@@ -102,26 +102,26 @@ To save several keys at once, *Load keys*, under *Secrets*, reads one QR code of
 <!-- screenshot: "Key insights" with an insight, its citation chips and the grounded line, from app version … -->
 <!-- screenshot: "Sources" unfolded, with each source's chip and evidence lines, from app version … -->
 
-## 6. Write, Rewrite, automatic writing, and the history
+## 6. Write, automatic writing, and the history
 
-**Write insight.** Each time the app starts afresh, nothing is written until you tap *Write insight*; *Key insights* says *Tap Write insight to have it written from the sources below.* That first tap is what lets automatic writing go on. Android usually keeps the app's process alive after you leave it, often for days, so coming back keeps it going; a restart of the phone, an update, or the system ending the app asks for the tap again.
+**Write insight.** Each time the app starts afresh, nothing is written until you tap; under the default *On track change*, *Key insights* says *Tap Write on change to write this track's insight and start writing automatically.* That first tap is what lets automatic writing go on. Android usually keeps the app's process alive after you leave it, often for days, so coming back keeps it going; a restart of the phone, an update, or the system ending the app asks for the tap again.
 
-**Automatic writing.** *Reactive*, under *Insights* in the settings, decides which tracks are written without a tap:
+**Automatic writing.** *Reactive*, under *Insights* in the settings, decides which tracks are written without a tap; the arrow beside *Write insight*, under *Key insights*, opens the same choices:
 
+- *Now*: only when you tap *Write insight*.
 - *On track change*, the default: a new insight for each new track.
-- *On skip*: only for a track you skip to, not one that follows a track played to its end. *Crossfade* (*Autodetect* by default), shown under it, helps tell the two apart.
-- *Manual*: only when you tap *Write insight*.
+- *On track skip*: only for a track you skip to, not one that follows a track played to its end. *Crossfade* (*Autodetect* by default), shown under it, helps tell the two apart.
 
 *Show insights* off makes no AI calls at all; the sources are still shown.
 
 **While you are away.** With *Look up in the background* off, the default, nothing is looked up or written while Sleevesight is not on screen. *Saver* (on, after 5 track changes, by default) stops one forgotten tap from paying for days: past that many track changes away, *Key insights* says *Automatic writing paused* and waits for a tap on *Write insight*. With *Look up in the background* on, insights are written while you are away, up to that count, each a paid call on your key.
 
-**Rewrite.** An insight is kept on the phone once written, so a track played again shows it at once, with no new call, as long as the sources find the same evidence and the AI service, model, effort and *AI service knowledge* are as they were; otherwise it is written afresh, as for a new track. While a track plays, when you save, replace or remove a key or switch a web search engine and the sources then find something different, or you choose another AI service, the kept insight is still shown, with *Written earlier, from the evidence under Sources.* and *Rewrite*, which writes it again from what the sources find now, with your current AI service, as a new paid call, or two. If an insight could not be written, *Key insights* says why (for example, *the AI service did not accept the key*), and *Write insight* tries again.
+**An insight kept from before.** An insight is kept on the phone once written, so a track played again shows it at once, with no new call, as long as the sources find the same evidence and the AI service, model, effort and *AI service knowledge* are as they were; otherwise it is written afresh, as for a new track. While a track plays, when you save, replace or remove a key or switch a web search engine and the sources then find something different, or you choose another AI service, the kept insight is still shown, with *Kept from before.* under it, and is not written again on its own while the track plays: *Rewrite*, with *Rewrite with updated source or model settings.*, writes it again on a tap. If an insight could not be written, *Key insights* says why (for example, *the AI service did not accept the key*), and the button under it tries again: *Write insight*, or *Write on change* or *Write on skip* while automatic writing waits for a tap.
 
 **The history.** Sleevesight keeps, on the phone only, information about the tracks it has seen play (titles, artists, albums, and when they played), never the music, and the track changes it uses to tell your skips from natural ends. *Keep history for* (90 days by default), with *Clear history* under it, and *New session idle trigger* (30 minutes) are under *History*. There is no screen that lists the history yet; the track changes recorded can be seen on the diagnostics screen (*Diagnostics*, under *Developer*, which seven taps on *Version*, under *About*, show).
 
 <!-- screenshot: Key insights waiting for the first tap: "Tap Write insight…" with the Write insight button, from app version … -->
-<!-- screenshot: an insight written earlier, shown after the evidence changed, with "Written earlier…" and "Rewrite", from app version … -->
+<!-- screenshot: an insight written earlier, shown after the evidence changed, with "Kept from before.", from app version … -->
 <!-- screenshot: Settings, "Insights": Show insights, Reactive, Proactive, Saver, Look up in the background, from app version … -->
 
 ## 7. Changing settings later, and clearing what is kept

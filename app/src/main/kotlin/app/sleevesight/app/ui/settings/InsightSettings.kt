@@ -19,7 +19,7 @@ private val MAX_CROSSFADE_SECONDS =
 /**
  * The insights' settings: *Show insights* (`writeInsights`), the master switch; *Reactive*
  * (`writeAutomatically`, D5), which track changes write an insight without a tap, with *Crossfade*
- * under it while it is *On skip*, the only choice that uses it; *Proactive* (`prepareNextTrack`,
+ * under it while it is *On track skip*, the only choice that uses it; *Proactive* (`prepareNextTrack`,
  * D13), the next track's evidence ahead; *Saver* (`pauseAutoWriteAfter`, #203); and *Look up in the
  * background* (D6) beside it, since both govern what happens while Sleevesight is away; and *Don't
  * repeat artist facts* (`artistFactsOncePerSession`, #407; once *Tell an artist's facts once per
@@ -40,36 +40,30 @@ internal fun InsightsSection(
         checked = settings.writeInsights,
     ) { on -> update { it.copy(writeInsights = on) } }
 
-    val modes =
-        listOf(
-            WriteAutomatically.ON_EVERY_TRACK_CHANGE to stringResource(R.string.settings_write_every_change),
-            WriteAutomatically.WHEN_I_SKIP to stringResource(R.string.settings_write_when_skip),
-            WriteAutomatically.NEVER to stringResource(R.string.settings_write_never),
+    // The same modes and names as the insight card's menu (#615); what each does is said only here.
+    val modes = WRITING_MODES.map { it.mode to stringResource(it.name) }
+    val modeDetails = WRITING_MODES.associate { it.mode to stringResource(it.detail) }
+    // Where the insight card's menu of its modes links to (#615).
+    LandingSpot(SettingsTarget.reactive) {
+        ValueRow(
+            title = stringResource(R.string.settings_write_automatically),
+            value = modes.first { it.first == settings.writeAutomatically }.second,
+            summary = stringResource(R.string.settings_write_automatically_summary),
+            onClick =
+                {
+                    open(
+                        SettingsDialog.Choice(
+                            R.string.settings_write_automatically,
+                            modes,
+                            settings.writeAutomatically,
+                            details = modeDetails,
+                        ) { mode ->
+                            update { it.copy(writeAutomatically = mode) }
+                        },
+                    )
+                }.takeIf { settings.writeInsights },
         )
-    val modeDetails =
-        mapOf(
-            WriteAutomatically.ON_EVERY_TRACK_CHANGE to stringResource(R.string.settings_write_every_change_detail),
-            WriteAutomatically.WHEN_I_SKIP to stringResource(R.string.settings_write_when_skip_detail),
-            WriteAutomatically.NEVER to stringResource(R.string.settings_write_never_detail),
-        )
-    ValueRow(
-        title = stringResource(R.string.settings_write_automatically),
-        value = modes.first { it.first == settings.writeAutomatically }.second,
-        summary = stringResource(R.string.settings_write_automatically_summary),
-        onClick =
-            {
-                open(
-                    SettingsDialog.Choice(
-                        R.string.settings_write_automatically,
-                        modes,
-                        settings.writeAutomatically,
-                        details = modeDetails,
-                    ) { mode ->
-                        update { it.withWriteAutomatically(mode) }
-                    },
-                )
-            }.takeIf { settings.writeInsights },
-    )
+    }
     if (settings.writeAutomatically == WriteAutomatically.WHEN_I_SKIP) CrossfadeRow(settings, update, open)
 
     SwitchRow(
@@ -116,7 +110,7 @@ private fun ArtistFactsRow(
 
 /**
  * *Crossfade* (D5): autodetect, or a fixed 0 to 15 seconds, for telling a skip from a natural end
- * under *On skip*; indented under *Reactive*, as it belongs to that choice.
+ * under *On track skip*; indented under *Reactive*, as it belongs to that choice.
  */
 @Composable
 private fun CrossfadeRow(

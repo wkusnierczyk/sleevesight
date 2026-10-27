@@ -99,34 +99,45 @@ class InsightSettingsTest {
 
             compose.onNodeWithText(text(R.string.settings_write_automatically)).performScrollTo().performClick()
             compose.onNode(inDialog(R.string.settings_write_when_skip)).performClick()
-            waitFor("On skip stored") { settings.now().writeAutomatically == WriteAutomatically.WHEN_I_SKIP }
+            waitFor("On track skip stored") { settings.now().writeAutomatically == WriteAutomatically.WHEN_I_SKIP }
             waitFor("Crossfade shown") { shown(R.string.settings_crossfade) }
 
             compose.onNodeWithText(text(R.string.settings_write_automatically)).performScrollTo().performClick()
             compose.onNode(inDialog(R.string.settings_write_never)).performClick()
-            waitFor("Manual stored") { settings.now().writeAutomatically == WriteAutomatically.NEVER }
+            waitFor("Now stored") { settings.now().writeAutomatically == WriteAutomatically.NEVER }
             waitFor("Crossfade gone") { !shown(R.string.settings_crossfade) }
-            // Under *Manual*, nothing is written away, so *Saver* cannot be changed.
+            // Under *Now*, nothing is written away, so *Saver* cannot be changed.
             compose.onNodeWithText(text(R.string.settings_pause_auto_write)).performScrollTo().assertIsNotEnabled()
         }
 
     @Test
-    fun aModeChosenUnderReactiveIsWhatTheInsightCardsToggleRestores() =
+    fun reactivesChoicesAreTheInsightCardsModesNowOnTrackChangeAndOnTrackSkipInThatOrder() =
         show {
-            // The description says the toggle beside each insight turns it on and off too (#553).
+            // The description names the insight card's menu, the same setting (#615).
             compose
                 .onNodeWithText(
-                    "Select what triggers writing an insight. Automatic writing can also be turned on and off " +
-                        "with the toggle beside each insight.",
+                    "Select what triggers writing an insight. The arrow beside Write insight, under Key insights, " +
+                        "sets it too.",
                 ).performScrollTo()
             compose.onNodeWithText(text(R.string.settings_write_automatically)).performScrollTo().performClick()
-            compose.onNode(inDialog(R.string.settings_write_when_skip)).performClick()
-            waitFor("On skip stored") { settings.now().writeAutomatically == WriteAutomatically.WHEN_I_SKIP }
-            compose.onNodeWithText(text(R.string.settings_write_automatically)).performScrollTo().performClick()
-            compose.onNode(inDialog(R.string.settings_write_never)).performClick()
-            waitFor("Manual stored") { settings.now().writeAutomatically == WriteAutomatically.NEVER }
-            assertEquals(WriteAutomatically.WHEN_I_SKIP, settings.now().lastAutomaticMode)
-            assertEquals(WriteAutomatically.WHEN_I_SKIP, settings.now().withAutomaticWriting(true).writeAutomatically)
+            val tops =
+                listOf("Now", "On track change", "On track skip").map { name ->
+                    compose
+                        .onNode(hasText(name) and hasAnyAncestor(isDialog()))
+                        .fetchSemanticsNode()
+                        .boundsInRoot.top
+                }
+            assertEquals(tops.sorted(), tops)
+            for (
+            detail in
+            listOf(
+                "Only when you tap Write insight.",
+                "An insight for every new track, as it starts.",
+                "An insight only when you skip to a track, not when one follows another by itself.",
+            )
+            ) {
+                compose.onNode(hasText(detail) and hasAnyAncestor(isDialog())).assertExists()
+            }
         }
 
     @Test

@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.edit
 import app.sleevesight.app.BuildConfig
 import app.sleevesight.core.settings.ReportButton
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.settings.WriteAutomatically
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
@@ -112,17 +113,17 @@ class SettingsStore(
     }
 
     /**
-     * The insight card's toggle for automatic writing (#553): each turn on or off is saved in
-     * [saves], which outlives the screen, as *Reactive* ([Settings.withAutomaticWriting]). A save
-     * that fails leaves the settings, and so the toggle, as they were.
+     * The insight card's menu of *Reactive*'s modes (#615, beside *Write insight*): each choice is
+     * saved in [saves], which outlives the screen, as *Reactive*. A save that fails leaves the
+     * setting, and so the menu, as it was.
      */
-    fun automaticWritingSwitch(saves: CoroutineScope): (Boolean) -> Unit =
-        { on ->
+    fun writingModeChooser(saves: CoroutineScope): (WriteAutomatically) -> Unit =
+        { mode ->
             saves.launch {
                 try {
-                    update { it.withAutomaticWriting(on) }
+                    update { it.copy(writeAutomatically = mode) }
                 } catch (_: IOException) {
-                    // Only an I/O error: the toggle shows the settings as they stay.
+                    // Only an I/O error: the menu shows the setting as it stays.
                 }
             }
         }
