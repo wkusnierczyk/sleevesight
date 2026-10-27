@@ -1,0 +1,9 @@
+What's new in 0.1.7:
+- Settings: sections open as panels; a search box finds any setting.
+- With nothing playing, Home lists your players and a guide.
+- Tap a genre to read what it is and why this track has it.
+- Sources is a chip that opens a panel, like the genres.
+- Write modes: On demand, On track skip, On track change.
+- Look again: a fresh look at the sources, then Rewrite if new.
+- An AI mark on buttons that use your AI service.
+- Large text: Settings rows and insight footer fit.
