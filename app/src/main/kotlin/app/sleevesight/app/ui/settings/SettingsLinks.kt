@@ -1,8 +1,6 @@
 package app.sleevesight.app.ui.settings
 
-import android.view.View
 import android.view.accessibility.AccessibilityManager
-import android.view.accessibility.AccessibilityNodeInfo
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.BringIntoViewSpec
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
@@ -37,20 +35,17 @@ import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.node.RootForTest
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.semantics.getAllSemanticsNodes
-import androidx.compose.ui.semantics.getOrNull
 import app.sleevesight.app.R
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
+import app.sleevesight.app.ui.theme.moveAccessibilityFocusToFocused
 import app.sleevesight.core.model.ProviderId
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.milliseconds
@@ -400,27 +395,6 @@ internal fun LandingSpot(
                 .onGloballyPositioned { placed[0] = it },
     ) {
         content()
-    }
-}
-
-/**
- * Gives the screen reader's focus to the node that holds the input focus in [host]'s composition,
- * as a screen reader's own move would ([AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS] on its
- * virtual view, which tells the screen reader with `TYPE_VIEW_ACCESSIBILITY_FOCUSED`). Compose has
- * no API for this, so the node is found in the composition's semantics ([RootForTest], whose
- * `semanticsOwner` is public) by its *focused* property; nothing happens if there is none.
- */
-private fun moveAccessibilityFocusToFocused(host: View) {
-    // A walk through Compose's semantics from outside: should it ever fail, the screen reader's focus
-    // stays where it was, and the screen goes on.
-    runCatching {
-        val owner = (host as? RootForTest)?.semanticsOwner ?: return
-        val focused =
-            owner
-                .getAllSemanticsNodes(mergingEnabled = true)
-                .firstOrNull { it.config.getOrNull(SemanticsProperties.Focused) == true } ?: return
-        host.accessibilityNodeProvider
-            ?.performAction(focused.id, AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS, null)
     }
 }
 
