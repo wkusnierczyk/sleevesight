@@ -81,8 +81,9 @@ import kotlin.time.Duration.Companion.seconds
  * @property cacheSizeLimit the most the caches may hold, in bytes of keys and values; past it the
  *   least recently used entries are evicted. See [DEFAULT_CACHE_SIZE_LIMIT].
  * @property historyLifetime *Keep history for*: how long the session history and the track changes
- *   are kept, counted back from today to when a track began to play and a change began; null keeps
- *   them for ever. See [DEFAULT_HISTORY_LIFETIME].
+ *   are kept, counted back from today to when a track began to play and a change began, and the
+ *   insights and genre reasons written, counted back to when each was written (#523, #643); null
+ *   keeps them for ever. See [DEFAULT_HISTORY_LIFETIME].
  * @property sessionGap *New session idle trigger*: how long a break in listening, from
  *   when the last track was last heard, ends a listening session. See [DEFAULT_SESSION_GAP].
  * @property keepSourcesUnfolded *Keep Sources as you left them* (#269): whether the *Sources* list
@@ -436,11 +437,12 @@ data class Settings(
          * be measured at the Phase 0.5 gate, #46): some 20 KB a track with its insights, so 50 MB
          * holds about 2,500 tracks, and more when only evidence is cached. Retrieval entries expire
          * within 30 days (D9), so evidence alone reaches the limit only for someone playing over 80
-         * new tracks a day. Written cards never expire, though: they accumulate until the limit,
-         * which every listener reaches in time (at about 2 KB a card, after some 25,000 cards), and
-         * from then on the least recently used go first, the cards of tracks not played for longest.
-         * 50 MB is small beside the players' own caches, and an evicted card costs a paid call to
-         * write again, which is why it is not lower.
+         * new tracks a day. Written cards are kept for [historyLifetime] (#643), 90 days by
+         * default, so at about 2 KB a card the limit is reached only past some 25,000 cards in that
+         * time, or with *Keep history for* at *Forever*, where they accumulate until it; from then
+         * on the least recently used go first, the cards of tracks not played for longest. 50 MB is
+         * small beside the players' own caches, and an evicted card costs a paid call to write
+         * again, which is why it is not lower.
          */
         const val DEFAULT_CACHE_SIZE_LIMIT: Long = CACHE_MEGABYTES * MEGABYTE
 

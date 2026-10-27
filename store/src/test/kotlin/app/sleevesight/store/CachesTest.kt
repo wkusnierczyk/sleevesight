@@ -51,6 +51,8 @@ class CachesTest {
 
     @Test
     fun `purging deletes the expired entries and keeps the rest`() {
+        // The insight's lifetime is *Keep history for*'s (SynthesisCacheTest); for ever here.
+        fixture.settings = fixture.settings.copy(historyLifetime = null)
         caches.retrieval.put(SourceId.DISCOGS, "a|x", 1, result())
         caches.retrieval.put(SourceId.MUSICBRAINZ, "a|x", 1, result())
         caches.artists.put("a", ArtistResolution.None)

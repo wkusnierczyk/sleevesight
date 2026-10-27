@@ -8,8 +8,9 @@ import kotlin.time.Duration
 import kotlin.time.Instant
 
 /**
- * Written insights and cards (architecture, *Cache and history*), kept until evicted by size; a
- * genre's reason ([CardKind.GENRE], #523) only for *Keep history for* too ([lifetimeOf]). An
+ * Written insights and cards (architecture, *Cache and history*), kept until evicted by size, and
+ * no longer than *Keep history for* ([lifetimeOf]): each is written about a track heard, so it goes
+ * with the track's place in the history (#523 for a genre's reason, #643 for an insight). An
  * entry is reused only for exactly the same [SynthesisKey]: the same evidence (R2), the same
  * prompt template and style (D14), and the same provider, model and model-knowledge switch. Each
  * one is a paid call on the user's key (driver 5), so a hit saves money as well as time.
@@ -34,7 +35,7 @@ class SynthesisCache internal constructor(
                 ).executeAsOneOrNull() ?: return null
         val now = context.clock.now()
         val writtenAt = Instant.fromEpochMilliseconds(row.written_at)
-        val lifetime = lifetimeOf(key.kind, context.settings())
+        val lifetime = lifetimeOf(context.settings())
         val expired = lifetime != null && now - writtenAt >= lifetime
         if (expired) {
             context.queries.synthesisDelete(row.id)
@@ -102,14 +103,14 @@ class SynthesisCache internal constructor(
 
     internal companion object {
         /**
-         * How long a card of [kind] is kept under [settings], besides the size limit: a genre's reason
-         * (#523) for *Keep history for* ([Settings.historyLifetime], null for *Forever*), since it is
-         * kept with the track, like its place in the history; the other kinds have none.
+         * How long a card of any kind is kept under [settings], besides the size limit: for *Keep
+         * history for* ([Settings.historyLifetime], null for *Forever*), counted from when it was
+         * written. A card is written about a track heard (the insight, #643; a genre's reason,
+         * #523), so it is kept with the track, like its place in the history. Read on every call,
+         * so a shorter setting stops serving older cards at once, and [Caches.purgeExpired]
+         * deletes them at its next run.
          */
-        fun lifetimeOf(
-            kind: CardKind,
-            settings: Settings,
-        ): Duration? = if (kind == CardKind.GENRE) settings.historyLifetime else null
+        fun lifetimeOf(settings: Settings): Duration? = settings.historyLifetime
     }
 }
 
