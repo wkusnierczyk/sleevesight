@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+# Installs the repository's hooks: a small dispatcher for each hook in this directory, written into
+# the clone's own hooks directory (`.git/hooks`, shared by every worktree). Each dispatcher runs the
+# hook of the checkout it runs in, `.githooks/<name>`, so every branch gets its own version of the
+# hooks. A checkout with no such hook (a branch from before them) gets a fallback instead: the guard
+# against commits on `main` and `dev-*` for `pre-commit` and `pre-merge-commit`, and Git LFS's own
+# hook, when Git LFS is installed, for the others.
+#
+# Run it once per clone, from any of its checkouts: .githooks/install
+# Running it again rewrites the dispatchers, so it also updates them. A hook already there that is
+# not a dispatcher (Git LFS's, say) is moved to `<name>.before-dispatcher`, and the path printed; the
+# dispatcher covers Git LFS's hooks and the guard. If that name is taken too, the script stops rather
+# than overwrite it. If `core.hooksPath` is set, git reads no hooks from `.git/hooks`, so the script
+# stops and says so.
+set -euo pipefail
+
+marker='# sleevesight hook dispatcher'
+hooks=(pre-commit pre-merge-commit pre-push post-checkout post-commit post-merge)
+
+if path=$(git config --get core.hooksPath); then
+  printf >&2 'install: core.hooksPath is set (%s), so git would not run hooks from .git/hooks.\n' "$path"
+  printf >&2 'Unset it (git config --unset core.hooksPath) and run this again.\n'
+  exit 1
+fi
+dir=$(git rev-parse --path-format=absolute --git-common-dir)/hooks
+mkdir -p "$dir"
+
+# fallback <name>: what the dispatcher runs in a checkout without `.githooks/<name>`.
+fallback() {
+  case "$1" in
+    pre-commit | pre-merge-commit)
+      # `guard-branch`, inline.
+      cat <<'EOF'
+branch=$(git symbolic-ref --quiet --short HEAD) || exit 0   # detached HEAD: allowed
+case "$branch" in
+  main|dev-*)
+    printf >&2 '\nRefusing to commit on "%s" in %s.\n' "$branch" "$(git rev-parse --show-toplevel)"
+    printf >&2 'main and dev-* move only through merged pull requests. Check which branch is checked out\n'
+    printf >&2 '(git branch --show-current; another session may have switched it), then move to your issue\n'
+    printf >&2 'branch or a worktree and commit there.\n\n'
+    exit 1 ;;
+esac
+exit 0
+EOF
+      ;;
+    *)
+      printf 'command -v git-lfs >/dev/null 2>&1 || exit 0\n'
+      # shellcheck disable=SC2016
+      printf 'exec git lfs %s "$@"\n' "$1"
+      ;;
+  esac
+}
+
+# Checked for every hook before anything is written, so a refusal leaves nothing half done.
+for name in "${hooks[@]}"; do
+  target=$dir/$name
+  if [ -e "$target" ] && ! grep -qxF "$marker" "$target" && [ -e "$target.before-dispatcher" ]; then
+    printf >&2 'install: %s is not a dispatcher, and %s exists already.\n' "$target" "$target.before-dispatcher"
+    printf >&2 'Move one of them away and run this again.\n'
+    exit 1
+  fi
+done
+
+for name in "${hooks[@]}"; do
+  target=$dir/$name
+  if [ -e "$target" ] && ! grep -qxF "$marker" "$target"; then
+    mv "$target" "$target.before-dispatcher"
+    printf 'install: moved the earlier %s to %s\n' "$name" "$target.before-dispatcher"
+  fi
+  # The dispatcher's text: the `$` in it are meant for the dispatcher, not expanded here.
+  # shellcheck disable=SC2016
+  {
+    printf '#!/bin/sh\n%s\n' "$marker"
+    printf '# Written by .githooks/install; run it again to update. Runs this checkout'"'"'s .githooks/%s\n' "$name"
+    printf '# when there is one, and otherwise the fallback below.\n'
+    printf 'hook="$(git rev-parse --show-toplevel)/.githooks/%s"\n' "$name"
+    printf 'if [ -f "$hook" ]; then exec "$hook" "$@"; fi\n'
+    fallback "$name"
+  } >"$target.tmp"
+  chmod +x "$target.tmp"
+  mv -f "$target.tmp" "$target"
+done
+printf 'install: dispatchers for %s in %s\n' "${hooks[*]}" "$dir"
