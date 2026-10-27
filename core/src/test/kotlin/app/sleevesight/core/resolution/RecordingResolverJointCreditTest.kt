@@ -36,6 +36,86 @@ class RecordingResolverJointCreditTest {
             assertEquals("2025-08-22", resolution.firstReleaseDate)
             // No one MusicBrainz artist is the pair, so it gets no id.
             assertEquals(listOf(ResolvedArtist("Ann Lee & The Rivets", null)), resolution.artists)
+            // Its artists give the genre labels.
+            assertEquals(
+                listOf(ResolvedArtist("Ann Lee", "ann"), ResolvedArtist("The Rivets", "rivets")),
+                resolution.jointArtists,
+            )
+        }
+
+    @Test
+    fun `a joint credit may mix a credited name with MusicBrainz's name for another artist`() =
+        runTest {
+            // Neither all as credited ("Ann & The Rivets") nor all as MusicBrainz names them ("Ann Lee &
+            // Rivets Band") is the name; "Ann Lee" as MusicBrainz names her and "The Rivets" as credited is.
+            val mixed =
+                listOf(joint("mixed", "2025", ann.copy(name = "Ann"), MbCredit("The Rivets", "rivets", "Rivets Band")))
+            val resolution = resolve(FakeMusicBrainz(Lookup.Found(mixed)), track("Song", "Ann Lee & The Rivets"))
+            assertEquals("mixed", resolution.recordingMbid)
+        }
+
+    @Test
+    fun `one joint name two different pairs write on one recording collides`() =
+        runTest {
+            val versus =
+                listOf(
+                    joint(
+                        "versus",
+                        "1970",
+                        ann,
+                        rivets.copy(joinPhrase = " vs. "),
+                        ann.copy(artistMbid = "other-ann"),
+                        rivets,
+                    ),
+                )
+            val resolution = resolve(FakeMusicBrainz(Lookup.Found(versus)), track("Song", "Ann Lee & The Rivets"))
+            assertIs<Outcome.Rejected>(resolution.outcome)
+            assertNull(resolution.recordingMbid)
+        }
+
+    @Test
+    fun `an artist accepted under a joint credit gets no id, even from a performer of the same name`() =
+        runTest {
+            val chosen = joint("chosen", "1975", ann, rivets)
+            val detail =
+                MbRecordingDetail(
+                    mbid = "chosen",
+                    title = "Song",
+                    credits = chosen.credits,
+                    firstReleaseDate = "1975",
+                    works = emptyList(),
+                    artistRelations =
+                        listOf(
+                            MbArtistRelation("performer", "pair", "Ann Lee & The Rivets", emptyList()),
+                        ),
+                    wikidataIds = emptyList(),
+                )
+            val musicBrainz = FakeMusicBrainz(Lookup.Found(listOf(chosen)), mapOf("chosen" to detail))
+            val resolution = resolve(musicBrainz, track("Song", "Ann Lee & The Rivets"))
+            assertEquals("chosen", resolution.recordingMbid)
+            assertEquals(listOf(ResolvedArtist("Ann Lee & The Rivets", null)), resolution.artists)
+        }
+
+    @Test
+    fun `an honorific variant that fits wins over a joint credit on another recording`() =
+        runTest {
+            // The joint credit's recording is the earlier, so it would be chosen if it were weighed.
+            val search =
+                listOf(
+                    joint("joint", "1970", ann, rivets),
+                    recording("variant", "Song", "Mr. Ann Lee & The Rivets", 200, "1990"),
+                )
+            val resolution = resolve(FakeMusicBrainz(Lookup.Found(search)), track("Song", "Ann Lee & The Rivets"))
+            assertEquals("variant", resolution.recordingMbid)
+        }
+
+    @Test
+    fun `credits that write the name only with another between them are not a joint credit`() =
+        runTest {
+            val apart = listOf(joint("apart", "1970", ann, credit("X", "x").copy(joinPhrase = " & "), rivets))
+            val resolution = resolve(FakeMusicBrainz(Lookup.Found(apart)), track("Song", "Ann Lee & The Rivets"))
+            assertNull(resolution.recordingMbid)
+            assertIs<Outcome.Rejected>(resolution.outcome)
         }
 
     @Test

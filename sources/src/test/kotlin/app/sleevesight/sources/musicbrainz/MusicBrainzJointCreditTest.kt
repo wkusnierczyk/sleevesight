@@ -11,6 +11,7 @@ import app.sleevesight.net.NetRequest
 import app.sleevesight.net.NetResponse
 import app.sleevesight.net.NetResult
 import app.sleevesight.sources.RecordedTracks
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -40,6 +41,15 @@ class MusicBrainzJointCreditTest {
             assertEquals(RECORDING, resolution.recordingMbid)
             assertEquals("Derya Yıldırım & Grup Şimşek", resolution.artistCredit)
             assertEquals(listOf(ResolvedArtist(ARTIST, null)), resolution.artists)
+            // The pair has no id of its own; its two artists give MusicBrainz's genre labels.
+            val labels = MusicBrainzSource().lookup(track, CompletableDeferred(resolution)).labelArtists
+            assertEquals(
+                listOf(
+                    ResolvedArtist("Derya Yıldırım", "961f11f3-3c55-4b0e-ab30-53c0dc8d956e"),
+                    ResolvedArtist("Grup Şimşek", "d1eb7b63-94ee-47ab-8747-3e1f5e9b45e8"),
+                ),
+                labels,
+            )
             assertEquals("2025-08-22", resolution.firstReleaseDate)
             assertEquals(
                 "2025",
