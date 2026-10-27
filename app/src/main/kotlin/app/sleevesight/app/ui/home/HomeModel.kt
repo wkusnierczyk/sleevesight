@@ -72,7 +72,9 @@ internal fun headerYears(
  * written with until another is chosen. *Reactive*'s [mode], null before the settings' first read,
  * whether automatic writing waits for a tap ([waiting], `PipelineView.waiting`), and whether *Saver*
  * has paused it ([paused], `PipelineView.paused`, #203) name the split button's Write and the line
- * about it (#615).
+ * about it (#615). Whether the insight shown is the card paid for, kept from before in place of an
+ * insight the run lacks ([cardShown], `PipelineView.cardShown`), and why its rewrite failed or that
+ * it was stopped ([rewriteFailed], `PipelineView.rewriteFailed`).
  */
 @Suppress("LongParameterList") // Each what one part of the card says.
 internal class InsightContext(
@@ -85,15 +87,19 @@ internal class InsightContext(
     val mode: WriteAutomatically? = null,
     val waiting: Boolean = false,
     val paused: Boolean = false,
+    val cardShown: Boolean = false,
+    val rewriteFailed: String? = null,
 )
 
 /**
- * What the pipeline offers beside the insight shown: Write again after a call that failed or was
+ * What the pipeline offers beside the insight shown: Rewrite beside the card paid for ([rewrite],
+ * once a settings change changed its key), Write again after a call that failed or was
  * stopped ([retry]), and Stop while the call is under
  * way ([stop]); and whether the Write offered is offered only because automatic writing paused
  * while the app was not on screen ([paused], #203).
  */
 internal class InsightOffers(
+    val rewrite: Boolean = false,
     val retry: Boolean = false,
     val stop: Boolean = false,
     val paused: Boolean = false,

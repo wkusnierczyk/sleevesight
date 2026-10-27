@@ -34,12 +34,15 @@ internal class CardOffer(
  * - a Write offered again after a call that failed or was stopped: *Write insight*, which writes
  *   this one only; or, while automatic writing waits for a tap, the mode's Write, since the tap
  *   also starts or resumes it;
- * - an insight shown, written now or kept from before: the mode's Write, disabled. No *Rewrite*
- *   (#615): a card kept matches the evidence, prompt, model and effort, so it would only write the
- *   same input again; the coordinator's offer of one is not shown;
+ * - an insight shown that the coordinator offers to write again ([InsightOffers.rewrite]):
+ *   *Rewrite*, enabled, in every mode. It is offered only when a settings change (the AI service,
+ *   its model, a source's key, the web engine) changed the card's key, so the card kept was written
+ *   with earlier settings; and again after such a rewrite failed or was stopped. Like any tap on
+ *   the Write offered, it also starts or resumes automatic writing while that waits for a tap;
+ * - any other insight shown, written now or kept from before: the mode's Write, disabled;
  * - while it is written: *Stop*, while the call can be stopped.
  * Disabled whenever a tap would do nothing: the pipeline offers no Write, or the model is found
- * unavailable and no insight is shown (#540), where a Write would fail again.
+ * unavailable (#540), where a Write, or a Rewrite, would fail again.
  */
 internal fun cardOffer(
     insight: InsightState,
@@ -48,24 +51,26 @@ internal fun cardOffer(
     val idle = CardOffer(modeWrite(context), enabled = false)
     if (context.unavailable != null && withoutInsight(insight)) return idle
     return when (insight) {
-        is InsightState.Idle ->
-            when {
-                !insight.canWrite -> idle
-                waitsForTap(context) -> CardOffer(modeWrite(context), enabled = true)
-                else -> CardOffer(R.string.home_write, enabled = true)
-            }
-
+        is InsightState.Idle -> if (insight.canWrite) write(context) else idle
         is InsightState.Writing -> CardOffer(R.string.home_stop, enabled = context.offers.stop, stop = true)
-        is InsightState.Written -> idle
+        is InsightState.Written ->
+            if (offersRewrite(context)) CardOffer(R.string.home_rewrite, enabled = true) else idle
         InsightState.NoEvidence -> idle
-        is InsightState.Failed, InsightState.Stopped ->
-            when {
-                !context.offers.retry -> idle
-                waitsForTap(context) -> CardOffer(modeWrite(context), enabled = true)
-                else -> CardOffer(R.string.home_write, enabled = true)
-            }
+        is InsightState.Failed, InsightState.Stopped -> if (context.offers.retry) write(context) else idle
     }
 }
+
+// The Write offered, enabled: the mode's while automatic writing waits for a tap, which the tap
+// starts or resumes; else *Write insight*, which writes this one only.
+private fun write(context: InsightContext): CardOffer =
+    CardOffer(if (waitsForTap(context)) modeWrite(context) else R.string.home_write, enabled = true)
+
+/**
+ * Whether the split button offers *Rewrite* beside a written insight: the coordinator offers to write
+ * the card paid for again ([InsightOffers.rewrite]), and the model is not found unavailable (#540).
+ * The card's line about it follows the same rule.
+ */
+internal fun offersRewrite(context: InsightContext): Boolean = context.offers.rewrite && context.unavailable == null
 
 /** *Reactive*'s mode while it writes automatically; null under *Now*, or before the settings' first read. */
 internal fun automaticMode(context: InsightContext): WriteAutomatically? =

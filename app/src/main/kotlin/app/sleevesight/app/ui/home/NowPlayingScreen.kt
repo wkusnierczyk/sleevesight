@@ -289,6 +289,7 @@ private fun insightContext(
     modelAllowed = modelAllowed,
     offers =
         InsightOffers(
+            rewrite = view.rewrite && track != null,
             retry = view.retry && track != null,
             stop = view.stopCall != null && track != null,
             paused = view.lapsed && track != null,
@@ -297,6 +298,8 @@ private fun insightContext(
     mode = settings?.writeAutomatically,
     waiting = view.waiting,
     paused = view.paused,
+    cardShown = view.cardShown && track != null,
+    rewriteFailed = view.rewriteFailed.takeIf { track != null },
 )
 
 // The insight card's menu of *Reactive*'s modes (#615): the mode chosen, paused while *Saver* has

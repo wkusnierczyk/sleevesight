@@ -32,8 +32,10 @@ import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ActivityScenario
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.pipeline.CallId
+import app.sleevesight.app.pipeline.PipelineHost
 import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.app.pipeline.RunId
+import app.sleevesight.app.pipeline.UnavailableModel
 import app.sleevesight.app.session.PlaybackInfo
 import app.sleevesight.app.session.PlaybackStatus
 import app.sleevesight.app.ui.home.HomeFixtures.normalizer
@@ -42,6 +44,7 @@ import app.sleevesight.app.ui.home.HomeFixtures.track
 import app.sleevesight.app.ui.home.HomeFixtures.written
 import app.sleevesight.app.ui.settings.SettingsSection
 import app.sleevesight.app.ui.settings.SettingsTarget
+import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WriteAutomatically
@@ -58,7 +61,9 @@ import org.robolectric.shadows.ShadowToast
 /**
  * The insight card's split button (#615): the leading half says what a tap does in each state,
  * the mode's Write while automatic writing waits for a tap (a Write offered again after a failure
- * or a Stop included), disabled while it runs by itself; the line says resume whenever *Saver* has
+ * or a Stop included), disabled while it runs by itself; *Rewrite* beside the card paid for while the
+ * coordinator offers it, with its line, a rewrite that failed or stopped said; *Kept from before.*
+ * for the card paid for; the line says resume whenever *Saver* has
  * paused it; the arrow's menu is *Reactive*, each showing the other's change, and ends with the way
  * to it in the settings; another automatic mode chosen says each new track's insight is a paid call,
  * *Now* or the mode already chosen says nothing; *Saver*'s pause shows beside it; a screen reader
@@ -71,6 +76,7 @@ class WriteSplitButtonScreenTest {
     val compose = createEmptyComposeRule()
 
     private val settings = MutableStateFlow<Settings?>(Settings())
+    private val unavailable = MutableStateFlow<UnavailableModel?>(null)
     private val view =
         MutableStateFlow(PipelineView(track(insight = written("It is a song [MB1].")), aiReady = true))
 
@@ -87,8 +93,9 @@ class WriteSplitButtonScreenTest {
                 it.setContent {
                     val shown by settings.collectAsState()
                     val pipeline by view.collectAsState()
+                    val missing by unavailable.collectAsState()
                     val playback = PlaybackInfo(Settings.SPOTIFY, PlaybackStatus.PLAYING)
-                    val state = NowPlayingState(pipeline, sundown, playback, settings = shown)
+                    val state = NowPlayingState(pipeline, sundown, playback, settings = shown, unavailable = missing)
                     Column(Modifier.verticalScroll(rememberScrollState())) { NowPlayingContent(state, actions) }
                 }
             }
@@ -201,33 +208,84 @@ class WriteSplitButtonScreenTest {
     }
 
     @Test
-    fun anInsightShownIsTheModesWriteDisabledInEveryModeWithNoRewrite() {
+    fun anInsightShownIsRewriteWhileOfferedElseTheModesWriteDisabledInEveryMode() {
         val labels =
             mapOf(
                 WriteAutomatically.NEVER to "Write insight",
                 WriteAutomatically.ON_EVERY_TRACK_CHANGE to "Write on change",
                 WriteAutomatically.WHEN_I_SKIP to "Write on skip",
             )
-        // Written now, and kept from before with the coordinator still offering to write it again.
-        val shown =
-            listOf(
+        val kept = track(insight = written("It is a song [MB1].", cached = true))
+        for ((mode, label) in labels) {
+            settings.value = Settings(writeAutomatically = mode)
+            // Kept from before, its key changed by a settings change: the coordinator offers a rewrite.
+            for (waiting in listOf(false, true)) {
+                view.value = PipelineView(kept, aiReady = true, rewrite = true, cardShown = true, waiting = waiting)
+                show {
+                    leading(WRITE_TAG).assertTextEquals("Rewrite").assertIsEnabled()
+                    assertEquals(0, count(NO_ACTION_TAG))
+                    says("Rewrite with updated source or model settings.")
+                    arrow.assertIsEnabled()
+                }
+            }
+            // Written now, or kept with nothing offered: the mode's Write, disabled, and no rewrite line.
+            for (pipeline in listOf(
                 PipelineView(track(insight = written("It is a song [MB1].")), aiReady = true),
-                PipelineView(
-                    track(insight = written("It is a song [MB1].", cached = true)),
-                    aiReady = true,
-                    rewrite = true,
-                ),
-            )
-        for (pipeline in shown) {
-            view.value = pipeline
-            for ((mode, label) in labels) {
-                settings.value = Settings(writeAutomatically = mode)
+                PipelineView(kept, aiReady = true, cardShown = true),
+            )) {
+                view.value = pipeline
                 show {
                     leading(NO_ACTION_TAG).assertTextEquals(label).assertIsNotEnabled()
                     assertEquals(0, count(WRITE_TAG))
                     compose.onNodeWithText("Rewrite", substring = true).assertDoesNotExist()
                     arrow.assertIsEnabled()
                 }
+            }
+        }
+    }
+
+    @Test
+    fun rewriteIsNotOfferedWhileTheModelIsFoundUnavailable() {
+        val kept = track(insight = written("It is a song [MB1].", cached = true))
+        view.value = PipelineView(kept, aiReady = true, rewrite = true, cardShown = true)
+        unavailable.value = UnavailableModel(ProviderId.ANTHROPIC, "claude-gone")
+        show {
+            leading(NO_ACTION_TAG).assertTextEquals("Write on change").assertIsNotEnabled()
+            compose.onNodeWithText("Rewrite with updated source or model settings.").assertDoesNotExist()
+        }
+    }
+
+    @Test
+    fun aCardKeptFromBeforeSaysSoEvenWhenNotFromTheCache() {
+        // The card paid for, shown in place of the run's own insight: not served from the cache.
+        view.value = PipelineView(track(insight = written("It is a song [MB1].")), aiReady = true, cardShown = true)
+        show { says("Kept from before.") }
+        view.value = PipelineView(track(insight = written("It is a song [MB1].")), aiReady = true)
+        show { compose.onNodeWithText("Kept from before.").assertDoesNotExist() }
+    }
+
+    @Test
+    fun aRewriteThatFailedOrStoppedShowsTheCardBeforeSaysSoAndOffersRewriteAgain() {
+        val kept = track(insight = written("It is a song [MB1].", cached = true))
+        val said =
+            mapOf(
+                "offline" to "Rewriting failed: no connection. This is the insight written earlier.",
+                PipelineHost.STOPPED to "Rewriting stopped. This is the insight written earlier.",
+            )
+        for ((why, line) in said) {
+            view.value = PipelineView(kept, aiReady = true, rewrite = true, cardShown = true, rewriteFailed = why)
+            show {
+                compose.onNodeWithText("It is a song", substring = true).assertExists()
+                says(line)
+                says("Kept from before.")
+                leading(WRITE_TAG).assertTextEquals("Rewrite").assertIsEnabled()
+                says("Rewrite with updated source or model settings.")
+            }
+            // Until the coordinator offers it again: the line, and no Rewrite.
+            view.value = PipelineView(kept, aiReady = true, cardShown = true, rewriteFailed = why)
+            show {
+                says(line)
+                leading(NO_ACTION_TAG).assertTextEquals("Write on change").assertIsNotEnabled()
             }
         }
     }

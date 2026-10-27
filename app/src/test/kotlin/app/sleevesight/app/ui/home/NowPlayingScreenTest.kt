@@ -17,7 +17,6 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTouchHeightIsEqualTo
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
@@ -541,20 +540,17 @@ class NowPlayingScreenTest {
         }
 
     @Test
-    fun theKeptCardOffersNoRewrite() {
-        // A rewrite would only write the same input again (#615): the coordinator's offer is not shown.
+    fun theKeptCardOffersRewriteWhichWritesItAgain() {
+        // Offered once a settings change changed the card's key (#615): a tap is the coordinator's Write.
         writes = 0
         val kept = track(insight = written("It was recorded in 1973 [MB1].", cached = true))
         show(state(PipelineView(kept, aiReady = true, rewrite = true, cardShown = true, writeKey = sundownKey))) {
+            compose.onNodeWithText(text(R.string.home_rewrite_offered)).assertExists()
             unfold()
             compose.onNodeWithText(text(R.string.home_evidence_cited)).assertExists()
-            assertEquals(0, compose.onAllNodesWithTag(WRITE_TAG).fetchSemanticsNodes().size)
-            compose
-                .onNodeWithTag(NO_ACTION_TAG)
-                .performScrollTo()
-                .assertIsNotEnabled()
-                .performClick()
-            assertEquals(0, writes)
+            compose.onNodeWithTag(WRITE_TAG).performScrollTo().performClick()
+            assertEquals(1, writes)
+            assertEquals(sundownKey to sundown, tapped)
         }
     }
 

@@ -15,13 +15,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
+import app.sleevesight.app.pipeline.PipelineHost
 import app.sleevesight.app.ui.report.ReportAction
 import app.sleevesight.core.pipeline.InsightState
 
 /**
  * *Key insights*: the insight in each of its states (architecture, *Errors and empty
  * states*). Model prose is plain text: its only interactive parts are the citation chips, built
- * from the evidence ids the app assigned, each scrolling to its line. Write and Stop go
+ * from the evidence ids the app assigned, each scrolling to its line. Write, Rewrite and Stop go
  * to the pipeline as taps; whether a tap writes or stops is the pipeline's to say. Under a written
  * insight, [GroundingLine]: a note, or with [groundingDetails] (*Show grounding details*, #437) the
  * grounding check's counts in full.
@@ -157,10 +158,24 @@ private fun Written(
     // The footer: the grounding line, then *Report a problem* at the row's end. The line's box takes
     // the room whatever it holds, so the action keeps its place should the line show only at times.
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.weight(1f)) { GroundingLine(insight.grounded, insight.cached, groundingDetails) }
+        // *Kept from before.* for the card paid for, whether or not it came from the cache.
+        val kept = insight.cached || context.cardShown
+        Box(Modifier.weight(1f)) { GroundingLine(insight.grounded, kept, groundingDetails) }
         context.track?.let { track -> ReportAction { actions.onReport(track, insight) } }
     }
     if (!insight.complete) Quiet(stringResource(R.string.home_insight_incomplete))
+    // The card paid for, shown again after its rewrite failed or was stopped.
+    context.rewriteFailed?.let {
+        if (it == PipelineHost.STOPPED) {
+            Quiet(stringResource(R.string.home_rewrite_stopped))
+        } else {
+            Quiet(stringResource(R.string.home_rewrite_failed, failureText(it)))
+        }
+    }
+    // By the split button's Rewrite (#615): written with earlier settings, it can be written again.
+    if (offersRewrite(context)) {
+        Quiet(stringResource(R.string.home_rewrite_offered))
+    }
 }
 
 @Composable

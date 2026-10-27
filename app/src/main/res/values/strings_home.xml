@@ -87,6 +87,8 @@
          for Now, or for the mode already chosen. -->
     <string name="home_write_mode_paid">Each new track’s insight is a paid call.</string>
     <string name="home_write">Write insight</string>
+    <!-- The split button's Write beside the card paid for, once a settings change changed its key (#615). -->
+    <string name="home_rewrite">Rewrite</string>
     <!-- The split button's Write under an automatic mode (#615): a tap writes this track's insight
          and starts or resumes automatic writing; disabled while it runs by itself. -->
     <string name="home_write_on_change">Write on change</string>
@@ -114,6 +116,10 @@
     <string name="home_insight_no_evidence">The sources give nothing to write an insight from.</string>
     <string name="home_insight_failed">The insight could not be written: %1$s.</string>
     <string name="home_insight_incomplete">The reply stopped early, so this is incomplete, and it was not kept.</string>
+    <!-- Shown with Rewrite (#615). -->
+    <string name="home_rewrite_offered">Rewrite with updated source or model settings.</string>
+    <string name="home_rewrite_failed">Rewriting failed: %1$s. This is the insight written earlier.</string>
+    <string name="home_rewrite_stopped">Rewriting stopped. This is the insight written earlier.</string>
     <string name="home_stop">Stop</string>
     <string name="home_insight_stopped">Stopped before the reply ended, so nothing was kept.</string>
     <string name="home_insight_retry">Write insight tries again, as a new call to your AI service.</string>
