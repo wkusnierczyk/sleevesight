@@ -93,6 +93,7 @@ internal class FakeSession(
     queueTitle: CharSequence? = null,
     sessionActivity: android.app.PendingIntent? = null,
     override var marksCall: Boolean = false,
+    override var remote: Boolean = false,
 ) : PlayerSession {
     override val key: Any = Any()
     val callbacks = mutableListOf<MediaController.Callback>()
@@ -176,6 +177,27 @@ internal class FakeSession(
             PlaybackInfoBuilder
                 .newBuilder()
                 .setAudioAttributes(AudioAttributes.Builder().setUsage(usage).build())
+                .build()
+        callbacks.toList().forEach { it.onAudioInfoChanged(info) }
+    }
+
+    /**
+     * Moves playback to another device ([remote]) or back to the phone, as Spotify Connect does,
+     * and reports it as the system would: `onAudioInfoChanged`, with no new playback state.
+     */
+    fun playOn(remote: Boolean) {
+        this.remote = remote
+        val type =
+            if (remote) {
+                MediaController.PlaybackInfo.PLAYBACK_TYPE_REMOTE
+            } else {
+                MediaController.PlaybackInfo.PLAYBACK_TYPE_LOCAL
+            }
+        val info =
+            PlaybackInfoBuilder
+                .newBuilder()
+                .setVolumeType(type)
+                .setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).build())
                 .build()
         callbacks.toList().forEach { it.onAudioInfoChanged(info) }
     }
