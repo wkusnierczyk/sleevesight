@@ -36,6 +36,7 @@ import app.sleevesight.app.secrets.KeyGate
 import app.sleevesight.app.secrets.SecretCipher
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretStore
+import app.sleevesight.app.secrets.keylessOffBeforeSave
 import app.sleevesight.app.session.ArtLoader
 import app.sleevesight.app.session.DataStoreLearningMark
 import app.sleevesight.app.session.HttpArt
@@ -137,7 +138,13 @@ class AppGraph internal constructor(
     val settings = SettingsStore(settingsData, SettingsStore.BUILD_DEFAULTS)
 
     /** The user's keys, sealed with the app's Android Keystore key, in a file of their own. */
-    val secrets = SecretStore(preferences(appContext, SECRETS_FILE), secretCipher)
+    val secrets =
+        SecretStore(
+            preferences(appContext, SECRETS_FILE),
+            secretCipher,
+            // A key saved where none was never finds its service still stored on (#667).
+            beforeFirstSave = settings::keylessOffBeforeSave,
+        )
 
     /**
      * Where the settings screen saves a setting or a key, or removes keys: the process's scope, so

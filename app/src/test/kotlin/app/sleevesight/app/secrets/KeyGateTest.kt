@@ -34,12 +34,20 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class KeyGateTest {
     private val key = softwareKey()
-    private val settings = SettingsStore(MemoryStore())
+    private val settingsData = FlakyDataStore(MemoryStore())
+    private val settings = SettingsStore(settingsData)
     private val secretsData = MemoryStore()
     private val secrets = secretStore()
 
+    /** The keys over [secretsData], each first save writing its services off, as the app's do. */
     private fun secretStore(cipher: SecretCipher = testCipher(key)) =
-        SecretStore(secretsData, cipher, legacyKeystore = false, dispatcher = Dispatchers.Unconfined)
+        SecretStore(
+            secretsData,
+            cipher,
+            legacyKeystore = false,
+            dispatcher = Dispatchers.Unconfined,
+            beforeFirstSave = settings::keylessOffBeforeSave,
+        )
 
     /** Every service that needs a key switched on, as an earlier version could store them. */
     private val allOn: (Settings) -> Settings = {
@@ -105,6 +113,84 @@ class KeyGateTest {
             gate()
             assertFalse(SourceSwitch.LASTFM in stored().enabledSources)
             assertEquals(emptySet<WebEngine>(), stored().webEngines)
+        }
+
+    @Test
+    fun servicesSwitchedOnWithNoKeyWhileTheGateRunsGoOffAgain() =
+        runTest(UnconfinedTestDispatcher()) {
+            gate()
+            settings.update(allOn)
+            runCurrent()
+            val now = stored()
+            assertNull(now.aiProvider)
+            assertFalse(SourceSwitch.LASTFM in now.enabledSources)
+            assertEquals(emptySet<WebEngine>(), now.webEngines)
+        }
+
+    @Test
+    fun anOffWriteThatFailedIsDoneAtTheNextChange() =
+        runTest(UnconfinedTestDispatcher()) {
+            saveAll()
+            settings.update(allOn)
+            gate()
+            settingsData.writeFailures.set(1)
+            assertTrue(secrets.clear(SecretId.EXA))
+            runCurrent()
+            // Not written: Exa is still stored on, until the next change of the settings or keys.
+            assertTrue(WebEngine.EXA in stored().webEngines)
+            settings.update { it.copy(showGenres = false) }
+            runCurrent()
+            assertFalse(WebEngine.EXA in stored().webEngines)
+        }
+
+    @Test
+    fun aKeySavedAgainAfterAFailedOffWriteDoesNotBringItsServiceBack() =
+        runTest(UnconfinedTestDispatcher()) {
+            saveAll()
+            settings.update(allOn)
+            gate()
+            // The key removed, and the gate's write of Exa off fails.
+            settingsData.writeFailures.set(1)
+            assertTrue(secrets.clear(SecretId.EXA))
+            runCurrent()
+            assertTrue(WebEngine.EXA in stored().webEngines)
+            // Saved again, the key finds Exa written off first: it stays off, as any key saved leaves it.
+            assertEquals(SaveResult.SAVED, secrets.set(SecretId.EXA, Secret("exa-again")))
+            runCurrent()
+            assertFalse(WebEngine.EXA in stored().webEngines)
+            assertEquals(ProviderId.ANTHROPIC, stored().aiProvider)
+        }
+
+    @Test
+    fun aKeySavedAfterAFailedOffWriteIsNotSavedWhenItsServiceCannotBeWrittenOff() =
+        runTest(UnconfinedTestDispatcher()) {
+            saveAll()
+            settings.update(allOn)
+            // The gate's write of Exa off fails, as before a restart: Exa stays stored on, its key gone.
+            settingsData.writeFailures.set(1)
+            gate()
+            assertTrue(secrets.clear(SecretId.EXA))
+            runCurrent()
+            assertTrue(WebEngine.EXA in stored().webEngines)
+            // The write before the save fails too: the key is not saved, and the save says storage failed.
+            settingsData.writeFailures.set(1)
+            assertEquals(SaveResult.NOT_WRITTEN, secrets.set(SecretId.EXA, Secret("exa-again")))
+            assertFalse(secrets.isStored(SecretId.EXA))
+            // Once the settings can be written, a save writes Exa off first.
+            assertEquals(SaveResult.SAVED, secrets.set(SecretId.EXA, Secret("exa-again")))
+            runCurrent()
+            assertFalse(WebEngine.EXA in stored().webEngines)
+        }
+
+    @Test
+    fun replacingASavedKeyLeavesItsServiceOn() =
+        runTest(UnconfinedTestDispatcher()) {
+            saveAll()
+            settings.update(allOn)
+            gate()
+            assertEquals(SaveResult.SAVED, secrets.set(SecretId.EXA, Secret("exa-new")))
+            runCurrent()
+            assertAllOn(stored())
         }
 
     @Test

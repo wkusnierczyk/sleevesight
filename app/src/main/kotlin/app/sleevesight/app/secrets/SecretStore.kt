@@ -164,6 +164,7 @@ class SecretStore(
     private val cipher: SecretCipher,
     private val legacyKeystore: Boolean = Build.VERSION.SDK_INT < Build.VERSION_CODES.S,
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val beforeFirstSave: suspend (SecretId) -> Boolean = { true },
 ) {
     private val data: Flow<Preferences> =
         dataStore.data.catch { e -> if (e is IOException) emit(emptyPreferences()) else throw e }
@@ -247,12 +248,25 @@ class SecretStore(
      * could not be written (DataStore failed), or, before API 31, when no key was found and the file
      * could not be read to tell whether one may be made; what was stored before is then kept, and
      * nothing is deleted.
+     *
+     * Where no entry is stored for [id] (or the file cannot be read to tell), [beforeFirstSave] runs
+     * first (#667): in the app, it saves the services that need the key off, so a key saved never
+     * finds its service still stored on from before it was removed, should the keys' gate
+     * ([KeyGate]) have failed to write that service off. When it fails, nothing is saved, and the
+     * result is [SaveResult.NOT_WRITTEN]: storage failed, and trying again may work.
      */
     suspend fun set(
         id: SecretId,
         secret: Secret,
     ): SaveResult =
         writes.withLock {
+            val first =
+                try {
+                    dataStore.data.first()[keyOf(id)] == null
+                } catch (_: IOException) {
+                    true // Not known: as if none were stored, so its services are saved off first.
+                }
+            if (first && !beforeFirstSave(id)) return@withLock SaveResult.NOT_WRITTEN
             // Before API 31, whether any entry is stored: null when the file cannot be read.
             val stored = if (legacyKeystore) anyStored() else false
             val sealed =

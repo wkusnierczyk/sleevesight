@@ -425,14 +425,17 @@ private val LANDING = 1300.milliseconds
  * Under a service that needs the key [id] (#539): "Set your Anthropic API key here.", the key's name
  * a link that unfolds *Secrets* and lands on the key's row, so the key is always one tap away; once
  * a key is saved ([state]), "Update your Anthropic API key here." (#667), the row there changing it.
- * A key saved but no longer readable is updated too: it is entered again. A row that shows it says
- * what is wrong with the key without naming *Secrets* ([keyNote] with `linked`).
+ * A key saved but no longer readable is updated too: it is entered again. Nothing before the keys'
+ * states are read (a null [state]), which would say "Set your …" for a moment beside a saved key. A
+ * row that shows it says what is wrong with the key without naming *Secrets* ([keyNote] with
+ * `linked`).
  */
 @Composable
 internal fun KeyLink(
     id: SecretId,
     state: SecretState?,
 ) {
+    if (state == null) return
     val name = stringResource(keyName(id))
     val sentence = if (keySaved(state)) R.string.settings_update_key else R.string.settings_set_key
     LinkedText(

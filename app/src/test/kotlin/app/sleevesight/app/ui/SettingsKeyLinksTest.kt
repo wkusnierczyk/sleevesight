@@ -212,6 +212,8 @@ class SettingsKeyLinksTest {
         saved: Boolean = false,
     ) {
         val target = SettingsTarget.key(id)
+        // The sentence shows once the keys' states are read (#667).
+        waitForNode(hasText(sentence(id, saved)))
         val sentence = compose.onNode(hasText(sentence(id, saved)), useUnmergedTree = true).performScrollTo()
         // With the clock stopped from the tap on, the landing goes no further than the test lets it.
         if (stopClock) compose.mainClock.autoAdvance = false

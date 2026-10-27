@@ -311,6 +311,11 @@ class AiSettingsTest {
             compose.onNodeWithText(text(R.string.settings_ai_provider_anthropic)).performScrollTo().assertIsOn()
             compose.waitForIdle()
             assertTrue(absentText(needsKey(R.string.settings_ai_provider_anthropic)))
+            // Nor "Set your …" (or "Update your …"), which could be wrong for a saved key (#667).
+            val keyName = text(R.string.settings_key_name_anthropic)
+            for (sentence in listOf(R.string.settings_set_key, R.string.settings_update_key)) {
+                assertTrue(compose.onAllNodesWithSubstring(app.getString(sentence, keyName)).isEmpty())
+            }
         }
     }
 

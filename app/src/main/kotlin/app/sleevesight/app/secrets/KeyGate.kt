@@ -32,6 +32,20 @@ internal fun Settings.keylessOff(missing: Set<SecretId>): Settings {
 internal suspend fun SecretStore.missing(): Set<SecretId> = SecretId.entries.filterNot { isStored(it) }.toSet()
 
 /**
+ * Saves every service that needs the key [id] off (#667), before that key is saved where none is
+ * stored ([SecretStore]'s `beforeFirstSave`): whatever the keys' gate could not write when the key
+ * was removed, the key saved never brings a service back on. Across a restart too, since it is the
+ * stored settings it writes. False when the settings could not be written; the key is then not saved.
+ */
+internal suspend fun SettingsStore.keylessOffBeforeSave(id: SecretId): Boolean =
+    try {
+        update { it.keylessOff(setOf(id)) }
+        true
+    } catch (_: IOException) {
+        false
+    }
+
+/**
  * Keeps a service that needs a key off, in the stored settings, while its key is not saved (#667):
  * whenever the keys change (one saved, removed, or every one purged) or the settings do, each
  * service switched on whose key has no entry is switched off and saved so ([keylessOff]). Settings
@@ -66,7 +80,8 @@ class KeyGate(
                 // The keys as read just before; the settings as stored at the write.
                 settings.update { it.keylessOff(missing) }
             } catch (_: IOException) {
-                // Not written: the switch stays on until the next change of the keys or settings.
+                // Not written: tried again at the next change of the keys or settings, and a key
+                // saved for it writes it off first ([keylessOffBeforeSave]), so it cannot come back.
             }
         }
     }
