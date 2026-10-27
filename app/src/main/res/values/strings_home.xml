@@ -122,6 +122,8 @@
     <!-- The insight card's split button (#615): its arrow opens the menu of Reactive's modes, the same
          setting. A screen reader reads the arrow with the mode chosen, one of Reactive's choices. -->
     <string name="home_write_mode">Writing mode: %1$s</string>
+    <!-- The arrow's description while its menu also holds Look again (#617), beside a written insight. -->
+    <string name="home_write_mode_look_again">Writing mode: %1$s, and Look again</string>
     <!-- The arrow, read before the settings are first read and the mode is not known. -->
     <string name="home_write_mode_unknown">Writing mode</string>
     <!-- The menu's last item, after the modes: opens the settings at Reactive, where each mode is described. -->

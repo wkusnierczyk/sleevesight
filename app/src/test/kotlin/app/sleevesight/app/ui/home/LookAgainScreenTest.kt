@@ -83,6 +83,9 @@ class LookAgainScreenTest {
     @Test
     fun aWrittenInsightOffersLookAgainFirstInTheMenuWithTheAiMark() {
         show {
+            compose
+                .onNodeWithTag(WRITE_MODE_TAG)
+                .assertContentDescriptionEquals("Writing mode: On track change (auto), and Look again")
             openMenu()
             item.assertIsEnabled().assertContentDescriptionEquals("Look again, uses AI")
             val marks = compose.onAllNodesWithTag(AI_MARK_TAG, useUnmergedTree = true).fetchSemanticsNodes()
@@ -118,6 +121,7 @@ class LookAgainScreenTest {
         view.value =
             PipelineView(track(insight = InsightState.Idle(canWrite = true)), aiReady = true, lookAgainKey = key)
         show {
+            compose.onNodeWithTag(WRITE_MODE_TAG).assertContentDescriptionEquals("Writing mode: On track change (auto)")
             openMenu()
             item.assertDoesNotExist()
         }

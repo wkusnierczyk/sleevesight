@@ -134,8 +134,8 @@ internal class LookAgainItem(
  * choosing *On demand*, or the mode already chosen, says nothing.
  *
  * Beside a written insight ([lookAgain], #617), the menu begins with *Look again*, ending in the
- * **AI** mark, as it may make a call, then a divider. The arrow's description stays *Writing
- * mode: <mode>*.
+ * **AI** mark, as it may make a call, then a divider; the arrow then reads *Writing mode: <mode>,
+ * and Look again*.
  *
  * Material 3's own `SplitButtonLayout` is not in material3 1.4, the version the project's Compose
  * BOM gives, so the halves are drawn here with its shapes: round outer corners (16 dp, as the genre
@@ -241,7 +241,7 @@ private fun ModeArrow(
         }
     val content =
         if (enabled) colours.contentColor else MaterialTheme.colorScheme.onSurface.copy(alpha = DISABLED_CONTENT_ALPHA)
-    val described = described(writing)
+    val described = described(writing, lookAgain != null)
     Box {
         var arrow =
             Modifier
@@ -278,11 +278,17 @@ private fun ModeArrow(
     }
 }
 
-// *Writing mode: <mode>*; *Writing mode* alone before the settings' first read.
+// *Writing mode: <mode>*, and *, and Look again* while the menu holds it (#617); *Writing mode*
+// alone before the settings' first read.
 @Composable
-private fun described(writing: WritingChoice?): String {
+private fun described(
+    writing: WritingChoice?,
+    lookAgain: Boolean,
+): String {
     if (writing == null) return stringResource(R.string.home_write_mode_unknown)
-    return stringResource(R.string.home_write_mode, stringResource(writingModeName(writing.mode)))
+    val mode = stringResource(writingModeName(writing.mode))
+    val line = if (lookAgain) R.string.home_write_mode_look_again else R.string.home_write_mode
+    return stringResource(line, mode)
 }
 
 // *Look again* beside a written insight (#617); *Reactive*'s modes, one choice among them, by name,
