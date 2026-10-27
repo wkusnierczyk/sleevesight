@@ -52,6 +52,7 @@ internal fun KeyRow(
     indent: Boolean,
     open: (SettingsDialog) -> Unit,
 ) {
+    if (!shownInSearch(title)) return
     val state = secrets[id] ?: SecretState.ABSENT
     LandingSpot(SettingsTarget.key(id)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -125,6 +126,8 @@ internal fun SecretsSection(
  */
 @Composable
 private fun LoadKeysMore() {
+    // With *Load keys*, whose row it explains (#649).
+    if (!shownInSearch(stringResource(R.string.settings_scan_keys))) return
     val parts =
         linkedParts(
             stringResource(R.string.settings_scan_keys_more),

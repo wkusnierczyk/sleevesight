@@ -28,9 +28,11 @@ import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
+import app.sleevesight.app.ui.theme.ChipFrame
 import app.sleevesight.app.ui.theme.DeveloperMark
 import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
+import app.sleevesight.app.ui.theme.chipColours
 import app.sleevesight.core.evidence.EvidenceLine
 import app.sleevesight.core.model.Outcome
 

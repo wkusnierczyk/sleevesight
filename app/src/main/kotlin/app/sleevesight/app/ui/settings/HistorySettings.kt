@@ -42,7 +42,7 @@ private const val DAYS_IN_YEAR = 365
 private val YEAR = DAYS_IN_YEAR.days
 
 /** The cache lifetimes of the sources with an adapter (D9); Discogs's comes with it. */
-private val SHOWN_LIFETIMES =
+internal val SHOWN_LIFETIMES =
     listOf(
         SourceId.MUSICBRAINZ to R.string.settings_source_musicbrainz,
         SourceId.WIKIDATA to R.string.settings_cache_wikidata,
@@ -62,9 +62,7 @@ internal fun HistorySection(
     open: (SettingsDialog) -> Unit,
 ) {
     val lifetime = settings.historyLifetime
-    val lifetimes =
-        ((HISTORY_DAYS.map { it.days } + listOfNotNull(lifetime)).distinct().sorted() + null)
-            .map { it to lifetimeLabel(it) }
+    val lifetimes = historyLifetimes(lifetime)
     ValueRow(title = stringResource(R.string.settings_keep_history), value = lifetimeLabel(lifetime)) {
         open(
             SettingsDialog.Choice(R.string.settings_keep_history, lifetimes, lifetime) { chosen ->
@@ -79,7 +77,7 @@ internal fun HistorySection(
     )
 
     val gap = settings.sessionGap
-    val gaps = (SESSION_GAP_MINUTES.map { it.minutes } + gap).distinct().sorted().map { it to durationLabel(it) }
+    val gaps = sessionGaps(gap)
     // Where *Don't repeat artist facts* links to (#581).
     LandingSpot(SettingsTarget.sessionGap) {
         ValueRow(
@@ -114,10 +112,12 @@ private fun LifetimeRows(
     update: Update,
     open: (SettingsDialog) -> Unit,
 ) {
-    Hint(R.string.settings_cache_lifetimes)
+    // Over the rows under it, so a search that finds one of them shows it too (#649).
+    val shown = SHOWN_LIFETIMES.filter { (source, _) -> settings.cacheLifetimes[source] != null }
+    Hint(R.string.settings_cache_lifetimes, over = shown.map { (_, name) -> stringResource(name) })
     for ((source, name) in SHOWN_LIFETIMES) {
         val lifetime = settings.cacheLifetimes[source] ?: continue
-        val options = (LIFETIME_DAYS.map { it.days } + lifetime).distinct().sorted().map { it to daysLabel(it) }
+        val options = cacheLifetimes(lifetime)
         ValueRow(title = stringResource(name), value = daysLabel(lifetime), indent = true) {
             open(
                 SettingsDialog.Choice(name, options, lifetime) { chosen ->
@@ -155,9 +155,26 @@ internal fun ClearHistoryDialog(
     )
 }
 
+/** *Keep history for*'s choices, [lifetime] the one set among them; null is *Forever*. */
+@Composable
+internal fun historyLifetimes(lifetime: Duration?): List<Pair<Duration?, String>> {
+    val lifetimes = (HISTORY_DAYS.map { it.days } + listOfNotNull(lifetime)).distinct().sorted()
+    return (lifetimes + null).map { it to lifetimeLabel(it) }
+}
+
+/** *New session idle trigger*'s choices, [gap] the one set among them. */
+@Composable
+internal fun sessionGaps(gap: Duration): List<Pair<Duration, String>> =
+    (SESSION_GAP_MINUTES.map { it.minutes } + gap).distinct().sorted().map { it to durationLabel(it) }
+
+/** A source's cache lifetime's choices, [lifetime] the one set among them. */
+@Composable
+internal fun cacheLifetimes(lifetime: Duration): List<Pair<Duration, String>> =
+    (LIFETIME_DAYS.map { it.days } + lifetime).distinct().sorted().map { it to daysLabel(it) }
+
 /** *Keep history for*: null is *Forever*. */
 @Composable
-private fun lifetimeLabel(lifetime: Duration?): String =
+internal fun lifetimeLabel(lifetime: Duration?): String =
     lifetime?.let { durationLabel(it) } ?: stringResource(R.string.settings_keep_history_forever)
 
 /**
@@ -166,7 +183,7 @@ private fun lifetimeLabel(lifetime: Duration?): String =
  * is shown as it is.
  */
 @Composable
-private fun durationLabel(duration: Duration): String {
+internal fun durationLabel(duration: Duration): String {
     val (unit, count) =
         when {
             duration.isWhole(YEAR) -> R.plurals.settings_years to duration / YEAR

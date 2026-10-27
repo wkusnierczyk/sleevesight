@@ -58,11 +58,7 @@ internal fun DeveloperSection(
         checked = settings.showGroundingDetails,
     ) { on -> update { it.copy(showGroundingDetails = on) } }
     ReportButtonRow(settings, update, open)
-    val linkStyles =
-        listOf(
-            LinkStyle.UNDERLINE to stringResource(R.string.settings_link_style_underline),
-            LinkStyle.HIGHLIGHT to stringResource(R.string.settings_link_style_highlight),
-        )
+    val linkStyles = linkStyles()
     ValueRow(
         title = stringResource(R.string.settings_link_style),
         value = linkStyles.first { it.first == settings.linkStyle }.second,
@@ -98,18 +94,8 @@ private fun ReportButtonRow(
     update: Update,
     open: (SettingsDialog) -> Unit,
 ) {
-    val reportButtons =
-        listOf(
-            ReportButton.SHOW to stringResource(R.string.settings_report_button_show),
-            ReportButton.AUTO to stringResource(R.string.settings_report_button_auto),
-            ReportButton.HIDE to stringResource(R.string.settings_report_button_hide),
-        )
-    val reportButtonDetails =
-        mapOf(
-            ReportButton.SHOW to stringResource(R.string.settings_report_button_show_detail),
-            ReportButton.AUTO to stringResource(R.string.settings_report_button_auto_detail),
-            ReportButton.HIDE to stringResource(R.string.settings_report_button_hide_detail),
-        )
+    val reportButtons = reportButtons()
+    val reportButtonDetails = reportButtonDetails()
     ValueRow(
         title = stringResource(R.string.settings_report_button),
         value = reportButtons.first { it.first == settings.reportButton }.second,
@@ -128,3 +114,29 @@ private fun ReportButtonRow(
         )
     }
 }
+
+/** *Link style*'s choices. */
+@Composable
+internal fun linkStyles(): List<Pair<LinkStyle, String>> =
+    listOf(
+        LinkStyle.UNDERLINE to stringResource(R.string.settings_link_style_underline),
+        LinkStyle.HIGHLIGHT to stringResource(R.string.settings_link_style_highlight),
+    )
+
+/** *Report button*'s choices. */
+@Composable
+internal fun reportButtons(): List<Pair<ReportButton, String>> =
+    listOf(
+        ReportButton.SHOW to stringResource(R.string.settings_report_button_show),
+        ReportButton.AUTO to stringResource(R.string.settings_report_button_auto),
+        ReportButton.HIDE to stringResource(R.string.settings_report_button_hide),
+    )
+
+/** What each of *Report button*'s choices does, as its dialog says under it. */
+@Composable
+internal fun reportButtonDetails(): Map<ReportButton, String> =
+    mapOf(
+        ReportButton.SHOW to stringResource(R.string.settings_report_button_show_detail),
+        ReportButton.AUTO to stringResource(R.string.settings_report_button_auto_detail),
+        ReportButton.HIDE to stringResource(R.string.settings_report_button_hide_detail),
+    )
