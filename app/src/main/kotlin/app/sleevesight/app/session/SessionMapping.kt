@@ -5,6 +5,7 @@ import android.media.MediaMetadata
 import android.media.session.MediaSession
 import android.media.session.PlaybackState
 import app.sleevesight.core.model.NowPlaying
+import app.sleevesight.core.settings.Settings
 import java.time.ZoneOffset
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.milliseconds
@@ -141,6 +142,42 @@ object SessionMapping {
             speed = state.playbackSpeed,
         )
     }
+
+    /**
+     * [state] as the app reads it, by whether its session plays on another device ([remote],
+     * `PLAYBACK_TYPE_REMOTE`): a remote session of one of [CONNECT_PLAYERS] reporting `PAUSED` at a
+     * speed above 0 is `PLAYING` at that speed; every other state is as reported. Every reader of
+     * a followed session's state takes it from here: the status shown, the bar, the choice of
+     * session, skip detection and the history.
+     *
+     * Spotify Connect publishes one session for the device it plays on, always `PAUSED`; only the
+     * speed tells playing (1) from paused (0), and the position is reported at each change (#595,
+     * from a capture of the system's log). On the phone itself Spotify reports `PLAYING`. Local
+     * sessions are read as reported: a local player reports `PAUSED` or `STOPPED` at speed 1 while
+     * it is still (Audioteka, `STOPPED` at 1). Other players' remote sessions are read as reported
+     * too: only Spotify's was measured, and a cast session paused at speed 1 would otherwise show as
+     * playing.
+     */
+    fun effectiveState(
+        player: String,
+        state: PlaybackState?,
+        remote: Boolean,
+    ): PlaybackState? =
+        state
+            ?.takeIf {
+                remote &&
+                    player in CONNECT_PLAYERS &&
+                    it.state == PlaybackState.STATE_PAUSED &&
+                    it.playbackSpeed > 0f
+            }?.let {
+                PlaybackState
+                    .Builder(it)
+                    .setState(PlaybackState.STATE_PLAYING, it.position, it.playbackSpeed, it.lastPositionUpdateTime)
+                    .build()
+            } ?: state
+
+    /** The players whose remote session reads its speed as playing ([effectiveState], #595): Spotify Connect's. */
+    val CONNECT_PLAYERS: Set<String> = setOf(Settings.SPOTIFY)
 
     /** Whether [state] is playing or about to, which makes its player the one shown. */
     fun isActive(state: PlaybackState?): Boolean = state?.state in ACTIVE

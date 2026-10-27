@@ -460,8 +460,10 @@ class SessionRepository(
      * The session shown of [eligible], in the system's order: the first that plays
      * ([SessionMapping.isActive]). With none playing, the player is the first listed's, as before
      * #595, and of that player's sessions the one already shown stays, so a pause on another device
-     * does not hand the row to the player's idle session; else the first listed. The speed of a
-     * paused session plays no part: many players report `PAUSED` at speed 1.
+     * does not hand the row to the player's idle session; else the first listed. Each state is
+     * read by its session's type first ([SessionMapping.effectiveState]): a remote session's
+     * `PAUSED` at a speed above 0 plays (Spotify Connect); a local one's speed plays no part, since
+     * many players report `PAUSED` at speed 1.
      */
     private fun choose(eligible: List<Attached>): Attached? {
         eligible.firstOrNull { SessionMapping.isActive(it.state) }?.let { return it }
@@ -579,8 +581,11 @@ class SessionRepository(
                             movesBack = SessionMapping.movedBack(this@Attached.state, state),
                         )
                         if (item != null) stateItem = item
-                        this@Attached.state = state
-                        remember(SessionMapping.playbackInfo(gate.player, state))
+                        reported = state
+                        // The type with each state, as `onAudioInfoChanged` need not come first.
+                        remote = gate.remote
+                        this@Attached.state = SessionMapping.effectiveState(gate.player, state, remote)
+                        remember(SessionMapping.playbackInfo(gate.player, this@Attached.state))
                         settleLater()
                     }
                 }
@@ -593,11 +598,16 @@ class SessionRepository(
                     ifAttached { queueTitle = title }
                 }
 
-                // Not relied on: Android need not report a change of usage (Android 16 does not
-                // for a local session); every report and settle checks the gate anyway.
+                // Not relied on for calls: Android need not report a change of usage (Android 16
+                // does not for a local session); every report and settle checks the gate anyway.
+                // A change of playback type is read here, and with each state too.
                 override fun onAudioInfoChanged(info: MediaController.PlaybackInfo) {
                     if (attached[gate.key] !== this@Attached) return
-                    if (gate.isCall) asCall() else waitingAfterCall(gate.key)
+                    when {
+                        gate.isCall -> asCall()
+                        waitingAfterCall(gate.key) -> Unit
+                        else -> readType()
+                    }
                 }
 
                 override fun onSessionDestroyed() {
@@ -610,7 +620,14 @@ class SessionRepository(
             }
 
         var metadata: MediaMetadata? = null
+
+        /** The playback state as the app reads it ([SessionMapping.effectiveState]): what everything here uses. */
         var state: PlaybackState? = null
+            private set
+
+        /** The playback state as the player reported it, and whether the session plays on another device. */
+        private var reported: PlaybackState? = null
+        private var remote = false
         var queue: List<MediaSession.QueueItem>? = null
         var queueTitle: CharSequence? = null
 
@@ -711,10 +728,25 @@ class SessionRepository(
                 // In the getters' order.
                 val read = values.iterator()
                 metadata = read.next() as MediaMetadata?
-                state = read.next() as PlaybackState?
+                reported = read.next() as PlaybackState?
                 queue = read.next() as List<MediaSession.QueueItem>?
                 queueTitle = read.next() as CharSequence?
+                remote = gate.remote
+                state = SessionMapping.effectiveState(gate.player, reported, remote)
             }
+        }
+
+        /**
+         * Reads the playback type again, as `onAudioInfoChanged` reports a change: playback moved
+         * between the phone and another device. The state last reported is read by the new type, and
+         * published if that changes it.
+         */
+        private fun readType() {
+            val now = gate.remote
+            if (now == remote) return
+            remote = now
+            state = SessionMapping.effectiveState(gate.player, reported, remote)
+            publish()
         }
 
         /**
@@ -752,6 +784,7 @@ class SessionRepository(
             pending = false
             metadata = null
             state = null
+            reported = null
             queue = null
             queueTitle = null
             track = null
@@ -964,6 +997,9 @@ private class CallGate(
 
     /** Whether the session is a call now: by its package (`Settings.isCall`) or by its own mark. */
     val isCall: Boolean get() = Settings.isCall(session.player) || session.marksCall
+
+    /** Whether the session plays on another device ([PlayerSession.remote]): its type, not what it plays. */
+    val remote: Boolean get() = session.remote
 
     fun register(callback: MediaController.Callback) = session.register(callback)
 
