@@ -687,7 +687,7 @@ fun sameInsightTrack(
  *
  * | State | Event | New state | Effects |
  * |---|---|---|---|
- * | not acknowledged | anything but the five below | unchanged | none |
+ * | not acknowledged | anything but the events of the rows below, up to ModeChosen | unchanged | none |
  * | any | Acknowledged | acknowledged | none |
  * | any | ActivityStarted | started + 1; restarting = false; the first action kept (only a new process, with a new coordinator, starts without it); the count of track changes away reset; a first action expired made again (#625) | none |
  * | any | ActivityStopped(c) | started − 1; restarting = c when none is left | none |

@@ -154,29 +154,29 @@ Each insight written is a call to your AI service (now and then two, below), on 
 flowchart TD
   A[Track starts] --> B[Gathering evidence…]
   B --> C{Written automatically?}
-  C -- yes --> D[Writing…, with Stop]
+  C -- yes --> D[Writing…, with Stop writing]
   C -- no --> E[Write insight]
   E -- tap --> D
   D -- reply checked --> F[The insight]
-  D -- Stop, or a failure --> G[Stopped or failed, with Write insight]
+  D -- Stop writing, or a failure --> G[Stopped or failed, with Write insight]
   G -- tap --> D
 ```
 
 ### *Write insight*
 
-*Write insight* writes the insight for the track on screen, from the sources shown under it: one call, or two in the case above. It is offered with *Tap Write insight to have it written from the sources below.* when the insight is not written on its own (see [Automatic writing](#automatic-writing)). Until the sources have answered, the insight says *Gathering evidence…*, and Write is not offered yet.
+*Write insight* writes the insight for the track on screen, from the sources shown under it: one call, or two in the case above. It is offered whenever the track has no insight and nothing will write it on its own (see [Automatic writing](#automatic-writing)), by default with *Tap Write insight to have it written from the sources below.* Until the sources have answered, the insight says *Gathering evidence…*, and *Write insight* is greyed out.
 
-### *Stop*
+### *Stop writing*
 
-While the insight is being written, *Key insights* says *Writing from the sources. Tap Stop to stop it.* and offers *Stop*. Stop ends the call: *Key insights* says *Stopped before the reply ended, so nothing was kept.* Nothing of the partial reply is kept, though the service may still bill what it had written before the stop, by its own terms.
+While the insight is being written, *Key insights* offers *Stop writing*, and says *Stop writing ends the call at once. If the request has reached your AI service, it still charges for what it has read and written so far.* A tap cancels the request: the AI service writes nothing more, and *Key insights* says *Stopped before the reply ended, so nothing was kept.* The service still charges for what it had already processed, the whole request it received and what it wrote before the stop. A stop before the request has gone out sends nothing, so nothing is charged; stopping also prevents the second call described above.
 
 ### Write again
 
-After a call that was stopped or failed, *Key insights* offers *Write insight* again, with *Write insight tries again, as a new call to your AI service.* Each try is a new call on your key, and it is never made on its own.
+After a call that failed, *Key insights* says *Writing failed:*, the reason, and *Tap Write insight to try again, as a new call.*; after one you stopped, *Tap Write insight to try again, as a new call.* Each try is a new call on your key, and it is never made on its own.
 
 ### An insight kept from before
 
-An insight already written stays when the track is looked up again and the insight would now be written differently: after you save, replace or remove a key, switch a web search engine, or choose another AI service, the sources may find other evidence, or another service would write it. *Key insights* then keeps the insight written earlier, with *Kept from before.* in the note under it, and under it *Sources* shows the lines that insight cites, found when it was written. It is not written again on its own while the track plays, and nothing is paid for it: the button under it says *Rewrite*, with *Rewrite with updated source or model settings.*, and a tap writes it again with the settings as they are now, a new paid call. If that rewrite fails or you stop it, the insight written earlier stays, with *Rewriting failed:* and the reason, or *Rewriting stopped.*, then *This is the insight written earlier.*, and *Rewrite* is offered again.
+An insight already written stays when the track is looked up again and the insight would now be written differently: after you save, replace or remove a key, switch a web search engine, choose another AI service or model, or change its reasoning effort or *AI service knowledge*, the sources may find other evidence, or the insight would be written otherwise. *Key insights* then keeps the insight written earlier, with *Kept from before.* in the note under it, and under it *Sources* shows the lines that insight cites, found when it was written. It is not written again on its own while the track plays, in any mode, and nothing is paid for it: the button under it says *Rewrite insight*, with *Rewrite insight with updated source or model settings.* straight under *Kept from before.*, and a tap writes it again with the settings as they are now, a new paid call. If that rewrite fails or you stop it, the insight written earlier stays, with *Rewriting failed:* and the reason, or *Rewriting stopped.*, then *This is the insight written earlier.*, and *Rewrite insight* is offered again.
 
 ### What costs nothing
 
@@ -186,28 +186,25 @@ An insight already written stays when the track is looked up again and the insig
 
 ### Automatic writing
 
-By default, [*Reactive*]({{ '/docs/tutorials/settings/' | relative_url }}) writes an insight for every track (*On track change*), so each track change is a call. *On track skip* writes only the tracks you skip to in your player; a track that ended on its own gets its sources and *Write insight*. Skips are told from natural ends by the time left on the track, and, for Spotify, by the playback states just before the change, with the player's [*Crossfade*]({{ '/docs/tutorials/settings/' | relative_url }}) detected by default. *Now* (only when you tap *Write insight*) offers *Write insight* on every track.
+By default, [*Reactive*]({{ '/docs/tutorials/settings/' | relative_url }}) writes an insight for every track (*On track change (auto)*), so each track change is a call. *On track skip (auto)* writes only the tracks you skip to in your player; a track that ended on its own gets its sources and *Write insight*. Skips are told from natural ends by the time left on the track, and, for Spotify, by the playback states just before the change, with the player's [*Crossfade*]({{ '/docs/tutorials/settings/' | relative_url }}) detected by default. *On demand* (only when you tap *Write insight*) offers *Write insight* on every track.
 
-**The split button.** At the end of *Key insights*, under the insight, one button in two parts. The left part always says what a tap does, and the line above it says the same in words:
+**The split button.** At the end of *Key insights*, under the insight, one button in two parts. The left part says what a tap does, the same in every mode, and the line above it says why:
 
-- **No insight yet, under *Now*:** *Write insight*, greyed out until there is something to write from (while the evidence is still being gathered, for one).
-- **No insight yet, under *On track change* or *On track skip*:** *Write on change* or *Write on skip*. While automatic writing waits for a tap (no tap yet since the app started, or *Saver* has paused it), it can be tapped, with *Tap Write on change to write this track's insight and start writing automatically.* (*Write on skip* under *On track skip*), or, while paused, the line under *The pause* below; the tap writes this track's insight and starts automatic writing, or resumes it. While automatic writing goes on by itself, it is greyed out, with *Writing automatically on every track change.* or *Writing automatically when you skip a track.*
-- **A track automatic writing leaves** (under *On track skip*, one that followed another by itself): *Write insight*, which writes that one only.
-- **A write offered again** after a call that failed or was stopped: *Write insight*, which writes that one only; or, while automatic writing waits for a tap, *Write on change* or *Write on skip*, since the tap also starts or resumes it, as the line above it says.
-- **An insight kept from before, written with earlier settings** (another AI service or model, a source's key, the web search engine; see [An insight kept from before](#an-insight-kept-from-before)): *Rewrite*, in every mode. Under an automatic mode, while automatic writing waits for a tap, the tap also starts or resumes it.
-- **Any other insight shown**, written now or kept from before: the mode's write (*Write insight* under *Now*, *Write on change* or *Write on skip* otherwise), greyed out.
-- **While it is written:** *Stop*.
+- ***Write insight***, whenever the track has no insight and nothing will write it on its own: under *On demand*; after a failed or stopped call; before your first action since the app started (below); for a track that played while *Saver* had paused automatic writing, with *Automatic writing was paused while Sleevesight was not on screen, and resumes now. This track wasn't written: tap Write insight to have it written.*; and under *On track skip (auto)*, for a track that followed the last one by itself, with *This track followed the last one by itself, so it wasn't written automatically. Tap Write insight to have it written.* A tap writes that one track.
+- ***Write insight*, greyed out**, while automatic writing will write the track, before and while it writes, with *Writing automatically on every track change.* or *Writing automatically when you skip a track.*; while the evidence is still being gathered; and once the insight is shown, unless it can be rewritten.
+- ***Rewrite insight***, in every mode, for an insight kept from before, written with earlier settings (see [An insight kept from before](#an-insight-kept-from-before)).
+- ***Stop writing*** while it is written.
 
-Each of these but *Stop* ends in a small, dimmed *AI*, greyed out with the button when it is: a tap on it is a call to your AI service, on your key. Every button in the app that calls the AI service carries it, and no other does, so *Stop* and the arrow have none. The button is as tall as the genre chips, and answers a tap a little beyond its edges.
+*Write insight* and *Rewrite insight* end in a small, dimmed *AI*, greyed out with the button when it is: a tap on it is a call to your AI service, on your key. Every button in the app that calls the AI service carries it, and no other does, so *Stop writing* and the arrow have none. The button is as tall as the genre chips, and answers a tap a little beyond its edges.
 
-The right part, an arrow, opens a menu of *Reactive*'s three choices by name, *Now*, *On track change* and *On track skip*, the current one checked, and, under a line, *See Settings for details*, which opens the settings at *Reactive*, where each is described. It is the same setting as *Reactive*: choosing in the menu sets it, and a change under *Reactive* shows in the menu. Choosing *On track change* or *On track skip*, when it is not already the choice, says, in a short message, *Each new track's insight is a paid call.*; choosing *Now*, or the current choice again, says nothing; after *Now*, from then on nothing more is written without a tap, the track playing included. While the pause below holds, *Paused* shows beside the button. With *Show insights* off, both parts are greyed out. A screen reader reads the left part as its action, with *uses AI* after a write ("Write insight, uses AI"; the mark itself is not read), the right part as *Writing mode* with the current choice (and *paused* while paused), as a drop-down list, and the menu's choices as a list with one selected.
+The right part, an arrow, opens a menu of *Reactive*'s three choices by name, in order of how much is written automatically, *On demand*, *On track skip (auto)* and *On track change (auto)*, the current one checked, and, under a line, *See Settings for details*, which opens the settings at *Reactive*, where each is described. It is the same setting as *Reactive*: choosing in the menu sets it, and a change under *Reactive* shows in the menu. Choosing *On track skip (auto)* or *On track change (auto)*, when it is not already the choice, says, in a short message, *Each new track's insight is a paid call.*; choosing *On demand*, or the current choice again, says nothing; after *On demand*, from then on nothing more is written without a tap, the track playing included. With *Show insights* off, both parts are greyed out. A screen reader reads the left part as its action, with *uses AI* after a write ("Write insight, uses AI"; the mark itself is not read), the right part as *Writing mode* with the current choice, as a drop-down list, and the menu's choices as a list with one selected.
 
-Automatic writing needs a first tap:
+Automatic writing starts with your first action:
 
-- **After the app starts afresh**, nothing is written until your first tap, in every mode: on *Write on change* or *Write on skip* under the automatic modes, on *Write insight* under *Now*. That tap lasts as long as the app's process, which the notification listener usually keeps alive after you leave the app, often for days: coming back to the app, from the player, the launcher or the screen turned on again, keeps it, and writing goes on without a new tap. A restart of the phone, an update of the app, or the system ending the process (on some phones, a swipe from Recents) starts afresh.
-- **The pause.** So that one tap does not keep paying for days, automatic writing pauses once the app has not been on screen for more track changes than [*Saver*]({{ '/docs/tutorials/settings/' | relative_url }}) names (5 by default). *Key insights* then offers *Write on change* (or *Write on skip*) with *Automatic writing paused: tracks changed while Sleevesight was not on screen. Tap Write on change to write this one and resume.* A tap writes the track and resumes. Each time you open the app the count starts again.
+- **After the app starts afresh**, nothing is written automatically until you act in it, in every mode: choose a mode (in the menu or under *Reactive*, the current one included), or tap *Write insight* or *Rewrite insight*. A track that played before that offers *Write insight*. That first action lasts as long as the app's process, which the notification listener usually keeps alive after you leave the app, often for days: coming back to the app, from the player, the launcher or the screen turned on again, keeps it, and writing goes on. A restart of the phone, an update of the app, or the system ending the process (on some phones, a swipe from Recents) starts afresh.
+- **The pause.** So that one action does not keep paying for days, automatic writing pauses once the app has not been on screen for more track changes than [*Saver*]({{ '/docs/tutorials/settings/' | relative_url }}) names (5 by default). Opening the app resumes it, and the count starts again. A track that played while it was paused is not written on its own, the one playing when you come back included: it offers *Write insight*, with the line above.
 
-<!-- screenshot: Key insights with the automatic-writing-paused line and Write on change, from the app version it is taken from -->
+<!-- screenshot: Key insights with the automatic-writing-resumed line and Write insight, from the app version it is taken from -->
 
 ### While the app is not on screen
 
@@ -245,16 +242,16 @@ Playing, pausing and skipping from inside Sleevesight are not built yet; use the
 
 | Situation | What you see |
 |---|---|
-| **Offline** | *Sources* says *Offline. The sources that could not be reached are asked again when the phone is back online.* Once the phone is back online, the playing track's unreachable sources are asked again; the rest keep what they found. What was kept on the phone from earlier lookups still shows. An insight that cannot be written for want of a connection says *The insight could not be written: no connection.* |
+| **Offline** | *Sources* says *Offline. The sources that could not be reached are asked again when the phone is back online.* Once the phone is back online, the playing track's unreachable sources are asked again; the rest keep what they found. What was kept on the phone from earlier lookups still shows. An insight that cannot be written for want of a connection says *Writing failed: no connection.* |
 | **No AI service on, or no key for it** | The sources are still looked up and shown. The insight says *Choose an AI service and save its key in Settings to have insights written.*, and no Write is offered. Set it up under [*AI services*]({{ '/docs/tutorials/settings/' | relative_url }}), with its key under *Secrets*. |
 | **Insights switched off** | *Insights are off. Turn them on in Settings.* No AI calls at all; the evidence is still shown. |
 | **No key for Last.fm or web search** | *Sources* says *Last.fm needs your key, in Settings.* or *Web search needs your key, in Settings.*, and it is not asked. MusicBrainz and Wikipedia need no key. |
 | **A source rejects a match** | The match is never used, and the source has no chip unless it gave other lines. With *Show grounding details* on, its chip says *rejected*, and the match is listed under *Rejected matches* with the reason. |
 | **A match that cannot be verified** | Its lines show under *Found, but not verified, so not cited*, and the insight is not given them. Web search results have nothing to be verified against: those its filter keeps are given to the insight, and may be cited. |
 | **A source fails** | *Sources* says so (*MusicBrainz failed.*, or *… could not be reached.*); the other sources' lines are used. |
-| **The AI service refuses or fails** | *The insight could not be written:* and the reason: the service did not accept the key, the account needs credit, its quota is used up for now, it is busy, it is not offered in your country, and the like. *Write insight* tries again, as a new call. |
+| **The AI service refuses or fails** | *Writing failed:* and the reason: the service did not accept the key, the account needs credit, its quota is used up for now, it is busy, it is not offered in your country, and the like, then *Tap Write insight to try again, as a new call.* |
 | **The selected model is not available** | *The currently selected Anthropic model Claude Haiku 5.5 is not available. Please select another model or provider in AI services.*, when the service no longer lists the model for your key, or answers a call that it does not know the model or does not let your account use it. *AI services* opens the settings at that service's model, under *AI services*; no insight is written until you choose another model or service. |
 | **The reply stopped early** | The insight shows with *The reply stopped early, so this is incomplete, and it was not kept.* |
-| **The app itself fails while writing** | *The insight could not be written: something went wrong.*, with no Write; the next track runs as usual. |
+| **The app itself fails while writing** | *Writing failed: something went wrong.*, with *Write insight* greyed out; the next track runs as usual. |
 
 A key that can no longer be read, or one that cannot be saved, is dealt with in the settings; the [settings page]({{ '/docs/tutorials/settings/' | relative_url }}) says how.
