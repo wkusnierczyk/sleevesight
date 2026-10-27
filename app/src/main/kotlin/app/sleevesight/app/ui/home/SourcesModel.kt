@@ -7,21 +7,31 @@ import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.pipeline.TrackState
 
-// What *Sources* shows of each source by default (#440): the chips of the sources that gave lines,
-// and a note only for what needs the listener; the rest is behind *Show grounding details*.
+// What *Sources* shows of each source (#440, #662): a row of its table for each source but those
+// that are off, and a note only for what needs the listener; the sources that are off, and the
+// statuses that are diagnostics, are behind *Show grounding details*.
 
 /**
- * Of [chips], those *Sources* shows by name (#440): a source that gave lines to [evidence], whatever
- * else it found, and never the model's own knowledge, which gives none. The rest, and every chip's
- * status, show only with *Show grounding details* on.
+ * Of [chips], the rows of *Sources*' table (#662). With grounding [details], every one; without,
+ * all but a source that is off ([isOff]), unless it gave lines to [evidence] (the insight kept from
+ * before cites lines found while it was on).
  */
-internal fun chipsWithLines(
+internal fun tableRows(
     chips: List<SourceChip>,
     evidence: EvidenceSet?,
+    details: Boolean,
 ): List<SourceChip> {
+    if (details) return chips
     val sources = evidence?.lines.orEmpty().mapTo(mutableSetOf()) { it.source }
-    return chips.filter { chip -> chip.source != SourceId.MODEL && chip.filters.any { it in sources } }
+    return chips.filter { chip -> !chip.isOff || chip.filters.any { it in sources } }
 }
+
+/**
+ * Whether [this] source is off: switched off in the settings, or on but without its key, so not
+ * asked (what *Sources* says of it in a note).
+ */
+internal val SourceChip.isOff: Boolean
+    get() = status == ChipStatus.NeedsKey || (status as? ChipStatus.Done)?.outcome == Outcome.SourceOff
 
 /** What *Sources* tells the listener of a source (#440): only what needs them or went wrong. */
 internal sealed interface SourceNote {

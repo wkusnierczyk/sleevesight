@@ -17,20 +17,34 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 
-// The chips as the genre chips are drawn (#439, #558): Home's genre chips, *Sources*' chip and its
-// filter chips (#623), and the settings' section chips (#649).
+// The chips as the genre chips are drawn (#439, #558): Home's genre chips, *Sources*' chip (#623)
+// and the letters of its table (#662, compact), and the settings' section chips (#649).
 
 /**
- * A chip as the genre chips are drawn (#439, #558), which *Sources*' chip on Home and its filter
- * chips share (#623), and the settings' section chips (#649): [content] in a row on [fill], in the
- * chips' rounded shape and padding ([CHIP_PADDING] at each side), with a 48 dp target, one node for
- * a screen reader; with [outline], a hairline of that colour around it. [modifier] goes outside the
- * target (a tag, a focus requester, a width); [action] inside the shape, so a press shows within it
- * (a click, and what a screen reader says of it). The items of [content] are centred in the row,
- * unless they align otherwise (by their baseline).
+ * A chip as the genre chips are drawn (#439, #558), which *Sources*' chip on Home (#623) and the
+ * settings' section chips (#649) share: [content] in a row on [fill], in the chips' rounded shape
+ * and padding ([CHIP_PADDING] at each side), with a 48 dp target, one node for a screen reader;
+ * with [outline], a hairline of that colour around it. [modifier] goes outside the target (a tag, a
+ * focus requester, a width); [action] inside the shape, so a press shows within it (a click, and
+ * what a screen reader says of it). The items of [content] are centred in the row, unless they
+ * align otherwise (by their baseline).
  */
 @Composable
 internal fun ChipFrame(
+    fill: Color,
+    modifier: Modifier = Modifier,
+    outline: Color? = null,
+    action: Modifier = Modifier,
+    content: @Composable RowScope.() -> Unit,
+) = CompactChipFrame(fill, modifier.minimumInteractiveComponentSize(), outline, action, content)
+
+/**
+ * A [ChipFrame] without its 48 dp target laid out (*Sources*' table, #662): the chip takes only its
+ * own room, so rows of chips sit close. A click on it still answers within 48 dp, as Compose
+ * extends a small control's touch area.
+ */
+@Composable
+internal fun CompactChipFrame(
     fill: Color,
     modifier: Modifier = Modifier,
     outline: Color? = null,
@@ -43,7 +57,6 @@ internal fun ChipFrame(
         verticalAlignment = Alignment.CenterVertically,
         modifier =
             modifier
-                .minimumInteractiveComponentSize()
                 .clip(shape)
                 .background(fill, shape)
                 .let { chip -> outline?.let { chip.border(1.dp, it, shape) } ?: chip }
