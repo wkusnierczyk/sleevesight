@@ -12,7 +12,7 @@ import app.sleevesight.core.settings.WriteAutomatically
  * changes while Sleevesight is not on screen (`pauseAutoWriteAfter`), and under it, while on, that
  * number, *n*; a value stored that is not among the choices is offered too. Switched on, it pauses
  * after the default number ([Settings.DEFAULT_PAUSE_AUTO_WRITE_AFTER]). Fixed while nothing is
- * written automatically (*Show insights* off, or *Reactive* under *Now*).
+ * written automatically (*Show insights* off, or *Reactive* under *On demand*).
  */
 @Composable
 internal fun SaverRows(
@@ -32,7 +32,7 @@ internal fun SaverRows(
             }.takeIf { writes },
     )
     if (count == null) return
-    val options = (Settings.PAUSE_AUTO_WRITE_CHOICES + count).distinct().sorted().map { it to pauseLabel(it) }
+    val options = saverCounts(count)
     ValueRow(
         title = stringResource(R.string.settings_pause_auto_write_after),
         value = pauseLabel(count),
@@ -67,6 +67,11 @@ private fun pauseSummary(
     return pluralStringResource(plural, count, count)
 }
 
+/** *Saver*'s counts to choose from, [count] the one set among them. */
+@Composable
+internal fun saverCounts(count: Int): List<Pair<Int, String>> =
+    (Settings.PAUSE_AUTO_WRITE_CHOICES + count).distinct().sorted().map { it to pauseLabel(it) }
+
 /** A choice of *Saver*'s count: [count] track changes away. */
 @Composable
-private fun pauseLabel(count: Int): String = pluralStringResource(R.plurals.settings_track_changes_away, count, count)
+internal fun pauseLabel(count: Int): String = pluralStringResource(R.plurals.settings_track_changes_away, count, count)

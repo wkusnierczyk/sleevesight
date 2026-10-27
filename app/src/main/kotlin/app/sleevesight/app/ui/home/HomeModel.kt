@@ -70,11 +70,11 @@ internal fun headerYears(
  * ([offers]); and the switched-on
  * AI service's model, while it is found unavailable ([unavailable], #540), which no insight is
  * written with until another is chosen. *Reactive*'s [mode], null before the settings' first read,
- * whether automatic writing waits for a tap ([waiting], `PipelineView.waiting`), and whether *Saver*
- * has paused it ([paused], `PipelineView.paused`, #203) name the split button's Write and the line
- * about it (#615). Whether the insight shown is the card paid for, kept from before in place of an
- * insight the run lacks ([cardShown], `PipelineView.cardShown`), and why its rewrite failed or that
- * it was stopped ([rewriteFailed], `PipelineView.rewriteFailed`).
+ * and whether automatic writing waits for the user ([waiting], `PipelineView.waiting`) say whether
+ * the line about the split button says it writes automatically (#615). Whether the insight shown
+ * is the card paid for, kept from before in place of an insight the run lacks ([cardShown],
+ * `PipelineView.cardShown`), and why its rewrite failed or that it was stopped ([rewriteFailed],
+ * `PipelineView.rewriteFailed`).
  */
 @Suppress("LongParameterList") // Each what one part of the card says.
 internal class InsightContext(
@@ -86,7 +86,6 @@ internal class InsightContext(
     val unavailable: UnavailableModel? = null,
     val mode: WriteAutomatically? = null,
     val waiting: Boolean = false,
-    val paused: Boolean = false,
     val cardShown: Boolean = false,
     val rewriteFailed: String? = null,
 )
@@ -95,27 +94,39 @@ internal class InsightContext(
  * What the pipeline offers beside the insight shown: Rewrite beside the card paid for ([rewrite],
  * once a settings change changed its key), Write again after a call that failed or was
  * stopped ([retry]), and Stop while the call is under
- * way ([stop]); and whether the Write offered is offered only because automatic writing paused
- * while the app was not on screen ([paused], #203).
+ * way ([stop]); and why automatic writing left the track the Write offered is for: it came to play
+ * while automatic writing was paused while the app was not on screen ([paused], #203), or it
+ * followed the last one by itself under *On track skip (auto)* ([followed], #625). *Look again*
+ * (#617): offered beside the card paid for ([lookAgain]), looking the sources up ([lookingAgain]),
+ * finding something new, with *Rewrite insight* offered for it ([somethingNew]), or nothing new
+ * ([nothingNew]).
  */
+@Suppress("LongParameterList") // Each what one line or action of the card says.
 internal class InsightOffers(
     val rewrite: Boolean = false,
     val retry: Boolean = false,
     val stop: Boolean = false,
     val paused: Boolean = false,
+    val followed: Boolean = false,
+    val lookAgain: Boolean = false,
+    val lookingAgain: Boolean = false,
+    val nothingNew: Boolean = false,
+    val somethingNew: Boolean = false,
 )
 
 /**
- * Where the insight card's taps go: Write ([onWrite]) and Stop ([onStop]) to the
- * pipeline, which says whether a tap does anything; a citation chip ([onCite]) to its line; the
- * link of a model found unavailable to the settings ([onSettings], #540); *Report a problem*
- * ([onReport], #390) with the written insight and the track it was written for.
+ * Where the insight card's taps go: Write ([onWrite]), Stop ([onStop]) and *Look again*
+ * ([onLookAgain], #617) to the pipeline, which says whether a tap does anything; a citation chip
+ * ([onCite]) to its line; the link of a model found unavailable to the settings ([onSettings],
+ * #540); *Report a problem* ([onReport], #390) with the written insight and the track it was
+ * written for.
  */
 internal class InsightActions(
     val onWrite: () -> Unit,
     val onStop: () -> Unit,
     val onCite: (String) -> Unit,
     val onSettings: () -> Unit = {},
+    val onLookAgain: () -> Unit = {},
     val onReport: (TrackState, InsightState.Written) -> Unit,
 )
 

@@ -4,14 +4,16 @@ import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.isTraversalGroup
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
@@ -33,7 +35,8 @@ import app.sleevesight.core.pipeline.InsightState
  * No container of its own (#609): the heading and the text sit on Home's background with the rest.
  * At the card's end, in every state, the split button (#615, [WriteSplitButton]): the card's action
  * ([cardOffer]) and the menu of *Reactive*'s modes, from [writing]; its arrow cannot be used while
- * that is null, before the settings' first read.
+ * that is null, before the settings' first read. Beside a written insight, the menu begins with
+ * *Look again* (#617), enabled while it can be tapped ([offersLookAgain]).
  */
 @Composable
 internal fun InsightCard(
@@ -46,11 +49,19 @@ internal fun InsightCard(
     Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(stringResource(R.string.home_insight_title), style = MaterialTheme.typography.titleMedium)
         InsightBody(insight, context, actions, groundingDetails)
-        WriteSplitButton(cardOffer(insight, context), actions.onWrite, actions.onStop, writing)
+        val lookAgain =
+            (insight as? InsightState.Written)?.let {
+                LookAgainItem(
+                    offersLookAgain(context),
+                    actions.onLookAgain,
+                )
+            }
+        WriteSplitButton(cardOffer(insight, context), actions.onWrite, actions.onStop, writing, lookAgain)
     }
 }
 
-// Why the card shows no insight, in words that match the split button's label.
+// Why the card shows no insight, in words that match the split button's label (#625): with Write
+// offered, why automatic writing left this track, where it did.
 @Composable
 private fun IdleNote(
     insight: InsightState.Idle,
@@ -59,16 +70,11 @@ private fun IdleNote(
     val auto = automaticMode(context)
     val line =
         when {
-            insight.canWrite && waitsForTap(context) -> {
-                val label = stringResource(modeWrite(context))
-                // Automatic writing paused while the app was away (#203): say so, and that a tap resumes it.
-                if (resumes(context)) {
-                    stringResource(R.string.home_insight_paused, label)
-                } else {
-                    stringResource(R.string.home_insight_tap_write_auto, label)
-                }
-            }
-
+            // The track came to play while *Saver* had paused automatic writing, which opening
+            // Sleevesight has resumed (#203, #625).
+            insight.canWrite && context.offers.paused -> stringResource(R.string.home_insight_resumed)
+            // *On track skip (auto)*: the track followed the last one by itself.
+            insight.canWrite && context.offers.followed -> stringResource(R.string.home_insight_followed)
             insight.canWrite -> stringResource(R.string.home_insight_tap_write)
             // Running by itself, the evidence in: it writes next, as the mode says.
             auto != null && runsByItself(context) -> stringResource(runningLine(auto))
@@ -106,31 +112,19 @@ private fun InsightBody(
 
         is InsightState.Written -> Written(insight, context, actions, groundingDetails)
         InsightState.NoEvidence -> Quiet(stringResource(R.string.home_insight_no_evidence))
+        // Write offered again after a call that failed or was stopped: a new paid call, on a tap
+        // only, from the split button, which the line says in the same breath.
         is InsightState.Failed -> {
-            Quiet(stringResource(R.string.home_insight_failed, failureText(insight.reason)))
-            Retry(context)
+            val reason = failureText(insight.reason)
+            val line = if (context.offers.retry) R.string.home_insight_failed_retry else R.string.home_insight_failed
+            Quiet(stringResource(line, reason))
         }
 
         InsightState.Stopped -> {
             Quiet(stringResource(R.string.home_insight_stopped))
-            Retry(context)
+            if (context.offers.retry) Quiet(stringResource(R.string.home_insight_retry))
         }
     }
-}
-
-// Write offered again after a call that failed or was stopped: a new paid call, on a tap only, from
-// the split button. While automatic writing waits for a tap, the tap also starts or resumes it, and
-// the line names the mode's Write, as the button does.
-@Composable
-private fun Retry(context: InsightContext) {
-    if (!context.offers.retry) return
-    val line =
-        when {
-            !waitsForTap(context) -> stringResource(R.string.home_insight_retry)
-            resumes(context) -> stringResource(R.string.home_insight_retry_resume, stringResource(modeWrite(context)))
-            else -> stringResource(R.string.home_insight_retry_auto, stringResource(modeWrite(context)))
-        }
-    Quiet(line)
 }
 
 /** Why no insight is offered: insights off, no AI service, the evidence still coming, or the pipeline not there yet. */
@@ -155,16 +149,28 @@ private fun Written(
     for (paragraph in paragraphs) {
         CheckedProse(paragraph, insight.grounded, context.track?.evidence, actions.onCite, insight.held)
     }
-    // The footer: the grounding line, then *Report a problem* at the row's end. The line's box takes
-    // the room whatever it holds, so the action keeps its place should the line show only at times.
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        // *Kept from before.* for the card paid for, whether or not it came from the cache.
-        val kept = insight.cached || context.cardShown
-        Box(Modifier.weight(1f)) { GroundingLine(insight.grounded, kept, groundingDetails) }
-        context.track?.let { track -> ReportAction { actions.onReport(track, insight) } }
-    }
+    // The footer: the grounding line, then *Report a problem* at the row's end, or under it at a
+    // large font size.
+    Footer(
+        lines = {
+            // *Kept from before.* for the card paid for, whether or not it came from the cache, and
+            // straight under it, with no gap, what is said of that card's rewrite (#606).
+            val kept = insight.cached || context.cardShown
+            GroundingLine(insight.grounded, kept, groundingDetails)
+            // What is said of *Look again* (#617).
+            lookAgainLine(context)?.let { Quiet(stringResource(it)) }
+            RewriteLines(context)
+        },
+        action = { context.track?.let { track -> ReportAction { actions.onReport(track, insight) } } },
+    )
     if (!insight.complete) Quiet(stringResource(R.string.home_insight_incomplete))
-    // The card paid for, shown again after its rewrite failed or was stopped.
+}
+
+// What is said of the card paid for and its rewrite: shown again after its rewrite failed or was
+// stopped; and by the split button's *Rewrite insight* (#615, #625), that it was written with
+// earlier settings and can be written again.
+@Composable
+private fun RewriteLines(context: InsightContext) {
     context.rewriteFailed?.let {
         if (it == PipelineHost.STOPPED) {
             Quiet(stringResource(R.string.home_rewrite_stopped))
@@ -172,11 +178,63 @@ private fun Written(
             Quiet(stringResource(R.string.home_rewrite_failed, failureText(it)))
         }
     }
-    // By the split button's Rewrite (#615): written with earlier settings, it can be written again.
-    if (offersRewrite(context)) {
-        Quiet(stringResource(R.string.home_rewrite_offered))
+    // Not for what a look again found (#617): its own line says what Rewrite insight writes from.
+    if (offersRewrite(context) && !context.offers.somethingNew) Quiet(stringResource(R.string.home_rewrite_offered))
+}
+
+/**
+ * The footer under a written insight: [lines] (the grounding line, and what is said of the card's
+ * rewrite straight under it), and [action] (*Report a problem*) at the row's end, the two centred
+ * on each other. The lines take the room whatever they
+ * hold, so the action keeps its place should they show only at times. When the action would leave
+ * the lines less than [FOOTER_LINES] of the row, as at a large font size or on a narrow screen
+ * (#606), the action goes under them, still at the row's end, and the lines take the whole row,
+ * rather than a word a line. A screen reader reads the lines, then the action, either way.
+ */
+@Composable
+private fun Footer(
+    lines: @Composable () -> Unit,
+    action: @Composable () -> Unit,
+) {
+    // A screen reader reads the lines, all of them, then the action, wherever the layout puts them:
+    // the footer and the lines are traversal groups, the lines first, so the action, centred on the
+    // lines beside them, is not read between two of them.
+    val content =
+        listOf(
+            @Composable {
+                Column(
+                    Modifier.semantics {
+                        isTraversalGroup = true
+                        traversalIndex = 0f
+                    },
+                ) { lines() }
+            },
+            @Composable { Box(Modifier.semantics { traversalIndex = 1f }) { action() } },
+        )
+    Layout(content, Modifier.semantics { isTraversalGroup = true }) { (lineParts, actionParts), constraints ->
+        val width = constraints.maxWidth
+        val loose = constraints.copy(minWidth = 0, minHeight = 0)
+        val acted = actionParts.map { it.measure(loose) }
+        val actionWidth = acted.maxOfOrNull { it.width } ?: 0
+        val actionHeight = acted.maxOfOrNull { it.height } ?: 0
+        val beside = width - actionWidth >= width * FOOTER_LINES
+        val text = lineParts.map { it.measure(loose.copy(maxWidth = if (beside) width - actionWidth else width)) }
+        val textHeight = text.maxOfOrNull { it.height } ?: 0
+        val height = if (beside) maxOf(textHeight, actionHeight) else textHeight + actionHeight
+        layout(width, height) {
+            if (beside) {
+                text.forEach { it.placeRelative(0, (height - it.height) / 2) }
+                acted.forEach { it.placeRelative(width - it.width, (height - it.height) / 2) }
+            } else {
+                text.forEach { it.placeRelative(0, 0) }
+                acted.forEach { it.placeRelative(width - it.width, textHeight) }
+            }
+        }
     }
 }
+
+/** The share of the footer's row its lines keep beside *Report a problem*, or it goes under them: half. */
+private const val FOOTER_LINES = 0.5f
 
 @Composable
 private fun Prose(text: AnnotatedString) {

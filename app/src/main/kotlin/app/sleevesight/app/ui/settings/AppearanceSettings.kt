@@ -16,7 +16,8 @@ import app.sleevesight.core.settings.ThemeChoice
  * as you left them* (#269), off by default, so the *Sources* list under each new track's insight
  * starts folded; under *Expandable boxes* only, so it is shown, but not offered, under *Separate
  * pages*, where each page opens fresh. *Logo intro at start* (#383), from the next time the app is
- * opened.
+ * opened. *Home guide* (#627): whether Home, with nothing playing, shows the guide to Home, where
+ * its *Re-enable in Settings* lands.
  */
 @Composable
 internal fun AppearanceSection(
@@ -24,12 +25,7 @@ internal fun AppearanceSection(
     update: Update,
     open: (SettingsDialog) -> Unit,
 ) {
-    val themes =
-        listOf(
-            ThemeChoice.SYSTEM to stringResource(R.string.settings_theme_system),
-            ThemeChoice.LIGHT to stringResource(R.string.settings_theme_light),
-            ThemeChoice.DARK to stringResource(R.string.settings_theme_dark),
-        )
+    val themes = themes()
     ValueRow(
         title = stringResource(R.string.settings_theme),
         value = themes.first { it.first == settings.theme }.second,
@@ -41,11 +37,7 @@ internal fun AppearanceSection(
             },
         )
     }
-    val fonts =
-        listOf(
-            FontChoice.APP_FONT to stringResource(R.string.settings_font_app),
-            FontChoice.SYSTEM_FONT to stringResource(R.string.settings_font_system),
-        )
+    val fonts = fonts()
     ValueRow(
         title = stringResource(R.string.settings_font),
         value = fonts.first { it.first == settings.font }.second,
@@ -70,6 +62,14 @@ internal fun AppearanceSection(
         summary = stringResource(R.string.settings_intro_summary),
         checked = settings.introAtStart,
     ) { on -> update { it.copy(introAtStart = on) } }
+    // Where the home guide's *Re-enable in Settings* links to (#627).
+    LandingSpot(SettingsTarget.homeGuide) {
+        SwitchRow(
+            title = stringResource(R.string.settings_home_guide),
+            summary = stringResource(R.string.settings_home_guide_summary),
+            checked = settings.homeGuide,
+        ) { on -> update { it.copy(homeGuide = on) } }
+    }
 }
 
 /** *Layout* (#447): *Expandable boxes* or *Separate pages*, chosen in a dialog. */
@@ -79,11 +79,7 @@ private fun LayoutRow(
     update: Update,
     open: (SettingsDialog) -> Unit,
 ) {
-    val layouts =
-        listOf(
-            Layout.EXPANDABLE_BOXES to stringResource(R.string.settings_layout_boxes),
-            Layout.SEPARATE_PAGES to stringResource(R.string.settings_layout_pages),
-        )
+    val layouts = layouts()
     ValueRow(
         title = stringResource(R.string.settings_layout),
         value = layouts.first { it.first == settings.layout }.second,
@@ -96,3 +92,28 @@ private fun LayoutRow(
         )
     }
 }
+
+/** *Theme*'s choices. */
+@Composable
+internal fun themes(): List<Pair<ThemeChoice, String>> =
+    listOf(
+        ThemeChoice.SYSTEM to stringResource(R.string.settings_theme_system),
+        ThemeChoice.LIGHT to stringResource(R.string.settings_theme_light),
+        ThemeChoice.DARK to stringResource(R.string.settings_theme_dark),
+    )
+
+/** *Font*'s choices. */
+@Composable
+internal fun fonts(): List<Pair<FontChoice, String>> =
+    listOf(
+        FontChoice.APP_FONT to stringResource(R.string.settings_font_app),
+        FontChoice.SYSTEM_FONT to stringResource(R.string.settings_font_system),
+    )
+
+/** *Layout*'s choices. */
+@Composable
+internal fun layouts(): List<Pair<Layout, String>> =
+    listOf(
+        Layout.EXPANDABLE_BOXES to stringResource(R.string.settings_layout_boxes),
+        Layout.SEPARATE_PAGES to stringResource(R.string.settings_layout_pages),
+    )

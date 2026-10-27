@@ -27,6 +27,11 @@ enum class Scope(
  * passage (D1). Web text can hold anything, so a lone UTF-16 surrogate in it is replaced with
  * U+FFFD here, once: the text stored, shown and fingerprinted is then the same well-formed
  * Unicode on every platform.
+ *
+ * [aggregate] marks a line that counts or lists what many listeners did (Last.fm's listeners, the
+ * tags they gave, the artists they find similar), whose numbers and order change from one lookup to
+ * the next: *Look again* (#617) compares it with its digits masked and its list as a set
+ * ([LineContent]). Neither its text nor the evidence's fingerprint reads it.
  */
 class EvidenceDraft(
     val source: SourceId,
@@ -34,16 +39,19 @@ class EvidenceDraft(
     text: String,
     val url: String?,
     val retrievedAt: Instant,
+    val aggregate: Boolean = false,
 ) {
     val text: String = text.withoutLoneSurrogates()
 
+    @Suppress("LongParameterList") // One for each of the draft's own fields.
     fun copy(
         source: SourceId = this.source,
         scope: Scope = this.scope,
         text: String = this.text,
         url: String? = this.url,
         retrievedAt: Instant = this.retrievedAt,
-    ): EvidenceDraft = EvidenceDraft(source, scope, text, url, retrievedAt)
+        aggregate: Boolean = this.aggregate,
+    ): EvidenceDraft = EvidenceDraft(source, scope, text, url, retrievedAt, aggregate)
 
     override fun equals(other: Any?): Boolean =
         other is EvidenceDraft &&
@@ -51,12 +59,14 @@ class EvidenceDraft(
             scope == other.scope &&
             text == other.text &&
             url == other.url &&
-            retrievedAt == other.retrievedAt
+            retrievedAt == other.retrievedAt &&
+            aggregate == other.aggregate
 
-    override fun hashCode(): Int = listOf(source, scope, text, url, retrievedAt).hashCode()
+    override fun hashCode(): Int = listOf(source, scope, text, url, retrievedAt, aggregate).hashCode()
 
     override fun toString(): String =
-        "EvidenceDraft(source=$source, scope=$scope, text=$text, url=$url, retrievedAt=$retrievedAt)"
+        "EvidenceDraft(source=$source, scope=$scope, text=$text, url=$url, retrievedAt=$retrievedAt" +
+            (if (aggregate) ", aggregate=true)" else ")")
 }
 
 /**
@@ -71,6 +81,7 @@ data class EvidenceLine(
     val text: String,
     val url: String?,
     val retrievedAt: Instant,
+    val aggregate: Boolean = false,
 )
 
 /** [this] with every unpaired UTF-16 surrogate replaced by U+FFFD. */

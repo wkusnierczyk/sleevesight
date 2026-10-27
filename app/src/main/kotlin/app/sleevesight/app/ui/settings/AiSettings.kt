@@ -42,7 +42,7 @@ internal fun AiSection(
     unavailable: Map<ProviderId, String> = emptyMap(),
 ) {
     for (provider in OFFERED_PROVIDERS) {
-        val gone = settings.model(provider)?.takeIf { unavailable[provider] == it }
+        val gone = goneModel(provider, settings, unavailable)
         ProviderRows(provider, settings, secrets, modelName, update, open, gone)
     }
 }
@@ -78,26 +78,58 @@ private fun ProviderRows(
             }
         }
     }
-    val default = Settings.DEFAULT_MODELS[provider]
-    val chosen = settings.aiModels[provider]
     // Where Home's note of a model found unavailable links to (#581).
     LandingSpot(SettingsTarget.model(provider)) {
         ValueRow(
             // Each row and dialog names its provider: with several providers, a screen reader reads
             // each row on its own.
             title = stringResource(R.string.settings_ai_model_of, name),
-            value =
-                when {
-                    chosen != null && chosen != default -> modelName(chosen)
-                    default != null -> stringResource(R.string.settings_ai_model_default, modelName(default))
-                    else -> ""
-                },
-            summary = gone?.let { stringResource(R.string.settings_model_not_available, name, modelName(it)) },
+            value = modelValue(provider, settings, modelName),
+            summary = modelUnavailable(name, gone, modelName),
             underBadge = true,
             onClick = { open(SettingsDialog.Model(provider)) },
         )
     }
     EffortRow(provider, name, settings, update, open)
+}
+
+/** [provider]'s selected model, when found unavailable ([unavailable], by provider; #540); else null. */
+internal fun goneModel(
+    provider: ProviderId,
+    settings: Settings,
+    unavailable: Map<ProviderId, String>,
+): String? = settings.model(provider)?.takeIf { unavailable[provider] == it }
+
+/** What [provider]'s model row shows: the model chosen, by name, or its default's, marked as the default. */
+@Composable
+internal fun modelValue(
+    provider: ProviderId,
+    settings: Settings,
+    modelName: (String) -> String,
+): String {
+    val default = Settings.DEFAULT_MODELS[provider]
+    val chosen = settings.aiModels[provider]
+    return when {
+        chosen != null && chosen != default -> modelName(chosen)
+        default != null -> stringResource(R.string.settings_ai_model_default, modelName(default))
+        else -> ""
+    }
+}
+
+/** What the model row of the service [name] says of its model [gone], found unavailable; null for none. */
+@Composable
+internal fun modelUnavailable(
+    name: String,
+    gone: String?,
+    modelName: (String) -> String,
+): String? = gone?.let { stringResource(R.string.settings_model_not_available, name, modelName(it)) }
+
+/** [provider]'s reasoning efforts to choose from, its own scale's and its default; null without a scale. */
+@Composable
+internal fun efforts(provider: ProviderId): List<Pair<ReasoningEffort?, String>>? {
+    val scale = Settings.EFFORT_SCALES[provider] ?: return null
+    return scale.levels.map<ReasoningEffort, Pair<ReasoningEffort?, String>> { it to effortLabel(it) } +
+        (null to stringResource(R.string.settings_effort_provider_default))
 }
 
 /** [provider]'s reasoning effort, from its own scale, or the provider's default; none without a scale. */
@@ -109,10 +141,7 @@ private fun EffortRow(
     update: Update,
     open: (SettingsDialog) -> Unit,
 ) {
-    val scale = Settings.EFFORT_SCALES[provider] ?: return
-    val efforts =
-        scale.levels.map<ReasoningEffort, Pair<ReasoningEffort?, String>> { it to effortLabel(it) } +
-            (null to stringResource(R.string.settings_effort_provider_default))
+    val efforts = efforts(provider) ?: return
     val current = settings.effort(provider)
     ValueRow(
         title = stringResource(R.string.settings_ai_effort_of, name),

@@ -16,10 +16,13 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.Measured
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Dp
@@ -27,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.app.ui.theme.plainSwitchColors
+import kotlin.math.roundToInt
 
 private const val DISABLED_ALPHA = 0.38f
 
@@ -42,10 +46,36 @@ private val LEADING_GAP = 16.dp
  */
 internal val UNDER_BADGE = ROW_MARK + LEADING_GAP
 
+/** The test tag of what starts a [SwitchRow], its [ROW_MARK] (#613). */
+internal const val ROW_LEADING_TAG = "settings-row-leading"
+
+/** The test tag of a [SwitchRow]'s switch (#613). */
+internal const val ROW_SWITCH_TAG = "settings-row-switch"
+
+/** Where a row's mark or switch is lined up with its name: its middle (#613). */
+private fun middle(measured: Measured): Int = measured.measuredHeight / 2
+
+/**
+ * The middle of a row's title's first line, in pixels from the title's top, as the title was last
+ * laid out (#613). Read where the row lines up its mark and switch, after the title is measured;
+ * not state, since it changes only while the row is being measured.
+ */
+private class FirstLine {
+    var middle = 0
+}
+
+/**
+ * A line of explanation in a section, [text]. As a sub-heading over rows, [over] names them by
+ * title: a search that shows only some rows shows it while any of them shows (#649); with none, it
+ * is not a setting of its own, and such a search leaves it out.
+ */
 @Composable
 internal fun Hint(
     @StringRes text: Int,
+    over: List<String> = emptyList(),
 ) {
+    val search = LocalRowSearch.current
+    if (search?.filtering == true && over.none { search.shows(it) }) return
     Text(stringResource(text), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(vertical = 4.dp))
 }
 
@@ -56,6 +86,10 @@ internal fun Hint(
  * own, apart from the switch, and so is [summaryLink], a link set in the summary where it has the
  * link's text ([sentenceWith]): another setting it names (#581). [leading] goes at the row's start,
  * before the title, [ROW_MARK] a side: a player's icon (#535), a service's badge (#537).
+ *
+ * The mark and the switch are centred on the first line of the title (#613), not on the whole row:
+ * level with the name however long the summary under it, at any font scale. A row with a name only
+ * looks as when they were centred on the row.
  */
 @Suppress("LongParameterList") // Each sets one aspect of the row; all but the first three have defaults.
 @Composable
@@ -70,10 +104,12 @@ internal fun SwitchRow(
     summaryLink: TextPart.Linked? = null,
     onChange: ((Boolean) -> Unit)?,
 ) {
+    if (!shownInSearch(title)) return
     val enabled = onChange != null
     val alpha = if (enabled) 1f else DISABLED_ALPHA
     val color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha)
     val titleColor = if (highlight) MaterialTheme.colorScheme.error.copy(alpha = alpha) else color
+    val firstLine = remember { FirstLine() }
     Row(
         modifier =
             Modifier
@@ -84,20 +120,31 @@ internal fun SwitchRow(
                     role = Role.Switch,
                     onValueChange = { onChange?.invoke(it) },
                 ).padding(start = if (indent) NESTED else 0.dp, top = 8.dp, bottom = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
     ) {
         leading?.let {
             // Dimmed with the row's text when the switch cannot be moved.
-            Box(Modifier.alpha(alpha)) { it() }
+            Box(Modifier.alignBy(::middle).testTag(ROW_LEADING_TAG).alpha(alpha)) { it() }
             Spacer(Modifier.width(LEADING_GAP))
         }
-        Column(modifier = Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge, color = titleColor)
+        Column(modifier = Modifier.weight(1f).alignBy { firstLine.middle }) {
+            Text(
+                searchMarked(title),
+                modifier = Modifier.testTag(ROW_TITLE_TAG),
+                style = MaterialTheme.typography.bodyLarge,
+                color = titleColor,
+                onTextLayout = { firstLine.middle = ((it.getLineTop(0) + it.getLineBottom(0)) / 2).roundToInt() },
+            )
             summary?.let { Summary(it, summaryLink, color) }
             below?.invoke()
         }
         Spacer(Modifier.width(16.dp))
-        Switch(checked = checked, onCheckedChange = null, enabled = enabled, colors = plainSwitchColors())
+        Switch(
+            checked = checked,
+            onCheckedChange = null,
+            modifier = Modifier.alignBy(::middle).testTag(ROW_SWITCH_TAG),
+            enabled = enabled,
+            colors = plainSwitchColors(),
+        )
     }
 }
 
@@ -130,6 +177,7 @@ internal fun ValueRow(
     underBadge: Boolean = false,
     onClick: (() -> Unit)?,
 ) {
+    if (!shownInSearch(title)) return
     val alpha = if (onClick != null) 1f else DISABLED_ALPHA
     val color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha)
     Column(
@@ -139,7 +187,12 @@ internal fun ValueRow(
                 .clickable(enabled = onClick != null, onClick = { onClick?.invoke() })
                 .padding(start = valueRowStart(indent, underBadge), top = 8.dp, bottom = 8.dp),
     ) {
-        Text(title, style = MaterialTheme.typography.bodyLarge, color = color)
+        Text(
+            searchMarked(title),
+            style = MaterialTheme.typography.bodyLarge,
+            color = color,
+            modifier = Modifier.testTag(ROW_TITLE_TAG),
+        )
         Text(
             value,
             style = MaterialTheme.typography.bodyMedium,
@@ -189,3 +242,6 @@ private fun valueRowStart(
         indent -> NESTED
         else -> 0.dp
     }
+
+/** The test tag of a setting's title, as its row shows it, which the search finds it by (#649). */
+internal const val ROW_TITLE_TAG = "settings_row_title"

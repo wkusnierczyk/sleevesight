@@ -407,7 +407,8 @@ class WikipediaSource(
         private fun balanced(text: String): Boolean =
             text.count { it == '"' } % 2 == 0 && text.count { it == '“' } == text.count { it == '”' }
 
-        private fun tidy(paragraph: String): String =
+        /** [paragraph] with the punctuation a dropped pronunciation leaves, and doubled spaces, tidied. */
+        internal fun tidy(paragraph: String): String =
             paragraph.replace(ORPHANED_PUNCTUATION, "(").replace(SPACES, " ").trim()
 
         private val SMALL_WORDS =

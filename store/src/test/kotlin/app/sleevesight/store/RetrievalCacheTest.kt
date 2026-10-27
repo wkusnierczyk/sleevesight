@@ -55,6 +55,31 @@ class RetrievalCacheTest {
     }
 
     @Test
+    fun `a line of counts and lists keeps its mark`() {
+        val at = Instant.parse("2026-10-27T12:00:00Z")
+        val counted =
+            EvidenceDraft(
+                SourceId.LASTFM,
+                Scope.ARTIST,
+                "Last.fm counts 5 listeners for X.",
+                null,
+                at,
+                aggregate = true,
+            )
+        val result = SourceResult(Outcome.ArtistArticle, listOf(counted), 10.milliseconds)
+        assertTrue(retrieval.put(SourceId.LASTFM, key, 1, result))
+
+        assertEquals(
+            listOf(true),
+            retrieval
+                .get(SourceId.LASTFM, key, 1)
+                ?.result
+                ?.evidence
+                ?.map { it.aggregate },
+        )
+    }
+
+    @Test
     fun `every outcome a source can give round-trips`() {
         val outcomes =
             listOf(

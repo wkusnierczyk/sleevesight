@@ -1,6 +1,7 @@
 package app.sleevesight.core.resolution
 
 import app.sleevesight.core.pipeline.ClearEpoch
+import app.sleevesight.core.sources.FreshLookups
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -35,6 +36,9 @@ import kotlin.time.TimeSource
  *
  * *Clear history* forgets every answer ([forget]); an answer asked for by work started before it
  * ([epoch]) is not kept once it arrives.
+ *
+ * Work that looks its sources up afresh ([FreshLookups], *Look again*, #617) is answered by
+ * [musicBrainz] whatever is kept, and keeps its answers as any other.
  */
 class RememberedMusicBrainz(
     private val musicBrainz: MusicBrainzLookup,
@@ -86,7 +90,7 @@ class RememberedMusicBrainz(
             key: K,
             ask: suspend () -> Lookup<T>,
         ): Lookup<T> {
-            kept(key)?.let { return it }
+            if (!FreshLookups.active()) kept(key)?.let { return it }
             val answer = ask()
             if (answer !is Lookup.Failed) keep(key, answer)
             return answer

@@ -19,20 +19,23 @@ private val MAX_CROSSFADE_SECONDS =
 /**
  * The insights' settings: *Show insights* (`writeInsights`), the master switch; *Reactive*
  * (`writeAutomatically`, D5), which track changes write an insight without a tap, with *Crossfade*
- * under it while it is *On track skip*, the only choice that uses it; *Proactive* (`prepareNextTrack`,
+ * under it while it is *On track skip (auto)*, the only choice that uses it; *Proactive* (`prepareNextTrack`,
  * D13), the next track's evidence ahead; *Saver* (`pauseAutoWriteAfter`, #203); and *Look up in the
  * background* (D6) beside it, since both govern what happens while Sleevesight is away; and *Don't
  * repeat artist facts* (`artistFactsOncePerSession`, #407; once *Tell an artist's facts once per
  * session*), what an insight's prompt holds of the artist's facts, its description linking to *New
  * session idle trigger* under *History* (#581). *Reactive*'s choices are
- * described in its dialog (#546). The rows about writing cannot be changed while *Show insights* is
- * off; *Proactive* can, as it writes nothing.
+ * described in its dialog (#546); a mode chosen there, the one chosen already included, goes to
+ * [chooseMode], which saves it and tells the pipeline (#625: an automatic one starts automatic
+ * writing from the next track), or, without one, is saved alone. The rows about writing cannot be
+ * changed while *Show insights* is off; *Proactive* can, as it writes nothing.
  */
 @Composable
 internal fun InsightsSection(
     settings: Settings,
     update: Update,
     open: (SettingsDialog) -> Unit,
+    chooseMode: ((WriteAutomatically) -> Unit)? = null,
 ) {
     SwitchRow(
         title = stringResource(R.string.settings_write_insights),
@@ -58,7 +61,11 @@ internal fun InsightsSection(
                             settings.writeAutomatically,
                             details = modeDetails,
                         ) { mode ->
-                            update { it.copy(writeAutomatically = mode) }
+                            if (chooseMode != null) {
+                                chooseMode(mode)
+                            } else {
+                                update { it.copy(writeAutomatically = mode) }
+                            }
                         },
                     )
                 }.takeIf { settings.writeInsights },
@@ -108,9 +115,15 @@ private fun ArtistFactsRow(
     )
 }
 
+/** *Crossfade*'s choices: autodetect, or a fixed 0 to 15 seconds. */
+@Composable
+internal fun crossfades(): List<Pair<Crossfade, String>> =
+    listOf<Pair<Crossfade, String>>(Crossfade.Autodetect to crossfadeLabel(Crossfade.Autodetect)) +
+        (0..MAX_CROSSFADE_SECONDS).map { s -> Crossfade.Fixed(s.seconds).let { it to crossfadeLabel(it) } }
+
 /**
  * *Crossfade* (D5): autodetect, or a fixed 0 to 15 seconds, for telling a skip from a natural end
- * under *On track skip*; indented under *Reactive*, as it belongs to that choice.
+ * under *On track skip (auto)*; indented under *Reactive*, as it belongs to that choice.
  */
 @Composable
 private fun CrossfadeRow(
@@ -118,9 +131,7 @@ private fun CrossfadeRow(
     update: Update,
     open: (SettingsDialog) -> Unit,
 ) {
-    val options =
-        listOf<Pair<Crossfade, String>>(Crossfade.Autodetect to crossfadeLabel(Crossfade.Autodetect)) +
-            (0..MAX_CROSSFADE_SECONDS).map { s -> Crossfade.Fixed(s.seconds).let { it to crossfadeLabel(it) } }
+    val options = crossfades()
     ValueRow(
         title = stringResource(R.string.settings_crossfade),
         value = crossfadeLabel(settings.crossfade),

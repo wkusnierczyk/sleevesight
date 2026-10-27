@@ -1,16 +1,12 @@
 package app.sleevesight.app.ui.home
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -18,7 +14,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -26,6 +21,8 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
+import app.sleevesight.app.ui.theme.ChipFrame
+import app.sleevesight.app.ui.theme.chipColours
 import app.sleevesight.core.genres.LabelSource
 import app.sleevesight.core.genres.PlacedLabel
 import app.sleevesight.core.genres.TrackGenres
@@ -38,7 +35,8 @@ import app.sleevesight.core.settings.Settings
  * ([TrackGenres.folded]). A chip opens the genre's panel ([GenrePanel]): under *Expandable boxes*,
  * under the chips, where a second tap on the same chip, or *Close*, closes it and another chip
  * switches it; under *Separate pages* ([openPage], #447), on the genres' page ([HomePage.GenresAt]),
- * the chip's genre open there. Chips are plain, told apart by their fill, not by a hue per genre
+ * the chip's genre open there. The panel shows what the genre is and *Why is this …?* from [notes]
+ * (#523). Chips are plain, told apart by their fill, not by a hue per genre
  * family.
  */
 @Composable
@@ -46,6 +44,7 @@ internal fun Genres(
     track: TrackState?,
     settings: Settings?,
     openPage: ((HomePage) -> Unit)? = null,
+    notes: PanelNotes = PanelNotes(),
 ) {
     // *Show genres* off (#444): no genres are asked for, and none shown, not even that they are off.
     if (track == null || !track.gathered || settings?.showGenres == false) return
@@ -57,7 +56,7 @@ internal fun Genres(
         // opens nothing reads as broken.
         openPage != null ->
             Chips(genres.folded, open = null, opensPage = true) { openPage(HomePage.GenresAt(it.label.genre.identity)) }
-        else -> GenresBox(track)
+        else -> GenresBox(track, notes)
     }
 }
 
@@ -67,7 +66,10 @@ internal fun labelsOff(settings: Settings?): Boolean =
 
 // Under *Expandable boxes*: the chips, and under them the panel of the genre chosen, if any.
 @Composable
-private fun GenresBox(track: TrackState) {
+private fun GenresBox(
+    track: TrackState,
+    notes: PanelNotes,
+) {
     // Closed on each new track. Kept by the genre's identity, so it outlasts labels that land later;
     // a genre no row has any more shows no panel.
     var chosen by rememberSaveable(track.normalized.lookupKey) { mutableStateOf<String?>(null) }
@@ -77,7 +79,7 @@ private fun GenresBox(track: TrackState) {
             val genre = label.label.genre.identity
             chosen = if (genre == open) null else genre
         }
-        open?.let { GenrePanel(track, it) { chosen = null } }
+        open?.let { GenrePanel(track, it, onClose = { chosen = null }, notes = notes) }
     }
 }
 
@@ -132,38 +134,19 @@ private fun GenreChip(
     action: String?,
     onClick: () -> Unit,
 ) {
-    val shape = RoundedCornerShape(16.dp)
     val (fill, content) = chipColours(selected == true)
-    Text(
-        placed.label.genre.label,
-        style = MaterialTheme.typography.labelLarge,
-        color = content,
-        modifier =
+    ChipFrame(
+        fill,
+        modifier = Modifier.testTag(tagOf(GENRE_PREFIX, placed)),
+        action =
             Modifier
-                .testTag(tagOf(GENRE_PREFIX, placed))
-                .minimumInteractiveComponentSize()
-                .clip(shape)
-                .background(fill, shape)
                 .let { chip ->
                     action?.let { chip.clickable(role = Role.Button, onClickLabel = it, onClick = onClick) } ?: chip
-                }.let { chip -> selected?.let { chip.semantics { this.selected = it } } ?: chip }
-                .padding(horizontal = 12.dp, vertical = 6.dp),
-    )
-}
-
-/**
- * A genre chip's fill and text colour, on Home and in the panel's table: a light fill in the text's
- * colour; [marked], the text's colour, with the box's colour for the text.
- */
-@Composable
-internal fun chipColours(marked: Boolean) =
-    MaterialTheme.colorScheme.let { colours ->
-        if (marked) {
-            colours.onSurface to colours.surfaceContainer
-        } else {
-            colours.onSurface.copy(alpha = FILL) to colours.onSurface
-        }
+                }.let { chip -> selected?.let { chip.semantics { this.selected = it } } ?: chip },
+    ) {
+        Text(placed.label.genre.label, style = MaterialTheme.typography.labelLarge, color = content)
     }
+}
 
 // Whether any row has [genre].
 private fun TrackGenres.has(genre: String): Boolean = all.any { it.genre.identity == genre }
@@ -191,5 +174,3 @@ internal fun tagOf(
         placed.row.level.name
             .lowercase() + ":" + artist + placed.label.genre.identity
 }
-
-private const val FILL = 0.08f

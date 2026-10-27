@@ -19,6 +19,7 @@ import app.sleevesight.core.pipeline.TrackChange
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.settings.PrepareNextTrack
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.settings.WriteAutomatically
 import app.sleevesight.wiring.SourceKeys
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -49,6 +50,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -91,14 +93,25 @@ import kotlin.coroutines.cancellation.CancellationException
  *   and the playing track's are then asked again.
  * @property lapsed whether the Write offered is offered only because automatic writing paused
  *   ([CoordinatorState.lapsed], #203): the app was not on screen for more track changes than
- *   *Saver* names, so the first action expired, and a tap resumes it.
- * @property paused whether automatic writing is paused by *Saver* ([CoordinatorState.expired],
- *   #203): the first action expired, and nothing is written without a tap until the user acts
- *   again. The insight card (#615) shows it as *Paused*, whether or not Write is offered ([lapsed]).
- * @property waiting whether automatic writing waits for a tap (#615): no first action since the
- *   app started ([CoordinatorState.acted], D5), or *Saver* has paused it ([paused]). A tap on the
- *   Write offered then writes the track and starts or resumes automatic writing; the insight card
- *   labels it with the mode (*Write on change*, *Write on skip*).
+ *   *Saver* names, so the first action expired, and this track came to play while it was. Opening
+ *   Sleevesight resumes automatic writing (#625), and the insight card says this track was not
+ *   written.
+ * @property followed whether the Write offered is offered only because the track followed the last
+ *   one by itself, which *On track skip (auto)* does not write on ([CoordinatorState.followed],
+ *   #625); the insight card says so.
+ * @property waiting whether automatic writing waits for the user (#615): no first action since the
+ *   app started ([CoordinatorState.acted], D5), *Saver* has paused it, or the track playing is
+ *   written only on a tap: it came to play before the first action or while it was paused, or a
+ *   mode was chosen while it played ([CoordinatorState.waitsForTap], `Report.tapOnly`, #625). The
+ *   insight card then does not say that it writes automatically.
+ * @property lookAgainKey the key of the run *Look again* is offered for (#617), which a tap carries
+ *   back ([PipelineHost.lookAgain]): the card paid for is shown, citing evidence, its run's sources
+ *   have landed and no call is under way ([CoordinatorState.lookAgainKey]); null otherwise.
+ * @property lookingAgain whether a look again is looking the sources up ([CoordinatorState.lookingAgain]).
+ * @property somethingNew whether the last look again found something new, and *Rewrite insight* is
+ *   offered for it ([CoordinatorState.foundSomethingNew]): a tap writes it, a paid call.
+ * @property nothingNew whether the last look again found nothing new, so nothing is offered for it
+ *   ([CoordinatorState.foundNothingNew]).
  */
 data class PipelineView(
     val track: TrackState? = null,
@@ -112,8 +125,12 @@ data class PipelineView(
     val stopCall: CallId? = null,
     val offline: Boolean = false,
     val lapsed: Boolean = false,
-    val paused: Boolean = false,
+    val followed: Boolean = false,
     val waiting: Boolean = false,
+    val lookAgainKey: RunKey? = null,
+    val lookingAgain: Boolean = false,
+    val nothingNew: Boolean = false,
+    val somethingNew: Boolean = false,
 )
 
 /**
@@ -148,12 +165,12 @@ class PipelineKeys(
  *
  * [state] is what the UI renders; [events] the diagnostics stream, across rebuilds;
  * [lookupsAllowed] the D6 gate, which the session layer's `http` art waits on too. [onAction] is
- * told when the coordinator takes a user's action (a tap on Write), for the time since the last
- * one that each track change is recorded with (D15).
+ * told when the coordinator takes a user's action (a tap on Write, or on *Look again*), for the
+ * time since the last one that each track change is recorded with (D15).
  *
  * *Saver* reaches the coordinator as `PauseAutoWriteChanged`, from the
- * settings as *Look up in the background* does (#203), and *Reactive* to or from *Now* as
- * `AutomaticWritingChanged` (#553), so a run's settings, read when it started, are narrowed by a
+ * settings as *Look up in the background* does (#203), and *Reactive*'s mode as
+ * `WritingModeChanged` (#553, #625), so a run's settings, read when it started, are narrowed by a
  * change made while it runs.
  *
  * [online] is whether the phone is online (its default network has validated internet access),
@@ -182,6 +199,9 @@ class PipelineHost(
 ) {
     private val queue = Channel<CoordinatorEvent>(Channel.UNLIMITED)
 
+    // The choices of *Reactive*'s mode made in this process, counted (#625).
+    private val choices = AtomicLong()
+
     // The callers of [forget] waiting for the loop to take their clear, in order.
     private val forgetting = ConcurrentLinkedQueue<CompletableDeferred<Unit>>()
 
@@ -209,6 +229,7 @@ class PipelineHost(
     )
 
     private val live = MutableStateFlow<Live?>(null)
+    private val liveMade = MutableStateFlow<PipelineParts?>(null)
 
     // The track whose run failed during its insight, shown as failed until another run starts.
     private val failed = MutableStateFlow<RunKey?>(null)
@@ -228,6 +249,12 @@ class PipelineHost(
 
     /** What the UI renders. */
     val state: StateFlow<PipelineView> = view.asStateFlow()
+
+    /**
+     * What the live pipeline was built from, null while none runs: its AI service, synthesis cache
+     * and hasher write a genre's reason on a tap (#523, `AppGenreNotes`), as its runs write insights.
+     */
+    val liveParts: StateFlow<PipelineParts?> = liveMade.asStateFlow()
 
     /** For the tests: each view as it is published, none conflated. */
     @Volatile
@@ -268,6 +295,36 @@ class PipelineHost(
         val latest = latestPlaying() ?: return
         if (!sameInsightTrack(shown, latest)) return
         queue.trySend(CoordinatorEvent.WriteTapped(key))
+    }
+
+    /**
+     * The user tapped *Look again* offered under [key] ([PipelineView.lookAgainKey], #617) beside
+     * the track [shown]: the coordinator looks every source of that run up afresh if it still offers
+     * it, and writes the insight again only if they found something new. Dropped, as a tap on
+     * Write is, for a track the session layer no longer shows.
+     */
+    fun lookAgain(
+        key: RunKey,
+        shown: NowPlaying,
+    ) {
+        val latest = latestPlaying() ?: return
+        if (!sameInsightTrack(shown, latest)) return
+        queue.trySend(CoordinatorEvent.LookAgainTapped(key))
+    }
+
+    /**
+     * The user chose [mode] for *Reactive* (#625), in the insight card's menu or in the settings,
+     * the mode chosen already included. It applies from the next track: the track playing is
+     * written only on a tap. An automatic one is the first action (D5), so automatic writing
+     * starts, or resumes, with the next track. The setting is saved apart: the function returned
+     * is told what the store holds once that save has ended ([CoordinatorEvent.ModeChoiceSettled],
+     * null when it could not be read), and the mode selected becomes the narrower of the choice and
+     * what the store holds. Until then this choice is the mode selected, whatever the store emits.
+     */
+    fun modeChosen(mode: WriteAutomatically): (WriteAutomatically?) -> Unit {
+        val choice = choices.incrementAndGet()
+        queue.trySend(CoordinatorEvent.ModeChosen(mode, choice))
+        return { stored -> queue.trySend(CoordinatorEvent.ModeChoiceSettled(choice, stored)) }
     }
 
     /**
@@ -316,10 +373,10 @@ class PipelineHost(
                 }
             }
             launch {
-                // *Reactive* to or from *Now* (#553; the insight card's menu, #615), so a run started
-                // before it was turned off does not write without a tap.
-                latest.map { it.writesAutomatically }.distinctUntilChanged().collect {
-                    queue.send(CoordinatorEvent.AutomaticWritingChanged(it))
+                // *Reactive*'s mode (#553, #625; the insight card's menu, #615), so a run started
+                // before it changed writes only on what the mode now selected writes on.
+                latest.map { it.writeAutomatically }.distinctUntilChanged().collect {
+                    queue.send(CoordinatorEvent.WritingModeChanged(it))
                 }
             }
             launch {
@@ -430,12 +487,14 @@ class PipelineHost(
         built.clear()
         if (!effect.built || made == null) {
             live.value = null
+            liveMade.value = null
             return
         }
         val (pipeline, madeParts) = made
         val runScope = CoroutineScope(scope.coroutineContext + SupervisorJob(scope.coroutineContext[Job]))
         runScope.launch(start = CoroutineStart.UNDISPATCHED) { pipeline.events.collect { eventFlow.tryEmit(it) } }
         live.value = Live(pipeline, madeParts, runScope)
+        liveMade.value = madeParts
     }
 
     private fun startRun(effect: CoordinatorEffect.StartRun) {
@@ -446,7 +505,7 @@ class PipelineHost(
         handle.job =
             current.scope.launch(epoch.mark()) {
                 try {
-                    current.pipeline.run(effect.nowPlaying, handle, effect.again)
+                    current.pipeline.run(effect.nowPlaying, handle, effect.again, effect.lookAgain)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (
@@ -602,6 +661,10 @@ class PipelineHost(
             queue.trySend(CoordinatorEvent.SourcesGathered(id, gathered))
         }
 
+        override fun assembled(evidence: EvidenceSet) {
+            queue.trySend(CoordinatorEvent.EvidenceAssembled(id, evidence))
+        }
+
         override fun cardShown(
             card: InsightState.Written?,
             evidence: EvidenceSet,
@@ -657,8 +720,12 @@ class PipelineHost(
                 stopCall = owner.stopCall,
                 offline = !owner.online,
                 lapsed = owner.lapsed,
-                paused = owner.expired,
+                followed = owner.followed,
                 waiting = owner.waitsForTap,
+                lookAgainKey = owner.lookAgainKey,
+                lookingAgain = owner.lookingAgain,
+                nothingNew = owner.foundNothingNew,
+                somethingNew = owner.foundSomethingNew,
             )
         }.collect {
             view.value = it
@@ -683,7 +750,9 @@ class PipelineHost(
         failedKey: RunKey?,
     ): Shown {
         val own = failing(offering(track, owner), failedKey)
-        val card = cardFor(owner, own)?.takeIf { lacksInsight(own) }
+        // A look again that found nothing new (#617) shows the card paid for, not the one its run
+        // found in the cache under the settings as they are now.
+        val card = cardFor(owner, own)?.takeIf { lacksInsight(own) || owner.foundNothingNew }
         val failure =
             when (val insight = own.insight) {
                 is InsightState.Failed -> insight.reason

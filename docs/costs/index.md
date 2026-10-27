@@ -5,7 +5,7 @@
 # the pipeline CLI measured (`:cli`, `live`, its report's *Tokens billed*). Linked from the product
 # page, the docs index, the settings page (*What it costs*, the Exa entry, *Secrets*), the usage page,
 # the tester brief and the README. A change to the default models, to what a call or a search
-# sends, or to how often one is made changes this page too; so does a price, when it is checked
+# sends, or to how often one is made (*Look again*, #617, included) changes this page too; so does a price, when it is checked
 # again.
 title: What it costs you
 permalink: /docs/costs/
@@ -46,14 +46,14 @@ Anthropic's prices are for prompts of up to 100,000 tokens; an insight's prompt 
 
 ## What a track costs, worked through
 
-**The insight.** With the default settings (*On track change*, the default model, low reasoning effort), an insight took on average 1,051 tokens in and 157 out, measured with the pipeline's command-line tool over 90 insights (four albums and playlists, twice; 25 October 2026, Claude Haiku 5.5, web search off). At Claude Haiku 5.5's prices, that is about $0.0002 an insight, two hundredths of a cent:
+**The insight.** With the default settings (*On track change (auto)*, the default model, low reasoning effort), an insight took on average 1,051 tokens in and 157 out, measured with the pipeline's command-line tool over 90 insights (four albums and playlists, twice; 25 October 2026, Claude Haiku 5.5, web search off). At Claude Haiku 5.5's prices, that is about $0.0002 an insight, two hundredths of a cent:
 
 - 1,051 tokens in at $0.10 per million: $0.000105;
 - 157 tokens out at $0.50 per million: $0.000079.
 
-Web search, on by default once Exa has a key, adds what it found to the prompt: at most ten results of up to 300 characters each, so at most about a thousand tokens more, $0.0001 more on Claude Haiku 5.5. The other services count tokens their own way, and their models reason at different lengths, so for them the same prices give a rough guide only: about $0.0002 an insight on GPT-6 Luna, and about $0.0007 on Gemini 3.5 Flash-Lite, whose prices are higher.
+Web search, on by default once Exa has a key, adds what it found to the prompt: at most five results, which over the fixture playlist came to about 1,700 characters a track on average and at most about 3,900 (27 October 2026), so about 400 tokens more on average and about a thousand at most, at most $0.0001 more on Claude Haiku 5.5. The other services count tokens their own way, and their models reason at different lengths, so for them the same prices give a rough guide only: about $0.0002 an insight on GPT-6 Luna, and about $0.0007 on Gemini 3.5 Flash-Lite, whose prices are higher.
 
-**The web search.** One Exa search for each new track, $0.004. With web search on, the search is most of what a new track costs.
+**The web search.** One Exa search for each new track, $0.004: each of 156 searches measured on 27 October 2026 reported that cost in Exa's answer, the highlights included. With web search on, the search is most of what a new track costs.
 
 **An hour's listening**, with Sleevesight on screen and the defaults, of tracks of about three and a half minutes: 17 new tracks.
 
@@ -62,6 +62,8 @@ Web search, on by default once Exa has a key, adds what it found to the prompt: 
 | Insights, Claude Haiku 5.5 | about $0.0002 | about $0.003 |
 | Exa searches | $0.004 | $0.068 |
 | **Together** | | **about $0.07** |
+
+**Look again**, on an insight already written ([usage]({{ '/docs/tutorials/usage/#look-again' | relative_url }})), looks every source up afresh and writes nothing: with web search on, it costs one Exa search, $0.004, whatever it finds. When the sources found something new, it offers *Rewrite insight*: that is the paid call, about $0.0002 on Claude Haiku 5.5, made only if you tap it.
 
 Tracks played before cost less: a track looked up again within the day costs no search, and a track played again with the same evidence and the same AI settings shows the insight written then, with no call ([*What costs nothing*]({{ '/docs/tutorials/usage/#what-costs-nothing' | relative_url }})).
 
@@ -74,7 +76,7 @@ Tracks played before cost less: a track looked up again within the day costs no 
 
 ## How to spend less
 
-- **Write fewer insights.** *Reactive*'s *On track skip* writes only the tracks you skip to, and *Now* only those you tap *Write insight* for ([Insights]({{ '/docs/tutorials/settings/#insights' | relative_url }})). Even under *On track change*, nothing is written until your first tap after the app starts, and *Saver* pauses automatic writing after a few track changes away ([*Automatic writing*]({{ '/docs/tutorials/usage/#automatic-writing' | relative_url }})). *Stop* ends the writing, but once the request has reached the AI service, it may still charge for it.
+- **Write fewer insights.** *Reactive*'s *On track skip (auto)* writes only the tracks you skip to, and *On demand* only those you tap *Write insight* for ([Insights]({{ '/docs/tutorials/settings/#insights' | relative_url }})). Even under *On track change (auto)*, nothing is written automatically until your first action after the app starts (a tap on *Write insight*, or a mode chosen), and *Saver* pauses automatic writing after a few track changes away; opening the app resumes it, but the track playing then is written only on a tap ([*Automatic writing*]({{ '/docs/tutorials/usage/#automatic-writing' | relative_url }})). *Stop writing* ends the call at once; if the request has reached your AI service, it still charges for what it has read and written so far.
 - **Play tracks again.** A track played again costs less, often nothing, as above.
 - **A cheaper model, or less reasoning.** The model and the reasoning effort are under [AI services]({{ '/docs/tutorials/settings/#ai-services' | relative_url }}); the defaults are each service's cheapest current model and a low effort, and an older model the service still lists may cost less, as the table shows.
 - **Web search off.** Exa's searches are made for every track looked up, whatever *Reactive* says, so turning *Exa web search* off under [Sources]({{ '/docs/tutorials/settings/#sources' | relative_url }}) saves the most; the other sources still find what they can.

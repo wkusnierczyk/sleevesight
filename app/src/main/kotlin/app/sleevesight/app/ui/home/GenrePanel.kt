@@ -5,29 +5,27 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
+import app.sleevesight.app.pipeline.GenreNotes
 import app.sleevesight.app.ui.theme.LinkedText
+import app.sleevesight.app.ui.theme.Panel
 import app.sleevesight.app.ui.theme.TextPart
+import app.sleevesight.app.ui.theme.chipColours
 import app.sleevesight.core.genres.GenreLevel
 import app.sleevesight.core.genres.GenreRow
 import app.sleevesight.core.genres.LabelSource
@@ -35,11 +33,12 @@ import app.sleevesight.core.genres.PlacedLabel
 import app.sleevesight.core.genres.TrackGenres
 import app.sleevesight.core.pipeline.TrackState
 
-// The genre's panel (#558): its heading, the table, and where the genre comes from.
+// The genre's panel (#558): its heading, the table, and where the table's labels come from, a line per row.
 
 /**
  * The panel of [genre] (#558; frame B of the agreed mock-ups): its name as a heading, with *Close*
- * when there is [onClose]; then the table, a row per level in [GenreLevel] order, each row's name
+ * when there is [onClose]; then what the genre is and *Why is this …?*, from [notes] (#523,
+ * [GenreAbout]); then the table, a row per level in [GenreLevel] order, each row's name
  * (the track's title, the artist's name, the album's title) on one line above its labels, [genre]
  * marked wherever it shows; then where the table's labels come from, a line per row, each source
  * linked to its page there, and MusicBrainz's licence (D12). Nothing when no row has [genre].
@@ -49,6 +48,7 @@ internal fun GenrePanel(
     track: TrackState,
     genre: String,
     onClose: (() -> Unit)? = null,
+    notes: PanelNotes = PanelNotes(),
 ) {
     val genres = track.genres
     val name =
@@ -56,44 +56,25 @@ internal fun GenrePanel(
             .firstOrNull { it.genre.identity == genre }
             ?.genre
             ?.label ?: return
-    val shape = RoundedCornerShape(12.dp)
-    val fill = MaterialTheme.colorScheme.onSurface.copy(alpha = PANEL_FILL)
-    Column(
-        modifier =
-            Modifier
-                .testTag(GENRE_PANEL_TAG)
-                .fillMaxWidth()
-                .clip(shape)
-                .background(fill, shape)
-                .padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                name,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                modifier =
-                    Modifier
-                        .weight(1f)
-                        .padding(vertical = 10.dp)
-                        .testTag(GENRE_PANEL_HEADING_TAG)
-                        .semantics { heading() },
-            )
-            onClose?.let {
-                TextButton(onClick = it, modifier = Modifier.testTag(GENRE_PANEL_CLOSE_TAG)) {
-                    Text(stringResource(R.string.page_close), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-        }
-        // TODO(#523): what the genre is, and *Why is this …?*, between the heading and the table.
-        Column(modifier = Modifier.padding(end = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = RULE))
-            Table(track, genre)
-            Credits(genres, several = track.normalized.artists.size > 1)
-        }
+    Panel(AnnotatedString(name), GENRE_PANEL_TAG, onClose) {
+        // What the genre is, and *Why is this …?* (#523), above the table.
+        GenreAbout(track, genre, notes)
+        Table(track, genre)
+        Credits(genres, several = track.normalized.artists.size > 1)
     }
 }
+
+/**
+ * What a genre's panel shows above its table ([GenreAbout]): [notes], where its definition and
+ * reason come from; where a citation in the reason goes ([onCite]: on Home, *Sources* unfolded to
+ * its line; under *Separate pages*, *Sources*' page at it); and whether the model's own knowledge is
+ * allowed now ([modelAllowed]).
+ */
+internal class PanelNotes(
+    val notes: GenreNotes = GenreNotes.None,
+    val onCite: (String) -> Unit = {},
+    val modelAllowed: Boolean = false,
+)
 
 /**
  * The table of [track]'s genres: a row per level with labels, in [GenreLevel] order, each row's
@@ -223,7 +204,7 @@ private fun sourceParts(
         .orEmpty()
 }
 
-/** The test tags of the genre's panel, its heading and its *Close*. */
+/** The test tags of the genre's panel, its heading and its *Close*, as [Panel] makes them. */
 const val GENRE_PANEL_TAG: String = "genre-panel"
 const val GENRE_PANEL_HEADING_TAG: String = "genre-panel:heading"
 const val GENRE_PANEL_CLOSE_TAG: String = "genre-panel:close"
@@ -232,5 +213,3 @@ const val GENRE_PANEL_CLOSE_TAG: String = "genre-panel:close"
 const val GENRES_ROW_PREFIX: String = "genres-row:"
 
 private const val SEPARATOR = " · "
-private const val PANEL_FILL = 0.05f
-private const val RULE = 0.12f

@@ -1,8 +1,6 @@
 package app.sleevesight.app.ui.settings
 
-import android.view.View
 import android.view.accessibility.AccessibilityManager
-import android.view.accessibility.AccessibilityNodeInfo
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.BringIntoViewSpec
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
@@ -37,46 +35,44 @@ import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.node.RootForTest
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.semantics.getAllSemanticsNodes
-import androidx.compose.ui.semantics.getOrNull
 import app.sleevesight.app.R
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
+import app.sleevesight.app.ui.theme.moveAccessibilityFocusToFocused
 import app.sleevesight.core.model.ProviderId
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.milliseconds
 
-// Links from one setting to another (#539): a link in a row's text that unfolds a section of the
-// settings and lands on a row in it, as the key links of *AI services* and *Sources* do. To add one:
+// Links from one setting to another (#539): a link in a row's text that opens a section of the
+// settings (its panel, #649) and lands on a row in it, as the key links of *AI services* and *Sources* do. To add one:
 //
 // 1. Name the place: a [SettingsTarget], the section and a row id of its own, best as a factory
-//    in its companion, as [SettingsTarget.key] is; a target without a row lands on the section's
-//    heading, which every [FoldedSection] already is.
+//    in its companion, as [SettingsTarget.key] is; a target without a row lands on the heading of
+//    the section's panel, which every [FoldedSection] already is.
 // 2. Wrap the row landed on in [LandingSpot] with that target.
 // 3. Put the link in the row's text: [settingsLink] gives the [TextPart.Action], for a
 //    [LinkedText] (with [sentenceWith] to set it in a sentence), as [KeyLink] does.
 
 /**
- * Where a link in the settings leads (#539): [section], unfolded, and in it the row [row] names, or,
- * for none, the section's heading. A row is named by an id of its own, unique among the screen's
- * rows; the factories in the companion name the rows that are linked to. Public, as Home opens the
- * settings at one (#581: [SettingsScreen]'s `landOn`, through the settings' route).
+ * Where a link in the settings leads (#539): [section], opened, and in it the row [row] names, or,
+ * for none, the heading of the section's panel (#649), whose *Close* takes the focus. A row is
+ * named by an id of its own, unique among the screen's rows; the factories in the companion name
+ * the rows that are linked to. Public, as Home opens the settings at one (#581: [SettingsScreen]'s
+ * `landOn`, through the settings' route).
  */
 @Immutable
 data class SettingsTarget(
     val section: SettingsSection,
     val row: String? = null,
 ) {
-    /** The tag of the row landed on, for tests; a section's own is its heading's ([SettingsSection.tag]). */
+    /** The tag of the row landed on, for tests; a section's own is its chip's ([SettingsSection.tag]). */
     val tag: String get() = row?.let { "settings_row_$it" } ?: section.tag
 
     /** The tag of a link to it, which [TextPart.Action] names it by to tests. */
@@ -86,7 +82,7 @@ data class SettingsTarget(
         /** The key [id]'s row under *Secrets* ([KeyRow]). */
         internal fun key(id: SecretId): SettingsTarget = SettingsTarget(SettingsSection.SECRETS, "key_${id.name}")
 
-        /** The section *AI services* itself, its heading (#581). */
+        /** The section *AI services* itself, its panel's heading (#581). */
         internal val aiServices: SettingsTarget = SettingsTarget(SettingsSection.AI_SERVICES)
 
         /** [provider]'s model row under *AI services* (#581), where another model is chosen. */
@@ -98,6 +94,12 @@ data class SettingsTarget(
 
         /** *Reactive*'s row under *Insights*, from the insight card's menu of its modes (#615). */
         internal val reactive: SettingsTarget = SettingsTarget(SettingsSection.INSIGHTS, "reactive")
+
+        /** The section *Players* itself, its panel's heading, from Home's list of players (#627). */
+        internal val players: SettingsTarget = SettingsTarget(SettingsSection.PLAYERS)
+
+        /** *Home guide*'s row under *Appearance*, from the guide's *Re-enable in Settings* (#627). */
+        internal val homeGuide: SettingsTarget = SettingsTarget(SettingsSection.APPEARANCE, "home_guide")
 
         /**
          * The target [section] (a [SettingsSection]'s name) and [row] name, as a route or a saved
@@ -114,7 +116,7 @@ data class SettingsTarget(
 }
 
 /**
- * Follows the settings' links (#539): [go] unfolds the target's section in [folds] and lands on the
+ * Follows the settings' links (#539): [go] opens the target's section in [folds] and lands on the
  * target, which its [LandingSpot] then scrolls into view and focuses. One per visit to the
  * settings, given to the rows as [LocalSettingsNavigator] ([ProvideSettingsNavigator]). Only a
  * landing still scrolling is saved with the screen ([saver]), to scroll and land once the screen is
@@ -156,12 +158,15 @@ internal class SettingsNavigator(
      * Ends [pending], unless another landing has begun since, where no [LandingSpot] is drawn for
      * its target once its section is unfolded: a route or a saved state naming a row no longer shown
      * (#581) would otherwise leave it pending, and [scrolling] set, for the rest of the visit.
+     * Called a frame after the landing begins, which is enough only because each [FoldedSection]
+     * composes all its rows at once, in a column that is not lazy: a lazy one would draw a row, and
+     * claim its spot, only once it is scrolled near, and this would drop a landing still to come.
      */
     fun dropUnclaimed(pending: Landing) {
         if (pending.target !in spots) landed(pending)
     }
 
-    /** Unfolds [target]'s section, if folded, and lands on [target]. */
+    /** Opens [target]'s section, if closed, and lands on [target]. */
     fun go(target: SettingsTarget) {
         folds.unfold(target.section)
         resume(target)
@@ -400,27 +405,6 @@ internal fun LandingSpot(
                 .onGloballyPositioned { placed[0] = it },
     ) {
         content()
-    }
-}
-
-/**
- * Gives the screen reader's focus to the node that holds the input focus in [host]'s composition,
- * as a screen reader's own move would ([AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS] on its
- * virtual view, which tells the screen reader with `TYPE_VIEW_ACCESSIBILITY_FOCUSED`). Compose has
- * no API for this, so the node is found in the composition's semantics ([RootForTest], whose
- * `semanticsOwner` is public) by its *focused* property; nothing happens if there is none.
- */
-private fun moveAccessibilityFocusToFocused(host: View) {
-    // A walk through Compose's semantics from outside: should it ever fail, the screen reader's focus
-    // stays where it was, and the screen goes on.
-    runCatching {
-        val owner = (host as? RootForTest)?.semanticsOwner ?: return
-        val focused =
-            owner
-                .getAllSemanticsNodes(mergingEnabled = true)
-                .firstOrNull { it.config.getOrNull(SemanticsProperties.Focused) == true } ?: return
-        host.accessibilityNodeProvider
-            ?.performAction(focused.id, AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS, null)
     }
 }
 

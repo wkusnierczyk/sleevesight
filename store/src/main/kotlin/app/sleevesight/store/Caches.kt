@@ -4,6 +4,7 @@ import app.cash.sqldelight.db.SqlDriver
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.synthesis.CardKind
 import app.sleevesight.store.db.CacheDatabase
 import app.sleevesight.store.db.CacheQueries
 import kotlin.time.Clock
@@ -54,9 +55,10 @@ class Caches(
      * one, those of a source the app no longer knows, and those in an old encoding), artist-level
      * results past the shortest lifetime of the sources they depend on (with the same two cases),
      * and artist resolution entries past theirs. Then evicts down to the size limit, which may
-     * have been lowered since. Reads never return an expired entry either way; this frees the
-     * space. An entry kept under an adapter's older extraction version, or an older version of its
-     * artist-level part, is not expired: it is deleted when read, replaced, or evicted. `:cli`
+     * have been lowered since. A genre's reason (#523) written longer ago than *Keep history for* is
+     * expired too. Reads never return an expired entry either way; this frees the space. An entry
+     * kept under an adapter's older extraction version, or an older version of its artist-level
+     * part, is not expired: it is deleted when read, replaced, or evicted. `:cli`
      * calls this at start, and the app on start. Returns how many entries it deleted.
      */
     fun purgeExpired(now: Instant = clock.now()): Long =
@@ -71,6 +73,10 @@ class Caches(
             deleted += purgeUnknownSources()
             deleted += queries.retrievalPurgeFormat(RetrievalCodec.FORMAT.toLong()).value
             deleted += queries.artistPurge((now - current.artistCacheLifetime).toEpochMilliseconds()).value
+            for (kind in CardKind.entries) {
+                val lifetime = SynthesisCache.lifetimeOf(kind, current) ?: continue
+                deleted += queries.synthesisPurgeKind(kind.key, (now - lifetime).toEpochMilliseconds()).value
+            }
             deleted + enforceLimit()
         }
 

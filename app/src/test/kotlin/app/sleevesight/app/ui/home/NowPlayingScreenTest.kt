@@ -122,8 +122,8 @@ class NowPlayingScreenTest {
         settings: Settings = Settings(),
     ) = NowPlayingState(view, sundown, PlaybackInfo(Settings.SPOTIFY, PlaybackStatus.PLAYING), settings = settings)
 
-    // The *Sources* list starts folded (#269), its heading the fold (#440): its first screenful, or all of it.
-    private fun unfold() = compose.onNodeWithTag(SOURCES_FOLD_TAG).performScrollTo().performClick()
+    // The *Sources* list starts folded (#269), its chip opening it (#623): its first screenful, or all of it.
+    private fun unfold() = compose.onNodeWithTag(SOURCES_CHIP_TAG).performScrollTo().performClick()
 
     private fun unfoldAll() {
         unfold()
@@ -131,9 +131,15 @@ class NowPlayingScreenTest {
     }
 
     @Test
-    fun nothingPlayingShowsTheIdleLine() =
-        show(NowPlayingState(PipelineView(track(insight = written("It is a song [MB1]."))), playing = null)) {
-            compose.onNodeWithText(text(R.string.home_placeholder)).assertIsDisplayed()
+    fun nothingPlayingShowsTheIdleHomeNotTheLastTrack() =
+        show(
+            NowPlayingState(
+                PipelineView(track(insight = written("It is a song [MB1]."))),
+                playing = null,
+                settings = Settings(),
+            ),
+        ) {
+            compose.awaitIdleHome()
             assertEquals(0, compose.onAllNodesWithTag(PLAYER_TAG).fetchSemanticsNodes().size)
         }
 
@@ -183,14 +189,14 @@ class NowPlayingScreenTest {
         show(state(PipelineView(offered, aiReady = true, writeKey = sundownKey, lapsed = true))) {
             compose
                 .onNodeWithText(
-                    text(R.string.home_insight_paused, "Write on change"),
+                    text(R.string.home_insight_resumed),
                 ).performScrollTo()
                 .assertIsDisplayed()
             compose.onNodeWithText(text(R.string.home_insight_tap_write)).assertDoesNotExist()
             compose.onNodeWithTag(WRITE_TAG).assertExists()
         }
         show(state(PipelineView(offered, aiReady = true, writeKey = sundownKey))) {
-            compose.onNodeWithText(text(R.string.home_insight_paused, "Write on change")).assertDoesNotExist()
+            compose.onNodeWithText(text(R.string.home_insight_resumed)).assertDoesNotExist()
             compose.onNodeWithText(text(R.string.home_insight_tap_write)).performScrollTo().assertIsDisplayed()
         }
     }
@@ -250,8 +256,9 @@ class NowPlayingScreenTest {
         }
         writes = 0
         show(state(PipelineView(failed, aiReady = true, retry = true, writeKey = sundownKey))) {
-            compose.onNodeWithText(text(R.string.home_insight_failed, reason)).assertExists()
-            compose.onNodeWithText(text(R.string.home_insight_retry)).assertExists()
+            // One line: why, and that Write insight tries again (#625).
+            compose.onNodeWithText(text(R.string.home_insight_failed_retry, reason)).assertExists()
+            compose.onNodeWithText(text(R.string.home_insight_failed, reason)).assertDoesNotExist()
             compose.onNodeWithTag(WRITE_TAG).performScrollTo().performClick()
             assertEquals(1, writes)
             assertEquals(sundownKey to sundown, tapped)

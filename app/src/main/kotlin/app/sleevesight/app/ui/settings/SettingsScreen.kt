@@ -44,6 +44,7 @@ import app.sleevesight.app.ui.theme.DeveloperMark
 import app.sleevesight.core.ai.AiProvider
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.settings.WriteAutomatically
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
@@ -53,8 +54,9 @@ import kotlinx.coroutines.launch
 import java.io.IOException
 
 /**
- * The settings screen (design, *Settings*; #444): its sections, each folded under its heading and
- * short description, all folded when the screen opens ([SettingsSection], [FoldedSection]):
+ * The settings screen (design, *Settings*; #444): its sections, each a chip with its short
+ * description beside it, which opens the section's panel in their place, any number open at once,
+ * all closed when the screen opens ([SettingsSection], [FoldedSection], #649):
  * *Players*, *Sources*, *AI services* ([AiSection], #227), *Secrets*, *Genres* (D12, #84),
  * *Insights* (D5, D13), *History* (#148, D9), *Appearance* (#377), *About*, and *Developer*, shown
  * only in developer mode, which seven taps on *Version* turn on ([VersionRow]). Each change is saved
@@ -77,9 +79,14 @@ import java.io.IOException
  * [installedPlayers] its icon, whether the phone shows it, and the players seen (#535); null lists
  * every stored player, without an icon.
  * [modelCheck] holds the services' models found unavailable (#540), which their rows say, and hears
- * each model list the model choice fetches. [landOn] is where the settings open, unfolded and
- * landed on as a link to it would ([SettingsNavigator.go]), once per visit: Home's note of a model
- * found unavailable opens them at the model's row (#581); null opens them all folded, at the top.
+ * each model list the model choice fetches. [landOn] is where the settings open, its section open
+ * and landed on as a link to it would ([SettingsNavigator.go]), once per visit: Home's note of a
+ * model found unavailable opens them at the model's row (#581); null opens them all closed, at the
+ * top.
+ * [chooseWritingMode] saves each mode chosen for *Reactive*, the one chosen already included, and
+ * tells the pipeline (#625: an automatic one starts automatic writing from the next track), its
+ * result whether it was saved, which the screen announces as it does any change; null saves the
+ * mode as any setting.
  */
 @Suppress("LongParameterList", "LongMethod") // The stores and actions it works on; a branch per dialog.
 @Composable
@@ -98,6 +105,7 @@ fun SettingsScreen(
     installedPlayers: InstalledPlayers? = null,
     modelCheck: ModelCheck? = null,
     landOn: SettingsTarget? = null,
+    chooseWritingMode: ((WriteAutomatically) -> Deferred<Boolean>)? = null,
     playerLabel: (String) -> String,
 ) {
     val settings by settingsStore.settings.collectAsState(initial = null)
@@ -112,9 +120,15 @@ fun SettingsScreen(
     // The changes in a row that could not be saved, 0 once one is: each one is announced.
     var changeFailures by remember { mutableIntStateOf(0) }
     val clearing = remember(scope) { Clearing(scope) }
-    val update =
-        scope.updater(settingsStore, saves) { failed ->
-            changeFailures = if (failed) changeFailures + 1 else 0
+    val failed = { failed: Boolean -> changeFailures = if (failed) changeFailures + 1 else 0 }
+    val update = scope.updater(settingsStore, saves, failed)
+    // *Reactive*'s mode through the app's chooser (#625), its save announced as any change's is.
+    val chooseMode: ((WriteAutomatically) -> Unit)? =
+        chooseWritingMode?.let { choose ->
+            { mode ->
+                val saved = choose(mode)
+                scope.launch { failed(!saved.await()) }
+            }
         }
     val keys = KeysShown(secrets, offerReset = sealFailed || SecretState.UNREADABLE in secrets.values)
     val context = LocalContext.current
@@ -132,6 +146,7 @@ fun SettingsScreen(
                         onOpenCredits,
                         onOpenDiagnostics,
                         onOpenWhatLeaves,
+                        chooseMode,
                     )
                 SettingsContent(current, keys, navigation, unavailable, landOn, update) { dialog = it }
             }
@@ -298,13 +313,17 @@ internal class PlayerApps(
     val installed: InstalledPlayers? = null,
 )
 
-/** How the screen names players and models, and where it leads. */
+/**
+ * How the screen names players and models, where it leads, and how it saves a mode chosen for
+ * *Reactive* ([chooseMode], #625; null: as any setting).
+ */
 private class Navigation(
     val players: PlayerApps,
     val modelName: (String) -> String,
     val openCredits: () -> Unit,
     val openDiagnostics: () -> Unit,
     val openWhatLeaves: () -> Unit,
+    val chooseMode: ((WriteAutomatically) -> Unit)? = null,
 )
 
 /**
@@ -356,7 +375,7 @@ private fun Notices(
 }
 
 /**
- * The settings' sections, all folded at first, and the links between them ([SettingsNavigator]);
+ * The settings' sections, all closed at first, and the links between them ([SettingsNavigator]);
  * opened at [landOn], if any, once per visit (a rotation does not land again).
  */
 @Suppress("LongParameterList") // What the sections show and change.
@@ -380,48 +399,97 @@ private fun SettingsContent(
                 landOn?.let { navigator?.go(it) }
             }
         }
-        SettingsColumn(settings, keys, navigation, unavailable, folds, update, open)
+        // The title and the search box above the list, so the search stays in reach (#649).
+        Text(
+            stringResource(R.string.settings_title),
+            style = MaterialTheme.typography.headlineMedium,
+            modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 16.dp),
+        )
+        SearchField(folds.query, folds::search, Modifier.padding(start = 24.dp, end = 24.dp, top = 12.dp))
+        // Asked once, off the main thread, from the start: for *Players* and for a search, which finds
+        // them as soon as it begins (#649).
+        val listed = listedPlayers(settings.followedPlayers.keys, navigation.players)
+        val found =
+            if (folds.searching) {
+                val players = listed.orEmpty().map { it.name }
+                matches(settingsIndex(settings, keys, players, navigation.modelName, unavailable), folds.query)
+            } else {
+                null
+            }
+        found?.let { SearchAnnouncement(folds.query, it.size) }
+        SettingsColumn(settings, keys, navigation, unavailable, Found(listed, found), folds, update, open)
     }
 }
 
-/** The sections, in [folds], in the order shown. */
-@Suppress("LongParameterList", "LongMethod") // What the sections show and change; one fold per section.
+/**
+ * The sections, open as [folds] has them, in the order shown, their chips all as wide
+ * ([sectionChipWidth]). While searching (#649), only the sections the search finds ([matches] of
+ * [settingsIndex]), each with what of it shows ([Found.sections]), or *No settings match "…"*.
+ */
+@Suppress("LongParameterList", "LongMethod") // What the sections show and change; one call per section.
 @Composable
 private fun SettingsColumn(
     settings: Settings,
     keys: KeysShown,
     navigation: Navigation,
     unavailable: Map<ProviderId, String>,
+    shown: Found,
     folds: SectionFolds,
     update: Update,
     open: (SettingsDialog) -> Unit,
 ) {
     val secrets = keys.states
+    val chip = sectionChipWidth()
+    val listed = shown.players
+    val found = shown.sections
+
+    // [section], unless a search under way does not find it.
+    @Composable
+    fun Section(
+        section: SettingsSection,
+        content: @Composable () -> Unit,
+    ) {
+        if (found == null) {
+            FoldedSection(section, folds, chip, content = content)
+        } else {
+            found[section]?.let { FoldedSection(section, folds, chip, it, content) }
+        }
+    }
+
     SettingsScrollColumn(
-        modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
+        modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Text(stringResource(R.string.settings_title), style = MaterialTheme.typography.headlineMedium)
-        FoldedSection(SettingsSection.PLAYERS, folds) { PlayersSection(settings, navigation.players, update) }
-        FoldedSection(SettingsSection.SOURCES, folds) { SourcesSection(settings, secrets, update) }
-        FoldedSection(SettingsSection.AI_SERVICES, folds) {
+        if (found?.isEmpty() == true) NothingFound(folds.query)
+        Section(SettingsSection.PLAYERS) { PlayersSection(settings, listed, navigation.players, update) }
+        Section(SettingsSection.SOURCES) { SourcesSection(settings, secrets, update) }
+        Section(SettingsSection.AI_SERVICES) {
             AiSection(settings, secrets, navigation.modelName, update, open, unavailable)
         }
-        FoldedSection(SettingsSection.SECRETS, folds) { SecretsSection(settings, keys, update, open) }
-        FoldedSection(SettingsSection.GENRES, folds) { GenresSection(settings, secrets, update) }
-        FoldedSection(SettingsSection.INSIGHTS, folds) { InsightsSection(settings, update, open) }
-        FoldedSection(SettingsSection.HISTORY, folds) { HistorySection(settings, update, open) }
-        FoldedSection(SettingsSection.APPEARANCE, folds) { AppearanceSection(settings, update, open) }
-        FoldedSection(SettingsSection.ABOUT, folds) {
+        Section(SettingsSection.SECRETS) { SecretsSection(settings, keys, update, open) }
+        Section(SettingsSection.GENRES) { GenresSection(settings, secrets, update) }
+        Section(SettingsSection.INSIGHTS) { InsightsSection(settings, update, open, navigation.chooseMode) }
+        Section(SettingsSection.HISTORY) { HistorySection(settings, update, open) }
+        Section(SettingsSection.APPEARANCE) { AppearanceSection(settings, update, open) }
+        Section(SettingsSection.ABOUT) {
             AboutSection(settings, update, navigation.openCredits, navigation.openWhatLeaves)
         }
-        if (settings.developerMode) {
+        if (settings.developerMode && (found == null || SettingsSection.DEVELOPER in found)) {
             // The whole section marked (#536), so what the mark means shows where it is set.
             DeveloperMark(spacing = 4.dp) {
-                FoldedSection(SettingsSection.DEVELOPER, folds) {
+                Section(SettingsSection.DEVELOPER) {
                     DeveloperSection(settings, update, open, navigation.openDiagnostics)
                 }
             }
         }
     }
 }
+
+/**
+ * The players listed under *Players* ([players], null until loaded), and, while searching, the
+ * sections the search finds, each with what of it shows ([sections]; null while not searching).
+ */
+private class Found(
+    val players: List<ListedPlayer>?,
+    val sections: Map<SettingsSection, SectionMatch>?,
+)

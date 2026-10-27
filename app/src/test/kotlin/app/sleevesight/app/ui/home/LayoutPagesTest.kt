@@ -277,9 +277,9 @@ class LayoutPagesTest {
         show(state(long(), boxes)) {
             assertEquals(0, count(SOURCES_PAGE_LINK_TAG))
 
-            compose.onNodeWithTag(SOURCES_FOLD_TAG).performScrollTo().performClick()
+            compose.onNodeWithTag(SOURCES_CHIP_TAG).performScrollTo().performClick()
             compose.onNodeWithTag(LINE_PREFIX + "MB1").assertExists()
-            // A genre chip opens its panel on Home (#558), with the table and where the genre comes from.
+            // A genre chip opens its panel on Home (#558), with the table and where its labels come from.
             compose.onNodeWithTag(GENRE_PREFIX + "track:folkpop").performScrollTo().performClick()
             compose.onNodeWithTag(GENRE_PANEL_HEADING_TAG).assertTextEquals("Folk Pop")
             compose.onNodeWithTag(GENRE_CELL_PREFIX + "artist:Gordon Lightfoot:rock").assertExists()
@@ -290,7 +290,7 @@ class LayoutPagesTest {
     @Test
     fun underSeparatePagesSourcesOpensAPageAndBackReturnsToHomeWhereItWas() =
         show(state(long(), pages)) {
-            assertEquals(0, count(SOURCES_FOLD_TAG))
+            assertEquals(0, count(SOURCES_CHIP_TAG))
             assertEquals(0, count(LINE_PREFIX + "MB1"))
             val unscrolled = top(SOURCES_PAGE_LINK_TAG)
             compose.onNodeWithTag(SOURCES_PAGE_LINK_TAG).performScrollTo()
@@ -334,7 +334,7 @@ class LayoutPagesTest {
             var drawn = false
             repeat(BACK_FRAMES) {
                 compose.mainClock.advanceTimeByFrame()
-                assertEquals(0, count(SOURCES_FOLD_TAG))
+                assertEquals(0, count(SOURCES_CHIP_TAG))
                 drawn = drawn || count(SOURCES_PAGE_LINK_TAG) > 0
             }
             // Home was drawn in those frames, so the fold's absence means something.
@@ -352,7 +352,7 @@ class LayoutPagesTest {
         show(NowPlayingState(read.view, read.playing, read.playback, settings = null)) { current ->
             // Home itself is drawn: the insight shows, with no settings needed.
             compose.onNodeWithText(text(R.string.home_insight_title)).assertExists()
-            assertEquals(0, count(SOURCES_FOLD_TAG))
+            assertEquals(0, count(SOURCES_CHIP_TAG))
             assertEquals(0, count(SOURCES_PAGE_LINK_TAG))
             assertEquals(0, count(GENRE_PREFIX + "track:folkpop"))
 
@@ -362,7 +362,7 @@ class LayoutPagesTest {
             var drawn = false
             repeat(BACK_FRAMES) {
                 compose.mainClock.advanceTimeByFrame()
-                assertEquals(0, count(SOURCES_FOLD_TAG))
+                assertEquals(0, count(SOURCES_CHIP_TAG))
                 drawn = drawn || count(SOURCES_PAGE_LINK_TAG) > 0
             }
             assertTrue(drawn)
@@ -493,6 +493,27 @@ class LayoutPagesTest {
         }
 
     @Test
+    fun aPageWithNothingPlayingSaysSoAndLeavesThePlayersAndTheGuideToHome() =
+        show(state(long(), pages)) { current ->
+            compose.onNodeWithTag(SOURCES_PAGE_LINK_TAG).performScrollTo().performClick()
+            compose.waitForIdle()
+
+            // The track goes: the page says so, and draws neither Home's players nor its guide.
+            val read = state(long(), pages)
+            current.value = NowPlayingState(read.view, null, read.playback, settings = pages)
+            compose.waitForIdle()
+            title(text(R.string.home_sources_title))
+            compose.onNodeWithTag(PAGE_NOTHING_PLAYING_TAG).assertTextEquals(text(R.string.page_nothing_playing))
+            assertEquals(0, count(NOTHING_PLAYING_TAG))
+            assertEquals(0, count(HOME_GUIDE_TAG))
+
+            // Back on Home, the players and the guide.
+            back()
+            onHome()
+            compose.onNodeWithTag(NOTHING_PLAYING_TAG).assertExists()
+        }
+
+    @Test
     fun genresPageFollowsANewTrackAOneLevelTrackAndShowGenres() =
         show(state(long(), pages)) { current ->
             compose.onNodeWithTag(GENRE_PREFIX + "track:folkpop").performScrollTo().performClick()
@@ -562,6 +583,8 @@ class LayoutPagesTest {
                 ).assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.Heading))
                 .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
                 .assert(clickLabelled(open))
+                // A chip since #623, as the genres' are; it opens a page, so it is never collapsed.
+                .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.StateDescription))
                 .assertTouchHeightIsEqualTo(48.dp)
             // A chip opens the genres' page: a button, never selected.
             compose

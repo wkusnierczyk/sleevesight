@@ -16,7 +16,9 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
+import app.sleevesight.app.AppGraph
 import app.sleevesight.app.MainActivity
+import app.sleevesight.app.MemoryStore
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.TestStores
@@ -189,8 +191,15 @@ class FontSettingsTest {
         fail("$title not shown within $MAX_FRAMES frames")
     }
 
+    /**
+     * The graph's settings in memory ([MemoryStore]), changed on the test's thread, the main one
+     * (#606): with their file, each wait for a stored font to reach [AppGraph.font] depended on
+     * DataStore's own threads finishing within [idleUntil]'s real-time limit. The one failure seen
+     * (in CI) was that wait timing out, before any activity was started.
+     */
     @Test
     fun mainActivityStartsInTheStoredFontAndFollowsIt() {
+        app.makeGraph = { AppGraph(it, settingsData = MemoryStore()) }
         val title = text(R.string.first_run_leaves_title)
         // *System font* stored and read by this process; no `LastFont` from an earlier one.
         runBlocking { app.graph.settings.update { it.copy(font = FontChoice.SYSTEM_FONT) } }
@@ -235,8 +244,22 @@ class FontSettingsTest {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity -> activity.setContent { CreditsScreen(onClose = {}) } }
             compose.onNodeWithText(text(R.string.credits_roboto)).performScrollTo().assertIsDisplayed()
-            compose.onNodeWithText("SIL Open Font License 1.1").performScrollTo().assertIsDisplayed()
+            // Roboto's, and the home guide's hand-written font's (#627).
+            compose.onNodeWithText(text(R.string.credits_caveat)).performScrollTo().assertIsDisplayed()
+            assertEquals(2, compose.onAllNodesWithText("SIL Open Font License 1.1").fetchSemanticsNodes().size)
         }
+    }
+
+    @Test
+    fun theHandFontsLicenceShipsWithTheApp() {
+        val licence =
+            app.assets
+                .open("licences/caveat-ofl.txt")
+                .bufferedReader()
+                .use { it.readText() }
+        assertTrue(licence.startsWith("Copyright 2014 The Caveat Project Authors"))
+        assertTrue(licence.contains("SIL OPEN FONT LICENSE Version 1.1"))
+        assertTrue(licence.contains("PERMISSION & CONDITIONS"))
     }
 
     @Test

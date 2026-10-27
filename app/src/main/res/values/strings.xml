@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Sleevesight</string>
+    <!-- The app's name where Android shows it: the launcher, App info, and the notification-access
+         list. The debug build sets its own (app/src/debug/res/values/strings.xml, #614), so that it
+         can be told from the Play build; app_name, which the app's own screens show, stays. -->
+    <string name="app_label">@string/app_name</string>
 
     <!-- First-run screen: what leaves the phone, and to whom (design, Privacy and security). -->
     <string name="first_run_intro">Sleevesight reads what your music player is playing, looks it up in the sources you switch on, and has the AI service you choose write about it. Before you start, here is what it reads, and what leaves your phone.</string>
@@ -91,6 +95,7 @@
     <string name="settings_model_failed_unavailable_here">The models could not be listed: the service is not offered in your country.</string>
     <string name="settings_model_failed_other">The models could not be listed: the service answered with an error.</string>
 
+    <!-- A settings section's name (#649): on its chip, one line, every chip as wide as the widest name; keep it short. -->
     <string name="settings_section_players">Players</string>
 
     <string name="settings_section_sources">Sources</string>
@@ -109,21 +114,23 @@
 
     <string name="settings_section_insights">Insights</string>
     <string name="settings_write_insights">Show insights</string>
-    <string name="settings_write_insights_summary">Insights on the playing track, written by your AI service from the sources’ evidence. Each insight written is a paid call on your AI service key. Stop ends the writing, but once the request has reached the AI service, it may still charge for it. When disabled, no AI calls are made; the evidence is still shown.</string>
+    <string name="settings_write_insights_summary">Insights on the playing track, written by your AI service from the sources’ evidence. Each insight written is a paid call on your AI service key. Stop writing ends the call at once; if the request has reached your AI service, it still charges for what it has read and written so far. Look again, in the menu beside Write insight, looks every source up afresh, a paid search with Exa web search on, and writes nothing; when the sources found something new, Rewrite insight writes the insight from it, a paid call, only if you tap it. When disabled, no AI calls are made; the evidence is still shown.</string>
     <string name="settings_write_automatically">Reactive</string>
-    <string name="settings_write_automatically_summary">Select what triggers writing an insight. The arrow beside Write insight, under Key insights, sets it too.</string>
+    <string name="settings_write_automatically_summary">Select what triggers writing an insight. The arrow beside Write insight, under Key insights, sets it too. Choosing an automatic mode starts automatic writing from the next track.</string>
     <string name="settings_pause_auto_write">Saver</string>
-    <string name="settings_pause_auto_write_summary">Stops automatic writing after a number of track changes while Sleevesight is not on screen, counted again from each time you open it.</string>
-    <string name="settings_write_every_change">On track change</string>
-    <string name="settings_write_when_skip">On track skip</string>
-    <string name="settings_write_never">Now</string>
-    <!-- Reactive's choices, each described under its name in the choice dialog (#546) and in the
-         insight card's menu beside Write insight (#615). -->
-    <string name="settings_write_every_change_detail">An insight for every new track, as it starts.</string>
-    <string name="settings_write_when_skip_detail">An insight only when you skip to a track, not when one follows another by itself.</string>
+    <string name="settings_pause_auto_write_summary">Stops automatic writing after a number of track changes while Sleevesight is not on screen, counted again from each time you open it. Opening Sleevesight resumes it.</string>
+    <!-- Reactive's choices (#625), in order of how much is written automatically; the same names
+         in the insight card's menu beside Write insight (#615). The stored value of On demand is
+         still NEVER. -->
+    <string name="settings_write_every_change">On track change (auto)</string>
+    <string name="settings_write_when_skip">On track skip (auto)</string>
+    <string name="settings_write_never">On demand</string>
+    <!-- Reactive's choices, each described under its name in the choice dialog (#546). -->
+    <string name="settings_write_every_change_detail">Writes automatically on every track change.</string>
+    <string name="settings_write_when_skip_detail">Writes automatically only when you skip to a track, not when one follows another by itself.</string>
     <string name="settings_write_never_detail">Only when you tap Write insight.</string>
     <string name="settings_crossfade">Crossfade</string>
-    <string name="settings_crossfade_summary">The player’s crossfade, for telling your skips from natural ends under “On track skip”.</string>
+    <string name="settings_crossfade_summary">The player’s crossfade, for telling your skips from natural ends under “On track skip (auto)”.</string>
     <string name="settings_crossfade_auto">Autodetect</string>
     <string name="settings_crossfade_seconds">%1$d s</string>
     <string name="settings_prepare_next">Proactive</string>
@@ -132,7 +139,7 @@
     <string name="settings_keep_sources">Keep Sources as you left them</string>
     <string name="settings_keep_sources_summary">Keeps the sources under each track’s insight folded or unfolded as you left them on the track before. When disabled, each new track’s sources start folded. Applies with Expandable boxes.</string>
     <string name="settings_background">Look up in the background</string>
-    <string name="settings_background_summary">Allows Sleevesight to look up information from sources while it is in the background, for every track played. With Reactive set to On track change or On track skip, insights are then written, and paid for, whether you read them or not, up to the Stop after limit when Saver is on.</string>
+    <string name="settings_background_summary">Allows Sleevesight to look up information from sources while it is in the background, for every track played. With Reactive set to On track change (auto) or On track skip (auto), insights are then written, and paid for, whether you read them or not, up to the Stop after limit when Saver is on.</string>
     <string name="settings_artist_facts_once">Don’t repeat artist facts</string>
     <!-- %1$s is settings_session_gap, a link to that row; %2$s is settings_section_history (#581). -->
     <string name="settings_artist_facts_once_summary">When you play several tracks by the same artist, each insight would tell the artist’s background again. With this on, an insight leaves out what an earlier one in the same listening session already said about the artist, and focuses on the song when there is enough to say about it. A new session starts after a break in listening, set under %1$s in %2$s.</string>
@@ -150,7 +157,7 @@
     <string name="settings_clear_history">Clear history</string>
     <string name="settings_clear_history_value">Deletes everything Sleevesight kept about the tracks you played</string>
     <string name="settings_clear_history_title">Clear history?</string>
-    <string name="settings_clear_history_explained">The list of tracks you played, the track changes recorded to learn your skips, the insights written and what the sources found are deleted from this phone. Your API keys and settings stay. Your music is not touched. This cannot be undone.</string>
+    <string name="settings_clear_history_explained">The list of tracks you played, the track changes recorded to learn your skips, the insights and genre explanations written, and what the sources found are deleted from this phone. Your API keys and settings stay. Your music is not touched. This cannot be undone.</string>
     <string name="settings_clear">Clear</string>
     <string name="settings_clear_history_failed">Not everything could be cleared. Try again.</string>
     <string name="settings_clear_history_done">History cleared.</string>
@@ -161,6 +168,8 @@
     <string name="settings_font_summary">The app’s own font looks the same on every phone. The system font is the one chosen in your phone’s settings.</string>
     <string name="settings_intro">Logo intro at start</string>
     <string name="settings_intro_summary">When you open Sleevesight while it is not already open, its logo plays a few seconds of animation first; a tap, Back or any key skips it. It never plays while your phone’s Remove animations or TalkBack is on.</string>
+    <string name="settings_home_guide">Home guide</string>
+    <string name="settings_home_guide_summary">While nothing is playing, Home shows a small picture of itself while a track plays, with notes on what each part does.</string>
     <string name="settings_section_keys">Secrets</string>
     <string name="settings_scan_keys">Load keys</string>
     <string name="settings_scan_keys_value">Save several API keys at once from one QR code.</string>
@@ -262,15 +271,15 @@
         <item quantity="one">%d track change away</item>
         <item quantity="other">%d track changes away</item>
     </plurals>
-    <!-- Stop after's description for the count chosen, with Look up in the background on; left out under Off. "Up to": a track the mode does not write on (a natural end under On track skip) is counted but not written. -->
+    <!-- Stop after's description for the count chosen, with Look up in the background on; left out under Off. "Up to": a track the mode does not write on (a natural end under On track skip (auto)) is counted but not written. Opening Sleevesight resumes automatic writing (#625). -->
     <plurals name="settings_pause_auto_write_summary_count">
-        <item quantity="one">While Sleevesight is in the background, it writes insights automatically for up to %1$d track change. After more than %1$d, it stops writing insights automatically until you tap Write insight.</item>
-        <item quantity="other">While Sleevesight is in the background, it writes insights automatically for up to %1$d track changes. After more than %1$d, it stops writing insights automatically until you tap Write insight.</item>
+        <item quantity="one">While Sleevesight is in the background, it writes insights automatically for up to %1$d track change. After more than %1$d, it stops writing insights automatically until you open it again.</item>
+        <item quantity="other">While Sleevesight is in the background, it writes insights automatically for up to %1$d track changes. After more than %1$d, it stops writing insights automatically until you open it again.</item>
     </plurals>
-    <!-- As settings_pause_auto_write_summary_count, with Look up in the background off: nothing is written in the background, and the count decides whether writing goes on when the app is back on screen. -->
+    <!-- As settings_pause_auto_write_summary_count, with Look up in the background off: nothing is written in the background, and the count decides whether the track playing when the app is back on screen is written automatically; automatic writing resumes from the next track either way (#625). -->
     <plurals name="settings_pause_auto_write_summary_count_foreground">
-        <item quantity="one">If Sleevesight is brought to the foreground within %1$d track change, it resumes writing insights automatically. If it is brought to the foreground after more than %1$d track change, it stops writing insights automatically until you tap Write insight.</item>
-        <item quantity="other">If Sleevesight is brought to the foreground within %1$d track changes, it resumes writing insights automatically. If it is brought to the foreground after more than %1$d track changes, it stops writing insights automatically until you tap Write insight.</item>
+        <item quantity="one">If Sleevesight is brought to the foreground within %1$d track change, it goes on writing insights automatically. After more than %1$d, the playing track’s insight is written only when you tap Write insight, and automatic writing resumes from the next track.</item>
+        <item quantity="other">If Sleevesight is brought to the foreground within %1$d track changes, it goes on writing insights automatically. After more than %1$d, the playing track’s insight is written only when you tap Write insight, and automatic writing resumes from the next track.</item>
     </plurals>
     <plurals name="settings_days">
         <item quantity="one">%d day</item>
@@ -309,6 +318,8 @@
     <string name="credits_exa">Exa</string>
     <string name="credits_exa_text">Web search results, under Exa’s terms of service.</string>
     <string name="credits_roboto">Roboto</string>
+    <string name="credits_caveat">Caveat</string>
+    <string name="credits_caveat_text">The hand-written font of the notes in Home’s guide, Caveat Regular, from github.com/googlefonts/caveat. Copyright 2014 The Caveat Project Authors.</string>
     <string name="credits_roboto_text">The app’s font, Roboto 3.016, from github.com/googlefonts/roboto-3-classic. Copyright 2011 The Roboto Project Authors.</string>
     <string name="credits_material_symbols">Material Symbols</string>
     <string name="credits_material_symbols_text">The icons in the app, such as the cogwheel, from Material Symbols by Google.</string>

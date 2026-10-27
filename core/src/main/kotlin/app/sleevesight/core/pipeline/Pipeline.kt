@@ -172,13 +172,17 @@ class Pipeline(
      *
      * With [again], what an earlier run of the same track gathered, it asks again only the
      * sources that were unreachable then (back online, #192): the others are kept as they landed,
-     * and a resolution made then is used again, not asked for.
+     * and a resolution made then is used again, not asked for. With [lookAgain] (#617), it looks
+     * every source up afresh, past the caches, keeping what the run before found of a source it
+     * cannot reach now ([LookAgain]).
      */
     suspend fun run(
         nowPlaying: NowPlaying,
         control: RunControl,
         again: Gathered? = null,
-    ): TrackState = start(nowPlaying, parts.normalizer.normalize(nowPlaying), settings(), control, again).run()
+        lookAgain: LookAgain? = null,
+    ): TrackState =
+        start(nowPlaying, parts.normalizer.normalize(nowPlaying), settings(), control, again, lookAgain).run()
 
     /**
      * Prepares [next], the next item in the player's queue, ahead of its play (D13, *Evidence*):
@@ -208,19 +212,22 @@ class Pipeline(
         return start(nowPlaying, track, settings(), RunControl.Unattended(write)).run()
     }
 
+    // The track, its settings and control, and how it looks up: as asked again, or afresh.
+    @Suppress("LongParameterList")
     private fun start(
         nowPlaying: NowPlaying,
         track: NormalizedTrack,
         current: Settings,
         control: RunControl,
         again: Gathered? = null,
+        lookAgain: LookAgain? = null,
     ): TrackRun {
         val token = runs.updateAndGetValue()
         val since = shown.forgets
         return TrackRun(
             parts = parts,
             time = time,
-            input = RunInput(current, nowPlaying, track, again),
+            input = RunInput(current, nowPlaying, track, again, lookAgain),
             control = control,
             onEvent = { if (shown.forgets == since) eventFlow.tryEmit(it) },
             publish = { state -> shown.publish(state, since) { runs.value == token } },

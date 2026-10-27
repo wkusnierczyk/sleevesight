@@ -244,14 +244,14 @@ internal fun GenresSection(
 }
 
 @StringRes
-private fun labelSourceName(source: LabelSource): Int =
+internal fun labelSourceName(source: LabelSource): Int =
     when (source) {
         LabelSource.LASTFM -> R.string.settings_source_lastfm
         LabelSource.MUSICBRAINZ -> R.string.settings_source_musicbrainz
     }
 
 @StringRes
-private fun labelSourceSummary(source: LabelSource): Int =
+internal fun labelSourceSummary(source: LabelSource): Int =
     when (source) {
         LabelSource.LASTFM -> R.string.settings_labels_lastfm_summary
         LabelSource.MUSICBRAINZ -> R.string.settings_labels_musicbrainz_summary
@@ -267,3 +267,13 @@ private fun labelSourcePage(source: LabelSource): String =
         LabelSource.LASTFM -> "https://www.last.fm/"
         LabelSource.MUSICBRAINZ -> "https://musicbrainz.org/doc/Folksonomy_Tagging"
     }
+
+/** *Sources*' rows as the settings' search finds them (#649): each by its name and what it is. */
+@Composable
+internal fun sourceIndexRows(): List<IndexedRow> {
+    val aiServices = stringResource(R.string.settings_section_ai)
+    return SOURCE_ROWS.map { source ->
+        // *AI service knowledge*'s description names *AI services*.
+        indexRow(stringResource(source.name), stringResource(source.summary, aiServices))
+    }
+}

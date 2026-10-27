@@ -40,7 +40,8 @@ import org.robolectric.RobolectricTestRunner
 import java.io.File
 
 /**
- * The links between settings (#539): a link to a section unfolds it and lands on its heading, and
+ * The links between settings (#539): a link to a section opens its panel (#649) and lands on its
+ * heading, the panel's *Close* taking the focus, as on opening, and
  * [sentenceWith] sets a link in its sentence. The key links are `SettingsKeyLinksTest`'s.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -49,7 +50,7 @@ class SettingsLinksTest {
     val compose = createEmptyComposeRule()
 
     @Test
-    fun aLinkToASectionUnfoldsItAndLandsOnItsHeading() {
+    fun aLinkToASectionOpensItsPanelAndLandsOnItsHeading() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             var navigator: SettingsNavigator? = null
             scenario.onActivity { activity ->
@@ -69,12 +70,12 @@ class SettingsLinksTest {
             }
             compose.waitForIdle()
             compose.runOnUiThread { navigator!!.go(SettingsTarget(SettingsSection.ABOUT)) }
-            val heading = hasTestTag(SettingsSection.ABOUT.tag) and isFocused()
-            compose.waitUntil(conditionDescription = "the About heading focused", timeoutMillis = 5_000) {
-                compose.onAllNodes(heading).fetchSemanticsNodes().isNotEmpty()
+            val close = hasTestTag(SettingsSection.ABOUT.panelTag + ":close") and isFocused()
+            compose.waitUntil(conditionDescription = "the About panel's Close focused", timeoutMillis = 5_000) {
+                compose.onAllNodes(close).fetchSemanticsNodes().isNotEmpty()
             }
-            compose.onNodeWithTag(SettingsSection.ABOUT.tag).assertIsDisplayed()
-            // Unfolded: its rows are drawn, under the heading.
+            compose.onNodeWithTag(SettingsSection.ABOUT.panelTag + ":heading").assertIsDisplayed()
+            // Open: its rows are drawn, under the heading.
             compose.onNodeWithText(ABOUT_ROWS).assertExists()
         }
     }

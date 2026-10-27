@@ -41,6 +41,18 @@ internal class CountingAdapter(
     /** Whether the source cannot be reached (the phone offline, say): its lookups end unreachable. */
     var unreachable = false
 
+    /** The text of the line it finds, when set (#617: what the source says now). */
+    var text: String? = null
+
+    /** The texts of the lines it finds, in order, when set; [text] is then not read (#617). */
+    var lines: List<String>? = null
+
+    /**
+     * Whether a request of its verification fails (#617): its lines are then unverified, and the
+     * result provisional, as Last.fm's when MusicBrainz's artist search fails.
+     */
+    var provisional = false
+
     override suspend fun lookup(
         track: NormalizedTrack,
         resolution: Deferred<Resolution>,
@@ -53,12 +65,21 @@ internal class CountingAdapter(
             throw e
         }
         resolution.await()
-        val line = EvidenceDraft(id, Scope.SONG, "A line from ${id.tag}.", null, Instant.parse("2026-10-16T12:00:00Z"))
+        val said = lines ?: listOf(text ?: "A line from ${id.tag}.")
+        val found = said.map { EvidenceDraft(id, Scope.SONG, it, null, Instant.parse("2026-10-16T12:00:00Z")) }
         return when {
             unreachable -> SourceResult(Outcome.Unreachable, emptyList(), byName)
             // A report with no artists (a title first) finds nothing.
             track.artists.isEmpty() -> SourceResult(Outcome.None, emptyList(), byName)
-            else -> SourceResult(Outcome.SongArticle, listOf(line), byName)
+            provisional ->
+                SourceResult(
+                    Outcome.SongArticle,
+                    emptyList(),
+                    byName,
+                    unverified = found,
+                    provisional = true,
+                )
+            else -> SourceResult(Outcome.SongArticle, found, byName)
         }
     }
 }
@@ -122,6 +143,9 @@ internal class CardCache(
 
     /** Forgets every card, as an eviction would. */
     fun clearCards() = cards.clear()
+
+    /** Every card kept now reads [text], as cards kept under other settings would (#617). */
+    fun replaceCards(text: String) = cards.replaceAll { _, _ -> text }
 
     override suspend fun result(
         adapter: SourceAdapter,

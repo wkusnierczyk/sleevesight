@@ -1,12 +1,15 @@
 package app.sleevesight.app.ui.home
 
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import app.sleevesight.app.R
 import app.sleevesight.core.model.NowPlaying
@@ -20,6 +23,7 @@ import app.sleevesight.core.pipeline.TrackState
  * its own ([PageFrame]), in the album art's colours, from the same [state] as Home, for the track
  * playing, with Home's [actions]; [onBack] goes back. Each page opens fresh: *Sources* at its
  * first screenful with every source's lines shown, whatever *Keep Sources as you left them* says.
+ * With nothing playing, a line says so ([PageNothingPlaying]).
  */
 @Composable
 internal fun NowPlayingPageContent(
@@ -35,17 +39,40 @@ internal fun NowPlayingPageContent(
     ArtTheme(state.art) {
         PageFrame(pageTitle(page), onBack, containerColor = ground) {
             if (playing == null || shown == null) {
-                NothingPlaying()
+                PageNothingPlaying()
                 return@PageFrame
             }
             when (page) {
                 is HomePage.Sources -> SourcesPage(shown, playing, page.cite, actions.openSettings)
-                HomePage.Genres -> GenresPage(shown.track, state.settings, genre = null)
-                is HomePage.GenresAt -> GenresPage(shown.track, state.settings, page.genre)
+                HomePage.Genres -> GenresPage(shown.track, state.settings, genre = null, genreNotes(shown, actions))
+                is HomePage.GenresAt -> GenresPage(shown.track, state.settings, page.genre, genreNotes(shown, actions))
             }
         }
     }
 }
+
+// What the genres' page shows above its table (#523): a citation in a reason opens *Sources*' page at its line.
+private fun genreNotes(
+    shown: Showing,
+    actions: NowPlayingActions,
+) = PanelNotes(actions.genreNotes, { id -> actions.openPage(HomePage.Sources(cite = id)) }, shown.modelAllowed)
+
+/**
+ * A page once nothing plays (#627): a line that says so, and no more. Not the idle Home
+ * ([IdleHome]): the page is titled for an item of a track, and the players and the guide are
+ * Home's, a back arrow away, where the guide's *Dismiss* and the players' state are kept.
+ */
+@Composable
+private fun PageNothingPlaying() {
+    Text(
+        stringResource(R.string.page_nothing_playing),
+        Modifier.testTag(PAGE_NOTHING_PLAYING_TAG),
+        style = MaterialTheme.typography.bodyLarge,
+    )
+}
+
+/** The test tag of the line a page shows once nothing plays. */
+const val PAGE_NOTHING_PLAYING_TAG: String = "page-nothing-playing"
 
 /** A page's title: the item's name. */
 @Composable

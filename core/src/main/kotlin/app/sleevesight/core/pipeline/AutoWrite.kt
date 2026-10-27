@@ -33,9 +33,9 @@ data class TrackChange(
  * - never while *Show insights* is off, or before the user's first action since the app started
  *   (in the app, a cold start: a return to it keeps the first action, until it expires after the
  *   track changes *Saver* names while the app is not on screen, #203);
- * - *On track change*: every track;
- * - *On track skip*: tracks the user moved to, by a skip in the player or an action in Sleevesight;
- * - *Now*: none.
+ * - *On track change (auto)*: every track;
+ * - *On track skip (auto)*: tracks the user moved to, by a skip in the player or an action in Sleevesight;
+ * - *On demand*: none.
  */
 object AutoWrite {
     fun writes(
@@ -50,13 +50,17 @@ object AutoWrite {
      * latest report it holds (`PipelineCoordinator`).
      */
     fun causes(settings: Settings): Set<ChangeCause> =
-        if (!settings.writeInsights) {
-            emptySet()
-        } else {
-            when (settings.writeAutomatically) {
-                WriteAutomatically.ON_EVERY_TRACK_CHANGE -> ChangeCause.entries.toSet()
-                WriteAutomatically.WHEN_I_SKIP -> setOf(ChangeCause.USER_ACTION, ChangeCause.SKIP_IN_PLAYER)
-                WriteAutomatically.NEVER -> emptySet()
-            }
+        if (!settings.writeInsights) emptySet() else causes(settings.writeAutomatically)
+
+    /**
+     * The causes of a change that [mode] writes on, *Show insights* aside: what the app's coordinator
+     * also checks against the mode selected now, which may have changed since a run read its
+     * settings (#625).
+     */
+    fun causes(mode: WriteAutomatically): Set<ChangeCause> =
+        when (mode) {
+            WriteAutomatically.ON_EVERY_TRACK_CHANGE -> ChangeCause.entries.toSet()
+            WriteAutomatically.WHEN_I_SKIP -> setOf(ChangeCause.USER_ACTION, ChangeCause.SKIP_IN_PLAYER)
+            WriteAutomatically.NEVER -> emptySet()
         }
 }

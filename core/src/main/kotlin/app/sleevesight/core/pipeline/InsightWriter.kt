@@ -292,19 +292,12 @@ internal class InsightWriter(
             duration = nowPlaying.duration,
             evidenceFingerprint = evidence.fingerprint,
             promptVersion = InsightPrompt.VERSION,
-            styleHash = styleHash(NO_STYLE),
+            styleHash = styleHash(parts.hasher),
             provider = ai.provider.id,
             model = model,
             modelKnowledge = allowModel,
             effort = settings.effort(ai.provider.id),
         )
-
-    // D14's style is not built yet: every card uses the built-in style, the hash of no style.
-    private fun styleHash(style: String): String =
-        parts.hasher.sha256(style.encodeToByteArray()).joinToString("") { byte ->
-            val value = byte.toInt() and BYTE_MASK
-            HEX[value shr NIBBLE].toString() + HEX[value and NIBBLE_MASK]
-        }
 
     // Shows [insight], and returns it.
     private fun show(insight: InsightState): InsightState {
@@ -327,13 +320,8 @@ internal class InsightWriter(
     }
 
     private companion object {
-        const val NO_STYLE = ""
         const val WAITS_FOR_TAP = "waits for a tap on Write (Reactive)"
         const val INCOMPLETE = "incomplete"
         const val DECLINED = "declined"
-        const val HEX = "0123456789abcdef"
-        const val BYTE_MASK = 0xFF
-        const val NIBBLE = 4
-        const val NIBBLE_MASK = 0x0F
     }
 }

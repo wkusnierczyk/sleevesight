@@ -41,11 +41,11 @@ At the bottom, a link opens the privacy policy in your browser.
 
 **What follows.** *Continue* takes you to the home screen, where the app opens from then on. If you turn notification access off later, the home screen says *Sleevesight needs notification access to see what is playing.* and offers *Turn on notification access*, which brings back the first-run screen, with its back arrow and *Close* to return to the home screen.
 
-With nothing playing yet, the home screen says *Nothing playing in a player you follow yet. Lookups run while Sleevesight is on screen.* At the top, the logo scrolls the screen back to the top, and the cogwheel opens *Settings*.
+With nothing playing yet, the home screen lists your music players, A to Z, each a row *Play on …* that opens the player, where you start the music; a player switched off is dimmed, with *Enable in Settings*, and with no player seen yet the screen says *No music player seen yet. Play music in one, and it is listed here and in Settings → Players.* Under the players, a small picture of the home screen while a track plays, with hand-written notes on what each part does: the guide, until you dismiss it ([usage]({{ '/docs/tutorials/usage/' | relative_url }}#nothing-playing)). At the top, the logo scrolls the screen back to the top, and the cogwheel opens *Settings*.
 
 <!-- screenshot: the first-run screen, bottom, with "Notification access is off." and "Open notification access", from app version … -->
 <!-- screenshot: the first-run screen, bottom, with "Notification access is on." and "Continue", from app version … -->
-<!-- screenshot: the home screen with nothing playing: the header with the logo and the cogwheel, and the idle line, from app version … -->
+<!-- screenshot: the home screen with nothing playing: the header with the logo and the cogwheel, the players, and the guide, from app version … -->
 
 ## 3. Choosing an AI service and saving its key
 
@@ -90,11 +90,11 @@ To save several keys at once, *Load keys*, under *Secrets*, reads one QR code of
 
 **The track appears.** Play music in a player you follow and open Sleevesight. The home screen follows the track, top to bottom: the player and its state (a tap opens the player), the cover with the playback position, the title, artists, album and year, the genre labels, *Key insights*, and *Sources*. Lookups and writing run while the app is on screen.
 
-**An insight is written.** While the sources are asked, *Key insights* says *Gathering evidence…*; while the AI service writes, *Writing…*, with *Stop*. The insight is a few sentences on why the track is interesting. On the very first track, and after the app starts afresh, it waits for a tap on *Write insight* (step 6).
+**An insight is written.** While the sources are asked, *Key insights* says *Gathering evidence…*; while the AI service writes, *Writing…*, with *Stop writing*. The insight is a few sentences on why the track is interesting. On the very first track, and after the app starts afresh, it waits for a tap on *Write insight*, or for a writing mode chosen (step 6).
 
 **Its citations.** Each sentence ends with chips for the sources it cites. A tap on a chip unfolds *Sources* and jumps to the line it cites. A sentence that cites nothing is underlined. When a sentence is not backed by the sources (it cites nothing, a line that does not exist, or the model's own knowledge), a note under the insight says how many, such as *1 sentence is not backed by the sources.*; otherwise there is none.
 
-**The *Sources* list.** Under the insight, *Sources* starts folded, its heading alone: *Sources ▸*; a tap on it unfolds it. Unfolded, each source that gave lines has a chip, by name, which shows or hides its lines; a note says when a source needs your key, could not be reached or failed; then come the evidence lines, and below them what was found but not verified, so not cited.
+**The *Sources* list.** Under the insight, *Sources* starts folded, a chip alone, like a genre chip; a tap on it opens its panel. In the panel, each source that gave lines has a chip, by name, which shows or hides its lines; a note says when a source needs your key, could not be reached or failed; then come the evidence lines, and below them what was found but not verified, so not cited.
 
 **What you decide.** Nothing, as a rule: you listen. A wrong-looking sentence can be checked against its line under *Sources*. [Usage]({{ '/docs/tutorials/usage/' | relative_url }}) says what each state of *Key insights* means, offline or when a source fails.
 
@@ -104,19 +104,19 @@ To save several keys at once, *Load keys*, under *Secrets*, reads one QR code of
 
 ## 6. Write, automatic writing, and the history
 
-**Write insight.** Each time the app starts afresh, nothing is written until you tap; under the default *On track change*, *Key insights* says *Tap Write on change to write this track's insight and start writing automatically.* That first tap is what lets automatic writing go on. Android usually keeps the app's process alive after you leave it, often for days, so coming back keeps it going; a restart of the phone, an update, or the system ending the app asks for the tap again.
+**Write insight.** Each time the app starts afresh, nothing is written automatically until you act in it: a tap on *Write insight*, which writes the track playing, or a writing mode chosen in the menu beside it (the current one included), which writes nothing by itself. Until then *Key insights* says *Tap Write insight to have it written from the sources below.* That first action is what lets automatic writing go on. Android usually keeps the app's process alive after you leave it, often for days, so coming back keeps it going; a restart of the phone, an update, or the system ending the app asks for it again.
 
 **Automatic writing.** *Reactive*, under *Insights* in the settings, decides which tracks are written without a tap; the arrow beside *Write insight*, under *Key insights*, opens the same choices:
 
-- *Now*: only when you tap *Write insight*.
-- *On track change*, the default: a new insight for each new track.
-- *On track skip*: only for a track you skip to, not one that follows a track played to its end. *Crossfade* (*Autodetect* by default), shown under it, helps tell the two apart.
+- *On demand*: only when you tap *Write insight*.
+- *On track skip (auto)*: only for a track you skip to, not one that follows a track played to its end, which offers *Write insight* and says why. *Crossfade* (*Autodetect* by default), shown under it, helps tell the two apart.
+- *On track change (auto)*, the default: a new insight for each new track.
 
 *Show insights* off makes no AI calls at all; the sources are still shown.
 
-**While you are away.** With *Look up in the background* off, the default, nothing is looked up or written while Sleevesight is not on screen. *Saver* (on, after 5 track changes, by default) stops one forgotten tap from paying for days: past that many track changes away, *Key insights* says *Automatic writing paused* and waits for a tap on *Write insight*. With *Look up in the background* on, insights are written while you are away, up to that count, each a paid call on your key.
+**While you are away.** With *Look up in the background* off, the default, nothing is looked up or written while Sleevesight is not on screen. *Saver* (on, after 5 track changes, by default) stops one forgotten action from paying for days: past that many track changes away, automatic writing pauses. Opening the app resumes it; the track playing then is not written on its own, and *Key insights* says *Automatic writing was paused while Sleevesight was not on screen, and resumes now.*, with *Write insight*. With *Look up in the background* on, insights are written while you are away, up to that count, each a paid call on your key.
 
-**An insight kept from before.** An insight is kept on the phone once written, so a track played again shows it at once, with no new call, as long as the sources find the same evidence and the AI service, model, effort and *AI service knowledge* are as they were; otherwise it is written afresh, as for a new track. While a track plays, when you save, replace or remove a key or switch a web search engine and the sources then find something different, or you choose another AI service, the kept insight is still shown, with *Kept from before.* under it, and is not written again on its own while the track plays: *Rewrite*, with *Rewrite with updated source or model settings.*, writes it again on a tap. If an insight could not be written, *Key insights* says why (for example, *the AI service did not accept the key*), and the button under it tries again: *Write insight*, or *Write on change* or *Write on skip* while automatic writing waits for a tap.
+**An insight kept from before.** An insight is kept on the phone once written, so a track played again shows it at once, with no new call, as long as the sources find the same evidence and the AI service, model, effort and *AI service knowledge* are as they were; otherwise it is written afresh, as for a new track. While a track plays, when you save, replace or remove a key or switch a web search engine and the sources then find something different, or you choose another AI service or model, or change its effort or *AI service knowledge*, the kept insight is still shown, with *Kept from before.* under it, and is not written again on its own while the track plays: *Rewrite insight*, with *Rewrite insight with updated source or model settings.*, writes it again on a tap. If an insight could not be written, *Key insights* says why (for example, *Writing failed: the AI service did not accept the key.*), and *Write insight* tries again, as a new call.
 
 **The history.** Sleevesight keeps, on the phone only, information about the tracks it has seen play (titles, artists, albums, and when they played), never the music, and the track changes it uses to tell your skips from natural ends. *Keep history for* (90 days by default), with *Clear history* under it, and *New session idle trigger* (30 minutes) are under *History*. There is no screen that lists the history yet; the track changes recorded can be seen on the diagnostics screen (*Diagnostics*, under *Developer*, which seven taps on *Version*, under *About*, show).
 
@@ -130,7 +130,7 @@ To save several keys at once, *Load keys*, under *Secrets*, reads one QR code of
 
 **Clearing what is kept.** Everything Sleevesight keeps stays on the phone and is left out of Android's backup. To remove it:
 
-- **The history:** *Clear history*, under *Keep history for* in *History*, deletes everything kept about the tracks you played (the list of tracks played and the track changes, the insights written and what the sources found), once you confirm with *Clear*; your API keys and settings stay, and your music is not touched. *Keep history for* sets how far back it reaches.
+- **The history:** *Clear history*, under *Keep history for* in *History*, deletes everything kept about the tracks you played (the list of tracks played and the track changes, the insights and genre explanations written, and what the sources found), once you confirm with *Clear*; your API keys and settings stay, and your music is not touched. *Keep history for* sets how far back it reaches.
 - **What sources said about artists:** *Keep what sources said about each artist* is off by default; turning it off after turning it on deletes what was kept.
 - **The keys:** the delete button beside a saved key's row, or *Remove* in its dialog, deletes that key; *Purge keys*, under *Secrets*, lists them and deletes them all. If a saved key can no longer be read, *Purge keys* says so, as the way to enter the keys afresh.
 - **Everything:** Android's *Clear storage* for Sleevesight, or uninstalling it, deletes all it kept, the insights written and the sources' findings included. Findings also expire on their own, on the lifetimes the settings show.

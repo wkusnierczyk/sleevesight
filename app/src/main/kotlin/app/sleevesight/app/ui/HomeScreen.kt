@@ -40,6 +40,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
+import app.sleevesight.app.ui.home.NothingPlaying
 import app.sleevesight.app.ui.logo.HeaderLogo
 import app.sleevesight.app.ui.report.ReportButtonState
 import app.sleevesight.app.ui.report.TesterReportButton
@@ -208,9 +209,7 @@ private const val MUTED_ALPHA = 0.5f
 @Composable
 private fun HomeAccessOnPreview() {
     SleevesightTheme {
-        HomeScreen(accessGranted = true, onOpenFirstRun = {}, onOpenSettings = {}) {
-            Text(stringResource(R.string.home_placeholder))
-        }
+        HomeScreen(accessGranted = true, onOpenFirstRun = {}, onOpenSettings = {}) { NothingPlaying() }
     }
 }
 

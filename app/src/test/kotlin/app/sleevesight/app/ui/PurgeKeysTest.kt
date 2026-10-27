@@ -10,6 +10,7 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -34,6 +35,7 @@ import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.testCipher
 import app.sleevesight.app.ui.settings.KeyDialogs
+import app.sleevesight.app.ui.settings.SEARCH_FIELD_TAG
 import app.sleevesight.app.ui.settings.SettingsDialog
 import app.sleevesight.app.ui.settings.SettingsScreen
 import app.sleevesight.app.ui.settings.SettingsSection
@@ -439,7 +441,7 @@ class PurgeKeysTest {
         val failingSecrets = SecretStore(stores.open("failing-secrets"), SecretCipher(keys), legacyKeystore = false)
         show(secretStore = failingSecrets) {
             compose.onNodeWithText(text(R.string.settings_key_name_exa)).performScrollTo().performClick()
-            compose.onNode(hasSetTextAction()).performTextInput("exa-key")
+            compose.onNode(keyField).performTextInput("exa-key")
             compose.onNodeWithText(text(R.string.settings_save)).performClick()
             waitForText(text(R.string.settings_key_save_failed))
             compose.onNodeWithText(text(R.string.settings_cancel)).performClick()
@@ -496,3 +498,6 @@ class PurgeKeysTest {
         }
     }
 }
+
+/** A key dialog's field: the one text field but the settings' search box (#649). */
+private val keyField = hasSetTextAction() and !hasTestTag(SEARCH_FIELD_TAG)

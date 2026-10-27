@@ -131,6 +131,9 @@ import kotlin.time.Duration.Companion.seconds
  *   while it is not open (not a return to it), plays one of the logo's intros before showing its
  *   screen. On by default: it is a few seconds, and a tap, Back or any key ends it; it never plays
  *   while the phone's *Remove animations* is on. Off, for someone who would rather not wait.
+ * @property homeGuide *Home guide* (#627): whether Home, with nothing playing, shows under the
+ *   players a small picture of Home while a track plays, with notes on what each part does. On by
+ *   default, for someone new to the app; its *Dismiss* hides it for a while, or switches this off.
  */
 data class Settings(
     val layout: Layout = Layout.EXPANDABLE_BOXES,
@@ -166,6 +169,7 @@ data class Settings(
     val theme: ThemeChoice = ThemeChoice.SYSTEM,
     val font: FontChoice = FontChoice.APP_FONT,
     val introAtStart: Boolean = true,
+    val homeGuide: Boolean = true,
 ) {
     init {
         require(cacheSizeLimit >= 0) { "The cache size limit must not be negative, was $cacheSizeLimit" }
@@ -178,7 +182,7 @@ data class Settings(
         }
     }
 
-    /** Whether *Reactive* writes automatically: *On track change* or *On track skip*, not *Now*. */
+    /** Whether *Reactive* writes automatically: *On track change (auto)* or *On track skip (auto)*, not *On demand*. */
     val writesAutomatically: Boolean get() = writeAutomatically != WriteAutomatically.NEVER
 
     /**
@@ -589,9 +593,10 @@ enum class Layout {
 }
 
 /**
- * *Reactive* (D5): which track changes write an insight without a tap. Shown as *On track change*,
- * *On track skip* and *Now* (#615: *Now* was *Manual*, *On track skip* was *On skip*); the stored
- * names stay as they are.
+ * *Reactive* (D5): which track changes write an insight without a tap. Shown as *On track change
+ * (auto)*, *On track skip (auto)* and *On demand* (#625; #615: *On demand* was *Now*, and *Manual*
+ * before it, *On track skip (auto)* was *On track skip*, and *On skip* before it); the stored names
+ * stay as they are.
  */
 enum class WriteAutomatically {
     ON_EVERY_TRACK_CHANGE,

@@ -3,6 +3,7 @@ package app.sleevesight.store
 import app.sleevesight.core.pipeline.ClearEpoch
 import app.sleevesight.core.sources.ArtistPart
 import app.sleevesight.core.sources.ArtistResults
+import app.sleevesight.core.sources.FreshLookups
 import app.sleevesight.core.sources.KeptPart
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.withContext
@@ -26,6 +27,9 @@ import kotlin.coroutines.cancellation.CancellationException
  * some answers in memory instead; [persists] stays true here). Cancellation is rethrown.
  *
  * Nothing found by work started before *Clear history* is kept after it ([epoch], #547).
+ *
+ * Work that looks its sources up afresh ([FreshLookups], *Look again*, #617) reads nothing here,
+ * so the adapters ask their sources; what they find is kept as usual.
  */
 class StoreArtistResults(
     private val caches: () -> Caches,
@@ -36,11 +40,15 @@ class StoreArtistResults(
     override suspend fun get(
         part: ArtistPart,
         key: String,
-    ): KeptPart? {
-        if (keeping.on) return failingAs(null) { caches().artistResults.get(part, key) }
-        keeping.retryClear()
-        return null
-    }
+    ): KeptPart? =
+        when {
+            FreshLookups.active() -> null
+            keeping.on -> failingAs(null) { caches().artistResults.get(part, key) }
+            else -> {
+                keeping.retryClear()
+                null
+            }
+        }
 
     override suspend fun keep(
         part: ArtistPart,

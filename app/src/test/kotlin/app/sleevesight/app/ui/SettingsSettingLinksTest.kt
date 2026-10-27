@@ -179,10 +179,12 @@ class SettingsSettingLinksTest {
     fun aiServiceKnowledgeLinksToAiServices() =
         show(SettingsSection.SOURCES) {
             follow(modelSummary, SettingsTarget(SettingsSection.AI_SERVICES))
-            // The section's heading takes the focus, and the section is unfolded under it.
-            val heading = hasTestTag(SettingsSection.AI_SERVICES.tag) and isFocused()
-            waitForNode(heading)
-            compose.onNode(heading).assertIsDisplayed()
+            // The section opens as its panel (#649), landed on at its heading, whose *Close* takes
+            // the focus, as on opening.
+            val close = hasTestTag(SettingsSection.AI_SERVICES.panelTag + ":close") and isFocused()
+            waitForNode(close)
+            compose.onNode(close).assertIsDisplayed()
+            compose.onNodeWithTag(SettingsSection.AI_SERVICES.panelTag + ":heading").assertIsDisplayed()
             waitForNode(hasText(app.getString(R.string.settings_ai_model_of, "Anthropic")))
         }
 
@@ -231,18 +233,34 @@ class SettingsSettingLinksTest {
         }
 
     @Test
+    fun theSettingsOpenedAtHomeGuideLandOnItsRow() =
+        // From the home guide's *Re-enable in Settings* (#627).
+        show(landOn = SettingsTarget.homeGuide) {
+            landedOnRow(SettingsTarget.homeGuide)
+            compose
+                .onNode(
+                    hasAnyAncestor(hasTestTag(SettingsTarget.homeGuide.tag)) and
+                        hasText(text(R.string.settings_home_guide)),
+                ).assertIsDisplayed()
+        }
+
+    @Test
     fun theSettingsOpenedAtASettingLandOnceAVisit() {
         val target = SettingsTarget(SettingsSection.AI_SERVICES, "model_GOOGLE")
         show(landOn = target) {
             landedOnRow(target)
             settle()
             // Back at the top, then the screen recreated (a rotation, or back from *Credits*).
-            val title = compose.onNode(hasText(text(R.string.settings_title))).performScrollTo()
-            val top = title.fetchSemanticsNode().boundsInRoot.top
+            // The first section's chip, at the list's top: the title is above the list (#649).
+            val first = compose.onNodeWithTag(SettingsSection.PLAYERS.tag).performScrollTo()
+            val top = first.fetchSemanticsNode().boundsInRoot.top
             restore()
+            // No landing again: the row takes no focus. Checked at once, since a landing in touch
+            // mode lets the focus go after a moment, sooner than [settle]'s wait.
+            assertEquals(0, count(hasAnyAncestor(hasTestTag(target.tag)) and isFocused()))
             settle()
-            // No landing again: the column stays where it was left, and the row takes no focus.
-            val again = compose.onNode(hasText(text(R.string.settings_title))).assertIsDisplayed()
+            // Nor later, and the column stays where it was left.
+            val again = compose.onNodeWithTag(SettingsSection.PLAYERS.tag).assertIsDisplayed()
             assertEquals(top, again.fetchSemanticsNode().boundsInRoot.top, 1f)
             assertEquals(0, count(hasAnyAncestor(hasTestTag(target.tag)) and isFocused()))
         }
@@ -270,10 +288,11 @@ class SettingsSettingLinksTest {
             scenario.onActivity { nav.navigate(SettingsPage) }
             waitForNode(hasText(SETTINGS_DRAWN))
             // The destination 0.1.5 saved: a typed destination's id is the hash of its serial name,
-            // and the object's route is that name alone, with no arguments.
-            val name = SettingsPage.serializer().descriptor.serialName
+            // and the object's route is that name alone, with no arguments. Written out, not read
+            // from the class, so a rename or a `@SerialName` that would lose saved back stacks fails.
+            val name = "app.sleevesight.app.ui.SettingsPage"
             compose.runOnUiThread {
-                assertEquals(name.hashCode(), nav.currentDestination?.id)
+                assertEquals(SETTINGS_PAGE_ID, nav.currentDestination?.id)
                 assertEquals(name, nav.currentDestination?.route)
             }
             // A back stack saved with the settings on it is restored into a new controller.
@@ -349,5 +368,8 @@ class SettingsSettingLinksTest {
         const val OPEN = "open_settings_at"
         const val SETTINGS_DRAWN = "Settings drawn"
         const val SETTINGS_RESTORED = "Settings restored"
+
+        // `"app.sleevesight.app.ui.SettingsPage".hashCode()`: the id 0.1.5 saved the settings under.
+        const val SETTINGS_PAGE_ID = 1_827_671_801
     }
 }

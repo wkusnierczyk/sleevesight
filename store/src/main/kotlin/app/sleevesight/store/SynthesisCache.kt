@@ -2,11 +2,14 @@ package app.sleevesight.store
 
 import app.sleevesight.core.ai.ReasoningEffort
 import app.sleevesight.core.model.ProviderId
+import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.synthesis.CardKind
+import kotlin.time.Duration
 import kotlin.time.Instant
 
 /**
- * Written insights and cards (architecture, *Cache and history*), kept until evicted by size. An
+ * Written insights and cards (architecture, *Cache and history*), kept until evicted by size; a
+ * genre's reason ([CardKind.GENRE], #523) only for *Keep history for* too ([lifetimeOf]). An
  * entry is reused only for exactly the same [SynthesisKey]: the same evidence (R2), the same
  * prompt template and style (D14), and the same provider, model and model-knowledge switch. Each
  * one is a paid call on the user's key (driver 5), so a hit saves money as well as time.
@@ -29,8 +32,16 @@ class SynthesisCache internal constructor(
                     modelKnowledge = key.modelKnowledge.toLong(),
                     effort = key.effortKey,
                 ).executeAsOneOrNull() ?: return null
-        context.queries.synthesisTouch(context.clock.now().toEpochMilliseconds(), row.id)
-        return CachedSynthesis(row.text, Instant.fromEpochMilliseconds(row.written_at))
+        val now = context.clock.now()
+        val writtenAt = Instant.fromEpochMilliseconds(row.written_at)
+        val lifetime = lifetimeOf(key.kind, context.settings())
+        val expired = lifetime != null && now - writtenAt >= lifetime
+        if (expired) {
+            context.queries.synthesisDelete(row.id)
+        } else {
+            context.queries.synthesisTouch(now.toEpochMilliseconds(), row.id)
+        }
+        return if (expired) null else CachedSynthesis(row.text, writtenAt)
     }
 
     /**
@@ -88,6 +99,18 @@ class SynthesisCache internal constructor(
     }
 
     private fun Boolean.toLong(): Long = if (this) 1L else 0L
+
+    internal companion object {
+        /**
+         * How long a card of [kind] is kept under [settings], besides the size limit: a genre's reason
+         * (#523) for *Keep history for* ([Settings.historyLifetime], null for *Forever*), since it is
+         * kept with the track, like its place in the history; the other kinds have none.
+         */
+        fun lifetimeOf(
+            kind: CardKind,
+            settings: Settings,
+        ): Duration? = if (kind == CardKind.GENRE) settings.historyLifetime else null
+    }
 }
 
 /**

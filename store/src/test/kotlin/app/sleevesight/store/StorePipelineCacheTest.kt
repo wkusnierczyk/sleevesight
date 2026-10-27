@@ -8,6 +8,7 @@ import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.CardKey
+import app.sleevesight.core.pipeline.KeptCard
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.SourceResult
@@ -54,6 +55,38 @@ class StorePipelineCacheTest {
             assertEquals(result, cache.result(adapter, sundown, 213.seconds))
             assertNull(cache.result(adapter, sundown, null))
             assertNull(cache.result(adapter, fixture.normalizer.normalize("Sundown", "Someone Else"), 213.seconds))
+        }
+
+    @Test
+    fun `a Last_fm result kept before its counts were marked is missed once the version is raised`() =
+        runBlocking {
+            // Last.fm's extraction version went from 3 to 4 with the aggregate mark (#617).
+            fun lastFm(version: Int) =
+                object : SourceAdapter {
+                    override val id: SourceId = SourceId.LASTFM
+                    override val extractionVersion: Int = version
+
+                    override suspend fun lookup(
+                        track: NormalizedTrack,
+                        resolution: Deferred<Resolution>,
+                    ): SourceResult = error("not looked up")
+                }
+            val unmarked =
+                EvidenceDraft(
+                    SourceId.LASTFM,
+                    Scope.ARTIST,
+                    "Last.fm counts 5 listeners for X.",
+                    null,
+                    fixture.clock.now,
+                )
+            cache.keep(
+                lastFm(3),
+                sundown,
+                213.seconds,
+                SourceResult(Outcome.ArtistArticle, listOf(unmarked), 12.milliseconds),
+            )
+
+            assertNull(cache.result(lastFm(4), sundown, 213.seconds))
         }
 
     @Test
@@ -112,5 +145,32 @@ class StorePipelineCacheTest {
                 )
             assertEquals("It was a hit [W1].", stored?.text)
             assertNull(cache.card(key.copy(kind = CardKind.SONG)))
+        }
+
+    @Test
+    fun `each genre's reason is kept apart, under the track's key and the genre`() =
+        runBlocking {
+            val jazz =
+                CardKey(
+                    kind = CardKind.GENRE,
+                    track = sundown,
+                    duration = 213.seconds,
+                    evidenceFingerprint = "9f2c",
+                    promptVersion = 1,
+                    styleHash = "e3b0",
+                    provider = ProviderId.ANTHROPIC,
+                    model = "claude-haiku-5-5",
+                    modelKnowledge = false,
+                    effort = ReasoningEffort.LOW,
+                    subject = "jazz",
+                )
+            cache.keep(jazz, "It is jazz [W1].")
+            cache.keep(jazz.copy(subject = "folk"), "It is folk [W2].")
+
+            assertEquals("It is jazz [W1].", cache.card(jazz))
+            assertEquals(KeptCard("It is jazz [W1].", fixture.clock.now), cache.keptCard(jazz))
+            assertEquals("It is folk [W2].", cache.card(jazz.copy(subject = "folk")))
+            assertNull(cache.card(jazz.copy(subject = null)))
+            assertNull(cache.card(jazz.copy(subject = "rock")))
         }
 }

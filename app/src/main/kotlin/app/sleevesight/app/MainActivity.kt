@@ -58,10 +58,25 @@ class MainActivity : ComponentActivity() {
             playerLaunch = graph::playerLaunchIntent,
             write = graph.pipeline::write,
             stop = graph.pipeline::stop,
+            // *Look again* on the card paid for (#617): fresh lookups, a write only for new evidence.
+            lookAgain = graph.pipeline::lookAgain,
             unavailableModel = graph.unavailableModel,
-            // The insight card's menu of Reactive's modes (#615), saved in the process's scope.
-            chooseWritingMode = graph.settings.writingModeChooser(graph.settingsSaves),
+            // The insight card's menu of Reactive's modes (#615), saved in the process's scope; an
+            // automatic mode chosen is the first action (#625).
+            chooseWritingMode = graph.chooseWritingMode,
+            // While nothing plays (#627): the players as *Players* lists them, and the guide.
+            installedPlayers = installedPlayers,
+            guideDismissed = graph.guideDismissal.dismissed,
+            dismissGuide = graph.guideDismissal::dismiss,
+            hideGuide = graph.settings.homeGuideHider(graph.settingsSaves),
+            // What a genre's panel shows above its table (#523).
+            genreNotes = graph.genreNotes,
         )
+    }
+
+    // The players' icons, whether the phone shows them, and those seen (#535), for *Players* and Home.
+    private val installedPlayers: InstalledPlayers by lazy {
+        InstalledPlayers(graph::playerIcon, graph::playerVisible, graph.sessions.seenPlayers)
     }
 
     // What Home's tester report button reads (#452): what the app knows at the tap, never a key.
@@ -123,14 +138,11 @@ class MainActivity : ComponentActivity() {
                                         links.openDiagnostics,
                                         onOpenWhatLeaves = links.openWhatLeaves,
                                         playerLaunch = graph::playerLaunchIntent,
-                                        installedPlayers =
-                                            InstalledPlayers(
-                                                graph::playerIcon,
-                                                graph::playerVisible,
-                                                graph.sessions.seenPlayers,
-                                            ),
+                                        installedPlayers = installedPlayers,
                                         modelCheck = graph.modelCheck,
                                         landOn = links.landOn,
+                                        // Reactive's choice (#625): an automatic mode is the first action.
+                                        chooseWritingMode = graph.chooseWritingMode,
                                         playerLabel = graph::playerLabel,
                                     )
                                 },
