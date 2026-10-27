@@ -74,8 +74,12 @@ class ButtonGroupSettingsTest {
 
     private fun text(id: Int) = app.getString(id)
 
-    /** A setting's choices: each label's id, the value it stores, and how to read the stored value. */
+    /**
+     * A setting: its name's id, its choices (each label's id and the value it stores), and how to
+     * read and store its value.
+     */
     private class Spec<T>(
+        val title: Int,
         val choices: List<Pair<Int, T>>,
         val stored: (Settings) -> T,
         val store: (Settings, T) -> Settings,
@@ -83,6 +87,7 @@ class ButtonGroupSettingsTest {
 
     private val theme =
         Spec(
+            R.string.settings_theme,
             listOf(
                 R.string.settings_theme_system to ThemeChoice.SYSTEM,
                 R.string.settings_theme_light to ThemeChoice.LIGHT,
@@ -93,6 +98,7 @@ class ButtonGroupSettingsTest {
         )
     private val font =
         Spec(
+            R.string.settings_font,
             listOf(
                 R.string.settings_font_app to FontChoice.APP_FONT,
                 R.string.settings_font_system to FontChoice.SYSTEM_FONT,
@@ -102,6 +108,7 @@ class ButtonGroupSettingsTest {
         )
     private val layout =
         Spec(
+            R.string.settings_layout,
             listOf(
                 R.string.settings_layout_boxes to Layout.EXPANDABLE_BOXES,
                 R.string.settings_layout_pages to Layout.SEPARATE_PAGES,
@@ -111,6 +118,7 @@ class ButtonGroupSettingsTest {
         )
     private val reportButton =
         Spec(
+            R.string.settings_report_button,
             listOf(
                 R.string.settings_report_button_show to ReportButton.SHOW,
                 R.string.settings_report_button_auto to ReportButton.AUTO,
@@ -121,6 +129,7 @@ class ButtonGroupSettingsTest {
         )
     private val linkStyle =
         Spec(
+            R.string.settings_link_style,
             listOf(
                 R.string.settings_link_style_underline to LinkStyle.UNDERLINE,
                 R.string.settings_link_style_highlight to LinkStyle.HIGHLIGHT,
@@ -158,6 +167,13 @@ class ButtonGroupSettingsTest {
         for ((label, _) in spec.choices) {
             val node = buttonNode(label)
             assertEquals(text(label), Role.RadioButton, node.config.getOrNull(SemanticsProperties.Role))
+            // Read with the setting's name, so a button reached straight away says what it sets.
+            val read =
+                node.config
+                    .getOrNull(SemanticsProperties.ContentDescription)
+                    .orEmpty()
+                    .joinToString()
+            assertTrue("${text(label)} is read as \"$read\"", read.startsWith("${text(spec.title)}: ${text(label)}"))
             val group = checkNotNull(node.parent)
             assertTrue("${text(label)} is in a selectable group", SemanticsProperties.SelectableGroup in group.config)
             parents += group.id

@@ -32,6 +32,8 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -77,21 +79,28 @@ private const val DISABLED_CONTAINER_ALPHA = 0.12f
  * [selected], so whatever changes the value elsewhere shows here at once. Not [enabled], none can
  * be chosen and all are dimmed.
  *
- * A screen reader reads the group as one group of radio buttons, each by its label, the chosen one
- * selected. Where the labels do not fit the row side by side, as at a large font size, each takes
- * a line of its own, full width, so nothing is cut ([GroupArrangement]).
+ * A screen reader reads the group as one group of radio buttons, the chosen one selected, each by
+ * its label, after the name of what is chosen ([name], a setting's, so a button reached straight
+ * away says what it sets: "Theme: Light"), and then what the value does, where [details] has it
+ * (as the dialogs read a choice with its description, #550). Where the labels do not fit the row
+ * side by side, as at a large font size, each takes a line of its own, full width, so nothing is
+ * cut ([GroupArrangement]).
  */
+@Suppress("LongParameterList") // What the group shows and says, each a value of its own, and what a tap does.
 @Composable
 internal fun <T> ChoiceButtonGroup(
     choices: List<Pair<T, String>>,
     selected: T,
     onSelect: (T) -> Unit,
     modifier: Modifier = Modifier,
+    name: String? = null,
+    details: Map<T, String> = emptyMap(),
     enabled: Boolean = true,
 ) {
     val buttons =
         choices.map { (value, label) ->
-            GroupButton(label, enabled, selected = value == selected) { onSelect(value) }
+            val read = listOfNotNull(name?.let { "$it: $label" } ?: label, details[value]).joinToString(". ")
+            GroupButton(label, enabled, selected = value == selected, read = read) { onSelect(value) }
         }
     ConnectedButtons(buttons, modifier.selectableGroup(), checks = true)
 }
@@ -107,7 +116,7 @@ internal fun ActionButtonGroup(
     actions: List<GroupAction>,
     modifier: Modifier = Modifier,
 ) {
-    val buttons = actions.map { GroupButton(it.label, it.enabled, selected = null, onClick = it.onClick) }
+    val buttons = actions.map { GroupButton(it.label, it.enabled, selected = null, read = null, onClick = it.onClick) }
     ConnectedButtons(buttons, modifier, checks = false)
 }
 
@@ -118,19 +127,24 @@ internal class GroupAction(
     val onClick: () -> Unit,
 )
 
-/** A button of the group: chosen or not ([selected]) in a choice, null in a row of actions. */
+/**
+ * A button of the group: chosen or not ([selected]) in a choice, null in a row of actions; [read],
+ * what a screen reader reads for it in place of its label, if not the label alone.
+ */
 private class GroupButton(
     val label: String,
     val enabled: Boolean,
     val selected: Boolean?,
+    val read: String?,
     val onClick: () -> Unit,
 )
 
 /**
  * How a group's buttons are laid out in the width it has: side by side, all as wide as the widest
  * needs ([EQUAL], as Material's connected groups are), or, where that does not fit, each as wide as
- * its label needs and the room left shared out ([PROPORTIONAL]); where even that does not fit, one
- * under another, each full width ([STACKED]), its label wrapping in it if it must.
+ * its label needs and the room left shared out in proportion to that ([PROPORTIONAL]); where even
+ * that does not fit, one under another, each full width ([STACKED]), its label wrapping in it if it
+ * must.
  */
 internal enum class GroupArrangement { EQUAL, PROPORTIONAL, STACKED }
 
@@ -268,6 +282,7 @@ private fun GroupButtonView(
                 .clip(shape)
                 .background(fill, shape)
                 .then(action)
+                .let { view -> button.read?.let { read -> view.semantics { contentDescription = read } } ?: view }
                 .padding(horizontal = GROUP_PADDING, vertical = 6.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,

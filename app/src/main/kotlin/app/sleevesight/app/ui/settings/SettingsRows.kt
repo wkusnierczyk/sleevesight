@@ -24,7 +24,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.Measured
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.ui.theme.ChoiceButtonGroup
@@ -206,8 +209,9 @@ internal fun ValueRow(
 /**
  * A setting with a few short choices (#637): [title], then [summary], then its [choices] as a
  * connected button group ([ChoiceButtonGroup]), the [selected] one marked; a tap on another calls
- * [onSelect] with it, at once, no dialog. A value in [details] has a line under the group saying
- * what it does, shown while it is the one chosen. A setting whose choices are many or long, or
+ * [onSelect] with it, at once, no dialog. Each button is read with [title] ("Theme: Light"). A
+ * value in [details] is read with its button, and has a line under the group saying what it does
+ * while it is the one chosen ([ChoiceDetails]). A setting whose choices are many or long, or
  * described one by one, is a [ValueRow] opening a dialog instead (`design/design.md`, *Settings
  * screen*).
  */
@@ -231,9 +235,38 @@ internal fun <T> ChoiceButtonsRow(
             modifier = Modifier.testTag(ROW_TITLE_TAG),
         )
         summary?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = color) }
-        ChoiceButtonGroup(choices, selected, onSelect, Modifier.padding(top = 4.dp))
-        details[selected]?.let {
-            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        ChoiceButtonGroup(choices, selected, onSelect, Modifier.padding(top = 4.dp), name = title, details = details)
+        ChoiceDetails(choices, selected, details)
+    }
+}
+
+/**
+ * Under a [ChoiceButtonsRow]'s buttons, what the [selected] value does, from [details], announced
+ * as it changes (a polite live region). While a search finds the description of a value not
+ * chosen, that one shows too, by its label, the query marked in it, so what the search found is
+ * on the screen.
+ */
+@Composable
+private fun <T> ChoiceDetails(
+    choices: List<Pair<T, String>>,
+    selected: T,
+    details: Map<T, String>,
+) {
+    val style = MaterialTheme.typography.bodySmall
+    val color = MaterialTheme.colorScheme.onSurfaceVariant
+    details[selected]?.let {
+        Text(it, style = style, color = color, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+    }
+    val needle =
+        LocalRowSearch.current
+            ?.query
+            ?.trim()
+            .orEmpty()
+    if (needle.isEmpty()) return
+    for ((value, label) in choices) {
+        val detail = details[value]
+        if (value != selected && detail != null && detail.contains(needle, ignoreCase = true)) {
+            Text(searchMarked("$label: $detail"), style = style, color = color)
         }
     }
 }

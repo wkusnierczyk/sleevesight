@@ -5,11 +5,15 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
@@ -26,6 +30,8 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ActivityScenario
 import app.sleevesight.app.MainActivity
@@ -222,6 +228,34 @@ class ButtonGroupTest {
         }) {
             ActionButtonGroup(actions, Modifier.width(GROUP_WIDTH.dp).testTag(GROUP))
         }
+    }
+
+    // Right to left, as in Arabic or Hebrew: the first choice at the right, the row mirrored.
+    @Test
+    fun rightToLeftTheFirstChoiceIsRightmost() =
+        show({
+            val all = themes.map { bounds(it.second) }
+            assertTrue("one row", all.all { it.top == all.first().top })
+            assertTrue("from the right: ${all.map { it.left }}", all.zipWithNext().all { (a, b) -> a.left >= b.right })
+        }) {
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                ChoiceButtonGroup(themes, selected, { selected = it }, Modifier.width(GROUP_WIDTH.dp).testTag(GROUP))
+            }
+        }
+
+    // The first button's round corners are at its start: the right, right to left.
+    @Test
+    fun rightToLeftTheCornersAreMirrored() {
+        val first = groupShape(0, 3, selected = false, stacked = false)
+        val size = Size(100f, 32f)
+        val unit = Density(1f)
+        val rtl = (first.createOutline(size, LayoutDirection.Rtl, unit) as Outline.Rounded).roundRect
+        val ltr = (first.createOutline(size, LayoutDirection.Ltr, unit) as Outline.Rounded).roundRect
+        assertEquals(16f, rtl.topRightCornerRadius.x, 0.01f)
+        assertEquals(16f, rtl.bottomRightCornerRadius.x, 0.01f)
+        assertEquals(4f, rtl.topLeftCornerRadius.x, 0.01f)
+        assertEquals(16f, ltr.topLeftCornerRadius.x, 0.01f)
+        assertEquals(4f, ltr.topRightCornerRadius.x, 0.01f)
     }
 
     @Test
