@@ -251,12 +251,13 @@ class SettingsSettingLinksTest {
             landedOnRow(target)
             settle()
             // Back at the top, then the screen recreated (a rotation, or back from *Credits*).
-            val title = compose.onNode(hasText(text(R.string.settings_title))).performScrollTo()
-            val top = title.fetchSemanticsNode().boundsInRoot.top
+            // The first section's chip, at the list's top: the title is above the list (#649).
+            val first = compose.onNodeWithTag(SettingsSection.PLAYERS.tag).performScrollTo()
+            val top = first.fetchSemanticsNode().boundsInRoot.top
             restore()
             settle()
             // No landing again: the column stays where it was left, and the row takes no focus.
-            val again = compose.onNode(hasText(text(R.string.settings_title))).assertIsDisplayed()
+            val again = compose.onNodeWithTag(SettingsSection.PLAYERS.tag).assertIsDisplayed()
             assertEquals(top, again.fetchSemanticsNode().boundsInRoot.top, 1f)
             assertEquals(0, count(hasAnyAncestor(hasTestTag(target.tag)) and isFocused()))
         }

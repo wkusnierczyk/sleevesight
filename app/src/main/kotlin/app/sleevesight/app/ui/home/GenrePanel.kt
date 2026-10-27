@@ -16,6 +16,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -55,7 +56,7 @@ internal fun GenrePanel(
             .firstOrNull { it.genre.identity == genre }
             ?.genre
             ?.label ?: return
-    Panel(name, GENRE_PANEL_TAG, onClose) {
+    Panel(AnnotatedString(name), GENRE_PANEL_TAG, onClose) {
         // What the genre is, and *Why is this …?* (#523), above the table.
         GenreAbout(track, genre, notes)
         Table(track, genre)

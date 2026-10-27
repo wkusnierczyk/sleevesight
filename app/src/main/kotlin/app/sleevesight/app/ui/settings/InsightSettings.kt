@@ -115,6 +115,12 @@ private fun ArtistFactsRow(
     )
 }
 
+/** *Crossfade*'s choices: autodetect, or a fixed 0 to 15 seconds. */
+@Composable
+internal fun crossfades(): List<Pair<Crossfade, String>> =
+    listOf<Pair<Crossfade, String>>(Crossfade.Autodetect to crossfadeLabel(Crossfade.Autodetect)) +
+        (0..MAX_CROSSFADE_SECONDS).map { s -> Crossfade.Fixed(s.seconds).let { it to crossfadeLabel(it) } }
+
 /**
  * *Crossfade* (D5): autodetect, or a fixed 0 to 15 seconds, for telling a skip from a natural end
  * under *On track skip (auto)*; indented under *Reactive*, as it belongs to that choice.
@@ -125,9 +131,7 @@ private fun CrossfadeRow(
     update: Update,
     open: (SettingsDialog) -> Unit,
 ) {
-    val options =
-        listOf<Pair<Crossfade, String>>(Crossfade.Autodetect to crossfadeLabel(Crossfade.Autodetect)) +
-            (0..MAX_CROSSFADE_SECONDS).map { s -> Crossfade.Fixed(s.seconds).let { it to crossfadeLabel(it) } }
+    val options = crossfades()
     ValueRow(
         title = stringResource(R.string.settings_crossfade),
         value = crossfadeLabel(settings.crossfade),

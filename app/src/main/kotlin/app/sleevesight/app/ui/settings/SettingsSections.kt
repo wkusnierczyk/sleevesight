@@ -10,6 +10,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -75,36 +76,81 @@ enum class SettingsSection(
 }
 
 /**
- * Which sections are open ([unfolded]). All are closed when the settings open; within one visit
- * each stays as it was left, through a rotation too, but nothing of it is stored.
+ * Which sections are open ([unfolded]), and the search under way ([query], #649). All are closed
+ * when the settings open; within one visit each stays as it was left, through a rotation too, but
+ * nothing of it is stored. While searching, the sections the search finds are open but those closed
+ * since it began ([closedInSearch]), and [unfolded] waits, untouched, for the search to be cleared.
  */
 @Stable
 internal class SectionFolds(
     unfolded: Set<SettingsSection> = emptySet(),
+    query: String = "",
+    closedInSearch: Set<SettingsSection> = emptySet(),
 ) {
     var unfolded by mutableStateOf(unfolded)
         private set
 
-    fun isUnfolded(section: SettingsSection): Boolean = section in unfolded
+    /** What the search box holds; blank while not searching. */
+    var query by mutableStateOf(query)
+        private set
 
-    /** Opens [section], if closed: its chip's tap, or a link to a setting in it ([SettingsNavigator.go]). */
-    fun unfold(section: SettingsSection) {
-        unfolded = unfolded + section
+    /** The sections closed with *Close* during this search. */
+    var closedInSearch by mutableStateOf(closedInSearch)
+        private set
+
+    /** Whether a search is under way. */
+    val searching: Boolean get() = query.isNotBlank()
+
+    /** Whether [section] shows as its panel: while searching, unless closed since the search began. */
+    fun isUnfolded(section: SettingsSection): Boolean =
+        if (searching) section !in closedInSearch else section in unfolded
+
+    /** Opens [section], if closed: its chip's tap. */
+    fun open(section: SettingsSection) {
+        if (searching) closedInSearch = closedInSearch - section else unfolded = unfolded + section
     }
 
     /** Closes [section], if open: its panel's *Close*. */
-    fun fold(section: SettingsSection) {
-        unfolded = unfolded - section
+    fun close(section: SettingsSection) {
+        if (searching) closedInSearch = closedInSearch + section else unfolded = unfolded - section
+    }
+
+    /**
+     * Opens [section] for a link to a setting in it ([SettingsNavigator.go]): a search under way
+     * ends first, so the section and the row linked to show whatever the search found.
+     */
+    fun unfold(section: SettingsSection) {
+        search("")
+        unfolded = unfolded + section
+    }
+
+    /** Searches for [text]; cleared, the sections are open again as before the search. */
+    fun search(text: String) {
+        query = text
+        if (text.isBlank()) closedInSearch = emptySet()
     }
 
     companion object {
+        /** Saved as the query, the sections closed in the search, and then the sections open. */
         val Saver: Saver<SectionFolds, ArrayList<String>> =
             Saver(
-                save = { folds -> ArrayList(folds.unfolded.map { it.name }) },
-                restore = { names ->
-                    SectionFolds(names.mapNotNull { n -> SettingsSection.entries.firstOrNull { it.name == n } }.toSet())
+                save = { folds ->
+                    ArrayList(
+                        listOf(folds.query, folds.closedInSearch.joinToString(",") { it.name }) +
+                            folds.unfolded.map { it.name },
+                    )
+                },
+                restore = { saved ->
+                    SectionFolds(
+                        unfolded = sections(saved.drop(2)),
+                        query = saved[0],
+                        closedInSearch = sections(saved[1].split(",")),
+                    )
                 },
             )
+
+        private fun sections(names: List<String>): Set<SettingsSection> =
+            names.mapNotNull { n -> SettingsSection.entries.firstOrNull { it.name == n } }.toSet()
     }
 }
 
@@ -120,12 +166,30 @@ internal fun rememberSectionFolds(): SectionFolds = rememberSaveable(saver = Sec
  * *Close* on opening and back to the chip on closing (a keyboard's, and a screen reader's;
  * [FocusHandoff]). The panel's heading is where a link to the section itself lands
  * ([SettingsTarget] without a row, [LandingSpot]), its *Close* taking the focus, as on opening.
+ *
+ * While a search finds the section ([found], [SectionFolds.searching]), it is open unless closed
+ * since the search began, its rows those [found] names, or all of them when the section's own name
+ * or a description has the query; the query is marked in its name and in its rows' ([RowSearch]).
  */
 @Composable
 internal fun FoldedSection(
     section: SettingsSection,
     folds: SectionFolds,
     chipWidth: Dp = sectionChipWidth(),
+    found: SectionMatch? = null,
+    content: @Composable () -> Unit,
+) {
+    val mark = searchMarkColour()
+    val search = found?.takeIf { folds.searching }?.let { RowSearch(folds.query, it.rows, mark) }
+    CompositionLocalProvider(LocalRowSearch provides search) { SectionBox(section, folds, chipWidth, content) }
+}
+
+// [FoldedSection]'s chip or panel, with the search, if any, as [LocalRowSearch] has it.
+@Composable
+private fun SectionBox(
+    section: SettingsSection,
+    folds: SectionFolds,
+    chipWidth: Dp,
     content: @Composable () -> Unit,
 ) {
     val handoff = rememberFocusHandoff()
@@ -134,15 +198,15 @@ internal fun FoldedSection(
     HorizontalDivider(modifier = Modifier.padding(top = 16.dp))
     if (!folds.isUnfolded(section)) {
         SectionChip(section, chipWidth, Modifier.handoffTarget(handoff, chip)) {
-            folds.unfold(section)
+            folds.open(section)
             handoff.moveTo(close)
         }
     } else {
         Panel(
-            stringResource(section.title),
+            searchMarked(stringResource(section.title)),
             section.panelTag,
             onClose = {
-                folds.fold(section)
+                folds.close(section)
                 handoff.moveTo(chip)
             },
             modifier = Modifier.padding(top = 8.dp),
@@ -185,7 +249,7 @@ private fun SectionChip(
                     },
         ) {
             Text(
-                stringResource(section.title),
+                searchMarked(stringResource(section.title)),
                 style = MaterialTheme.typography.labelLarge,
                 color = colour,
                 textAlign = TextAlign.Center,

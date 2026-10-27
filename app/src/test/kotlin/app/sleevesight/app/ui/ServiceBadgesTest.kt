@@ -141,7 +141,9 @@ class ServiceBadgesTest {
             assertBadge(R.string.settings_source_musicbrainz, "MB")
             // Last.fm's switch waits for its key and cannot be moved; its badge is there all the same.
             assertBadge(R.string.settings_source_lastfm, "L")
-            // Nested under *Show genres*, which has no badge, as before: 16 dp in.
+            // Nested under *Show genres*, which has no badge, as before: 16 dp in. Both in view, under
+            // the search box, which stays above the list (#649).
+            compose.onNode(isToggleable() and hasText(app.getString(R.string.settings_show_genres))).performScrollTo()
             val musicBrainz = badgeIn(R.string.settings_source_musicbrainz, "MB").left / density
             assertEquals(16f, musicBrainz - start(app.getString(R.string.settings_show_genres)), 0.5f)
         }

@@ -399,11 +399,23 @@ private fun SettingsContent(
                 landOn?.let { navigator?.go(it) }
             }
         }
+        // The title and the search box above the list, so the search stays in reach (#649).
+        Text(
+            stringResource(R.string.settings_title),
+            style = MaterialTheme.typography.headlineMedium,
+            modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 16.dp),
+        )
+        SearchField(folds.query, folds::search, Modifier.padding(start = 24.dp, end = 24.dp, top = 12.dp))
         SettingsColumn(settings, keys, navigation, unavailable, folds, update, open)
     }
 }
 
-/** The sections, open as [folds] has them, in the order shown, their chips all as wide ([sectionChipWidth]). */
+/**
+ * The sections, open as [folds] has them, in the order shown, their chips all as wide
+ * ([sectionChipWidth]). While searching (#649), only the sections the search finds ([matches] of
+ * [settingsIndex]), each with what of it shows, or *No settings match "…"*; a screen reader hears
+ * how many match ([SearchAnnouncement]).
+ */
 @Suppress("LongParameterList", "LongMethod") // What the sections show and change; one call per section.
 @Composable
 private fun SettingsColumn(
@@ -417,30 +429,53 @@ private fun SettingsColumn(
 ) {
     val secrets = keys.states
     val chip = sectionChipWidth()
+    val found =
+        if (folds.searching) {
+            val players =
+                listedPlayers(settings.followedPlayers.keys, navigation.players).orEmpty().map { it.name }
+            matches(settingsIndex(settings, keys, players, navigation.modelName), folds.query)
+        } else {
+            null
+        }
+
+    // [section], unless a search under way does not find it.
+    @Composable
+    fun Section(
+        section: SettingsSection,
+        content: @Composable () -> Unit,
+    ) {
+        if (found == null) {
+            FoldedSection(section, folds, chip, content = content)
+        } else {
+            found[section]?.let { FoldedSection(section, folds, chip, it, content) }
+        }
+    }
+
     SettingsScrollColumn(
-        modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
+        modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Text(stringResource(R.string.settings_title), style = MaterialTheme.typography.headlineMedium)
-        FoldedSection(SettingsSection.PLAYERS, folds, chip) { PlayersSection(settings, navigation.players, update) }
-        FoldedSection(SettingsSection.SOURCES, folds, chip) { SourcesSection(settings, secrets, update) }
-        FoldedSection(SettingsSection.AI_SERVICES, folds, chip) {
+        if (found != null) {
+            SearchAnnouncement(folds.query, found.size)
+            if (found.isEmpty()) NothingFound(folds.query)
+        }
+        Section(SettingsSection.PLAYERS) { PlayersSection(settings, navigation.players, update) }
+        Section(SettingsSection.SOURCES) { SourcesSection(settings, secrets, update) }
+        Section(SettingsSection.AI_SERVICES) {
             AiSection(settings, secrets, navigation.modelName, update, open, unavailable)
         }
-        FoldedSection(SettingsSection.SECRETS, folds, chip) { SecretsSection(settings, keys, update, open) }
-        FoldedSection(SettingsSection.GENRES, folds, chip) { GenresSection(settings, secrets, update) }
-        FoldedSection(SettingsSection.INSIGHTS, folds, chip) {
-            InsightsSection(settings, update, open, navigation.chooseMode)
-        }
-        FoldedSection(SettingsSection.HISTORY, folds, chip) { HistorySection(settings, update, open) }
-        FoldedSection(SettingsSection.APPEARANCE, folds, chip) { AppearanceSection(settings, update, open) }
-        FoldedSection(SettingsSection.ABOUT, folds, chip) {
+        Section(SettingsSection.SECRETS) { SecretsSection(settings, keys, update, open) }
+        Section(SettingsSection.GENRES) { GenresSection(settings, secrets, update) }
+        Section(SettingsSection.INSIGHTS) { InsightsSection(settings, update, open, navigation.chooseMode) }
+        Section(SettingsSection.HISTORY) { HistorySection(settings, update, open) }
+        Section(SettingsSection.APPEARANCE) { AppearanceSection(settings, update, open) }
+        Section(SettingsSection.ABOUT) {
             AboutSection(settings, update, navigation.openCredits, navigation.openWhatLeaves)
         }
-        if (settings.developerMode) {
+        if (settings.developerMode && (found == null || SettingsSection.DEVELOPER in found)) {
             // The whole section marked (#536), so what the mark means shows where it is set.
             DeveloperMark(spacing = 4.dp) {
-                FoldedSection(SettingsSection.DEVELOPER, folds, chip) {
+                Section(SettingsSection.DEVELOPER) {
                     DeveloperSection(settings, update, open, navigation.openDiagnostics)
                 }
             }

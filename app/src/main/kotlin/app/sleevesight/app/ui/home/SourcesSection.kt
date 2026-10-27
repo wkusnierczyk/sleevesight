@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -114,7 +115,7 @@ internal fun SourcesSection(
     } else {
         Box(Modifier.onFocusChanged { inside[0] = it.hasFocus }) {
             Panel(
-                stringResource(R.string.home_sources_title),
+                AnnotatedString(stringResource(R.string.home_sources_title)),
                 SOURCES_PANEL_TAG,
                 onClose = {
                     fold.set(Fold.Folded)

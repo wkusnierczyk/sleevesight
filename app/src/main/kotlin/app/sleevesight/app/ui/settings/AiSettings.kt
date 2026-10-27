@@ -100,6 +100,14 @@ private fun ProviderRows(
     EffortRow(provider, name, settings, update, open)
 }
 
+/** [provider]'s reasoning efforts to choose from, its own scale's and its default; null without a scale. */
+@Composable
+internal fun efforts(provider: ProviderId): List<Pair<ReasoningEffort?, String>>? {
+    val scale = Settings.EFFORT_SCALES[provider] ?: return null
+    return scale.levels.map<ReasoningEffort, Pair<ReasoningEffort?, String>> { it to effortLabel(it) } +
+        (null to stringResource(R.string.settings_effort_provider_default))
+}
+
 /** [provider]'s reasoning effort, from its own scale, or the provider's default; none without a scale. */
 @Composable
 private fun EffortRow(
@@ -109,10 +117,7 @@ private fun EffortRow(
     update: Update,
     open: (SettingsDialog) -> Unit,
 ) {
-    val scale = Settings.EFFORT_SCALES[provider] ?: return
-    val efforts =
-        scale.levels.map<ReasoningEffort, Pair<ReasoningEffort?, String>> { it to effortLabel(it) } +
-            (null to stringResource(R.string.settings_effort_provider_default))
+    val efforts = efforts(provider) ?: return
     val current = settings.effort(provider)
     ValueRow(
         title = stringResource(R.string.settings_ai_effort_of, name),

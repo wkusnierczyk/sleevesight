@@ -68,6 +68,8 @@ private class FirstLine {
 internal fun Hint(
     @StringRes text: Int,
 ) {
+    // Not a setting of its own: a search showing only some rows leaves it out (#649).
+    if (LocalRowSearch.current?.filtering == true) return
     Text(stringResource(text), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(vertical = 4.dp))
 }
 
@@ -96,6 +98,7 @@ internal fun SwitchRow(
     summaryLink: TextPart.Linked? = null,
     onChange: ((Boolean) -> Unit)?,
 ) {
+    if (!shownInSearch(title)) return
     val enabled = onChange != null
     val alpha = if (enabled) 1f else DISABLED_ALPHA
     val color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha)
@@ -119,7 +122,8 @@ internal fun SwitchRow(
         }
         Column(modifier = Modifier.weight(1f).alignBy { firstLine.middle }) {
             Text(
-                title,
+                searchMarked(title),
+                modifier = Modifier.testTag(ROW_TITLE_TAG),
                 style = MaterialTheme.typography.bodyLarge,
                 color = titleColor,
                 onTextLayout = { firstLine.middle = ((it.getLineTop(0) + it.getLineBottom(0)) / 2).roundToInt() },
@@ -167,6 +171,7 @@ internal fun ValueRow(
     underBadge: Boolean = false,
     onClick: (() -> Unit)?,
 ) {
+    if (!shownInSearch(title)) return
     val alpha = if (onClick != null) 1f else DISABLED_ALPHA
     val color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha)
     Column(
@@ -176,7 +181,12 @@ internal fun ValueRow(
                 .clickable(enabled = onClick != null, onClick = { onClick?.invoke() })
                 .padding(start = valueRowStart(indent, underBadge), top = 8.dp, bottom = 8.dp),
     ) {
-        Text(title, style = MaterialTheme.typography.bodyLarge, color = color)
+        Text(
+            searchMarked(title),
+            style = MaterialTheme.typography.bodyLarge,
+            color = color,
+            modifier = Modifier.testTag(ROW_TITLE_TAG),
+        )
         Text(
             value,
             style = MaterialTheme.typography.bodyMedium,
@@ -226,3 +236,6 @@ private fun valueRowStart(
         indent -> NESTED
         else -> 0.dp
     }
+
+/** The test tag of a setting's title, as its row shows it, which the search finds it by (#649). */
+internal const val ROW_TITLE_TAG = "settings_row_title"

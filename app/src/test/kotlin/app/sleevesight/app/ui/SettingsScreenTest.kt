@@ -13,6 +13,7 @@ import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.isNotEnabled
@@ -42,6 +43,7 @@ import app.sleevesight.app.secrets.SecretState
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.testCipher
+import app.sleevesight.app.ui.settings.SEARCH_FIELD_TAG
 import app.sleevesight.app.ui.settings.SettingsScreen
 import app.sleevesight.app.ui.settings.SettingsSection
 import app.sleevesight.core.Secret
@@ -247,7 +249,7 @@ class SettingsScreenTest {
         show {
             compose.openSection(SettingsSection.SECRETS)
             compose.onNodeWithText(text(R.string.settings_key_name_lastfm)).performScrollTo().performClick()
-            compose.onNode(hasSetTextAction()).performTextInput("  lastfm-key  ")
+            compose.onNode(keyField).performTextInput("  lastfm-key  ")
             compose.onNodeWithText(text(R.string.settings_save)).performClick()
 
             waitFor("the Last.fm key stored") { runBlocking { secrets.get(SecretId.LASTFM) }?.reveal() == "lastfm-key" }
@@ -272,7 +274,7 @@ class SettingsScreenTest {
             waitForText(text(R.string.settings_title))
             compose.openSection(SettingsSection.SECRETS)
             compose.onNodeWithText(text(R.string.settings_key_name_exa)).performScrollTo().performClick()
-            compose.onNode(hasSetTextAction()).performTextInput("exa-key")
+            compose.onNode(keyField).performTextInput("exa-key")
             compose.onNodeWithText(text(R.string.settings_save)).performClick()
 
             waitForText(text(R.string.settings_key_save_failed))
@@ -291,7 +293,7 @@ class SettingsScreenTest {
             flaky.writeFailures.set(1)
             compose.openSection(SettingsSection.SECRETS)
             compose.onNodeWithText(text(R.string.settings_key_name_exa)).performScrollTo().performClick()
-            compose.onNode(hasSetTextAction()).performTextInput("exa-key")
+            compose.onNode(keyField).performTextInput("exa-key")
             compose.onNodeWithText(text(R.string.settings_save)).performClick()
 
             waitForText(text(R.string.settings_key_write_failed))
@@ -320,14 +322,14 @@ class SettingsScreenTest {
             show(secretStore = slowSecrets) {
                 compose.openSection(SettingsSection.SECRETS)
                 compose.onNodeWithText(text(R.string.settings_key_name_exa)).performScrollTo().performClick()
-                compose.onNode(hasSetTextAction()).performTextInput("exa-key")
+                compose.onNode(keyField).performTextInput("exa-key")
                 compose.onNodeWithText(text(R.string.settings_save)).performClick()
 
                 // While the save runs, *Cancel* is refused, so it cannot seem to cancel a save that goes on.
                 val cancel = hasText(text(R.string.settings_cancel))
                 waitForNode(cancel and isNotEnabled())
                 compose.onNode(cancel).performClick()
-                compose.onNode(hasSetTextAction()).assertExists()
+                compose.onNode(keyField).assertExists()
 
                 release.countDown()
                 waitForText(text(R.string.settings_key_save_failed))
@@ -350,7 +352,7 @@ class SettingsScreenTest {
         show(secretStore = legacySecrets) {
             compose.openSection(SettingsSection.SECRETS)
             compose.onNodeWithText(text(R.string.settings_key_name_exa)).performScrollTo().performClick()
-            compose.onNode(hasSetTextAction()).performTextInput("exa-key")
+            compose.onNode(keyField).performTextInput("exa-key")
             compose.onNodeWithText(text(R.string.settings_save)).performClick()
 
             waitForText(text(R.string.settings_key_write_failed))
@@ -388,7 +390,7 @@ class SettingsScreenTest {
             flaky.writeGate = gate
             compose.openSection(SettingsSection.SECRETS)
             compose.onNodeWithText(text(R.string.settings_key_name_exa)).performScrollTo().performClick()
-            compose.onNode(hasSetTextAction()).performTextInput("exa-key")
+            compose.onNode(keyField).performTextInput("exa-key")
             compose.onNodeWithText(text(R.string.settings_save)).performClick()
             waitFor("the key's write started") { flaky.writes.get() == 1 }
 
@@ -668,3 +670,6 @@ class SettingsScreenTest {
     private fun ComposeTestRule.onAllNodesWithSubstring(text: String) =
         onAllNodes(hasText(text, substring = true), useUnmergedTree = true).fetchSemanticsNodes()
 }
+
+/** A key dialog's field: the one text field but the settings' search box (#649). */
+private val keyField = hasSetTextAction() and !hasTestTag(SEARCH_FIELD_TAG)
