@@ -59,7 +59,9 @@ fun NothingPlaying() {
  * lists, in its order, A to Z by name ([listedPlayers]); a followed one's row opens the player from
  * its launcher entry, as *Players*' *Open the app* does, and a switched-off one's is dimmed, cannot be
  * tapped, and links to *Players* (*Enable in Settings*). With no player listed, a line says so, and
- * links to *Players*. Under the players, the guide to Home ([HomeGuide]) while *Home guide* is on and
+ * links to *Players*. With *Only enabled players on Home* on (#674), only the followed players are
+ * listed; with players listed but none of them followed, a line says none is switched on, and links
+ * to *Players*. Under the players, the guide to Home ([HomeGuide]) while *Home guide* is on and
  * it is not [guideDismissed]. Nothing before the settings' first read ([settings] null), nor before
  * the players have loaded.
  */
@@ -72,16 +74,18 @@ internal fun IdleHome(
     if (settings == null) return
     val apps = remember(actions) { PlayerApps(actions.playerLabel, actions.playerLaunch, actions.installedPlayers) }
     val listed = listedPlayers(settings.followedPlayers.keys, apps) ?: return
+    val shown = if (settings.onlyEnabledPlayersOnHome) listed.filter { settings.follows(it.packageName) } else listed
     val toPlayers = { actions.openSettingsAt(SettingsTarget.players) }
     Column(Modifier.fillMaxWidth().testTag(NOTHING_PLAYING_TAG)) {
-        if (listed.isEmpty()) {
+        if (shown.isEmpty()) {
+            val line = if (listed.isEmpty()) R.string.home_players_none else R.string.home_players_none_enabled
             val link = TextPart.Action(stringResource(R.string.home_players_none_link), PLAYERS_LINK_TAG, toPlayers)
             LinkedText(
-                linkedParts(stringResource(R.string.home_players_none), link),
+                linkedParts(stringResource(line), link),
                 style = MaterialTheme.typography.bodyLarge,
             )
         }
-        for (player in listed) {
+        for (player in shown) {
             key(player.packageName) {
                 IdlePlayerRow(player, settings.follows(player.packageName), apps, toPlayers)
             }
@@ -170,7 +174,7 @@ private fun IdlePlayerRow(
 /** The test tag of the idle Home: the players and the guide. */
 const val NOTHING_PLAYING_TAG: String = "nothing-playing"
 
-/** The test tag of the link to *Players* in the line shown when no player has been seen. */
+/** The test tag of the link to *Players* in the line shown when no player is listed. */
 const val PLAYERS_LINK_TAG: String = "home-players-link"
 
 /** The test tag of the idle Home's row for [packageName]. */
