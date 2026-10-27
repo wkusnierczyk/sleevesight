@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+# Before each push: the static checks of CI's `build`, without the tests, for the modules the pushed
+# commits touch (`:<module>:staticChecks`: ktlint, Detekt, type-resolved where `check` runs it, and
+# Android lint in the app), then Git LFS's own pre-push.
+#
+# The modules come from the files changed by the commits that no remote-tracking branch has yet (a
+# merge counts with all it brings to its first parent, since combining two branches can break a
+# check). A change in a module's directory, other than Markdown, checks that module; a change to the
+# build itself (`build-logic/`, `gradle/`, the root Gradle files, `config/detekt/`, `.editorconfig`)
+# checks them all; anything else checks none, and Gradle does not start.
+#
+# Gradle runs on the working tree, so it checks the pushed commits when they are what is checked out.
+# On a machine where several checkouts share one Gradle lock (`.dev/scratchpad/gradle.lock` beside
+# the main checkout), it waits for that lock. CI stays the final check.
+set -euo pipefail
+
+# Checked first, so a missing Git LFS stops the push before Gradle runs rather than after.
+command -v git-lfs >/dev/null 2>&1 || {
+  printf >&2 '\nGit LFS is not installed (no git-lfs on the path); this repository keeps its videos in it.\n'
+  printf >&2 'Install it, then run: git lfs install --skip-repo\n\n'
+  exit 2
+}
+
+updates=$(mktemp)
+trap 'rm -f "$updates"' EXIT
+cat >"$updates"
+
+fail() {
+  printf >&2 '\npre-push: %s\n\n' "$*"
+  exit 1
+}
+
+cd "$(git rev-parse --show-toplevel)"
+
+head=$(git rev-parse HEAD)
+revs=()
+elsewhere=false
+while read -r _ local_sha _ remote_sha; do
+  [ -n "$local_sha" ] || continue
+  case "$local_sha" in *[!0]*) ;; *) continue ;; esac   # all zeros: a branch deleted on the remote
+  revs+=("$local_sha")
+  [ "$(git rev-parse "$local_sha^{commit}" 2>/dev/null || true)" = "$head" ] || elsewhere=true
+  if [[ "$remote_sha" == *[!0]* ]] && git cat-file -e "$remote_sha^{commit}" 2>/dev/null; then
+    revs+=("^$remote_sha")
+  fi
+done <"$updates"
+
+modules=()
+while IFS= read -r m; do modules+=("$m"); done < <(sed -n 's/^include(":\([A-Za-z0-9_-]*\)")$/\1/p' settings.gradle.kts)
+[ "${#modules[@]}" -gt 0 ] || fail 'no include(":<module>") lines found in settings.gradle.kts.'
+
+touched=()
+all=false
+if [ "${#revs[@]}" -gt 0 ]; then
+  # NUL-separated, so that git quotes no unusual path ("app/…") and each one maps to its module.
+  while IFS= read -r -d '' path; do
+    [ -n "$path" ] || continue
+    case "$path" in
+      build-logic/* | gradle/* | build.gradle.kts | settings.gradle.kts | settings-gradle.lockfile | \
+        gradle.properties | gradlew | gradlew.bat | config/detekt/* | .editorconfig)
+        all=true ;;
+      *.md) ;;
+      */*)
+        top=${path%%/*}
+        for m in "${modules[@]}"; do [ "$m" = "$top" ] && touched+=("$m"); done ;;
+    esac
+  done < <(git log -z -m --first-parent --no-renames --format= --name-only "${revs[@]}" --not --remotes)
+fi
+
+tasks=()
+for m in "${modules[@]}"; do
+  if $all; then
+    tasks+=(":$m:staticChecks")
+  else
+    for t in ${touched[@]+"${touched[@]}"}; do
+      if [ "$t" = "$m" ]; then tasks+=(":$m:staticChecks"); break; fi
+    done
+  fi
+done
+
+if [ "${#tasks[@]}" -gt 0 ]; then
+  printf >&2 'pre-push: %s\n' "${tasks[*]}"
+  $elsewhere && printf >&2 'pre-push: note: the checks run on the working tree, which is not the commit being pushed.\n'
+  gradle=(./gradlew --no-daemon --console=plain --continue "${tasks[@]}")
+  lock=$(git rev-parse --path-format=absolute --git-common-dir)/../.dev/scratchpad/gradle.lock
+  if [ -f "$lock" ] && command -v lockf >/dev/null 2>&1; then
+    gradle=(lockf -k "$lock" "${gradle[@]}")
+  elif [ -f "$lock" ] && command -v flock >/dev/null 2>&1; then
+    gradle=(flock "$lock" "${gradle[@]}")
+  fi
+  status=0
+  "${gradle[@]}" </dev/null || status=$?
+  [ "$status" -eq 0 ] || fail "the static checks failed (above); fix them, commit, and push again."
+fi
+
+# Git LFS's own pre-push, as `git lfs install` writes it, last: it uploads the pushed LFS objects.
+git lfs pre-push "$@" <"$updates"
