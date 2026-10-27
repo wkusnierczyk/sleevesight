@@ -406,15 +406,25 @@ private fun SettingsContent(
             modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 16.dp),
         )
         SearchField(folds.query, folds::search, Modifier.padding(start = 24.dp, end = 24.dp, top = 12.dp))
-        SettingsColumn(settings, keys, navigation, unavailable, folds, update, open)
+        // Asked once, off the main thread, from the start: for *Players* and for a search, which finds
+        // them as soon as it begins (#649).
+        val listed = listedPlayers(settings.followedPlayers.keys, navigation.players)
+        val found =
+            if (folds.searching) {
+                val players = listed.orEmpty().map { it.name }
+                matches(settingsIndex(settings, keys, players, navigation.modelName, unavailable), folds.query)
+            } else {
+                null
+            }
+        found?.let { SearchAnnouncement(folds.query, it.size) }
+        SettingsColumn(settings, keys, navigation, unavailable, Found(listed, found), folds, update, open)
     }
 }
 
 /**
  * The sections, open as [folds] has them, in the order shown, their chips all as wide
  * ([sectionChipWidth]). While searching (#649), only the sections the search finds ([matches] of
- * [settingsIndex]), each with what of it shows, or *No settings match "…"*; a screen reader hears
- * how many match ([SearchAnnouncement]).
+ * [settingsIndex]), each with what of it shows ([Found.sections]), or *No settings match "…"*.
  */
 @Suppress("LongParameterList", "LongMethod") // What the sections show and change; one call per section.
 @Composable
@@ -423,20 +433,15 @@ private fun SettingsColumn(
     keys: KeysShown,
     navigation: Navigation,
     unavailable: Map<ProviderId, String>,
+    shown: Found,
     folds: SectionFolds,
     update: Update,
     open: (SettingsDialog) -> Unit,
 ) {
     val secrets = keys.states
     val chip = sectionChipWidth()
-    // Asked off the main thread from the start, so a search finds them as soon as it begins.
-    val players = listedPlayers(settings.followedPlayers.keys, navigation.players).orEmpty().map { it.name }
-    val found =
-        if (folds.searching) {
-            matches(settingsIndex(settings, keys, players, navigation.modelName), folds.query)
-        } else {
-            null
-        }
+    val listed = shown.players
+    val found = shown.sections
 
     // [section], unless a search under way does not find it.
     @Composable
@@ -455,11 +460,8 @@ private fun SettingsColumn(
         modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        if (found != null) {
-            SearchAnnouncement(folds.query, found.size)
-            if (found.isEmpty()) NothingFound(folds.query)
-        }
-        Section(SettingsSection.PLAYERS) { PlayersSection(settings, navigation.players, update) }
+        if (found?.isEmpty() == true) NothingFound(folds.query)
+        Section(SettingsSection.PLAYERS) { PlayersSection(settings, listed, navigation.players, update) }
         Section(SettingsSection.SOURCES) { SourcesSection(settings, secrets, update) }
         Section(SettingsSection.AI_SERVICES) {
             AiSection(settings, secrets, navigation.modelName, update, open, unavailable)
@@ -482,3 +484,12 @@ private fun SettingsColumn(
         }
     }
 }
+
+/**
+ * The players listed under *Players* ([players], null until loaded), and, while searching, the
+ * sections the search finds, each with what of it shows ([sections]; null while not searching).
+ */
+private class Found(
+    val players: List<ListedPlayer>?,
+    val sections: Map<SettingsSection, SectionMatch>?,
+)

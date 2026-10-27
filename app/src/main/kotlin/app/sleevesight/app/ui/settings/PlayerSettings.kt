@@ -57,11 +57,12 @@ class InstalledPlayers(
  * shows under the name only in developer mode. The icon is decorative: the name beside it says
  * which app it is.
  *
- * Listed as [listedPlayers] gives them (#627: A to Z by name, as Home lists them): each stored
- * player the phone shows this app, or that reported music since the process started, so a followed
- * player that plays always has its switch. One that is neither, Spotify (listed by default) on a
- * phone without it included, is hidden, and its entry kept: not being shown is no proof the app is
- * gone (`PlayerRemovedReceiver` drops an uninstalled one). The rows show once the list's names and
+ * Listed as [listed], which the screen asks [listedPlayers] for once, for the search too (#649;
+ * #627: A to Z by name, as Home lists them): each stored player the phone shows this app, or that
+ * reported music since the process started, so a followed player that plays always has its switch.
+ * One that is neither, Spotify (listed by default) on a phone without it included, is hidden, and
+ * its entry kept: not being shown is no proof the app is gone (`PlayerRemovedReceiver` drops an
+ * uninstalled one). The rows show once the list's names and
  * links have loaded, off the main thread; each row's icon loads after, off the main thread too,
  * once per row while the section is drawn (#579): the row shows without it until it has, and for
  * good when the phone has none to give. With no [PlayerApps.installed] (tests, previews), every
@@ -70,10 +71,12 @@ class InstalledPlayers(
 @Composable
 internal fun PlayersSection(
     settings: Settings,
+    listed: List<ListedPlayer>?,
     apps: PlayerApps,
     update: Update,
 ) {
-    val listed = listedPlayers(settings.followedPlayers.keys, apps) ?: return
+    // Asked once, by the screen, for the search too (#649); null until loaded.
+    if (listed == null) return
     if (listed.isEmpty()) Hint(R.string.settings_players_none)
     for (player in listed) {
         val followed = settings.followedPlayers[player.packageName] ?: false

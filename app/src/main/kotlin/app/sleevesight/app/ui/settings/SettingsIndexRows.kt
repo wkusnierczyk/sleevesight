@@ -5,6 +5,7 @@ import androidx.compose.ui.res.stringResource
 import app.sleevesight.app.BuildConfig
 import app.sleevesight.app.R
 import app.sleevesight.core.genres.LabelSource
+import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WriteAutomatically
 
@@ -14,13 +15,19 @@ import app.sleevesight.core.settings.WriteAutomatically
 internal fun aiRows(
     settings: Settings,
     modelName: (String) -> String,
+    unavailable: Map<ProviderId, String>,
 ): List<IndexedRow> =
     OFFERED_PROVIDERS.flatMap { provider ->
         val name = stringResource(providerName(provider))
-        val default = Settings.DEFAULT_MODELS[provider]
-        val models = listOfNotNull(settings.aiModels[provider], default).distinct().map(modelName)
-        val modelTitle = stringResource(R.string.settings_ai_model_of, name)
-        val model = IndexedRow(modelTitle, listOf(modelTitle) + models)
+        // As the row shows it: its value, the default marked so, and that the model is unavailable.
+        val models = listOfNotNull(settings.aiModels[provider], Settings.DEFAULT_MODELS[provider]).distinct()
+        val model =
+            choiceRow(
+                stringResource(R.string.settings_ai_model_of, name),
+                modelUnavailable(name, goneModel(provider, settings, unavailable), modelName),
+                modelValue(provider, settings, modelName),
+                models.map(modelName),
+            )
         val efforts =
             efforts(provider)?.let { options ->
                 choiceRow(

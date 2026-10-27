@@ -98,7 +98,7 @@ class SettingsSearchTest {
                     if (emitted) {
                         CompositionLocalProvider(LocalSaveableStateRegistry provides registry) {
                             SettingsScreen(settings, secrets, emptyMap(), { CompletableDeferred(true) }, saves) {
-                                "Player $it"
+                                PLAYER_NAMES[it] ?: it
                             }
                         }
                     }
@@ -174,6 +174,15 @@ class SettingsSearchTest {
         }
 
     @Test
+    fun aSubHeadingShowsOverASettingFoundUnderIt() =
+        show {
+            // A source's cache lifetime, under *History*'s sub-heading on how long findings are kept.
+            search(text(R.string.settings_cache_wikidata))
+            assertTrue(text(R.string.settings_cache_wikidata) in rowsOf(SettingsSection.HISTORY))
+            compose.onNode(hasText(text(R.string.settings_cache_lifetimes))).assertExists()
+        }
+
+    @Test
     fun aChoiceFindsTheSettingThatOffersIt() =
         show {
             // *Separate pages* is only a choice of *Layout*, not its value: the default is the other.
@@ -199,13 +208,13 @@ class SettingsSearchTest {
 
     @Test
     fun aPlayersNameFindsItsRow() {
-        runBlocking { settings.update { it.copy(followedPlayers = mapOf("org.example.tunes" to true)) } }
+        runBlocking { settings.update { it.copy(followedPlayers = mapOf(GROOVEBOX to true)) } }
         show {
-            search("example.tunes")
+            search("groovebox")
             // The players are listed off the main thread (#579), which the clock does not wait for.
-            compose.waitUntil(5_000) { count(SettingsSection.PLAYERS.panelTag) == 1 }
+            compose.waitUntil(5_000) { "Groovebox" in rowsOf(SettingsSection.PLAYERS) }
             assertEquals(listOf(SettingsSection.PLAYERS), shownSections())
-            assertEquals(listOf("Player org.example.tunes"), rowsOf(SettingsSection.PLAYERS))
+            assertEquals(listOf("Groovebox"), rowsOf(SettingsSection.PLAYERS))
         }
     }
 
@@ -277,16 +286,13 @@ class SettingsSearchTest {
         }
 
     @Test
-    fun aScreenReaderReadsTheBoxAsSearchSettingsAndHearsHowManySectionsMatch() =
+    fun aScreenReaderReadsTheBoxBySearchSettingsAndHearsHowManySectionsMatch() =
         show {
+            // Named by its placeholder, with no content description to stand for what is typed.
             compose
                 .onNodeWithTag(SEARCH_FIELD_TAG)
-                .assert(
-                    SemanticsMatcher.expectValue(
-                        SemanticsProperties.ContentDescription,
-                        listOf(text(R.string.settings_search_hint)),
-                    ),
-                )
+                .assert(hasText(text(R.string.settings_search_hint)))
+                .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.ContentDescription))
             search(text(R.string.settings_layout_pages))
             compose.mainClock.advanceTimeBy(ANNOUNCED)
             compose.waitForIdle()
@@ -296,9 +302,54 @@ class SettingsSearchTest {
                 .assert(SemanticsMatcher.expectValue(SemanticsProperties.ContentDescription, listOf(one)))
         }
 
+    @Test
+    fun editsThatKeepTheCountAreAnnouncedOnceTheTypingPauses() =
+        show {
+            val announced = { searchAnnouncement() }
+            compose.mainClock.autoAdvance = false
+            try {
+                // From the first keystroke the live region is there, saying nothing yet.
+                typeWithoutWaiting("Separate p")
+                assertEquals("", announced())
+                compose.mainClock.advanceTimeBy(PAUSE_SHORT)
+                // Typing on, the count unchanged: the wait starts again, nothing is said.
+                typeWithoutWaiting("Separate pa")
+                assertEquals(listOf(SettingsSection.APPEARANCE), shownSections())
+                compose.mainClock.advanceTimeBy(PAUSE_SHORT)
+                assertEquals("", announced())
+                // Paused: said once.
+                compose.mainClock.advanceTimeBy(ANNOUNCED)
+                assertEquals(app.resources.getQuantityString(R.plurals.settings_search_matches, 1, 1), announced())
+            } finally {
+                compose.mainClock.autoAdvance = true
+            }
+        }
+
+    private fun typeWithoutWaiting(query: String) {
+        compose.onNodeWithTag(SEARCH_FIELD_TAG).performTextReplacement(query)
+        repeat(FRAMES) { compose.mainClock.advanceTimeByFrame() }
+    }
+
+    private fun searchAnnouncement(): String =
+        compose
+            .onNodeWithTag(SEARCH_ANNOUNCEMENT_TAG)
+            .fetchSemanticsNode()
+            .config[SemanticsProperties.ContentDescription]
+            .joinToString("")
+
     private companion object {
+        const val GROOVEBOX = "org.example.groovebox"
+
+        // A player's name as the phone shows it, which has nothing of its package name.
+        val PLAYER_NAMES = mapOf(GROOVEBOX to "Groovebox")
+
         const val KEEP_ARTISTS_WORDS = 30
         const val NINETY = 90
         const val ANNOUNCED = 1_000L
+
+        // Shorter than the pause before an announcement (0.7 s), twice longer than it together.
+        const val PAUSE_SHORT = 400L
+
+        const val FRAMES = 3
     }
 }

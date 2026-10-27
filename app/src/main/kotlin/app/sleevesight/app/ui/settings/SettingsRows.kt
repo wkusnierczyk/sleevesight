@@ -64,12 +64,18 @@ private class FirstLine {
     var middle = 0
 }
 
+/**
+ * A line of explanation in a section, [text]. As a sub-heading over rows, [over] names them by
+ * title: a search that shows only some rows shows it while any of them shows (#649); with none, it
+ * is not a setting of its own, and such a search leaves it out.
+ */
 @Composable
 internal fun Hint(
     @StringRes text: Int,
+    over: List<String> = emptyList(),
 ) {
-    // Not a setting of its own: a search showing only some rows leaves it out (#649).
-    if (LocalRowSearch.current?.filtering == true) return
+    val search = LocalRowSearch.current
+    if (search?.filtering == true && over.none { search.shows(it) }) return
     Text(stringResource(text), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(vertical = 4.dp))
 }
 

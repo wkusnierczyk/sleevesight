@@ -112,7 +112,9 @@ private fun LifetimeRows(
     update: Update,
     open: (SettingsDialog) -> Unit,
 ) {
-    Hint(R.string.settings_cache_lifetimes)
+    // Over the rows under it, so a search that finds one of them shows it too (#649).
+    val shown = SHOWN_LIFETIMES.filter { (source, _) -> settings.cacheLifetimes[source] != null }
+    Hint(R.string.settings_cache_lifetimes, over = shown.map { (_, name) -> stringResource(name) })
     for ((source, name) in SHOWN_LIFETIMES) {
         val lifetime = settings.cacheLifetimes[source] ?: continue
         val options = cacheLifetimes(lifetime)

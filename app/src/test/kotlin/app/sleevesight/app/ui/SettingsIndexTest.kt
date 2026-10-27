@@ -11,17 +11,26 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextReplacement
 import androidx.test.core.app.ActivityScenario
+import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.MemoryStore
+import app.sleevesight.app.R
+import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.testCipher
+import app.sleevesight.app.ui.settings.IndexedSection
+import app.sleevesight.app.ui.settings.KeysShown
 import app.sleevesight.app.ui.settings.ROW_TITLE_TAG
 import app.sleevesight.app.ui.settings.SEARCH_FIELD_TAG
 import app.sleevesight.app.ui.settings.SettingsScreen
 import app.sleevesight.app.ui.settings.SettingsSection
+import app.sleevesight.app.ui.settings.matches
+import app.sleevesight.app.ui.settings.settingsIndex
 import app.sleevesight.core.Secret
+import app.sleevesight.core.model.ProviderId
+import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WriteAutomatically
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -48,6 +57,7 @@ class SettingsIndexTest {
     @get:Rule
     val compose = createEmptyComposeRule()
 
+    private val app = ApplicationProvider.getApplicationContext<SleevesightApplication>()
     private val settings = SettingsStore(MemoryStore())
     private val secrets = SecretStore(MemoryStore(), testCipher(), dispatcher = Dispatchers.Unconfined)
     private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -66,6 +76,36 @@ class SettingsIndexTest {
                 useUnmergedTree = true,
             ).fetchSemanticsNodes()
             .map { node -> node.config[SemanticsProperties.Text].joinToString("") { it.text } }
+
+    @Test
+    fun aModelsRowIsFoundByWhatItShowsItsDefaultAndThatItIsUnavailable() {
+        val gone = Settings.DEFAULT_MODELS.getValue(ProviderId.ANTHROPIC)
+        var index: List<IndexedSection>? = null
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                activity.setContent {
+                    // The default model selected, and found unavailable (#540).
+                    index =
+                        settingsIndex(
+                            Settings(),
+                            KeysShown(emptyMap(), offerReset = false),
+                            emptyList(),
+                            { "Model $it" },
+                            mapOf(ProviderId.ANTHROPIC to gone),
+                        )
+                }
+            }
+            compose.waitForIdle()
+        }
+        val name = app.getString(R.string.settings_ai_provider_anthropic)
+        val row = app.getString(R.string.settings_ai_model_of, name)
+        // Its value as the row shows it, the default marked so; and the row's warning.
+        val default = app.getString(R.string.settings_ai_model_default, "Model $gone")
+        val warning = app.getString(R.string.settings_model_not_available, name, "Model $gone")
+        for (query in listOf(default, warning)) {
+            assertEquals(query, setOf(row), matches(index!!, query)[SettingsSection.AI_SERVICES]?.rows)
+        }
+    }
 
     @Test
     fun everySettingDrawnIsFoundByItsNameInItsSection() {

@@ -27,7 +27,6 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -141,7 +140,7 @@ internal fun searchMarkColour(): Color = MaterialTheme.colorScheme.tertiaryConta
 /**
  * The search box (#649), under the settings' title, outside the list: a search symbol, the hint
  * *Search settings*, and, once there is text, a button that clears it. A screen reader reads the
- * field as *Search settings*.
+ * field by its hint, *Search settings*, while it is empty, and by what was typed after.
  */
 @Composable
 internal fun SearchField(
@@ -153,11 +152,9 @@ internal fun SearchField(
     OutlinedTextField(
         value = query,
         onValueChange = onQuery,
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .testTag(SEARCH_FIELD_TAG)
-                .semantics { contentDescription = hint },
+        // Named by its placeholder, the hint: a content description would replace what was typed
+        // in what a screen reader reads.
+        modifier = modifier.fillMaxWidth().testTag(SEARCH_FIELD_TAG),
         placeholder = { Text(hint) },
         leadingIcon = { Icon(painterResource(R.drawable.ic_search), contentDescription = null) },
         trailingIcon =
@@ -181,7 +178,8 @@ internal fun SearchField(
 /**
  * What a search for [query] found, said to a screen reader once the typing has paused
  * ([ANNOUNCE_AFTER]): how many sections match ([count]), or that none does. Drawn as a point, not
- * seen; the screen shows what it found.
+ * seen, above the list so it is on screen however far the list is scrolled; the screen shows what
+ * it found.
  */
 @Composable
 internal fun SearchAnnouncement(
@@ -194,22 +192,23 @@ internal fun SearchAnnouncement(
         } else {
             pluralStringResource(R.plurals.settings_search_matches, count, count)
         }
-    var said by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(message) {
+    // Drawn from the search's first keystroke, empty, so the screen reader knows the live region
+    // before its first change; said only once the typing pauses, whether or not the count changed,
+    // and only when what it says has changed.
+    var said by remember { mutableStateOf("") }
+    LaunchedEffect(query, message) {
         delay(ANNOUNCE_AFTER)
         said = message
     }
-    said?.let {
-        Box(
-            Modifier
-                .size(1.dp)
-                .testTag(SEARCH_ANNOUNCEMENT_TAG)
-                .clearAndSetSemantics {
-                    contentDescription = it
-                    liveRegion = LiveRegionMode.Polite
-                },
-        )
-    }
+    Box(
+        Modifier
+            .size(1.dp)
+            .testTag(SEARCH_ANNOUNCEMENT_TAG)
+            .clearAndSetSemantics {
+                contentDescription = said
+                liveRegion = LiveRegionMode.Polite
+            },
+    )
 }
 
 /** Nothing found for [query]: *No settings match "…"*. */

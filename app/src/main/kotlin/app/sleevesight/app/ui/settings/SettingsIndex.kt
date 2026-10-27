@@ -2,6 +2,7 @@ package app.sleevesight.app.ui.settings
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
+import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.settings.Settings
 
 // What the settings' search looks through (#649): every section and its settings, as the screen
@@ -13,7 +14,8 @@ import app.sleevesight.core.settings.Settings
  * choices it offers (*dark* finds *Theme*). Built from the string resources, so in the app's
  * language; the same rows as the sections draw for [settings] (*Crossfade* only under *On track
  * skip (auto)*, *Developer* only in developer mode), with the players [players] lists by name and
- * the AI services' models by name ([modelName]), as their rows show them. [keys] says whether
+ * the AI services' models by name ([modelName]), as their rows show them, with the models found
+ * unavailable ([unavailable], #540) said so as their rows say it. [keys] says whether
  * *Purge keys* shows, and each key's state.
  */
 @Composable
@@ -22,11 +24,12 @@ internal fun settingsIndex(
     keys: KeysShown,
     players: List<String>,
     modelName: (String) -> String,
+    unavailable: Map<ProviderId, String> = emptyMap(),
 ): List<IndexedSection> =
     listOfNotNull(
         indexed(SettingsSection.PLAYERS, players.map { indexRow(it) }),
         indexed(SettingsSection.SOURCES, sourceIndexRows()),
-        indexed(SettingsSection.AI_SERVICES, aiRows(settings, modelName)),
+        indexed(SettingsSection.AI_SERVICES, aiRows(settings, modelName, unavailable)),
         indexed(SettingsSection.SECRETS, secretRows(keys)),
         indexed(SettingsSection.GENRES, genreRows()),
         indexed(SettingsSection.INSIGHTS, insightRows(settings)),
