@@ -82,30 +82,40 @@ class RecordingResolver(
         val chosen = accepted.minWithOrNull(PREFERENCE)
         return when {
             collision != null -> collision
-            chosen == null ->
-                (if (fitting.isEmpty()) byVariant(track, duration, candidates, leaders) else null)
-                    ?: unmatched(track, candidates)
+            chosen == null -> weaker(track, duration, candidates, leaders, fitting) ?: unmatched(track, candidates)
             else -> accept(track, chosen, leaders.details[chosen.recording.mbid], accepted)
         }
     }
 
-    // A credit under an honorific variant of an artist's name (`Mr. A Balladeer` for `a balladeer`,
-    // #79), weighed only when no candidate whose title and length fit names the track's artists in
-    // any other way, so a variant never stands beside or against a credit by name or a band's. Then
-    // the variant credits are taken as the artists' credits, with the same rules: the earliest of the
-    // fitting is chosen, and a variant two MusicBrainz artists share collides. Null when no candidate
-    // whose title and length fit credits a variant.
-    private suspend fun byVariant(
+    // The weaker forms of a credit, each weighed only when no candidate whose title and length fit
+    // ([fitting]) names the track's artists in a stronger way, so a weaker form never stands beside or
+    // against a stronger one; the first form that some fitting candidate has decides. Then those credits
+    // are taken as the artists' credits, with the same rules: the earliest of the fitting is chosen, and
+    // a name two MusicBrainz identities share collides. Null when no fitting candidate has either form.
+    // - A credit under an honorific variant of an artist's name (`Mr. A Balladeer` for `a balladeer`,
+    //   #79).
+    // - Then a joint credit (#661): the player names as one artist what MusicBrainz credits as several,
+    //   such as "Derya Yıldırım & Grup Şimşek", credited "Derya Yıldırım" and "Grup Şimşek" joined by
+    //   " & ". A joint credit is one identity, the run of artists it credits, so one name two different
+    //   runs share collides. The artist gets no MusicBrainz id, since no one MusicBrainz artist is
+    //   theirs; the run's artists count as theirs for the work's original.
+    private suspend fun weaker(
         track: NormalizedTrack,
         duration: Duration?,
         candidates: List<Candidate>,
         leaders: Leaders,
+        fitting: List<Candidate>,
     ): Resolution? {
-        val fitting =
-            candidates
-                .filter { it.titleMatches && it.durationMatches && it.variants.isNotEmpty() }
-                .map { it.copy(named = it.variants, led = emptyMap()).identified(emptyMap()) }
-        val accepted = narrowed(fitting, duration)
+        val fits = candidates.filter { it.titleMatches && it.durationMatches }
+        val accepted: List<Candidate> =
+            if (fitting.isNotEmpty()) {
+                emptyList()
+            } else {
+                sequenceOf<(Candidate) -> Candidate?>({ it.asVariant() }, { it.jointly() })
+                    .map { form -> narrowed(fits.mapNotNull(form), duration) }
+                    .firstOrNull { it.isNotEmpty() }
+                    .orEmpty()
+            }
         val chosen = accepted.minWithOrNull(PREFERENCE) ?: return null
         return collision(track, accepted) ?: accept(track, chosen, leaders.details[chosen.recording.mbid], accepted)
     }
@@ -133,6 +143,11 @@ class RecordingResolver(
             matching { credit, artist ->
                 listOf(credit.name, credit.artistName).any { names.honorificVariant(it, artist) }
             }
+        val joint =
+            track.artists
+                .mapNotNull { artist ->
+                    names.jointCredit(recording.credits, artist)?.let { artist to it }
+                }.toMap()
         return Candidate(
             recording = recording,
             titleSimilarity = names.titleSimilarity(track.title, recording.title),
@@ -141,6 +156,7 @@ class RecordingResolver(
             // Orchestra" on one recording may be two artists.
             led = any.mapValues { (artist, ids) -> ids - named[artist].orEmpty() }.filterValues { it.isNotEmpty() },
             variants = variants,
+            joint = joint,
             durationGap = gap,
         )
     }
@@ -300,10 +316,12 @@ class RecordingResolver(
      * A search result as a candidate: [named] maps each track artist it credits by name to the
      * credits' MusicBrainz ids; [led] each one's band credits (a band they would lead) to the bands'
      * ids, beside any credit by name; [variants] each one's credits under an honorific variant of
-     * the name ([NameMatcher.honorificVariant]), for [byVariant]. Once [identified], [ids] maps each
-     * artist to who they are on this recording (the credits' ids, a band's leaders, or the band as
-     * an unknown artist), [creditedArtists] counts those credited by name or as a confirmed leader,
-     * and [bands] holds the ids of the bands whose leader is confirmed.
+     * the name ([NameMatcher.honorificVariant]), for [weaker] ([asVariant]); [joint] each one's joint credit,
+     * the ids of the run of credits that together write the name, for [weaker] too ([jointly], which
+     * sets [parts] to those ids). Once [identified], [ids] maps each artist to who they are on this
+     * recording (the credits' ids, a band's leaders, a joint credit's run, or the band as an unknown
+     * artist), [creditedArtists] counts those credited by name, jointly or as a confirmed leader, and
+     * [bands] holds the ids of the bands whose leader is confirmed.
      */
     private data class Candidate(
         val recording: MbRecording,
@@ -311,6 +329,8 @@ class RecordingResolver(
         val named: Map<String, Set<String>>,
         val led: Map<String, Set<String>>,
         val variants: Map<String, Set<String>> = emptyMap(),
+        val joint: Map<String, List<String>> = emptyMap(),
+        val parts: Set<String> = emptySet(),
         val durationGap: Duration?,
         val ids: Map<String, Set<String>> = emptyMap(),
         val creditedArtists: Int = 0,
@@ -339,10 +359,35 @@ class RecordingResolver(
          * band's recordings.
          */
         val known: Map<String, String?> get() =
-            ids.mapValues { (_, ids) -> ids.singleOrNull()?.takeUnless { it.startsWith(BAND) } }
+            ids.mapValues { (_, ids) -> ids.singleOrNull()?.takeUnless { it.startsWith(BAND) || it.startsWith(JOINT) } }
 
-        /** The credits that stand for the track's artists: by name, or a band whose leader is confirmed. */
-        val credited: Set<String> get() = named.values.flatten().toSet() + bands
+        /**
+         * The credits that stand for the track's artists: by name, a band whose leader is confirmed, or
+         * the artists of a joint credit.
+         */
+        val credited: Set<String> get() {
+            val byName = named.values.flatten().filterNot { it.startsWith(JOINT) }
+            return byName.toSet() + bands + parts
+        }
+
+        /** As a candidate of its variant credits, for [weaker]: each one as the artist's credit; null with none. */
+        fun asVariant(): Candidate? =
+            if (variants.isEmpty()) null else copy(named = variants, led = emptyMap()).identified(emptyMap())
+
+        /**
+         * As a candidate of its joint credits, for [weaker]: each one as the artist's credit, a single
+         * identity standing for the run of artists, whose ids are its [parts]; null with none.
+         */
+        fun jointly(): Candidate? =
+            if (joint.isEmpty()) {
+                null
+            } else {
+                copy(
+                    named = joint.mapValues { (_, ids) -> setOf(JOINT + ids.joinToString("+")) },
+                    led = emptyMap(),
+                    parts = joint.values.flatten().toSet(),
+                ).identified(emptyMap())
+            }
 
         val titleMatches: Boolean get() = titleSimilarity >= ResolutionThresholds.TITLE_SIMILARITY
         val durationMatches: Boolean get() =
@@ -352,6 +397,9 @@ class RecordingResolver(
         companion object {
             /** The prefix of a band's id standing for its unconfirmed leader, an unknown artist. */
             const val BAND = "band:"
+
+            /** The prefix of a joint credit's identity: the ids of the artists it credits, in order. */
+            const val JOINT = "joint:"
         }
     }
 
