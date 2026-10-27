@@ -189,7 +189,7 @@ class SessionMappingTest {
     @Test
     fun aRemoteSessionPausedAtASpeedAboveZeroIsReadAsPlayingAtThatSpeed() {
         val moving = state(PlaybackState.STATE_PAUSED, positionMs = 199_141, speed = 1f, updatedAt = 425_640_380)
-        val read = checkNotNull(SessionMapping.effectiveState(moving, remote = true))
+        val read = checkNotNull(SessionMapping.effectiveState(SPOTIFY, moving, remote = true))
         assertEquals(PlaybackState.STATE_PLAYING, read.state)
         assertEquals(
             PlaybackInfo(SPOTIFY, PlaybackStatus.PLAYING, 199_141.milliseconds, 425_640_380, 1f),
@@ -198,18 +198,18 @@ class SessionMappingTest {
         assertTrue(SessionMapping.isActive(read))
 
         val still = state(PlaybackState.STATE_PAUSED, positionMs = 206_184, speed = 0f, updatedAt = 425_648_204)
-        assertSame(still, SessionMapping.effectiveState(still, remote = true))
+        assertSame(still, SessionMapping.effectiveState(SPOTIFY, still, remote = true))
         val stopped = state(PlaybackState.STATE_STOPPED, positionMs = 406_220, speed = 1f)
-        assertSame(stopped, SessionMapping.effectiveState(stopped, remote = true))
-        assertNull(SessionMapping.effectiveState(null, remote = true))
+        assertSame(stopped, SessionMapping.effectiveState(SPOTIFY, stopped, remote = true))
+        assertNull(SessionMapping.effectiveState(SPOTIFY, null, remote = true))
     }
 
     @Test
     fun aLocalSessionsStateIsReadAsReportedAtAnySpeed() {
         val paused = state(PlaybackState.STATE_PAUSED, positionMs = 199_141, speed = 1f)
-        assertSame(paused, SessionMapping.effectiveState(paused, remote = false))
+        assertSame(paused, SessionMapping.effectiveState(SPOTIFY, paused, remote = false))
         val stopped = state(PlaybackState.STATE_STOPPED, positionMs = 406_220, speed = 1f, updatedAt = 426_152_503)
-        assertSame(stopped, SessionMapping.effectiveState(stopped, remote = false))
+        assertSame(stopped, SessionMapping.effectiveState(SPOTIFY, stopped, remote = false))
         val info = SessionMapping.playbackInfo(SPOTIFY, stopped)
         assertEquals(PlaybackStatus.STOPPED, info.status)
         assertEquals(406_220.milliseconds, info.displayPositionAt(426_162_503))

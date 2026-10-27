@@ -187,6 +187,40 @@ internal class RemoteSessionTest : SessionRepositoryFixture() {
     }
 
     @Test
+    fun theStatesKeptForSkipDetectionAndTheHistoryAreTheStatesShown() {
+        val car = spotify(remote = true)
+        replay(car) {}
+
+        val change = checkNotNull(repository.lastChange.value)
+        assertEquals(CAREFREE, change.track.title)
+        val moving = change.states.filter { it.state.speed > 0f }
+        assertTrue(change.states.toString(), moving.isNotEmpty())
+        assertTrue(change.states.toString(), moving.all { it.state.status == PlaybackStatus.PLAYING })
+    }
+
+    @Test
+    fun anotherPlayersRemoteSessionPausedAtSpeedOneStaysPaused() {
+        // Only Spotify's remote session was measured; a cast session paused at speed 1 is paused.
+        followed.value = setOf(YOUTUBE_MUSIC)
+        val paused = state(PlaybackState.STATE_PAUSED, positionMs = 10_000, speed = 1f, updatedAt = 1_000)
+        system.active =
+            listOf(
+                FakeSession(
+                    YOUTUBE_MUSIC,
+                    metadata = metadata(title = "If You Could Read My Mind"),
+                    playbackState = paused,
+                    remote = true,
+                ),
+            )
+        repository.start()
+
+        val playback = repository.playback.value
+        assertEquals(PlaybackStatus.PAUSED, playback.status)
+        assertEquals(10_000.milliseconds, playback.displayPositionAt(6_000))
+        assertNull(repository.playing.value)
+    }
+
+    @Test
     fun aRemoteSessionPlayingIsChosenOverAnotherPlayersPausedOneListedFirst() {
         followed.value = setOf(YOUTUBE_MUSIC, SPOTIFY)
         val paused = state(PlaybackState.STATE_PAUSED, positionMs = 10_000, speed = 0f)

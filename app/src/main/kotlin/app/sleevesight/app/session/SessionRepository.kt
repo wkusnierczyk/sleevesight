@@ -584,8 +584,8 @@ class SessionRepository(
                         reported = state
                         // The type with each state, as `onAudioInfoChanged` need not come first.
                         remote = gate.remote
-                        this@Attached.state = SessionMapping.effectiveState(state, remote)
-                        remember(SessionMapping.playbackInfo(gate.player, state))
+                        this@Attached.state = SessionMapping.effectiveState(gate.player, state, remote)
+                        remember(SessionMapping.playbackInfo(gate.player, this@Attached.state))
                         settleLater()
                     }
                 }
@@ -732,7 +732,7 @@ class SessionRepository(
                 queue = read.next() as List<MediaSession.QueueItem>?
                 queueTitle = read.next() as CharSequence?
                 remote = gate.remote
-                state = SessionMapping.effectiveState(reported, remote)
+                state = SessionMapping.effectiveState(gate.player, reported, remote)
             }
         }
 
@@ -745,7 +745,7 @@ class SessionRepository(
             val now = gate.remote
             if (now == remote) return
             remote = now
-            state = SessionMapping.effectiveState(reported, remote)
+            state = SessionMapping.effectiveState(gate.player, reported, remote)
             publish()
         }
 
