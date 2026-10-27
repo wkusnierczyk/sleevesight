@@ -6,11 +6,9 @@ import android.app.UiModeManager
 import android.os.Bundle
 import android.util.TypedValue
 import androidx.activity.compose.setContent
-import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.isDialog
+import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
-import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.core.view.WindowCompat
@@ -82,9 +80,9 @@ class ThemeSettingTest {
 
     private fun text(id: Int) = app.getString(id)
 
+    // One tap on the choice's button in *Theme*'s row (#637).
     private fun choose(option: Int) {
-        compose.onNodeWithText(text(R.string.settings_theme)).performScrollTo().performClick()
-        compose.onNode(hasText(text(option)) and hasAnyAncestor(isDialog())).performClick()
+        compose.onNode(hasText(text(option)) and isSelectable()).performScrollTo().performClick()
     }
 
     @Test

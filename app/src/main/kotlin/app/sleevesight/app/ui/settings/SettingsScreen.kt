@@ -261,17 +261,14 @@ internal sealed interface SettingsDialog {
      * One of [options], each a value with its label; [onSelect] saves the one chosen. The [title]
      * takes [titleArg], when given, as its one argument (a provider's name). A value in [details]
      * has a line under its label saying what it does (#546, #550), which a screen reader reads with
-     * the label, as one choice. A [developer] choice, one only developer mode offers, has its list
-     * marked as such (#536, `DeveloperMark`).
+     * the label, as one choice.
      */
-    @Suppress("LongParameterList") // What the dialog shows, each a value of its own, and what it does.
     class Choice<T>(
         @StringRes val title: Int,
         val options: List<Pair<T, String>>,
         val selected: T,
         val titleArg: String? = null,
         val details: Map<T, String> = emptyMap(),
-        val developer: Boolean = false,
         val onSelect: (T) -> Unit,
     ) : SettingsDialog
 
@@ -470,7 +467,7 @@ private fun SettingsColumn(
         Section(SettingsSection.GENRES) { GenresSection(settings, secrets, update) }
         Section(SettingsSection.INSIGHTS) { InsightsSection(settings, update, open, navigation.chooseMode) }
         Section(SettingsSection.HISTORY) { HistorySection(settings, update, open) }
-        Section(SettingsSection.APPEARANCE) { AppearanceSection(settings, update, open) }
+        Section(SettingsSection.APPEARANCE) { AppearanceSection(settings, update) }
         Section(SettingsSection.ABOUT) {
             AboutSection(settings, update, navigation.openCredits, navigation.openWhatLeaves)
         }
@@ -478,7 +475,7 @@ private fun SettingsColumn(
             // The whole section marked (#536), so what the mark means shows where it is set.
             DeveloperMark(spacing = 4.dp) {
                 Section(SettingsSection.DEVELOPER) {
-                    DeveloperSection(settings, update, open, navigation.openDiagnostics)
+                    DeveloperSection(settings, update, navigation.openDiagnostics)
                 }
             }
         }
