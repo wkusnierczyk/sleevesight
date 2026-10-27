@@ -6,8 +6,8 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 /**
- * *Reactive* turned to *Manual* while the run's own settings still write automatically (#553:
- * `AutomaticWritingChanged`), through [PipelineCoordinator]: a decision for nothing to narrate
+ * *Reactive* turned to *On demand* while the run's own settings still write automatically (#553:
+ * `WritingModeChanged`), through [PipelineCoordinator]: a decision for nothing to narrate
  * leaves neither a would-write nor a pause in the ledger, so the run asking again when the network
  * returns offers Write rather than writing.
  */
@@ -15,7 +15,7 @@ class PipelineCoordinatorAutomaticWritingTest {
     private val cases =
         listOf(
             Case(
-                "Manual since the run started, nothing to narrate offline: back online, Write offered, no call",
+                "On demand since the run started, nothing to narrate offline: back online, Write offered, no call",
                 mapOf("Zero" to 1),
                 listOf("Zero", "A", "A"),
                 "A",
@@ -41,7 +41,7 @@ class PipelineCoordinatorAutomaticWritingTest {
                 )
             },
             Case(
-                "Manual while Saver has paused, nothing to narrate: no pause in the ledger",
+                "On demand while Saver has paused, nothing to narrate: no pause in the ledger",
                 mapOf("Zero" to 1, "B" to 1),
                 listOf("Zero", "B", "C"),
                 // Nothing to write from, offline: no Write either.
@@ -63,5 +63,5 @@ class PipelineCoordinatorAutomaticWritingTest {
         )
 
     @Test
-    fun `turned to Manual, a decision for nothing to narrate leaves no would-write or pause`() = checkAll(cases)
+    fun `turned to On demand, a decision for nothing to narrate leaves no would-write or pause`() = checkAll(cases)
 }
