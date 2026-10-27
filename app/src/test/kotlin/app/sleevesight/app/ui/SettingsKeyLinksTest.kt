@@ -36,9 +36,9 @@ import androidx.compose.ui.text.LinkAnnotation
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
+import app.sleevesight.app.MemoryStore
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
-import app.sleevesight.app.TestStores
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.SettingsStore
@@ -59,7 +59,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
@@ -75,20 +74,21 @@ class SettingsKeyLinksTest {
     @get:Rule
     val compose = createEmptyComposeRule()
 
-    @get:Rule
-    val tmp = TemporaryFolder()
-
     private val app = ApplicationProvider.getApplicationContext<SleevesightApplication>()
-    private val stores by lazy { TestStores(tmp.root) }
-    private val settings by lazy { SettingsStore(stores.open("settings")) }
-    private val secrets by lazy { SecretStore(stores.open("secrets"), testCipher()) }
+
+    // In memory, and read on the main thread (#622). The screen shows nothing until the settings
+    // are read, and composed afresh ([restore]) it reads them again; the keys' states, once read,
+    // add a note to each row that needs a key, which moves the rows below. From their files, those
+    // reads ran on DataStore's own threads (and the keys' on `Dispatchers.IO`), which `waitForIdle`
+    // does not wait for: on a busy machine the rows were not back yet when the test looked for them.
+    private val settings = SettingsStore(MemoryStore())
+    private val secrets = SecretStore(MemoryStore(), testCipher(), dispatcher = Dispatchers.Unconfined)
     private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var inputModes: InputModeManager? = null
 
     @After
     fun close() {
         saves.cancel()
-        stores.close()
         // The accessibility manager outlives the test: leave no screen reader on for the next one.
         val manager = shadowOf(app.getSystemService(AccessibilityManager::class.java))
         manager.setTouchExplorationEnabled(false)
@@ -123,6 +123,7 @@ class SettingsKeyLinksTest {
         registry = SaveableStateRegistry(saved) { true }
         emitted = true
         compose.waitForIdle()
+        compose.onNode(hasText(text(R.string.settings_title))).assertExists("the settings composed again")
     }
 
     /** [restore], with the clock stopped, a frame for each step. */
