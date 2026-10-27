@@ -94,7 +94,7 @@ To save several keys at once, *Load keys*, under *Secrets*, reads one QR code of
 
 **Its citations.** Each sentence ends with chips for the sources it cites. A tap on a chip unfolds *Sources* and jumps to the line it cites. A sentence that cites nothing is underlined. When a sentence is not backed by the sources (it cites nothing, a line that does not exist, or the model's own knowledge), a note under the insight says how many, such as *1 sentence is not backed by the sources.*; otherwise there is none.
 
-**The *Sources* list.** Under the insight, *Sources* starts folded, its heading alone: *Sources ▸*; a tap on it unfolds it. Unfolded, each source that gave lines has a chip, by name, which shows or hides its lines; a note says when a source needs your key, could not be reached or failed; then come the evidence lines, and below them what was found but not verified, so not cited.
+**The *Sources* list.** Under the insight, *Sources* starts folded, a chip alone, like a genre chip; a tap on it opens its panel. In the panel, each source that gave lines has a chip, by name, which shows or hides its lines; a note says when a source needs your key, could not be reached or failed; then come the evidence lines, and below them what was found but not verified, so not cited.
 
 **What you decide.** Nothing, as a rule: you listen. A wrong-looking sentence can be checked against its line under *Sources*. [Usage]({{ '/docs/tutorials/usage/' | relative_url }}) says what each state of *Key insights* means, offline or when a source fails.
 

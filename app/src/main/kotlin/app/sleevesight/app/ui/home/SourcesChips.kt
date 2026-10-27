@@ -6,9 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -16,7 +14,6 @@ import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -28,6 +25,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.state.ToggleableState
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.theme.DeveloperMark
@@ -36,37 +34,39 @@ import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.core.evidence.EvidenceLine
 import app.sleevesight.core.model.Outcome
 
-// The *Sources* section's heading, its chips and its note (#440).
+// *Sources*' chip on Home (#623), its filter chips and its note (#440).
 
 /**
- * The section's heading, and its fold (#440): `Sources` and the disclosure triangle of the folds,
- * right while [folded], down while not; the whole line a button, which a screen
- * reader reads as the heading *Sources*, collapsed or expanded.
+ * *Sources* on Home (#623): a chip, drawn as a genre chip is ([ChipFrame]), named *Sources*. Under
+ * *Expandable boxes* it opens the section's panel ([SourcesSection]), and a screen reader reads it
+ * as the heading *Sources*, a button, collapsed; under *Separate pages* ([opensPage], #447) it opens
+ * *Sources*' page, and a screen reader names its action "open page", with no state, as it does a
+ * genre chip's there. [modifier] goes on the chip's outside: a focus requester.
  */
 @Composable
-internal fun SourcesHeading(
-    folded: Boolean,
-    toggle: () -> Unit,
+internal fun SourcesChip(
+    opensPage: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
 ) {
     val name = stringResource(R.string.home_sources_title)
-    val state = stringResource(if (folded) R.string.home_fold_collapsed else R.string.home_fold_expanded)
-    val symbol = stringResource(if (folded) R.string.home_fold_folded else R.string.home_fold_unfolded)
-    Text(
-        "$name $symbol",
-        style = MaterialTheme.typography.titleSmall,
-        modifier =
+    val collapsed = stringResource(R.string.home_fold_collapsed)
+    val open = stringResource(R.string.home_page_open)
+    val (fill, content) = chipColours(marked = false)
+    ChipFrame(
+        fill,
+        modifier = modifier.testTag(if (opensPage) SOURCES_PAGE_LINK_TAG else SOURCES_CHIP_TAG),
+        action =
             Modifier
-                .testTag(SOURCES_FOLD_TAG)
-                .minimumInteractiveComponentSize()
-                .clip(RoundedCornerShape(4.dp))
-                .clickable(role = Role.Button, onClick = toggle)
+                .clickable(role = Role.Button, onClickLabel = open.takeIf { opensPage }, onClick = onClick)
                 .clearAndSetSemantics {
                     heading()
                     contentDescription = name
-                    stateDescription = state
-                }.wrapContentHeight(Alignment.CenterVertically)
-                .padding(end = 4.dp),
-    )
+                    if (!opensPage) stateDescription = collapsed
+                },
+    ) {
+        Text(name, style = MaterialTheme.typography.labelLarge, color = content)
+    }
 }
 
 /**
@@ -213,8 +213,10 @@ private fun StatusChip(
 }
 
 /**
- * A source's chip (#440): the letter its citations use, small, and its name ("W Wikipedia"); it
- * shows or hides the source's lines ([shown]). A screen reader reads it as the source's name, and
+ * A source's chip (#440), drawn as a genre chip is ([ChipFrame], #623): the letter its citations
+ * use, small and quieter, before its name ("W Wikipedia"), on the name's baseline; it shows or hides
+ * the source's lines. While they show ([shown]), the genre chip's light fill; hidden, outlined, its
+ * name struck through and faded. A screen reader reads it as a switch, the source's name, and
  * whether its lines show.
  */
 @Composable
@@ -224,41 +226,48 @@ private fun NameChip(
     onToggle: () -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme
-    val shape = RoundedCornerShape(8.dp)
     val name = chipName(chip.source)
     val action = stringResource(R.string.home_source_filter, name)
     val state = stringResource(if (shown) R.string.home_source_lines_shown else R.string.home_source_lines_hidden)
-    val color = if (shown) colors.onSurfaceVariant else colors.outline
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        modifier =
+    val (fill, content) = chipColours(marked = false)
+    val color = if (shown) content else colors.outline
+    ChipFrame(
+        if (shown) fill else Color.Transparent,
+        modifier = Modifier.testTag(CHIP_PREFIX + chip.source.tag),
+        outline = colors.outline.takeUnless { shown },
+        action =
             Modifier
-                .testTag(CHIP_PREFIX + chip.source.tag)
-                .minimumInteractiveComponentSize()
-                .clip(shape)
-                .background(if (shown) colors.secondaryContainer else Color.Transparent, shape)
-                .border(1.dp, colors.outlineVariant, shape)
                 .clickable(onClickLabel = action, role = Role.Switch, onClick = onToggle)
                 .clearAndSetSemantics {
                     contentDescription = name
                     stateDescription = state
                     toggleableState = ToggleableState(shown)
-                }.padding(horizontal = 8.dp, vertical = 4.dp),
+                },
     ) {
         // Quieter than the name while its lines show; hidden, the name is already the quiet outline
         // colour, and a letter fainter still would fall below a legible contrast.
         val letter = if (shown) color.copy(alpha = MARK_ALPHA) else color
-        Text(chip.source.tag, style = MaterialTheme.typography.labelSmall, color = letter)
-        Text(name, style = MaterialTheme.typography.labelMedium, color = color)
+        Text(
+            chip.source.tag,
+            style = MaterialTheme.typography.labelSmall,
+            color = letter,
+            modifier = Modifier.alignByBaseline(),
+        )
+        Text(
+            name,
+            style = MaterialTheme.typography.labelLarge,
+            color = color,
+            textDecoration = if (shown) null else TextDecoration.LineThrough,
+            modifier = Modifier.alignByBaseline(),
+        )
     }
 }
 
 // The note's link to the settings.
 private const val SETTINGS_LINK = "settings"
 
-/** The test tag of the section's heading, its fold. */
-const val SOURCES_FOLD_TAG: String = "sources-fold"
+/** The test tag of *Sources*' chip on Home under *Expandable boxes*, which opens its panel. */
+const val SOURCES_CHIP_TAG: String = "sources-chip"
 
 /** The test tag of the note of what needs the listener. */
 const val SOURCES_NOTE_TAG: String = "sources-note"

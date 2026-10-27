@@ -16,11 +16,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
@@ -32,6 +35,8 @@ import app.sleevesight.app.R
 import app.sleevesight.app.ui.theme.DeveloperMark
 import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
+import app.sleevesight.app.ui.theme.handoffTarget
+import app.sleevesight.app.ui.theme.rememberFocusHandoff
 import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.EvidenceLine
 import app.sleevesight.core.evidence.Scope
@@ -39,16 +44,20 @@ import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.TrackState
 
 /**
- * The *Sources* section, quiet, at the bottom (design, *Home screen*). Its heading is its fold
- * (#440): `Sources ▸` folded, and nothing else; `Sources ▾` unfolded, and under it a chip for each
- * source that gave lines, by name with the letter its citations use ([chipsWithLines]), which shows
- * or hides that source's lines (a display filter only: what the model may use is the settings'),
- * the chips of a row centred on one line; a note when a source needs the listener's key, could not
- * be reached or failed ([sourceNotes]), its key's linking to the settings ([openSettings]); and the
- * list: the evidence lines, each with its scope and a link to where it was found, and the lines of
- * matches that could not be verified, which are shown but never cited. The lines are a table of two
- * columns (#270): the tags right-aligned in the first, as wide as the widest, so every line's text
- * starts at the same place.
+ * The *Sources* section, quiet, at the bottom (design, *Home screen*). Folded, it is a chip,
+ * *Sources* ([SourcesChip], #623), drawn as a genre chip is, and nothing else; a tap on it opens its
+ * panel in its place ([HomePanel], as a genre's is): *Sources* as a heading, with *Close* at the top
+ * right, which folds it back to the chip; the focus moves to *Close* on opening and back to the chip
+ * on closing (a keyboard's, and a screen reader's), and to the chip when a new track folds the panel
+ * while a keyboard's focus is in it. In the panel, a chip for each source that gave
+ * lines, by name with the letter its citations use ([chipsWithLines]), drawn as a genre chip too,
+ * which shows or hides that source's lines (a display filter only: what the model may use is the
+ * settings'); a note when a source needs the listener's key, could not be reached or failed
+ * ([sourceNotes]), its key's linking to the settings ([openSettings]); and the list: the evidence
+ * lines, each with its scope and a link to where it was found, and the lines of matches that could
+ * not be verified, which are shown but never cited. The lines are a table of two columns (#270):
+ * the tags right-aligned in the first, as wide as the widest, so every line's text starts at the
+ * same place.
  *
  * With *Show grounding details* on ([SourcesShown.details]), the chips are every source's, as
  * [SourcesShown.chips] has them, each with its letter and its status ("W the song (kept)"), the
@@ -58,9 +67,10 @@ import app.sleevesight.core.pipeline.TrackState
  * The list unfolds a screenful ([Fold.PAGE] lines) at a time ([fold], #269): *show more…* and
  * *show all* under it while lines remain, *… show less* back to the first screenful once past it.
  * The unverified lines and the rejected matches are part of the list, after the evidence lines,
- * under their own headings. A citation tapped unfolds it to the line cited ([LineFocus.cite]). The
- * heading is a button a screen reader names *Sources*, collapsed or expanded, each control one it
- * names in words, and the list says how much of it shows.
+ * under their own headings. A citation tapped opens the panel and unfolds it to the line cited
+ * ([LineFocus.cite]), the focus staying where it was. A screen reader reads the chip as a button,
+ * *Sources*, collapsed; each control as one it names in words; and the list says how much of it
+ * shows.
  *
  * When the insight shown is the one written earlier ([SourcesShown.cardKept]: the pipeline shows the card paid
  * for in place of an insight the run lacks, `PipelineView.cardShown`, whether Rewrite is offered,
@@ -69,8 +79,8 @@ import app.sleevesight.core.pipeline.TrackState
  * While the phone is offline and a source is unreachable ([SourcesShown.offline], #192), it says
  * so: those sources are asked again once it is back online.
  *
- * This is the section as a box (*Layout*'s *Expandable boxes*, #447): its heading, and under it,
- * unfolded, [SourcesBody], which a page of its own mounts under *Separate pages*.
+ * This is the section as a box (*Layout*'s *Expandable boxes*, #447): its chip, or its panel with
+ * [SourcesBody] in it, which a page of its own mounts under *Separate pages*.
  */
 @Composable
 internal fun SourcesSection(
@@ -79,18 +89,41 @@ internal fun SourcesSection(
     fold: SourcesFold,
     openSettings: () -> Unit = {},
 ) {
+    val handoff = rememberFocusHandoff()
+    val chip = remember { FocusRequester() }
+    val close = remember { FocusRequester() }
+    // Whether the input focus is in the panel, as last told: plain, read as the panel folds.
+    val inside = remember { BooleanArray(1) }
     val folded = fold.fold == Fold.Folded
-    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        SourcesHeading(folded) {
-            if (!folded) {
-                fold.set(Fold.Folded)
-            } else {
-                // Every entry hidden by the chips: unfolding shows their lines, not an empty list.
-                if (entriesOf(shown.track, focus.hidden, shown.details).isEmpty()) focus.showAll()
-                fold.set(Fold.Pages(1))
+    val before = remember { BooleanArray(1).also { it[0] = folded } }
+    // Folded by other than *Close* (a new track) while the focus was in the panel: back to the chip,
+    // or a keyboard's focus would fall to the top of the screen. Read before the panel goes.
+    val handBack = folded && !before[0] && inside[0]
+    SideEffect {
+        before[0] = folded
+        if (handBack) handoff.moveTo(chip)
+    }
+    if (folded) {
+        SourcesChip(opensPage = false, modifier = Modifier.handoffTarget(handoff, chip)) {
+            // Every entry hidden by the chips: unfolding shows their lines, not an empty list.
+            if (entriesOf(shown.track, focus.hidden, shown.details).isEmpty()) focus.showAll()
+            fold.set(Fold.Pages(1))
+            handoff.moveTo(close)
+        }
+    } else {
+        Box(Modifier.onFocusChanged { inside[0] = it.hasFocus }) {
+            HomePanel(
+                stringResource(R.string.home_sources_title),
+                SOURCES_PANEL_TAG,
+                onClose = {
+                    fold.set(Fold.Folded)
+                    handoff.moveTo(chip)
+                },
+                closeModifier = Modifier.handoffTarget(handoff, close),
+            ) {
+                SourcesBody(shown, focus, fold, openSettings)
             }
         }
-        if (!folded) SourcesBody(shown, focus, fold, openSettings)
     }
 }
 
@@ -108,7 +141,7 @@ internal class SourcesShown(
 )
 
 /**
- * The section's content (#447: one component, mounted in place under its heading or on a page of its
+ * The section's content (#447: one component, mounted in place in its panel or on a page of its
  * own): the chips, the note, and the list as far as [fold] unfolds it, with its paging. Drawn as a
  * column of its own, spaced as the section is.
  */
@@ -350,3 +383,8 @@ private val TAG_PADDING = 4.dp
 
 /** The test tag of an evidence line, before its id. */
 const val LINE_PREFIX: String = "line:"
+
+/** The test tags of *Sources*' panel on Home, its heading and its *Close* (#623), as [HomePanel] makes them. */
+const val SOURCES_PANEL_TAG: String = "sources-panel"
+const val SOURCES_PANEL_HEADING_TAG: String = "sources-panel:heading"
+const val SOURCES_PANEL_CLOSE_TAG: String = "sources-panel:close"

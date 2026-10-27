@@ -22,7 +22,7 @@ import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 
 // The paging of the *Sources* list (#269, #440): how much of it shows, above it, and the controls
-// under it. The fold itself is the section's heading ([SourcesSection]).
+// under it. The fold itself is *Sources*' chip and its panel's *Close* ([SourcesSection]).
 
 /**
  * Above the unfolded list: how much of it shows ([shown] of [total] entries), or, with every entry

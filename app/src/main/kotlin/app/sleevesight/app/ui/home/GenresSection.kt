@@ -1,11 +1,14 @@
 package app.sleevesight.app.ui.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -19,6 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -132,22 +136,50 @@ private fun GenreChip(
     action: String?,
     onClick: () -> Unit,
 ) {
-    val shape = RoundedCornerShape(16.dp)
     val (fill, content) = chipColours(selected == true)
-    Text(
-        placed.label.genre.label,
-        style = MaterialTheme.typography.labelLarge,
-        color = content,
-        modifier =
+    ChipFrame(
+        fill,
+        modifier = Modifier.testTag(tagOf(GENRE_PREFIX, placed)),
+        action =
             Modifier
-                .testTag(tagOf(GENRE_PREFIX, placed))
+                .let { chip ->
+                    action?.let { chip.clickable(role = Role.Button, onClickLabel = it, onClick = onClick) } ?: chip
+                }.let { chip -> selected?.let { chip.semantics { this.selected = it } } ?: chip },
+    ) {
+        Text(placed.label.genre.label, style = MaterialTheme.typography.labelLarge, color = content)
+    }
+}
+
+/**
+ * A chip as the genre chips are drawn (#439, #558), which *Sources*' chip on Home and its filter
+ * chips share (#623): [content] in a row on [fill], in the chips' rounded shape and padding, with a
+ * 48 dp target, one node for a screen reader; with [outline], a hairline of that colour around it.
+ * [modifier] goes outside the target (a tag, a focus requester); [action] inside the shape, so a
+ * press shows within it (a click, and what a screen reader says of it). The items of [content] are
+ * centred in the row, unless they align otherwise (by their baseline).
+ */
+@Composable
+internal fun ChipFrame(
+    fill: Color,
+    modifier: Modifier = Modifier,
+    outline: Color? = null,
+    action: Modifier = Modifier,
+    content: @Composable RowScope.() -> Unit,
+) {
+    val shape = RoundedCornerShape(16.dp)
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        modifier =
+            modifier
                 .minimumInteractiveComponentSize()
                 .clip(shape)
                 .background(fill, shape)
-                .let { chip ->
-                    action?.let { chip.clickable(role = Role.Button, onClickLabel = it, onClick = onClick) } ?: chip
-                }.let { chip -> selected?.let { chip.semantics { this.selected = it } } ?: chip }
+                .let { chip -> outline?.let { chip.border(1.dp, it, shape) } ?: chip }
+                .semantics(mergeDescendants = true) {}
+                .then(action)
                 .padding(horizontal = 12.dp, vertical = 6.dp),
+        content = content,
     )
 }
 
