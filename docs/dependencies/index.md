@@ -1,6 +1,6 @@
 ---
 # The dependencies page (#412), at `/docs/dependencies/`: the libraries the app ships, what each does
-# in it, its licence and limits; the data sources, the font and the icons; the build-time tools.
+# in it, its licence and limits; the data sources, the fonts and the icons; the build-time tools.
 # Written from the release runtime classpath of `:app` (`app/gradle.lockfile`), the artifacts' POMs,
 # the module build files, `config/dependency-allowlist.txt`, the credits screen (`CreditsScreen.kt`)
 # and `design/architecture.md`. `checkDependencyPage` fails when a shipped Maven group is missing
@@ -12,7 +12,7 @@ permalink: /docs/dependencies/
 
 # Dependencies
 
-What Sleevesight is built on: the libraries that ship in the app, what each one does there, under which licence, and its limits; then the data sources, the font and the icons the app credits; and last, the tools that only build and test it.
+What Sleevesight is built on: the libraries that ship in the app, what each one does there, under which licence, and its limits; then the data sources, the fonts and the icons the app credits; and last, the tools that only build and test it.
 
 ## What keeps this page current
 
@@ -144,14 +144,15 @@ Two of these are open questions rather than settled ones. MusicBrainz's tags are
 
 The AI services that write the insights (Anthropic, OpenAI or Google, on the user's own key) are services, not sources of what the app shows; what each receives is in the [privacy policy]({{ '/privacy.html' | relative_url }}).
 
-## The font and the icons
+## The fonts and the icons
 
 | Asset | What it is | Licence |
 |---|---|---|
 | Roboto | The app's font, from [googlefonts/roboto-3-classic](https://github.com/googlefonts/roboto-3-classic), bundled with the app; *Font* in Settings switches between *App font (Roboto)* and *System font* | [SIL Open Font License 1.1](https://openfontlicense.org), copyright 2011 The Roboto Project Authors |
+| Caveat | The hand-written font of the notes in the home screen's guide, from [googlefonts/caveat](https://github.com/googlefonts/caveat), bundled with the app | [SIL Open Font License 1.1](https://openfontlicense.org), copyright 2014 The Caveat Project Authors |
 | Material Symbols | The icons in the app, such as the cogwheel, by Google | [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0) |
 
-The Open Font License lets a font be bundled with any program, a GPL one included, as long as each copy carries its copyright notice and licence. Apache-2.0 asks that each copy carry the licence. So both licences' texts ship inside the app, and the credits screen names the font with its copyright, and the icon set, each with its licence.
+The Open Font License lets a font be bundled with any program, a GPL one included, as long as each copy carries its copyright notice and licence. Apache-2.0 asks that each copy carry the licence. So the licences' texts ship inside the app, and the credits screen names each font with its copyright, and the icon set, each with its licence.
 
 ## Build-time tools
 

@@ -244,8 +244,22 @@ class FontSettingsTest {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity -> activity.setContent { CreditsScreen(onClose = {}) } }
             compose.onNodeWithText(text(R.string.credits_roboto)).performScrollTo().assertIsDisplayed()
-            compose.onNodeWithText("SIL Open Font License 1.1").performScrollTo().assertIsDisplayed()
+            // Roboto's, and the home guide's hand-written font's (#627).
+            compose.onNodeWithText(text(R.string.credits_caveat)).performScrollTo().assertIsDisplayed()
+            assertEquals(2, compose.onAllNodesWithText("SIL Open Font License 1.1").fetchSemanticsNodes().size)
         }
+    }
+
+    @Test
+    fun theHandFontsLicenceShipsWithTheApp() {
+        val licence =
+            app.assets
+                .open("licences/caveat-ofl.txt")
+                .bufferedReader()
+                .use { it.readText() }
+        assertTrue(licence.startsWith("Copyright 2014 The Caveat Project Authors"))
+        assertTrue(licence.contains("SIL OPEN FONT LICENSE Version 1.1"))
+        assertTrue(licence.contains("PERMISSION & CONDITIONS"))
     }
 
     @Test

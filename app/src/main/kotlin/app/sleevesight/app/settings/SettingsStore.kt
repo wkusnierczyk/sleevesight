@@ -152,6 +152,22 @@ class SettingsStore(
         }
 
     /**
+     * The home guide's *Do not show again* (#627): each call switches *Home guide* off, saved in
+     * [saves], which outlives the screen. A save that fails leaves the setting, and so the guide, as
+     * it was.
+     */
+    fun homeGuideHider(saves: CoroutineScope): () -> Unit =
+        {
+            saves.launch {
+                try {
+                    update { it.copy(homeGuide = false) }
+                } catch (_: IOException) {
+                    // Only an I/O error: the guide stays, as the setting does.
+                }
+            }
+        }
+
+    /**
      * Home's report button's *Hide* (#518): each call sets *Report button* to *Hide*, launched in
      * [saves], which outlives the screen, so leaving Home or a rotation does not cut it short. The
      * result says whether it was saved: false after an I/O error, which leaves the setting as it was.

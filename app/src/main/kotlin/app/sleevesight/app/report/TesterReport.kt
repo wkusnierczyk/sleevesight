@@ -419,6 +419,7 @@ internal val SETTING_LINES: List<Pair<String, (Settings) -> String>> =
         "theme" to { it.theme.name },
         "font" to { it.font.name },
         "introAtStart" to { onOff(it.introAtStart) },
+        "homeGuide" to { onOff(it.homeGuide) },
     )
 
 private fun onOff(on: Boolean) = if (on) "on" else "off"

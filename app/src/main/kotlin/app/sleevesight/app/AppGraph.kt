@@ -52,6 +52,7 @@ import app.sleevesight.app.settings.LastTheme
 import app.sleevesight.app.settings.PrunePlayersMigration
 import app.sleevesight.app.settings.SeenPlayersRecorder
 import app.sleevesight.app.settings.SettingsStore
+import app.sleevesight.app.ui.home.GuideDismissal
 import app.sleevesight.core.ai.AiProvider
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.normalizer.Normalizer
@@ -309,6 +310,9 @@ class AppGraph internal constructor(
             stored = { provider -> SecretId.forProvider(provider)?.let { secrets.isStored(it) } == true },
         )
 
+    /** The guide to Home's *Dismiss once* (#627), held for the process, never stored. */
+    val guideDismissal = GuideDismissal()
+
     /**
      * The latest settings read, for the caches, which read them on every call, the pipeline and
      * the history's recorder and retention, and the home screen and its pages (#447), which come
@@ -528,6 +532,8 @@ class AppGraph internal constructor(
         pipelineScope.launch { diagnostics.log.follow(pipeline.events) }
         // Each player the session layer sees appears under *Players*, switched off.
         mainScope.launch { seenPlayersRecorder.run() }
+        // The guide to Home, dismissed once, is back for the next time nothing plays (#627).
+        mainScope.launch { guideDismissal.clearOnPlay(sessions.nowPlaying) }
         // What the session layer sees is recorded whether or not the app is visible.
         mainScope.launch { historyRecorder.run() }
         mainScope.launch { historyRetention.run() }

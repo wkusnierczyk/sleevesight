@@ -95,6 +95,7 @@ class SettingsCodecTest {
                 theme = ThemeChoice.DARK,
                 font = FontChoice.SYSTEM_FONT,
                 introAtStart = false,
+                homeGuide = false,
             )
         assertEquals(changed, roundTrip(changed))
     }
@@ -260,6 +261,15 @@ class SettingsCodecTest {
         val prefs = mutablePreferencesOf()
         SettingsCodec.write(Settings(introAtStart = false), prefs)
         assertEquals(mutablePreferencesOf(booleanPreferencesKey("display.intro") to false), prefs)
+    }
+
+    @Test
+    fun theHomeGuideIsOnByDefaultAndOffIsStoredUnderItsKey() {
+        // As stored before the setting existed (#627): other settings, and no guide.
+        assertTrue(SettingsCodec.read(mutablePreferencesOf(booleanPreferencesKey("display.intro") to false)).homeGuide)
+        val prefs = mutablePreferencesOf()
+        SettingsCodec.write(Settings(homeGuide = false), prefs)
+        assertEquals(mutablePreferencesOf(booleanPreferencesKey("display.home_guide") to false), prefs)
     }
 
     @Test

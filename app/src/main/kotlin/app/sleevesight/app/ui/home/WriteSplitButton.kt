@@ -60,35 +60,35 @@ import kotlinx.coroutines.launch
  * Each half's least height as drawn (#624): as tall as Home's chips; more where the label wraps.
  * Each answers a tap across 48 dp.
  */
-private val HEIGHT = 32.dp
+internal val SPLIT_HEIGHT = 32.dp
 
 /** The arrow's width, and the row's least height: the touch target Android's accessibility guidance asks for. */
-private val TARGET = 48.dp
+internal val SPLIT_TARGET = 48.dp
 
 /**
  * The room inside the leading half around its label: as in Home's genre chips, so a label of one
  * line makes it 32 dp high, as tall as they are, at any font size.
  */
-private val PADDING = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+internal val SPLIT_PADDING = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
 
 /** The corner where the two halves meet, as Material 3's split button has it. */
-private val INNER_CORNER = CornerSize(4.dp)
+internal val SPLIT_INNER_CORNER = CornerSize(4.dp)
 
 /**
  * The outer corners: round at 32 dp high, as the genre chips' are; fixed, so a taller button, its
  * label wrapping, keeps them and its text clear of them.
  */
-private val OUTER_CORNER = CornerSize(16.dp)
+internal val SPLIT_OUTER_CORNER = CornerSize(16.dp)
 
 /** The gap between the halves. */
-private val GAP = 2.dp
+internal val SPLIT_GAP = 2.dp
 
 /** The alpha of a control's content that cannot be used, and of its container, as Material's. */
 private const val DISABLED_CONTENT_ALPHA = 0.38f
 private const val DISABLED_CONTAINER_ALPHA = 0.12f
 
 /** The arrow turned up while the menu is open. */
-private const val OPEN_ROTATION = 180f
+internal const val SPLIT_OPEN_ROTATION = 180f
 
 /**
  * *Reactive* (D5) as the split button's menu shows it (#615): the [mode] chosen; not [enabled]
@@ -135,14 +135,15 @@ internal fun WriteSplitButton(
     writing: WritingChoice?,
 ) {
     val filled = offer.invites
-    Halves(Modifier) {
+    Halves(Modifier.testTag(WRITE_HALVES_TAG)) {
         Leading(offer, filled, if (offer.stop) onStop else onWrite)
         ModeArrow(filled, writing)
     }
 }
 
 /**
- * The two halves, [content]: the leading one, then the arrow (#624). The arrow's 48 dp width is
+ * The two halves, [content]: the leading one, then the arrow (#624); the home guide's *Dismiss*
+ * (#627) is laid out by it too. The arrow's 48 dp width is
  * kept first, and the leading half takes the width left, its label wrapping in it where it must;
  * it is at least 32 dp high, and the arrow is drawn as high as it, so the halves are always of one
  * height. The row is at least 48 dp high, the halves centred in it: each answers a tap across 48 dp
@@ -151,17 +152,17 @@ internal fun WriteSplitButton(
  * arrow could not follow.
  */
 @Composable
-private fun Halves(
+internal fun Halves(
     modifier: Modifier,
     content: @Composable () -> Unit,
 ) {
     CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
-        Layout(content, modifier.testTag(WRITE_HALVES_TAG)) { measurables, constraints ->
+        Layout(content, modifier) { measurables, constraints ->
             val (leadingHalf, arrowHalf) = measurables
-            val gap = GAP.roundToPx()
-            val target = TARGET.roundToPx()
+            val gap = SPLIT_GAP.roundToPx()
+            val target = SPLIT_TARGET.roundToPx()
             val loose = constraints.copy(minWidth = 0, minHeight = 0)
-            val least = HEIGHT.roundToPx().coerceAtMost(loose.maxHeight)
+            val least = SPLIT_HEIGHT.roundToPx().coerceAtMost(loose.maxHeight)
             val leading = leadingHalf.measure(loose.offset(horizontal = -(target + gap)).copy(minHeight = least))
             val arrow = arrowHalf.measure(Constraints.fixed(target, leading.height))
             val width = leading.width + gap + arrow.width
@@ -181,7 +182,7 @@ private fun Leading(
     filled: Boolean,
     onClick: () -> Unit,
 ) {
-    val shape = RoundedCornerShape(OUTER_CORNER, INNER_CORNER, INNER_CORNER, OUTER_CORNER)
+    val shape = RoundedCornerShape(SPLIT_OUTER_CORNER, SPLIT_INNER_CORNER, SPLIT_INNER_CORNER, SPLIT_OUTER_CORNER)
     val tag =
         when {
             !offer.enabled -> NO_ACTION_TAG
@@ -195,9 +196,9 @@ private fun Leading(
     // Every Write calls the AI service, a disabled one included; Stop does not (#624).
     val label: @Composable () -> Unit = { if (offer.usesAi) AiLabel(text) else Text(text) }
     if (filled) {
-        Button(onClick, modifier, enabled, shape = shape, contentPadding = PADDING) { label() }
+        Button(onClick, modifier, enabled, shape = shape, contentPadding = SPLIT_PADDING) { label() }
     } else {
-        OutlinedButton(onClick, modifier, enabled, shape = shape, contentPadding = PADDING) { label() }
+        OutlinedButton(onClick, modifier, enabled, shape = shape, contentPadding = SPLIT_PADDING) { label() }
     }
 }
 
@@ -214,7 +215,7 @@ private fun ModeArrow(
     val context = LocalContext.current
     val failed = stringResource(R.string.settings_change_failed)
     val enabled = writing?.enabled == true
-    val shape = RoundedCornerShape(INNER_CORNER, OUTER_CORNER, OUTER_CORNER, INNER_CORNER)
+    val shape = RoundedCornerShape(SPLIT_INNER_CORNER, SPLIT_OUTER_CORNER, SPLIT_OUTER_CORNER, SPLIT_INNER_CORNER)
     val colours = if (filled) ButtonDefaults.buttonColors() else ButtonDefaults.outlinedButtonColors()
     val container =
         when {
@@ -245,7 +246,7 @@ private fun ModeArrow(
                 painterResource(R.drawable.ic_keyboard_arrow_down),
                 contentDescription = null,
                 tint = content,
-                modifier = Modifier.rotate(if (open) OPEN_ROTATION else 0f),
+                modifier = Modifier.rotate(if (open) SPLIT_OPEN_ROTATION else 0f),
             )
         }
         if (writing != null) {

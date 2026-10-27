@@ -256,9 +256,11 @@ class ReportProblemScreenTest {
             compose.onNodeWithTag(REPORT_NOTE_TAG).performTextInput("It charted in 1974.")
 
             // The player's session ended: the screen shows nothing playing.
-            update(NowPlayingState(PipelineView(), playing = null))
+            update(NowPlayingState(PipelineView(), playing = null, settings = Settings()))
 
-            compose.onNodeWithText(text(R.string.home_placeholder)).assertExists()
+            compose.waitUntil(
+                5_000,
+            ) { compose.onAllNodesWithTag(NOTHING_PLAYING_TAG).fetchSemanticsNodes().isNotEmpty() }
             compose.onNodeWithTag(REPORT_SEND_TAG).performClick()
             assertTrue("Note: It charted in 1974.\n" in mail.sent.single().body)
         }
