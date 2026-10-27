@@ -6,6 +6,7 @@ import app.sleevesight.ai.openai.OpenAiProvider
 import app.sleevesight.core.ResourceReader
 import app.sleevesight.core.Secret
 import app.sleevesight.core.ai.AiProvider
+import app.sleevesight.core.genres.GenreDefinitions
 import app.sleevesight.core.genres.GenreVocabulary
 import app.sleevesight.core.genres.LastFmLabels
 import app.sleevesight.core.genres.MusicBrainzLabels
@@ -33,6 +34,7 @@ import app.sleevesight.sources.musicbrainz.MusicBrainzSource
 import app.sleevesight.sources.web.ExaWebSearch
 import app.sleevesight.sources.wikidata.WikidataClient
 import app.sleevesight.sources.wikipedia.WikipediaClient
+import app.sleevesight.sources.wikipedia.WikipediaGenres
 import app.sleevesight.sources.wikipedia.WikipediaSource
 
 /**
@@ -113,6 +115,16 @@ class PipelineWiring internal constructor(
      */
     fun lastFmLabels(key: Secret): LastFmLabels =
         LastFmLabels(LastFmTags(net, key), vocabulary, Normalizer(accentFolder)::foldForKey, artists = artists)
+
+    /**
+     * The genres' definitions a genre's panel shows (#523): each genre's English Wikipedia article,
+     * through its MusicBrainz genre and Wikidata item ([WikipediaGenres]), kept per genre in [kept]
+     * for Wikipedia's lifetime, or, with a [kept] that does not persist, in memory for as long as the
+     * one made lives. The app passes the artist-level table without *Keep what sources said about
+     * each artist*'s switch, since a definition says nothing about what was played.
+     */
+    fun genreDefinitions(kept: ArtistResults = artists): GenreDefinitions =
+        GenreDefinitions(WikipediaGenres(WikidataClient(net), WikipediaClient(net)), vocabulary, kept = kept)
 
     /**
      * Forgets MusicBrainz's answers kept in memory ([RememberedMusicBrainz]), for *Clear history*
