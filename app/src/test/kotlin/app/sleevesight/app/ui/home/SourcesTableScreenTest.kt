@@ -6,8 +6,11 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsNode
@@ -20,15 +23,22 @@ import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.assertTouchHeightIsEqualTo
 import androidx.compose.ui.test.assertTouchWidthIsEqualTo
 import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.click
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performFirstLinkClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -55,6 +65,7 @@ import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.SourceSwitch
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -63,6 +74,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import kotlin.math.abs
+import androidx.compose.ui.graphics.Color as ComposeColor
 
 /**
  * *Sources*' table (#662): a row for each source that is on, its letter as a chip, its name and
@@ -108,6 +120,7 @@ class SourcesTableScreenTest {
         track: TrackState,
         settings: Settings = modelOn,
         needsKey: Set<SourceId> = setOf(SourceId.LASTFM),
+        fontScale: Float = 1f,
         block: () -> Unit,
     ) {
         val state =
@@ -121,7 +134,10 @@ class SourcesTableScreenTest {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity {
                 it.setContent {
-                    Column(Modifier.verticalScroll(rememberScrollState())) { NowPlayingContent(state, actions) }
+                    val density = LocalDensity.current
+                    CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale)) {
+                        Column(Modifier.verticalScroll(rememberScrollState())) { NowPlayingContent(state, actions) }
+                    }
                 }
             }
             scenario.onActivity { block() }
@@ -227,7 +243,21 @@ class SourcesTableScreenTest {
                 assertFalse(tag, SemanticsActions.OnClick in chip)
                 assertFalse(tag, SemanticsProperties.Role in chip)
                 assertFalse(tag, SemanticsProperties.ToggleableState in chip)
+                // Nor an empty node a screen reader would stop on: no node of the chip merges.
+                val merging =
+                    compose
+                        .onAllNodes(hasTestTag(CHIP_PREFIX + tag) or hasAnyAncestor(hasTestTag(CHIP_PREFIX + tag)))
+                        .fetchSemanticsNodes()
+                        .filter { it.config.isMergingSemanticsOfDescendants }
+                assertEquals(tag, emptyList<SemanticsNode>(), merging)
             }
+            // A switch is one node, as before.
+            assertTrue(
+                compose
+                    .onNodeWithTag(CHIP_PREFIX + "W")
+                    .fetchSemanticsNode()
+                    .config.isMergingSemanticsOfDescendants,
+            )
             // A dimmed chip's row is read as one text: the source's name and what it found.
             val web = text(R.string.home_source_name_web)
             compose
@@ -300,6 +330,126 @@ class SourcesTableScreenTest {
             // A chip lays out its own height, not its 48 dp target.
             for (chip in chips) assertTrue("${chip.size.height} px", chip.size.height / density() < TARGET_DP)
         }
+
+    /** Touches the screen at [dp] from [chip]'s top (negative above it), at its horizontal centre. */
+    private fun touch(
+        chip: String,
+        dp: Float,
+    ) {
+        val bounds = compose.onNodeWithTag(CHIP_PREFIX + chip).fetchSemanticsNode().boundsInRoot
+        compose.onRoot().performTouchInput { click(Offset(bounds.center.x, bounds.top + dp * density())) }
+        compose.waitForIdle()
+    }
+
+    private fun shown(tag: String) =
+        compose.onNodeWithTag(CHIP_PREFIX + tag).fetchSemanticsNode().config[SemanticsProperties.ToggleableState] ==
+            ToggleableState.On
+
+    /**
+     * Touches just outside a chip, above and below it, and between two rows, each nearer one chip:
+     * the nearer chip toggles, and only it. At [fontScale].
+     */
+    private fun touchesGoToTheNearerChip(fontScale: Float) =
+        show(mixed, fontScale = fontScale) {
+            unfold()
+            compose.onNodeWithTag(ROW_PREFIX + "G", useUnmergedTree = true).performScrollTo()
+            val height =
+                compose
+                    .onNodeWithTag(CHIP_PREFIX + "MB")
+                    .fetchSemanticsNode()
+                    .size.height / density()
+            val wikipedia =
+                compose
+                    .onNodeWithTag(CHIP_PREFIX + "W")
+                    .fetchSemanticsNode()
+                    .boundsInRoot.top
+            val musicBrainz =
+                compose
+                    .onNodeWithTag(CHIP_PREFIX + "MB")
+                    .fetchSemanticsNode()
+                    .boundsInRoot.bottom
+            // Halfway between MusicBrainz's chip and Wikipedia's, in dp from MusicBrainz's top.
+            val between = height + (wikipedia - musicBrainz) / density() / 2
+            // How far beyond its edges a chip answers: up to its 48 dp, none once it is as tall.
+            val reach = (TARGET_DP - height) / 2
+            if (reach > NEAR) {
+                // Above MusicBrainz's chip, within its 48 dp.
+                touch("MB", -NEAR)
+                assertEquals(false to true, shown("MB") to shown("W"))
+                touch("MB", -NEAR)
+                assertEquals(true to true, shown("MB") to shown("W"))
+                // Below it, nearer it than Wikipedia's.
+                touch("MB", between - NEAR)
+                assertEquals(false to true, shown("MB") to shown("W"))
+                touch("MB", between - NEAR)
+                // Below that, nearer Wikipedia's.
+                touch("MB", between + NEAR)
+                assertEquals(true to false, shown("MB") to shown("W"))
+                touch("MB", between + NEAR)
+                assertEquals(true to true, shown("MB") to shown("W"))
+                // Below Wikipedia's chip, nearer it than the dimmed web search's, which takes no touch.
+                touch("W", height + NEAR)
+                assertEquals(true to false, shown("MB") to shown("W"))
+            } else {
+                // A chip as tall as its target: a touch outside it, above or between two, toggles
+                // nothing; one just inside its edge toggles it.
+                touch("MB", -NEAR)
+                touch("MB", between - NEAR.coerceAtMost(between - height - 1f))
+                touch("MB", between + NEAR.coerceAtMost(between - height - 1f))
+                assertEquals(true to true, shown("MB") to shown("W"))
+                touch("MB", NEAR)
+                assertEquals(false to true, shown("MB") to shown("W"))
+                touch("W", NEAR)
+                assertEquals(false to false, shown("MB") to shown("W"))
+            }
+        }
+
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun aTouchNearAChipGoesToTheNearerChip() = touchesGoToTheNearerChip(1f)
+
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun aTouchNearAChipGoesToTheNearerChipInALargeFont() = touchesGoToTheNearerChip(2f)
+
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun theRowsAreAtLeastATouchAreaApartSoTheTargetsDoNotOverlap() =
+        show(mixed) {
+            unfold()
+            // Unclipped: a chip scrolled out of view has empty bounds in the root.
+            val centres =
+                listOf("MB", "W", "G", "M").map {
+                    val chip = compose.onNodeWithTag(CHIP_PREFIX + it).fetchSemanticsNode()
+                    chip.positionInRoot.y + chip.size.height / 2f
+                }
+            val pitches = centres.zipWithNext { above, below -> (below - above) / density() }
+            assertTrue("chips 48 dp apart at the least: $pitches", pitches.all { it >= TARGET_DP - 0.5f })
+        }
+
+    @Test
+    fun withGroundingDetailsAFailureOrARejectedMatchIsInTheErrorColour() {
+        fun colour(tag: String): ComposeColor {
+            val layouts = mutableListOf<TextLayoutResult>()
+            compose
+                .onNodeWithTag(STATUS_PREFIX + tag, useUnmergedTree = true)
+                .fetchSemanticsNode()
+                .config[SemanticsActions.GetTextLayoutResult]
+                .action
+                ?.invoke(layouts)
+            return layouts
+                .single()
+                .layoutInput.style.color
+        }
+        show(mixed, settings = details) {
+            unfold()
+            assertNotEquals(colour("MB"), colour("G"))
+        }
+        show(mixed) {
+            unfold()
+            assertEquals(colour("MB"), colour("G"))
+        }
+    }
 
     @Test
     fun thePlayersReleaseRowIsNamedPlayer() {
@@ -402,8 +552,13 @@ class SourcesTableScreenTest {
             assertEquals(0, count(SOURCES_NOTE_TAG))
         }
 
-    // The chip as drawn, its rounded shape and no more.
-    private fun picture(tag: String): Bitmap = compose.onNodeWithTag(tag).captureToImage().asAndroidBitmap()
+    // The chip as drawn, its rounded shape and no more, scrolled into view.
+    private fun picture(tag: String): Bitmap =
+        compose
+            .onNodeWithTag(tag)
+            .performScrollTo()
+            .captureToImage()
+            .asAndroidBitmap()
 
     private fun density() = app.resources.displayMetrics.density
 
@@ -448,5 +603,8 @@ class SourcesTableScreenTest {
 
         const val ROW_GAP_DP = 6f
         const val TARGET_DP = 48f
+
+        // How far from a chip's edge, or from halfway between two, a touch lands, in dp.
+        const val NEAR = 4f
     }
 }

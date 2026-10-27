@@ -108,13 +108,13 @@ When little is documented about a track, the insight is short rather than filled
 
 **Folded and unfolded.** *Sources* starts folded: only its chip shows, **Sources**, which looks like a genre chip. A tap on it opens the *Sources* panel in its place, which looks like a genre's panel: *Sources* at the top, and **Close** at the top right, which folds it back to the chip. With a keyboard or a screen reader, the focus moves to *Close* when the panel opens and back to the chip when it closes. A screen reader reads the chip as a heading and a button, *Sources*, collapsed.
 
-**The table of the sources.** In the panel, a table with a row for each source that is on. On the left, right-aligned, a chip with the letter the source's lines and citations use, so a citation can be matched to its source: `MB` *MusicBrainz*, `W` *Wikipedia* (it covers Wikidata's `WD` lines too), `L` *Last.fm*, `G` *Web search*, `P` *Player* (the release the player reports, the album as a line of evidence), and `M` *AI service knowledge*, when the model's own knowledge is on. On the right, the source's name, and under it what it found: *Found the song*, *Found the artist only*, *Found the original song*, *Gave the release* (the player), *Nothing found*, *Looking…* (it has not answered yet), *Could not be reached*, *Failed*, or *Allowed in Settings* (the model's own knowledge). The rows sit close together; each chip still answers a tap a little beyond its edges.
+**The table of the sources.** In the panel, a table with a row for each source that is on, and for one you switched off whose lines the insight kept from before still cites. On the left, right-aligned, a chip with the letter the source's lines and citations use, so a citation can be matched to its source: `MB` *MusicBrainz*, `W` *Wikipedia* (it covers Wikidata's `WD` lines too), `L` *Last.fm*, `G` *Web search*, `P` *Player* (the release the player reports, the album as a line of evidence), and `M` *AI service knowledge*, when the model's own knowledge is on. On the right, the source's name, and under it what it found: *Found the song*, *Found the artist only*, *Found the original song*, *Gave the release* (the player), *Nothing found*, *Looking…* (it has not answered yet), *Could not be reached*, *Failed*, or *Allowed in Settings* (the model's own knowledge). The rows sit close together; each chip still answers a tap a little beyond its edges, up to halfway to the next row's.
 
 The chip shows at a glance what a tap does:
 
 - **filled**: the source gave lines, and they are shown; a tap hides them;
-- **outlined**, with no fill: the source gave lines, and they are hidden; a tap shows them again;
-- **dimmed**: the source gave no lines, so there is nothing to show or hide, and it is not a button.
+- **outlined**, a firm outline with no fill: the source gave lines, and they are hidden; a tap shows them again;
+- **dimmed**, a faint outline: the source gave no lines, so there is nothing to show or hide, and it is not a button.
 
 That only changes what you see: what the AI service may use is set under [*Sources*]({{ '/docs/tutorials/settings/' | relative_url }}). A screen reader reads a chip that shows or hides lines as a switch, its source's name, and whether its lines are shown or hidden, then what the source found; a dimmed chip's row is read as text, the source's name and what it found.
 
@@ -133,7 +133,8 @@ A citation tapped in the insight opens the panel and unfolds the list as far as 
 |---|---|
 | *Off in Settings* | You switched the source off under *Sources* |
 | *Needs your key, in Settings* | Last.fm or web search is on, but its key is not saved |
-| *Match rejected* | What it found failed the identity check (without the option, *Nothing found*) |
+| *Match rejected* | What it found failed the identity check (without the option, *Nothing found*); shown in the error colour |
+| *Failed* | As without the option, but shown in the error colour |
 | *(kept)*, after what it found | The answer was kept on the phone from an earlier lookup |
 
 Each new track's list starts folded, so the insight is what you see first. With [*Keep Sources as you left them*]({{ '/docs/tutorials/settings/' | relative_url }}) on, it stays as you left it on the track before. Either way, the fold is kept through a rotation and when Android restores the screen, not when the app starts afresh.

@@ -36,12 +36,20 @@ internal fun ChipFrame(
     outline: Color? = null,
     action: Modifier = Modifier,
     content: @Composable RowScope.() -> Unit,
-) = CompactChipFrame(fill, modifier.minimumInteractiveComponentSize(), outline, action, content)
+) = CompactChipFrame(
+    fill,
+    modifier.minimumInteractiveComponentSize(),
+    outline,
+    Modifier.semantics(mergeDescendants = true) {}.then(action),
+    content,
+)
 
 /**
  * A [ChipFrame] without its 48 dp target laid out (*Sources*' table, #662): the chip takes only its
  * own room, so rows of chips sit close. A click on it still answers within 48 dp, as Compose
- * extends a small control's touch area.
+ * extends a small control's touch area. It is not one node for a screen reader of itself: [action]
+ * says what it is (a [ChipFrame] merges it; a chip that is no control, and clears what it says,
+ * leaves no empty node for a screen reader to stop on).
  */
 @Composable
 internal fun CompactChipFrame(
@@ -51,7 +59,7 @@ internal fun CompactChipFrame(
     action: Modifier = Modifier,
     content: @Composable RowScope.() -> Unit,
 ) {
-    val shape = RoundedCornerShape(16.dp)
+    val shape = CHIP_SHAPE
     Row(
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -60,12 +68,14 @@ internal fun CompactChipFrame(
                 .clip(shape)
                 .background(fill, shape)
                 .let { chip -> outline?.let { chip.border(1.dp, it, shape) } ?: chip }
-                .semantics(mergeDescendants = true) {}
                 .then(action)
                 .padding(horizontal = CHIP_PADDING, vertical = 6.dp),
         content = content,
     )
 }
+
+/** The chips' rounded shape ([ChipFrame]). */
+internal val CHIP_SHAPE = RoundedCornerShape(16.dp)
 
 /** The space between a chip's edge and its content, at each side ([ChipFrame]). */
 internal val CHIP_PADDING = 12.dp

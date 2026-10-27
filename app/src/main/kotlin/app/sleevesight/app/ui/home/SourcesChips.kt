@@ -1,10 +1,12 @@
 package app.sleevesight.app.ui.home
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -30,6 +32,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.theme.CHIP_PADDING
+import app.sleevesight.app.ui.theme.CHIP_SHAPE
 import app.sleevesight.app.ui.theme.ChipFrame
 import app.sleevesight.app.ui.theme.CompactChipFrame
 import app.sleevesight.app.ui.theme.DeveloperMark
@@ -37,6 +40,7 @@ import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.app.ui.theme.chipColours
 import app.sleevesight.core.evidence.EvidenceLine
+import app.sleevesight.core.model.Outcome
 
 // *Sources*' chip on Home (#623), its table of the sources (#662) and its note (#440).
 
@@ -173,6 +177,10 @@ private fun Table(
     }
 }
 
+/** Whether a source's lookup failed or its match was rejected. */
+private val ChipStatus.wentWrong: Boolean
+    get() = this == ChipStatus.Failed || (this as? ChipStatus.Done)?.outcome is Outcome.Rejected
+
 /** What a source's chip in the table shows: its lines shown or hidden, or none to show. */
 private enum class LetterState { SHOWN, HIDDEN, DIMMED }
 
@@ -187,10 +195,15 @@ private fun SourceRow(
 ) {
     val name = chipName(chip.source)
     val filters = state != LetterState.DIMMED
+    // At least [ROW_HEIGHT] tall, the chip centred: with [ROW_GAP], each chip's 48 dp touch area
+    // ends where the next row's begins, so a touch between two chips goes to the nearer.
     Row(
         horizontalArrangement = Arrangement.spacedBy(COLUMN_GAP),
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.testTag(ROW_PREFIX + chip.source.tag),
+        modifier =
+            Modifier
+                .testTag(ROW_PREFIX + chip.source.tag)
+                .heightIn(min = ROW_HEIGHT),
     ) {
         Box(Modifier.width(width), contentAlignment = Alignment.CenterEnd) {
             LetterChip(chip, name, state, onToggle)
@@ -206,10 +219,14 @@ private fun SourceRow(
                 overflow = TextOverflow.Ellipsis,
                 modifier = if (filters) Modifier.clearAndSetSemantics {} else Modifier,
             )
+            // With grounding details, a failure and a rejected match in the error colour, as the
+            // status chips had them (#440).
+            val colors = MaterialTheme.colorScheme
             Text(
                 statusText(chip.status, details),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = if (details && chip.status.wentWrong) colors.error else colors.onSurfaceVariant,
+                modifier = Modifier.testTag(STATUS_PREFIX + chip.source.tag),
             )
         }
     }
@@ -218,8 +235,9 @@ private fun SourceRow(
 /**
  * A source's letter as a chip, drawn as a genre chip is but without its 48 dp laid out
  * ([CompactChipFrame]): [LetterState.SHOWN], filled as a genre marked in its panel is
- * (`chipColours(marked = true)`); [LetterState.HIDDEN], a solid outline and no fill;
- * [LetterState.DIMMED], a faint outline, the letter faded, and not a button.
+ * (`chipColours(marked = true)`); [LetterState.HIDDEN], a solid outline in the text's colour,
+ * a little heavier, and no fill; [LetterState.DIMMED], a faint outline, the letter quieter (still
+ * 4.5:1 on the panel, `onSurfaceVariant`), and not a button, nor a node a screen reader stops on.
  */
 @Composable
 private fun LetterChip(
@@ -231,12 +249,15 @@ private fun LetterChip(
     val colors = MaterialTheme.colorScheme
     val (marked, onMarked) = chipColours(marked = true)
     val fill = if (state == LetterState.SHOWN) marked else Color.Transparent
-    val outline = if (state == LetterState.DIMMED) colors.outlineVariant else colors.onSurface
+    // Hidden, the heavier outline drawn over the frame's; dimmed, the frame's faint hairline.
+    val outline = if (state == LetterState.DIMMED) colors.outlineVariant else null
+    val heavy =
+        if (state == LetterState.HIDDEN) Modifier.border(HIDDEN_OUTLINE, colors.onSurface, CHIP_SHAPE) else Modifier
     val letter =
         when (state) {
             LetterState.SHOWN -> onMarked
             LetterState.HIDDEN -> colors.onSurface
-            LetterState.DIMMED -> colors.outline
+            LetterState.DIMMED -> colors.onSurfaceVariant
         }
     val action =
         if (state == LetterState.DIMMED) {
@@ -247,6 +268,7 @@ private fun LetterChip(
             val said =
                 stringResource(if (shown) R.string.home_source_lines_shown else R.string.home_source_lines_hidden)
             Modifier
+                .semantics(mergeDescendants = true) {}
                 .clickable(onClickLabel = label, role = Role.Switch, onClick = onToggle)
                 .clearAndSetSemantics {
                     contentDescription = name
@@ -256,7 +278,7 @@ private fun LetterChip(
         }
     CompactChipFrame(
         fill,
-        modifier = Modifier.testTag(CHIP_PREFIX + chip.source.tag),
+        modifier = Modifier.testTag(CHIP_PREFIX + chip.source.tag).then(heavy),
         outline = outline,
         action = action,
     ) {
@@ -285,9 +307,12 @@ private fun letterColumnWidth(tags: List<String>): Dp {
     }
 }
 
-// The space between two rows of the table, and between its columns.
+// The space between two rows of the table, and between its columns; a row's least height, which
+// with the gap makes rows 48 dp apart at the least, a chip's touch area; a hidden chip's outline.
 private val ROW_GAP = 6.dp
 private val COLUMN_GAP = 12.dp
+private val ROW_HEIGHT = 42.dp
+private val HIDDEN_OUTLINE = 1.5.dp
 
 // The note's link to the settings.
 private const val SETTINGS_LINK = "settings"
@@ -300,6 +325,9 @@ const val SOURCES_NOTE_TAG: String = "sources-note"
 
 /** The test tag of a source's chip, before its tag (`MB`, `W`). */
 const val CHIP_PREFIX: String = "chip:"
+
+/** The test tag of what a source's row says it found, before its tag (`MB`, `W`). */
+const val STATUS_PREFIX: String = "source-status:"
 
 /** The test tag of a source's row of the table, before its tag (`MB`, `W`). */
 const val ROW_PREFIX: String = "source-row:"
