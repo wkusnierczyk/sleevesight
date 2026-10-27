@@ -16,7 +16,9 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
+import app.sleevesight.app.AppGraph
 import app.sleevesight.app.MainActivity
+import app.sleevesight.app.MemoryStore
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.TestStores
@@ -189,8 +191,15 @@ class FontSettingsTest {
         fail("$title not shown within $MAX_FRAMES frames")
     }
 
+    /**
+     * The graph's settings in memory ([MemoryStore]), changed on the test's thread, the main one
+     * (#606): with their file, each wait for a stored font to reach [AppGraph.font] depended on
+     * DataStore's own threads finishing within [idleUntil]'s real-time limit. The one failure seen
+     * (in CI) was that wait timing out, before any activity was started.
+     */
     @Test
     fun mainActivityStartsInTheStoredFontAndFollowsIt() {
+        app.makeGraph = { AppGraph(it, settingsData = MemoryStore()) }
         val title = text(R.string.first_run_leaves_title)
         // *System font* stored and read by this process; no `LastFont` from an earlier one.
         runBlocking { app.graph.settings.update { it.copy(font = FontChoice.SYSTEM_FONT) } }
