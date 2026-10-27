@@ -115,7 +115,7 @@ internal fun FoldedSection(
 
 /**
  * A section's heading: a divider above, then its name with the disclosure triangle (right while
- * folded, down while unfolded, as the home screen's folds have it), and its short description
+ * folded, down while unfolded), and its short description
  * under it; the whole of it toggles the fold. A screen reader reads it as a heading with its state,
  * "collapsed" or "expanded", and not the triangle. The one place the headings' style is set:
  * bold, in the text colour, not the accent (#442). It is where a link to the section itself lands

@@ -6,7 +6,6 @@ import android.graphics.Bitmap
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -15,9 +14,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.CallId
 import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.app.pipeline.UnavailableModel
@@ -203,10 +200,11 @@ internal class NowPlayingActions(
  * the song, artist and album insights (#522, Phase 1.5), and the rest of the detail content, the
  * transport controls and the handoff to the player (design, *Phase 2*).
  *
- * *Layout* (#447): under *Expandable boxes*, the default, *Sources* folds in place, a genre chip
- * opens its genre's panel under the chips (#558), and a citation unfolds *Sources* to its line.
- * Under *Separate pages* each opens on a page of its own ([NowPlayingActions.openPage]): `Sources ›`,
- * and a citation, which opens *Sources* at its line; a genre chip, the genres' page at its genre.
+ * *Layout* (#447): under *Expandable boxes*, the default, *Sources*' chip opens its panel in place
+ * (#623), a genre chip opens its genre's panel under the chips (#558), and a citation unfolds
+ * *Sources* to its line. Under *Separate pages* each opens on a page of its own
+ * ([NowPlayingActions.openPage]): *Sources*' chip, and a citation, which opens *Sources* at its line;
+ * a genre chip, the genres' page at its genre.
  * The insight shows in full on Home either way.
  */
 @Composable
@@ -275,7 +273,7 @@ internal fun NowPlayingContent(
     }
 }
 
-// *Sources* on Home: `Sources ›`, the way to its page, under *Separate pages* ([pages]), else the box.
+// *Sources* on Home: its chip, the way to its page, under *Separate pages* ([pages]), else the box (#623).
 @Composable
 private fun SourcesItem(
     pages: Boolean,
@@ -285,12 +283,7 @@ private fun SourcesItem(
     actions: NowPlayingActions,
 ) {
     if (pages) {
-        PageLink(
-            stringResource(R.string.home_sources_title),
-            SOURCES_PAGE_LINK_TAG,
-            MaterialTheme.typography.titleSmall,
-            heading = true,
-        ) { actions.openPage(HomePage.Sources()) }
+        SourcesChip(opensPage = true) { actions.openPage(HomePage.Sources()) }
     } else {
         SourcesSection(shown.sources(), focus, fold, actions.openSettings)
     }

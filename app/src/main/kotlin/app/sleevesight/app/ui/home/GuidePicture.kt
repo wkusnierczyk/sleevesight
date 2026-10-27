@@ -159,8 +159,8 @@ private class PictureBox {
  * track. The header's logo and the key data are Home's own ([HeaderLogo], [KeyData]); the rest are
  * plain copies of Home's parts, since Home's own need a run's state, take taps and carry their own
  * semantics: the player row, a fixed cover (beige, with no blue, so the pen's arrows stand out), the
- * position, the genre chips, *Key insights* with its citation, the Write button and *Sources* with
- * two lines. Each part the notes name tells [report] where it is.
+ * position, *Key insights* with its citation and the Write button; the genre chips and *Sources*' chip
+ * are Home's own [ChipFrame], without a click. Each part the notes name tells [report] where it is.
  */
 @Composable
 private fun MiniHome(
@@ -229,14 +229,18 @@ private fun MiniHeader(cogwheel: Modifier) {
     }
 }
 
-// *Sources*, its heading and two lines, the whole block where [modifier] says.
+// *Sources*, folded, as Home shows it (#623): its chip, drawn by Home's own [ChipFrame], where
+// [modifier] says.
 @Composable
 private fun MiniSources(modifier: Modifier) {
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(stringResource(R.string.home_sources_title), style = MaterialTheme.typography.titleSmall)
-        val lines = listOf(R.string.home_guide_example_source_wikipedia, R.string.home_guide_example_source_musicbrainz)
-        for (line in lines) {
-            Text(stringResource(line), style = MaterialTheme.typography.bodySmall)
+    val (fill, content) = chipColours(marked = false)
+    Row(modifier) {
+        ChipFrame(fill) {
+            Text(
+                stringResource(R.string.home_sources_title),
+                style = MaterialTheme.typography.labelLarge,
+                color = content,
+            )
         }
     }
 }
@@ -299,24 +303,13 @@ private fun MiniCover() {
     }
 }
 
-// The genre chips, as Home's look ([chipColours]), at their touch target's height.
+// The genre chips, drawn by Home's own [ChipFrame], not buttons here.
 @Composable
 private fun MiniChips(modifier: Modifier) {
     val (fill, content) = chipColours(marked = false)
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         for (genre in EXAMPLE_GENRES) {
-            Box(Modifier.heightIn(min = 48.dp), contentAlignment = Alignment.Center) {
-                Text(
-                    genre,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = content,
-                    modifier =
-                        Modifier
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(fill)
-                            .padding(horizontal = 12.dp, vertical = 6.dp),
-                )
-            }
+            ChipFrame(fill) { Text(genre, style = MaterialTheme.typography.labelLarge, color = content) }
         }
     }
 }

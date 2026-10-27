@@ -24,10 +24,8 @@
     <string name="home_guide_note_cite">follow to references</string>
     <string name="home_guide_note_write">generate an insight (paid)</string>
     <string name="home_guide_note_sources">read source information</string>
-    <!-- The picture's example insight, and its two sources' lines. -->
+    <!-- The picture's example insight. -->
     <string name="home_guide_example_insight">Bill Evans wrote the chords, though Davis is credited as the sole composer</string>
-    <string name="home_guide_example_source_wikipedia">W1 · Wikipedia: Blue in Green</string>
-    <string name="home_guide_example_source_musicbrainz">M1 · MusicBrainz: the recording</string>
     <!-- The guide's split button: Dismiss, and the menu of what it does. -->
     <string name="home_guide_dismiss">Dismiss</string>
     <!-- The menu's arrow, as a screen reader says it: %1$s is the choice in force. -->
@@ -73,23 +71,22 @@
     <string name="home_genres">Genres</string>
     <string name="home_genres_none">None found.</string>
     <string name="home_genres_off">Every genre source is off in Settings.</string>
-    <!-- The disclosure triangles of the folds (Sources, the settings' sections): folded, unfolded. -->
+    <!-- The disclosure triangles of the settings' sections: folded, unfolded. -->
     <string name="home_fold_folded">▸</string>
     <string name="home_fold_unfolded">▾</string>
-    <!-- Under Layout's Separate pages (#447): drawn after an item's name on Home, as the way to its
-         page, in place of a fold's triangle; and its action, as a screen reader names it ("Double-tap
-         to open page"). -->
-    <string name="home_page_symbol">›</string>
     <!-- A page's back arrow, as a screen reader says it. -->
     <string name="page_back">Back</string>
-    <!-- The button at the end of a page opened from somewhere (the credits, the first-run screen opened again), which closes it. -->
+    <!-- The button at the end of a page opened from somewhere (the credits, the first-run screen opened again), which closes it;
+         and at the top right of a panel on Home (a genre's, Sources'), which closes the panel. -->
     <string name="page_close">Close</string>
+    <!-- Under Layout's Separate pages (#447): the action of a chip on Home that opens a page (Sources,
+         a genre), as a screen reader names it ("Double-tap to open page"). -->
     <string name="home_page_open">open page</string>
     <!-- The genres' page, with Show genres off. -->
     <string name="home_genres_hidden">Show genres is off in Settings.</string>
-    <!-- A fold's state, as a screen reader says it. -->
+    <!-- Sources' chip on Home, as a screen reader says its state (#623): its panel opens in its place,
+         so the chip is only ever collapsed. -->
     <string name="home_fold_collapsed">collapsed</string>
-    <string name="home_fold_expanded">expanded</string>
     <!-- A genre chip's action, as a screen reader names it ("Double-tap to show genre"): it opens the
          genre's panel, or, while that panel shows, closes it. -->
     <string name="home_genre_show">show genre</string>
