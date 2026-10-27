@@ -1,0 +1,15 @@
+#!/bin/sh
+# Refuses a commit or a merge commit on `main` or a `dev-*` integration branch: those move only
+# through merged pull requests. Run by `pre-commit` and `pre-merge-commit`; not a hook itself.
+# `install` writes the same guard into its dispatchers, for checkouts without this file: a change
+# here is made there too.
+branch=$(git symbolic-ref --quiet --short HEAD) || exit 0   # detached HEAD: allowed
+case "$branch" in
+  main|dev-*)
+    printf >&2 '\nRefusing to commit on "%s" in %s.\n' "$branch" "$(git rev-parse --show-toplevel)"
+    printf >&2 'main and dev-* move only through merged pull requests. Check which branch is checked out\n'
+    printf >&2 '(git branch --show-current; another session may have switched it), then move to your issue\n'
+    printf >&2 'branch or a worktree and commit there.\n\n'
+    exit 1 ;;
+esac
+exit 0

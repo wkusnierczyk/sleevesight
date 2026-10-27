@@ -3,6 +3,9 @@ agp = "9.4.1"
 kotlin = "2.4.21"
 detekt = "1.23.8"
 ktlint-gradle = "14.2.0"
+# ktlint itself, set here rather than left to the plugin's default, so the pre-commit hook
+# (`.githooks/pre-commit`) formats with the same version; a new version needs its checksum there.
+ktlint = "1.5.0"
 ktor = "3.6.0"
 okhttp = "5.5.0"
 kotlinx-serialization = "1.11.0"

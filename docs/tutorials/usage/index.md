@@ -93,11 +93,11 @@ When little is documented about a track, the insight is short rather than filled
 
 <!-- screenshot: Sources unfolded, with chips, a note and evidence lines, from the app version it is taken from -->
 
-**Folded and unfolded.** *Sources* starts folded: only its heading shows, **Sources ▸**. A tap on the heading unfolds it (**Sources ▾**), and another folds it again. A screen reader reads the heading as *Sources*, collapsed or expanded.
+**Folded and unfolded.** *Sources* starts folded: only its chip shows, **Sources**, which looks like a genre chip. A tap on it opens the *Sources* panel in its place, which looks like a genre's panel: *Sources* at the top, and **Close** at the top right, which folds it back to the chip. With a keyboard or a screen reader, the focus moves to *Close* when the panel opens and back to the chip when it closes. A screen reader reads the chip as a heading and a button, *Sources*, collapsed.
 
-**The chips.** Unfolded, a chip for each source that gave lines, by its name, with the letter its lines and citations use beside it, small, so a citation can be matched to its chip: `MB` *MusicBrainz*, `W` *Wikipedia* (its chip covers Wikidata's `WD` lines too), `L` *Last.fm*, `G` *Web search*, and `P` *Player*, the release the player reports, the album as a line of evidence. A source that gave no lines has no chip.
+**The chips.** In the panel, a chip for each source that gave lines, drawn like a genre chip, with its name and, before it, small and dimmed, the letter its lines and citations use, so a citation can be matched to its chip: `MB` *MusicBrainz*, `W` *Wikipedia* (its chip covers Wikidata's `WD` lines too), `L` *Last.fm*, `G` *Web search*, and `P` *Player*, the release the player reports, the album as a line of evidence. A source that gave no lines has no chip.
 
-A chip shows or hides its source's lines. That only changes what you see: what the AI service may use is set under [*Sources*]({{ '/docs/tutorials/settings/' | relative_url }}). A screen reader reads a chip as its source's name, and whether its lines are shown or hidden.
+A chip shows or hides its source's lines: while they show, it has a genre chip's light fill; hidden, it is outlined, its name struck through and faded. That only changes what you see: what the AI service may use is set under [*Sources*]({{ '/docs/tutorials/settings/' | relative_url }}). A screen reader reads a chip as a switch, its source's name, and whether its lines are shown or hidden.
 
 **The note.** Under the chips, a note only when something needs you or went wrong, a sentence for each source: *Last.fm needs your key, in Settings.* (a tap on *Settings* opens them; the key goes under *Secrets*), *Web search could not be reached.*, or *MusicBrainz failed.* A source that found nothing, whose match was rejected, or that you switched off says nothing.
 
@@ -106,7 +106,7 @@ A chip shows or hides its source's lines. That only changes what you see: what t
 - *show more…* shows the next 8, and *show all* the rest, while entries remain;
 - *… show less* goes back to the first 8, once past them.
 
-A citation tapped in the insight unfolds the list as far as its line. When the chips hide every line, the count says so, and folding and unfolding *Sources* shows them again.
+A citation tapped in the insight opens the panel and unfolds the list as far as its line. When the chips hide every line, the count says so, and closing and opening *Sources* again shows them.
 
 **Grounding details.** With [*Show grounding details*]({{ '/docs/tutorials/settings/' | relative_url }}), a developer option, on, the chips are every source's, each with its letter and what it found, and the list ends with *Rejected matches*, each with its source and the reason it was rejected:
 
@@ -128,7 +128,7 @@ A citation tapped in the insight unfolds the list as far as its line. When the c
 
 Each new track's list starts folded, so the insight is what you see first. With [*Keep Sources as you left them*]({{ '/docs/tutorials/settings/' | relative_url }}) on, it stays as you left it on the track before. Either way, the fold is kept through a rotation and when Android restores the screen, not when the app starts afresh.
 
-With *Layout* set to *Separate pages*, the heading reads **Sources ›**, and a tap on it opens *Sources* on a page of its own, at its first 8 entries with every source's lines shown ([Pages](#pages)).
+With *Layout* set to *Separate pages*, a tap on the **Sources** chip opens *Sources* on a page of its own, at its first 8 entries with every source's lines shown ([Pages](#pages)).
 
 ### Pages
 
@@ -138,13 +138,13 @@ With *Layout* set to *Separate pages*, the heading reads **Sources ›**, and a 
 
 With *Separate pages*, the home screen is shorter, and each part opens a page of its own, on the app's background like the home screen, its accents in the album art's colours, with a back arrow and the part's name at the top:
 
-- **Sources ›** opens the chips, the note and the list, which works as it does unfolded on the home screen, *show more…* and all.
+- The **Sources** chip opens the filter chips, the note and the list, which works as it does unfolded on the home screen, *show more…* and all.
 - A genre chip on the home screen opens the genres' page: the chips, the one tapped marked, and that genre's panel, with the table and where its labels came from. A tap on another chip there switches the panel to its genre.
 - A citation chip in the insight opens *Sources*' page at the line it cites, scrolled to and flashed.
 
 The insight itself stays on the home screen, in full, whichever layout is set.
 
-The back arrow, or Android's back, returns to where the page was opened from: the home screen, where you left it. Each page shows the track playing, and follows a new track. Each page opens fresh, so *Keep Sources as you left them* applies only to *Expandable boxes*. On the home screen, a screen reader reads *Sources ›* and each genre chip by its name, and says that a double tap opens its page; a page's title is read as a heading.
+The back arrow, or Android's back, returns to where the page was opened from: the home screen, where you left it. Each page shows the track playing, and follows a new track. Each page opens fresh, so *Keep Sources as you left them* applies only to *Expandable boxes*. On the home screen, a screen reader reads the *Sources* chip and each genre chip by its name, and says that a double tap opens its page; a page's title is read as a heading.
 
 ## Writing an insight
 

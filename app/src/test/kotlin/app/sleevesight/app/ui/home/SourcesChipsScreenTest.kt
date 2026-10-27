@@ -111,7 +111,7 @@ class SourcesChipsScreenTest {
     }
 
     private fun unfold() {
-        compose.onNodeWithTag(SOURCES_FOLD_TAG).performScrollTo().performClick()
+        compose.onNodeWithTag(SOURCES_CHIP_TAG).performScrollTo().performClick()
         compose.waitForIdle()
     }
 
@@ -233,7 +233,7 @@ class SourcesChipsScreenTest {
         }
 
     @Test
-    fun groundingDetailsStillShowNothingButTheHeadingWhileFolded() =
+    fun groundingDetailsStillShowNothingButTheChipWhileFolded() =
         show(mixed, settings = details) {
             for (tag in listOf("MB", "W", "G", "L", "M")) assertEquals(tag, 0, count(CHIP_PREFIX + tag))
             assertEquals(0, countText(text(R.string.home_rejected_title)))

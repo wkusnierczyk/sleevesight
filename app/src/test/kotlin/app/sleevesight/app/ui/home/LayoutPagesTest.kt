@@ -277,7 +277,7 @@ class LayoutPagesTest {
         show(state(long(), boxes)) {
             assertEquals(0, count(SOURCES_PAGE_LINK_TAG))
 
-            compose.onNodeWithTag(SOURCES_FOLD_TAG).performScrollTo().performClick()
+            compose.onNodeWithTag(SOURCES_CHIP_TAG).performScrollTo().performClick()
             compose.onNodeWithTag(LINE_PREFIX + "MB1").assertExists()
             // A genre chip opens its panel on Home (#558), with the table and where the genre comes from.
             compose.onNodeWithTag(GENRE_PREFIX + "track:folkpop").performScrollTo().performClick()
@@ -290,7 +290,7 @@ class LayoutPagesTest {
     @Test
     fun underSeparatePagesSourcesOpensAPageAndBackReturnsToHomeWhereItWas() =
         show(state(long(), pages)) {
-            assertEquals(0, count(SOURCES_FOLD_TAG))
+            assertEquals(0, count(SOURCES_CHIP_TAG))
             assertEquals(0, count(LINE_PREFIX + "MB1"))
             val unscrolled = top(SOURCES_PAGE_LINK_TAG)
             compose.onNodeWithTag(SOURCES_PAGE_LINK_TAG).performScrollTo()
@@ -334,7 +334,7 @@ class LayoutPagesTest {
             var drawn = false
             repeat(BACK_FRAMES) {
                 compose.mainClock.advanceTimeByFrame()
-                assertEquals(0, count(SOURCES_FOLD_TAG))
+                assertEquals(0, count(SOURCES_CHIP_TAG))
                 drawn = drawn || count(SOURCES_PAGE_LINK_TAG) > 0
             }
             // Home was drawn in those frames, so the fold's absence means something.
@@ -352,7 +352,7 @@ class LayoutPagesTest {
         show(NowPlayingState(read.view, read.playing, read.playback, settings = null)) { current ->
             // Home itself is drawn: the insight shows, with no settings needed.
             compose.onNodeWithText(text(R.string.home_insight_title)).assertExists()
-            assertEquals(0, count(SOURCES_FOLD_TAG))
+            assertEquals(0, count(SOURCES_CHIP_TAG))
             assertEquals(0, count(SOURCES_PAGE_LINK_TAG))
             assertEquals(0, count(GENRE_PREFIX + "track:folkpop"))
 
@@ -362,7 +362,7 @@ class LayoutPagesTest {
             var drawn = false
             repeat(BACK_FRAMES) {
                 compose.mainClock.advanceTimeByFrame()
-                assertEquals(0, count(SOURCES_FOLD_TAG))
+                assertEquals(0, count(SOURCES_CHIP_TAG))
                 drawn = drawn || count(SOURCES_PAGE_LINK_TAG) > 0
             }
             assertTrue(drawn)
@@ -562,6 +562,8 @@ class LayoutPagesTest {
                 ).assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.Heading))
                 .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
                 .assert(clickLabelled(open))
+                // A chip since #623, as the genres' are; it opens a page, so it is never collapsed.
+                .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.StateDescription))
                 .assertTouchHeightIsEqualTo(48.dp)
             // A chip opens the genres' page: a button, never selected.
             compose

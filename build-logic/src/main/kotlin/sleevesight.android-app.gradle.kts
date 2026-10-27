@@ -81,6 +81,8 @@ val checkApkClasses = tasks.register("checkApkClasses") { group = "verification"
 tasks.named("check") { dependsOn(checkApkClasses) }
 val checkApkNotices = tasks.register("checkApkNotices") { group = "verification" }
 tasks.named("check") { dependsOn(checkApkNotices) }
+// Android lint on debug, the variant phones install, with the pre-push hook's other static checks.
+tasks.named("staticChecks") { dependsOn("lintDebug") }
 
 androidComponents {
     onVariants { variant ->

@@ -65,9 +65,16 @@ tasks.named("check") {
     dependsOn("detektMain", "detektJvmMain", "detektTest", checkNetworkReferences, checkPortableCode)
 }
 
+tasks.named("staticChecks") {
+    dependsOn("detektMain", "detektJvmMain", "detektTest")
+}
+
 // A module with shared test fixtures (`java-test-fixtures`) checks them the same way.
 pluginManager.withPlugin("java-test-fixtures") {
     tasks.named("check") {
+        dependsOn("detektTestFixtures")
+    }
+    tasks.named("staticChecks") {
         dependsOn("detektTestFixtures")
     }
     checkPortableCode.configure {
