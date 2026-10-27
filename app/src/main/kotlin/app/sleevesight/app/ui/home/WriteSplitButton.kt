@@ -106,6 +106,16 @@ internal class WritingChoice(
 )
 
 /**
+ * *Look again* in the split button's menu (#617), beside a written insight: a tap ([onLookAgain])
+ * looks every source up afresh and writes the insight again only if they found something new;
+ * [enabled] while it can be tapped.
+ */
+internal class LookAgainItem(
+    val enabled: Boolean,
+    val onLookAgain: () -> Unit = {},
+)
+
+/**
  * The insight card's split button (#615, #625), after Material 3's: the leading half is the card's
  * [offer] ([cardOffer]), *Write insight* or *Rewrite insight* ([onWrite]), or *Stop writing*
  * ([onStop]), disabled when a tap would do nothing; the trailing
@@ -123,6 +133,10 @@ internal class WritingChoice(
  * automatic mode other than the one chosen says that each new track's insight is a paid call;
  * choosing *On demand*, or the mode already chosen, says nothing.
  *
+ * Beside a written insight ([lookAgain], #617), the menu begins with *Look again*, ending in the
+ * **AI** mark, as it may make a call, then a divider. The arrow's description stays *Writing
+ * mode: <mode>*.
+ *
  * Material 3's own `SplitButtonLayout` is not in material3 1.4, the version the project's Compose
  * BOM gives, so the halves are drawn here with its shapes: round outer corners (16 dp, as the genre
  * chips' are), 4 dp inner ones and a 2 dp gap.
@@ -133,11 +147,12 @@ internal fun WriteSplitButton(
     onWrite: () -> Unit,
     onStop: () -> Unit,
     writing: WritingChoice?,
+    lookAgain: LookAgainItem? = null,
 ) {
     val filled = offer.invites
     Halves(Modifier.testTag(WRITE_HALVES_TAG)) {
         Leading(offer, filled, if (offer.stop) onStop else onWrite)
-        ModeArrow(filled, writing)
+        ModeArrow(filled, writing, lookAgain)
     }
 }
 
@@ -208,6 +223,7 @@ private fun Leading(
 private fun ModeArrow(
     filled: Boolean,
     writing: WritingChoice?,
+    lookAgain: LookAgainItem?,
 ) {
     var open by remember { mutableStateOf(false) }
     // Outlives the menu, which closes as a mode is chosen, to hear how the save ended.
@@ -251,7 +267,7 @@ private fun ModeArrow(
         }
         if (writing != null) {
             DropdownMenu(expanded = open && enabled, onDismissRequest = { open = false }) {
-                ModeMenu(writing, { open = false }) { saved ->
+                ModeMenu(writing, { open = false }, lookAgain) { saved ->
                     // A save that failed is said (#625): the menu keeps the mode the store holds.
                     scope.launch {
                         if (!saved.await()) Toast.makeText(context, failed, Toast.LENGTH_LONG).show()
@@ -269,14 +285,29 @@ private fun described(writing: WritingChoice?): String {
     return stringResource(R.string.home_write_mode, stringResource(writingModeName(writing.mode)))
 }
 
-// *Reactive*'s modes, one choice among them, by name, the chosen one checked; then the way to the
-// settings at *Reactive*, where each is described.
+// *Look again* beside a written insight (#617); *Reactive*'s modes, one choice among them, by name,
+// the chosen one checked; then the way to the settings at *Reactive*, where each is described.
 @Composable
 internal fun ModeMenu(
     writing: WritingChoice,
     close: () -> Unit,
+    lookAgain: LookAgainItem? = null,
     saving: (Deferred<Boolean>) -> Unit = {},
 ) {
+    lookAgain?.let { item ->
+        DropdownMenuItem(
+            // Read as "Look again, uses AI": a new insight is a call to the AI service.
+            text = { AiLabel(stringResource(R.string.home_look_again)) },
+            onClick = {
+                close()
+                item.onLookAgain()
+            },
+            enabled = item.enabled,
+            leadingIcon = { Spacer(Modifier.size(24.dp)) },
+            modifier = Modifier.testTag(LOOK_AGAIN_TAG),
+        )
+        HorizontalDivider()
+    }
     val context = LocalContext.current
     val paid = stringResource(R.string.home_write_mode_paid)
     Column(Modifier.selectableGroup()) {
@@ -336,6 +367,9 @@ const val WRITE_HALVES_TAG: String = "write-halves"
 
 /** The test tag of the split button's arrow, which opens the menu of *Reactive*'s modes. */
 const val WRITE_MODE_TAG: String = "write-mode"
+
+/** The test tag of the menu's *Look again* (#617). */
+const val LOOK_AGAIN_TAG: String = "look-again"
 
 /** The test tag of the menu's *See Settings for details*. */
 const val WRITE_MODE_DETAILS_TAG: String = "write-mode-details"

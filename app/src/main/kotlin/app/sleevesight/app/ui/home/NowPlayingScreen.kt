@@ -61,6 +61,8 @@ import kotlinx.coroutines.flow.StateFlow
  *   which [dismissGuide] does, until a track plays; [hideGuide] switches *Home guide* off.
  * @property genreNotes what a genre's panel shows above its table (#523): what the genre is, and
  *   *Why is this …?*.
+ * @property lookAgain a tap on *Look again* (#617), with the key it was offered under and the track
+ *   it was shown beside, as [write] takes a tap on Write.
  */
 @Suppress("LongParameterList") // What one screen reads, each published on its own.
 class HomeFeed(
@@ -82,6 +84,7 @@ class HomeFeed(
     val dismissGuide: () -> Unit = {},
     val hideGuide: () -> Unit = {},
     val genreNotes: GenreNotes = GenreNotes.None,
+    val lookAgain: (RunKey, NowPlaying) -> Unit = { _, _ -> },
 )
 
 /**
@@ -142,6 +145,7 @@ private fun HomeFeed.actions(
     playerLaunch = playerLaunch,
     write = write,
     stop = stop,
+    lookAgain = lookAgain,
     chooseWritingMode = chooseWritingMode,
     installedPlayers = installedPlayers,
     dismissGuide = dismissGuide,
@@ -176,7 +180,8 @@ internal class NowPlayingState(
  * the settings at a setting, from the note of a model found unavailable (#581). [openPage] opens
  * an item on a page of its own, under *Layout*'s *Separate pages* (#447). [chooseWritingMode] saves
  * a mode chosen in the insight card's menu of *Reactive*'s modes (#615). [genreNotes] gives what a
- * genre's panel shows above its table (#523). While nothing plays (#627), the players are listed
+ * genre's panel shows above its table (#523); [lookAgain] takes a tap on *Look again* (#617), as
+ * [write] takes one on Write. While nothing plays (#627), the players are listed
  * with [installedPlayers]' icons, and the guide's *Dismiss* goes to [dismissGuide] (*Dismiss once*)
  * or [hideGuide] (*Do not show again*).
  */
@@ -197,6 +202,7 @@ internal class NowPlayingActions(
     val dismissGuide: () -> Unit = {},
     val hideGuide: () -> Unit = {},
     val genreNotes: GenreNotes = GenreNotes.None,
+    val lookAgain: (RunKey, NowPlaying) -> Unit = { _, _ -> },
 )
 
 /**
@@ -271,6 +277,7 @@ internal fun NowPlayingContent(
             // A tap carries what it was shown for: the run Write is offered for, beside this track.
             val onWrite: () -> Unit = { view.writeKey?.let { actions.write(it, playing) } }
             val onStop: () -> Unit = { view.stopCall?.let(actions.stop) }
+            val onLookAgain: () -> Unit = { view.lookAgainKey?.let { actions.lookAgain(it, playing) } }
             // The note of a model found unavailable opens *AI services* at that model's row (#581).
             val onModelSettings: () -> Unit = {
                 state.unavailable?.let { actions.openSettingsAt(SettingsTarget.model(it.provider)) }
@@ -279,7 +286,7 @@ internal fun NowPlayingContent(
             InsightCard(
                 track?.insight ?: NOT_YET,
                 insightContext(view, track, settings, shown.modelAllowed, state.unavailable),
-                InsightActions(onWrite, onStop, cite, onModelSettings) { reportedTrack, written ->
+                InsightActions(onWrite, onStop, cite, onModelSettings, onLookAgain) { reportedTrack, written ->
                     reporting = Reported(reportedTrack, written)
                 },
                 shown.details,
@@ -325,6 +332,9 @@ private fun insightContext(
             stop = view.stopCall != null && track != null,
             paused = view.lapsed && track != null,
             followed = view.followed && track != null,
+            lookAgain = view.lookAgainKey != null && track != null,
+            lookingAgain = view.lookingAgain && track != null,
+            nothingNew = view.nothingNew && track != null,
         ),
     unavailable = unavailable.takeIf { settings?.writeInsights != false },
     mode = settings?.writeAutomatically,

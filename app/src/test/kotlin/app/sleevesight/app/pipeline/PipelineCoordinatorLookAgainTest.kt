@@ -1,0 +1,164 @@
+package app.sleevesight.app.pipeline
+
+import app.sleevesight.core.pipeline.ChangeCause
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+/**
+ * *Look again* on the card paid for (#617), as `PipelineCoordinatorTest` runs its sequences: a run
+ * that looks every source up afresh, past the cache, with what the run before gathered; no call when
+ * its evidence's fingerprint is the card's; one, as the tap's, when it changed; never a second call
+ * beside automatic writing; and Stop as for a Write.
+ */
+class PipelineCoordinatorLookAgainTest {
+    // The first action made, and A written automatically, its sources landed.
+    private fun written(cache: Boolean = false): World =
+        started().apply {
+            this.cache = cache
+            acted()
+            play("A")
+            settle()
+            assertEquals(1, calls["A"])
+        }
+
+    @Test
+    fun `nothing new makes no call, and the card stays, the cache missing it or not`() {
+        for (cache in listOf(false, true)) {
+            val world = written(cache)
+            world.lookAgain()
+            world.settle()
+
+            assertEquals("cache $cache", listOf("A"), world.lookedAgain)
+            assertEquals("cache $cache", 1, world.calls["A"])
+            assertEquals("cache $cache", "A #1", world.cardText())
+            assertTrue("cache $cache", world.coordinator.state.foundNothingNew)
+            assertFalse("cache $cache", world.coordinator.state.lookingAgain)
+            assertEquals("cache $cache", world.key("A"), world.coordinator.state.lookAgainKey)
+        }
+    }
+
+    @Test
+    fun `something new makes one call, the tap's, whose card replaces the one shown`() {
+        val world = written(cache = true)
+        world.evidenceText = "Evidence 2."
+        world.service++
+        world.lookAgain()
+        world.settle()
+
+        assertEquals(2, world.calls["A"])
+        assertEquals("A #2", world.cardText())
+        assertFalse(world.coordinator.state.foundNothingNew)
+        // Written, and not again unasked, however long it plays.
+        world.settle()
+        assertEquals(2, world.calls["A"])
+    }
+
+    @Test
+    fun `its run looks up past the cache, with what the run before gathered, and is the user's action`() {
+        val world = written(cache = true)
+        val before =
+            checkNotNull(
+                world.coordinator.state.run
+                    ?.gathered,
+            )
+        val actions = world.actions
+        world.lookupMs = 2_000
+        world.lookAgain()
+
+        assertTrue(world.coordinator.state.lookingAgain)
+        assertNull(world.coordinator.state.lookAgainKey)
+        world.settle()
+        assertEquals(listOf("Zero", "A", "A"), world.lookups)
+        assertEquals(listOf(before), world.lookedAgainBefore)
+        assertEquals(actions + 1, world.actions)
+    }
+
+    @Test
+    fun `a look again on a card from the cache before the first action starts no automatic writing`() {
+        val world = started()
+        world.cache = true
+        world.cards[world.key("A") to 0] = "A kept"
+        world.play("A")
+        world.settle()
+        assertFalse(world.coordinator.state.acted)
+
+        world.lookAgain()
+        world.settle()
+        world.play("B")
+        world.settle()
+
+        assertEquals(listOf("A"), world.lookedAgain)
+        assertEquals(1, world.actions)
+        assertFalse(world.coordinator.state.acted)
+        assertEquals(null, world.calls["B"])
+    }
+
+    @Test
+    fun `no look again while a call is under way, so it never doubles automatic writing`() {
+        val world = written()
+        world.streamMs = 10_000
+        world.play("B")
+        world.advance(DEBOUNCE_MS + 1_000)
+        assertEquals(1, world.calls["B"])
+        assertNull(world.coordinator.state.lookAgainKey)
+
+        world.lookAgain(world.key("B"))
+        world.settle()
+
+        assertEquals(emptyList<String>(), world.lookedAgain)
+        assertEquals(1, world.calls["B"])
+    }
+
+    @Test
+    fun `a track change during a look again cuts it off, and the new track is written once`() {
+        val world = written()
+        world.evidenceText = "Evidence 2."
+        world.lookupMs = 5_000
+        world.lookAgain()
+        world.advance(1_000)
+        world.play("B", ChangeCause.SKIP_IN_PLAYER)
+        world.settle()
+
+        assertEquals(1, world.calls["A"])
+        assertEquals(1, world.calls["B"])
+        assertFalse(world.coordinator.state.lookingAgain)
+    }
+
+    @Test
+    fun `Stop ends a look again's call as it ends a Write's, and the card written before stays`() {
+        val world = written()
+        world.evidenceText = "Evidence 2."
+        world.streamMs = 10_000
+        world.lookAgain()
+        world.advance(1_000)
+        assertEquals(2, world.calls["A"])
+
+        world.stopTap()
+        world.settle()
+
+        assertEquals(listOf("A"), world.stopped)
+        assertEquals("A #1", world.cardText())
+        // Write offered again beside the card: Rewrite insight, a new call on a tap only.
+        assertTrue(world.coordinator.state.rewrites())
+        assertEquals(2, world.calls["A"])
+    }
+
+    @Test
+    fun `a tap for another run's key, or with no card shown, does nothing`() {
+        val world = written()
+        world.lookAgain(world.key("Elsewhere"))
+        world.settle()
+        assertEquals(emptyList<String>(), world.lookedAgain)
+
+        val unwritten = started()
+        unwritten.play("A")
+        unwritten.settle()
+        assertNull(unwritten.coordinator.state.lookAgainKey)
+        unwritten.lookAgain(unwritten.key("A"))
+        unwritten.settle()
+        assertEquals(emptyList<String>(), unwritten.lookedAgain)
+    }
+}

@@ -41,6 +41,9 @@ internal class CountingAdapter(
     /** Whether the source cannot be reached (the phone offline, say): its lookups end unreachable. */
     var unreachable = false
 
+    /** The text of the line it finds, when set (#617: what the source says now). */
+    var text: String? = null
+
     override suspend fun lookup(
         track: NormalizedTrack,
         resolution: Deferred<Resolution>,
@@ -53,7 +56,8 @@ internal class CountingAdapter(
             throw e
         }
         resolution.await()
-        val line = EvidenceDraft(id, Scope.SONG, "A line from ${id.tag}.", null, Instant.parse("2026-10-16T12:00:00Z"))
+        val said = text ?: "A line from ${id.tag}."
+        val line = EvidenceDraft(id, Scope.SONG, said, null, Instant.parse("2026-10-16T12:00:00Z"))
         return when {
             unreachable -> SourceResult(Outcome.Unreachable, emptyList(), byName)
             // A report with no artists (a title first) finds nothing.

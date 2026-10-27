@@ -70,6 +70,15 @@ internal fun cardOffer(
  */
 internal fun offersRewrite(context: InsightContext): Boolean = context.offers.rewrite && context.unavailable == null
 
+/**
+ * Whether *Look again* (#617) can be tapped beside the written insight shown: the pipeline offers it
+ * ([InsightOffers.lookAgain]: the card paid for, its sources landed, no call under way), insights
+ * are on and an AI service is ready, and the model is not found unavailable (#540), where the
+ * write it may lead to would fail.
+ */
+internal fun offersLookAgain(context: InsightContext): Boolean =
+    context.offers.lookAgain && context.insightsOn && context.aiReady && context.unavailable == null
+
 /** *Reactive*'s mode while it writes automatically; null under *On demand*, or before the settings' first read. */
 internal fun automaticMode(context: InsightContext): WriteAutomatically? =
     context.mode?.takeIf { it != WriteAutomatically.NEVER }

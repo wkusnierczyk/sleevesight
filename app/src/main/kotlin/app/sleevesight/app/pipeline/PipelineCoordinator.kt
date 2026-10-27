@@ -11,6 +11,7 @@ import app.sleevesight.core.pipeline.AutoWrite
 import app.sleevesight.core.pipeline.ChangeCause
 import app.sleevesight.core.pipeline.Gathered
 import app.sleevesight.core.pipeline.InsightState
+import app.sleevesight.core.pipeline.LookAgain
 import app.sleevesight.core.pipeline.RunKey
 import app.sleevesight.core.pipeline.RunStep
 import app.sleevesight.core.pipeline.SourceState
@@ -195,6 +196,23 @@ sealed interface CoordinatorEvent {
     ) : CoordinatorEvent
 
     /**
+     * The user tapped *Look again* offered for the run under [key] (#617), as the screen showed it
+     * ([CoordinatorState.lookAgainKey]): a tap for any other run does nothing.
+     */
+    data class LookAgainTapped(
+        val key: RunKey,
+    ) : CoordinatorEvent
+
+    /**
+     * Run [run]'s evidence is assembled, with [fingerprint] (`RunControl.assembled`): sent after
+     * [SourcesGathered], before the run decides its insight.
+     */
+    data class EvidenceAssembled(
+        val run: RunId,
+        val fingerprint: String,
+    ) : CoordinatorEvent
+
+    /**
      * The user tapped Stop shown for model call [call] while it was under way
      * ([CoordinatorState.stopCall]): a tap for any other call (another run's, or an earlier one of
      * this run), or once the call has ended, does nothing.
@@ -300,12 +318,14 @@ sealed interface CoordinatorEffect {
 
     /**
      * Start run [run] of [nowPlaying] on the live pipeline; with [again], what the run before it
-     * gathered, asking again only the sources that were unreachable (#192, `Pipeline.run`).
+     * gathered, asking again only the sources that were unreachable (#192, `Pipeline.run`); with
+     * [lookAgain], looking every source up afresh, past the caches (#617).
      */
     data class StartRun(
         val run: RunId,
         val nowPlaying: NowPlaying,
         val again: Gathered? = null,
+        val lookAgain: LookAgain? = null,
     ) : CoordinatorEffect
 
     /** Cancel run [run]. */
@@ -342,8 +362,9 @@ sealed interface CoordinatorEffect {
     ) : CoordinatorEffect
 
     /**
-     * The user acted in Sleevesight, now: a tap on Write was taken. The time is kept for the track
-     * changes' features (D15, `UserActions`); the first action is in the state.
+     * The user acted in Sleevesight, now: a tap on Write, or on *Look again* (#617), was taken.
+     * The time is kept for the track changes' features (D15, `UserActions`); the first action is
+     * in the state.
      */
     data object Acted : CoordinatorEffect
 }
@@ -509,7 +530,10 @@ data class CoordinatorState(
      * written had the first action stood, or it asks again for a key whose decision was paused
      * ([Ledger.paused]) under its own settings and cause. [followed] when it offers Write only
      * because its track followed the last one by itself, a cause its settings do not write on
-     * (*On track skip (auto)*, #625), the first action made.
+     * (*On track skip (auto)*, #625), the first action made. [looksAgain] on a run started by a tap
+     * on *Look again* (#617): the fingerprint of the evidence the card shown then cites, against
+     * which its own evidence's [fingerprint], once assembled, says whether the sources found
+     * anything new; it writes only then, as that tap's call, and never otherwise.
      */
     data class Run(
         val id: RunId,
@@ -530,6 +554,8 @@ data class CoordinatorState(
         val tapped: Boolean = false,
         val lapsed: Boolean = false,
         val followed: Boolean = false,
+        val looksAgain: String? = null,
+        val fingerprint: String? = null,
     )
 
     /**
@@ -643,6 +669,28 @@ data class CoordinatorState(
         get() = automatic && current?.takeIf { it.offered && !it.calling }?.followed == true
 
     /**
+     * The key of the run *Look again* is offered for (#617): the current run, of the track the
+     * ledger has written, with a card that cites evidence, its sources landed, no model call under
+     * way, and no look again of its own still looking. Null otherwise.
+     */
+    val lookAgainKey: RunKey?
+        get() {
+            val run = current?.takeIf { !it.calling && it.gathered != null } ?: return null
+            if (run.looksAgain != null && run.fingerprint == null) return null
+            return run.key.takeIf { written(run.nowPlaying)?.card?.evidence != null }
+        }
+
+    /** Whether the current run looks again (#617) and has not yet assembled its evidence. */
+    val lookingAgain: Boolean get() = current?.let { it.looksAgain != null && it.fingerprint == null } == true
+
+    /**
+     * Whether the current run looked again (#617) and found nothing new: its evidence's fingerprint
+     * is the card's, so no call was made, and the card stays.
+     */
+    val foundNothingNew: Boolean
+        get() = current?.let { it.looksAgain != null && it.fingerprint == it.looksAgain && !it.calling } == true
+
+    /**
      * Whether automatic writing waits for the user (#615): no first action since the app started
      * ([acted], D5), it expired after *Saver*'s count ([expired]), or the track playing is written
      * only on a tap ([Report.tapOnly], #625).
@@ -720,7 +768,14 @@ fun sameInsightTrack(
  * expiry and resets the count. An activity start makes an expired first action again (#625:
  * opening Sleevesight resumes automatic writing), but a track reported while it was paused
  * ([CoordinatorState.Report.whilePaused]) still offers Write rather than being written, so the
- * track playing at the return is not paid for unasked. The table gives each
+ * track playing at the return is not paid for unasked. *Look again* (#617) on the card paid for
+ * replaces the current run with one of its key and report that looks every source up afresh
+ * (`StartRun`'s `lookAgain`, with what the old run gathered), and keeps the fingerprint of the
+ * evidence the card cites: its question is answered by writing, as the tap's call, only when its
+ * own evidence's fingerprint differs ([CoordinatorEvent.EvidenceAssembled]); when it is the same,
+ * nothing is written, and the card stays ([CoordinatorState.foundNothingNew]). It goes through the
+ * same run, grants and Stop as a Write, so it never doubles with automatic writing, which never
+ * writes a track the ledger has written. The table gives each
  * event's own effects; asking again, the grants and the preparation follow every row.
  * "The run" is the run in progress; "an old run" is any other, cancelled or replaced. "The key" is
  * a report's `RunKey`; "the ledger's written track" is the insight track whose entry is written;
@@ -759,14 +814,17 @@ fun sameInsightTrack(
  * | current run asking again, not yet decided, a run it replaced (or one before) offering Write, no tap kept yet, allowed, of the tap's key | WriteTapped(key) | the tap kept: it answers the run's question as a tap (one call, the ledger written); first action made | Acted |
  * | current run offering Write, allowed, of the tap's key | WriteTapped(key) | calling (its next call); the ledger written, under the run's key (or kept, if written already: a rewrite); first action made; the latest report no longer tap-only or while-paused | Grant(MODEL_CALL), Acted |
  * | otherwise (a tap for another run's key included) | WriteTapped(key) | unchanged | none |
+ * | current run of the ledger's written track, its card citing evidence, its sources landed, no model call under way, not itself looking again still, allowed, of the tap's key | LookAgainTapped(key) (#617) | a new run of its key and report, looking again, with the fingerprint of the card's evidence; a preparation cancelled; not the first action | CancelRun (old), CancelPreparation (if one is cancelled), StartRun (looking again, with what the old run gathered), Acted |
+ * | otherwise | LookAgainTapped(key) | unchanged | none |
+ * | the run | EvidenceAssembled(fingerprint) | its fingerprint kept; a look again's question is then answered by writing only when it differs from the card's | none |
  * | the run, the tap's call under way | StopTapped(call) | unchanged (the call ends with its StepEnded; the ledger stays written, so nothing writes it again without a tap) | StopCall(call) |
  * | otherwise (no call under way, another run's call, or an earlier call of the run) | StopTapped(call) | unchanged | none |
  * | the run (current or not) | RetryAsked (its call failed or was stopped) | Write offered again: a tap grants a new call, never the grants on their own; the ledger unchanged | none |
- * | the run, not orphaned | CardShown(card or none) | the ledger written, under the run's key, unless written already; the card only if the ledger has none; a kept tap dropped | none |
+ * | the run, not orphaned | CardShown(card or none) | the ledger written, under the run's key, unless written already; the card only if the ledger has none, or the run looks again; a kept tap dropped | none |
  * | the run, not orphaned | CardWritten(card) | the ledger's card replaced (the ledger written already, when the call was granted); a kept tap dropped | none |
  * | the run, orphaned (a report of another insight track settled while it ran) | CardShown, CardWritten, DecidedWithoutCall | unchanged | none |
  * | the run, not orphaned | DecidedWithoutCall(nothing to narrate?) | the ledger decided (not written), under the run's key, unless written already; would-write with the run's settings only when for nothing to narrate, the key's first decision, by the current run, and the grant's check would have written; kept, under the same settings, by a run of the key asking again; else none; paused (#203) likewise, with the first action expired in place of made; a kept tap dropped | none |
- * | an old run | StepRequested, InsightAsked, StepEnded, RunEnded, CardShown, CardWritten, DecidedWithoutCall, RetryAsked | unchanged | none |
+ * | an old run | StepRequested, InsightAsked, StepEnded, RunEnded, CardShown, CardWritten, DecidedWithoutCall, RetryAsked, EvidenceAssembled | unchanged | none |
  * | any | NextChanged(next) | next = it; a preparation of another track cancelled | CancelPreparation (if one is cancelled) |
  * | the preparation | StepRequested(step) | the step waiting (granted once the preparation may run; a model call never) | none |
  * | the preparation | PreparationEnded | none in progress; its track prepared | none |
@@ -817,6 +875,7 @@ class PipelineCoordinator(
             CoordinatorEvent.Cleared -> cleared()
             is CoordinatorEvent.RebuildFinished -> finished(event)
             is CoordinatorEvent.WriteTapped -> tapped(event.key)
+            is CoordinatorEvent.LookAgainTapped -> lookAgain(event.key)
             is CoordinatorEvent.StopTapped -> stopTapped(event.call)
             is CoordinatorEvent.NextChanged -> nextChanged(event.next)
             is CoordinatorEvent.PreparationEnded -> preparationEnded(event.prep)
@@ -835,12 +894,16 @@ class PipelineCoordinator(
             is CoordinatorEvent.RetryAsked -> ofRun(event.run) { it.copy(offered = true) }
             is CoordinatorEvent.StepEnded -> stepEnded(event.run, event.step)
             is CoordinatorEvent.RunEnded -> runEnded(event.run)
-            is CoordinatorEvent.CardShown -> record(event.run, written = true, card = event.card, replaces = false)
+            // A look again's card, from the cache, is the card for what it found (#617).
+            is CoordinatorEvent.CardShown -> {
+                record(event.run, written = true, card = event.card, replaces = state.run?.looksAgain != null)
+            }
             is CoordinatorEvent.CardWritten -> record(event.run, written = true, card = event.card, replaces = true)
             is CoordinatorEvent.DecidedWithoutCall -> {
                 record(event.run, written = false, nothingToNarrate = event.nothingToNarrate)
             }
             is CoordinatorEvent.SourcesGathered -> ofRun(event.run) { it.copy(gathered = event.gathered) }
+            is CoordinatorEvent.EvidenceAssembled -> ofRun(event.run) { it.copy(fingerprint = event.fingerprint) }
             else -> Unit
         }
     }
@@ -1035,6 +1098,8 @@ class PipelineCoordinator(
                 again = true,
                 keepsTap = run.offered || run.keepsTap,
                 tapped = run.keepsTap && run.tapped,
+                // A look again (#617) still compares what it finds with the card.
+                looksAgain = run.looksAgain,
             )
         state = state.copy(runs = id.value, run = replacement)
         effects += CoordinatorEffect.StartRun(id, run.nowPlaying, again = run.gathered)
@@ -1110,6 +1175,24 @@ class PipelineCoordinator(
         return true
     }
 
+    // A tap on *Look again* offered for the run under [key] (#617): the run is replaced by one of
+    // its key and report that looks every source up afresh, keeping what this one found of a source
+    // it cannot reach, and compares what it finds with the card shown. A user's action for skip
+    // detection (D15), but not the first action (D5): it starts no automatic writing.
+    private fun lookAgain(key: RunKey) {
+        val run = state.current?.takeIf { state.allowed && state.lookAgainKey == key }
+        val shown = run?.let { state.written(it.nowPlaying)?.card?.evidence }
+        val gathered = run?.gathered
+        if (run == null || shown == null || gathered == null) return
+        cancelPreparation()
+        effects += CoordinatorEffect.CancelRun(run.id)
+        val id = RunId(state.runs + 1)
+        val looking = CoordinatorState.Run(id, run.key, run.nowPlaying, looksAgain = shown.fingerprint)
+        state = state.copy(runs = id.value, run = looking)
+        effects += CoordinatorEffect.StartRun(id, run.nowPlaying, lookAgain = LookAgain(gathered))
+        effects += CoordinatorEffect.Acted
+    }
+
     // Only the call Stop was shown for, while it is under way. Stopping spends nothing, so it
     // needs neither currency nor requests allowed, and it is no action (D5, D15).
     private fun stopTapped(call: CallId) {
@@ -1135,6 +1218,8 @@ class PipelineCoordinator(
                 labelled = true,
                 keepsTap = false,
                 tapped = false,
+                // A look again that ended before its evidence (#617) looks no more.
+                looksAgain = if (it.fingerprint != null) it.looksAgain else null,
             )
         }
         afterCall()
@@ -1321,8 +1406,10 @@ class PipelineCoordinator(
         val writesOn = run.insight
         if (writesOn != null) {
             val write = writes(run, writesOn, stands())
-            val lapsed = !write && lapsed(run, writesOn)
-            val followed = !write && !lapsed && followed(writesOn)
+            // A look again (#617) is the user's: no line says why automatic writing left it.
+            val own = run.looksAgain == null
+            val lapsed = own && !write && lapsed(run, writesOn)
+            val followed = own && !write && !lapsed && followed(writesOn)
             // For a written track, the question comes only when its card is not found (a rebuild
             // changed the card's key): Write is offered beside the card paid for, to rewrite it.
             next =
@@ -1388,6 +1475,10 @@ class PipelineCoordinator(
             stands()
     }
 
+    // Whether a look again's evidence (#617) differs from the card's: the sources found something new.
+    private fun foundNew(run: CoordinatorState.Run): Boolean =
+        run.fingerprint != null && run.fingerprint != run.looksAgain
+
     // The answer to [run]'s question whether to write, under the causes its settings write on,
     // with the first action made or not ([acted]).
     private fun writes(
@@ -1395,8 +1486,9 @@ class PipelineCoordinator(
         writesOn: Set<ChangeCause>,
         acted: Boolean,
     ): Boolean {
-        // A tap kept for it (#192) answers as a tap: one call, the ledger written.
-        if (run.tapped) return true
+        // A tap kept for it (#192) answers as a tap: one call, the ledger written. A look again
+        // (#617) writes, as its tap's call, only when the sources found something new.
+        if (run.tapped || run.looksAgain != null) return run.tapped || foundNew(run)
         val ledger = state.ledger?.takeIf { sameInsightTrack(it.track, run.nowPlaying) }
         val written = ledger?.written == true
         // The cause of the latest report, which the run, being current, holds: the latest word

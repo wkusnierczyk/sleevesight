@@ -16,7 +16,11 @@ import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.PipelineHost
 import app.sleevesight.app.ui.report.ReportAction
+import app.sleevesight.core.model.Outcome
+import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.InsightState
+import app.sleevesight.core.pipeline.SourceState
+import app.sleevesight.core.pipeline.TrackState
 
 /**
  * *Key insights*: the insight in each of its states (architecture, *Errors and empty
@@ -32,7 +36,8 @@ import app.sleevesight.core.pipeline.InsightState
  * No container of its own (#609): the heading and the text sit on Home's background with the rest.
  * At the card's end, in every state, the split button (#615, [WriteSplitButton]): the card's action
  * ([cardOffer]) and the menu of *Reactive*'s modes, from [writing]; its arrow cannot be used while
- * that is null, before the settings' first read.
+ * that is null, before the settings' first read. Beside a written insight, the menu begins with
+ * *Look again* (#617), enabled while it can be tapped ([offersLookAgain]).
  */
 @Composable
 internal fun InsightCard(
@@ -45,7 +50,14 @@ internal fun InsightCard(
     Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(stringResource(R.string.home_insight_title), style = MaterialTheme.typography.titleMedium)
         InsightBody(insight, context, actions, groundingDetails)
-        WriteSplitButton(cardOffer(insight, context), actions.onWrite, actions.onStop, writing)
+        val lookAgain =
+            (insight as? InsightState.Written)?.let {
+                LookAgainItem(
+                    offersLookAgain(context),
+                    actions.onLookAgain,
+                )
+            }
+        WriteSplitButton(cardOffer(insight, context), actions.onWrite, actions.onStop, writing, lookAgain)
     }
 }
 
@@ -146,11 +158,39 @@ private fun Written(
         val kept = insight.cached || context.cardShown
         Column(Modifier.weight(1f)) {
             GroundingLine(insight.grounded, kept, groundingDetails)
+            LookAgainLines(context)
             RewriteLines(context)
         }
         context.track?.let { track -> ReportAction { actions.onReport(track, insight) } }
     }
     if (!insight.complete) Quiet(stringResource(R.string.home_insight_incomplete))
+}
+
+// What is said of *Look again* (#617): while it looks the sources up, what that costs; once it
+// found nothing new, that it did, so the card stays and nothing was paid for its writing.
+@Composable
+private fun LookAgainLines(context: InsightContext) {
+    when {
+        context.offers.lookingAgain -> {
+            val line =
+                if (searchesWeb(
+                        context.track,
+                    )
+                ) {
+                    R.string.home_look_again_looking_web
+                } else {
+                    R.string.home_look_again_looking
+                }
+            Quiet(stringResource(line))
+        }
+        context.offers.nothingNew -> Quiet(stringResource(R.string.home_look_again_nothing_new))
+    }
+}
+
+// Whether [track]'s run looks the web search up: an adapter for it, its key saved, and switched on.
+private fun searchesWeb(track: TrackState?): Boolean {
+    val web = track?.sources?.get(SourceId.WEB) ?: return false
+    return (web as? SourceState.Done)?.result?.outcome != Outcome.SourceOff
 }
 
 // What is said of the card paid for and its rewrite: shown again after its rewrite failed or was

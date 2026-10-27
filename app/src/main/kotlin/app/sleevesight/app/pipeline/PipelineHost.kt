@@ -104,6 +104,12 @@ import kotlin.coroutines.cancellation.CancellationException
  *   written only on a tap: it came to play before the first action or while it was paused, or a
  *   mode was chosen while it played ([CoordinatorState.waitsForTap], `Report.tapOnly`, #625). The
  *   insight card then does not say that it writes automatically.
+ * @property lookAgainKey the key of the run *Look again* is offered for (#617), which a tap carries
+ *   back ([PipelineHost.lookAgain]): the card paid for is shown, citing evidence, its run's sources
+ *   have landed and no call is under way ([CoordinatorState.lookAgainKey]); null otherwise.
+ * @property lookingAgain whether a look again is looking the sources up ([CoordinatorState.lookingAgain]).
+ * @property nothingNew whether the last look again found nothing new, so nothing was written
+ *   ([CoordinatorState.foundNothingNew]).
  */
 data class PipelineView(
     val track: TrackState? = null,
@@ -119,6 +125,9 @@ data class PipelineView(
     val lapsed: Boolean = false,
     val followed: Boolean = false,
     val waiting: Boolean = false,
+    val lookAgainKey: RunKey? = null,
+    val lookingAgain: Boolean = false,
+    val nothingNew: Boolean = false,
 )
 
 /**
@@ -153,8 +162,8 @@ class PipelineKeys(
  *
  * [state] is what the UI renders; [events] the diagnostics stream, across rebuilds;
  * [lookupsAllowed] the D6 gate, which the session layer's `http` art waits on too. [onAction] is
- * told when the coordinator takes a user's action (a tap on Write), for the time since the last
- * one that each track change is recorded with (D15).
+ * told when the coordinator takes a user's action (a tap on Write, or on *Look again*), for the
+ * time since the last one that each track change is recorded with (D15).
  *
  * *Saver* reaches the coordinator as `PauseAutoWriteChanged`, from the
  * settings as *Look up in the background* does (#203), and *Reactive*'s mode as
@@ -283,6 +292,21 @@ class PipelineHost(
         val latest = latestPlaying() ?: return
         if (!sameInsightTrack(shown, latest)) return
         queue.trySend(CoordinatorEvent.WriteTapped(key))
+    }
+
+    /**
+     * The user tapped *Look again* offered under [key] ([PipelineView.lookAgainKey], #617) beside
+     * the track [shown]: the coordinator looks every source of that run up afresh if it still offers
+     * it, and writes the insight again only if they found something new. Dropped, as a tap on
+     * Write is, for a track the session layer no longer shows.
+     */
+    fun lookAgain(
+        key: RunKey,
+        shown: NowPlaying,
+    ) {
+        val latest = latestPlaying() ?: return
+        if (!sameInsightTrack(shown, latest)) return
+        queue.trySend(CoordinatorEvent.LookAgainTapped(key))
     }
 
     /**
@@ -478,7 +502,7 @@ class PipelineHost(
         handle.job =
             current.scope.launch(epoch.mark()) {
                 try {
-                    current.pipeline.run(effect.nowPlaying, handle, effect.again)
+                    current.pipeline.run(effect.nowPlaying, handle, effect.again, effect.lookAgain)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (
@@ -634,6 +658,10 @@ class PipelineHost(
             queue.trySend(CoordinatorEvent.SourcesGathered(id, gathered))
         }
 
+        override fun assembled(evidence: EvidenceSet) {
+            queue.trySend(CoordinatorEvent.EvidenceAssembled(id, evidence.fingerprint))
+        }
+
         override fun cardShown(
             card: InsightState.Written?,
             evidence: EvidenceSet,
@@ -691,6 +719,9 @@ class PipelineHost(
                 lapsed = owner.lapsed,
                 followed = owner.followed,
                 waiting = owner.waitsForTap,
+                lookAgainKey = owner.lookAgainKey,
+                lookingAgain = owner.lookingAgain,
+                nothingNew = owner.foundNothingNew,
             )
         }.collect {
             view.value = it

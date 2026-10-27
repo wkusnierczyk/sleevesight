@@ -96,27 +96,35 @@ internal class InsightContext(
  * stopped ([retry]), and Stop while the call is under
  * way ([stop]); and why automatic writing left the track the Write offered is for: it came to play
  * while automatic writing was paused while the app was not on screen ([paused], #203), or it
- * followed the last one by itself under *On track skip (auto)* ([followed], #625).
+ * followed the last one by itself under *On track skip (auto)* ([followed], #625). *Look again*
+ * (#617): offered beside the card paid for ([lookAgain]), looking the sources up ([lookingAgain]),
+ * and finding nothing new ([nothingNew]).
  */
+@Suppress("LongParameterList") // Each what one line or action of the card says.
 internal class InsightOffers(
     val rewrite: Boolean = false,
     val retry: Boolean = false,
     val stop: Boolean = false,
     val paused: Boolean = false,
     val followed: Boolean = false,
+    val lookAgain: Boolean = false,
+    val lookingAgain: Boolean = false,
+    val nothingNew: Boolean = false,
 )
 
 /**
- * Where the insight card's taps go: Write ([onWrite]) and Stop ([onStop]) to the
- * pipeline, which says whether a tap does anything; a citation chip ([onCite]) to its line; the
- * link of a model found unavailable to the settings ([onSettings], #540); *Report a problem*
- * ([onReport], #390) with the written insight and the track it was written for.
+ * Where the insight card's taps go: Write ([onWrite]), Stop ([onStop]) and *Look again*
+ * ([onLookAgain], #617) to the pipeline, which says whether a tap does anything; a citation chip
+ * ([onCite]) to its line; the link of a model found unavailable to the settings ([onSettings],
+ * #540); *Report a problem* ([onReport], #390) with the written insight and the track it was
+ * written for.
  */
 internal class InsightActions(
     val onWrite: () -> Unit,
     val onStop: () -> Unit,
     val onCite: (String) -> Unit,
     val onSettings: () -> Unit = {},
+    val onLookAgain: () -> Unit = {},
     val onReport: (TrackState, InsightState.Written) -> Unit,
 )
 
