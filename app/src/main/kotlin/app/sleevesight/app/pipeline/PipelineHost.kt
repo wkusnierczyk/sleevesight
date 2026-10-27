@@ -9,9 +9,11 @@ import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.pipeline.ClearEpoch
 import app.sleevesight.core.pipeline.Gathered
 import app.sleevesight.core.pipeline.InsightState
+import app.sleevesight.core.pipeline.InsightState.Written
 import app.sleevesight.core.pipeline.Pipeline
 import app.sleevesight.core.pipeline.PipelineEvent
 import app.sleevesight.core.pipeline.PipelineParts
+import app.sleevesight.core.pipeline.PipelineTime
 import app.sleevesight.core.pipeline.RunControl
 import app.sleevesight.core.pipeline.RunKey
 import app.sleevesight.core.pipeline.RunStep
@@ -20,6 +22,7 @@ import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.settings.PrepareNextTrack
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WriteAutomatically
+import app.sleevesight.core.settings.pastKeepHistory
 import app.sleevesight.wiring.SourceKeys
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -41,6 +44,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
@@ -52,6 +56,8 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.coroutines.cancellation.CancellationException
+import kotlin.time.Clock
+import kotlin.time.Duration
 
 /**
  * What the home screen (#52) and the diagnostics screen (#54) read of the pipeline.
@@ -180,6 +186,13 @@ class PipelineKeys(
  * Each run and preparation starts marked with [epoch]'s generation, so what it finds is kept only
  * if *Clear history* has not come since (#547). [forget] is that clear's part here: the track's
  * state, the insight shown and the coordinator's ledger go, at once.
+ *
+ * An insight is shown no longer than *Keep history for* after it was written (#643,
+ * `pastKeepHistory`, by [clock]), as the synthesis cache serves it and as a genre's reason is shown
+ * (`AppGenreNotes`): checked on each change of the settings or of what is shown, the run's own or the
+ * card paid for from the ledger, *Look again*'s fallback included. When the setting is shortened
+ * past the insight shown, the track is also looked up again by a rebuild, from the caches: its run
+ * finds no card, which the cache no longer serves, so Write is offered to write it afresh.
  */
 @Suppress("LongParameterList", "TooManyFunctions") // The inputs of one loop, each a seam for the tests.
 class PipelineHost(
@@ -196,6 +209,7 @@ class PipelineHost(
     private val next: Flow<NowPlaying?> = emptyFlow(),
     private val online: Flow<Boolean> = emptyFlow(),
     private val epoch: ClearEpoch = ClearEpoch(),
+    private val clock: Clock = Clock.System,
 ) {
     private val queue = Channel<CoordinatorEvent>(Channel.UNLIMITED)
 
@@ -395,6 +409,13 @@ class PipelineHost(
                 online.distinctUntilChanged().collect { queue.send(CoordinatorEvent.NetworkChanged(it)) }
             }
             launch {
+                // *Keep history for* shortened past the insight shown (#643): the view drops it
+                // ([publish]), and a rebuild looks the track up again, so Write is offered.
+                latest.map { it.historyLifetime }.distinctUntilChanged().drop(1).collect { lifetime ->
+                    if (holdsPast(lifetime)) queue.send(CoordinatorEvent.RebuildRequested)
+                }
+            }
+            launch {
                 changes.collect { change ->
                     change?.let {
                         val playing = it.nowPlaying
@@ -460,7 +481,7 @@ class PipelineHost(
                         val latest = checkNotNull(latestSettings)
                         val now = latest.value
                         val made = parts(readKeys(now.aiProvider), now)
-                        built[number] = Pipeline(made) { latest.value } to made
+                        built[number] = Pipeline(made, PipelineTime(clock)) { latest.value } to made
                         true
                     } catch (e: CancellationException) {
                         throw e
@@ -701,13 +722,11 @@ class PipelineHost(
             // here replaces a written insight), so whether it is the card goes with it, and the
             // note and the card stay in step.
             val before = if (fresh) view.value else PipelineView()
-            val shown =
-                own?.let { shownTrack(it, owner, failedKey) }
-                    ?: before.track
-                        ?.let { shownTrack(it, owner, failedKey) }
-                        ?.let { Shown(it.track, before.rewriteFailed, before.cardShown) }
-                    ?: Shown(null, null)
+            val lifetime = now.historyLifetime
+            val shown = shownOf(own, before, owner, failedKey, lifetime)
             val insight = shown.track?.insight
+            // The card paid for past *Keep history for* (#643) is not shown, so nothing is offered for it.
+            val cardPast = cardPast(shown, owner, lifetime)
             PipelineView(
                 track = shown.track,
                 rewrite = owner.rewrites() && insight is InsightState.Written,
@@ -722,9 +741,9 @@ class PipelineHost(
                 lapsed = owner.lapsed,
                 followed = owner.followed,
                 waiting = owner.waitsForTap,
-                lookAgainKey = owner.lookAgainKey,
+                lookAgainKey = owner.lookAgainKey.takeUnless { cardPast },
                 lookingAgain = owner.lookingAgain,
-                nothingNew = owner.foundNothingNew,
+                nothingNew = owner.foundNothingNew && !cardPast,
                 somethingNew = owner.foundSomethingNew,
             )
         }.collect {
@@ -739,20 +758,28 @@ class PipelineHost(
         val track: TrackState?,
         val rewriteFailed: String?,
         val cardShown: Boolean = false,
-    )
+    ) {
+        // Whether a written insight is shown: not one dropped past *Keep history for* (#643).
+        val writtenShown: Boolean get() = track?.insight is Written
+    }
 
     // The track as shown: Write withdrawn unless offered; a run that failed while writing as
-    // failed; the card paid for (from the ledger) in place of an insight its run lacks, saying so
+    // failed; an insight past *Keep history for* ([lifetime], #643) not shown; the card paid for
+    // (from the ledger) in place of an insight its run lacks, unless it is past it too, saying so
     // when the run's own failed (a rewrite); and the header from the ledger's latest report.
     private fun shownTrack(
         track: TrackState,
         owner: CoordinatorState,
         failedKey: RunKey?,
+        lifetime: Duration?,
     ): Shown {
-        val own = failing(offering(track, owner), failedKey)
+        val own = unlessPast(failing(offering(track, owner), failedKey), lifetime)
         // A look again that found nothing new (#617) shows the card paid for, not the one its run
         // found in the cache under the settings as they are now.
-        val card = cardFor(owner, own)?.takeIf { lacksInsight(own) || owner.foundNothingNew }
+        val card =
+            cardFor(owner, own)
+                ?.takeUnless { past(it.insight, lifetime) }
+                ?.takeIf { lacksInsight(own) || owner.foundNothingNew }
         val failure =
             when (val insight = own.insight) {
                 is InsightState.Failed -> insight.reason
@@ -768,6 +795,60 @@ class PipelineHost(
     ): Set<SourceId> {
         val adapters = made?.adapters?.map { it.id }?.toSet() ?: return view.value.needsKey
         return KEYED_SOURCES.filter { now.isEnabled(it) && it !in adapters }.toSet()
+    }
+
+    // The run's own track as shown, or, until the live pipeline publishes, the one shown [before].
+    private fun shownOf(
+        own: TrackState?,
+        before: PipelineView,
+        owner: CoordinatorState,
+        failedKey: RunKey?,
+        lifetime: Duration?,
+    ): Shown =
+        own?.let { shownTrack(it, owner, failedKey, lifetime) }
+            ?: before.track
+                ?.let { shownTrack(it, owner, failedKey, lifetime) }
+                ?.let { Shown(it.track, before.rewriteFailed, before.cardShown && it.writtenShown) }
+            ?: Shown(null, null)
+
+    // Whether the card paid for, for the track [shown], is past *Keep history for* ([lifetime]; #643).
+    private fun cardPast(
+        shown: Shown,
+        owner: CoordinatorState,
+        lifetime: Duration?,
+    ): Boolean {
+        val card = shown.track?.let { cardFor(owner, it) } ?: return false
+        return past(card.insight, lifetime)
+    }
+
+    // Whether [insight] was written longer ago than *Keep history for* ([lifetime]; #643).
+    private fun past(
+        insight: Written,
+        lifetime: Duration?,
+    ): Boolean = pastKeepHistory(insight.writtenAt, lifetime, clock.now())
+
+    // [track] with its insight not shown when it is past *Keep history for* ([lifetime]; #643).
+    private fun unlessPast(
+        track: TrackState,
+        lifetime: Duration?,
+    ): TrackState {
+        val insight = track.insight as? Written ?: return track
+        return if (past(insight, lifetime)) track.copy(insight = InsightState.Idle(canWrite = false)) else track
+    }
+
+    // Whether the live pipeline's insight, or the card paid for, is past [lifetime] (#643).
+    private fun holdsPast(lifetime: Duration?): Boolean {
+        val own =
+            live.value
+                ?.pipeline
+                ?.state
+                ?.value
+                ?.insight as? Written
+        val card =
+            snapshot.value.ledger
+                ?.card
+                ?.insight
+        return listOfNotNull(own, card).any { past(it, lifetime) }
     }
 
     // The card paid for, from the ledger, if [track] is of its written track.

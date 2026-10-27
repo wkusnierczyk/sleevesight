@@ -3,6 +3,7 @@ package app.sleevesight.store
 import app.sleevesight.core.ai.ReasoningEffort
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.settings.pastKeepHistory
 import app.sleevesight.core.synthesis.CardKind
 import kotlin.time.Duration
 import kotlin.time.Instant
@@ -35,8 +36,7 @@ class SynthesisCache internal constructor(
                 ).executeAsOneOrNull() ?: return null
         val now = context.clock.now()
         val writtenAt = Instant.fromEpochMilliseconds(row.written_at)
-        val lifetime = lifetimeOf(context.settings())
-        val expired = lifetime != null && now - writtenAt >= lifetime
+        val expired = pastKeepHistory(writtenAt, lifetimeOf(context.settings()), now)
         if (expired) {
             context.queries.synthesisDelete(row.id)
         } else {
