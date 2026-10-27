@@ -6,6 +6,8 @@ import androidx.compose.material3.Typography
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
@@ -125,14 +127,13 @@ class FontSettingsTest {
             compose.waitUntil(5_000) { shown(appFont) }
             assertEquals(Roboto, typography?.bodyLarge?.fontFamily)
 
-            compose.onNodeWithText(text(R.string.settings_font)).performScrollTo().performClick()
-            compose.onNodeWithText(systemFont).performClick()
+            // One tap on the choice's button in *Font*'s row (#637).
+            compose.onNode(hasText(systemFont) and isSelectable()).performScrollTo().performClick()
             compose.waitUntil(5_000) { shown(systemFont) && typography?.bodyLarge?.fontFamily != Roboto }
             assertEquals(FontChoice.SYSTEM_FONT, settings.now().font)
             assertEquals(Typography(), typography)
 
-            compose.onNodeWithText(text(R.string.settings_font)).performScrollTo().performClick()
-            compose.onNodeWithText(appFont).performClick()
+            compose.onNode(hasText(appFont) and isSelectable()).performScrollTo().performClick()
             compose.waitUntil(5_000) { typography?.bodyLarge?.fontFamily == Roboto }
             assertEquals(FontChoice.APP_FONT, settings.now().font)
         }
