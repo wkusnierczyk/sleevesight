@@ -8,7 +8,8 @@ import java.io.File
 /**
  * Every link in the app is made in `Accents.kt` (#442), by `LinkedText` or `LinkLabel`, so none
  * takes another look or loses its line: the app's sources make no link, link style or underline
- * anywhere else, the citations' chips and the sentences they flag aside.
+ * anywhere else, the citations' chips and the sentences they flag aside. A line struck through (a
+ * hidden source's filter chip, #623) is neither, and is let through.
  */
 class LinkSourcesTest {
     @Test
@@ -51,10 +52,15 @@ class LinkSourcesTest {
                 "import androidx.compose.ui.text.TextLinkStyles as Styles",
                 "import androidx.compose.ui.text.fromHtml",
                 "import androidx.compose.foundation.text.ClickableText as Clickable",
+                // Struck through and underlined at once is still underlined.
+                "TextDecoration.combine(listOf(TextDecoration.LineThrough, TextDecoration.Underline))",
+                "val style = SpanStyle(textDecoration = TextDecoration.LineThrough + TextDecoration.Underline)",
+                "import androidx.compose.ui.text.style.TextDecoration as Decoration",
             )
         for (source in made) assertTrue(source, violations("Example.kt", source).isNotEmpty())
-        // The citations' own exceptions do not reach another file.
-        for (line in CITATIONS) assertTrue(line, violations("Example.kt", line).isNotEmpty())
+        // The citations' own exceptions do not reach another file; but for the plain import of
+        // `TextDecoration`, which any file may have for a strike-through, its uses still checked.
+        for (line in CITATIONS - DECORATION_IMPORT) assertTrue(line, violations("Example.kt", line).isNotEmpty())
         // Nor does one reach a citations line written another way.
         assertTrue(violations("Citations.kt", "withLink(LinkAnnotation.Url(url)) { append(label) }").isNotEmpty())
     }
@@ -66,6 +72,9 @@ class LinkSourcesTest {
                 "LinkedText(listOf(TextPart.Words(\"See \"), TextPart.Link(name, url)), style)",
                 "LinkLabel(TextPart.Link(shownAddress(url), url), onClickLabel = open, style = style)",
                 "Text(\"Underlined in the error colour\")",
+                // A struck-through line is not a link's look.
+                "import androidx.compose.ui.text.style.TextDecoration",
+                "textDecoration = if (shown) null else TextDecoration.LineThrough,",
             )
         for (source in fine) assertEquals(source, emptyList<String>(), violations("Example.kt", source))
         for (line in CITATIONS) assertEquals(line, emptyList<String>(), violations("Citations.kt", line))
@@ -107,13 +116,18 @@ class LinkSourcesTest {
                 "withLink(link) { append(label) }",
             )
 
+        /** A strike-through, and the plain import of what makes it, which make no link (#623). */
+        val STRUCK = Regex("""\bTextDecoration\.LineThrough\b""")
+        const val DECORATION_IMPORT = "import androidx.compose.ui.text.style.TextDecoration"
+
         /** The lines of [source], a file named [name], that make a link, each as "name:line: text". */
         fun violations(
             name: String,
             source: String,
         ): List<String> =
             source.lines().withIndex().mapNotNull { (i, line) ->
-                val made = MADE.containsMatchIn(line) || IMPORTED.containsMatchIn(line)
+                val checked = if (line.trim() == DECORATION_IMPORT) "" else line.replace(STRUCK, "")
+                val made = MADE.containsMatchIn(checked) || IMPORTED.containsMatchIn(checked)
                 val excepted = name == "Citations.kt" && line.trim() in CITATIONS
                 "$name:${i + 1}: ${line.trim()}".takeIf { made && !excepted }
             }
