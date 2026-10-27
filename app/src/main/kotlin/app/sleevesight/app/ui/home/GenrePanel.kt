@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
+import app.sleevesight.app.pipeline.GenreNotes
 import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.core.genres.GenreLevel
@@ -33,7 +34,8 @@ import app.sleevesight.core.pipeline.TrackState
 
 /**
  * The panel of [genre] (#558; frame B of the agreed mock-ups): its name as a heading, with *Close*
- * when there is [onClose]; then the table, a row per level in [GenreLevel] order, each row's name
+ * when there is [onClose]; then what the genre is and *Why is this …?*, from [notes] (#523,
+ * [GenreAbout]); then the table, a row per level in [GenreLevel] order, each row's name
  * (the track's title, the artist's name, the album's title) on one line above its labels, [genre]
  * marked wherever it shows; then where the table's labels come from, a line per row, each source
  * linked to its page there, and MusicBrainz's licence (D12). Nothing when no row has [genre].
@@ -43,6 +45,7 @@ internal fun GenrePanel(
     track: TrackState,
     genre: String,
     onClose: (() -> Unit)? = null,
+    notes: PanelNotes = PanelNotes(),
 ) {
     val genres = track.genres
     val name =
@@ -51,11 +54,24 @@ internal fun GenrePanel(
             ?.genre
             ?.label ?: return
     HomePanel(name, GENRE_PANEL_TAG, onClose) {
-        // TODO(#523): what the genre is, and *Why is this …?*, between the heading and the table.
+        // What the genre is, and *Why is this …?* (#523), above the table.
+        GenreAbout(track, genre, notes)
         Table(track, genre)
         Credits(genres, several = track.normalized.artists.size > 1)
     }
 }
+
+/**
+ * What a genre's panel shows above its table ([GenreAbout]): [notes], where its definition and
+ * reason come from; where a citation in the reason goes ([onCite]: on Home, *Sources* unfolded to
+ * its line; under *Separate pages*, *Sources*' page at it); and whether the model's own knowledge is
+ * allowed now ([modelAllowed]).
+ */
+internal class PanelNotes(
+    val notes: GenreNotes = GenreNotes.None,
+    val onCite: (String) -> Unit = {},
+    val modelAllowed: Boolean = false,
+)
 
 /**
  * The table of [track]'s genres: a row per level with labels, in [GenreLevel] order, each row's

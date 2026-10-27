@@ -281,6 +281,10 @@ DELETE FROM synthesis;
 synthesisDelete:
 DELETE FROM synthesis WHERE id = :id;
 
+-- The cards of a kind written before a time: a genre's reasons past *Keep history for* (#523).
+synthesisPurgeKind:
+DELETE FROM synthesis WHERE kind = :kind AND written_at < :cutoff;
+
 -- Size and eviction
 
 tableSizes:

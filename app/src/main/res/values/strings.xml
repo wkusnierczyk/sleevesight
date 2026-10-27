@@ -154,7 +154,7 @@
     <string name="settings_clear_history">Clear history</string>
     <string name="settings_clear_history_value">Deletes everything Sleevesight kept about the tracks you played</string>
     <string name="settings_clear_history_title">Clear history?</string>
-    <string name="settings_clear_history_explained">The list of tracks you played, the track changes recorded to learn your skips, the insights written and what the sources found are deleted from this phone. Your API keys and settings stay. Your music is not touched. This cannot be undone.</string>
+    <string name="settings_clear_history_explained">The list of tracks you played, the track changes recorded to learn your skips, the insights and genre explanations written, and what the sources found are deleted from this phone. Your API keys and settings stay. Your music is not touched. This cannot be undone.</string>
     <string name="settings_clear">Clear</string>
     <string name="settings_clear_history_failed">Not everything could be cleared. Try again.</string>
     <string name="settings_clear_history_done">History cleared.</string>

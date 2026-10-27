@@ -8,6 +8,7 @@ import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.CardKey
+import app.sleevesight.core.pipeline.KeptCard
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.SourceResult
@@ -112,5 +113,32 @@ class StorePipelineCacheTest {
                 )
             assertEquals("It was a hit [W1].", stored?.text)
             assertNull(cache.card(key.copy(kind = CardKind.SONG)))
+        }
+
+    @Test
+    fun `each genre's reason is kept apart, under the track's key and the genre`() =
+        runBlocking {
+            val jazz =
+                CardKey(
+                    kind = CardKind.GENRE,
+                    track = sundown,
+                    duration = 213.seconds,
+                    evidenceFingerprint = "9f2c",
+                    promptVersion = 1,
+                    styleHash = "e3b0",
+                    provider = ProviderId.ANTHROPIC,
+                    model = "claude-haiku-5-5",
+                    modelKnowledge = false,
+                    effort = ReasoningEffort.LOW,
+                    subject = "jazz",
+                )
+            cache.keep(jazz, "It is jazz [W1].")
+            cache.keep(jazz.copy(subject = "folk"), "It is folk [W2].")
+
+            assertEquals("It is jazz [W1].", cache.card(jazz))
+            assertEquals(KeptCard("It is jazz [W1].", fixture.clock.now), cache.keptCard(jazz))
+            assertEquals("It is folk [W2].", cache.card(jazz.copy(subject = "folk")))
+            assertNull(cache.card(jazz.copy(subject = null)))
+            assertNull(cache.card(jazz.copy(subject = "rock")))
         }
 }

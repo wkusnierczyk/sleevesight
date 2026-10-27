@@ -40,12 +40,18 @@ internal fun NowPlayingPageContent(
             }
             when (page) {
                 is HomePage.Sources -> SourcesPage(shown, playing, page.cite, actions.openSettings)
-                HomePage.Genres -> GenresPage(shown.track, state.settings, genre = null)
-                is HomePage.GenresAt -> GenresPage(shown.track, state.settings, page.genre)
+                HomePage.Genres -> GenresPage(shown.track, state.settings, genre = null, genreNotes(shown, actions))
+                is HomePage.GenresAt -> GenresPage(shown.track, state.settings, page.genre, genreNotes(shown, actions))
             }
         }
     }
 }
+
+// What the genres' page shows above its table (#523): a citation in a reason opens *Sources*' page at its line.
+private fun genreNotes(
+    shown: Showing,
+    actions: NowPlayingActions,
+) = PanelNotes(actions.genreNotes, { id -> actions.openPage(HomePage.Sources(cite = id)) }, shown.modelAllowed)
 
 /** A page's title: the item's name. */
 @Composable

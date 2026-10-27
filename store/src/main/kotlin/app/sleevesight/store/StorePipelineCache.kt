@@ -3,6 +3,7 @@ package app.sleevesight.store
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.pipeline.CardKey
 import app.sleevesight.core.pipeline.ClearEpoch
+import app.sleevesight.core.pipeline.KeptCard
 import app.sleevesight.core.pipeline.PipelineCache
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.SourceResult
@@ -59,6 +60,9 @@ class StorePipelineCache(
 
     override suspend fun card(key: CardKey): String? = withContext(io) { caches.synthesis.get(key.toStore())?.text }
 
+    override suspend fun keptCard(key: CardKey): KeptCard? =
+        withContext(io) { caches.synthesis.get(key.toStore())?.let { KeptCard(it.text, it.writtenAt) } }
+
     override suspend fun keep(
         key: CardKey,
         text: String,
@@ -70,7 +74,9 @@ class StorePipelineCache(
     private fun CardKey.toStore(): SynthesisKey =
         SynthesisKey(
             kind = kind,
-            entityKey = caches.retrieval.keyOf(track, duration),
+            // A card about more than the track (a genre's reason, #523) keeps its subject after it,
+            // past a line break: the retrieval key's parts are length-prefixed, so the two never blur.
+            entityKey = caches.retrieval.keyOf(track, duration) + subject?.let { "\n$it" }.orEmpty(),
             evidenceFingerprint = evidenceFingerprint,
             promptVersion = promptVersion,
             styleHash = styleHash,

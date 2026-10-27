@@ -209,6 +209,7 @@ class PipelineHost(
     )
 
     private val live = MutableStateFlow<Live?>(null)
+    private val liveMade = MutableStateFlow<PipelineParts?>(null)
 
     // The track whose run failed during its insight, shown as failed until another run starts.
     private val failed = MutableStateFlow<RunKey?>(null)
@@ -228,6 +229,12 @@ class PipelineHost(
 
     /** What the UI renders. */
     val state: StateFlow<PipelineView> = view.asStateFlow()
+
+    /**
+     * What the live pipeline was built from, null while none runs: its AI service, synthesis cache
+     * and hasher write a genre's reason on a tap (#523, `AppGenreNotes`), as its runs write insights.
+     */
+    val liveParts: StateFlow<PipelineParts?> = liveMade.asStateFlow()
 
     /** For the tests: each view as it is published, none conflated. */
     @Volatile
@@ -430,12 +437,14 @@ class PipelineHost(
         built.clear()
         if (!effect.built || made == null) {
             live.value = null
+            liveMade.value = null
             return
         }
         val (pipeline, madeParts) = made
         val runScope = CoroutineScope(scope.coroutineContext + SupervisorJob(scope.coroutineContext[Job]))
         runScope.launch(start = CoroutineStart.UNDISPATCHED) { pipeline.events.collect { eventFlow.tryEmit(it) } }
         live.value = Live(pipeline, madeParts, runScope)
+        liveMade.value = madeParts
     }
 
     private fun startRun(effect: CoordinatorEffect.StartRun) {

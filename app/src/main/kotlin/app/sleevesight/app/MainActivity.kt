@@ -66,6 +66,8 @@ class MainActivity : ComponentActivity() {
             guideDismissed = graph.guideDismissal.dismissed,
             dismissGuide = graph.guideDismissal::dismiss,
             hideGuide = graph.settings.homeGuideHider(graph.settingsSaves),
+            // What a genre's panel shows above its table (#523).
+            genreNotes = graph.genreNotes,
         )
     }
 

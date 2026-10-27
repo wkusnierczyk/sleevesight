@@ -6,7 +6,7 @@ import app.sleevesight.net.NetRequest
 import app.sleevesight.sources.array
 import app.sleevesight.sources.lookup
 import app.sleevesight.sources.obj
-import app.sleevesight.sources.parseObject
+import app.sleevesight.sources.parseWikimedia
 import app.sleevesight.sources.string
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -47,7 +47,7 @@ class WikipediaClient(
                 "formatversion" to "2",
             )
         return net.lookup(NetRequest(API, query = query)) { response ->
-            val json = parseObject(response.body).obj("query")
+            val json = parseWikimedia(response.body).obj("query")
             val moves =
                 (json.array("normalized") + json.array("redirects")).associate {
                     it.required("from") to
@@ -81,7 +81,7 @@ class WikipediaClient(
                 "formatversion" to "2",
             )
         return net.lookup(NetRequest(API, query = query)) { response ->
-            parseObject(response.body)
+            parseWikimedia(response.body)
                 .obj("query")
                 .array("pages")
                 .firstOrNull()
