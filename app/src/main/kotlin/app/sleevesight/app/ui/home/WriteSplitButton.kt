@@ -7,11 +7,12 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -21,10 +22,12 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -33,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -44,20 +48,38 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.offset
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.settings.WRITING_MODES
 import app.sleevesight.app.ui.settings.writingModeName
 import app.sleevesight.core.settings.WriteAutomatically
 
-/** Each half's height, and the arrow's least width: the touch target Android's accessibility guidance asks for. */
+/**
+ * Each half's least height as drawn (#624): as tall as Home's chips; more where the label wraps.
+ * Each answers a tap across 48 dp.
+ */
+private val HEIGHT = 32.dp
+
+/** The arrow's width, and the row's least height: the touch target Android's accessibility guidance asks for. */
 private val TARGET = 48.dp
+
+/**
+ * The room inside the leading half around its label: as in Home's genre chips, so a label of one
+ * line makes it 32 dp high, as tall as they are, at any font size.
+ */
+private val PADDING = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
 
 /** The corner where the two halves meet, as Material 3's split button has it. */
 private val INNER_CORNER = CornerSize(4.dp)
 
-/** The outer corners: round. */
-private val OUTER_CORNER = CornerSize(percent = 50)
+/**
+ * The outer corners: round at 32 dp high, as the genre chips' are; fixed, so a taller button, its
+ * label wrapping, keeps them and its text clear of them.
+ */
+private val OUTER_CORNER = CornerSize(16.dp)
 
 /** The gap between the halves. */
 private val GAP = 2.dp
@@ -94,14 +116,18 @@ internal class WritingChoice(
  *
  * A screen reader reads the leading half as its action, the arrow as *Writing mode: <mode>* (with
  * *paused* while *Saver* has paused it), a drop-down list, and the menu's modes as one choice among
- * them, the chosen one selected. Each half is at least 48 dp high, the arrow 48 dp wide. Choosing an
+ * them, the chosen one selected. Both halves are drawn 32 dp high, as Home's chips are, or as high
+ * as a label that wraps makes the leading one, and each answers a tap across 48 dp; the arrow is
+ * 48 dp wide ([Halves]). Each Write ends in the **AI** mark ([AiLabel], #624),
+ * read as "<label>, uses AI"; *Stop* and the arrow, which make no call, do not. Choosing an
  * automatic mode other than the one chosen says that each new track's insight is a paid call;
  * choosing *Now*, or the mode already chosen, says nothing.
  *
  * Material 3's own `SplitButtonLayout` is not in material3 1.4, the version the project's Compose
- * BOM gives, so the halves are drawn here with its shapes: round outer corners, 4 dp inner ones and a
- * 2 dp gap.
+ * BOM gives, so the halves are drawn here with its shapes: round outer corners (16 dp, as the genre
+ * chips' are), 4 dp inner ones and a 2 dp gap.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun WriteSplitButton(
     offer: CardOffer,
@@ -111,8 +137,13 @@ internal fun WriteSplitButton(
 ) {
     val filled = offer.invites
     val paused = writing != null && writing.paused && writing.mode != WriteAutomatically.NEVER
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-        Row(horizontalArrangement = Arrangement.spacedBy(GAP), verticalAlignment = Alignment.CenterVertically) {
+    // *Paused* goes beside the halves, or under them where the line has no room for it.
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+        itemVerticalAlignment = Alignment.CenterVertically,
+    ) {
+        Halves(Modifier) {
             Leading(offer, filled, if (offer.stop) onStop else onWrite)
             ModeArrow(filled, writing, paused)
         }
@@ -124,6 +155,40 @@ internal fun WriteSplitButton(
                 // Said in the arrow's description; tagged for the tests alone.
                 modifier = Modifier.clearAndSetSemantics { testTag = WRITE_MODE_PAUSED_TAG },
             )
+        }
+    }
+}
+
+/**
+ * The two halves, [content]: the leading one, then the arrow (#624). The arrow's 48 dp width is
+ * kept first, and the leading half takes the width left, its label wrapping in it where it must;
+ * it is at least 32 dp high, and the arrow is drawn as high as it, so the halves are always of one
+ * height. The row is at least 48 dp high, the halves centred in it: each answers a tap across 48 dp
+ * (Compose widens a smaller tap target into the room around it), which Material's own
+ * `minimumInteractiveComponentSize` would otherwise give the leading half alone, by a size the
+ * arrow could not follow.
+ */
+@Composable
+private fun Halves(
+    modifier: Modifier,
+    content: @Composable () -> Unit,
+) {
+    CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
+        Layout(content, modifier.testTag(WRITE_HALVES_TAG)) { measurables, constraints ->
+            val (leadingHalf, arrowHalf) = measurables
+            val gap = GAP.roundToPx()
+            val target = TARGET.roundToPx()
+            val loose = constraints.copy(minWidth = 0, minHeight = 0)
+            val least = HEIGHT.roundToPx().coerceAtMost(loose.maxHeight)
+            val leading = leadingHalf.measure(loose.offset(horizontal = -(target + gap)).copy(minHeight = least))
+            val arrow = arrowHalf.measure(Constraints.fixed(target, leading.height))
+            val width = leading.width + gap + arrow.width
+            val height = maxOf(leading.height, target)
+            layout(width, height) {
+                val top = (height - leading.height) / 2
+                leading.placeRelative(0, top)
+                arrow.placeRelative(leading.width + gap, top)
+            }
         }
     }
 }
@@ -141,13 +206,16 @@ private fun Leading(
             offer.stop -> STOP_TAG
             else -> WRITE_TAG
         }
-    val modifier = Modifier.testTag(tag).heightIn(min = TARGET)
+    // As high as [Halves] has it: 32 dp at least, more for a label that wraps.
+    val modifier = Modifier.testTag(tag)
     val enabled = offer.enabled
-    val label: @Composable () -> Unit = { Text(stringResource(offer.label)) }
+    val text = stringResource(offer.label)
+    // Every Write calls the AI service, a disabled one included; Stop does not (#624).
+    val label: @Composable () -> Unit = { if (offer.usesAi) AiLabel(text) else Text(text) }
     if (filled) {
-        Button(onClick = onClick, modifier = modifier, enabled = enabled, shape = shape) { label() }
+        Button(onClick, modifier, enabled, shape = shape, contentPadding = PADDING) { label() }
     } else {
-        OutlinedButton(onClick = onClick, modifier = modifier, enabled = enabled, shape = shape) { label() }
+        OutlinedButton(onClick, modifier, enabled, shape = shape, contentPadding = PADDING) { label() }
     }
 }
 
@@ -176,8 +244,8 @@ private fun ModeArrow(
         var arrow =
             Modifier
                 .testTag(WRITE_MODE_TAG)
-                .heightIn(min = TARGET)
-                .widthIn(min = TARGET)
+                // As wide and high as [Halves] has it: 48 dp, and the leading half's height.
+                .fillMaxSize()
                 .clip(shape)
                 .background(container)
         if (!filled) arrow = arrow.border(ButtonDefaults.outlinedButtonBorder(enabled), shape)
@@ -276,6 +344,9 @@ const val STOP_TAG: String = "stop"
 
 /** The test tag of the leading half while a tap would do nothing: disabled. */
 const val NO_ACTION_TAG: String = "write-none"
+
+/** The test tag of the split button's two halves, together. */
+const val WRITE_HALVES_TAG: String = "write-halves"
 
 /** The test tag of the split button's arrow, which opens the menu of *Reactive*'s modes. */
 const val WRITE_MODE_TAG: String = "write-mode"
