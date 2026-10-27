@@ -165,6 +165,8 @@
     <string name="settings_font_summary">The app’s own font looks the same on every phone. The system font is the one chosen in your phone’s settings.</string>
     <string name="settings_intro">Logo intro at start</string>
     <string name="settings_intro_summary">When you open Sleevesight while it is not already open, its logo plays a few seconds of animation first; a tap, Back or any key skips it. It never plays while your phone’s Remove animations or TalkBack is on.</string>
+    <string name="settings_home_guide">Home guide</string>
+    <string name="settings_home_guide_summary">While nothing is playing, Home shows a small picture of itself while a track plays, with notes on what each part does.</string>
     <string name="settings_section_keys">Secrets</string>
     <string name="settings_scan_keys">Load keys</string>
     <string name="settings_scan_keys_value">Save several API keys at once from one QR code.</string>
@@ -313,6 +315,8 @@
     <string name="credits_exa">Exa</string>
     <string name="credits_exa_text">Web search results, under Exa’s terms of service.</string>
     <string name="credits_roboto">Roboto</string>
+    <string name="credits_caveat">Caveat</string>
+    <string name="credits_caveat_text">The hand-written font of the notes in Home’s guide, Caveat Regular, from github.com/googlefonts/caveat. Copyright 2014 The Caveat Project Authors.</string>
     <string name="credits_roboto_text">The app’s font, Roboto 3.016, from github.com/googlefonts/roboto-3-classic. Copyright 2011 The Roboto Project Authors.</string>
     <string name="credits_material_symbols">Material Symbols</string>
     <string name="credits_material_symbols_text">The icons in the app, such as the cogwheel, from Material Symbols by Google.</string>

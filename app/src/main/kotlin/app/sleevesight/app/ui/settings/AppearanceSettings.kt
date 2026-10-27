@@ -16,7 +16,8 @@ import app.sleevesight.core.settings.ThemeChoice
  * as you left them* (#269), off by default, so the *Sources* list under each new track's insight
  * starts folded; under *Expandable boxes* only, so it is shown, but not offered, under *Separate
  * pages*, where each page opens fresh. *Logo intro at start* (#383), from the next time the app is
- * opened.
+ * opened. *Home guide* (#627): whether Home, with nothing playing, shows the guide to Home, where
+ * its *Re-enable in Settings* lands.
  */
 @Composable
 internal fun AppearanceSection(
@@ -70,6 +71,14 @@ internal fun AppearanceSection(
         summary = stringResource(R.string.settings_intro_summary),
         checked = settings.introAtStart,
     ) { on -> update { it.copy(introAtStart = on) } }
+    // Where the home guide's *Re-enable in Settings* links to (#627).
+    LandingSpot(SettingsTarget.homeGuide) {
+        SwitchRow(
+            title = stringResource(R.string.settings_home_guide),
+            summary = stringResource(R.string.settings_home_guide_summary),
+            checked = settings.homeGuide,
+        ) { on -> update { it.copy(homeGuide = on) } }
+    }
 }
 
 /** *Layout* (#447): *Expandable boxes* or *Separate pages*, chosen in a dialog. */

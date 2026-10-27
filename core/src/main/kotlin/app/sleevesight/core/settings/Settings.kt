@@ -131,6 +131,9 @@ import kotlin.time.Duration.Companion.seconds
  *   while it is not open (not a return to it), plays one of the logo's intros before showing its
  *   screen. On by default: it is a few seconds, and a tap, Back or any key ends it; it never plays
  *   while the phone's *Remove animations* is on. Off, for someone who would rather not wait.
+ * @property homeGuide *Home guide* (#627): whether Home, with nothing playing, shows under the
+ *   players a small picture of Home while a track plays, with notes on what each part does. On by
+ *   default, for someone new to the app; its *Dismiss* hides it for a while, or switches this off.
  */
 data class Settings(
     val layout: Layout = Layout.EXPANDABLE_BOXES,
@@ -166,6 +169,7 @@ data class Settings(
     val theme: ThemeChoice = ThemeChoice.SYSTEM,
     val font: FontChoice = FontChoice.APP_FONT,
     val introAtStart: Boolean = true,
+    val homeGuide: Boolean = true,
 ) {
     init {
         require(cacheSizeLimit >= 0) { "The cache size limit must not be negative, was $cacheSizeLimit" }

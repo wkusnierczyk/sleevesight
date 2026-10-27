@@ -493,6 +493,27 @@ class LayoutPagesTest {
         }
 
     @Test
+    fun aPageWithNothingPlayingSaysSoAndLeavesThePlayersAndTheGuideToHome() =
+        show(state(long(), pages)) { current ->
+            compose.onNodeWithTag(SOURCES_PAGE_LINK_TAG).performScrollTo().performClick()
+            compose.waitForIdle()
+
+            // The track goes: the page says so, and draws neither Home's players nor its guide.
+            val read = state(long(), pages)
+            current.value = NowPlayingState(read.view, null, read.playback, settings = pages)
+            compose.waitForIdle()
+            title(text(R.string.home_sources_title))
+            compose.onNodeWithTag(PAGE_NOTHING_PLAYING_TAG).assertTextEquals(text(R.string.page_nothing_playing))
+            assertEquals(0, count(NOTHING_PLAYING_TAG))
+            assertEquals(0, count(HOME_GUIDE_TAG))
+
+            // Back on Home, the players and the guide.
+            back()
+            onHome()
+            compose.onNodeWithTag(NOTHING_PLAYING_TAG).assertExists()
+        }
+
+    @Test
     fun genresPageFollowsANewTrackAOneLevelTrackAndShowGenres() =
         show(state(long(), pages)) { current ->
             compose.onNodeWithTag(GENRE_PREFIX + "track:folkpop").performScrollTo().performClick()

@@ -131,9 +131,15 @@ class NowPlayingScreenTest {
     }
 
     @Test
-    fun nothingPlayingShowsTheIdleLine() =
-        show(NowPlayingState(PipelineView(track(insight = written("It is a song [MB1]."))), playing = null)) {
-            compose.onNodeWithText(text(R.string.home_placeholder)).assertIsDisplayed()
+    fun nothingPlayingShowsTheIdleHomeNotTheLastTrack() =
+        show(
+            NowPlayingState(
+                PipelineView(track(insight = written("It is a song [MB1]."))),
+                playing = null,
+                settings = Settings(),
+            ),
+        ) {
+            compose.awaitIdleHome()
             assertEquals(0, compose.onAllNodesWithTag(PLAYER_TAG).fetchSemanticsNodes().size)
         }
 

@@ -43,9 +43,20 @@ The header stays at the top while the rest of the screen scrolls under it; a thi
 
 At the bottom of the home screen, under a thin line, *What leaves the device?* opens the first-run screen again, to reread it. *What leaves the device*, under *About* in the settings, opens it too. Opened again, it has a back arrow at the top and *Close* at the bottom, which bring you back, as Android's back does.
 
+### Nothing playing
+
+While no player you follow has a track, the home screen shows the way to your music, and what it will show once a track plays.
+
+<!-- screenshot: the home screen with nothing playing: the players and the guide, from the app version it is taken from -->
+
+- **The players**, the same ones [*Players*]({{ '/docs/tutorials/settings/' | relative_url }}#players) lists, A to Z by name, each a row with the app's icon, *Play on …* and the open-in-new symbol. A tap opens the player as its launcher icon does; you start the music there, and the home screen fills in once it plays. A player that is switched off is dimmed and cannot be tapped; under its name, *Enable in Settings* opens the settings at *Players*. A screen reader reads it as "Play on Poweramp, not followed", then the link.
+- **No player listed.** While *Players* lists no player (Spotify, there by default, is not installed, and no other player has reported music), the screen says *No music player seen yet. Play music in one, and it is listed here and in Settings → Players.*, the last words a link to *Players*.
+- **The guide**, under the players: a small picture of the home screen while a track plays (*Blue in Green*, Miles Davis, *Kind of Blue*, 1959, an example, with a drawn cover), and beside it notes in a hand-written font, each with an arrow to the part it names: the cogwheel, *tap to configure*; the player, *tap to open*; the genre chips, *tap a genre for details*; the insight, *read about what's playing*; a citation, *follow to references*; the Write button, *generate an insight (paid)*; *Sources*, *read source information*. The picture is drawn by the app, in its theme and font, and cannot be tapped. The notes follow the phone's font size. A screen reader reads it as one image: "Home while a track plays:", then the notes in order, each after the part it points at ("Settings: tap to configure; Player: tap to open; …").
+- **Dismiss**, under the guide, a split button. The button says *Dismiss*; its arrow opens a menu of what it does: *Dismiss once*, the default, hides the guide until the next time nothing plays, after a track has played or when Sleevesight is started again; *Do not show again* switches [*Home guide*]({{ '/docs/tutorials/settings/' | relative_url }}#appearance) off. *Re-enable in Settings*, under them, opens the settings at *Home guide*, which brings the guide back.
+
 ### The playing track
 
-The track is shown straight on the home screen, with no box around it, its accents (the playback position, the labels, the buttons, the citation chips) in colours taken from its cover: the app picks the cover's most suitable colour and builds a colour scheme from it, light or dark as the phone is. Without a cover, the app's own colours are used. While no player you follow has a track, the screen says *Nothing playing in a player you follow yet.*
+The track is shown straight on the home screen, with no box around it, its accents (the playback position, the labels, the buttons, the citation chips) in colours taken from its cover: the app picks the cover's most suitable colour and builds a colour scheme from it, light or dark as the phone is. Without a cover, the app's own colours are used. While no player you follow has a track, the screen shows your players and the guide ([Nothing playing](#nothing-playing)).
 
 From top to bottom, the screen shows:
 
@@ -146,7 +157,7 @@ With *Separate pages*, the home screen is shorter, and each part opens a page of
 
 The insight itself stays on the home screen, in full, whichever layout is set.
 
-The back arrow, or Android's back, returns to where the page was opened from: the home screen, where you left it. Each page shows the track playing, and follows a new track. Each page opens fresh, so *Keep Sources as you left them* applies only to *Expandable boxes*. On the home screen, a screen reader reads the *Sources* chip and each genre chip by its name, and says that a double tap opens its page; a page's title is read as a heading.
+The back arrow, or Android's back, returns to where the page was opened from: the home screen, where you left it. Each page shows the track playing, and follows a new track; with nothing playing, it says *Nothing is playing in a player you follow.*, and the back arrow returns to the home screen, with your players. Each page opens fresh, so *Keep Sources as you left them* applies only to *Expandable boxes*. On the home screen, a screen reader reads the *Sources* chip and each genre chip by its name, and says that a double tap opens its page; a page's title is read as a heading.
 
 ## Writing an insight
 
@@ -232,7 +243,7 @@ The history is left out of Android's backup, and the app never sends it anywhere
 
 With several players followed, the home screen shows the one playing; with none playing, the one most recently active. A player that keeps more than one media session, as Spotify may while it plays to another device through Spotify Connect, is shown through the one playing, with its state and position; when it pauses, it stays shown, rather than the player's idle session. Spotify playing on another device (a car or a speaker, through Spotify Connect) shows as playing, its bar moving, while the Spotify app is open on the phone. With the Spotify app closed on the phone, Spotify tells the phone nothing of that playback, so Sleevesight shows nothing until you open Spotify on the phone.
 
-**Not followed.** To find your music players, Sleevesight looks at apps that report what they play (playing or paused) and checks whether it is music, a track with a title and an artist: from an app not switched on, it reads what the app says it is playing only until the app reports music, and then nothing more of what it plays until Sleevesight starts afresh (not each time you open it), or the app is uninstalled and installed again. A new player is added under *Players* switched off. Sleevesight does not follow a player that is off: it does not track what the player plays, it keeps or sends none of it, and the home screen does not show it. While only such players play, the home screen says *Nothing playing in a player you follow yet.*
+**Not followed.** To find your music players, Sleevesight looks at apps that report what they play (playing or paused) and checks whether it is music, a track with a title and an artist: from an app not switched on, it reads what the app says it is playing only until the app reports music, and then nothing more of what it plays until Sleevesight starts afresh (not each time you open it), or the app is uninstalled and installed again. A new player is added under *Players* switched off. Sleevesight does not follow a player that is off: it does not track what the player plays, it keeps or sends none of it, and the home screen does not show it. While only such players play, the home screen shows what it shows with nothing playing ([Nothing playing](#nothing-playing)), the player dimmed, with *Enable in Settings*.
 
 **Not supported.**
 
