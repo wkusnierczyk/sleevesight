@@ -21,6 +21,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
+import app.sleevesight.app.BuildConfig
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
@@ -88,12 +89,14 @@ class LogoPicturesTest {
 
     /**
      * [logo] is the one-line logo in [colors]: "Sleeve" in ink in the left 40%, "sight" in red after
-     * it, the record last, from the box's proportions in units (Sleeve to 44.99, sight from 46.94
-     * to 109.36, of 192.11).
+     * it, the record last (its rim and red label), or with [bug] the bug in ink in its place and no
+     * red there, from the box's proportions in units (Sleeve to 44.99, sight from 46.94 to 109.36,
+     * the record from 156.95, of 192.11).
      */
     private fun assertLogo(
         logo: Bitmap,
         colors: LogoColors,
+        bug: Boolean,
     ) {
         val part = { from: Float, to: Float ->
             val left = (logo.width * from).toInt()
@@ -102,22 +105,46 @@ class LogoPicturesTest {
         assertTrue("ink in Sleeve", part(0f, .4f).any { near(it, colors.ink) })
         assertTrue("no red in Sleeve", part(0f, .4f).none { near(it, colors.sight) })
         assertTrue("red in sight", part(.45f, .7f).any { near(it, colors.sight) })
-        assertTrue("the record's rim", part(.8f, 1f).any { near(it, colors.rim) })
+        if (bug) {
+            assertTrue("the bug's ink in the record's place", part(.8f, 1f).any { near(it, colors.ink) })
+            assertTrue("no record's red label", part(.8f, 1f).none { near(it, colors.sight) })
+        } else {
+            assertTrue("the record's rim", part(.8f, 1f).any { near(it, colors.rim) })
+            assertTrue("the record's red label", part(.8f, 1f).any { near(it, colors.sight) })
+        }
     }
 
     @Test
     fun theHeaderLogoIsSleeveInInkAndSightInRedWithTheRecord() {
         for (dark in listOf(false, true)) {
-            show(dark, { HeaderLogo(Modifier.testTag("logo"), height = HEADER_LOGO_HEIGHT * 3) }) {
+            show(dark, { HeaderLogo(Modifier.testTag("logo"), height = HEADER_LOGO_HEIGHT * 3, bug = false) }) {
                 val logo = compose.onNodeWithTag("logo").captureToImage().asAndroidBitmap()
                 keep("header-logo-${if (dark) "dark" else "light"}", logo)
-                assertLogo(logo, if (dark) LogoColors.Dark else LogoColors.Light)
+                assertLogo(logo, if (dark) LogoColors.Dark else LogoColors.Light, bug = false)
             }
         }
     }
 
     @Test
-    fun theHomeHeaderShowsTheLogo() {
+    fun theDebugLogoDrawsTheBugInTheRecordsPlace() {
+        for (dark in listOf(false, true)) {
+            show(dark, { HeaderLogo(Modifier.testTag("logo"), height = HEADER_LOGO_HEIGHT * 3, bug = true) }) {
+                val logo = compose.onNodeWithTag("logo").captureToImage().asAndroidBitmap()
+                keep("header-logo-bug-${if (dark) "dark" else "light"}", logo)
+                assertLogo(logo, if (dark) LogoColors.Dark else LogoColors.Light, bug = true)
+            }
+        }
+    }
+
+    /**
+     * Home's header as this build draws it by default: a debug build's draws the bug in the
+     * record's place (#652), a release build's the record. The unit tests run on the debug build
+     * only (the app has no `testReleaseUnitTest`), so here it is the bug; the release build's
+     * default is `BuildConfig.DEBUG`, false there, and the record it then draws is
+     * [theHeaderLogoIsSleeveInInkAndSightInRedWithTheRecord]'s.
+     */
+    @Test
+    fun theHomeHeaderShowsTheLogoWithTheBugInADebugBuildOnly() {
         for (dark in listOf(false, true)) {
             show(dark, {
                 HomeScreen(accessGranted = true, onOpenFirstRun = {}, onOpenSettings = {}) { Text("Now playing") }
@@ -143,7 +170,7 @@ class LogoPicturesTest {
                         width.toInt(),
                         height.toInt(),
                     )
-                assertLogo(logo, if (dark) LogoColors.Dark else LogoColors.Light)
+                assertLogo(logo, if (dark) LogoColors.Dark else LogoColors.Light, bug = BuildConfig.DEBUG)
             }
         }
     }
@@ -241,11 +268,12 @@ class LogoPicturesTest {
 private fun IntroOverHome(intro: LogoIntro) {
     val background = MaterialTheme.colorScheme.surface
     val colors = logoColors()
+    val bug = logoBug()
     CompositionLocalProvider(LocalLogoIntro provides intro) {
         Box(Modifier.fillMaxSize()) {
             HomeScreen(accessGranted = true, onOpenFirstRun = {}, onOpenSettings = {}) { Text("Now playing") }
             Canvas(Modifier.fillMaxSize()) {
-                if (!intro.finished) drawIntro(intro.variant, intro.elapsed, intro.target, background, colors)
+                if (!intro.finished) drawIntro(intro.variant, intro.elapsed, intro.target, background, colors, bug)
             }
         }
     }

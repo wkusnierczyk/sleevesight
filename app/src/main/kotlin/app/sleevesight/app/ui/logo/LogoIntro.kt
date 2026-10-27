@@ -25,6 +25,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.ClipOp
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.rotate
@@ -106,6 +107,7 @@ fun LogoIntroOverlay(
     if (intro.finished) return
     val background = MaterialTheme.colorScheme.surface
     val colors = logoColors()
+    val bug = logoBug()
     BackHandler { intro.skip() }
     val focus = remember { FocusRequester() }
     LaunchedEffect(focus) { focus.requestFocus() }
@@ -130,7 +132,7 @@ fun LogoIntroOverlay(
                 }
             },
     ) {
-        drawIntro(intro.variant, intro.elapsed, intro.target, background, colors)
+        drawIntro(intro.variant, intro.elapsed, intro.target, background, colors, bug)
     }
 }
 
@@ -232,14 +234,18 @@ private const val ONE_TURN_DEG = 360f
  * screen arrives; the splash; its flight onto [target], each part ("Sleeve"; "sight"; the record)
  * onto its own place in the one-line logo, so the stacked mark comes apart into the line as it
  * shrinks, or, with no header logo to land on (the first-run screen), fading where it is; and D's
- * record turning in on the header.
+ * record turning in on the header. With a [bug] ([logoBug], a debug build's, #652), the landed
+ * logo draws it in the record's place, as the header's does, so the hand-over does not jump; the
+ * splash and its flight keep the record.
  */
+@Suppress("LongParameterList")
 internal fun DrawScope.drawIntro(
     variant: IntroVariant,
     t: Float,
     target: Rect?,
     background: Color,
     colors: LogoColors,
+    bug: Path? = null,
 ) {
     drawRect(background, alpha = 1 - eased(t, variant.land, ARRIVE, EASE_OUT))
     val (origin, k) = splashPlace(variant, size)
@@ -271,9 +277,9 @@ internal fun DrawScope.drawIntro(
                 if (variant == IntroVariant.D) {
                     val p = eased(t, variant.land + D_RECORD_AT, D_RECORD_MS, TURN_IN)
                     val radius = LogoOutlines.RECORD_R * (D_GROW + (1 - D_GROW) * p)
-                    drawRecord(colors, RecordCentre, radius, -ONE_TURN_DEG * (1 - p), p)
+                    drawRecordPlace(colors, bug, RecordPose(RecordCentre, radius, -ONE_TURN_DEG * (1 - p), p))
                 } else {
-                    drawRecord(colors, RecordCentre)
+                    drawRecordPlace(colors, bug)
                 }
             }
         }
