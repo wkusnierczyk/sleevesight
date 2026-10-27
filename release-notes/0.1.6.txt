@@ -1,0 +1,10 @@
+What's new in 0.1.6:
+- Spotify playing on another device shows as playing.
+- Tapping the player opens Spotify.
+- Home: no panels around the track and insights.
+- Genres are chips; tap one to see where it comes from.
+- Write has a menu: now, on track change, or on skip.
+- When an AI model corrects itself, the draft is mostly hidden.
+- Settings: a badge on each service, and links to related settings.
+- A reinstalled player is listed again.
+- Developer mode marks what only it shows.
