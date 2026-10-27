@@ -176,15 +176,17 @@ class ExaWebSearch(
  * - `lite`: the cheapest type ($4 per 1000 against $7 for `auto`), on the same index as `auto`,
  *   served from the index without fetching pages at query time. It replaced `instant` (#584), which
  *   Exa 3.0 made legacy at the same price. In the spike `instant` was as relevant as `auto` on the
- *   fixture's tracks at a tenth of the latency; `lite` has not been compared live yet (#608).
+ *   fixture's tracks at a tenth of the latency; compared live with `instant` since (#608), `lite`
+ *   found the recording on far more of the fixture's tracks, at about the same speed.
  *   `lite` accepts only a restricted set of parameters and rejects a request with any other;
  *   every field here is in that set (`ExaWebSearchTest`).
  * - [numResults] 10, the most the base price covers, so the filter has enough to choose from: it
  *   kept 0 to 4 of 10 on the thin and same-title tracks. Highlights are not billed on top
  *   (`design/design.md`, *Web search provider (D11)*), so a search costs $0.004 by Exa's pricing.
  * - [excludeDomains]: [RecordingFilter.OWN_SOURCE_HOSTS], which the filter drops anyway.
- * - Highlights of at most 300 characters, steered by the title, the work it is from when there is
- *   one, and the artists: the snippet. Exa's results carry no snippet without a `contents` option.
+ * - Highlights asked for at 300 characters, steered by the title, the work it is from when there
+ *   is one, and the artists: the snippet. Exa's results carry no snippet without a `contents`
+ *   option. `maxCharacters` is not a cap: about three in ten came back longer, up to 3,000 (#608).
  * - The results are then judged by [RecordingFilter]: the song (and its work) and a distinctive
  *   credited artist named, and the result's own title not naming the artist without the song.
  */
