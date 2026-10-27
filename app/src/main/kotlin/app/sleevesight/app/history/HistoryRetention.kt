@@ -25,11 +25,17 @@ import kotlin.time.Duration.Companion.hours
  * when it runs, not when it was queued, so one waiting behind other writes when the lifetime is made
  * longer, or *Forever*, deletes by the new one. One that fails is reported by the recorder and
  * tried again at the next; the recorder skips them while the clock has moved.
+ *
+ * After each deletion, [trim] runs: the caches' purge, which deletes the insights and genre
+ * reasons written longer ago than the lifetime (#643), so they go with the history, at once when the
+ * lifetime is shortened and on the same [PERIOD], not only at the next start.
  */
 class HistoryRetention(
     private val recorder: HistoryRecorder,
     private val lifetime: Flow<Duration?>,
     private val scope: CoroutineScope,
+    // Before [forget], which a trailing lambda names.
+    private val trim: suspend () -> Unit = {},
     private val forget: suspend () -> Boolean = { true },
 ) {
     // The lifetime now, for the deletions already queued: they run on the I/O dispatcher.
@@ -44,6 +50,7 @@ class HistoryRetention(
             if (kept == null) return@collectLatest
             while (true) {
                 recorder.deleteOlderThan { current }
+                trim()
                 delay(PERIOD)
             }
         }

@@ -73,6 +73,28 @@ internal class HistoryRetentionTest : HistoryRecorderFixture() {
     }
 
     @Test
+    fun theCachesArePurgedAfterEachTrimAtStartOnAShorterLifetimeAndAfterEachPeriod() {
+        // #643: the insights and genre reasons past the lifetime go with the history, not only at
+        // the next start.
+        var trims = 0
+        val trimming = HistoryRetention(recorder, lifetime, scope, trim = { trims++ })
+        played("Old", base - 91.days)
+        scope.launch { trimming.run() }
+        assertEquals(listOf<String>(), rows())
+        assertEquals("at start, after the history's trim", 1, trims)
+
+        lifetime.value = 7.days
+        scheduler.runCurrent()
+        assertEquals("at once on a shorter lifetime", 2, trims)
+        atPeriod()
+        assertEquals("after each period", 3, trims)
+
+        lifetime.value = null
+        atPeriod(2)
+        assertEquals("none while kept for ever", 3, trims)
+    }
+
+    @Test
     fun theLifetimeIsCountedBackFromTodayEvenWhenNothingHasPlayedSince() {
         lifetime.value = 30.days
         played("Old", base - 40.days)

@@ -425,7 +425,9 @@ class AppGraph internal constructor(
 
     /**
      * *Keep history for* and *Clear history*, through the recorder, in the process's scope. *Clear
-     * history* also deletes everything else kept about the tracks played ([forgetTracks]).
+     * history* also deletes everything else kept about the tracks played ([forgetTracks]); each
+     * trim of the history also purges the caches ([purgeCaches]), so the insights and genre reasons
+     * past *Keep history for* go with it (#643).
      */
     val historyRetention =
         HistoryRetention(
@@ -433,6 +435,7 @@ class AppGraph internal constructor(
             latestSettings.filterNotNull().map { it.historyLifetime },
             mainScope,
             forget = ::forgetTracks,
+            trim = ::purgeCaches,
         )
 
     /**
@@ -565,11 +568,20 @@ class AppGraph internal constructor(
         // settings are read only then); reads never return them either way.
         mainScope.launch {
             latestSettings.filterNotNull().first()
-            try {
-                withContext(Dispatchers.IO) { caches.purgeExpired() }
-            } catch (e: SQLException) {
-                Log.w(TAG, "The cache could not be purged: ${e::class.simpleName}")
-            }
+            purgeCaches()
+        }
+    }
+
+    /**
+     * Deletes the caches' expired entries ([Caches.purgeExpired]): on start, and after each trim
+     * of the history, so the insights and genre reasons past *Keep history for* go with it (#643).
+     * One that fails is tried again at the next.
+     */
+    private suspend fun purgeCaches() {
+        try {
+            withContext(Dispatchers.IO) { caches.purgeExpired() }
+        } catch (e: SQLException) {
+            Log.w(TAG, "The cache could not be purged: ${e::class.simpleName}")
         }
     }
 
