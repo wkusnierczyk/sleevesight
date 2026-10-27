@@ -181,7 +181,8 @@ class ExaWebSearch(
  *   `lite` accepts only a restricted set of parameters and rejects a request with any other;
  *   every field here is in that set (`ExaWebSearchTest`).
  * - [numResults] 10, the most the base price covers, so the filter has enough to choose from: it
- *   kept 0 to 4 of 10 on the thin and same-title tracks. Highlights are not billed on top
+ *   kept 0 to 4 of 10 on the thin and same-title tracks with `instant` (2026-10-14), and 4 or 5
+ *   with `lite` (2026-10-27, #608). Highlights are not billed on top
  *   (`design/design.md`, *Web search provider (D11)*), so a search costs $0.004 by Exa's pricing.
  * - [excludeDomains]: [RecordingFilter.OWN_SOURCE_HOSTS], which the filter drops anyway.
  * - Highlights asked for at 300 characters, steered by the title, the work it is from when there
