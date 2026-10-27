@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.heightIn
@@ -24,6 +25,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -34,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -44,14 +47,25 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.settings.WRITING_MODES
 import app.sleevesight.app.ui.settings.writingModeName
 import app.sleevesight.core.settings.WriteAutomatically
 
-/** Each half's height, and the arrow's least width: the touch target Android's accessibility guidance asks for. */
+/**
+ * Each half's height as drawn (#624): as tall as Home's chips, or the label's line where a large font
+ * makes that taller. Each answers a tap across 48 dp.
+ */
+private val HEIGHT = 32.dp
+
+/** The arrow's least width as drawn: the touch target Android's accessibility guidance asks for. */
 private val TARGET = 48.dp
+
+/** The room inside the leading half, at each side of its label: as in Home's chips. */
+private val PADDING = PaddingValues(horizontal = 12.dp)
 
 /** The corner where the two halves meet, as Material 3's split button has it. */
 private val INNER_CORNER = CornerSize(4.dp)
@@ -94,7 +108,9 @@ internal class WritingChoice(
  *
  * A screen reader reads the leading half as its action, the arrow as *Writing mode: <mode>* (with
  * *paused* while *Saver* has paused it), a drop-down list, and the menu's modes as one choice among
- * them, the chosen one selected. Each half is at least 48 dp high, the arrow 48 dp wide. Choosing an
+ * them, the chosen one selected. Each half is drawn 32 dp high, as Home's chips are, and answers a
+ * tap across 48 dp; the arrow is 48 dp wide. Each Write ends in the **AI** mark ([AiLabel], #624),
+ * read as "<label>, uses AI"; *Stop* and the arrow, which make no call, do not. Choosing an
  * automatic mode other than the one chosen says that each new track's insight is a paid call;
  * choosing *Now*, or the mode already chosen, says nothing.
  *
@@ -113,8 +129,15 @@ internal fun WriteSplitButton(
     val paused = writing != null && writing.paused && writing.mode != WriteAutomatically.NEVER
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
         Row(horizontalArrangement = Arrangement.spacedBy(GAP), verticalAlignment = Alignment.CenterVertically) {
-            Leading(offer, filled, if (offer.stop) onStop else onWrite)
-            ModeArrow(filled, writing, paused)
+            // One height for both halves: 32 dp, or the label's own where a large font makes it taller
+            // (the mark is kept within the label's line, so it does not add to it).
+            val measurer = rememberTextMeasurer()
+            val style = MaterialTheme.typography.labelLarge
+            val text = stringResource(offer.label)
+            val line = remember(measurer, style, text) { measurer.measure(text, style, maxLines = 1).size.height }
+            val height = maxOf(HEIGHT, with(LocalDensity.current) { line.toDp() })
+            Leading(offer, filled, height, if (offer.stop) onStop else onWrite)
+            ModeArrow(filled, writing, paused, height)
         }
         if (paused) {
             Text(
@@ -132,6 +155,7 @@ internal fun WriteSplitButton(
 private fun Leading(
     offer: CardOffer,
     filled: Boolean,
+    height: Dp,
     onClick: () -> Unit,
 ) {
     val shape = RoundedCornerShape(OUTER_CORNER, INNER_CORNER, INNER_CORNER, OUTER_CORNER)
@@ -141,13 +165,16 @@ private fun Leading(
             offer.stop -> STOP_TAG
             else -> WRITE_TAG
         }
-    val modifier = Modifier.testTag(tag).heightIn(min = TARGET)
+    // Drawn [height] high, at least; the button itself answers a tap across 48 dp.
+    val modifier = Modifier.testTag(tag).heightIn(min = height)
     val enabled = offer.enabled
-    val label: @Composable () -> Unit = { Text(stringResource(offer.label)) }
+    val text = stringResource(offer.label)
+    // Every Write calls the AI service, a disabled one included; Stop does not (#624).
+    val label: @Composable () -> Unit = { if (offer.usesAi) AiLabel(text) else Text(text) }
     if (filled) {
-        Button(onClick = onClick, modifier = modifier, enabled = enabled, shape = shape) { label() }
+        Button(onClick, modifier, enabled, shape = shape, contentPadding = PADDING) { label() }
     } else {
-        OutlinedButton(onClick = onClick, modifier = modifier, enabled = enabled, shape = shape) { label() }
+        OutlinedButton(onClick, modifier, enabled, shape = shape, contentPadding = PADDING) { label() }
     }
 }
 
@@ -158,6 +185,7 @@ private fun ModeArrow(
     filled: Boolean,
     writing: WritingChoice?,
     paused: Boolean,
+    height: Dp,
 ) {
     var open by remember { mutableStateOf(false) }
     val enabled = writing?.enabled == true
@@ -176,7 +204,8 @@ private fun ModeArrow(
         var arrow =
             Modifier
                 .testTag(WRITE_MODE_TAG)
-                .heightIn(min = TARGET)
+                .minimumInteractiveComponentSize()
+                .heightIn(min = height)
                 .widthIn(min = TARGET)
                 .clip(shape)
                 .background(container)

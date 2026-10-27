@@ -20,6 +20,12 @@ internal class CardOffer(
 ) {
     /** A Write the pipeline offers: drawn filled, the card's call to act. */
     val invites: Boolean get() = enabled && !stop
+
+    /**
+     * Whether a tap calls the AI service, so the label carries the **AI** mark (#624): every Write,
+     * a disabled one included; not *Stop*.
+     */
+    val usesAi: Boolean get() = !stop
 }
 
 /**
