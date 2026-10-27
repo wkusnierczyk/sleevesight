@@ -95,9 +95,10 @@ class SettingsLinks(
  * notification access is on, and on [Home] after that. Continuing needs access on, so the
  * first-run screen is seen even when access was granted in Settings before the app was opened.
  * [Home] itself sends the user to [FirstRun] until they have continued past it, so no other way in
- * (a deep link, a restored back stack) skips it; nor do [SettingsPage], which [settings] draws,
- * given the ways to [CreditsPage] and [DiagnosticsPage], [CreditsPage], and [DiagnosticsPage],
- * which [diagnostics] draws, given the way back to the settings. [Home] shows the pipeline's state,
+ * (a deep link, a restored back stack) skips it; nor do [SettingsPage] and [SettingsAt], which
+ * [settings] draws, given the ways to [CreditsPage] and [DiagnosticsPage] and, for [SettingsAt],
+ * the setting to land on; [CreditsPage]; and [DiagnosticsPage], which [diagnostics] draws, given
+ * the way back to the settings. [Home] shows the pipeline's state,
  * as [pipeline] draws it, given the way to the settings and to Home's pages, and, with a
  * [testerReport] feed, the tester's report button while its settings show it (#452); each of
  * [HomePage]'s pages (#447) shows an item of it on a page of its own, as [page] draws it, and goes
