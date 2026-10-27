@@ -46,7 +46,7 @@ Anthropic's prices are for prompts of up to 100,000 tokens; an insight's prompt 
 
 ## What a track costs, worked through
 
-**The insight.** With the default settings (*On track change*, the default model, low reasoning effort), an insight took on average 1,051 tokens in and 157 out, measured with the pipeline's command-line tool over 90 insights (four albums and playlists, twice; 25 October 2026, Claude Haiku 5.5, web search off). At Claude Haiku 5.5's prices, that is about $0.0002 an insight, two hundredths of a cent:
+**The insight.** With the default settings (*On track change (auto)*, the default model, low reasoning effort), an insight took on average 1,051 tokens in and 157 out, measured with the pipeline's command-line tool over 90 insights (four albums and playlists, twice; 25 October 2026, Claude Haiku 5.5, web search off). At Claude Haiku 5.5's prices, that is about $0.0002 an insight, two hundredths of a cent:
 
 - 1,051 tokens in at $0.10 per million: $0.000105;
 - 157 tokens out at $0.50 per million: $0.000079.
@@ -74,7 +74,7 @@ Tracks played before cost less: a track looked up again within the day costs no 
 
 ## How to spend less
 
-- **Write fewer insights.** *Reactive*'s *On track skip* writes only the tracks you skip to, and *Now* only those you tap *Write insight* for ([Insights]({{ '/docs/tutorials/settings/#insights' | relative_url }})). Even under *On track change*, nothing is written until your first tap after the app starts, and *Saver* pauses automatic writing after a few track changes away ([*Automatic writing*]({{ '/docs/tutorials/usage/#automatic-writing' | relative_url }})). *Stop* ends the writing, but once the request has reached the AI service, it may still charge for it.
+- **Write fewer insights.** *Reactive*'s *On track skip (auto)* writes only the tracks you skip to, and *On demand* only those you tap *Write insight* for ([Insights]({{ '/docs/tutorials/settings/#insights' | relative_url }})). Even under *On track change (auto)*, nothing is written automatically until your first action after the app starts (a tap on *Write insight*, or a mode chosen), and *Saver* pauses automatic writing after a few track changes away; opening the app resumes it, but the track playing then is written only on a tap ([*Automatic writing*]({{ '/docs/tutorials/usage/#automatic-writing' | relative_url }})). *Stop writing* ends the call at once; if the request has reached your AI service, it still charges for what it has read and written so far.
 - **Play tracks again.** A track played again costs less, often nothing, as above.
 - **A cheaper model, or less reasoning.** The model and the reasoning effort are under [AI services]({{ '/docs/tutorials/settings/#ai-services' | relative_url }}); the defaults are each service's cheapest current model and a low effort, and an older model the service still lists may cost less, as the table shows.
 - **Web search off.** Exa's searches are made for every track looked up, whatever *Reactive* says, so turning *Exa web search* off under [Sources]({{ '/docs/tutorials/settings/#sources' | relative_url }}) saves the most; the other sources still find what they can.

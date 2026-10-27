@@ -182,7 +182,7 @@ data class Settings(
         }
     }
 
-    /** Whether *Reactive* writes automatically: *On track change* or *On track skip*, not *Now*. */
+    /** Whether *Reactive* writes automatically: *On track change (auto)* or *On track skip (auto)*, not *On demand*. */
     val writesAutomatically: Boolean get() = writeAutomatically != WriteAutomatically.NEVER
 
     /**
@@ -593,9 +593,10 @@ enum class Layout {
 }
 
 /**
- * *Reactive* (D5): which track changes write an insight without a tap. Shown as *On track change*,
- * *On track skip* and *Now* (#615: *Now* was *Manual*, *On track skip* was *On skip*); the stored
- * names stay as they are.
+ * *Reactive* (D5): which track changes write an insight without a tap. Shown as *On track change
+ * (auto)*, *On track skip (auto)* and *On demand* (#625; #615: *On demand* was *Now*, and *Manual*
+ * before it, *On track skip (auto)* was *On track skip*, and *On skip* before it); the stored names
+ * stay as they are.
  */
 enum class WriteAutomatically {
     ON_EVERY_TRACK_CHANGE,

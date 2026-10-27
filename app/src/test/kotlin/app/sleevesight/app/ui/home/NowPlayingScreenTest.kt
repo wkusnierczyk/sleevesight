@@ -189,14 +189,14 @@ class NowPlayingScreenTest {
         show(state(PipelineView(offered, aiReady = true, writeKey = sundownKey, lapsed = true))) {
             compose
                 .onNodeWithText(
-                    text(R.string.home_insight_paused, "Write on change"),
+                    text(R.string.home_insight_resumed),
                 ).performScrollTo()
                 .assertIsDisplayed()
             compose.onNodeWithText(text(R.string.home_insight_tap_write)).assertDoesNotExist()
             compose.onNodeWithTag(WRITE_TAG).assertExists()
         }
         show(state(PipelineView(offered, aiReady = true, writeKey = sundownKey))) {
-            compose.onNodeWithText(text(R.string.home_insight_paused, "Write on change")).assertDoesNotExist()
+            compose.onNodeWithText(text(R.string.home_insight_resumed)).assertDoesNotExist()
             compose.onNodeWithText(text(R.string.home_insight_tap_write)).performScrollTo().assertIsDisplayed()
         }
     }
@@ -256,8 +256,9 @@ class NowPlayingScreenTest {
         }
         writes = 0
         show(state(PipelineView(failed, aiReady = true, retry = true, writeKey = sundownKey))) {
-            compose.onNodeWithText(text(R.string.home_insight_failed, reason)).assertExists()
-            compose.onNodeWithText(text(R.string.home_insight_retry)).assertExists()
+            // One line: why, and that Write insight tries again (#625).
+            compose.onNodeWithText(text(R.string.home_insight_failed_retry, reason)).assertExists()
+            compose.onNodeWithText(text(R.string.home_insight_failed, reason)).assertDoesNotExist()
             compose.onNodeWithTag(WRITE_TAG).performScrollTo().performClick()
             assertEquals(1, writes)
             assertEquals(sundownKey to sundown, tapped)

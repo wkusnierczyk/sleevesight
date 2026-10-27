@@ -19,6 +19,7 @@ import app.sleevesight.core.pipeline.TrackChange
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.settings.PrepareNextTrack
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.settings.WriteAutomatically
 import app.sleevesight.wiring.SourceKeys
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -49,6 +50,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -91,14 +93,17 @@ import kotlin.coroutines.cancellation.CancellationException
  *   and the playing track's are then asked again.
  * @property lapsed whether the Write offered is offered only because automatic writing paused
  *   ([CoordinatorState.lapsed], #203): the app was not on screen for more track changes than
- *   *Saver* names, so the first action expired, and a tap resumes it.
- * @property paused whether automatic writing is paused by *Saver* ([CoordinatorState.expired],
- *   #203): the first action expired, and nothing is written without a tap until the user acts
- *   again. The insight card (#615) shows it as *Paused*, whether or not Write is offered ([lapsed]).
- * @property waiting whether automatic writing waits for a tap (#615): no first action since the
- *   app started ([CoordinatorState.acted], D5), or *Saver* has paused it ([paused]). A tap on the
- *   Write offered then writes the track and starts or resumes automatic writing; the insight card
- *   labels it with the mode (*Write on change*, *Write on skip*).
+ *   *Saver* names, so the first action expired, and this track came to play while it was. Opening
+ *   Sleevesight resumes automatic writing (#625), and the insight card says this track was not
+ *   written.
+ * @property followed whether the Write offered is offered only because the track followed the last
+ *   one by itself, which *On track skip (auto)* does not write on ([CoordinatorState.followed],
+ *   #625); the insight card says so.
+ * @property waiting whether automatic writing waits for the user (#615): no first action since the
+ *   app started ([CoordinatorState.acted], D5), *Saver* has paused it, or the track playing is
+ *   written only on a tap: it came to play before the first action or while it was paused, or a
+ *   mode was chosen while it played ([CoordinatorState.waitsForTap], `Report.tapOnly`, #625). The
+ *   insight card then does not say that it writes automatically.
  */
 data class PipelineView(
     val track: TrackState? = null,
@@ -112,7 +117,7 @@ data class PipelineView(
     val stopCall: CallId? = null,
     val offline: Boolean = false,
     val lapsed: Boolean = false,
-    val paused: Boolean = false,
+    val followed: Boolean = false,
     val waiting: Boolean = false,
 )
 
@@ -152,8 +157,8 @@ class PipelineKeys(
  * one that each track change is recorded with (D15).
  *
  * *Saver* reaches the coordinator as `PauseAutoWriteChanged`, from the
- * settings as *Look up in the background* does (#203), and *Reactive* to or from *Now* as
- * `AutomaticWritingChanged` (#553), so a run's settings, read when it started, are narrowed by a
+ * settings as *Look up in the background* does (#203), and *Reactive*'s mode as
+ * `WritingModeChanged` (#553, #625), so a run's settings, read when it started, are narrowed by a
  * change made while it runs.
  *
  * [online] is whether the phone is online (its default network has validated internet access),
@@ -181,6 +186,9 @@ class PipelineHost(
     private val epoch: ClearEpoch = ClearEpoch(),
 ) {
     private val queue = Channel<CoordinatorEvent>(Channel.UNLIMITED)
+
+    // The choices of *Reactive*'s mode made in this process, counted (#625).
+    private val choices = AtomicLong()
 
     // The callers of [forget] waiting for the loop to take their clear, in order.
     private val forgetting = ConcurrentLinkedQueue<CompletableDeferred<Unit>>()
@@ -278,6 +286,21 @@ class PipelineHost(
     }
 
     /**
+     * The user chose [mode] for *Reactive* (#625), in the insight card's menu or in the settings,
+     * the mode chosen already included. It applies from the next track: the track playing is
+     * written only on a tap. An automatic one is the first action (D5), so automatic writing
+     * starts, or resumes, with the next track. The setting is saved apart: the function returned
+     * is told what the store holds once that save has ended ([CoordinatorEvent.ModeChoiceSettled],
+     * null when it could not be read), and the mode selected becomes the narrower of the choice and
+     * what the store holds. Until then this choice is the mode selected, whatever the store emits.
+     */
+    fun modeChosen(mode: WriteAutomatically): (WriteAutomatically?) -> Unit {
+        val choice = choices.incrementAndGet()
+        queue.trySend(CoordinatorEvent.ModeChosen(mode, choice))
+        return { stored -> queue.trySend(CoordinatorEvent.ModeChoiceSettled(choice, stored)) }
+    }
+
+    /**
      * The user tapped Stop offered for [call] ([PipelineView.stopCall]): the coordinator stops that
      * model call if it is still under way, and no other. Unlike a tap on Write, it is never dropped
      * for a track left meanwhile: stopping spends nothing.
@@ -323,10 +346,10 @@ class PipelineHost(
                 }
             }
             launch {
-                // *Reactive* to or from *Now* (#553; the insight card's menu, #615), so a run started
-                // before it was turned off does not write without a tap.
-                latest.map { it.writesAutomatically }.distinctUntilChanged().collect {
-                    queue.send(CoordinatorEvent.AutomaticWritingChanged(it))
+                // *Reactive*'s mode (#553, #625; the insight card's menu, #615), so a run started
+                // before it changed writes only on what the mode now selected writes on.
+                latest.map { it.writeAutomatically }.distinctUntilChanged().collect {
+                    queue.send(CoordinatorEvent.WritingModeChanged(it))
                 }
             }
             launch {
@@ -666,7 +689,7 @@ class PipelineHost(
                 stopCall = owner.stopCall,
                 offline = !owner.online,
                 lapsed = owner.lapsed,
-                paused = owner.expired,
+                followed = owner.followed,
                 waiting = owner.waitsForTap,
             )
         }.collect {

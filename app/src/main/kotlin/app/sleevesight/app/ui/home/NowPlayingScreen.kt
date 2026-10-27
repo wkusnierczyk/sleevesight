@@ -34,6 +34,8 @@ import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.settings.Layout
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WriteAutomatically
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -50,7 +52,8 @@ import kotlinx.coroutines.flow.StateFlow
  * @property unavailableModel the switched-on AI service's model, while it is found unavailable
  *   (#540): no insight is written with it, and the card says so.
  * @property chooseWritingMode saves a mode chosen in the insight card's menu of *Reactive*'s modes
- *   (#615), as *Reactive*.
+ *   (#615), as *Reactive*, and tells the pipeline, where an automatic mode is the first action (#625);
+ *   its result says whether it was saved.
  * @property installedPlayers the players' icons, whether the phone shows them, and the players seen,
  *   for the players listed while nothing plays (#627); null lists every stored player, without an
  *   icon.
@@ -73,7 +76,7 @@ class HomeFeed(
     val stop: (CallId) -> Unit,
     val playerLaunch: (String) -> Intent? = { null },
     val unavailableModel: StateFlow<UnavailableModel?> = MutableStateFlow(null),
-    val chooseWritingMode: (WriteAutomatically) -> Unit = {},
+    val chooseWritingMode: (WriteAutomatically) -> Deferred<Boolean> = { CompletableDeferred(true) },
     val installedPlayers: InstalledPlayers? = null,
     val guideDismissed: StateFlow<Boolean> = MutableStateFlow(false),
     val dismissGuide: () -> Unit = {},
@@ -189,7 +192,7 @@ internal class NowPlayingActions(
     val openSettings: () -> Unit = {},
     val openPage: (HomePage) -> Unit = {},
     val openSettingsAt: (SettingsTarget) -> Unit = { openSettings() },
-    val chooseWritingMode: (WriteAutomatically) -> Unit = {},
+    val chooseWritingMode: (WriteAutomatically) -> Deferred<Boolean> = { CompletableDeferred(true) },
     val installedPlayers: InstalledPlayers? = null,
     val dismissGuide: () -> Unit = {},
     val hideGuide: () -> Unit = {},
@@ -280,7 +283,7 @@ internal fun NowPlayingContent(
                     reporting = Reported(reportedTrack, written)
                 },
                 shown.details,
-                settings?.let { writingChoice(it, view, actions) },
+                settings?.let { writingChoice(it, actions) },
             )
             if (settings != null) SourcesItem(pages, shown, focus, fold, actions)
         }
@@ -321,25 +324,22 @@ private fun insightContext(
             retry = view.retry && track != null,
             stop = view.stopCall != null && track != null,
             paused = view.lapsed && track != null,
+            followed = view.followed && track != null,
         ),
     unavailable = unavailable.takeIf { settings?.writeInsights != false },
     mode = settings?.writeAutomatically,
     waiting = view.waiting,
-    paused = view.paused,
     cardShown = view.cardShown && track != null,
     rewriteFailed = view.rewriteFailed.takeIf { track != null },
 )
 
-// The insight card's menu of *Reactive*'s modes (#615): the mode chosen, paused while *Saver* has
-// paused automatic writing, and fixed while *Show insights* is off; its last item opens the settings
-// at *Reactive*.
+// The insight card's menu of *Reactive*'s modes (#615): the mode chosen, fixed while *Show
+// insights* is off; its last item opens the settings at *Reactive*.
 private fun writingChoice(
     settings: Settings,
-    view: PipelineView,
     actions: NowPlayingActions,
 ) = WritingChoice(
     mode = settings.writeAutomatically,
-    paused = view.paused,
     enabled = settings.writeInsights,
     onChoose = actions.chooseWritingMode,
     onDetails = { actions.openSettingsAt(SettingsTarget.reactive) },

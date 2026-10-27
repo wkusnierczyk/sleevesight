@@ -15,6 +15,7 @@ import app.sleevesight.core.pipeline.RunKey
 import app.sleevesight.core.pipeline.RunStep
 import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.settings.WriteAutomatically
 
 /** A card paid for: the insight written and checked, and the evidence it cites. */
 data class Card(
@@ -25,7 +26,7 @@ data class Card(
 /**
  * What decides, from a run's settings, whether it writes without a tap: the causes *Reactive*
  * writes on ([writesOn], `AutoWrite.causes`: none while *Show insights* is off or
- * under *Now*), and whether the model's own knowledge is allowed ([allowModel]), which decides
+ * under *On demand*), and whether the model's own knowledge is allowed ([allowModel]), which decides
  * whether the evidence has anything to narrate (`EvidenceSet.nothingToNarrate`).
  */
 data class WriteSettings(
@@ -78,7 +79,10 @@ sealed interface CoordinatorEvent {
     /**
      * An activity started (`MainActivity.onStart`). Never the app opening on its own: a return to
      * the app, the screen turned on, keeps the first action ([CoordinatorState.acted]), and starts
-     * the count of track changes away again ([CoordinatorState.away], #203).
+     * the count of track changes away again ([CoordinatorState.away], #203). A first action that
+     * expired is made again (#625): opening Sleevesight resumes the automatic writing *Saver*
+     * paused, though not for a track that came to play while it was paused
+     * ([CoordinatorState.Report.whilePaused]).
      */
     data object ActivityStarted : CoordinatorEvent
 
@@ -102,13 +106,49 @@ sealed interface CoordinatorEvent {
     ) : CoordinatorEvent
 
     /**
-     * *Reactive* (D5) moved to or from *Now* (#553; also the insight card's menu, #615): [automatic]
-     * while it writes automatically. It only narrows a run's settings, read when the run started:
-     * off, no run writes without a tap from then on; on, a run started under *Now* still does
-     * not.
+     * *Reactive* (D5) as the settings now hold it (#553, #625; also the insight card's menu, #615):
+     * [mode]. It only narrows a run's settings, read when the run started: a decision writes only
+     * on a cause both the run's settings and the mode now selected write on, so *On demand* stops
+     * every run writing without a tap, and *On track skip (auto)* stops a run started under *On
+     * track change (auto)* writing a track that followed the last one by itself; a run started
+     * under *On demand* still writes nothing. It sets the mode selected only until the user first
+     * chooses one in this process ([ModeChosen]): from then on the choices, and what the store holds
+     * after each one's save ([ModeChoiceSettled]), are the one source of it, so a late emission of
+     * an earlier choice's save can never widen it again.
      */
-    data class AutomaticWritingChanged(
-        val automatic: Boolean,
+    data class WritingModeChanged(
+        val mode: WriteAutomatically,
+    ) : CoordinatorEvent
+
+    /**
+     * The user chose [mode] for *Reactive* (#625), in the insight card's menu or in the settings,
+     * the one chosen already included. It applies from the next track: the track playing, written
+     * or not, decided or still looked up, is written only on a tap ([CoordinatorState.Report.tapOnly]).
+     * "The next track" is the next one the coordinator hears of after the choice, even if the session
+     * layer had already published it: the coordinator only knows a track once it is reported.
+     * An automatic mode is the first action (D5), so automatic writing starts, or resumes, with the
+     * next track; *On demand* acts on nothing. The mode now selected is [mode] at once, and stays
+     * so whatever [WritingModeChanged] says until [ModeChoiceSettled] for this [choice], the
+     * host's count of choices, says what the store holds.
+     */
+    data class ModeChosen(
+        val mode: WriteAutomatically,
+        val choice: Long = 1,
+    ) : CoordinatorEvent {
+        val automatic: Boolean get() = mode != WriteAutomatically.NEVER
+    }
+
+    /**
+     * The save of choice [choice] ([ModeChosen]) ended, saved or not, and the store then held
+     * [stored] (null when it could not be read). For the latest choice the mode selected becomes
+     * the narrower of the choice and [stored] (the one that writes on fewer causes): a save that
+     * failed never leaves the coordinator writing more than the user chose, nor more than the store,
+     * and so the menu, says; an unreadable store keeps the choice. For an earlier choice, nothing:
+     * a later choice is the user's word.
+     */
+    data class ModeChoiceSettled(
+        val choice: Long,
+        val stored: WriteAutomatically?,
     ) : CoordinatorEvent
 
     /** A key, a web engine or the AI service changed: a new pipeline is needed. */
@@ -135,7 +175,7 @@ sealed interface CoordinatorEvent {
     /**
      * Run [run] has its evidence and could write its insight; [writesOn] are the causes of a change
      * that *Reactive* writes on, once the user has acted, under the run's
-     * settings (`AutoWrite.causes`: none while *Show insights* is off or under *Now*), and
+     * settings (`AutoWrite.causes`: none while *Show insights* is off or under *On demand*), and
      * [allowModel] whether its settings allow the model's own knowledge (#192: a run that asks
      * again writes without a tap only under the settings the track was decided under).
      */
@@ -320,9 +360,14 @@ sealed interface CoordinatorEffect {
  * action, and once it passes [pauseAfter] (*Saver*; null for *Off*), at
  * the next change after that many, the first action, if made, expires: [acted] false and
  * [expired] true, until the user acts again, and a tap kept for the run (#192) is dropped. An
- * activity start resets [away], not [expired]. [automatic] is *Reactive* as last reported, writing
- * automatically or not (#553): off, no decision writes without a tap, whatever the run's own
- * settings, read when it started, say. [ledger] is the insight of the current insight
+ * activity start resets [away], and makes an expired first action again: opening Sleevesight
+ * resumes automatic writing (#625), though not for a track that came to play while it was paused
+ * ([Report.whilePaused]). Choosing an automatic mode is the first action too
+ * ([CoordinatorEvent.ModeChosen]), from the next track. [mode] is *Reactive* as reported before
+ * the first choice in this process, then as chosen, and as the store held once the latest
+ * choice's save ended ([chosen], the latest choice; #553, #625; null before either, which narrows nothing): no decision writes on a cause
+ * it does not write on ([modeWrites]), whatever the run's own settings, read when it started, say;
+ * [automatic] while it writes on any. [ledger] is the insight of the current insight
  * track ([Ledger]). [building] is the rebuild waiting to be swapped in, and [built] its outcome
  * once it is known. [next] is the track to prepare ahead (D13), [preparation] the preparation in progress, and [prepared] the
  * track whose preparation ended on the live pipeline, so it is not prepared again. [online] is
@@ -341,7 +386,8 @@ data class CoordinatorState(
     val pauseAfter: Int? = null,
     val away: Int = 0,
     val expired: Boolean = false,
-    val automatic: Boolean = true,
+    val mode: WriteAutomatically? = null,
+    val chosen: Long = 0,
     val latest: Report? = null,
     val run: Run? = null,
     val ledger: Ledger? = null,
@@ -419,13 +465,27 @@ data class CoordinatorState(
             }
     }
 
-    /** The latest report: its number, track and cause, and whether its debounce has passed. */
+    /**
+     * The latest report: its number, track and cause, and whether its debounce has passed.
+     * [tapOnly] when its track is written only on a tap (#625): it came to play before the first
+     * action since the app started, or while that action was expired, or a mode was chosen while it
+     * played. Automatic writing, started or resumed since, applies from the next track, so no
+     * decision for it writes, whether made before the action or after. [whilePaused] when the
+     * reason is that it came to play while automatic writing was paused ([expired], #203), so the
+     * card says so once opening Sleevesight has resumed it. [follows] when it followed another
+     * insight track reported before, not the first report of the process. A report of the insight
+     * track reported before keeps all three; an action in Sleevesight, or a tap on the Write
+     * offered for it, clears the first two.
+     */
     data class Report(
         val seq: Long,
         val key: RunKey,
         val nowPlaying: NowPlaying,
         val cause: ChangeCause,
         val settled: Boolean = false,
+        val tapOnly: Boolean = false,
+        val whilePaused: Boolean = false,
+        val follows: Boolean = false,
     )
 
     /**
@@ -447,7 +507,9 @@ data class CoordinatorState(
      * run is kept ([tapped]), through further replacements, and answers its question as a tap.
      * [lapsed] when it offers Write only because the first action expired (#203): it would have
      * written had the first action stood, or it asks again for a key whose decision was paused
-     * ([Ledger.paused]) under its own settings and cause.
+     * ([Ledger.paused]) under its own settings and cause. [followed] when it offers Write only
+     * because its track followed the last one by itself, a cause its settings do not write on
+     * (*On track skip (auto)*, #625), the first action made.
      */
     data class Run(
         val id: RunId,
@@ -467,6 +529,7 @@ data class CoordinatorState(
         val keepsTap: Boolean = false,
         val tapped: Boolean = false,
         val lapsed: Boolean = false,
+        val followed: Boolean = false,
     )
 
     /**
@@ -480,6 +543,12 @@ data class CoordinatorState(
     )
 
     val visible: Boolean get() = started > 0 || restarting
+
+    /** Whether *Reactive* writes automatically, as last reported or chosen ([mode]; unknown counts as yes). */
+    val automatic: Boolean get() = mode != WriteAutomatically.NEVER
+
+    /** Whether the mode now selected writes on [cause] ([mode]; unknown narrows nothing). */
+    fun modeWrites(cause: ChangeCause): Boolean = mode?.let { cause in AutoWrite.causes(it) } ?: true
 
     val allowed: Boolean get() = acknowledged && (visible || background)
 
@@ -556,19 +625,29 @@ data class CoordinatorState(
     fun rewrites(): Boolean = current?.let { it.offered && !it.calling && written(it.nowPlaying) != null } == true
 
     /**
-     * Whether the Write offered is offered only because the first action expired (#203): the
-     * current run's decision would have written had it stood, and the user has not acted since.
-     * Never under *Now* ([automatic], #553): a tap there resumes nothing. [expired] alone says
-     * whether automatic writing is paused, for the insight card's *Paused*.
+     * Whether the Write offered is offered only because automatic writing was paused (#203): the
+     * current run's decision would have written had the first action stood, and nothing has
+     * written it since. It stays so once opening Sleevesight has resumed automatic writing (#625),
+     * so the insight card says why this track was not written. Never under *On demand*
+     * ([automatic], #553), where nothing would have written.
      */
     val lapsed: Boolean
-        get() = expired && automatic && current?.takeIf { it.offered && !it.calling }?.lapsed == true
+        get() = automatic && current?.takeIf { it.offered && !it.calling }?.lapsed == true
 
     /**
-     * Whether automatic writing waits for a tap (#615): no first action since the app started
-     * ([acted], D5), or it expired after *Saver*'s count ([expired]).
+     * Whether the Write offered is offered only because the track followed the last one by itself,
+     * which the mode does not write on (*On track skip (auto)*, #625): the current run's
+     * [Run.followed]. Never under *On demand* ([automatic]).
      */
-    val waitsForTap: Boolean get() = !acted || expired
+    val followed: Boolean
+        get() = automatic && current?.takeIf { it.offered && !it.calling }?.followed == true
+
+    /**
+     * Whether automatic writing waits for the user (#615): no first action since the app started
+     * ([acted], D5), it expired after *Saver*'s count ([expired]), or the track playing is written
+     * only on a tap ([Report.tapOnly], #625).
+     */
+    val waitsForTap: Boolean get() = !acted || expired || latest?.tapOnly == true
 }
 
 /** The same insight track: [TrackIdentity.playsOn], the session history's rule for a track that plays on. */
@@ -614,11 +693,11 @@ fun sameInsightTrack(
  * evidence, another service), and Write is offered beside the card paid for, which the view keeps
  * showing ([CoordinatorState.rewrites]), as the user's choice to rewrite it. Else write when the
  * latest report's cause, which the current run holds, is one *Reactive* writes
- * on under the run's settings (`InsightAsked.writesOn`: every cause under *On track change*,
- * a skip in the player or an action in Sleevesight under *On track skip*, none under *Now* or with
- * *Show insights* off) and *Reactive* still writes automatically now ([CoordinatorState.automatic],
- * #553: turned to *Now* since the run started, nothing writes without a tap), the user has acted since the app started (a cold start: a return to the
- * app keeps the first action) and that first action has not expired, and the ledger has not decided
+ * on under the run's settings (`InsightAsked.writesOn`: every cause under *On track change (auto)*,
+ * a skip in the player or an action in Sleevesight under *On track skip (auto)*, none under *On demand* or with
+ * *Show insights* off) and the mode now selected writes on it too ([CoordinatorState.modeWrites],
+ * #553, #625: turned to *On demand* since the run started, nothing writes without a tap), the user has acted since the app started (a cold start: a return to the
+ * app keeps the first action) and that first action has not expired, the track came to play after it, and no mode was chosen while it played (#625: [CoordinatorState.Report.tapOnly]), and the ledger has not decided
  * this key (a rebuild's run of it again is not a track change, D5); else offer Write, marking the
  * run lapsed when only the expiry kept it from writing ([CoordinatorState.Run.lapsed]), so the
  * view says why. The ledger then records the decision. A model call that fails or is stopped
@@ -637,8 +716,11 @@ fun sameInsightTrack(
  * automatic writing after* names ([CoordinatorEvent.PauseAutoWriteChanged], none for *Off*) the
  * first action, if made, expires at the next change after that many (so that many are written as
  * usual), and that track and the ones after it offer Write until the user acts again; a tap kept
- * for the run is dropped then, so it pays for nothing. "The first action made" (a tap, a kept tap, an action in Sleevesight) also undoes an
- * expiry and resets the count. The table gives each
+ * for the run is dropped then, so it pays for nothing. "The first action made" (a tap, a kept tap, an action in Sleevesight, an automatic mode chosen, #625) also undoes an
+ * expiry and resets the count. An activity start makes an expired first action again (#625:
+ * opening Sleevesight resumes automatic writing), but a track reported while it was paused
+ * ([CoordinatorState.Report.whilePaused]) still offers Write rather than being written, so the
+ * track playing at the return is not paid for unasked. The table gives each
  * event's own effects; asking again, the grants and the preparation follow every row.
  * "The run" is the run in progress; "an old run" is any other, cancelled or replaced. "The key" is
  * a report's `RunKey`; "the ledger's written track" is the insight track whose entry is written;
@@ -647,14 +729,16 @@ fun sameInsightTrack(
  *
  * | State | Event | New state | Effects |
  * |---|---|---|---|
- * | not acknowledged | anything but the five below | unchanged | none |
+ * | not acknowledged | anything but the events of the rows below, up to ModeChoiceSettled | unchanged | none |
  * | any | Acknowledged | acknowledged | none |
- * | any | ActivityStarted | started + 1; restarting = false; the first action kept (only a new process, with a new coordinator, starts without it); the count of track changes away reset, a first action expired staying expired (#203) | none |
+ * | any | ActivityStarted | started + 1; restarting = false; the first action kept (only a new process, with a new coordinator, starts without it); the count of track changes away reset; a first action expired made again (#625) | none |
  * | any | ActivityStopped(c) | started − 1; restarting = c when none is left | none |
  * | any | BackgroundChanged(on) | background = on | none |
  * | any | PauseAutoWriteChanged(n) | the pause after n track changes away (none for *Off*) | none |
- * | any | AutomaticWritingChanged(on) | automatic = on (#553) | none |
- * | any | Reported(key, cause) | latest = the report, with its cause; the run current only if it holds it; first action made if the cause is an action in Sleevesight; a preparation cancelled unless the report is of the insight track reported before | CancelPreparation (if one is cancelled), StartTimer |
+ * | any | WritingModeChanged(mode) | mode = it, until the first choice in this process; then unchanged (#553, #625) | none |
+ * | any | ModeChosen(mode, choice) | mode = it; the latest choice = choice; the latest report tap-only; first action made if automatic (#625) | none |
+ * | any | ModeChoiceSettled(choice, stored) | of the latest choice, with the store read: mode = the narrower of mode and stored; else unchanged (#625) | none |
+ * | any | Reported(key, cause) | latest = the report, with its cause; of another insight track: tap-only when the first action is not made after it (as below), while-paused when it is expired, follows when a report came before; of the same insight track: as the report before; never tap-only or while-paused for an action in Sleevesight; the run current only if it holds it; first action made if the cause is an action in Sleevesight; a preparation cancelled unless the report is of the insight track reported before | CancelPreparation (if one is cancelled), StartTimer |
  * | none visible (no activity started or restarting) | Reported(key, cause), of another insight track than the report before (or the first), not an action in Sleevesight | as above; one more track change away; past the pause's count (the change after that many), with the first action made: the first action expired (acted false), until the user acts again, and a tap kept for the run dropped (keepsTap and tapped cleared); with *Off*, never | as above |
  * | latest not this report | Settled | unchanged | none |
  * | any | Settled, of another insight track than the ledger's | latest settled; the ledger emptied; then as below | as below |
@@ -673,7 +757,7 @@ fun sameInsightTrack(
  * | the run | RunEnded | calling, offered, the steps it waits for and its question cleared; labelled; a kept tap dropped (keepsTap and tapped cleared); then as for StepEnded(MODEL_CALL) | as above |
  * | the run (current or not) | StepRequested(step), InsightAsked(causes, model knowledge) | the step or the question waiting, with the causes its settings write on; for the ledger's written track (its card not found), answered by offering Write to rewrite it, never by writing | none |
  * | current run asking again, not yet decided, a run it replaced (or one before) offering Write, no tap kept yet, allowed, of the tap's key | WriteTapped(key) | the tap kept: it answers the run's question as a tap (one call, the ledger written); first action made | Acted |
- * | current run offering Write, allowed, of the tap's key | WriteTapped(key) | calling (its next call); the ledger written, under the run's key (or kept, if written already: a rewrite); first action made | Grant(MODEL_CALL), Acted |
+ * | current run offering Write, allowed, of the tap's key | WriteTapped(key) | calling (its next call); the ledger written, under the run's key (or kept, if written already: a rewrite); first action made; the latest report no longer tap-only or while-paused | Grant(MODEL_CALL), Acted |
  * | otherwise (a tap for another run's key included) | WriteTapped(key) | unchanged | none |
  * | the run, the tap's call under way | StopTapped(call) | unchanged (the call ends with its StepEnded; the ledger stays written, so nothing writes it again without a tap) | StopCall(call) |
  * | otherwise (no call under way, another run's call, or an earlier call of the run) | StopTapped(call) | unchanged | none |
@@ -711,7 +795,10 @@ class PipelineCoordinator(
             is CoordinatorEvent.ActivityStopped -> stopped(event.changingConfigurations)
             is CoordinatorEvent.BackgroundChanged -> state = state.copy(background = event.on)
             is CoordinatorEvent.PauseAutoWriteChanged -> state = state.copy(pauseAfter = event.after)
-            is CoordinatorEvent.AutomaticWritingChanged -> state = state.copy(automatic = event.automatic)
+            is CoordinatorEvent.WritingModeChanged,
+            is CoordinatorEvent.ModeChosen,
+            is CoordinatorEvent.ModeChoiceSettled,
+            -> mode(event)
             else -> if (state.acknowledged) onAcknowledged(event)
         }
         if (state.acknowledged) {
@@ -759,9 +846,52 @@ class PipelineCoordinator(
     }
 
     // The first action stays: only a new process, with a new coordinator, starts without it (#190).
-    // The count of track changes away starts again; a first action expired stays so (#203).
+    // The count of track changes away starts again (#203), and a first action expired is made
+    // again: opening Sleevesight resumes automatic writing (#625).
     private fun started() {
         state = state.copy(started = state.started + 1, restarting = false, away = 0)
+        if (state.expired) act()
+    }
+
+    // *Reactive*'s mode (#625): the store's word until the first choice in this process; then the
+    // latest choice, and what the store held once its save ended.
+    private fun mode(event: CoordinatorEvent) {
+        when (event) {
+            is CoordinatorEvent.WritingModeChanged -> if (state.chosen == 0L) state = state.copy(mode = event.mode)
+            is CoordinatorEvent.ModeChosen -> modeChosen(event)
+            is CoordinatorEvent.ModeChoiceSettled -> {
+                // Never wider than the choice: a save that failed keeps the narrower of the two.
+                val stored = event.stored
+                if (event.choice == state.chosen &&
+                    stored != null
+                ) {
+                    state = state.copy(mode = narrower(state.mode, stored))
+                }
+            }
+            else -> Unit
+        }
+    }
+
+    // Of [chosen] and [stored], the mode that writes on fewer causes (#625); [stored] when nothing
+    // was chosen.
+    private fun narrower(
+        chosen: WriteAutomatically?,
+        stored: WriteAutomatically,
+    ): WriteAutomatically =
+        if (chosen != null && AutoWrite.causes(chosen).size < AutoWrite.causes(stored).size) chosen else stored
+
+    // A mode chosen (#625): selected at once, the latest choice, and from the next track: the track
+    // playing is written only on a tap. An automatic mode is the first action.
+    private fun modeChosen(event: CoordinatorEvent.ModeChosen) {
+        // A choice the host counted before the latest one taken (none, on one thread) selects nothing.
+        val latestChoice = event.choice >= state.chosen
+        state =
+            state.copy(
+                mode = if (latestChoice) event.mode else state.mode,
+                chosen = maxOf(state.chosen, event.choice),
+                latest = state.latest?.copy(tapOnly = true),
+            )
+        if (event.automatic) act()
     }
 
     // The user acted: the first action made, any expiry of it undone, and the count away reset.
@@ -792,15 +922,25 @@ class PipelineCoordinator(
 
     private fun reported(event: CoordinatorEvent.Reported) {
         // Another track playing: its run comes first, and the next item will change too.
-        val before = state.latest?.nowPlaying
+        val earlier = state.latest
+        val before = earlier?.nowPlaying
         val another = before == null || !sameInsightTrack(before, event.nowPlaying)
         if (another) cancelPreparation()
-        val seq = (state.latest?.seq ?: 0) + 1
+        val seq = (earlier?.seq ?: 0) + 1
         state = state.copy(latest = CoordinatorState.Report(seq, event.key, event.nowPlaying, event.cause))
         when {
             event.cause == ChangeCause.USER_ACTION -> act()
             another && !state.visible -> counted()
         }
+        // A track that came to play before the first action, or while it was expired, is written
+        // only on a tap, once an action or the app's opening has started or resumed automatic
+        // writing too (#625); the same track reported again keeps that, and an action in
+        // Sleevesight is the user's.
+        val user = event.cause == ChangeCause.USER_ACTION
+        val tapOnly = !user && if (another) !state.acted else earlier?.tapOnly == true
+        val whilePaused = !user && if (another) state.expired else earlier?.whilePaused == true
+        val follows = if (another) earlier != null else earlier?.follows == true
+        state = state.copy(latest = state.latest?.copy(tapOnly = tapOnly, whilePaused = whilePaused, follows = follows))
         effects += CoordinatorEffect.StartTimer(seq)
     }
 
@@ -936,12 +1076,27 @@ class PipelineCoordinator(
         val run = state.current?.takeIf { state.writeKey == key } ?: return
         state =
             state.copy(
-                run = run.copy(offered = false, calling = true, calls = run.calls + 1, lapsed = false),
+                run =
+                    run.copy(
+                        offered = false,
+                        calling = true,
+                        calls = run.calls + 1,
+                        lapsed = false,
+                        followed = false,
+                    ),
                 ledger = entry(run, written = true),
             )
         act()
+        tappedFor()
         effects += CoordinatorEffect.Grant(run.id, RunStep.MODEL_CALL)
         effects += CoordinatorEffect.Acted
+    }
+
+    // A tap on the Write offered for the track playing (#625): the user has acted on it, so it is
+    // tap-only, or paused, no longer, and the card stops saying it waits. Its ledger is written
+    // by the tap, so nothing writes it again unasked either way.
+    private fun tappedFor() {
+        state = state.copy(latest = state.latest?.copy(tapOnly = false, whilePaused = false))
     }
 
     // A tap shown for the run an ask-again replaced (#192): kept until its replacement, of the
@@ -950,6 +1105,7 @@ class PipelineCoordinator(
         val keeping = state.current?.takeIf { it.keepsTap && !it.tapped && it.key == key } ?: return false
         state = state.copy(run = keeping.copy(tapped = true))
         act()
+        tappedFor()
         effects += CoordinatorEffect.Acted
         return true
     }
@@ -1108,8 +1264,8 @@ class PipelineCoordinator(
         val writes =
             cause != null &&
                 cause in settings.writesOn &&
-                state.automatic &&
-                state.acted &&
+                state.modeWrites(cause) &&
+                stands() &&
                 state.current?.id == run.id
         val unreachable = run.gathered?.unreachable.orEmpty()
         return when {
@@ -1133,8 +1289,8 @@ class PipelineCoordinator(
         val blocked =
             cause != null &&
                 cause in settings.writesOn &&
-                state.automatic &&
-                state.expired &&
+                state.modeWrites(cause) &&
+                paused() &&
                 state.current?.id == run.id
         return when {
             recorded.written -> null
@@ -1164,8 +1320,9 @@ class PipelineCoordinator(
         var next = run.copy(asked = emptySet(), lookedUp = lookedUp)
         val writesOn = run.insight
         if (writesOn != null) {
-            val write = writes(run, writesOn, state.acted)
+            val write = writes(run, writesOn, stands())
             val lapsed = !write && lapsed(run, writesOn)
+            val followed = !write && !lapsed && followed(writesOn)
             // For a written track, the question comes only when its card is not found (a rebuild
             // changed the card's key): Write is offered beside the card paid for, to rewrite it.
             next =
@@ -1177,6 +1334,7 @@ class PipelineCoordinator(
                     keepsTap = false,
                     tapped = false,
                     lapsed = lapsed,
+                    followed = followed,
                 )
             val decided = entry(run, write)
             val settings = WriteSettings(writesOn, run.allowModel)
@@ -1194,16 +1352,40 @@ class PipelineCoordinator(
         run: CoordinatorState.Run,
         writesOn: Set<ChangeCause>,
     ): Boolean {
-        // Under *Now* (#553), nothing would have written: no pause to tell of.
-        if (!state.expired || !state.automatic) return false
+        // Under *On demand* (#553), nothing would have written: no pause to tell of.
+        if (!paused() || !state.automatic) return false
         val ledger = state.ledger?.takeIf { sameInsightTrack(it.track, run.nowPlaying) }
         val cause = state.latest?.cause
         val carried =
             run.again &&
                 ledger?.key == run.key &&
                 ledger.paused == WriteSettings(writesOn, run.allowModel) &&
-                cause in writesOn
+                cause != null &&
+                cause in writesOn &&
+                state.modeWrites(cause)
         return carried || writes(run, writesOn, acted = true)
+    }
+
+    // Whether the first action stands for the track playing: made, not expired, and the track not
+    // written only on a tap (#625: it came to play after the action, and no mode was chosen since).
+    private fun stands(): Boolean = state.acted && state.latest?.tapOnly != true
+
+    // Whether only the pause keeps the track playing from being written: the first action expired,
+    // or the track came to play while it was (#203, #625).
+    private fun paused(): Boolean = state.expired || state.latest?.whilePaused == true
+
+    // Whether Write is offered only because the track followed the last one by itself (#625): a
+    // natural end after another track reported before (not the process's first report), which the
+    // run's settings ([writesOn]) and the mode now selected do not both write on, though they
+    // both write on others (*On track skip (auto)*), with the first action standing.
+    private fun followed(writesOn: Set<ChangeCause>): Boolean {
+        val latest = state.latest ?: return false
+        val writing = writesOn.filter(state::modeWrites)
+        return latest.cause == ChangeCause.NATURAL_END &&
+            latest.follows &&
+            writing.isNotEmpty() &&
+            latest.cause !in writing &&
+            stands()
     }
 
     // The answer to [run]'s question whether to write, under the causes its settings write on,
@@ -1220,8 +1402,9 @@ class PipelineCoordinator(
         // The cause of the latest report, which the run, being current, holds: the latest word
         // on how the user came to this track (a skip back to it during its run included).
         val cause = state.latest?.cause
-        // *Reactive* turned to *Now* since the run started (#553) answers no for it too.
-        val writes = cause != null && cause in writesOn && state.automatic && acted && !written
+        // The mode now selected, changed since the run started, answers for it too (#553, #625):
+        // *On demand* no for every cause, *On track skip (auto)* no for a natural end.
+        val writes = cause != null && cause in writesOn && state.modeWrites(cause) && acted && !written
         // A key the ledger decided: a rebuild's run of it is not a track change (D5). A run that
         // asks again (#192) writes only as the decision for nothing to narrate would have, under
         // the same settings, once a source unreachable when it was made has returned lines.
