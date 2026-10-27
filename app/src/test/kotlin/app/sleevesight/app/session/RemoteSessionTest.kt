@@ -5,6 +5,7 @@ import app.sleevesight.app.session.Sessions.SPOTIFY
 import app.sleevesight.app.session.Sessions.YOUTUBE_MUSIC
 import app.sleevesight.app.session.Sessions.metadata
 import app.sleevesight.app.session.Sessions.state
+import kotlinx.coroutines.launch
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -109,6 +110,48 @@ internal class RemoteSessionTest : SessionRepositoryFixture() {
             session.settled(report.state())
             each(report)
         }
+    }
+
+    /**
+     * Sends each recorded state to [session] when it was taken, the metadata first where the track
+     * changes, with no settling between them: the virtual clock, set to the capture's at [spotify],
+     * moves on by the capture's time between reports, so the reports a few milliseconds apart come
+     * as one burst, as they did in the car. Then lets the last burst settle.
+     */
+    private fun replayInTime(session: FakeSession) {
+        var title = recorded.first().title
+        for (report in recorded) {
+            scheduler.advanceTimeBy(report.updatedAt - scheduler.currentTime)
+            scheduler.runCurrent()
+            if (report.title != title) {
+                title = report.title
+                session.send(metadata(title = title))
+            }
+            session.send(report.state())
+        }
+        settle()
+    }
+
+    @Test
+    fun theCaptureReplayedInItsOwnTimeChangesTrackOnce() {
+        scheduler.advanceTimeBy(recorded.first().updatedAt)
+        val car = spotify(remote = true)
+        val tracks = recordTracks()
+        val published = mutableListOf<SessionChange?>()
+        scope.launch { repository.lastChange.collect { published += it } }
+
+        replayInTime(car)
+
+        // One change, published once, timed when the new track's first report came, and each track
+        // shown once: the bursts of three reports, and the new track's sixteen in its first 40 ms,
+        // each coalesce into one.
+        assertEquals(1, changes(tracks))
+        assertEquals(listOf(SUNDOWN, CAREFREE), tracks.filterNotNull().map { it.title })
+        val change = published.filterNotNull().single()
+        assertEquals(CAREFREE, change.track.title)
+        assertEquals(SUNDOWN, change.from?.title)
+        assertEquals(425_656_537L, change.changedAt)
+        assertEquals(PlaybackStatus.PLAYING, repository.playback.value.status)
     }
 
     @Test

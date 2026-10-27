@@ -79,7 +79,7 @@
          or the album's is not known (#556): "First released 1990". -->
     <string name="home_first_released">First released %1$s</string>
 
-    <!-- Genre labels (#558): the chips, the genre's panel with its table, and where a genre comes from. -->
+    <!-- Genre labels (#558): the chips, the genre's panel with its table, and where the table's labels come from. -->
     <string name="home_genres">Genres</string>
     <string name="home_genres_none">None found.</string>
     <string name="home_genres_off">Every genre source is off in Settings.</string>
@@ -109,10 +109,10 @@
     <string name="home_genres_track">Track</string>
     <string name="home_genres_artist_row">Artist</string>
     <string name="home_genres_album">Album</string>
-    <!-- Where the panel's genre comes from, before each source that gave it: a line per level. -->
+    <!-- Where the table's labels come from, a line per row, before each source that gave any of that row's labels. -->
     <string name="home_genre_from_track">From the track’s tags:</string>
     <string name="home_genre_from">From the artist’s tags:</string>
-    <!-- With several credited artists: %1$s the artist whose tags gave it. -->
+    <!-- With several credited artists: %1$s the artist whose tags gave the row's labels. -->
     <string name="home_genre_from_named">From %1$s’s tags:</string>
     <string name="home_genre_from_album">From the album’s tags:</string>
     <string name="home_genre_licence">licence</string>

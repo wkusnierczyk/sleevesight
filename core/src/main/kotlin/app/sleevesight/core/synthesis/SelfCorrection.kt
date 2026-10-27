@@ -24,17 +24,21 @@ data class SelfCorrection(
          * revision of what came before it, and the line itself says it corrects the reply.
          *
          * **A revision.** Text comes before the line, the draft, and the text after it, the fresh
-         * version, cites at least one line, every one of them cited in the draft already
-         * ([revises]): a correction drops the draft's unsupported sentences and restates the rest
-         * with the same evidence. Prose that goes on with evidence of its own (`[W2]` after `[W1]`)
-         * is never cut, whatever its words.
+         * version, cites at least one line, every one of them cited in the draft already, and its
+         * first sentence restates the draft: at least three quarters of its words, each counted
+         * once, are the draft's ([revises]). A correction drops the draft's unsupported sentences and
+         * restates the rest with the same evidence. Prose that goes on with evidence of its own
+         * (`[W2]` after `[W1]`) is never cut, whatever its words; nor is prose that goes on to say
+         * something new from the same line, as it does on a track documented by one line, where
+         * every paragraph cites it.
          *
          * **A comment.** A line of its own that holds whole sentences: the text before it ends a
          * sentence (a stop, a colon or a citation) and the line ends one too, so a sentence wrapped
          * over two lines is never one. It sits inside no quotation, is not wrapped in emphasis
-         * (`*...*`, a lyric's or a title's), and cites nothing; what it quotes (`"..."`, `“...”`;
-         * not an apostrophe, nor a `"` after a digit, as in `12"`) is not read. It then says it
-         * corrects the reply in one of three ways:
+         * (`*...*`, a lyric's or a title's), and cites nothing; what it quotes (`"..."`, `“...”`,
+         * `'...'`, `‘...’`; not an apostrophe, inside a word, as in `I'll`, opening one, as in `'em`,
+         * or before a digit, as in `'90s`, nor a `"` after a digit, as in `12"`; [Quotations]) is
+         * not read. It then says it corrects the reply in one of three ways:
          *
          * - it opens as only an aside does ([ASIDE]: `Wait,`, `Oops,`, `Hmm,`, `On second thought`,
          *   `Correction`) and speaks of the reply's making ([META]: a sentence, the evidence, a
@@ -49,8 +53,8 @@ data class SelfCorrection(
          *
          * The cost: a comment that shares a line with the fresh version, says none of this ("That
          * second sentence is not supported."), or comes before a version that cites a line the
-         * draft did not, is not found, and the reply shows as written, the comment flagged as
-         * uncited by the check.
+         * draft did not or opens with a sentence of new words, is not found, and the reply shows as
+         * written, the comment flagged as uncited by the check.
          */
         fun of(reply: String): SelfCorrection? {
             val text = reply.trimJs()
@@ -61,7 +65,11 @@ data class SelfCorrection(
                 val line = text.substring(lineStart, lineEnd)
                 val before = text.substring(0, lineStart).trimJs()
                 val after = text.substring(minOf(lineEnd + 1, text.length)).trimJs()
-                if (before.isNotEmpty() && revises(after, before) && isComment(line, before)) {
+                // Whether a quotation opened before the line is still open: read over the text as
+                // it is, so a blank line before the line ends a single quotation left open.
+                val open = Quotations.of(text, end = lineStart).open
+                val ahead = text.substring(lineEnd)
+                if (before.isNotEmpty() && revises(after, before) && isComment(line, before, open, ahead)) {
                     found = SelfCorrection(kept = unquoted(after), withdrawn = text.substring(0, lineEnd).trimJs())
                 }
                 lineStart = lineEnd + 1
@@ -69,27 +77,44 @@ data class SelfCorrection(
             return found
         }
 
-        // Whether [version] revises [draft]: it cites at least one line, and only lines the draft cited.
+        // Whether [version] revises [draft]: it cites at least one line, and only lines the draft
+        // cited, and its first sentence restates the draft, at least three quarters of its words
+        // (each counted once) being the draft's.
         private fun revises(
             version: String,
             draft: String,
         ): Boolean {
             val cited = CITATION.findAll(version).map { it.value }.toSet()
             val drafted = CITATION.findAll(draft).map { it.value }.toSet()
-            return cited.isNotEmpty() && drafted.containsAll(cited)
+            if (cited.isEmpty() || !drafted.containsAll(cited)) return false
+            val first = GroundingCheck.splitSentences(version).firstOrNull() ?: version
+            val restated = words(first)
+            val draftWords = words(draft)
+            return restated.isNotEmpty() && restated.count { it in draftWords } >= restated.size * RESTATED
         }
 
-        // Whether [line], after [before], is the model's comment on its own reply.
+        // The words of [text], lower case, each once, without citations or a possessive's `'s`.
+        private fun words(text: String): Set<String> =
+            WORD
+                .findAll(CITATION.replace(text, " "))
+                .map { word -> POSSESSIVE.replace(word.value.lowercase(), "") }
+                .toSet()
+
+        // Whether [line], after [before], in which a quotation is still [open] or not, is the model's
+        // comment on its own reply; [ahead] is the text after it, where a quotation that opens in it
+        // may close.
         private fun isComment(
             line: String,
             before: String,
+            open: Boolean,
+            ahead: String,
         ): Boolean {
             val l = line.trimJs()
             val bare = l.trimStart('(', '*', '_', ' ')
             val whole = SENTENCE_END.containsMatchIn(before) && LINE_END.containsMatchIn(bare)
             val marked = (l.firstOrNull() ?: ' ') in QUOTE_MARKS || (l.lastOrNull() ?: ' ') in QUOTE_MARKS
-            val read = unquotedText(bare)
-            val apart = !marked && !quoteOpen(before) && !CITATION.containsMatchIn(l)
+            val read = unquotedText(bare, ahead)
+            val apart = !marked && !open && !CITATION.containsMatchIn(l)
             if (!whole || !apart || read == null) return false
             return INTRO.containsMatchIn(read.trimEnd('*', '_', ')', ' ')) || (!EMPHASIZED.matches(l) && says(read))
         }
@@ -103,42 +128,12 @@ data class SelfCorrection(
         }
 
         // [line] with what it quotes taken out, each quotation as an ellipsis; null when a quotation
-        // opens in it and does not close.
-        private fun unquotedText(line: String): String? {
-            val out = StringBuilder()
-            var close: Char? = null
-            var stray = false
-            for ((i, c) in line.withIndex()) {
-                val mark = isQuoteMark(line, i)
-                when {
-                    close == null && mark && c == '”' -> stray = true
-                    close == null && mark -> {
-                        close = if (c == '“') '”' else '"'
-                        out.append('…')
-                    }
-                    close != null && mark && c == close -> close = null
-                    close == null -> out.append(c)
-                }
-            }
-            return out.toString().takeIf { close == null && !stray }
-        }
-
-        // Whether [text] leaves a quotation open, its marks read as [unquotedText] reads them.
-        private fun quoteOpen(text: String): Boolean {
-            val straight = text.indices.count { text[it] == '"' && isQuoteMark(text, it) }
-            return straight % 2 == 1 || text.count { it == '“' } > text.count { it == '”' }
-        }
-
-        // Whether [text] at [i] is a quotation mark: `“`, `”`, or a `"` not after a digit (`12"`).
-        private fun isQuoteMark(
-            text: String,
-            i: Int,
-        ): Boolean =
-            when (text[i]) {
-                '“', '”' -> true
-                '"' -> i == 0 || !text[i - 1].isDigit()
-                else -> false
-            }
+        // opens in it and does not close (a single one may close in the lines [ahead] of it), or a
+        // closing `”` comes with none open.
+        private fun unquotedText(
+            line: String,
+            ahead: String,
+        ): String? = Quotations.of(line + ahead, end = line.length).takeIf { !it.open && !it.stray }?.outside
 
         // [text] without quotation marks around the whole of it: the opening mark's partner is the
         // last character (the text's only two straight double quotes, or its only curly pair), and
@@ -193,6 +188,155 @@ data class SelfCorrection(
 
         private val QUOTE_MARKS = setOf('"', '“', '”')
 
+        /** The share of a version's first sentence's words that must be the draft's ([revises]). */
+        private const val RESTATED = 0.75
+
+        /** A possessive's ending, `'s` or `’s`, taken off a word in [revises]. */
+        private val POSSESSIVE = Regex("['’]s$")
+
+        /** A word: letters and digits, with any apostrophes inside it (`I'll`, `Rosseel's`). */
+        private val WORD = Regex("[\\p{L}\\p{N}]+(?:['’][\\p{L}\\p{N}]+)*")
+
         private val CITATION = Regex("\\[[A-Z]{1,2}[0-9]*\\]")
+    }
+}
+
+/**
+ * A text read for its quotations: what is [outside] them, each quotation as an ellipsis; whether a
+ * quotation is still [open] at its end; and whether a closing `”` came with none open ([stray]).
+ */
+private class Quotations(
+    val outside: String,
+    val open: Boolean,
+    val stray: Boolean,
+) {
+    companion object {
+        /**
+         * The first [end] characters of [text] read for its quotations: double (`"..."`, `“...”`)
+         * or single (`'...'`, `‘...’`), the marks of one inside another not read as marks. A single
+         * mark is also an apostrophe, so a single quotation is read conservatively: it opens only
+         * where a mark that closes it follows ([closer], looked for in the whole of [text]), so an
+         * apostrophe that opens a word (`'Round Midnight`, `'em`, `rock 'n roll`) opens nothing;
+         * it does not close at a plural's apostrophe before a word (`‘For the lovers’ sake, …’`)
+         * when another mark follows that closes it; and it ends at a blank line at the latest, so
+         * a stray apostrophe hides nothing after its paragraph.
+         */
+        fun of(
+            text: String,
+            end: Int = text.length,
+        ): Quotations {
+            val out = StringBuilder()
+            var close: Char? = null
+            var stray = false
+            for (i in 0 until end) {
+                val c = text[i]
+                when {
+                    close == SINGLE && blankLineAt(text, i) -> {
+                        close = null
+                        out.append(c)
+                    }
+                    close == SINGLE -> if (endsSingle(text, i)) close = null
+                    close != null -> if (c == close && isQuoteMark(text, i)) close = null
+                    c == '”' -> stray = true
+                    isQuoteMark(text, i) || startsSingle(text, i) -> {
+                        close = partner(c)
+                        out.append('…')
+                    }
+                    else -> out.append(c)
+                }
+            }
+            return Quotations(out.toString(), open = close != null, stray = stray)
+        }
+
+        // The mark that closes the quotation [opening] opens.
+        private fun partner(opening: Char): Char =
+            when (opening) {
+                '“' -> '”'
+                '"' -> '"'
+                else -> SINGLE
+            }
+
+        // Whether [text] at [i] is a quotation mark: `“`, `”`, or a `"` not after a digit (`12"`).
+        private fun isQuoteMark(
+            text: String,
+            i: Int,
+        ): Boolean =
+            when (text[i]) {
+                '“', '”' -> true
+                '"' -> i == 0 || !text[i - 1].isDigit()
+                else -> false
+            }
+
+        // Whether [text] at [i] may open a single quotation: a `'` or `‘` at the start of the text,
+        // or after a space or one of [SINGLE_AFTER] (not inside a word, nor after an initial's stop,
+        // as in `S.'s`, nor after a closing double quotation mark, as in `"Hey Jude"'s`), before a
+        // letter (not a digit, as in `'90s`).
+        private fun opensSingle(
+            text: String,
+            i: Int,
+        ): Boolean =
+            text[i] in "'‘" &&
+                (i == 0 || text[i - 1].isWhitespace() || text[i - 1] in SINGLE_AFTER) &&
+                text.getOrNull(i + 1)?.isLetter() == true
+
+        // Whether [text] at [i] may close a single quotation: a `'` or `’` after a character that is
+        // no space, and not inside a word (not `I'll`).
+        private fun closesSingle(
+            text: String,
+            i: Int,
+        ): Boolean =
+            text[i] in "'’" &&
+                i > 0 &&
+                !text[i - 1].isWhitespace() &&
+                text.getOrNull(i + 1)?.isLetterOrDigit() != true
+
+        // Whether [text] at [i] opens a single quotation: a mark that may, with one after it to close it.
+        private fun startsSingle(
+            text: String,
+            i: Int,
+        ): Boolean = opensSingle(text, i) && closer(text, i + 1) != null
+
+        // Whether [text] at [i] closes the single quotation open: a mark that may, unless it may be a
+        // plural's apostrophe and another mark after it may close the quotation.
+        private fun endsSingle(
+            text: String,
+            i: Int,
+        ): Boolean = closesSingle(text, i) && !(plural(text, i) && closer(text, i + 1) != null)
+
+        // Whether the mark at [i] may be a plural's apostrophe: after an `s`, before a space and a word.
+        private fun plural(
+            text: String,
+            i: Int,
+        ): Boolean =
+            text[i - 1] in "sS" &&
+                text.getOrNull(i + 1) == ' ' &&
+                text.getOrNull(i + 2)?.isLetter() == true
+
+        // Where, from [from] on, the first mark that may close a single quotation is, before the next
+        // blank line; null for none.
+        private fun closer(
+            text: String,
+            from: Int,
+        ): Int? {
+            val paragraphEnd = (from until text.length).firstOrNull { blankLineAt(text, it) } ?: text.length
+            return (from until paragraphEnd).firstOrNull { closesSingle(text, it) }
+        }
+
+        // Whether a blank line starts at [i]: a line break, then only spaces or tabs to the next.
+        private fun blankLineAt(
+            text: String,
+            i: Int,
+        ): Boolean {
+            if (text[i] != '\n') return false
+            var j = i + 1
+            while (j < text.length && (text[j] == ' ' || text[j] == '\t')) j++
+            return j < text.length && text[j] == '\n'
+        }
+
+        /** What a single quotation, opened by `'` or `‘`, waits for in [of]: `'` or `’`. */
+        private const val SINGLE = '\''
+
+        /** What a single quotation may open after, besides a space: a bracket, a dash, a slash. */
+        private const val SINGLE_AFTER = "([{—–-/"
     }
 }
