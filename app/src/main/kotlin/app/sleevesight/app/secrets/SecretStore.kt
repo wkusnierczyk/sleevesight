@@ -164,7 +164,7 @@ class SecretStore(
     private val cipher: SecretCipher,
     private val legacyKeystore: Boolean = Build.VERSION.SDK_INT < Build.VERSION_CODES.S,
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
-    private val beforeFirstSave: suspend (SecretId) -> Boolean = { true },
+    private val servicesOff: suspend (Set<SecretId>) -> Boolean = { true },
 ) {
     private val data: Flow<Preferences> =
         dataStore.data.catch { e -> if (e is IOException) emit(emptyPreferences()) else throw e }
@@ -249,7 +249,7 @@ class SecretStore(
      * could not be read to tell whether one may be made; what was stored before is then kept, and
      * nothing is deleted.
      *
-     * Where no entry is stored for [id] (or the file cannot be read to tell), [beforeFirstSave] runs
+     * Where no entry is stored for [id] (or the file cannot be read to tell), [servicesOff] runs
      * first (#667): in the app, it saves the services that need the key off, so a key saved never
      * finds its service still stored on from before it was removed, should the keys' gate
      * ([KeyGate]) have failed to write that service off. When it fails, nothing is saved, and the
@@ -266,7 +266,7 @@ class SecretStore(
                 } catch (_: IOException) {
                     true // Not known: as if none were stored, so its services are saved off first.
                 }
-            if (first && !beforeFirstSave(id)) return@withLock SaveResult.NOT_WRITTEN
+            if (first && !servicesOff(setOf(id))) return@withLock SaveResult.NOT_WRITTEN
             // Before API 31, whether any entry is stored: null when the file cannot be read.
             val stored = if (legacyKeystore) anyStored() else false
             val sealed =
@@ -305,12 +305,19 @@ class SecretStore(
      * working after a removal the user was told had not finished. Until a reset removes them, a save
      * makes a new Keystore key from API 31 (the entries left stay unreadable); before it, with
      * entries stored, a save fails ([SaveResult.NOT_SEALED]) and *Purge keys* is offered again.
+     *
+     * With the Keystore key deleted, every service that needs a key is saved off ([servicesOff],
+     * #667), whether or not the entries went: entries left unreadable still count as stored for the
+     * keys' gate ([KeyGate]), and a key saved over one is no first save, so without this a key
+     * entered after the purge would find its service still on. A write that fails is done again by
+     * the next purge, which is offered while entries are left.
      */
     suspend fun reset(): ResetResult =
         writes.withLock {
             try {
                 val removed = write { prefs -> SecretId.entries.forEach { prefs.remove(keyOf(it)) } }
                 val deleted = withContext(dispatcher) { cipher.deleteKey() }
+                if (deleted) servicesOff(SecretId.entries.toSet())
                 ResetResult(removed, deleted, statesNow())
             } finally {
                 resets.update { it + 1 }

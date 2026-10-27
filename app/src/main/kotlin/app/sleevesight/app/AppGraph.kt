@@ -36,7 +36,7 @@ import app.sleevesight.app.secrets.KeyGate
 import app.sleevesight.app.secrets.SecretCipher
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretStore
-import app.sleevesight.app.secrets.keylessOffBeforeSave
+import app.sleevesight.app.secrets.servicesOff
 import app.sleevesight.app.session.ArtLoader
 import app.sleevesight.app.session.DataStoreLearningMark
 import app.sleevesight.app.session.HttpArt
@@ -142,8 +142,8 @@ class AppGraph internal constructor(
         SecretStore(
             preferences(appContext, SECRETS_FILE),
             secretCipher,
-            // A key saved where none was never finds its service still stored on (#667).
-            beforeFirstSave = settings::keylessOffBeforeSave,
+            // A key saved where none was, or after a purge, never finds its service stored on (#667).
+            servicesOff = settings::servicesOff,
         )
 
     /**

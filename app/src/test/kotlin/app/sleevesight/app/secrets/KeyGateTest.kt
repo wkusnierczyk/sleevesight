@@ -46,7 +46,7 @@ class KeyGateTest {
             cipher,
             legacyKeystore = false,
             dispatcher = Dispatchers.Unconfined,
-            beforeFirstSave = settings::keylessOffBeforeSave,
+            servicesOff = settings::servicesOff,
         )
 
     /** Every service that needs a key switched on, as an earlier version could store them. */
@@ -228,6 +228,40 @@ class KeyGateTest {
             assertNull(now.aiProvider)
             assertFalse(SourceSwitch.LASTFM in now.enabledSources)
             assertEquals(emptySet<WebEngine>(), now.webEngines)
+        }
+
+    @Test
+    fun aPurgeThatLeavesEntriesUnreadableStillSwitchesEveryKeyedServiceOff() =
+        runTest(UnconfinedTestDispatcher()) {
+            val flaky = FlakyDataStore(MemoryStore())
+            val store =
+                SecretStore(
+                    flaky,
+                    testCipher(key),
+                    legacyKeystore = false,
+                    dispatcher = Dispatchers.Unconfined,
+                    servicesOff = settings::servicesOff,
+                )
+            for (id in listOf(SecretId.ANTHROPIC, SecretId.LASTFM, SecretId.EXA)) store.set(id, Secret("key-$id"))
+            settings.update(allOn)
+            gate(store)
+            assertAllOn(stored())
+            // The entries cannot be removed, but the Keystore key goes: they are left unreadable,
+            // which the gate counts as stored.
+            flaky.writeFailures.set(1)
+            val purged = store.reset()
+            assertFalse(purged.removed)
+            assertTrue(purged.sealDeleted)
+            runCurrent()
+            assertEquals(SecretState.UNREADABLE, store.states.first()[SecretId.EXA])
+            val now = stored()
+            assertNull(now.aiProvider)
+            assertFalse(SourceSwitch.LASTFM in now.enabledSources)
+            assertEquals(emptySet<WebEngine>(), now.webEngines)
+            // A key entered over an entry left is no first save, and finds its service off.
+            assertEquals(SaveResult.SAVED, store.set(SecretId.EXA, Secret("exa-new")))
+            runCurrent()
+            assertEquals(emptySet<WebEngine>(), stored().webEngines)
         }
 
     @Test
