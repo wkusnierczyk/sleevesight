@@ -8,6 +8,7 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isNotEnabled
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
@@ -28,6 +29,7 @@ import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.testCipher
 import app.sleevesight.app.ui.scan.QrScanner
+import app.sleevesight.app.ui.settings.SEARCH_FIELD_TAG
 import app.sleevesight.app.ui.settings.SettingsScreen
 import app.sleevesight.app.ui.settings.SettingsSection
 import app.sleevesight.core.Secret
@@ -176,14 +178,14 @@ class BusyDialogTest {
     fun aKeySavedByTwoTapsInOneFrameIsSavedOnce() =
         show {
             compose.onNodeWithText(text(R.string.settings_key_name_exa)).performScrollTo().performClick()
-            compose.onNode(hasSetTextAction()).performTextInput("exa-key")
+            compose.onNode(keyField).performTextInput("exa-key")
             val before = flaky.writes.get()
             flaky.writeGate = gate
 
             tapTwiceInOneFrame(text(R.string.settings_save))
             waitFor("the save's write started") { flaky.writes.get() == before + 1 }
 
-            assertEquals(1, release(hasSetTextAction(), before))
+            assertEquals(1, release(keyField, before))
             assertEquals("exa-key", runBlocking { secrets.get(SecretId.EXA) }?.reveal())
         }
 
@@ -206,3 +208,6 @@ class BusyDialogTest {
         }
     }
 }
+
+/** A key dialog's field: the one text field but the settings' search box (#649). */
+private val keyField = hasSetTextAction() and !hasTestTag(SEARCH_FIELD_TAG)

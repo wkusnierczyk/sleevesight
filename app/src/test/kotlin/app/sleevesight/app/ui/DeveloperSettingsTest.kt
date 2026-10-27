@@ -76,8 +76,12 @@ class DeveloperSettingsTest {
     private fun shown(text: String) =
         compose.onAllNodesWithText(text, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
 
+    // Its chip, or its panel when open (#649).
     private val developerShown
-        get() = compose.onAllNodesWithTag(SettingsSection.DEVELOPER.tag).fetchSemanticsNodes().isNotEmpty()
+        get() =
+            listOf(SettingsSection.DEVELOPER.tag, SettingsSection.DEVELOPER.panelTag).any {
+                compose.onAllNodesWithTag(it).fetchSemanticsNodes().isNotEmpty()
+            }
 
     private fun show(
         onOpenDiagnostics: () -> Unit = {},

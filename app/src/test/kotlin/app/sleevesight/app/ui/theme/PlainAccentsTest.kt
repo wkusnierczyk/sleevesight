@@ -21,7 +21,8 @@ import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.ui.home.artScheme
-import app.sleevesight.app.ui.settings.SectionHeading
+import app.sleevesight.app.ui.settings.FoldedSection
+import app.sleevesight.app.ui.settings.SectionFolds
 import app.sleevesight.app.ui.settings.SettingsSection
 import app.sleevesight.app.ui.settings.SwitchRow
 import org.junit.Assert.assertEquals
@@ -49,12 +50,14 @@ class PlainAccentsTest {
     private val pictures = AccentPictures(compose)
 
     @Test
-    fun aSectionHeadingIsBoldInTheTextColour() {
+    fun aSectionsChipIsInTheTextColourAndItsPanelsHeadingBoldInIt() {
         for (dark in listOf(false, true)) {
-            for (unfolded in listOf(false, true)) {
-                pictures.show(dark, { Column { SectionHeading(SettingsSection.ABOUT, unfolded) {} } }) { scheme ->
+            for (open in listOf(false, true)) {
+                val folds = SectionFolds(if (open) setOf(SettingsSection.ABOUT) else emptySet())
+                pictures.show(dark, { Column { FoldedSection(SettingsSection.ABOUT, folds) {} } }) { scheme ->
                     val style = pictures.styleOf(app.getString(R.string.settings_section_about))
-                    assertEquals(FontWeight.Bold, style.fontWeight)
+                    // The panel's heading bold (#442); the chip's name as a genre chip's (#649).
+                    if (open) assertEquals(FontWeight.Bold, style.fontWeight)
                     assertEquals(scheme.onSurface, style.color)
                 }
             }

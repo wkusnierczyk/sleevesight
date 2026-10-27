@@ -83,6 +83,8 @@ internal fun VersionRow(
     developerMode: Boolean,
     onDeveloperMode: () -> Unit,
 ) {
+    val name = stringResource(R.string.settings_version)
+    if (!shownInSearch(name)) return
     val context = LocalContext.current
     val resources = LocalResources.current
     // Counted afresh whenever developer mode turns on or off, and kept through a rotation. After
@@ -120,7 +122,7 @@ internal fun VersionRow(
                     }
                 }.padding(vertical = 8.dp),
     ) {
-        Text(stringResource(R.string.settings_version), style = MaterialTheme.typography.bodyLarge)
+        Text(searchMarked(name), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.testTag(ROW_TITLE_TAG))
         Text(
             stringResource(R.string.settings_version_value, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE),
             style = MaterialTheme.typography.bodyMedium,
@@ -140,8 +142,9 @@ private fun LinkRow(
     summary: Int,
 ) {
     val name = stringResource(title)
+    if (!shownInSearch(name)) return
     Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
-        Text(name, style = MaterialTheme.typography.bodyLarge)
+        Text(searchMarked(name), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.testTag(ROW_TITLE_TAG))
         Text(stringResource(summary), style = MaterialTheme.typography.bodySmall)
         Text(
             shownAddress(url),

@@ -32,7 +32,7 @@ internal fun SaverRows(
             }.takeIf { writes },
     )
     if (count == null) return
-    val options = (Settings.PAUSE_AUTO_WRITE_CHOICES + count).distinct().sorted().map { it to pauseLabel(it) }
+    val options = saverCounts(count)
     ValueRow(
         title = stringResource(R.string.settings_pause_auto_write_after),
         value = pauseLabel(count),
@@ -67,6 +67,11 @@ private fun pauseSummary(
     return pluralStringResource(plural, count, count)
 }
 
+/** *Saver*'s counts to choose from, [count] the one set among them. */
+@Composable
+internal fun saverCounts(count: Int): List<Pair<Int, String>> =
+    (Settings.PAUSE_AUTO_WRITE_CHOICES + count).distinct().sorted().map { it to pauseLabel(it) }
+
 /** A choice of *Saver*'s count: [count] track changes away. */
 @Composable
-private fun pauseLabel(count: Int): String = pluralStringResource(R.plurals.settings_track_changes_away, count, count)
+internal fun pauseLabel(count: Int): String = pluralStringResource(R.plurals.settings_track_changes_away, count, count)

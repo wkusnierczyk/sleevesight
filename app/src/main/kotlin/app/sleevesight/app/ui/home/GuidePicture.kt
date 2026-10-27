@@ -68,6 +68,8 @@ import androidx.compose.ui.unit.sp
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.logo.HeaderLogo
 import app.sleevesight.app.ui.logo.LocalLogoIntro
+import app.sleevesight.app.ui.theme.ChipFrame
+import app.sleevesight.app.ui.theme.chipColours
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
 import kotlin.math.max

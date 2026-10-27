@@ -25,12 +25,7 @@ internal fun AppearanceSection(
     update: Update,
     open: (SettingsDialog) -> Unit,
 ) {
-    val themes =
-        listOf(
-            ThemeChoice.SYSTEM to stringResource(R.string.settings_theme_system),
-            ThemeChoice.LIGHT to stringResource(R.string.settings_theme_light),
-            ThemeChoice.DARK to stringResource(R.string.settings_theme_dark),
-        )
+    val themes = themes()
     ValueRow(
         title = stringResource(R.string.settings_theme),
         value = themes.first { it.first == settings.theme }.second,
@@ -42,11 +37,7 @@ internal fun AppearanceSection(
             },
         )
     }
-    val fonts =
-        listOf(
-            FontChoice.APP_FONT to stringResource(R.string.settings_font_app),
-            FontChoice.SYSTEM_FONT to stringResource(R.string.settings_font_system),
-        )
+    val fonts = fonts()
     ValueRow(
         title = stringResource(R.string.settings_font),
         value = fonts.first { it.first == settings.font }.second,
@@ -88,11 +79,7 @@ private fun LayoutRow(
     update: Update,
     open: (SettingsDialog) -> Unit,
 ) {
-    val layouts =
-        listOf(
-            Layout.EXPANDABLE_BOXES to stringResource(R.string.settings_layout_boxes),
-            Layout.SEPARATE_PAGES to stringResource(R.string.settings_layout_pages),
-        )
+    val layouts = layouts()
     ValueRow(
         title = stringResource(R.string.settings_layout),
         value = layouts.first { it.first == settings.layout }.second,
@@ -105,3 +92,28 @@ private fun LayoutRow(
         )
     }
 }
+
+/** *Theme*'s choices. */
+@Composable
+internal fun themes(): List<Pair<ThemeChoice, String>> =
+    listOf(
+        ThemeChoice.SYSTEM to stringResource(R.string.settings_theme_system),
+        ThemeChoice.LIGHT to stringResource(R.string.settings_theme_light),
+        ThemeChoice.DARK to stringResource(R.string.settings_theme_dark),
+    )
+
+/** *Font*'s choices. */
+@Composable
+internal fun fonts(): List<Pair<FontChoice, String>> =
+    listOf(
+        FontChoice.APP_FONT to stringResource(R.string.settings_font_app),
+        FontChoice.SYSTEM_FONT to stringResource(R.string.settings_font_system),
+    )
+
+/** *Layout*'s choices. */
+@Composable
+internal fun layouts(): List<Pair<Layout, String>> =
+    listOf(
+        Layout.EXPANDABLE_BOXES to stringResource(R.string.settings_layout_boxes),
+        Layout.SEPARATE_PAGES to stringResource(R.string.settings_layout_pages),
+    )
