@@ -200,7 +200,7 @@ class SourcesFoldScreenTest {
     fun theListStartsFoldedAsItsChipAlone() =
         show(state(long(20, wikipedia = 3))) {
             folded(true)
-            // No filter chips, no note, no count, no controls: the chip only.
+            // No table, no note, no count, no controls: the chip only.
             assertEquals(0, count(CHIP_PREFIX + "MB"))
             assertEquals(0, count(CHIP_PREFIX + "W"))
             assertEquals(0, count(FOLD_STATUS_TAG))
