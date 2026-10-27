@@ -18,6 +18,7 @@ class GenreVocabulary(
     val families: List<GenreFamily>,
     private val labelOverrides: Map<String, String> = emptyMap(),
     synonyms: List<List<String>> = emptyList(),
+    musicBrainz: Map<String, String> = emptyMap(),
 ) {
     private val familyOf: Map<String, GenreFamily> =
         buildMap {
@@ -44,6 +45,22 @@ class GenreVocabulary(
                 }
             }
         }
+
+    // Each genre's MusicBrainz genre, by identity: the first of its tags to have one.
+    private val musicBrainzOf: Map<String, String> =
+        buildMap {
+            for ((tag, mbid) in musicBrainz) {
+                val genre = requireNotNull(identity(tag)) { "a MusicBrainz genre for '$tag', not in the vocabulary" }
+                putIfAbsent(genre, mbid)
+            }
+        }
+
+    /**
+     * The MusicBrainz genre (its MBID, CC0) of the genre [identity] stands for ([identity]), through
+     * which its definition is found (#523: the genre's Wikidata item, then its English Wikipedia
+     * article); null for a genre that is not one of MusicBrainz's.
+     */
+    fun musicBrainzGenre(identity: String): String? = musicBrainzOf[identity]
 
     /**
      * What a vocabulary tag stands for, so spelling variants count as one genre: its letters and
@@ -103,6 +120,7 @@ class GenreVocabulary(
                 file.families.map { GenreFamily(it.id, it.hue, it.tags) },
                 file.labels,
                 file.synonyms,
+                file.musicbrainz,
             )
         }
 
@@ -155,6 +173,7 @@ private class VocabularyFile(
     val families: List<FamilyEntry>,
     val labels: Map<String, String> = emptyMap(),
     val synonyms: List<List<String>> = emptyList(),
+    val musicbrainz: Map<String, String> = emptyMap(),
 )
 
 @Serializable
