@@ -8,7 +8,9 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
+import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -37,9 +39,10 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
- * The choice dialog's per-choice descriptions (#546, #550): *Reactive*'s and *Report button*'s
- * choices each show a line saying what they do, in the same radio button as the choice's name, so
- * a screen reader, which reads the merged node, reads the description with its choice.
+ * The per-choice descriptions (#546, #550): *Reactive*'s choices each show a line in its dialog
+ * saying what they do, in the same radio button as the choice's name, so a screen reader, which
+ * reads the merged node, reads the description with its choice. *Report button*'s choices are a
+ * button group in its row (#637): the chosen one's description shows under the buttons.
  */
 @RunWith(RobolectricTestRunner::class)
 class ChoiceDetailsSettingsTest {
@@ -103,20 +106,26 @@ class ChoiceDetailsSettingsTest {
         }
 
     @Test
-    fun reportButtonChoicesAreEachDescribedAndReadWithTheirName() {
+    fun reportButtonSaysWhatTheChosenChoiceDoesUnderItsButtons() {
         runBlocking { settings.update { it.copy(developerMode = true) } }
         show(SettingsSection.DEVELOPER) {
             compose.waitUntil(5_000) {
                 compose.onAllNodes(hasText(text(R.string.settings_report_button))).fetchSemanticsNodes().isNotEmpty()
             }
-            compose.onNodeWithText(text(R.string.settings_report_button)).performScrollTo().performClick()
-            assertDescribed(
+            val choices =
                 listOf(
                     R.string.settings_report_button_show to R.string.settings_report_button_show_detail,
                     R.string.settings_report_button_auto to R.string.settings_report_button_auto_detail,
                     R.string.settings_report_button_hide to R.string.settings_report_button_hide_detail,
-                ),
-            )
+                )
+            for ((label, detail) in choices) {
+                compose.onNode(hasText(text(label)) and isSelectable()).performScrollTo().performClick()
+                compose.waitUntil(5_000) { compose.onAllNodesWithText(text(detail)).fetchSemanticsNodes().isNotEmpty() }
+                // Only the chosen one's.
+                for ((_, other) in choices.filter { it.second != detail }) {
+                    compose.onNodeWithText(text(other)).assertDoesNotExist()
+                }
+            }
         }
     }
 }

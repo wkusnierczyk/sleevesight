@@ -27,6 +27,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import app.sleevesight.app.ui.theme.ChoiceButtonGroup
 import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.app.ui.theme.plainSwitchColors
@@ -199,6 +200,41 @@ internal fun ValueRow(
             color = MaterialTheme.colorScheme.primary.copy(alpha = alpha),
         )
         summary?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = color) }
+    }
+}
+
+/**
+ * A setting with a few short choices (#637): [title], then [summary], then its [choices] as a
+ * connected button group ([ChoiceButtonGroup]), the [selected] one marked; a tap on another calls
+ * [onSelect] with it, at once, no dialog. A value in [details] has a line under the group saying
+ * what it does, shown while it is the one chosen. A setting whose choices are many or long, or
+ * described one by one, is a [ValueRow] opening a dialog instead (`design/design.md`, *Settings
+ * screen*).
+ */
+@Suppress("LongParameterList") // What the row shows, each a value of its own, and what a tap does.
+@Composable
+internal fun <T> ChoiceButtonsRow(
+    title: String,
+    summary: String?,
+    choices: List<Pair<T, String>>,
+    selected: T,
+    details: Map<T, String> = emptyMap(),
+    onSelect: (T) -> Unit,
+) {
+    if (!shownInSearch(title)) return
+    val color = MaterialTheme.colorScheme.onSurface
+    Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 8.dp)) {
+        Text(
+            searchMarked(title),
+            style = MaterialTheme.typography.bodyLarge,
+            color = color,
+            modifier = Modifier.testTag(ROW_TITLE_TAG),
+        )
+        summary?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = color) }
+        ChoiceButtonGroup(choices, selected, onSelect, Modifier.padding(top = 4.dp))
+        details[selected]?.let {
+            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }
 
