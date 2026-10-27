@@ -2,6 +2,7 @@ package app.sleevesight.app.ui.home
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
@@ -10,6 +11,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.isTraversalGroup
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
@@ -181,7 +185,22 @@ private fun Footer(
     lines: @Composable () -> Unit,
     action: @Composable () -> Unit,
 ) {
-    Layout(contents = listOf({ Column { lines() } }, action)) { (lineParts, actionParts), constraints ->
+    // A screen reader reads the lines, all of them, then the action, wherever the layout puts them:
+    // the footer and the lines are traversal groups, the lines first, so the action, centred on the
+    // lines beside them, is not read between two of them.
+    val content =
+        listOf(
+            @Composable {
+                Column(
+                    Modifier.semantics {
+                        isTraversalGroup = true
+                        traversalIndex = 0f
+                    },
+                ) { lines() }
+            },
+            @Composable { Box(Modifier.semantics { traversalIndex = 1f }) { action() } },
+        )
+    Layout(content, Modifier.semantics { isTraversalGroup = true }) { (lineParts, actionParts), constraints ->
         val width = constraints.maxWidth
         val loose = constraints.copy(minWidth = 0, minHeight = 0)
         val acted = actionParts.map { it.measure(loose) }
