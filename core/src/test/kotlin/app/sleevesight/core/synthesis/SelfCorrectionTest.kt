@@ -103,6 +103,9 @@ class SelfCorrectionTest {
                 "So \"I'll fix the roof\" sets up the closing pledge:",
                 "So 'I'll fix it' sets up the closing pledge:",
                 "So ‘I’ll fix it’ sets up the closing pledge:",
+                // A plural's apostrophe inside the quotation does not close it.
+                "So 'For the lovers' sake, I'll fix it' sets up the closing pledge:",
+                "So ‘For the lovers’ sake, I’ll fix it’ sets up the closing pledge:",
                 "So the 12\" mix ends on \"Let me correct that line\" sung twice.",
                 // An introduction that is not a sentence of its own.
                 "The next verse is her revised reply:",
@@ -148,6 +151,9 @@ class SelfCorrectionTest {
                 // The middle line of a lyric in single quotation marks over three lines.
                 "The song circles one regret [W1]. The last verse runs:\n\n" +
                     "'I must fix it.\nI must fix it, I should cut it now.\nThen I go' [W1].",
+                // A lyric line, before prose whose first sentence opens with initials.
+                "B.B. King recorded the song in 1960 [W1]. The chorus pleads:\n\n" +
+                    "Let me fix it, let me make it right.\n\nB.B. King returned to it on his 2000 album [W1].",
             )
         for (reply in replies) {
             val grounded = written(reply)
@@ -158,11 +164,22 @@ class SelfCorrectionTest {
 
     @Test
     fun `an apostrophe opens no quotation, before a word or a decade or after a plural`() {
-        val version = "It defined the '90s for the Beatles' heirs, rock 'n' roll's too [MB1]."
-        val reply = "$version It sets the tone.\n\nWait, I'll drop the second sentence.\n\n$version"
-        val grounded = written(reply)
-        assertEquals(version, grounded.text)
-        assertNotNull(grounded.withdrawn)
+        val versions =
+            listOf(
+                "It defined the '90s for the Beatles' heirs, rock 'n' roll's too [MB1].",
+                // An apostrophe that opens a word, with no mark after it to close a quotation.
+                "Monk's 'Round Midnight is the standard [MB1].",
+                "Monk’s ‘Round Midnight is the standard [MB1].",
+                "They give 'em hell on every chorus, rock 'n roll to the end [MB1].",
+                // After a title's closing quotation mark.
+                "\"Hey Jude\"'s coda runs four minutes [MB1].",
+            )
+        for (version in versions) {
+            val reply = "$version It sold a million [W1].\n\nWait, I'll drop the second sentence.\n\n$version"
+            val grounded = written(reply)
+            assertEquals(version, grounded.text, reply)
+            assertNotNull(grounded.withdrawn, reply)
+        }
     }
 
     @Test
