@@ -37,10 +37,12 @@ class NameMatcher(
         a: String,
         b: String,
     ): Boolean {
-        val ka = key(a).removePrefix(THE)
-        val kb = key(b).removePrefix(THE)
-        return ka.isNotEmpty() && ka == kb
+        val ka = nameKey(a)
+        return ka.isNotEmpty() && ka == nameKey(b)
     }
+
+    /** [text]'s [key] without a leading `the`: two names are the [sameName] when theirs are equal and not empty. */
+    fun nameKey(text: String): String = key(text).removePrefix(THE)
 
     /**
      * Whether [a] and [b] are one name written with and without a leading honorific (`Mr.`, `Mrs.`,
