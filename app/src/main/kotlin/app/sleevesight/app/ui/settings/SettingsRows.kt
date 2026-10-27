@@ -46,7 +46,7 @@ private val LEADING_GAP = 16.dp
  */
 internal val UNDER_BADGE = ROW_MARK + LEADING_GAP
 
-/** The test tag of what starts a [SwitchRow], its [ROW_MARK] (#613). */
+/** The test tag of what starts a [SwitchRow] or a [ValueRow], its [ROW_MARK] (#613). */
 internal const val ROW_LEADING_TAG = "settings-row-leading"
 
 /** The test tag of a [SwitchRow]'s switch (#613). */
@@ -165,7 +165,8 @@ private fun Summary(
 /**
  * A setting with a value, which [onClick] opens a dialog to change; null [onClick] is disabled.
  * [indent] nests it under the row above; [underBadge] starts it at the name of the badged row above
- * ([UNDER_BADGE]) instead.
+ * ([UNDER_BADGE]) instead. [leading] goes at the row's start, before the title, [ROW_MARK] a side,
+ * centred on the title's first line as a [SwitchRow]'s is: a source's badge (#670).
  */
 @Suppress("LongParameterList") // Each sets one aspect of the row; all but the title, value and action have defaults.
 @Composable
@@ -175,30 +176,40 @@ internal fun ValueRow(
     summary: String? = null,
     indent: Boolean = false,
     underBadge: Boolean = false,
+    leading: (@Composable () -> Unit)? = null,
     onClick: (() -> Unit)?,
 ) {
     if (!shownInSearch(title)) return
     val alpha = if (onClick != null) 1f else DISABLED_ALPHA
     val color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha)
-    Column(
+    val firstLine = remember { FirstLine() }
+    Row(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .clickable(enabled = onClick != null, onClick = { onClick?.invoke() })
                 .padding(start = valueRowStart(indent, underBadge), top = 8.dp, bottom = 8.dp),
     ) {
-        Text(
-            searchMarked(title),
-            style = MaterialTheme.typography.bodyLarge,
-            color = color,
-            modifier = Modifier.testTag(ROW_TITLE_TAG),
-        )
-        Text(
-            value,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.primary.copy(alpha = alpha),
-        )
-        summary?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = color) }
+        leading?.let {
+            // Dimmed with the row's text when the row cannot be tapped.
+            Box(Modifier.alignBy(::middle).testTag(ROW_LEADING_TAG).alpha(alpha)) { it() }
+            Spacer(Modifier.width(LEADING_GAP))
+        }
+        Column(modifier = Modifier.weight(1f).alignBy { firstLine.middle }) {
+            Text(
+                searchMarked(title),
+                style = MaterialTheme.typography.bodyLarge,
+                color = color,
+                modifier = Modifier.testTag(ROW_TITLE_TAG),
+                onTextLayout = { firstLine.middle = ((it.getLineTop(0) + it.getLineBottom(0)) / 2).roundToInt() },
+            )
+            Text(
+                value,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary.copy(alpha = alpha),
+            )
+            summary?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = color) }
+        }
     }
 }
 

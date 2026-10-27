@@ -17,9 +17,10 @@ import androidx.compose.ui.unit.dp
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.settings.SourceSwitch
 
-// A service's badge under *Sources*, *Genres* and *AI services* (#537): its letter in a plain,
-// neutral tile, the size of a player's icon under *Players*, so the rows line up. Letters, not the
-// services' logos: each logo is a third party's mark with its own terms (#591).
+// A service's badge under *Sources*, *Genres*, *AI services* and, under *History*, how long each
+// source's findings are kept (#537, #670): its letter in a plain, neutral tile, the size of a
+// player's icon under *Players*, so the rows line up. Letters, not the services' logos: each logo
+// is a third party's mark with its own terms (#591).
 
 /**
  * The size of what starts a settings row: a player's icon (#535), a service's badge (#537); the
@@ -36,11 +37,14 @@ private val BADGE_TEXT = 15.dp
 /** The badge's corners: those of Home's source chips. */
 private val BADGE_SHAPE = RoundedCornerShape(8.dp)
 
+/** The letter [source]'s citations and Home's chip use: its [SourceId.tag], the one place it is set. */
+internal fun badgeLetter(source: SourceId): String = source.tag
+
 /**
- * The letter a source's citations and Home's chip use for [switch] ([SourceId.tag]): its first
- * source's, so *Wikipedia and Wikidata* is `W`.
+ * The letter a source's citations and Home's chip use for [switch]: its first source's, so
+ * *Wikipedia and Wikidata* is `W`.
  */
-internal fun badgeLetter(switch: SourceSwitch): String = switch.sources.first().tag
+internal fun badgeLetter(switch: SourceSwitch): String = badgeLetter(switch.sources.first())
 
 /** The letter a web search engine's badge shows: that of web search's citations, `G`. */
 internal val WEB_BADGE: String = badgeLetter(SourceSwitch.WEB)
