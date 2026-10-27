@@ -22,7 +22,9 @@ import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.GenreNotes
 import app.sleevesight.app.ui.theme.LinkedText
+import app.sleevesight.app.ui.theme.Panel
 import app.sleevesight.app.ui.theme.TextPart
+import app.sleevesight.app.ui.theme.chipColours
 import app.sleevesight.core.genres.GenreLevel
 import app.sleevesight.core.genres.GenreRow
 import app.sleevesight.core.genres.LabelSource
@@ -53,7 +55,7 @@ internal fun GenrePanel(
             .firstOrNull { it.genre.identity == genre }
             ?.genre
             ?.label ?: return
-    HomePanel(name, GENRE_PANEL_TAG, onClose) {
+    Panel(name, GENRE_PANEL_TAG, onClose) {
         // What the genre is, and *Why is this …?* (#523), above the table.
         GenreAbout(track, genre, notes)
         Table(track, genre)
@@ -201,7 +203,7 @@ private fun sourceParts(
         .orEmpty()
 }
 
-/** The test tags of the genre's panel, its heading and its *Close*, as [HomePanel] makes them. */
+/** The test tags of the genre's panel, its heading and its *Close*, as [Panel] makes them. */
 const val GENRE_PANEL_TAG: String = "genre-panel"
 const val GENRE_PANEL_HEADING_TAG: String = "genre-panel:heading"
 const val GENRE_PANEL_CLOSE_TAG: String = "genre-panel:close"

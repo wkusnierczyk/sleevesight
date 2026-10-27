@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Settings' sections (#444): each heading's short description, always shown, and its fuller explanation, shown unfolded. -->
+    <!-- Settings' sections (#444): each section's short description, shown beside its chip, and its fuller explanation, shown at the top of its panel (#649). -->
     <string name="settings_section_collapsed">collapsed</string>
     <string name="settings_section_expanded">expanded</string>
     <string name="settings_players_short">Music apps Sleevesight follows</string>

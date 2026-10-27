@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.theme.DeveloperMark
 import app.sleevesight.app.ui.theme.LinkedText
+import app.sleevesight.app.ui.theme.Panel
 import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.app.ui.theme.handoffTarget
 import app.sleevesight.app.ui.theme.rememberFocusHandoff
@@ -46,7 +47,7 @@ import app.sleevesight.core.pipeline.TrackState
 /**
  * The *Sources* section, quiet, at the bottom (design, *Home screen*). Folded, it is a chip,
  * *Sources* ([SourcesChip], #623), drawn as a genre chip is, and nothing else; a tap on it opens its
- * panel in its place ([HomePanel], as a genre's is): *Sources* as a heading, with *Close* at the top
+ * panel in its place ([Panel], as a genre's is): *Sources* as a heading, with *Close* at the top
  * right, which folds it back to the chip; the focus moves to *Close* on opening and back to the chip
  * on closing (a keyboard's, and a screen reader's), and to the chip when a new track folds the panel
  * while a keyboard's focus is in it. In the panel, a chip for each source that gave
@@ -112,7 +113,7 @@ internal fun SourcesSection(
         }
     } else {
         Box(Modifier.onFocusChanged { inside[0] = it.hasFocus }) {
-            HomePanel(
+            Panel(
                 stringResource(R.string.home_sources_title),
                 SOURCES_PANEL_TAG,
                 onClose = {
@@ -384,7 +385,7 @@ private val TAG_PADDING = 4.dp
 /** The test tag of an evidence line, before its id. */
 const val LINE_PREFIX: String = "line:"
 
-/** The test tags of *Sources*' panel on Home, its heading and its *Close* (#623), as [HomePanel] makes them. */
+/** The test tags of *Sources*' panel on Home, its heading and its *Close* (#623), as [Panel] makes them. */
 const val SOURCES_PANEL_TAG: String = "sources-panel"
 const val SOURCES_PANEL_HEADING_TAG: String = "sources-panel:heading"
 const val SOURCES_PANEL_CLOSE_TAG: String = "sources-panel:close"

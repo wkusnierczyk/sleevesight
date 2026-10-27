@@ -179,10 +179,12 @@ class SettingsSettingLinksTest {
     fun aiServiceKnowledgeLinksToAiServices() =
         show(SettingsSection.SOURCES) {
             follow(modelSummary, SettingsTarget(SettingsSection.AI_SERVICES))
-            // The section's heading takes the focus, and the section is unfolded under it.
-            val heading = hasTestTag(SettingsSection.AI_SERVICES.tag) and isFocused()
-            waitForNode(heading)
-            compose.onNode(heading).assertIsDisplayed()
+            // The section opens as its panel (#649), landed on at its heading, whose *Close* takes
+            // the focus, as on opening.
+            val close = hasTestTag(SettingsSection.AI_SERVICES.panelTag + ":close") and isFocused()
+            waitForNode(close)
+            compose.onNode(close).assertIsDisplayed()
+            compose.onNodeWithTag(SettingsSection.AI_SERVICES.panelTag + ":heading").assertIsDisplayed()
             waitForNode(hasText(app.getString(R.string.settings_ai_model_of, "Anthropic")))
         }
 

@@ -54,8 +54,9 @@ import kotlinx.coroutines.launch
 import java.io.IOException
 
 /**
- * The settings screen (design, *Settings*; #444): its sections, each folded under its heading and
- * short description, all folded when the screen opens ([SettingsSection], [FoldedSection]):
+ * The settings screen (design, *Settings*; #444): its sections, each a chip with its short
+ * description beside it, which opens the section's panel in their place, any number open at once,
+ * all closed when the screen opens ([SettingsSection], [FoldedSection], #649):
  * *Players*, *Sources*, *AI services* ([AiSection], #227), *Secrets*, *Genres* (D12, #84),
  * *Insights* (D5, D13), *History* (#148, D9), *Appearance* (#377), *About*, and *Developer*, shown
  * only in developer mode, which seven taps on *Version* turn on ([VersionRow]). Each change is saved
@@ -78,9 +79,10 @@ import java.io.IOException
  * [installedPlayers] its icon, whether the phone shows it, and the players seen (#535); null lists
  * every stored player, without an icon.
  * [modelCheck] holds the services' models found unavailable (#540), which their rows say, and hears
- * each model list the model choice fetches. [landOn] is where the settings open, unfolded and
- * landed on as a link to it would ([SettingsNavigator.go]), once per visit: Home's note of a model
- * found unavailable opens them at the model's row (#581); null opens them all folded, at the top.
+ * each model list the model choice fetches. [landOn] is where the settings open, its section open
+ * and landed on as a link to it would ([SettingsNavigator.go]), once per visit: Home's note of a
+ * model found unavailable opens them at the model's row (#581); null opens them all closed, at the
+ * top.
  * [chooseWritingMode] saves each mode chosen for *Reactive*, the one chosen already included, and
  * tells the pipeline (#625: an automatic one starts automatic writing from the next track), its
  * result whether it was saved, which the screen announces as it does any change; null saves the
@@ -373,7 +375,7 @@ private fun Notices(
 }
 
 /**
- * The settings' sections, all folded at first, and the links between them ([SettingsNavigator]);
+ * The settings' sections, all closed at first, and the links between them ([SettingsNavigator]);
  * opened at [landOn], if any, once per visit (a rotation does not land again).
  */
 @Suppress("LongParameterList") // What the sections show and change.
@@ -401,8 +403,8 @@ private fun SettingsContent(
     }
 }
 
-/** The sections, in [folds], in the order shown. */
-@Suppress("LongParameterList", "LongMethod") // What the sections show and change; one fold per section.
+/** The sections, open as [folds] has them, in the order shown, their chips all as wide ([sectionChipWidth]). */
+@Suppress("LongParameterList", "LongMethod") // What the sections show and change; one call per section.
 @Composable
 private fun SettingsColumn(
     settings: Settings,
@@ -414,30 +416,31 @@ private fun SettingsColumn(
     open: (SettingsDialog) -> Unit,
 ) {
     val secrets = keys.states
+    val chip = sectionChipWidth()
     SettingsScrollColumn(
         modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Text(stringResource(R.string.settings_title), style = MaterialTheme.typography.headlineMedium)
-        FoldedSection(SettingsSection.PLAYERS, folds) { PlayersSection(settings, navigation.players, update) }
-        FoldedSection(SettingsSection.SOURCES, folds) { SourcesSection(settings, secrets, update) }
-        FoldedSection(SettingsSection.AI_SERVICES, folds) {
+        FoldedSection(SettingsSection.PLAYERS, folds, chip) { PlayersSection(settings, navigation.players, update) }
+        FoldedSection(SettingsSection.SOURCES, folds, chip) { SourcesSection(settings, secrets, update) }
+        FoldedSection(SettingsSection.AI_SERVICES, folds, chip) {
             AiSection(settings, secrets, navigation.modelName, update, open, unavailable)
         }
-        FoldedSection(SettingsSection.SECRETS, folds) { SecretsSection(settings, keys, update, open) }
-        FoldedSection(SettingsSection.GENRES, folds) { GenresSection(settings, secrets, update) }
-        FoldedSection(SettingsSection.INSIGHTS, folds) {
+        FoldedSection(SettingsSection.SECRETS, folds, chip) { SecretsSection(settings, keys, update, open) }
+        FoldedSection(SettingsSection.GENRES, folds, chip) { GenresSection(settings, secrets, update) }
+        FoldedSection(SettingsSection.INSIGHTS, folds, chip) {
             InsightsSection(settings, update, open, navigation.chooseMode)
         }
-        FoldedSection(SettingsSection.HISTORY, folds) { HistorySection(settings, update, open) }
-        FoldedSection(SettingsSection.APPEARANCE, folds) { AppearanceSection(settings, update, open) }
-        FoldedSection(SettingsSection.ABOUT, folds) {
+        FoldedSection(SettingsSection.HISTORY, folds, chip) { HistorySection(settings, update, open) }
+        FoldedSection(SettingsSection.APPEARANCE, folds, chip) { AppearanceSection(settings, update, open) }
+        FoldedSection(SettingsSection.ABOUT, folds, chip) {
             AboutSection(settings, update, navigation.openCredits, navigation.openWhatLeaves)
         }
         if (settings.developerMode) {
             // The whole section marked (#536), so what the mark means shows where it is set.
             DeveloperMark(spacing = 4.dp) {
-                FoldedSection(SettingsSection.DEVELOPER, folds) {
+                FoldedSection(SettingsSection.DEVELOPER, folds, chip) {
                     DeveloperSection(settings, update, open, navigation.openDiagnostics)
                 }
             }
