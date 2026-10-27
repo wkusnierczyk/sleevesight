@@ -63,7 +63,7 @@ Web search, on by default once Exa has a key, adds what it found to the prompt: 
 | Exa searches | $0.004 | $0.068 |
 | **Together** | | **about $0.07** |
 
-**Look again**, on an insight already written ([usage]({{ '/docs/tutorials/usage/#look-again' | relative_url }})), looks every source up afresh: with web search on, one Exa search, $0.004, whatever it finds; and, only if the sources found something new, one insight written again, about $0.0002 on Claude Haiku 5.5. It is made only on a tap.
+**Look again**, on an insight already written ([usage]({{ '/docs/tutorials/usage/#look-again' | relative_url }})), looks every source up afresh and writes nothing: with web search on, it costs one Exa search, $0.004, whatever it finds. When the sources found something new, it offers *Rewrite insight*: that is the paid call, about $0.0002 on Claude Haiku 5.5, made only if you tap it.
 
 Tracks played before cost less: a track looked up again within the day costs no search, and a track played again with the same evidence and the same AI settings shows the insight written then, with no call ([*What costs nothing*]({{ '/docs/tutorials/usage/#what-costs-nothing' | relative_url }})).
 
