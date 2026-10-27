@@ -11,10 +11,13 @@ detekt {
     config.setFrom(rootProject.file("config/detekt/detekt.yml"))
 }
 
-// The version in `gradle/libs.versions.toml`, which the pre-commit hook reads too.
-ktlint {
-    version = extensions.getByType<VersionCatalogsExtension>().named("libs").findVersion("ktlint").get().requiredVersion
-}
+// The version in `gradle/libs.versions.toml`, which the pre-commit hook reads too. A build with no
+// such catalog, such as the build logic's functional tests, keeps the plugin's default.
+extensions
+    .getByType<VersionCatalogsExtension>()
+    .find("libs")
+    .flatMap { it.findVersion("ktlint") }
+    .ifPresent { ktlint { version = it.requiredVersion } }
 
 // The static checks of `check` without the tests, for the pre-push hook (`.githooks/pre-push`):
 // ktlint and Detekt here; the pipeline modules add their type-resolved Detekt tasks and the app its
