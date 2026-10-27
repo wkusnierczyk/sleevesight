@@ -22,18 +22,19 @@ import kotlin.math.sqrt
 
 /**
  * The parts of Home the guide's notes name (#627), top to bottom as Home shows them, each with its
- * [note].
+ * [note] and, for a screen reader, which reads the notes without the picture, its [label].
  */
 internal enum class GuidePart(
     @StringRes val note: Int,
+    @StringRes val label: Int,
 ) {
-    SETTINGS(R.string.home_guide_note_settings),
-    PLAYER(R.string.home_guide_note_player),
-    GENRES(R.string.home_guide_note_genres),
-    INSIGHT(R.string.home_guide_note_insight),
-    CITE(R.string.home_guide_note_cite),
-    WRITE(R.string.home_guide_note_write),
-    SOURCES(R.string.home_guide_note_sources),
+    SETTINGS(R.string.home_guide_note_settings, R.string.home_guide_part_settings),
+    PLAYER(R.string.home_guide_note_player, R.string.home_guide_part_player),
+    GENRES(R.string.home_guide_note_genres, R.string.home_guide_part_genres),
+    INSIGHT(R.string.home_guide_note_insight, R.string.home_guide_part_insight),
+    CITE(R.string.home_guide_note_cite, R.string.home_guide_part_cite),
+    WRITE(R.string.home_guide_note_write, R.string.home_guide_part_write),
+    SOURCES(R.string.home_guide_note_sources, R.string.home_guide_part_sources),
 }
 
 /**
@@ -65,7 +66,7 @@ internal data class GuideMetrics(
     }
 }
 
-/** Where the notes go, the arrows from them, and the guide's [height] (#627). */
+/** Where the notes go, the arrows from them, both in [GuidePart] order, and the guide's [height] (#627). */
 internal data class GuideShown(
     val notes: List<Offset>,
     val arrows: List<GuideArrow>,
@@ -89,7 +90,7 @@ internal data class GuideArrow(
 
 /**
  * The notes and arrows (#627) for [parts], each part's bounds in a picture [pictureWidth] by
- * [pictureHeight], with notes [noteHeights] high, in [GuidePart] order, as the mock-up lays them
+ * [pictureHeight], with notes [noteHeights] high, all in [GuidePart] order, as the mock-up lays them
  * out: each note on the right at the height of its part's middle, pushed below the note above when
  * they would overlap, so notes and parts run in the same order and no two arrows cross. The last
  * note, pushed below its part, goes a little lower and to the left, under the picture's corner, and
@@ -124,7 +125,7 @@ internal fun guideLayout(
         bottom = max(bottom, top + h)
     }
     val arrows =
-        order.map { part ->
+        GuidePart.entries.map { part ->
             val rect = parts.getValue(part)
             val note = notes[part.ordinal]!!
             val h = noteHeights[part.ordinal]

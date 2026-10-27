@@ -46,7 +46,8 @@ class GuideLayoutTest {
     @Test
     fun eachArrowEndsJustInsideItsPartAtItsHeight() {
         val shown = laidOut()
-        // The arrows run top to bottom, as the parts do here.
+        // The arrows, as the notes, in the parts' order.
+        assertEquals(GuidePart.entries.size, shown.arrows.size)
         val insight = shown.arrows[GuidePart.INSIGHT.ordinal]
         val part = parts.getValue(GuidePart.INSIGHT)
         assertEquals(part.center.y, insight.end.y, 0.01f)
@@ -58,10 +59,21 @@ class GuideLayoutTest {
     }
 
     @Test
+    fun theArrowsAreInThePartsOrderWhateverOrderThePartsAreDrawnIn() {
+        // The player above the cogwheel: the arrows are still each at its own part.
+        val swapped =
+            parts + (GuidePart.SETTINGS to Rect(130f, 25f, 140f, 35f)) + (GuidePart.PLAYER to Rect(6f, 5f, 60f, 13f))
+        val shown = guideLayout(swapped, GuidePart.entries.map { 20f }, pictureWidth, pictureHeight, metrics)
+        for (part in GuidePart.entries) {
+            assertEquals(part.name, swapped.getValue(part).center.y, shown.arrows[part.ordinal].end.y, 0.01f)
+        }
+    }
+
+    @Test
     fun theLastNotePushedBelowItsPartPointsUpIntoItsBottom() {
         // Tall notes push *Sources*' note below its part.
         val shown = laidOut(heights = 40f)
-        val sources = shown.arrows.last()
+        val sources = shown.arrows[GuidePart.SOURCES.ordinal]
         val part = parts.getValue(GuidePart.SOURCES)
         assertTrue(sources.fromBelow)
         assertEquals(part.center.x, sources.end.x, 0.01f)

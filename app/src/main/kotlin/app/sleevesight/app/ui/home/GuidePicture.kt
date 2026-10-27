@@ -45,11 +45,14 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.TextStyle
@@ -58,6 +61,7 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
@@ -83,7 +87,8 @@ internal val Caveat: FontFamily = FontFamily(Font(R.font.caveat_regular))
  * The guide's picture (#627): Home while a track plays, drawn small from Home's own parts with a
  * fixed example track ([MiniHome]), and on its right a note in a hand-written font ([Caveat]) for
  * each [GuidePart], with a drawn arrow to it ([guideLayout]). Not interactive; a screen reader reads
- * it as one image, *Home while a track plays:* and then the notes, in order.
+ * it as one image, *Home while a track plays:* and then the notes, in order, each after the name of
+ * the part it points at (*Settings: tap to configure*), since the picture's parts are not read.
  *
  * The notes follow the font size, and the picture narrows as it grows, so the notes keep room; the
  * picture itself is drawn at the default font size, so it stays a picture of Home.
@@ -91,11 +96,7 @@ internal val Caveat: FontFamily = FontFamily(Font(R.font.caveat_regular))
 @Composable
 internal fun GuidePicture(modifier: Modifier = Modifier) {
     val notes = GuidePart.entries.map { stringResource(it.note) }
-    val described =
-        stringResource(
-            R.string.home_guide_picture,
-            notes.joinToString(stringResource(R.string.home_guide_note_separator)),
-        )
+    val described = described(notes)
     // Where each part is in the picture, as last laid out: its bounds in the picture's own box.
     val parts = remember { mutableStateMapOf<GuidePart, Rect>() }
     val picture = remember { PictureBox() }
@@ -119,8 +120,10 @@ internal fun GuidePicture(modifier: Modifier = Modifier) {
         modifier =
             modifier
                 .testTag(GUIDE_PICTURE_TAG)
-                .clearAndSetSemantics { contentDescription = described }
-                .drawWithContent {
+                .clearAndSetSemantics {
+                    contentDescription = described
+                    role = Role.Image
+                }.drawWithContent {
                     drawContent()
                     val stroke = Stroke(width = PEN.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
                     for (arrow in arrows.value) drawArrow(arrow, pen, stroke)
@@ -148,6 +151,22 @@ internal fun GuidePicture(modifier: Modifier = Modifier) {
     }
 }
 
+/**
+ * What a screen reader says of the picture: *Home while a track plays:*, then the [notes], in
+ * [GuidePart] order, each after the name of the part it points at, which the picture does not read.
+ */
+@Composable
+private fun described(notes: List<String>): String {
+    val named =
+        GuidePart.entries.zip(notes) { part, note ->
+            stringResource(R.string.home_guide_named_note, stringResource(part.label), note)
+        }
+    return stringResource(
+        R.string.home_guide_picture,
+        named.joinToString(stringResource(R.string.home_guide_note_separator)),
+    )
+}
+
 /** The picture's own box, as last placed, which the parts' bounds are measured in. */
 private class PictureBox {
     var coordinates: LayoutCoordinates? = null
@@ -161,6 +180,7 @@ private class PictureBox {
  * semantics: the player row, a fixed cover (beige, with no blue, so the pen's arrows stand out), the
  * position, *Key insights* with its citation and the Write button; the genre chips and *Sources*' chip
  * are Home's own [ChipFrame], without a click. Each part the notes name tells [report] where it is.
+ * Left to right whatever the phone's language: a picture of Home as the notes, on its right, name it.
  */
 @Composable
 private fun MiniHome(
@@ -187,10 +207,12 @@ private fun MiniHome(
                 }
             },
     ) {
-        // The default font size, and no logo intro to report to: a picture, not Home's header.
+        // The default font size, no logo intro to report to, and left to right, as the notes are
+        // placed: a picture, not Home's header.
         CompositionLocalProvider(
             LocalDensity provides Density(density.density, 1f),
             LocalLogoIntro provides null,
+            LocalLayoutDirection provides LayoutDirection.Ltr,
         ) {
             Column(
                 Modifier.padding(start = 16.dp, end = 16.dp, bottom = 18.dp),
@@ -346,14 +368,17 @@ private fun MiniInsight(
 // The Write button, as [WriteSplitButton] draws it while it offers a Write: filled, in two halves.
 @Composable
 private fun MiniWrite(modifier: Modifier) {
-    Row(modifier, horizontalArrangement = Arrangement.spacedBy(GAP)) {
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(SPLIT_GAP)) {
         val colours = MaterialTheme.colorScheme
+        val leading = RoundedCornerShape(SPLIT_OUTER_CORNER, SPLIT_INNER_CORNER, SPLIT_INNER_CORNER, SPLIT_OUTER_CORNER)
+        val trailing =
+            RoundedCornerShape(SPLIT_INNER_CORNER, SPLIT_OUTER_CORNER, SPLIT_OUTER_CORNER, SPLIT_INNER_CORNER)
         Box(
             Modifier
-                .heightIn(min = HEIGHT)
-                .clip(RoundedCornerShape(OUTER_CORNER, INNER_CORNER, INNER_CORNER, OUTER_CORNER))
+                .heightIn(min = SPLIT_HEIGHT)
+                .clip(leading)
                 .background(colours.primary)
-                .padding(PADDING),
+                .padding(SPLIT_PADDING),
             contentAlignment = Alignment.Center,
         ) {
             // With the **AI** mark, as Home's Write has it (#624).
@@ -363,8 +388,8 @@ private fun MiniWrite(modifier: Modifier) {
         }
         Box(
             Modifier
-                .size(TARGET, HEIGHT)
-                .clip(RoundedCornerShape(INNER_CORNER, OUTER_CORNER, OUTER_CORNER, INNER_CORNER))
+                .size(SPLIT_TARGET, SPLIT_HEIGHT)
+                .clip(trailing)
                 .background(colours.primary),
             contentAlignment = Alignment.Center,
         ) {

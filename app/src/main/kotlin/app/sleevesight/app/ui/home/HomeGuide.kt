@@ -84,10 +84,10 @@ private fun DismissButton(
         OutlinedButton(
             onClick = if (never) onNever else onDismissOnce,
             modifier = Modifier.testTag(GUIDE_DISMISS_TAG),
-            shape = RoundedCornerShape(OUTER_CORNER, INNER_CORNER, INNER_CORNER, OUTER_CORNER),
-            contentPadding = PADDING,
+            shape = RoundedCornerShape(SPLIT_OUTER_CORNER, SPLIT_INNER_CORNER, SPLIT_INNER_CORNER, SPLIT_OUTER_CORNER),
+            contentPadding = SPLIT_PADDING,
         ) { Text(stringResource(R.string.home_guide_dismiss)) }
-        val shape = RoundedCornerShape(INNER_CORNER, OUTER_CORNER, OUTER_CORNER, INNER_CORNER)
+        val shape = RoundedCornerShape(SPLIT_INNER_CORNER, SPLIT_OUTER_CORNER, SPLIT_OUTER_CORNER, SPLIT_INNER_CORNER)
         Box {
             Box(
                 modifier =
@@ -105,7 +105,7 @@ private fun DismissButton(
                     painterResource(R.drawable.ic_keyboard_arrow_down),
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.rotate(if (open) OPEN_ROTATION else 0f),
+                    modifier = Modifier.rotate(if (open) SPLIT_OPEN_ROTATION else 0f),
                 )
             }
             DropdownMenu(expanded = open, onDismissRequest = { open = false }) {

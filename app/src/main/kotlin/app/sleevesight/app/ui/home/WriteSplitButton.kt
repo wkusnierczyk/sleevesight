@@ -61,35 +61,35 @@ import app.sleevesight.core.settings.WriteAutomatically
  * Each half's least height as drawn (#624): as tall as Home's chips; more where the label wraps.
  * Each answers a tap across 48 dp.
  */
-internal val HEIGHT = 32.dp
+internal val SPLIT_HEIGHT = 32.dp
 
 /** The arrow's width, and the row's least height: the touch target Android's accessibility guidance asks for. */
-internal val TARGET = 48.dp
+internal val SPLIT_TARGET = 48.dp
 
 /**
  * The room inside the leading half around its label: as in Home's genre chips, so a label of one
  * line makes it 32 dp high, as tall as they are, at any font size.
  */
-internal val PADDING = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+internal val SPLIT_PADDING = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
 
 /** The corner where the two halves meet, as Material 3's split button has it. */
-internal val INNER_CORNER = CornerSize(4.dp)
+internal val SPLIT_INNER_CORNER = CornerSize(4.dp)
 
 /**
  * The outer corners: round at 32 dp high, as the genre chips' are; fixed, so a taller button, its
  * label wrapping, keeps them and its text clear of them.
  */
-internal val OUTER_CORNER = CornerSize(16.dp)
+internal val SPLIT_OUTER_CORNER = CornerSize(16.dp)
 
 /** The gap between the halves. */
-internal val GAP = 2.dp
+internal val SPLIT_GAP = 2.dp
 
 /** The alpha of a control's content that cannot be used, and of its container, as Material's. */
 private const val DISABLED_CONTENT_ALPHA = 0.38f
 private const val DISABLED_CONTAINER_ALPHA = 0.12f
 
 /** The arrow turned up while the menu is open. */
-internal const val OPEN_ROTATION = 180f
+internal const val SPLIT_OPEN_ROTATION = 180f
 
 /**
  * *Reactive* (D5) as the split button's menu shows it (#615): the [mode] chosen; [paused] while
@@ -177,10 +177,10 @@ internal fun Halves(
     CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
         Layout(content, modifier) { measurables, constraints ->
             val (leadingHalf, arrowHalf) = measurables
-            val gap = GAP.roundToPx()
-            val target = TARGET.roundToPx()
+            val gap = SPLIT_GAP.roundToPx()
+            val target = SPLIT_TARGET.roundToPx()
             val loose = constraints.copy(minWidth = 0, minHeight = 0)
-            val least = HEIGHT.roundToPx().coerceAtMost(loose.maxHeight)
+            val least = SPLIT_HEIGHT.roundToPx().coerceAtMost(loose.maxHeight)
             val leading = leadingHalf.measure(loose.offset(horizontal = -(target + gap)).copy(minHeight = least))
             val arrow = arrowHalf.measure(Constraints.fixed(target, leading.height))
             val width = leading.width + gap + arrow.width
@@ -200,7 +200,7 @@ private fun Leading(
     filled: Boolean,
     onClick: () -> Unit,
 ) {
-    val shape = RoundedCornerShape(OUTER_CORNER, INNER_CORNER, INNER_CORNER, OUTER_CORNER)
+    val shape = RoundedCornerShape(SPLIT_OUTER_CORNER, SPLIT_INNER_CORNER, SPLIT_INNER_CORNER, SPLIT_OUTER_CORNER)
     val tag =
         when {
             !offer.enabled -> NO_ACTION_TAG
@@ -214,9 +214,9 @@ private fun Leading(
     // Every Write calls the AI service, a disabled one included; Stop does not (#624).
     val label: @Composable () -> Unit = { if (offer.usesAi) AiLabel(text) else Text(text) }
     if (filled) {
-        Button(onClick, modifier, enabled, shape = shape, contentPadding = PADDING) { label() }
+        Button(onClick, modifier, enabled, shape = shape, contentPadding = SPLIT_PADDING) { label() }
     } else {
-        OutlinedButton(onClick, modifier, enabled, shape = shape, contentPadding = PADDING) { label() }
+        OutlinedButton(onClick, modifier, enabled, shape = shape, contentPadding = SPLIT_PADDING) { label() }
     }
 }
 
@@ -230,7 +230,7 @@ private fun ModeArrow(
 ) {
     var open by remember { mutableStateOf(false) }
     val enabled = writing?.enabled == true
-    val shape = RoundedCornerShape(INNER_CORNER, OUTER_CORNER, OUTER_CORNER, INNER_CORNER)
+    val shape = RoundedCornerShape(SPLIT_INNER_CORNER, SPLIT_OUTER_CORNER, SPLIT_OUTER_CORNER, SPLIT_INNER_CORNER)
     val colours = if (filled) ButtonDefaults.buttonColors() else ButtonDefaults.outlinedButtonColors()
     val container =
         when {
@@ -261,7 +261,7 @@ private fun ModeArrow(
                 painterResource(R.drawable.ic_keyboard_arrow_down),
                 contentDescription = null,
                 tint = content,
-                modifier = Modifier.rotate(if (open) OPEN_ROTATION else 0f),
+                modifier = Modifier.rotate(if (open) SPLIT_OPEN_ROTATION else 0f),
             )
         }
         if (writing != null) {

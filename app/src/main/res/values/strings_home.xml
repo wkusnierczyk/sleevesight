@@ -8,15 +8,27 @@
     <string name="home_play_on_not_followed">Play on %1$s, not followed</string>
     <!-- Under a switched-off player's name: a link that opens Settings at Players. -->
     <string name="home_player_enable">Enable in Settings</string>
-    <!-- With no player seen yet; %1$s is home_players_none_link, a link that opens Settings at Players. -->
+    <!-- With no player listed; %1$s is home_players_none_link, a link that opens Settings at Players. -->
     <string name="home_players_none">No music player seen yet. Play music in one, and it is listed here and in %1$s.</string>
     <string name="home_players_none_link">Settings → Players</string>
     <!-- What a screen reader says a tap on a link to Settings → Players does. -->
     <string name="home_players_open_settings">Open Settings at Players</string>
     <!-- The guide to Home: the notes on its picture, top to bottom. -->
-    <!-- What a screen reader says of the picture: %1$s is the notes, in order, joined by home_guide_note_separator. -->
+    <!-- What a screen reader says of the picture: %1$s is the notes, in order, each as home_guide_named_note,
+         joined by home_guide_note_separator. -->
     <string name="home_guide_picture">Home while a track plays: %1$s</string>
     <string name="home_guide_note_separator">"; "</string>
+    <!-- A note as a screen reader says it: %1$s is the part it points at (home_guide_part_…), %2$s the note. -->
+    <string name="home_guide_named_note">%1$s: %2$s</string>
+    <!-- The parts the notes point at, as a screen reader names them. -->
+    <string name="home_guide_part_settings">Settings</string>
+    <string name="home_guide_part_player">Player</string>
+    <string name="home_guide_part_genres">Genres</string>
+    <string name="home_guide_part_insight">Insight</string>
+    <string name="home_guide_part_cite">Citation</string>
+    <string name="home_guide_part_write">Write button</string>
+    <string name="home_guide_part_sources">Sources</string>
+    <!-- The notes. -->
     <string name="home_guide_note_settings">tap to configure</string>
     <string name="home_guide_note_player">tap to open</string>
     <string name="home_guide_note_genres">tap a genre for details</string>
@@ -76,6 +88,8 @@
     <string name="home_fold_unfolded">▾</string>
     <!-- A page's back arrow, as a screen reader says it. -->
     <string name="page_back">Back</string>
+    <!-- A page (Sources', the genres') once nothing plays (#627): the players and the guide are on Home. -->
+    <string name="page_nothing_playing">Nothing is playing in a player you follow.</string>
     <!-- The button at the end of a page opened from somewhere (the credits, the first-run screen opened again), which closes it;
          and at the top right of a panel on Home (a genre's, Sources'), which closes the panel. -->
     <string name="page_close">Close</string>

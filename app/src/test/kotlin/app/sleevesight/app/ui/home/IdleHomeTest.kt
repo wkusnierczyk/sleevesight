@@ -194,21 +194,15 @@ class IdleHomeTest {
     @Test
     fun theGuidesPictureIsOneImageWithItsNotesInOrder() =
         show(players) {
-            val notes =
-                listOf(
-                    R.string.home_guide_note_settings,
-                    R.string.home_guide_note_player,
-                    R.string.home_guide_note_genres,
-                    R.string.home_guide_note_insight,
-                    R.string.home_guide_note_cite,
-                    R.string.home_guide_note_write,
-                    R.string.home_guide_note_sources,
-                ).map { text(it) }
             val node = compose.onNodeWithTag(GUIDE_PICTURE_TAG).fetchSemanticsNode()
-            assertEquals(
-                listOf("Home while a track plays: " + notes.joinToString("; ")),
-                node.config.getOrNull(SemanticsProperties.ContentDescription),
-            )
+            // Each note after the part it points at, since the parts in the picture are not read.
+            val described =
+                "Home while a track plays: Settings: tap to configure; Player: tap to open; " +
+                    "Genres: tap a genre for details; Insight: read about what’s playing; " +
+                    "Citation: follow to references; Write button: generate an insight (paid); " +
+                    "Sources: read source information"
+            assertEquals(listOf(described), node.config.getOrNull(SemanticsProperties.ContentDescription))
+            assertEquals(Role.Image, node.config.getOrNull(SemanticsProperties.Role))
             // One image: nothing in it is read, or reached, on its own.
             assertTrue(node.children.isEmpty())
             assertEquals(0, compose.onAllNodes(hasText("Blue in Green")).fetchSemanticsNodes().size)
