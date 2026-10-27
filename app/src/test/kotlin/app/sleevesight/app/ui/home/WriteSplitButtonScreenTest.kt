@@ -57,12 +57,13 @@ import org.robolectric.shadows.ShadowToast
 
 /**
  * The insight card's split button (#615): the leading half says what a tap does in each state,
- * the mode's Write while automatic writing waits for a tap, disabled while it runs by itself; the
- * arrow's menu is *Reactive*, each showing the other's change, and ends with the way to it in the
- * settings; an automatic mode chosen says each new track's insight is a paid call, *Now* says
- * nothing; *Saver*'s pause shows beside it; a screen reader reads the action, *Writing mode: <mode>*
- * as a drop-down list, and the modes as one choice among them; 48 dp targets; fixed while *Show
- * insights* is off.
+ * the mode's Write while automatic writing waits for a tap (a Write offered again after a failure
+ * or a Stop included), disabled while it runs by itself; the line says resume whenever *Saver* has
+ * paused it; the arrow's menu is *Reactive*, each showing the other's change, and ends with the way
+ * to it in the settings; another automatic mode chosen says each new track's insight is a paid call,
+ * *Now* or the mode already chosen says nothing; *Saver*'s pause shows beside it; a screen reader
+ * reads the action, *Writing mode: <mode>* as a drop-down list, and the modes as one choice among
+ * them; 48 dp targets; fixed while *Show insights* is off.
  */
 @RunWith(RobolectricTestRunner::class)
 class WriteSplitButtonScreenTest {
@@ -158,6 +159,22 @@ class WriteSplitButtonScreenTest {
     }
 
     @Test
+    fun whileSaverHasPausedItTheLineSaysResumeEvenForAWriteNotOfferedBecauseOfThePause() {
+        // Under On track skip, a natural end while paused: Write offered, but not because of the pause.
+        settings.value = Settings(writeAutomatically = WriteAutomatically.WHEN_I_SKIP)
+        view.value = PipelineView(offered, aiReady = true, waiting = true, paused = true)
+        show {
+            leading(WRITE_TAG).assertTextEquals("Write on skip").assertIsEnabled()
+            says(
+                "Automatic writing paused: tracks changed while Sleevesight was not on screen. Tap Write on skip " +
+                    "to write this one and resume.",
+            )
+            compose.onNodeWithText("start writing automatically", substring = true).assertDoesNotExist()
+            assertEquals(1, count(WRITE_MODE_PAUSED_TAG))
+        }
+    }
+
+    @Test
     fun whileAutomaticWritingRunsByItselfTheModesWriteIsDisabled() {
         view.value = PipelineView(notYet, aiReady = true)
         show {
@@ -230,6 +247,39 @@ class WriteSplitButtonScreenTest {
     }
 
     @Test
+    fun aFailedOrStoppedCallWhileAutomaticWritingWaitsOffersTheModesWrite() {
+        val labels =
+            mapOf(
+                WriteAutomatically.ON_EVERY_TRACK_CHANGE to "Write on change",
+                WriteAutomatically.WHEN_I_SKIP to "Write on skip",
+            )
+        for (insight in listOf(InsightState.Failed("overloaded"), InsightState.Stopped)) {
+            for ((mode, label) in labels) {
+                settings.value = Settings(writeAutomatically = mode)
+                // No tap yet since the app started: the tap starts automatic writing.
+                view.value = PipelineView(track(insight = insight), aiReady = true, retry = true, waiting = true)
+                show {
+                    leading(WRITE_TAG).assertTextEquals(label).assertIsEnabled()
+                    says("$label tries again, as a new call to your AI service, and starts writing automatically.")
+                }
+                // Saver has paused it: the tap resumes it.
+                view.value = view.value.copy(paused = true)
+                show {
+                    leading(WRITE_TAG).assertTextEquals(label).assertIsEnabled()
+                    says("$label tries again, as a new call to your AI service, and resumes writing automatically.")
+                }
+            }
+            // Under Now a tap starts nothing.
+            settings.value = Settings(writeAutomatically = WriteAutomatically.NEVER)
+            view.value = PipelineView(track(insight = insight), aiReady = true, retry = true, waiting = true)
+            show {
+                leading(WRITE_TAG).assertTextEquals("Write insight").assertIsEnabled()
+                says("Write insight tries again, as a new call to your AI service.")
+            }
+        }
+    }
+
+    @Test
     fun whileWritingItIsStop() {
         view.value =
             PipelineView(track(insight = InsightState.Writing("It is")), aiReady = true, stopCall = CallId(RunId(1), 1))
@@ -288,6 +338,19 @@ class WriteSplitButtonScreenTest {
             ShadowToast.reset()
             choose(WriteAutomatically.NEVER)
             assertNull(ShadowToast.getLatestToast())
+        }
+    }
+
+    @Test
+    fun theModeAlreadyChosenChosenAgainSaysNothing() {
+        for (mode in listOf(WriteAutomatically.ON_EVERY_TRACK_CHANGE, WriteAutomatically.WHEN_I_SKIP)) {
+            settings.value = Settings(writeAutomatically = mode)
+            show {
+                ShadowToast.reset()
+                choose(mode)
+                assertNull(ShadowToast.getLatestToast())
+                assertEquals(mode, settings.value?.writeAutomatically)
+            }
         }
     }
 

@@ -29,8 +29,11 @@ internal class CardOffer(
  *   ([modeWrite]); enabled while automatic writing waits for a tap (no first action yet, or *Saver*
  *   has paused it: [waitsForTap]), when a tap writes this track and starts or resumes it; disabled
  *   while it runs by itself;
- * - a Write offered for a track automatic writing leaves (a natural end under *On track skip*), or
- *   again after a call that failed or was stopped: *Write insight*, which writes this one only;
+ * - a Write offered for a track automatic writing leaves (a natural end under *On track skip*):
+ *   *Write insight*, which writes this one only;
+ * - a Write offered again after a call that failed or was stopped: *Write insight*, which writes
+ *   this one only; or, while automatic writing waits for a tap, the mode's Write, since the tap
+ *   also starts or resumes it;
  * - an insight shown, written now or kept from before: the mode's Write, disabled. No *Rewrite*
  *   (#615): a card kept matches the evidence, prompt, model and effort, so it would only write the
  *   same input again; the coordinator's offer of one is not shown;
@@ -56,7 +59,11 @@ internal fun cardOffer(
         is InsightState.Written -> idle
         InsightState.NoEvidence -> idle
         is InsightState.Failed, InsightState.Stopped ->
-            if (context.offers.retry) CardOffer(R.string.home_write, enabled = true) else idle
+            when {
+                !context.offers.retry -> idle
+                waitsForTap(context) -> CardOffer(modeWrite(context), enabled = true)
+                else -> CardOffer(R.string.home_write, enabled = true)
+            }
     }
 }
 
@@ -75,11 +82,18 @@ internal fun modeWrite(context: InsightContext): Int =
 
 /**
  * Whether automatic writing waits for a tap (#615): under an automatic mode, before the first action
- * since the app started, or while *Saver* has paused it (the Write offered because of the pause
- * included). The one place the rule is kept, so the labels and the lines follow it together.
+ * since the app started, or while *Saver* has paused it ([resumes]). The one place the rule is kept,
+ * so the labels and the lines follow it together.
  */
 internal fun waitsForTap(context: InsightContext): Boolean =
-    automaticMode(context) != null && (context.waiting || context.offers.paused)
+    automaticMode(context) != null && (context.waiting || resumes(context))
+
+/**
+ * Whether a tap resumes automatic writing rather than starts it: under an automatic mode, while
+ * *Saver* has paused it (#203), whether or not the Write offered is offered because of the pause.
+ */
+internal fun resumes(context: InsightContext): Boolean =
+    automaticMode(context) != null && (context.paused || context.offers.paused)
 
 /**
  * Whether automatic writing runs by itself: an automatic mode, insights on, an AI service ready,

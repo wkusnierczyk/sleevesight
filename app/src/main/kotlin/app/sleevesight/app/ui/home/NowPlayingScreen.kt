@@ -296,6 +296,7 @@ private fun insightContext(
     unavailable = unavailable.takeIf { settings?.writeInsights != false },
     mode = settings?.writeAutomatically,
     waiting = view.waiting,
+    paused = view.paused,
 )
 
 // The insight card's menu of *Reactive*'s modes (#615): the mode chosen, paused while *Saver* has

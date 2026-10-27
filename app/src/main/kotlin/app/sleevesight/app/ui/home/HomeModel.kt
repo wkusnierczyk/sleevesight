@@ -70,8 +70,9 @@ internal fun headerYears(
  * ([offers]); and the switched-on
  * AI service's model, while it is found unavailable ([unavailable], #540), which no insight is
  * written with until another is chosen. *Reactive*'s [mode], null before the settings' first read,
- * and whether automatic writing waits for a tap ([waiting], `PipelineView.waiting`) name the
- * split button's Write and the line about it (#615).
+ * whether automatic writing waits for a tap ([waiting], `PipelineView.waiting`), and whether *Saver*
+ * has paused it ([paused], `PipelineView.paused`, #203) name the split button's Write and the line
+ * about it (#615).
  */
 @Suppress("LongParameterList") // Each what one part of the card says.
 internal class InsightContext(
@@ -83,6 +84,7 @@ internal class InsightContext(
     val unavailable: UnavailableModel? = null,
     val mode: WriteAutomatically? = null,
     val waiting: Boolean = false,
+    val paused: Boolean = false,
 )
 
 /**

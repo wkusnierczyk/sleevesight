@@ -95,7 +95,8 @@ internal class WritingChoice(
  * A screen reader reads the leading half as its action, the arrow as *Writing mode: <mode>* (with
  * *paused* while *Saver* has paused it), a drop-down list, and the menu's modes as one choice among
  * them, the chosen one selected. Each half is at least 48 dp high, the arrow 48 dp wide. Choosing an
- * automatic mode says that each new track's insight is a paid call; choosing *Now* says nothing.
+ * automatic mode other than the one chosen says that each new track's insight is a paid call;
+ * choosing *Now*, or the mode already chosen, says nothing.
  *
  * Material 3's own `SplitButtonLayout` is not in material3 1.4, the version the project's Compose
  * BOM gives, so the halves are drawn here with its shapes: round outer corners, 4 dp inner ones and a
@@ -231,7 +232,10 @@ internal fun ModeMenu(
                 text = { Text(stringResource(entry.name)) },
                 onClick = {
                     close()
-                    if (entry.mode != WriteAutomatically.NEVER) Toast.makeText(context, paid, Toast.LENGTH_SHORT).show()
+                    // Said once, as the mode changes to one that pays for each track.
+                    if (entry.mode != WriteAutomatically.NEVER && !chosen) {
+                        Toast.makeText(context, paid, Toast.LENGTH_SHORT).show()
+                    }
                     writing.onChoose(entry.mode)
                 },
                 leadingIcon = {

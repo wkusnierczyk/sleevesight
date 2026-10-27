@@ -60,8 +60,8 @@ private fun IdleNote(
         when {
             insight.canWrite && waitsForTap(context) -> {
                 val label = stringResource(modeWrite(context))
-                // Offered because automatic writing paused while the app was away (#203): say so.
-                if (context.offers.paused) {
+                // Automatic writing paused while the app was away (#203): say so, and that a tap resumes it.
+                if (resumes(context)) {
                     stringResource(R.string.home_insight_paused, label)
                 } else {
                     stringResource(R.string.home_insight_tap_write_auto, label)
@@ -118,10 +118,18 @@ private fun InsightBody(
 }
 
 // Write offered again after a call that failed or was stopped: a new paid call, on a tap only, from
-// the split button.
+// the split button. While automatic writing waits for a tap, the tap also starts or resumes it, and
+// the line names the mode's Write, as the button does.
 @Composable
 private fun Retry(context: InsightContext) {
-    if (context.offers.retry) Quiet(stringResource(R.string.home_insight_retry))
+    if (!context.offers.retry) return
+    val line =
+        when {
+            !waitsForTap(context) -> stringResource(R.string.home_insight_retry)
+            resumes(context) -> stringResource(R.string.home_insight_retry_resume, stringResource(modeWrite(context)))
+            else -> stringResource(R.string.home_insight_retry_auto, stringResource(modeWrite(context)))
+        }
+    Quiet(line)
 }
 
 /** Why no insight is offered: insights off, no AI service, the evidence still coming, or the pipeline not there yet. */

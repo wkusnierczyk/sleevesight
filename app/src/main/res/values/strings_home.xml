@@ -83,7 +83,8 @@
     <string name="home_write_mode_paused_mark">Paused</string>
     <!-- The menu's last item, after the modes: opens the settings at Reactive, where each mode is described. -->
     <string name="home_write_mode_details">See Settings for details</string>
-    <!-- A short message when an automatic mode is chosen in the menu; none for Now. -->
+    <!-- A short message when an automatic mode other than the one chosen is chosen in the menu; none
+         for Now, or for the mode already chosen. -->
     <string name="home_write_mode_paid">Each new track’s insight is a paid call.</string>
     <string name="home_write">Write insight</string>
     <!-- The split button's Write under an automatic mode (#615): a tap writes this track's insight
@@ -116,6 +117,11 @@
     <string name="home_stop">Stop</string>
     <string name="home_insight_stopped">Stopped before the reply ended, so nothing was kept.</string>
     <string name="home_insight_retry">Write insight tries again, as a new call to your AI service.</string>
+    <!-- Write offered again while automatic writing waits for a tap (#615): before the first tap since
+         the app started, or while Saver has paused it. %1$s: the split button's Write, as it is
+         labelled (Write on change, Write on skip). -->
+    <string name="home_insight_retry_auto">%1$s tries again, as a new call to your AI service, and starts writing automatically.</string>
+    <string name="home_insight_retry_resume">%1$s tries again, as a new call to your AI service, and resumes writing automatically.</string>
     <!-- The note under an insight (#437): only for sentences the sources do not back (uncited, citing
          missing evidence, or from the model's own knowledge), and for an insight kept from before. -->
     <plurals name="home_note_unbacked">
