@@ -132,9 +132,9 @@ internal class World {
     val carried = mutableListOf<Gathered>()
 
     /**
-     * What the sources find now, as the text of the evidence's one line (#617): the runs report its
-     * fingerprint, and the cards written carry it. A change is new evidence; with [cache] on, raise
-     * [service] with it, as the card's key changes with the evidence.
+     * What the sources find now, as the text of the evidence's one line (#617): the runs report it,
+     * and the cards written carry it. A change of its words is new evidence (of its spacing, not);
+     * with [cache] on, raise [service] with it, as the card's key changes with the evidence.
      */
     var evidenceText = "Evidence 1."
 
@@ -348,7 +348,7 @@ internal class World {
         unreachable: Boolean = false,
     ) {
         schedule(delayMs, CoordinatorEvent.SourcesGathered(run, sources(unreachable)), run)
-        schedule(delayMs, CoordinatorEvent.EvidenceAssembled(run, evidence().fingerprint), run)
+        schedule(delayMs, CoordinatorEvent.EvidenceAssembled(run, evidence()), run)
         val insight =
             when {
                 cache && (keys.getValue(run) to service) in cards -> {

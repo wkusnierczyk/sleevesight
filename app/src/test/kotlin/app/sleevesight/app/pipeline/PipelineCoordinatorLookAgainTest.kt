@@ -10,8 +10,9 @@ import org.junit.Test
 /**
  * *Look again* on the card paid for (#617), as `PipelineCoordinatorTest` runs its sequences: a run
  * that looks every source up afresh, past the cache, with what the run before gathered; no call when
- * its evidence's fingerprint is the card's; one, as the tap's, when it changed; never a second call
- * beside automatic writing; and Stop as for a Write.
+ * its evidence says nothing the card's does not (spacing aside); one, as the tap's, when it does,
+ * and that one only, however the run is replaced; never a second call beside automatic writing;
+ * and Stop as for a Write.
  */
 class PipelineCoordinatorLookAgainTest {
     // The first action made, and A written automatically, its sources landed.
@@ -38,6 +39,51 @@ class PipelineCoordinatorLookAgainTest {
             assertFalse("cache $cache", world.coordinator.state.lookingAgain)
             assertEquals("cache $cache", world.key("A"), world.coordinator.state.lookAgainKey)
         }
+    }
+
+    @Test
+    fun `the same evidence spaced otherwise is nothing new`() {
+        val world = written()
+        world.evidenceText = "  Evidence\n  1.  "
+        world.lookAgain()
+        world.settle()
+
+        assertEquals(1, world.calls["A"])
+        assertTrue(world.coordinator.state.foundNothingNew)
+    }
+
+    @Test
+    fun `with nothing new, a card kept under the current settings does not replace the one shown`() {
+        val world = written(cache = true)
+        world.cards[world.key("A") to world.service] = "A, kept under other settings"
+        world.lookAgain()
+        world.settle()
+
+        assertEquals(1, world.calls["A"])
+        assertEquals("A #1", world.cardText())
+    }
+
+    @Test
+    fun `a look again's call, stopped, is not made again when a run asks its sources again online`() {
+        val world = written()
+        world.evidenceText = "Evidence 2."
+        world.streamMs = 10_000
+        world.send(CoordinatorEvent.NetworkChanged(online = false))
+        world.offline = true
+        world.offlineFinds = true
+        world.lookAgain()
+        world.advance(1_000)
+        assertEquals(2, world.calls["A"])
+        world.stopTap()
+        world.settle()
+
+        world.offline = false
+        world.send(CoordinatorEvent.NetworkChanged(online = true))
+        world.settle()
+
+        assertEquals(listOf("A"), world.askedAgain)
+        assertEquals(2, world.calls["A"])
+        assertEquals("A #1", world.cardText())
     }
 
     @Test

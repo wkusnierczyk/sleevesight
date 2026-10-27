@@ -659,7 +659,7 @@ class PipelineHost(
         }
 
         override fun assembled(evidence: EvidenceSet) {
-            queue.trySend(CoordinatorEvent.EvidenceAssembled(id, evidence.fingerprint))
+            queue.trySend(CoordinatorEvent.EvidenceAssembled(id, evidence))
         }
 
         override fun cardShown(

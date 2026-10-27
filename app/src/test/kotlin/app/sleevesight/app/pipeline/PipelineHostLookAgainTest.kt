@@ -1,6 +1,11 @@
 package app.sleevesight.app.pipeline
 
+import app.sleevesight.core.Secret
+import app.sleevesight.core.model.Outcome
+import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.InsightState
+import app.sleevesight.core.sources.Resolution
+import app.sleevesight.wiring.SourceKeys
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
@@ -13,8 +18,10 @@ import kotlin.time.Duration.Companion.seconds
 
 /**
  * *Look again* on the card paid for (#617), through the host and a real pipeline: the sources asked
- * afresh past the retrieval cache, no call to the AI service when they find nothing new, one when
- * they do.
+ * afresh past the retrieval cache, no call to the AI service when they find nothing new (the same
+ * lines in another order or spacing, a source that failed in whole or in part, or was left
+ * provisional, MusicBrainz unreachable on a track served from the cache), one when they do, written
+ * with the earlier lines of a source that failed.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class PipelineHostLookAgainTest : PipelineHostFixture() {
@@ -49,6 +56,77 @@ internal class PipelineHostLookAgainTest : PipelineHostFixture() {
                 host.state.value.track
                     ?.insight is InsightState.Written,
             )
+        }
+
+    // A look again, which must find nothing new: no call, and the view says so.
+    private fun TestScope.nothingNew() {
+        lookAgain()
+        settle()
+        assertEquals(2, musicBrainz.asked.size)
+        assertEquals(1, provider.requestsFor("Sundown"))
+        assertTrue(host.state.value.nothingNew)
+    }
+
+    @Test
+    fun `the same lines in another order and spacing are nothing new`() =
+        runTest {
+            musicBrainz.lines = listOf("Sundown was recorded in 1973.", "It topped the charts.")
+            written()
+            musicBrainz.lines = listOf("It topped  the charts. ", "Sundown was\nrecorded in 1973.")
+            nothingNew()
+        }
+
+    @Test
+    fun `a source that answers in part is nothing new`() =
+        runTest {
+            musicBrainz.lines = listOf("Sundown was recorded in 1973.", "Gordon Lightfoot is Canadian.")
+            written()
+            // The artist's part did not answer: the song's line alone.
+            musicBrainz.lines = listOf("Sundown was recorded in 1973.")
+            nothingNew()
+        }
+
+    @Test
+    fun `a provisional result is nothing new`() =
+        runTest {
+            written()
+            musicBrainz.provisional = true
+            nothingNew()
+        }
+
+    @Test
+    fun `MusicBrainz unreachable on a track served from the cache is nothing new`() =
+        runTest {
+            written()
+            play("Carefree Highway")
+            settle()
+            play("Sundown")
+            settle()
+            assertEquals(2, musicBrainz.asked.size)
+            musicBrainz.unreachable = true
+            resolutions += Resolution(Outcome.Unreachable)
+            lookAgain()
+            settle()
+
+            assertEquals(3, musicBrainz.asked.size)
+            assertEquals(1, provider.requestsFor("Sundown"))
+            assertTrue(host.state.value.nothingNew)
+        }
+
+    @Test
+    fun `one new line is written from, with the earlier lines of a source that failed`() =
+        runTest {
+            keys = PipelineKeys(ai = Secret("ai"), sources = SourceKeys(lastFm = Secret("lastfm")))
+            written()
+            musicBrainz.unreachable = true
+            lastFm.text = "Sundown was a number one single."
+            lookAgain()
+            settle()
+
+            assertEquals(2, provider.requestsFor("Sundown"))
+            val prompt = provider.prompts.last()
+            assertTrue("Sundown was a number one single." in prompt)
+            assertTrue("A line from ${SourceId.MUSICBRAINZ.tag}." in prompt)
         }
 
     @Test

@@ -44,6 +44,15 @@ internal class CountingAdapter(
     /** The text of the line it finds, when set (#617: what the source says now). */
     var text: String? = null
 
+    /** The texts of the lines it finds, in order, when set; [text] is then not read (#617). */
+    var lines: List<String>? = null
+
+    /**
+     * Whether a request of its verification fails (#617): its lines are then unverified, and the
+     * result provisional, as Last.fm's when MusicBrainz's artist search fails.
+     */
+    var provisional = false
+
     override suspend fun lookup(
         track: NormalizedTrack,
         resolution: Deferred<Resolution>,
@@ -56,13 +65,21 @@ internal class CountingAdapter(
             throw e
         }
         resolution.await()
-        val said = text ?: "A line from ${id.tag}."
-        val line = EvidenceDraft(id, Scope.SONG, said, null, Instant.parse("2026-10-16T12:00:00Z"))
+        val said = lines ?: listOf(text ?: "A line from ${id.tag}.")
+        val found = said.map { EvidenceDraft(id, Scope.SONG, it, null, Instant.parse("2026-10-16T12:00:00Z")) }
         return when {
             unreachable -> SourceResult(Outcome.Unreachable, emptyList(), byName)
             // A report with no artists (a title first) finds nothing.
             track.artists.isEmpty() -> SourceResult(Outcome.None, emptyList(), byName)
-            else -> SourceResult(Outcome.SongArticle, listOf(line), byName)
+            provisional ->
+                SourceResult(
+                    Outcome.SongArticle,
+                    emptyList(),
+                    byName,
+                    unverified = found,
+                    provisional = true,
+                )
+            else -> SourceResult(Outcome.SongArticle, found, byName)
         }
     }
 }

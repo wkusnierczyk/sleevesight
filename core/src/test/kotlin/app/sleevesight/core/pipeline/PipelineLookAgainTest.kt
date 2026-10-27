@@ -146,6 +146,44 @@ class PipelineLookAgainTest {
         }
 
     @Test
+    fun `a source that brings nothing new, answering in part or provisionally, keeps what it found before`() =
+        runTest {
+            var answer =
+                SourceResult(
+                    Outcome.SongArticle,
+                    listOf(line(SourceId.LASTFM, "A."), line(SourceId.LASTFM, "B.")),
+                    Duration.ZERO,
+                )
+            val lastFm = FakeAdapter(SourceId.LASTFM, verifies = false) { _, _ -> answer }
+            val pipeline = pipeline(listOf(lastFm), FakeResolver(), MemoryCache())
+            val first = granting()
+            pipeline.run(sundown, first)
+            val before = first.gathered.single()
+
+            for (fresh in listOf(
+                SourceResult(Outcome.SongArticle, listOf(line(SourceId.LASTFM, "A.")), Duration.ZERO),
+                SourceResult(
+                    Outcome.SongArticle,
+                    emptyList(),
+                    Duration.ZERO,
+                    unverified = listOf(line(SourceId.LASTFM, "C.")),
+                    provisional = true,
+                ),
+            )) {
+                answer = fresh
+                val state = pipeline.run(sundown, granting(), lookAgain = LookAgain(before))
+                assertEquals(before.sources[SourceId.LASTFM], state.sources[SourceId.LASTFM])
+            }
+            // One that brings a line stands, though it lost another.
+            answer = SourceResult(Outcome.SongArticle, listOf(line(SourceId.LASTFM, "C.")), Duration.ZERO)
+            val state = pipeline.run(sundown, granting(), lookAgain = LookAgain(before))
+            assertEquals(
+                listOf("C."),
+                (state.sources[SourceId.LASTFM] as SourceState.Done).result.evidence.map { it.text },
+            )
+        }
+
+    @Test
     fun `a usual run reports its evidence too, and is not marked fresh`() =
         runTest {
             val pipeline = pipeline(listOf(Marking()), FakeResolver(), MemoryCache())
