@@ -1,20 +1,21 @@
 package app.sleevesight.app.ui.home
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -25,10 +26,15 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.state.ToggleableState
-import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
+import app.sleevesight.app.ui.theme.CHIP_PADDING
+import app.sleevesight.app.ui.theme.CHIP_SHAPE
 import app.sleevesight.app.ui.theme.ChipFrame
+import app.sleevesight.app.ui.theme.CompactChipFrame
 import app.sleevesight.app.ui.theme.DeveloperMark
 import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
@@ -36,7 +42,7 @@ import app.sleevesight.app.ui.theme.chipColours
 import app.sleevesight.core.evidence.EvidenceLine
 import app.sleevesight.core.model.Outcome
 
-// *Sources*' chip on Home (#623), its filter chips and its note (#440).
+// *Sources*' chip on Home (#623), its table of the sources (#662) and its note (#440).
 
 /**
  * *Sources* on Home (#623): a chip, drawn as a genre chip is ([ChipFrame]), named *Sources*. Under
@@ -116,154 +122,197 @@ internal fun Notes(
 }
 
 /**
- * The chips of *Sources*, [chips] (none, no row), each showing or hiding its source's [lines] by
- * [focus], those shown again unfolded to by [fold]; with grounding [details] each with its status,
- * else by name. The chips of a row are centred on one line.
+ * *Sources*' table (#662): a row for each of [rows], in two columns, so a citation's letter can be
+ * matched to its source. On the left, right-aligned in a column as wide as the widest, a chip with
+ * the letter the source's lines and citations use (`SourceId.tag`, the one place it is set); on the
+ * right, the source's name on one line and what it found on the next ([statusText]). The chip
+ * shows, at a glance, what a tap does to its source's [lines] ([focus]): filled while they show,
+ * outlined while they are hidden, a tap showing them again (unfolded to by [fold]); dimmed for a
+ * source that gave none, with nothing to show or hide, and no button. The rows sit close, the
+ * chips' 48 dp targets not laid out ([CompactChipFrame]). With grounding [details], the rows
+ * of the sources that are off and the statuses that are diagnostics show too, the whole table in
+ * the developer mark (#536). A screen reader reads a chip that filters as a switch, its source's
+ * name, with its lines shown or hidden, and then what it found; a dimmed one's row as text, its
+ * name and what it found.
  */
 @Composable
-internal fun SourceChips(
-    chips: List<SourceChip>,
+internal fun SourceTable(
+    rows: List<SourceChip>,
     details: Boolean,
     lines: List<EvidenceLine>,
     focus: LineFocus,
     fold: SourcesFold,
 ) {
-    if (chips.isEmpty()) return
-    // Every source's chip with its status shows only in developer mode, marked as such (#536).
+    if (rows.isEmpty()) return
     if (details) {
-        DeveloperMark { ChipRow(chips, true, lines, focus, fold) }
+        DeveloperMark { Table(rows, true, lines, focus, fold) }
     } else {
-        ChipRow(chips, false, lines, focus, fold)
+        Table(rows, false, lines, focus, fold)
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ChipRow(
-    chips: List<SourceChip>,
+private fun Table(
+    rows: List<SourceChip>,
     details: Boolean,
     lines: List<EvidenceLine>,
     focus: LineFocus,
     fold: SourcesFold,
 ) {
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-        itemVerticalAlignment = Alignment.CenterVertically,
+    val width = letterColumnWidth(rows.map { it.source.tag })
+    Column(
+        modifier = Modifier.testTag(SOURCES_TABLE_TAG),
+        verticalArrangement = Arrangement.spacedBy(ROW_GAP),
     ) {
-        for (chip in chips) {
-            val shown = chip.filters.none { it in focus.hidden }
+        for (row in rows) {
+            val state =
+                when {
+                    lines.none { it.source in row.filters } -> LetterState.DIMMED
+                    row.filters.none { it in focus.hidden } -> LetterState.SHOWN
+                    else -> LetterState.HIDDEN
+                }
             // Lines shown again are unfolded to, wherever they fall in the list.
-            val toggle = { focus.toggle(chip)?.let(fold::reach) }
-            if (details) {
-                StatusChip(chip, filtering = lines.any { it.source in chip.filters }, shown = shown) { toggle() }
-            } else {
-                NameChip(chip, shown = shown) { toggle() }
-            }
+            SourceRow(row, width, state, details) { focus.toggle(row)?.let(fold::reach) }
         }
     }
 }
 
-/**
- * A source's chip under *Show grounding details*: its letter and its status ("W the song"), as the
- * chips were before #440. One whose source has lines ([filtering]) shows or hides them ([shown]).
- */
+/** Whether a source's lookup failed or its match was rejected. */
+private val ChipStatus.wentWrong: Boolean
+    get() = this == ChipStatus.Failed || (this as? ChipStatus.Done)?.outcome is Outcome.Rejected
+
+/** What a source's chip in the table shows: its lines shown or hidden, or none to show. */
+private enum class LetterState { SHOWN, HIDDEN, DIMMED }
+
+/** One row of the table: [chip]'s letter, right-aligned in a column [width] wide, its name and what it found. */
 @Composable
-private fun StatusChip(
+private fun SourceRow(
     chip: SourceChip,
-    filtering: Boolean,
-    shown: Boolean,
+    width: Dp,
+    state: LetterState,
+    details: Boolean,
     onToggle: () -> Unit,
 ) {
-    val colors = MaterialTheme.colorScheme
-    val label = stringResource(R.string.home_source_chip, chip.source.tag, statusText(chip.status))
-    val bad = chip.status == ChipStatus.Failed || (chip.status as? ChipStatus.Done)?.outcome is Outcome.Rejected
-    val shape = RoundedCornerShape(8.dp)
-    // The chip's own text is what it says; the filter is its action and its state.
-    val action = stringResource(R.string.home_source_filter, chipName(chip.source))
-    val state = stringResource(if (shown) R.string.home_source_lines_shown else R.string.home_source_lines_hidden)
-    val toggle =
-        if (filtering) {
-            Modifier
-                .semantics {
-                    stateDescription = state
-                    toggleableState = ToggleableState(shown)
-                }.clickable(onClickLabel = action, role = Role.Switch, onClick = onToggle)
-        } else {
-            Modifier
-        }
-    Text(
-        label,
-        style = MaterialTheme.typography.labelMedium,
-        color =
-            if (bad) {
-                colors.error
-            } else if (filtering && !shown) {
-                colors.outline
-            } else {
-                colors.onSurfaceVariant
-            },
+    val name = chipName(chip.source)
+    val filters = state != LetterState.DIMMED
+    // At least [ROW_HEIGHT] tall, the chip centred: with [ROW_GAP], each chip's 48 dp touch area
+    // ends where the next row's begins, so a touch between two chips goes to the nearer.
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(COLUMN_GAP),
+        verticalAlignment = Alignment.CenterVertically,
         modifier =
             Modifier
-                .testTag(CHIP_PREFIX + chip.source.tag)
-                .then(if (filtering) Modifier.minimumInteractiveComponentSize() else Modifier)
-                .background(if (filtering && shown) colors.secondaryContainer else Color.Transparent, shape)
-                .border(1.dp, colors.outlineVariant, shape)
-                .then(toggle)
-                .padding(horizontal = 8.dp, vertical = 4.dp),
-    )
+                .testTag(ROW_PREFIX + chip.source.tag)
+                .heightIn(min = ROW_HEIGHT),
+    ) {
+        Box(Modifier.width(width), contentAlignment = Alignment.CenterEnd) {
+            LetterChip(chip, name, state, onToggle)
+        }
+        // A dimmed chip's row is read as one text, its name and what it found; a switch's says its
+        // name itself, so the name here is not read again.
+        Column(Modifier.weight(1f).then(if (filters) Modifier else Modifier.semantics(mergeDescendants = true) {})) {
+            Text(
+                name,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = if (filters) Modifier.clearAndSetSemantics {} else Modifier,
+            )
+            // With grounding details, a failure and a rejected match in the error colour, as the
+            // status chips had them (#440).
+            val colors = MaterialTheme.colorScheme
+            Text(
+                statusText(chip.status, details),
+                style = MaterialTheme.typography.bodySmall,
+                color = if (details && chip.status.wentWrong) colors.error else colors.onSurfaceVariant,
+                modifier = Modifier.testTag(STATUS_PREFIX + chip.source.tag),
+            )
+        }
+    }
 }
 
 /**
- * A source's chip (#440), drawn as a genre chip is ([ChipFrame], #623): the letter its citations
- * use, small and quieter, before its name ("W Wikipedia"), on the name's baseline; it shows or hides
- * the source's lines. While they show ([shown]), the genre chip's light fill; hidden, outlined, its
- * name struck through and faded. A screen reader reads it as a switch, the source's name, and
- * whether its lines show.
+ * A source's letter as a chip, drawn as a genre chip is but without its 48 dp laid out
+ * ([CompactChipFrame]): [LetterState.SHOWN], filled as a genre marked in its panel is
+ * (`chipColours(marked = true)`); [LetterState.HIDDEN], a solid outline in the text's colour,
+ * a little heavier, and no fill; [LetterState.DIMMED], a faint outline, the letter quieter (still
+ * 4.5:1 on the panel, `onSurfaceVariant`), and not a button, nor a node a screen reader stops on.
  */
 @Composable
-private fun NameChip(
+private fun LetterChip(
     chip: SourceChip,
-    shown: Boolean,
+    name: String,
+    state: LetterState,
     onToggle: () -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme
-    val name = chipName(chip.source)
-    val action = stringResource(R.string.home_source_filter, name)
-    val state = stringResource(if (shown) R.string.home_source_lines_shown else R.string.home_source_lines_hidden)
-    val (fill, content) = chipColours(marked = false)
-    val color = if (shown) content else colors.outline
-    ChipFrame(
-        if (shown) fill else Color.Transparent,
-        modifier = Modifier.testTag(CHIP_PREFIX + chip.source.tag),
-        outline = colors.outline.takeUnless { shown },
-        action =
+    val (marked, onMarked) = chipColours(marked = true)
+    val fill = if (state == LetterState.SHOWN) marked else Color.Transparent
+    // Hidden, the heavier outline drawn over the frame's; dimmed, the frame's faint hairline.
+    val outline = if (state == LetterState.DIMMED) colors.outlineVariant else null
+    val heavy =
+        if (state == LetterState.HIDDEN) Modifier.border(HIDDEN_OUTLINE, colors.onSurface, CHIP_SHAPE) else Modifier
+    val letter =
+        when (state) {
+            LetterState.SHOWN -> onMarked
+            LetterState.HIDDEN -> colors.onSurface
+            LetterState.DIMMED -> colors.onSurfaceVariant
+        }
+    val action =
+        if (state == LetterState.DIMMED) {
+            Modifier.clearAndSetSemantics {}
+        } else {
+            val label = stringResource(R.string.home_source_filter, name)
+            val shown = state == LetterState.SHOWN
+            val said =
+                stringResource(if (shown) R.string.home_source_lines_shown else R.string.home_source_lines_hidden)
             Modifier
-                .clickable(onClickLabel = action, role = Role.Switch, onClick = onToggle)
+                .semantics(mergeDescendants = true) {}
+                .clickable(onClickLabel = label, role = Role.Switch, onClick = onToggle)
                 .clearAndSetSemantics {
                     contentDescription = name
-                    stateDescription = state
+                    stateDescription = said
                     toggleableState = ToggleableState(shown)
-                },
+                }
+        }
+    CompactChipFrame(
+        fill,
+        modifier = Modifier.testTag(CHIP_PREFIX + chip.source.tag).then(heavy),
+        outline = outline,
+        action = action,
     ) {
-        // Quieter than the name while its lines show; hidden, the name is already the quiet outline
-        // colour, and a letter fainter still would fall below a legible contrast.
-        val letter = if (shown) color.copy(alpha = MARK_ALPHA) else color
         Text(
             chip.source.tag,
-            style = MaterialTheme.typography.labelSmall,
-            color = letter,
-            modifier = Modifier.alignByBaseline(),
-        )
-        Text(
-            name,
             style = MaterialTheme.typography.labelLarge,
-            color = color,
-            textDecoration = if (shown) null else TextDecoration.LineThrough,
-            modifier = Modifier.alignByBaseline(),
+            color = letter,
+            maxLines = 1,
+            softWrap = false,
         )
     }
 }
+
+/**
+ * The letters' column: as wide as the widest of [tags] as [LetterChip] draws them, its text and
+ * [CHIP_PADDING] at each side, each side rounded as it is laid out.
+ */
+@Composable
+private fun letterColumnWidth(tags: List<String>): Dp {
+    val measurer = rememberTextMeasurer()
+    val style = MaterialTheme.typography.labelLarge
+    val density = LocalDensity.current
+    return remember(tags, style, density) {
+        val widest = tags.maxOfOrNull { measurer.measure(it, style).size.width } ?: 0
+        with(density) { (widest + 2 * CHIP_PADDING.roundToPx()).toDp() }
+    }
+}
+
+// The space between two rows of the table, and between its columns; a row's least height, which
+// with the gap makes rows 48 dp apart at the least, a chip's touch area; a hidden chip's outline.
+private val ROW_GAP = 6.dp
+private val COLUMN_GAP = 12.dp
+private val ROW_HEIGHT = 42.dp
+private val HIDDEN_OUTLINE = 1.5.dp
 
 // The note's link to the settings.
 private const val SETTINGS_LINK = "settings"
@@ -276,3 +325,12 @@ const val SOURCES_NOTE_TAG: String = "sources-note"
 
 /** The test tag of a source's chip, before its tag (`MB`, `W`). */
 const val CHIP_PREFIX: String = "chip:"
+
+/** The test tag of what a source's row says it found, before its tag (`MB`, `W`). */
+const val STATUS_PREFIX: String = "source-status:"
+
+/** The test tag of a source's row of the table, before its tag (`MB`, `W`). */
+const val ROW_PREFIX: String = "source-row:"
+
+/** The test tag of *Sources*' table of the sources. */
+const val SOURCES_TABLE_TAG: String = "sources-table"

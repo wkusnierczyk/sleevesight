@@ -229,21 +229,20 @@
 
     <!-- Sources. -->
     <string name="home_sources_title">Sources</string>
-    <!-- A source's chip under Show grounding details: its letter and its status ("W the song"). -->
-    <string name="home_source_chip">%1$s %2$s</string>
-    <string name="home_source_pending">looking</string>
-    <string name="home_source_found_song">the song</string>
-    <string name="home_source_found_artist">the artist only</string>
-    <string name="home_source_found_original">the original song</string>
-    <string name="home_source_rejected">rejected</string>
-    <string name="home_source_none">nothing found</string>
-    <string name="home_source_off">off</string>
-    <string name="home_source_unreachable">unreachable</string>
-    <string name="home_source_failed">failed</string>
-    <string name="home_source_needs_key">needs your key, in Settings</string>
+    <!-- What a source found, under its name in the Sources table; "(kept)" and "Match rejected" only under Show grounding details. -->
+    <string name="home_source_pending">Looking…</string>
+    <string name="home_source_found_song">Found the song</string>
+    <string name="home_source_found_artist">Found the artist only</string>
+    <string name="home_source_found_original">Found the original song</string>
+    <string name="home_source_rejected">Match rejected</string>
+    <string name="home_source_none">Nothing found</string>
+    <string name="home_source_off">Off in Settings</string>
+    <string name="home_source_unreachable">Could not be reached</string>
+    <string name="home_source_failed">Failed</string>
+    <string name="home_source_needs_key">Needs your key, in Settings</string>
     <string name="home_source_cached">%1$s (kept)</string>
-    <string name="home_source_release">release</string>
-    <string name="home_source_model_allowed">allowed</string>
+    <string name="home_source_release">Gave the release</string>
+    <string name="home_source_model_allowed">Allowed in Settings</string>
     <string name="home_source_filter">Show or hide the lines of %1$s</string>
     <string name="home_source_lines_shown">lines shown</string>
     <string name="home_source_lines_hidden">lines hidden</string>
