@@ -8,10 +8,11 @@
 #
 # Run it once per clone, from any of its checkouts: .githooks/install
 # Running it again rewrites the dispatchers, so it also updates them. A hook already there that is
-# not a dispatcher (Git LFS's, say) is moved to `<name>.before-dispatcher`, and the path printed; the
-# dispatcher covers Git LFS's hooks and the guard. If that name is taken too, the script stops rather
-# than overwrite it. If `core.hooksPath` is set, git reads no hooks from `.git/hooks`, so the script
-# stops and says so.
+# not a dispatcher (Git LFS's, say) is moved to `<name>.before-dispatcher`, and the path printed; if
+# that name is taken too, the script stops rather than overwrite it. The dispatcher covers Git LFS's
+# hooks and the guard; any other hook moved aside no longer runs, and the script says so: what it
+# does goes into `.githooks/<name>` by hand. If `core.hooksPath` is set, git reads no hooks from
+# `.git/hooks`, so the script stops and says so.
 set -euo pipefail
 
 marker='# sleevesight hook dispatcher'
@@ -44,7 +45,14 @@ exit 0
 EOF
       ;;
     *)
-      printf 'command -v git-lfs >/dev/null 2>&1 || exit 0\n'
+      # Git LFS's hook, as loud as the hooks in this directory when Git LFS is missing.
+      cat <<'EOF'
+command -v git-lfs >/dev/null 2>&1 || {
+  printf >&2 '\nGit LFS is not installed (no git-lfs on the path); this repository keeps its videos in it.\n'
+  printf >&2 'Install it, then run: git lfs install --skip-repo\n\n'
+  exit 2
+}
+EOF
       # shellcheck disable=SC2016
       printf 'exec git lfs %s "$@"\n' "$1"
       ;;
@@ -66,6 +74,11 @@ for name in "${hooks[@]}"; do
   if [ -e "$target" ] && ! grep -qxF "$marker" "$target"; then
     mv "$target" "$target.before-dispatcher"
     printf 'install: moved the earlier %s to %s\n' "$name" "$target.before-dispatcher"
+    # Git LFS's stock hook is covered by the dispatcher; anything else is not.
+    if ! grep -qE "git lfs $name( |\$)" "$target.before-dispatcher"; then
+      printf 'install: %s is not Git LFS'"'"'s hook and no longer runs; merge what it does into\n' "$target.before-dispatcher"
+      printf '.githooks/%s by hand if it is still needed.\n' "$name"
+    fi
   fi
   # The dispatcher's text: the `$` in it are meant for the dispatcher, not expanded here.
   # shellcheck disable=SC2016
