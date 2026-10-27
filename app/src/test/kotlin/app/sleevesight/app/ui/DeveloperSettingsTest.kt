@@ -130,12 +130,13 @@ class DeveloperSettingsTest {
             }
             assertFalse(settings.now().developerMode)
             tapVersion()
-            assertEquals(text(R.string.settings_developer_on), ShadowToast.getTextOfLatestToast())
+            // Worded as a state, "enabled" (#669).
+            assertEquals("Developer mode is enabled", ShadowToast.getTextOfLatestToast())
             compose.waitUntil(5_000) { settings.now().developerMode && developerShown }
 
             // Once on, a tap says so.
             tapVersion()
-            assertEquals(text(R.string.settings_developer_already_on), ShadowToast.getTextOfLatestToast())
+            assertEquals("Developer mode is already enabled", ShadowToast.getTextOfLatestToast())
 
             // The section's switch turns developer mode off, and its options with it.
             compose.openSection(SettingsSection.DEVELOPER)
