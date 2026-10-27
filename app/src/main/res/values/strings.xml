@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Sleevesight</string>
+    <!-- The app's name where Android shows it: the launcher, App info, and the notification-access
+         list. The debug build sets its own (app/src/debug/res/values/strings.xml, #614), so that it
+         can be told from the Play build; app_name, which the app's own screens show, stays. -->
+    <string name="app_label">@string/app_name</string>
 
     <!-- First-run screen: what leaves the phone, and to whom (design, Privacy and security). -->
     <string name="first_run_intro">Sleevesight reads what your music player is playing, looks it up in the sources you switch on, and has the AI service you choose write about it. Before you start, here is what it reads, and what leaves your phone.</string>
