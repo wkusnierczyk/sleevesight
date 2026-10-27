@@ -50,6 +50,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -99,9 +100,10 @@ import kotlin.coroutines.cancellation.CancellationException
  *   one by itself, which *On track skip (auto)* does not write on ([CoordinatorState.followed],
  *   #625); the insight card says so.
  * @property waiting whether automatic writing waits for the user (#615): no first action since the
- *   app started ([CoordinatorState.acted], D5), *Saver* has paused it, or the track came to play
- *   while it was paused ([CoordinatorState.waitsForTap]). The insight card then does not say that
- *   it writes automatically.
+ *   app started ([CoordinatorState.acted], D5), *Saver* has paused it, or the track playing is
+ *   written only on a tap: it came to play before the first action or while it was paused, or a
+ *   mode was chosen while it played ([CoordinatorState.waitsForTap], `Report.tapOnly`, #625). The
+ *   insight card then does not say that it writes automatically.
  */
 data class PipelineView(
     val track: TrackState? = null,
@@ -184,6 +186,9 @@ class PipelineHost(
     private val epoch: ClearEpoch = ClearEpoch(),
 ) {
     private val queue = Channel<CoordinatorEvent>(Channel.UNLIMITED)
+
+    // The choices of *Reactive*'s mode made in this process, counted (#625).
+    private val choices = AtomicLong()
 
     // The callers of [forget] waiting for the loop to take their clear, in order.
     private val forgetting = ConcurrentLinkedQueue<CompletableDeferred<Unit>>()
@@ -284,11 +289,15 @@ class PipelineHost(
      * The user chose [mode] for *Reactive* (#625), in the insight card's menu or in the settings,
      * the mode chosen already included. It applies from the next track: the track playing is
      * written only on a tap. An automatic one is the first action (D5), so automatic writing
-     * starts, or resumes, with the next track. The setting is saved apart, and reaches the
-     * coordinator as any change to it does.
+     * starts, or resumes, with the next track. The setting is saved apart: the function returned
+     * is told what the store holds once that save has ended ([CoordinatorEvent.ModeChoiceSettled],
+     * null when it could not be read), so a save that failed puts the mode back as the store, and
+     * the menu, have it. Until then this choice is the mode selected, whatever the store emits.
      */
-    fun modeChosen(mode: WriteAutomatically) {
-        queue.trySend(CoordinatorEvent.ModeChosen(mode))
+    fun modeChosen(mode: WriteAutomatically): (WriteAutomatically?) -> Unit {
+        val choice = choices.incrementAndGet()
+        queue.trySend(CoordinatorEvent.ModeChosen(mode, choice))
+        return { stored -> queue.trySend(CoordinatorEvent.ModeChoiceSettled(choice, stored)) }
     }
 
     /**

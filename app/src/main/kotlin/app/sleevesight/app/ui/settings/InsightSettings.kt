@@ -25,16 +25,17 @@ private val MAX_CROSSFADE_SECONDS =
  * repeat artist facts* (`artistFactsOncePerSession`, #407; once *Tell an artist's facts once per
  * session*), what an insight's prompt holds of the artist's facts, its description linking to *New
  * session idle trigger* under *History* (#581). *Reactive*'s choices are
- * described in its dialog (#546); a mode chosen there, the one chosen already included, is told to
- * [modeChosen] as well as saved: an automatic one starts automatic writing from the next track (#625). The rows
- * about writing cannot be changed while *Show insights* is off; *Proactive* can, as it writes nothing.
+ * described in its dialog (#546); a mode chosen there, the one chosen already included, goes to
+ * [chooseMode], which saves it and tells the pipeline (#625: an automatic one starts automatic
+ * writing from the next track), or, without one, is saved alone. The rows about writing cannot be
+ * changed while *Show insights* is off; *Proactive* can, as it writes nothing.
  */
 @Composable
 internal fun InsightsSection(
     settings: Settings,
     update: Update,
     open: (SettingsDialog) -> Unit,
-    modeChosen: (WriteAutomatically) -> Unit = {},
+    chooseMode: ((WriteAutomatically) -> Unit)? = null,
 ) {
     SwitchRow(
         title = stringResource(R.string.settings_write_insights),
@@ -60,8 +61,11 @@ internal fun InsightsSection(
                             settings.writeAutomatically,
                             details = modeDetails,
                         ) { mode ->
-                            update { it.copy(writeAutomatically = mode) }
-                            modeChosen(mode)
+                            if (chooseMode != null) {
+                                chooseMode(mode)
+                            } else {
+                                update { it.copy(writeAutomatically = mode) }
+                            }
                         },
                     )
                 }.takeIf { settings.writeInsights },

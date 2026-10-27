@@ -111,7 +111,10 @@ sealed interface CoordinatorEvent {
      * on a cause both the run's settings and the mode now selected write on, so *On demand* stops
      * every run writing without a tap, and *On track skip (auto)* stops a run started under *On
      * track change (auto)* writing a track that followed the last one by itself; a run started
-     * under *On demand* still writes nothing.
+     * under *On demand* still writes nothing. It sets the mode selected only until the user first
+     * chooses one in this process ([ModeChosen]): from then on the choices, and what the store holds
+     * after each one's save ([ModeChoiceSettled]), are the one source of it, so a late emission of
+     * an earlier choice's save can never widen it again.
      */
     data class WritingModeChanged(
         val mode: WriteAutomatically,
@@ -122,14 +125,27 @@ sealed interface CoordinatorEvent {
      * the one chosen already included. It applies from the next track: the track playing, written
      * or not, decided or still looked up, is written only on a tap ([CoordinatorState.Report.tapOnly]).
      * An automatic mode is the first action (D5), so automatic writing starts, or resumes, with the
-     * next track; *On demand* acts on nothing. The mode now selected is [mode] at once, before the
-     * setting's save comes as [WritingModeChanged].
+     * next track; *On demand* acts on nothing. The mode now selected is [mode] at once, and stays
+     * so whatever [WritingModeChanged] says until [ModeChoiceSettled] for this [choice], the
+     * host's count of choices, says what the store holds.
      */
     data class ModeChosen(
         val mode: WriteAutomatically,
+        val choice: Long = 1,
     ) : CoordinatorEvent {
         val automatic: Boolean get() = mode != WriteAutomatically.NEVER
     }
+
+    /**
+     * The save of choice [choice] ([ModeChosen]) ended, saved or not, and the store then held
+     * [stored] (null when it could not be read). For the latest choice it sets the mode selected,
+     * so a save that failed leaves the coordinator with the mode the store, and so the menu, still
+     * has; for an earlier one, nothing: a later choice is the user's word.
+     */
+    data class ModeChoiceSettled(
+        val choice: Long,
+        val stored: WriteAutomatically?,
+    ) : CoordinatorEvent
 
     /** A key, a web engine or the AI service changed: a new pipeline is needed. */
     data object RebuildRequested : CoordinatorEvent
@@ -343,8 +359,9 @@ sealed interface CoordinatorEffect {
  * activity start resets [away], and makes an expired first action again: opening Sleevesight
  * resumes automatic writing (#625), though not for a track that came to play while it was paused
  * ([Report.whilePaused]). Choosing an automatic mode is the first action too
- * ([CoordinatorEvent.ModeChosen]), from the next track. [mode] is *Reactive* as last reported or
- * chosen (#553, #625; null before either, which narrows nothing): no decision writes on a cause
+ * ([CoordinatorEvent.ModeChosen]), from the next track. [mode] is *Reactive* as reported before
+ * the first choice in this process, then as chosen, and as the store held once the latest
+ * choice's save ended ([chosen], the latest choice; #553, #625; null before either, which narrows nothing): no decision writes on a cause
  * it does not write on ([modeWrites]), whatever the run's own settings, read when it started, say;
  * [automatic] while it writes on any. [ledger] is the insight of the current insight
  * track ([Ledger]). [building] is the rebuild waiting to be swapped in, and [built] its outcome
@@ -366,6 +383,7 @@ data class CoordinatorState(
     val away: Int = 0,
     val expired: Boolean = false,
     val mode: WriteAutomatically? = null,
+    val chosen: Long = 0,
     val latest: Report? = null,
     val run: Run? = null,
     val ledger: Ledger? = null,
@@ -707,14 +725,15 @@ fun sameInsightTrack(
  *
  * | State | Event | New state | Effects |
  * |---|---|---|---|
- * | not acknowledged | anything but the events of the rows below, up to ModeChosen | unchanged | none |
+ * | not acknowledged | anything but the events of the rows below, up to ModeChoiceSettled | unchanged | none |
  * | any | Acknowledged | acknowledged | none |
  * | any | ActivityStarted | started + 1; restarting = false; the first action kept (only a new process, with a new coordinator, starts without it); the count of track changes away reset; a first action expired made again (#625) | none |
  * | any | ActivityStopped(c) | started − 1; restarting = c when none is left | none |
  * | any | BackgroundChanged(on) | background = on | none |
  * | any | PauseAutoWriteChanged(n) | the pause after n track changes away (none for *Off*) | none |
- * | any | WritingModeChanged(mode) | mode = it (#553, #625) | none |
- * | any | ModeChosen(mode) | mode = it; the latest report tap-only; first action made if automatic (#625) | none |
+ * | any | WritingModeChanged(mode) | mode = it, until the first choice in this process; then unchanged (#553, #625) | none |
+ * | any | ModeChosen(mode, choice) | mode = it; the latest choice = choice; the latest report tap-only; first action made if automatic (#625) | none |
+ * | any | ModeChoiceSettled(choice, stored) | of the latest choice, with the store read: mode = stored; else unchanged (#625) | none |
  * | any | Reported(key, cause) | latest = the report, with its cause; of another insight track: tap-only when the first action is not made after it (as below), while-paused when it is expired, follows when a report came before; of the same insight track: as the report before; never tap-only or while-paused for an action in Sleevesight; the run current only if it holds it; first action made if the cause is an action in Sleevesight; a preparation cancelled unless the report is of the insight track reported before | CancelPreparation (if one is cancelled), StartTimer |
  * | none visible (no activity started or restarting) | Reported(key, cause), of another insight track than the report before (or the first), not an action in Sleevesight | as above; one more track change away; past the pause's count (the change after that many), with the first action made: the first action expired (acted false), until the user acts again, and a tap kept for the run dropped (keepsTap and tapped cleared); with *Off*, never | as above |
  * | latest not this report | Settled | unchanged | none |
@@ -772,8 +791,10 @@ class PipelineCoordinator(
             is CoordinatorEvent.ActivityStopped -> stopped(event.changingConfigurations)
             is CoordinatorEvent.BackgroundChanged -> state = state.copy(background = event.on)
             is CoordinatorEvent.PauseAutoWriteChanged -> state = state.copy(pauseAfter = event.after)
-            is CoordinatorEvent.WritingModeChanged -> state = state.copy(mode = event.mode)
-            is CoordinatorEvent.ModeChosen -> modeChosen(event)
+            is CoordinatorEvent.WritingModeChanged,
+            is CoordinatorEvent.ModeChosen,
+            is CoordinatorEvent.ModeChoiceSettled,
+            -> mode(event)
             else -> if (state.acknowledged) onAcknowledged(event)
         }
         if (state.acknowledged) {
@@ -828,10 +849,30 @@ class PipelineCoordinator(
         if (state.expired) act()
     }
 
-    // A mode chosen (#625): selected at once, and from the next track: the track playing is written
-    // only on a tap. An automatic mode is the first action.
+    // *Reactive*'s mode (#625): the store's word until the first choice in this process; then the
+    // latest choice, and what the store held once its save ended.
+    private fun mode(event: CoordinatorEvent) {
+        when (event) {
+            is CoordinatorEvent.WritingModeChanged -> if (state.chosen == 0L) state = state.copy(mode = event.mode)
+            is CoordinatorEvent.ModeChosen -> modeChosen(event)
+            is CoordinatorEvent.ModeChoiceSettled -> {
+                if (event.choice == state.chosen && event.stored != null) state = state.copy(mode = event.stored)
+            }
+            else -> Unit
+        }
+    }
+
+    // A mode chosen (#625): selected at once, the latest choice, and from the next track: the track
+    // playing is written only on a tap. An automatic mode is the first action.
     private fun modeChosen(event: CoordinatorEvent.ModeChosen) {
-        state = state.copy(mode = event.mode, latest = state.latest?.copy(tapOnly = true))
+        // A choice the host counted before the latest one taken (none, on one thread) selects nothing.
+        val latestChoice = event.choice >= state.chosen
+        state =
+            state.copy(
+                mode = if (latestChoice) event.mode else state.mode,
+                chosen = maxOf(state.chosen, event.choice),
+                latest = state.latest?.copy(tapOnly = true),
+            )
         if (event.automatic) act()
     }
 

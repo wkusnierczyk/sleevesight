@@ -253,6 +253,68 @@ class PipelineCoordinatorResumeTest {
         )
     }
 
+    @Test
+    fun aLateSaveOfAnEarlierChoiceNeverWidensTheModeSelected() {
+        // Codex's sequence: On track skip (auto) stored; On track change (auto), then On demand,
+        // chosen with both saves delayed; a skip to B; the first save's word arrives while B is
+        // looked up, then the second's. B is never written: the latest choice is On demand.
+        val world = started()
+        world.writesOn = mode(WriteAutomatically.WHEN_I_SKIP)
+        world.send(CoordinatorEvent.WritingModeChanged(WriteAutomatically.WHEN_I_SKIP))
+        world.acted()
+        world.send(CoordinatorEvent.ModeChosen(WriteAutomatically.ON_EVERY_TRACK_CHANGE, choice = 1))
+        world.send(CoordinatorEvent.ModeChosen(WriteAutomatically.NEVER, choice = 2))
+        world.lookupMs = 5_000
+        world.play("B", SKIP_IN_PLAYER)
+        world.advance(DEBOUNCE_MS + 100)
+        world.send(CoordinatorEvent.WritingModeChanged(WriteAutomatically.ON_EVERY_TRACK_CHANGE))
+        world.send(CoordinatorEvent.ModeChoiceSettled(choice = 1, stored = WriteAutomatically.ON_EVERY_TRACK_CHANGE))
+        world.advance(0)
+        assertEquals(WriteAutomatically.NEVER, world.coordinator.state.mode)
+        world.settle()
+        assertEquals(null, world.calls["B"])
+        assertTrue("B offers Write", world.offersWriteFor("B"))
+        world.send(CoordinatorEvent.WritingModeChanged(WriteAutomatically.NEVER))
+        world.send(CoordinatorEvent.ModeChoiceSettled(choice = 2, stored = WriteAutomatically.NEVER))
+        world.settle()
+        assertEquals(null, world.calls["B"])
+        assertEquals(WriteAutomatically.NEVER, world.coordinator.state.mode)
+    }
+
+    @Test
+    fun aChoiceWhoseSaveFailedLeavesTheModeTheStoreHolds() {
+        // The menu shows On track skip (auto) again, and the coordinator writes by it: a track that
+        // followed by itself is not written, though the run read On track change (auto).
+        val world = started()
+        world.send(CoordinatorEvent.WritingModeChanged(WriteAutomatically.WHEN_I_SKIP))
+        world.acted()
+        world.send(CoordinatorEvent.ModeChosen(WriteAutomatically.ON_EVERY_TRACK_CHANGE, choice = 1))
+        world.send(CoordinatorEvent.ModeChoiceSettled(choice = 1, stored = WriteAutomatically.WHEN_I_SKIP))
+        world.advance(0)
+        assertEquals(WriteAutomatically.WHEN_I_SKIP, world.coordinator.state.mode)
+        world.play("A")
+        world.settle()
+        assertEquals(null, world.calls["A"])
+        world.play("B", SKIP_IN_PLAYER)
+        world.settle()
+        assertEquals(1, world.calls["B"])
+        // A store that could not be read says nothing: the choice stands.
+        world.send(CoordinatorEvent.ModeChosen(WriteAutomatically.NEVER, choice = 2))
+        world.send(CoordinatorEvent.ModeChoiceSettled(choice = 2, stored = null))
+        world.advance(0)
+        assertEquals(WriteAutomatically.NEVER, world.coordinator.state.mode)
+    }
+
+    @Test
+    fun theEndOfAnEarlierChoicesSaveChangesNothing() {
+        val world = started()
+        world.send(CoordinatorEvent.ModeChosen(WriteAutomatically.ON_EVERY_TRACK_CHANGE, choice = 1))
+        world.send(CoordinatorEvent.ModeChosen(WriteAutomatically.NEVER, choice = 2))
+        world.send(CoordinatorEvent.ModeChoiceSettled(choice = 1, stored = WriteAutomatically.ON_EVERY_TRACK_CHANGE))
+        world.advance(0)
+        assertEquals(WriteAutomatically.NEVER, world.coordinator.state.mode)
+    }
+
     // The first action made on Zero (a tap), the app left, with *Saver* at one change away: A is
     // written as usual, if looked up away ([background]), and B, the change after, expires it.
     private fun paused(background: Boolean): World =

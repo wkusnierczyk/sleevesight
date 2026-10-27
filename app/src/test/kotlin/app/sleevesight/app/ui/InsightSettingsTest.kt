@@ -92,7 +92,11 @@ class InsightSettingsTest {
                         emptyMap(),
                         { CompletableDeferred(true) },
                         saves,
-                        onWritingModeChosen = { chosen += it },
+                        chooseWritingMode =
+                            settings.writingModeChooser(saves) { mode ->
+                                chosen += mode
+                                {}
+                            },
                     ) { it }
                 }
             }

@@ -1,5 +1,7 @@
 package app.sleevesight.app.settings
 
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import app.sleevesight.app.TestStores
@@ -13,9 +15,12 @@ import kotlinx.coroutines.job
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.io.IOException
 
 /**
  * The insight card's menu of *Reactive*'s modes as the app saves it (#615,
@@ -65,15 +70,39 @@ class WritingModeChooserTest {
     fun eachChoiceIsToldOnTheModeAlreadyChosenIncluded() {
         // The pipeline hears each choice, where an automatic mode is the first action (#625).
         val told = mutableListOf<WriteAutomatically>()
+        val settled = mutableListOf<WriteAutomatically?>()
         val store = store()
         val modes = listOf(WriteAutomatically.WHEN_I_SKIP, WriteAutomatically.WHEN_I_SKIP, WriteAutomatically.NEVER)
-        runBlocking {
-            for (mode in modes) store.writingModeChooser(saves) { told += it }(mode)
-            saves.coroutineContext.job.children
-                .toList()
-                .forEach { it.join() }
-        }
+        val chooser =
+            store.writingModeChooser(saves) { mode ->
+                told += mode
+                { stored -> synchronized(settled) { settled += stored } }
+            }
+        val saved = runBlocking { modes.map(chooser).map { it.await() } }
         assertEquals(modes, told)
+        assertEquals(listOf(true, true, true), saved)
+        // Each save's end is told on, with what the store then held.
+        assertEquals(modes.size, settled.size)
+        assertTrue(settled.all { it in modes })
+    }
+
+    @Test
+    fun aSaveThatFailsSaysSoAndTellsTheModeTheStoreStillHolds() {
+        // So the pipeline goes back to the mode the menu still shows (#625).
+        val real = stores.open("settings")
+        runBlocking { SettingsStore(real).update { it.copy(writeAutomatically = WriteAutomatically.WHEN_I_SKIP) } }
+        val failing =
+            object : DataStore<Preferences> {
+                override val data = real.data
+
+                override suspend fun updateData(transform: suspend (t: Preferences) -> Preferences): Preferences =
+                    throw IOException("cannot write")
+            }
+        var stored: WriteAutomatically? = null
+        val chooser = SettingsStore(failing).writingModeChooser(saves) { { stored = it } }
+        val saved = runBlocking { chooser(WriteAutomatically.ON_EVERY_TRACK_CHANGE).await() }
+        assertFalse(saved)
+        assertEquals(WriteAutomatically.WHEN_I_SKIP, stored)
     }
 
     @Test

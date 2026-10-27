@@ -81,8 +81,10 @@ import java.io.IOException
  * each model list the model choice fetches. [landOn] is where the settings open, unfolded and
  * landed on as a link to it would ([SettingsNavigator.go]), once per visit: Home's note of a model
  * found unavailable opens them at the model's row (#581); null opens them all folded, at the top.
- * [onWritingModeChosen] hears each mode chosen for *Reactive*, the one chosen already included,
- * besides its save: an automatic one starts automatic writing from the next track (#625).
+ * [chooseWritingMode] saves each mode chosen for *Reactive*, the one chosen already included, and
+ * tells the pipeline (#625: an automatic one starts automatic writing from the next track), its
+ * result whether it was saved, which the screen announces as it does any change; null saves the
+ * mode as any setting.
  */
 @Suppress("LongParameterList", "LongMethod") // The stores and actions it works on; a branch per dialog.
 @Composable
@@ -101,7 +103,7 @@ fun SettingsScreen(
     installedPlayers: InstalledPlayers? = null,
     modelCheck: ModelCheck? = null,
     landOn: SettingsTarget? = null,
-    onWritingModeChosen: (WriteAutomatically) -> Unit = {},
+    chooseWritingMode: ((WriteAutomatically) -> Deferred<Boolean>)? = null,
     playerLabel: (String) -> String,
 ) {
     val settings by settingsStore.settings.collectAsState(initial = null)
@@ -116,9 +118,15 @@ fun SettingsScreen(
     // The changes in a row that could not be saved, 0 once one is: each one is announced.
     var changeFailures by remember { mutableIntStateOf(0) }
     val clearing = remember(scope) { Clearing(scope) }
-    val update =
-        scope.updater(settingsStore, saves) { failed ->
-            changeFailures = if (failed) changeFailures + 1 else 0
+    val failed = { failed: Boolean -> changeFailures = if (failed) changeFailures + 1 else 0 }
+    val update = scope.updater(settingsStore, saves, failed)
+    // *Reactive*'s mode through the app's chooser (#625), its save announced as any change's is.
+    val chooseMode: ((WriteAutomatically) -> Unit)? =
+        chooseWritingMode?.let { choose ->
+            { mode ->
+                val saved = choose(mode)
+                scope.launch { failed(!saved.await()) }
+            }
         }
     val keys = KeysShown(secrets, offerReset = sealFailed || SecretState.UNREADABLE in secrets.values)
     val context = LocalContext.current
@@ -136,7 +144,7 @@ fun SettingsScreen(
                         onOpenCredits,
                         onOpenDiagnostics,
                         onOpenWhatLeaves,
-                        onWritingModeChosen,
+                        chooseMode,
                     )
                 SettingsContent(current, keys, navigation, unavailable, landOn, update) { dialog = it }
             }
@@ -304,8 +312,8 @@ internal class PlayerApps(
 )
 
 /**
- * How the screen names players and models, where it leads, and whom it tells of a mode chosen for
- * *Reactive* ([modeChosen], #625).
+ * How the screen names players and models, where it leads, and how it saves a mode chosen for
+ * *Reactive* ([chooseMode], #625; null: as any setting).
  */
 private class Navigation(
     val players: PlayerApps,
@@ -313,7 +321,7 @@ private class Navigation(
     val openCredits: () -> Unit,
     val openDiagnostics: () -> Unit,
     val openWhatLeaves: () -> Unit,
-    val modeChosen: (WriteAutomatically) -> Unit = {},
+    val chooseMode: ((WriteAutomatically) -> Unit)? = null,
 )
 
 /**
@@ -419,7 +427,7 @@ private fun SettingsColumn(
         FoldedSection(SettingsSection.SECRETS, folds) { SecretsSection(settings, keys, update, open) }
         FoldedSection(SettingsSection.GENRES, folds) { GenresSection(settings, secrets, update) }
         FoldedSection(SettingsSection.INSIGHTS, folds) {
-            InsightsSection(settings, update, open, navigation.modeChosen)
+            InsightsSection(settings, update, open, navigation.chooseMode)
         }
         FoldedSection(SettingsSection.HISTORY, folds) { HistorySection(settings, update, open) }
         FoldedSection(SettingsSection.APPEARANCE, folds) { AppearanceSection(settings, update, open) }
