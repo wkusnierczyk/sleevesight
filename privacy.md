@@ -72,7 +72,7 @@ Google Play, which distributes the app, handles your installation under [Google'
 - *Proactive* off sends nothing about the next track.
 - *Report a problem*, and the tester's report button, send nothing by themselves: each shows the report and hands it to your mail app, which handles it as any message you write (some keep a draft in your mail account) and sends it to the developer only if you do. A tester's report leaves out the track changes unless you turn them on, and any part you leave out. *Report button* at *Hide*, or developer mode off, removes the button.
 - *Keep what sources said about each artist*, off by default, keeps what the sources said about each artist played on the phone, so fewer requests about artists are sent; turning it off deletes it.
-- *Keep history for* sets how long the history is kept, from a week to a year, or forever. *Clear history*, right under it, deletes at once everything kept about the tracks you played, the insights, the genre explanations and the sources' findings included.
+- *Keep history for* sets how long the history, and the insights and genre explanations written, are kept, from a week to a year, or forever; one written longer ago is no longer shown, and is deleted at the app's next start. *Clear history*, right under it, deletes at once everything kept about the tracks you played, the insights, the genre explanations and the sources' findings included.
 - A saved key can be removed in the settings, with the delete button on its row, and *Purge keys* removes them all.
 - Android's *Clear storage* for Sleevesight, or uninstalling it, deletes everything it kept on the phone. Cached findings also expire on their own, on the lifetimes shown in the settings.
 

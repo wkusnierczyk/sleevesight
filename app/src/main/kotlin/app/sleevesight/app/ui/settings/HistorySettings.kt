@@ -63,7 +63,11 @@ internal fun HistorySection(
 ) {
     val lifetime = settings.historyLifetime
     val lifetimes = historyLifetimes(lifetime)
-    ValueRow(title = stringResource(R.string.settings_keep_history), value = lifetimeLabel(lifetime)) {
+    ValueRow(
+        title = stringResource(R.string.settings_keep_history),
+        value = lifetimeLabel(lifetime),
+        summary = stringResource(R.string.settings_keep_history_summary),
+    ) {
         open(
             SettingsDialog.Choice(R.string.settings_keep_history, lifetimes, lifetime) { chosen ->
                 update { it.copy(historyLifetime = chosen) }

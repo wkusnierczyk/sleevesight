@@ -91,6 +91,22 @@ class HistorySettingsTest {
         }
 
     @Test
+    fun keepHistoryForSaysTheInsightsAndGenreExplanationsFollowIt() =
+        showHistory {
+            // #643: the insights written are kept and shown no longer than the history, so it says so.
+            val summary = text(R.string.settings_keep_history_summary)
+            assertTrue(summary, "insights and genre explanations" in summary)
+            val rows =
+                listOf(
+                    R.string.settings_keep_history,
+                    R.string.settings_keep_history_summary,
+                    R.string.settings_clear_history,
+                )
+            val tops = rows.map(::top)
+            assertEquals("the title, its description, then Clear history", tops.sorted(), tops)
+        }
+
+    @Test
     fun noDescriptionInHistoryStartsFromTheOffState() =
         showHistory {
             // Only *History* is unfolded, so every text with an "Off:" at its start would be one of its own.
