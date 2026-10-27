@@ -252,8 +252,11 @@ class SettingsSettingLinksTest {
             val title = compose.onNode(hasText(text(R.string.settings_title))).performScrollTo()
             val top = title.fetchSemanticsNode().boundsInRoot.top
             restore()
+            // No landing again: the row takes no focus. Checked at once, since a landing in touch
+            // mode lets the focus go after a moment, sooner than [settle]'s wait.
+            assertEquals(0, count(hasAnyAncestor(hasTestTag(target.tag)) and isFocused()))
             settle()
-            // No landing again: the column stays where it was left, and the row takes no focus.
+            // Nor later, and the column stays where it was left.
             val again = compose.onNode(hasText(text(R.string.settings_title))).assertIsDisplayed()
             assertEquals(top, again.fetchSemanticsNode().boundsInRoot.top, 1f)
             assertEquals(0, count(hasAnyAncestor(hasTestTag(target.tag)) and isFocused()))
@@ -282,10 +285,11 @@ class SettingsSettingLinksTest {
             scenario.onActivity { nav.navigate(SettingsPage) }
             waitForNode(hasText(SETTINGS_DRAWN))
             // The destination 0.1.5 saved: a typed destination's id is the hash of its serial name,
-            // and the object's route is that name alone, with no arguments.
-            val name = SettingsPage.serializer().descriptor.serialName
+            // and the object's route is that name alone, with no arguments. Written out, not read
+            // from the class, so a rename or a `@SerialName` that would lose saved back stacks fails.
+            val name = "app.sleevesight.app.ui.SettingsPage"
             compose.runOnUiThread {
-                assertEquals(name.hashCode(), nav.currentDestination?.id)
+                assertEquals(SETTINGS_PAGE_ID, nav.currentDestination?.id)
                 assertEquals(name, nav.currentDestination?.route)
             }
             // A back stack saved with the settings on it is restored into a new controller.
@@ -361,5 +365,8 @@ class SettingsSettingLinksTest {
         const val OPEN = "open_settings_at"
         const val SETTINGS_DRAWN = "Settings drawn"
         const val SETTINGS_RESTORED = "Settings restored"
+
+        // `"app.sleevesight.app.ui.SettingsPage".hashCode()`: the id 0.1.5 saved the settings under.
+        const val SETTINGS_PAGE_ID = 1_827_671_801
     }
 }

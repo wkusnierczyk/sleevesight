@@ -157,6 +157,9 @@ internal class SettingsNavigator(
      * Ends [pending], unless another landing has begun since, where no [LandingSpot] is drawn for
      * its target once its section is unfolded: a route or a saved state naming a row no longer shown
      * (#581) would otherwise leave it pending, and [scrolling] set, for the rest of the visit.
+     * Called a frame after the landing begins, which is enough only because each [FoldedSection]
+     * composes all its rows at once, in a column that is not lazy: a lazy one would draw a row, and
+     * claim its spot, only once it is scrolled near, and this would drop a landing still to come.
      */
     fun dropUnclaimed(pending: Landing) {
         if (pending.target !in spots) landed(pending)

@@ -49,7 +49,7 @@ import org.robolectric.annotation.GraphicsMode
  * The genres under *Expandable boxes* (#439, #558): the chips alone; a chip opens its genre's
  * panel, another switches it, the same chip or *Close* closes it; the panel's table names its rows
  * by the track's title, the artist's name and the album's title, on one line each and read whole,
- * the genre marked wherever it shows; where the genre comes from; none, and off.
+ * the genre marked wherever it shows; where the table's labels come from, a line per row; none, and off.
  */
 @RunWith(RobolectricTestRunner::class)
 class GenresScreenTest {

@@ -30,7 +30,7 @@ import app.sleevesight.core.genres.PlacedLabel
 import app.sleevesight.core.genres.TrackGenres
 import app.sleevesight.core.pipeline.TrackState
 
-// The genre's panel (#558): its heading, the table, and where the genre comes from.
+// The genre's panel (#558): its heading, the table, and where the table's labels come from, a line per row.
 
 /**
  * The panel of [genre] (#558; frame B of the agreed mock-ups): its name as a heading, with *Close*
