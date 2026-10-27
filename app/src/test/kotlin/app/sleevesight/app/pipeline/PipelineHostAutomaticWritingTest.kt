@@ -14,22 +14,23 @@ import org.junit.Test
 import kotlin.time.Duration.Companion.seconds
 
 /**
- * *Reactive* changed while a track's sources are still being looked up (#553: the insight card's
- * toggle): turned to *Manual*, the run, whose settings were read when it started, writes nothing
- * without a tap; turned on, a run started under *Manual* still writes nothing for its track. And
- * the view's `paused` follows *Saver*'s pause: on past its count, off after a tap.
+ * *Reactive* changed while a track's sources are still being looked up (#553; since #615 from the
+ * insight card's menu): turned to *Now*, the run, whose settings were read when it started, makes
+ * no paid call without a tap; turned to an automatic mode, a run started under *Now* still writes
+ * nothing for its track. And the view's `paused` follows *Saver*'s pause: on past its count, off
+ * after a tap.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class PipelineHostAutomaticWritingTest : PipelineHostFixture() {
     @Test
-    fun `turned off while the sources are looked up, the track is not written`() =
+    fun `Now chosen while the sources are looked up, the track is not written`() =
         runTest {
             acted()
             musicBrainz.byName = 3.seconds
             play("Two")
             // The run has started, its lookups under way.
             advanceTimeBy(DEBOUNCE + 1.seconds)
-            settings.value = settings.value.withAutomaticWriting(false)
+            settings.value = settings.value.copy(writeAutomatically = WriteAutomatically.NEVER)
             settle()
             assertEquals(0, provider.requestsFor("Two"))
             val insight =
@@ -39,17 +40,17 @@ internal class PipelineHostAutomaticWritingTest : PipelineHostFixture() {
         }
 
     @Test
-    fun `turned on while the sources are looked up, the track is not written`() =
+    fun `an automatic mode chosen while the sources are looked up, the track is not written`() =
         runTest {
-            settings.value = settings.value.withWriteAutomatically(WriteAutomatically.NEVER)
+            settings.value = settings.value.copy(writeAutomatically = WriteAutomatically.NEVER)
             acted()
             musicBrainz.byName = 3.seconds
             play("Two")
             advanceTimeBy(DEBOUNCE + 1.seconds)
-            settings.value = settings.value.withAutomaticWriting(true)
+            settings.value = settings.value.copy(writeAutomatically = WriteAutomatically.ON_EVERY_TRACK_CHANGE)
             settle()
             assertEquals(0, provider.requestsFor("Two"))
-            // The next track is written: the toggle is on again.
+            // The next track is written: the mode writes automatically again.
             play("Three")
             settle()
             assertEquals(1, provider.requestsFor("Three"))
@@ -69,12 +70,12 @@ internal class PipelineHostAutomaticWritingTest : PipelineHostFixture() {
             settle()
             assertTrue("past the count", host.state.value.paused)
             assertTrue("Write offered because of the pause", host.state.value.lapsed)
-            // Turned off: still paused for the toggle, but the card no longer offers to resume.
-            settings.value = settings.value.withAutomaticWriting(false)
+            // Turned to Now: still paused for the card, but it no longer offers to resume.
+            settings.value = settings.value.copy(writeAutomatically = WriteAutomatically.NEVER)
             settle()
             assertTrue(host.state.value.paused)
-            assertFalse("nothing to resume under Manual", host.state.value.lapsed)
-            settings.value = settings.value.withAutomaticWriting(true)
+            assertFalse("nothing to resume under Now", host.state.value.lapsed)
+            settings.value = settings.value.copy(writeAutomatically = WriteAutomatically.ON_EVERY_TRACK_CHANGE)
             settle()
             host.activityStarted()
             settle()

@@ -13,6 +13,7 @@ import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.resolution.NameMatcher
+import app.sleevesight.core.settings.WriteAutomatically
 import app.sleevesight.core.sources.ReleaseDate
 
 // What the home screen shows, worked out from what the session layer and the pipeline publish, as
@@ -66,9 +67,14 @@ internal fun headerYears(
 /**
  * What the insight card needs besides the insight: the [track] it is of, and from the pipeline's
  * view and the settings, whether an insight can be written, what the pipeline offers beside it
- * ([offers]), and why a rewrite failed or that it was stopped ([rewriteFailed]); and the switched-on
+ * ([offers]); and the switched-on
  * AI service's model, while it is found unavailable ([unavailable], #540), which no insight is
- * written with until another is chosen.
+ * written with until another is chosen. *Reactive*'s [mode], null before the settings' first read,
+ * whether automatic writing waits for a tap ([waiting], `PipelineView.waiting`), and whether *Saver*
+ * has paused it ([paused], `PipelineView.paused`, #203) name the split button's Write and the line
+ * about it (#615). Whether the insight shown is the card paid for, kept from before in place of an
+ * insight the run lacks ([cardShown], `PipelineView.cardShown`), and why its rewrite failed or that
+ * it was stopped ([rewriteFailed], `PipelineView.rewriteFailed`).
  */
 @Suppress("LongParameterList") // Each what one part of the card says.
 internal class InsightContext(
@@ -77,13 +83,18 @@ internal class InsightContext(
     val insightsOn: Boolean,
     val modelAllowed: Boolean,
     val offers: InsightOffers,
-    val rewriteFailed: String?,
     val unavailable: UnavailableModel? = null,
+    val mode: WriteAutomatically? = null,
+    val waiting: Boolean = false,
+    val paused: Boolean = false,
+    val cardShown: Boolean = false,
+    val rewriteFailed: String? = null,
 )
 
 /**
- * What the pipeline offers beside the insight shown: Rewrite beside the card paid for ([rewrite]),
- * Write again after a call that failed or was stopped ([retry]), and Stop while the call is under
+ * What the pipeline offers beside the insight shown: Rewrite beside the card paid for ([rewrite],
+ * once a settings change changed its key), Write again after a call that failed or was
+ * stopped ([retry]), and Stop while the call is under
  * way ([stop]); and whether the Write offered is offered only because automatic writing paused
  * while the app was not on screen ([paused], #203).
  */
@@ -95,7 +106,7 @@ internal class InsightOffers(
 )
 
 /**
- * Where the insight card's taps go: Write and Rewrite ([onWrite]) and Stop ([onStop]) to the
+ * Where the insight card's taps go: Write ([onWrite]) and Stop ([onStop]) to the
  * pipeline, which says whether a tap does anything; a citation chip ([onCite]) to its line; the
  * link of a model found unavailable to the settings ([onSettings], #540); *Report a problem*
  * ([onReport], #390) with the written insight and the track it was written for.

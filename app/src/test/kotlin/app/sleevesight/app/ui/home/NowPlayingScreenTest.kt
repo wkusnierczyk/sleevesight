@@ -37,7 +37,6 @@ import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.pipeline.CallId
-import app.sleevesight.app.pipeline.PipelineHost
 import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.app.pipeline.RunId
 import app.sleevesight.app.session.PlaybackInfo
@@ -182,12 +181,16 @@ class NowPlayingScreenTest {
     fun writeOfferedBecauseAutomaticWritingPausedSaysSo() {
         val offered = track(insight = InsightState.Idle(canWrite = true))
         show(state(PipelineView(offered, aiReady = true, writeKey = sundownKey, lapsed = true))) {
-            compose.onNodeWithText(text(R.string.home_insight_paused)).performScrollTo().assertIsDisplayed()
+            compose
+                .onNodeWithText(
+                    text(R.string.home_insight_paused, "Write on change"),
+                ).performScrollTo()
+                .assertIsDisplayed()
             compose.onNodeWithText(text(R.string.home_insight_tap_write)).assertDoesNotExist()
             compose.onNodeWithTag(WRITE_TAG).assertExists()
         }
         show(state(PipelineView(offered, aiReady = true, writeKey = sundownKey))) {
-            compose.onNodeWithText(text(R.string.home_insight_paused)).assertDoesNotExist()
+            compose.onNodeWithText(text(R.string.home_insight_paused, "Write on change")).assertDoesNotExist()
             compose.onNodeWithText(text(R.string.home_insight_tap_write)).performScrollTo().assertIsDisplayed()
         }
     }
@@ -283,23 +286,6 @@ class NowPlayingScreenTest {
             compose.onNodeWithTag(STOP_TAG).performScrollTo().performClick()
             // The tap carries the call Stop was offered for.
             assertEquals(listOf(call), stops)
-        }
-    }
-
-    @Test
-    fun aRewriteStoppedShowsTheCardWrittenEarlierAndSaysSo() {
-        val view =
-            PipelineView(
-                track(insight = written("It was recorded in 1973 [MB1].")),
-                aiReady = true,
-                rewrite = true,
-                rewriteFailed = PipelineHost.STOPPED,
-                writeKey = sundownKey,
-            )
-        show(state(view)) {
-            compose.onNodeWithText(text(R.string.home_rewrite_stopped)).assertExists()
-            compose.onNodeWithText("It was recorded in 1973", substring = true).assertExists()
-            compose.onNodeWithTag(WRITE_TAG).assertExists()
         }
     }
 
@@ -554,7 +540,8 @@ class NowPlayingScreenTest {
         }
 
     @Test
-    fun theKeptCardOffersRewriteAndSaysWhenARewriteFailed() {
+    fun theKeptCardOffersRewriteWhichWritesItAgain() {
+        // Offered once a settings change changed the card's key (#615): a tap is the coordinator's Write.
         writes = 0
         val kept = track(insight = written("It was recorded in 1973 [MB1].", cached = true))
         show(state(PipelineView(kept, aiReady = true, rewrite = true, cardShown = true, writeKey = sundownKey))) {
@@ -563,13 +550,7 @@ class NowPlayingScreenTest {
             compose.onNodeWithText(text(R.string.home_evidence_cited)).assertExists()
             compose.onNodeWithTag(WRITE_TAG).performScrollTo().performClick()
             assertEquals(1, writes)
-        }
-        show(state(PipelineView(kept, aiReady = true, cardShown = true, rewriteFailed = "offline"))) {
-            val reason = text(R.string.home_failure_offline)
-            compose.onNodeWithText(text(R.string.home_rewrite_failed, reason)).assertExists()
-            unfold()
-            compose.onNodeWithText(text(R.string.home_evidence_cited)).assertExists()
-            assertEquals(0, compose.onAllNodesWithTag(WRITE_TAG).fetchSemanticsNodes().size)
+            assertEquals(sundownKey to sundown, tapped)
         }
     }
 

@@ -94,7 +94,11 @@ import kotlin.coroutines.cancellation.CancellationException
  *   *Saver* names, so the first action expired, and a tap resumes it.
  * @property paused whether automatic writing is paused by *Saver* ([CoordinatorState.expired],
  *   #203): the first action expired, and nothing is written without a tap until the user acts
- *   again. The insight card's toggle (#553) shows it, whether or not Write is offered ([lapsed]).
+ *   again. The insight card (#615) shows it as *Paused*, whether or not Write is offered ([lapsed]).
+ * @property waiting whether automatic writing waits for a tap (#615): no first action since the
+ *   app started ([CoordinatorState.acted], D5), or *Saver* has paused it ([paused]). A tap on the
+ *   Write offered then writes the track and starts or resumes automatic writing; the insight card
+ *   labels it with the mode (*Write on change*, *Write on skip*).
  */
 data class PipelineView(
     val track: TrackState? = null,
@@ -109,6 +113,7 @@ data class PipelineView(
     val offline: Boolean = false,
     val lapsed: Boolean = false,
     val paused: Boolean = false,
+    val waiting: Boolean = false,
 )
 
 /**
@@ -147,7 +152,7 @@ class PipelineKeys(
  * one that each track change is recorded with (D15).
  *
  * *Saver* reaches the coordinator as `PauseAutoWriteChanged`, from the
- * settings as *Look up in the background* does (#203), and *Reactive* to or from *Manual* as
+ * settings as *Look up in the background* does (#203), and *Reactive* to or from *Now* as
  * `AutomaticWritingChanged` (#553), so a run's settings, read when it started, are narrowed by a
  * change made while it runs.
  *
@@ -311,7 +316,7 @@ class PipelineHost(
                 }
             }
             launch {
-                // *Reactive* to or from *Manual* (#553, the insight card's toggle), so a run started
+                // *Reactive* to or from *Now* (#553; the insight card's menu, #615), so a run started
                 // before it was turned off does not write without a tap.
                 latest.map { it.writesAutomatically }.distinctUntilChanged().collect {
                     queue.send(CoordinatorEvent.AutomaticWritingChanged(it))
@@ -653,6 +658,7 @@ class PipelineHost(
                 offline = !owner.online,
                 lapsed = owner.lapsed,
                 paused = owner.expired,
+                waiting = owner.waitsForTap,
             )
         }.collect {
             view.value = it

@@ -220,6 +220,17 @@ class SettingsSettingLinksTest {
         }
 
     @Test
+    fun theSettingsOpenedAtReactiveLandOnItsRow() =
+        // From the insight card's menu, *See Settings for details* (#615).
+        show(landOn = SettingsTarget.reactive) {
+            landedOnRow(SettingsTarget.reactive)
+            compose
+                .onNode(
+                    hasAnyAncestor(hasTestTag(SettingsTarget.reactive.tag)) and hasText("Reactive"),
+                ).assertExists()
+        }
+
+    @Test
     fun theSettingsOpenedAtASettingLandOnceAVisit() {
         val target = SettingsTarget(SettingsSection.AI_SERVICES, "model_GOOGLE")
         show(landOn = target) {

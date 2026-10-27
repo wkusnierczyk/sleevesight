@@ -96,6 +96,9 @@ data class SettingsTarget(
         /** *New session idle trigger*'s row under *History* (#581). */
         internal val sessionGap: SettingsTarget = SettingsTarget(SettingsSection.HISTORY, "session_gap")
 
+        /** *Reactive*'s row under *Insights*, from the insight card's menu of its modes (#615). */
+        internal val reactive: SettingsTarget = SettingsTarget(SettingsSection.INSIGHTS, "reactive")
+
         /**
          * The target [section] (a [SettingsSection]'s name) and [row] name, as a route or a saved
          * state carries it; null for no section, or a name no section has.

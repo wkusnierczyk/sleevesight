@@ -45,12 +45,7 @@ import kotlin.time.Duration.Companion.seconds
  *   and the home screen shows none. On by default.
  * @property writeInsights the master switch: off means no AI calls at all; evidence is still shown.
  * @property writeAutomatically *Reactive* (D5): which track changes write an insight without a tap.
- *   The insight card's toggle (#553) is the same setting: on, one of the automatic modes; off,
- *   [WriteAutomatically.NEVER]. Set it with [withWriteAutomatically] or [withAutomaticWriting], which
- *   keep [lastAutomaticMode].
- * @property lastAutomaticMode the automatic mode *Reactive* was last set to (#553), never
- *   [WriteAutomatically.NEVER]: what the insight card's toggle, turned on again, restores
- *   ([withAutomaticWriting]). *On track change* until another is chosen.
+ *   The menu of the insight card's split button (#615) is the same setting, its three modes.
  * @property pauseAutoWriteAfter *Saver* (#203): the track changes reported
  *   while Sleevesight is not on screen that are written as usual; at the next, the user's first
  *   action expires, so nothing more is written without a new tap. Null is *Off*, and the first
@@ -149,7 +144,6 @@ data class Settings(
     val showGenres: Boolean = true,
     val writeInsights: Boolean = true,
     val writeAutomatically: WriteAutomatically = WriteAutomatically.ON_EVERY_TRACK_CHANGE,
-    val lastAutomaticMode: WriteAutomatically = WriteAutomatically.ON_EVERY_TRACK_CHANGE,
     val pauseAutoWriteAfter: Int? = DEFAULT_PAUSE_AUTO_WRITE_AFTER,
     val crossfade: Crossfade = Crossfade.Autodetect,
     val prepareNextTrack: PrepareNextTrack = PrepareNextTrack.EVIDENCE,
@@ -182,39 +176,10 @@ data class Settings(
         require(pauseAutoWriteAfter == null || pauseAutoWriteAfter > 0) {
             "Automatic writing must pause after a positive number of track changes, was $pauseAutoWriteAfter"
         }
-        require(lastAutomaticMode != WriteAutomatically.NEVER) { "The last automatic mode must write automatically" }
     }
 
-    /** Whether *Reactive* writes automatically: the insight card's toggle (#553) is on. */
+    /** Whether *Reactive* writes automatically: *On track change* or *On track skip*, not *Now*. */
     val writesAutomatically: Boolean get() = writeAutomatically != WriteAutomatically.NEVER
-
-    /**
-     * These settings with *Reactive* set to [mode], keeping the automatic mode in use for the
-     * insight card's toggle (#553): [mode] itself when it writes automatically, else the mode left
-     * if that one did ([lastAutomaticMode]).
-     */
-    fun withWriteAutomatically(mode: WriteAutomatically): Settings =
-        copy(
-            writeAutomatically = mode,
-            lastAutomaticMode =
-                when {
-                    mode != WriteAutomatically.NEVER -> mode
-                    writesAutomatically -> writeAutomatically
-                    else -> lastAutomaticMode
-                },
-        )
-
-    /**
-     * These settings with the insight card's toggle (#553) turned [on] or off: off is *Manual*; on
-     * keeps an automatic mode already set, or restores the last one used ([lastAutomaticMode]),
-     * *On track change* if none was.
-     */
-    fun withAutomaticWriting(on: Boolean): Settings =
-        when {
-            !on -> withWriteAutomatically(WriteAutomatically.NEVER)
-            writesAutomatically -> this
-            else -> withWriteAutomatically(lastAutomaticMode)
-        }
 
     /**
      * Whether events from [player] (a package name) are followed; a player not yet seen is not, and
@@ -623,7 +588,11 @@ enum class Layout {
     EXPANDABLE_BOXES,
 }
 
-/** *Reactive* (D5): which track changes write an insight without a tap. */
+/**
+ * *Reactive* (D5): which track changes write an insight without a tap. Shown as *On track change*,
+ * *On track skip* and *Now* (#615: *Now* was *Manual*, *On track skip* was *On skip*); the stored
+ * names stay as they are.
+ */
 enum class WriteAutomatically {
     ON_EVERY_TRACK_CHANGE,
     WHEN_I_SKIP,

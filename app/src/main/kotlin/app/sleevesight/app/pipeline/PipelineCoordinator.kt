@@ -25,7 +25,7 @@ data class Card(
 /**
  * What decides, from a run's settings, whether it writes without a tap: the causes *Reactive*
  * writes on ([writesOn], `AutoWrite.causes`: none while *Show insights* is off or
- * under *Manual*), and whether the model's own knowledge is allowed ([allowModel]), which decides
+ * under *Now*), and whether the model's own knowledge is allowed ([allowModel]), which decides
  * whether the evidence has anything to narrate (`EvidenceSet.nothingToNarrate`).
  */
 data class WriteSettings(
@@ -102,9 +102,9 @@ sealed interface CoordinatorEvent {
     ) : CoordinatorEvent
 
     /**
-     * *Reactive* (D5) moved to or from *Manual* (#553: also the insight card's toggle): [automatic]
+     * *Reactive* (D5) moved to or from *Now* (#553; also the insight card's menu, #615): [automatic]
      * while it writes automatically. It only narrows a run's settings, read when the run started:
-     * off, no run writes without a tap from then on; on, a run started under *Manual* still does
+     * off, no run writes without a tap from then on; on, a run started under *Now* still does
      * not.
      */
     data class AutomaticWritingChanged(
@@ -135,7 +135,7 @@ sealed interface CoordinatorEvent {
     /**
      * Run [run] has its evidence and could write its insight; [writesOn] are the causes of a change
      * that *Reactive* writes on, once the user has acted, under the run's
-     * settings (`AutoWrite.causes`: none while *Show insights* is off or under *Manual*), and
+     * settings (`AutoWrite.causes`: none while *Show insights* is off or under *Now*), and
      * [allowModel] whether its settings allow the model's own knowledge (#192: a run that asks
      * again writes without a tap only under the settings the track was decided under).
      */
@@ -558,11 +558,17 @@ data class CoordinatorState(
     /**
      * Whether the Write offered is offered only because the first action expired (#203): the
      * current run's decision would have written had it stood, and the user has not acted since.
-     * Never under *Manual* ([automatic], #553): a tap there resumes nothing. [expired] alone says
-     * whether automatic writing is paused, for the insight card's toggle.
+     * Never under *Now* ([automatic], #553): a tap there resumes nothing. [expired] alone says
+     * whether automatic writing is paused, for the insight card's *Paused*.
      */
     val lapsed: Boolean
         get() = expired && automatic && current?.takeIf { it.offered && !it.calling }?.lapsed == true
+
+    /**
+     * Whether automatic writing waits for a tap (#615): no first action since the app started
+     * ([acted], D5), or it expired after *Saver*'s count ([expired]).
+     */
+    val waitsForTap: Boolean get() = !acted || expired
 }
 
 /** The same insight track: [TrackIdentity.playsOn], the session history's rule for a track that plays on. */
@@ -609,9 +615,9 @@ fun sameInsightTrack(
  * showing ([CoordinatorState.rewrites]), as the user's choice to rewrite it. Else write when the
  * latest report's cause, which the current run holds, is one *Reactive* writes
  * on under the run's settings (`InsightAsked.writesOn`: every cause under *On track change*,
- * a skip in the player or an action in Sleevesight under *On skip*, none under *Manual* or with
+ * a skip in the player or an action in Sleevesight under *On track skip*, none under *Now* or with
  * *Show insights* off) and *Reactive* still writes automatically now ([CoordinatorState.automatic],
- * #553: turned to *Manual* since the run started, nothing writes without a tap), the user has acted since the app started (a cold start: a return to the
+ * #553: turned to *Now* since the run started, nothing writes without a tap), the user has acted since the app started (a cold start: a return to the
  * app keeps the first action) and that first action has not expired, and the ledger has not decided
  * this key (a rebuild's run of it again is not a track change, D5); else offer Write, marking the
  * run lapsed when only the expiry kept it from writing ([CoordinatorState.Run.lapsed]), so the
@@ -1188,7 +1194,7 @@ class PipelineCoordinator(
         run: CoordinatorState.Run,
         writesOn: Set<ChangeCause>,
     ): Boolean {
-        // Under *Manual* now (#553), nothing would have written: no pause to tell of.
+        // Under *Now* (#553), nothing would have written: no pause to tell of.
         if (!state.expired || !state.automatic) return false
         val ledger = state.ledger?.takeIf { sameInsightTrack(it.track, run.nowPlaying) }
         val cause = state.latest?.cause
@@ -1214,7 +1220,7 @@ class PipelineCoordinator(
         // The cause of the latest report, which the run, being current, holds: the latest word
         // on how the user came to this track (a skip back to it during its run included).
         val cause = state.latest?.cause
-        // *Reactive* turned to *Manual* since the run started (#553) answers no for it too.
+        // *Reactive* turned to *Now* since the run started (#553) answers no for it too.
         val writes = cause != null && cause in writesOn && state.automatic && acted && !written
         // A key the ledger decided: a rebuild's run of it is not a track change (D5). A run that
         // asks again (#192) writes only as the decision for nothing to narrate would have, under

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Material Symbols "keyboard_arrow_down", outlined, weight 400, 24 px (Apache-2.0;
+     google/material-design-icons, symbols/web): the insight card's split button's arrow, which opens
+     the menu of Reactive's modes (#615). Its path is drawn in Material Symbols' 960-unit box, whose
+     top is at y = -960. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="960"
+    android:viewportHeight="960">
+    <group android:translateY="960">
+        <path
+            android:fillColor="#FF000000"
+            android:pathData="M480-344 240-584l56-56 184 184 184-184 56 56-240 240Z" />
+    </group>
+</vector>

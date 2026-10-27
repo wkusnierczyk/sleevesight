@@ -72,26 +72,40 @@
 
     <!-- The insight. -->
     <string name="home_insight_title">Key insights</string>
-    <!-- The insight card's toggle for automatic writing (#553), the same setting as Reactive: its name,
-         read by a screen reader with its state, and shown with it as the tooltip on a long press. -->
-    <string name="home_auto_write">Write insights automatically</string>
-    <string name="home_auto_write_on">on</string>
-    <string name="home_auto_write_off">off</string>
-    <!-- While Saver has paused automatic writing: the toggle stays on, and says it is paused. -->
-    <string name="home_auto_write_paused">on, paused</string>
-    <!-- The tooltip: the toggle's name and its state, one of the three above. -->
-    <string name="home_auto_write_tooltip">Write insights automatically: %1$s</string>
-    <!-- Shown beside the toggle's symbol while Saver has paused automatic writing. -->
-    <string name="home_auto_write_paused_mark">Paused</string>
-    <!-- A short message when the toggle is turned on. -->
-    <string name="home_auto_write_paid">Each new track’s insight is a paid call.</string>
+    <!-- The insight card's split button (#615): its arrow opens the menu of Reactive's modes, the same
+         setting. A screen reader reads the arrow with the mode chosen, one of Reactive's choices. -->
+    <string name="home_write_mode">Writing mode: %1$s</string>
+    <!-- The arrow, read before the settings are first read and the mode is not known. -->
+    <string name="home_write_mode_unknown">Writing mode</string>
+    <!-- The mode as the arrow reads it while Saver has paused automatic writing. -->
+    <string name="home_write_mode_paused">%1$s, paused</string>
+    <!-- Shown beside the split button while Saver has paused automatic writing. -->
+    <string name="home_write_mode_paused_mark">Paused</string>
+    <!-- The menu's last item, after the modes: opens the settings at Reactive, where each mode is described. -->
+    <string name="home_write_mode_details">See Settings for details</string>
+    <!-- A short message when an automatic mode other than the one chosen is chosen in the menu; none
+         for Now, or for the mode already chosen. -->
+    <string name="home_write_mode_paid">Each new track’s insight is a paid call.</string>
     <string name="home_write">Write insight</string>
+    <!-- The split button's Write beside the card paid for, once a settings change changed its key (#615). -->
     <string name="home_rewrite">Rewrite</string>
+    <!-- The split button's Write under an automatic mode (#615): a tap writes this track's insight
+         and starts or resumes automatic writing; disabled while it runs by itself. -->
+    <string name="home_write_on_change">Write on change</string>
+    <string name="home_write_on_skip">Write on skip</string>
     <string name="home_insight_gathering">Gathering evidence…</string>
     <string name="home_insight_preparing">Getting the insight ready…</string>
     <string name="home_insight_tap_write">Tap Write insight to have it written from the sources below.</string>
-    <string name="home_insight_paused">Automatic writing paused: tracks changed while Sleevesight was not on screen. Tap Write insight to write this one and resume.</string>
+    <!-- %1$s: the split button's Write, as it is labelled (Write on change, Write on skip). -->
+    <string name="home_insight_paused">Automatic writing paused: tracks changed while Sleevesight was not on screen. Tap %1$s to write this one and resume.</string>
+    <!-- Under an automatic mode, before the first tap since the app started (#615); %1$s as above. -->
+    <string name="home_insight_tap_write_auto">Tap %1$s to write this track’s insight and start writing automatically.</string>
+    <!-- Under an automatic mode, while it writes by itself (#615). -->
+    <string name="home_insight_auto_change">Writing automatically on every track change.</string>
+    <string name="home_insight_auto_skip">Writing automatically when you skip a track.</string>
     <string name="home_insight_writing">Writing…</string>
+    <!-- While the insight is written and Stop can end the call (#615). -->
+    <string name="home_insight_writing_stop">Writing from the sources. Tap Stop to stop it.</string>
     <string name="home_insight_off">Insights are off. Turn them on in Settings.</string>
     <string name="home_insight_unavailable">Choose an AI service and save its key in Settings to have insights written.</string>
     <!-- The switched-on AI service's model is not listed for the key, or the service refused it
@@ -102,12 +116,18 @@
     <string name="home_insight_no_evidence">The sources give nothing to write an insight from.</string>
     <string name="home_insight_failed">The insight could not be written: %1$s.</string>
     <string name="home_insight_incomplete">The reply stopped early, so this is incomplete, and it was not kept.</string>
-    <string name="home_rewrite_offered">Written earlier, from the evidence under Sources. Rewrite writes it again from what the sources find now, with your current AI service.</string>
+    <!-- Shown with Rewrite (#615). -->
+    <string name="home_rewrite_offered">Rewrite with updated source or model settings.</string>
     <string name="home_rewrite_failed">Rewriting failed: %1$s. This is the insight written earlier.</string>
     <string name="home_rewrite_stopped">Rewriting stopped. This is the insight written earlier.</string>
     <string name="home_stop">Stop</string>
     <string name="home_insight_stopped">Stopped before the reply ended, so nothing was kept.</string>
     <string name="home_insight_retry">Write insight tries again, as a new call to your AI service.</string>
+    <!-- Write offered again while automatic writing waits for a tap (#615): before the first tap since
+         the app started, or while Saver has paused it. %1$s: the split button's Write, as it is
+         labelled (Write on change, Write on skip). -->
+    <string name="home_insight_retry_auto">%1$s tries again, as a new call to your AI service, and starts writing automatically.</string>
+    <string name="home_insight_retry_resume">%1$s tries again, as a new call to your AI service, and resumes writing automatically.</string>
     <!-- The note under an insight (#437): only for sentences the sources do not back (uncited, citing
          missing evidence, or from the model's own knowledge), and for an insight kept from before. -->
     <plurals name="home_note_unbacked">
