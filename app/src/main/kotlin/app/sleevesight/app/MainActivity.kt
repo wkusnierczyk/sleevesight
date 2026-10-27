@@ -61,6 +61,8 @@ class MainActivity : ComponentActivity() {
             unavailableModel = graph.unavailableModel,
             // The insight card's menu of Reactive's modes (#615), saved in the process's scope.
             chooseWritingMode = graph.settings.writingModeChooser(graph.settingsSaves),
+            // What a genre's panel shows above its table (#523).
+            genreNotes = graph.genreNotes,
         )
     }
 

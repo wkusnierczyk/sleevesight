@@ -70,6 +70,39 @@ class SynthesisCacheTest {
     }
 
     @Test
+    fun `a genre's reason is kept for Keep history for, and goes with the purge after it`() {
+        val reason = key.copy(kind = CardKind.GENRE)
+        fixture.settings = fixture.settings.copy(historyLifetime = 7.days)
+        synthesis.put(reason, "It is folk [W1].")
+        synthesis.put(key, "text")
+        fixture.clock.advance(6.days)
+        assertNotNull(synthesis.get(reason))
+
+        fixture.clock.advance(1.days)
+        // Not served once past it, the insight still is, and the purge deletes the reason.
+        assertNull(synthesis.get(reason))
+        synthesis.put(reason, "It is folk [W1].", fixture.clock.now - 8.days)
+        assertEquals(1, fixture.caches.purgeExpired())
+        assertNotNull(synthesis.get(key))
+        assertEquals(
+            1,
+            fixture.caches
+                .stats()
+                .synthesis.entries,
+        )
+    }
+
+    @Test
+    fun `with Keep history for at Forever, a genre's reason is kept until evicted`() {
+        val reason = key.copy(kind = CardKind.GENRE)
+        fixture.settings = fixture.settings.copy(historyLifetime = null)
+        synthesis.put(reason, "It is folk [W1].")
+        fixture.clock.advance(3650.days)
+        fixture.caches.purgeExpired()
+        assertNotNull(synthesis.get(reason))
+    }
+
+    @Test
     fun `a rewritten card replaces the kept one`() {
         synthesis.put(key, "first")
         synthesis.put(key, "second")

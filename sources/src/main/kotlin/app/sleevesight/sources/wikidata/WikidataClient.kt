@@ -9,7 +9,7 @@ import app.sleevesight.sources.array
 import app.sleevesight.sources.int
 import app.sleevesight.sources.lookup
 import app.sleevesight.sources.obj
-import app.sleevesight.sources.parseObject
+import app.sleevesight.sources.parseWikimedia
 import app.sleevesight.sources.string
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -59,7 +59,7 @@ class WikidataClient(
                     ),
             )
         return net.lookup(request) { response ->
-            values(parseObject(response.body).obj("claims")?.get(property) as? JsonArray)
+            values(parseWikimedia(response.body).obj("claims")?.get(property) as? JsonArray)
         }
     }
 
@@ -76,7 +76,7 @@ class WikidataClient(
                 "format" to "json",
             )
         return net.lookup(NetRequest(API, query = query)) { response ->
-            parseObject(response.body).obj("query").array("search").mapNotNull { it.string("title") }
+            parseWikimedia(response.body).obj("query").array("search").mapNotNull { it.string("title") }
         }
     }
 
@@ -96,7 +96,7 @@ class WikidataClient(
                 "format" to "json",
             )
         return net.lookup(NetRequest(API, query = query)) { response ->
-            parseObject(response.body)
+            parseWikimedia(response.body)
                 .obj("entities")
                 .orEmpty()
                 .filterValues { (it as? JsonObject)?.containsKey("missing") == false }

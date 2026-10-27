@@ -20,6 +20,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.CallId
+import app.sleevesight.app.pipeline.GenreNotes
 import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.app.pipeline.UnavailableModel
 import app.sleevesight.app.report.MailHandoff
@@ -53,6 +54,8 @@ import kotlinx.coroutines.flow.StateFlow
  *   (#540): no insight is written with it, and the card says so.
  * @property chooseWritingMode saves a mode chosen in the insight card's menu of *Reactive*'s modes
  *   (#615), as *Reactive*.
+ * @property genreNotes what a genre's panel shows above its table (#523): what the genre is, and
+ *   *Why is this …?*.
  */
 @Suppress("LongParameterList") // What one screen reads, each published on its own.
 class HomeFeed(
@@ -69,6 +72,7 @@ class HomeFeed(
     val playerLaunch: (String) -> Intent? = { null },
     val unavailableModel: StateFlow<UnavailableModel?> = MutableStateFlow(null),
     val chooseWritingMode: (WriteAutomatically) -> Unit = {},
+    val genreNotes: GenreNotes = GenreNotes.None,
 )
 
 /**
@@ -129,6 +133,7 @@ private fun HomeFeed.actions(
     write = write,
     stop = stop,
     chooseWritingMode = chooseWritingMode,
+    genreNotes = genreNotes,
     openSettings = openSettings,
     openPage = openPage,
     openSettingsAt = openSettingsAt,
@@ -154,7 +159,8 @@ internal class NowPlayingState(
  * the settings, from *Sources*' note of a source that needs its key (#440), and [openSettingsAt]
  * the settings at a setting, from the note of a model found unavailable (#581). [openPage] opens
  * an item on a page of its own, under *Layout*'s *Separate pages* (#447). [chooseWritingMode] saves
- * a mode chosen in the insight card's menu of *Reactive*'s modes (#615).
+ * a mode chosen in the insight card's menu of *Reactive*'s modes (#615). [genreNotes] gives what a
+ * genre's panel shows above its table (#523).
  */
 @Suppress("LongParameterList") // Each of the screen's ways out, on its own.
 internal class NowPlayingActions(
@@ -169,6 +175,7 @@ internal class NowPlayingActions(
     val openPage: (HomePage) -> Unit = {},
     val openSettingsAt: (SettingsTarget) -> Unit = { openSettings() },
     val chooseWritingMode: (WriteAutomatically) -> Unit = {},
+    val genreNotes: GenreNotes = GenreNotes.None,
 )
 
 /**
@@ -232,7 +239,14 @@ internal fun NowPlayingContent(
             KeyData(normalized, header, headerYears(track, header))
             // Until the settings' first read, the layout is not known: neither item is drawn,
             // rather than the boxes for a frame and then the pages (#447).
-            if (settings != null) Genres(track, settings, actions.openPage.takeIf { pages })
+            if (settings != null) {
+                Genres(
+                    track,
+                    settings,
+                    actions.openPage.takeIf { pages },
+                    PanelNotes(actions.genreNotes, cite, shown.modelAllowed),
+                )
+            }
             // A tap carries what it was shown for: the run Write is offered for, beside this track.
             val onWrite: () -> Unit = { view.writeKey?.let { actions.write(it, playing) } }
             val onStop: () -> Unit = { view.stopCall?.let(actions.stop) }

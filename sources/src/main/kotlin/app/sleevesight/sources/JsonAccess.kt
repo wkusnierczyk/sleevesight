@@ -23,6 +23,18 @@ internal val lenientJson: Json = Json { ignoreUnknownKeys = true }
 
 internal fun parseObject(text: String): JsonObject = lenientJson.parseToJsonElement(text) as JsonObject
 
+/**
+ * A Wikimedia API answer (Wikipedia's, Wikidata's): [parseObject], or, for the error envelope those
+ * APIs send with a status of 200 (`{"error": {"code": "ratelimited", …}}`, a `maxlag`, a bad
+ * parameter), a [WikimediaError], which the lookup reports as failed rather than as an empty answer
+ * that a cache would keep as "none".
+ */
+internal fun parseWikimedia(text: String): JsonObject =
+    parseObject(text).also { if (it.containsKey("error")) throw WikimediaError() }
+
+/** A Wikimedia API's error envelope in an answer of status 200; its code is not kept, as no value is. */
+internal class WikimediaError : IllegalStateException("Wikimedia API error")
+
 internal fun JsonElement?.obj(key: String): JsonObject? = (this as? JsonObject)?.get(key) as? JsonObject
 
 internal fun JsonElement?.array(key: String): List<JsonElement> =
