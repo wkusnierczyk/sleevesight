@@ -51,20 +51,21 @@ import app.sleevesight.core.pipeline.TrackState
  * panel in its place ([Panel], as a genre's is): *Sources* as a heading, with *Close* at the top
  * right, which folds it back to the chip; the focus moves to *Close* on opening and back to the chip
  * on closing (a keyboard's, and a screen reader's), and to the chip when a new track folds the panel
- * while a keyboard's focus is in it. In the panel, a chip for each source that gave
- * lines, by name with the letter its citations use ([chipsWithLines]), drawn as a genre chip too,
- * which shows or hides that source's lines (a display filter only: what the model may use is the
- * settings'); a note when a source needs the listener's key, could not be reached or failed
- * ([sourceNotes]), its key's linking to the settings ([openSettings]); and the list: the evidence
- * lines, each with its scope and a link to where it was found, and the lines of matches that could
- * not be verified, which are shown but never cited. The lines are a table of two columns (#270):
+ * while a keyboard's focus is in it. In the panel, a table of the sources ([SourceTable], #662), a
+ * row for each but those that are off ([tableRows]): a chip with the letter its citations use, which
+ * shows or hides that source's lines (a display filter only: what the model may use is the
+ * settings'), dimmed for one that gave none, and its name and what it found; a note when a source
+ * needs the listener's key, could not be reached or failed ([sourceNotes]), its key's linking to
+ * the settings ([openSettings]); and the list: the evidence lines, each with its scope and a link
+ * to where it was found, and the lines of matches that could not be verified, which are shown but
+ * never cited. The lines are a table of two columns (#270):
  * the tags right-aligned in the first, as wide as the widest, so every line's text starts at the
  * same place.
  *
- * With *Show grounding details* on ([SourcesShown.details]), the chips are every source's, as
- * [SourcesShown.chips] has them, each with its letter and its status ("W the song (kept)"), the
- * model's own knowledge's `M` among them, and the list ends with the matches the sources rejected,
- * with their reasons.
+ * With *Show grounding details* on ([SourcesShown.details]), the table has every source's row, as
+ * [SourcesShown.chips] has them, the sources that are off too, with the statuses that are
+ * diagnostics ("Found the song (kept)", "Match rejected"), in the developer mark; and the list ends
+ * with the matches the sources rejected, with their reasons.
  *
  * The list unfolds a screenful ([Fold.PAGE] lines) at a time ([fold], #269): *show more…* and
  * *show all* under it while lines remain, *… show less* back to the first screenful once past it.
@@ -130,8 +131,8 @@ internal fun SourcesSection(
 }
 
 /**
- * What *Sources* shows of a [track]: its [chips] (every source's, the list cut to those with lines
- * unless with grounding [details]), whether the insight shown is the card kept from before
+ * What *Sources* shows of a [track]: its [chips] (every source's, the table without those that are
+ * off unless with grounding [details]), whether the insight shown is the card kept from before
  * ([cardKept]), and whether the phone is [offline] with a source unreachable.
  */
 internal class SourcesShown(
@@ -144,7 +145,7 @@ internal class SourcesShown(
 
 /**
  * The section's content (#447: one component, mounted in place in its panel or on a page of its
- * own): the chips, the note, and the list as far as [fold] unfolds it, with its paging. Drawn as a
+ * own): the table of the sources, the note, and the list as far as [fold] unfolds it, with its paging. Drawn as a
  * column of its own, spaced as the section is.
  */
 @OptIn(ExperimentalLayoutApi::class)
@@ -167,7 +168,7 @@ internal fun SourcesBody(
         // Of every line, hidden ones too, so the column does not move when a chip hides some.
         val tagWidth = tagColumnWidth(lines.map { it.id } + unverified.map { it.source.tag })
         val chips = shown.chips
-        SourceChips(if (details) chips else chipsWithLines(chips, track?.evidence), details, lines, focus, fold)
+        SourceTable(tableRows(chips, track?.evidence, details), details, lines, focus, fold)
         Notes(sourceNotes(chips, shown.offline), openSettings)
         if (shown.offline) Small(stringResource(R.string.home_sources_offline))
         if (lines.isEmpty()) {

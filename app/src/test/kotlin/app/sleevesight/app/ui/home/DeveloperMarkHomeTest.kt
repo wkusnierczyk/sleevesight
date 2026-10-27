@@ -43,9 +43,9 @@ import org.robolectric.RobolectricTestRunner
 
 /**
  * The developer mark (#536) on Home: what *Show grounding details* adds (the full counts under the
- * insight, every source's status chip, the rejected matches) is marked while marking is on; nothing
- * is while it is off; and without the details nothing on Home is marked, as nothing there is
- * developer mode's alone.
+ * insight, *Sources*' table with the sources that are off and the diagnostics, #662, the rejected
+ * matches) is marked while marking is on; nothing is while it is off; and without the details
+ * nothing on Home is marked, as nothing there is developer mode's alone.
  */
 @RunWith(RobolectricTestRunner::class)
 class DeveloperMarkHomeTest {
@@ -111,8 +111,10 @@ class DeveloperMarkHomeTest {
     @Test
     fun theGroundingDetailsAreMarked() =
         show(details, marked = true) {
-            // The counts, the status chips, the rejected matches: each block marked once.
+            // The counts, the sources' table, the rejected matches: each block marked once.
             assertEquals(3, marks())
+            val table = hasTestTag(SOURCES_TABLE_TAG) and hasAnyAncestor(hasTestTag(DEVELOPER_MARK_TAG))
+            assertEquals(1, compose.onAllNodes(table, useUnmergedTree = true).fetchSemanticsNodes().size)
             val grounded = app.resources.getQuantityString(R.plurals.home_meta_grounded, 2, 2, 2)
             assertEquals(1, marked(grounded, substring = true))
             assertEquals(1, marked(app.getString(R.string.home_rejected_title)))
