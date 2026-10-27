@@ -2,15 +2,13 @@ package app.sleevesight.app.ui.home
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
@@ -155,14 +153,16 @@ private fun Written(
     for (paragraph in paragraphs) {
         CheckedProse(paragraph, insight.grounded, context.track?.evidence, actions.onCite, insight.held)
     }
-    // The footer: the grounding line, then *Report a problem* at the row's end. The line's box takes
-    // the room whatever it holds, so the action keeps its place should the line show only at times.
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        // *Kept from before.* for the card paid for, whether or not it came from the cache.
-        val kept = insight.cached || context.cardShown
-        Box(Modifier.weight(1f)) { GroundingLine(insight.grounded, kept, groundingDetails) }
-        context.track?.let { track -> ReportAction { actions.onReport(track, insight) } }
-    }
+    // The footer: the grounding line, then *Report a problem* at the row's end, or under it at a
+    // large font size.
+    Footer(
+        lines = {
+            // *Kept from before.* for the card paid for, whether or not it came from the cache.
+            val kept = insight.cached || context.cardShown
+            GroundingLine(insight.grounded, kept, groundingDetails)
+        },
+        action = { context.track?.let { track -> ReportAction { actions.onReport(track, insight) } } },
+    )
     if (!insight.complete) Quiet(stringResource(R.string.home_insight_incomplete))
     // The card paid for, shown again after its rewrite failed or was stopped.
     context.rewriteFailed?.let {
@@ -177,6 +177,44 @@ private fun Written(
         Quiet(stringResource(R.string.home_rewrite_offered))
     }
 }
+
+/**
+ * The footer under a written insight: [lines] (the grounding line) and [action] (*Report a
+ * problem*) at the row's end, the two centred on each other. The lines take the room whatever they
+ * hold, so the action keeps its place should they show only at times. When the action would leave
+ * the lines less than [FOOTER_LINES] of the row, as at a large font size or on a narrow screen
+ * (#606), the action goes under them, still at the row's end, and the lines take the whole row,
+ * rather than a word a line. A screen reader reads the lines, then the action, either way.
+ */
+@Composable
+private fun Footer(
+    lines: @Composable () -> Unit,
+    action: @Composable () -> Unit,
+) {
+    Layout(contents = listOf({ Column { lines() } }, action)) { (lineParts, actionParts), constraints ->
+        val width = constraints.maxWidth
+        val loose = constraints.copy(minWidth = 0, minHeight = 0)
+        val acted = actionParts.map { it.measure(loose) }
+        val actionWidth = acted.maxOfOrNull { it.width } ?: 0
+        val actionHeight = acted.maxOfOrNull { it.height } ?: 0
+        val beside = width - actionWidth >= width * FOOTER_LINES
+        val text = lineParts.map { it.measure(loose.copy(maxWidth = if (beside) width - actionWidth else width)) }
+        val textHeight = text.maxOfOrNull { it.height } ?: 0
+        val height = if (beside) maxOf(textHeight, actionHeight) else textHeight + actionHeight
+        layout(width, height) {
+            if (beside) {
+                text.forEach { it.placeRelative(0, (height - it.height) / 2) }
+                acted.forEach { it.placeRelative(width - it.width, (height - it.height) / 2) }
+            } else {
+                text.forEach { it.placeRelative(0, 0) }
+                acted.forEach { it.placeRelative(width - it.width, textHeight) }
+            }
+        }
+    }
+}
+
+/** The share of the footer's row its lines keep beside *Report a problem*, or it goes under them: half. */
+private const val FOOTER_LINES = 0.5f
 
 @Composable
 private fun Prose(text: AnnotatedString) {
