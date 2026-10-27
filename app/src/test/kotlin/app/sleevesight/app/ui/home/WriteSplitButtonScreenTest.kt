@@ -50,6 +50,7 @@ import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WriteAutomatically
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -83,8 +84,9 @@ class WriteSplitButtonScreenTest {
     private val view =
         MutableStateFlow(PipelineView(track(insight = written("It is a song [MB1].")), aiReady = true))
 
-    // Each mode chosen in the menu, as the app's chooser hears it (#625).
+    // Each mode chosen in the menu, as the app's chooser hears it (#625), and whether its save works.
     private val chosen = mutableListOf<WriteAutomatically>()
+    private var saves = true
 
     private fun show(block: () -> Unit) {
         // The menu saves as the app's does: through the settings, which the card then reads.
@@ -93,7 +95,9 @@ class WriteSplitButtonScreenTest {
                 normalizer::normalize,
                 chooseWritingMode = { mode ->
                     chosen += mode
-                    settings.value = settings.value?.copy(writeAutomatically = mode)
+                    // A save that fails leaves the setting as it was.
+                    if (saves) settings.value = settings.value?.copy(writeAutomatically = mode)
+                    CompletableDeferred(saves)
                 },
                 openSettingsAt = { openedAt += it },
             )
@@ -436,6 +440,23 @@ class WriteSplitButtonScreenTest {
             choose(WriteAutomatically.NEVER)
             assertNull(ShadowToast.getLatestToast())
         }
+    }
+
+    @Test
+    fun aModeWhoseSaveFailedIsAnnouncedAndTheMenuKeepsTheStoredMode() {
+        saves = false
+        show {
+            ShadowToast.reset()
+            choose(WriteAutomatically.NEVER)
+            compose.waitForIdle()
+            assertEquals(
+                "The last change could not be saved: the phone’s storage failed. The setting keeps its saved " +
+                    "value; try again.",
+                ShadowToast.getTextOfLatestToast(),
+            )
+            arrow.assertContentDescriptionEquals("Writing mode: On track change (auto)")
+        }
+        assertEquals(listOf(WriteAutomatically.NEVER), chosen)
     }
 
     @Test

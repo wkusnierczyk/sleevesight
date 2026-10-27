@@ -37,6 +37,8 @@ import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.settings.Layout
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WriteAutomatically
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -53,7 +55,8 @@ import kotlinx.coroutines.flow.StateFlow
  * @property unavailableModel the switched-on AI service's model, while it is found unavailable
  *   (#540): no insight is written with it, and the card says so.
  * @property chooseWritingMode saves a mode chosen in the insight card's menu of *Reactive*'s modes
- *   (#615), as *Reactive*, and tells the pipeline, where an automatic mode is the first action (#625).
+ *   (#615), as *Reactive*, and tells the pipeline, where an automatic mode is the first action (#625);
+ *   its result says whether it was saved.
  * @property genreNotes what a genre's panel shows above its table (#523): what the genre is, and
  *   *Why is this …?*.
  */
@@ -71,7 +74,7 @@ class HomeFeed(
     val stop: (CallId) -> Unit,
     val playerLaunch: (String) -> Intent? = { null },
     val unavailableModel: StateFlow<UnavailableModel?> = MutableStateFlow(null),
-    val chooseWritingMode: (WriteAutomatically) -> Unit = {},
+    val chooseWritingMode: (WriteAutomatically) -> Deferred<Boolean> = { CompletableDeferred(true) },
     val genreNotes: GenreNotes = GenreNotes.None,
 )
 
@@ -174,7 +177,7 @@ internal class NowPlayingActions(
     val openSettings: () -> Unit = {},
     val openPage: (HomePage) -> Unit = {},
     val openSettingsAt: (SettingsTarget) -> Unit = { openSettings() },
-    val chooseWritingMode: (WriteAutomatically) -> Unit = {},
+    val chooseWritingMode: (WriteAutomatically) -> Deferred<Boolean> = { CompletableDeferred(true) },
     val genreNotes: GenreNotes = GenreNotes.None,
 )
 

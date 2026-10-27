@@ -28,8 +28,8 @@ data class KeptReason(
  * [CardKind.GENRE], keyed like the insight ([key]: the track, the evidence's fingerprint, the prompt
  * version, the AI service, its model and effort, the model-knowledge switch) and the genre
  * ([CardKey.subject]). A reason once written is found again with no call ([kept]) for as long as its
- * key holds: a settings change that would offer the insight's *Rewrite* (another service, model or
- * effort, new evidence) misses it, and *Why is this …?* is offered again.
+ * key holds: a settings change that would offer the insight's *Rewrite insight* (another service,
+ * model or effort, new evidence) misses it, and *Why is this …?* is offered again.
  *
  * Its states are the insight's ([InsightState]): [InsightState.Writing] while the reply comes,
  * [InsightState.Written] once checked, [InsightState.NoEvidence] when the evidence has nothing to

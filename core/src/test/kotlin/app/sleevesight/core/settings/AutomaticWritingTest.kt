@@ -8,8 +8,8 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * *Reactive*'s modes as automatic writing reads them: *On track change* and *On track skip* write
- * without a tap, *Now* does not.
+ * *Reactive*'s modes as automatic writing reads them: *On track change (auto)* and *On track skip
+ * (auto)* write without a tap, *On demand* does not.
  */
 class AutomaticWritingTest {
     @Test

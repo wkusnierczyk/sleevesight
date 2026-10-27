@@ -282,9 +282,10 @@ class PipelineCoordinatorResumeTest {
     }
 
     @Test
-    fun aChoiceWhoseSaveFailedLeavesTheModeTheStoreHolds() {
-        // The menu shows On track skip (auto) again, and the coordinator writes by it: a track that
-        // followed by itself is not written, though the run read On track change (auto).
+    fun aChoiceWhoseSaveFailedLeavesTheNarrowerOfItAndTheStore() {
+        // On track change (auto) chosen, its save failed, On track skip (auto) stored: the
+        // coordinator writes by the narrower, the store's, as the menu shows: a track that followed
+        // by itself is not written, though the run read On track change (auto).
         val world = started()
         world.send(CoordinatorEvent.WritingModeChanged(WriteAutomatically.WHEN_I_SKIP))
         world.acted()
@@ -303,6 +304,24 @@ class PipelineCoordinatorResumeTest {
         world.send(CoordinatorEvent.ModeChoiceSettled(choice = 2, stored = null))
         world.advance(0)
         assertEquals(WriteAutomatically.NEVER, world.coordinator.state.mode)
+    }
+
+    @Test
+    fun onDemandWhoseSaveFailedStaysOnDemand() {
+        // Codex's case: On track change (auto) stored, the first action made, On demand chosen and
+        // its save throws. The store, and the menu, still say On track change (auto), but nothing
+        // is written without a tap: the narrower of the two is the user's choice.
+        val world = started()
+        world.send(CoordinatorEvent.WritingModeChanged(WriteAutomatically.ON_EVERY_TRACK_CHANGE))
+        world.acted()
+        world.send(CoordinatorEvent.ModeChosen(WriteAutomatically.NEVER, choice = 1))
+        world.send(CoordinatorEvent.ModeChoiceSettled(choice = 1, stored = WriteAutomatically.ON_EVERY_TRACK_CHANGE))
+        world.advance(0)
+        assertEquals(WriteAutomatically.NEVER, world.coordinator.state.mode)
+        world.play("A", SKIP_IN_PLAYER)
+        world.settle()
+        assertEquals(null, world.calls["A"])
+        assertTrue("A offers Write", world.offersWriteFor("A"))
     }
 
     @Test

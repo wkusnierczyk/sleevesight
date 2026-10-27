@@ -124,6 +124,8 @@ sealed interface CoordinatorEvent {
      * The user chose [mode] for *Reactive* (#625), in the insight card's menu or in the settings,
      * the one chosen already included. It applies from the next track: the track playing, written
      * or not, decided or still looked up, is written only on a tap ([CoordinatorState.Report.tapOnly]).
+     * "The next track" is the next one the coordinator hears of after the choice, even if the session
+     * layer had already published it: the coordinator only knows a track once it is reported.
      * An automatic mode is the first action (D5), so automatic writing starts, or resumes, with the
      * next track; *On demand* acts on nothing. The mode now selected is [mode] at once, and stays
      * so whatever [WritingModeChanged] says until [ModeChoiceSettled] for this [choice], the
@@ -138,9 +140,11 @@ sealed interface CoordinatorEvent {
 
     /**
      * The save of choice [choice] ([ModeChosen]) ended, saved or not, and the store then held
-     * [stored] (null when it could not be read). For the latest choice it sets the mode selected,
-     * so a save that failed leaves the coordinator with the mode the store, and so the menu, still
-     * has; for an earlier one, nothing: a later choice is the user's word.
+     * [stored] (null when it could not be read). For the latest choice the mode selected becomes
+     * the narrower of the choice and [stored] (the one that writes on fewer causes): a save that
+     * failed never leaves the coordinator writing more than the user chose, nor more than the store,
+     * and so the menu, says; an unreadable store keeps the choice. For an earlier choice, nothing:
+     * a later choice is the user's word.
      */
     data class ModeChoiceSettled(
         val choice: Long,
@@ -733,7 +737,7 @@ fun sameInsightTrack(
  * | any | PauseAutoWriteChanged(n) | the pause after n track changes away (none for *Off*) | none |
  * | any | WritingModeChanged(mode) | mode = it, until the first choice in this process; then unchanged (#553, #625) | none |
  * | any | ModeChosen(mode, choice) | mode = it; the latest choice = choice; the latest report tap-only; first action made if automatic (#625) | none |
- * | any | ModeChoiceSettled(choice, stored) | of the latest choice, with the store read: mode = stored; else unchanged (#625) | none |
+ * | any | ModeChoiceSettled(choice, stored) | of the latest choice, with the store read: mode = the narrower of mode and stored; else unchanged (#625) | none |
  * | any | Reported(key, cause) | latest = the report, with its cause; of another insight track: tap-only when the first action is not made after it (as below), while-paused when it is expired, follows when a report came before; of the same insight track: as the report before; never tap-only or while-paused for an action in Sleevesight; the run current only if it holds it; first action made if the cause is an action in Sleevesight; a preparation cancelled unless the report is of the insight track reported before | CancelPreparation (if one is cancelled), StartTimer |
  * | none visible (no activity started or restarting) | Reported(key, cause), of another insight track than the report before (or the first), not an action in Sleevesight | as above; one more track change away; past the pause's count (the change after that many), with the first action made: the first action expired (acted false), until the user acts again, and a tap kept for the run dropped (keepsTap and tapped cleared); with *Off*, never | as above |
  * | latest not this report | Settled | unchanged | none |
@@ -856,11 +860,25 @@ class PipelineCoordinator(
             is CoordinatorEvent.WritingModeChanged -> if (state.chosen == 0L) state = state.copy(mode = event.mode)
             is CoordinatorEvent.ModeChosen -> modeChosen(event)
             is CoordinatorEvent.ModeChoiceSettled -> {
-                if (event.choice == state.chosen && event.stored != null) state = state.copy(mode = event.stored)
+                // Never wider than the choice: a save that failed keeps the narrower of the two.
+                val stored = event.stored
+                if (event.choice == state.chosen &&
+                    stored != null
+                ) {
+                    state = state.copy(mode = narrower(state.mode, stored))
+                }
             }
             else -> Unit
         }
     }
+
+    // Of [chosen] and [stored], the mode that writes on fewer causes (#625); [stored] when nothing
+    // was chosen.
+    private fun narrower(
+        chosen: WriteAutomatically?,
+        stored: WriteAutomatically,
+    ): WriteAutomatically =
+        if (chosen != null && AutoWrite.causes(chosen).size < AutoWrite.causes(stored).size) chosen else stored
 
     // A mode chosen (#625): selected at once, the latest choice, and from the next track: the track
     // playing is written only on a tap. An automatic mode is the first action.

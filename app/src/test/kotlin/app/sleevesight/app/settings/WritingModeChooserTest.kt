@@ -76,14 +76,15 @@ class WritingModeChooserTest {
         val chooser =
             store.writingModeChooser(saves) { mode ->
                 told += mode
-                { stored -> synchronized(settled) { settled += stored } }
+                { stored -> settled += stored }
             }
-        val saved = runBlocking { modes.map(chooser).map { it.await() } }
+        // One at a time: each save's end is told on with the mode it just saved.
+        for (mode in modes) {
+            assertTrue(runBlocking { chooser(mode).await() })
+            assertEquals(mode, settled.last())
+        }
         assertEquals(modes, told)
-        assertEquals(listOf(true, true, true), saved)
-        // Each save's end is told on, with what the store then held.
-        assertEquals(modes.size, settled.size)
-        assertTrue(settled.all { it in modes })
+        assertEquals(modes, settled)
     }
 
     @Test

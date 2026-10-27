@@ -28,6 +28,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,6 +52,9 @@ import app.sleevesight.app.R
 import app.sleevesight.app.ui.settings.WRITING_MODES
 import app.sleevesight.app.ui.settings.writingModeName
 import app.sleevesight.core.settings.WriteAutomatically
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.launch
 
 /**
  * Each half's least height as drawn (#624): as tall as Home's chips; more where the label wraps.
@@ -89,13 +93,15 @@ private const val OPEN_ROTATION = 180f
 /**
  * *Reactive* (D5) as the split button's menu shows it (#615): the [mode] chosen; not [enabled]
  * while *Show insights* is off, as *Reactive* cannot be changed then. [onChoose] saves a mode
- * chosen, the one chosen already included (an automatic one starts automatic writing from the next track,
- * #625); [onDetails] opens the settings at *Reactive*, where each mode is described.
+ * chosen, the one chosen already included (an automatic one starts automatic writing from the
+ * next track, #625), its result whether it was saved: a save that failed is announced, as the
+ * settings announce any change that could not be saved. [onDetails] opens the settings at
+ * *Reactive*, where each mode is described.
  */
 internal class WritingChoice(
     val mode: WriteAutomatically,
     val enabled: Boolean = true,
-    val onChoose: (WriteAutomatically) -> Unit = {},
+    val onChoose: (WriteAutomatically) -> Deferred<Boolean> = { CompletableDeferred(true) },
     val onDetails: () -> Unit = {},
 )
 
@@ -203,6 +209,10 @@ private fun ModeArrow(
     writing: WritingChoice?,
 ) {
     var open by remember { mutableStateOf(false) }
+    // Outlives the menu, which closes as a mode is chosen, to hear how the save ended.
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val failed = stringResource(R.string.settings_change_failed)
     val enabled = writing?.enabled == true
     val shape = RoundedCornerShape(INNER_CORNER, OUTER_CORNER, OUTER_CORNER, INNER_CORNER)
     val colours = if (filled) ButtonDefaults.buttonColors() else ButtonDefaults.outlinedButtonColors()
@@ -240,7 +250,12 @@ private fun ModeArrow(
         }
         if (writing != null) {
             DropdownMenu(expanded = open && enabled, onDismissRequest = { open = false }) {
-                ModeMenu(writing) { open = false }
+                ModeMenu(writing, { open = false }) { saved ->
+                    // A save that failed is said (#625): the menu keeps the mode the store holds.
+                    scope.launch {
+                        if (!saved.await()) Toast.makeText(context, failed, Toast.LENGTH_LONG).show()
+                    }
+                }
             }
         }
     }
@@ -259,6 +274,7 @@ private fun described(writing: WritingChoice?): String {
 internal fun ModeMenu(
     writing: WritingChoice,
     close: () -> Unit,
+    saving: (Deferred<Boolean>) -> Unit = {},
 ) {
     val context = LocalContext.current
     val paid = stringResource(R.string.home_write_mode_paid)
@@ -273,7 +289,7 @@ internal fun ModeMenu(
                     if (entry.mode != WriteAutomatically.NEVER && !chosen) {
                         Toast.makeText(context, paid, Toast.LENGTH_SHORT).show()
                     }
-                    writing.onChoose(entry.mode)
+                    saving(writing.onChoose(entry.mode))
                 },
                 leadingIcon = {
                     if (chosen) {

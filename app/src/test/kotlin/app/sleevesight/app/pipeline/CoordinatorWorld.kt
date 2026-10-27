@@ -94,7 +94,7 @@ internal class World {
     val grants = mutableListOf<String>()
     private val preparing = HashMap<RunId, String>()
 
-    /** The causes the runs' settings write on (`AutoWrite.causes`): *On track change* unless set. */
+    /** The causes the runs' settings write on (`AutoWrite.causes`): *On track change (auto)* unless set. */
     var writesOn: Set<ChangeCause> = mode(WriteAutomatically.ON_EVERY_TRACK_CHANGE)
 
     /**
