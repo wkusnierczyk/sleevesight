@@ -41,11 +41,11 @@ At the bottom, a link opens the privacy policy in your browser.
 
 **What follows.** *Continue* takes you to the home screen, where the app opens from then on. If you turn notification access off later, the home screen says *Sleevesight needs notification access to see what is playing.* and offers *Turn on notification access*, which brings back the first-run screen, with its back arrow and *Close* to return to the home screen.
 
-With nothing playing yet, the home screen says *Nothing playing in a player you follow yet. Lookups run while Sleevesight is on screen.* At the top, the logo scrolls the screen back to the top, and the cogwheel opens *Settings*.
+With nothing playing yet, the home screen lists your music players, A to Z, each a row *Play on …* that opens the player, where you start the music; a player switched off is dimmed, with *Enable in Settings*, and with no player seen yet the screen says *No music player seen yet. Play music in one, and it is listed here and in Settings → Players.* Under the players, a small picture of the home screen while a track plays, with hand-written notes on what each part does: the guide, until you dismiss it ([usage]({{ '/docs/tutorials/usage/' | relative_url }}#nothing-playing)). At the top, the logo scrolls the screen back to the top, and the cogwheel opens *Settings*.
 
 <!-- screenshot: the first-run screen, bottom, with "Notification access is off." and "Open notification access", from app version … -->
 <!-- screenshot: the first-run screen, bottom, with "Notification access is on." and "Continue", from app version … -->
-<!-- screenshot: the home screen with nothing playing: the header with the logo and the cogwheel, and the idle line, from app version … -->
+<!-- screenshot: the home screen with nothing playing: the header with the logo and the cogwheel, the players, and the guide, from app version … -->
 
 ## 3. Choosing an AI service and saving its key
 
