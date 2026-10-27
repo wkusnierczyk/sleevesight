@@ -44,6 +44,7 @@ import app.sleevesight.app.ui.theme.DeveloperMark
 import app.sleevesight.core.ai.AiProvider
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.settings.WriteAutomatically
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
@@ -80,6 +81,8 @@ import java.io.IOException
  * each model list the model choice fetches. [landOn] is where the settings open, unfolded and
  * landed on as a link to it would ([SettingsNavigator.go]), once per visit: Home's note of a model
  * found unavailable opens them at the model's row (#581); null opens them all folded, at the top.
+ * [onWritingModeChosen] hears each mode chosen for *Reactive*, the one chosen already included,
+ * besides its save: an automatic one starts automatic writing at once (#625).
  */
 @Suppress("LongParameterList", "LongMethod") // The stores and actions it works on; a branch per dialog.
 @Composable
@@ -98,6 +101,7 @@ fun SettingsScreen(
     installedPlayers: InstalledPlayers? = null,
     modelCheck: ModelCheck? = null,
     landOn: SettingsTarget? = null,
+    onWritingModeChosen: (WriteAutomatically) -> Unit = {},
     playerLabel: (String) -> String,
 ) {
     val settings by settingsStore.settings.collectAsState(initial = null)
@@ -132,6 +136,7 @@ fun SettingsScreen(
                         onOpenCredits,
                         onOpenDiagnostics,
                         onOpenWhatLeaves,
+                        onWritingModeChosen,
                     )
                 SettingsContent(current, keys, navigation, unavailable, landOn, update) { dialog = it }
             }
@@ -298,13 +303,17 @@ internal class PlayerApps(
     val installed: InstalledPlayers? = null,
 )
 
-/** How the screen names players and models, and where it leads. */
+/**
+ * How the screen names players and models, where it leads, and whom it tells of a mode chosen for
+ * *Reactive* ([modeChosen], #625).
+ */
 private class Navigation(
     val players: PlayerApps,
     val modelName: (String) -> String,
     val openCredits: () -> Unit,
     val openDiagnostics: () -> Unit,
     val openWhatLeaves: () -> Unit,
+    val modeChosen: (WriteAutomatically) -> Unit = {},
 )
 
 /**
@@ -409,7 +418,9 @@ private fun SettingsColumn(
         }
         FoldedSection(SettingsSection.SECRETS, folds) { SecretsSection(settings, keys, update, open) }
         FoldedSection(SettingsSection.GENRES, folds) { GenresSection(settings, secrets, update) }
-        FoldedSection(SettingsSection.INSIGHTS, folds) { InsightsSection(settings, update, open) }
+        FoldedSection(SettingsSection.INSIGHTS, folds) {
+            InsightsSection(settings, update, open, navigation.modeChosen)
+        }
         FoldedSection(SettingsSection.HISTORY, folds) { HistorySection(settings, update, open) }
         FoldedSection(SettingsSection.APPEARANCE, folds) { AppearanceSection(settings, update, open) }
         FoldedSection(SettingsSection.ABOUT, folds) {

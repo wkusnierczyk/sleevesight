@@ -115,10 +115,15 @@ class SettingsStore(
     /**
      * The insight card's menu of *Reactive*'s modes (#615, beside *Write insight*): each choice is
      * saved in [saves], which outlives the screen, as *Reactive*. A save that fails leaves the
-     * setting, and so the menu, as it was.
+     * setting, and so the menu, as it was. Each choice, the mode chosen already included, is also
+     * told to [chosen] at once (#625: an automatic mode starts automatic writing).
      */
-    fun writingModeChooser(saves: CoroutineScope): (WriteAutomatically) -> Unit =
+    fun writingModeChooser(
+        saves: CoroutineScope,
+        chosen: (WriteAutomatically) -> Unit = {},
+    ): (WriteAutomatically) -> Unit =
         { mode ->
+            chosen(mode)
             saves.launch {
                 try {
                     update { it.copy(writeAutomatically = mode) }

@@ -2,7 +2,6 @@ package app.sleevesight.app.ui.home
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -50,7 +49,8 @@ internal fun InsightCard(
     }
 }
 
-// Why the card shows no insight, in words that match the split button's label.
+// Why the card shows no insight, in words that match the split button's label (#625): with Write
+// offered, why automatic writing left this track, where it did.
 @Composable
 private fun IdleNote(
     insight: InsightState.Idle,
@@ -59,16 +59,11 @@ private fun IdleNote(
     val auto = automaticMode(context)
     val line =
         when {
-            insight.canWrite && waitsForTap(context) -> {
-                val label = stringResource(modeWrite(context))
-                // Automatic writing paused while the app was away (#203): say so, and that a tap resumes it.
-                if (resumes(context)) {
-                    stringResource(R.string.home_insight_paused, label)
-                } else {
-                    stringResource(R.string.home_insight_tap_write_auto, label)
-                }
-            }
-
+            // The track came to play while *Saver* had paused automatic writing, which opening
+            // Sleevesight has resumed (#203, #625).
+            insight.canWrite && context.offers.paused -> stringResource(R.string.home_insight_resumed)
+            // *On track skip (auto)*: the track followed the last one by itself.
+            insight.canWrite && context.offers.followed -> stringResource(R.string.home_insight_followed)
             insight.canWrite -> stringResource(R.string.home_insight_tap_write)
             // Running by itself, the evidence in: it writes next, as the mode says.
             auto != null && runsByItself(context) -> stringResource(runningLine(auto))
@@ -106,31 +101,19 @@ private fun InsightBody(
 
         is InsightState.Written -> Written(insight, context, actions, groundingDetails)
         InsightState.NoEvidence -> Quiet(stringResource(R.string.home_insight_no_evidence))
+        // Write offered again after a call that failed or was stopped: a new paid call, on a tap
+        // only, from the split button, which the line says in the same breath.
         is InsightState.Failed -> {
-            Quiet(stringResource(R.string.home_insight_failed, failureText(insight.reason)))
-            Retry(context)
+            val reason = failureText(insight.reason)
+            val line = if (context.offers.retry) R.string.home_insight_failed_retry else R.string.home_insight_failed
+            Quiet(stringResource(line, reason))
         }
 
         InsightState.Stopped -> {
             Quiet(stringResource(R.string.home_insight_stopped))
-            Retry(context)
+            if (context.offers.retry) Quiet(stringResource(R.string.home_insight_retry))
         }
     }
-}
-
-// Write offered again after a call that failed or was stopped: a new paid call, on a tap only, from
-// the split button. While automatic writing waits for a tap, the tap also starts or resumes it, and
-// the line names the mode's Write, as the button does.
-@Composable
-private fun Retry(context: InsightContext) {
-    if (!context.offers.retry) return
-    val line =
-        when {
-            !waitsForTap(context) -> stringResource(R.string.home_insight_retry)
-            resumes(context) -> stringResource(R.string.home_insight_retry_resume, stringResource(modeWrite(context)))
-            else -> stringResource(R.string.home_insight_retry_auto, stringResource(modeWrite(context)))
-        }
-    Quiet(line)
 }
 
 /** Why no insight is offered: insights off, no AI service, the evidence still coming, or the pipeline not there yet. */
@@ -158,13 +141,23 @@ private fun Written(
     // The footer: the grounding line, then *Report a problem* at the row's end. The line's box takes
     // the room whatever it holds, so the action keeps its place should the line show only at times.
     Row(verticalAlignment = Alignment.CenterVertically) {
-        // *Kept from before.* for the card paid for, whether or not it came from the cache.
+        // *Kept from before.* for the card paid for, whether or not it came from the cache, and
+        // straight under it, with no gap, what is said of that card's rewrite (#606).
         val kept = insight.cached || context.cardShown
-        Box(Modifier.weight(1f)) { GroundingLine(insight.grounded, kept, groundingDetails) }
+        Column(Modifier.weight(1f)) {
+            GroundingLine(insight.grounded, kept, groundingDetails)
+            RewriteLines(context)
+        }
         context.track?.let { track -> ReportAction { actions.onReport(track, insight) } }
     }
     if (!insight.complete) Quiet(stringResource(R.string.home_insight_incomplete))
-    // The card paid for, shown again after its rewrite failed or was stopped.
+}
+
+// What is said of the card paid for and its rewrite: shown again after its rewrite failed or was
+// stopped; and by the split button's *Rewrite insight* (#615, #625), that it was written with
+// earlier settings and can be written again.
+@Composable
+private fun RewriteLines(context: InsightContext) {
     context.rewriteFailed?.let {
         if (it == PipelineHost.STOPPED) {
             Quiet(stringResource(R.string.home_rewrite_stopped))
@@ -172,10 +165,7 @@ private fun Written(
             Quiet(stringResource(R.string.home_rewrite_failed, failureText(it)))
         }
     }
-    // By the split button's Rewrite (#615): written with earlier settings, it can be written again.
-    if (offersRewrite(context)) {
-        Quiet(stringResource(R.string.home_rewrite_offered))
-    }
+    if (offersRewrite(context)) Quiet(stringResource(R.string.home_rewrite_offered))
 }
 
 @Composable

@@ -43,8 +43,8 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
- * *Insights* (#444): *Reactive*, one choice, with *Crossfade* under it only while it is *On skip*,
- * and the mode chosen there what the insight card's toggle restores (#553); *Proactive*, a switch;
+ * *Insights* (#444): *Reactive*, one choice, with *Crossfade* under it only while it is *On track
+ * skip (auto)*, each mode chosen there told to the pipeline (#625); *Proactive*, a switch;
  * *Don't repeat artist facts* (#407, #546), a switch; and the rows about writing fixed while *Show
  * insights* is off.
  */
@@ -79,11 +79,21 @@ class InsightSettingsTest {
         condition: () -> Boolean,
     ) = compose.waitUntil(conditionDescription = what, timeoutMillis = 5_000) { condition() }
 
+    // The modes chosen for *Reactive*, as the pipeline hears them (#625).
+    private val chosen = mutableListOf<WriteAutomatically>()
+
     private fun show(block: () -> Unit) {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 activity.setContent {
-                    SettingsScreen(settings, secrets, emptyMap(), { CompletableDeferred(true) }, saves) { it }
+                    SettingsScreen(
+                        settings,
+                        secrets,
+                        emptyMap(),
+                        { CompletableDeferred(true) },
+                        saves,
+                        onWritingModeChosen = { chosen += it },
+                    ) { it }
                 }
             }
             compose.openSection(SettingsSection.INSIGHTS)
@@ -104,24 +114,24 @@ class InsightSettingsTest {
 
             compose.onNodeWithText(text(R.string.settings_write_automatically)).performScrollTo().performClick()
             compose.onNode(inDialog(R.string.settings_write_never)).performClick()
-            waitFor("Now stored") { settings.now().writeAutomatically == WriteAutomatically.NEVER }
+            waitFor("On demand stored") { settings.now().writeAutomatically == WriteAutomatically.NEVER }
             waitFor("Crossfade gone") { !shown(R.string.settings_crossfade) }
-            // Under *Now*, nothing is written away, so *Saver* cannot be changed.
+            // Under *On demand*, nothing is written away, so *Saver* cannot be changed.
             compose.onNodeWithText(text(R.string.settings_pause_auto_write)).performScrollTo().assertIsNotEnabled()
         }
 
     @Test
-    fun reactivesChoicesAreTheInsightCardsModesNowOnTrackChangeAndOnTrackSkipInThatOrder() =
+    fun reactivesChoicesAreTheInsightCardsModesInOrderOfHowMuchIsWrittenAutomatically() =
         show {
             // The description names the insight card's menu, the same setting (#615).
             compose
                 .onNodeWithText(
                     "Select what triggers writing an insight. The arrow beside Write insight, under Key insights, " +
-                        "sets it too.",
+                        "sets it too. Choosing an automatic mode starts automatic writing at once.",
                 ).performScrollTo()
             compose.onNodeWithText(text(R.string.settings_write_automatically)).performScrollTo().performClick()
             val tops =
-                listOf("Now", "On track change", "On track skip").map { name ->
+                listOf("On demand", "On track skip (auto)", "On track change (auto)").map { name ->
                     compose
                         .onNode(hasText(name) and hasAnyAncestor(isDialog()))
                         .fetchSemanticsNode()
@@ -132,12 +142,29 @@ class InsightSettingsTest {
             detail in
             listOf(
                 "Only when you tap Write insight.",
-                "An insight for every new track, as it starts.",
-                "An insight only when you skip to a track, not when one follows another by itself.",
+                "Writes automatically only when you skip to a track, not when one follows another by itself.",
+                "Writes automatically on every track change.",
             )
             ) {
                 compose.onNode(hasText(detail) and hasAnyAncestor(isDialog())).assertExists()
             }
+        }
+
+    @Test
+    fun eachModeChosenIsToldToThePipelineTheOneChosenAlreadyIncluded() =
+        show {
+            // The default, On track change (auto), chosen again: still the first action (#625).
+            val names =
+                mapOf(
+                    WriteAutomatically.ON_EVERY_TRACK_CHANGE to R.string.settings_write_every_change,
+                    WriteAutomatically.NEVER to R.string.settings_write_never,
+                )
+            for ((mode, name) in names) {
+                compose.onNodeWithText(text(R.string.settings_write_automatically)).performScrollTo().performClick()
+                compose.onNode(inDialog(name)).performClick()
+                waitFor("$mode stored") { settings.now().writeAutomatically == mode }
+            }
+            assertEquals(listOf(WriteAutomatically.ON_EVERY_TRACK_CHANGE, WriteAutomatically.NEVER), chosen)
         }
 
     @Test

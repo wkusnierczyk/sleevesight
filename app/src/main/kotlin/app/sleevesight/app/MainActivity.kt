@@ -59,8 +59,9 @@ class MainActivity : ComponentActivity() {
             write = graph.pipeline::write,
             stop = graph.pipeline::stop,
             unavailableModel = graph.unavailableModel,
-            // The insight card's menu of Reactive's modes (#615), saved in the process's scope.
-            chooseWritingMode = graph.settings.writingModeChooser(graph.settingsSaves),
+            // The insight card's menu of Reactive's modes (#615), saved in the process's scope; an
+            // automatic mode chosen is the first action (#625).
+            chooseWritingMode = graph.settings.writingModeChooser(graph.settingsSaves, graph.pipeline::modeChosen),
         )
     }
 
@@ -131,6 +132,8 @@ class MainActivity : ComponentActivity() {
                                             ),
                                         modelCheck = graph.modelCheck,
                                         landOn = links.landOn,
+                                        // Reactive's choice (#625): an automatic mode is the first action.
+                                        onWritingModeChosen = graph.pipeline::modeChosen,
                                         playerLabel = graph::playerLabel,
                                     )
                                 },

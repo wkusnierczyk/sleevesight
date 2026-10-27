@@ -52,7 +52,7 @@ import kotlinx.coroutines.flow.StateFlow
  * @property unavailableModel the switched-on AI service's model, while it is found unavailable
  *   (#540): no insight is written with it, and the card says so.
  * @property chooseWritingMode saves a mode chosen in the insight card's menu of *Reactive*'s modes
- *   (#615), as *Reactive*.
+ *   (#615), as *Reactive*, and tells the pipeline, where an automatic mode is the first action (#625).
  */
 @Suppress("LongParameterList") // What one screen reads, each published on its own.
 class HomeFeed(
@@ -247,7 +247,7 @@ internal fun NowPlayingContent(
                     reporting = Reported(reportedTrack, written)
                 },
                 shown.details,
-                settings?.let { writingChoice(it, view, actions) },
+                settings?.let { writingChoice(it, actions) },
             )
             if (settings != null) SourcesItem(pages, shown, focus, fold, actions)
         }
@@ -293,25 +293,22 @@ private fun insightContext(
             retry = view.retry && track != null,
             stop = view.stopCall != null && track != null,
             paused = view.lapsed && track != null,
+            followed = view.followed && track != null,
         ),
     unavailable = unavailable.takeIf { settings?.writeInsights != false },
     mode = settings?.writeAutomatically,
     waiting = view.waiting,
-    paused = view.paused,
     cardShown = view.cardShown && track != null,
     rewriteFailed = view.rewriteFailed.takeIf { track != null },
 )
 
-// The insight card's menu of *Reactive*'s modes (#615): the mode chosen, paused while *Saver* has
-// paused automatic writing, and fixed while *Show insights* is off; its last item opens the settings
-// at *Reactive*.
+// The insight card's menu of *Reactive*'s modes (#615): the mode chosen, fixed while *Show
+// insights* is off; its last item opens the settings at *Reactive*.
 private fun writingChoice(
     settings: Settings,
-    view: PipelineView,
     actions: NowPlayingActions,
 ) = WritingChoice(
     mode = settings.writeAutomatically,
-    paused = view.paused,
     enabled = settings.writeInsights,
     onChoose = actions.chooseWritingMode,
     onDetails = { actions.openSettingsAt(SettingsTarget.reactive) },

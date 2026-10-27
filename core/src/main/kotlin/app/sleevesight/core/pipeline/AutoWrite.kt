@@ -33,9 +33,9 @@ data class TrackChange(
  * - never while *Show insights* is off, or before the user's first action since the app started
  *   (in the app, a cold start: a return to it keeps the first action, until it expires after the
  *   track changes *Saver* names while the app is not on screen, #203);
- * - *On track change*: every track;
- * - *On track skip*: tracks the user moved to, by a skip in the player or an action in Sleevesight;
- * - *Now*: none.
+ * - *On track change (auto)*: every track;
+ * - *On track skip (auto)*: tracks the user moved to, by a skip in the player or an action in Sleevesight;
+ * - *On demand*: none.
  */
 object AutoWrite {
     fun writes(

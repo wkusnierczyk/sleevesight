@@ -19,8 +19,9 @@ import org.junit.rules.TemporaryFolder
 
 /**
  * The insight card's menu of *Reactive*'s modes as the app saves it (#615,
- * `SettingsStore.writingModeChooser`): each choice is *Reactive*, read back after a restart; the
- * key the toggle before it stored (#553) is left unread.
+ * `SettingsStore.writingModeChooser`): each choice is *Reactive*, read back after a restart, and is
+ * told on, the mode already chosen included (#625); the key the toggle before it stored (#553) is
+ * left unread.
  */
 class WritingModeChooserTest {
     @get:Rule
@@ -58,6 +59,21 @@ class WritingModeChooserTest {
             assertEquals(mode, runBlocking { store().settings.first() }.writeAutomatically)
             stores.close()
         }
+    }
+
+    @Test
+    fun eachChoiceIsToldOnTheModeAlreadyChosenIncluded() {
+        // The pipeline hears each choice, where an automatic mode is the first action (#625).
+        val told = mutableListOf<WriteAutomatically>()
+        val store = store()
+        val modes = listOf(WriteAutomatically.WHEN_I_SKIP, WriteAutomatically.WHEN_I_SKIP, WriteAutomatically.NEVER)
+        runBlocking {
+            for (mode in modes) store.writingModeChooser(saves) { told += it }(mode)
+            saves.coroutineContext.job.children
+                .toList()
+                .forEach { it.join() }
+        }
+        assertEquals(modes, told)
     }
 
     @Test
