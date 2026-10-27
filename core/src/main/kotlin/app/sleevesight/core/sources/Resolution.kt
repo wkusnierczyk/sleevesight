@@ -20,6 +20,10 @@ import app.sleevesight.core.normalizer.Edition
  * @property artists each credited artist of the track, in the track's order, resolved separately:
  *   its MusicBrainz artist id when the accepted recording credits it (or names it in a performer
  *   relationship), null otherwise. Empty when no recording was accepted.
+ * @property jointArtists the artists of a joint credit a track's artist was accepted under (#661:
+ *   the player's "Derya Yıldırım & Grup Şimşek" is MusicBrainz's "Derya Yıldırım" and "Grup Şimşek"),
+ *   by their credited names, with their MusicBrainz ids, for the genre labels only: the track's artist
+ *   itself has no id in [artists], since no one MusicBrainz artist is theirs. Empty otherwise.
  * @property firstRelease the earliest release of the recording; the player's release stays
  *   separate (`P` evidence).
  * @property releaseDates the releases of the track's recordings, one per title and release group
@@ -61,6 +65,7 @@ data class Resolution(
     val title: String? = null,
     val artistCredit: String? = null,
     val artists: List<ResolvedArtist> = emptyList(),
+    val jointArtists: List<ResolvedArtist> = emptyList(),
     val firstRelease: FirstRelease? = null,
     val releaseDates: List<ReleaseDate> = emptyList(),
     val work: ResolvedWork? = null,
