@@ -8,6 +8,7 @@ import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.sources.FreshLookups
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.SourceResult
@@ -17,19 +18,22 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Duration
 
 /**
  * What one run is about: the track as the player reports it and normalized, and its settings;
  * [again], what an earlier run of the track gathered, when it asks again the sources that were
- * unreachable then (#192).
+ * unreachable then (#192); [lookAgain], when it looks every source up afresh (#617).
  */
 internal class RunInput(
     val settings: Settings,
     val nowPlaying: NowPlaying,
     val track: NormalizedTrack,
     val again: Gathered? = null,
+    val lookAgain: LookAgain? = null,
 )
 
 /** Where a run reports: diagnostics events, and changes to its state. */
@@ -57,6 +61,9 @@ internal class TrackRun(
     private val track = input.track
     private val key = track.lookupKey
     private val enabled = parts.adapters.filter { settings.isEnabled(it.id) }
+
+    // Whether the run looks every source up afresh (#617).
+    private val looksAgain = input.lookAgain != null
 
     // What an earlier run of the track found (#192), kept as it landed: every state of a source
     // still switched on but `Unreachable`, which is asked again. An adapter that threw (a bug, not
@@ -95,17 +102,19 @@ internal class TrackRun(
      * when it waits for a tap, once the user taps Write; else not at all. The genre labels that take
      * requests (MusicBrainz's artists', Last.fm's track's and album's) are asked for beside the
      * insight, after the evidence, so it does not wait for them; the run
-     * ends when both have. Each step that sends requests starts once [control] grants it.
+     * ends when both have. Each step that sends requests starts once [control] grants it. A run that
+     * looks again (#617) does all of it marked [FreshLookups], so no cache answers its lookups.
      */
     suspend fun run(): TrackState {
         try {
             emit(PipelineEvent.Received(nowPlaying))
             emit(PipelineEvent.Normalized(track))
             publish(state.value)
-            coroutineScope {
+            withContext(if (looksAgain) FreshLookups else EmptyCoroutineContext) {
                 gather()
                 control.gathered(Gathered(state.value.sources, state.value.resolution))
                 val evidence = assemble()
+                control.assembled(evidence)
                 launch {
                     control.await(RunStep.LABELS)
                     try {
@@ -130,14 +139,15 @@ internal class TrackRun(
         publish(state.value)
     }
 
-    // What an earlier run kept (#192); then the cache; then the misses by name in parallel, with
-    // resolution alongside (D4).
+    // What an earlier run kept (#192); then the cache, but for a look again (#617); then the misses
+    // by name in parallel, with resolution alongside (D4).
     private suspend fun gather() {
         input.again?.let { again ->
             val asked = again.unreachable.filter { source -> enabled.any { it.id == source } }
             if (asked.isNotEmpty()) emit(PipelineEvent.AskedAgain(key, asked.sortedBy { it.ordinal }))
         }
-        val misses = enabled.filter { adapter -> adapter.id !in keptBefore && !fromCache(adapter) }
+        if (looksAgain) emit(PipelineEvent.LookedAgain(key, enabled.map { it.id }))
+        val misses = enabled.filter { adapter -> adapter.id !in keptBefore && (looksAgain || !fromCache(adapter)) }
         if (misses.isEmpty()) return
         control.await(RunStep.LOOKUPS)
         val resolution = CompletableDeferred<Resolution>()
@@ -178,7 +188,8 @@ internal class TrackRun(
             val started = time.timeSource.markNow()
             var resolved: Resolution? = null
             try {
-                resolved = parts.resolver.resolve(track, nowPlaying.duration)
+                resolved =
+                    parts.resolver.resolve(track, nowPlaying.duration).let { input.lookAgain?.resolution(it) ?: it }
                 resolution.complete(resolved)
                 emit(PipelineEvent.Resolved(key, resolved.outcome, started.elapsedNow(), resolved.failure))
                 update { it.copy(resolution = resolved) }
@@ -212,7 +223,9 @@ internal class TrackRun(
                 // A bug in one adapter must not take the others down; its type is logged.
                 SourceState.Failed(nameOf(e))
             }
-        land(adapter.id, landed)
+        // A look again (#617) shows what it found, or what was found before when it found nothing new.
+        val shown = input.lookAgain?.kept(adapter.id, landed) ?: landed
+        land(adapter.id, shown)
         if (landed is SourceState.Done && landed.result.outcome != Outcome.Unreachable) {
             when {
                 !made.await() -> {
@@ -221,6 +234,12 @@ internal class TrackRun(
 
                 landed.result.provisional -> {
                     emit(PipelineEvent.NotCached(key, adapter.id, PROVISIONAL))
+                }
+
+                // A look again (#617) that shows what was found before, in whole or in part: the
+                // entry kept stays, and the lines carried keep their own lifetime.
+                shown !== landed -> {
+                    emit(PipelineEvent.NotCached(key, adapter.id, KEPT_BEFORE))
                 }
 
                 else -> {
@@ -304,6 +323,8 @@ internal class TrackRun(
         const val NOT_RESOLVED: String = "the MusicBrainz resolution it was checked against could not be made"
 
         const val PROVISIONAL: String = "a request of its verification failed, so a later lookup may verify it"
+
+        const val KEPT_BEFORE: String = "a look again shows lines found before, which keep their own lifetime (#617)"
 
         fun nameOf(e: Throwable): String = e::class.simpleName ?: "Exception"
 

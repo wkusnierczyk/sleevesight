@@ -58,6 +58,38 @@ class StorePipelineCacheTest {
         }
 
     @Test
+    fun `a Last_fm result kept before its counts were marked is missed once the version is raised`() =
+        runBlocking {
+            // Last.fm's extraction version went from 3 to 4 with the aggregate mark (#617).
+            fun lastFm(version: Int) =
+                object : SourceAdapter {
+                    override val id: SourceId = SourceId.LASTFM
+                    override val extractionVersion: Int = version
+
+                    override suspend fun lookup(
+                        track: NormalizedTrack,
+                        resolution: Deferred<Resolution>,
+                    ): SourceResult = error("not looked up")
+                }
+            val unmarked =
+                EvidenceDraft(
+                    SourceId.LASTFM,
+                    Scope.ARTIST,
+                    "Last.fm counts 5 listeners for X.",
+                    null,
+                    fixture.clock.now,
+                )
+            cache.keep(
+                lastFm(3),
+                sundown,
+                213.seconds,
+                SourceResult(Outcome.ArtistArticle, listOf(unmarked), 12.milliseconds),
+            )
+
+            assertNull(cache.result(lastFm(4), sundown, 213.seconds))
+        }
+
+    @Test
     fun `web search's results are kept like any other source's`() =
         runBlocking {
             val web =

@@ -122,6 +122,8 @@
     <!-- The insight card's split button (#615): its arrow opens the menu of Reactive's modes, the same
          setting. A screen reader reads the arrow with the mode chosen, one of Reactive's choices. -->
     <string name="home_write_mode">Writing mode: %1$s</string>
+    <!-- The arrow's description while its menu also holds Look again (#617), beside a written insight. -->
+    <string name="home_write_mode_look_again">Writing mode: %1$s, and Look again</string>
     <!-- The arrow, read before the settings are first read and the mode is not known. -->
     <string name="home_write_mode_unknown">Writing mode</string>
     <!-- The menu's last item, after the modes: opens the settings at Reactive, where each mode is described. -->
@@ -168,6 +170,15 @@
     <string name="home_rewrite_offered">Rewrite insight with updated source or model settings.</string>
     <string name="home_rewrite_failed">Rewriting failed: %1$s. This is the insight written earlier.</string>
     <string name="home_rewrite_stopped">Rewriting stopped. This is the insight written earlier.</string>
+    <!-- Look again (#617): the first item of the menu beside Write insight, on a written insight; it
+         makes no AI call, so it has no AI mark. Then the lines under "Kept from before." while it
+         looks the sources up (with Exa web search on, or not), once it found something new (with
+         Rewrite insight offered), and once it found nothing new. -->
+    <string name="home_look_again">Look again</string>
+    <string name="home_look_again_looking_web">Looking every source up again, the web search included: a paid search on your Exa key.</string>
+    <string name="home_look_again_looking">Looking every source up again.</string>
+    <string name="home_look_again_something_new">The sources found something new. Tap Rewrite insight to have the insight written from it, a paid call.</string>
+    <string name="home_look_again_nothing_new">The sources found nothing new.</string>
     <string name="home_stop">Stop writing</string>
     <string name="home_insight_stopped">Stopped before the reply ended, so nothing was kept.</string>
     <!-- Under a stopped write, with Write insight offered again (#625). -->

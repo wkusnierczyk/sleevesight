@@ -58,6 +58,8 @@ class MainActivity : ComponentActivity() {
             playerLaunch = graph::playerLaunchIntent,
             write = graph.pipeline::write,
             stop = graph.pipeline::stop,
+            // *Look again* on the card paid for (#617): fresh lookups, a write only for new evidence.
+            lookAgain = graph.pipeline::lookAgain,
             unavailableModel = graph.unavailableModel,
             // The insight card's menu of Reactive's modes (#615), saved in the process's scope; an
             // automatic mode chosen is the first action (#625).

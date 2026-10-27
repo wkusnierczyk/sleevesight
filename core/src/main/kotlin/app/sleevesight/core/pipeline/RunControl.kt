@@ -76,6 +76,13 @@ interface RunControl {
     fun gathered(gathered: Gathered) = Unit
 
     /**
+     * The evidence is assembled: [evidence], with its fingerprint, reported once, after [gathered]
+     * and before the insight is decided. The app's coordinator compares its fingerprint with the
+     * card's when the run looks again (#617), and writes only when it changed. By default nothing.
+     */
+    fun assembled(evidence: EvidenceSet) = Unit
+
+    /**
      * The insight was decided with no model call and nothing from the cache: insights off, or no
      * AI service set up; by default also for nothing to narrate ([nothingToNarrate]).
      */

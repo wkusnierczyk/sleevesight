@@ -1,6 +1,7 @@
 package app.sleevesight.app.pipeline
 
 import app.sleevesight.core.evidence.EvidenceDraft
+import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.Outcome
@@ -14,6 +15,7 @@ import app.sleevesight.core.pipeline.RunKey
 import app.sleevesight.core.pipeline.RunStep
 import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.platform.JvmAccentFolder
+import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WriteAutomatically
 import app.sleevesight.core.sources.SourceResult
@@ -129,6 +131,17 @@ internal class World {
     val askedAgain = mutableListOf<String>()
     val carried = mutableListOf<Gathered>()
 
+    /**
+     * What the sources find now, as the text of the evidence's one line (#617): the runs report it,
+     * and the cards written carry it. A change of its words is new evidence (of its spacing, not);
+     * with [cache] on, raise [service] with it, as the card's key changes with the evidence.
+     */
+    var evidenceText = "Evidence 1."
+
+    /** The runs started to look again (#617), by title, and what the run before them gathered. */
+    val lookedAgain = mutableListOf<String>()
+    val lookedAgainBefore = mutableListOf<Gathered>()
+
     /** What the coordinator's effects have asked of the host other than runs: the actions taken. */
     var actions = 0
     var holdKeys = false
@@ -216,9 +229,14 @@ internal class World {
             askedAgain += effect.nowPlaying.title
             carried += it
         }
+        effect.lookAgain?.let {
+            lookedAgain += effect.nowPlaying.title
+            lookedAgainBefore += it.before
+        }
         // With the cache, a key looked up before needs no lookups; a run asking again its
-        // unreachable sources, which were not kept, does.
-        if (cache && keys.getValue(effect.run) in retrieved && effect.again == null) {
+        // unreachable sources, which were not kept, does, and so does one looking again (#617).
+        val afresh = effect.again != null || effect.lookAgain != null
+        if (cache && keys.getValue(effect.run) in retrieved && !afresh) {
             gathered(effect.run, delayMs = 0)
         } else {
             schedule(0, CoordinatorEvent.StepRequested(effect.run, RunStep.LOOKUPS), effect.run)
@@ -330,6 +348,7 @@ internal class World {
         unreachable: Boolean = false,
     ) {
         schedule(delayMs, CoordinatorEvent.SourcesGathered(run, sources(unreachable)), run)
+        schedule(delayMs, CoordinatorEvent.EvidenceAssembled(run, evidence()), run)
         val insight =
             when {
                 cache && (keys.getValue(run) to service) in cards -> {
@@ -406,7 +425,10 @@ internal class World {
     fun offersWriteFor(title: String) = coordinator.state.offersWrite(key(title))
 
     fun card(text: String) =
-        Card(InsightState.Written(GroundedText(text, emptyList(), allowModel = false), cached = false), null)
+        Card(InsightState.Written(GroundedText(text, emptyList(), allowModel = false), cached = false), evidence())
+
+    /** The evidence the sources find now ([evidenceText]). */
+    fun evidence(): EvidenceSet = EvidenceSet.of(listOf(line(SourceId.WEB).copy(text = evidenceText)), JvmHasher)
 
     /** The text of the card the ledger holds. */
     fun cardText(): String? =
@@ -450,6 +472,15 @@ internal fun World.tap() = tap(coordinator.state.writeKey ?: key("No run offers 
 /** A tap on Write carrying [key], as a screen that showed that run sends it. */
 internal fun World.tap(key: RunKey) {
     send(CoordinatorEvent.WriteTapped(key))
+    advance(0)
+}
+
+/** A tap on *Look again* as the screen sends it (#617): under the key it is offered for (when none is, any key). */
+internal fun World.lookAgain() = lookAgain(coordinator.state.lookAgainKey ?: key("No run offers Look again"))
+
+/** A tap on *Look again* carrying [key], as a screen that showed that run sends it. */
+internal fun World.lookAgain(key: RunKey) {
+    send(CoordinatorEvent.LookAgainTapped(key))
     advance(0)
 }
 

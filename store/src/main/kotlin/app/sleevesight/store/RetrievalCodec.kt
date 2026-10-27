@@ -142,6 +142,7 @@ internal object RetrievalCodec {
             text = draft.text,
             url = draft.url,
             retrievedAt = draft.retrievedAt.toString(),
+            aggregate = draft.aggregate,
         )
 
     private fun draft(stored: DraftJson): EvidenceDraft =
@@ -151,6 +152,7 @@ internal object RetrievalCodec {
             text = stored.text,
             url = stored.url,
             retrievedAt = Instant.parse(stored.retrievedAt),
+            aggregate = stored.aggregate,
         )
 
     @Serializable
@@ -205,6 +207,8 @@ internal object RetrievalCodec {
         val text: String,
         val url: String? = null,
         val retrievedAt: String,
+        // A line of counts and lists (#617, `EvidenceDraft.aggregate`); left out when false.
+        val aggregate: Boolean = false,
     )
 
     @Serializable

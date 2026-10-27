@@ -35,7 +35,8 @@ import app.sleevesight.core.pipeline.InsightState
  * No container of its own (#609): the heading and the text sit on Home's background with the rest.
  * At the card's end, in every state, the split button (#615, [WriteSplitButton]): the card's action
  * ([cardOffer]) and the menu of *Reactive*'s modes, from [writing]; its arrow cannot be used while
- * that is null, before the settings' first read.
+ * that is null, before the settings' first read. Beside a written insight, the menu begins with
+ * *Look again* (#617), enabled while it can be tapped ([offersLookAgain]).
  */
 @Composable
 internal fun InsightCard(
@@ -48,7 +49,14 @@ internal fun InsightCard(
     Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(stringResource(R.string.home_insight_title), style = MaterialTheme.typography.titleMedium)
         InsightBody(insight, context, actions, groundingDetails)
-        WriteSplitButton(cardOffer(insight, context), actions.onWrite, actions.onStop, writing)
+        val lookAgain =
+            (insight as? InsightState.Written)?.let {
+                LookAgainItem(
+                    offersLookAgain(context),
+                    actions.onLookAgain,
+                )
+            }
+        WriteSplitButton(cardOffer(insight, context), actions.onWrite, actions.onStop, writing, lookAgain)
     }
 }
 
@@ -149,6 +157,8 @@ private fun Written(
             // straight under it, with no gap, what is said of that card's rewrite (#606).
             val kept = insight.cached || context.cardShown
             GroundingLine(insight.grounded, kept, groundingDetails)
+            // What is said of *Look again* (#617).
+            lookAgainLine(context)?.let { Quiet(stringResource(it)) }
             RewriteLines(context)
         },
         action = { context.track?.let { track -> ReportAction { actions.onReport(track, insight) } } },
@@ -168,7 +178,8 @@ private fun RewriteLines(context: InsightContext) {
             Quiet(stringResource(R.string.home_rewrite_failed, failureText(it)))
         }
     }
-    if (offersRewrite(context)) Quiet(stringResource(R.string.home_rewrite_offered))
+    // Not for what a look again found (#617): its own line says what Rewrite insight writes from.
+    if (offersRewrite(context) && !context.offers.somethingNew) Quiet(stringResource(R.string.home_rewrite_offered))
 }
 
 /**

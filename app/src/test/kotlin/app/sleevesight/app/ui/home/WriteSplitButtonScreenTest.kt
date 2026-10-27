@@ -416,10 +416,10 @@ class WriteSplitButtonScreenTest {
     @Test
     fun reactiveChangedInTheSettingsShowsInTheMenu() =
         show {
-            arrow.assertContentDescriptionEquals("Writing mode: On track change (auto)")
+            arrow.assertContentDescriptionEquals("Writing mode: On track change (auto), and Look again")
             settings.value = settings.value?.copy(writeAutomatically = WriteAutomatically.NEVER)
             compose.waitForIdle()
-            arrow.assertContentDescriptionEquals("Writing mode: On demand")
+            arrow.assertContentDescriptionEquals("Writing mode: On demand, and Look again")
             arrow.performClick()
             compose.waitForIdle()
             item(WriteAutomatically.NEVER).assertIsSelected()
@@ -454,7 +454,7 @@ class WriteSplitButtonScreenTest {
                     "value; try again.",
                 ShadowToast.getTextOfLatestToast(),
             )
-            arrow.assertContentDescriptionEquals("Writing mode: On track change (auto)")
+            arrow.assertContentDescriptionEquals("Writing mode: On track change (auto), and Look again")
         }
         assertEquals(listOf(WriteAutomatically.NEVER), chosen)
     }
@@ -481,7 +481,7 @@ class WriteSplitButtonScreenTest {
                 .assertTextEquals("Write insight")
                 .assertTouchHeightIsEqualTo(48.dp)
             arrow
-                .assertContentDescriptionEquals("Writing mode: On track change (auto)")
+                .assertContentDescriptionEquals("Writing mode: On track change (auto), and Look again")
                 .reads(Role.DropdownList)
                 .assertHasClickAction()
                 .assertTouchWidthIsEqualTo(48.dp)

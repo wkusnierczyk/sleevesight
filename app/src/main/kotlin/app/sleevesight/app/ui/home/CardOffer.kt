@@ -2,7 +2,11 @@ package app.sleevesight.app.ui.home
 
 import androidx.annotation.StringRes
 import app.sleevesight.app.R
+import app.sleevesight.core.model.Outcome
+import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.InsightState
+import app.sleevesight.core.pipeline.SourceState
+import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.settings.WriteAutomatically
 
 // What the insight card's split button offers (#615), and the rules its label and the card's lines
@@ -69,6 +73,37 @@ internal fun cardOffer(
  * The card's line about it follows the same rule.
  */
 internal fun offersRewrite(context: InsightContext): Boolean = context.offers.rewrite && context.unavailable == null
+
+/**
+ * Whether *Look again* (#617) can be tapped beside the written insight shown: the pipeline offers it
+ * ([InsightOffers.lookAgain]: the card paid for, its sources landed, no call under way), insights
+ * are on and an AI service is ready, and the model is not found unavailable (#540), where the
+ * write it may lead to would fail.
+ */
+internal fun offersLookAgain(context: InsightContext): Boolean =
+    context.offers.lookAgain && context.insightsOn && context.aiReady && context.unavailable == null
+
+/**
+ * The line said of *Look again* (#617) under *Kept from before.*: while it looks the sources up,
+ * what that costs, the web search named when the run looks it up; once it found something new, that
+ * *Rewrite insight* writes from it, a paid call, while that is offered; once it found nothing new,
+ * that it did; else none.
+ */
+@StringRes
+internal fun lookAgainLine(context: InsightContext): Int? =
+    when {
+        context.offers.lookingAgain ->
+            if (searchesWeb(context.track)) R.string.home_look_again_looking_web else R.string.home_look_again_looking
+        context.offers.somethingNew && offersRewrite(context) -> R.string.home_look_again_something_new
+        context.offers.nothingNew -> R.string.home_look_again_nothing_new
+        else -> null
+    }
+
+// Whether [track]'s run looks the web search up: an adapter for it (its key saved), switched on.
+private fun searchesWeb(track: TrackState?): Boolean {
+    val web = track?.sources?.get(SourceId.WEB) ?: return false
+    return (web as? SourceState.Done)?.result?.outcome != Outcome.SourceOff
+}
 
 /** *Reactive*'s mode while it writes automatically; null under *On demand*, or before the settings' first read. */
 internal fun automaticMode(context: InsightContext): WriteAutomatically? =
