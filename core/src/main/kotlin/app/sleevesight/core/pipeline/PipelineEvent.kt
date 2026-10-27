@@ -44,6 +44,15 @@ sealed interface PipelineEvent {
         val sources: List<SourceId>,
     ) : PipelineEvent
 
+    /**
+     * A run looks again (*Look again*, #617): it asks [sources], every source switched on, afresh,
+     * past the caches.
+     */
+    data class LookedAgain(
+        override val key: String,
+        val sources: List<SourceId>,
+    ) : PipelineEvent
+
     /** A newer track cancelled this one's run (`collectLatest`). */
     data class Superseded(
         override val key: String,

@@ -57,6 +57,13 @@ internal class Granted(
         this.gathered += gathered
     }
 
+    /** The evidence the run assembled, each time it reported it (#617). */
+    val assembled = mutableListOf<EvidenceSet>()
+
+    override fun assembled(evidence: EvidenceSet) {
+        this.assembled += evidence
+    }
+
     override fun decidedWithoutCall() {
         withoutCall++
     }

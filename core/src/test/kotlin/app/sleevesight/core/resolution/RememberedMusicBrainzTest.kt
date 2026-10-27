@@ -1,10 +1,12 @@
 package app.sleevesight.core.resolution
 
 import app.sleevesight.core.pipeline.ClearEpoch
+import app.sleevesight.core.sources.FreshLookups
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.time.Duration.Companion.minutes
@@ -89,6 +91,15 @@ class RememberedMusicBrainzTest {
             counting.hold = null
             gated.searchRecordings("Song", "Artist")
 
+            assertEquals(listOf("search Song", "search Song"), counting.asked)
+        }
+
+    @Test
+    fun `work that looks afresh is answered by MusicBrainz, and its answers are kept`() =
+        runTest {
+            remembered.searchRecordings("Song", "Artist")
+            withContext(FreshLookups) { remembered.searchRecordings("Song", "Artist") }
+            remembered.searchRecordings("Song", "Artist")
             assertEquals(listOf("search Song", "search Song"), counting.asked)
         }
 
