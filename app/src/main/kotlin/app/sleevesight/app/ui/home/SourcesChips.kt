@@ -246,7 +246,7 @@ private fun NameChip(
     ) {
         // Quieter than the name while its lines show; hidden, the name is already the quiet outline
         // colour, and a letter fainter still would fall below a legible contrast.
-        val letter = if (shown) color.copy(alpha = LETTER_ALPHA) else color
+        val letter = if (shown) color.copy(alpha = MARK_ALPHA) else color
         Text(
             chip.source.tag,
             style = MaterialTheme.typography.labelSmall,
@@ -262,9 +262,6 @@ private fun NameChip(
         )
     }
 }
-
-// The letter beside a chip's name: there to match a citation to its chip, quieter than the name.
-private const val LETTER_ALPHA = 0.75f
 
 // The note's link to the settings.
 private const val SETTINGS_LINK = "settings"

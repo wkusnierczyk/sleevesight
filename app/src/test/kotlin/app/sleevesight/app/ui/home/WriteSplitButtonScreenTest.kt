@@ -21,7 +21,8 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextEquals
-import androidx.compose.ui.test.assertWidthIsAtLeast
+import androidx.compose.ui.test.assertTouchHeightIsEqualTo
+import androidx.compose.ui.test.assertTouchWidthIsEqualTo
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
@@ -419,13 +420,13 @@ class WriteSplitButtonScreenTest {
                 .onNodeWithTag(NO_ACTION_TAG)
                 .reads(Role.Button)
                 .assertTextEquals("Write on change")
-                .assertHeightIsAtLeast(48.dp)
+                .assertTouchHeightIsEqualTo(48.dp)
             arrow
                 .assertContentDescriptionEquals("Writing mode: On track change")
                 .reads(Role.DropdownList)
                 .assertHasClickAction()
-                .assertWidthIsAtLeast(48.dp)
-                .assertHeightIsAtLeast(48.dp)
+                .assertTouchWidthIsEqualTo(48.dp)
+                .assertTouchHeightIsEqualTo(48.dp)
             arrow.performClick()
             compose.waitForIdle()
             for (mode in WriteAutomatically.entries) {

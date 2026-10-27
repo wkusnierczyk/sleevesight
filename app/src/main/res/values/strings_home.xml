@@ -85,6 +85,10 @@
     <!-- A short message when an automatic mode other than the one chosen is chosen in the menu; none
          for Now, or for the mode already chosen. -->
     <string name="home_write_mode_paid">Each new track’s insight is a paid call.</string>
+    <!-- The small mark after the label of every button whose tap calls the AI service (#624). -->
+    <string name="home_ai_mark">AI</string>
+    <!-- How a screen reader reads a button that calls the AI service (#624); %1$s: its label. -->
+    <string name="home_uses_ai">%1$s, uses AI</string>
     <string name="home_write">Write insight</string>
     <!-- The split button's Write beside the card paid for, once a settings change changed its key (#615). -->
     <string name="home_rewrite">Rewrite</string>
