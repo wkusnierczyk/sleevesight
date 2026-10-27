@@ -16,12 +16,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
@@ -46,7 +48,8 @@ import app.sleevesight.core.pipeline.TrackState
  * *Sources* ([SourcesChip], #623), drawn as a genre chip is, and nothing else; a tap on it opens its
  * panel in its place ([HomePanel], as a genre's is): *Sources* as a heading, with *Close* at the top
  * right, which folds it back to the chip; the focus moves to *Close* on opening and back to the chip
- * on closing (a keyboard's, and a screen reader's). In the panel, a chip for each source that gave
+ * on closing (a keyboard's, and a screen reader's), and to the chip when a new track folds the panel
+ * while a keyboard's focus is in it. In the panel, a chip for each source that gave
  * lines, by name with the letter its citations use ([chipsWithLines]), drawn as a genre chip too,
  * which shows or hides that source's lines (a display filter only: what the model may use is the
  * settings'); a note when a source needs the listener's key, could not be reached or failed
@@ -89,7 +92,18 @@ internal fun SourcesSection(
     val handoff = rememberFocusHandoff()
     val chip = remember { FocusRequester() }
     val close = remember { FocusRequester() }
-    if (fold.fold == Fold.Folded) {
+    // Whether the input focus is in the panel, as last told: plain, read as the panel folds.
+    val inside = remember { BooleanArray(1) }
+    val folded = fold.fold == Fold.Folded
+    val before = remember { BooleanArray(1).also { it[0] = folded } }
+    // Folded by other than *Close* (a new track) while the focus was in the panel: back to the chip,
+    // or a keyboard's focus would fall to the top of the screen. Read before the panel goes.
+    val handBack = folded && !before[0] && inside[0]
+    SideEffect {
+        before[0] = folded
+        if (handBack) handoff.moveTo(chip)
+    }
+    if (folded) {
         SourcesChip(opensPage = false, modifier = Modifier.handoffTarget(handoff, chip)) {
             // Every entry hidden by the chips: unfolding shows their lines, not an empty list.
             if (entriesOf(shown.track, focus.hidden, shown.details).isEmpty()) focus.showAll()
@@ -97,16 +111,18 @@ internal fun SourcesSection(
             handoff.moveTo(close)
         }
     } else {
-        HomePanel(
-            stringResource(R.string.home_sources_title),
-            SOURCES_PANEL_TAG,
-            onClose = {
-                fold.set(Fold.Folded)
-                handoff.moveTo(chip)
-            },
-            closeModifier = Modifier.handoffTarget(handoff, close),
-        ) {
-            SourcesBody(shown, focus, fold, openSettings)
+        Box(Modifier.onFocusChanged { inside[0] = it.hasFocus }) {
+            HomePanel(
+                stringResource(R.string.home_sources_title),
+                SOURCES_PANEL_TAG,
+                onClose = {
+                    fold.set(Fold.Folded)
+                    handoff.moveTo(chip)
+                },
+                closeModifier = Modifier.handoffTarget(handoff, close),
+            ) {
+                SourcesBody(shown, focus, fold, openSettings)
+            }
         }
     }
 }

@@ -15,7 +15,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.node.RootForTest
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInputModeManager
@@ -29,7 +31,9 @@ import androidx.compose.ui.semantics.getOrNull
 
 /**
  * A move of the focus to a control ([moveTo]) that is laid out only from the next frame, such as the
- * one that replaces the control just tapped. Each control it may move to carries [handoffTarget].
+ * one that replaces the control just tapped. Each control it may move to carries [handoffTarget],
+ * which tells it whether the control is in the layout and whether it holds the focus: a move to a
+ * control that leaves before the move runs (the panel folded again by a new track) is dropped.
  * Run by [FocusHandoffEffect].
  */
 @Stable
@@ -38,14 +42,45 @@ internal class FocusHandoff {
     var pending: FocusRequester? by mutableStateOf(null)
         private set
 
+    // The targets in the layout, and the one holding the focus: read only by the moves, so plain.
+    private val attached = mutableSetOf<FocusRequester>()
+    private var holding: FocusRequester? = null
+
     /** Moves the focus to [target] once it is laid out. */
     fun moveTo(target: FocusRequester) {
         pending = target
     }
 
-    /** The move to [target] has run its course. */
+    /** Whether [target] is in the layout. */
+    internal fun isAttached(target: FocusRequester): Boolean = target in attached
+
+    /** Whether [target] holds the input focus. */
+    internal fun holds(target: FocusRequester): Boolean = holding === target
+
+    /** The move to [target] has run its course, or [target] has left: no move to it is pending. */
     internal fun done(target: FocusRequester) {
         if (pending === target) pending = null
+    }
+
+    internal fun attach(target: FocusRequester) {
+        attached += target
+    }
+
+    internal fun detach(target: FocusRequester) {
+        attached -= target
+        if (holding === target) holding = null
+        done(target)
+    }
+
+    internal fun focused(
+        target: FocusRequester,
+        focused: Boolean,
+    ) {
+        if (focused) {
+            holding = target
+        } else if (holding === target) {
+            holding = null
+        }
     }
 }
 
@@ -67,8 +102,35 @@ internal fun Modifier.handoffTarget(
     handoff: FocusHandoff,
     requester: FocusRequester,
 ): Modifier =
-    focusProperties { if (handoff.pending === requester) canFocus = true }
+    this
+        .then(HandoffTargetElement(handoff, requester))
+        .onFocusChanged { handoff.focused(requester, it.hasFocus) }
+        .focusProperties { if (handoff.pending === requester) canFocus = true }
         .focusRequester(requester)
+
+// Tells [handoff] whether [requester]'s control is in the layout; one that leaves drops a move to it.
+private data class HandoffTargetElement(
+    val handoff: FocusHandoff,
+    val requester: FocusRequester,
+) : ModifierNodeElement<HandoffTargetNode>() {
+    override fun create() = HandoffTargetNode(handoff, requester)
+
+    override fun update(node: HandoffTargetNode) {
+        if (node.isAttached) node.handoff.detach(node.requester)
+        node.handoff = handoff
+        node.requester = requester
+        if (node.isAttached) handoff.attach(requester)
+    }
+}
+
+private class HandoffTargetNode(
+    var handoff: FocusHandoff,
+    var requester: FocusRequester,
+) : Modifier.Node() {
+    override fun onAttach() = handoff.attach(requester)
+
+    override fun onDetach() = handoff.detach(requester)
+}
 
 /**
  * Runs [handoff]'s moves, a frame after each is asked for, so its control is laid out: driven by a
@@ -86,13 +148,16 @@ internal fun FocusHandoffEffect(handoff: FocusHandoff) {
     LaunchedEffect(target) {
         try {
             withFrameNanos { }
+            // Gone before the move could run (folded again by a new track): nothing moves.
+            if (!handoff.isAttached(target)) return@LaunchedEffect
             val exploring = accessibility?.isTouchExplorationEnabled == true
             if (!exploring && inputModes.inputMode == InputMode.Touch) return@LaunchedEffect
             target.requestFocus()
             if (exploring) {
-                // Only once the control has the input focus, which the screen reader's then follows.
+                // Only once the control has the input focus, which the screen reader's then follows;
+                // never to whatever else holds it.
                 withFrameNanos { }
-                moveAccessibilityFocusToFocused(host)
+                if (handoff.holds(target)) moveAccessibilityFocusToFocused(host)
             }
         } finally {
             handoff.done(target)

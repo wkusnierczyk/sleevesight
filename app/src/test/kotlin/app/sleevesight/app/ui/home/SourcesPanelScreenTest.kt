@@ -8,14 +8,21 @@ import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityManager
 import android.view.accessibility.AccessibilityRecord
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -45,6 +52,7 @@ import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.app.session.PlaybackInfo
 import app.sleevesight.app.session.PlaybackStatus
+import app.sleevesight.app.ui.home.HomeFixtures.carefree
 import app.sleevesight.app.ui.home.HomeFixtures.normalizer
 import app.sleevesight.app.ui.home.HomeFixtures.track
 import app.sleevesight.app.ui.home.HomeFixtures.written
@@ -114,18 +122,26 @@ class SourcesPanelScreenTest {
             ),
         )
 
+    private fun state(playing: TrackState) =
+        NowPlayingState(
+            PipelineView(playing, aiReady = true),
+            playing.nowPlaying,
+            PlaybackInfo(Settings.SPOTIFY, PlaybackStatus.PLAYING),
+            settings = Settings(),
+        )
+
+    // What Home shows: [show] starts it, and a test changes it as the pipeline would (a new track).
+    private val current = mutableStateOf(state(track()))
+
+    // A control above Home that can take the focus while touched, to hold it elsewhere.
+    private val elsewhere = FocusRequester()
+
     private fun show(
         playing: TrackState = track(),
         touch: Boolean = false,
         block: () -> Unit,
     ) {
-        val state =
-            NowPlayingState(
-                PipelineView(playing, aiReady = true),
-                playing.nowPlaying,
-                PlaybackInfo(Settings.SPOTIFY, PlaybackStatus.PLAYING),
-                settings = Settings(),
-            )
+        current.value = state(playing)
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 // As on a phone being touched, where Compose's clickable controls take no focus of
@@ -134,7 +150,14 @@ class SourcesPanelScreenTest {
                 activity.setContent {
                     inputModes = LocalInputModeManager.current
                     Column(Modifier.verticalScroll(rememberScrollState())) {
-                        NowPlayingContent(state, NowPlayingActions(normalizer::normalize))
+                        Box(
+                            Modifier
+                                .size(48.dp)
+                                .testTag(ELSEWHERE_TAG)
+                                .focusRequester(elsewhere)
+                                .focusable(),
+                        )
+                        NowPlayingContent(current.value, NowPlayingActions(normalizer::normalize))
                     }
                 }
             }
@@ -362,7 +385,71 @@ class SourcesPanelScreenTest {
             check("W", shown = false)
         }
 
+    /** A new track playing, which folds the panel (*Keep Sources as you left them* off). */
+    private fun nextTrack() {
+        current.value = state(track(carefree))
+    }
+
+    @Test
+    fun aNewTrackBeforeTheMoveToCloseRunsMovesNothingAndTheScreenReaderStays() {
+        startScreenReader()
+        show(touch = true) {
+            compose.runOnIdle { elsewhere.requestFocus() }
+            compose.onNodeWithTag(ELSEWHERE_TAG).assertIsFocused()
+            compose.onNodeWithTag(SOURCES_CHIP_TAG).performScrollTo()
+            val before = sentSoFar()
+            compose.mainClock.autoAdvance = false
+            try {
+                compose.onNodeWithTag(SOURCES_CHIP_TAG).performClick()
+                // In the same frame: the panel folds again before *Close* is ever laid out.
+                nextTrack()
+                repeat(FRAMES) { compose.mainClock.advanceTimeByFrame() }
+            } finally {
+                compose.mainClock.autoAdvance = true
+            }
+            compose.waitForIdle()
+            assertEquals(0, count(SOURCES_PANEL_TAG))
+            // The screen reader is not sent to whatever holds the input focus.
+            assertEquals(emptyList<Int>(), movedTo(before))
+            compose.onNodeWithTag(ELSEWHERE_TAG).assertIsFocused()
+        }
+    }
+
+    @Test
+    fun aNewTrackFoldingThePanelWithTheFocusInItHandsTheFocusToTheChip() =
+        show {
+            tap(SOURCES_CHIP_TAG)
+            compose.onNodeWithTag(SOURCES_PANEL_CLOSE_TAG).assertIsFocused()
+            nextTrack()
+            compose.waitForIdle()
+            assertEquals(0, count(SOURCES_PANEL_TAG))
+            compose.onNodeWithTag(SOURCES_CHIP_TAG).assertIsFocused()
+        }
+
+    @Test
+    fun aNewTrackFoldingThePanelWithTheFocusElsewhereMovesNothing() {
+        startScreenReader()
+        show(track(insight = written("It topped the charts [W1].")), touch = true) {
+            compose.onNodeWithText("It topped the charts", substring = true).performScrollTo().performFirstLinkClick {
+                (it.item as? LinkAnnotation.Clickable)?.tag == CITE_PREFIX + "W1"
+            }
+            compose.waitForIdle()
+            assertEquals(1, count(SOURCES_PANEL_TAG))
+            val before = sentSoFar()
+            nextTrack()
+            compose.waitForIdle()
+            assertEquals(0, count(SOURCES_PANEL_TAG))
+            assertEquals(emptyList<Int>(), movedTo(before))
+            assertEquals(0, focused())
+        }
+    }
+
     private companion object {
+        const val ELSEWHERE_TAG = "elsewhere"
+
+        // Frames for a move of the focus to run its course: it waits one, and one more for a screen reader.
+        const val FRAMES = 4
+
         // An accessibility node id holds its virtual view's id in its upper half.
         const val VIRTUAL_ID_SHIFT = 32
 
