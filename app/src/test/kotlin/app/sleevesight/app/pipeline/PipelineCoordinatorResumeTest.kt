@@ -299,9 +299,14 @@ class PipelineCoordinatorResumeTest {
         world.play("B", SKIP_IN_PLAYER)
         world.settle()
         assertEquals(1, world.calls["B"])
+        // A choice equal to the stored mode, its save failed: that mode.
+        world.send(CoordinatorEvent.ModeChosen(WriteAutomatically.WHEN_I_SKIP, choice = 3))
+        world.send(CoordinatorEvent.ModeChoiceSettled(choice = 3, stored = WriteAutomatically.WHEN_I_SKIP))
+        world.advance(0)
+        assertEquals(WriteAutomatically.WHEN_I_SKIP, world.coordinator.state.mode)
         // A store that could not be read says nothing: the choice stands.
-        world.send(CoordinatorEvent.ModeChosen(WriteAutomatically.NEVER, choice = 2))
-        world.send(CoordinatorEvent.ModeChoiceSettled(choice = 2, stored = null))
+        world.send(CoordinatorEvent.ModeChosen(WriteAutomatically.NEVER, choice = 4))
+        world.send(CoordinatorEvent.ModeChoiceSettled(choice = 4, stored = null))
         world.advance(0)
         assertEquals(WriteAutomatically.NEVER, world.coordinator.state.mode)
     }

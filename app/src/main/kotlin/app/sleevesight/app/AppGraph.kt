@@ -504,7 +504,8 @@ class AppGraph internal constructor(
     /**
      * *Reactive*'s mode chosen, in the insight card's menu or in the settings (#615, #625): saved in
      * [settingsSaves], and told to the pipeline before the save and once it has ended, so the mode
-     * the pipeline writes by is the latest choice, then what the store holds.
+     * the pipeline writes by is the latest choice, then the narrower of the choice and what the
+     * store holds.
      */
     val chooseWritingMode: (WriteAutomatically) -> Deferred<Boolean> by lazy {
         settings.writingModeChooser(settingsSaves, pipeline::modeChosen)

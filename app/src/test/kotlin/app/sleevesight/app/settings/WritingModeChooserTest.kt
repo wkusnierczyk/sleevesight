@@ -87,23 +87,32 @@ class WritingModeChooserTest {
         assertEquals(modes, settled)
     }
 
+    // A store whose writes all fail with [failure], over [real] for reads.
+    private fun failing(
+        real: DataStore<Preferences>,
+        failure: Exception,
+    ) = object : DataStore<Preferences> {
+        override val data = real.data
+
+        override suspend fun updateData(transform: suspend (t: Preferences) -> Preferences): Preferences = throw failure
+    }
+
     @Test
     fun aSaveThatFailsSaysSoAndTellsTheModeTheStoreStillHolds() {
-        // So the pipeline goes back to the mode the menu still shows (#625).
+        // So the pipeline writes by the narrower of the choice and the store (#625). Any failure
+        // counts, not only an I/O error, so a caller waiting for the result never sees it thrown;
+        // and a choice equal to the stored mode is told on the same way.
         val real = stores.open("settings")
         runBlocking { SettingsStore(real).update { it.copy(writeAutomatically = WriteAutomatically.WHEN_I_SKIP) } }
-        val failing =
-            object : DataStore<Preferences> {
-                override val data = real.data
-
-                override suspend fun updateData(transform: suspend (t: Preferences) -> Preferences): Preferences =
-                    throw IOException("cannot write")
+        for (failure in listOf(IOException("cannot write"), IllegalStateException("not an I/O error"))) {
+            for (mode in listOf(WriteAutomatically.ON_EVERY_TRACK_CHANGE, WriteAutomatically.WHEN_I_SKIP)) {
+                var stored: WriteAutomatically? = null
+                val chooser = SettingsStore(failing(real, failure)).writingModeChooser(saves) { { stored = it } }
+                val saved = runBlocking { chooser(mode).await() }
+                assertFalse("$failure, $mode", saved)
+                assertEquals("$failure, $mode", WriteAutomatically.WHEN_I_SKIP, stored)
             }
-        var stored: WriteAutomatically? = null
-        val chooser = SettingsStore(failing).writingModeChooser(saves) { { stored = it } }
-        val saved = runBlocking { chooser(WriteAutomatically.ON_EVERY_TRACK_CHANGE).await() }
-        assertFalse(saved)
-        assertEquals(WriteAutomatically.WHEN_I_SKIP, stored)
+        }
     }
 
     @Test

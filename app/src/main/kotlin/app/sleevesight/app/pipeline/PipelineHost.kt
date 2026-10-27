@@ -291,8 +291,8 @@ class PipelineHost(
      * written only on a tap. An automatic one is the first action (D5), so automatic writing
      * starts, or resumes, with the next track. The setting is saved apart: the function returned
      * is told what the store holds once that save has ended ([CoordinatorEvent.ModeChoiceSettled],
-     * null when it could not be read), so a save that failed puts the mode back as the store, and
-     * the menu, have it. Until then this choice is the mode selected, whatever the store emits.
+     * null when it could not be read), and the mode selected becomes the narrower of the choice and
+     * what the store holds. Until then this choice is the mode selected, whatever the store emits.
      */
     fun modeChosen(mode: WriteAutomatically): (WriteAutomatically?) -> Unit {
         val choice = choices.incrementAndGet()

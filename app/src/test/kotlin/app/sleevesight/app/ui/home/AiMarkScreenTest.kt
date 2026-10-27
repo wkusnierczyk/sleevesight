@@ -55,7 +55,8 @@ import org.robolectric.annotation.GraphicsMode
 /**
  * The **AI** mark on Home's buttons that call the AI service (#624): every Write of the insight
  * card's split button ends in it, enabled or not, after its label and on its baseline, and reads as
- * "<label>, uses AI" with the mark itself hidden; *Stop* and the arrow, which make no call, do not.
+ * "<label>, uses AI" with the mark itself hidden; *Stop writing* and the arrow, which make no call,
+ * do not.
  * Both halves are drawn as tall as Home's chips, 32 dp, growing alike with a large font, in a row
  * 48 dp high, and each answers a tap across 48 dp.
  */

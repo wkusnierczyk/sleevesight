@@ -7,6 +7,7 @@ import app.sleevesight.app.BuildConfig
 import app.sleevesight.core.settings.ReportButton
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WriteAutomatically
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
@@ -120,8 +121,9 @@ class SettingsStore(
      * says whether it was saved. A save that fails leaves the setting, and so the menu, as it was.
      * Each choice, the mode chosen already included, is told to [chosen] at once (#625: the
      * pipeline), and the function [chosen] returns is told, once the save has ended, saved or not,
-     * what the store then holds ([storedMode]), so the pipeline and the menu agree after a save
-     * that failed.
+     * what the store then holds ([storedMode]): the pipeline then writes by the narrower of the
+     * choice and what the store holds. Any failure of the save but a cancellation counts as not
+     * saved, an I/O error or not, so a caller waiting for the result never sees it thrown.
      */
     fun writingModeChooser(
         saves: CoroutineScope,
@@ -134,8 +136,10 @@ class SettingsStore(
                     try {
                         update { it.copy(writeAutomatically = mode) }
                         true
-                    } catch (_: IOException) {
-                        // Only an I/O error: the menu shows the setting as it stays.
+                    } catch (cancelled: CancellationException) {
+                        throw cancelled
+                    } catch (_: Exception) {
+                        // Not saved, whatever failed: the menu shows the setting as it stays.
                         false
                     }
                 settled(storedMode())
@@ -143,11 +147,13 @@ class SettingsStore(
             }
         }
 
-    /** *Reactive*'s mode as the store holds it now; null when it cannot be read. */
+    /** *Reactive*'s mode as the store holds it now; null when it cannot be read, whatever failed. */
     suspend fun storedMode(): WriteAutomatically? =
         try {
             SettingsCodec.read(dataStore.data.first(), defaults).writeAutomatically
-        } catch (_: IOException) {
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
             null
         }
 
