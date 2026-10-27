@@ -130,7 +130,7 @@ class DeveloperSettingsTest {
             }
             assertFalse(settings.now().developerMode)
             tapVersion()
-            // Worded as a state, "enabled" (#669).
+            // Literal text, not the resource, to pin the wording #669 settled on.
             assertEquals("Developer mode is enabled", ShadowToast.getTextOfLatestToast())
             compose.waitUntil(5_000) { settings.now().developerMode && developerShown }
 
