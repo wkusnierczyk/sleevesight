@@ -254,7 +254,7 @@ class PipelineCoordinatorPauseTest {
         assertFalse("before any action, nothing expired", fresh.coordinator.state.expired)
         assertFalse("before any action, not lapsed", fresh.coordinator.state.lapsed)
 
-        // *Manual*: Write is offered whatever the first action, so not because it expired.
+        // *On demand*: Write is offered whatever the first action, so not because it expired.
         val never = started()
         never.writesOn = emptySet()
         never.pause(1)

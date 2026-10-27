@@ -4,11 +4,8 @@ import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -31,6 +28,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,12 +40,10 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -56,6 +52,9 @@ import app.sleevesight.app.R
 import app.sleevesight.app.ui.settings.WRITING_MODES
 import app.sleevesight.app.ui.settings.writingModeName
 import app.sleevesight.core.settings.WriteAutomatically
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.launch
 
 /**
  * Each half's least height as drawn (#624): as tall as Home's chips; more where the label wraps.
@@ -92,42 +91,42 @@ private const val DISABLED_CONTAINER_ALPHA = 0.12f
 internal const val SPLIT_OPEN_ROTATION = 180f
 
 /**
- * *Reactive* (D5) as the split button's menu shows it (#615): the [mode] chosen; [paused] while
- * *Saver* has paused automatic writing (#203), said beside the button under an automatic mode; not
- * [enabled] while *Show insights* is off, as *Reactive* cannot be changed then. [onChoose] saves a
- * mode chosen; [onDetails] opens the settings at *Reactive*, where each mode is described.
+ * *Reactive* (D5) as the split button's menu shows it (#615): the [mode] chosen; not [enabled]
+ * while *Show insights* is off, as *Reactive* cannot be changed then. [onChoose] saves a mode
+ * chosen, the one chosen already included (an automatic one starts automatic writing from the
+ * next track, #625), its result whether it was saved: a save that failed is announced, as the
+ * settings announce any change that could not be saved. [onDetails] opens the settings at
+ * *Reactive*, where each mode is described.
  */
 internal class WritingChoice(
     val mode: WriteAutomatically,
-    val paused: Boolean = false,
     val enabled: Boolean = true,
-    val onChoose: (WriteAutomatically) -> Unit = {},
+    val onChoose: (WriteAutomatically) -> Deferred<Boolean> = { CompletableDeferred(true) },
     val onDetails: () -> Unit = {},
 )
 
 /**
- * The insight card's split button (#615), after Material 3's: the leading half is the card's
- * [offer] ([cardOffer]), *Write insight*, *Write on change* or *Write on skip* ([onWrite]), or
- * *Stop* ([onStop]), disabled when a tap would do nothing; the trailing
+ * The insight card's split button (#615, #625), after Material 3's: the leading half is the card's
+ * [offer] ([cardOffer]), *Write insight* or *Rewrite insight* ([onWrite]), or *Stop writing*
+ * ([onStop]), disabled when a tap would do nothing; the trailing
  * half, an arrow, opens the menu of *Reactive*'s modes ([writing]) by name, the one chosen marked,
  * and after a divider *See Settings for details*, which opens the settings at *Reactive*. Filled
  * while it offers a Write, outlined otherwise, as the buttons before it were. While [writing] is
  * null, before the settings' first read, the arrow cannot be used.
  *
- * A screen reader reads the leading half as its action, the arrow as *Writing mode: <mode>* (with
- * *paused* while *Saver* has paused it), a drop-down list, and the menu's modes as one choice among
+ * A screen reader reads the leading half as its action, the arrow as *Writing mode: <mode>*, a
+ * drop-down list, and the menu's modes as one choice among
  * them, the chosen one selected. Both halves are drawn 32 dp high, as Home's chips are, or as high
  * as a label that wraps makes the leading one, and each answers a tap across 48 dp; the arrow is
- * 48 dp wide ([Halves]). Each Write ends in the **AI** mark ([AiLabel], #624),
- * read as "<label>, uses AI"; *Stop* and the arrow, which make no call, do not. Choosing an
+ * 48 dp wide ([Halves]). *Write insight* and *Rewrite insight* end in the **AI** mark ([AiLabel], #624),
+ * read as "<label>, uses AI"; *Stop writing* and the arrow, which make no call, do not. Choosing an
  * automatic mode other than the one chosen says that each new track's insight is a paid call;
- * choosing *Now*, or the mode already chosen, says nothing.
+ * choosing *On demand*, or the mode already chosen, says nothing.
  *
  * Material 3's own `SplitButtonLayout` is not in material3 1.4, the version the project's Compose
  * BOM gives, so the halves are drawn here with its shapes: round outer corners (16 dp, as the genre
  * chips' are), 4 dp inner ones and a 2 dp gap.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun WriteSplitButton(
     offer: CardOffer,
@@ -136,26 +135,9 @@ internal fun WriteSplitButton(
     writing: WritingChoice?,
 ) {
     val filled = offer.invites
-    val paused = writing != null && writing.paused && writing.mode != WriteAutomatically.NEVER
-    // *Paused* goes beside the halves, or under them where the line has no room for it.
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-        itemVerticalAlignment = Alignment.CenterVertically,
-    ) {
-        Halves(Modifier.testTag(WRITE_HALVES_TAG)) {
-            Leading(offer, filled, if (offer.stop) onStop else onWrite)
-            ModeArrow(filled, writing, paused)
-        }
-        if (paused) {
-            Text(
-                stringResource(R.string.home_write_mode_paused_mark),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                // Said in the arrow's description; tagged for the tests alone.
-                modifier = Modifier.clearAndSetSemantics { testTag = WRITE_MODE_PAUSED_TAG },
-            )
-        }
+    Halves(Modifier.testTag(WRITE_HALVES_TAG)) {
+        Leading(offer, filled, if (offer.stop) onStop else onWrite)
+        ModeArrow(filled, writing)
     }
 }
 
@@ -226,9 +208,12 @@ private fun Leading(
 private fun ModeArrow(
     filled: Boolean,
     writing: WritingChoice?,
-    paused: Boolean,
 ) {
     var open by remember { mutableStateOf(false) }
+    // Outlives the menu, which closes as a mode is chosen, to hear how the save ended.
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val failed = stringResource(R.string.settings_change_failed)
     val enabled = writing?.enabled == true
     val shape = RoundedCornerShape(SPLIT_INNER_CORNER, SPLIT_OUTER_CORNER, SPLIT_OUTER_CORNER, SPLIT_INNER_CORNER)
     val colours = if (filled) ButtonDefaults.buttonColors() else ButtonDefaults.outlinedButtonColors()
@@ -240,7 +225,7 @@ private fun ModeArrow(
         }
     val content =
         if (enabled) colours.contentColor else MaterialTheme.colorScheme.onSurface.copy(alpha = DISABLED_CONTENT_ALPHA)
-    val described = described(writing, paused)
+    val described = described(writing)
     Box {
         var arrow =
             Modifier
@@ -266,23 +251,22 @@ private fun ModeArrow(
         }
         if (writing != null) {
             DropdownMenu(expanded = open && enabled, onDismissRequest = { open = false }) {
-                ModeMenu(writing) { open = false }
+                ModeMenu(writing, { open = false }) { saved ->
+                    // A save that failed is said (#625): the menu keeps the mode the store holds.
+                    scope.launch {
+                        if (!saved.await()) Toast.makeText(context, failed, Toast.LENGTH_LONG).show()
+                    }
+                }
             }
         }
     }
 }
 
-// *Writing mode: <mode>*, with *paused* while *Saver* has paused it; *Writing mode* alone before the
-// settings' first read.
+// *Writing mode: <mode>*; *Writing mode* alone before the settings' first read.
 @Composable
-private fun described(
-    writing: WritingChoice?,
-    paused: Boolean,
-): String {
+private fun described(writing: WritingChoice?): String {
     if (writing == null) return stringResource(R.string.home_write_mode_unknown)
-    val name = stringResource(writingModeName(writing.mode))
-    val mode = if (paused) stringResource(R.string.home_write_mode_paused, name) else name
-    return stringResource(R.string.home_write_mode, mode)
+    return stringResource(R.string.home_write_mode, stringResource(writingModeName(writing.mode)))
 }
 
 // *Reactive*'s modes, one choice among them, by name, the chosen one checked; then the way to the
@@ -291,6 +275,7 @@ private fun described(
 internal fun ModeMenu(
     writing: WritingChoice,
     close: () -> Unit,
+    saving: (Deferred<Boolean>) -> Unit = {},
 ) {
     val context = LocalContext.current
     val paid = stringResource(R.string.home_write_mode_paid)
@@ -305,7 +290,7 @@ internal fun ModeMenu(
                     if (entry.mode != WriteAutomatically.NEVER && !chosen) {
                         Toast.makeText(context, paid, Toast.LENGTH_SHORT).show()
                     }
-                    writing.onChoose(entry.mode)
+                    saving(writing.onChoose(entry.mode))
                 },
                 leadingIcon = {
                     if (chosen) {
@@ -340,7 +325,7 @@ internal fun writingModeTag(mode: WriteAutomatically): String = "write-mode-${mo
 /** The test tag of the split button's leading half while it offers a Write. */
 const val WRITE_TAG: String = "write"
 
-/** The test tag of Stop, the leading half while it offers it. */
+/** The test tag of *Stop writing*, the leading half while it offers it. */
 const val STOP_TAG: String = "stop"
 
 /** The test tag of the leading half while a tap would do nothing: disabled. */
@@ -354,6 +339,3 @@ const val WRITE_MODE_TAG: String = "write-mode"
 
 /** The test tag of the menu's *See Settings for details*. */
 const val WRITE_MODE_DETAILS_TAG: String = "write-mode-details"
-
-/** The test tag of *Paused*, beside the split button while *Saver* has paused automatic writing. */
-const val WRITE_MODE_PAUSED_TAG: String = "write-mode-paused"

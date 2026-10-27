@@ -55,7 +55,8 @@ import org.robolectric.annotation.GraphicsMode
 /**
  * The **AI** mark on Home's buttons that call the AI service (#624): every Write of the insight
  * card's split button ends in it, enabled or not, after its label and on its baseline, and reads as
- * "<label>, uses AI" with the mark itself hidden; *Stop* and the arrow, which make no call, do not.
+ * "<label>, uses AI" with the mark itself hidden; *Stop writing* and the arrow, which make no call,
+ * do not.
  * Both halves are drawn as tall as Home's chips, 32 dp, growing alike with a large font, in a row
  * 48 dp high, and each answers a tap across 48 dp.
  */
@@ -101,29 +102,23 @@ class AiMarkScreenTest {
 
     @Test
     fun everyWriteEndsInTheMarkAndReadsAsUsesAi() {
-        // Under Now, and under each automatic mode while it waits for a tap.
-        val writes =
-            mapOf(
-                WriteAutomatically.NEVER to "Write insight",
-                WriteAutomatically.ON_EVERY_TRACK_CHANGE to "Write on change",
-                WriteAutomatically.WHEN_I_SKIP to "Write on skip",
-            )
-        for ((mode, label) in writes) {
+        // Write insight, in every mode (#625).
+        for (mode in WriteAutomatically.entries) {
             settings.value = Settings(writeAutomatically = mode)
             view.value = PipelineView(offered, aiReady = true, waiting = true)
-            show { compose.onNodeWithTag(WRITE_TAG).assertIsEnabled().carriesTheMark(label) }
+            show { compose.onNodeWithTag(WRITE_TAG).assertIsEnabled().carriesTheMark("Write insight") }
         }
         // Rewrite, beside the card paid for once a settings change changed its key.
         settings.value = Settings()
         val kept = track(insight = written("It is a song [MB1].", cached = true))
         view.value = PipelineView(kept, aiReady = true, rewrite = true, cardShown = true)
-        show { compose.onNodeWithTag(WRITE_TAG).assertIsEnabled().carriesTheMark("Rewrite") }
+        show { compose.onNodeWithTag(WRITE_TAG).assertIsEnabled().carriesTheMark("Rewrite insight") }
     }
 
     @Test
     fun aDisabledWriteKeepsItsMark() {
         view.value = PipelineView(track(insight = written("It is a song [MB1].")), aiReady = true)
-        show { compose.onNodeWithTag(NO_ACTION_TAG).assertIsNotEnabled().carriesTheMark("Write on change") }
+        show { compose.onNodeWithTag(NO_ACTION_TAG).assertIsNotEnabled().carriesTheMark("Write insight") }
     }
 
     @Test
@@ -131,7 +126,7 @@ class AiMarkScreenTest {
         view.value =
             PipelineView(track(insight = InsightState.Writing("It is")), aiReady = true, stopCall = CallId(RunId(1), 1))
         show {
-            val stop = compose.onNodeWithTag(STOP_TAG).assertTextEquals("Stop")
+            val stop = compose.onNodeWithTag(STOP_TAG).assertTextEquals("Stop writing")
             stop.assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.ContentDescription))
             assertEquals(0, marksIn(STOP_TAG))
             assertEquals(0, marksIn(WRITE_MODE_TAG))

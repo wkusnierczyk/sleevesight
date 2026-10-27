@@ -43,12 +43,14 @@ import app.sleevesight.app.ui.home.HomeFixtures.normalizer
 import app.sleevesight.app.ui.home.HomeFixtures.sundown
 import app.sleevesight.app.ui.home.HomeFixtures.track
 import app.sleevesight.app.ui.home.HomeFixtures.written
+import app.sleevesight.app.ui.report.REPORT_TAG
 import app.sleevesight.app.ui.settings.SettingsSection
 import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WriteAutomatically
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -60,16 +62,17 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.shadows.ShadowToast
 
 /**
- * The insight card's split button (#615): the leading half says what a tap does in each state,
- * the mode's Write while automatic writing waits for a tap (a Write offered again after a failure
- * or a Stop included), disabled while it runs by itself; *Rewrite* beside the card paid for while the
- * coordinator offers it, with its line, a rewrite that failed or stopped said; *Kept from before.*
- * for the card paid for; the line says resume whenever *Saver* has
- * paused it; the arrow's menu is *Reactive*, each showing the other's change, and ends with the way
- * to it in the settings; another automatic mode chosen says each new track's insight is a paid call,
- * *Now* or the mode already chosen says nothing; *Saver*'s pause shows beside it; a screen reader
- * reads the action, *Writing mode: <mode>* as a drop-down list, and the modes as one choice among
- * them; 48 dp targets; fixed while *Show insights* is off.
+ * The insight card's split button (#615, #625): the leading half is *Write insight* or *Rewrite
+ * insight*, the same in every mode, or *Stop writing* while one is written, in each situation:
+ * the app just started, a new track with nothing written, an insight shown, a track that came to
+ * play while *Saver* had paused automatic writing, a card written with earlier settings (*Rewrite
+ * insight*, its line straight under *Kept from before.*, #606), a track that followed the last one
+ * by itself, writing, and a failure; each with its line. The arrow's menu is *Reactive*, in order of
+ * how much is written automatically, each showing the other's change, every choice told on (the
+ * one chosen included), and it ends with the way to it in the settings; another automatic mode
+ * chosen says each new track's insight is a paid call, *On demand* or the mode already chosen says
+ * nothing; a screen reader reads the action, *Writing mode: <mode>* as a drop-down list, and the
+ * modes as one choice among them; 48 dp targets; fixed while *Show insights* is off.
  */
 @RunWith(RobolectricTestRunner::class)
 class WriteSplitButtonScreenTest {
@@ -81,12 +84,21 @@ class WriteSplitButtonScreenTest {
     private val view =
         MutableStateFlow(PipelineView(track(insight = written("It is a song [MB1].")), aiReady = true))
 
+    // Each mode chosen in the menu, as the app's chooser hears it (#625), and whether its save works.
+    private val chosen = mutableListOf<WriteAutomatically>()
+    private var saves = true
+
     private fun show(block: () -> Unit) {
         // The menu saves as the app's does: through the settings, which the card then reads.
         val actions =
             NowPlayingActions(
                 normalizer::normalize,
-                chooseWritingMode = { mode -> settings.value = settings.value?.copy(writeAutomatically = mode) },
+                chooseWritingMode = { mode ->
+                    chosen += mode
+                    // A save that fails leaves the setting as it was.
+                    if (saves) settings.value = settings.value?.copy(writeAutomatically = mode)
+                    CompletableDeferred(saves)
+                },
                 openSettingsAt = { openedAt += it },
             )
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
@@ -130,77 +142,35 @@ class WriteSplitButtonScreenTest {
 
     private fun says(line: String) = compose.onNodeWithText(line).assertExists()
 
+    private fun absent(text: String) = compose.onNodeWithText(text, substring = true).assertDoesNotExist()
+
+    // Write insight, enabled, its line [line], in every mode.
+    private fun writeInsightInEveryMode(
+        pipeline: PipelineView,
+        line: String,
+    ) {
+        view.value = pipeline
+        for (mode in WriteAutomatically.entries) {
+            settings.value = Settings(writeAutomatically = mode)
+            show {
+                leading(WRITE_TAG).assertTextEquals("Write insight").assertIsEnabled()
+                says(line)
+                REMOVED.forEach(::absent)
+            }
+        }
+    }
+
     @Test
-    fun underNowWithNoInsightShownItIsWriteInsight() {
+    fun theAppJustStartedItIsWriteInsightInEveryMode() =
+        // No first action yet since the app started: Write offered, nothing written automatically.
+        writeInsightInEveryMode(
+            PipelineView(offered, aiReady = true, waiting = true),
+            "Tap Write insight to have it written from the sources below.",
+        )
+
+    @Test
+    fun aNewTrackUnderOnDemandIsWriteInsight() {
         settings.value = Settings(writeAutomatically = WriteAutomatically.NEVER)
-        view.value = PipelineView(offered, aiReady = true, waiting = true)
-        show {
-            leading(WRITE_TAG).assertTextEquals("Write insight").assertIsEnabled()
-            says("Tap Write insight to have it written from the sources below.")
-        }
-    }
-
-    @Test
-    fun underAnAutomaticModeBeforeTheFirstTapItIsTheModesWriteEnabled() {
-        view.value = PipelineView(offered, aiReady = true, waiting = true)
-        show {
-            leading(WRITE_TAG).assertTextEquals("Write on change").assertIsEnabled()
-            says("Tap Write on change to write this track’s insight and start writing automatically.")
-        }
-        settings.value = Settings(writeAutomatically = WriteAutomatically.WHEN_I_SKIP)
-        show {
-            leading(WRITE_TAG).assertTextEquals("Write on skip").assertIsEnabled()
-            says("Tap Write on skip to write this track’s insight and start writing automatically.")
-        }
-    }
-
-    @Test
-    fun whileSaverHasPausedItTheModesWriteResumesIt() {
-        view.value = PipelineView(offered, aiReady = true, waiting = true, lapsed = true, paused = true)
-        show {
-            leading(WRITE_TAG).assertTextEquals("Write on change").assertIsEnabled()
-            says(
-                "Automatic writing paused: tracks changed while Sleevesight was not on screen. Tap Write on change " +
-                    "to write this one and resume.",
-            )
-        }
-    }
-
-    @Test
-    fun whileSaverHasPausedItTheLineSaysResumeEvenForAWriteNotOfferedBecauseOfThePause() {
-        // Under On track skip, a natural end while paused: Write offered, but not because of the pause.
-        settings.value = Settings(writeAutomatically = WriteAutomatically.WHEN_I_SKIP)
-        view.value = PipelineView(offered, aiReady = true, waiting = true, paused = true)
-        show {
-            leading(WRITE_TAG).assertTextEquals("Write on skip").assertIsEnabled()
-            says(
-                "Automatic writing paused: tracks changed while Sleevesight was not on screen. Tap Write on skip " +
-                    "to write this one and resume.",
-            )
-            compose.onNodeWithText("start writing automatically", substring = true).assertDoesNotExist()
-            assertEquals(1, count(WRITE_MODE_PAUSED_TAG))
-        }
-    }
-
-    @Test
-    fun whileAutomaticWritingRunsByItselfTheModesWriteIsDisabled() {
-        view.value = PipelineView(notYet, aiReady = true)
-        show {
-            leading(NO_ACTION_TAG).assertTextEquals("Write on change").assertIsNotEnabled()
-            assertEquals(0, count(WRITE_TAG))
-            says("Writing automatically on every track change.")
-        }
-        settings.value = Settings(writeAutomatically = WriteAutomatically.WHEN_I_SKIP)
-        show {
-            leading(NO_ACTION_TAG).assertTextEquals("Write on skip").assertIsNotEnabled()
-            says("Writing automatically when you skip a track.")
-        }
-    }
-
-    @Test
-    fun aTrackAutomaticWritingLeavesIsWrittenWithWriteInsight() {
-        // Under On track skip, a track that followed another by itself: Write offered, nothing waits.
-        settings.value = Settings(writeAutomatically = WriteAutomatically.WHEN_I_SKIP)
         view.value = PipelineView(offered, aiReady = true)
         show {
             leading(WRITE_TAG).assertTextEquals("Write insight").assertIsEnabled()
@@ -209,36 +179,69 @@ class WriteSplitButtonScreenTest {
     }
 
     @Test
-    fun anInsightShownIsRewriteWhileOfferedElseTheModesWriteDisabledInEveryMode() {
-        val labels =
+    fun aNewTrackAutomaticWritingWillWriteIsWriteInsightDisabled() {
+        view.value = PipelineView(notYet, aiReady = true)
+        val lines =
             mapOf(
-                WriteAutomatically.NEVER to "Write insight",
-                WriteAutomatically.ON_EVERY_TRACK_CHANGE to "Write on change",
-                WriteAutomatically.WHEN_I_SKIP to "Write on skip",
+                WriteAutomatically.ON_EVERY_TRACK_CHANGE to "Writing automatically on every track change.",
+                WriteAutomatically.WHEN_I_SKIP to "Writing automatically when you skip a track.",
             )
-        val kept = track(insight = written("It is a song [MB1].", cached = true))
-        for ((mode, label) in labels) {
+        for ((mode, line) in lines) {
             settings.value = Settings(writeAutomatically = mode)
-            // Kept from before, its key changed by a settings change: the coordinator offers a rewrite.
-            for (waiting in listOf(false, true)) {
-                view.value = PipelineView(kept, aiReady = true, rewrite = true, cardShown = true, waiting = waiting)
-                show {
-                    leading(WRITE_TAG).assertTextEquals("Rewrite").assertIsEnabled()
-                    assertEquals(0, count(NO_ACTION_TAG))
-                    says("Rewrite with updated source or model settings.")
-                    arrow.assertIsEnabled()
-                }
+            show {
+                leading(NO_ACTION_TAG).assertTextEquals("Write insight").assertIsNotEnabled()
+                assertEquals(0, count(WRITE_TAG))
+                says(line)
             }
-            // Written now, or kept with nothing offered: the mode's Write, disabled, and no rewrite line.
+        }
+    }
+
+    @Test
+    fun aTrackThatCameToPlayWhileSaverHadPausedAutomaticWritingIsWriteInsightAndSaysItResumes() {
+        for (mode in listOf(WriteAutomatically.ON_EVERY_TRACK_CHANGE, WriteAutomatically.WHEN_I_SKIP)) {
+            settings.value = Settings(writeAutomatically = mode)
+            view.value = PipelineView(offered, aiReady = true, waiting = true, lapsed = true)
+            show {
+                leading(WRITE_TAG).assertTextEquals("Write insight").assertIsEnabled()
+                says(
+                    "Automatic writing was paused while Sleevesight was not on screen, and resumes now. This track " +
+                        "wasn’t written: tap Write insight to have it written.",
+                )
+                // No *Paused* beside the button: opening Sleevesight has resumed it.
+                absent("Paused")
+                arrow.assertContentDescriptionEquals("Writing mode: ${NAMES.getValue(mode)}")
+            }
+        }
+    }
+
+    @Test
+    fun aTrackThatFollowedTheLastOneByItselfIsWriteInsightAndSaysWhy() {
+        settings.value = Settings(writeAutomatically = WriteAutomatically.WHEN_I_SKIP)
+        view.value = PipelineView(offered, aiReady = true, followed = true)
+        show {
+            leading(WRITE_TAG).assertTextEquals("Write insight").assertIsEnabled()
+            says(
+                "This track followed the last one by itself, so it wasn’t written automatically. Tap Write " +
+                    "insight to have it written.",
+            )
+        }
+    }
+
+    @Test
+    fun anInsightShownIsWriteInsightDisabledInEveryMode() {
+        val kept = track(insight = written("It is a song [MB1].", cached = true))
+        for (mode in WriteAutomatically.entries) {
+            settings.value = Settings(writeAutomatically = mode)
+            // Written now, or kept with nothing offered: Write insight, disabled, and no rewrite line.
             for (pipeline in listOf(
                 PipelineView(track(insight = written("It is a song [MB1].")), aiReady = true),
                 PipelineView(kept, aiReady = true, cardShown = true),
             )) {
                 view.value = pipeline
                 show {
-                    leading(NO_ACTION_TAG).assertTextEquals(label).assertIsNotEnabled()
+                    leading(NO_ACTION_TAG).assertTextEquals("Write insight").assertIsNotEnabled()
                     assertEquals(0, count(WRITE_TAG))
-                    compose.onNodeWithText("Rewrite", substring = true).assertDoesNotExist()
+                    absent("Rewrite")
                     arrow.assertIsEnabled()
                 }
             }
@@ -246,13 +249,68 @@ class WriteSplitButtonScreenTest {
     }
 
     @Test
+    fun aCardWrittenWithEarlierSettingsIsRewriteInsightInEveryMode() {
+        // Kept from before, its key changed by a settings change: the coordinator offers a rewrite.
+        // Not from the cache, so *Kept from before.* says so for the card paid for (#606).
+        val kept = track(insight = written("It is a song [MB1]."))
+        for (mode in WriteAutomatically.entries) {
+            settings.value = Settings(writeAutomatically = mode)
+            for (waiting in listOf(false, true)) {
+                view.value = PipelineView(kept, aiReady = true, rewrite = true, cardShown = true, waiting = waiting)
+                show {
+                    leading(WRITE_TAG).assertTextEquals("Rewrite insight").assertIsEnabled()
+                    assertEquals(0, count(NO_ACTION_TAG))
+                    says("Kept from before.")
+                    says("Rewrite insight with updated source or model settings.")
+                    arrow.assertIsEnabled()
+                }
+            }
+        }
+    }
+
+    @Test
+    fun theRewriteLineSitsStraightUnderKeptFromBefore() {
+        // Nothing between them, *Report a problem* included (#606), for the rewrite offered and for
+        // one that failed or was stopped.
+        val kept = track(insight = written("It is a song [MB1]."))
+        val lines =
+            listOf(
+                PipelineView(kept, aiReady = true, rewrite = true, cardShown = true) to
+                    listOf("Rewrite insight with updated source or model settings."),
+                PipelineView(kept, aiReady = true, rewrite = true, cardShown = true, rewriteFailed = "offline") to
+                    listOf(
+                        "Rewriting failed: no connection. This is the insight written earlier.",
+                        "Rewrite insight with updated source or model settings.",
+                    ),
+                PipelineView(kept, aiReady = true, cardShown = true, rewriteFailed = PipelineHost.STOPPED) to
+                    listOf("Rewriting stopped. This is the insight written earlier."),
+            )
+        for ((pipeline, under) in lines) {
+            view.value = pipeline
+            show {
+                var above = bounds("Kept from before.")
+                for (line in under) {
+                    val next = bounds(line)
+                    assertEquals("$line straight under the line above", above.bottom, next.top, 1f)
+                    assertEquals("$line aligned with Kept from before.", above.left, next.left, 1f)
+                    above = next
+                }
+                val report = compose.onNodeWithTag(REPORT_TAG).fetchSemanticsNode().boundsInRoot
+                assertTrue("Report a problem beside the lines, not under them", report.left >= above.right)
+            }
+        }
+    }
+
+    private fun bounds(text: String) = compose.onNodeWithText(text).fetchSemanticsNode().boundsInRoot
+
+    @Test
     fun rewriteIsNotOfferedWhileTheModelIsFoundUnavailable() {
         val kept = track(insight = written("It is a song [MB1].", cached = true))
         view.value = PipelineView(kept, aiReady = true, rewrite = true, cardShown = true)
         unavailable.value = UnavailableModel(ProviderId.ANTHROPIC, "claude-gone")
         show {
-            leading(NO_ACTION_TAG).assertTextEquals("Write on change").assertIsNotEnabled()
-            compose.onNodeWithText("Rewrite with updated source or model settings.").assertDoesNotExist()
+            leading(NO_ACTION_TAG).assertTextEquals("Write insight").assertIsNotEnabled()
+            compose.onNodeWithText("Rewrite insight with updated source or model settings.").assertDoesNotExist()
         }
     }
 
@@ -266,8 +324,8 @@ class WriteSplitButtonScreenTest {
     }
 
     @Test
-    fun aRewriteThatFailedOrStoppedShowsTheCardBeforeSaysSoAndOffersRewriteAgain() {
-        val kept = track(insight = written("It is a song [MB1].", cached = true))
+    fun aRewriteThatFailedOrStoppedShowsTheCardBeforeSaysSoAndOffersRewriteInsightAgain() {
+        val kept = track(insight = written("It is a song [MB1]."))
         val said =
             mapOf(
                 "offline" to "Rewriting failed: no connection. This is the insight written earlier.",
@@ -279,74 +337,53 @@ class WriteSplitButtonScreenTest {
                 compose.onNodeWithText("It is a song", substring = true).assertExists()
                 says(line)
                 says("Kept from before.")
-                leading(WRITE_TAG).assertTextEquals("Rewrite").assertIsEnabled()
-                says("Rewrite with updated source or model settings.")
+                leading(WRITE_TAG).assertTextEquals("Rewrite insight").assertIsEnabled()
+                says("Rewrite insight with updated source or model settings.")
             }
-            // Until the coordinator offers it again: the line, and no Rewrite.
+            // Until the coordinator offers it again: the line, and Write insight disabled.
             view.value = PipelineView(kept, aiReady = true, cardShown = true, rewriteFailed = why)
             show {
                 says(line)
-                leading(NO_ACTION_TAG).assertTextEquals("Write on change").assertIsNotEnabled()
+                leading(NO_ACTION_TAG).assertTextEquals("Write insight").assertIsNotEnabled()
             }
         }
     }
 
     @Test
-    fun aFailedOrStoppedCallOffersWriteInsightAgainInEveryMode() {
-        for (insight in listOf(InsightState.Failed("overloaded"), InsightState.Stopped)) {
-            view.value = PipelineView(track(insight = insight), aiReady = true, retry = true)
-            for (mode in WriteAutomatically.entries) {
-                settings.value = Settings(writeAutomatically = mode)
-                show {
-                    leading(WRITE_TAG).assertTextEquals("Write insight").assertIsEnabled()
-                    says("Write insight tries again, as a new call to your AI service.")
-                }
-            }
+    fun aFailureIsWriteInsightWithTheReasonInEveryMode() =
+        writeInsightInEveryMode(
+            PipelineView(track(insight = InsightState.Failed("offline")), aiReady = true, retry = true, waiting = true),
+            "Writing failed: no connection. Tap Write insight to try again, as a new call.",
+        )
+
+    @Test
+    fun aStoppedCallIsWriteInsightInEveryMode() =
+        writeInsightInEveryMode(
+            PipelineView(track(insight = InsightState.Stopped), aiReady = true, retry = true, waiting = true),
+            "Tap Write insight to try again, as a new call.",
+        )
+
+    @Test
+    fun aFailureNotOfferedAgainSaysWhyAndOffersNothing() {
+        view.value = PipelineView(track(insight = InsightState.Failed("offline")), aiReady = true)
+        show {
+            says("Writing failed: no connection.")
+            leading(NO_ACTION_TAG).assertTextEquals("Write insight").assertIsNotEnabled()
         }
     }
 
     @Test
-    fun aFailedOrStoppedCallWhileAutomaticWritingWaitsOffersTheModesWrite() {
-        val labels =
-            mapOf(
-                WriteAutomatically.ON_EVERY_TRACK_CHANGE to "Write on change",
-                WriteAutomatically.WHEN_I_SKIP to "Write on skip",
-            )
-        for (insight in listOf(InsightState.Failed("overloaded"), InsightState.Stopped)) {
-            for ((mode, label) in labels) {
-                settings.value = Settings(writeAutomatically = mode)
-                // No tap yet since the app started: the tap starts automatic writing.
-                view.value = PipelineView(track(insight = insight), aiReady = true, retry = true, waiting = true)
-                show {
-                    leading(WRITE_TAG).assertTextEquals(label).assertIsEnabled()
-                    says("$label tries again, as a new call to your AI service, and starts writing automatically.")
-                }
-                // Saver has paused it: the tap resumes it.
-                view.value = view.value.copy(paused = true)
-                show {
-                    leading(WRITE_TAG).assertTextEquals(label).assertIsEnabled()
-                    says("$label tries again, as a new call to your AI service, and resumes writing automatically.")
-                }
-            }
-            // Under Now a tap starts nothing.
-            settings.value = Settings(writeAutomatically = WriteAutomatically.NEVER)
-            view.value = PipelineView(track(insight = insight), aiReady = true, retry = true, waiting = true)
-            show {
-                leading(WRITE_TAG).assertTextEquals("Write insight").assertIsEnabled()
-                says("Write insight tries again, as a new call to your AI service.")
-            }
-        }
-    }
-
-    @Test
-    fun whileWritingItIsStop() {
+    fun whileWritingItIsStopWritingWithItsCaveat() {
         view.value =
             PipelineView(track(insight = InsightState.Writing("It is")), aiReady = true, stopCall = CallId(RunId(1), 1))
         show {
-            leading(STOP_TAG).assertTextEquals("Stop").assertIsEnabled()
+            leading(STOP_TAG).assertTextEquals("Stop writing").assertIsEnabled()
             assertEquals(0, count(WRITE_TAG))
             // One line, in place of *Writing…*.
-            says("Writing from the sources. Tap Stop to stop it.")
+            says(
+                "Stop writing ends the call at once. If the request has reached your AI service, it still charges " +
+                    "for what it has read and written so far.",
+            )
             compose.onNodeWithText("Writing…").assertDoesNotExist()
         }
     }
@@ -358,26 +395,31 @@ class WriteSplitButtonScreenTest {
     }
 
     @Test
-    fun aModeChosenInTheMenuIsReactive() {
-        show {
-            for (mode in listOf(
+    fun aModeChosenInTheMenuIsReactiveAndToldOnTheOneChosenIncluded() {
+        val modes =
+            listOf(
+                WriteAutomatically.WHEN_I_SKIP,
+                // Chosen again: an automatic mode chosen starts automatic writing (#625).
                 WriteAutomatically.WHEN_I_SKIP,
                 WriteAutomatically.NEVER,
                 WriteAutomatically.ON_EVERY_TRACK_CHANGE,
-            )) {
+            )
+        show {
+            for (mode in modes) {
                 choose(mode)
                 assertEquals(mode, settings.value?.writeAutomatically)
             }
         }
+        assertEquals(modes, chosen)
     }
 
     @Test
     fun reactiveChangedInTheSettingsShowsInTheMenu() =
         show {
-            arrow.assertContentDescriptionEquals("Writing mode: On track change")
+            arrow.assertContentDescriptionEquals("Writing mode: On track change (auto)")
             settings.value = settings.value?.copy(writeAutomatically = WriteAutomatically.NEVER)
             compose.waitForIdle()
-            arrow.assertContentDescriptionEquals("Writing mode: Now")
+            arrow.assertContentDescriptionEquals("Writing mode: On demand")
             arrow.performClick()
             compose.waitForIdle()
             item(WriteAutomatically.NEVER).assertIsSelected()
@@ -401,6 +443,23 @@ class WriteSplitButtonScreenTest {
     }
 
     @Test
+    fun aModeWhoseSaveFailedIsAnnouncedAndTheMenuKeepsTheStoredMode() {
+        saves = false
+        show {
+            ShadowToast.reset()
+            choose(WriteAutomatically.NEVER)
+            compose.waitForIdle()
+            assertEquals(
+                "The last change could not be saved: the phone’s storage failed. The setting keeps its saved " +
+                    "value; try again.",
+                ShadowToast.getTextOfLatestToast(),
+            )
+            arrow.assertContentDescriptionEquals("Writing mode: On track change (auto)")
+        }
+        assertEquals(listOf(WriteAutomatically.NEVER), chosen)
+    }
+
+    @Test
     fun theModeAlreadyChosenChosenAgainSaysNothing() {
         for (mode in listOf(WriteAutomatically.ON_EVERY_TRACK_CHANGE, WriteAutomatically.WHEN_I_SKIP)) {
             settings.value = Settings(writeAutomatically = mode)
@@ -419,10 +478,10 @@ class WriteSplitButtonScreenTest {
             compose
                 .onNodeWithTag(NO_ACTION_TAG)
                 .reads(Role.Button)
-                .assertTextEquals("Write on change")
+                .assertTextEquals("Write insight")
                 .assertTouchHeightIsEqualTo(48.dp)
             arrow
-                .assertContentDescriptionEquals("Writing mode: On track change")
+                .assertContentDescriptionEquals("Writing mode: On track change (auto)")
                 .reads(Role.DropdownList)
                 .assertHasClickAction()
                 .assertTouchWidthIsEqualTo(48.dp)
@@ -445,7 +504,7 @@ class WriteSplitButtonScreenTest {
         }
 
     @Test
-    fun theMenuNamesEachModeNowFirstAndEndsWithTheWayToTheirDetails() =
+    fun theMenuNamesEachModeByHowMuchIsWrittenAutomaticallyAndEndsWithTheWayToTheirDetails() =
         show {
             arrow.performClick()
             compose.waitForIdle()
@@ -457,10 +516,8 @@ class WriteSplitButtonScreenTest {
                         .boundsInRoot.top
                 }
             assertEquals(tops.sorted(), tops)
-            // The names alone: what each does is said in the settings.
-            item(WriteAutomatically.NEVER).assertTextEquals("Now")
-            item(WriteAutomatically.ON_EVERY_TRACK_CHANGE).assertTextEquals("On track change")
-            item(WriteAutomatically.WHEN_I_SKIP).assertTextEquals("On track skip")
+            // The names alone, as in *Reactive*: what each does is said in the settings.
+            for ((mode, name) in NAMES) item(mode).assertTextEquals(name)
             compose
                 .onNodeWithTag(
                     WRITE_MODE_DETAILS_TAG,
@@ -480,26 +537,6 @@ class WriteSplitButtonScreenTest {
             assertEquals(0, count(WRITE_MODE_DETAILS_TAG))
             assertEquals(WriteAutomatically.ON_EVERY_TRACK_CHANGE, settings.value?.writeAutomatically)
         }
-
-    @Test
-    fun whileSaverHasPausedAutomaticWritingItSaysSo() {
-        view.value = view.value.copy(paused = true)
-        show {
-            arrow.assertContentDescriptionEquals("Writing mode: On track change, paused")
-            assertEquals(1, count(WRITE_MODE_PAUSED_TAG))
-        }
-    }
-
-    @Test
-    fun thePauseIsNotShownWhileNotPausedOrUnderNow() {
-        show { assertEquals(0, count(WRITE_MODE_PAUSED_TAG)) }
-        view.value = view.value.copy(paused = true)
-        settings.value = Settings(writeAutomatically = WriteAutomatically.NEVER)
-        show {
-            arrow.assertContentDescriptionEquals("Writing mode: Now")
-            assertEquals(0, count(WRITE_MODE_PAUSED_TAG))
-        }
-    }
 
     @Test
     fun theModeCannotBeChangedWhileShowInsightsIsOff() {
@@ -526,7 +563,25 @@ class WriteSplitButtonScreenTest {
     }
 
     private companion object {
+        // In order of how much is written automatically (#625).
         val WRITING_ORDER =
-            listOf(WriteAutomatically.NEVER, WriteAutomatically.ON_EVERY_TRACK_CHANGE, WriteAutomatically.WHEN_I_SKIP)
+            listOf(WriteAutomatically.NEVER, WriteAutomatically.WHEN_I_SKIP, WriteAutomatically.ON_EVERY_TRACK_CHANGE)
+
+        val NAMES =
+            mapOf(
+                WriteAutomatically.NEVER to "On demand",
+                WriteAutomatically.WHEN_I_SKIP to "On track skip (auto)",
+                WriteAutomatically.ON_EVERY_TRACK_CHANGE to "On track change (auto)",
+            )
+
+        // What the button and the card no longer say (#625).
+        val REMOVED =
+            listOf(
+                "Write on change",
+                "Write on skip",
+                "start writing automatically",
+                "starts writing automatically",
+                "resumes writing automatically",
+            )
     }
 }

@@ -12,7 +12,7 @@ import app.sleevesight.core.settings.WriteAutomatically
  * changes while Sleevesight is not on screen (`pauseAutoWriteAfter`), and under it, while on, that
  * number, *n*; a value stored that is not among the choices is offered too. Switched on, it pauses
  * after the default number ([Settings.DEFAULT_PAUSE_AUTO_WRITE_AFTER]). Fixed while nothing is
- * written automatically (*Show insights* off, or *Reactive* under *Now*).
+ * written automatically (*Show insights* off, or *Reactive* under *On demand*).
  */
 @Composable
 internal fun SaverRows(

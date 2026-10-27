@@ -41,7 +41,7 @@ flowchart LR
 
 ### The session layer
 
-Android lets an app read what a music player is playing only through notification access. The session layer holds that access, and reads the media session of each player you follow: which player it is; the title, artists, album and its year, length and cover; whether it is playing, and how far in; and the queue up next. It ignores the notifications themselves and never touches the audio. A call's session, from the phone's own call apps or one Android marks as a voice call, is dropped before anything of it is read. The session layer also tells a skip from a track that ended on its own, which decides whether an insight is written under *Reactive* set to *On track skip*. Playing, pausing and skipping from the app come in Phase 2; today a tap on the player's name opens the player.
+Android lets an app read what a music player is playing only through notification access. The session layer holds that access, and reads the media session of each player you follow: which player it is; the title, artists, album and its year, length and cover; whether it is playing, and how far in; and the queue up next. It ignores the notifications themselves and never touches the audio. A call's session, from the phone's own call apps or one Android marks as a voice call, is dropped before anything of it is read. The session layer also tells a skip from a track that ended on its own, which decides whether an insight is written under *Reactive* set to *On track skip (auto)*. Playing, pausing and skipping from the app come in Phase 2; today a tap on the player's name opens the player.
 
 ### The pipeline
 

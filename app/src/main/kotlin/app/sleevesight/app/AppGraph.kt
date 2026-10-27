@@ -66,6 +66,7 @@ import app.sleevesight.core.settings.FontChoice
 import app.sleevesight.core.settings.LinkStyle
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.ThemeChoice
+import app.sleevesight.core.settings.WriteAutomatically
 import app.sleevesight.store.ArtistKeeping
 import app.sleevesight.store.Caches
 import app.sleevesight.store.SessionHistory
@@ -76,6 +77,7 @@ import app.sleevesight.store.history.HistoryDatabase
 import app.sleevesight.wiring.appPipelineWiring
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -498,6 +500,16 @@ class AppGraph internal constructor(
             epoch = clearEpoch,
             io = Dispatchers.IO,
         )
+
+    /**
+     * *Reactive*'s mode chosen, in the insight card's menu or in the settings (#615, #625): saved in
+     * [settingsSaves], and told to the pipeline before the save and once it has ended, so the mode
+     * the pipeline writes by is the latest choice, then the narrower of the choice and what the
+     * store holds.
+     */
+    val chooseWritingMode: (WriteAutomatically) -> Deferred<Boolean> by lazy {
+        settings.writingModeChooser(settingsSaves, pipeline::modeChosen)
+    }
 
     /**
      * The diagnostics screen's: the pipeline's events kept in memory from the start of the process,

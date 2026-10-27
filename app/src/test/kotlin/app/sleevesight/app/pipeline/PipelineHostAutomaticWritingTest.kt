@@ -15,15 +15,16 @@ import kotlin.time.Duration.Companion.seconds
 
 /**
  * *Reactive* changed while a track's sources are still being looked up (#553; since #615 from the
- * insight card's menu): turned to *Now*, the run, whose settings were read when it started, makes
- * no paid call without a tap; turned to an automatic mode, a run started under *Now* still writes
- * nothing for its track. And the view's `paused` follows *Saver*'s pause: on past its count, off
- * after a tap.
+ * insight card's menu): turned to *On demand*, the run, whose settings were read when it started, makes
+ * no paid call without a tap; turned to an automatic mode, a run started under *On demand* still writes
+ * nothing for its track. Past *Saver*'s count, Write is offered because of the pause, and opening
+ * the app resumes automatic writing, though not for the track that came to play while it was
+ * paused (#625). An automatic mode chosen is the first action; *On demand* chosen is not.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class PipelineHostAutomaticWritingTest : PipelineHostFixture() {
     @Test
-    fun `Now chosen while the sources are looked up, the track is not written`() =
+    fun `On demand chosen while the sources are looked up, the track is not written`() =
         runTest {
             acted()
             musicBrainz.byName = 3.seconds
@@ -57,7 +58,7 @@ internal class PipelineHostAutomaticWritingTest : PipelineHostFixture() {
         }
 
     @Test
-    fun `the view is paused past Saver's count and not after a tap`() =
+    fun `past Saver's count Write is offered for the pause, and opening the app resumes automatic writing`() =
         runTest {
             settings.value = settings.value.copy(pauseAutoWriteAfter = 1, lookUpInBackground = true)
             acted()
@@ -65,24 +66,46 @@ internal class PipelineHostAutomaticWritingTest : PipelineHostFixture() {
             runCurrent()
             play("Two")
             settle()
-            assertFalse("one change away is written as usual", host.state.value.paused)
+            assertEquals("one change away is written as usual", 1, provider.requestsFor("Two"))
+            assertFalse(host.state.value.lapsed)
             play("Three")
             settle()
-            assertTrue("past the count", host.state.value.paused)
+            assertEquals("past the count", 0, provider.requestsFor("Three"))
             assertTrue("Write offered because of the pause", host.state.value.lapsed)
-            // Turned to Now: still paused for the card, but it no longer offers to resume.
+            // Turned to On demand: nothing would have written, so the pause is not why.
             settings.value = settings.value.copy(writeAutomatically = WriteAutomatically.NEVER)
             settle()
-            assertTrue(host.state.value.paused)
-            assertFalse("nothing to resume under Now", host.state.value.lapsed)
+            assertFalse("nothing to resume under On demand", host.state.value.lapsed)
             settings.value = settings.value.copy(writeAutomatically = WriteAutomatically.ON_EVERY_TRACK_CHANGE)
             settle()
+            // Opening the app resumes automatic writing (#625); Three, which came to play while it
+            // was paused, still offers Write and says why, and nothing is paid for it.
             host.activityStarted()
             settle()
-            assertTrue("an activity start does not undo the pause", host.state.value.paused)
-            tap()
+            assertTrue("Three still says why", host.state.value.lapsed)
+            assertEquals(0, provider.requestsFor("Three"))
+            play("Four")
             settle()
-            assertFalse("a tap resumes", host.state.value.paused)
+            assertEquals("resumed: the next track is written", 1, provider.requestsFor("Four"))
+        }
+
+    @Test
+    fun `an automatic mode chosen is the first action, On demand chosen is not`() =
+        runTest {
+            started()
+            play("One")
+            settle()
+            assertEquals("no first action yet", 0, provider.requestsFor("One"))
+            host.modeChosen(WriteAutomatically.NEVER)
+            play("Two")
+            settle()
+            assertEquals("On demand chosen acts on nothing", 0, provider.requestsFor("Two"))
+            // The mode chosen already, chosen again in the menu: automatic writing starts.
+            host.modeChosen(WriteAutomatically.ON_EVERY_TRACK_CHANGE)
+            runCurrent()
+            assertEquals("the track decided before stays unwritten", 0, provider.requestsFor("Two"))
+            play("Three")
+            settle()
             assertEquals(1, provider.requestsFor("Three"))
         }
 
