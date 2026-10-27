@@ -355,8 +355,13 @@ class WikipediaSource(
         val ARTIST_PART: ArtistPart =
             ArtistPart("wikipedia.artist", EXTRACTION_VERSION, 1, SourceSwitch.WIKIPEDIA.sources)
 
-        /** [extractionVersion]: raised when what the adapter makes of the articles changes. */
-        const val EXTRACTION_VERSION: Int = 1
+        /**
+         * [extractionVersion]: raised when what the adapter makes of the articles changes, or the
+         * resolution it checks them against. 2: a joint credit resolves on MusicBrainz (#661), so a
+         * result kept against the earlier resolution's miss is looked up again; [ARTIST_PART] goes
+         * with it.
+         */
+        const val EXTRACTION_VERSION: Int = 2
 
         private val json = Json { encodeDefaults = false }
 
