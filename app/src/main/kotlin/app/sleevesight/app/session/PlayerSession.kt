@@ -37,6 +37,14 @@ interface PlayerSession {
      */
     val marksCall: Boolean get() = false
 
+    /**
+     * Whether the session plays on another device (`PLAYBACK_TYPE_REMOTE`), as Spotify Connect's
+     * does (#595): what [SessionMapping.effectiveState] reads its state by. It can change while the
+     * session lasts, as playback moves between the phone and another device; the change is reported
+     * with `onAudioInfoChanged`.
+     */
+    val remote: Boolean get() = false
+
     /** Registers [callback] for this session's changes, delivered on the main thread. */
     fun register(callback: MediaController.Callback)
 
@@ -73,6 +81,13 @@ class ControllerSession(
         get() {
             val info: MediaController.PlaybackInfo? = controller.playbackInfo
             return info?.audioAttributes?.usage in CALL_USAGES
+        }
+
+    // Annotated non-null, yet null from a Robolectric controller: read as possibly absent.
+    override val remote: Boolean
+        get() {
+            val info: MediaController.PlaybackInfo? = controller.playbackInfo
+            return info?.playbackType == MediaController.PlaybackInfo.PLAYBACK_TYPE_REMOTE
         }
 
     private companion object {
