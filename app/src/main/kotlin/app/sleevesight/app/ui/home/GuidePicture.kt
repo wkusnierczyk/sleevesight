@@ -229,19 +229,18 @@ private fun MiniHeader(cogwheel: Modifier) {
     }
 }
 
-// *Sources*, folded, as Home shows it (#623): its chip, drawn by Home's own [ChipFrame], where
-// [modifier] says.
+// *Sources*, folded, as Home shows it (#623): its chip, drawn by Home's own [ChipFrame], [modifier]
+// on the chip as drawn.
 @Composable
 private fun MiniSources(modifier: Modifier) {
     val (fill, content) = chipColours(marked = false)
-    Row(modifier) {
-        ChipFrame(fill) {
-            Text(
-                stringResource(R.string.home_sources_title),
-                style = MaterialTheme.typography.labelLarge,
-                color = content,
-            )
-        }
+    // Where the chip is drawn, inside its touch target, so the note's arrow ends at the chip itself.
+    ChipFrame(fill, action = modifier) {
+        Text(
+            stringResource(R.string.home_sources_title),
+            style = MaterialTheme.typography.labelLarge,
+            color = content,
+        )
     }
 }
 
