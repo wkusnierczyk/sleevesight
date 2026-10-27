@@ -19,7 +19,8 @@ import kotlin.time.TimeSource
  * once per track and hands every adapter): this adapter waits for it, takes its outcome, and
  * templates its lines ([MusicBrainzEvidence]). Its latency is the wait.
  *
- * Its result also names the resolved artists ([SourceResult.labelArtists]), whose tags give
+ * Its result also names the resolved artists ([SourceResult.labelArtists]; for a joint credit, its
+ * artists, [Resolution.jointArtists]), whose tags give
  * MusicBrainz's genre labels (#84), and carries the recording's tags the resolution brought
  * ([SourceResult.recordingTags], #439), for the track's; it asks for no tags itself. The pipeline
  * asks for the artists', after the evidence, so the insight never waits for them; no tag reaches a
@@ -38,8 +39,9 @@ class MusicBrainzSource(
      * 2: the result names the resolved artists, for the genre labels (#84). 3: and the date of the
      * first release, for the home screen's year (#52). 4: the artists by name too, and the
      * recording's tags, for the genre rows (#439). 5: and the dates of the releases' titles, for the
-     * year after the album (#556). Without [genres] (*Show genres* off, #444), it
-     * keeps no tags, and its results are kept apart ([WITHOUT_GENRES_VERSION]).
+     * year after the album (#556). 6: a joint credit resolves (#661), so a track kept as *nothing found*
+     * or *rejected* by the rules before is asked again, and its artists give the genre labels. Without
+     * [genres] (*Show genres* off, #444), it keeps no tags, and its results are kept apart ([WITHOUT_GENRES_VERSION]).
      */
     override val extractionVersion: Int = EXTRACTION_VERSION + if (genres) 0 else WITHOUT_GENRES_VERSION
 
@@ -56,7 +58,8 @@ class MusicBrainzSource(
             outcome = resolved.outcome,
             evidence = MusicBrainzEvidence.lines(resolved, clock.now()),
             latency = start.elapsedNow(),
-            labelArtists = resolved.artists.filter { it.mbid != null }.distinctBy { it.mbid },
+            // A joint credit's artists too (#661), whose track artist has no id of its own.
+            labelArtists = (resolved.artists.filter { it.mbid != null } + resolved.jointArtists).distinctBy { it.mbid },
             recordingTags =
                 resolved.recordingMbid?.takeIf { genres && resolved.recordingTags.isNotEmpty() }?.let {
                     RecordingTags(it, resolved.recordingTags)
@@ -70,4 +73,4 @@ class MusicBrainzSource(
     }
 }
 
-private const val EXTRACTION_VERSION = 5
+private const val EXTRACTION_VERSION = 6
