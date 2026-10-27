@@ -65,8 +65,9 @@ import org.robolectric.Shadows.shadowOf
 
 /**
  * The links from *AI services* and *Sources* to the keys (#539): under each service that needs a
- * key, "Set your … API key here.", the key's name a link that unfolds *Secrets* and lands on the
- * key's row, scrolled into view and focused, with a key saved or not; and *AI services*' fuller
+ * key, "Set your … API key here." ("Update your …" once it is saved, #667), the key's name a link
+ * that unfolds *Secrets* and lands on the key's row, scrolled into view and focused, with a key
+ * saved or not; and *AI services*' fuller
  * text says a service switched off keeps its settings.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -109,7 +110,11 @@ class SettingsKeyLinksTest {
             },
         )
 
-    private fun sentence(id: SecretId) = app.getString(R.string.settings_set_key, keyName(id))
+    /** The sentence under a service that needs the key [id]: "Set your …", or "Update your …" once [saved] (#667). */
+    private fun sentence(
+        id: SecretId,
+        saved: Boolean = false,
+    ) = app.getString(if (saved) R.string.settings_update_key else R.string.settings_set_key, keyName(id))
 
     // The screen's saved state, as an activity keeps it: [restore] saves it, drops the content and
     // composes it afresh from what was saved, as Android does for a recreated activity (a rotation).
@@ -204,9 +209,10 @@ class SettingsKeyLinksTest {
     private fun follow(
         id: SecretId,
         stopClock: Boolean = false,
+        saved: Boolean = false,
     ) {
         val target = SettingsTarget.key(id)
-        val sentence = compose.onNode(hasText(sentence(id)), useUnmergedTree = true).performScrollTo()
+        val sentence = compose.onNode(hasText(sentence(id, saved)), useUnmergedTree = true).performScrollTo()
         // With the clock stopped from the tap on, the landing goes no further than the test lets it.
         if (stopClock) compose.mainClock.autoAdvance = false
         sentence.performFirstLinkClick { (it.item as? LinkAnnotation.Clickable)?.tag == target.linkTag }
@@ -244,11 +250,12 @@ class SettingsKeyLinksTest {
     fun theLinkStaysOnceTheKeyIsSaved() {
         runBlocking { secrets.set(SecretId.LASTFM, Secret("lastfm-key")) }
         show(SettingsSection.SOURCES) {
-            waitForNode(hasText(sentence(SecretId.LASTFM)))
-            // No note that the key is needed, but the way to it, which now changes it.
+            // No note that the key is needed, but the way to it, which now updates it (#667).
+            waitForNode(hasText(sentence(SecretId.LASTFM, saved = true)))
+            assertTrue(compose.onAllNodes(hasText(sentence(SecretId.LASTFM))).fetchSemanticsNodes().isEmpty())
             val needs = app.getString(R.string.settings_needs_key_linked, text(R.string.settings_source_lastfm))
             assertTrue(compose.onAllNodes(hasText(needs, substring = true)).fetchSemanticsNodes().isEmpty())
-            follow(SecretId.LASTFM)
+            follow(SecretId.LASTFM, saved = true)
             landedOn(SecretId.LASTFM)
         }
     }

@@ -61,7 +61,9 @@ import kotlin.coroutines.cancellation.CancellationException
  *   offers Write only while the coordinator does ([CoordinatorState.offersWrite]).
  * @property needsKey the keyed sources (Last.fm, web search) switched on under *Sources* (web
  *   search with an engine switched on, `Settings.isEnabled`) that are not looked up because their
- *   key is not saved, or cannot be read: their state is that they need a key, not a failure. They
+ *   key is not saved, or cannot be read: their state is that they need a key, not a failure. A
+ *   source with no key saved is kept off (#667, `KeyGate`), so this is mostly one whose saved key
+ *   cannot be read, or one on in settings the gate has not yet written off. They
  *   have no entry in [TrackState.sources], which holds one per adapter, and a source needs its key
  *   for an adapter.
  * @property aiReady whether an insight can be written: an AI service is chosen, it has a client,

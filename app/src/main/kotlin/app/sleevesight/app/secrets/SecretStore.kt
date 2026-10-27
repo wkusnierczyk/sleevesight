@@ -10,6 +10,8 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import app.sleevesight.core.Secret
 import app.sleevesight.core.keys.KeyName
 import app.sleevesight.core.model.ProviderId
+import app.sleevesight.core.settings.SourceSwitch
+import app.sleevesight.core.settings.WebEngine
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -69,6 +71,24 @@ enum class SecretId(
                 ProviderId.OPENAI -> OPENAI
                 ProviderId.GOOGLE -> GOOGLE
                 ProviderId.OLLAMA -> null
+            }
+
+        /** The key the source [switch] needs, or null for one that needs none; web search's are its engines'. */
+        fun forSource(switch: SourceSwitch): SecretId? =
+            when (switch) {
+                SourceSwitch.LASTFM -> LASTFM
+                SourceSwitch.MUSICBRAINZ,
+                SourceSwitch.WIKIPEDIA,
+                SourceSwitch.DISCOGS,
+                SourceSwitch.WEB,
+                SourceSwitch.MODEL,
+                -> null
+            }
+
+        /** The key the web search engine [engine] needs. */
+        fun forEngine(engine: WebEngine): SecretId =
+            when (engine) {
+                WebEngine.EXA -> EXA
             }
     }
 }

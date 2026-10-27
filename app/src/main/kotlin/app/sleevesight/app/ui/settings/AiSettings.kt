@@ -27,7 +27,8 @@ internal val OFFERED_PROVIDERS: List<ProviderId> = listOf(ProviderId.ANTHROPIC, 
  * one on switches the one on before off, and with all off no insight is written. A provider's
  * model and effort can be set while it is off, and stay when it is switched off, so switching back
  * restores them. Its key is under *Secrets*, which a link under the switch leads to ([KeyLink]);
- * switched on without it, the provider says so. A provider whose selected model was found
+ * with no key saved, its switch is off and cannot be moved, and it says it needs the key (#667). A
+ * provider whose selected model was found
  * unavailable ([unavailable], by provider; #540) says so under its model, and asks for another;
  * Home's note of it links to the model's row ([SettingsTarget.model], #581).
  */
@@ -59,25 +60,31 @@ private fun ProviderRows(
     open: (SettingsDialog) -> Unit,
     gone: String?,
 ) {
-    val on = settings.aiProvider == provider
     val keyId = SecretId.forProvider(provider)
+    val key = keyId?.let { secrets[it] }
+    // With no key saved, the switch is off and cannot be moved (#667); stored on with none, as
+    // before the keys' gate ([app.sleevesight.app.secrets.KeyGate]) writes it off, it shows off.
+    val usable = keyId == null || keySaved(key)
+    val on = settings.aiProvider == provider && (keyId == null || key != SecretState.ABSENT)
     val name = stringResource(providerName(provider))
     SwitchRow(
         title = name,
-        // Switched on, it says when its key is missing or cannot be read: insights wait for it.
-        summary = keyId?.let { keyNote(it, secrets, linked = true) }.takeIf { on },
+        // It says when its key is missing, why the switch cannot be moved, or cannot be read.
+        summary = keyId?.let { keyNote(it, secrets, linked = true) },
         checked = on,
         leading = { ServiceBadge(providerBadge(name)) },
-        below = keyId?.let { { KeyLink(it) } },
-    ) { switchedOn ->
-        update {
-            when {
-                switchedOn -> it.copy(aiProvider = provider)
-                it.aiProvider == provider -> it.copy(aiProvider = null)
-                else -> it
-            }
-        }
-    }
+        below = keyId?.let { { KeyLink(it, key) } },
+        onChange =
+            { switchedOn: Boolean ->
+                update {
+                    when {
+                        switchedOn -> it.copy(aiProvider = provider)
+                        it.aiProvider == provider -> it.copy(aiProvider = null)
+                        else -> it
+                    }
+                }
+            }.takeIf { usable },
+    )
     // Where Home's note of a model found unavailable links to (#581).
     LandingSpot(SettingsTarget.model(provider)) {
         ValueRow(

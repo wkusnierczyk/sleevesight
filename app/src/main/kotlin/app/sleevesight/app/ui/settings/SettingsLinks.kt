@@ -43,6 +43,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import app.sleevesight.app.R
 import app.sleevesight.app.secrets.SecretId
+import app.sleevesight.app.secrets.SecretState
 import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.app.ui.theme.moveAccessibilityFocusToFocused
@@ -422,16 +423,28 @@ private val LANDING = 1300.milliseconds
 
 /**
  * Under a service that needs the key [id] (#539): "Set your Anthropic API key here.", the key's name
- * a link that unfolds *Secrets* and lands on the key's row, shown whether or not a key is saved, so
- * the key is always one tap away; with one saved, the row there changes it. A row that shows it
- * says what is wrong with the key without naming *Secrets* ([keyNote] with `linked`).
+ * a link that unfolds *Secrets* and lands on the key's row, so the key is always one tap away; once
+ * a key is saved ([state]), "Update your Anthropic API key here." (#667), the row there changing it.
+ * A key saved but no longer readable is updated too: it is entered again. A row that shows it says
+ * what is wrong with the key without naming *Secrets* ([keyNote] with `linked`).
  */
 @Composable
-internal fun KeyLink(id: SecretId) {
+internal fun KeyLink(
+    id: SecretId,
+    state: SecretState?,
+) {
     val name = stringResource(keyName(id))
+    val sentence = if (keySaved(state)) R.string.settings_update_key else R.string.settings_set_key
     LinkedText(
-        sentenceWith(stringResource(R.string.settings_set_key, name), settingsLink(name, SettingsTarget.key(id))),
+        sentenceWith(stringResource(sentence, name), settingsLink(name, SettingsTarget.key(id))),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurface,
     )
 }
+
+/**
+ * Whether a key in [state] is saved, as the switch of the service that needs it reads it (#667): its
+ * switch can be used. A key stored but no longer readable is saved: the service's row says it cannot
+ * be read. Not before the keys' states are read (null), nor with no key.
+ */
+internal fun keySaved(state: SecretState?): Boolean = state == SecretState.SAVED || state == SecretState.UNREADABLE

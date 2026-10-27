@@ -32,6 +32,7 @@ import app.sleevesight.app.pipeline.pipelineKeys
 import app.sleevesight.app.pipeline.rebuilds
 import app.sleevesight.app.pipeline.shown
 import app.sleevesight.app.secrets.AndroidKeystoreKey
+import app.sleevesight.app.secrets.KeyGate
 import app.sleevesight.app.secrets.SecretCipher
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretStore
@@ -538,6 +539,10 @@ class AppGraph internal constructor(
         // What the session layer sees is recorded whether or not the app is visible.
         mainScope.launch { historyRecorder.run() }
         mainScope.launch { historyRetention.run() }
+        // A service that needs a key is off while its key is not saved, in the stored settings
+        // (#667): an earlier version's settings at the first start, and after a key is removed.
+        // Off the main thread: its write waits for none of the main thread's work.
+        pipelineScope.launch { KeyGate(settings, secrets, latestSettings.filterNotNull()).run() }
         // `history.db` opens only after the first run is acknowledged.
         mainScope.launch {
             firstRun.state.first { it }
