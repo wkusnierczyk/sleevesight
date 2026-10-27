@@ -30,6 +30,7 @@ import app.sleevesight.core.settings.SourceSwitch
 import app.sleevesight.core.sources.Resolution
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -37,6 +38,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import kotlin.time.Clock
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Instant
 
 /**
  * What a genre's panel shows above its table, in the app (#523): a genre's definition found once for
@@ -83,15 +87,23 @@ class AppGenreNotesTest {
         return playing.copy(genres = TrackGenres(listOf(row)))
     }
 
+    // A clock the tests move.
+    private val clock =
+        object : Clock {
+            var at = Instant.parse("2026-10-27T12:00:00Z")
+
+            override fun now(): Instant = at
+        }
+
     private fun TestScope.notes(epoch: ClearEpoch = ClearEpoch()) =
-        AppGenreNotes(definitions, parts, settings, this, epoch)
+        AppGenreNotes(definitions, parts, settings, this, epoch, clock = clock)
 
     @Test
     fun `a genre's definition is found once for every track that has it`() =
         runTest {
             val notes = notes()
             // The panels of three tracks with rock, one after the other.
-            repeat(3) { assertEquals(rock, notes.definition("rock")?.url) }
+            repeat(3) { assertEquals(rock, notes.definition("rock").first { it != null }?.url) }
             assertEquals(1, articles.asked.size)
         }
 
@@ -100,8 +112,25 @@ class AppGenreNotesTest {
         runTest {
             val now = checkNotNull(settings.value)
             settings.value = now.copy(enabledSources = now.enabledSources - SourceSwitch.WIKIPEDIA)
-            assertNull(notes().definition("rock"))
+            assertNull(notes().definition("rock").first())
             assertEquals(0, articles.asked.size)
+        }
+
+    @Test
+    fun `a definition is looked up once Wikipedia comes on, and gone once it goes off`() =
+        runTest {
+            val on = checkNotNull(settings.value)
+            settings.value = null
+            val shown = mutableListOf<String?>()
+            val watching = launch { notes().definition("rock").collect { shown += it?.url } }
+            advanceUntilIdle()
+            // The settings' first read.
+            settings.value = on
+            advanceUntilIdle()
+            settings.value = on.copy(enabledSources = on.enabledSources - SourceSwitch.WIKIPEDIA)
+            advanceUntilIdle()
+            watching.cancel()
+            assertEquals(listOf(null, rock, null), shown)
         }
 
     @Test
@@ -140,6 +169,40 @@ class AppGenreNotesTest {
             val shown = reason.first() as GenreReason.Shown
             assertTrue((shown.state as InsightState.Written).cached)
             assertEquals(1, provider.requests)
+        }
+
+    @Test
+    fun `a reason shown is offered again once it is older than Keep history for`() =
+        runTest {
+            settings.value = settings.value?.copy(historyLifetime = 7.days)
+            val notes = notes()
+            notes.explain(track(), "rock")
+            advanceUntilIdle()
+            assertTrue(notes.reason(track(), "rock").first() is GenreReason.Shown)
+            clock.at += 7.days
+            assertEquals(GenreReason.Offered, notes.reason(track(), "rock").first())
+            // A tap writes it again: the store serves no copy as old (this fake cache cannot tell).
+            cache.clearCards()
+            notes.explain(track(), "rock")
+            advanceUntilIdle()
+            assertEquals(2, provider.requests)
+        }
+
+    @Test
+    fun `a shorter Keep history for drops a reason shown at once`() =
+        runTest {
+            val notes = notes()
+            notes.explain(track(), "rock")
+            advanceUntilIdle()
+            clock.at += 3.days
+            val shown = mutableListOf<GenreReason>()
+            val watching = launch { notes.reason(track(), "rock").collect { shown += it } }
+            advanceUntilIdle()
+            settings.value = settings.value?.copy(historyLifetime = 1.days)
+            advanceUntilIdle()
+            watching.cancel()
+            assertTrue(shown.first() is GenreReason.Shown)
+            assertEquals(GenreReason.Offered, shown.last())
         }
 
     @Test

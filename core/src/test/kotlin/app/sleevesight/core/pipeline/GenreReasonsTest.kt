@@ -93,7 +93,7 @@ class GenreReasonsTest {
         runTest {
             write()
             val key = checkNotNull(reasons.key(track, "jazz", settings))
-            val kept = assertIs<InsightState.Written>(reasons.kept(key, track))
+            val kept = assertIs<InsightState.Written>(reasons.kept(key, track)?.state)
             assertTrue(kept.cached)
             assertEquals(1, provider.requests.size)
         }

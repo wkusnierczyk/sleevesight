@@ -8,6 +8,7 @@ import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.CardKey
+import app.sleevesight.core.pipeline.KeptCard
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.SourceResult
@@ -135,6 +136,7 @@ class StorePipelineCacheTest {
             cache.keep(jazz.copy(subject = "folk"), "It is folk [W2].")
 
             assertEquals("It is jazz [W1].", cache.card(jazz))
+            assertEquals(KeptCard("It is jazz [W1].", fixture.clock.now), cache.keptCard(jazz))
             assertEquals("It is folk [W2].", cache.card(jazz.copy(subject = "folk")))
             assertNull(cache.card(jazz.copy(subject = null)))
             assertNull(cache.card(jazz.copy(subject = "rock")))

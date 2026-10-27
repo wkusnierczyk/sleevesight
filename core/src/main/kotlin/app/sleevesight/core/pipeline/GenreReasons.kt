@@ -13,6 +13,13 @@ import app.sleevesight.core.synthesis.GenreReasonPrompt
 import app.sleevesight.core.synthesis.GroundingCheck
 import app.sleevesight.core.synthesis.InsightReply
 import kotlin.coroutines.cancellation.CancellationException
+import kotlin.time.Instant
+
+/** A reason kept in the cache: its [state] as checked, and when it was written ([writtenAt]), if the cache says. */
+data class KeptReason(
+    val state: InsightState,
+    val writtenAt: Instant?,
+)
 
 /**
  * *Why is this …?* in a genre's panel (#523; `design/design.md`, *Genre labels*): why the track
@@ -65,13 +72,16 @@ class GenreReasons(
         )
     }
 
-    /** The reason kept for [key], checked against [track]'s evidence; null when none is kept. */
+    /**
+     * The reason kept for [key], checked against [track]'s evidence, with when it was written where
+     * the cache says; null when none is kept.
+     */
     suspend fun kept(
         key: CardKey,
         track: TrackState,
-    ): InsightState? {
-        val text = attempt { cache.card(key) } ?: return null
-        return checked(text, key, track, cached = true, usage = null, complete = true)
+    ): KeptReason? {
+        val card = attempt { cache.keptCard(key) } ?: return null
+        return KeptReason(checked(card.text, key, track, cached = true, usage = null, complete = true), card.writtenAt)
     }
 
     /**

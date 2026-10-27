@@ -117,7 +117,7 @@ class WikipediaGenresTest {
         }
 
     @Test
-    fun `of several items holding the genre's id, the lowest-numbered with an article is quoted, whatever the search's order`() =
+    fun `of several items holding the id, the lowest-numbered with an article is quoted`() =
         runTest {
             val articles = mapOf("Q20" to "Hard bop (later)", "Q3" to "Hard bop")
             val wikidata = Wikidata(mapOf(HARD_BOP to listOf("Q20", "Q3")), articles)

@@ -8,6 +8,7 @@ import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.SourceResult
 import app.sleevesight.core.synthesis.CardKind
 import kotlin.time.Duration
+import kotlin.time.Instant
 
 /**
  * The caches the pipeline consults first (`design/architecture.md`, *Cache and history*). An
@@ -42,6 +43,13 @@ interface PipelineCache {
     /** The card written for [key], if kept. */
     suspend fun card(key: CardKey): String?
 
+    /**
+     * The card written for [key], if kept, with when it was written, where the cache knows it (a
+     * genre's reason, #523, is shown no longer than *Keep history for* after it); by default [card]'s,
+     * with no time.
+     */
+    suspend fun keptCard(key: CardKey): KeptCard? = card(key)?.let { KeptCard(it, null) }
+
     /** Keeps the card [text], written for [key]. */
     suspend fun keep(
         key: CardKey,
@@ -71,6 +79,12 @@ interface PipelineCache {
         ) = Unit
     }
 }
+
+/** A card kept: its [text], and when it was written ([writtenAt]), null where the cache does not say. */
+data class KeptCard(
+    val text: String,
+    val writtenAt: Instant?,
+)
 
 /**
  * What a written card depends on (R2, D14): the synthesis cache key, with the track itself as the

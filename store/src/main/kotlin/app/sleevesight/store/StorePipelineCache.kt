@@ -3,6 +3,7 @@ package app.sleevesight.store
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.pipeline.CardKey
 import app.sleevesight.core.pipeline.ClearEpoch
+import app.sleevesight.core.pipeline.KeptCard
 import app.sleevesight.core.pipeline.PipelineCache
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.SourceResult
@@ -58,6 +59,9 @@ class StorePipelineCache(
     }
 
     override suspend fun card(key: CardKey): String? = withContext(io) { caches.synthesis.get(key.toStore())?.text }
+
+    override suspend fun keptCard(key: CardKey): KeptCard? =
+        withContext(io) { caches.synthesis.get(key.toStore())?.let { KeptCard(it.text, it.writtenAt) } }
 
     override suspend fun keep(
         key: CardKey,

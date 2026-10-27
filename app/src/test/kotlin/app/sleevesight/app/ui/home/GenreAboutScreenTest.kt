@@ -10,6 +10,7 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertHeightIsAtLeast
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
@@ -42,8 +43,11 @@ import app.sleevesight.core.settings.Layout
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.synthesis.GroundingCheck
 import app.sleevesight.core.synthesis.InsightReply
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -93,11 +97,12 @@ class GenreAboutScreenTest {
     private inner class Notes(
         private val definition: GenreDefinition? = jazz,
         start: GenreReason = GenreReason.Offered,
+        private val lookedUp: (String) -> Flow<GenreDefinition?> = { flowOf(definition) },
     ) : GenreNotes {
         val reason = MutableStateFlow(start)
         var taps = 0
 
-        override suspend fun definition(genre: String): GenreDefinition? = definition
+        override fun definition(genre: String): Flow<GenreDefinition?> = lookedUp(genre)
 
         override fun reason(
             track: TrackState,
@@ -215,6 +220,36 @@ class GenreAboutScreenTest {
             compose.onNodeWithText(text(R.string.genre_why_failed, text(R.string.home_failure_offline))).assertExists()
             compose.onNodeWithTag(GENRE_WHY_TAG).performScrollTo().performClick()
             assertEquals(1, notes.taps)
+        }
+    }
+
+    @Test
+    fun anotherGenresDefinitionNeverShowsWhileThisOnesIsLookedUp() {
+        // Modal jazz's lookup never answers.
+        val notes = Notes(lookedUp = { genre -> if (genre == "jazz") flowOf(jazz) else flow { awaitCancellation() } })
+        val modal =
+            TrackLabel(
+                GenreLabel(
+                    "modal jazz",
+                    "jazzblues",
+                    "Modal Jazz",
+                    "modaljazz",
+                    level = GenreLevel.ARTIST,
+                    artist = "Miles Davis",
+                ),
+                listOf(LabelCredit(LabelSource.LASTFM, "https://example.org/modal")),
+            )
+        val two =
+            playing.copy(
+                genres = TrackGenres(listOf(GenreRow(GenreLevel.ARTIST, "Miles Davis", listOf(label(), modal)))),
+            )
+        showBox(notes, track = two) {
+            compose.onNodeWithText(jazz.text).assertExists()
+            compose.onNodeWithTag(GENRE_PREFIX + "artist:Miles Davis:modaljazz").performClick()
+            compose.waitForIdle()
+            compose.onNodeWithTag(GENRE_PANEL_HEADING_TAG).assertTextEquals("Modal Jazz")
+            assertEquals(0, count(GENRE_DEFINITION_TAG))
+            compose.onNodeWithText(jazz.text).assertDoesNotExist()
         }
     }
 

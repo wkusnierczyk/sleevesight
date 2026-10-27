@@ -11,7 +11,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -50,15 +50,22 @@ internal fun GenreAbout(
     val notes = shown.notes
     val onCite = shown.onCite
     val modelAllowed = shown.modelAllowed
-    val definition by produceState<GenreDefinition?>(null, genre, notes) { value = notes.definition(genre) }
-    val reason by remember(track, genre, notes) { notes.reason(track, genre) }.collectAsState(GenreReason.None)
+    // A new subscription only when what the reason's key is made of changes, not on every state of
+    // the track (a source landing, labels joining).
+    val reason by remember(track.normalized, track.evidence?.fingerprint, track.genres, genre, notes) {
+        notes.reason(track, genre)
+    }.collectAsState(GenreReason.None)
     val label =
         track.genres.all
             .firstOrNull { it.genre.identity == genre }
             ?.genre
             ?.label ?: return
     val question = stringResource(R.string.genre_why, inSentence(label))
-    definition?.let { Definition(it) }
+    // Its own state per genre: another genre's definition never shows while this one's is looked up.
+    key(genre, notes) {
+        val definition by remember { notes.definition(genre) }.collectAsState(null)
+        definition?.let { Definition(it) }
+    }
     when (val shown = reason) {
         GenreReason.None -> Unit
         GenreReason.Offered -> WhyButton(question) { notes.explain(track, genre) }
