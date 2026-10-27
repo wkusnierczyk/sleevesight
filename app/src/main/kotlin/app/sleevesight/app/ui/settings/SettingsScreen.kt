@@ -429,10 +429,10 @@ private fun SettingsColumn(
 ) {
     val secrets = keys.states
     val chip = sectionChipWidth()
+    // Asked off the main thread from the start, so a search finds them as soon as it begins.
+    val players = listedPlayers(settings.followedPlayers.keys, navigation.players).orEmpty().map { it.name }
     val found =
         if (folds.searching) {
-            val players =
-                listedPlayers(settings.followedPlayers.keys, navigation.players).orEmpty().map { it.name }
             matches(settingsIndex(settings, keys, players, navigation.modelName), folds.query)
         } else {
             null

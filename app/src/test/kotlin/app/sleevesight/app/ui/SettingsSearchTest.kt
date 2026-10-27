@@ -202,6 +202,8 @@ class SettingsSearchTest {
         runBlocking { settings.update { it.copy(followedPlayers = mapOf("org.example.tunes" to true)) } }
         show {
             search("example.tunes")
+            // The players are listed off the main thread (#579), which the clock does not wait for.
+            compose.waitUntil(5_000) { count(SettingsSection.PLAYERS.panelTag) == 1 }
             assertEquals(listOf(SettingsSection.PLAYERS), shownSections())
             assertEquals(listOf("Player org.example.tunes"), rowsOf(SettingsSection.PLAYERS))
         }
