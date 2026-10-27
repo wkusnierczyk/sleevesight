@@ -69,7 +69,9 @@ data class Options(
               --out <file>        also write the report to this file
               --fixtures <dir>    the fixtures directory (default: fixtures)
               --cache <file|none> the cache database (default: a fresh temporary one for replay,
-                                  .dev/cli/cache.db for live; none for record)
+                                  .dev/cli/cache.db for live; none for record); each start
+                                  deletes its expired entries, and its insights older than the
+                                  app's default Keep history for (90 days)
               --provider <name>   the AI service: anthropic, openai or google (default: the one
                                   --record names, else anthropic); openai only for live, since
                                   only Anthropic's and Google's replies are recorded and replayed
