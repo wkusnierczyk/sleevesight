@@ -1,15 +1,25 @@
 package app.sleevesight.sources.wikipedia
 
 import app.sleevesight.core.genres.GenreDefinition
+import app.sleevesight.core.genres.GenreDefinitions
+import app.sleevesight.core.genres.GenreVocabulary
+import app.sleevesight.core.platform.JvmResourceReader
 import app.sleevesight.core.resolution.Lookup
 import app.sleevesight.core.resolution.WdEntity
 import app.sleevesight.core.resolution.WikidataLookup
+import app.sleevesight.core.testing.MemoryArtistResults
+import app.sleevesight.net.NetClient
 import app.sleevesight.net.NetError
+import app.sleevesight.net.NetRequest
+import app.sleevesight.net.NetResponse
+import app.sleevesight.net.NetResult
 import app.sleevesight.sources.web.ReplayNetClient
+import app.sleevesight.sources.wikidata.WikidataClient
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 
 /** A MusicBrainz genre's article (#523): its Wikidata item, the item's English article, its first two sentences. */
 class WikipediaGenresTest {
@@ -105,6 +115,75 @@ class WikipediaGenresTest {
             val down = WikipediaClient(ReplayNetClient.failing(NetError.Offline("SocketTimeoutException")))
             assertIs<Lookup.Failed>(WikipediaGenres(found, down).definition(HARD_BOP))
         }
+
+    @Test
+    fun `of several items holding the genre's id, the lowest-numbered with an article is quoted, whatever the search's order`() =
+        runTest {
+            val articles = mapOf("Q20" to "Hard bop (later)", "Q3" to "Hard bop")
+            val wikidata = Wikidata(mapOf(HARD_BOP to listOf("Q20", "Q3")), articles)
+            val wikipedia = WikipediaClient(ReplayNetClient.ok(lead("Hard bop is jazz.")))
+            val found = WikipediaGenres(wikidata, wikipedia).definition(HARD_BOP)
+            assertEquals("Hard bop", (found as Lookup.Found).value.title)
+        }
+
+    @Test
+    fun `abbreviations, initials and decimals do not cut a sentence`() {
+        val text =
+            "Grunge emerged in the U.S. state of Washington. It began in St. Louis in 1.5 decades. Third."
+        assertEquals(
+            "Grunge emerged in the U.S. state of Washington. It began in St. Louis in 1.5 decades.",
+            WikipediaGenres.opening(text),
+        )
+    }
+
+    @Test
+    fun `a paragraph the quote splitter refuses, for an inch mark, is still split`() {
+        // `WikipediaSource.split` gives nothing for a paragraph with a quote after a digit.
+        val text = "Hardcore was first sold on 12\" singles. It grew fast. Later it spread."
+        assertEquals(emptyList<String>(), WikipediaSource.split(text))
+        assertEquals("Hardcore was first sold on 12\" singles. It grew fast.", WikipediaGenres.opening(text))
+    }
+
+    @Test
+    fun `an error envelope in an answer of status 200 is a failed lookup, not none`() =
+        runTest {
+            val envelope = """{"error":{"code":"ratelimited","info":"You've exceeded your rate limit."}}"""
+            val wikidata = WikidataClient(ReplayNetClient.ok(envelope))
+            assertIs<Lookup.Failed>(wikidata.itemsWithStatement(WikipediaGenres.MUSICBRAINZ_GENRE, HARD_BOP))
+            assertIs<Lookup.Failed>(wikidata.entities(listOf("Q1")))
+            assertIs<Lookup.Failed>(WikipediaClient(ReplayNetClient.ok(envelope)).lead("Jazz"))
+            assertIs<Lookup.Failed>(WikipediaClient(ReplayNetClient.ok(envelope)).pages(listOf("Jazz")))
+        }
+
+    @Test
+    fun `a definition refused by a rate limit is not kept, and the next panel looks it up again`() =
+        runTest {
+            val envelope = """{"error":{"code":"ratelimited"}}"""
+            val search = """{"query":{"search":[{"title":"Q8341"}]}}"""
+            val entities = """{"entities":{"Q8341":{"sitelinks":{"enwiki":{"title":"Jazz"}}}}}"""
+            val net = Sequenced(listOf(envelope, search, entities, lead("Jazz is a music genre.")))
+            val definitions =
+                GenreDefinitions(
+                    WikipediaGenres(WikidataClient(net), WikipediaClient(net)),
+                    GenreVocabulary.load(JvmResourceReader),
+                    kept = MemoryArtistResults(),
+                )
+            assertNull(definitions.of("jazz"))
+            assertEquals("Jazz is a music genre.", definitions.of("jazz")?.text)
+            assertEquals(4, net.sent)
+        }
+
+    // Answers each request with the next of [bodies], status 200.
+    private class Sequenced(
+        private val bodies: List<String>,
+    ) : NetClient {
+        var sent = 0
+
+        override suspend fun send(request: NetRequest): NetResult<NetResponse> =
+            NetResult.Success(NetResponse(200, emptyMap(), bodies[sent++].encodeToByteArray()))
+
+        override fun close() = Unit
+    }
 
     private companion object {
         const val HARD_BOP = "hard-bop-mbid"

@@ -8,8 +8,8 @@ import app.sleevesight.sources.lastfm.LastFmBio
 
 /**
  * A MusicBrainz genre's English Wikipedia article, as a genre's panel quotes it (#523): the
- * Wikidata items holding the genre's id ([MUSICBRAINZ_GENRE], `P8052`), the first of them with an
- * English article (its `enwiki` sitelink), and that article's first [SENTENCES] sentences, from
+ * Wikidata items holding the genre's id ([MUSICBRAINZ_GENRE], `P8052`), the first of them, by
+ * their number (`Q181010`), with an English article (its `enwiki` sitelink), and that article's first [SENTENCES] sentences, from
  * its lead's plain text, tidied and split as the Wikipedia adapter splits it
  * ([WikipediaSource.split], else, for a paragraph it gives none of, [LastFmBio.split]). Three
  * requests at most, all to Wikimedia, which needs no key; the text is CC BY-SA 4.0, credited with a
@@ -20,7 +20,9 @@ class WikipediaGenres(
     private val wikipedia: WikipediaClient,
 ) : GenreArticles {
     override suspend fun definition(musicBrainzGenre: String): Lookup<GenreDefinition> =
-        wikidata.itemsWithStatement(MUSICBRAINZ_GENRE, musicBrainzGenre).then { items ->
+        wikidata.itemsWithStatement(MUSICBRAINZ_GENRE, musicBrainzGenre).then { found ->
+            // The lowest-numbered item first, so several holding one id always give the same article.
+            val items = found.sortedBy { it.removePrefix("Q").toLongOrNull() ?: Long.MAX_VALUE }
             if (items.isEmpty()) return@then Lookup.NotFound
             wikidata.entities(items).then { entities ->
                 val title = items.firstNotNullOfOrNull { entities[it]?.enwiki } ?: return@then Lookup.NotFound
