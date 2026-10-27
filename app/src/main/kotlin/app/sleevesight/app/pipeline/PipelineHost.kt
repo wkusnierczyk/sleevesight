@@ -750,7 +750,9 @@ class PipelineHost(
         failedKey: RunKey?,
     ): Shown {
         val own = failing(offering(track, owner), failedKey)
-        val card = cardFor(owner, own)?.takeIf { lacksInsight(own) }
+        // A look again that found nothing new (#617) shows the card paid for, not the one its run
+        // found in the cache under the settings as they are now.
+        val card = cardFor(owner, own)?.takeIf { lacksInsight(own) || owner.foundNothingNew }
         val failure =
             when (val insight = own.insight) {
                 is InsightState.Failed -> insight.reason

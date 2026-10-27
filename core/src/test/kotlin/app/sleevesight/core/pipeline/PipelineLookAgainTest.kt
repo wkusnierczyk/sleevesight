@@ -1,6 +1,7 @@
 package app.sleevesight.core.pipeline
 
 import app.sleevesight.core.evidence.Scope
+import app.sleevesight.core.evidence.bringsNewSince
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
@@ -191,7 +192,7 @@ class PipelineLookAgainTest {
         }
 
     @Test
-    fun `a source with a new line keeps its earlier lines of the scopes it lacks, and is cached so`() =
+    fun `a source with a new line keeps its earlier lines of the scopes it lacks, and is not cached so`() =
         runTest {
             val cache = MemoryCache()
             val song = line(SourceId.WIKIPEDIA, "The song.")
@@ -210,11 +211,71 @@ class PipelineLookAgainTest {
 
             val shown = (state.sources[SourceId.WIKIPEDIA] as SourceState.Done).result.evidence.map { it.text }
             assertEquals(listOf("The song, again.", "The artist."), shown)
-            // What is shown is kept, the earlier lines carried with the new one.
+            // Lines carried keep their own lifetime: the entry kept before stays.
             assertEquals(
-                listOf("The song, again.", "The artist."),
+                listOf("The song.", "The artist."),
                 cache.results[SourceId.WIKIPEDIA to kept]?.evidence?.map { it.text },
             )
+        }
+
+    @Test
+    fun `a two-artist track whose first artist's article fails keeps that artist's lines beside the other's new one`() =
+        runTest {
+            fun artist(
+                text: String,
+                page: String,
+            ) = line(SourceId.WIKIPEDIA, text, Scope.ARTIST).copy(url = page)
+            val first = artist("A is a singer.", "https://en.wikipedia.org/wiki/A")
+            var answer =
+                SourceResult(
+                    Outcome.ArtistArticle,
+                    listOf(first, artist("B is a drummer.", "https://en.wikipedia.org/wiki/B")),
+                    Duration.ZERO,
+                )
+            val wikipedia = FakeAdapter(SourceId.WIKIPEDIA, verifies = false) { _, _ -> answer }
+            val pipeline = pipeline(listOf(wikipedia), FakeResolver(), MemoryCache())
+            val before = granting()
+            pipeline.run(sundown, before)
+
+            // A's article did not answer; B's says something new.
+            answer =
+                SourceResult(
+                    Outcome.ArtistArticle,
+                    listOf(artist("B is a drummer and a singer.", "https://en.wikipedia.org/wiki/B")),
+                    Duration.ZERO,
+                )
+            val state = pipeline.run(sundown, granting(), lookAgain = LookAgain(before.gathered.single()))
+
+            val shown = (state.sources[SourceId.WIKIPEDIA] as SourceState.Done).result.evidence.map { it.text }
+            assertEquals(listOf("B is a drummer and a singer.", "A is a singer."), shown)
+        }
+
+    @Test
+    fun `a count of listeners that changed is nothing new, against a marked line`() =
+        runTest {
+            fun counted(n: String) =
+                SourceResult(
+                    Outcome.ArtistArticle,
+                    listOf(
+                        line(
+                            SourceId.LASTFM,
+                            "Last.fm counts $n listeners for X.",
+                            Scope.ARTIST,
+                        ).copy(aggregate = true),
+                    ),
+                    Duration.ZERO,
+                )
+            var answer = counted("683,942")
+            val lastFm = FakeAdapter(SourceId.LASTFM, verifies = false) { _, _ -> answer }
+            val pipeline = pipeline(listOf(lastFm), FakeResolver(), MemoryCache())
+            val first = granting()
+            pipeline.run(sundown, first)
+
+            answer = counted("690,001")
+            val looking = granting()
+            pipeline.run(sundown, looking, lookAgain = LookAgain(first.gathered.single()))
+
+            assertEquals(false, looking.assembled.single().bringsNewSince(first.assembled.single()))
         }
 
     @Test

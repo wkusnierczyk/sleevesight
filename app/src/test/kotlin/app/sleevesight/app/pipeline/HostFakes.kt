@@ -144,6 +144,9 @@ internal class CardCache(
     /** Forgets every card, as an eviction would. */
     fun clearCards() = cards.clear()
 
+    /** Every card kept now reads [text], as cards kept under other settings would (#617). */
+    fun replaceCards(text: String) = cards.replaceAll { _, _ -> text }
+
     override suspend fun result(
         adapter: SourceAdapter,
         track: NormalizedTrack,

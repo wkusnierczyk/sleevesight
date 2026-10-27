@@ -561,7 +561,8 @@ data class CoordinatorState(
      * shown at the tap cites; [foundNew], once the run's own evidence is assembled, whether it holds
      * a line that says what none of [shown]'s says (`EvidenceSet.bringsNewSince`: order, spacing,
      * case, typography and lines missing never count); null before. [rewriting] whether the run it
-     * replaced offered *Rewrite insight* (a settings change since the card was written). A look
+     * replaced offered *Rewrite insight* for a settings change since the card was written (not for
+     * what an earlier look again found). A look
      * again never writes: when it found something new, its question is answered by offering
      * *Rewrite insight*, the paid call made only on a tap of its own (`WriteTapped`); when not, it
      * offers it only if [rewriting].
@@ -1218,7 +1219,13 @@ class PipelineCoordinator(
                 id,
                 run.key,
                 run.nowPlaying,
-                lookAgain = CoordinatorState.LookingAgain(shown, rewriting = state.rewrites()),
+                // Only a settings change's offer carries on, not one an earlier look again made.
+                lookAgain =
+                    CoordinatorState.LookingAgain(
+                        shown,
+                        rewriting =
+                            run.lookAgain?.rewriting ?: state.rewrites(),
+                    ),
             )
         state = state.copy(runs = id.value, run = looking)
         effects += CoordinatorEffect.StartRun(id, run.nowPlaying, lookAgain = LookAgain(gathered))

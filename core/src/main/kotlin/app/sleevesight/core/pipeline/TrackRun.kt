@@ -223,7 +223,7 @@ internal class TrackRun(
                 // A bug in one adapter must not take the others down; its type is logged.
                 SourceState.Failed(nameOf(e))
             }
-        // A look again (#617) shows, and keeps, what it found unless that says nothing new.
+        // A look again (#617) shows what it found, or what was found before when it found nothing new.
         val shown = input.lookAgain?.kept(adapter.id, landed) ?: landed
         land(adapter.id, shown)
         if (landed is SourceState.Done && landed.result.outcome != Outcome.Unreachable) {
@@ -236,16 +236,16 @@ internal class TrackRun(
                     emit(PipelineEvent.NotCached(key, adapter.id, PROVISIONAL))
                 }
 
-                input.lookAgain?.keepsBefore(adapter.id, shown) == true -> {
-                    emit(PipelineEvent.NotCached(key, adapter.id, NOTHING_NEW))
+                // A look again (#617) that shows what was found before, in whole or in part: the
+                // entry kept stays, and the lines carried keep their own lifetime.
+                shown !== landed -> {
+                    emit(PipelineEvent.NotCached(key, adapter.id, KEPT_BEFORE))
                 }
 
                 else -> {
-                    // What is shown: the fresh result, with a look again's earlier lines carried.
-                    val kept = (shown as? SourceState.Done)?.result ?: landed.result
                     guard.attempt(
                         "write ${adapter.id.tag}",
-                    ) { parts.cache.keep(adapter, track, nowPlaying.duration, kept) }
+                    ) { parts.cache.keep(adapter, track, nowPlaying.duration, landed.result) }
                 }
             }
         }
@@ -324,7 +324,7 @@ internal class TrackRun(
 
         const val PROVISIONAL: String = "a request of its verification failed, so a later lookup may verify it"
 
-        const val NOTHING_NEW: String = "a look again found nothing new, so the result kept before stays (#617)"
+        const val KEPT_BEFORE: String = "a look again shows lines found before, which keep their own lifetime (#617)"
 
         fun nameOf(e: Throwable): String = e::class.simpleName ?: "Exception"
 

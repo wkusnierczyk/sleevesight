@@ -302,9 +302,11 @@ class LastFmAdapter(
         /**
          * [extractionVersion]. 2: a page other MusicBrainz artists of its name may share has only its
          * bio verified (#75). 3: without genres, no line of the artist's tags (#545); 1002, the
-         * version without genres before it, holds that line and must not be served.
+         * version without genres before it, holds that line and must not be served. 4: the lines of
+         * counts and lists are marked `aggregate` (#617), which results kept before lack, so *Look
+         * again* would take a count that changed in them for something new.
          */
-        const val EXTRACTION_VERSION: Int = 3
+        const val EXTRACTION_VERSION: Int = 4
 
         /**
          * The extraction version of what the artist cache keeps ([ARTIST_PART],

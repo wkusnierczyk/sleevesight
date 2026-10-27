@@ -1,6 +1,8 @@
 package app.sleevesight.core.pipeline
 
+import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.LineContent
+import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.sources.Resolution
@@ -16,9 +18,12 @@ import app.sleevesight.core.sources.SourceResult
  * unless the fresh lookup brought a line that says what none of [before]'s lines from it say
  * ([LineContent]): so a source that failed, failed in part, was left provisional, or was judged
  * against a resolution that could not be made keeps what it found then, and so does one that found
- * the same again. A source that brought a new line but lacks lines of a scope it had before (an
- * artist's article that did not answer, beside a new line about the song) keeps [before]'s lines of
- * those scopes beside the fresh ones. An unreachable resolution is [before]'s when that run made one.
+ * the same again. A source that brought a new line but lacks a kind of line it had before keeps
+ * [before]'s lines of that kind beside the fresh ones: an artist's lines by the page they cite, so
+ * each credited artist's are its own (one artist's article that did not answer, beside a new line
+ * about another), other lines by their scope. An unreachable resolution is [before]'s when that
+ * run made one. The retrieval cache keeps a fresh result only as it came: one shown with [before]'s
+ * state, or with lines carried from it, is not kept, so lines carried keep their own lifetime.
  */
 class LookAgain(
     val before: Gathered,
@@ -40,17 +45,6 @@ class LookAgain(
         }
     }
 
-    /**
-     * Whether [shown], what the look again shows of [source], is [before]'s state: the fresh lookup
-     * brought nothing new from it. It is then not kept in the retrieval cache, so a fuller entry is
-     * not replaced by a partial one, and a later run still finds the card written from it; what is
-     * shown otherwise (the fresh result, with earlier lines carried) is kept, as a usual lookup's.
-     */
-    internal fun keepsBefore(
-        source: SourceId,
-        shown: SourceState,
-    ): Boolean = shown === before.sources[source]
-
     /** The resolution made before, when [fresh] could not be made and the run before made one; else null. */
     internal fun resolution(fresh: Resolution): Resolution? =
         before.resolution?.takeIf { fresh.outcome == Outcome.Unreachable && it.outcome != Outcome.Unreachable }
@@ -65,13 +59,17 @@ class LookAgain(
 
     private fun contents(result: SourceResult): List<LineContent> = result.evidence.map(LineContent::of)
 
-    // [fresh] with [earlier]'s lines of the scopes it lacks, or null when it lacks none.
+    // [fresh] with [earlier]'s lines of the kinds it lacks, or null when it lacks none.
     private fun carried(
         fresh: SourceResult,
         earlier: SourceResult,
     ): SourceResult? {
-        val scopes = fresh.evidence.map { it.scope }.toSet()
-        val missing = earlier.evidence.filter { it.scope !in scopes }
+        val kinds = fresh.evidence.map(::kind).toSet()
+        val missing = earlier.evidence.filter { kind(it) !in kinds }
         return if (missing.isEmpty()) null else fresh.copy(evidence = fresh.evidence + missing)
     }
+
+    // A kind of line, as carried: an artist's lines by their page (each artist's own), others by scope.
+    private fun kind(line: EvidenceDraft): Pair<Scope, String?> =
+        line.scope to line.url?.takeIf { line.scope == Scope.ARTIST }
 }

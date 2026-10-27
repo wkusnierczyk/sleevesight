@@ -136,6 +136,30 @@ internal class PipelineHostLookAgainTest : PipelineHostFixture() {
         }
 
     @Test
+    fun `finding nothing new shows the card paid for, not another the cache holds under the settings now`() =
+        runTest {
+            written()
+            val paid =
+                (
+                    host.state.value.track
+                        ?.insight as InsightState.Written
+                ).grounded.text
+            cache.replaceCards("It is another song [MB1].")
+            lookAgain()
+            settle()
+
+            assertTrue(host.state.value.nothingNew)
+            assertTrue(host.state.value.cardShown)
+            assertEquals(
+                paid,
+                (
+                    host.state.value.track
+                        ?.insight as InsightState.Written
+                ).grounded.text,
+            )
+        }
+
+    @Test
     fun `finding something new, Rewrite insight is offered, and its tap writes from it, in one call`() =
         runTest {
             written()

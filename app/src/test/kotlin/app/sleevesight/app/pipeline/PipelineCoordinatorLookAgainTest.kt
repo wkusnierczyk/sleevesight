@@ -56,6 +56,23 @@ class PipelineCoordinatorLookAgainTest {
     }
 
     @Test
+    fun `an offer a look again made is not carried by the next look again, which finds nothing new`() {
+        val world = written()
+        world.evidenceText = "Evidence 2."
+        world.lookAgain()
+        world.settle()
+        assertEquals(world.key("A"), world.coordinator.state.writeKey)
+
+        world.evidenceText = "Evidence 1."
+        world.lookAgain()
+        world.settle()
+
+        assertTrue(world.coordinator.state.foundNothingNew)
+        assertNull(world.coordinator.state.writeKey)
+        assertEquals(1, world.calls["A"])
+    }
+
+    @Test
     fun `the same evidence spaced otherwise is nothing new`() {
         val world = written()
         world.evidenceText = "  Evidence\n  1.  "
