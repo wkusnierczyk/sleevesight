@@ -6,13 +6,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ButtonDefaults
@@ -64,7 +62,8 @@ internal fun HomeGuide(
 }
 
 /**
- * *Dismiss*, after the insight card's split button ([WriteSplitButton]), outlined: the leading half
+ * *Dismiss*, after the insight card's split button ([WriteSplitButton]), outlined, laid out by its
+ * [Halves] (32 dp high as drawn, each half a 48 dp target): the leading half
  * dismisses the guide as the menu says, *Dismiss once* until another is chosen, and says *Dismiss*
  * either way; the arrow opens the menu. A screen reader reads the arrow as *Dismiss options: <the
  * choice>*, a drop-down list, the choices as one choice among them, the chosen one selected, and
@@ -78,22 +77,24 @@ private fun DismissButton(
 ) {
     var never by rememberSaveable { mutableStateOf(false) }
     var open by remember { mutableStateOf(false) }
-    Row(horizontalArrangement = Arrangement.spacedBy(GAP), verticalAlignment = Alignment.CenterVertically) {
+    val choice = stringResource(if (never) R.string.home_guide_dismiss_never else R.string.home_guide_dismiss_once)
+    val described = stringResource(R.string.home_guide_dismiss_options, choice)
+    // Laid out as the insight card's split button is: 32 dp high as drawn, each half a 48 dp target.
+    Halves(Modifier) {
         OutlinedButton(
             onClick = if (never) onNever else onDismissOnce,
-            modifier = Modifier.testTag(GUIDE_DISMISS_TAG).heightIn(min = TARGET),
+            modifier = Modifier.testTag(GUIDE_DISMISS_TAG),
             shape = RoundedCornerShape(OUTER_CORNER, INNER_CORNER, INNER_CORNER, OUTER_CORNER),
+            contentPadding = PADDING,
         ) { Text(stringResource(R.string.home_guide_dismiss)) }
-        val choice = stringResource(if (never) R.string.home_guide_dismiss_never else R.string.home_guide_dismiss_once)
-        val described = stringResource(R.string.home_guide_dismiss_options, choice)
         val shape = RoundedCornerShape(INNER_CORNER, OUTER_CORNER, OUTER_CORNER, INNER_CORNER)
         Box {
             Box(
                 modifier =
                     Modifier
                         .testTag(GUIDE_DISMISS_MENU_TAG)
-                        .heightIn(min = TARGET)
-                        .widthIn(min = TARGET)
+                        // As wide and high as [Halves] has it: 48 dp, and the leading half's height.
+                        .fillMaxSize()
                         .clip(shape)
                         .border(ButtonDefaults.outlinedButtonBorder(), shape)
                         .clickable(role = Role.DropdownList) { open = true }

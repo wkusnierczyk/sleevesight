@@ -18,7 +18,9 @@ import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -356,21 +358,20 @@ private fun MiniWrite(modifier: Modifier) {
         val colours = MaterialTheme.colorScheme
         Box(
             Modifier
-                .heightIn(min = 40.dp)
+                .heightIn(min = HEIGHT)
                 .clip(RoundedCornerShape(OUTER_CORNER, INNER_CORNER, INNER_CORNER, OUTER_CORNER))
                 .background(colours.primary)
-                .padding(horizontal = 24.dp),
+                .padding(PADDING),
             contentAlignment = Alignment.Center,
         ) {
-            Text(
-                stringResource(R.string.home_write),
-                style = MaterialTheme.typography.labelLarge,
-                color = colours.onPrimary,
-            )
+            // With the **AI** mark, as Home's Write has it (#624).
+            CompositionLocalProvider(LocalContentColor provides colours.onPrimary) {
+                ProvideTextStyle(MaterialTheme.typography.labelLarge) { AiLabel(stringResource(R.string.home_write)) }
+            }
         }
         Box(
             Modifier
-                .size(48.dp, 40.dp)
+                .size(TARGET, HEIGHT)
                 .clip(RoundedCornerShape(INNER_CORNER, OUTER_CORNER, OUTER_CORNER, INNER_CORNER))
                 .background(colours.primary),
             contentAlignment = Alignment.Center,
