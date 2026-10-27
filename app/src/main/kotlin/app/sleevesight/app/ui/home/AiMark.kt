@@ -25,14 +25,15 @@ import kotlin.math.roundToInt
 // source chips' letters.
 
 /**
- * A small mark's alpha against the text beside it: the source chips' letters (`MB`, `W`) and the
- * **AI** mark, there to be found when looked for, quieter than the words they go with.
+ * A small mark's alpha against the text beside it: the **AI** mark (as the source chips' letters,
+ * `MB`, `W`, were set before *Sources*' table, #662), there to be found when looked for, quieter
+ * than the words it goes with.
  */
 internal const val MARK_ALPHA = 0.75f
 
 /**
  * The label of a button whose tap makes a call to the AI service (#624): [label], then a small,
- * dimmed **AI**, set as the source chips' letters are (`labelSmall`, at [MARK_ALPHA] of the
+ * dimmed **AI**, set as the source chips' letters were (`labelSmall`, at [MARK_ALPHA] of the
  * label's colour) but after the label, on its baseline. It goes in the button's content slot, in
  * place of the label's `Text`: `Button(onClick) { AiLabel(label) }`. Every button that calls the AI
  * shows its label through it, and no other does: not *Stop writing*, not the split button's arrow.

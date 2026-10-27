@@ -67,7 +67,6 @@ import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.settings.Settings
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -80,9 +79,9 @@ import kotlin.math.abs
 
 /**
  * *Sources* on Home as a chip that opens its panel (#623): the chip drawn and read as a genre chip
- * is, the panel with its heading and *Close*, the focus moved between them, and the filter chips
- * inside drawn as genre chips, shown or hidden. What unfolds the list and how far is
- * `SourcesFoldScreenTest`'s.
+ * is, the panel with its heading and *Close*, the focus moved between them, and the table's chips
+ * inside read as switches, shown or hidden; how they are drawn is `SourcesTableScreenTest`'s. What
+ * unfolds the list and how far is `SourcesFoldScreenTest`'s.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w411dp-h891dp-420dpi")
@@ -223,9 +222,6 @@ class SourcesPanelScreenTest {
     // What a chip is drawn on: its top left corner, outside its rounded end.
     private fun groundOf(chip: Bitmap) = chip.getPixel(1, 1)
 
-    // A chip's left edge at mid-height: its outline, if it has one.
-    private fun edgeOf(chip: Bitmap) = chip.getPixel(1, chip.height / 2)
-
     private fun near(
         a: Int,
         b: Int,
@@ -286,7 +282,7 @@ class SourcesPanelScreenTest {
                 .assertTextEquals(text(R.string.page_close))
                 .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
                 .assertTouchHeightIsEqualTo(48.dp)
-            // Inside: the filter chips and the lines.
+            // Inside: the table of the sources and the lines.
             compose.onNodeWithTag(CHIP_PREFIX + "MB").assertExists()
             compose.onNodeWithTag(LINE_PREFIX + "MB1").assertExists()
 
@@ -344,25 +340,7 @@ class SourcesPanelScreenTest {
         }
 
     @Test
-    @GraphicsMode(GraphicsMode.Mode.NATIVE)
-    fun aSourceShownHasAGenreChipsFillAndOneHiddenIsOutlinedWithNone() =
-        show {
-            tap(SOURCES_CHIP_TAG)
-            tap(CHIP_PREFIX + "W")
-            val shown = picture(CHIP_PREFIX + "MB")
-            val hidden = picture(CHIP_PREFIX + "W")
-            assertTrue("a shown chip has a fill: ${hex(fillOf(shown))}", !near(fillOf(shown), groundOf(shown)))
-            assertTrue(
-                "a hidden chip has none: ${hex(fillOf(hidden))} on ${hex(groundOf(hidden))}",
-                near(fillOf(hidden), groundOf(hidden)),
-            )
-            assertTrue("a hidden chip is outlined: ${hex(edgeOf(hidden))}", !near(edgeOf(hidden), groundOf(hidden)))
-            assertTrue("a shown chip is not: ${hex(edgeOf(shown))}", near(edgeOf(shown), fillOf(shown)))
-            assertNotEquals(fillOf(shown), fillOf(hidden))
-        }
-
-    @Test
-    fun aScreenReaderReadsEachFilterChipAsASwitchWithWhetherItsLinesShow() =
+    fun aScreenReaderReadsEachTableChipAsASwitchWithWhetherItsLinesShow() =
         show {
             tap(SOURCES_CHIP_TAG)
             tap(CHIP_PREFIX + "W")
