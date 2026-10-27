@@ -19,7 +19,6 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
-import kotlin.test.assertNull
 
 /** A MusicBrainz genre's article (#523): its Wikidata item, the item's English article, its first two sentences. */
 class WikipediaGenresTest {
@@ -168,8 +167,11 @@ class WikipediaGenresTest {
                     GenreVocabulary.load(JvmResourceReader),
                     kept = MemoryArtistResults(),
                 )
-            assertNull(definitions.of("jazz"))
-            assertEquals("Jazz is a music genre.", definitions.of("jazz")?.text)
+            assertIs<Lookup.Failed>(definitions.lookup("jazz"))
+            assertEquals(
+                "Jazz is a music genre.",
+                assertIs<Lookup.Found<GenreDefinition>>(definitions.lookup("jazz")).value.text,
+            )
             assertEquals(4, net.sent)
         }
 

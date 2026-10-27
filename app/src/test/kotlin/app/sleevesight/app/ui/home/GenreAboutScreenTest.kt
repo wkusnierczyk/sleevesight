@@ -39,6 +39,7 @@ import app.sleevesight.core.genres.TrackGenres
 import app.sleevesight.core.genres.TrackLabel
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.TrackState
+import app.sleevesight.core.resolution.Lookup
 import app.sleevesight.core.settings.Layout
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.synthesis.GroundingCheck
@@ -97,12 +98,14 @@ class GenreAboutScreenTest {
     private inner class Notes(
         private val definition: GenreDefinition? = jazz,
         start: GenreReason = GenreReason.Offered,
-        private val lookedUp: (String) -> Flow<GenreDefinition?> = { flowOf(definition) },
+        private val lookedUp: (String) -> Flow<Lookup<GenreDefinition>?> = {
+            flowOf(definition?.let { Lookup.Found(it) } ?: Lookup.NotFound)
+        },
     ) : GenreNotes {
         val reason = MutableStateFlow(start)
         var taps = 0
 
-        override fun definition(genre: String): Flow<GenreDefinition?> = lookedUp(genre)
+        override fun definition(genre: String): Flow<Lookup<GenreDefinition>?> = lookedUp(genre)
 
         override fun reason(
             track: TrackState,
@@ -226,7 +229,16 @@ class GenreAboutScreenTest {
     @Test
     fun anotherGenresDefinitionNeverShowsWhileThisOnesIsLookedUp() {
         // Modal jazz's lookup never answers.
-        val notes = Notes(lookedUp = { genre -> if (genre == "jazz") flowOf(jazz) else flow { awaitCancellation() } })
+        val notes =
+            Notes(lookedUp = { genre ->
+                if (genre ==
+                    "jazz"
+                ) {
+                    flowOf(Lookup.Found(jazz))
+                } else {
+                    flow { awaitCancellation() }
+                }
+            })
         val modal =
             TrackLabel(
                 GenreLabel(
@@ -254,8 +266,27 @@ class GenreAboutScreenTest {
     }
 
     @Test
+    fun aGenreWithNoArticleSaysSoInTheDefinitionsPlace() =
+        showBox(Notes(definition = null)) {
+            assertEquals(0, count(GENRE_DEFINITION_TAG))
+            compose.onNodeWithTag(GENRE_NO_DEFINITION_TAG).assertTextEquals(text(R.string.genre_definition_none))
+            assertEquals("Wikipedia has no article for this genre.", text(R.string.genre_definition_none))
+            val tops = listOf(GENRE_PANEL_HEADING_TAG, GENRE_NO_DEFINITION_TAG, GENRE_WHY_TAG).map(::top)
+            assertEquals(tops.sorted(), tops)
+        }
+
+    @Test
+    fun noLineWhileTheDefinitionIsLookedUpOrAfterAFailedLookup() {
+        showBox(Notes(lookedUp = { flowOf(null) })) { assertEquals(0, count(GENRE_NO_DEFINITION_TAG)) }
+        showBox(Notes(lookedUp = { flowOf(Lookup.Failed("offline")) })) {
+            assertEquals(0, count(GENRE_NO_DEFINITION_TAG))
+            assertEquals(0, count(GENRE_DEFINITION_TAG))
+        }
+    }
+
+    @Test
     fun noDefinitionAndNoWhyLeaveTheTableAlone() =
-        showBox(Notes(definition = null, start = GenreReason.None)) {
+        showBox(Notes(lookedUp = { flowOf(null) }, start = GenreReason.None)) {
             assertEquals(0, count(GENRE_DEFINITION_TAG))
             assertEquals(0, count(GENRE_WHY_TAG))
             assertEquals(0, count(GENRE_REASON_TAG))

@@ -33,7 +33,7 @@ fun interface GenreArticles {
  * The definitions a genre's panel shows (#523; `design/design.md`, *Genre labels*): a genre's own,
  * the same for every track, so each is found once and kept per genre, by its MusicBrainz genre
  * ([GenreVocabulary.musicBrainzGenre]). A genre that is not one of MusicBrainz's has none, nor one
- * whose genre has no English article; *Why is this …?* is offered either way.
+ * whose genre has no English article, and its panel says so; *Why is this …?* is offered either way.
  *
  * Kept in [kept], the artist-level cache's table (#238), under [PART], for Wikipedia's lifetime
  * (*How long each source's findings are kept*, D9), whatever *Keep what sources said about each
@@ -53,11 +53,12 @@ class GenreDefinitions(
     private val kept = KeptTags(PART, kept, clock, lifetime, capacity)
 
     /**
-     * The definition of the genre [identity] stands for ([GenreLabel.identity]), kept or looked up;
-     * null when it has none, or the lookup failed.
+     * The definition of the genre [identity] stands for ([GenreLabel.identity]), kept or looked up:
+     * not found when it has none (it is not one of MusicBrainz's genres, or its genre has no English
+     * article), which its panel says (#663); failed when the lookup failed, and nothing is kept.
      */
-    suspend fun of(identity: String): GenreDefinition? {
-        val genre = vocabulary.musicBrainzGenre(identity) ?: return null
+    suspend fun lookup(identity: String): Lookup<GenreDefinition> {
+        val genre = vocabulary.musicBrainzGenre(identity) ?: return Lookup.NotFound
         val found =
             kept.tagsOf(genre) {
                 when (val answer = articles.definition(genre)) {
@@ -66,7 +67,11 @@ class GenreDefinitions(
                     is Lookup.Failed -> answer
                 }
             }
-        return found?.takeIf { it.size == FIELDS }?.let { (text, title, url) -> GenreDefinition(text, title, url) }
+        return when {
+            found == null -> Lookup.Failed(FAILED)
+            found.size == FIELDS -> found.let { (text, title, url) -> Lookup.Found(GenreDefinition(text, title, url)) }
+            else -> Lookup.NotFound
+        }
     }
 
     companion object {
@@ -83,5 +88,8 @@ class GenreDefinitions(
         const val DEFAULT_CAPACITY: Int = 200
 
         private const val FIELDS = 3
+
+        /** Why a lookup failed: the request's own reason is not kept past it. */
+        const val FAILED: String = "lookup failed"
     }
 }

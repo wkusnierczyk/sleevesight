@@ -9,6 +9,7 @@ import app.sleevesight.core.pipeline.GenreReasons
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.PipelineParts
 import app.sleevesight.core.pipeline.TrackState
+import app.sleevesight.core.resolution.Lookup
 import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -56,10 +57,11 @@ sealed interface GenreReason {
  */
 interface GenreNotes {
     /**
-     * The definition of the genre [genre] stands for (`GenreLabel.identity`), as it changes: null
-     * while it is looked up, for none, and while lookups are off; looked up again when they come on.
+     * The definition of the genre [genre] stands for (`GenreLabel.identity`), as it changes: found;
+     * not found when it has none, which the panel says (#663); failed when the lookup failed; null
+     * while it is looked up and while lookups are off; looked up again when they come on.
      */
-    fun definition(genre: String): Flow<GenreDefinition?>
+    fun definition(genre: String): Flow<Lookup<GenreDefinition>?>
 
     /** [track]'s reason for [genre], as it changes. */
     fun reason(
@@ -75,7 +77,7 @@ interface GenreNotes {
 
     /** Neither: the panel shows its table alone (previews, tests). */
     object None : GenreNotes {
-        override fun definition(genre: String): Flow<GenreDefinition?> = flowOf(null)
+        override fun definition(genre: String): Flow<Lookup<GenreDefinition>?> = flowOf(null)
 
         override fun reason(
             track: TrackState,
@@ -130,11 +132,11 @@ class AppGenreNotes(
     private val writing: MutableSet<CardKey> = ConcurrentHashMap.newKeySet()
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    override fun definition(genre: String): Flow<GenreDefinition?> =
+    override fun definition(genre: String): Flow<Lookup<GenreDefinition>?> =
         settings
             .map { now -> now != null && now.showGenres && now.isEnabled(SourceId.WIKIPEDIA) }
             .distinctUntilChanged()
-            .mapLatest { on -> if (on) withContext(io) { definitions.of(genre) } else null }
+            .mapLatest { on -> if (on) withContext(io) { definitions.lookup(genre) } else null }
 
     override fun reason(
         track: TrackState,
