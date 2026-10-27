@@ -56,8 +56,8 @@ import org.robolectric.annotation.GraphicsMode
  * The **AI** mark on Home's buttons that call the AI service (#624): every Write of the insight
  * card's split button ends in it, enabled or not, after its label and on its baseline, and reads as
  * "<label>, uses AI" with the mark itself hidden; *Stop* and the arrow, which make no call, do not.
- * Both halves are drawn as tall as Home's chips, 32 dp, growing alike with a large font, and each
- * answers a tap across 48 dp.
+ * Both halves are drawn as tall as Home's chips, 32 dp, growing alike with a large font, in a row
+ * 48 dp high, and each answers a tap across 48 dp.
  */
 @RunWith(RobolectricTestRunner::class)
 class AiMarkScreenTest {
@@ -165,10 +165,12 @@ class AiMarkScreenTest {
     // Text measured as on a phone.
     @Test
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
-    fun bothHalvesAreDrawnAsTallAsTheChipsAndAnswerATapAcross48dp() {
+    fun bothHalvesAreDrawnAsTallAsTheChipsInA48dpRowAndAnswerATapAcross48dp() {
         settings.value = Settings(writeAutomatically = WriteAutomatically.NEVER)
         view.value = PipelineView(offered, aiReady = true, waiting = true)
         show {
+            // The 48 dp the targets need is kept in the layout, not only lent by the touch handling.
+            compose.onNodeWithTag(WRITE_HALVES_TAG).assertHeightIsEqualTo(48.dp)
             for (tag in listOf(WRITE_TAG, WRITE_MODE_TAG)) {
                 compose
                     .onNodeWithTag(tag)
