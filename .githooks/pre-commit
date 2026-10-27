@@ -9,8 +9,12 @@
 # ktlint is its standalone jar from Maven Central, at the version `gradle/libs.versions.toml` sets for
 # the Gradle plugin, downloaded on first use into a cache directory and checked against the SHA-256
 # below each time. It takes a second or two, against Gradle's half a minute or more.
+# If the download fails (offline, say), the commit goes ahead unformatted, with a warning; the pre-push
+# checks and CI still check the formatting.
 # `build-logic/` is left out: the Gradle checks do not cover it, and it is not in ktlint's style.
 set -euo pipefail
+# Paths are file names, never patterns: no globbing of `*?[` and no `:` magic.
+export GIT_LITERAL_PATHSPECS=1
 
 "$(dirname "$0")/guard-branch"
 
@@ -28,6 +32,14 @@ fail() {
   printf >&2 '\npre-commit: %s\n\n' "$*"
   exit 1
 }
+
+part=
+work=
+cleanup() {
+  [ -z "$part" ] || rm -f "$part"
+  [ -z "$work" ] || rm -rf "$work"
+}
+trap cleanup EXIT
 
 files=()
 while IFS= read -r -d '' path; do
@@ -55,14 +67,15 @@ if [ ! -f "$jar" ] || [ "$(sha256 "$jar")" != "$sha" ]; then
   mkdir -p "$cache"
   part=$(mktemp "$cache/download.XXXXXX")
   if ! curl -fsSL --retry 2 -o "$part" "$url"; then
-    rm -f "$part"
-    fail "could not download $url."
+    printf >&2 '\npre-commit: WARNING: could not download %s;\n' "$url"
+    printf >&2 'the staged Kotlin is committed unformatted. The pre-push checks and CI still check it.\n\n'
+    exit 0
   fi
   if [ "$(sha256 "$part")" != "$sha" ]; then
-    rm -f "$part"
     fail "the download of $url does not match its checksum; it was not used."
   fi
   mv -f "$part" "$jar"
+  part=
 fi
 
 java=java
@@ -72,23 +85,32 @@ command -v "$java" >/dev/null 2>&1 || fail 'ktlint needs Java: set JAVA_HOME or 
 # The staged files, and the .editorconfig files ktlint reads, copied out of the index into a
 # directory of their own with the same layout.
 work=$(mktemp -d)
-trap 'rm -rf "$work"' EXIT
 partly=()
 for path in "${files[@]}"; do
   mkdir -p "$work/$(dirname "$path")"
-  git cat-file blob ":$path" >"$work/$path"
+  git cat-file blob ":0:$path" >"$work/$path"
   git diff --quiet -- "$path" || partly+=("$path")
 done
 while IFS= read -r -d '' path; do
-  mkdir -p "$work/$(dirname "$path")"
-  git cat-file blob ":$path" >"$work/$path"
-done < <(git ls-files -z -- .editorconfig '*/.editorconfig')
+  case "$path" in
+    .editorconfig | */.editorconfig)
+      mkdir -p "$work/$(dirname "$path")"
+      git cat-file blob ":0:$path" >"$work/$path" ;;
+  esac
+done < <(git ls-files -z)
+
+# `git commit <paths>` commits from a temporary index, and git's own index keeps what was staged
+# before: those files are formatted in the commit and the working tree, and need a `git add` after.
+case "$(basename "${GIT_INDEX_FILE:-index}")" in
+  index | index.lock) temporary=false ;;
+  *) temporary=true ;;
+esac
 
 status=0
 (cd "$work" && "$java" -jar "$jar" --format --relative --log-level=error -- "${files[@]}") || status=$?
 
 for path in "${files[@]}"; do
-  if git cat-file blob ":$path" | cmp -s - "$work/$path"; then continue; fi
+  if git cat-file blob ":0:$path" | cmp -s - "$work/$path"; then continue; fi
   mode=$(git ls-files -s -- "$path" | cut -d' ' -f1)
   blob=$(git hash-object -w --path="$path" "$work/$path")
   git update-index --cacheinfo "$mode,$blob,$path"
@@ -99,6 +121,9 @@ for path in "${files[@]}"; do
   else
     cat "$work/$path" >"$path"
     printf >&2 'pre-commit: formatted %s\n' "$path"
+  fi
+  if $temporary; then
+    printf >&2 'pre-commit: git add %s afterwards: the commit has it formatted, the index has it as staged before.\n' "$path"
   fi
 done
 
