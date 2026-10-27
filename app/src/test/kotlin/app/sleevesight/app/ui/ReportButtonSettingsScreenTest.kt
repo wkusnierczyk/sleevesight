@@ -1,9 +1,9 @@
 package app.sleevesight.app.ui
 
 import androidx.activity.compose.setContent
-import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.isDialog
+import androidx.compose.ui.test.isSelectable
+import androidx.compose.ui.test.isSelected
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
@@ -64,14 +64,14 @@ class ReportButtonSettingsScreenTest {
 
     private fun shown(id: Int) = compose.onAllNodesWithText(text(id)).fetchSemanticsNodes().isNotEmpty()
 
+    // One tap on the choice's button in the row (#637).
     private fun choose(option: Int) {
-        compose.onNodeWithText(text(R.string.settings_report_button)).performScrollTo().performClick()
-        compose.onNode(hasText(text(option)) and hasAnyAncestor(isDialog())).performClick()
+        compose.onNode(hasText(text(option)) and isSelectable()).performScrollTo().performClick()
     }
 
-    // The row's value: the choice's label, outside the dialog.
+    // The row's choice: its button, selected.
     private fun rowShows(option: Int) =
-        compose.onAllNodes(hasText(text(option)) and !hasAnyAncestor(isDialog())).fetchSemanticsNodes().isNotEmpty()
+        compose.onAllNodes(hasText(text(option)) and isSelectable() and isSelected()).fetchSemanticsNodes().isNotEmpty()
 
     @Test
     fun theRowPicksEachChoiceAndDeveloperModeOffSetsHide() {
