@@ -58,7 +58,8 @@ class SelfCorrectionTest {
         assertEquals("It came out in 2022 [MB1]", written(citedAfter).text)
         // Opens with a quoted title and ends with one, a stop inside: no marks around the whole.
         val titles =
-            "It came out in 2022 [MB1], as critics noted [W1]. It sets the tone.\n\n" +
+            "\"Andrew\" opens the album [MB1], and critics described it as a quiet farewell [W1]. " +
+                "It sets the tone.\n\n" +
                 "Wait, I'll drop the second sentence. Corrected reply:\n\n" +
                 "\"Andrew\" opens the album [MB1]. It is on \"Hert.\""
         assertEquals("\"Andrew\" opens the album [MB1]. It is on \"Hert.\"", written(titles).text)
@@ -92,13 +93,16 @@ class SelfCorrectionTest {
     }
 
     @Test
-    fun `a line that reads like an aside, before text that only re-cites the draft, is kept when it is prose`() {
+    fun `a line that reads like an aside, before text that restates the draft, is kept when it is prose`() {
         val draft = "It was written in 1964 [W1]. It was released in 1965 [MB1].\n\n"
-        val after = "\n\nIt reached the top ten [W1][MB1]."
+        val after = "\n\nIt was written in 1964 [W1]. It reached the top ten [MB1]."
         val lines =
             listOf(
-                // A quoted lyric inside prose.
+                // A quoted lyric inside prose, in double or single quotation marks (an apostrophe
+                // inside the quotation).
                 "So \"I'll fix the roof\" sets up the closing pledge:",
+                "So 'I'll fix it' sets up the closing pledge:",
+                "So ‘I’ll fix it’ sets up the closing pledge:",
                 "So the 12\" mix ends on \"Let me correct that line\" sung twice.",
                 // An introduction that is not a sentence of its own.
                 "The next verse is her revised reply:",
@@ -120,6 +124,45 @@ class SelfCorrectionTest {
             assertEquals(reply, grounded.text, line)
             assertNull(grounded.withdrawn, line)
         }
+    }
+
+    /**
+     * Lyrics that read as a correction, after a draft that cites the one line the prose after them
+     * cites again, as on a track documented by one line: the prose says something new, and does
+     * not restate the draft (#606, from the reviews of #604).
+     */
+    @Test
+    fun `a lyric that reads as a correction, before prose that goes on from the same line, is kept`() {
+        val replies =
+            listOf(
+                // A single-quoted lyric inside prose.
+                "The song turns a domestic task into a promise [W1].\n\n" +
+                    "So 'I'll fix it' sets up the closing pledge:\n\nThe narrator will return home [W1].",
+                // A lyric line of its own, after an introduction.
+                "The song is about a breakup [W1]. The chorus pleads:\n\n" +
+                    "Let me fix it, let me make it right.\n\nThe plea recurs on every verse [W1].",
+                // The middle line of a lyric in italics over three lines, a stop ending the line before.
+                "The song is a plea to an absent lover [W1]. The bridge goes:\n\n" +
+                    "*I waited all night.\nLet me fix it, I'll drop it all.\nCome home.*\n\n" +
+                    "The plea recurs on every verse [W1].",
+                // The middle line of a lyric in single quotation marks over three lines.
+                "The song circles one regret [W1]. The last verse runs:\n\n" +
+                    "'I must fix it.\nI must fix it, I should cut it now.\nThen I go' [W1].",
+            )
+        for (reply in replies) {
+            val grounded = written(reply)
+            assertEquals(reply, grounded.text, reply)
+            assertNull(grounded.withdrawn, reply)
+        }
+    }
+
+    @Test
+    fun `an apostrophe opens no quotation, before a word or a decade or after a plural`() {
+        val version = "It defined the '90s for the Beatles' heirs, rock 'n' roll's too [MB1]."
+        val reply = "$version It sets the tone.\n\nWait, I'll drop the second sentence.\n\n$version"
+        val grounded = written(reply)
+        assertEquals(version, grounded.text)
+        assertNotNull(grounded.withdrawn)
     }
 
     @Test
