@@ -69,7 +69,7 @@ A screen reader reads each chip as a button, says whether its genre's panel is o
 
 When there are none, it says *None found.*, or *Every genre source is off in Settings.*; with *Show genres* off, nothing of the genres shows.
 
-With [*Layout*]({{ '/docs/tutorials/settings/' | relative_url }}#appearance) set to *Separate pages*, a tap on a chip opens the genres on a page of their own, with the same chips, the one you tapped marked, and its panel, with no *Close*: the back arrow returns to the home screen ([Pages](#pages)).
+With [*Layout*]({{ '/docs/tutorials/settings/' | relative_url }}#appearance) set to *Separate pages*, a tap on a chip opens the genres on a page of their own, with the same chips, the one you tapped marked (not a button there: a screen reader reads it as selected, with nothing to do), and its panel, with no *Close*: the back arrow returns to the home screen ([Pages](#pages)).
 
 ### The insight
 
