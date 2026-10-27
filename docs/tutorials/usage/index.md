@@ -104,15 +104,21 @@ When little is documented about a track, the insight is short rather than filled
 
 *Sources*, at the bottom of the screen, shows what the insight was written from.
 
-<!-- screenshot: Sources unfolded, with chips, a note and evidence lines, from the app version it is taken from -->
+<!-- screenshot: Sources unfolded, with the table of the sources, a note and evidence lines, from the app version it is taken from -->
 
 **Folded and unfolded.** *Sources* starts folded: only its chip shows, **Sources**, which looks like a genre chip. A tap on it opens the *Sources* panel in its place, which looks like a genre's panel: *Sources* at the top, and **Close** at the top right, which folds it back to the chip. With a keyboard or a screen reader, the focus moves to *Close* when the panel opens and back to the chip when it closes. A screen reader reads the chip as a heading and a button, *Sources*, collapsed.
 
-**The chips.** In the panel, a chip for each source that gave lines, drawn like a genre chip, with its name and, before it, small and dimmed, the letter its lines and citations use, so a citation can be matched to its chip: `MB` *MusicBrainz*, `W` *Wikipedia* (its chip covers Wikidata's `WD` lines too), `L` *Last.fm*, `G` *Web search*, and `P` *Player*, the release the player reports, the album as a line of evidence. A source that gave no lines has no chip.
+**The table of the sources.** In the panel, a table with a row for each source that is on, and for one you switched off whose lines the insight kept from before still cites. On the left, right-aligned, a chip with the letter the source's lines and citations use, so a citation can be matched to its source: `MB` *MusicBrainz*, `W` *Wikipedia* (it covers Wikidata's `WD` lines too), `L` *Last.fm*, `G` *Web search*, `P` *Player* (the release the player reports, the album as a line of evidence), and `M` *AI service knowledge*, when the model's own knowledge is on. On the right, the source's name, and under it what it found: *Found the song*, *Found the artist only*, *Found the original song*, *Gave the release* (the player), *Nothing found*, *Looking…* (it has not answered yet), *Could not be reached*, *Failed*, or *Allowed in Settings* (the model's own knowledge). The rows sit close together; each chip still answers a tap a little beyond its edges, up to halfway to the next row's.
 
-A chip shows or hides its source's lines: while they show, it has a genre chip's light fill; hidden, it is outlined, its name struck through and faded. That only changes what you see: what the AI service may use is set under [*Sources*]({{ '/docs/tutorials/settings/' | relative_url }}). A screen reader reads a chip as a switch, its source's name, and whether its lines are shown or hidden.
+The chip shows at a glance what a tap does:
 
-**The note.** Under the chips, a note only when something needs you or went wrong, a sentence for each source: *Last.fm needs your key, in Settings.*, when its saved key can no longer be read (a tap on *Settings* opens them; the key goes under *Secrets*), *Web search could not be reached.*, or *MusicBrainz failed.* A source that found nothing, whose match was rejected, or that is switched off says nothing; a source with no key saved is switched off.
+- **filled**: the source gave lines, and they are shown; a tap hides them;
+- **outlined**, a firm outline with no fill: the source gave lines, and they are hidden; a tap shows them again;
+- **dimmed**, a faint outline: the source gave no lines, so there is nothing to show or hide, and it is not a button.
+
+That only changes what you see: what the AI service may use is set under [*Sources*]({{ '/docs/tutorials/settings/' | relative_url }}). A screen reader reads a chip that shows or hides lines as a switch, its source's name, and whether its lines are shown or hidden, then what the source found; a dimmed chip's row is read as text, the source's name and what it found.
+
+**The note.** Under the table, a note only when something needs you or went wrong, a sentence for each source: *Last.fm needs your key, in Settings.*, when its saved key can no longer be read (a tap on *Settings* opens them; the key goes under *Secrets*), *Web search could not be reached.*, or *MusicBrainz failed.* A source that found nothing, whose match was rejected, or that is switched off says nothing; a source with no key saved is switched off.
 
 **The list.** Then the evidence lines, each with its id, its text, what it is about (*song*, *artist*, *original song*, *release*, *web*) and a link to the page it was found on, which opens in the browser. After them, under their own heading, come *Found, but not verified, so not cited*: lines from matches that could not be checked against the track, which are shown but never given to the insight. Above the list, how many entries show ("Showing 8 of 12 entries"). It unfolds 8 entries at a time:
 
@@ -121,23 +127,15 @@ A chip shows or hides its source's lines: while they show, it has a genre chip's
 
 A citation tapped in the insight opens the panel and unfolds the list as far as its line. When the chips hide every line, the count says so, and closing and opening *Sources* again shows them.
 
-**Grounding details.** With [*Show grounding details*]({{ '/docs/tutorials/settings/' | relative_url }}), a developer option, on, the chips are every source's, each with its letter and what it found, and the list ends with *Rejected matches*, each with its source and the reason it was rejected:
+**Grounding details.** With [*Show grounding details*]({{ '/docs/tutorials/settings/' | relative_url }}), a developer option, on, the table, in the developer mark, has a row for the sources that are off too, and says more of what some found; and the list ends with *Rejected matches*, each with its source and the reason it was rejected:
 
-| Chip says | Meaning |
+| The row says | Meaning |
 |---|---|
-| *looking* | The source has not answered yet |
-| *the song* | It found the song |
-| *the artist only* | It found the artist, not the song |
-| *the original song* | It found the song this one covers |
-| *release* | The `P` chip: the release the player reports |
-| *nothing found* | It answered, with nothing on this track |
-| *rejected* | What it found failed the identity check (shown in the error colour) |
-| *unreachable* | It could not be reached |
-| *failed* | The lookup went wrong (shown in the error colour) |
-| *off* | The source is off under *Sources*: you switched it off, or its key is not saved |
-| *needs your key, in Settings* | Last.fm or web search is on, but its saved key can no longer be read |
-| *allowed* | The `M` chip: the model's own knowledge may be cited |
-| *(kept)*, after any of these | The answer was kept on the phone from an earlier lookup |
+| *Off in Settings* | The source is off under *Sources*: you switched it off, or its key is not saved |
+| *Needs your key, in Settings* | Last.fm or web search is on, but its saved key can no longer be read |
+| *Match rejected* | What it found failed the identity check (without the option, *Nothing found*); shown in the error colour |
+| *Failed* | As without the option, but shown in the error colour |
+| *(kept)*, after what it found | The answer was kept on the phone from an earlier lookup |
 
 Each new track's list starts folded, so the insight is what you see first. With [*Keep Sources as you left them*]({{ '/docs/tutorials/settings/' | relative_url }}) on, it stays as you left it on the track before. Either way, the fold is kept through a rotation and when Android restores the screen, not when the app starts afresh.
 
@@ -151,7 +149,7 @@ With *Layout* set to *Separate pages*, a tap on the **Sources** chip opens *Sour
 
 With *Separate pages*, the home screen is shorter, and each part opens a page of its own, on the app's background like the home screen, its accents in the album art's colours, with a back arrow and the part's name at the top:
 
-- The **Sources** chip opens the filter chips, the note and the list, which works as it does unfolded on the home screen, *show more…* and all.
+- The **Sources** chip opens the table of the sources, the note and the list, which works as it does unfolded on the home screen, *show more…* and all.
 - A genre chip on the home screen opens the genres' page: the chips, the one tapped marked, and that genre's panel, with what the genre is and *Why is this …?*, the table and where its labels came from; a citation in the answer opens the *Sources* page at its line. A tap on another chip there switches the panel to its genre.
 - A citation chip in the insight opens *Sources*' page at the line it cites, scrolled to and flashed.
 
@@ -262,8 +260,8 @@ Playing, pausing and skipping from inside Sleevesight are not built yet; use the
 | **Offline** | *Sources* says *Offline. The sources that could not be reached are asked again when the phone is back online.* Once the phone is back online, the playing track's unreachable sources are asked again; the rest keep what they found. What was kept on the phone from earlier lookups still shows. An insight that cannot be written for want of a connection says *Writing failed: no connection.* |
 | **No AI service on, or no key for it** | The sources are still looked up and shown. The insight says *Choose an AI service and save its key in Settings to have insights written.*, and no Write is offered. Set it up under [*AI services*]({{ '/docs/tutorials/settings/' | relative_url }}), with its key under *Secrets*. |
 | **Insights switched off** | *Insights are off. Turn them on in Settings.* No AI calls at all; the evidence is still shown. |
-| **No key for Last.fm or web search** | It is off under [*Sources*]({{ '/docs/tutorials/settings/' | relative_url }}), and cannot be switched on until its key is saved; it is not asked. With *Show grounding details* on, its chip says *off*. A saved key that can no longer be read is entered again: until then *Sources* says *Last.fm needs your key, in Settings.* or *Web search needs your key, in Settings.* MusicBrainz and Wikipedia need no key. |
-| **A source rejects a match** | The match is never used, and the source has no chip unless it gave other lines. With *Show grounding details* on, its chip says *rejected*, and the match is listed under *Rejected matches* with the reason. |
+| **No key for Last.fm or web search** | It is off under [*Sources*]({{ '/docs/tutorials/settings/' | relative_url }}), and cannot be switched on until its key is saved; it is not asked. With *Show grounding details* on, its row says *Off in Settings*. A saved key that can no longer be read is entered again: until then *Sources* says *Last.fm needs your key, in Settings.* or *Web search needs your key, in Settings.* MusicBrainz and Wikipedia need no key. |
+| **A source rejects a match** | The match is never used, and the source's row says *Nothing found*, its chip dimmed, unless it gave other lines. With *Show grounding details* on, its row says *Match rejected*, and the match is listed under *Rejected matches* with the reason. |
 | **A match that cannot be verified** | Its lines show under *Found, but not verified, so not cited*, and the insight is not given them. Web search results have nothing to be verified against: those its filter keeps are given to the insight, and may be cited. |
 | **A source fails** | *Sources* says so (*MusicBrainz failed.*, or *… could not be reached.*); the other sources' lines are used. |
 | **The AI service refuses or fails** | *Writing failed:* and the reason: the service did not accept the key, the account needs credit, its quota is used up for now, it is busy, it is not offered in your country, and the like, then *Tap Write insight to try again, as a new call.* |

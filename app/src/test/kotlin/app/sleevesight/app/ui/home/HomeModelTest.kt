@@ -118,7 +118,7 @@ class HomeModelTest {
     }
 
     @Test
-    fun onlyTheSourcesThatGaveLinesHaveChipsByDefaultAndNeverTheModel() {
+    fun theTableHasEverySourceButThoseThatAreOffWhichOnlyGroundingDetailsAdd() {
         val withRelease =
             EvidenceSet.of(
                 listOf(
@@ -133,19 +133,37 @@ class HomeModelTest {
                 sources =
                     mapOf(
                         SourceId.MUSICBRAINZ to done(evidence = listOf(HomeFixtures.musicBrainzLine)),
-                        // Wikidata's line only: Wikipedia's chip, which covers it, shows.
+                        // Wikidata's line only: Wikipedia's row, which covers it, shows.
                         SourceId.WIKIPEDIA to done(Outcome.None),
                         SourceId.WEB to done(Outcome.Rejected("another song")),
-                        SourceId.DISCOGS to SourceState.Pending,
+                        SourceId.DISCOGS to done(Outcome.SourceOff),
                     ),
                 evidence = withRelease,
             )
         val chips = sourceChips(state, needsKey = setOf(SourceId.LASTFM), modelAllowed = true)
+        // Off (Discogs) or without its key (Last.fm): no row; found nothing or rejected (web
+        // search), and the model's own knowledge, which gives no lines: a row, dimmed.
         assertEquals(
-            listOf(SourceId.PLAYER, SourceId.MUSICBRAINZ, SourceId.WIKIPEDIA),
-            chipsWithLines(chips, state.evidence).map { it.source },
+            listOf(SourceId.PLAYER, SourceId.MUSICBRAINZ, SourceId.WIKIPEDIA, SourceId.WEB, SourceId.MODEL),
+            tableRows(chips, state.evidence, details = false).map { it.source },
         )
-        assertEquals(emptyList<SourceChip>(), chipsWithLines(chips, null))
+        assertEquals(chips, tableRows(chips, state.evidence, details = true))
+        assertEquals(
+            listOf(SourceId.DISCOGS, SourceId.LASTFM),
+            chips.filter { it.isOff }.map { it.source },
+        )
+    }
+
+    @Test
+    fun aSourceOffNowStillHasItsRowWhileTheInsightKeptCitesItsLines() {
+        val state =
+            track(
+                sources = mapOf(SourceId.MUSICBRAINZ to done(Outcome.SourceOff)),
+                evidence = EvidenceSet.of(listOf(HomeFixtures.musicBrainzLine), JvmHasher),
+            )
+        val chips = sourceChips(state, needsKey = emptySet(), modelAllowed = false)
+        assertEquals(listOf(SourceId.MUSICBRAINZ), tableRows(chips, state.evidence, details = false).map { it.source })
+        assertEquals(emptyList<SourceChip>(), tableRows(chips, null, details = false))
     }
 
     @Test
