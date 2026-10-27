@@ -9,10 +9,10 @@ import org.junit.Test
 
 /**
  * *Look again* on the card paid for (#617), as `PipelineCoordinatorTest` runs its sequences: a run
- * that looks every source up afresh, past the cache, with what the run before gathered; no call when
- * its evidence says nothing the card's does not (spacing aside); one, as the tap's, when it does,
- * and that one only, however the run is replaced; never a second call beside automatic writing;
- * and Stop as for a Write.
+ * that looks every source up afresh, past the cache, with what the run before gathered, and never
+ * calls the AI service itself: when its evidence says something the card's does not (spacing aside),
+ * *Rewrite insight* is offered, and its tap alone writes; when not, nothing is offered. Never a
+ * call beside automatic writing; a track change cuts it off; Stop ends the Rewrite as any Write.
  */
 class PipelineCoordinatorLookAgainTest {
     // The first action made, and A written automatically, its sources landed.
@@ -26,7 +26,7 @@ class PipelineCoordinatorLookAgainTest {
         }
 
     @Test
-    fun `nothing new makes no call, and the card stays, the cache missing it or not`() {
+    fun `nothing new offers nothing, and the card stays, the cache missing it or not`() {
         for (cache in listOf(false, true)) {
             val world = written(cache)
             world.lookAgain()
@@ -37,7 +37,21 @@ class PipelineCoordinatorLookAgainTest {
             assertEquals("cache $cache", "A #1", world.cardText())
             assertTrue("cache $cache", world.coordinator.state.foundNothingNew)
             assertFalse("cache $cache", world.coordinator.state.lookingAgain)
+            assertNull("cache $cache", world.coordinator.state.writeKey)
             assertEquals("cache $cache", world.key("A"), world.coordinator.state.lookAgainKey)
+        }
+    }
+
+    @Test
+    fun `a look again never calls the AI service, whatever it finds`() {
+        for (found in listOf("Evidence 1.", "Evidence 2.", "  evidence\n 1. ")) {
+            val world = written()
+            world.evidenceText = found
+            world.lookAgain()
+            world.settle()
+            world.settle()
+            assertEquals(found, 1, world.calls["A"])
+            assertEquals(found, "A #1", world.cardText())
         }
     }
 
@@ -64,39 +78,43 @@ class PipelineCoordinatorLookAgainTest {
     }
 
     @Test
-    fun `a look again's call, stopped, is not made again when a run asks its sources again online`() {
+    fun `a run that asks its sources again online after a look again calls nothing`() {
         val world = written()
         world.evidenceText = "Evidence 2."
-        world.streamMs = 10_000
         world.send(CoordinatorEvent.NetworkChanged(online = false))
         world.offline = true
         world.offlineFinds = true
         world.lookAgain()
-        world.advance(1_000)
-        assertEquals(2, world.calls["A"])
-        world.stopTap()
         world.settle()
+        assertTrue(world.coordinator.state.foundSomethingNew)
 
         world.offline = false
         world.send(CoordinatorEvent.NetworkChanged(online = true))
         world.settle()
 
         assertEquals(listOf("A"), world.askedAgain)
-        assertEquals(2, world.calls["A"])
+        assertEquals(1, world.calls["A"])
         assertEquals("A #1", world.cardText())
     }
 
     @Test
-    fun `something new makes one call, the tap's, whose card replaces the one shown`() {
+    fun `something new offers Rewrite insight, and its tap alone writes, once`() {
         val world = written(cache = true)
         world.evidenceText = "Evidence 2."
         world.service++
         world.lookAgain()
         world.settle()
 
+        assertEquals(1, world.calls["A"])
+        assertTrue(world.coordinator.state.foundSomethingNew)
+        assertTrue(world.coordinator.state.rewrites())
+        assertEquals(world.key("A"), world.coordinator.state.writeKey)
+
+        world.tap()
+        world.settle()
         assertEquals(2, world.calls["A"])
         assertEquals("A #2", world.cardText())
-        assertFalse(world.coordinator.state.foundNothingNew)
+        assertFalse(world.coordinator.state.foundSomethingNew)
         // Written, and not again unasked, however long it plays.
         world.settle()
         assertEquals(2, world.calls["A"])
@@ -174,11 +192,13 @@ class PipelineCoordinatorLookAgainTest {
     }
 
     @Test
-    fun `Stop ends a look again's call as it ends a Write's, and the card written before stays`() {
+    fun `Stop ends the Rewrite tapped after a look again as any Write's, and the card written before stays`() {
         val world = written()
         world.evidenceText = "Evidence 2."
         world.streamMs = 10_000
         world.lookAgain()
+        world.settle()
+        world.tap()
         world.advance(1_000)
         assertEquals(2, world.calls["A"])
 
@@ -187,7 +207,6 @@ class PipelineCoordinatorLookAgainTest {
 
         assertEquals(listOf("A"), world.stopped)
         assertEquals("A #1", world.cardText())
-        // Write offered again beside the card: Rewrite insight, a new call on a tap only.
         assertTrue(world.coordinator.state.rewrites())
         assertEquals(2, world.calls["A"])
     }

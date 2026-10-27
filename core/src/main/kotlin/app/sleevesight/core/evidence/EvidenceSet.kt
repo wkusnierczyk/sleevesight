@@ -94,6 +94,7 @@ class EvidenceSet private constructor(
                                 text = draft.text,
                                 url = draft.url,
                                 retrievedAt = draft.retrievedAt,
+                                aggregate = draft.aggregate,
                             )
                         }
                     }

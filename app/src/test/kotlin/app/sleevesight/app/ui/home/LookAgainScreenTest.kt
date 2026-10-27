@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
@@ -42,10 +43,11 @@ import org.robolectric.RobolectricTestRunner
 
 /**
  * *Look again* on the insight card (#617): the first item of the split button's menu beside a
- * written insight, ending in the **AI** mark and read as "Look again, uses AI"; enabled while the
- * pipeline offers it, and a tap carries the key it was offered under and the track shown; absent
- * with no written insight. Under *Kept from before.*, while it looks: what it costs, the web search
- * named when it is looked up; once it found nothing new, that it did.
+ * written insight, with no **AI** mark (it makes no call); enabled while the pipeline offers it,
+ * and a tap carries the key it was offered under and the track shown; absent with no written
+ * insight. Under *Kept from before.*, while it looks: what it costs, the web search named when it
+ * is looked up; once it found something new, that *Rewrite insight* writes from it (in place of
+ * the settings' rewrite line); once it found nothing new, that it did.
  */
 @RunWith(RobolectricTestRunner::class)
 class LookAgainScreenTest {
@@ -81,20 +83,21 @@ class LookAgainScreenTest {
     private val item get() = compose.onNodeWithTag(LOOK_AGAIN_TAG)
 
     @Test
-    fun aWrittenInsightOffersLookAgainFirstInTheMenuWithTheAiMark() {
+    fun aWrittenInsightOffersLookAgainFirstInTheMenuWithNoAiMark() {
         show {
             compose
                 .onNodeWithTag(WRITE_MODE_TAG)
                 .assertContentDescriptionEquals("Writing mode: On track change (auto), and Look again")
             openMenu()
-            item.assertIsEnabled().assertContentDescriptionEquals("Look again, uses AI")
+            // It makes no call to the AI service, so it carries no AI mark.
+            item.assertIsEnabled().assertTextEquals("Look again")
             val marks = compose.onAllNodesWithTag(AI_MARK_TAG, useUnmergedTree = true).fetchSemanticsNodes()
             val inItem =
                 marks.count { mark ->
                     val bounds = item.fetchSemanticsNode().boundsInRoot
                     bounds.contains(mark.boundsInRoot.center)
                 }
-            assertEquals(1, inItem)
+            assertEquals(0, inItem)
             // Above the modes.
             val first = item.fetchSemanticsNode().boundsInRoot
             val mode = compose.onNodeWithText("On demand").fetchSemanticsNode().boundsInRoot
@@ -132,19 +135,38 @@ class LookAgainScreenTest {
         view.value = PipelineView(kept, aiReady = true, cardShown = true, lookingAgain = true)
         show {
             compose
-                .onNodeWithText(
-                    "Looking every source up again. If they find anything new, the insight is written again, " +
-                        "a paid call.",
-                ).assertExists()
+                .onNodeWithText("Looking every source up again.")
+                .assertExists()
         }
         val searching = kept.copy(sources = kept.sources + (SourceId.WEB to SourceState.Pending))
         view.value = PipelineView(searching, aiReady = true, cardShown = true, lookingAgain = true)
         show {
             compose
                 .onNodeWithText(
-                    "Looking every source up again, the web search included: a paid search on your Exa key. " +
-                        "If they find anything new, the insight is written again, a paid call.",
+                    "Looking every source up again, the web search included: a paid search on your Exa key.",
                 ).assertExists()
+        }
+    }
+
+    @Test
+    fun somethingNewOffersRewriteInsightWithItsOwnLine() {
+        view.value =
+            PipelineView(
+                kept,
+                aiReady = true,
+                cardShown = true,
+                lookAgainKey = key,
+                rewrite = true,
+                somethingNew = true,
+            )
+        show {
+            compose.onNodeWithTag(WRITE_TAG).assertTextEquals("Rewrite insight").assertIsEnabled()
+            compose
+                .onNodeWithText(
+                    "The sources found something new. Tap Rewrite insight to have the insight written from it, " +
+                        "a paid call.",
+                ).assertExists()
+            compose.onNodeWithText("Rewrite insight with updated source or model settings.").assertDoesNotExist()
         }
     }
 

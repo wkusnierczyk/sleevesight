@@ -113,7 +113,7 @@
 
     <string name="settings_section_insights">Insights</string>
     <string name="settings_write_insights">Show insights</string>
-    <string name="settings_write_insights_summary">Insights on the playing track, written by your AI service from the sources’ evidence. Each insight written is a paid call on your AI service key. Stop writing ends the call at once; if the request has reached your AI service, it still charges for what it has read and written so far. Look again, in the menu beside Write insight, looks every source up afresh (with Exa web search on, a paid search) and writes the insight again, a paid call, only if the sources found something new. When disabled, no AI calls are made; the evidence is still shown.</string>
+    <string name="settings_write_insights_summary">Insights on the playing track, written by your AI service from the sources’ evidence. Each insight written is a paid call on your AI service key. Stop writing ends the call at once; if the request has reached your AI service, it still charges for what it has read and written so far. Look again, in the menu beside Write insight, looks every source up afresh, a paid search with Exa web search on, and writes nothing; when the sources found something new, Rewrite insight writes the insight from it, a paid call, only if you tap it. When disabled, no AI calls are made; the evidence is still shown.</string>
     <string name="settings_write_automatically">Reactive</string>
     <string name="settings_write_automatically_summary">Select what triggers writing an insight. The arrow beside Write insight, under Key insights, sets it too. Choosing an automatic mode starts automatic writing from the next track.</string>
     <string name="settings_pause_auto_write">Saver</string>

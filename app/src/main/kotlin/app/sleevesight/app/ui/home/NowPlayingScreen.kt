@@ -335,6 +335,7 @@ private fun insightContext(
             lookAgain = view.lookAgainKey != null && track != null,
             lookingAgain = view.lookingAgain && track != null,
             nothingNew = view.nothingNew && track != null,
+            somethingNew = view.somethingNew && track != null,
         ),
     unavailable = unavailable.takeIf { settings?.writeInsights != false },
     mode = settings?.writeAutomatically,

@@ -1,5 +1,6 @@
 package app.sleevesight.core.pipeline
 
+import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
@@ -155,7 +156,8 @@ class PipelineLookAgainTest {
                     Duration.ZERO,
                 )
             val lastFm = FakeAdapter(SourceId.LASTFM, verifies = false) { _, _ -> answer }
-            val pipeline = pipeline(listOf(lastFm), FakeResolver(), MemoryCache())
+            val cache = MemoryCache()
+            val pipeline = pipeline(listOf(lastFm), FakeResolver(), cache)
             val first = granting()
             pipeline.run(sundown, first)
             val before = first.gathered.single()
@@ -173,6 +175,11 @@ class PipelineLookAgainTest {
                 answer = fresh
                 val state = pipeline.run(sundown, granting(), lookAgain = LookAgain(before))
                 assertEquals(before.sources[SourceId.LASTFM], state.sources[SourceId.LASTFM])
+                // The fuller result kept before stays in the cache.
+                assertEquals(
+                    listOf("A.", "B."),
+                    cache.results[SourceId.LASTFM to "$key@null"]?.evidence?.map { it.text },
+                )
             }
             // One that brings a line stands, though it lost another.
             answer = SourceResult(Outcome.SongArticle, listOf(line(SourceId.LASTFM, "C.")), Duration.ZERO)
@@ -180,6 +187,33 @@ class PipelineLookAgainTest {
             assertEquals(
                 listOf("C."),
                 (state.sources[SourceId.LASTFM] as SourceState.Done).result.evidence.map { it.text },
+            )
+        }
+
+    @Test
+    fun `a source with a new line keeps its earlier lines of the scopes it lacks, and is cached so`() =
+        runTest {
+            val cache = MemoryCache()
+            val song = line(SourceId.WIKIPEDIA, "The song.")
+            val artist = line(SourceId.WIKIPEDIA, "The artist.", Scope.ARTIST)
+            var answer = SourceResult(Outcome.SongArticle, listOf(song, artist), Duration.ZERO)
+            val wikipedia = FakeAdapter(SourceId.WIKIPEDIA, verifies = false) { _, _ -> answer }
+            val pipeline = pipeline(listOf(wikipedia), FakeResolver(), cache)
+            val first = granting()
+            pipeline.run(sundown, first)
+            val kept = "$key@null"
+
+            // The artist's article did not answer, beside a new line about the song.
+            answer =
+                SourceResult(Outcome.SongArticle, listOf(line(SourceId.WIKIPEDIA, "The song, again.")), Duration.ZERO)
+            val state = pipeline.run(sundown, granting(), lookAgain = LookAgain(first.gathered.single()))
+
+            val shown = (state.sources[SourceId.WIKIPEDIA] as SourceState.Done).result.evidence.map { it.text }
+            assertEquals(listOf("The song, again.", "The artist."), shown)
+            // What is shown is kept, the earlier lines carried with the new one.
+            assertEquals(
+                listOf("The song, again.", "The artist."),
+                cache.results[SourceId.WIKIPEDIA to kept]?.evidence?.map { it.text },
             )
         }
 

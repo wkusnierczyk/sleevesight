@@ -18,10 +18,10 @@ import kotlin.time.Duration.Companion.seconds
 
 /**
  * *Look again* on the card paid for (#617), through the host and a real pipeline: the sources asked
- * afresh past the retrieval cache, no call to the AI service when they find nothing new (the same
- * lines in another order or spacing, a source that failed in whole or in part, or was left
- * provisional, MusicBrainz unreachable on a track served from the cache), one when they do, written
- * with the earlier lines of a source that failed.
+ * afresh past the retrieval cache, and no call to the AI service. Nothing new (the same lines in
+ * another order or spacing, a source that failed in whole or in part, or was left provisional,
+ * MusicBrainz unreachable on a track served from the cache) offers nothing; something new offers
+ * *Rewrite insight*, whose tap writes from it, with the earlier lines of a source that failed.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class PipelineHostLookAgainTest : PipelineHostFixture() {
@@ -43,7 +43,7 @@ internal class PipelineHostLookAgainTest : PipelineHostFixture() {
     }
 
     @Test
-    fun `the sources are asked afresh, and finding nothing new, nothing is written`() =
+    fun `the sources are asked afresh, and finding nothing new, nothing is written or offered`() =
         runTest {
             written()
             lookAgain()
@@ -52,6 +52,7 @@ internal class PipelineHostLookAgainTest : PipelineHostFixture() {
             assertEquals(2, musicBrainz.asked.size)
             assertEquals(1, provider.requests)
             assertTrue(host.state.value.nothingNew)
+            assertEquals(null, host.state.value.writeKey)
             assertTrue(
                 host.state.value.track
                     ?.insight is InsightState.Written,
@@ -65,6 +66,7 @@ internal class PipelineHostLookAgainTest : PipelineHostFixture() {
         assertEquals(2, musicBrainz.asked.size)
         assertEquals(1, provider.requestsFor("Sundown"))
         assertTrue(host.state.value.nothingNew)
+        assertEquals(null, host.state.value.writeKey)
     }
 
     @Test
@@ -122,6 +124,10 @@ internal class PipelineHostLookAgainTest : PipelineHostFixture() {
             lastFm.text = "Sundown was a number one single."
             lookAgain()
             settle()
+            assertEquals(1, provider.requestsFor("Sundown"))
+            assertTrue(host.state.value.somethingNew)
+            tap()
+            settle()
 
             assertEquals(2, provider.requestsFor("Sundown"))
             val prompt = provider.prompts.last()
@@ -130,7 +136,7 @@ internal class PipelineHostLookAgainTest : PipelineHostFixture() {
         }
 
     @Test
-    fun `finding something new, the insight is written from it, in one call`() =
+    fun `finding something new, Rewrite insight is offered, and its tap writes from it, in one call`() =
         runTest {
             written()
             musicBrainz.text = "Sundown was a number one single."
@@ -138,6 +144,11 @@ internal class PipelineHostLookAgainTest : PipelineHostFixture() {
             settle()
 
             assertEquals(2, musicBrainz.asked.size)
+            assertEquals(1, provider.requests)
+            assertTrue(host.state.value.somethingNew)
+            assertTrue(host.state.value.rewrite)
+            tap()
+            settle()
             assertEquals(2, provider.requests)
             assertTrue("Sundown was a number one single." in provider.prompts.last())
             assertFalse(host.state.value.nothingNew)

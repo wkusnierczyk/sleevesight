@@ -98,7 +98,8 @@ internal class InsightContext(
  * while automatic writing was paused while the app was not on screen ([paused], #203), or it
  * followed the last one by itself under *On track skip (auto)* ([followed], #625). *Look again*
  * (#617): offered beside the card paid for ([lookAgain]), looking the sources up ([lookingAgain]),
- * and finding nothing new ([nothingNew]).
+ * finding something new, with *Rewrite insight* offered for it ([somethingNew]), or nothing new
+ * ([nothingNew]).
  */
 @Suppress("LongParameterList") // Each what one line or action of the card says.
 internal class InsightOffers(
@@ -110,6 +111,7 @@ internal class InsightOffers(
     val lookAgain: Boolean = false,
     val lookingAgain: Boolean = false,
     val nothingNew: Boolean = false,
+    val somethingNew: Boolean = false,
 )
 
 /**

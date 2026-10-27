@@ -288,7 +288,12 @@ class LastFmAdapter(
             val similar = artist.similar.take(MAX_SIMILAR).joinToString(", ") { it.name }
             texts += "Last.fm lists artists similar to $name by listening overlap: $similar." to artist.url
         }
-        return ArtistLines(bio, texts.map { (text, url) -> EvidenceDraft(id, Scope.ARTIST, text, url, retrievedAt) })
+        // Counts and lists of what many listeners did, which change from one lookup to the next (#617).
+        val aggregates =
+            texts.map { (text, url) ->
+                EvidenceDraft(id, Scope.ARTIST, text, url, retrievedAt, aggregate = true)
+            }
+        return ArtistLines(bio, aggregates)
     }
 
     companion object {

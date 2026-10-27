@@ -171,11 +171,13 @@
     <string name="home_rewrite_failed">Rewriting failed: %1$s. This is the insight written earlier.</string>
     <string name="home_rewrite_stopped">Rewriting stopped. This is the insight written earlier.</string>
     <!-- Look again (#617): the first item of the menu beside Write insight, on a written insight; it
-         ends in the AI mark. Then the lines under "Kept from before." while it looks the sources up
-         (with Exa web search on, or not), and once it found nothing new. -->
+         makes no AI call, so it has no AI mark. Then the lines under "Kept from before." while it
+         looks the sources up (with Exa web search on, or not), once it found something new (with
+         Rewrite insight offered), and once it found nothing new. -->
     <string name="home_look_again">Look again</string>
-    <string name="home_look_again_looking_web">Looking every source up again, the web search included: a paid search on your Exa key. If they find anything new, the insight is written again, a paid call.</string>
-    <string name="home_look_again_looking">Looking every source up again. If they find anything new, the insight is written again, a paid call.</string>
+    <string name="home_look_again_looking_web">Looking every source up again, the web search included: a paid search on your Exa key.</string>
+    <string name="home_look_again_looking">Looking every source up again.</string>
+    <string name="home_look_again_something_new">The sources found something new. Tap Rewrite insight to have the insight written from it, a paid call.</string>
     <string name="home_look_again_nothing_new">The sources found nothing new.</string>
     <string name="home_stop">Stop writing</string>
     <string name="home_insight_stopped">Stopped before the reply ended, so nothing was kept.</string>

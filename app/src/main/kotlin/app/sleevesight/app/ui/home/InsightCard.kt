@@ -178,7 +178,8 @@ private fun RewriteLines(context: InsightContext) {
             Quiet(stringResource(R.string.home_rewrite_failed, failureText(it)))
         }
     }
-    if (offersRewrite(context)) Quiet(stringResource(R.string.home_rewrite_offered))
+    // Not for what a look again found (#617): its own line says what Rewrite insight writes from.
+    if (offersRewrite(context) && !context.offers.somethingNew) Quiet(stringResource(R.string.home_rewrite_offered))
 }
 
 /**

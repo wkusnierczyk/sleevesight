@@ -107,8 +107,8 @@ internal class WritingChoice(
 
 /**
  * *Look again* in the split button's menu (#617), beside a written insight: a tap ([onLookAgain])
- * looks every source up afresh and writes the insight again only if they found something new;
- * [enabled] while it can be tapped.
+ * looks every source up afresh, and never calls the AI service; when they found something new,
+ * *Rewrite insight* is offered for it. [enabled] while it can be tapped.
  */
 internal class LookAgainItem(
     val enabled: Boolean,
@@ -133,9 +133,9 @@ internal class LookAgainItem(
  * automatic mode other than the one chosen says that each new track's insight is a paid call;
  * choosing *On demand*, or the mode already chosen, says nothing.
  *
- * Beside a written insight ([lookAgain], #617), the menu begins with *Look again*, ending in the
- * **AI** mark, as it may make a call, then a divider; the arrow then reads *Writing mode: <mode>,
- * and Look again*.
+ * Beside a written insight ([lookAgain], #617), the menu begins with *Look again*, which makes no
+ * call to the AI service and so carries no **AI** mark, then a divider; the arrow then reads
+ * *Writing mode: <mode>, and Look again*.
  *
  * Material 3's own `SplitButtonLayout` is not in material3 1.4, the version the project's Compose
  * BOM gives, so the halves are drawn here with its shapes: round outer corners (16 dp, as the genre
@@ -302,8 +302,8 @@ internal fun ModeMenu(
 ) {
     lookAgain?.let { item ->
         DropdownMenuItem(
-            // Read as "Look again, uses AI": a new insight is a call to the AI service.
-            text = { AiLabel(stringResource(R.string.home_look_again)) },
+            // No AI mark: it looks the sources up, and writes nothing (#617).
+            text = { Text(stringResource(R.string.home_look_again)) },
             onClick = {
                 close()
                 item.onLookAgain()

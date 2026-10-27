@@ -108,7 +108,9 @@ import kotlin.coroutines.cancellation.CancellationException
  *   back ([PipelineHost.lookAgain]): the card paid for is shown, citing evidence, its run's sources
  *   have landed and no call is under way ([CoordinatorState.lookAgainKey]); null otherwise.
  * @property lookingAgain whether a look again is looking the sources up ([CoordinatorState.lookingAgain]).
- * @property nothingNew whether the last look again found nothing new, so nothing was written
+ * @property somethingNew whether the last look again found something new, and *Rewrite insight* is
+ *   offered for it ([CoordinatorState.foundSomethingNew]): a tap writes it, a paid call.
+ * @property nothingNew whether the last look again found nothing new, so nothing is offered for it
  *   ([CoordinatorState.foundNothingNew]).
  */
 data class PipelineView(
@@ -128,6 +130,7 @@ data class PipelineView(
     val lookAgainKey: RunKey? = null,
     val lookingAgain: Boolean = false,
     val nothingNew: Boolean = false,
+    val somethingNew: Boolean = false,
 )
 
 /**
@@ -722,6 +725,7 @@ class PipelineHost(
                 lookAgainKey = owner.lookAgainKey,
                 lookingAgain = owner.lookingAgain,
                 nothingNew = owner.foundNothingNew,
+                somethingNew = owner.foundSomethingNew,
             )
         }.collect {
             view.value = it

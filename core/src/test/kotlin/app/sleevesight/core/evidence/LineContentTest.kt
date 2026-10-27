@@ -28,6 +28,38 @@ class LineContentTest {
     }
 
     @Test
+    fun `case, curly quotes, dashes and Unicode spaces bring nothing new`() {
+        val earlier = set(SourceId.WIKIPEDIA to "It is \"Sundown\" - a hit.")
+        val again = set(SourceId.WIKIPEDIA to "it\u00A0is \u201CSundown\u201D \u2013 a hit.")
+        assertFalse(again.bringsNewSince(earlier))
+    }
+
+    @Test
+    fun `counts and lists of listeners bring nothing new when only their numbers or order change`() {
+        fun counted(vararg texts: String) =
+            EvidenceSet.of(
+                texts.map { EvidenceDraft(SourceId.LASTFM, Scope.ARTIST, it, null, at, aggregate = true) },
+                JvmHasher,
+            )
+        val earlier = counted("Last.fm counts 683,942 listeners for X.", "Last.fm listeners tag X as: folk, rock.")
+        assertFalse(
+            counted(
+                "Last.fm counts 690,001 listeners for X.",
+                "Last.fm listeners tag X as: rock, folk.",
+            ).bringsNewSince(earlier),
+        )
+        assertTrue(counted("Last.fm listeners tag X as: rock, jazz.").bringsNewSince(earlier))
+        // Unmarked, the same count would be new.
+        assertTrue(
+            set(SourceId.LASTFM to "Last.fm counts 690,001 listeners for X.").bringsNewSince(
+                set(
+                    SourceId.LASTFM to "Last.fm counts 683,942 listeners for X.",
+                ),
+            ),
+        )
+    }
+
+    @Test
     fun `fewer lines bring nothing new`() {
         assertFalse(set(SourceId.MUSICBRAINZ to "Recorded in 1973.").bringsNewSince(earlier))
         assertFalse(set().bringsNewSince(earlier))

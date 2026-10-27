@@ -223,7 +223,9 @@ internal class TrackRun(
                 // A bug in one adapter must not take the others down; its type is logged.
                 SourceState.Failed(nameOf(e))
             }
-        land(adapter.id, input.lookAgain?.kept(adapter.id, landed) ?: landed)
+        // A look again (#617) shows, and keeps, what it found unless that says nothing new.
+        val shown = input.lookAgain?.kept(adapter.id, landed) ?: landed
+        land(adapter.id, shown)
         if (landed is SourceState.Done && landed.result.outcome != Outcome.Unreachable) {
             when {
                 !made.await() -> {
@@ -234,10 +236,16 @@ internal class TrackRun(
                     emit(PipelineEvent.NotCached(key, adapter.id, PROVISIONAL))
                 }
 
+                input.lookAgain?.keepsBefore(adapter.id, shown) == true -> {
+                    emit(PipelineEvent.NotCached(key, adapter.id, NOTHING_NEW))
+                }
+
                 else -> {
+                    // What is shown: the fresh result, with a look again's earlier lines carried.
+                    val kept = (shown as? SourceState.Done)?.result ?: landed.result
                     guard.attempt(
                         "write ${adapter.id.tag}",
-                    ) { parts.cache.keep(adapter, track, nowPlaying.duration, landed.result) }
+                    ) { parts.cache.keep(adapter, track, nowPlaying.duration, kept) }
                 }
             }
         }
@@ -315,6 +323,8 @@ internal class TrackRun(
         const val NOT_RESOLVED: String = "the MusicBrainz resolution it was checked against could not be made"
 
         const val PROVISIONAL: String = "a request of its verification failed, so a later lookup may verify it"
+
+        const val NOTHING_NEW: String = "a look again found nothing new, so the result kept before stays (#617)"
 
         fun nameOf(e: Throwable): String = e::class.simpleName ?: "Exception"
 

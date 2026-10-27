@@ -85,14 +85,16 @@ internal fun offersLookAgain(context: InsightContext): Boolean =
 
 /**
  * The line said of *Look again* (#617) under *Kept from before.*: while it looks the sources up,
- * what that costs, the web search named when the run looks it up; once it found nothing new, that
- * it did, so the card stays and nothing was paid for its writing; else none.
+ * what that costs, the web search named when the run looks it up; once it found something new, that
+ * *Rewrite insight* writes from it, a paid call, while that is offered; once it found nothing new,
+ * that it did; else none.
  */
 @StringRes
 internal fun lookAgainLine(context: InsightContext): Int? =
     when {
         context.offers.lookingAgain ->
             if (searchesWeb(context.track)) R.string.home_look_again_looking_web else R.string.home_look_again_looking
+        context.offers.somethingNew && offersRewrite(context) -> R.string.home_look_again_something_new
         context.offers.nothingNew -> R.string.home_look_again_nothing_new
         else -> null
     }
