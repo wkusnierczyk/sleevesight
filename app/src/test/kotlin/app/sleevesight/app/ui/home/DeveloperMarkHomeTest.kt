@@ -89,7 +89,7 @@ class DeveloperMarkHomeTest {
                 }
             }
             compose.waitForIdle()
-            compose.onNodeWithTag(SOURCES_FOLD_TAG).performScrollTo().performClick()
+            compose.onNodeWithTag(SOURCES_CHIP_TAG).performScrollTo().performClick()
             compose.waitForIdle()
             block()
         }

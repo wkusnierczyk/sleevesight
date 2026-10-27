@@ -122,8 +122,8 @@ class NowPlayingScreenTest {
         settings: Settings = Settings(),
     ) = NowPlayingState(view, sundown, PlaybackInfo(Settings.SPOTIFY, PlaybackStatus.PLAYING), settings = settings)
 
-    // The *Sources* list starts folded (#269), its heading the fold (#440): its first screenful, or all of it.
-    private fun unfold() = compose.onNodeWithTag(SOURCES_FOLD_TAG).performScrollTo().performClick()
+    // The *Sources* list starts folded (#269), its chip opening it (#623): its first screenful, or all of it.
+    private fun unfold() = compose.onNodeWithTag(SOURCES_CHIP_TAG).performScrollTo().performClick()
 
     private fun unfoldAll() {
         unfold()

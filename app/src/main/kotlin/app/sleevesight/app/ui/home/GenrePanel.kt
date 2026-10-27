@@ -5,21 +5,15 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -56,42 +50,10 @@ internal fun GenrePanel(
             .firstOrNull { it.genre.identity == genre }
             ?.genre
             ?.label ?: return
-    val shape = RoundedCornerShape(12.dp)
-    val fill = MaterialTheme.colorScheme.onSurface.copy(alpha = PANEL_FILL)
-    Column(
-        modifier =
-            Modifier
-                .testTag(GENRE_PANEL_TAG)
-                .fillMaxWidth()
-                .clip(shape)
-                .background(fill, shape)
-                .padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                name,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                modifier =
-                    Modifier
-                        .weight(1f)
-                        .padding(vertical = 10.dp)
-                        .testTag(GENRE_PANEL_HEADING_TAG)
-                        .semantics { heading() },
-            )
-            onClose?.let {
-                TextButton(onClick = it, modifier = Modifier.testTag(GENRE_PANEL_CLOSE_TAG)) {
-                    Text(stringResource(R.string.page_close), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-        }
+    HomePanel(name, GENRE_PANEL_TAG, onClose) {
         // TODO(#523): what the genre is, and *Why is this …?*, between the heading and the table.
-        Column(modifier = Modifier.padding(end = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = RULE))
-            Table(track, genre)
-            Credits(genres, several = track.normalized.artists.size > 1)
-        }
+        Table(track, genre)
+        Credits(genres, several = track.normalized.artists.size > 1)
     }
 }
 
@@ -223,7 +185,7 @@ private fun sourceParts(
         .orEmpty()
 }
 
-/** The test tags of the genre's panel, its heading and its *Close*. */
+/** The test tags of the genre's panel, its heading and its *Close*, as [HomePanel] makes them. */
 const val GENRE_PANEL_TAG: String = "genre-panel"
 const val GENRE_PANEL_HEADING_TAG: String = "genre-panel:heading"
 const val GENRE_PANEL_CLOSE_TAG: String = "genre-panel:close"
@@ -232,5 +194,3 @@ const val GENRE_PANEL_CLOSE_TAG: String = "genre-panel:close"
 const val GENRES_ROW_PREFIX: String = "genres-row:"
 
 private const val SEPARATOR = " · "
-private const val PANEL_FILL = 0.05f
-private const val RULE = 0.12f
