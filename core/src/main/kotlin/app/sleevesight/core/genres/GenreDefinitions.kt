@@ -44,7 +44,8 @@ fun interface GenreArticles {
  */
 class GenreDefinitions(
     private val articles: GenreArticles,
-    private val vocabulary: GenreVocabulary,
+    /** The vocabulary that names each genre's MusicBrainz genre; a genre's panel reads its names too. */
+    val vocabulary: GenreVocabulary,
     clock: Clock = Clock.System,
     lifetime: Duration = DEFAULT_LIFETIME,
     capacity: Int = DEFAULT_CAPACITY,

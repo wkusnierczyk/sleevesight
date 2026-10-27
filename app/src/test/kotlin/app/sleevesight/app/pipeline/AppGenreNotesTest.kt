@@ -2,6 +2,7 @@ package app.sleevesight.app.pipeline
 
 import app.sleevesight.app.ui.home.HomeFixtures
 import app.sleevesight.core.Secret
+import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.genres.GenreArticles
 import app.sleevesight.core.genres.GenreDefinition
 import app.sleevesight.core.genres.GenreDefinitions
@@ -14,6 +15,7 @@ import app.sleevesight.core.genres.LabelSource
 import app.sleevesight.core.genres.TrackGenres
 import app.sleevesight.core.genres.TrackLabel
 import app.sleevesight.core.model.ProviderId
+import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.pipeline.AiAccess
 import app.sleevesight.core.pipeline.ClearEpoch
@@ -35,6 +37,7 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -172,6 +175,27 @@ class AppGenreNotesTest {
             notes.explain(track, "rock")
             advanceUntilIdle()
             assertEquals(1, provider.requests)
+        }
+
+    @Test
+    fun `a reason says whether its evidence says anything about how the track sounds`() =
+        runTest {
+            val notes = notes()
+            // The fixture's lines: a recording year, a chart, a single; nothing of the sound (#664).
+            notes.explain(track(), "rock")
+            advanceUntilIdle()
+            assertTrue((notes.reason(track(), "rock").first() as GenreReason.Shown).silent)
+            // A line about the track naming its instruments: the app has nothing to say.
+            val guitar = HomeFixtures.draft(SourceId.MUSICBRAINZ, "Lightfoot performs on it (guitar, vocals).")
+            val evidence =
+                EvidenceSet.of(
+                    listOf(HomeFixtures.musicBrainzLine, HomeFixtures.wikipediaLine, guitar),
+                    JvmHasher,
+                )
+            val described = track(HomeFixtures.track(evidence = evidence))
+            notes.explain(described, "rock")
+            advanceUntilIdle()
+            assertFalse((notes.reason(described, "rock").first() as GenreReason.Shown).silent)
         }
 
     @Test

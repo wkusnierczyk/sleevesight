@@ -14,5 +14,15 @@
     <string name="genre_why_writing">Writing…</string>
     <string name="genre_why_no_evidence">The sources say nothing that explains it.</string>
     <string name="genre_why_failed">The explanation could not be written: %1$s.</string>
+    <!-- The app's own line above a reason whose evidence says nothing about how the track sounds
+         (#664), then where the label came from: %1$s is what was tagged, "this track", an artist's
+         name, "this album", or several of them joined ("Ann Peebles and this album"). -->
+    <string name="genre_why_silent">The sources say nothing about how this track sounds.</string>
+    <string name="genre_why_from_lastfm">The label comes from listeners’ tags for %1$s on Last.fm.</string>
+    <string name="genre_why_from_musicbrainz">The label comes from MusicBrainz contributors’ tags for %1$s.</string>
+    <string name="genre_why_from_sources">The label comes from tags for %1$s on Last.fm and MusicBrainz.</string>
+    <string name="genre_why_this_track">this track</string>
+    <string name="genre_why_this_album">this album</string>
+    <string name="genre_why_and">%1$s and %2$s</string>
     <string name="genre_why_incomplete">The reply stopped early, so this is incomplete, and it was not kept.</string>
 </resources>

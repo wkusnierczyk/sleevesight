@@ -40,9 +40,19 @@ class GenreReasonPromptTest {
     @Test
     fun `its rules are the insight's, with the label's own first`() {
         val text = prompt()
-        assertTrue(GenreReasonPrompt.UNSUPPORTED_RULE in text)
+        assertTrue(GenreReasonPrompt.ABOUT_THE_MUSIC_RULE in text)
         assertTrue(InsightPrompt.contract(allowModel = false) in text)
         assertTrue(GroundingCheck.NO_EVIDENCE in text)
+    }
+
+    @Test
+    fun `it asks for no sentence about the evidence or its gaps, and its version says it changed`() {
+        // #664: version 1 asked the model to say when the evidence did not support the label, and it
+        // wrote a sentence about the evidence, which nothing can back.
+        val text = prompt()
+        assertTrue("never about the evidence or the sources" in text)
+        assertFalse("say so plainly in your first sentence" in text)
+        assertEquals(2, GenreReasonPrompt.VERSION)
     }
 
     @Test
