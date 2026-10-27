@@ -561,11 +561,11 @@ class AppGraph internal constructor(
      * kept. Then the pipeline's part ([PipelineHost.forget]): its run and preparation cancelled, the
      * insight shown and the coordinator's ledger gone, and the track playing not looked up again
      * until another one plays. Then every cache (the sources' findings, the artist resolutions and
-     * results, the insights and cards written, the genres' reasons and definitions among them), in one transaction and in turn with what is written
-     * about artists ([ArtistKeeping.clearWith]); MusicBrainz's answers held in memory; the genres'
-     * reasons shown ([AppGenreNotes.forget]); the artist
-     * facts the listening session cited; the session layer's last change, which names the track
-     * before; and the diagnostics' steps, which name the tracks. The API keys and the settings stay.
+     * results, the insights and cards written, the genres' reasons and definitions among them), in
+     * one transaction and in turn with what is written about artists ([ArtistKeeping.clearWith]);
+     * MusicBrainz's answers held in memory; the genres' reasons shown ([AppGenreNotes.forget]); the
+     * artist facts the listening session cited; the session layer's last change, which names the
+     * track before; and the diagnostics' steps, which name the tracks. The API keys and the settings stay.
      * Returns whether the caches were cleared; the rest cannot fail.
      */
     private suspend fun forgetTracks(): Boolean {

@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
+import app.sleevesight.app.pipeline.GenreNotes
 import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.core.genres.GenreLevel
@@ -59,6 +60,18 @@ internal fun GenrePanel(
         Credits(genres, several = track.normalized.artists.size > 1)
     }
 }
+
+/**
+ * What a genre's panel shows above its table ([GenreAbout]): [notes], where its definition and
+ * reason come from; where a citation in the reason goes ([onCite]: on Home, *Sources* unfolded to
+ * its line; under *Separate pages*, *Sources*' page at it); and whether the model's own knowledge is
+ * allowed now ([modelAllowed]).
+ */
+internal class PanelNotes(
+    val notes: GenreNotes = GenreNotes.None,
+    val onCite: (String) -> Unit = {},
+    val modelAllowed: Boolean = false,
+)
 
 /**
  * The table of [track]'s genres: a row per level with labels, in [GenreLevel] order, each row's

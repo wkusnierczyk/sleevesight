@@ -20,7 +20,6 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
-import app.sleevesight.app.pipeline.GenreNotes
 import app.sleevesight.app.pipeline.GenreReason
 import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
@@ -31,25 +30,14 @@ import app.sleevesight.core.pipeline.TrackState
 // A genre's panel, above its table (#523): what the genre is, and why this track has it.
 
 /**
- * What a genre's panel shows above its table ([GenreAbout]): [notes], where its definition and
- * reason come from; where a citation in the reason goes ([onCite]: on Home, *Sources* unfolded to
- * its line; under *Separate pages*, *Sources*' page at it); and whether the model's own knowledge is
- * allowed now ([modelAllowed]).
- */
-internal class PanelNotes(
-    val notes: GenreNotes = GenreNotes.None,
-    val onCite: (String) -> Unit = {},
-    val modelAllowed: Boolean = false,
-)
-
-/**
  * What the genre [genre] is and why [track] has it, as [shown]'s notes give them (#523; `design/design.md`,
  * *Genre labels*), at the top of the genre's panel, in this order: the definition, from Wikipedia,
  * with its credit ("From Wikipedia", linking the article, and its licence); then *Why is this …?*,
  * a button carrying the **AI** mark ([AiLabel]), or, once asked for, the reason, under the question
  * as a heading, checked and cited as the insight is: its citations chips that go to their lines
- * ([PanelNotes.onCite]), its grounding note under it. Neither shows when [PanelNotes.notes] has none: no definition for a
- * genre with no article (or Wikipedia off), no button for a genre only MusicBrainz gives, with
+ * ([PanelNotes.onCite]), its grounding note under it. Neither shows when [PanelNotes.notes] has
+ * none: no definition for a genre with no article (or Wikipedia off), no button for a genre only
+ * MusicBrainz gives, with
  * *Show insights* off or no AI service ready. A reason still being written reads its `[M]` as the
  * settings allow it ([PanelNotes.modelAllowed]).
  */

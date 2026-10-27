@@ -11,6 +11,7 @@ import app.sleevesight.core.pipeline.PipelineParts
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -110,9 +111,9 @@ class AppGenreNotes(
     private val writing: MutableSet<CardKey> = ConcurrentHashMap.newKeySet()
 
     override suspend fun definition(genre: String): GenreDefinition? {
-        val now = settings.value ?: return null
-        if (!now.showGenres || !now.isEnabled(SourceId.WIKIPEDIA)) return null
-        return withContext(io) { definitions.of(genre) }
+        val now = settings.value
+        val looksUp = now != null && now.showGenres && now.isEnabled(SourceId.WIKIPEDIA)
+        return if (looksUp) withContext(io) { definitions.of(genre) } else null
     }
 
     override fun reason(
@@ -134,30 +135,41 @@ class AppGenreNotes(
         genre: String,
     ) {
         val reasons = parts.value?.let { GenreReasons(it.ai, it.cache, it.hasher) } ?: return
-        val key = settings.value?.let { reasons.key(track, genre, it) } ?: return
-        if ((shown.value[key] as? InsightState.Failed) == null && key in shown.value) return
-        if (!writing.add(key)) return
+        val key = settings.value?.let { now -> reasons.key(track, genre, now) }
+        // Not offered; shown already, unless it failed; or under way.
+        if (key == null || !open(key) || !writing.add(key)) return
         val label =
             track.genres.all
                 .firstOrNull { it.genre.identity == genre }
                 ?.genre
                 ?.label ?: genre
-        scope.launch(epoch.mark()) {
-            val work = coroutineContext
-            val show: (InsightState) -> Unit = { if (epoch.isCurrent(work)) put(key, it) }
-            try {
-                // One kept meanwhile (another panel's) is shown with no call.
-                reasons.kept(key, track)?.let(show) ?: reasons.write(key, track, label, show)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (
-                // A bug, not the network, which the writer maps to a state: shown as failed, offered again.
-                @Suppress("TooGenericExceptionCaught") e: Exception,
-            ) {
-                show(InsightState.Failed(e::class.simpleName ?: FAILED))
-            } finally {
-                writing.remove(key)
-            }
+        scope.launch(epoch.mark()) { write(reasons, key, track, label) }
+    }
+
+    // Whether [key]'s reason may be asked for: not shown yet, or shown as failed.
+    private fun open(key: CardKey): Boolean = shown.value[key].let { it == null || it is InsightState.Failed }
+
+    // [key]'s reason, kept meanwhile (another panel's), with no call, or written; each state shown
+    // while no *Clear history* came since it started.
+    private suspend fun write(
+        reasons: GenreReasons,
+        key: CardKey,
+        track: TrackState,
+        label: String,
+    ) {
+        val work = currentCoroutineContext()
+        val show: (InsightState) -> Unit = { if (epoch.isCurrent(work)) put(key, it) }
+        try {
+            reasons.kept(key, track)?.let(show) ?: reasons.write(key, track, label, show)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (
+            // A bug, not the network, which the writer maps to a state: shown as failed, offered again.
+            @Suppress("TooGenericExceptionCaught") e: Exception,
+        ) {
+            show(InsightState.Failed(e::class.simpleName ?: FAILED))
+        } finally {
+            writing.remove(key)
         }
     }
 

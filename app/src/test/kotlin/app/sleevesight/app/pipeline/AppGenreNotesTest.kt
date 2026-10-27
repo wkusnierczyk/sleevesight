@@ -14,9 +14,6 @@ import app.sleevesight.core.genres.LabelSource
 import app.sleevesight.core.genres.TrackGenres
 import app.sleevesight.core.genres.TrackLabel
 import app.sleevesight.core.model.ProviderId
-import app.sleevesight.core.platform.JvmAccentFolder
-import app.sleevesight.core.platform.JvmHasher
-import app.sleevesight.core.platform.JvmResourceReader
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.pipeline.AiAccess
 import app.sleevesight.core.pipeline.ClearEpoch
@@ -24,6 +21,9 @@ import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.PipelineParts
 import app.sleevesight.core.pipeline.TrackResolver
 import app.sleevesight.core.pipeline.TrackState
+import app.sleevesight.core.platform.JvmAccentFolder
+import app.sleevesight.core.platform.JvmHasher
+import app.sleevesight.core.platform.JvmResourceReader
 import app.sleevesight.core.resolution.Lookup
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.SourceSwitch
@@ -74,14 +74,17 @@ class AppGenreNotesTest {
 
     private fun label(tag: String) =
         TrackLabel(
-            GenreLabel(tag, "rock", tag.replaceFirstChar(Char::uppercase), tag, level = GenreLevel.ARTIST, artist = "A"),
+            GenreLabel(tag, "rock", tag.replaceFirstChar(Char::uppercase), tag, null, GenreLevel.ARTIST, "A"),
             listOf(LabelCredit(LabelSource.LASTFM, null)),
         )
 
-    private fun track(playing: TrackState = HomeFixtures.track()) =
-        playing.copy(genres = TrackGenres(listOf(GenreRow(GenreLevel.ARTIST, "A", listOf(label("rock"), label("punk"))))))
+    private fun track(playing: TrackState = HomeFixtures.track()): TrackState {
+        val row = GenreRow(GenreLevel.ARTIST, "A", listOf(label("rock"), label("punk")))
+        return playing.copy(genres = TrackGenres(listOf(row)))
+    }
 
-    private fun TestScope.notes(epoch: ClearEpoch = ClearEpoch()) = AppGenreNotes(definitions, parts, settings, this, epoch)
+    private fun TestScope.notes(epoch: ClearEpoch = ClearEpoch()) =
+        AppGenreNotes(definitions, parts, settings, this, epoch)
 
     @Test
     fun `a genre's definition is found once for every track that has it`() =
@@ -95,7 +98,8 @@ class AppGenreNotesTest {
     @Test
     fun `with Wikipedia off, no definition is looked up`() =
         runTest {
-            settings.value = settings.value?.let { it.copy(enabledSources = it.enabledSources - SourceSwitch.WIKIPEDIA) }
+            val now = checkNotNull(settings.value)
+            settings.value = now.copy(enabledSources = now.enabledSources - SourceSwitch.WIKIPEDIA)
             assertNull(notes().definition("rock"))
             assertEquals(0, articles.asked.size)
         }

@@ -85,8 +85,7 @@ class GenreAboutScreenTest {
 
     private val written: InsightState.Written =
         InsightState.Written(
-            (GroundingCheck.check("Its modal tunes are jazz [MB1].", HomeFixtures.evidence, false) as InsightReply.Written)
-                .grounded,
+            (GroundingCheck.check(REASON, HomeFixtures.evidence, false) as InsightReply.Written).grounded,
             cached = false,
         )
 
@@ -119,7 +118,9 @@ class GenreAboutScreenTest {
         block: () -> Unit,
     ) {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            scenario.onActivity { it.setContent { Column(Modifier.verticalScroll(rememberScrollState())) { content() } } }
+            scenario.onActivity {
+                it.setContent { Column(Modifier.verticalScroll(rememberScrollState())) { content() } }
+            }
             compose.waitForIdle()
             block()
         }
@@ -170,7 +171,7 @@ class GenreAboutScreenTest {
             compose.onNodeWithTag(GENRE_WHY_TAG).assertContentDescriptionEquals("$question, uses AI")
             val marks =
                 compose
-                    .onAllNodes(hasTestTag(AI_MARK_TAG) and hasAnyAncestor(hasTestTag(GENRE_WHY_TAG)), useUnmergedTree = true)
+                    .onAllNodes(hasTestTag(AI_MARK_TAG) and hasAnyAncestor(hasTestTag(GENRE_WHY_TAG)), true)
                     .fetchSemanticsNodes()
             assertEquals(1, marks.size)
             // A tap answers across 48 dp at least.
@@ -261,5 +262,9 @@ class GenreAboutScreenTest {
         assertEquals("RnB", inSentence("RnB"))
         assertEquals("R&B", inSentence("R&B"))
         assertEquals("drum and bass", inSentence("Drum And Bass"))
+    }
+
+    private companion object {
+        const val REASON = "Its modal tunes are jazz [MB1]."
     }
 }
