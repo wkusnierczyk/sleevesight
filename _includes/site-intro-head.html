@@ -11,10 +11,15 @@ document.documentElement.classList.add('js');
   var root = document.documentElement, all = ['c', 'd', 'f', 'g', 'h', 'i', 'r1', 'r2'];
   root.setAttribute('data-logo', all[Math.floor(Math.random() * all.length)]);
   // `location.hash` is empty for a bare `#`, so the address is read whole. A reload, or Back or Forward
-  // to the page, skips the intro (#368).
+  // to the page, skips the intro (#368); so does a link followed from another page of the site, in this
+  // tab or a new one (#654): the browser sends the address it came from as the referrer, and the script
+  // only compares its origin with this page's, keeping nothing. Where no same-origin referrer is
+  // available (a typed or pasted address, a bookmark, a link from another site, or a referrer
+  // stripped), the intro plays.
   var nav = performance.getEntriesByType ? performance.getEntriesByType('navigation')[0] : null,
-      again = nav && (nav.type === 'reload' || nav.type === 'back_forward');
-  if (again || location.href.indexOf('#') !== -1 || !matchMedia('(prefers-reduced-motion: no-preference)').matches) return;
+      again = nav && (nav.type === 'reload' || nav.type === 'back_forward'),
+      within = document.referrer.indexOf(location.origin + '/') === 0;
+  if (again || within || location.href.indexOf('#') !== -1 || !matchMedia('(prefers-reduced-motion: no-preference)').matches) return;
   root.classList.add('sl-wait');
   // The second script's `start()` takes the wait off; should it fail or never run, the page shows
   // after three seconds all the same, without the intro.
