@@ -62,7 +62,7 @@ Anything that surprises you. In particular:
 - **Crashes**, freezes, or a screen that does not make sense.
 - **Battery or data** use you did not expect.
 - **The app icon:** how it looks on your home screen, with your launcher and, on Android 13 or later, with themed icons on. A screenshot of the home screen helps.
-- **The product page's intro:** each time you open [sleevesight.app](https://sleevesight.app/) in the browser, one of several intros plays, picked at random (not on a reload, and not with *Reduce motion* on in your system settings); a click on the logo plays one again, picked afresh. Which did you like, and why? Did any feel too long? If one turned the logo, what did the turn remind you of?
+- **The product page's intro:** each time you open [sleevesight.app](https://sleevesight.app/) in the browser, one of several intros plays, picked at random (not on a reload, not when you come from another page of the site, and not with *Reduce motion* on in your system settings); a click on the logo plays one again, picked afresh. Which did you like, and why? Did any feel too long? If one turned the logo, what did the turn remind you of?
 
 **The report button.** The test build shows a small button with a bug on it at the bottom right of the home screen. It steps aside while the home screen scrolls, so it does not cover what passes under it, and comes back once the scrolling stops. Tap it as soon as you notice something, and choose *Report*: it takes what the app knows at that moment, so you need not note the track or the time. Before anything is sent, it shows you the whole report, in parts:
 
