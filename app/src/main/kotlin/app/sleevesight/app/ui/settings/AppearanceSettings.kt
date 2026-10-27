@@ -17,39 +17,33 @@ import app.sleevesight.core.settings.ThemeChoice
  * starts folded; under *Expandable boxes* only, so it is shown, but not offered, under *Separate
  * pages*, where each page opens fresh. *Logo intro at start* (#383), from the next time the app is
  * opened. *Home guide* (#627): whether Home, with nothing playing, shows the guide to Home, where
- * its *Re-enable in Settings* lands.
+ * its *Re-enable in Settings* lands. *Theme*, *Font* and *Layout* show their choices as button
+ * groups (#637), one tap to choose.
  */
 @Composable
 internal fun AppearanceSection(
     settings: Settings,
     update: Update,
-    open: (SettingsDialog) -> Unit,
 ) {
-    val themes = themes()
-    ValueRow(
+    // *Theme*, *Font* and *Layout*: a few short choices each, as button groups (#637).
+    ChoiceButtonsRow(
         title = stringResource(R.string.settings_theme),
-        value = themes.first { it.first == settings.theme }.second,
         summary = stringResource(R.string.settings_theme_summary),
-    ) {
-        open(
-            SettingsDialog.Choice(R.string.settings_theme, themes, settings.theme) { theme ->
-                update { it.copy(theme = theme) }
-            },
-        )
-    }
-    val fonts = fonts()
-    ValueRow(
+        choices = themes(),
+        selected = settings.theme,
+    ) { theme -> update { it.copy(theme = theme) } }
+    ChoiceButtonsRow(
         title = stringResource(R.string.settings_font),
-        value = fonts.first { it.first == settings.font }.second,
         summary = stringResource(R.string.settings_font_summary),
-    ) {
-        open(
-            SettingsDialog.Choice(R.string.settings_font, fonts, settings.font) { font ->
-                update { it.copy(font = font) }
-            },
-        )
-    }
-    LayoutRow(settings, update, open)
+        choices = fonts(),
+        selected = settings.font,
+    ) { font -> update { it.copy(font = font) } }
+    ChoiceButtonsRow(
+        title = stringResource(R.string.settings_layout),
+        summary = stringResource(R.string.settings_layout_summary),
+        choices = layouts(),
+        selected = settings.layout,
+    ) { layout -> update { it.copy(layout = layout) } }
     val boxes = settings.layout == Layout.EXPANDABLE_BOXES
     SwitchRow(
         title = stringResource(R.string.settings_keep_sources),
@@ -69,27 +63,6 @@ internal fun AppearanceSection(
             summary = stringResource(R.string.settings_home_guide_summary),
             checked = settings.homeGuide,
         ) { on -> update { it.copy(homeGuide = on) } }
-    }
-}
-
-/** *Layout* (#447): *Expandable boxes* or *Separate pages*, chosen in a dialog. */
-@Composable
-private fun LayoutRow(
-    settings: Settings,
-    update: Update,
-    open: (SettingsDialog) -> Unit,
-) {
-    val layouts = layouts()
-    ValueRow(
-        title = stringResource(R.string.settings_layout),
-        value = layouts.first { it.first == settings.layout }.second,
-        summary = stringResource(R.string.settings_layout_summary),
-    ) {
-        open(
-            SettingsDialog.Choice(R.string.settings_layout, layouts, settings.layout) { layout ->
-                update { it.copy(layout = layout) }
-            },
-        )
     }
 }
 
