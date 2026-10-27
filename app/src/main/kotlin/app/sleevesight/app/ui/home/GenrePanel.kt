@@ -39,7 +39,8 @@ import app.sleevesight.core.pipeline.TrackState
 
 /**
  * The panel of [genre] (#558; frame B of the agreed mock-ups): its name as a heading, with *Close*
- * when there is [onClose]; then the table, a row per level in [GenreLevel] order, each row's name
+ * when there is [onClose]; then what the genre is and *Why is this …?*, from [notes] (#523,
+ * [GenreAbout]); then the table, a row per level in [GenreLevel] order, each row's name
  * (the track's title, the artist's name, the album's title) on one line above its labels, [genre]
  * marked wherever it shows; then where the table's labels come from, a line per row, each source
  * linked to its page there, and MusicBrainz's licence (D12). Nothing when no row has [genre].
@@ -49,6 +50,7 @@ internal fun GenrePanel(
     track: TrackState,
     genre: String,
     onClose: (() -> Unit)? = null,
+    notes: PanelNotes = PanelNotes(),
 ) {
     val genres = track.genres
     val name =
@@ -86,9 +88,10 @@ internal fun GenrePanel(
                 }
             }
         }
-        // TODO(#523): what the genre is, and *Why is this …?*, between the heading and the table.
         Column(modifier = Modifier.padding(end = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = RULE))
+            // What the genre is, and *Why is this …?* (#523), above the table.
+            GenreAbout(track, genre, notes)
             Table(track, genre)
             Credits(genres, several = track.normalized.artists.size > 1)
         }

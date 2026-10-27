@@ -20,7 +20,8 @@ import app.sleevesight.core.settings.Settings
 /**
  * The genres' page ([HomePage.GenresAt], or [HomePage.Genres] from a back stack an earlier version
  * saved): the chips Home shows, of [track], the one of the genre open marked, and that genre's
- * panel ([GenrePanel]), with no *Close*: the back arrow closes the page. It opens at [genre], the
+ * panel ([GenrePanel]), with no *Close*: the back arrow closes the page; what the genre is and *Why is
+ * this …?* from [notes] (#523). It opens at [genre], the
  * chip tapped on Home; a chip switches the panel to its genre, and the marked one is not a button.
  * With no [genre], or one the track does not have (a new track since), it opens at the first
  * chip's. While the track's lookups run, and with *Show genres* off in [settings], it says so.
@@ -30,6 +31,7 @@ internal fun GenresPage(
     track: TrackState?,
     settings: Settings?,
     genre: String?,
+    notes: PanelNotes = PanelNotes(),
 ) {
     val genres = track?.genres
     when {
@@ -37,7 +39,7 @@ internal fun GenresPage(
         track == null || !track.gathered || genres == null -> QuietLine(stringResource(R.string.home_evidence_looking))
         genres.isEmpty && labelsOff(settings) -> QuietLine(stringResource(R.string.home_genres_off))
         genres.isEmpty -> QuietLine(stringResource(R.string.home_genres_none))
-        else -> GenresPageBody(track, genre)
+        else -> GenresPageBody(track, genre, notes)
     }
 }
 
@@ -45,6 +47,7 @@ internal fun GenresPage(
 private fun GenresPageBody(
     track: TrackState,
     start: String?,
+    notes: PanelNotes,
 ) {
     val genres = track.genres
     // Back to the chip tapped on Home on each new track, which falls back to the first chip.
@@ -56,7 +59,7 @@ private fun GenresPageBody(
                 .label.genre.identity
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Chips(genres.folded, open, close = false) { chosen = it.label.genre.identity }
-        GenrePanel(track, open)
+        GenrePanel(track, open, notes = notes)
     }
 }
 

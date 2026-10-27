@@ -38,7 +38,8 @@ import app.sleevesight.core.settings.Settings
  * ([TrackGenres.folded]). A chip opens the genre's panel ([GenrePanel]): under *Expandable boxes*,
  * under the chips, where a second tap on the same chip, or *Close*, closes it and another chip
  * switches it; under *Separate pages* ([openPage], #447), on the genres' page ([HomePage.GenresAt]),
- * the chip's genre open there. Chips are plain, told apart by their fill, not by a hue per genre
+ * the chip's genre open there. The panel shows what the genre is and *Why is this …?* from [notes]
+ * (#523). Chips are plain, told apart by their fill, not by a hue per genre
  * family.
  */
 @Composable
@@ -46,6 +47,7 @@ internal fun Genres(
     track: TrackState?,
     settings: Settings?,
     openPage: ((HomePage) -> Unit)? = null,
+    notes: PanelNotes = PanelNotes(),
 ) {
     // *Show genres* off (#444): no genres are asked for, and none shown, not even that they are off.
     if (track == null || !track.gathered || settings?.showGenres == false) return
@@ -57,7 +59,7 @@ internal fun Genres(
         // opens nothing reads as broken.
         openPage != null ->
             Chips(genres.folded, open = null, opensPage = true) { openPage(HomePage.GenresAt(it.label.genre.identity)) }
-        else -> GenresBox(track)
+        else -> GenresBox(track, notes)
     }
 }
 
@@ -67,7 +69,10 @@ internal fun labelsOff(settings: Settings?): Boolean =
 
 // Under *Expandable boxes*: the chips, and under them the panel of the genre chosen, if any.
 @Composable
-private fun GenresBox(track: TrackState) {
+private fun GenresBox(
+    track: TrackState,
+    notes: PanelNotes,
+) {
     // Closed on each new track. Kept by the genre's identity, so it outlasts labels that land later;
     // a genre no row has any more shows no panel.
     var chosen by rememberSaveable(track.normalized.lookupKey) { mutableStateOf<String?>(null) }
@@ -77,7 +82,7 @@ private fun GenresBox(track: TrackState) {
             val genre = label.label.genre.identity
             chosen = if (genre == open) null else genre
         }
-        open?.let { GenrePanel(track, it) { chosen = null } }
+        open?.let { GenrePanel(track, it, onClose = { chosen = null }, notes = notes) }
     }
 }
 

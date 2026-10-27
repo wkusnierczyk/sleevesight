@@ -21,6 +21,7 @@ import app.sleevesight.app.diagnostics.Diagnostics
 import app.sleevesight.app.diagnostics.DiagnosticsLog
 import app.sleevesight.app.history.HistoryRecorder
 import app.sleevesight.app.history.HistoryRetention
+import app.sleevesight.app.pipeline.AppGenreNotes
 import app.sleevesight.app.pipeline.AppPipelineParts
 import app.sleevesight.app.pipeline.ModelCheck
 import app.sleevesight.app.pipeline.PipelineHost
@@ -476,6 +477,25 @@ class AppGraph internal constructor(
         )
 
     /**
+     * What a genre's panel shows besides its table (#523): each genre's definition, kept in the
+     * caches' artist-level table whatever *Keep what sources said about each artist* says, since it
+     * says nothing about what was played; and *Why is this …?*, written with the live pipeline's AI
+     * service and kept in its synthesis cache, in the pipeline's scope, marked with [clearEpoch].
+     */
+    val genreNotes: AppGenreNotes =
+        AppGenreNotes(
+            definitions =
+                wiring.genreDefinitions(
+                    StoreArtistResults({ caches }, Dispatchers.IO, ArtistKeeping.ALWAYS, clearEpoch),
+                ),
+            parts = pipeline.liveParts,
+            settings = latestSettings,
+            scope = pipelineScope,
+            epoch = clearEpoch,
+            io = Dispatchers.IO,
+        )
+
+    /**
      * The diagnostics screen's: the pipeline's events kept in memory from the start of the process,
      * the track changes and the caches' sizes, read when the screen asks, and what skip detection
      * has learned, with its reset ([skipLearning]).
@@ -541,8 +561,9 @@ class AppGraph internal constructor(
      * kept. Then the pipeline's part ([PipelineHost.forget]): its run and preparation cancelled, the
      * insight shown and the coordinator's ledger gone, and the track playing not looked up again
      * until another one plays. Then every cache (the sources' findings, the artist resolutions and
-     * results, the insights and cards written), in one transaction and in turn with what is written
-     * about artists ([ArtistKeeping.clearWith]); MusicBrainz's answers held in memory; the artist
+     * results, the insights and cards written, the genres' reasons and definitions among them), in one transaction and in turn with what is written
+     * about artists ([ArtistKeeping.clearWith]); MusicBrainz's answers held in memory; the genres'
+     * reasons shown ([AppGenreNotes.forget]); the artist
      * facts the listening session cited; the session layer's last change, which names the track
      * before; and the diagnostics' steps, which name the tracks. The API keys and the settings stay.
      * Returns whether the caches were cleared; the rest cannot fail.
@@ -555,6 +576,7 @@ class AppGraph internal constructor(
         val cleared = artistKeeping.clearWith { withContext(Dispatchers.IO) { caches.clearAll() } }
         if (!cleared) Log.w(TAG, "The caches could not be cleared")
         wiring.forgetRemembered()
+        genreNotes.forget()
         sessionFacts.forget()
         sessions.forgetLastChange()
         diagnostics.log.clear()
