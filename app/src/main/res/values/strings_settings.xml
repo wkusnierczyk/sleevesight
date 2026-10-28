@@ -126,13 +126,13 @@
 
     <!-- Load keys and Purge keys (#446): the screens that replace their dialogs. Load keys starts
          with five words, which seal the setup code to this phone (#590). -->
-    <string name="load_keys_words_intro">These words seal your keys to this phone: the QR code made with them opens only here, and only with them, so a photo or a screenshot of it gives nothing away.</string>
+    <string name="load_keys_words_intro">These words seal your keys: the QR code made with them opens only with them, so a photo or a screenshot of the code alone gives nothing away.</string>
     <string name="load_keys_open">1. On your computer, open the API keys page:</string>
     <string name="load_keys_type">2. Type these words there. The first three letters of each are enough.</string>
     <!-- Under the words; the argument is how many minutes they last. -->
     <plurals name="load_keys_words_expire">
-        <item quantity="one">They open one QR code, and expire in %1$d minute or when you leave this screen.</item>
-        <item quantity="other">They open one QR code, and expire in %1$d minutes or when you leave this screen.</item>
+        <item quantity="one">This phone takes one QR code made with them, within %1$d minute; it forgets them when you leave this screen.</item>
+        <item quantity="other">This phone takes one QR code made with them, within %1$d minutes; it forgets them when you leave this screen.</item>
     </plurals>
     <string name="load_keys_words_expired">These words have expired. Show new words, and type those on the computer.</string>
     <string name="load_keys_new_words">New words</string>
