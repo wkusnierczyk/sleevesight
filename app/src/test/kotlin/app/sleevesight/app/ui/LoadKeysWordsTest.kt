@@ -1,6 +1,7 @@
 package app.sleevesight.app.ui
 
 import android.content.Intent
+import android.os.Looper
 import android.view.WindowManager
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.LaunchedEffect
@@ -57,6 +58,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.shadows.ShadowDialog
+import java.time.Duration
 
 /**
  * *Load keys*' words (#590): five words from the list, shown first, which seal the setup code to the
@@ -146,6 +148,20 @@ class LoadKeysWordsTest {
             waitForNode(hasTestTag(LOAD_KEYS_WORD_TAG))
             scenario.block()
         }
+    }
+
+    /**
+     * [ms] pass while the phone sleeps: the clock that counts deep sleep moves (Robolectric's
+     * `SystemClock`, the main looper's), the coroutines' delays, on the test clock, do not.
+     */
+    private fun asleep(ms: Long) {
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(ms))
+    }
+
+    /** [ms] pass while the phone is awake: both clocks move. */
+    private fun awake(ms: Long) {
+        asleep(ms)
+        compose.mainClock.advanceTimeBy(ms)
     }
 
     private fun next() {
@@ -250,7 +266,7 @@ class LoadKeysWordsTest {
         show {
             val words = shownWords()
             next()
-            compose.mainClock.advanceTimeBy(WORDS_LIFETIME.inWholeMilliseconds)
+            awake(WORDS_LIFETIME.inWholeMilliseconds)
             code = sealed("sleevesight-keys:v1\nlastfm=$lastFmKey", words)
             waitForText(text(R.string.load_keys_expired_title))
             assertNull(stored(SecretId.LASTFM))
@@ -261,9 +277,31 @@ class LoadKeysWordsTest {
         }
 
     @Test
+    fun wordsOutlivedInDeepSleepAreRefusedAtTheScan() =
+        show {
+            val words = shownWords()
+            next()
+            asleep(WORDS_LIFETIME.inWholeMilliseconds)
+            code = sealed("sleevesight-keys:v1\nlastfm=$lastFmKey", words)
+            waitForText(text(R.string.load_keys_expired_title))
+            assertNull(stored(SecretId.LASTFM))
+        }
+
+    @Test
+    fun wordsOutlivedInDeepSleepAreHiddenWhenShownAgain() =
+        show {
+            next()
+            asleep(WORDS_LIFETIME.inWholeMilliseconds)
+            compose.onNodeWithText(text(R.string.load_keys_show_words)).performClick()
+            waitForText(text(R.string.load_keys_words_expired))
+            assertTrue(shownWords().isEmpty())
+            assertTrue(!shown(text(R.string.load_keys_next)))
+        }
+
+    @Test
     fun expiredWordsAreHiddenAndOfferOnlyNewWords() =
         show {
-            compose.mainClock.advanceTimeBy(WORDS_LIFETIME.inWholeMilliseconds)
+            awake(WORDS_LIFETIME.inWholeMilliseconds)
             waitForText(text(R.string.load_keys_words_expired))
             assertTrue(shownWords().isEmpty())
             assertTrue(!shown(text(R.string.load_keys_next)))

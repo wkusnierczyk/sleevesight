@@ -1,5 +1,6 @@
 package app.sleevesight.app.ui.settings
 
+import android.os.SystemClock
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -14,6 +15,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -76,6 +78,9 @@ internal fun offerOf(read: SetupRead): SetupOffer =
 /** How long the words *Load keys* shows can open a code, from when they are drawn. */
 internal val WORDS_LIFETIME: Duration = 5.minutes
 
+/** How often, at most, the words' age is checked while they show, so they go soon after waking. */
+private const val WORDS_CHECK_MS = 1_000L
+
 /** What a screen test finds each word *Load keys* shows by. */
 internal const val LOAD_KEYS_WORD_TAG = "load-keys-word"
 
@@ -127,7 +132,8 @@ private sealed interface LoadStep {
  * *Load keys*, a screen of its own ([KeyScreen], secure). First, five words drawn from [list] at
  * random ([crypto]), each large, to type on the computer at [API_KEYS_URL], where the page seals the
  * setup code with them (#590), with *New words* and *Next*; they open one code, and are forgotten
- * after [WORDS_LIFETIME] or when the screen is left (never saved, so a recreated screen draws new
+ * after [WORDS_LIFETIME] by [clock], which counts deep sleep, or when the screen is left (never
+ * saved, so a recreated screen draws new
  * ones). Then how to make the code, the camera's view ([scanner]) to read it, *Show the words* and
  * *Cancel* ([GuidedScan], as the key field's scans, #541). A sealed code is opened with the words
  * (about a second, while the screen says so), or refused: the words do not match it, have expired
@@ -150,21 +156,29 @@ internal fun LoadKeysScreen(
     onDismiss: () -> Unit,
     list: KeyWords = remember { KeyWords.load(JvmResourceReader) },
     crypto: KeyCrypto = JvmKeyCrypto,
+    clock: () -> Long = SystemClock::elapsedRealtime,
 ) {
     var step by remember { mutableStateOf<LoadStep>(LoadStep.Words) }
     var busy by remember { mutableStateOf(false) }
-    // The words while they can open a code; once they cannot, why.
+    // The words while they can open a code; once they cannot, why. Their age is told by [clock],
+    // which counts deep sleep, as a coroutine's delay does not: a phone asleep on this screen for
+    // an hour finds them expired. The delay below only hides them on time while the phone is awake.
     var words by remember { mutableStateOf<List<String>?>(list.draw(crypto::pick)) }
+    var drawnAt by remember { mutableLongStateOf(clock()) }
     var gone by remember { mutableStateOf<Refusal?>(null) }
+    val lifetime = WORDS_LIFETIME.inWholeMilliseconds
+    val due = { clock() - drawnAt >= lifetime }
+    val expire = {
+        words = null
+        gone = Refusal.EXPIRED
+    }
     LaunchedEffect(words) {
-        if (words != null) {
-            delay(WORDS_LIFETIME)
-            words = null
-            gone = Refusal.EXPIRED
-        }
+        while (words != null && !due()) delay(minOf(lifetime - (clock() - drawnAt), WORDS_CHECK_MS))
+        if (words != null) expire()
     }
     val newWords = {
         words = list.draw(crypto::pick)
+        drawnAt = clock()
         gone = null
         step = LoadStep.Words
     }
@@ -173,8 +187,9 @@ internal fun LoadKeysScreen(
     KeyScreen(title, busy || step is LoadStep.Opening, onDismiss) {
         when (val shown = step) {
             LoadStep.Words -> {
+                LaunchedEffect(Unit) { if (words != null && due()) expire() }
                 WordsStep(
-                    words = words,
+                    words = words?.takeUnless { due() },
                     onNewWords = newWords,
                     onNext = { step = LoadStep.Scanning },
                     onCancel = onDismiss,
@@ -191,6 +206,7 @@ internal fun LoadKeysScreen(
                     scanner = scanner,
                     onScanned = { code ->
                         val read = KeySetup.read(code)
+                        if (read == SetupRead.Sealed && words != null && due()) expire()
                         val shownWords = words
                         step =
                             when {
