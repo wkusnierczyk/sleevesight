@@ -126,9 +126,9 @@ internal fun <T> ChoiceDialog(
  * On a phone the dialog takes the screen's width, less a margin ([keyDialogWidth]).
  *
  * A key read from a QR code, a setup code's or a plain key's, is never shown (#702), as *Load keys*
- * shows none in full, so that keys can be lent: while the field holds a scanned key, the eye is not
- * there and the field stays masked, until it is emptied or takes text typed on a computer
- * ([KeyField]).
+ * shows none in full, so that keys can be lent: it is kept apart from the text field, which holds
+ * only mask characters for it, the eye is not there meanwhile, and any edit replaces it whole
+ * ([KeyField]). An autofill request open when it arrives is cancelled.
  *
  * Its buttons are the same for every key ([KeyDialogButtons], #543): *Cancel* at the start, then
  * *Remove*, while a key is stored, in the error colour with the trash can, and *Save*, filled.
@@ -153,7 +153,7 @@ internal fun KeyDialog(
     var session by remember { mutableStateOf<KeyboardSession?>(null) }
     val ledger = SessionLedger.of(LocalContext.current)
     val scope = rememberCoroutineScope()
-    val value = field.typed.trim()
+    val value = field.value.trim()
     val autofill = LocalAutofillManager.current
 
     // Ends the autofill session unsaved before the field goes, which would otherwise commit it. The
@@ -181,7 +181,11 @@ internal fun KeyDialog(
             scanning = null
             val result = scanned(purpose, id, text.trim(), ledger)
             failed = result.failed
-            result.key?.let(field::scan)
+            result.key?.let { key ->
+                // An autofill request open on the field ends before the key is in the dialog.
+                autofill?.cancel()
+                field.scan(key)
+            }
             session = result.session
         }
     }
@@ -275,12 +279,12 @@ private fun KeyEntry(
             WebLink(terms.url)
         }
         OutlinedTextField(
-            value = field.typed,
+            value = field.text,
             onValueChange = field::enter,
             label = { Text(stringResource(R.string.settings_key_field)) },
             trailingIcon = {
                 KeyFieldIcons(
-                    entered = field.typed.isNotEmpty(),
+                    entered = field.text.isNotEmpty(),
                     scanned = field.scanned,
                     shown = field.shown,
                     showable = !busy,

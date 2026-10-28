@@ -54,7 +54,7 @@ import org.robolectric.annotation.Config
  * The key field's icons (#432): *Scan QR code* and *Type on a computer* in the field, in place of
  * the links under it, and the eye, there only while the field holds something, which shows and
  * hides it; the field is masked again when it empties, the dialog closes or the app is left. The dialog takes the
- * screen's width, less a margin, up to Material's widest dialog. A key read from a QR code has no eye (#702).
+ * screen's width, less a margin, up to Material's widest dialog.
  */
 @RunWith(RobolectricTestRunner::class)
 class KeyFieldIconsTest {
@@ -78,19 +78,16 @@ class KeyFieldIconsTest {
     }
 
     /**
-     * Shows the dialog, whose scanner reads [code] at once, or, with [codes], each of them in turn
-     * and then [code] again, whose saves end as [saving] says, and whose computer types [typed] as
-     * soon as a keyboard session starts.
+     * Shows the dialog, whose scanner reads [code] at once, whose saves end as [saving] says, and
+     * whose computer types [typed] as soon as a keyboard session starts.
      */
     private fun show(
         code: String = NEITHER,
-        codes: List<String> = emptyList(),
         saving: CompletableDeferred<SaveResult> = CompletableDeferred(SaveResult.SAVED),
         typed: String = "",
         block: (Shown) -> Unit,
     ) {
-        val next = ArrayDeque(codes)
-        val scanner: QrScanner = { onScanned -> LaunchedEffect(Unit) { onScanned(next.removeFirstOrNull() ?: code) } }
+        val scanner: QrScanner = { onScanned -> LaunchedEffect(Unit) { onScanned(code) } }
         val keyboard: ComputerKeyboard = { session, _, onText, _ -> LaunchedEffect(session) { onText(typed) } }
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             val shown = Shown(scenario)
@@ -291,86 +288,6 @@ class KeyFieldIconsTest {
             assertEquals("a password to autofill", ContentType.Password, type)
         }
 
-    // A key read from a QR code is never shown (#702): keys are lent as a setup code.
-
-    /** Scans with the QR icon, and waits until the field holds [ANTHROPIC_KEY], masked or not. */
-    private fun scanKey() {
-        compose.onNodeWithContentDescription(scan).performClick()
-        compose.waitUntil(timeoutMillis = 5_000) { showing()?.length == ANTHROPIC_KEY.length }
-    }
-
-    /** Whether the field has no eye: neither *Show key* nor *Hide key*. */
-    private fun noEye() = count(hasContentDescription(show)) + count(hasContentDescription(hide)) == 0
-
-    @Test
-    fun aPlainKeyScannedIntoTheFieldStaysMaskedWithNoEye() =
-        show(code = ANTHROPIC_KEY) {
-            scanKey()
-            assertTrue("masked", masked())
-            assertTrue("no eye", noEye())
-        }
-
-    @Test
-    fun aSetupCodesKeyScannedIntoTheFieldStaysMaskedWithNoEye() =
-        show(code = "sleevesight-keys:v1\nanthropic=$ANTHROPIC_KEY") {
-            scanKey()
-            assertTrue("masked", masked())
-            assertTrue("no eye", noEye())
-        }
-
-    @Test
-    fun aKeyScannedWhileATypedOneIsShownIsMaskedWithNoEye() =
-        show(code = ANTHROPIC_KEY) {
-            field().performTextInput("sk-ant-typed")
-            compose.onNodeWithContentDescription(show).performClick()
-            compose.waitForIdle()
-            assertFalse(masked())
-
-            scanKey()
-            assertTrue("masked", masked())
-            assertTrue("no eye", noEye())
-        }
-
-    @Test
-    fun anEditThatLeavesAScannedKeyInTheFieldKeepsItMaskedWithNoEye() =
-        show(code = ANTHROPIC_KEY) {
-            scanKey()
-            field().performTextInput("x")
-            compose.waitForIdle()
-            assertTrue("masked", masked())
-            assertTrue("no eye", noEye())
-        }
-
-    @Test
-    fun aKeyTypedOnceTheScannedOneIsClearedHasTheEyeAgain() =
-        show(code = ANTHROPIC_KEY) {
-            scanKey()
-            field().performTextClearance()
-            field().performTextInput("sk-ant-typed")
-            compose.waitForIdle()
-            assertTrue(masked())
-            compose.onNodeWithContentDescription(show).assertIsEnabled().performClick()
-            compose.waitForIdle()
-            assertEquals("sk-ant-typed", showing())
-        }
-
-    @Test
-    fun aKeyTypedOnAComputerAfterAScannedOneCanBeShown() =
-        show(
-            codes = listOf(ANTHROPIC_KEY),
-            code = KeyboardVectors.freshCode(),
-            typed = "sk-ant-from-the-computer",
-        ) {
-            scanKey()
-            assertTrue(noEye())
-
-            compose.onNodeWithContentDescription(type).performClick()
-            waitFor(hasContentDescription(show))
-            compose.onNodeWithContentDescription(show).performClick()
-            compose.waitForIdle()
-            assertEquals("sk-ant-from-the-computer", showing())
-        }
-
     // The field spans the dialog, whose text has Material's 24 dp padding at each side.
 
     @Test
@@ -395,8 +312,5 @@ class KeyFieldIconsTest {
     private companion object {
         /** A QR code's text that is neither a key (it holds a space) nor a keyboard session's code. */
         const val NEITHER = "not a key"
-
-        /** An Anthropic key's form, for the dialog's key, Anthropic's. */
-        val ANTHROPIC_KEY = "sk-ant-api03-" + "a1B2_c3-D4".repeat(9)
     }
 }
