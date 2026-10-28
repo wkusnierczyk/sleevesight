@@ -253,7 +253,8 @@ class OkHttpEngineTest {
                     it.stream(NetRequest(server.url("/s").toString())) { }
                 }
 
-            assertIs<NetError.Offline>(assertIs<NetResult.Failure>(result).error)
+            val lost = assertIs<NetError.Offline>(assertIs<NetResult.Failure>(result).error)
+            assertFalse(lost.timedOut, lost.reason)
             assertEquals(1, server.requestCount)
         }
 
@@ -274,7 +275,9 @@ class OkHttpEngineTest {
 
             val result = KtorNetClient(twice, okHttpEngine(), log).use { it.stream(slow) { line -> lines += line } }
 
-            assertIs<NetError.Offline>(assertIs<NetResult.Failure>(result).error)
+            val late = assertIs<NetError.Offline>(assertIs<NetResult.Failure>(result).error)
+            assertEquals("HttpRequestTimeoutException", late.reason)
+            assertTrue(late.timedOut)
             assertEquals(listOf("first"), lines)
             assertEquals(1, server.requestCount)
             assertEquals(1, log.lines.size, log.lines.joinToString("\n"))

@@ -204,7 +204,7 @@ internal class KtorNetClient(
             currentCoroutineContext().ensureActive()
             // Timeouts, refused connections, DNS failures and dropped connections are all
             // IOExceptions in Ktor 3. Only the type is kept: a message can carry the URL.
-            Attempt.Failed(NetError.Offline(e::class.simpleName ?: "IOException"), final = stream.began)
+            Attempt.Failed(NetError.Offline(offlineReason(e)), final = stream.began)
         } catch (e: IllegalArgumentException) {
             // A check in Ktor or OkHttp that validation did not foresee. Its message can quote a
             // header value, so it is reported by a fixed label.

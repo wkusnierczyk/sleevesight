@@ -47,7 +47,7 @@ internal suspend fun readLines(
         if (failure == null) splitter.finish()
     } catch (e: IOException) {
         currentCoroutineContext().ensureActive()
-        failure = NetError.Offline(e::class.simpleName ?: "IOException")
+        failure = NetError.Offline(offlineReason(e))
     }
     return failure
 }

@@ -71,3 +71,20 @@ private val protocolExceptions =
             throw EngineProtocolException(e::class.simpleName ?: "ProtocolException")
         }
     }
+
+/**
+ * [e]'s type as the platform names it, for `offlineReason`: its class's simple name when that is a
+ * class of Java or Kotlin, else that of its nearest superclass that is (OkHttp's and Okio's own
+ * become `IOException` or the like). R8 renames the app's and the libraries' classes in the release
+ * build, never the platform's, so the name reads the same in a problem report from the phone as in
+ * a test (#665).
+ */
+internal fun platformTypeName(e: Throwable): String {
+    var type: Class<*> = e.javaClass
+    while (PLATFORM_PACKAGES.none { type.name.startsWith(it) }) {
+        type = type.superclass ?: break
+    }
+    return type.simpleName
+}
+
+private val PLATFORM_PACKAGES = listOf("java.", "javax.", "kotlin.")
