@@ -194,8 +194,10 @@ internal class InsightWriter(
                 is CompletionEvent.Done ->
                     finish(last, text.toString(), card, checkNotNull(started).elapsedNow(), control, sent)
                 is CompletionEvent.Error -> {
-                    emit(PipelineEvent.ModelFailed(key, last.kind))
-                    show(InsightState.Failed(last.kind.name.lowercase()))
+                    // How far the reply got, for the diagnostics: its length, never its text (#665).
+                    val latency = started?.elapsedNow()
+                    emit(PipelineEvent.ModelFailed(key, last.kind, last.breakoff, text.length, latency))
+                    show(InsightState.Failed(ReplyFailures.of(last)))
                 }
 
                 else -> {
@@ -203,7 +205,7 @@ internal class InsightWriter(
                         emit(PipelineEvent.ModelStopped(key))
                         show(InsightState.Stopped)
                     } else {
-                        show(InsightState.Failed(INCOMPLETE))
+                        show(InsightState.Failed(ReplyFailures.INCOMPLETE))
                     }
                 }
             }
@@ -240,9 +242,15 @@ internal class InsightWriter(
         val asksAgain =
             sent.leftOut.isNotEmpty() &&
                 GroundingCheck.check(text, sent.evidence, allowModel) == InsightReply.NoEvidence
+        // A reply with no text is no card: an empty one would be shown, and kept when it ended (#665).
+        val blank = ReplyFailures.ofBlank(done, text)
         return when {
             done.stopReason == StopReason.REFUSAL -> {
-                show(InsightState.Failed(DECLINED))
+                show(InsightState.Failed(ReplyFailures.DECLINED))
+            }
+
+            blank != null -> {
+                show(InsightState.Failed(blank))
             }
 
             asksAgain -> {
@@ -345,7 +353,5 @@ internal class InsightWriter(
 
     private companion object {
         const val WAITS_FOR_TAP = "waits for a tap on Write (Reactive)"
-        const val INCOMPLETE = "incomplete"
-        const val DECLINED = "declined"
     }
 }

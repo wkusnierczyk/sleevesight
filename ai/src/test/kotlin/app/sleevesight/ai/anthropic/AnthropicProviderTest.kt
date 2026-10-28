@@ -6,6 +6,8 @@ import app.sleevesight.ai.ReplayNetClient.Companion.ok
 import app.sleevesight.ai.ReplayNetClient.Companion.recorded
 import app.sleevesight.core.Secret
 import app.sleevesight.core.ai.AiErrorKind
+import app.sleevesight.core.ai.Breakoff
+import app.sleevesight.core.ai.BreakoffCause
 import app.sleevesight.core.ai.CompletionEvent
 import app.sleevesight.core.ai.CompletionRequest
 import app.sleevesight.core.ai.ModelInfo
@@ -268,18 +270,39 @@ class AnthropicProviderTest {
         }
 
     @Test
-    fun `a stream that ends before message_stop is incomplete`() =
+    fun `a stream that ends before message_stop is incomplete, as having no end, with the tokens counted`() =
         runTest {
             val (events, _) =
                 events {
                     ok(
                         sse(
-                            """{"type":"message_start","message":{"usage":{"input_tokens":3}}}""",
+                            """{"type":"message_start","message":{"usage":{"input_tokens":3,"output_tokens":1}}}""",
                             """{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Half"}}""",
                         ),
                     )
                 }
-            assertEquals(CompletionEvent.Error(AiErrorKind.INCOMPLETE), events.last())
+            val breakoff = Breakoff(BreakoffCause.NO_END, Usage(3, 1))
+            assertEquals(CompletionEvent.Error(AiErrorKind.INCOMPLETE, breakoff = breakoff), events.last())
+        }
+
+    @Test
+    fun `a stream that ends after message_delta gave the stop reason is complete, though message_stop is lost`() =
+        runTest {
+            for (end in listOf(null, NetError.Offline("SocketException"))) {
+                val events =
+                    provider(
+                        cutNet(
+                            """{"type":"message_start","message":{"usage":{"input_tokens":3}}}""",
+                            """{"type":"content_block_delta","index":0,""" +
+                                """"delta":{"type":"text_delta","text":"Whole."}}""",
+                            """{"type":"message_delta","delta":{"stop_reason":"end_turn"},""" +
+                                """"usage":{"output_tokens":9}}""",
+                            end = end,
+                        ),
+                    ).stream(request, key).toList()
+                val done = CompletionEvent.Done(Usage(3, 9), StopReason.END)
+                assertEquals(listOf(CompletionEvent.Delta("Whole."), done), events, "ended by $end")
+            }
         }
 
     @Test
@@ -466,27 +489,59 @@ class AnthropicProviderTest {
     }
 
     @Test
-    fun `the connection lost after the message began leaves an incomplete reply`() =
+    fun `the connection lost after the message began leaves an incomplete reply, saying how it broke off`() =
         runTest {
-            val net =
-                object : NetClient {
-                    override suspend fun send(request: NetRequest): NetResult<NetResponse> = error("not used")
+            val cases =
+                listOf(
+                    NetError.Offline("IOException") to
+                        Breakoff(BreakoffCause.CONNECTION_LOST, Usage(3, 0), "IOException"),
+                    NetError.Offline("CancelledBody") to
+                        Breakoff(BreakoffCause.CONNECTION_LOST, Usage(3, 0), "CancelledBody"),
+                    NetError.Offline("SocketTimeoutException") to
+                        Breakoff(BreakoffCause.TIMED_OUT, Usage(3, 0), "SocketTimeoutException"),
+                    NetError.Offline("HttpRequestTimeoutException") to
+                        Breakoff(BreakoffCause.TIMED_OUT, Usage(3, 0), "HttpRequestTimeoutException"),
+                    NetError.TooLarge(16) to Breakoff(BreakoffCause.TOO_LARGE, Usage(3, 0)),
+                )
+            for ((error, breakoff) in cases) {
+                val net =
+                    cutNet(
+                        """{"type":"message_start","message":{"usage":{"input_tokens":3}}}""",
+                        """{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Half"}}""",
+                        end = error,
+                    )
+                val events = provider(net).stream(request, key).toList()
+                val incomplete = CompletionEvent.Error(AiErrorKind.INCOMPLETE, breakoff = breakoff)
+                assertEquals(listOf(CompletionEvent.Delta("Half"), incomplete), events, "ended by $error")
+            }
+        }
 
-                    override suspend fun stream(
-                        request: NetRequest,
-                        onLine: suspend (String) -> Unit,
-                    ): NetResult<NetResponse> {
-                        sse(
-                            """{"type":"message_start","message":{"usage":{"input_tokens":3}}}""",
-                            """{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Half"}}""",
-                        ).lines().forEach { onLine(it) }
-                        return NetResult.Failure(NetError.Offline("IOException"))
-                    }
-
-                    override fun close() = Unit
-                }
+    @Test
+    fun `the connection lost before the message began is offline, not a reply that broke off`() =
+        runTest {
+            val net = cutNet(end = NetError.Offline("SocketTimeoutException"))
             val events = provider(net).stream(request, key).toList()
-            assertEquals(listOf(CompletionEvent.Delta("Half"), CompletionEvent.Error(AiErrorKind.INCOMPLETE)), events)
+            assertEquals(listOf(CompletionEvent.Error(AiErrorKind.OFFLINE)), events)
+        }
+
+    // A stream of [events] that ends with [end], a failure, or as a 200 whose body simply ended when null.
+    private fun cutNet(
+        vararg events: String,
+        end: NetError?,
+    ): NetClient =
+        object : NetClient {
+            override suspend fun send(request: NetRequest): NetResult<NetResponse> = error("not used")
+
+            override suspend fun stream(
+                request: NetRequest,
+                onLine: suspend (String) -> Unit,
+            ): NetResult<NetResponse> {
+                if (events.isNotEmpty()) sse(*events).lines().forEach { onLine(it) }
+                return end?.let { NetResult.Failure(it) }
+                    ?: NetResult.Success(NetResponse(200, emptyMap(), ByteArray(0)))
+            }
+
+            override fun close() = Unit
         }
 
     @Test

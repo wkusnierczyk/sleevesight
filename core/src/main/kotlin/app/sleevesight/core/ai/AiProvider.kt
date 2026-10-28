@@ -111,12 +111,48 @@ sealed interface CompletionEvent {
 
     /**
      * The reply failed; the text so far, if any, is incomplete. [retryAfter] is the service's
-     * requested wait, when it gave one.
+     * requested wait, when it gave one. [breakoff] says how a reply that had begun broke off, for
+     * [AiErrorKind.INCOMPLETE] only, when the client can tell.
      */
     data class Error(
         val kind: AiErrorKind,
         val retryAfter: Duration? = null,
-    ) : CompletionEvent
+        val breakoff: Breakoff? = null,
+    ) : CompletionEvent {
+        init {
+            require(breakoff == null || kind == AiErrorKind.INCOMPLETE) {
+                "A breakoff is for an incomplete reply, not $kind"
+            }
+        }
+    }
+}
+
+/**
+ * How a reply broke off before its end ([AiErrorKind.INCOMPLETE]), for the card to say and the
+ * diagnostics to record, never with the text (#665): its [cause]; the tokens the service had counted
+ * by then ([usage]: Anthropic counts the input when the reply begins and the output only near its
+ * end, OpenAI both only at the end, so they are often zero); and the transport's label for the
+ * failure ([detail], such as `SocketTimeoutException`), null when the stream simply ended.
+ */
+data class Breakoff(
+    val cause: BreakoffCause,
+    val usage: Usage,
+    val detail: String? = null,
+)
+
+/** Why a reply that had begun did not reach its end. */
+enum class BreakoffCause {
+    /** The stream ended, as the transport saw it, without the service's end of the reply. */
+    NO_END,
+
+    /** The connection was lost or cut mid-reply. */
+    CONNECTION_LOST,
+
+    /** The client stopped waiting: the reply fell silent, or took longer in all, than it allows. */
+    TIMED_OUT,
+
+    /** The reply was longer than the client reads. */
+    TOO_LARGE,
 }
 
 /** Tokens billed for one completion, as the service reports them. */
@@ -188,7 +224,10 @@ enum class AiErrorKind {
     /** The prompt is too large for the service. */
     REQUEST_TOO_LARGE,
 
-    /** The stream broke off or ended before the reply was complete. */
+    /**
+     * The stream broke off or ended before the reply was complete; [CompletionEvent.Error.breakoff]
+     * says how, when the client can tell.
+     */
     INCOMPLETE,
 
     /** The service answered with something this client cannot read. */

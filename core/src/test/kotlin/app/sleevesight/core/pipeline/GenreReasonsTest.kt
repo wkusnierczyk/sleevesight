@@ -2,8 +2,11 @@ package app.sleevesight.core.pipeline
 
 import app.sleevesight.core.Secret
 import app.sleevesight.core.ai.AiErrorKind
+import app.sleevesight.core.ai.Breakoff
+import app.sleevesight.core.ai.BreakoffCause
 import app.sleevesight.core.ai.CompletionEvent
 import app.sleevesight.core.ai.StopReason
+import app.sleevesight.core.ai.Usage
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.genres.GenreLabel
@@ -163,6 +166,30 @@ class GenreReasonsTest {
             assertEquals(false, written.complete)
             assertEquals(0, cache.cards.size)
         }
+
+    @Test
+    fun `a reply that broke off says how, and one with no text fails, and neither is kept (#665)`() =
+        runTest {
+            val cases =
+                listOf(
+                    brokeOff(BreakoffCause.CONNECTION_LOST) to ReplyFailures.CONNECTION_LOST,
+                    brokeOff(BreakoffCause.TIMED_OUT) to ReplyFailures.TIMED_OUT,
+                    brokeOff(BreakoffCause.NO_END) to ReplyFailures.INCOMPLETE,
+                    FakeProvider.done("", StopReason.MAX_TOKENS) to ReplyFailures.LENGTH_LIMIT,
+                    FakeProvider.done(" \n", StopReason.END) to ReplyFailures.EMPTY,
+                )
+            for ((reply, label) in cases) {
+                provider.reply = { reply }
+                assertEquals(InsightState.Failed(label), write(), label)
+            }
+            assertEquals(0, cache.cards.size)
+        }
+
+    private fun brokeOff(cause: BreakoffCause): List<CompletionEvent> =
+        listOf(
+            CompletionEvent.Delta("Half"),
+            CompletionEvent.Error(AiErrorKind.INCOMPLETE, breakoff = Breakoff(cause, Usage(900, 0))),
+        )
 
     @Test
     fun `a cache that fails is a miss, and the reason is still written`() =

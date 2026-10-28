@@ -1,6 +1,7 @@
 package app.sleevesight.core.pipeline
 
 import app.sleevesight.core.ai.AiErrorKind
+import app.sleevesight.core.ai.Breakoff
 import app.sleevesight.core.ai.StopReason
 import app.sleevesight.core.ai.Usage
 import app.sleevesight.core.model.NormalizedTrack
@@ -158,9 +159,17 @@ sealed interface PipelineEvent {
         val latency: Duration,
     ) : PipelineEvent
 
+    /**
+     * The call failed, as [kind] says; for a reply that broke off, [breakoff] says how, when the
+     * client can tell (#665). [received] is how many characters of the reply had come, never which,
+     * and [latency] how long after the call began it failed; both null where not measured.
+     */
     data class ModelFailed(
         override val key: String,
         val kind: AiErrorKind,
+        val breakoff: Breakoff? = null,
+        val received: Int? = null,
+        val latency: Duration? = null,
     ) : PipelineEvent
 
     /**

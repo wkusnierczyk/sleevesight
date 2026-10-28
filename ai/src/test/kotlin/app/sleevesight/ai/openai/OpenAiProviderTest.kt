@@ -6,6 +6,8 @@ import app.sleevesight.ai.ReplayNetClient.Companion.ok
 import app.sleevesight.ai.ReplayNetClient.Companion.recorded
 import app.sleevesight.core.Secret
 import app.sleevesight.core.ai.AiErrorKind
+import app.sleevesight.core.ai.Breakoff
+import app.sleevesight.core.ai.BreakoffCause
 import app.sleevesight.core.ai.CompletionEvent
 import app.sleevesight.core.ai.CompletionRequest
 import app.sleevesight.core.ai.ModelInfo
@@ -295,10 +297,12 @@ class OpenAiProviderTest {
         }
 
     @Test
-    fun `a stream that ends before its response does is incomplete`() =
+    fun `a stream that ends before its response does is incomplete, as having no end`() =
         runTest {
             val (events, _) = events { ok(sse(created, delta("Half"))) }
-            assertEquals(listOf(CompletionEvent.Delta("Half"), CompletionEvent.Error(AiErrorKind.INCOMPLETE)), events)
+            val incomplete =
+                CompletionEvent.Error(AiErrorKind.INCOMPLETE, breakoff = Breakoff(BreakoffCause.NO_END, Usage(0, 0)))
+            assertEquals(listOf(CompletionEvent.Delta("Half"), incomplete), events)
         }
 
     @Test
@@ -493,7 +497,7 @@ class OpenAiProviderTest {
     }
 
     @Test
-    fun `the connection lost after the response began leaves an incomplete reply`() =
+    fun `the connection lost after the response began leaves an incomplete reply, saying how`() =
         runTest {
             val net =
                 object : NetClient {
@@ -504,13 +508,15 @@ class OpenAiProviderTest {
                         onLine: suspend (String) -> Unit,
                     ): NetResult<NetResponse> {
                         sse(created, delta("Half")).lines().forEach { onLine(it) }
-                        return NetResult.Failure(NetError.Offline("IOException"))
+                        return NetResult.Failure(NetError.Offline("SocketTimeoutException"))
                     }
 
                     override fun close() = Unit
                 }
             val events = provider(net).stream(request, key).toList()
-            assertEquals(listOf(CompletionEvent.Delta("Half"), CompletionEvent.Error(AiErrorKind.INCOMPLETE)), events)
+            val breakoff = Breakoff(BreakoffCause.TIMED_OUT, Usage(0, 0), "SocketTimeoutException")
+            val incomplete = CompletionEvent.Error(AiErrorKind.INCOMPLETE, breakoff = breakoff)
+            assertEquals(listOf(CompletionEvent.Delta("Half"), incomplete), events)
         }
 
     @Test
