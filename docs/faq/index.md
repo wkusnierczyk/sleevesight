@@ -6,7 +6,7 @@
 # constraints*), the usage page (*Players*) and the issues named; what other services offer is from
 # their own documentation, dated where it can change. Linked from the docs index, the tester brief and
 # the README. A change to what the app reads, to what a player shows, to Spotify's terms or to the plans
-# named here (#708, #709) changes this page too.
+# named here (#709) changes this page too; so does the first-run statement on notification access (#708).
 title: Frequently asked questions
 permalink: /docs/faq/
 ---
@@ -19,11 +19,11 @@ Notification access may sound alarming, but the app uses very little of it: what
 
 ## Why does Sleevesight need notification access? Does it read my notifications?
 
-It does not read your notifications. Notification access is Android's only way for an app to see what another app is playing. A player reports its track in a *media session*, and Android lists other apps' media sessions (through `MediaSessionManager`) only to an app that holds notification access. Android cannot narrow that access to one app, or to media sessions alone, and its dialog describes everything the access would allow, not what the app does with it.
+It does not read your notifications. A player reports its track in a *media session*, and Android lists other apps' media sessions (through `MediaSessionManager`) only to an app that holds notification access. Android cannot narrow that access to one app, or to media sessions alone, and its dialog describes everything the access would allow, not what the app does with it.
 
 Sleevesight reads the media sessions of the players you switch on (Spotify by default): the track, its artists, album (and its year), length and cover; whether it is playing and how far in; and the queue of tracks up next. It never reads the notifications themselves, your messages or your contacts, and never the audio. Of another app with a media session, it reads only enough to tell whether it plays music, so that it can be listed under *Players*, switched off. The part of the code that holds the access, [`SleevesightListenerService`](https://github.com/wkusnierczyk/sleevesight/blob/main/app/src/main/kotlin/app/sleevesight/app/session/SleevesightListenerService.kt), only starts and stops the reading of the players; nothing in it handles a notification: it overrides none of the notification callbacks, so they are ignored.
 
-The [privacy policy]({{ '/privacy.html#what-the-app-reads-on-the-phone' | relative_url }}) says what is read, in full. The first-run screen says the same before Android's dialog opens ([a typical journey]({{ '/docs/journey/' | relative_url }}), step 2), and is being made plainer about it ([#708](https://github.com/wkusnierczyk/sleevesight/issues/708)).
+The [privacy policy]({{ '/privacy.html#what-the-app-reads-on-the-phone' | relative_url }}) says what is read, in full. The first-run screen says the same before Android's dialog opens ([a typical journey]({{ '/docs/journey/' | relative_url }}), step 2): right above *Open notification access*, and on the home screen's *Turn on notification access* prompt, a short statement says what Android's dialog will warn of; that Sleevesight uses the access only to see what apps say they are playing, to find your music players, and follows only the players you switch on; that it never reads your notifications, messages or contacts, and never acts on them or on calls; and that the access cannot be limited to one app. The home screen's *Turn on notification access* prompt, which leads to that screen, says it in one line.
 
 ## Why not connect to Spotify instead, with one "Connect" button, as Garmin Connect links with Strava?
 

@@ -56,7 +56,8 @@ import kotlinx.coroutines.launch
  * Where the first-run flow lands: a header that stays at the top ([HomeHeader]), and under it, while
  * notification access is on, what is playing ([pipeline], the now-playing content) and, at the
  * bottom under a muted divider, the way back to what leaves the device (#441); while it is off, the
- * way to turn it on. Everything under the header scrolls, so a citation can bring its evidence line
+ * way to turn it on, with a line on Android's warning for it and what Sleevesight does with the access
+ * (#708). Everything under the header scrolls, so a citation can bring its evidence line
  * into view.
  *
  * With [report] (#452: developer mode on, and *Report button* at *Show* or *Auto*), a small
@@ -144,6 +145,9 @@ private fun HomeBody(
             )
         } else {
             Text(stringResource(R.string.home_access_off), style = MaterialTheme.typography.bodyLarge)
+            // The first-run screen, which the button opens, says it in full before Android's own screen
+            // for the access (#708); here, the short form.
+            Text(stringResource(R.string.home_access_statement), style = MaterialTheme.typography.bodyMedium)
             Button(onClick = onOpenFirstRun) { Text(stringResource(R.string.home_turn_on_access)) }
         }
     }
