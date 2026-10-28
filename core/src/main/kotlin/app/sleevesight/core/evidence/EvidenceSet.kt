@@ -41,9 +41,9 @@ class EvidenceSet private constructor(
      * which the insight prompt gives the model in its track block anyway, so from it alone the
      * model could only restate the release the card's header shows. With [allowModel] on (the
      * *Model's own knowledge* switch), such a set is narrated: the model may add its one unverified
-     * sentence, cited `[M]`, which the user opted into. But only once the report names the track's
+     * sentence, cited `[AI]`, which the user opted into. But only once the report names the track's
      * artists ([artistsKnown]): some players report the title and album before the artists, and a
-     * card written from that early report would stand for the track, its `[M]` sentence written
+     * card written from that early report would stand for the track, its `[AI]` sentence written
      * without the artist, since nothing is written twice for one track without a tap (D5). Decided
      * with no call, that early report leaves the track unwritten, so the report with the artists,
      * under a new key, is decided afresh (#204). A set with no line at all is never narrated,

@@ -40,7 +40,7 @@ class SpokenWordsTest {
     @Test
     fun aSentenceFromTheModelsOwnKnowledgeIsSaidToBeUnverifiedWithoutItsMark() {
         val grounded =
-            written("Sundown was recorded in 1973 [MB1]. Lightfoot wrote it in Toronto [M].", allowModel = true)
+            written("Sundown was recorded in 1973 [MB1]. Lightfoot wrote it in Toronto [AI].", allowModel = true)
         // As the check marked it, not as the text reads.
         assertEquals(
             SentenceStatus.MODEL,
@@ -55,11 +55,11 @@ class SpokenWordsTest {
     }
 
     @Test
-    fun theModelsMarkAsAiIsLeftOutTooAndACitationOfNoLineIsUnverified() {
-        // `[AI]` (#668) is a citation of no line here, where the model's own knowledge is `M`.
+    fun theMarkOfAnInsightKeptFromBeforeIsLeftOutTooAndACitationOfNoLineIsUnverified() {
+        // `[M]`, the model's mark until #668, in an insight kept from before.
         assertEquals(
-            listOf("Unverified: Lightfoot wrote it in Toronto."),
-            spoken("Lightfoot wrote it in Toronto [AI]."),
+            listOf("Sundown was recorded in 1973.", "Unverified: Lightfoot wrote it in Toronto."),
+            spoken("Sundown was recorded in 1973 [MB1]. Lightfoot wrote it in Toronto [M].", allowModel = true),
         )
         assertEquals(listOf("Unverified: It was a hit."), spoken("It was a hit [W9]."))
     }

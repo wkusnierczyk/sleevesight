@@ -38,11 +38,12 @@ import app.sleevesight.core.pipeline.TrackState
 
 /**
  * The panel of [genre] (#558; frame B of the agreed mock-ups): its name as a heading, with *Close*
- * when there is [onClose]; then what the genre is and *Why is this …?*, from [notes] (#523,
- * [GenreAbout]); then the table, a row per level in [GenreLevel] order, each row's name
- * (the track's title, the artist's name, the album's title) on one line above its labels, [genre]
- * marked wherever it shows; then where the table's labels come from, a line per row, each source
- * linked to its page there, and MusicBrainz's licence (D12). Nothing when no row has [genre].
+ * when there is [onClose] (under [closeModifier]: a focus requester); then what the genre is and
+ * *Why is this …?*, from [notes] (#523, [GenreAbout]); then the table, a row per level in
+ * [GenreLevel] order, each row's name (the track's title, the artist's name, the album's title) on
+ * one line above its labels, [genre] marked wherever it shows; then where the table's labels come
+ * from, a line per row, each source linked to its page there, and MusicBrainz's licence (D12).
+ * Nothing when no row has [genre].
  */
 @Composable
 internal fun GenrePanel(
@@ -50,6 +51,7 @@ internal fun GenrePanel(
     genre: String,
     onClose: (() -> Unit)? = null,
     notes: PanelNotes = PanelNotes(),
+    closeModifier: Modifier = Modifier,
 ) {
     val genres = track.genres
     val name =
@@ -57,7 +59,7 @@ internal fun GenrePanel(
             .firstOrNull { it.genre.identity == genre }
             ?.genre
             ?.label ?: return
-    Panel(AnnotatedString(name), GENRE_PANEL_TAG, onClose) {
+    Panel(AnnotatedString(name), GENRE_PANEL_TAG, onClose, closeModifier = closeModifier) {
         // What the genre is, and *Why is this …?* (#523), above the table.
         GenreAbout(track, genre, notes)
         Table(track, genre)

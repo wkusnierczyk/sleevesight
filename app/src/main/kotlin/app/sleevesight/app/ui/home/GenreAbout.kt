@@ -42,7 +42,7 @@ import app.sleevesight.core.pipeline.TrackState
  * ([PanelNotes.onCite]), its grounding note under it. Neither shows when [PanelNotes.notes] has
  * none: no definition for a genre with no article (or Wikipedia off), no button for a genre only
  * MusicBrainz gives, with
- * *Show insights* off or no AI service ready. A reason still being written reads its `[M]` as the
+ * *Show insights* off or no AI service ready. A reason still being written reads its `[AI]` as the
  * settings allow it ([PanelNotes.modelAllowed]). A written reason has *Read aloud* (#325,
  * [ReadAloudButton]) at the end of its grounding note's row, which reads the question, then the
  * reason ([PanelNotes.readAloud]).

@@ -59,13 +59,18 @@ object InsightPrompt {
      * version 5's. Raised as
      * version 4 was: the cards written before it on thinly documented tracks are the ones padded
      * with a sentence restating that line, and each track kept is written afresh once.
+     *
+     * Not raised when the model's own knowledge's citation became `[AI]` (#668, it was `[M]`): a
+     * card kept under the `[M]` wording reads and shows as one written now
+     * ([citationId]), so writing every kept track afresh, a paid call each, would buy
+     * nothing.
      */
     const val VERSION: Int = 6
 
     /**
      * The prompt for [nowPlaying], normalized as [normalized], written from [evidence]. With
      * [allowModel] (the *Model's own knowledge* switch), the model may add one sentence of its own,
-     * cited `[M]`. [userStyle] is the user's style for this card (D14), or null for the built-in
+     * cited `[AI]`. [userStyle] is the user's style for this card (D14), or null for the built-in
      * style alone.
      */
     fun build(
@@ -138,7 +143,7 @@ object InsightPrompt {
             GAP_RULE,
             if (allowModel) {
                 "- You may add at most one sentence of your own general knowledge if it adds real value, " +
-                    "ending with [M]. Never contradict the evidence."
+                    "ending with [${GroundingCheck.MODEL_ID}]. Never contradict the evidence."
             } else {
                 "- Do not use your own knowledge."
             },
