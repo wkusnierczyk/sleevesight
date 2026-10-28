@@ -196,6 +196,8 @@ class BusyDialogTest {
         val code = "sleevesight-keys:v1\nlastfm=$lastFmKey"
         show(scanner = { onScanned -> LaunchedEffect(Unit) { onScanned(code) } }) {
             compose.onNodeWithText(text(R.string.settings_scan_keys)).performScrollTo().performClick()
+            // Past the words that seal a code (#590): these codes are clear ones.
+            compose.onNodeWithText(text(R.string.load_keys_next)).performClick()
             waitForText(text(R.string.setup_title))
             val before = flaky.writes.get()
             flaky.writeGate = gate
