@@ -52,6 +52,8 @@
     <string name="settings_needs_key">Needs your %1$s key, in Secrets.</string>
     <!-- Under each service that needs a key (#539): %1$s is the key's name ("Anthropic API key"), a link to its row in Secrets. -->
     <string name="settings_set_key">Set your %1$s here.</string>
+    <!-- The same, once the key is saved (#667). -->
+    <string name="settings_update_key">Update your %1$s here.</string>
     <string name="settings_key_unreadable_note">Your %1$s key can no longer be read; see Secrets.</string>
     <!-- The same, above the link to the key in Secrets (settings_set_key), which says where it is. -->
     <string name="settings_needs_key_linked">Needs your %1$s key.</string>

@@ -388,12 +388,16 @@ data class Settings(
                     ),
             )
 
-        /** All on except the model's own knowledge. */
+        /**
+         * All on except the model's own knowledge. On the phone, a source that needs a key (Last.fm)
+         * is kept off while its key is not saved (#667, the app's `KeyGate`), so it starts off
+         * there; the command line switches it off itself when its keys file holds no key.
+         */
         val DEFAULT_SOURCES: Set<SourceSwitch> = SourceSwitch.entries.toSet() - SourceSwitch.MODEL
 
         /**
-         * Every engine on. Each needs the user's own key, so an engine searches only once its key
-         * is saved: the switch is for turning off one whose key is saved, without removing the key.
+         * Every engine on. Each needs the user's own key: on the phone an engine is kept off while
+         * its key is not saved (#667, the app's `KeyGate`), and saving the key does not switch it on.
          */
         val DEFAULT_WEB_ENGINES: Set<WebEngine> = WebEngine.entries.toSet()
 

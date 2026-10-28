@@ -204,6 +204,23 @@ class HomeModelTest {
     }
 
     @Test
+    fun aKeyedSourceSwitchedOffThatWasNotLookedUpIsOffNotInNeedOfItsKey() {
+        // Last.fm with no key saved is switched off (#667), so it has no adapter and no state in
+        // the track: it says it is off, as one switched off with its key does, and needs nothing.
+        val state = track(sources = mapOf(SourceId.MUSICBRAINZ to done()))
+        val chips = sourceChips(state, needsKey = emptySet(), modelAllowed = false, off = setOf(SourceId.LASTFM))
+        assertEquals(listOf(SourceId.MUSICBRAINZ, SourceId.LASTFM), chips.map { it.source })
+        assertEquals(ChipStatus.Done(Outcome.SourceOff, cached = false), chips.last().status)
+        assertEquals(emptyList<SourceNote>(), sourceNotes(chips, offline = false))
+        // One looked up keeps the state its run gave it.
+        val looked = track(sources = mapOf(SourceId.LASTFM to done(Outcome.None)))
+        assertEquals(
+            listOf(ChipStatus.Done(Outcome.None, cached = false)),
+            sourceChips(looked, emptySet(), false, off = setOf(SourceId.LASTFM)).map { it.status },
+        )
+    }
+
+    @Test
     fun rejectedMatchesAndUnverifiedLinesComeFromEachSourcesResult() {
         val unverified = draft(SourceId.LASTFM, "Gordon Lightfoot has 1M listeners.")
         val state =

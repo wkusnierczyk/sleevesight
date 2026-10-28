@@ -32,9 +32,11 @@ import app.sleevesight.app.pipeline.pipelineKeys
 import app.sleevesight.app.pipeline.rebuilds
 import app.sleevesight.app.pipeline.shown
 import app.sleevesight.app.secrets.AndroidKeystoreKey
+import app.sleevesight.app.secrets.KeyGate
 import app.sleevesight.app.secrets.SecretCipher
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretStore
+import app.sleevesight.app.secrets.servicesOff
 import app.sleevesight.app.session.ArtLoader
 import app.sleevesight.app.session.DataStoreLearningMark
 import app.sleevesight.app.session.HttpArt
@@ -136,7 +138,13 @@ class AppGraph internal constructor(
     val settings = SettingsStore(settingsData, SettingsStore.BUILD_DEFAULTS)
 
     /** The user's keys, sealed with the app's Android Keystore key, in a file of their own. */
-    val secrets = SecretStore(preferences(appContext, SECRETS_FILE), secretCipher)
+    val secrets =
+        SecretStore(
+            preferences(appContext, SECRETS_FILE),
+            secretCipher,
+            // A key saved where none was, or after a purge, never finds its service stored on (#667).
+            servicesOff = settings::servicesOff,
+        )
 
     /**
      * Where the settings screen saves a setting or a key, or removes keys: the process's scope, so
@@ -541,6 +549,10 @@ class AppGraph internal constructor(
         // What the session layer sees is recorded whether or not the app is visible.
         mainScope.launch { historyRecorder.run() }
         mainScope.launch { historyRetention.run() }
+        // A service that needs a key is off while its key is not saved, in the stored settings
+        // (#667): an earlier version's settings at the first start, and after a key is removed.
+        // Off the main thread: its write waits for none of the main thread's work.
+        pipelineScope.launch { KeyGate(settings, secrets, latestSettings.filterNotNull()).run() }
         // `history.db` opens only after the first run is acknowledged.
         mainScope.launch {
             firstRun.state.first { it }

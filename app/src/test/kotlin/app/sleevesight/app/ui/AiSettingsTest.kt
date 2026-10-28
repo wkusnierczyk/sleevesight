@@ -4,11 +4,15 @@ import androidx.activity.compose.setContent
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
+import androidx.compose.ui.test.isEnabled
+import androidx.compose.ui.test.isNotEnabled
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -262,18 +266,26 @@ class AiSettingsTest {
                 .onNode(effortRow(anthropic(R.string.settings_ai_effort_of), R.string.settings_effort_high))
                 .performScrollTo()
                 .assertIsDisplayed()
+            // With no key saved, it says it needs one, and its switch cannot be moved (#667).
             val needsAnthropicKey = needsKey(R.string.settings_ai_provider_anthropic)
-            assertTrue(absentText(needsAnthropicKey))
+            waitForText(needsAnthropicKey)
+            anthropic.assertIsNotEnabled()
+            // A screen reader hears the switch as unavailable, with the line that says why.
+            val anthropicName = text(R.string.settings_ai_provider_anthropic)
+            compose
+                .onNode(hasText(anthropicName) and hasText(needsAnthropicKey) and isNotEnabled())
+                .assertExists()
+
+            // Saving the key makes the switch usable, and leaves it off.
+            runBlocking { secrets.set(SecretId.ANTHROPIC, Secret("anthropic-key")) }
+            waitFor("the key notice gone") { absentText(needsAnthropicKey) }
+            anthropic.assertIsEnabled().assertIsOff()
+            assertEquals(null, current().aiProvider)
 
             anthropic.performClick()
             waitFor("Anthropic switched on") { current().aiProvider == ProviderId.ANTHROPIC }
             assertEquals("claude-opus-5-5", current().model)
             assertEquals(ReasoningEffort.HIGH, current().effort)
-            // On with no key saved, it says that it needs one, in *Secrets*.
-            waitForText(needsAnthropicKey)
-
-            runBlocking { secrets.set(SecretId.ANTHROPIC, Secret("anthropic-key")) }
-            waitFor("the key notice gone") { absentText(needsAnthropicKey) }
 
             anthropic.performClick()
             waitFor("Anthropic switched off") { current().aiProvider == null }
@@ -299,12 +311,21 @@ class AiSettingsTest {
             compose.onNodeWithText(text(R.string.settings_ai_provider_anthropic)).performScrollTo().assertIsOn()
             compose.waitForIdle()
             assertTrue(absentText(needsKey(R.string.settings_ai_provider_anthropic)))
+            // Nor "Set your …" (or "Update your …"), which could be wrong for a saved key (#667).
+            val keyName = text(R.string.settings_key_name_anthropic)
+            for (sentence in listOf(R.string.settings_set_key, R.string.settings_update_key)) {
+                assertTrue(compose.onAllNodesWithSubstring(app.getString(sentence, keyName)).isEmpty())
+            }
         }
     }
 
     @Test
     fun openAiIsOfferedWithItsOwnModelAndEffortAndTheSwitchesAreExclusive() {
-        runBlocking { settings.update { it.copy(aiProvider = ProviderId.ANTHROPIC) } }
+        runBlocking {
+            secrets.set(SecretId.ANTHROPIC, Secret("anthropic-key"))
+            secrets.set(SecretId.OPENAI, Secret("openai-key"))
+            settings.update { it.copy(aiProvider = ProviderId.ANTHROPIC) }
+        }
         show {
             val openAi = text(R.string.settings_ai_provider_openai)
             // Its key is under *Secrets*, not here.
@@ -316,17 +337,17 @@ class AiSettingsTest {
             compose.onNodeWithText(effort).performScrollTo().assertIsDisplayed()
 
             val openAiSwitch = compose.onNodeWithText(openAi).performScrollTo()
+            // Once the keys' states are read: the switch is usable with its key saved.
+            waitFor("OpenAI's switch usable") {
+                compose.onAllNodes(hasText(openAi) and isEnabled()).fetchSemanticsNodes().isNotEmpty()
+            }
             openAiSwitch.assertIsOff()
             openAiSwitch.performClick()
             waitFor("OpenAI switched on") { current().aiProvider == ProviderId.OPENAI }
             compose.onNodeWithText(text(R.string.settings_ai_provider_anthropic)).performScrollTo().assertIsOff()
             assertEquals(Settings.DEFAULT_MODELS.getValue(ProviderId.OPENAI), current().model)
             assertEquals(ReasoningEffort.LOW, current().effort)
-            // Its key, not Anthropic's, is the one insights wait for.
-            val needsOpenAiKey = needsKey(R.string.settings_ai_provider_openai)
-            waitForText(needsOpenAiKey)
-            runBlocking { secrets.set(SecretId.OPENAI, Secret("openai-key")) }
-            waitFor("the key notice gone") { absentText(needsOpenAiKey) }
+            assertTrue(absentText(needsKey(R.string.settings_ai_provider_openai)))
         }
     }
 
@@ -378,10 +399,18 @@ class AiSettingsTest {
 
     @Test
     fun switchingGoogleOnSwitchesAnthropicOff() {
-        runBlocking { settings.update { it.copy(aiProvider = ProviderId.ANTHROPIC) } }
+        runBlocking {
+            secrets.set(SecretId.ANTHROPIC, Secret("anthropic-key"))
+            secrets.set(SecretId.GOOGLE, Secret("google-key"))
+            settings.update { it.copy(aiProvider = ProviderId.ANTHROPIC) }
+        }
         show {
             compose.onNodeWithText(text(R.string.settings_ai_provider_anthropic)).performScrollTo().assertIsOn()
-            val google = compose.onNodeWithText(text(R.string.settings_ai_provider_google)).performScrollTo()
+            val googleName = text(R.string.settings_ai_provider_google)
+            waitFor("Google's switch usable") {
+                compose.onAllNodes(hasText(googleName) and isEnabled()).fetchSemanticsNodes().isNotEmpty()
+            }
+            val google = compose.onNodeWithText(googleName).performScrollTo()
             google.assertIsOff()
 
             google.performClick()

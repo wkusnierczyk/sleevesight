@@ -122,7 +122,7 @@ The chip shows at a glance what a tap does:
 
 That only changes what you see: what the AI service may use is set under [*Sources*]({{ '/docs/tutorials/settings/' | relative_url }}). A screen reader reads a chip that shows or hides lines as a switch, its source's name, and whether its lines are shown or hidden, then what the source found; a dimmed chip's row is read as text, the source's name and what it found.
 
-**The note.** Under the table, a note only when something needs you or went wrong, a sentence for each source: *Last.fm needs your key, in Settings.* (a tap on *Settings* opens them; the key goes under *Secrets*), *Web search could not be reached.*, or *MusicBrainz failed.* A source that found nothing, whose match was rejected, or that you switched off says nothing.
+**The note.** Under the table, a note only when something needs you or went wrong, a sentence for each source: *Last.fm needs your key, in Settings.*, when its saved key can no longer be read (a tap on *Settings* opens them; the key goes under *Secrets*), *Web search could not be reached.*, or *MusicBrainz failed.* A source that found nothing, whose match was rejected, or that is switched off says nothing; a source with no key saved is switched off.
 
 **The list.** Then the evidence lines, each with its id, its text, what it is about (*song*, *artist*, *original song*, *release*, *web*) and a link to the page it was found on, which opens in the browser. After them, under their own heading, come *Found, but not verified, so not cited*: lines from matches that could not be checked against the track, which are shown but never given to the insight. Above the list, how many entries show ("Showing 8 of 12 entries"). It unfolds 8 entries at a time, with three buttons in one group under it, always in the same place:
 
@@ -137,8 +137,8 @@ A citation tapped in the insight opens the panel and unfolds the list as far as 
 
 | The row says | Meaning |
 |---|---|
-| *Off in Settings* | You switched the source off under *Sources* |
-| *Needs your key, in Settings* | Last.fm or web search is on, but its key is not saved |
+| *Off in Settings* | The source is off under *Sources*: you switched it off, or its key is not saved |
+| *Needs your key, in Settings* | Last.fm or web search is on, but its saved key can no longer be read |
 | *Match rejected* | What it found failed the identity check (without the option, *Nothing found*); shown in the error colour |
 | *Failed* | As without the option, but shown in the error colour |
 | *(kept)*, after what it found | The answer was kept on the phone from an earlier lookup |
@@ -266,7 +266,7 @@ Playing, pausing and skipping from inside Sleevesight are not built yet; use the
 | **Offline** | *Sources* says *Offline. The sources that could not be reached are asked again when the phone is back online.* Once the phone is back online, the playing track's unreachable sources are asked again; the rest keep what they found. What was kept on the phone from earlier lookups still shows. An insight that cannot be written for want of a connection says *Writing failed: no connection.* |
 | **No AI service on, or no key for it** | The sources are still looked up and shown. The insight says *Choose an AI service and save its key in Settings to have insights written.*, and no Write is offered. Set it up under [*AI services*]({{ '/docs/tutorials/settings/' | relative_url }}), with its key under *Secrets*. |
 | **Insights switched off** | *Insights are off. Turn them on in Settings.* No AI calls at all; the evidence is still shown. |
-| **No key for Last.fm or web search** | *Sources* says *Last.fm needs your key, in Settings.* or *Web search needs your key, in Settings.*, and it is not asked. MusicBrainz and Wikipedia need no key. |
+| **No key for Last.fm or web search** | It is off under [*Sources*]({{ '/docs/tutorials/settings/' | relative_url }}), and cannot be switched on until its key is saved; it is not asked. With *Show grounding details* on, its row says *Off in Settings*. A saved key that can no longer be read is entered again: until then *Sources* says *Last.fm needs your key, in Settings.* or *Web search needs your key, in Settings.* MusicBrainz and Wikipedia need no key. |
 | **A source rejects a match** | The match is never used, and the source's row says *Nothing found*, its chip dimmed, unless it gave other lines. With *Show grounding details* on, its row says *Match rejected*, and the match is listed under *Rejected matches* with the reason. |
 | **A match that cannot be verified** | Its lines show under *Found, but not verified, so not cited*, and the insight is not given them. Web search results have nothing to be verified against: those its filter keeps are given to the insight, and may be cited. |
 | **A source fails** | *Sources* says so (*MusicBrainz failed.*, or *… could not be reached.*); the other sources' lines are used. |

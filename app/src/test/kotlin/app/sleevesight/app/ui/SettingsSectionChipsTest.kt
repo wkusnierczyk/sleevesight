@@ -161,6 +161,8 @@ class SettingsSectionChipsTest {
             assertEquals(0, compose.onAllNodesWithTag(SettingsSection.SECRETS.panelTag).fetchSemanticsNodes().size)
             val target = SettingsTarget.key(SecretId.EXA)
             val name = text(R.string.settings_key_name_exa)
+            // The sentence shows once the keys' states are read (#667).
+            waitForNode(hasText(app.getString(R.string.settings_set_key, name)))
             compose
                 .onNode(hasText(app.getString(R.string.settings_set_key, name)), useUnmergedTree = true)
                 .performScrollTo()
