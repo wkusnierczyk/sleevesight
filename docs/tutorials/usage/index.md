@@ -196,7 +196,7 @@ Beside an insight already written, the arrow's menu begins with ***Look again***
 
 ### What costs nothing
 
-- **A track played again.** When a track you played before comes back, the sources find the same evidence, and the AI service, model, reasoning effort and *AI service knowledge* are as they were, the insight written then is shown again, marked *Kept from before.*, with no call. Otherwise it is written afresh, as for a new track. Kept insights are dropped, least recently shown first, once they pass the cache's size limit.
+- **A track played again.** When a track you played before comes back, the sources find the same evidence, and the AI service, model, reasoning effort and *AI service knowledge* are as they were, the insight written then is shown again, marked *Kept from before.*, with no call. Otherwise it is written afresh, as for a new track. Kept insights are dropped once older than *Keep history for* (90 days by default), and, least recently shown first, once they pass the cache's size limit.
 - **Nothing to write from.** When the sources give nothing to write an insight from, *Key insights* says *The sources give nothing to write an insight from.*, and no call is made. The same line can also follow a call, when the AI service finds nothing in the evidence to write from. With the model's own knowledge on, the album the player reports is enough for a call, once the player has also reported the artists; the model may then add what it knows, marked unverified.
 - **The next track.** The track next in the player's queue is looked up ahead (by default, at MusicBrainz), so its sources come sooner when it plays. No insight is written ahead.
 
@@ -232,7 +232,7 @@ Sleevesight keeps, on the phone only, information about the tracks it has seen p
 
 What there is:
 
-- **The settings' *History* group**: [*Keep history for*]({{ '/docs/tutorials/settings/' | relative_url }}) (90 days by default); *Clear history*, right under it, which deletes everything kept about the tracks you played (the list of tracks played and the track changes, the insights and genre explanations written, and what the sources found) together, once you confirm, and keeps your API keys and settings and leaves your music untouched; and [*New session idle trigger*]({{ '/docs/tutorials/settings/' | relative_url }}), which decides where one listening session ends.
+- **The settings' *History* group**: [*Keep history for*]({{ '/docs/tutorials/settings/' | relative_url }}) (90 days by default), how long the history and the insights and genre explanations written are kept; *Clear history*, right under it, which deletes everything kept about the tracks you played (the list of tracks played and the track changes, the insights and genre explanations written, and what the sources found) together, once you confirm, and keeps your API keys and settings and leaves your music untouched; and [*New session idle trigger*]({{ '/docs/tutorials/settings/' | relative_url }}), which decides where one listening session ends.
 - **The diagnostics screen**, under the developer settings, which lists the track changes recorded, with what skip detection learns from them, and can export them to a file you choose.
 
 The history is left out of Android's backup, and the app never sends it anywhere; only an export you make from the diagnostics screen takes a copy of the track changes off the app.

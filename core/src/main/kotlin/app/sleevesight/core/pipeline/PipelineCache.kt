@@ -56,6 +56,17 @@ interface PipelineCache {
         text: String,
     )
 
+    /**
+     * Keeps the card [text], written for [key] at [writtenAt], the time the card shown carries too,
+     * so the screen and the cache count *Keep history for* from the same time (#643); by default
+     * as [keep] without one, where the cache keeps no time of its own.
+     */
+    suspend fun keep(
+        key: CardKey,
+        text: String,
+        writtenAt: Instant,
+    ) = keep(key, text)
+
     /** A cache that keeps nothing. */
     object None : PipelineCache {
         override suspend fun result(

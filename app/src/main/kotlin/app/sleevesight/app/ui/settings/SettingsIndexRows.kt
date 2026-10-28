@@ -148,7 +148,7 @@ internal fun historyRows(settings: Settings): List<IndexedRow> {
     return listOf(
         choiceRow(
             stringResource(R.string.settings_keep_history),
-            null,
+            stringResource(R.string.settings_keep_history_summary),
             lifetimeLabel(settings.historyLifetime),
             lifetimes.map { it.second },
         ),
