@@ -16,7 +16,9 @@ import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.CardKey
 import app.sleevesight.core.pipeline.ClearEpoch
+import app.sleevesight.core.pipeline.KeptCard
 import app.sleevesight.core.pipeline.PipelineCache
+import app.sleevesight.core.settings.pastKeepHistory
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.SourceResult
@@ -25,6 +27,7 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Instant
 
@@ -133,8 +136,13 @@ internal class CountingProvider : AiProvider {
  */
 internal class CardCache(
     private val epoch: ClearEpoch = ClearEpoch(),
+    private val clock: Clock? = null,
+    private val lifetime: () -> Duration? = { null },
 ) : PipelineCache {
     private val cards = mutableMapOf<CardKey, String>()
+
+    // When each card was kept, by [clock]; none without one, as a cache that does not say.
+    private val keptAt = mutableMapOf<CardKey, Instant>()
     private val results = mutableMapOf<Triple<SourceId, String, Long?>, SourceResult>()
     var keepsResults = false
 
@@ -166,12 +174,53 @@ internal class CardCache(
         }
     }
 
-    override suspend fun card(key: CardKey): String? = cards[key]
+    override suspend fun card(key: CardKey): String? = keptCard(key)?.text
+
+    /** A read of a card waits for this once it has its answer, as a slow read would; null, none. */
+    var readHeld: Deferred<Unit>? = null
+
+    /** When each card kept was written, as kept. */
+    val keptTimes: Collection<Instant> get() = keptAt.values
+
+    // As the store serves it: none written longer ago than [lifetime] (*Keep history for*, #643),
+    // which is deleted as it is read.
+    override suspend fun keptCard(key: CardKey): KeptCard? {
+        val at = keptAt[key]
+        if (clock != null && pastKeepHistory(at, lifetime(), clock.now())) {
+            cards.remove(key)
+            keptAt.remove(key)
+        }
+        val kept = cards[key]?.let { KeptCard(it, at) }
+        if (kept != null) readHeld?.await()
+        return kept
+    }
 
     override suspend fun keep(
         key: CardKey,
         text: String,
     ) {
-        epoch.ifCurrent(currentCoroutineContext()) { cards[key] = text }
+        epoch.ifCurrent(currentCoroutineContext()) {
+            cards[key] = text
+            clock?.let { keptAt[key] = it.now() }
+        }
     }
+
+    override suspend fun keep(
+        key: CardKey,
+        text: String,
+        writtenAt: Instant,
+    ) {
+        epoch.ifCurrent(currentCoroutineContext()) {
+            cards[key] = text
+            keptAt[key] = writtenAt
+        }
+    }
+}
+
+/** A clock the tests move ([at]), which moves on by [tick] each time it is read. */
+internal class MovedClock(
+    var at: Instant = Instant.parse("2026-10-27T12:00:00Z"),
+    var tick: Duration = Duration.ZERO,
+) : Clock {
+    override fun now(): Instant = at.also { at += tick }
 }

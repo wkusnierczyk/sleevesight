@@ -50,9 +50,12 @@ internal abstract class PipelineHostFixture {
     protected val lastFm = CountingAdapter(SourceId.LASTFM)
     protected val provider = CountingProvider()
 
+    /** The time the host, its pipelines and the cache go by (#643: *Keep history for*). */
+    protected val clock = MovedClock()
+
     /** *Clear history*'s boundary (#547), which the host marks its runs with and the cache keeps by. */
     protected val epoch = ClearEpoch()
-    protected val cache = CardCache(epoch)
+    protected val cache = CardCache(epoch, clock) { settings.value.historyLifetime }
 
     /** The next item in the queue (D13), and each resolution asked: the lookup key and the length. */
     protected val next = MutableStateFlow<NowPlaying?>(null)
@@ -81,6 +84,7 @@ internal abstract class PipelineHostFixture {
             next = next,
             online = online,
             epoch = epoch,
+            clock = clock,
             normalizer = Normalizer(JvmAccentFolder),
             parts = { keys, _ ->
                 builds++

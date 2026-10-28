@@ -24,7 +24,9 @@ import androidx.compose.ui.unit.toSize
  * `assets/logo/src/make_app_logo.py`). As the product page's one-line logo
  * (`_includes/logo-linear.html`): the record runs from the top of the "h" to the foot of the "g",
  * 0.266 em after the "t", so [height] is the record's. In the light or dark colours as the
- * screen's background is light or dark.
+ * screen's background is light or dark. In a debug build ([LOGO_BUG], #652), the tester report
+ * button's bug takes the record's place ([drawRecordPlace]), as in the intro's landed logo, which
+ * reads the same [LOGO_BUG].
  *
  * It says nothing itself: its caller names it (Home's header: "Sleevesight, scroll to top"). If
  * its box is narrower than the logo, the logo shrinks to fit. While the intro plays
@@ -35,9 +37,22 @@ import androidx.compose.ui.unit.toSize
 fun HeaderLogo(
     modifier: Modifier = Modifier,
     height: Dp = HEADER_LOGO_HEIGHT,
+) = HeaderLogo(LOGO_BUG, modifier, height)
+
+/**
+ * [HeaderLogo] with the bug in the record's place or not, whatever the build ([LOGO_BUG]): for
+ * tests, which draw both on the one build they run on. The app's callers use [HeaderLogo] without
+ * it, so the header always draws what the intro lands.
+ */
+@Composable
+internal fun HeaderLogo(
+    bug: Boolean,
+    modifier: Modifier = Modifier,
+    height: Dp = HEADER_LOGO_HEIGHT,
 ) {
     val intro = LocalLogoIntro.current
     val colors = logoColors()
+    val bugPath = logoBug(bug)
     val shown by remember(intro) { derivedStateOf { intro?.finished ?: true } }
     val place =
         if (intro == null) {
@@ -52,7 +67,7 @@ fun HeaderLogo(
             drawSleeve(colors)
             translate(LineShift.x, LineShift.y) {
                 drawSight(colors)
-                drawRecord(colors, RecordCentre)
+                drawRecordPlace(colors, bugPath)
             }
         }
     }
