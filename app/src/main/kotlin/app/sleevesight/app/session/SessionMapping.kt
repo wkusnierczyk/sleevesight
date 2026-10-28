@@ -205,10 +205,11 @@ object SessionMapping {
 
     /**
      * Where the art can come from, best first: the bitmap the player sends (`ALBUM_ART`, else `ART`),
-     * then its `content://` URIs, read locally where the player allows it, then its `http` URIs,
+     * then its `content://` URIs, read locally where the player allows it, then its `https` URIs,
      * fetched through `:sources` (`design/architecture.md`, *UI*). So a player that sends a bitmap,
      * as Spotify and YouTube Music do, never causes a request for its art. Other schemes are
-     * skipped: another app's files cannot be read.
+     * skipped: another app's files cannot be read, and a plain `http` address would travel
+     * unencrypted (#696; `ArtFetcher` refuses one too).
      */
     fun artSources(metadata: MediaMetadata?): List<ArtSource> {
         metadata ?: return emptyList()
@@ -218,7 +219,7 @@ object SessionMapping {
         val uris = artUris(metadata)
         return listOfNotNull(bitmap?.let(ArtSource::Image)) +
             uris.filter { it.scheme() == "content" }.map(ArtSource::Content) +
-            uris.filter { it.scheme() == "http" || it.scheme() == "https" }.map(ArtSource::Http)
+            uris.filter { it.scheme() == "https" }.map(ArtSource::Http)
     }
 
     private fun artUris(metadata: MediaMetadata): List<String> =

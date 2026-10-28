@@ -20,7 +20,7 @@ Buttons and settings are named as the app names them, in italics.
 
 The first time it is opened, the app shows its first-run screen, which says what it reads and what leaves the phone, and leads to Android's notification access. Nothing is read or sent before you continue from it. The [journey]({{ '/docs/journey/' | relative_url }}) covers that screen step by step.
 
-If notification access is turned off later, the home screen says *Sleevesight needs notification access to see what is playing.*, with *Turn on notification access*, which leads back to the first-run screen.
+If notification access is turned off later, the home screen says *Sleevesight needs notification access to see what is playing.*, with *Turn on notification access*, which leads back to the first-run screen. Right above *Open notification access*, the first-run screen says what Android's screen for the access will warn of (that the app could read all your notifications, such as messages; some phones name banking apps, or make you wait before you can allow it), and that Sleevesight uses the access only to see what apps say they are playing, to find your music players, and follows only the players you switch on; it never reads your notifications, messages or contacts, and never acts on them or on calls. The home screen's prompt says it in one line.
 
 ## The logo intro
 

@@ -49,7 +49,8 @@ sealed interface NetError {
 
     /**
      * The server's answer broke HTTP in a way the engine does not pass on, such as a 407 from a
-     * server that is not a proxy. It answered, so it is never retried.
+     * server that is not a proxy, or could not be followed safely: a redirect from `https` to plain
+     * `http` (`redirect to http refused`, #696). It answered, so it is never retried.
      */
     data class Protocol(
         val reason: String,

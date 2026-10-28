@@ -10,12 +10,19 @@ import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
+import org.w3c.dom.Document
+import org.w3c.dom.Element
 import javax.xml.parsers.DocumentBuilderFactory
 
 /**
  * Fails when a variant's merged manifest requests a permission that is not in the permission
  * allowlist. Libraries can merge permissions in unseen; this makes each one a reviewed edit.
  * `${applicationId}` in the allowlist stands for the application id.
+ *
+ * Fails too when the merged manifest could allow an unencrypted connection (#696): its
+ * `<application>` must say `android:usesCleartextTraffic="false"` (Android 8 allows cleartext by
+ * default, and `minSdk` is 26) and carry no `android:networkSecurityConfig`, which from Android 7
+ * on takes that attribute's place and could allow cleartext.
  */
 abstract class CheckManifest : DefaultTask() {
     @get:InputFile
@@ -66,11 +73,33 @@ abstract class CheckManifest : DefaultTask() {
                     "\nRemove them with tools:node=\"remove\", or add them after review.",
             )
         }
+        val cleartext = cleartextProblems(doc)
+        if (cleartext.isNotEmpty()) {
+            throw GradleException(
+                "The merged manifest could allow unencrypted connections:\n" +
+                    cleartext.joinToString("\n") { "  $it" },
+            )
+        }
         marker.get().asFile.writeText("ok\n")
     }
 
-    private companion object {
-        const val ANDROID_NS = "http://schemas.android.com/apk/res/android"
-        val PERMISSION_TAGS = listOf("uses-permission", "uses-permission-sdk-23")
+    internal companion object {
+        private const val ANDROID_NS = "http://schemas.android.com/apk/res/android"
+        private val PERMISSION_TAGS = listOf("uses-permission", "uses-permission-sdk-23")
+
+        /** What in [doc]'s `<application>` could let the app connect unencrypted; empty if nothing. */
+        fun cleartextProblems(doc: Document): List<String> {
+            val applications = doc.getElementsByTagName("application")
+            if (applications.length != 1) return listOf("expected one <application>, found ${applications.length}")
+            val application = applications.item(0) as Element
+            return listOfNotNull(
+                "android:usesCleartextTraffic is not \"false\"".takeIf {
+                    application.getAttributeNS(ANDROID_NS, "usesCleartextTraffic") != "false"
+                },
+                "android:networkSecurityConfig is set".takeIf {
+                    application.hasAttributeNS(ANDROID_NS, "networkSecurityConfig")
+                },
+            )
+        }
     }
 }

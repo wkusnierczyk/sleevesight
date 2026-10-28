@@ -87,7 +87,9 @@ private val SPACING = 12.dp
 
 /**
  * The screen's text, from its introduction ([intro]), the way to notification access, and the link to
- * the privacy policy; once access is on, *Continue* ([onContinue]) when there is one.
+ * the privacy policy; once access is on, *Continue* ([onContinue]) when there is one. While access is
+ * off, right above *Open notification access*, it says what Android's screen for it will warn of, and
+ * what Sleevesight does with the access (#708).
  */
 @Composable
 private fun FirstRunText(
@@ -125,6 +127,9 @@ private fun FirstRunText(
     } else {
         Heading(R.string.access_off)
         Body(R.string.access_off_hint)
+        // Read just before Android's own screen for the access, which sounds broader than what the
+        // app does with it (#708).
+        Body(R.string.access_statement)
         Button(
             onClick = { noSettingsScreen = !openAccessSettings() },
             modifier = Modifier.fillMaxWidth(),

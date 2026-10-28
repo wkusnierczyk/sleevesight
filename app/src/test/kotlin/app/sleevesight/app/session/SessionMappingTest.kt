@@ -309,11 +309,20 @@ class SessionMappingTest {
     @Test
     fun withoutABitmapTheUrisAreTriedAndOtherSchemesSkipped() {
         assertEquals(
-            listOf(ArtSource.Http("HTTP://cdn/2")),
-            SessionMapping.artSources(metadata(albumArtUri = "file:///sdcard/a.jpg", artUri = "HTTP://cdn/2")),
+            listOf(ArtSource.Http("HTTPS://cdn/2")),
+            SessionMapping.artSources(metadata(albumArtUri = "file:///sdcard/a.jpg", artUri = "HTTPS://cdn/2")),
         )
         assertEquals(emptyList<ArtSource>(), SessionMapping.artSources(metadata()))
         assertEquals(emptyList<ArtSource>(), SessionMapping.artSources(null))
+    }
+
+    @Test
+    fun aPlainHttpArtAddressIsSkipped() {
+        assertEquals(
+            listOf(ArtSource.Http("https://cdn/2")),
+            SessionMapping.artSources(metadata(albumArtUri = "http://cdn/1", artUri = "https://cdn/2")),
+        )
+        assertEquals(emptyList<ArtSource>(), SessionMapping.artSources(metadata(artUri = "HTTP://cdn/1")))
     }
 
     @Test
