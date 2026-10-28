@@ -1,0 +1,6 @@
+What's new in 0.1.9:
+- Load keys: the QR code of your keys is sealed with five words the phone shows, so a photo of it alone gives nothing away.
+- A key read from a QR code is never shown, also in its own dialog.
+- Before Android's notification access warning, a plain word on what the app reads.
+- When an insight's reply breaks off, the app says how.
+- Covers are fetched over HTTPS only.
