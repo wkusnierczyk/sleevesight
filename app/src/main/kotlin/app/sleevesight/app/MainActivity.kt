@@ -23,6 +23,7 @@ import app.sleevesight.app.report.AppBuild
 import app.sleevesight.app.report.TesterReports
 import app.sleevesight.app.ui.DiagnosticsScreen
 import app.sleevesight.app.ui.SleevesightNavHost
+import app.sleevesight.app.ui.ThemeButtonFeed
 import app.sleevesight.app.ui.home.HomeFeed
 import app.sleevesight.app.ui.home.NowPlayingHome
 import app.sleevesight.app.ui.home.NowPlayingPage
@@ -71,6 +72,8 @@ class MainActivity : ComponentActivity() {
             hideGuide = graph.settings.homeGuideHider(graph.settingsSaves),
             // What a genre's panel shows above its table (#523).
             genreNotes = graph.genreNotes,
+            // *Read aloud* under the insight and a genre's reason (#325).
+            readAloud = graph.readAloud,
         )
     }
 
@@ -99,6 +102,12 @@ class MainActivity : ComponentActivity() {
                     diagnostics = graph.diagnostics,
                 ),
         )
+    }
+
+    // What Home's theme button reads (#636): *Theme button* and *Theme*, and the tap's save, in the
+    // process's scope, which outlives the activity the new theme restarts from Android 12.
+    private val themeButton: ThemeButtonFeed by lazy {
+        ThemeButtonFeed(graph.latestSettings, graph.settings.themeCycler(graph.settingsSaves))
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -154,6 +163,7 @@ class MainActivity : ComponentActivity() {
                                     NowPlayingPage(homeFeed, page, links.openSettings, links.openPage, links.back)
                                 },
                                 testerReport = testerReport,
+                                themeButton = themeButton,
                             )
                         }
                         intro?.let { LogoIntroOverlay(it) }
@@ -216,14 +226,17 @@ class MainActivity : ComponentActivity() {
     // possible; a stop for a configuration change (a rotation) says so, so the app stays visible
     // until the new activity starts. A start never asks for a new first action (D5): only a cold
     // start, a new process, begins without one (#190).
+    // A reading aloud stops, too, when the app leaves the screen, and not for a rotation (#325).
     override fun onStart() {
         super.onStart()
         graph.pipeline.activityStarted()
+        graph.readAloud.activityStarted()
     }
 
     override fun onStop() {
         super.onStop()
         graph.pipeline.activityStopped(changingConfigurations = isChangingConfigurations)
+        graph.readAloud.activityStopped(changingConfigurations = isChangingConfigurations)
     }
 
     override fun onResume() {

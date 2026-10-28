@@ -143,6 +143,7 @@ class SettingsSearchTest {
             assertEquals(
                 listOf(
                     R.string.settings_theme,
+                    R.string.settings_theme_button,
                     R.string.settings_font,
                     R.string.settings_layout,
                     R.string.settings_keep_sources,

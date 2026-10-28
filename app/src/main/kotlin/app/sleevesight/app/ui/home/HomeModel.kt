@@ -15,6 +15,8 @@ import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.resolution.NameMatcher
 import app.sleevesight.core.settings.WriteAutomatically
 import app.sleevesight.core.sources.ReleaseDate
+import app.sleevesight.core.synthesis.GroundingCheck
+import app.sleevesight.core.synthesis.citationId
 
 // What the home screen shows, worked out from what the session layer and the pipeline publish, as
 // plain functions so the tests need no screen. Nothing here decides anything for the pipeline.
@@ -142,15 +144,16 @@ internal sealed interface Segment {
 }
 
 /**
- * [sentence] split into its text and its citations (`[W1]`, `[M]`), as the grounding check reads
- * them. The citations become chips the app builds; the rest is plain text.
+ * [sentence] split into its text and its citations (`[W1]`, `[AI]`), as the grounding check reads
+ * them, a legacy `[M]` as `AI` ([citationId], #668). The citations become chips the
+ * app builds; the rest is plain text.
  */
 internal fun segments(sentence: String): List<Segment> {
     val out = mutableListOf<Segment>()
     var at = 0
     for (match in CITATION.findAll(sentence)) {
         if (match.range.first > at) out += Segment.Text(sentence.substring(at, match.range.first))
-        out += Segment.Cite(match.groupValues[1])
+        out += Segment.Cite(citationId(match.groupValues[1]))
         at = match.range.last + 1
     }
     if (at < sentence.length) out += Segment.Text(sentence.substring(at))
@@ -161,7 +164,7 @@ internal fun segments(sentence: String): List<Segment> {
 internal enum class CiteKind { LINE, MODEL, UNKNOWN }
 
 /**
- * What citing [id] points at, in [evidence]: `M` only when the model's own knowledge is allowed. A
+ * What citing [id] points at, in [evidence]: `AI` only when the model's own knowledge is allowed. A
  * line outside [held], the ids the prompt held when it left some of the track's out (#239), is no
  * line, as the grounding check reads it: the model was not given it, though the track has it.
  */
@@ -172,7 +175,7 @@ internal fun citeKind(
     held: Set<String>? = null,
 ): CiteKind =
     when {
-        id == SourceId.MODEL.tag -> if (modelAllowed) CiteKind.MODEL else CiteKind.UNKNOWN
+        id == GroundingCheck.MODEL_ID -> if (modelAllowed) CiteKind.MODEL else CiteKind.UNKNOWN
         held != null && id !in held -> CiteKind.UNKNOWN
         evidence?.get(id) != null -> CiteKind.LINE
         else -> CiteKind.UNKNOWN
@@ -206,13 +209,15 @@ internal sealed interface ChipStatus {
 /**
  * The chips of the *Sources* section, in the evidence's order (`P` first, as the simulator shows
  * it): the player's release when there is a `P` line, each source looked up, each keyed source
- * that needs its key, and the model's own knowledge when it is allowed. The Wikipedia chip shows
- * and hides Wikidata's lines too, which its adapter brings.
+ * that needs its key, each keyed source switched off ([off]) that was not looked up, as off (#667:
+ * one with no key saved is off, not in need of its key), and the model's own knowledge when it is
+ * allowed. The Wikipedia chip shows and hides Wikidata's lines too, which its adapter brings.
  */
 internal fun sourceChips(
     track: TrackState,
     needsKey: Set<SourceId>,
     modelAllowed: Boolean,
+    off: Set<SourceId> = emptySet(),
 ): List<SourceChip> {
     val chips = mutableListOf<SourceChip>()
     if (track.evidence
@@ -244,8 +249,14 @@ internal fun sourceChips(
             }
         chips += SourceChip(source, status, filtersOf(source))
     }
-    for (source in order.filter { it in needsKey && it !in track.sources }) {
-        chips += SourceChip(source, ChipStatus.NeedsKey, filtersOf(source))
+    for (source in order.filter { it !in track.sources }) {
+        val status =
+            when (source) {
+                in needsKey -> ChipStatus.NeedsKey
+                in off -> ChipStatus.Done(Outcome.SourceOff, cached = false)
+                else -> null
+            }
+        status?.let { chips += SourceChip(source, it, filtersOf(source)) }
     }
     if (modelAllowed) chips += SourceChip(SourceId.MODEL, ChipStatus.ModelAllowed, setOf(SourceId.MODEL))
     return chips

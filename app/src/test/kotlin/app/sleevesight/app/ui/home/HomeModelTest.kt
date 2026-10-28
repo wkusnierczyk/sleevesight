@@ -57,14 +57,23 @@ class HomeModelTest {
     fun aCitationPointsAtALineTheModelOrNothing() {
         assertEquals(CiteKind.LINE, citeKind("MB1", evidence, modelAllowed = false))
         assertEquals(CiteKind.UNKNOWN, citeKind("L1", evidence, modelAllowed = false))
-        assertEquals(CiteKind.MODEL, citeKind("M", evidence, modelAllowed = true))
-        assertEquals(CiteKind.UNKNOWN, citeKind("M", evidence, modelAllowed = false))
+        assertEquals(CiteKind.MODEL, citeKind("AI", evidence, modelAllowed = true))
+        assertEquals(CiteKind.UNKNOWN, citeKind("AI", evidence, modelAllowed = false))
         assertEquals(CiteKind.UNKNOWN, citeKind("MB1", null, modelAllowed = false))
-        // A line its prompt left out (#239) is no line, though the track has it; `M` is not a line.
+        // A line its prompt left out (#239) is no line, though the track has it; `AI` is not a line.
         val held = setOf("MB1")
         assertEquals(CiteKind.LINE, citeKind("MB1", evidence, modelAllowed = false, held))
         assertEquals(CiteKind.UNKNOWN, citeKind("W1", evidence, modelAllowed = false, held))
-        assertEquals(CiteKind.MODEL, citeKind("M", evidence, modelAllowed = true, held))
+        assertEquals(CiteKind.MODEL, citeKind("AI", evidence, modelAllowed = true, held))
+    }
+
+    @Test
+    fun aCitationOfMWrittenBefore0_1_8IsTheModelsOwnKnowledgeShownAsAI() {
+        // A reply kept from before the model's own knowledge was cited `[AI]` (#668) cites `[M]`.
+        val legacy = segments("He was Canadian [M].")
+        assertEquals(listOf(Segment.Text("He was Canadian "), Segment.Cite("AI"), Segment.Text(".")), legacy)
+        assertEquals(CiteKind.MODEL, citeKind(legacy.filterIsInstance<Segment.Cite>().single().id, evidence, true))
+        assertEquals(segments("He was Canadian [AI]."), legacy)
     }
 
     @Test
@@ -191,6 +200,23 @@ class HomeModelTest {
         assertEquals(
             listOf(SourceNote.NeedsKey(SourceId.LASTFM)),
             sourceNotes(sourceChips(keyless, setOf(SourceId.LASTFM), modelAllowed = false), offline = false),
+        )
+    }
+
+    @Test
+    fun aKeyedSourceSwitchedOffThatWasNotLookedUpIsOffNotInNeedOfItsKey() {
+        // Last.fm with no key saved is switched off (#667), so it has no adapter and no state in
+        // the track: it says it is off, as one switched off with its key does, and needs nothing.
+        val state = track(sources = mapOf(SourceId.MUSICBRAINZ to done()))
+        val chips = sourceChips(state, needsKey = emptySet(), modelAllowed = false, off = setOf(SourceId.LASTFM))
+        assertEquals(listOf(SourceId.MUSICBRAINZ, SourceId.LASTFM), chips.map { it.source })
+        assertEquals(ChipStatus.Done(Outcome.SourceOff, cached = false), chips.last().status)
+        assertEquals(emptyList<SourceNote>(), sourceNotes(chips, offline = false))
+        // One looked up keeps the state its run gave it.
+        val looked = track(sources = mapOf(SourceId.LASTFM to done(Outcome.None)))
+        assertEquals(
+            listOf(ChipStatus.Done(Outcome.None, cached = false)),
+            sourceChips(looked, emptySet(), false, off = setOf(SourceId.LASTFM)).map { it.status },
         )
     }
 

@@ -22,6 +22,8 @@ import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.assertTouchHeightIsEqualTo
+import androidx.compose.ui.test.isEnabled
+import androidx.compose.ui.test.isNotEnabled
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
@@ -180,9 +182,31 @@ class SourcesFoldScreenTest {
 
     private fun status(expected: String) = compose.onNodeWithTag(FOLD_STATUS_TAG).assertTextEquals(expected)
 
-    /** Which paging controls show, by tag, as a set. */
-    private fun controls(): Set<String> =
-        listOf(FOLD_MORE_TAG, FOLD_ALL_TAG, FOLD_LESS_TAG).filter { count(it) > 0 }.toSet()
+    private val paging = listOf(FOLD_LESS_TAG, FOLD_MORE_TAG, FOLD_ALL_TAG)
+
+    private fun enabled(tag: String) =
+        SemanticsProperties.Disabled !in
+            compose
+                .onAllNodesWithTag(tag)
+                .onFirst()
+                .fetchSemanticsNode()
+                .config
+
+    /**
+     * Which paging buttons can be used, by tag, as a set. The buttons show all three or none, never
+     * some: those that do not apply are disabled, not gone (#666).
+     */
+    private fun controls(): Set<String> {
+        val counts = paging.map(::count)
+        assertTrue("all three paging buttons or none: $counts", counts.all { it == counts.first() })
+        return paging.filter { count(it) > 0 && enabled(it) }.toSet()
+    }
+
+    /** Whether the paging buttons show (all three: [controls] checks they come together). */
+    private fun pagingShown(): Boolean {
+        controls()
+        return count(FOLD_LESS_TAG) > 0
+    }
 
     /** Opens *Sources*' panel with its chip. */
     private fun open() = tap(SOURCES_CHIP_TAG)
@@ -204,19 +228,20 @@ class SourcesFoldScreenTest {
             assertEquals(0, count(CHIP_PREFIX + "MB"))
             assertEquals(0, count(CHIP_PREFIX + "W"))
             assertEquals(0, count(FOLD_STATUS_TAG))
-            assertEquals(emptySet<String>(), controls())
+            assertFalse(pagingShown())
             assertEquals(0, linesShown())
         }
 
     @Test
-    fun theChipUnfoldsTheFirstScreenfulWithShowMoreAndShowAllUnderIt() =
+    fun theChipUnfoldsTheFirstScreenfulWithThePagingUnderItShowLessDisabled() =
         show(state(long(20))) {
             open()
             assertEquals(Fold.PAGE, linesShown())
             compose.onNodeWithTag(LINE_PREFIX + "MB8").assertExists()
             assertEquals(0, count(LINE_PREFIX + "MB9"))
             compose.onNodeWithTag(CHIP_PREFIX + "MB").assertExists()
-            // No *less* at the first screenful.
+            // *Show less* there but disabled at the first screenful.
+            assertTrue(pagingShown())
             assertEquals(setOf(FOLD_MORE_TAG, FOLD_ALL_TAG), controls())
             status(text(R.string.home_sources_showing, 8, 20))
         }
@@ -232,7 +257,7 @@ class SourcesFoldScreenTest {
 
             tap(FOLD_MORE_TAG)
             assertEquals(20, linesShown())
-            // Nothing left: *show more…* and *show all* go, *… show less* stays.
+            // Nothing left: *Show more* and *Show all* disabled, *Show less* not.
             assertEquals(setOf(FOLD_LESS_TAG), controls())
             status(plural(R.plurals.home_sources_showing_all, 20))
 
@@ -242,7 +267,7 @@ class SourcesFoldScreenTest {
         }
 
     @Test
-    fun showAllShowsEveryLineWithShowLess() =
+    fun showAllShowsEveryLineWithOnlyShowLessEnabled() =
         show(state(long(20))) {
             open()
             tap(FOLD_ALL_TAG)
@@ -261,17 +286,19 @@ class SourcesFoldScreenTest {
                 close()
                 folded(true)
                 assertEquals("$unfold", 0, linesShown())
-                assertEquals(emptySet<String>(), controls())
+                assertFalse(pagingShown())
                 assertEquals(0, count(CHIP_PREFIX + "MB"))
                 assertEquals(0, count(FOLD_STATUS_TAG))
             }
         }
 
     @Test
-    fun aListOfAScreenfulOrLessUnfoldsWholeWithNoPaging() =
+    fun aListOfAScreenfulOrLessUnfoldsWholeWithEveryPagingButtonDisabled() =
         show(state(track())) {
             open()
             assertEquals(3, linesShown())
+            // In its place from the start, so it does not appear as sources land and the list grows.
+            assertTrue(pagingShown())
             assertEquals(emptySet<String>(), controls())
             status(plural(R.plurals.home_sources_showing_all, 3))
         }
@@ -288,59 +315,60 @@ class SourcesFoldScreenTest {
             }
             compose.waitForIdle()
             compose.onNodeWithTag(LINE_PREFIX + "MB12").assertIsDisplayed()
-            // Unfolded by whole screenfuls, so *show more…* goes on from there.
+            // Unfolded by whole screenfuls, so *Show more* goes on from there.
             assertEquals(16, linesShown())
             assertEquals(setOf(FOLD_LESS_TAG, FOLD_MORE_TAG, FOLD_ALL_TAG), controls())
         }
     }
 
     @Test
-    fun thePagingReadsShowMoreShowLessAndShowAllInPlainText() {
-        assertEquals("show more…", text(R.string.home_sources_more))
-        assertEquals("… show less", text(R.string.home_sources_less))
-        assertEquals("show all", text(R.string.home_sources_all))
+    fun thePagingReadsShowLessShowMoreAndShowAll() {
+        assertEquals("Show less", text(R.string.home_sources_less))
+        assertEquals("Show more", text(R.string.home_sources_more))
+        assertEquals("Show all", text(R.string.home_sources_all))
     }
 
     @Test
-    fun thePagingControlsAreButtonsNamedInWordsWith48DpTargets() =
+    fun thePagingIsOneRowOfThreeButtonsUnderTheListInOrderReadByTheirLabelsWith48DpTargets() =
         show(state(long(20))) {
-            val words =
+            val labels =
                 mapOf(
-                    FOLD_MORE_TAG to R.string.home_sources_more_words,
-                    FOLD_ALL_TAG to R.string.home_sources_all_words,
-                    FOLD_LESS_TAG to R.string.home_sources_less_words,
+                    FOLD_LESS_TAG to R.string.home_sources_less,
+                    FOLD_MORE_TAG to R.string.home_sources_more,
+                    FOLD_ALL_TAG to R.string.home_sources_all,
                 )
-            val drawn =
-                listOf(
-                    R.string.home_sources_more,
-                    R.string.home_sources_all,
-                    R.string.home_sources_less,
-                ).map(::text)
 
-            fun check(tag: String) {
-                compose
-                    .onAllNodesWithTag(tag)
-                    .onFirst()
-                    .performScrollTo()
-                    .assert(
-                        SemanticsMatcher.expectValue(
-                            SemanticsProperties.ContentDescription,
-                            listOf(text(words.getValue(tag))),
-                        ),
-                    ).assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
-                    .assert(SemanticsMatcher.keyIsDefined(SemanticsActions.OnClick))
-                    .assertTouchHeightIsEqualTo(48.dp)
-                // The arrows and dots are not read.
-                for (label in drawn) {
-                    assertEquals(label, 0, compose.onAllNodesWithText(label).fetchSemanticsNodes().size)
-                }
+            fun check(
+                tag: String,
+                enabled: Boolean,
+            ) {
+                val node =
+                    compose
+                        .onAllNodesWithTag(tag)
+                        .onFirst()
+                        .performScrollTo()
+                        .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
+                        .assert(SemanticsMatcher.keyIsDefined(SemanticsActions.OnClick))
+                        .assertTouchHeightIsEqualTo(48.dp)
+                        .assertTextEquals(text(labels.getValue(tag)))
+                        .assert(if (enabled) isEnabled() else isNotEnabled())
+                        .fetchSemanticsNode()
+                // Read by its label, nothing in its place.
+                assertEquals(tag, null, node.config.getOrNull(SemanticsProperties.ContentDescription))
             }
 
             open()
-            check(FOLD_MORE_TAG)
-            check(FOLD_ALL_TAG)
+            check(FOLD_LESS_TAG, enabled = false)
+            check(FOLD_MORE_TAG, enabled = true)
+            check(FOLD_ALL_TAG, enabled = true)
             tap(FOLD_MORE_TAG)
-            check(FOLD_LESS_TAG)
+            check(FOLD_LESS_TAG, enabled = true)
+            // One row, *Show less* | *Show more* | *Show all*, under the last line shown.
+            val bounds = paging.map { compose.onNodeWithTag(it).fetchSemanticsNode().boundsInRoot }
+            assertTrue("one row: $bounds", bounds.all { it.top == bounds.first().top })
+            assertTrue("in order: $bounds", bounds.zipWithNext().all { (a, b) -> a.right <= b.left })
+            val last = compose.onNodeWithTag(LINE_PREFIX + "MB16").fetchSemanticsNode().boundsInRoot
+            assertTrue("under the list", last.bottom <= bounds.first().top)
             // How much shows is announced as it changes.
             compose
                 .onNodeWithTag(FOLD_STATUS_TAG)
@@ -349,6 +377,19 @@ class SourcesFoldScreenTest {
             compose
                 .onNodeWithTag(CHIP_PREFIX + "MB")
                 .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Switch))
+        }
+
+    @Test
+    fun thePagingStaysInPlaceAsTheListGrowsPastAScreenful() =
+        show(state(long(3))) { current ->
+            open()
+            assertTrue(pagingShown())
+            assertEquals(emptySet<String>(), controls())
+            // More sources land: the same buttons, now *Show more* and *Show all* enabled.
+            current.value = state(long(20))
+            compose.waitForIdle()
+            assertTrue(pagingShown())
+            assertEquals(setOf(FOLD_MORE_TAG, FOLD_ALL_TAG), controls())
         }
 
     @Test
@@ -561,7 +602,8 @@ class SourcesFoldScreenTest {
             tap(CHIP_PREFIX + "MB")
             tap(CHIP_PREFIX + "W")
             assertEquals(0, linesShown())
-            assertEquals(emptySet<String>(), controls())
+            // No list, so no paging under it.
+            assertFalse(pagingShown())
             status(plural(R.plurals.home_sources_filtered, 3))
             close()
             assertEquals(0, count(FOLD_STATUS_TAG))

@@ -9,6 +9,7 @@ import android.graphics.drawable.Drawable
 import android.net.ConnectivityManager
 import android.os.Build
 import android.util.Log
+import android.view.accessibility.AccessibilityManager
 import androidx.datastore.core.DataMigration
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
@@ -32,9 +33,11 @@ import app.sleevesight.app.pipeline.pipelineKeys
 import app.sleevesight.app.pipeline.rebuilds
 import app.sleevesight.app.pipeline.shown
 import app.sleevesight.app.secrets.AndroidKeystoreKey
+import app.sleevesight.app.secrets.KeyGate
 import app.sleevesight.app.secrets.SecretCipher
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretStore
+import app.sleevesight.app.secrets.servicesOff
 import app.sleevesight.app.session.ArtLoader
 import app.sleevesight.app.session.DataStoreLearningMark
 import app.sleevesight.app.session.HttpArt
@@ -52,7 +55,13 @@ import app.sleevesight.app.settings.LastTheme
 import app.sleevesight.app.settings.PrunePlayersMigration
 import app.sleevesight.app.settings.SeenPlayersRecorder
 import app.sleevesight.app.settings.SettingsStore
+import app.sleevesight.app.speech.ReadAloud
+import app.sleevesight.app.speech.ReadAloudMessages
+import app.sleevesight.app.speech.SystemMusicFocus
+import app.sleevesight.app.speech.SystemSpeech
+import app.sleevesight.app.speech.screenReaderOn
 import app.sleevesight.app.ui.home.GuideDismissal
+import app.sleevesight.app.ui.home.SpokenWords
 import app.sleevesight.core.ai.AiProvider
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.normalizer.Normalizer
@@ -136,7 +145,13 @@ class AppGraph internal constructor(
     val settings = SettingsStore(settingsData, SettingsStore.BUILD_DEFAULTS)
 
     /** The user's keys, sealed with the app's Android Keystore key, in a file of their own. */
-    val secrets = SecretStore(preferences(appContext, SECRETS_FILE), secretCipher)
+    val secrets =
+        SecretStore(
+            preferences(appContext, SECRETS_FILE),
+            secretCipher,
+            // A key saved where none was, or after a purge, never finds its service stored on (#667).
+            servicesOff = settings::servicesOff,
+        )
 
     /**
      * Where the settings screen saves a setting or a key, or removes keys: the process's scope, so
@@ -425,7 +440,9 @@ class AppGraph internal constructor(
 
     /**
      * *Keep history for* and *Clear history*, through the recorder, in the process's scope. *Clear
-     * history* also deletes everything else kept about the tracks played ([forgetTracks]).
+     * history* also deletes everything else kept about the tracks played ([forgetTracks]); each
+     * trim of the history also purges the caches ([purgeCaches]), so the insights and genre reasons
+     * past *Keep history for* go with it (#643).
      */
     val historyRetention =
         HistoryRetention(
@@ -433,6 +450,7 @@ class AppGraph internal constructor(
             latestSettings.filterNotNull().map { it.historyLifetime },
             mainScope,
             forget = ::forgetTracks,
+            trim = ::purgeCaches,
         )
 
     /**
@@ -512,6 +530,28 @@ class AppGraph internal constructor(
     }
 
     /**
+     * *Read aloud* (#325): the insight, or a genre's reason, read by the phone's text-to-speech
+     * engine, the music lowered or paused for it as *While reading aloud* says. It follows what
+     * plays and what the pipeline shows (stopping on a track change, reading each new insight with
+     * *Read new insights aloud*), on the main thread; what it cannot read is told in a short message.
+     */
+    val readAloud: ReadAloud by lazy {
+        ReadAloud(
+            speech = SystemSpeech(appContext),
+            focus = SystemMusicFocus(appContext),
+            settings = latestSettings,
+            words =
+                SpokenWords(appContext.getString(R.string.read_aloud_unverified)) { title, artists ->
+                    appContext.getString(R.string.read_aloud_track_line, title, artists)
+                },
+            screenReader = { screenReaderOn(appContext.getSystemService(AccessibilityManager::class.java)) },
+            tell = ReadAloudMessages(appContext)::tell,
+            // A genre's reason followed while it is read, on the main thread, as long as the process.
+            scope = mainScope,
+        )
+    }
+
+    /**
      * The diagnostics screen's: the pipeline's events kept in memory from the start of the process,
      * the track changes and the caches' sizes, read when the screen asks, and what skip detection
      * has learned, with its reset ([skipLearning]).
@@ -535,9 +575,15 @@ class AppGraph internal constructor(
         mainScope.launch { seenPlayersRecorder.run() }
         // The guide to Home, dismissed once, is back for the next time nothing plays (#627).
         mainScope.launch { guideDismissal.clearOnPlay(sessions.nowPlaying) }
+        // A reading aloud stops with its track, and a new insight is read with *Read new insights aloud* (#325).
+        mainScope.launch { readAloud.follow(sessions.nowPlaying, pipeline.state) }
         // What the session layer sees is recorded whether or not the app is visible.
         mainScope.launch { historyRecorder.run() }
         mainScope.launch { historyRetention.run() }
+        // A service that needs a key is off while its key is not saved, in the stored settings
+        // (#667): an earlier version's settings at the first start, and after a key is removed.
+        // Off the main thread: its write waits for none of the main thread's work.
+        pipelineScope.launch { KeyGate(settings, secrets, latestSettings.filterNotNull()).run() }
         // `history.db` opens only after the first run is acknowledged.
         mainScope.launch {
             firstRun.state.first { it }
@@ -562,14 +608,25 @@ class AppGraph internal constructor(
                 }
         }
         // Expired cache entries are deleted on start, once the first run is acknowledged (the
-        // settings are read only then); reads never return them either way.
+        // settings are read only then); reads never return them either way. With a *Keep history
+        // for* lifetime, the history's retention does it, after its first trim (#643); with
+        // *Forever*, which it never trims for, this does.
         mainScope.launch {
-            latestSettings.filterNotNull().first()
-            try {
-                withContext(Dispatchers.IO) { caches.purgeExpired() }
-            } catch (e: SQLException) {
-                Log.w(TAG, "The cache could not be purged: ${e::class.simpleName}")
-            }
+            if (latestSettings.filterNotNull().first().historyLifetime == null) purgeCaches()
+        }
+    }
+
+    /**
+     * Deletes the caches' expired entries ([Caches.purgeExpired]): after each trim of the history,
+     * so the insights and genre reasons past *Keep history for* go with it (#643), and on start
+     * with *Forever*, when nothing is trimmed.
+     * One that fails is tried again at the next.
+     */
+    private suspend fun purgeCaches() {
+        try {
+            withContext(Dispatchers.IO) { caches.purgeExpired() }
+        } catch (e: SQLException) {
+            Log.w(TAG, "The cache could not be purged: ${e::class.simpleName}")
         }
     }
 

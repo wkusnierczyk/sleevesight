@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import app.sleevesight.app.R
+import app.sleevesight.app.pipeline.PipelineHost
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.TrackState
@@ -55,7 +56,12 @@ internal fun NowPlayingPageContent(
 private fun genreNotes(
     shown: Showing,
     actions: NowPlayingActions,
-) = PanelNotes(actions.genreNotes, { id -> actions.openPage(HomePage.Sources(cite = id)) }, shown.modelAllowed)
+) = PanelNotes(
+    actions.genreNotes,
+    { id -> actions.openPage(HomePage.Sources(cite = id)) },
+    shown.modelAllowed,
+    actions.readAloud,
+)
 
 /**
  * A page once nothing plays (#627): a line that says so, and no more. Not the idle Home
@@ -124,6 +130,13 @@ internal class Showing(
     /** The pipeline's track beside [playing], or null until the pipeline reaches it. */
     val track: TrackState? = trackFor(view, playing)
 
+    /**
+     * The sources looked up only with the user's key that are switched off (#667), which have no
+     * adapter, and so no state in the track, without their key: *Sources* says they are off.
+     */
+    private val keyedOff: Set<SourceId> =
+        settings?.let { now -> PipelineHost.KEYED_SOURCES.filterNot { now.isEnabled(it) }.toSet() }.orEmpty()
+
     /** *Show grounding details* (#437, #440). */
     val details: Boolean = settings?.showGroundingDetails == true
 
@@ -131,7 +144,7 @@ internal class Showing(
     fun sources() =
         SourcesShown(
             track = track,
-            chips = track?.let { sourceChips(it, view.needsKey, modelAllowed) }.orEmpty(),
+            chips = track?.let { sourceChips(it, view.needsKey, modelAllowed, keyedOff) }.orEmpty(),
             cardKept = view.cardShown && track != null,
             offline = offlineShown(view, track),
             details = details,

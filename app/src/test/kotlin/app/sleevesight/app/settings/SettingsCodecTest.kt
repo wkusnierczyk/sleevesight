@@ -16,6 +16,7 @@ import app.sleevesight.core.settings.FontChoice
 import app.sleevesight.core.settings.Layout
 import app.sleevesight.core.settings.LinkStyle
 import app.sleevesight.core.settings.PrepareNextTrack
+import app.sleevesight.core.settings.ReadAloudMusic
 import app.sleevesight.core.settings.ReportButton
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.SourceSwitch
@@ -67,6 +68,7 @@ class SettingsCodecTest {
                 aiModels = mapOf(ProviderId.ANTHROPIC to "claude-opus-5-5", ProviderId.OPENAI to "gpt-other"),
                 aiEfforts = mapOf(ProviderId.ANTHROPIC to ReasoningEffort.HIGH),
                 followedPlayers = mapOf(Settings.SPOTIFY to false, "com.example.player" to true),
+                onlyEnabledPlayersOnHome = true,
                 enabledSources = setOf(SourceSwitch.MUSICBRAINZ, SourceSwitch.MODEL),
                 webEngines = emptySet(),
                 labelSources = setOf(LabelSource.LASTFM),
@@ -78,6 +80,9 @@ class SettingsCodecTest {
                 prepareNextTrack = PrepareNextTrack.OFF,
                 lookUpInBackground = true,
                 artistFactsOncePerSession = false,
+                readAloudMusic = ReadAloudMusic.PAUSE,
+                readTrackLineFirst = true,
+                readNewInsightsAloud = true,
                 cacheLifetimes = Settings.DEFAULT_CACHE_LIFETIMES + (SourceId.WEB to 3.days),
                 keepArtistResults = true,
                 artistCacheLifetime = 30.days,

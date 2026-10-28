@@ -9,6 +9,7 @@ import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isEnabled
 import androidx.compose.ui.test.isOff
 import androidx.compose.ui.test.isOn
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
@@ -195,11 +196,18 @@ class SourceSettingsTest {
     @Test
     fun exaWebSearchIsASourceOfItsOwn() =
         show(SettingsSection.SOURCES) {
-            val exa = compose.onNode(holding(R.string.settings_engine_exa_summary)).performScrollTo()
-            exa.assertIsOn()
-            // No key yet: it says so, above the link to where the key goes.
+            // No key yet: it says so, above the link to where the key goes, and its switch, stored
+            // on as by default, shows off and cannot be moved (#667).
             val exaName = text(R.string.settings_key_recipient_exa)
-            waitForNode(holding(app.getString(R.string.settings_needs_key_linked, exaName)))
+            val needs = app.getString(R.string.settings_needs_key_linked, exaName)
+            waitForNode(holding(needs))
+            val exa = compose.onNode(holding(R.string.settings_engine_exa_summary)).performScrollTo()
+            exa.assertIsOff().assertIsNotEnabled()
+
+            // Saved, the key makes the switch usable, and leaves it as it was stored.
+            runBlocking { secrets.set(SecretId.EXA, Secret("exa-key")) }
+            waitFor("the key notice gone") { absent(holding(needs)) }
+            exa.assertIsOn().assertIsEnabled()
 
             exa.performClick()
             waitFor("Exa stored off") { WebEngine.EXA !in current().webEngines }
@@ -213,8 +221,12 @@ class SourceSettingsTest {
     @Test
     fun exaSwitchedOnTurnsWebSearchOnToo() {
         // As an earlier version could leave it: *Web search* off, its engine on.
-        runBlocking { settings.update { it.copy(enabledSources = it.enabledSources - SourceSwitch.WEB) } }
+        runBlocking {
+            secrets.set(SecretId.EXA, Secret("exa-key"))
+            settings.update { it.copy(enabledSources = it.enabledSources - SourceSwitch.WEB) }
+        }
         show(SettingsSection.SOURCES) {
+            waitForNode(holding(R.string.settings_engine_exa_summary) and isEnabled())
             val exa = compose.onNode(holding(R.string.settings_engine_exa_summary)).performScrollTo()
             exa.assertIsOff()
             exa.performClick()

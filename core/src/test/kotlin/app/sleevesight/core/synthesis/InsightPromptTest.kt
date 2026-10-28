@@ -152,6 +152,6 @@ class InsightPromptTest {
     private companion object {
         const val MODEL_RULE =
             "- You may add at most one sentence of your own general knowledge if it adds real value, ending " +
-                "with [M]. Never contradict the evidence."
+                "with [AI]. Never contradict the evidence."
     }
 }

@@ -1,5 +1,6 @@
 package app.sleevesight.app.ui
 
+import android.os.Looper
 import androidx.activity.compose.setContent
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
@@ -15,10 +16,10 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontFamily
-import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.AppGraph
+import app.sleevesight.app.FlakyDataStore
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.MemoryStore
 import app.sleevesight.app.R
@@ -55,6 +56,9 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
+import java.time.Duration
+import kotlin.time.toJavaDuration
 
 /** *Font* (#377): Roboto, bundled, by default; the system font as a setting. */
 @RunWith(RobolectricTestRunner::class)
@@ -228,15 +232,23 @@ class FontSettingsTest {
     fun aNewProcessStartsInTheFontLastReadThenFollowsTheSettings() {
         // As left by an earlier process, whose settings said *System font*; this one's say the default.
         LastFont(app).value = FontChoice.SYSTEM_FONT
-        // The settings' first read held off: while a directory stands where their file goes, every
-        // read fails, and is retried. Without it the read could land before `font` is first read:
-        // DataStore reads on a thread of its own, and a read done before the collector suspends
-        // resumes it at once, on the main thread, with no turn of the main looper.
-        val file = app.preferencesDataStoreFile("settings")
-        assertTrue(file.mkdirs())
+        // The settings in memory, every read failing until the failures are cleared, so the first
+        // read is held off: without it the read would land before `font` is first read. The retry
+        // waits on the main looper's clock, which only this test advances: no file, and no thread
+        // of DataStore's own to wait on in real time (#629).
+        val data = FlakyDataStore(MemoryStore()).apply { failures.set(Int.MAX_VALUE) }
+        app.makeGraph = { AppGraph(it, settingsData = data) }
         assertEquals(FontChoice.SYSTEM_FONT, app.graph.font.value)
-        assertTrue(file.delete())
-        idleUntil("the settings' first read") { app.graph.font.value == FontChoice.APP_FONT }
+        // Several collectors read at the start; the retries come only as the clock moves on.
+        val firstReads = data.reads.get()
+        val looper = shadowOf(Looper.getMainLooper())
+        looper.idleFor(Duration.ofSeconds(1))
+        assertTrue("the read retried", data.reads.get() > firstReads)
+        assertEquals(FontChoice.SYSTEM_FONT, app.graph.font.value)
+
+        data.failures.set(0)
+        looper.idleFor(SettingsStore.MAX_RETRY.toJavaDuration())
+        assertEquals(FontChoice.APP_FONT, app.graph.font.value)
         assertEquals(FontChoice.APP_FONT, LastFont(app).value)
     }
 
@@ -245,8 +257,8 @@ class FontSettingsTest {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity -> activity.setContent { CreditsScreen(onClose = {}) } }
             compose.onNodeWithText(text(R.string.credits_roboto)).performScrollTo().assertIsDisplayed()
-            // Roboto's, and the home guide's hand-written font's (#627).
-            compose.onNodeWithText(text(R.string.credits_caveat)).performScrollTo().assertIsDisplayed()
+            // Roboto's, and the home guide's hand-drawn font's (#627, #672).
+            compose.onNodeWithText(text(R.string.credits_shantell_sans)).performScrollTo().assertIsDisplayed()
             assertEquals(2, compose.onAllNodesWithText("SIL Open Font License 1.1").fetchSemanticsNodes().size)
         }
     }
@@ -255,10 +267,10 @@ class FontSettingsTest {
     fun theHandFontsLicenceShipsWithTheApp() {
         val licence =
             app.assets
-                .open("licences/caveat-ofl.txt")
+                .open("licences/shantell-sans-ofl.txt")
                 .bufferedReader()
                 .use { it.readText() }
-        assertTrue(licence.startsWith("Copyright 2014 The Caveat Project Authors"))
+        assertTrue(licence.startsWith("Copyright 2022 The Shantell Sans Project Authors"))
         assertTrue(licence.contains("SIL OPEN FONT LICENSE Version 1.1"))
         assertTrue(licence.contains("PERMISSION & CONDITIONS"))
     }

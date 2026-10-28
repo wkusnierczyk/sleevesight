@@ -19,6 +19,7 @@
     <string name="first_run_to_ai">To the AI service you choose: the title, artists and album, and what the sources found. This is for the playing track only: the next one in the queue is looked up ahead, but no insight is written for it until it plays.</string>
     <string name="first_run_api_keys">Your API keys: each only to the service it belongs to, with each request to it.</string>
     <string name="first_run_to_art_host">To the server a cover’s web address names, when a player gives the cover only as a web address: a request for that image. The address itself may identify the album or episode.</string>
+    <string name="first_run_to_speech">To your phone’s text-to-speech engine, only when an insight is read aloud: its text. The engine is the one chosen in Android’s settings; some, such as Google’s network voices, send the text to their server to be spoken.</string>
     <string name="first_run_to_developer">To the developer, only if you send it: a report of a problem with an insight. “Report a problem” shows the whole report, with the track, the insight and its evidence, and the AI service and model that wrote it, and hands it to your mail app, addressed to support@sleevesight.app. It reaches the developer only if you send it; until then your mail app handles it as any message you write, which may keep a draft in your mail account. That report never holds your API keys, history or settings. In developer mode with “Report button” on (the test build’s default), a button on Home does the same for a report of the app’s state: its settings, what it received from the player, the sources and the AI service, and its diagnostics, with the track changes only if you add them; never your API keys.</string>
     <string name="first_run_ip_address">Each of these services also sees your phone’s IP address, as every service you connect to does.</string>
 
@@ -152,6 +153,7 @@
     <string name="settings_section_history">History</string>
     <string name="settings_keep_history">Keep history for</string>
     <string name="settings_keep_history_forever">Forever</string>
+    <string name="settings_keep_history_summary">How long Sleevesight keeps, on this phone, the list of tracks you played, the track changes recorded to learn your skips, and the insights and genre explanations written for them, counted from when each was played or written. Anything older is no longer shown and is deleted. A shorter time applies at once.</string>
     <string name="settings_session_gap">New session idle trigger</string>
     <string name="settings_session_gap_summary">A track that starts after a longer break begins a new listening session, counted from when the last track was heard. Earlier sessions stay in your history, for as long as “Keep history for” is set. Within a session, each artist fact is told once, unless “Don’t repeat artist facts” is off. A change applies from the next track that starts.</string>
     <string name="settings_clear_history">Clear history</string>
@@ -318,8 +320,8 @@
     <string name="credits_exa">Exa</string>
     <string name="credits_exa_text">Web search results, under Exa’s terms of service.</string>
     <string name="credits_roboto">Roboto</string>
-    <string name="credits_caveat">Caveat</string>
-    <string name="credits_caveat_text">The hand-written font of the notes in Home’s guide, Caveat Regular, from github.com/googlefonts/caveat. Copyright 2014 The Caveat Project Authors.</string>
+    <string name="credits_shantell_sans">Shantell Sans</string>
+    <string name="credits_shantell_sans_text">The hand-drawn font of the notes in Home’s guide, Shantell Sans Normal Regular, from github.com/arrowtype/shantell-sans. Copyright 2022 The Shantell Sans Project Authors.</string>
     <string name="credits_roboto_text">The app’s font, Roboto 3.016, from github.com/googlefonts/roboto-3-classic. Copyright 2011 The Roboto Project Authors.</string>
     <string name="credits_material_symbols">Material Symbols</string>
     <string name="credits_material_symbols_text">The icons in the app, such as the cogwheel, from Material Symbols by Google.</string>

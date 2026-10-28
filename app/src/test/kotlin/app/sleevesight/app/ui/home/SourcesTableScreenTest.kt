@@ -97,7 +97,7 @@ class SourcesTableScreenTest {
 
     private var settingsOpened = 0
 
-    // The model's own knowledge allowed, so there is an `M` row.
+    // The model's own knowledge allowed, so there is an `AI` row.
     private val modelOn = Settings(enabledSources = Settings.DEFAULT_SOURCES + SourceSwitch.MODEL)
     private val details = modelOn.copy(showGroundingDetails = true)
 
@@ -208,14 +208,14 @@ class SourcesTableScreenTest {
             unfold()
             // Off (Discogs) or without its key (Last.fm): no row. Rejected (web search) and the
             // model's own knowledge: a row.
-            assertEquals(listOf("MB", "W", "G", "M"), rows())
+            assertEquals(listOf("MB", "W", "G", "AI"), rows())
             assertEquals(listOf(text(R.string.home_source_found_song)), said("MB"))
             assertEquals(listOf(text(R.string.home_source_found_song)), said("W"))
             // A dimmed chip's row says its name; a rejected match is nothing found.
             assertEquals(listOf(text(R.string.home_source_name_web), text(R.string.home_source_none)), said("G"))
             assertEquals(
                 listOf(text(R.string.settings_source_model), text(R.string.home_source_model_allowed)),
-                said("M"),
+                said("AI"),
             )
             // No diagnostics: kept, rejected, off.
             assertEquals(0, countText(text(R.string.home_source_cached, ""), substring = true))
@@ -238,7 +238,7 @@ class SourcesTableScreenTest {
                     .config[SemanticsActions.OnClick]
                     .label,
             )
-            for (tag in listOf("G", "M")) {
+            for (tag in listOf("G", "AI")) {
                 val chip = compose.onNodeWithTag(CHIP_PREFIX + tag).fetchSemanticsNode().config
                 assertFalse(tag, SemanticsActions.OnClick in chip)
                 assertFalse(tag, SemanticsProperties.Role in chip)
@@ -324,7 +324,7 @@ class SourcesTableScreenTest {
             val gaps = rows.zipWithNext { above, below -> (below.first - above.second) / density() }
             assertTrue("rows about 6 dp apart: $gaps", gaps.all { abs(it - ROW_GAP_DP) < 1f })
             val chips =
-                listOf("MB", "W", "G", "M").map { compose.onNodeWithTag(CHIP_PREFIX + it).fetchSemanticsNode() }
+                listOf("MB", "W", "G", "AI").map { compose.onNodeWithTag(CHIP_PREFIX + it).fetchSemanticsNode() }
             val ends = chips.map { it.positionInRoot.x + it.size.width }
             assertTrue("one right edge: $ends", ends.maxOf { it } - ends.minOf { it } < 1f)
             // A chip lays out its own height, not its 48 dp target.
@@ -419,7 +419,7 @@ class SourcesTableScreenTest {
             unfold()
             // Unclipped: a chip scrolled out of view has empty bounds in the root.
             val centres =
-                listOf("MB", "W", "G", "M").map {
+                listOf("MB", "W", "G", "AI").map {
                     val chip = compose.onNodeWithTag(CHIP_PREFIX + it).fetchSemanticsNode()
                     chip.positionInRoot.y + chip.size.height / 2f
                 }
@@ -521,7 +521,7 @@ class SourcesTableScreenTest {
         show(mixed, settings = details) {
             unfold()
             // The same table, with the sources that are off: Discogs, and Last.fm without its key.
-            assertEquals(listOf("MB", "W", "D", "G", "L", "M"), rows())
+            assertEquals(listOf("MB", "W", "D", "G", "L", "AI"), rows())
             assertEquals(
                 listOf(text(R.string.home_source_cached, text(R.string.home_source_found_song))),
                 said("MB"),
@@ -547,7 +547,7 @@ class SourcesTableScreenTest {
     fun groundingDetailsStillShowNothingButTheChipWhileFolded() =
         show(mixed, settings = details) {
             assertEquals(0, count(SOURCES_TABLE_TAG))
-            for (tag in listOf("MB", "W", "G", "L", "M")) assertEquals(tag, 0, count(CHIP_PREFIX + tag))
+            for (tag in listOf("MB", "W", "G", "L", "AI")) assertEquals(tag, 0, count(CHIP_PREFIX + tag))
             assertEquals(0, countText(text(R.string.home_rejected_title)))
             assertEquals(0, count(SOURCES_NOTE_TAG))
         }

@@ -14,6 +14,9 @@
     <string name="settings_players_short">Music apps Sleevesight follows</string>
     <string name="settings_players_long">Sleevesight reads what a player says it is playing (track, artist, album). It does not receive the audio or your other notifications. Android grants this with notification access. To find your music players, Sleevesight looks at apps that report what they play (playing or paused) and checks whether it is music (a track with a title and an artist); it stops checking an app for music once it has found some, until Sleevesight starts afresh (not each time you open it). A new player is added to this list switched off. Sleevesight does not follow a player that is off: it does not track what the player plays, and keeps or sends none of it. Switch on the players you want Sleevesight to follow. Calls from the phone app, and sessions Android marks as voice calls, are never read.</string>
     <string name="settings_players_none">No players yet. A music app appears here, switched off, once you play music in it.</string>
+    <!-- Under the players (#674): whether Home, with nothing playing, lists only the players switched on. -->
+    <string name="settings_players_on_home">Only enabled players on Home</string>
+    <string name="settings_players_on_home_summary">Home lists only the players Sleevesight follows, not every player it has recognized.</string>
     <string name="settings_sources_short">External services providing information on artists and music.</string>
     <string name="settings_sources_long">Sleevesight pulls information about the currently played music from services dedicated to music and from general information sources. Switch on the services you want Sleevesight to get information from.</string>
     <string name="settings_ai_short">Large Language Model (LLM) services</string>
@@ -49,6 +52,8 @@
     <string name="settings_needs_key">Needs your %1$s key, in Secrets.</string>
     <!-- Under each service that needs a key (#539): %1$s is the key's name ("Anthropic API key"), a link to its row in Secrets. -->
     <string name="settings_set_key">Set your %1$s here.</string>
+    <!-- The same, once the key is saved (#667). -->
+    <string name="settings_update_key">Update your %1$s here.</string>
     <string name="settings_key_unreadable_note">Your %1$s key can no longer be read; see Secrets.</string>
     <!-- The same, above the link to the key in Secrets (settings_set_key), which says where it is. -->
     <string name="settings_needs_key_linked">Needs your %1$s key.</string>
@@ -69,6 +74,8 @@
     <string name="settings_theme_system">System</string>
     <string name="settings_theme_light">Light</string>
     <string name="settings_theme_dark">Dark</string>
+    <string name="settings_theme_button">Theme button</string>
+    <string name="settings_theme_button_summary">Shows a button beside Settings on Home that switches between the light, dark and system themes.</string>
 
     <!-- About. -->
     <string name="settings_version">Version</string>
@@ -165,4 +172,16 @@
     <string name="purge_keys_done_none">The phone’s key that sealed your keys has been deleted.</string>
     <string name="purge_keys_more">More about safe delete</string>
     <string name="purge_keys_more_explained">Purge keys removes every saved key from this phone’s storage, and deletes the key in the phone’s Android Keystore that encrypted them. Any copy left in the storage can then never be decrypted again (crypto-erasure). Sleevesight never sent your keys anywhere but to their own services, and never logged them. Purging keys from Sleevesight does not revoke them. You can still use your API keys elsewhere if you keep another copy.</string>
+    <!-- Read aloud (#325), at the end of Insights: what reads, then its three settings. -->
+    <string name="settings_read_aloud_hint">Read aloud, the speaker button under each insight, has your phone’s text-to-speech engine read the insight to you. The engine is the one chosen in Android’s settings; some, such as Google’s network voices, send the text to their server to be spoken.</string>
+    <string name="settings_read_aloud_music">While reading aloud</string>
+    <string name="settings_read_aloud_music_summary">What happens to the music playing while an insight is read aloud.</string>
+    <string name="settings_read_aloud_lower">Lower the music</string>
+    <string name="settings_read_aloud_pause">Pause the music</string>
+    <string name="settings_read_aloud_lower_detail">The music plays on, quieter, while the insight is read.</string>
+    <string name="settings_read_aloud_pause_detail">The music pauses while the insight is read, and plays on after it. A player that does not resume by itself stays paused.</string>
+    <string name="settings_read_track_line">Read the track line first</string>
+    <string name="settings_read_track_line_summary">Reading an insight aloud starts with the track’s title and artists.</string>
+    <string name="settings_read_new_insights">Read new insights aloud</string>
+    <string name="settings_read_new_insights_summary">Reads each new insight aloud as soon as it is written, while Sleevesight is on screen. Not while TalkBack or another screen reader is on, since it reads the screen itself.</string>
 </resources>

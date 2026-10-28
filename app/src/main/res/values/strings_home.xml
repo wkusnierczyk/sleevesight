@@ -11,16 +11,15 @@
     <!-- With no player listed; %1$s is home_players_none_link, a link that opens Settings at Players. -->
     <string name="home_players_none">No music player seen yet. Play music in one, and it is listed here and in %1$s.</string>
     <string name="home_players_none_link">Settings → Players</string>
+    <!-- With Only enabled players on Home on and no player switched on (#674); %1$s is home_players_none_link. -->
+    <string name="home_players_none_enabled">No player is switched on. Switch on the players you want Sleevesight to follow in %1$s.</string>
     <!-- What a screen reader says a tap on a link to Settings → Players does. -->
     <string name="home_players_open_settings">Open Settings at Players</string>
     <!-- The guide to Home: the notes on its picture, top to bottom. -->
-    <!-- What a screen reader says of the picture: %1$s is the notes, in order, each as home_guide_named_note,
-         joined by home_guide_note_separator. -->
-    <string name="home_guide_picture">Home while a track plays: %1$s</string>
-    <string name="home_guide_note_separator">"; "</string>
-    <!-- A note as a screen reader says it: %1$s is the part it points at (home_guide_part_…), %2$s the note. -->
+    <!-- A note as a screen reader says it, a button (#673): %1$s is the part it points at (home_guide_part_…),
+         %2$s the note. -->
     <string name="home_guide_named_note">%1$s: %2$s</string>
-    <!-- The parts the notes point at, as a screen reader names them. -->
+    <!-- The parts the notes point at, as a screen reader names them, and the heading of a note's panel. -->
     <string name="home_guide_part_settings">Settings</string>
     <string name="home_guide_part_player">Player</string>
     <string name="home_guide_part_genres">Genres</string>
@@ -36,6 +35,19 @@
     <string name="home_guide_note_cite">follow to references</string>
     <string name="home_guide_note_write">generate an insight (paid)</string>
     <string name="home_guide_note_sources">read source information</string>
+    <!-- A note's panel (#673), opened by a tap on the note: the part's fuller description, under its
+         name (home_guide_part_…). Each says what the app does; keep them in step with it. -->
+    <string name="home_guide_about_settings">Opens Settings: the players Sleevesight follows, which sources it looks up, your AI service and the API keys, genres, when insights are written, history, and how the app looks (theme, font, layout).</string>
+    <string name="home_guide_about_player">The player Sleevesight follows, and whether it is playing. A tap opens the player.</string>
+    <string name="home_guide_about_genres">The track’s genres, from MusicBrainz or Last.fm. A tap on one shows which of the track, the artist and the album carry it and where the label comes from; what the genre is, where Wikipedia has an article on it; and, where your AI service can explain it, Why is this …?, a paid call.</string>
+    <string name="home_guide_about_insight">A few sentences about the track, written by your AI service from what the sources found, and checked against them.</string>
+    <string name="home_guide_about_cite">Each sentence names the source lines it rests on. A tap on one opens Sources at that line. A sentence underlined in red rests on none.</string>
+    <string name="home_guide_about_write">Write insight has your AI service write the insight, a paid call on your key. The arrow beside it chooses when insights are written: On demand, On track change (auto) or On track skip (auto). Once an insight is written, it also offers Look again, which looks every source up afresh without an AI call (a paid search on your Exa key when Exa web search is on); when they found something new, Rewrite insight writes the insight from it.</string>
+    <string name="home_guide_about_sources">What each source found about the track. A tap opens a table of the sources, each with what it found, and under it the lines they found, each with a link to where it was found. A tap on a source’s letter shows or hides its lines.</string>
+    <!-- The magnifier at the picture's corner (#673), as a screen reader names it; it opens the picture full screen. -->
+    <string name="home_guide_magnify">Magnify the picture</string>
+    <!-- The picture full screen (#673): its title, and the picture as a screen reader names it. -->
+    <string name="home_guide_magnified">Home while a track plays</string>
     <!-- The picture's example insight. -->
     <string name="home_guide_example_insight">Bill Evans wrote the chords, though Davis is credited as the sole composer</string>
     <!-- The guide's split button: Dismiss, and the menu of what it does. -->
@@ -55,6 +67,11 @@
     <string name="home_what_leaves_open">Show what leaves the device</string>
     <!-- The header's cogwheel: what a screen reader says, and its tooltip. -->
     <string name="home_settings">Settings</string>
+    <!-- The header's theme button (#636), named for the theme a tap gives: what a screen reader
+         says, and its tooltip. -->
+    <string name="home_theme_to_dark">Switch to dark theme</string>
+    <string name="home_theme_to_system">Switch to the system theme</string>
+    <string name="home_theme_to_light">Switch to light theme</string>
     <!-- The header's name (the logo, once it lands), as a screen reader says it; %1$s is the app's name. -->
     <string name="home_scroll_to_top">%1$s, scroll to top</string>
 
@@ -254,13 +271,10 @@
     <string name="home_source_note_settings">Settings</string>
     <string name="home_source_note_unreachable">%1$s could not be reached.</string>
     <string name="home_source_note_failed">%1$s failed.</string>
-    <!-- The paging of the list of sources: each control as drawn, and as a screen reader says it. -->
-    <string name="home_sources_more">show more…</string>
-    <string name="home_sources_more_words">Show more sources</string>
-    <string name="home_sources_all">show all</string>
-    <string name="home_sources_all_words">Show all sources</string>
-    <string name="home_sources_less">… show less</string>
-    <string name="home_sources_less_words">Show fewer sources</string>
+    <!-- The paging of the list of sources: one group of three buttons under it, in this order. -->
+    <string name="home_sources_less">Show less</string>
+    <string name="home_sources_more">Show more</string>
+    <string name="home_sources_all">Show all</string>
     <!-- How much of the list shows, unfolded. An entry is an evidence line, an unverified line or a rejected match. -->
     <string name="home_sources_showing">Showing %1$d of %2$d entries</string>
     <plurals name="home_sources_showing_all">
@@ -291,4 +305,14 @@
     <!-- Chips' names under Sources, beside their letters, where they differ from the settings' names. -->
     <string name="home_source_chip_wikipedia">Wikipedia</string>
     <string name="home_source_chip_player">Player</string>
+    <!-- Read aloud (#325): the button under an insight and under a genre's reason, its name while it
+         reads, the app's own words in what is read, and what is said when it cannot read. -->
+    <string name="home_read_aloud">Read aloud</string>
+    <string name="home_read_aloud_stop">Stop reading aloud</string>
+    <string name="read_aloud_unverified">Unverified:</string>
+    <string name="read_aloud_track_line">%1$s, by %2$s.</string>
+    <string name="read_aloud_no_engine">This phone has no text-to-speech engine to read the insight aloud. One can be set up in Android’s settings, under Accessibility, Text-to-speech output.</string>
+    <string name="read_aloud_no_voice">Your phone’s text-to-speech engine has no %1$s voice, so the insight is not read aloud. A voice can be added in Android’s settings, under Accessibility, Text-to-speech output.</string>
+    <string name="read_aloud_busy">The insight cannot be read aloud while another app is using the sound, as during a call.</string>
+    <string name="read_aloud_failed">Reading aloud stopped: the phone’s text-to-speech engine failed.</string>
 </resources>

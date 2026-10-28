@@ -4,7 +4,6 @@ import app.cash.sqldelight.db.SqlDriver
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.settings.Settings
-import app.sleevesight.core.synthesis.CardKind
 import app.sleevesight.store.db.CacheDatabase
 import app.sleevesight.store.db.CacheQueries
 import kotlin.time.Clock
@@ -23,7 +22,8 @@ import kotlin.time.Instant
  *   [Settings.artistCacheLifetime].
  * - [artistResults]: what sources said about an artist, per artist rather than per track (#238),
  *   for the lifetime of the sources each depends on ([Settings.cacheLifetimes], D9).
- * - [synthesis]: written insights and cards by the full synthesis key (R2, D14), until evicted.
+ * - [synthesis]: written insights and cards by the full synthesis key (R2, D14), until evicted,
+ *   and no longer than *Keep history for* ([Settings.historyLifetime]).
  *
  * [settings] is read on every call, so a changed lifetime or size limit applies at once. Time comes
  * from [clock] alone. Past [Settings.cacheSizeLimit], the least recently used retrieval,
@@ -55,11 +55,13 @@ class Caches(
      * one, those of a source the app no longer knows, and those in an old encoding), artist-level
      * results past the shortest lifetime of the sources they depend on (with the same two cases),
      * and artist resolution entries past theirs. Then evicts down to the size limit, which may
-     * have been lowered since. A genre's reason (#523) written longer ago than *Keep history for* is
-     * expired too. Reads never return an expired entry either way; this frees the space. An entry
-     * kept under an adapter's older extraction version, or an older version of its artist-level
-     * part, is not expired: it is deleted when read, replaced, or evicted. `:cli`
-     * calls this at start, and the app on start. Returns how many entries it deleted.
+     * have been lowered since. An insight or card (a genre's reason, #523; an insight, #643)
+     * written longer ago than *Keep history for* is expired too, under the setting as it is now,
+     * so a shortened one deletes what it no longer keeps. Reads never return an expired entry
+     * either way; this frees the space. An entry kept under an adapter's older extraction version,
+     * or an older version of its artist-level part, is not expired: it is deleted when read,
+     * replaced, or evicted. `:cli` calls this at start, and the app on start. Returns how many
+     * entries it deleted.
      */
     fun purgeExpired(now: Instant = clock.now()): Long =
         queries.transactionWithResult {
@@ -73,9 +75,8 @@ class Caches(
             deleted += purgeUnknownSources()
             deleted += queries.retrievalPurgeFormat(RetrievalCodec.FORMAT.toLong()).value
             deleted += queries.artistPurge((now - current.artistCacheLifetime).toEpochMilliseconds()).value
-            for (kind in CardKind.entries) {
-                val lifetime = SynthesisCache.lifetimeOf(kind, current) ?: continue
-                deleted += queries.synthesisPurgeKind(kind.key, (now - lifetime).toEpochMilliseconds()).value
+            SynthesisCache.lifetimeOf(current)?.let { lifetime ->
+                deleted += queries.synthesisPurge((now - lifetime).toEpochMilliseconds()).value
             }
             deleted + enforceLimit()
         }

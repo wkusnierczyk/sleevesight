@@ -112,7 +112,7 @@ class GroundingNoteTest {
     fun theNoteCountsTheUnderlinedSentencesUncitedAndMissingTogetherInThePlural() =
         show(
             written(
-                "It was recorded in 1973 [MB1]. It is great. It was a hit [MB9]. It is loved [M].",
+                "It was recorded in 1973 [MB1]. It is great. It was a hit [MB9]. It is loved [AI].",
                 allowModel = true,
             ),
         ) {

@@ -51,7 +51,7 @@ RULES, which hold whatever the style says:
 - An "artist" line is about the performer, not this recording.
 - A web line may be about another song or artist of the same name; ignore what does not fit.
 - If the evidence supports fewer sentences than the style asks for, write fewer; a short insight is enough. Do not say what the evidence leaves out. Write no sentence without a citation.
-- You may add at most one sentence of your own general knowledge if it adds real value, ending with [M]. Never contradict the evidence.
+- You may add at most one sentence of your own general knowledge if it adds real value, ending with [AI]. Never contradict the evidence.
 - Plain text only: no headings, lists or markdown.
 - If no evidence is usable, reply with exactly: NO_EVIDENCE
 

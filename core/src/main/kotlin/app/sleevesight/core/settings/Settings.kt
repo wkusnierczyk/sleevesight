@@ -34,6 +34,10 @@ import kotlin.time.Duration.Companion.seconds
  *   Read [effort]; set with [withEffort].
  * @property followedPlayers one switch per player whose session reported music, by package name;
  *   never a phone call's ([isCall]). See [follows].
+ * @property onlyEnabledPlayersOnHome *Only enabled players on Home* (#674): whether Home, with
+ *   nothing playing, lists only the players switched on in [followedPlayers], rather than every
+ *   player *Players* lists, the ones not followed dimmed. Off by default, so a new user sees every
+ *   player recognized, and how to switch one on.
  * @property enabledSources the user's *Sources* switches: what the model may use. Ask
  *   [isEnabled] about a [SourceId], which maps it to its switch.
  * @property webEngines the web search engines switched on under *Web search* (D11); web search runs
@@ -55,6 +59,16 @@ import kotlin.time.Duration.Companion.seconds
  *   insight's prompt leaves out the artist-level lines another insight of the listening session
  *   cited, and all of them for a track with enough lines of its own (#239, `PromptEvidence`); off,
  *   every insight is written from all its evidence, as before #239.
+ * @property readAloudMusic *While reading aloud* (#325): what happens to the music playing while an
+ *   insight is read aloud: lowered under the voice (the default, so the music is not interrupted),
+ *   or paused and resumed after it. See [ReadAloudMusic].
+ * @property readTrackLineFirst *Read the track line first* (#325): whether reading an insight aloud
+ *   starts with the track's title and artists. Off by default: the track is on the screen and in
+ *   the player, and the insight is what was asked for.
+ * @property readNewInsightsAloud *Read new insights aloud* (#325): whether each insight is read
+ *   aloud as soon as it is written, while Sleevesight is on screen (D6), and never while a screen
+ *   reader is on (spoken feedback, or touch exploration: TalkBack), which reads the screen itself.
+ *   Off by default: speaking unasked over the music is a surprise, and *Read aloud* is one tap.
  * @property cacheLifetimes the retrieval cache lifetime per source (D9). A source with none (the
  *   pseudo-sources, which retrieve nothing) is not cached.
  * @property keepArtistResults *Keep what sources said about each artist* (#420): whether what the
@@ -81,8 +95,9 @@ import kotlin.time.Duration.Companion.seconds
  * @property cacheSizeLimit the most the caches may hold, in bytes of keys and values; past it the
  *   least recently used entries are evicted. See [DEFAULT_CACHE_SIZE_LIMIT].
  * @property historyLifetime *Keep history for*: how long the session history and the track changes
- *   are kept, counted back from today to when a track began to play and a change began; null keeps
- *   them for ever. See [DEFAULT_HISTORY_LIFETIME].
+ *   are kept, counted back from today to when a track began to play and a change began, and the
+ *   insights and genre reasons written, counted back to when each was written (#523, #643); null
+ *   keeps them for ever. See [DEFAULT_HISTORY_LIFETIME].
  * @property sessionGap *New session idle trigger*: how long a break in listening, from
  *   when the last track was last heard, ends a listening session. See [DEFAULT_SESSION_GAP].
  * @property keepSourcesUnfolded *Keep Sources as you left them* (#269): whether the *Sources* list
@@ -103,7 +118,7 @@ import kotlin.time.Duration.Companion.seconds
  * @property showGroundingDetails *Show grounding details* (#437), a developer setting: whether the
  *   insight card shows the grounding check's full counts ("2 of 3 sentences grounded · 1 uncited")
  *   rather than only a note when a sentence is not backed by the sources, and whether *Sources*
- *   shows every source's chip with its status, the model's own knowledge's `M` among them, and the
+ *   shows every source's chip with its status, the model's own knowledge's `AI` among them, and the
  *   matches rejected (#440), rather than only the sources that gave lines, by name. Off: the
  *   citations already show how each sentence is grounded, and most statuses are diagnostics.
  * @property developerMode *Developer mode* (#444): whether the settings show their *Developer*
@@ -125,6 +140,9 @@ import kotlin.time.Duration.Companion.seconds
  *   default, and back on with developer mode off, as every developer option goes back to its
  *   default.
  * @property theme *Theme* (#444): light or dark as the system is, or always one of them.
+ * @property themeButton *Theme button* (#636): whether Home's header shows, beside the cogwheel, a
+ *   button that moves [theme] one step on ([ThemeChoice.next]) with each tap. On by default: one
+ *   tap, where *Theme* in the settings takes several.
  * @property font *Font* (#377): the app's own font, Roboto, bundled with it, or the phone's system
  *   font. See [FontChoice].
  * @property introAtStart *Logo intro at start* (#383): whether the app, opened from the launcher
@@ -141,6 +159,7 @@ data class Settings(
     val aiModels: Map<ProviderId, String> = emptyMap(),
     val aiEfforts: Map<ProviderId, ReasoningEffort?> = emptyMap(),
     val followedPlayers: Map<String, Boolean> = mapOf(SPOTIFY to true),
+    val onlyEnabledPlayersOnHome: Boolean = false,
     val enabledSources: Set<SourceSwitch> = DEFAULT_SOURCES,
     val webEngines: Set<WebEngine> = DEFAULT_WEB_ENGINES,
     val labelSources: Set<LabelSource> = DEFAULT_LABEL_SOURCES,
@@ -152,6 +171,9 @@ data class Settings(
     val prepareNextTrack: PrepareNextTrack = PrepareNextTrack.EVIDENCE,
     val lookUpInBackground: Boolean = false,
     val artistFactsOncePerSession: Boolean = true,
+    val readAloudMusic: ReadAloudMusic = ReadAloudMusic.LOWER,
+    val readTrackLineFirst: Boolean = false,
+    val readNewInsightsAloud: Boolean = false,
     val cacheLifetimes: Map<SourceId, Duration> = DEFAULT_CACHE_LIFETIMES,
     val keepArtistResults: Boolean = false,
     val artistCacheLifetime: Duration = DEFAULT_ARTIST_CACHE_LIFETIME,
@@ -167,6 +189,7 @@ data class Settings(
     val linkStyle: LinkStyle = LinkStyle.UNDERLINE,
     val markDeveloperItems: Boolean = true,
     val theme: ThemeChoice = ThemeChoice.SYSTEM,
+    val themeButton: Boolean = true,
     val font: FontChoice = FontChoice.APP_FONT,
     val introAtStart: Boolean = true,
     val homeGuide: Boolean = true,
@@ -378,12 +401,16 @@ data class Settings(
                     ),
             )
 
-        /** All on except the model's own knowledge. */
+        /**
+         * All on except the model's own knowledge. On the phone, a source that needs a key (Last.fm)
+         * is kept off while its key is not saved (#667, the app's `KeyGate`), so it starts off
+         * there; the command line switches it off itself when its keys file holds no key.
+         */
         val DEFAULT_SOURCES: Set<SourceSwitch> = SourceSwitch.entries.toSet() - SourceSwitch.MODEL
 
         /**
-         * Every engine on. Each needs the user's own key, so an engine searches only once its key
-         * is saved: the switch is for turning off one whose key is saved, without removing the key.
+         * Every engine on. Each needs the user's own key: on the phone an engine is kept off while
+         * its key is not saved (#667, the app's `KeyGate`), and saving the key does not switch it on.
          */
         val DEFAULT_WEB_ENGINES: Set<WebEngine> = WebEngine.entries.toSet()
 
@@ -436,11 +463,12 @@ data class Settings(
          * be measured at the Phase 0.5 gate, #46): some 20 KB a track with its insights, so 50 MB
          * holds about 2,500 tracks, and more when only evidence is cached. Retrieval entries expire
          * within 30 days (D9), so evidence alone reaches the limit only for someone playing over 80
-         * new tracks a day. Written cards never expire, though: they accumulate until the limit,
-         * which every listener reaches in time (at about 2 KB a card, after some 25,000 cards), and
-         * from then on the least recently used go first, the cards of tracks not played for longest.
-         * 50 MB is small beside the players' own caches, and an evicted card costs a paid call to
-         * write again, which is why it is not lower.
+         * new tracks a day. Written cards are kept for [historyLifetime] (#643), 90 days by
+         * default, so at about 2 KB a card the limit is reached only past some 25,000 cards in that
+         * time, or with *Keep history for* at *Forever*, where they accumulate until it; from then
+         * on the least recently used go first, the cards of tracks not played for longest. 50 MB is
+         * small beside the players' own caches, and an evicted card costs a paid call to write
+         * again, which is why it is not lower.
          */
         const val DEFAULT_CACHE_SIZE_LIMIT: Long = CACHE_MEGABYTES * MEGABYTE
 
@@ -539,6 +567,19 @@ enum class ThemeChoice {
     SYSTEM,
     LIGHT,
     DARK,
+    ;
+
+    /**
+     * The theme Home's theme button (#636) gives from this one: *Light*, then *Dark*, then
+     * *System*, then *Light* again.
+     */
+    val next: ThemeChoice
+        get() =
+            when (this) {
+                LIGHT -> DARK
+                DARK -> SYSTEM
+                SYSTEM -> LIGHT
+            }
 }
 
 /**
@@ -602,6 +643,24 @@ enum class WriteAutomatically {
     ON_EVERY_TRACK_CHANGE,
     WHEN_I_SKIP,
     NEVER,
+}
+
+/**
+ * *While reading aloud* (#325): what happens to the music playing while an insight is read aloud,
+ * through Android's audio focus, which the player follows.
+ */
+enum class ReadAloudMusic {
+    /**
+     * *Lower the music*: the player plays on, quieter, under the voice (transient audio focus that
+     * lets others duck). The default: the music is not interrupted.
+     */
+    LOWER,
+
+    /**
+     * *Pause the music*: the player pauses for the voice and plays on after it (transient audio
+     * focus), as players do when Android hands the focus back.
+     */
+    PAUSE,
 }
 
 /**

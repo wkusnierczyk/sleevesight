@@ -116,26 +116,43 @@ internal fun ActionButtonGroup(
     actions: List<GroupAction>,
     modifier: Modifier = Modifier,
 ) {
-    val buttons = actions.map { GroupButton(it.label, it.enabled, selected = null, read = null, onClick = it.onClick) }
+    val buttons =
+        actions.map {
+            GroupButton(
+                it.label,
+                it.enabled,
+                selected = null,
+                read = null,
+                modifier = it.modifier,
+                onClick = it.onClick,
+            )
+        }
     ConnectedButtons(buttons, modifier, checks = false)
 }
 
-/** One action of an [ActionButtonGroup]: its [label], whether it can be used ([enabled]), and what a tap does. */
+/**
+ * One action of an [ActionButtonGroup]: its [label], whether it can be used ([enabled]), a
+ * [modifier] for its button (a test tag, or a target the focus can be handed to), and what a tap
+ * does.
+ */
 internal class GroupAction(
     val label: String,
     val enabled: Boolean = true,
+    val modifier: Modifier = Modifier,
     val onClick: () -> Unit,
 )
 
 /**
  * A button of the group: chosen or not ([selected]) in a choice, null in a row of actions; [read],
- * what a screen reader reads for it in place of its label, if not the label alone.
+ * what a screen reader reads for it in place of its label, if not the label alone; [modifier], set
+ * on the button before its click, so a focus requester in it reaches the button.
  */
 private class GroupButton(
     val label: String,
     val enabled: Boolean,
     val selected: Boolean?,
     val read: String?,
+    val modifier: Modifier = Modifier,
     val onClick: () -> Unit,
 )
 
@@ -281,6 +298,7 @@ private fun GroupButtonView(
                 .heightIn(min = GROUP_HEIGHT)
                 .clip(shape)
                 .background(fill, shape)
+                .then(button.modifier)
                 .then(action)
                 .let { view -> button.read?.let { read -> view.semantics { contentDescription = read } } ?: view }
                 .padding(horizontal = GROUP_PADDING, vertical = 6.dp),

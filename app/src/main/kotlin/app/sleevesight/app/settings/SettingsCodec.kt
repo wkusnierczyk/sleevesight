@@ -48,6 +48,7 @@ internal object SettingsCodec {
     private val LAYOUT = stringPreferencesKey("layout")
     private val PLAYERS_ON = stringSetPreferencesKey("players.on")
     private val PLAYERS_OFF = stringSetPreferencesKey("players.off")
+    private val PLAYERS_ON_HOME = booleanPreferencesKey("players.only_enabled_on_home")
     private val SOURCES_ON = stringSetPreferencesKey("sources.on")
     private val SOURCES_OFF = stringSetPreferencesKey("sources.off")
     private val ENGINES_ON = stringSetPreferencesKey("web.engines.on")
@@ -62,6 +63,9 @@ internal object SettingsCodec {
     private val PREPARE_NEXT = stringPreferencesKey("insights.prepare_next_track")
     private val BACKGROUND = booleanPreferencesKey("lookups.background")
     private val ARTIST_FACTS_ONCE = booleanPreferencesKey("insights.artist_facts_once")
+    private val READ_ALOUD_MUSIC = stringPreferencesKey("read_aloud.music")
+    private val READ_TRACK_LINE = booleanPreferencesKey("read_aloud.track_line_first")
+    private val READ_NEW_INSIGHTS = booleanPreferencesKey("read_aloud.new_insights")
     private val KEEP_ARTIST_RESULTS = booleanPreferencesKey("cache.keep_artist_results")
     private val ARTIST_LIFETIME_MS = longPreferencesKey("cache.artist_lifetime_ms")
     private val CACHE_SIZE_LIMIT = longPreferencesKey("cache.size_limit")
@@ -75,6 +79,7 @@ internal object SettingsCodec {
     private val LINK_STYLE = stringPreferencesKey("developer.link_style")
     private val MARK_DEVELOPER_ITEMS = booleanPreferencesKey("developer.mark_items")
     private val THEME = stringPreferencesKey("display.theme")
+    private val THEME_BUTTON = booleanPreferencesKey("display.theme_button")
     private val FONT = stringPreferencesKey("display.font")
     private val INTRO = booleanPreferencesKey("display.intro")
     private val HOME_GUIDE = booleanPreferencesKey("display.home_guide")
@@ -95,6 +100,7 @@ internal object SettingsCodec {
             aiModels = AiSettingsCodec.readModels(prefs),
             aiEfforts = AiSettingsCodec.readEfforts(prefs),
             followedPlayers = readPlayers(prefs, defaults),
+            onlyEnabledPlayersOnHome = prefs[PLAYERS_ON_HOME] ?: defaults.onlyEnabledPlayersOnHome,
             enabledSources = readSwitches(prefs, SOURCES_ON, SOURCES_OFF, defaults.enabledSources),
             webEngines = readSwitches(prefs, ENGINES_ON, ENGINES_OFF, defaults.webEngines),
             labelSources = readSwitches(prefs, LABELS_ON, LABELS_OFF, defaults.labelSources),
@@ -106,6 +112,9 @@ internal object SettingsCodec {
             prepareNextTrack = enumOf(prefs[PREPARE_NEXT]) ?: defaults.prepareNextTrack,
             lookUpInBackground = prefs[BACKGROUND] ?: defaults.lookUpInBackground,
             artistFactsOncePerSession = prefs[ARTIST_FACTS_ONCE] ?: defaults.artistFactsOncePerSession,
+            readAloudMusic = enumOf(prefs[READ_ALOUD_MUSIC]) ?: defaults.readAloudMusic,
+            readTrackLineFirst = prefs[READ_TRACK_LINE] ?: defaults.readTrackLineFirst,
+            readNewInsightsAloud = prefs[READ_NEW_INSIGHTS] ?: defaults.readNewInsightsAloud,
             cacheLifetimes = readLifetimes(prefs),
             keepArtistResults = prefs[KEEP_ARTIST_RESULTS] ?: defaults.keepArtistResults,
             artistCacheLifetime =
@@ -126,6 +135,7 @@ internal object SettingsCodec {
             linkStyle = enumOf(prefs[LINK_STYLE]) ?: defaults.linkStyle,
             markDeveloperItems = prefs[MARK_DEVELOPER_ITEMS] ?: defaults.markDeveloperItems,
             theme = enumOf(prefs[THEME]) ?: defaults.theme,
+            themeButton = prefs[THEME_BUTTON] ?: defaults.themeButton,
             font = enumOf(prefs[FONT]) ?: defaults.font,
             introAtStart = prefs[INTRO] ?: defaults.introAtStart,
             homeGuide = prefs[HOME_GUIDE] ?: defaults.homeGuide,
@@ -169,6 +179,9 @@ internal object SettingsCodec {
         // A default player missing from the players is not followed, so it is stored as off.
         val players = changes(stored.followedPlayers, settings.followedPlayers)
         writeOverrides(players, { defaults.followedPlayers[it] }, prefs, PLAYERS_ON, PLAYERS_OFF)
+        if (moved { it.onlyEnabledPlayersOnHome }) {
+            prefs.put(PLAYERS_ON_HOME, settings.onlyEnabledPlayersOnHome, defaults.onlyEnabledPlayersOnHome)
+        }
         switches(SOURCES_ON, SOURCES_OFF) { it.enabledSources }
         switches(ENGINES_ON, ENGINES_OFF) { it.webEngines }
         switches(LABELS_ON, LABELS_OFF) { it.labelSources }
@@ -195,6 +208,15 @@ internal object SettingsCodec {
         }
         if (moved { it.artistFactsOncePerSession }) {
             prefs.put(ARTIST_FACTS_ONCE, settings.artistFactsOncePerSession, defaults.artistFactsOncePerSession)
+        }
+        if (moved { it.readAloudMusic }) {
+            prefs.put(READ_ALOUD_MUSIC, settings.readAloudMusic.name, defaults.readAloudMusic.name)
+        }
+        if (moved { it.readTrackLineFirst }) {
+            prefs.put(READ_TRACK_LINE, settings.readTrackLineFirst, defaults.readTrackLineFirst)
+        }
+        if (moved { it.readNewInsightsAloud }) {
+            prefs.put(READ_NEW_INSIGHTS, settings.readNewInsightsAloud, defaults.readNewInsightsAloud)
         }
         for (source in Settings.DEFAULT_CACHE_LIFETIMES.keys) {
             if (!moved { it.cacheLifetimes[source] }) continue
@@ -255,6 +277,7 @@ internal object SettingsCodec {
             prefs.put(MARK_DEVELOPER_ITEMS, settings.markDeveloperItems, defaults.markDeveloperItems)
         }
         if (moved { it.theme }) prefs.put(THEME, settings.theme.name, defaults.theme.name)
+        if (moved { it.themeButton }) prefs.put(THEME_BUTTON, settings.themeButton, defaults.themeButton)
         if (moved { it.font }) prefs.put(FONT, settings.font.name, defaults.font.name)
         if (moved { it.introAtStart }) prefs.put(INTRO, settings.introAtStart, defaults.introAtStart)
         if (moved { it.homeGuide }) prefs.put(HOME_GUIDE, settings.homeGuide, defaults.homeGuide)

@@ -12,6 +12,7 @@ import app.sleevesight.core.pipeline.SoundEvidence
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.resolution.Lookup
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.settings.pastKeepHistory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.currentCoroutineContext
@@ -256,7 +257,7 @@ class AppGenreNotes(
     private fun expired(
         writtenAt: Instant?,
         lifetime: Duration? = settings.value?.historyLifetime,
-    ): Boolean = writtenAt != null && lifetime != null && clock.now() - writtenAt >= lifetime
+    ): Boolean = pastKeepHistory(writtenAt, lifetime, clock.now())
 
     // Drops [key]'s reason, past *Keep history for*, so the cache is read again (and misses).
     private fun drop(key: CardKey) {

@@ -22,6 +22,8 @@ import app.sleevesight.app.pipeline.UnavailableModel
 import app.sleevesight.app.report.MailHandoff
 import app.sleevesight.app.report.PhoneMail
 import app.sleevesight.app.session.PlaybackInfo
+import app.sleevesight.app.speech.ReadAloud
+import app.sleevesight.app.speech.Reading
 import app.sleevesight.app.ui.report.InsightReportDialog
 import app.sleevesight.app.ui.settings.InstalledPlayers
 import app.sleevesight.app.ui.settings.SettingsTarget
@@ -63,6 +65,8 @@ import kotlinx.coroutines.flow.StateFlow
  *   *Why is this …?*.
  * @property lookAgain a tap on *Look again* (#617), with the key it was offered under and the track
  *   it was shown beside, as [write] takes a tap on Write.
+ * @property readAloud *Read aloud* (#325), under the insight and under a genre's reason; null shows
+ *   no button.
  */
 @Suppress("LongParameterList") // What one screen reads, each published on its own.
 class HomeFeed(
@@ -85,6 +89,7 @@ class HomeFeed(
     val hideGuide: () -> Unit = {},
     val genreNotes: GenreNotes = GenreNotes.None,
     val lookAgain: (RunKey, NowPlaying) -> Unit = { _, _ -> },
+    val readAloud: ReadAloud? = null,
 )
 
 /**
@@ -154,6 +159,7 @@ private fun HomeFeed.actions(
     openSettings = openSettings,
     openPage = openPage,
     openSettingsAt = openSettingsAt,
+    readAloud = readAloud,
 )
 
 /**
@@ -183,7 +189,8 @@ internal class NowPlayingState(
  * genre's panel shows above its table (#523); [lookAgain] takes a tap on *Look again* (#617), as
  * [write] takes one on Write. While nothing plays (#627), the players are listed
  * with [installedPlayers]' icons, and the guide's *Dismiss* goes to [dismissGuide] (*Dismiss once*)
- * or [hideGuide] (*Do not show again*).
+ * or [hideGuide] (*Do not show again*). [readAloud] reads the insight, or a genre's reason, aloud
+ * (#325); null shows no *Read aloud*.
  */
 @Suppress("LongParameterList") // Each of the screen's ways out, on its own.
 internal class NowPlayingActions(
@@ -203,6 +210,7 @@ internal class NowPlayingActions(
     val hideGuide: () -> Unit = {},
     val genreNotes: GenreNotes = GenreNotes.None,
     val lookAgain: (RunKey, NowPlaying) -> Unit = { _, _ -> },
+    val readAloud: ReadAloud? = null,
 )
 
 /**
@@ -271,7 +279,7 @@ internal fun NowPlayingContent(
                     track,
                     settings,
                     actions.openPage.takeIf { pages },
-                    PanelNotes(actions.genreNotes, cite, shown.modelAllowed),
+                    PanelNotes(actions.genreNotes, cite, shown.modelAllowed, actions.readAloud),
                 )
             }
             // A tap carries what it was shown for: the run Write is offered for, beside this track.
@@ -291,11 +299,23 @@ internal fun NowPlayingContent(
                 },
                 shown.details,
                 settings?.let { writingChoice(it, actions) },
+                insightReading(actions.readAloud, track),
             )
             if (settings != null) SourcesItem(pages, shown, focus, fold, actions)
         }
     }
 }
+
+// *Read aloud* under the insight (#325): it reads the insight shown, for the track it is shown beside.
+@Composable
+private fun insightReading(
+    readAloud: ReadAloud?,
+    track: TrackState?,
+): ReadAloudControl? =
+    readAloudControl(readAloud, Reading.INSIGHT) {
+        val written = track?.insight as? InsightState.Written
+        if (track != null && written != null) readAloud?.readInsight(track, written)
+    }
 
 // *Sources* on Home: its chip, the way to its page, under *Separate pages* ([pages]), else the box (#623).
 @Composable

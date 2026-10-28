@@ -29,9 +29,9 @@ import java.io.IOException
 
 /**
  * The credits (architecture, *UI*, *Licensing*): each data source the app uses, with its licence
- * and attribution, then the fonts it bundles, Roboto (#377) and Caveat (#627), its icons' set, Material Symbols, and
- * the libraries it ships, by licence, each with the licence's text (#488), and a link to the site's
- * page on what each library does in the app (#502). MusicBrainz is listed
+ * and attribution, then the fonts it bundles, Roboto (#377) and Shantell Sans (#672), its icons'
+ * set, Material Symbols, and the libraries it ships, by licence, each with the licence's text
+ * (#488), and a link to the site's page on what each library does in the app (#502). MusicBrainz is listed
  * with both its licences, CC0 for its core data and CC BY-NC-SA 3.0 for its tags, which are a
  * genre label source (D12, #84). A page opened from the settings (#549): the back arrow at its top and
  * *Close* at its end go back to them ([onClose]), as Android's back does.
@@ -116,14 +116,14 @@ internal val FONT_CREDIT: Credit =
     )
 
 /**
- * Caveat, the hand-written font of the notes in Home's guide (#627), with its copyright notice and
- * its licence, as for Roboto ([FONT_CREDIT]); the licence's text is in the app too
- * (`assets/licences/caveat-ofl.txt`).
+ * Shantell Sans, the hand-drawn font of the notes in Home's guide (#627, #672), with its copyright
+ * notice and its licence, as for Roboto ([FONT_CREDIT]); the licence's text is in the app too
+ * (`assets/licences/shantell-sans-ofl.txt`).
  */
 internal val HAND_FONT_CREDIT: Credit =
     Credit(
-        R.string.credits_caveat,
-        R.string.credits_caveat_text,
+        R.string.credits_shantell_sans,
+        R.string.credits_shantell_sans_text,
         Licence("SIL Open Font License 1.1", "https://openfontlicense.org"),
     )
 

@@ -64,8 +64,14 @@ private fun unbacked(grounded: GroundedText): Int =
         }
     }
 
-// The statuses `CheckedProse` underlines in red.
+// The statuses `CheckedProse` underlines in red, which the note counts.
 private val UNDERLINED = setOf(SentenceStatus.UNCITED, SentenceStatus.UNKNOWN)
+
+/**
+ * The statuses of a sentence the sources do not back, which reading aloud says so (#325): the ones
+ * underlined in red ([UNDERLINED], which the note counts) and the model's own knowledge.
+ */
+internal val UNBACKED = setOf(SentenceStatus.UNCITED, SentenceStatus.UNKNOWN, SentenceStatus.MODEL)
 
 /** The grounding check's counts in full, as the simulator gives them (*Show grounding details*). */
 @Composable

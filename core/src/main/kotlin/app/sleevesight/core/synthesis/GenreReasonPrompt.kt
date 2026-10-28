@@ -29,6 +29,8 @@ object GenreReasonPrompt {
      * The version of this prompt's template, part of the synthesis cache key ([CardKind.GENRE]):
      * raised when its contract or built-in style changes, so reasons written from the old prompt are
      * not reused.
+     * Not raised when the model's own knowledge's citation became `[AI]` (#668), as
+     * `InsightPrompt.VERSION` was not: a reason kept with `[M]` reads as one written now ([citationId]).
      */
     const val VERSION: Int = 2
 
@@ -54,7 +56,7 @@ object GenreReasonPrompt {
     /**
      * The prompt for why [nowPlaying], normalized as [normalized], carries the genre label [genre],
      * written from [evidence]; with [allowModel] (the *Model's own knowledge* switch), the model may
-     * add one sentence of its own, cited `[M]`.
+     * add one sentence of its own, cited `[AI]`.
      */
     fun build(
         nowPlaying: NowPlaying,
