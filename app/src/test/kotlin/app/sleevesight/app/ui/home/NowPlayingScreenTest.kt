@@ -316,7 +316,7 @@ class NowPlayingScreenTest {
     @Test
     fun aKeptCardsModelCitationStaysAsCheckedWhenTheSettingChanges() {
         // Written with the model's own knowledge allowed; the setting is off now (its default).
-        val kept = track(insight = written("It is loved [M].", cached = true, allowModel = true))
+        val kept = track(insight = written("It is loved [AI].", cached = true, allowModel = true))
         show(state(PipelineView(kept, aiReady = true))) {
             val texts =
                 compose
@@ -326,7 +326,7 @@ class NowPlayingScreenTest {
                     ).fetchSemanticsNode()
                     .config[SemanticsProperties.Text]
             val prose = texts.first { "It is loved" in it.text }
-            val chip = prose.spanStyles.single { prose.text.substring(it.start, it.end).trim() == "M" }
+            val chip = prose.spanStyles.single { prose.text.substring(it.start, it.end).trim() == "AI" }
             assertEquals(lightColorScheme().tertiaryContainer, chip.item.background)
         }
     }
@@ -348,8 +348,8 @@ class NowPlayingScreenTest {
 
     @Test
     fun aCardCheckedWithTheModelsKnowledgeAllowedShowsItsModelCitationAsSoBesideAMissingLine() {
-        // No sentence comes out `MODEL`: the only `[M]` sits beside a line that does not exist.
-        val kept = track(insight = written("It is loved [M][L1].", cached = true, allowModel = true))
+        // No sentence comes out `MODEL`: the only `[AI]` sits beside a line that does not exist.
+        val kept = track(insight = written("It is loved [AI][L1].", cached = true, allowModel = true))
         show(state(PipelineView(kept, aiReady = true))) {
             val prose =
                 compose
@@ -357,14 +357,14 @@ class NowPlayingScreenTest {
                     .fetchSemanticsNode()
                     .config[SemanticsProperties.Text]
                     .first { "It is loved" in it.text }
-            val chip = prose.spanStyles.single { prose.text.substring(it.start, it.end).trim() == "M" }
+            val chip = prose.spanStyles.single { prose.text.substring(it.start, it.end).trim() == "AI" }
             assertEquals(lightColorScheme().tertiaryContainer, chip.item.background)
         }
     }
 
     @Test
     fun aScreenReaderHearsEachCitationByWhatItPointsAtAndCanFollowALine() {
-        val reply = "It topped the charts [W1]. It is loved [M]. It charted [L1]. It is great."
+        val reply = "It topped the charts [W1]. It is loved [AI]. It charted [L1]. It is great."
         show(state(PipelineView(track(insight = written(reply, allowModel = true)), aiReady = true))) {
             // The paragraph, not the evidence line that reads the same.
             val prose =

@@ -203,7 +203,7 @@
     {
      "s": "Lightfoot also wrote The Wreck of the Edmund Fitzgerald. [M]",
      "cites": [
-      "M"
+      "AI"
      ],
      "status": "model"
     }
@@ -225,7 +225,7 @@
     {
      "s": "Lightfoot also wrote The Wreck of the Edmund Fitzgerald. [M]",
      "cites": [
-      "M"
+      "AI"
      ],
      "status": "unknown"
     }
@@ -241,7 +241,7 @@
      "s": "He was Canadian and wrote many hits. [L1][M]",
      "cites": [
       "L1",
-      "M"
+      "AI"
      ],
      "status": "model"
     }
@@ -604,7 +604,7 @@
     {
      "s": "Unverified claim. [M]",
      "cites": [
-      "M"
+      "AI"
      ],
      "status": "unknown"
     }
@@ -741,7 +741,7 @@
     {
      "s": "x[M]　",
      "cites": [
-      "M"
+      "AI"
      ],
      "status": "model"
     }

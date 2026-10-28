@@ -316,11 +316,11 @@ class ShownRunTest {
 
     @Test
     fun theGroundingCheckReadsTheReplyAsWrittenAndTheShownTextKeepsItsSentencesAndCitations() {
-        val reply = "It covers *Title* [MB1]. It was **huge**. _Other_ is cited [M]."
+        val reply = "It covers *Title* [MB1]. It was **huge**. _Other_ is cited [AI]."
         val grounded = (GroundingCheck.check(reply, setOf("MB1"), allowModel = false) as InsightReply.Written).grounded
         val paragraph = grounded.paragraphs.single()
         assertEquals(
-            listOf("It covers *Title* [MB1].", "It was **huge**.", "_Other_ is cited [M]."),
+            listOf("It covers *Title* [MB1].", "It was **huge**.", "_Other_ is cited [AI]."),
             paragraph.map { it.text },
         )
         // A sentence opening with emphasis is a sentence of its own, so the uncited one shows (#574).
@@ -337,6 +337,6 @@ class ShownRunTest {
             },
         )
         assertEquals(listOf(text("It was "), text("huge", bold = true), text(".")), runs[1])
-        assertEquals(listOf(text("Other", italic = true), text(" is cited "), cite("M"), text(".")), runs[2])
+        assertEquals(listOf(text("Other", italic = true), text(" is cited "), cite("AI"), text(".")), runs[2])
     }
 }

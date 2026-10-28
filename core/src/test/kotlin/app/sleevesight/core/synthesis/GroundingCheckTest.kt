@@ -1,6 +1,7 @@
 package app.sleevesight.core.synthesis
 
 import app.sleevesight.core.evidence.EvidenceSet
+import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.fixtures.Fixtures
 import kotlinx.serialization.SerialName
@@ -250,7 +251,7 @@ class GroundingCheckTest {
         val evidence = FixtureEvidence.of(1)
         val reply =
             "Sundown topped the US chart. [W3] It was a hit everywhere. Little is known about the B-side. " +
-                "It was covered. [W99] He was Canadian. [M]"
+                "It was covered. [W99] He was Canadian. [AI]"
         val written = assertIs<InsightReply.Written>(GroundingCheck.check(reply, evidence, allowModel = true))
         assertEquals(GroundingCounts(ok = 1, model = 1, hedge = 1, uncited = 1, unknown = 1), written.grounded.counts)
         assertEquals(5, written.grounded.counts.total)
@@ -259,13 +260,49 @@ class GroundingCheckTest {
     @Test
     fun `a written reply says whether the model's own knowledge was allowed, whatever its sentences came out as`() {
         val evidence = FixtureEvidence.of(1)
-        // `[M]` beside a line that does not exist: no sentence comes out `MODEL` either way.
-        val reply = "Sundown topped the US chart. [W3] He was Canadian. [M][W99]"
+        // `[AI]` beside a line that does not exist: no sentence comes out `MODEL` either way.
+        val reply = "Sundown topped the US chart. [W3] He was Canadian. [AI][W99]"
         for (allowModel in listOf(true, false)) {
             val written = assertIs<InsightReply.Written>(GroundingCheck.check(reply, evidence, allowModel))
             assertEquals(0, written.grounded.counts.model)
             assertEquals(allowModel, written.grounded.allowModel)
         }
+    }
+
+    @Test
+    fun `the model's own knowledge is cited AI, its source's tag`() {
+        assertEquals("AI", GroundingCheck.MODEL_ID)
+        assertEquals(SourceId.MODEL.tag, GroundingCheck.MODEL_ID)
+        val evidence = FixtureEvidence.of(1)
+        val written =
+            assertIs<InsightReply.Written>(GroundingCheck.check("He was Canadian. [AI]", evidence, allowModel = true))
+        assertEquals(
+            listOf(SentenceStatus.MODEL),
+            written.grounded.paragraphs
+                .flatten()
+                .map { it.status },
+        )
+    }
+
+    @Test
+    fun `a reply written before 0_1_8 citing M reads as citing the model's own knowledge, as AI`() {
+        // Cards kept in the synthesis cache under the same prompt version still cite `[M]` (#668).
+        val evidence = FixtureEvidence.of(1)
+        val reply = "Sundown topped the US chart. [W3] He was Canadian. [M] It was a hit [W3][M]."
+        val allowed = assertIs<InsightReply.Written>(GroundingCheck.check(reply, evidence, allowModel = true))
+        val sentences = allowed.grounded.paragraphs.flatten()
+        assertEquals(listOf(listOf("W3"), listOf("AI"), listOf("W3", "AI")), sentences.map { it.cites })
+        assertEquals(
+            listOf(SentenceStatus.OK, SentenceStatus.MODEL, SentenceStatus.MODEL),
+            sentences.map { it.status },
+        )
+        val off = assertIs<InsightReply.Written>(GroundingCheck.check(reply, evidence, allowModel = false))
+        assertEquals(
+            listOf(SentenceStatus.OK, SentenceStatus.UNKNOWN, SentenceStatus.UNKNOWN),
+            off.grounded.paragraphs
+                .flatten()
+                .map { it.status },
+        )
     }
 
     @Test

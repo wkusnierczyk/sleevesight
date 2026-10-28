@@ -48,7 +48,7 @@ object GenreReasonPrompt {
     /**
      * The prompt for why [nowPlaying], normalized as [normalized], carries the genre label [genre],
      * written from [evidence]; with [allowModel] (the *Model's own knowledge* switch), the model may
-     * add one sentence of its own, cited `[M]`.
+     * add one sentence of its own, cited `[AI]`.
      */
     fun build(
         nowPlaying: NowPlaying,
