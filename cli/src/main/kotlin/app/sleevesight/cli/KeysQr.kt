@@ -5,6 +5,10 @@ import app.sleevesight.core.keys.KeyName
 import app.sleevesight.core.keys.KeyProblem
 import app.sleevesight.core.keys.KeySetup
 import app.sleevesight.core.keys.KeyShape
+import app.sleevesight.core.keys.KeyWords
+import app.sleevesight.core.keys.SealedSetup
+import app.sleevesight.core.platform.JvmKeyCrypto
+import app.sleevesight.core.platform.JvmResourceReader
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.common.BitMatrix
@@ -16,7 +20,11 @@ import java.io.InputStream
 import java.io.PrintStream
 
 /**
- * `keys-qr` (#268): draws a setup code ([KeySetup]) in the terminal, for the app's *Load keys*.
+ * `keys-qr` (#268): draws a setup code ([KeySetup]) in the terminal, for the app's *Load keys*,
+ * sealed (#590, [SealedSetup]) with the five words *Load keys* shows, which are read from the
+ * [terminal] without echo, never from the command line, where the shell's history would keep them;
+ * with no terminal, from the first line of standard input, unless a key is read from it. With
+ * `--unsealed`, the clear code, which is the keys themselves.
  * The keys come from the developer's environment or keys file ([Keys]); with `--keys`, from that
  * file alone, not the environment, so a tester's file cannot pick up the developer's own keys; with
  * `--<name>-from`, only from the files given, `-` for standard input, so a tester's key is drawn without being saved
@@ -29,7 +37,11 @@ class KeysQr(
     private val err: PrintStream,
     private val environment: Map<String, String>,
     private val input: InputStream,
+    private val terminal: ((String) -> String?)?,
 ) {
+    private var unsealed = false
+    private var stdinTaken = false
+
     fun run(args: List<String>): Int {
         val keys =
             try {
@@ -65,15 +77,74 @@ class KeysQr(
                     null
                 }
             }
-        if (problem != null) {
-            err.println(problem)
-            return Cli.EXIT_USAGE
+        if (problem != null) err.println(problem)
+        return when {
+            problem != null -> Cli.EXIT_USAGE
+            unsealed -> drawCode(keys, null)
+            else -> readWords()?.let { drawCode(keys, it) } ?: Cli.EXIT_USAGE
         }
-        out.print(draw(encode(KeySetup.write(keys))))
+    }
+
+    // Draws [keys]' setup code, sealed with [words], or clear without them.
+    private fun drawCode(
+        keys: Map<KeyName, Secret>,
+        words: List<String>?,
+    ): Int {
+        val setup = KeySetup.write(keys)
+        val code = words?.let { SealedSetup.seal(setup, it, JvmKeyCrypto) } ?: setup
+        out.print(draw(encode(code)))
         out.flush()
         err.println("Holds the ${keys.keys.joinToString { label(it) }} key${if (keys.size > 1) "s" else ""}.")
-        err.println("In Sleevesight: Settings, Secrets, Load keys. Then clear the terminal: the code is the keys.")
+        if (words == null) {
+            err.println("In Sleevesight: Settings, Secrets, Load keys. Then clear the terminal: the code is the keys.")
+        } else {
+            err.println(
+                "Sealed with the phone's words: on the phone, Next, then scan it. It opens only there, once, " +
+                    "within a few minutes. Then clear the terminal.",
+            )
+        }
         return 0
+    }
+
+    // The five words, from the terminal (three tries) or standard input (one), or null, said why.
+    private fun readWords(): List<String>? {
+        val list = KeyWords.load(JvmResourceReader)
+        val tries = if (terminal != null) TRIES else 1
+        var words: List<String>? = null
+        var asked = 0
+        var answered = true
+        while (words == null && answered && asked < tries) {
+            asked++
+            val read = typed()?.let(list::read)
+            val problem = read?.let(::problemOf)
+            when {
+                read == null -> answered = false
+                problem != null -> err.println(problem)
+                else -> words = read.filterNotNull()
+            }
+        }
+        if (words == null && answered) {
+            err.println("Nothing drawn: type the words Load keys shows, or give --unsealed for a clear code.")
+        }
+        return words
+    }
+
+    // A line of words, from the terminal or standard input, or null when there is none.
+    private fun typed(): String? =
+        when {
+            terminal != null -> terminal.invoke(PROMPT)
+            stdinTaken -> null.also { err.println(NO_TERMINAL) }
+            else -> input.bufferedReader().readLine()
+        }
+
+    // What is wrong with the words [read], or null when they are the five.
+    private fun problemOf(read: List<String?>): String? {
+        val wrong = read.indexOfFirst { it == null }
+        return when {
+            wrong >= 0 -> "Word ${wrong + 1} is not one of the phone's words."
+            read.size != KeyWords.COUNT -> "${read.size} words: the phone shows ${KeyWords.COUNT}."
+            else -> null
+        }
     }
 
     private fun read(args: List<String>): Map<KeyName, Secret> {
@@ -82,6 +153,11 @@ class KeysQr(
         val rest = args.iterator()
         while (rest.hasNext()) {
             val arg = rest.next()
+            if (arg == UNSEALED) {
+                require(!unsealed) { "$arg given twice" }
+                unsealed = true
+                continue
+            }
             val name = KeyName.entries.firstOrNull { arg == "--${it.code}-from" }
             // No argument's value is repeated: it may be a key, typed by mistake (`--anthropic-from=sk-…`).
             require(name != null || arg == "--keys") {
@@ -94,6 +170,7 @@ class KeysQr(
             if (name == null) keysFile = File(value) else from[name] = value
         }
         require(from.values.count { it == STDIN } <= 1) { "Only one key can be read from standard input" }
+        stdinTaken = STDIN in from.values
         val given = keysFile
         require(given == null || given.isFile) { "--keys: no such file" }
         require(given == null || from.isEmpty()) { "--keys and --<name>-from cannot be combined" }
@@ -128,6 +205,13 @@ class KeysQr(
     companion object {
         private const val STDIN = "-"
         private const val QUIET_ZONE = 4
+        private const val UNSEALED = "--unsealed"
+        private const val TRIES = 3
+        private const val PROMPT =
+            "The five words Load keys shows on the phone, in order (the first three letters of each are enough): "
+        private const val NO_TERMINAL =
+            "The words are read from the terminal, or from standard input, which a key is read from here: " +
+                "run it in a terminal, or give --unsealed."
 
         /** What an option's name looks like, and nothing more: anything else may hold a key. */
         private val OPTION = Regex("--[a-z-]{1,30}")
@@ -136,11 +220,17 @@ class KeysQr(
             """
             Usage: sleevesight-cli keys-qr [--keys <file>] [--anthropic-from <file|->] [--openai-from <file|->]
                                            [--google-from <file|->] [--exa-from <file|->] [--lastfm-from <file|->]
+                                           [--unsealed]
 
               Draws a setup code for the app's Settings, Secrets, Load keys: the keys from the
               environment or ~/.config/sleevesight/keys.env; with --keys, from that file alone; with
               any --<name>-from, only the keys in those files, - for standard input (one at most).
               --keys and --<name>-from cannot be combined.
+              The code is sealed with the five words Load keys shows on the phone, asked for at a
+              prompt and not echoed (with no terminal, the first line of standard input), never taken
+              from the command line: only that phone opens it, with those words, once, within a few
+              minutes. With --unsealed, the clear code, which is the keys themselves, for a key's own
+              Scan QR code.
               Nothing is written to a file or sent anywhere. Do not make the code with an online QR
               generator: it would receive the keys.
 

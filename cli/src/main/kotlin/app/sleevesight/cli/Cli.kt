@@ -61,9 +61,14 @@ class Cli(
     private val err: PrintStream,
     private val environment: Map<String, String> = System.getenv(),
     private val input: InputStream = System.`in`,
+    private val terminal: ((String) -> String?)? = null,
 ) {
     fun run(args: List<String>): Int =
-        if (args.firstOrNull() == KEYS_QR) KeysQr(out, err, environment, input).run(args.drop(1)) else runPipeline(args)
+        if (args.firstOrNull() == KEYS_QR) {
+            KeysQr(out, err, environment, input, terminal).run(args.drop(1))
+        } else {
+            runPipeline(args)
+        }
 
     private fun runPipeline(args: List<String>): Int {
         val options =
