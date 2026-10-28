@@ -50,9 +50,9 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.shadows.ShadowDialog
 
 /**
- * *Load keys* (#268, #446): its screen, with a scanner that needs no camera. A code that is all
- * good, partly good, of nothing usable, not a setup code, or of a later version; saving, and a save
- * that fails.
+ * *Load keys* (#268, #446): its screen, with a scanner that needs no camera, past its words (#590,
+ * `LoadKeysWordsTest`). A clear code that is all good, partly good, of nothing usable, not a setup
+ * code, or of a later version; saving, and a save that fails.
  */
 @RunWith(RobolectricTestRunner::class)
 class LoadKeysTest {
@@ -78,7 +78,7 @@ class LoadKeysTest {
 
     private fun text(id: Int) = app.getString(id)
 
-    /** Opens *Load keys* on the settings screen, scanning with [scanner]. */
+    /** Opens *Load keys* on the settings screen, scanning with [scanner], and goes past its words to the camera. */
     private fun show(
         scanner: QrScanner,
         secretStore: SecretStore = secrets,
@@ -100,6 +100,8 @@ class LoadKeysTest {
             waitForText(text(R.string.settings_title))
             compose.openSection(SettingsSection.SECRETS)
             compose.onNodeWithText(text(R.string.settings_scan_keys)).performScrollTo().performClick()
+            waitForText(text(R.string.load_keys_next))
+            compose.onNodeWithText(text(R.string.load_keys_next)).performClick()
             scenario.block()
         }
     }
@@ -150,13 +152,13 @@ class LoadKeysTest {
         key: String,
     ) = app.getString(R.string.key_ending, text(id), ending(key))
 
-    private fun closed() = !shown(text(R.string.load_keys_read)) && !shown(text(R.string.setup_title))
+    private fun closed() = !shown(text(R.string.load_keys_read_code)) && !shown(text(R.string.setup_title))
 
     @Test
     fun theScreenSaysHowToMakeTheCodeAndOpensTheInstructions() =
         show(scanner = notScanning) {
             waitForText(text(R.string.load_keys_make))
-            compose.onNodeWithText(text(R.string.load_keys_read)).assertIsDisplayed()
+            compose.onNodeWithText(text(R.string.load_keys_read_code)).assertIsDisplayed()
 
             val address = "sleevesight.app/api-keys"
             compose
@@ -172,7 +174,7 @@ class LoadKeysTest {
     @Test
     fun theScreenIsSecureAndCancelClosesIt() =
         show(scanner = notScanning) {
-            waitForText(text(R.string.load_keys_read))
+            waitForText(text(R.string.load_keys_read_code))
             val flags =
                 ShadowDialog
                     .getLatestDialog()
@@ -192,6 +194,8 @@ class LoadKeysTest {
             val exa = text(R.string.settings_key_recipient_exa)
             waitForText(app.getString(R.string.setup_new, anthropic, ending(anthropicKey)))
             compose.onNodeWithText(app.getString(R.string.setup_replaces, exa, ending(exaKey))).assertIsDisplayed()
+            // A clear code, not sealed with the words: the screen says anyone who saw it can read the keys.
+            compose.onNodeWithText(text(R.string.load_keys_clear_code)).performScrollTo().assertIsDisplayed()
             // All good: *Save* or *Cancel*, nothing else.
             for (absent in listOf(
                 R.string.setup_scan_again,

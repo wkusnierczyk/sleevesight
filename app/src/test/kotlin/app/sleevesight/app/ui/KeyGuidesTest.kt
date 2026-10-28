@@ -175,7 +175,7 @@ class KeyGuidesTest {
             compose.onNode(more).performFirstLinkClick { (it.item as LinkAnnotation.Url).url.endsWith("/api-keys") }
             assertEquals("https://sleevesight.app/api-keys", opened()?.dataString)
             // The links are apart from the row, which still opens the screen.
-            assertTrue(!shown(hasText(text(R.string.load_keys_read))))
+            assertTrue(!shown(hasText(text(R.string.load_keys_type))))
         }
 
     @Test
@@ -183,7 +183,10 @@ class KeyGuidesTest {
         runBlocking { settings.update { it.copy(developerMode = true) } }
         show(scanner = notScanning) {
             compose.onNodeWithText(text(R.string.settings_scan_keys)).performScrollTo().performClick()
-            waitForText(text(R.string.load_keys_read))
+            waitForText(text(R.string.load_keys_type))
+            assertTrue(!shown(hasText("keys-qr", substring = true)))
+            compose.onNodeWithText(text(R.string.load_keys_next)).performClick()
+            waitForText(text(R.string.load_keys_read_code))
             assertTrue(!shown(hasText("keys-qr", substring = true)))
         }
     }
@@ -292,6 +295,13 @@ class KeyGuidesTest {
     @Test
     fun aSetupCodeOfALaterVersionAsksForAnUpdate() =
         scannedSays("sleevesight-keys:v3\nlastfm=$lastFmKey", R.string.settings_key_scan_setup_newer)
+
+    @Test
+    fun aSealedSetupCodePointsToLoadKeys() =
+        scannedSays(
+            "sleevesight-keys:v2:AAknwBAXHiUsMzpBSE9WXWRrcnnAzdrn9AEOGyg1Qk9O",
+            R.string.settings_key_scan_setup_sealed,
+        )
 
     @Test
     fun aSetupCodeOfNoKeysSaysSo() = scannedSays("sleevesight-keys:v1\n", R.string.settings_key_scan_setup_empty)
