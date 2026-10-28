@@ -306,6 +306,14 @@ class GroundingCheckTest {
     }
 
     @Test
+    fun `a reply citing M, as written before 0_1_8, is told from one citing AI`() {
+        assertTrue(citesLegacyModelId("He was Canadian. [M]"))
+        assertTrue(citesLegacyModelId("It was a hit [W3][M]."))
+        assertFalse(citesLegacyModelId("He was Canadian. [AI]"))
+        assertFalse(citesLegacyModelId("It was a hit [MB1]."))
+    }
+
+    @Test
     fun `no evidence is a reply of its own`() {
         val empty = EvidenceSet.of(emptyList(), JvmHasher)
         assertEquals(InsightReply.NoEvidence, GroundingCheck.check(" NO_EVIDENCE ", empty, allowModel = false))

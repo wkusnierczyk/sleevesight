@@ -29,6 +29,8 @@ object GenreReasonPrompt {
      * The version of this prompt's template, part of the synthesis cache key ([CardKind.GENRE]):
      * raised when its contract or built-in style changes, so reasons written from the old prompt are
      * not reused.
+     * Not raised when the model's own knowledge's citation became `[AI]` (#668), as
+     * `InsightPrompt.VERSION` was not: a reason kept with `[M]` reads as one written now ([citationId]).
      */
     const val VERSION: Int = 1
 
