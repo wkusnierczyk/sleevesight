@@ -43,6 +43,7 @@ import app.sleevesight.core.genres.TrackGenres
 import app.sleevesight.core.genres.TrackLabel
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.TrackState
+import app.sleevesight.core.resolution.Lookup
 import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -215,7 +216,7 @@ class ReadAloudScreenTest {
     ) : GenreNotes {
         val shown = MutableStateFlow<GenreReason>(GenreReason.Shown(reason))
 
-        override fun definition(genre: String): Flow<GenreDefinition?> = flowOf(null)
+        override fun definition(genre: String): Flow<Lookup<GenreDefinition>?> = flowOf(null)
 
         override fun reason(
             track: TrackState,

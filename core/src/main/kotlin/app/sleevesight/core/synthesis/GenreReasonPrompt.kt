@@ -7,15 +7,15 @@ import app.sleevesight.core.model.NowPlaying
 /**
  * The prompt for *Why is this …?* in a genre's panel (#523; `design/design.md`, *Appendix. Prompt
  * contracts*, *Genre reason*): why the track playing carries the genre label [build]'s `genre`,
- * written from its evidence, grounded and cited as the insight is, and saying so when the evidence
- * does not support the label.
+ * written from its evidence, grounded and cited as the insight is, about the music, never about the
+ * evidence or its gaps ([ABOUT_THE_MUSIC_RULE]).
  *
  * It is the insight's prompt ([InsightPrompt]) with another task: the same fenced data (the track as
  * the player reports it and the evidence, each line flattened, [InsightPrompt.oneLine]), the same
  * order (data, style, then the contract under [InsightPrompt.CONTRACT_HEADING]), and the insight's
  * rules ([InsightPrompt.contract]: citations, evidence only, the scope rules, model knowledge, plain
- * text, `NO_EVIDENCE`), with two of its own: the label is a listener's tag, not a fact, and a reason
- * the evidence does not hold is said to be so, in a cited sentence ([UNSUPPORTED_RULE]). The genre
+ * text, `NO_EVIDENCE`), with two of its own: the label is a listener's tag, not a fact, and the reply
+ * is about the music, never about the evidence or what it leaves out ([ABOUT_THE_MUSIC_RULE]). The genre
  * is a vocabulary label (`GenreVocabulary`) that a source other than MusicBrainz gives: MusicBrainz's
  * tags never reach a prompt (D12). The reply goes through the same grounding check
  * ([GroundingCheck]).
@@ -32,20 +32,25 @@ object GenreReasonPrompt {
      * Not raised when the model's own knowledge's citation became `[AI]` (#668), as
      * `InsightPrompt.VERSION` was not: a reason kept with `[M]` reads as one written now ([citationId]).
      */
-    const val VERSION: Int = 1
+    const val VERSION: Int = 2
 
     /** The built-in style: shorter than the insight's, since it answers one question. */
     const val BUILT_IN_STYLE: String =
         "- Write 1 to 3 sentences.\n- Plain conversational English. No hype."
 
     /**
-     * The rule on a label the evidence does not hold: say so, plainly, in a cited sentence (the
-     * mock-up's *modal jazz*: "Nothing in the sources ties it to modal jazz: they describe it as hard
-     * bop [W1]."), rather than make a case for it or reply `NO_EVIDENCE`.
+     * The rule on the evidence itself (version 2, #664): write about the music, never about the
+     * evidence or its gaps. Version 1 asked the model to say plainly, in its first sentence, when the
+     * evidence did not support the label (the mock-up's *modal jazz*), and on the phone it wrote "The
+     * evidence does not support the Alternative label, because it says nothing about this track's
+     * instruments or sound.": a sentence about the evidence, which no line can back, so it was
+     * underlined as uncited. Now the model writes what the evidence does say, cited, without arguing
+     * for the label. Saying in the app when the sources do not establish a genre is #695.
      */
-    const val UNSUPPORTED_RULE: String =
-        "- If the evidence does not support the label, say so plainly in your first sentence, and cite " +
-            "what the evidence says instead. Never argue for a label the evidence does not support."
+    const val ABOUT_THE_MUSIC_RULE: String =
+        "- Write about the music and the artists, never about the evidence or the sources: no sentence on " +
+            "what they say, do not say or leave out. If the evidence does not support the label, do not argue " +
+            "for it: write only what the evidence does say about the music, cited."
 
     /**
      * The prompt for why [nowPlaying], normalized as [normalized], carries the genre label [genre],
@@ -103,7 +108,7 @@ object GenreReasonPrompt {
     fun contract(allowModel: Boolean): String =
         listOf(
             "- The genre is a label, not a fact: explain it only from the evidence.",
-            UNSUPPORTED_RULE,
+            ABOUT_THE_MUSIC_RULE,
             InsightPrompt.contract(allowModel),
         ).joinToString("\n")
 }

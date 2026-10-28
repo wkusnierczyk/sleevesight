@@ -92,7 +92,7 @@ To save several keys at once, *Load keys*, under *Secrets*, reads one QR code of
 
 **An insight is written.** While the sources are asked, *Key insights* says *Gathering evidence…*; while the AI service writes, *Writing…*, with *Stop writing*. The insight is a few sentences on why the track is interesting. On the very first track, and after the app starts afresh, it waits for a tap on *Write insight*, or for a writing mode chosen (step 6).
 
-**Its citations.** Each sentence ends with chips for the sources it cites. A tap on a chip unfolds *Sources* and jumps to the line it cites. A sentence that cites nothing is underlined. When a sentence is not backed by the sources (it cites nothing, a line that does not exist, or the model's own knowledge), a note under the insight says how many, such as *1 sentence is not backed by the sources.*; otherwise there is none.
+**Its citations.** Each sentence ends with chips for the sources it cites. A tap on a chip unfolds *Sources* and jumps to the line it cites. A sentence the sources do not back (it cites nothing, or a line that does not exist) is underlined in red, and a note under the insight points to it, such as *The sentence underlined in red is not backed by the sources.*; otherwise there is none.
 
 **The *Sources* list.** Under the insight, *Sources* starts folded, a chip alone, like a genre chip; a tap on it opens its panel. In the panel, a table of the sources that are on: each with the letter its citations use, as a chip that shows or hides its lines (dimmed when it gave none), its name and what it found; a note says when a source needs your key, could not be reached or failed; then come the evidence lines, and below them what was found but not verified, so not cited.
 

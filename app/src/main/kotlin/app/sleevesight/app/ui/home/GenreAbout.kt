@@ -30,6 +30,7 @@ import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.core.genres.GenreDefinition
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.TrackState
+import app.sleevesight.core.resolution.Lookup
 
 // A genre's panel, above its table (#523): what the genre is, and why this track has it.
 
@@ -39,9 +40,10 @@ import app.sleevesight.core.pipeline.TrackState
  * with its credit ("From Wikipedia", linking the article, and its licence); then *Why is this …?*,
  * a button carrying the **AI** mark ([AiLabel]), or, once asked for, the reason, under the question
  * as a heading, checked and cited as the insight is: its citations chips that go to their lines
- * ([PanelNotes.onCite]), its grounding note under it. Neither shows when [PanelNotes.notes] has
- * none: no definition for a genre with no article (or Wikipedia off), no button for a genre only
- * MusicBrainz gives, with
+ * ([PanelNotes.onCite]), its grounding note under it. A genre with no definition says so in the
+ * definition's place, once the lookup has answered (#663). Neither shows when [PanelNotes.notes]
+ * has none: no definition while it is looked up, after a failed lookup, or with Wikipedia off; no
+ * button for a genre only MusicBrainz gives, with
  * *Show insights* off or no AI service ready. A reason still being written reads its `[AI]` as the
  * settings allow it ([PanelNotes.modelAllowed]). A written reason has *Read aloud* (#325,
  * [ReadAloudButton]) at the end of its grounding note's row, which reads the question, then the
@@ -71,7 +73,12 @@ internal fun GenreAbout(
     // Its own state per genre: another genre's definition never shows while this one's is looked up.
     key(genre, notes) {
         val definition by remember { notes.definition(genre) }.collectAsState(null)
-        definition?.let { Definition(it) }
+        when (val found = definition) {
+            is Lookup.Found -> Definition(found.value)
+            // Said only once the lookup answered: not while it runs, after it failed, or with it off.
+            Lookup.NotFound -> NoDefinition()
+            is Lookup.Failed, null -> Unit
+        }
     }
     when (val shown = reason) {
         GenreReason.None -> Unit
@@ -94,6 +101,11 @@ internal fun GenreAbout(
         }
     }
 }
+
+// In the definition's place, for a genre that has none (#663), in the panel's quiet note style.
+@Composable
+private fun NoDefinition() =
+    Quiet(stringResource(R.string.genre_definition_none), Modifier.testTag(GENRE_NO_DEFINITION_TAG))
 
 // The definition, then its credit: the article linked, and the licence.
 @Composable
@@ -181,8 +193,16 @@ private fun Reason(
 }
 
 @Composable
-private fun Quiet(text: String) {
-    Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+private fun Quiet(
+    text: String,
+    modifier: Modifier = Modifier,
+) {
+    Text(
+        text,
+        modifier = modifier,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
 }
 
 /**
@@ -201,8 +221,9 @@ private val WORD = Regex("\\p{L}+")
 /** The address of the licence of Wikipedia's text, which the definition's credit links. */
 internal const val WIKIPEDIA_LICENCE: String = "https://creativecommons.org/licenses/by-sa/4.0/"
 
-/** The test tags of a genre's definition, its *Why is this …?* and its reason. */
+/** The test tags of a genre's definition (or the line saying it has none), its *Why is this …?* and its reason. */
 const val GENRE_DEFINITION_TAG: String = "genre-panel:definition"
+const val GENRE_NO_DEFINITION_TAG: String = "genre-panel:no-definition"
 const val GENRE_WHY_TAG: String = "genre-panel:why"
 const val GENRE_REASON_TAG: String = "genre-panel:reason"
 

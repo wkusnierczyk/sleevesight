@@ -5,6 +5,10 @@
          licence its terms. -->
     <string name="genre_definition_from">From Wikipedia</string>
     <string name="genre_definition_licence">CC BY-SA 4.0</string>
+    <!-- In the definition's place, for a genre that has none (#663): it has no MusicBrainz genre, or
+         its genre's Wikidata item has no English article (Wikipedia may still have one by the
+         genre's name, which the app does not reach, so it does not say there is none). -->
+    <string name="genre_definition_none">No definition from Wikipedia for this genre.</string>
     <!-- The button that writes the reason, and the reason's heading once written. %1$s is the genre,
          as a sentence names it ("jazz", "UK garage"). -->
     <string name="genre_why">Why is this %1$s?</string>

@@ -76,6 +76,8 @@ class AppGenreNotesTest {
         }
     private val definitions = GenreDefinitions(articles, GenreVocabulary.load(JvmResourceReader))
 
+    private fun Lookup<GenreDefinition>?.found(): GenreDefinition? = (this as? Lookup.Found)?.value
+
     private fun label(tag: String) =
         TrackLabel(
             GenreLabel(tag, "rock", tag.replaceFirstChar(Char::uppercase), tag, null, GenreLevel.ARTIST, "A"),
@@ -103,8 +105,25 @@ class AppGenreNotesTest {
         runTest {
             val notes = notes()
             // The panels of three tracks with rock, one after the other.
-            repeat(3) { assertEquals(rock, notes.definition("rock").first { it != null }?.url) }
+            repeat(3) {
+                assertEquals(
+                    rock,
+                    notes
+                        .definition("rock")
+                        .first { it != null }
+                        .found()
+                        ?.url,
+                )
+            }
             assertEquals(1, articles.asked.size)
+        }
+
+    @Test
+    fun `a genre with no article is not found, so its panel can say so`() =
+        runTest {
+            // *British invasion* is not one of MusicBrainz's genres (#663).
+            assertEquals(Lookup.NotFound, notes().definition("britishinvasion").first { it != null })
+            assertEquals(0, articles.asked.size)
         }
 
     @Test
@@ -122,7 +141,7 @@ class AppGenreNotesTest {
             val on = checkNotNull(settings.value)
             settings.value = null
             val shown = mutableListOf<String?>()
-            val watching = launch { notes().definition("rock").collect { shown += it?.url } }
+            val watching = launch { notes().definition("rock").collect { shown += it.found()?.url } }
             advanceUntilIdle()
             // The settings' first read.
             settings.value = on
