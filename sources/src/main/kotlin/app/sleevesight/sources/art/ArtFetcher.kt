@@ -11,9 +11,11 @@ import kotlin.time.Duration.Companion.seconds
  * `:app` may not reach `:net`, so the session layer asks here. Castbox sends such URIs.
  *
  * A plain `http` URI is refused before any request (#696): the address may identify the album or
- * episode, so it never travels unencrypted. The manifest refuses cleartext too
- * (`usesCleartextTraffic="false"`), on Android 8 as well, whose default allows it; this check makes
- * the refusal a plain "not https" rather than a failure inside the network layer.
+ * episode, so it never travels unencrypted. An `https` server's redirect to plain `http` is not
+ * followed either: `:net` ends it as `NetError.Protocol` ("redirect to http refused"), with no
+ * second request, so the result is `Failed("Protocol")`. The manifest refuses cleartext too
+ * (`usesCleartextTraffic="false"`), on Android 8 as well, whose default allows it; these checks make
+ * the refusal a plain, final failure rather than a failed connection, reported as offline and retried.
  *
  * The URI is a stranger's choice, so the answer is bounded ([MAX_BYTES]) and kept only when the
  * server says it is an image, or says nothing of its type; the caller decodes it. For the same

@@ -9,6 +9,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertTrue
 
 /** Redirects and what the log shows of their hops: which chains stay in their origin, and which hops are hidden. */
 class RedirectLogTest {
@@ -131,32 +132,87 @@ class RedirectLogTest {
         }
 
     @Test
-    fun `a change of scheme or port is another origin`() =
+    fun `a redirect from https to http is refused, with no second request and no retry`() =
         runTest {
-            for (location in listOf("http://api.example.org/b", "https://api.example.org:8443/b")) {
+            for (location in listOf(
+                "http://img.example/cover.jpg",
+                "HTTP://img.example/cover.jpg",
+                "http://img.example:443/cover.jpg",
+            )) {
                 var calls = 0
+                val log = RecordingLog()
                 val result =
-                    withClient(handler = {
+                    withClient(log = log, handler = {
                         calls++
                         respond("", HttpStatusCode.Found, headersOf(HttpHeaders.Location, location))
-                    }) {
-                        it.send(
-                            NetRequest(
-                                "https://api.example.org/a",
-                                secrets =
-                                    NetSecrets(
-                                        headers =
-                                            mapOf(
-                                                "x-api-key" to key,
-                                            ),
-                                    ),
-                            ),
-                        )
-                    }
+                    }) { it.send(NetRequest("https://img.example/a.jpg", sensitiveUrl = true)) }
 
-                assertEquals(302, assertIs<NetResult.Success<NetResponse>>(result).value.status, location)
+                assertEquals(NetResult.Failure(NetError.Protocol("redirect to http refused")), result, location)
                 assertEquals(1, calls, location)
+                assertEquals(0, testScheduler.currentTime, location)
+                assertTrue(log.lines.last().endsWith("-> Protocol(reason=redirect to http refused)"), log.lines.last())
             }
+        }
+
+    @Test
+    fun `a redirect from https to http is refused in a chain that stays in its origin too`() =
+        runTest {
+            var calls = 0
+            val result =
+                withClient(handler = {
+                    calls++
+                    respond("", HttpStatusCode.Found, headersOf(HttpHeaders.Location, "http://api.example.org/b"))
+                }) {
+                    val secrets = NetSecrets(headers = mapOf("x-api-key" to key))
+                    it.send(NetRequest("https://api.example.org/a", secrets = secrets))
+                }
+
+            assertEquals(NetResult.Failure(NetError.Protocol("redirect to http refused")), result)
+            assertEquals(1, calls)
+        }
+
+    @Test
+    fun `a chain started on http may still follow a redirect on http`() =
+        runTest {
+            val urls = mutableListOf<String>()
+            withClient(handler = { request ->
+                urls += request.url.toString()
+                if (urls.size == 1) {
+                    respond("", HttpStatusCode.Found, headersOf(HttpHeaders.Location, "http://other.example.net/x"))
+                } else {
+                    respond("ok")
+                }
+            }) { it.send(NetRequest("http://api.example.org/a")) }
+
+            assertEquals(listOf("http://api.example.org/a", "http://other.example.net/x"), urls)
+        }
+
+    @Test
+    fun `a change of port is another origin`() =
+        runTest {
+            val location = "https://api.example.org:8443/b"
+            var calls = 0
+            val result =
+                withClient(handler = {
+                    calls++
+                    respond("", HttpStatusCode.Found, headersOf(HttpHeaders.Location, location))
+                }) {
+                    it.send(
+                        NetRequest(
+                            "https://api.example.org/a",
+                            secrets =
+                                NetSecrets(
+                                    headers =
+                                        mapOf(
+                                            "x-api-key" to key,
+                                        ),
+                                ),
+                        ),
+                    )
+                }
+
+            assertEquals(302, assertIs<NetResult.Success<NetResponse>>(result).value.status, location)
+            assertEquals(1, calls, location)
         }
 
     @Test
