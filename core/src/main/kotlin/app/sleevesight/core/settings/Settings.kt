@@ -108,7 +108,7 @@ import kotlin.time.Duration.Companion.seconds
  * @property showGroundingDetails *Show grounding details* (#437), a developer setting: whether the
  *   insight card shows the grounding check's full counts ("2 of 3 sentences grounded · 1 uncited")
  *   rather than only a note when a sentence is not backed by the sources, and whether *Sources*
- *   shows every source's chip with its status, the model's own knowledge's `M` among them, and the
+ *   shows every source's chip with its status, the model's own knowledge's `AI` among them, and the
  *   matches rejected (#440), rather than only the sources that gave lines, by name. Off: the
  *   citations already show how each sentence is grounded, and most statuses are diagnostics.
  * @property developerMode *Developer mode* (#444): whether the settings show their *Developer*
