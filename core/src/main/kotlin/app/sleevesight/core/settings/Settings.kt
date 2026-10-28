@@ -34,6 +34,10 @@ import kotlin.time.Duration.Companion.seconds
  *   Read [effort]; set with [withEffort].
  * @property followedPlayers one switch per player whose session reported music, by package name;
  *   never a phone call's ([isCall]). See [follows].
+ * @property onlyEnabledPlayersOnHome *Only enabled players on Home* (#674): whether Home, with
+ *   nothing playing, lists only the players switched on in [followedPlayers], rather than every
+ *   player *Players* lists, the ones not followed dimmed. Off by default, so a new user sees every
+ *   player recognized, and how to switch one on.
  * @property enabledSources the user's *Sources* switches: what the model may use. Ask
  *   [isEnabled] about a [SourceId], which maps it to its switch.
  * @property webEngines the web search engines switched on under *Web search* (D11); web search runs
@@ -144,6 +148,7 @@ data class Settings(
     val aiModels: Map<ProviderId, String> = emptyMap(),
     val aiEfforts: Map<ProviderId, ReasoningEffort?> = emptyMap(),
     val followedPlayers: Map<String, Boolean> = mapOf(SPOTIFY to true),
+    val onlyEnabledPlayersOnHome: Boolean = false,
     val enabledSources: Set<SourceSwitch> = DEFAULT_SOURCES,
     val webEngines: Set<WebEngine> = DEFAULT_WEB_ENGINES,
     val labelSources: Set<LabelSource> = DEFAULT_LABEL_SOURCES,
