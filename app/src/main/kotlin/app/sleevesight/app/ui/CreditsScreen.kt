@@ -30,11 +30,12 @@ import java.io.IOException
 /**
  * The credits (architecture, *UI*, *Licensing*): each data source the app uses, with its licence
  * and attribution, then the fonts it bundles, Roboto (#377) and Shantell Sans (#672), its icons'
- * set, Material Symbols, and the libraries it ships, by licence, each with the licence's text
- * (#488), and a link to the site's page on what each library does in the app (#502). MusicBrainz is listed
- * with both its licences, CC0 for its core data and CC BY-NC-SA 3.0 for its tags, which are a
- * genre label source (D12, #84). A page opened from the settings (#549): the back arrow at its top and
- * *Close* at its end go back to them ([onClose]), as Android's back does.
+ * set, Material Symbols, the EFF's word list, from which *Load keys* draws its words (#590), and
+ * the libraries it ships, by licence, each with the licence's text (#488), and a link to the
+ * site's page on what each library does in the app (#502). MusicBrainz is listed with both its
+ * licences, CC0 for its core data and CC BY-NC-SA 3.0 for its tags, which are a genre label source
+ * (D12, #84). A page opened from the settings (#549): the back arrow at its top and *Close* at its
+ * end go back to them ([onClose]), as Android's back does.
  */
 @Composable
 fun CreditsScreen(onClose: () -> Unit) {
@@ -56,6 +57,7 @@ fun CreditsScreen(onClose: () -> Unit) {
         CreditEntry(FONT_CREDIT)
         CreditEntry(HAND_FONT_CREDIT)
         CreditEntry(ICON_CREDIT)
+        CreditEntry(WORDS_CREDIT)
         Text(
             stringResource(R.string.credits_libraries),
             style = MaterialTheme.typography.titleLarge,
@@ -137,6 +139,17 @@ internal val ICON_CREDIT: Credit =
         R.string.credits_material_symbols,
         R.string.credits_material_symbols_text,
         Licence("Apache License 2.0", "https://www.apache.org/licenses/LICENSE-2.0"),
+    )
+
+/**
+ * The EFF's short wordlist 2, from which *Load keys* draws its words (#590), bundled unchanged
+ * (`KeyWords`), under CC BY 3.0 US, which asks for the credit.
+ */
+internal val WORDS_CREDIT: Credit =
+    Credit(
+        R.string.credits_eff_words,
+        R.string.credits_eff_words_text,
+        Licence("CC BY 3.0 US", "https://creativecommons.org/licenses/by/3.0/us/"),
     )
 
 private const val LICENCES = "licences/"

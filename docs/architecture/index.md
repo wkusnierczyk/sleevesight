@@ -74,7 +74,7 @@ One Android activity in Jetpack Compose: the first-run screen, the home screen w
 The website, served by GitHub Pages, has three pages that work with the app:
 
 - **The [product page]({{ '/' | relative_url }})** says what the app does. It loads nothing from outside the site.
-- **[`api-keys`]({{ '/api-keys.html' | relative_url }})** draws a QR code of several API keys in the browser, for *Load keys*. Its content security policy forbids any network request, and it stores nothing, so the keys leave the computer only in the code you scan.
+- **[`api-keys`]({{ '/api-keys.html' | relative_url }})** draws a QR code of several API keys in the browser, for *Load keys*, sealed with the five words the phone shows (PBKDF2, then AES-GCM, in WebCrypto), so the code is useless without them. Its content security policy forbids any network request, and it stores nothing, so the keys leave the computer only in the code you scan.
 - **[`keyboard.html`]({{ '/keyboard.html' | relative_url }})**, for *Type on a computer*, makes a one-time key, shows it in a QR code for the phone to scan, and sends what you type to the phone over Bluetooth, encrypted with that key. Its content security policy forbids any network request, so nothing goes through a server; the Bluetooth link is between the computer and the phone alone.
 
 The pages with diagrams, this one among them, load the diagram script, Mermaid, from jsDelivr.
