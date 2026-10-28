@@ -1,5 +1,6 @@
 package app.sleevesight.app.history
 
+import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
@@ -7,6 +8,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
 
@@ -25,11 +27,17 @@ import kotlin.time.Duration.Companion.hours
  * when it runs, not when it was queued, so one waiting behind other writes when the lifetime is made
  * longer, or *Forever*, deletes by the new one. One that fails is reported by the recorder and
  * tried again at the next; the recorder skips them while the clock has moved.
+ *
+ * After each deletion, [trim] runs: the caches' purge, which deletes the insights and genre
+ * reasons written longer ago than the lifetime (#643), so they go with the history, at once when the
+ * lifetime is shortened and on the same [PERIOD], not only at the next start.
  */
 class HistoryRetention(
     private val recorder: HistoryRecorder,
     private val lifetime: Flow<Duration?>,
     private val scope: CoroutineScope,
+    // Before [forget], which a trailing lambda names.
+    private val trim: suspend () -> Unit = {},
     private val forget: suspend () -> Boolean = { true },
 ) {
     // The lifetime now, for the deletions already queued: they run on the I/O dispatcher.
@@ -44,8 +52,23 @@ class HistoryRetention(
             if (kept == null) return@collectLatest
             while (true) {
                 recorder.deleteOlderThan { current }
+                trimmed()
                 delay(PERIOD)
             }
+        }
+    }
+
+    // [trim], whose failure, of whatever kind, never stops the history's own trimming: it is tried
+    // again at the next.
+    private suspend fun trimmed() {
+        try {
+            trim()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (
+            @Suppress("TooGenericExceptionCaught") e: Exception,
+        ) {
+            Log.w(TAG, "The caches could not be trimmed: ${e::class.simpleName}")
         }
     }
 
@@ -70,5 +93,7 @@ class HistoryRetention(
          * each deletion scans the history's two main tables, so a few a day is cheap.
          */
         val PERIOD: Duration = 6.hours
+
+        private const val TAG = "HistoryRetention"
     }
 }
