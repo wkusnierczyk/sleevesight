@@ -205,7 +205,7 @@ class ButtonGroupTest {
         val tapped = mutableListOf<String>()
         val actions =
             listOf(
-                GroupAction("Show less", enabled = false, tag = "less") { tapped += "less" },
+                GroupAction("Show less", enabled = false, modifier = Modifier.testTag("less")) { tapped += "less" },
                 GroupAction("Show more") { tapped += "more" },
                 GroupAction("Show all") { tapped += "all" },
             )
@@ -219,7 +219,7 @@ class ButtonGroupTest {
                 "not a choice",
                 SemanticsProperties.SelectableGroup in compose.onNodeWithTag(GROUP).fetchSemanticsNode().config,
             )
-            // A tag given lands on its button.
+            // A modifier given lands on its button.
             compose.onNodeWithTag("less").assertTextEquals("Show less").assertIsNotEnabled()
             button("Show less").assertIsNotEnabled().performClick()
             button("Show more").assertIsEnabled().performClick()

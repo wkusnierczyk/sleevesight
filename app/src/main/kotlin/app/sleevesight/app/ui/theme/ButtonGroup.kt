@@ -30,7 +30,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -119,33 +118,41 @@ internal fun ActionButtonGroup(
 ) {
     val buttons =
         actions.map {
-            GroupButton(it.label, it.enabled, selected = null, read = null, tag = it.tag, onClick = it.onClick)
+            GroupButton(
+                it.label,
+                it.enabled,
+                selected = null,
+                read = null,
+                modifier = it.modifier,
+                onClick = it.onClick,
+            )
         }
     ConnectedButtons(buttons, modifier, checks = false)
 }
 
 /**
- * One action of an [ActionButtonGroup]: its [label], whether it can be used ([enabled]), a test
- * [tag] for its button if it has one, and what a tap does.
+ * One action of an [ActionButtonGroup]: its [label], whether it can be used ([enabled]), a
+ * [modifier] for its button (a test tag, or a target the focus can be handed to), and what a tap
+ * does.
  */
 internal class GroupAction(
     val label: String,
     val enabled: Boolean = true,
-    val tag: String? = null,
+    val modifier: Modifier = Modifier,
     val onClick: () -> Unit,
 )
 
 /**
  * A button of the group: chosen or not ([selected]) in a choice, null in a row of actions; [read],
- * what a screen reader reads for it in place of its label, if not the label alone; [tag], its test
- * tag, if any.
+ * what a screen reader reads for it in place of its label, if not the label alone; [modifier], set
+ * on the button before its click, so a focus requester in it reaches the button.
  */
 private class GroupButton(
     val label: String,
     val enabled: Boolean,
     val selected: Boolean?,
     val read: String?,
-    val tag: String? = null,
+    val modifier: Modifier = Modifier,
     val onClick: () -> Unit,
 )
 
@@ -291,8 +298,8 @@ private fun GroupButtonView(
                 .heightIn(min = GROUP_HEIGHT)
                 .clip(shape)
                 .background(fill, shape)
+                .then(button.modifier)
                 .then(action)
-                .let { view -> button.tag?.let { view.testTag(it) } ?: view }
                 .let { view -> button.read?.let { read -> view.semantics { contentDescription = read } } ?: view }
                 .padding(horizontal = GROUP_PADDING, vertical = 6.dp),
         horizontalArrangement = Arrangement.Center,

@@ -125,7 +125,7 @@ That only changes what you see: what the AI service may use is set under [*Sourc
 - *Show less* goes back to the first 8;
 - *Show more* shows the next 8, and *Show all* the rest.
 
-A button that does not apply is disabled, rather than gone: *Show less* at the first 8, *Show more* and *Show all* once every entry shows. A screen reader reads three buttons, a disabled one as unavailable.
+A button that does not apply is disabled, rather than gone: *Show less* at the first 8, *Show more* and *Show all* once every entry shows. A screen reader reads three buttons, and says "disabled" for one that does not apply. Used from a keyboard or with a screen reader, a button that becomes disabled passes the focus to another in the group: *Show all*, or *Show more* at the end, to *Show less*, and *Show less* to *Show more*.
 
 A citation tapped in the insight opens the panel and unfolds the list as far as its line. When the chips hide every line, the count says so, and closing and opening *Sources* again shows them.
 
