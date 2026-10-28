@@ -67,7 +67,7 @@ Everything the app keeps is on the phone, and none of it is part of Android's ba
 
 ### The user interface
 
-One Android activity in Jetpack Compose: the first-run screen, the home screen with the playing track, the insight, its citations and *Sources*, the settings, the credits and the diagnostics. Its colours come from the album art, computed on the phone. Its font is bundled, so nothing is fetched to show text. API keys can be pasted, scanned from a QR code with the camera (*Load keys*), or typed on a computer (*Type on a computer*), over Bluetooth.
+One Android activity in Jetpack Compose: the first-run screen, the home screen with the playing track, its genres, the insight, its citations and *Sources* (and, with nothing playing, your players and a guide to the screen), the settings, the credits and the diagnostics. *Read aloud* hands an insight's text to the phone's own text-to-speech engine, through Android; the app ships no speech engine of its own. Its colours come from the album art, computed on the phone. Its font is bundled, so nothing is fetched to show text. API keys can be pasted, scanned from a QR code with the camera (*Load keys*), or typed on a computer (*Type on a computer*), over Bluetooth.
 
 ### The site's pages
 
@@ -87,11 +87,12 @@ flowchart LR
     App["Sleevesight"]
   end
   App -- "title and artists" --> MB["MusicBrainz"]
-  App -- "song and artist titles; Wikidata: identifiers only" --> WP["Wikipedia and Wikidata"]
+  App -- "song, artist and genre titles; Wikidata: identifiers only" --> WP["Wikipedia and Wikidata"]
   App -- "artists' names, your key" --> LFM["Last.fm"]
   App -- "title, artists, the film or show, your key" --> Exa["Exa web search"]
   App -- "title, artists, album, evidence, your key" --> AI["Anthropic, OpenAI or Google"]
   App -- "a request for the image" --> Art["The cover's server"]
+  App -. "an insight's text, when read aloud" .-> TTS["The phone's text-to-speech engine"]
   App -. "a report, only if you send it from your mail app" .-> Dev["The developer, by email"]
   App -. "a Bluetooth advertisement, while you type a key on a computer" .-> Near["Devices nearby"]
   Play["Google Play"] -- "the app and its updates" --> App
@@ -102,17 +103,18 @@ Requests go straight from the phone to each service, over HTTPS; Android refuses
 | Service | When | What it receives |
 |---|---|---|
 | MusicBrainz | Switched on (it is by default) | The title and artists of the playing track, cleaned of tags such as "2006 Remaster". While *Proactive* is on, as it is by default, the title and artists of the next track in the player's queue, before it plays. |
-| Wikipedia and Wikidata | Wikipedia switched on | Wikipedia: the title and artists, to find their articles. Wikidata: only identifiers, from MusicBrainz or Wikipedia, never a name. |
+| Wikipedia and Wikidata | Wikipedia switched on | Wikipedia: the title and artists, to find their articles. Wikidata: only identifiers, from MusicBrainz or Wikipedia, never a name. When you open a genre's panel, Wikidata gets the genre's MusicBrainz identifier and Wikipedia the title of the genre's article, to show what the genre is; nothing about the track. |
 | Last.fm | Switched on, with your key | The artists' names only, and your Last.fm key. |
 | Exa (web search) | Switched on, with your key | The title and artists, the film or show a title says it is from, and your Exa key. |
-| The AI service you choose: Anthropic, OpenAI or Google | *Show insights* on, a service switched on, with your key | The title, artists and album, and what the sources found, for the playing track only; each insight a request of its own, with no conversation kept. Your key for that service, and the model you chose. |
+| The AI service you choose: Anthropic, OpenAI or Google | *Show insights* on, a service switched on, with your key | The title, artists and album, and what the sources found, for the playing track only; each insight, and each *Why is this …?* you tap in a genre's panel (with the genre's name), a request of its own, with no conversation kept. Your key for that service, and the model you chose. The app also asks the service for its list of models, with your key and nothing about your listening: at start, and when you open the model choice. |
 | The server a cover's web address names | A player gives the cover only as a web address | A request for that image. The address itself may identify the album or episode. |
+| The phone's text-to-speech engine | You tap *Read aloud*, or *Read new insights aloud* is on | The insight's text (or a genre's *Why is this …?* answer), with the track's title and artists if *Read the track line first* is on. The engine is the one chosen in Android's settings: one that speaks on the phone sends nothing, while one with network voices, such as Google's, sends the text to its server to be spoken, under its own policy. |
 | The developer, at `support@sleevesight.app` | You tap *Report a problem* on an insight and send the report from your own mail app | The reason and your note; the track as the player reported it (title, artists, album, length) and its MusicBrainz ids; the insight and the evidence lines it was written from (for an insight kept from before, every evidence line of the track), with their sources and addresses; the prompt version, AI service, model and effort. You see all of it before your mail app opens; your mail app handles it from then on as any message you write (some keep a draft in your mail account), and sends it from your address only if you do. Never your keys, the history or the settings. |
 | The developer, at `support@sleevesight.app` | In developer mode with *Report button* at *Show* or *Auto* (by default only in the test build for Play's testing tracks), you tap the button on the home screen, then *Report*, and send the tester's report from your own mail app | When you tapped, with the time zone, and the app's version and build; the settings, never your keys; what the player reports and what the app made of it (the sources' findings, the evidence, the insight and its citation check, the AI service and model); the diagnostics' events and what skip detection has learned; the latest track changes, with the tracks' titles and times, only if you add them. You see all of it, and can edit or leave out each part, before your mail app opens; it sends it from your address only if you do. |
 | Devices nearby, over Bluetooth | While a key's dialog types on a computer (*Type on a computer*) | The phone's advertisement, which any device nearby that scans for Bluetooth can see: a random identifier for the session, and the phone's Bluetooth name only with *Share phone's name with Type on a computer* on. The typed text comes from the computer, encrypted; the phone sends back only Bluetooth's acknowledgements. |
 | Google Play | Installing and updating the app | Google handles the installation under its own policy; it gives the developer aggregated install statistics and, from phones that share usage and diagnostics with Google, crash reports that name no one. The app holds no Google Play library. |
 
-The album name goes to the AI service alone, never to the sources. Each API key goes only to the service it belongs to. By default, lookups and writing happen only while Sleevesight is on screen; with *Look up in the background* on, also while it is not. A Spotify account, once the app offers connecting one, would add requests to Spotify's Web API with your own token; no build offers it yet. Nothing else leaves the phone, except a diagnostics export you make yourself, a report you hand to your mail app, and, while you type a key on a computer, the phone's Bluetooth advertisement, which devices nearby can see (the session's service, and the phone's name only with *Share phone's name with Type on a computer* on).
+The album name goes to the AI service alone, never to the sources. Each API key goes only to the service it belongs to. By default, lookups and writing happen only while Sleevesight is on screen; with *Look up in the background* on, also while it is not. A Spotify account, once the app offers connecting one, would add requests to Spotify's Web API with your own token; no build offers it yet. Nothing else leaves the phone, except a diagnostics export you make yourself, a report you hand to your mail app, an insight read aloud by an engine that speaks through its server, and, while you type a key on a computer, the phone's Bluetooth advertisement, which devices nearby can see (the session's service, and the phone's name only with *Share phone's name with Type on a computer* on).
 
 ## Enforced, not promised
 
