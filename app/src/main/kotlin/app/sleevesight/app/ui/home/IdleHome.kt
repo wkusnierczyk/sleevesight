@@ -25,6 +25,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.AlignmentLine
+import androidx.compose.ui.layout.FirstBaseline
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -49,6 +51,7 @@ import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.app.ui.theme.linkedParts
 import app.sleevesight.core.settings.Settings
+import kotlin.math.roundToInt
 
 /**
  * Home with nothing playing in a followed player (#627), for previews and the navigation's default:
@@ -186,7 +189,8 @@ private fun IdlePlayerRow(
  * tall as a followed one's; else, at a large font, under the name, from its start. The link's touch
  * target, 48 dp tall around its text, then reaches up over the name's last line by the space above
  * the text, so the link's text starts right under the name's, with no gap; the name takes no taps.
- * [linkLabel] draws the link from its text and style, which also measure that text here.
+ * That space is the link's first baseline as drawn, less the first baseline of its text alone,
+ * which [link] and [linkStyle] measure here; [linkLabel] draws the link from them.
  */
 @Composable
 private fun NameThenLink(
@@ -212,9 +216,10 @@ private fun NameThenLink(
             }
         } else {
             val placed = named.measure(Constraints(maxWidth = width))
-            val text = measurer.measure(link, style, constraints = Constraints(maxWidth = width)).size.height
-            // The target is centred on the text: half what it adds is above the text.
-            val above = ((linked.height - text) / 2).coerceAtLeast(0)
+            // How far below the target's top the text starts, whatever the target adds around it.
+            val drawn = linked[FirstBaseline]
+            val own = measurer.measure(link, style, constraints = Constraints(maxWidth = width)).firstBaseline
+            val above = if (drawn == AlignmentLine.Unspecified) 0 else (drawn - own.roundToInt()).coerceAtLeast(0)
             val top = (placed.height - above).coerceAtLeast(0)
             layout(width, top + linked.height) {
                 placed.placeRelative(0, 0)
