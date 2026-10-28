@@ -57,14 +57,23 @@ class HomeModelTest {
     fun aCitationPointsAtALineTheModelOrNothing() {
         assertEquals(CiteKind.LINE, citeKind("MB1", evidence, modelAllowed = false))
         assertEquals(CiteKind.UNKNOWN, citeKind("L1", evidence, modelAllowed = false))
-        assertEquals(CiteKind.MODEL, citeKind("M", evidence, modelAllowed = true))
-        assertEquals(CiteKind.UNKNOWN, citeKind("M", evidence, modelAllowed = false))
+        assertEquals(CiteKind.MODEL, citeKind("AI", evidence, modelAllowed = true))
+        assertEquals(CiteKind.UNKNOWN, citeKind("AI", evidence, modelAllowed = false))
         assertEquals(CiteKind.UNKNOWN, citeKind("MB1", null, modelAllowed = false))
-        // A line its prompt left out (#239) is no line, though the track has it; `M` is not a line.
+        // A line its prompt left out (#239) is no line, though the track has it; `AI` is not a line.
         val held = setOf("MB1")
         assertEquals(CiteKind.LINE, citeKind("MB1", evidence, modelAllowed = false, held))
         assertEquals(CiteKind.UNKNOWN, citeKind("W1", evidence, modelAllowed = false, held))
-        assertEquals(CiteKind.MODEL, citeKind("M", evidence, modelAllowed = true, held))
+        assertEquals(CiteKind.MODEL, citeKind("AI", evidence, modelAllowed = true, held))
+    }
+
+    @Test
+    fun aCitationOfMWrittenBefore0_1_8IsTheModelsOwnKnowledgeShownAsAI() {
+        // A reply kept from before the model's own knowledge was cited `[AI]` (#668) cites `[M]`.
+        val legacy = segments("He was Canadian [M].")
+        assertEquals(listOf(Segment.Text("He was Canadian "), Segment.Cite("AI"), Segment.Text(".")), legacy)
+        assertEquals(CiteKind.MODEL, citeKind(legacy.filterIsInstance<Segment.Cite>().single().id, evidence, true))
+        assertEquals(segments("He was Canadian [AI]."), legacy)
     }
 
     @Test

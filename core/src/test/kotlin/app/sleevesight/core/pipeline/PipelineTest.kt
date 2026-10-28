@@ -31,6 +31,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.testTimeSource
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -379,7 +380,7 @@ class PipelineTest {
             for (allowModel in listOf(false, true)) {
                 val model = if (allowModel) setOf(SourceSwitch.MODEL) else emptySet()
                 settings = settings.copy(enabledSources = Settings.DEFAULT_SOURCES + model)
-                val provider = FakeProvider { FakeProvider.done("It is on Sundown [P1]. It was a hit [M].") }
+                val provider = FakeProvider { FakeProvider.done("It is on Sundown [P1]. It was a hit [AI].") }
                 val empty = FakeAdapter(SourceId.WEB) { _, _ -> SourceResult(Outcome.None, emptyList(), 0.seconds) }
                 val state = pipeline(listOf(empty), provider = provider).run(sundown, write = true)
 
@@ -398,7 +399,7 @@ class PipelineTest {
     fun `with model knowledge on, the release alone gets a call only once the report names the artists`() =
         runTest {
             settings = settings.copy(enabledSources = Settings.DEFAULT_SOURCES + SourceSwitch.MODEL)
-            val provider = FakeProvider { FakeProvider.done("It is on Sundown [P1]. It was a hit [M].") }
+            val provider = FakeProvider { FakeProvider.done("It is on Sundown [P1]. It was a hit [AI].") }
             val empty = FakeAdapter(SourceId.WEB) { _, _ -> SourceResult(Outcome.None, emptyList(), 0.seconds) }
             val pipeline = pipeline(listOf(empty), provider = provider)
 
@@ -463,14 +464,42 @@ class PipelineTest {
         }
 
     @Test
-    fun `model knowledge on lets the prompt and the check allow M`() =
+    fun `model knowledge on lets the prompt and the check allow AI`() =
         runTest {
             settings = settings.copy(enabledSources = Settings.DEFAULT_SOURCES + SourceSwitch.MODEL)
-            val provider = FakeProvider { FakeProvider.done("It is a song [MB1]. Lightfoot was Canadian [M].") }
+            val provider = FakeProvider { FakeProvider.done("It is a song [MB1]. Lightfoot was Canadian [AI].") }
             val state = pipeline(listOf(mb()), provider = provider).run(sundown, write = true)
 
             assertEquals(1, assertIs<InsightState.Written>(state.insight).grounded.counts.model)
-            assertTrue("[M]" in provider.requests.single().prompt)
+            val prompt = provider.requests.single().prompt
+            assertTrue("[AI]" in prompt)
+            assertFalse("[M]" in prompt)
+        }
+
+    @Test
+    fun `a card kept before 0_1_8 citing M is still served, its M read as the model's own knowledge`() =
+        runTest {
+            // The prompt's version stayed when its citation became `[AI]` (#668): a card kept under
+            // the `[M]` wording has the key a card written now has, and reads as one.
+            settings = settings.copy(enabledSources = Settings.DEFAULT_SOURCES + SourceSwitch.MODEL)
+            val cache = MemoryCache()
+            val provider = FakeProvider { FakeProvider.done("It is a song [MB1]. Lightfoot was Canadian [AI].") }
+            val pipeline = pipeline(listOf(mb()), provider = provider, cache = cache)
+            pipeline.run(sundown, write = true)
+            val key = cache.cards.keys.single()
+            cache.cards[key] = "It is a song [MB1]. Lightfoot was Canadian [M]."
+
+            val written = assertIs<InsightState.Written>(pipeline.run(sundown, write = true).insight)
+
+            assertTrue(written.cached)
+            assertEquals(1, provider.requests.size)
+            assertEquals(1, written.grounded.counts.model)
+            assertEquals(
+                listOf(listOf("MB1"), listOf("AI")),
+                written.grounded.paragraphs
+                    .flatten()
+                    .map { it.cites },
+            )
         }
 
     // follow: the app's loop over track changes.

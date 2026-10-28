@@ -67,6 +67,7 @@ class SettingsCodecTest {
                 aiModels = mapOf(ProviderId.ANTHROPIC to "claude-opus-5-5", ProviderId.OPENAI to "gpt-other"),
                 aiEfforts = mapOf(ProviderId.ANTHROPIC to ReasoningEffort.HIGH),
                 followedPlayers = mapOf(Settings.SPOTIFY to false, "com.example.player" to true),
+                onlyEnabledPlayersOnHome = true,
                 enabledSources = setOf(SourceSwitch.MUSICBRAINZ, SourceSwitch.MODEL),
                 webEngines = emptySet(),
                 labelSources = setOf(LabelSource.LASTFM),

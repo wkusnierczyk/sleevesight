@@ -4,7 +4,8 @@ package app.sleevesight.core.model
  * Where an evidence line comes from. [tag] prefixes its id (`W1`, `L3`, `G2`, `P1`).
  *
  * Two are pseudo-sources that retrieve nothing: [PLAYER], the player's own metadata (the
- * release), and [MODEL], the model's own knowledge, which may add at most one unverified claim.
+ * release), and [MODEL], the model's own knowledge (*AI service knowledge*), which may add at most
+ * one unverified claim, cited `[AI]` (`[M]` until 0.1.8, #668: `citationId`).
  * [WIKIDATA] is separate from [WIKIPEDIA] because its lines are templated from structured data
  * and its retrieval cache lifetime differs (D9); both sit behind the user's one Wikipedia switch.
  */
@@ -17,7 +18,7 @@ enum class SourceId(
     LASTFM("L"),
     DISCOGS("D"),
     WEB("G"),
-    MODEL("M"),
+    MODEL("AI"),
     PLAYER("P"),
     ;
 

@@ -433,7 +433,9 @@ class AppGraph internal constructor(
 
     /**
      * *Keep history for* and *Clear history*, through the recorder, in the process's scope. *Clear
-     * history* also deletes everything else kept about the tracks played ([forgetTracks]).
+     * history* also deletes everything else kept about the tracks played ([forgetTracks]); each
+     * trim of the history also purges the caches ([purgeCaches]), so the insights and genre reasons
+     * past *Keep history for* go with it (#643).
      */
     val historyRetention =
         HistoryRetention(
@@ -441,6 +443,7 @@ class AppGraph internal constructor(
             latestSettings.filterNotNull().map { it.historyLifetime },
             mainScope,
             forget = ::forgetTracks,
+            trim = ::purgeCaches,
         )
 
     /**
@@ -574,14 +577,25 @@ class AppGraph internal constructor(
                 }
         }
         // Expired cache entries are deleted on start, once the first run is acknowledged (the
-        // settings are read only then); reads never return them either way.
+        // settings are read only then); reads never return them either way. With a *Keep history
+        // for* lifetime, the history's retention does it, after its first trim (#643); with
+        // *Forever*, which it never trims for, this does.
         mainScope.launch {
-            latestSettings.filterNotNull().first()
-            try {
-                withContext(Dispatchers.IO) { caches.purgeExpired() }
-            } catch (e: SQLException) {
-                Log.w(TAG, "The cache could not be purged: ${e::class.simpleName}")
-            }
+            if (latestSettings.filterNotNull().first().historyLifetime == null) purgeCaches()
+        }
+    }
+
+    /**
+     * Deletes the caches' expired entries ([Caches.purgeExpired]): after each trim of the history,
+     * so the insights and genre reasons past *Keep history for* go with it (#643), and on start
+     * with *Forever*, when nothing is trimmed.
+     * One that fails is tried again at the next.
+     */
+    private suspend fun purgeCaches() {
+        try {
+            withContext(Dispatchers.IO) { caches.purgeExpired() }
+        } catch (e: SQLException) {
+            Log.w(TAG, "The cache could not be purged: ${e::class.simpleName}")
         }
     }
 

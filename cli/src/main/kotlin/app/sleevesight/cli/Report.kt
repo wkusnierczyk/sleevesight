@@ -13,6 +13,8 @@ import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.PipelineEvent
 import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.synthesis.InsightPrompt
+import app.sleevesight.core.synthesis.LEGACY_MODEL_NOTE
+import app.sleevesight.core.synthesis.citesLegacyModelId
 import app.sleevesight.store.CacheStats
 import kotlin.time.Duration
 
@@ -514,6 +516,10 @@ private class TrackSection(
                     if (status in MARKED) "${sentence.text} _(${status.lowercase()})_" else sentence.text
                 }
             appendLine("> $text")
+        }
+        if (citesLegacyModelId(insight.grounded.text)) {
+            appendLine()
+            appendLine("_${LEGACY_MODEL_NOTE}_")
         }
         insight.grounded.withdrawn?.let { withdrawn ->
             appendLine()

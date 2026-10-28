@@ -100,7 +100,8 @@ class SettingsLinks(
  * the setting to land on; [CreditsPage]; and [DiagnosticsPage], which [diagnostics] draws, given
  * the way back to the settings. [Home] shows the pipeline's state,
  * as [pipeline] draws it, given the way to the settings and to Home's pages, and, with a
- * [testerReport] feed, the tester's report button while its settings show it (#452); each of
+ * [testerReport] feed, the tester's report button while its settings show it (#452), and, with a
+ * [themeButton] feed, the theme button while *Theme button* shows it (#636); each of
  * [HomePage]'s pages (#447) shows an item of it on a page of its own, as [page] draws it, and goes
  * back to where it was opened from, Home at the place it was scrolled to, as Android's back does.
  */
@@ -112,6 +113,7 @@ fun SleevesightNavHost(
     openAccessSettings: () -> Boolean,
     navController: NavHostController = rememberNavController(),
     testerReport: TesterReportFeed? = null,
+    themeButton: ThemeButtonFeed? = null,
     settings: @Composable (links: SettingsLinks) -> Unit = {},
     pipeline: @Composable (links: HomeLinks) -> Unit = { NothingPlaying() },
     page: @Composable (page: HomePage, links: HomeLinks) -> Unit = { _, _ -> },
@@ -155,6 +157,7 @@ fun SleevesightNavHost(
                         onOpenFirstRun = { navController.navigate(FirstRun) { launchSingleTop = true } },
                         onOpenSettings = links.openSettings,
                         report = report,
+                        themeButton = themeButtonOf(themeButton),
                         pipeline = { pipeline(links) },
                     )
                 }

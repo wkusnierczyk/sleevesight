@@ -11,6 +11,8 @@
     <!-- With no player listed; %1$s is home_players_none_link, a link that opens Settings at Players. -->
     <string name="home_players_none">No music player seen yet. Play music in one, and it is listed here and in %1$s.</string>
     <string name="home_players_none_link">Settings → Players</string>
+    <!-- With Only enabled players on Home on and no player switched on (#674); %1$s is home_players_none_link. -->
+    <string name="home_players_none_enabled">No player is switched on. Switch on the players you want Sleevesight to follow in %1$s.</string>
     <!-- What a screen reader says a tap on a link to Settings → Players does. -->
     <string name="home_players_open_settings">Open Settings at Players</string>
     <!-- The guide to Home: the notes on its picture, top to bottom. -->
@@ -55,6 +57,11 @@
     <string name="home_what_leaves_open">Show what leaves the device</string>
     <!-- The header's cogwheel: what a screen reader says, and its tooltip. -->
     <string name="home_settings">Settings</string>
+    <!-- The header's theme button (#636), named for the theme a tap gives: what a screen reader
+         says, and its tooltip. -->
+    <string name="home_theme_to_dark">Switch to dark theme</string>
+    <string name="home_theme_to_system">Switch to the system theme</string>
+    <string name="home_theme_to_light">Switch to light theme</string>
     <!-- The header's name (the logo, once it lands), as a screen reader says it; %1$s is the app's name. -->
     <string name="home_scroll_to_top">%1$s, scroll to top</string>
 
@@ -253,13 +260,10 @@
     <string name="home_source_note_settings">Settings</string>
     <string name="home_source_note_unreachable">%1$s could not be reached.</string>
     <string name="home_source_note_failed">%1$s failed.</string>
-    <!-- The paging of the list of sources: each control as drawn, and as a screen reader says it. -->
-    <string name="home_sources_more">show more…</string>
-    <string name="home_sources_more_words">Show more sources</string>
-    <string name="home_sources_all">show all</string>
-    <string name="home_sources_all_words">Show all sources</string>
-    <string name="home_sources_less">… show less</string>
-    <string name="home_sources_less_words">Show fewer sources</string>
+    <!-- The paging of the list of sources: one group of three buttons under it, in this order. -->
+    <string name="home_sources_less">Show less</string>
+    <string name="home_sources_more">Show more</string>
+    <string name="home_sources_all">Show all</string>
     <!-- How much of the list shows, unfolded. An entry is an evidence line, an unverified line or a rejected match. -->
     <string name="home_sources_showing">Showing %1$d of %2$d entries</string>
     <plurals name="home_sources_showing_all">

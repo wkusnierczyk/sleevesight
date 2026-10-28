@@ -25,7 +25,7 @@ import app.sleevesight.core.resolution.MusicBrainzEvidence
  * - All of the evidence when leaving lines out would leave nothing retrieved to narrate
  *   ([EvidenceSet.nothingToNarrate] with model knowledge off, whatever its switch): an insight that
  *   repeats an artist fact is better than none, and than one in which the model's own knowledge
- *   (`[M]`, unverified) stands in for the verified artist lines left out.
+ *   (`[AI]`, unverified) stands in for the verified artist lines left out.
  *
  * Web lines count as the track's own, as a web search is about the track; the measurement ran with
  * web search off, so how insights use the artist lines on tracks whose own lines are mostly web

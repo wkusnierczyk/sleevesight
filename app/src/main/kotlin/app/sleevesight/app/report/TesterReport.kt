@@ -13,6 +13,8 @@ import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.settings.Crossfade
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.synthesis.InsightPrompt
+import app.sleevesight.core.synthesis.LEGACY_MODEL_NOTE
+import app.sleevesight.core.synthesis.citesLegacyModelId
 import app.sleevesight.store.TrackChangeRecord
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -361,6 +363,7 @@ private fun StringBuilder.appendWritten(insight: InsightState.Written) {
         val cites = if (sentence.cites.isEmpty()) "" else " ${sentence.cites.joinToString(" ") { "[$it]" }}"
         appendLine("- ${sentence.status.name.lowercase()}$cites: ${sentence.text}")
     }
+    if (citesLegacyModelId(insight.grounded.text)) appendLine(LEGACY_MODEL_NOTE)
 }
 
 /**
@@ -386,6 +389,7 @@ internal val SETTING_LINES: List<Pair<String, (Settings) -> String>> =
                 .joinToString { "${it.key} ${onOff(it.value)}" }
                 .ifEmpty { NONE }
         },
+        "onlyEnabledPlayersOnHome" to { onOff(it.onlyEnabledPlayersOnHome) },
         "enabledSources" to { s -> s.enabledSources.joinToString { it.name }.ifEmpty { NONE } },
         "webEngines" to { s -> s.webEngines.joinToString { it.name }.ifEmpty { NONE } },
         "labelSources" to { s -> s.labelSources.joinToString { it.name }.ifEmpty { NONE } },
@@ -417,6 +421,7 @@ internal val SETTING_LINES: List<Pair<String, (Settings) -> String>> =
         "linkStyle" to { it.linkStyle.name },
         "markDeveloperItems" to { onOff(it.markDeveloperItems) },
         "theme" to { it.theme.name },
+        "themeButton" to { onOff(it.themeButton) },
         "font" to { it.font.name },
         "introAtStart" to { onOff(it.introAtStart) },
         "homeGuide" to { onOff(it.homeGuide) },

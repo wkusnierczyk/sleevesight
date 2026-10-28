@@ -72,7 +72,7 @@ internal sealed interface Fold {
          * dpi), an evidence line of one or two lines of text with its scope and link under it is
          * about 50 to 70 dp, so 8 come to some 450 to 550 dp: with the controls above and below,
          * about the screen left once the list is scrolled to, and short enough that what follows
-         * it is never far. Not a setting: *show all* is a tap away for whoever wants every line.
+         * it is never far. Not a setting: *Show all* is a tap away for whoever wants every line.
          */
         const val PAGE: Int = 8
     }
