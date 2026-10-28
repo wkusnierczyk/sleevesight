@@ -14,6 +14,9 @@
     <string name="settings_players_short">Music apps Sleevesight follows</string>
     <string name="settings_players_long">Sleevesight reads what a player says it is playing (track, artist, album). It does not receive the audio or your other notifications. Android grants this with notification access. To find your music players, Sleevesight looks at apps that report what they play (playing or paused) and checks whether it is music (a track with a title and an artist); it stops checking an app for music once it has found some, until Sleevesight starts afresh (not each time you open it). A new player is added to this list switched off. Sleevesight does not follow a player that is off: it does not track what the player plays, and keeps or sends none of it. Switch on the players you want Sleevesight to follow. Calls from the phone app, and sessions Android marks as voice calls, are never read.</string>
     <string name="settings_players_none">No players yet. A music app appears here, switched off, once you play music in it.</string>
+    <!-- Under the players (#674): whether Home, with nothing playing, lists only the players switched on. -->
+    <string name="settings_players_on_home">Only enabled players on Home</string>
+    <string name="settings_players_on_home_summary">Home lists only the players Sleevesight follows, not every player it has recognized.</string>
     <string name="settings_sources_short">External services providing information on artists and music.</string>
     <string name="settings_sources_long">Sleevesight pulls information about the currently played music from services dedicated to music and from general information sources. Switch on the services you want Sleevesight to get information from.</string>
     <string name="settings_ai_short">Large Language Model (LLM) services</string>

@@ -27,7 +27,7 @@ internal fun settingsIndex(
     unavailable: Map<ProviderId, String> = emptyMap(),
 ): List<IndexedSection> =
     listOfNotNull(
-        indexed(SettingsSection.PLAYERS, players.map { indexRow(it) }),
+        indexed(SettingsSection.PLAYERS, players.map { indexRow(it) } + playerRows()),
         indexed(SettingsSection.SOURCES, sourceIndexRows()),
         indexed(SettingsSection.AI_SERVICES, aiRows(settings, modelName, unavailable)),
         indexed(SettingsSection.SECRETS, secretRows(keys)),
