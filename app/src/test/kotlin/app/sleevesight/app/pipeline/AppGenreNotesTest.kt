@@ -2,7 +2,6 @@ package app.sleevesight.app.pipeline
 
 import app.sleevesight.app.ui.home.HomeFixtures
 import app.sleevesight.core.Secret
-import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.genres.GenreArticles
 import app.sleevesight.core.genres.GenreDefinition
 import app.sleevesight.core.genres.GenreDefinitions
@@ -36,7 +35,6 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -174,23 +172,6 @@ class AppGenreNotesTest {
             notes.explain(track, "rock")
             advanceUntilIdle()
             assertEquals(1, provider.requests)
-        }
-
-    @Test
-    fun `a reason says whether its evidence says anything about how the track sounds`() =
-        runTest {
-            val notes = notes()
-            // MusicBrainz's templated line alone: nothing of the sound (#664).
-            val templated = EvidenceSet.of(listOf(HomeFixtures.musicBrainzLine), JvmHasher)
-            val silent = track(HomeFixtures.track(evidence = templated))
-            notes.explain(silent, "rock")
-            advanceUntilIdle()
-            assertTrue((notes.reason(silent, "rock").first() as GenreReason.Shown).silent)
-            // The fixture adds a sentence from the song's Wikipedia article: free text, which may
-            // say how it sounds, so the app says nothing.
-            notes.explain(track(), "rock")
-            advanceUntilIdle()
-            assertFalse((notes.reason(track(), "rock").first() as GenreReason.Shown).silent)
         }
 
     @Test

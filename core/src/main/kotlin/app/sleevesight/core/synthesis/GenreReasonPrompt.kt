@@ -44,9 +44,8 @@ object GenreReasonPrompt {
      * evidence did not support the label (the mock-up's *modal jazz*), and on the phone it wrote "The
      * evidence does not support the Alternative label, because it says nothing about this track's
      * instruments or sound.": a sentence about the evidence, which no line can back, so it was
-     * underlined as uncited. When the sources say nothing about the sound, the app says so in its own
-     * line above the reply (`SoundEvidence`), and the model writes what the evidence does say, cited,
-     * without arguing for the label.
+     * underlined as uncited. Now the model writes what the evidence does say, cited, without arguing
+     * for the label. Saying in the app when the sources do not establish a genre is #695.
      */
     const val ABOUT_THE_MUSIC_RULE: String =
         "- Write about the music and the artists, never about the evidence or the sources: no sentence on " +

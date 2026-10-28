@@ -8,7 +8,6 @@ import app.sleevesight.core.pipeline.ClearEpoch
 import app.sleevesight.core.pipeline.GenreReasons
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.PipelineParts
-import app.sleevesight.core.pipeline.SoundEvidence
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.resolution.Lookup
 import app.sleevesight.core.settings.Settings
@@ -47,12 +46,9 @@ sealed interface GenreReason {
     /**
      * Asked for, or kept from before: [state] is [InsightState.Writing], [InsightState.Written],
      * [InsightState.NoEvidence], or [InsightState.Failed], beside which it is offered again.
-     * [silent] when the evidence it is written from says nothing about how the track sounds
-     * ([SoundEvidence]), which the app says above it (#664).
      */
     data class Shown(
         val state: InsightState,
-        val silent: Boolean = false,
     ) : GenreReason
 }
 
@@ -147,9 +143,6 @@ class AppGenreNotes(
         track: TrackState,
         genre: String,
     ): Flow<GenreReason> {
-        // Whether the evidence the reason is written from (its key holds the fingerprint) says nothing
-        // about how the track sounds: decided once, when the flow is first collected, off composition.
-        val silent by lazy { track.evidence?.let(SoundEvidence::silent) ?: false }
         // The reason's key, or null when none is offered.
         val keys =
             combine(parts, settings) { made, now ->
@@ -166,7 +159,7 @@ class AppGenreNotes(
                     key == null -> GenreReason.None
                     entry == null -> GenreReason.Offered
                     expired(entry.writtenAt, lifetime) -> GenreReason.Offered.also { drop(key) }
-                    else -> GenreReason.Shown(entry.state, silent)
+                    else -> GenreReason.Shown(entry.state)
                 }
             }
     }

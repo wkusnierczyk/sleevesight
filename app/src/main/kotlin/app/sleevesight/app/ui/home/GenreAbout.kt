@@ -28,8 +28,6 @@ import app.sleevesight.app.speech.Reading
 import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.core.genres.GenreDefinition
-import app.sleevesight.core.genres.GenreLevel
-import app.sleevesight.core.genres.LabelSource
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.resolution.Lookup
@@ -42,15 +40,14 @@ import app.sleevesight.core.resolution.Lookup
  * with its credit ("From Wikipedia", linking the article, and its licence); then *Why is this …?*,
  * a button carrying the **AI** mark ([AiLabel]), or, once asked for, the reason, under the question
  * as a heading, checked and cited as the insight is: its citations chips that go to their lines
- * ([PanelNotes.onCite]), its grounding note under it. A genre with no article says so in the
+ * ([PanelNotes.onCite]), its grounding note under it. A genre with no definition says so in the
  * definition's place, once the lookup has answered (#663). Neither shows when [PanelNotes.notes]
  * has none: no definition while it is looked up, after a failed lookup, or with Wikipedia off; no
  * button for a genre only MusicBrainz gives, with
- * *Show insights* off or no AI service ready. When the evidence says nothing about how the track
- * sounds, the app says so above the reason, with where the label came from (#664). A reason still
- * being written reads its `[AI]` as the settings allow it ([PanelNotes.modelAllowed]). A written
- * reason has *Read aloud* (#325, [ReadAloudButton]) at the end of its grounding note's row, which
- * reads the question, then the reason ([PanelNotes.readAloud]).
+ * *Show insights* off or no AI service ready. A reason still being written reads its `[AI]` as the
+ * settings allow it ([PanelNotes.modelAllowed]). A written reason has *Read aloud* (#325,
+ * [ReadAloudButton]) at the end of its grounding note's row, which reads the question, then the
+ * reason ([PanelNotes.readAloud]).
  */
 @Composable
 internal fun GenreAbout(
@@ -87,7 +84,6 @@ internal fun GenreAbout(
         GenreReason.None -> Unit
         GenreReason.Offered -> WhyButton(question) { notes.explain(track, genre) }
         is GenreReason.Shown -> {
-            val silent = if (shown.silent) silentLine(track, genre) else null
             val readAloud =
                 readAloudControl(reader, Reading.genreReason(genre)) {
                     // Read aloud follows the reason as the notes give it, whatever screen shows.
@@ -100,7 +96,6 @@ internal fun GenreAbout(
                 question,
                 InsightContext(track, true, true, modelAllowed, InsightOffers()),
                 onCite,
-                silent,
                 readAloud,
             ) { notes.explain(track, genre) }
         }
@@ -109,14 +104,8 @@ internal fun GenreAbout(
 
 // In the definition's place, for a genre that has none (#663), in the panel's quiet note style.
 @Composable
-private fun NoDefinition() {
-    Text(
-        stringResource(R.string.genre_definition_none),
-        modifier = Modifier.testTag(GENRE_NO_DEFINITION_TAG),
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
-}
+private fun NoDefinition() =
+    Quiet(stringResource(R.string.genre_definition_none), Modifier.testTag(GENRE_NO_DEFINITION_TAG))
 
 // The definition, then its credit: the article linked, and the licence.
 @Composable
@@ -149,17 +138,15 @@ private fun WhyButton(
     ) { AiLabel(question) }
 }
 
-// The reason asked for, in [state], under the [question], the app's own [silent] line above its text
-// while it is written and once it is; offered again after a failure. Written, with [readAloud] at the
-// end of its grounding note's row.
-@Suppress("LongParameterList") // What the reason shows, the lines around it, and its two actions.
+// The reason asked for, in [state], under the [question]; offered again after a failure. Written,
+// with [readAloud] at the end of its grounding note's row.
+@Suppress("LongParameterList") // What the reason shows, and its two actions.
 @Composable
 private fun Reason(
     state: InsightState,
     question: String,
     context: InsightContext,
     onCite: (String) -> Unit,
-    silent: String?,
     readAloud: ReadAloudControl?,
     again: () -> Unit,
 ) {
@@ -169,9 +156,6 @@ private fun Reason(
             style = MaterialTheme.typography.titleSmall,
             modifier = Modifier.semantics { heading() },
         )
-        if (silent != null && (state is InsightState.Writing || state is InsightState.Written)) {
-            Quiet(silent, Modifier.testTag(GENRE_SILENT_TAG))
-        }
         when (state) {
             is InsightState.Writing -> {
                 for (paragraph in paragraphsOf(state.partial)) UncheckedProse(paragraph, context, onCite)
@@ -222,63 +206,6 @@ private fun Quiet(
 }
 
 /**
- * The app's own line above a reason whose evidence says nothing about how the track sounds (#664):
- * that, and where the label came from, as the genre's rows give it: a clause for each source whose
- * tags gave it, in [LabelSource] order, naming what it tagged (the track, its artists by name, the
- * album). The app's statement, not the model's: no citations, no underline.
- */
-@Composable
-private fun silentLine(
-    track: TrackState,
-    genre: String,
-): String {
-    val thisTrack = stringResource(R.string.genre_why_this_track)
-    val thisAlbum = stringResource(R.string.genre_why_this_album)
-    val theArtist = stringResource(R.string.genre_why_the_artist)
-    // What each source tagged with the genre, in row order: the track, the artists, the album.
-    val tagged =
-        track.genres.rows
-            .flatMap { row ->
-                val subject =
-                    when (row.level) {
-                        GenreLevel.TRACK -> thisTrack
-                        GenreLevel.ALBUM -> thisAlbum
-                        GenreLevel.ARTIST -> row.artist ?: theArtist
-                    }
-                row.labels
-                    .filter { it.genre.identity == genre }
-                    .flatMap { label -> label.credits.map { it.source to subject } }
-            }.groupBy({ it.first }, { it.second })
-            .mapValues { (_, subjects) -> subjects.distinct() }
-    val clauses =
-        LabelSource.entries.mapNotNull { source ->
-            tagged[source]?.let { subjects ->
-                val who = listed(subjects)
-                when (source) {
-                    LabelSource.LASTFM -> stringResource(R.string.genre_why_from_lastfm, who)
-                    LabelSource.MUSICBRAINZ -> stringResource(R.string.genre_why_from_musicbrainz, who)
-                }
-            }
-        }
-    val origin =
-        clauses
-            .reduceOrNull { all, clause -> stringResource(R.string.genre_why_clauses, all, clause) }
-            ?.let { stringResource(R.string.genre_why_from, it) }
-    return listOfNotNull(stringResource(R.string.genre_why_silent), origin).joinToString(" ")
-}
-
-// [items] as a sentence lists them, with the separators of the resources: "A", "A and B", "A, B and C".
-@Composable
-private fun listed(items: List<String>): String {
-    var all = items.first()
-    for (i in 1 until items.size) {
-        val separator = if (i == items.lastIndex) R.string.genre_why_and else R.string.genre_why_list
-        all = stringResource(separator, all, items[i])
-    }
-    return all
-}
-
-/**
  * [label] as a sentence names it: each word in lower case ("Hip-Hop" is "hip-hop"), but for one
  * whose label keeps a capital past its first letter (an acronym, "UK"; "RnB") or that is a single
  * letter ("R&B").
@@ -299,7 +226,6 @@ const val GENRE_DEFINITION_TAG: String = "genre-panel:definition"
 const val GENRE_NO_DEFINITION_TAG: String = "genre-panel:no-definition"
 const val GENRE_WHY_TAG: String = "genre-panel:why"
 const val GENRE_REASON_TAG: String = "genre-panel:reason"
-const val GENRE_SILENT_TAG: String = "genre-panel:silent"
 
 private val HEIGHT = 32.dp
 private val CORNER = 16.dp
