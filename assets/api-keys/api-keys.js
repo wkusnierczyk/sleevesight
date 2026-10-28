@@ -6,6 +6,7 @@
 
 import { qrSvg } from '../keyboard/qr-svg.js';
 import { BAD_CHARACTERS, SERVICES, check, ending, readFile, write } from './keys.js';
+import { codeDrawer } from './draw.js';
 import { COUNT, PREFIX_LETTERS, readWords, seal, tokens } from './seal.js';
 
 const $ = (id) => document.getElementById(id);
@@ -41,11 +42,41 @@ let generation = 0;
 // What `#holds` last said, so a live region is not rebuilt, and read out again, at each keystroke.
 let held = null;
 
-// Counts the codes asked to be drawn, so that a code still being sealed when the keys or the words
-// change, or when *Clear* is chosen, is dropped once sealed; and what the code drawn holds, so that
-// it is not sealed again, with a new salt, at a keystroke that changes nothing in it.
-let drawing = 0;
-let drawn = null;
+// Whether the code on screen is a clear one, about which the page warns until it is gone.
+let clearShown = false;
+
+// Draws the code (`draw.js`): the one on screen goes as soon as what it holds changes, so a clear
+// code never stays while a sealed one is made, nor after sealing fails.
+const drawer = codeDrawer({
+  seal,
+  show: (content, sealed, describe) => {
+    const label = sealed ? 'Sealed setup code of the keys listed below it' : 'Setup code of the keys listed below it';
+    const { svg, side } = qrSvg(content, label);
+    const code = $('code');
+    code.style.width = `${side * MODULE_PX}px`;
+    code.replaceChildren(svg);
+    code.hidden = false;
+    clearShown = !sealed;
+    warn();
+    describe(sealed);
+  },
+  hide: () => {
+    const code = $('code');
+    code.hidden = true;
+    code.replaceChildren();
+    clearShown = false;
+    warn();
+  },
+  failed: () => {
+    held = null;
+    $('holds').textContent = 'No code: it could not be sealed, as this browser lacks the cryptography it needs.';
+  },
+});
+
+// Warns that the code is the keys themselves while sealing is off, or a clear code is still shown.
+function warn() {
+  $('unsealed').hidden = $('seal').checked && !clearShown;
+}
 
 const NUMBERS = ['no', 'one', 'two', 'three', 'four', 'five'];
 
@@ -130,7 +161,7 @@ function update() {
   const sealing = $('seal').checked;
   $('words').disabled = !sealing;
   $('show-words').disabled = !sealing;
-  $('unsealed').hidden = sealing;
+  warn();
   const typed = sealing ? wordsTyped() : { words: null, said: '', error: false };
   reportWords(typed.said, typed.error);
   const waiting = sealing && typed.words === null;
@@ -139,7 +170,7 @@ function update() {
   held = said;
   const holds = $('holds');
   if (keys.size === 0 || waiting) {
-    hideCode();
+    drawer.clear();
     if (!changed) return;
     if (keys.size === 0) {
       holds.textContent = refused.length === 0 ? 'No key yet.' : 'No code: no key has its service’s form.';
@@ -150,59 +181,30 @@ function update() {
   }
   const text = write(keys);
   const words = sealing ? typed.words : null;
-  draw(text, words);
-  if (!changed) return;
-  const list = document.createElement('ul');
-  for (const [name, value] of keys) {
-    const item = document.createElement('li');
-    item.textContent = `${labelOf(name)}, ending ${ending(value)}`;
-    list.append(item);
-  }
-  const lines = [document.createTextNode(sealing ? 'The code, sealed with the phone’s words, holds:' : 'The code holds:'), list];
-  if (refused.length > 0) {
-    const left = document.createElement('p');
-    left.className = 'error';
-    left.textContent = `Left out, not of its service’s form: ${refused.map(labelOf).join(', ')}.`;
-    lines.push(left);
-  }
-  holds.replaceChildren(...lines);
-}
-
-// Hides the code, and drops one still being sealed.
-function hideCode() {
-  drawing++;
-  drawn = null;
-  const code = $('code');
-  code.hidden = true;
-  code.replaceChildren();
-}
-
-// Draws the setup code [text], sealed with [words] (none: as it is), unless the code drawn already
-// holds the same; a code sealed after another was asked for is dropped.
-async function draw(text, words) {
-  const what = JSON.stringify([text, words]);
-  if (what === drawn) return;
-  drawn = what;
-  const asked = ++drawing;
-  let content = text;
-  if (words !== null) {
-    try {
-      content = await seal(text, words);
-    } catch {
-      if (asked === drawing) {
-        drawn = null;
-        $('holds').textContent = 'The code could not be sealed: this browser lacks the cryptography it needs.';
-      }
-      return;
+  // What the code holds, said once it shows: as a sealed code only once a sealed one is drawn.
+  const describe = (sealed) => {
+    const list = document.createElement('ul');
+    for (const [name, value] of keys) {
+      const item = document.createElement('li');
+      item.textContent = `${labelOf(name)}, ending ${ending(value)}`;
+      list.append(item);
     }
-    if (asked !== drawing) return;
+    const lines = [document.createTextNode(sealed ? 'The code, sealed with the phone’s words, holds:' : 'The code holds:'), list];
+    if (refused.length > 0) {
+      const left = document.createElement('p');
+      left.className = 'error';
+      left.textContent = `Left out, not of its service’s form: ${refused.map(labelOf).join(', ')}.`;
+      lines.push(left);
+    }
+    holds.replaceChildren(...lines);
+  };
+  if (drawer.holds(text, words)) {
+    // The same code: said again only when what is said of it changed (a key left out, say).
+    if (changed && !$('code').hidden) describe(words !== null);
+    return;
   }
-  const label = words === null ? 'Setup code of the keys listed below it' : 'Sealed setup code of the keys listed below it';
-  const { svg, side } = qrSvg(content, label);
-  const code = $('code');
-  code.style.width = `${side * MODULE_PX}px`;
-  code.replaceChildren(svg);
-  code.hidden = false;
+  if (words !== null) holds.textContent = 'Sealing the code with the phone’s words…';
+  drawer.draw(text, words, describe);
 }
 
 // Sets the file report at once. The same report again (the same file read twice) ends in a
@@ -261,7 +263,7 @@ function clear() {
   $('show-words').checked = false;
   showWords(false);
   $('seal').checked = true;
-  hideCode();
+  drawer.clear();
   update();
 }
 

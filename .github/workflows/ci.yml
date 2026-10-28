@@ -46,6 +46,10 @@ jobs:
       - name: API keys page vectors current
         run: node assets/api-keys/make_vectors.mjs --check
 
+      # The API keys page's drawing of its sealed code (#590), with sealing that is slow or fails.
+      - name: API keys page drawing
+        run: node --test assets/api-keys/draw.test.mjs
+
       - name: Changes that need a build
         id: changes
         run: |
