@@ -22,7 +22,7 @@ import app.sleevesight.core.settings.Settings
  *   (`Settings.showGroundingDetails`).
  * - *Report button* (#452, #518): Home's button for a tester's report ([Settings.reportButton]):
  *   *Show*, *Auto* (hidden while Home scrolls) or *Hide*; *Auto* by default in the test build and
- *   *Hide* in any other.
+ *   *Hide* in any other; what the one chosen does is said under its buttons (#550, #637).
  * - *Link style* (#519): every link underlined (the default) or highlighted
  *   ([Settings.linkStyle]), to try both on the phone over real album art; back to the underline
  *   with developer mode off.
@@ -36,7 +36,6 @@ import app.sleevesight.core.settings.Settings
 internal fun DeveloperSection(
     settings: Settings,
     update: Update,
-    open: (SettingsDialog) -> Unit,
     openDiagnostics: () -> Unit,
 ) {
     SwitchRow(
@@ -57,24 +56,20 @@ internal fun DeveloperSection(
         summary = stringResource(R.string.settings_grounding_details_summary),
         checked = settings.showGroundingDetails,
     ) { on -> update { it.copy(showGroundingDetails = on) } }
-    ReportButtonRow(settings, update, open)
-    val linkStyles = linkStyles()
-    ValueRow(
+    // *Report button* and *Link style*: a few short choices each, as button groups (#637).
+    ChoiceButtonsRow(
+        title = stringResource(R.string.settings_report_button),
+        summary = stringResource(R.string.settings_report_button_summary),
+        choices = reportButtons(),
+        selected = settings.reportButton,
+        details = reportButtonDetails(),
+    ) { choice -> update { it.copy(reportButton = choice) } }
+    ChoiceButtonsRow(
         title = stringResource(R.string.settings_link_style),
-        value = linkStyles.first { it.first == settings.linkStyle }.second,
         summary = stringResource(R.string.settings_link_style_summary),
-    ) {
-        open(
-            SettingsDialog.Choice(
-                R.string.settings_link_style,
-                linkStyles,
-                settings.linkStyle,
-                developer = true,
-            ) { style ->
-                update { it.copy(linkStyle = style) }
-            },
-        )
-    }
+        choices = linkStyles(),
+        selected = settings.linkStyle,
+    ) { style -> update { it.copy(linkStyle = style) } }
     SwitchRow(
         title = stringResource(R.string.settings_mark_developer),
         summary = stringResource(R.string.settings_mark_developer_summary),
@@ -85,34 +80,6 @@ internal fun DeveloperSection(
         summary = stringResource(R.string.settings_developer_mode_summary),
         checked = settings.developerMode,
     ) { on -> update { if (on) it.copy(developerMode = true) else it.withoutDeveloperMode() } }
-}
-
-/** *Report button* (#452, #518): *Show*, *Auto* or *Hide*, each described in the dialog (#550). */
-@Composable
-private fun ReportButtonRow(
-    settings: Settings,
-    update: Update,
-    open: (SettingsDialog) -> Unit,
-) {
-    val reportButtons = reportButtons()
-    val reportButtonDetails = reportButtonDetails()
-    ValueRow(
-        title = stringResource(R.string.settings_report_button),
-        value = reportButtons.first { it.first == settings.reportButton }.second,
-        summary = stringResource(R.string.settings_report_button_summary),
-    ) {
-        open(
-            SettingsDialog.Choice(
-                R.string.settings_report_button,
-                reportButtons,
-                settings.reportButton,
-                details = reportButtonDetails,
-                developer = true,
-            ) { choice ->
-                update { it.copy(reportButton = choice) }
-            },
-        )
-    }
 }
 
 /** *Link style*'s choices. */
@@ -132,7 +99,7 @@ internal fun reportButtons(): List<Pair<ReportButton, String>> =
         ReportButton.HIDE to stringResource(R.string.settings_report_button_hide),
     )
 
-/** What each of *Report button*'s choices does, as its dialog says under it. */
+/** What each of *Report button*'s choices does, as its row says under the buttons while it is chosen. */
 @Composable
 internal fun reportButtonDetails(): Map<ReportButton, String> =
     mapOf(
