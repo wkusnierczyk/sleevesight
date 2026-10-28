@@ -22,19 +22,21 @@ import kotlin.math.sqrt
 
 /**
  * The parts of Home the guide's notes name (#627), top to bottom as Home shows them, each with its
- * [note] and, for a screen reader, which reads the notes without the picture, its [label].
+ * [note]; its [label], the part's name, which a screen reader says before the note and the note's
+ * panel has as its heading; and [about], the panel's fuller description (#673).
  */
 internal enum class GuidePart(
     @StringRes val note: Int,
     @StringRes val label: Int,
+    @StringRes val about: Int,
 ) {
-    SETTINGS(R.string.home_guide_note_settings, R.string.home_guide_part_settings),
-    PLAYER(R.string.home_guide_note_player, R.string.home_guide_part_player),
-    GENRES(R.string.home_guide_note_genres, R.string.home_guide_part_genres),
-    INSIGHT(R.string.home_guide_note_insight, R.string.home_guide_part_insight),
-    CITE(R.string.home_guide_note_cite, R.string.home_guide_part_cite),
-    WRITE(R.string.home_guide_note_write, R.string.home_guide_part_write),
-    SOURCES(R.string.home_guide_note_sources, R.string.home_guide_part_sources),
+    SETTINGS(R.string.home_guide_note_settings, R.string.home_guide_part_settings, R.string.home_guide_about_settings),
+    PLAYER(R.string.home_guide_note_player, R.string.home_guide_part_player, R.string.home_guide_about_player),
+    GENRES(R.string.home_guide_note_genres, R.string.home_guide_part_genres, R.string.home_guide_about_genres),
+    INSIGHT(R.string.home_guide_note_insight, R.string.home_guide_part_insight, R.string.home_guide_about_insight),
+    CITE(R.string.home_guide_note_cite, R.string.home_guide_part_cite, R.string.home_guide_about_cite),
+    WRITE(R.string.home_guide_note_write, R.string.home_guide_part_write, R.string.home_guide_about_write),
+    SOURCES(R.string.home_guide_note_sources, R.string.home_guide_part_sources, R.string.home_guide_about_sources),
 }
 
 /**
@@ -60,6 +62,17 @@ internal data class GuideMetrics(
         val share = PICTURE_SHARE / sqrt(fontScale.coerceAtLeast(1f))
         return min(width * share, dp(MAX_PICTURE_DP)).roundToInt()
     }
+
+    /**
+     * A note's panel's width in a guide [width] wide (#673): the picture's, over its phone screen,
+     * unless that is narrower than [MIN_PANEL_DP] at the font size, as at a large font, where the
+     * picture narrows as the text grows: then wider, over the notes too, never wider than the guide.
+     */
+    fun panelWidth(width: Int): Int =
+        max(pictureWidth(width), min(width.toFloat(), dp(MIN_PANEL_DP) * fontScale).roundToInt())
+
+    /** The space kept between a note's panel and the part and note it is about. */
+    val panelGap: Float get() = dp(PANEL_GAP_DP)
 
     companion object {
         fun of(density: Density): GuideMetrics = GuideMetrics(density.density, density.fontScale)
@@ -168,6 +181,36 @@ internal fun guideLayout(
     return GuideShown(notes.map { it!! }, arrows, bottom + 6 * u)
 }
 
+/**
+ * Where a note's panel, [height] high, goes in a picture [pictureHeight] high (#673): clear of the
+ * [band] from the top to the bottom of the part and its note, so the outlined part, the note and the
+ * arrow between them stay in sight, [gap] from it; under it if it fits in the picture, else over it
+ * if it fits there, else under it, below the picture if need be, where the guide grows to hold it.
+ * Its top.
+ */
+internal fun panelTop(
+    band: ClosedFloatingPointRange<Float>,
+    height: Float,
+    pictureHeight: Int,
+    gap: Float,
+): Float {
+    val below = band.endInclusive + gap
+    val above = band.start - gap - height
+    return when {
+        below + height <= pictureHeight -> below
+        above >= 0f -> above
+        else -> below
+    }
+}
+
+/** Whether a note's panel, [height] high, fits in the picture under or over the [band] ([panelTop]). */
+internal fun panelFits(
+    band: ClosedFloatingPointRange<Float>,
+    height: Float,
+    pictureHeight: Int,
+    gap: Float,
+): Boolean = band.endInclusive + gap + height <= pictureHeight || band.start - gap - height >= 0f
+
 /** A seeded wobble in [0, 1), the mock-up's, so the arrows look drawn and stay put between draws. */
 private fun wobble(seed: Int): Float {
     val x = sin(seed * 999.0) * 10_000
@@ -203,6 +246,10 @@ private const val PICTURE_SHARE = 0.42f
 private const val MAX_PICTURE_DP = 200f
 private const val GAP_DP = 14f
 private const val FIRST_LINE_DP = 12f
+
+/** A note's panel's narrowest, in dp at the default font size, and its distance from the part. */
+private const val MIN_PANEL_DP = 160f
+private const val PANEL_GAP_DP = 8f
 
 /** Half the angle between the arrowhead's two lines, in radians. */
 private const val HEAD_SPREAD = 0.5f

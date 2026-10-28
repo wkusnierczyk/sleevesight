@@ -10,7 +10,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.hasText
@@ -56,8 +55,9 @@ import org.robolectric.Shadows.shadowOf
 
 /**
  * Home with nothing playing (#627): a row per player *Players* lists, A to Z by name, the followed
- * ones opening the player, the switched-off ones linking to *Players*; and the guide to Home, its
- * picture one image for a screen reader, dismissed once or for good.
+ * ones opening the player, the switched-off ones linking to *Players*; and the guide to Home,
+ * dismissed once or for good (its notes and its picture full screen: `GuideNotesTest`,
+ * `GuideMagnifierTest`).
  */
 @RunWith(RobolectricTestRunner::class)
 class IdleHomeTest {
@@ -190,23 +190,6 @@ class IdleHomeTest {
             assertEquals(listOf(SettingsTarget.players), openedAt)
         }
     }
-
-    @Test
-    fun theGuidesPictureIsOneImageWithItsNotesInOrder() =
-        show(players) {
-            val node = compose.onNodeWithTag(GUIDE_PICTURE_TAG).fetchSemanticsNode()
-            // Each note after the part it points at, since the parts in the picture are not read.
-            val described =
-                "Home while a track plays: Settings: tap to configure; Player: tap to open; " +
-                    "Genres: tap a genre for details; Insight: read about what’s playing; " +
-                    "Citation: follow to references; Write button: generate an insight (paid); " +
-                    "Sources: read source information"
-            assertEquals(listOf(described), node.config.getOrNull(SemanticsProperties.ContentDescription))
-            assertEquals(Role.Image, node.config.getOrNull(SemanticsProperties.Role))
-            // One image: nothing in it is read, or reached, on its own.
-            assertTrue(node.children.isEmpty())
-            assertEquals(0, compose.onAllNodes(hasText("Blue in Green")).fetchSemanticsNodes().size)
-        }
 
     @Test
     fun withHomeGuideOffTheGuideIsNotShown() =

@@ -84,4 +84,36 @@ class GuideLayoutTest {
         assertTrue(note.y >= pictureHeight + 8f)
         assertTrue(shown.height >= note.y + 40f)
     }
+
+    // A note's panel (#673): clear of its part and its note, in the picture where it fits.
+
+    @Test
+    fun aPanelGoesUnderItsPartAndNoteWhenItFitsInThePicture() {
+        // The cogwheel and its note, 0 to 20: under both.
+        assertEquals(28f, panelTop(0f..20f, 100f, pictureHeight, 8f), 0.01f)
+        assertTrue(panelFits(0f..20f, 100f, pictureHeight, 8f))
+    }
+
+    @Test
+    fun aPanelGoesOverThemWhenItDoesNotFitUnder() {
+        // The Write button and its note, 298 to 318: 120 does not fit under, in 400.
+        assertEquals(298f - 8f - 120f, panelTop(298f..318f, 120f, pictureHeight, 8f), 0.01f)
+        assertTrue(panelFits(298f..318f, 120f, pictureHeight, 8f))
+    }
+
+    @Test
+    fun aPanelFittingNeitherGoesUnderThemBelowThePicture() {
+        assertEquals(256f, panelTop(228f..248f, 300f, pictureHeight, 8f), 0.01f)
+        assertFalse(panelFits(228f..248f, 300f, pictureHeight, 8f))
+    }
+
+    @Test
+    fun aPanelIsThePicturesWidthUnlessThatIsTooNarrowAtTheFontSize() {
+        assertEquals(metrics.pictureWidth(400), metrics.panelWidth(400))
+        // At twice the font size the picture narrows, and the panel widens past it, within the guide.
+        val large = GuideMetrics(density = 1f, fontScale = 2f)
+        assertTrue(large.panelWidth(400) > large.pictureWidth(400))
+        assertEquals(320, large.panelWidth(400))
+        assertEquals(300, large.panelWidth(300))
+    }
 }
