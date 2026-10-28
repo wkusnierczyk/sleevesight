@@ -565,16 +565,18 @@ class AppGraph internal constructor(
                 }
         }
         // Expired cache entries are deleted on start, once the first run is acknowledged (the
-        // settings are read only then); reads never return them either way.
+        // settings are read only then); reads never return them either way. With a *Keep history
+        // for* lifetime, the history's retention does it, after its first trim (#643); with
+        // *Forever*, which it never trims for, this does.
         mainScope.launch {
-            latestSettings.filterNotNull().first()
-            purgeCaches()
+            if (latestSettings.filterNotNull().first().historyLifetime == null) purgeCaches()
         }
     }
 
     /**
-     * Deletes the caches' expired entries ([Caches.purgeExpired]): on start, and after each trim
-     * of the history, so the insights and genre reasons past *Keep history for* go with it (#643).
+     * Deletes the caches' expired entries ([Caches.purgeExpired]): after each trim of the history,
+     * so the insights and genre reasons past *Keep history for* go with it (#643), and on start
+     * with *Forever*, when nothing is trimmed.
      * One that fails is tried again at the next.
      */
     private suspend fun purgeCaches() {

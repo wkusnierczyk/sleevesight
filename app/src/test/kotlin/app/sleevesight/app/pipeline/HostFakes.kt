@@ -176,11 +176,23 @@ internal class CardCache(
 
     override suspend fun card(key: CardKey): String? = keptCard(key)?.text
 
-    // As the store serves it: none written longer ago than [lifetime] (*Keep history for*, #643).
+    /** A read of a card waits for this once it has its answer, as a slow read would; null, none. */
+    var readHeld: Deferred<Unit>? = null
+
+    /** When each card kept was written, as kept. */
+    val keptTimes: Collection<Instant> get() = keptAt.values
+
+    // As the store serves it: none written longer ago than [lifetime] (*Keep history for*, #643),
+    // which is deleted as it is read.
     override suspend fun keptCard(key: CardKey): KeptCard? {
-        val text = cards[key] ?: return null
         val at = keptAt[key]
-        return if (clock != null && pastKeepHistory(at, lifetime(), clock.now())) null else KeptCard(text, at)
+        if (clock != null && pastKeepHistory(at, lifetime(), clock.now())) {
+            cards.remove(key)
+            keptAt.remove(key)
+        }
+        val kept = cards[key]?.let { KeptCard(it, at) }
+        if (kept != null) readHeld?.await()
+        return kept
     }
 
     override suspend fun keep(
@@ -192,11 +204,23 @@ internal class CardCache(
             clock?.let { keptAt[key] = it.now() }
         }
     }
+
+    override suspend fun keep(
+        key: CardKey,
+        text: String,
+        writtenAt: Instant,
+    ) {
+        epoch.ifCurrent(currentCoroutineContext()) {
+            cards[key] = text
+            keptAt[key] = writtenAt
+        }
+    }
 }
 
-/** A clock the tests move ([at]). */
+/** A clock the tests move ([at]), which moves on by [tick] each time it is read. */
 internal class MovedClock(
     var at: Instant = Instant.parse("2026-10-27T12:00:00Z"),
+    var tick: Duration = Duration.ZERO,
 ) : Clock {
-    override fun now(): Instant = at
+    override fun now(): Instant = at.also { at += tick }
 }

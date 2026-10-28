@@ -11,6 +11,7 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.CoroutineContext
 import kotlin.time.Duration
+import kotlin.time.Instant
 
 /**
  * The pipeline's [PipelineCache] over [caches]: the retrieval cache for source results, the
@@ -69,6 +70,15 @@ class StorePipelineCache(
     ) {
         val work = currentCoroutineContext()
         epoch.ifCurrent(work) { withContext(io) { caches.synthesis.put(key.toStore(), text) } }
+    }
+
+    override suspend fun keep(
+        key: CardKey,
+        text: String,
+        writtenAt: Instant,
+    ) {
+        val work = currentCoroutineContext()
+        epoch.ifCurrent(work) { withContext(io) { caches.synthesis.put(key.toStore(), text, writtenAt) } }
     }
 
     private fun CardKey.toStore(): SynthesisKey =

@@ -251,6 +251,9 @@ internal class InsightWriter(
 
             else -> {
                 val complete = done.stopReason == StopReason.END
+                // One time, in whole milliseconds as the cache keeps it, for the card shown and the
+                // card kept, so the screen and the cache count *Keep history for* alike (#643).
+                val at = Instant.fromEpochMilliseconds(time.clock.now().toEpochMilliseconds())
                 val written =
                     checked(
                         text,
@@ -259,7 +262,7 @@ internal class InsightWriter(
                         cached = false,
                         usage = done.usage,
                         complete = complete,
-                        writtenAt = time.clock.now(),
+                        writtenAt = at,
                     )
                 val keepable =
                     sent.leftOut.isEmpty() ||
@@ -268,7 +271,7 @@ internal class InsightWriter(
                             ?.paragraphs
                             ?.flatten()
                             ?.none { sentence -> sentence.cites.any { it in sent.leftOut } } == true
-                if (complete && keepable) guard.attempt("write insight") { keep(card, text) }
+                if (complete && keepable) guard.attempt("write insight") { keep(card, text, at) }
                 if (written is InsightState.Written) {
                     parts.sessionFacts.cite(key, ArtistFact.citedIn(written.grounded, sent.evidence.lines))
                     control.cardWritten(written, evidence)

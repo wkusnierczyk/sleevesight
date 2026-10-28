@@ -95,6 +95,20 @@ internal class HistoryRetentionTest : HistoryRecorderFixture() {
     }
 
     @Test
+    fun aTrimThatFailsNeverStopsTheHistorysOwnTrimming() {
+        var trims = 0
+        val failing = HistoryRetention(recorder, lifetime, scope, trim = { trims++.also { error("purge failed") } })
+        played("Turning", base - 90.days + 3.hours)
+        played("New", base)
+        scope.launch { failing.run() }
+        assertEquals(1, trims)
+
+        atPeriod()
+        assertEquals("deleted after the failure", listOf("New"), rows())
+        assertEquals("tried again", 2, trims)
+    }
+
+    @Test
     fun theLifetimeIsCountedBackFromTodayEvenWhenNothingHasPlayedSince() {
         lifetime.value = 30.days
         played("Old", base - 40.days)

@@ -1,5 +1,6 @@
 package app.sleevesight.app.history
 
+import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
@@ -7,6 +8,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
 
@@ -50,9 +52,23 @@ class HistoryRetention(
             if (kept == null) return@collectLatest
             while (true) {
                 recorder.deleteOlderThan { current }
-                trim()
+                trimmed()
                 delay(PERIOD)
             }
+        }
+    }
+
+    // [trim], whose failure, of whatever kind, never stops the history's own trimming: it is tried
+    // again at the next.
+    private suspend fun trimmed() {
+        try {
+            trim()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (
+            @Suppress("TooGenericExceptionCaught") e: Exception,
+        ) {
+            Log.w(TAG, "The caches could not be trimmed: ${e::class.simpleName}")
         }
     }
 
@@ -77,5 +93,7 @@ class HistoryRetention(
          * each deletion scans the history's two main tables, so a few a day is cheap.
          */
         val PERIOD: Duration = 6.hours
+
+        private const val TAG = "HistoryRetention"
     }
 }

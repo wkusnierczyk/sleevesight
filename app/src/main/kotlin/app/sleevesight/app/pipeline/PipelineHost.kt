@@ -44,7 +44,6 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
@@ -58,6 +57,7 @@ import java.util.concurrent.atomic.AtomicLong
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Clock
 import kotlin.time.Duration
+import kotlin.time.Instant
 
 /**
  * What the home screen (#52) and the diagnostics screen (#54) read of the pipeline.
@@ -190,9 +190,11 @@ class PipelineKeys(
  * An insight is shown no longer than *Keep history for* after it was written (#643,
  * `pastKeepHistory`, by [clock]), as the synthesis cache serves it and as a genre's reason is shown
  * (`AppGenreNotes`): checked on each change of the settings or of what is shown, the run's own or the
- * card paid for from the ledger, *Look again*'s fallback included. When the setting is shortened
- * past the insight shown, the track is also looked up again by a rebuild, from the caches: its run
- * finds no card, which the cache no longer serves, so Write is offered to write it afresh.
+ * card paid for from the ledger, *Look again*'s fallback included. Each insight so hidden, whether
+ * the setting was shortened, time passed, or a card read from the cache arrived late, is told to
+ * the coordinator once (`CardExpired`: the ledger forgets the card) and the track looked up again
+ * by a rebuild, from the caches: its run finds no card, which the cache no longer serves, so Write
+ * is offered to write it afresh, and nothing writes on its own.
  */
 @Suppress("LongParameterList", "TooManyFunctions") // The inputs of one loop, each a seam for the tests.
 class PipelineHost(
@@ -255,6 +257,10 @@ class PipelineHost(
     // The settings once read (after the acknowledgement); builds read them.
     @Volatile
     private var latestSettings: StateFlow<Settings>? = null
+
+    // The insights hidden as past *Keep history for* (#643) whose expiry was sent, by their track
+    // and when they were written, so each is sent once. Touched only by [publish].
+    private val expiredSent = HashSet<Pair<RunKey, Instant>>()
 
     // Touched only by the loop.
     private val runs = HashMap<RunId, RunHandle>()
@@ -407,13 +413,6 @@ class PipelineHost(
             }
             launch {
                 online.distinctUntilChanged().collect { queue.send(CoordinatorEvent.NetworkChanged(it)) }
-            }
-            launch {
-                // *Keep history for* shortened past the insight shown (#643): the view drops it
-                // ([publish]), and a rebuild looks the track up again, so Write is offered.
-                latest.map { it.historyLifetime }.distinctUntilChanged().drop(1).collect { lifetime ->
-                    if (holdsPast(lifetime)) queue.send(CoordinatorEvent.RebuildRequested)
-                }
             }
             launch {
                 changes.collect { change ->
@@ -723,6 +722,7 @@ class PipelineHost(
             // note and the card stay in step.
             val before = if (fresh) view.value else PipelineView()
             val lifetime = now.historyLifetime
+            expire(own ?: before.track, owner, lifetime)
             val shown = shownOf(own, before, owner, failedKey, lifetime)
             val insight = shown.track?.insight
             // The card paid for past *Keep history for* (#643) is not shown, so nothing is offered for it.
@@ -836,19 +836,23 @@ class PipelineHost(
         return if (past(insight, lifetime)) track.copy(insight = InsightState.Idle(canWrite = false)) else track
     }
 
-    // Whether the live pipeline's insight, or the card paid for, is past [lifetime] (#643).
-    private fun holdsPast(lifetime: Duration?): Boolean {
-        val own =
-            live.value
-                ?.pipeline
-                ?.state
-                ?.value
-                ?.insight as? Written
-        val card =
-            snapshot.value.ledger
-                ?.card
-                ?.insight
-        return listOfNotNull(own, card).any { past(it, lifetime) }
+    // [track]'s insight and the card paid for for it, those past [lifetime] (#643): each, by its
+    // track and when it was written, once told to the coordinator, whose ledger forgets the card,
+    // and the track looked up again by a rebuild, so Write is offered.
+    private fun expire(
+        track: TrackState?,
+        owner: CoordinatorState,
+        lifetime: Duration?,
+    ) {
+        if (track == null) return
+        val key = RunKey.of(track.normalized, track.nowPlaying)
+        val past =
+            listOfNotNull(track.insight as? Written, cardFor(owner, track)?.insight)
+                .filter { past(it, lifetime) }
+                .mapNotNull { it.writtenAt }
+                .filter { expiredSent.add(key to it) }
+        past.forEach { queue.trySend(CoordinatorEvent.CardExpired(it)) }
+        if (past.isNotEmpty()) queue.trySend(CoordinatorEvent.RebuildRequested)
     }
 
     // The card paid for, from the ledger, if [track] is of its written track.
