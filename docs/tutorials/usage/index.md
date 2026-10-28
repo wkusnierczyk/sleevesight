@@ -39,6 +39,7 @@ When you open Sleevesight from the launcher while it is not open, it plays one o
 The header stays at the top while the rest of the screen scrolls under it; a thin line shows under it once the screen has scrolled.
 
 - **The logo**, at the left: a tap scrolls the home screen back to the top. A screen reader calls it "Sleevesight, scroll to top".
+- **The theme button**, before the cogwheel, switches the app's theme in one tap: *Light*, then *Dark*, then *System* (as the phone is), then *Light* again, kept as [*Theme*]({{ '/docs/tutorials/settings/' | relative_url }}) in the settings. It shows the theme a tap gives: a moon while *Theme* is *Light*, the automatic brightness symbol while it is *Dark*, a sun while it is *System*. Its tooltip and what a screen reader says name that theme too: "Switch to dark theme", "Switch to the system theme", "Switch to light theme". From *System* while the phone is light, a tap gives *Light*, which looks the same, and from *Dark* to *System* while the phone is dark likewise; the button's symbol and name change, so you can see the tap was taken. *Theme button*, under *Appearance* in the settings, hides it.
 - **The cogwheel**, at the right, opens the settings.
 
 At the bottom of the home screen, under a thin line, *What leaves the device?* opens the first-run screen again, to reread it. *What leaves the device*, under *About* in the settings, opens it too. Opened again, it has a back arrow at the top and *Close* at the bottom, which bring you back, as Android's back does.
