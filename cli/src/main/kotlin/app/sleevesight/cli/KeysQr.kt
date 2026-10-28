@@ -21,10 +21,12 @@ import java.io.PrintStream
 
 /**
  * `keys-qr` (#268): draws a setup code ([KeySetup]) in the terminal, for the app's *Load keys*,
- * sealed (#590, [SealedSetup]) with the five words *Load keys* shows, which are read from the
- * [terminal] without echo, never from the command line, where the shell's history would keep them;
- * with no terminal, from the first line of standard input, unless a key is read from it. With
- * `--unsealed`, the clear code, which is the keys themselves.
+ * sealed (#590, [SealedSetup]) with the five words *Load keys* shows, which are read without echo
+ * from the [terminal] (Java's console, or the controlling terminal with its echo off), never from
+ * the command line, where the shell's history would keep them; from the first line of standard
+ * input only when it is not a terminal (a pipe or a file) and no key is read from it. Where standard
+ * input is a terminal whose echo cannot be turned off, nothing is read. With `--unsealed`, the clear
+ * code, which is the keys themselves.
  * The keys come from the developer's environment or keys file ([Keys]); with `--keys`, from that
  * file alone, not the environment, so a tester's file cannot pick up the developer's own keys; with
  * `--<name>-from`, only from the files given, `-` for standard input, so a tester's key is drawn without being saved
@@ -37,7 +39,7 @@ class KeysQr(
     private val err: PrintStream,
     private val environment: Map<String, String>,
     private val input: InputStream,
-    private val terminal: ((String) -> String?)?,
+    private val terminal: () -> Terminal,
 ) {
     private var unsealed = false
     private var stdinTaken = false
@@ -99,23 +101,25 @@ class KeysQr(
             err.println("In Sleevesight: Settings, Secrets, Load keys. Then clear the terminal: the code is the keys.")
         } else {
             err.println(
-                "Sealed with the phone's words: on the phone, Next, then scan it. It opens only there, once, " +
-                    "within a few minutes. Then clear the terminal.",
+                "Sealed with the phone's words: it opens only with them. On the phone, Next, then scan it " +
+                    "(the phone takes it once, within 5 minutes of showing the words). Then clear the terminal.",
             )
         }
         return 0
     }
 
-    // The five words, from the terminal (three tries) or standard input (one), or null, said why.
+    // The five words, from a terminal (three tries) or standard input (one), or null, said why.
     private fun readWords(): List<String>? {
         val list = KeyWords.load(JvmResourceReader)
-        val tries = if (terminal != null) TRIES else 1
+        val shell = terminal()
+        val source = shell.wordsSource(stdinTaken)
+        val tries = if (source == Terminal.WordsSource.STDIN) 1 else TRIES
         var words: List<String>? = null
         var asked = 0
         var answered = true
         while (words == null && answered && asked < tries) {
             asked++
-            val read = typed()?.let(list::read)
+            val read = typed(shell, source)?.let(list::read)
             val problem = read?.let(::problemOf)
             when {
                 read == null -> answered = false
@@ -129,13 +133,23 @@ class KeysQr(
         return words
     }
 
-    // A line of words, from the terminal or standard input, or null when there is none.
-    private fun typed(): String? =
-        when {
-            terminal != null -> terminal.invoke(PROMPT)
-            stdinTaken -> null.also { err.println(NO_TERMINAL) }
-            else -> input.bufferedReader().readLine()
-        } ?: null.also { if (terminal != null || !stdinTaken) err.println(NO_WORDS) }
+    // A line of words, from [source], or null when there is none, said why.
+    private fun typed(
+        shell: Terminal,
+        source: Terminal.WordsSource,
+    ): String? {
+        val line =
+            when (source) {
+                Terminal.WordsSource.CONSOLE -> shell.console?.invoke(PROMPT)
+                Terminal.WordsSource.TTY -> shell.tty?.invoke(PROMPT)
+                Terminal.WordsSource.STDIN -> input.bufferedReader().readLine()
+                Terminal.WordsSource.NO_MASKED_TERMINAL -> null.also { err.println(NO_MASKED_TERMINAL) }
+                Terminal.WordsSource.STDIN_TAKEN -> null.also { err.println(NO_TERMINAL) }
+            }
+        val refused = source == Terminal.WordsSource.NO_MASKED_TERMINAL || source == Terminal.WordsSource.STDIN_TAKEN
+        if (line == null && !refused) err.println(NO_WORDS)
+        return line
+    }
 
     // What is wrong with the words [read], or null when they are the five.
     private fun problemOf(read: List<String?>): String? {
@@ -212,6 +226,9 @@ class KeysQr(
         private const val PROMPT =
             "The five words Load keys shows on the phone, in order (the first three letters of each are enough): "
         private const val NO_WORDS = "No words given: nothing drawn."
+        private const val NO_MASKED_TERMINAL =
+            "The words would show as they are typed: this terminal's echo cannot be turned off. Pipe them in " +
+                "(the first line of standard input), or give --unsealed."
         private const val NO_TERMINAL =
             "The words are read from the terminal, or from standard input, which a key is read from here: " +
                 "run it in a terminal, give the key as a file (such as --anthropic-from <(pbpaste)), " +
@@ -231,10 +248,10 @@ class KeysQr(
               any --<name>-from, only the keys in those files, - for standard input (one at most).
               --keys and --<name>-from cannot be combined.
               The code is sealed with the five words Load keys shows on the phone, asked for at a
-              prompt and not echoed (with no terminal, the first line of standard input), never taken
-              from the command line: only that phone opens it, with those words, once, within a few
-              minutes. With --unsealed, the clear code, which is the keys themselves, for a key's own
-              Scan QR code.
+              prompt on the terminal with its echo off (from a pipe, the first line of standard
+              input), never taken from the command line: the code opens only with those words, and
+              the phone takes it once, within 5 minutes of showing them. With --unsealed, the clear
+              code, which is the keys themselves, for a key's own Scan QR code.
               Nothing is written to a file or sent anywhere. Do not make the code with an online QR
               generator: it would receive the keys.
 

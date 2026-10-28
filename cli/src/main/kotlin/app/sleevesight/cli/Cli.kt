@@ -61,7 +61,8 @@ class Cli(
     private val err: PrintStream,
     private val environment: Map<String, String> = System.getenv(),
     private val input: InputStream = System.`in`,
-    private val terminal: ((String) -> String?)? = null,
+    // Where `keys-qr` reads the words: asked only then, since finding out runs `stty` and `sh`.
+    private val terminal: () -> Terminal = { Terminal() },
 ) {
     fun run(args: List<String>): Int =
         if (args.firstOrNull() == KEYS_QR) {

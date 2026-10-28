@@ -44,14 +44,16 @@ class KeysQrTest {
         vararg args: String,
         environment: Map<String, String> = emptyMap(),
         stdin: String = "",
+        shell: Terminal = Terminal(),
         terminal: ((String) -> String?)? = null,
     ): Run {
         val out = ByteArrayOutputStream()
         val err = ByteArrayOutputStream()
         val input = ByteArrayInputStream(stdin.toByteArray())
         val status =
-            Cli(PrintStream(out, true), PrintStream(err, true), environment, input, terminal)
-                .run(listOf("keys-qr") + args)
+            Cli(PrintStream(out, true), PrintStream(err, true), environment, input) {
+                terminal?.let { Terminal(console = it) } ?: shell
+            }.run(listOf("keys-qr") + args)
         return Run(status, out.toString(Charsets.UTF_8), err.toString(Charsets.UTF_8))
     }
 
@@ -303,5 +305,29 @@ class KeysQrTest {
         assertEquals(Cli.EXIT_USAGE, run.status)
         assertEquals("", run.out)
         assertTrue("No words given" in run.err)
+    }
+
+    @Test
+    fun `standard input a terminal whose echo cannot be turned off is not read, and nothing is drawn`() {
+        val file = File(dir, "echo.env").apply { writeText("SLEEVESIGHT_EXA_API_KEY=$exa\n") }
+        val echoing =
+            run("--keys", file.path, stdin = "${words.joinToString(" ")}\n", shell = Terminal(stdinIsTerminal = true))
+        assertEquals(Cli.EXIT_USAGE, echoing.status)
+        assertEquals("", echoing.out)
+        assertTrue("echo cannot be turned off" in echoing.err)
+        for (word in words) assertFalse(word in echoing.err)
+    }
+
+    @Test
+    fun `with a key on standard input, the words come from the controlling terminal with its echo off`() {
+        val prompts = mutableListOf<String>()
+        val tty: (String) -> String? = { prompt ->
+            prompts += prompt
+            words.joinToString(" ")
+        }
+        val run = run("--lastfm-from", "-", stdin = lastFm, shell = Terminal(tty = tty))
+        assertEquals(0, run.status, run.err)
+        assertEquals(1, prompts.size)
+        assertEquals(mapOf(KeyName.LASTFM to lastFm), opened(run.out).keys.mapValues { it.value.reveal() })
     }
 }
