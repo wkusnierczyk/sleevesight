@@ -126,6 +126,9 @@ class FakeProvider(
 class MemoryCache : PipelineCache {
     val results = mutableMapOf<Pair<SourceId, String>, SourceResult>()
     val cards = mutableMapOf<CardKey, String>()
+
+    /** When each card was written, where the writer said. */
+    val keptAt = mutableMapOf<CardKey, Instant>()
     var failing = false
 
     override suspend fun result(
@@ -154,5 +157,14 @@ class MemoryCache : PipelineCache {
         text: String,
     ) {
         cards[key] = text
+    }
+
+    override suspend fun keep(
+        key: CardKey,
+        text: String,
+        writtenAt: Instant,
+    ) {
+        cards[key] = text
+        keptAt[key] = writtenAt
     }
 }

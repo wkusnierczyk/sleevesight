@@ -38,9 +38,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import kotlin.time.Clock
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
-import kotlin.time.Instant
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * What a genre's panel shows above its table, in the app (#523): a genre's definition found once for
@@ -50,7 +50,12 @@ import kotlin.time.Instant
  */
 class AppGenreNotesTest {
     private val provider = CountingProvider().apply { reply = { "Its loud guitars are rock [MB1]." } }
-    private val cache = CardCache()
+
+    // A clock the tests move.
+    private val clock = MovedClock()
+
+    // A cache that says when each card was kept: the time given, or its own reading of [clock].
+    private val cache = CardCache(clock = clock)
     private val parts =
         MutableStateFlow<PipelineParts?>(
             PipelineParts(
@@ -88,14 +93,6 @@ class AppGenreNotesTest {
         val row = GenreRow(GenreLevel.ARTIST, "A", listOf(label("rock"), label("punk")))
         return playing.copy(genres = TrackGenres(listOf(row)))
     }
-
-    // A clock the tests move.
-    private val clock =
-        object : Clock {
-            var at = Instant.parse("2026-10-27T12:00:00Z")
-
-            override fun now(): Instant = at
-        }
 
     private fun TestScope.notes(epoch: ClearEpoch = ClearEpoch()) =
         AppGenreNotes(definitions, parts, settings, this, epoch, clock = clock)
@@ -205,6 +202,24 @@ class AppGenreNotesTest {
             notes.explain(track(), "rock")
             advanceUntilIdle()
             assertEquals(2, provider.requests)
+        }
+
+    @Test
+    fun `a reason written is held from the time the cache keeps it with`() =
+        runTest {
+            settings.value = settings.value?.copy(historyLifetime = 7.days)
+            // The clock moves on each time it is read while the reason is written.
+            clock.tick = 1.milliseconds
+            val notes = notes()
+            notes.explain(track(), "rock")
+            advanceUntilIdle()
+            clock.tick = Duration.ZERO
+            val kept = cache.keptTimes.single()
+            clock.at = kept + 7.days - 1.milliseconds
+            assertTrue(notes.reason(track(), "rock").first() is GenreReason.Shown)
+            // Past *Keep history for* by the cache's time, past it on the screen too.
+            clock.at = kept + 7.days
+            assertEquals(GenreReason.Offered, notes.reason(track(), "rock").first())
         }
 
     @Test
