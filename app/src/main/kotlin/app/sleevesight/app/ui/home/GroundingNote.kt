@@ -13,12 +13,14 @@ import app.sleevesight.core.synthesis.GroundedText
 import app.sleevesight.core.synthesis.SentenceStatus
 
 /**
- * The line under a written insight: with [details] (*Show grounding details*, a developer option,
- * #437) the grounding check's counts in full ([Meta]), else a note only when there is something
- * to say ([Note]). [modifier] goes to the line's text. With no note, nothing is drawn, and the
- * modifier with it: a caller that sets the line in a row beside other content fills the space
- * itself, so that content keeps its place (a weighted `Box` around the line, a
- * `Spacer(Modifier.weight(1f))`, or `Arrangement.End`).
+ * The grounding line under a written insight or a genre's reason: with [details] (*Show grounding
+ * details*, a developer option, #437) the grounding check's counts in full ([Meta]), else a note
+ * only when there is something to say ([Note]), which says [cached] (*Kept from before.*) too; the
+ * insight passes false, since its footer's first line says so (*As written previously.*, #671).
+ * [modifier] goes to the line's text. With no note, nothing is drawn, and the modifier with it: a
+ * caller that sets the line in a row beside other content fills the space itself, so that content
+ * keeps its place (a weighted `Box` around the line, a `Spacer(Modifier.weight(1f))`, or
+ * `Arrangement.End`).
  */
 @Composable
 internal fun GroundingLine(
@@ -28,14 +30,14 @@ internal fun GroundingLine(
     modifier: Modifier = Modifier,
 ) {
     // The full counts show only in developer mode, and are marked as such (#536).
-    if (details) DeveloperMark { Meta(grounded, cached, modifier) } else Note(grounded, cached, modifier)
+    if (details) DeveloperMark { Meta(grounded, modifier) } else Note(grounded, cached, modifier)
 }
 
 /**
  * The note under the insight (#437), shown only when there is something to say: the sentences the
  * sources do not back, which are underlined in red (uncited, or citing missing evidence), named by
- * that mark ("The sentence underlined in red is not backed by the sources.", #664), and that the
- * insight was kept from before. A sentence from the model's own knowledge is not counted: it is
+ * that mark ("The sentence underlined in red is not backed by the sources.", #664), and, for a
+ * genre's reason, that it was kept from before. A sentence from the model's own knowledge is not counted: it is
  * not underlined, and its own chip says where it is from. A sentence the sources back
  * needs no word: its citations show it. The full counts are [Meta]'s, behind *Show grounding details*.
  * A sentence that shows as nothing once its Markdown is cleaned (a rule on its own, #555) is not
@@ -73,11 +75,13 @@ private val UNDERLINED = setOf(SentenceStatus.UNCITED, SentenceStatus.UNKNOWN)
  */
 internal val UNBACKED = setOf(SentenceStatus.UNCITED, SentenceStatus.UNKNOWN, SentenceStatus.MODEL)
 
-/** The grounding check's counts in full, as the simulator gives them (*Show grounding details*). */
+/**
+ * The grounding check's counts in full, as the simulator gives them (*Show grounding details*).
+ * Not whether the insight was kept from before: its footer's first line says that (#671).
+ */
 @Composable
 private fun Meta(
     grounded: GroundedText,
-    cached: Boolean,
     modifier: Modifier,
 ) {
     val counts = grounded.counts
@@ -91,7 +95,6 @@ private fun Meta(
                 add(pluralStringResource(R.plurals.home_meta_unknown, counts.unknown, counts.unknown))
             }
             if (grounded.withdrawn != null) add(stringResource(R.string.home_meta_self_corrected))
-            if (cached) add(stringResource(R.string.home_meta_kept))
         }
     MetaLine(parts.joinToString(" · "), modifier)
 }

@@ -45,9 +45,9 @@ import org.robolectric.RobolectricTestRunner
  * *Look again* on the insight card (#617): the first item of the split button's menu beside a
  * written insight, with no **AI** mark (it makes no call); enabled while the pipeline offers it,
  * and a tap carries the key it was offered under and the track shown; absent with no written
- * insight. Under *Kept from before.*, while it looks: what it costs, the web search named when it
- * is looked up; once it found something new, that *Rewrite insight* writes from it (in place of
- * the settings' rewrite line); once it found nothing new, that it did.
+ * insight. After *As written previously.*, on the same line (#671), while it looks: what it costs,
+ * the web search named when it is looked up; once it found something new, that *Rewrite insight*
+ * uses it (in place of the settings' rewrite words); once it found nothing new, that it did.
  */
 @RunWith(RobolectricTestRunner::class)
 class LookAgainScreenTest {
@@ -135,7 +135,7 @@ class LookAgainScreenTest {
         view.value = PipelineView(kept, aiReady = true, cardShown = true, lookingAgain = true)
         show {
             compose
-                .onNodeWithText("Looking every source up again.")
+                .onNodeWithText("As written previously. Looking every source up again.")
                 .assertExists()
         }
         val searching = kept.copy(sources = kept.sources + (SourceId.WEB to SourceState.Pending))
@@ -143,7 +143,8 @@ class LookAgainScreenTest {
         show {
             compose
                 .onNodeWithText(
-                    "Looking every source up again, the web search included: a paid search on your Exa key.",
+                    "As written previously. " +
+                        "Looking every source up again, the web search included: a paid search on your Exa key.",
                 ).assertExists()
         }
     }
@@ -163,20 +164,17 @@ class LookAgainScreenTest {
             compose.onNodeWithTag(WRITE_TAG).assertTextEquals("Rewrite insight").assertIsEnabled()
             compose
                 .onNodeWithText(
-                    "The sources found something new. Tap Rewrite insight to have the insight written from it, " +
-                        "a paid call.",
+                    "As written previously. New findings from sources: tap Rewrite insight to use them, a paid call.",
                 ).assertExists()
-            compose.onNodeWithText("Rewrite insight with updated source or model settings.").assertDoesNotExist()
+            compose.onNodeWithText("updated source or model settings", substring = true).assertDoesNotExist()
         }
     }
 
     @Test
-    fun nothingNewIsSaidUnderKeptFromBefore() {
+    fun nothingNewIsSaidAfterAsWrittenPreviously() {
         view.value = PipelineView(kept, aiReady = true, cardShown = true, lookAgainKey = key, nothingNew = true)
         show {
-            val above = compose.onNodeWithText("Kept from before.").fetchSemanticsNode().boundsInRoot
-            val line = compose.onNodeWithText("The sources found nothing new.").fetchSemanticsNode().boundsInRoot
-            assertEquals(above.bottom, line.top, 1f)
+            compose.onNodeWithText("As written previously. No update from sources.").assertExists()
         }
     }
 

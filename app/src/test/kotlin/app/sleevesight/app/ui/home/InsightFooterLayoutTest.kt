@@ -9,9 +9,13 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -33,13 +37,15 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import kotlin.math.abs
 
 /**
- * The footer under a written insight (#606, from #598): the grounding line, and the rewrite's lines
- * under it, with *Report a problem* at the row's end beside them, at the usual font size; at twice
- * the size, where the action beside them left the line about a word a line, the action under the
- * last line, still at the row's end, and the lines on the whole row. A screen reader reads every
- * line, then the action. Text measured as on a phone.
+ * The footer under a written insight (#671, which replaced #606's row): each part on its own line,
+ * at the start, top to bottom: *As written previously.* with what follows from it, the grounding
+ * line (the note on the sentences underlined in red, or in developer mode the counts), then *Report
+ * a problem*, its label where the lines start, in the theme's error colour, light and dark. At twice
+ * the font size each line wraps on its own, on the whole row. A screen reader reads them in that
+ * order. Text measured as on a phone.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w411dp-h891dp-420dpi")
@@ -48,11 +54,15 @@ class InsightFooterLayoutTest {
     @get:Rule
     val compose = createEmptyComposeRule()
 
+    // The theme's error colour, as the card was drawn in it.
+    private var error = Color.Unspecified
+
     private fun show(
         details: Boolean,
-        rewrite: Boolean = false,
+        dark: Boolean = false,
         block: (MainActivity) -> Unit,
     ) {
+        // The second sentence cites nothing: underlined in red, so the note shows.
         val insight = HomeFixtures.written("Sundown was recorded in 1973 [MB1]. It is a classic.", cached = true)
         val context =
             InsightContext(
@@ -60,14 +70,15 @@ class InsightFooterLayoutTest {
                 aiReady = true,
                 insightsOn = true,
                 modelAllowed = false,
-                offers = InsightOffers(rewrite = rewrite),
-                // The card's rewrite stopped, and *Rewrite insight* offered again.
-                rewriteFailed = PipelineHost.STOPPED.takeIf { rewrite },
+                offers = InsightOffers(rewrite = true),
+                // The card's rewrite stopped, and *Rewrite insight* offered again: the longest line 1.
+                rewriteFailed = PipelineHost.STOPPED,
             )
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity {
                 it.setContent {
-                    SleevesightTheme(darkTheme = false) {
+                    SleevesightTheme(darkTheme = dark) {
+                        error = MaterialTheme.colorScheme.error
                         Column(Modifier.padding(16.dp).fillMaxWidth().testTag(CARD)) {
                             InsightCard(
                                 insight,
@@ -97,56 +108,63 @@ class InsightFooterLayoutTest {
 
     private val density get() = compose.density.density
 
-    @Test
-    fun atTheUsualFontSizeReportAProblemIsBesideTheGroundingLine() {
-        for ((details, line) in listOf(false to NOTE, true to META)) {
+    private fun assertEachOnItsOwnLineAtTheStart(scale: Float) {
+        for ((details, grounding) in listOf(false to NOTE, true to COUNTS)) {
             show(details) { _ ->
-                val text = bounds(line)
+                val first = bounds(BEFORE)
+                val second = bounds(grounding)
                 val action = report
-                assertTrue("$line: the action after the line", action.left >= text.right)
-                assertEquals("$line: the action at the row's end", card.right, action.right, 1f)
-                assertEquals("$line: the two centred on each other", text.center.y, action.center.y, density)
+                val where = "$grounding at $scale"
+                assertTrue("$where: the grounding line under line 1", second.top >= first.bottom - 1f)
+                assertTrue("$where: Report a problem under the grounding line", action.top >= second.bottom - 1f)
+                assertEquals("$where: line 1 at the start", card.left, first.left, 1f)
+                // In developer mode its mark's outline sits round it, in the same column.
+                assertEquals("$where: the grounding line at the start", card.left, second.left, density * 2)
+                // The action's label, inside the button, where the lines start.
+                assertEquals("$where: Report a problem's label at the start", card.left, bounds(REPORT).left, 1f)
+                // Its 48 dp target, which its semantic bounds (the button drawn) leave out, reserved
+                // under the line above, to the card's end, where the action is last.
+                assertTrue("$where: a 48 dp target", (card.bottom - second.bottom) / density >= 48f - 0.5f)
+                assertTrue("$where: the action inside it", action.bottom <= card.bottom + 1f)
             }
         }
     }
 
     @Test
+    fun atTheUsualFontSizeEachPartIsOnItsOwnLineAtTheStart() = assertEachOnItsOwnLineAtTheStart(1f)
+
+    @Test
     @Config(fontScale = 2f)
-    fun atTwiceTheFontSizeReportAProblemIsUnderTheGroundingLine() {
-        for ((details, line) in listOf(false to NOTE, true to META)) {
-            show(details) { _ ->
-                val text = bounds(line)
-                val action = report
-                assertTrue("$line: the action under the line", action.top >= text.bottom - 1f)
-                assertEquals("$line: the action at the row's end", card.right, action.right, 1f)
-                assertTrue("$line: the line wider than half the row", text.width > card.width / 2)
-                assertTrue("$line: the action still 48 dp high", action.height / density >= 48f - 0.5f)
+    fun atTwiceTheFontSizeEachPartIsOnItsOwnLineAtTheStart() = assertEachOnItsOwnLineAtTheStart(2f)
+
+    @Test
+    @Config(fontScale = 2f)
+    fun atTwiceTheFontSizeEachLineWrapsOnTheWholeRow() =
+        show(details = false) { _ ->
+            val first = bounds(BEFORE)
+            // Line 1 wraps (several lines high), on the whole row rather than beside the action.
+            assertTrue("line 1 wraps", first.height > bounds(REPORT).height * 2)
+            assertTrue("line 1 on more than half the row", first.width > card.width / 2)
+            assertTrue("the note on more than half the row", bounds(NOTE).width > card.width / 2)
+        }
+
+    @Test
+    fun reportAProblemIsInTheThemesErrorColourLightAndDark() {
+        for (dark in listOf(false, true)) {
+            show(details = false, dark = dark) { _ ->
+                val pixels = compose.onNodeWithTag(REPORT_TAG).captureToImage().toPixelMap()
+                val drawn = (0 until pixels.width).flatMap { x -> (0 until pixels.height).map { y -> pixels[x, y] } }
+                // The label's strokes are drawn solid in the error colour.
+                assertTrue("dark $dark: the label in $error", drawn.any { close(it, error) })
             }
         }
     }
 
-    @Test
-    fun withTheRewritesLinesReportAProblemIsCentredBesideThemAll() =
-        show(details = false, rewrite = true) { _ ->
-            val first = bounds(NOTE)
-            val last = bounds(OFFERED)
-            val action = report
-            val lines = maxOf(first.right, bounds(STOPPED).right, last.right)
-            assertTrue("the action after every line", action.left >= lines)
-            assertEquals("the action centred on the lines", (first.top + last.bottom) / 2, action.center.y, density)
-        }
+    private fun close(
+        a: Color,
+        b: Color,
+    ): Boolean = listOf(a.red - b.red, a.green - b.green, a.blue - b.blue).all { abs(it) < TOLERANCE }
 
-    @Test
-    @Config(fontScale = 2f)
-    fun atTwiceTheFontSizeReportAProblemIsUnderTheRewritesLastLine() =
-        show(details = false, rewrite = true) { _ ->
-            val action = report
-            assertTrue("the action under the last line", action.top >= bounds(OFFERED).bottom - 1f)
-            assertEquals("the action at the row's end", card.right, action.right, 1f)
-        }
-
-    // Centred on the lines, the action sat level with the stopped line, and a screen reader read it
-    // between that line and the offer to rewrite.
     @Test
     fun aScreenReaderReadsEveryLineThenReportAProblem() {
         val accessibility =
@@ -157,15 +175,12 @@ class InsightFooterLayoutTest {
         shadowOf(accessibility).setEnabledAccessibilityServiceList(listOf(AccessibilityServiceInfo()))
         for (scale in listOf(1f, 2f)) {
             RuntimeEnvironment.setFontScale(scale)
-            show(details = false, rewrite = true) { activity ->
+            show(details = false) { activity ->
                 val provider = checkNotNull(composeView(activity.window.decorView).accessibilityNodeProvider)
-                val ids = listOf(NOTE, STOPPED, OFFERED).map { node(it).id } + reportNode.id
+                val ids = listOf(BEFORE, NOTE).map { node(it).id } + reportNode.id
                 // Each node names the one read after it.
-                val next = ids.map { checkNotNull(provider.createAccessibilityNodeInfo(it)).extras.getInt(BEFORE) }
-                assertEquals("at $scale: the lines, then the action", ids.drop(1), next.dropLast(1))
-                // Both layouts: beside the lines at the usual size, under them at twice the size.
-                val under = report.top >= bounds(OFFERED).bottom - 1f
-                assertEquals("at $scale: the action under the lines", scale > 1f, under)
+                val next = ids.map { checkNotNull(provider.createAccessibilityNodeInfo(it)).extras.getInt(AFTER) }
+                assertEquals("at $scale: line 1, the note, then the action", ids.drop(1), next.dropLast(1))
             }
         }
     }
@@ -180,12 +195,13 @@ class InsightFooterLayoutTest {
 
     private companion object {
         const val CARD = "card"
-        const val NOTE = "Kept from before."
-        const val META = "kept from before"
-        const val STOPPED = "Rewriting stopped."
-        const val OFFERED = "Rewrite insight with"
+        const val BEFORE = "As written previously. Rewriting stopped. Tap Rewrite insight"
+        const val NOTE = "The sentence underlined in red is not backed by the sources."
+        const val COUNTS = "1 of 2 sentences grounded · 1 uncited"
+        const val REPORT = "Report a problem"
+        const val TOLERANCE = 0.02f
 
         // Where Compose puts, for tests, the node a screen reader reads after a node.
-        const val BEFORE = "android.view.accessibility.extra.EXTRA_DATA_TEST_TRAVERSALBEFORE_VAL"
+        const val AFTER = "android.view.accessibility.extra.EXTRA_DATA_TEST_TRAVERSALBEFORE_VAL"
     }
 }

@@ -66,7 +66,7 @@ import org.robolectric.shadows.ShadowToast
  * insight*, the same in every mode, or *Stop writing* while one is written, in each situation:
  * the app just started, a new track with nothing written, an insight shown, a track that came to
  * play while *Saver* had paused automatic writing, a card written with earlier settings (*Rewrite
- * insight*, its line straight under *Kept from before.*, #606), a track that followed the last one
+ * insight*, said after *As written previously.* on the same line, #606, #671), a track that followed the last one
  * by itself, writing, and a failure; each with its line. The arrow's menu is *Reactive*, in order of
  * how much is written automatically, each showing the other's change, every choice told on (the
  * one chosen included), and it ends with the way to it in the settings; another automatic mode
@@ -251,7 +251,7 @@ class WriteSplitButtonScreenTest {
     @Test
     fun aCardWrittenWithEarlierSettingsIsRewriteInsightInEveryMode() {
         // Kept from before, its key changed by a settings change: the coordinator offers a rewrite.
-        // Not from the cache, so *Kept from before.* says so for the card paid for (#606).
+        // Not from the cache, so *As written previously.* says so for the card paid for (#606, #671).
         val kept = track(insight = written("It is a song [MB1]."))
         for (mode in WriteAutomatically.entries) {
             settings.value = Settings(writeAutomatically = mode)
@@ -260,8 +260,7 @@ class WriteSplitButtonScreenTest {
                 show {
                     leading(WRITE_TAG).assertTextEquals("Rewrite insight").assertIsEnabled()
                     assertEquals(0, count(NO_ACTION_TAG))
-                    says("Kept from before.")
-                    says("Rewrite insight with updated source or model settings.")
+                    says("As written previously. $REWRITE_OFFERED")
                     arrow.assertIsEnabled()
                 }
             }
@@ -269,34 +268,25 @@ class WriteSplitButtonScreenTest {
     }
 
     @Test
-    fun theRewriteLineSitsStraightUnderKeptFromBefore() {
-        // Nothing between them, *Report a problem* included (#606), for the rewrite offered and for
-        // one that failed or was stopped.
+    fun theRewritesWordsFollowAsWrittenPreviouslyOnItsLineAboveReportAProblem() {
+        // One line (#671), for the rewrite offered and for one that failed or was stopped, and
+        // *Report a problem* under it, at the start.
         val kept = track(insight = written("It is a song [MB1]."))
         val lines =
             listOf(
                 PipelineView(kept, aiReady = true, rewrite = true, cardShown = true) to
-                    listOf("Rewrite insight with updated source or model settings."),
+                    "As written previously. $REWRITE_OFFERED",
                 PipelineView(kept, aiReady = true, rewrite = true, cardShown = true, rewriteFailed = "offline") to
-                    listOf(
-                        "Rewriting failed: no connection. This is the insight written earlier.",
-                        "Rewrite insight with updated source or model settings.",
-                    ),
+                    "As written previously. Rewriting failed: no connection. $REWRITE_OFFERED",
                 PipelineView(kept, aiReady = true, cardShown = true, rewriteFailed = PipelineHost.STOPPED) to
-                    listOf("Rewriting stopped. This is the insight written earlier."),
+                    "As written previously. Rewriting stopped.",
             )
-        for ((pipeline, under) in lines) {
+        for ((pipeline, line) in lines) {
             view.value = pipeline
             show {
-                var above = bounds("Kept from before.")
-                for (line in under) {
-                    val next = bounds(line)
-                    assertEquals("$line straight under the line above", above.bottom, next.top, 1f)
-                    assertEquals("$line aligned with Kept from before.", above.left, next.left, 1f)
-                    above = next
-                }
+                val above = bounds(line)
                 val report = compose.onNodeWithTag(REPORT_TAG).fetchSemanticsNode().boundsInRoot
-                assertTrue("Report a problem beside the lines, not under them", report.left >= above.right)
+                assertTrue("Report a problem under the line", report.top >= above.bottom - 1f)
             }
         }
     }
@@ -310,7 +300,7 @@ class WriteSplitButtonScreenTest {
         unavailable.value = UnavailableModel(ProviderId.ANTHROPIC, "claude-gone")
         show {
             leading(NO_ACTION_TAG).assertTextEquals("Write insight").assertIsNotEnabled()
-            compose.onNodeWithText("Rewrite insight with updated source or model settings.").assertDoesNotExist()
+            absent(REWRITE_OFFERED)
         }
     }
 
@@ -318,9 +308,9 @@ class WriteSplitButtonScreenTest {
     fun aCardKeptFromBeforeSaysSoEvenWhenNotFromTheCache() {
         // The card paid for, shown in place of the run's own insight: not served from the cache.
         view.value = PipelineView(track(insight = written("It is a song [MB1].")), aiReady = true, cardShown = true)
-        show { says("Kept from before.") }
+        show { says("As written previously.") }
         view.value = PipelineView(track(insight = written("It is a song [MB1].")), aiReady = true)
-        show { compose.onNodeWithText("Kept from before.").assertDoesNotExist() }
+        show { absent("As written previously.") }
     }
 
     @Test
@@ -328,22 +318,20 @@ class WriteSplitButtonScreenTest {
         val kept = track(insight = written("It is a song [MB1]."))
         val said =
             mapOf(
-                "offline" to "Rewriting failed: no connection. This is the insight written earlier.",
-                PipelineHost.STOPPED to "Rewriting stopped. This is the insight written earlier.",
+                "offline" to "Rewriting failed: no connection.",
+                PipelineHost.STOPPED to "Rewriting stopped.",
             )
         for ((why, line) in said) {
             view.value = PipelineView(kept, aiReady = true, rewrite = true, cardShown = true, rewriteFailed = why)
             show {
                 compose.onNodeWithText("It is a song", substring = true).assertExists()
-                says(line)
-                says("Kept from before.")
+                says("As written previously. $line $REWRITE_OFFERED")
                 leading(WRITE_TAG).assertTextEquals("Rewrite insight").assertIsEnabled()
-                says("Rewrite insight with updated source or model settings.")
             }
             // Until the coordinator offers it again: the line, and Write insight disabled.
             view.value = PipelineView(kept, aiReady = true, cardShown = true, rewriteFailed = why)
             show {
-                says(line)
+                says("As written previously. $line")
                 leading(NO_ACTION_TAG).assertTextEquals("Write insight").assertIsNotEnabled()
             }
         }
@@ -563,6 +551,9 @@ class WriteSplitButtonScreenTest {
     }
 
     private companion object {
+        // What follows *As written previously.* with *Rewrite insight* offered (#671).
+        const val REWRITE_OFFERED = "Tap Rewrite insight to write it with the updated source or model settings."
+
         // In order of how much is written automatically (#625).
         val WRITING_ORDER =
             listOf(WriteAutomatically.NEVER, WriteAutomatically.WHEN_I_SKIP, WriteAutomatically.ON_EVERY_TRACK_CHANGE)

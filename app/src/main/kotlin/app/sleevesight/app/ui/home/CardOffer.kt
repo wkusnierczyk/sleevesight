@@ -84,10 +84,10 @@ internal fun offersLookAgain(context: InsightContext): Boolean =
     context.offers.lookAgain && context.insightsOn && context.aiReady && context.unavailable == null
 
 /**
- * The line said of *Look again* (#617) under *Kept from before.*: while it looks the sources up,
- * what that costs, the web search named when the run looks it up; once it found something new, that
- * *Rewrite insight* writes from it, a paid call, while that is offered; once it found nothing new,
- * that it did; else none.
+ * What is said of *Look again* (#617) after *As written previously.* (#671), on the same line: while
+ * it looks the sources up, what that costs, the web search named when the run looks it up; once it
+ * found something new, that *Rewrite insight* uses it, a paid call, while that is offered; once it
+ * found nothing new, that it did; else none.
  */
 @StringRes
 internal fun lookAgainLine(context: InsightContext): Int? =

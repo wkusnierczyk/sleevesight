@@ -552,7 +552,7 @@ class NowPlayingScreenTest {
         writes = 0
         val kept = track(insight = written("It was recorded in 1973 [MB1].", cached = true))
         show(state(PipelineView(kept, aiReady = true, rewrite = true, cardShown = true, writeKey = sundownKey))) {
-            compose.onNodeWithText(text(R.string.home_rewrite_offered)).assertExists()
+            compose.onNodeWithText(text(R.string.home_rewrite_offered), substring = true).assertExists()
             unfold()
             compose.onNodeWithText(text(R.string.home_evidence_cited)).assertExists()
             compose.onNodeWithTag(WRITE_TAG).performScrollTo().performClick()
