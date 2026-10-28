@@ -57,6 +57,7 @@ import app.sleevesight.app.speech.ReadAloud
 import app.sleevesight.app.speech.ReadAloudMessages
 import app.sleevesight.app.speech.SystemMusicFocus
 import app.sleevesight.app.speech.SystemSpeech
+import app.sleevesight.app.speech.screenReaderOn
 import app.sleevesight.app.ui.home.GuideDismissal
 import app.sleevesight.app.ui.home.SpokenWords
 import app.sleevesight.core.ai.AiProvider
@@ -535,9 +536,7 @@ class AppGraph internal constructor(
                 SpokenWords(appContext.getString(R.string.read_aloud_unverified)) { title, artists ->
                     appContext.getString(R.string.read_aloud_track_line, title, artists)
                 },
-            screenReader = {
-                appContext.getSystemService(AccessibilityManager::class.java)?.isTouchExplorationEnabled == true
-            },
+            screenReader = { screenReaderOn(appContext.getSystemService(AccessibilityManager::class.java)) },
             tell = ReadAloudMessages(appContext)::tell,
         )
     }

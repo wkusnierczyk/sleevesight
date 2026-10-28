@@ -79,6 +79,7 @@ internal class FakeFocus(
 ) : MusicFocus {
     val taken = mutableListOf<ReadAloudMusic>()
     var held = false
+    var releases = 0
     private var lost: (() -> Unit)? = null
 
     override fun take(
@@ -93,6 +94,7 @@ internal class FakeFocus(
     }
 
     override fun release() {
+        if (held) releases++
         held = false
     }
 
@@ -172,6 +174,37 @@ class ReadAloudTest {
         assertFalse(focus.held)
         // The end it would have had changes nothing.
         speech.finish()
+        assertNull(readAloud.reading.value)
+    }
+
+    @Test
+    fun aReadingThatReplacesAnotherKeepsTheMusicDownBetweenThem() {
+        readAloud.readInsight(shown, insight)
+        readAloud.readGenreReason(shown, "folk rock", "Why is this folk rock?", written("It is folk rock [MB1]."))
+        assertEquals("the focus taken once", listOf(ReadAloudMusic.LOWER), focus.taken)
+        assertEquals("never given back between them", 0, focus.releases)
+        assertTrue(focus.held)
+        speech.finish()
+        assertEquals(1, focus.releases)
+        assertFalse(focus.held)
+    }
+
+    @Test
+    fun aGenresReasonReplacedOrWithdrawnStopsItsReadingAndTheSameShownAgainDoesNot() {
+        val id = Reading.genreReason("folk rock")
+        val reason = written("It is folk rock [MB1].")
+        readAloud.readGenreReason(shown, "folk rock", "Why is this folk rock?", reason)
+        // The same reason shown again (the panel opened again, a rotation's new frame), or another genre's.
+        readAloud.shown(id, reason)
+        readAloud.shown(Reading.genreReason("jazz"), null)
+        assertEquals(id, readAloud.reading.value?.id)
+        // Offered again (a settings change): withdrawn.
+        readAloud.shown(id, null)
+        assertNull(readAloud.reading.value)
+        assertFalse(focus.held)
+
+        readAloud.readGenreReason(shown, "folk rock", "Why is this folk rock?", reason)
+        readAloud.shown(id, written("It is folk rock, rewritten [MB1]."))
         assertNull(readAloud.reading.value)
     }
 

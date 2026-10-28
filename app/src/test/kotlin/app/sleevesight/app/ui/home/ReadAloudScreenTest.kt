@@ -27,6 +27,7 @@ import app.sleevesight.app.session.PlaybackStatus
 import app.sleevesight.app.speech.FakeFocus
 import app.sleevesight.app.speech.FakeSpeech
 import app.sleevesight.app.speech.ReadAloud
+import app.sleevesight.app.speech.Reading
 import app.sleevesight.app.ui.home.HomeFixtures.normalizer
 import app.sleevesight.app.ui.home.HomeFixtures.sundown
 import app.sleevesight.app.ui.home.HomeFixtures.track
@@ -207,14 +208,16 @@ class ReadAloudScreenTest {
 
     // Notes whose reason for jazz is written.
     private class Written(
-        private val reason: InsightState.Written,
+        reason: InsightState.Written,
     ) : GenreNotes {
+        val shown = MutableStateFlow<GenreReason>(GenreReason.Shown(reason))
+
         override fun definition(genre: String): Flow<GenreDefinition?> = flowOf(null)
 
         override fun reason(
             track: TrackState,
             genre: String,
-        ): Flow<GenreReason> = flowOf(GenreReason.Shown(reason))
+        ): Flow<GenreReason> = shown
 
         override fun explain(
             track: TrackState,
@@ -246,6 +249,38 @@ class ReadAloudScreenTest {
             compose.onNodeWithTag(GENRE_READ_ALOUD_TAG).performClick()
             compose.waitForIdle()
             assertEquals(listOf(listOf("Why is this jazz?", "Its modal tunes are jazz.")), speech.spoken)
+        }
+    }
+
+    @Test
+    fun aGenresReasonOfferedAgainWhileItIsReadStopsTheReading() {
+        val label =
+            TrackLabel(
+                GenreLabel("jazz", "jazzblues", "Jazz", "jazz", level = GenreLevel.ARTIST, artist = "Gordon Lightfoot"),
+                listOf(LabelCredit(LabelSource.LASTFM, "https://example.org/jazz")),
+            )
+        val playing =
+            track().copy(
+                genres = TrackGenres(listOf(GenreRow(GenreLevel.ARTIST, "Gordon Lightfoot", listOf(label)))),
+            )
+        val reasons = Written(written("Its modal tunes are jazz [MB1]."))
+        val notes = PanelNotes(reasons, readAloud = readAloud)
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity {
+                it.setContent {
+                    Column(
+                        Modifier.verticalScroll(rememberScrollState()),
+                    ) { GenrePanel(playing, "jazz", notes = notes) }
+                }
+            }
+            compose.onNodeWithTag(GENRE_READ_ALOUD_TAG).performScrollTo().performClick()
+            compose.waitForIdle()
+            assertEquals("jazz's reason is read", Reading.genreReason("jazz"), readAloud.reading.value?.id)
+            // A settings change offers it again: what was read is withdrawn.
+            reasons.shown.value = GenreReason.Offered
+            compose.waitForIdle()
+            assertEquals(null, readAloud.reading.value)
+            assertEquals(1, speech.stops)
         }
     }
 

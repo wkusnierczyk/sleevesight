@@ -1,5 +1,7 @@
 package app.sleevesight.app.speech
 
+import android.accessibilityservice.AccessibilityServiceInfo
+import android.view.accessibility.AccessibilityManager
 import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.app.session.TrackIdentity
 import app.sleevesight.app.ui.home.SpokenWords
@@ -57,19 +59,21 @@ enum class ReadAloudProblem {
 /**
  * *Read aloud* (#325): an insight, or a genre's reason (#523), read by the phone's text-to-speech
  * engine ([speech]), with the music lowered or paused for it ([focus]) as *While reading aloud*
- * says ([settings]). One reading at a time: a new one replaces the last. [reading] is the one under
- * way, from the tap until its last word, which a button shows as *Stop reading aloud*.
+ * says ([settings]). One reading at a time: a new one replaces the last, keeping its audio focus,
+ * so the music does not come up between them. [reading] is the one under way, from the tap until
+ * its last word, which a button shows as *Stop reading aloud*.
  *
  * It stops at once on [stop] (the button again); when the track it is about stops playing (a track
  * change, or the player's session ending: [follow]); when what it reads is no longer shown (a
- * rewrite in its place); when another app takes the sound from it (a call); and when the app leaves
- * the screen ([activityStopped]), which releases the engine too. A rotation, which stops the
+ * rewrite in its place: the card's followed here, a genre's reason told by its panel, [shown]);
+ * when another app takes the sound from it (a call); and when the app leaves the screen
+ * ([activityStopped]), which releases the engine too. A rotation, which stops the
  * activity only to start it again, does not stop it.
  *
  * *Read new insights aloud* ([follow]): an insight written while the app is on screen, as the call
  * that wrote it ends (not one from the cache, nor one written while the app was away), is read as
- * a tap would read it, never while a screen reader explores by touch ([screenReader]), which reads
- * the screen itself. The button works either way.
+ * a tap would read it, never while a screen reader is on ([screenReader], [screenReaderOn]), which
+ * reads the screen itself. The button works either way.
  *
  * What is said is the app's ([words]): the track line first with *Read the track line first*,
  * then the sentences as the card shows them ([spokenSentences]), in the insight's language
@@ -90,6 +94,9 @@ class ReadAloud(
 
     /** The reading under way, from the tap until its last word, or null. */
     val reading: StateFlow<Reading?> = readingState.asStateFlow()
+
+    // How the audio focus is held for the reading under way, or null when it is not.
+    private var held: ReadAloudMusic? = null
 
     // Activities started, and whether one stopped for a configuration change and is starting again.
     private var started = 0
@@ -124,8 +131,9 @@ class ReadAloud(
 
     /** Starts [reading], in place of the one under way. */
     fun read(reading: Reading) {
-        stop()
-        if (reading.parts.isEmpty()) return
+        if (reading.parts.isEmpty()) return stop()
+        // One under way is replaced, its focus kept: the music does not come up between the two.
+        if (readingState.value != null) speech.stop()
         readingState.value = reading
         speech.open { opened ->
             // Stopped, or replaced, while the engine opened.
@@ -134,8 +142,7 @@ class ReadAloud(
             when {
                 !opened -> fail(reading, ReadAloudProblem.NO_ENGINE)
                 !speech.speaks(reading.locale) -> fail(reading, ReadAloudProblem.NO_VOICE)
-                !focus.take(music) { if (readingState.value === reading) stop() } ->
-                    fail(reading, ReadAloudProblem.BUSY)
+                !takeFocus(music) -> fail(reading, ReadAloudProblem.BUSY)
                 else ->
                     speech.speak(
                         reading.parts,
@@ -154,9 +161,35 @@ class ReadAloud(
         end()
     }
 
+    // The audio focus for a reading, as [music] says: kept from the reading this one replaced when
+    // it was taken the same way. Another app taking it stops whatever is read.
+    private fun takeFocus(music: ReadAloudMusic): Boolean {
+        if (held == music) return true
+        val taken = focus.take(music) { stop() }
+        held = music.takeIf { taken }
+        return taken
+    }
+
     private fun end() {
         readingState.value = null
-        focus.release()
+        if (held != null) {
+            held = null
+            focus.release()
+        }
+    }
+
+    /**
+     * What a button shows for its reading [id] now ([written], or null for none: a genre's reason
+     * offered again, or gone): a reading of something else under that id stops (#325, a genre's
+     * reason replaced or withdrawn). Told only of what is shown, not of a screen's first frame, so a
+     * rotation leaves the reading as it is.
+     */
+    fun shown(
+        id: String,
+        written: InsightState.Written?,
+    ) {
+        val reading = readingState.value ?: return
+        if (reading.id == id && reading.of != written) stop()
     }
 
     private fun fail(
@@ -227,7 +260,7 @@ class ReadAloud(
     }
 
     // Whether a new insight for [track] is read by itself: *Read new insights aloud* on, the app on
-    // screen, no screen reader exploring, and [track] the one playing.
+    // screen, no screen reader on, and [track] the one playing.
     private fun readsNew(
         track: TrackState,
         now: NowPlaying?,
@@ -246,3 +279,15 @@ class ReadAloud(
  */
 fun insightLocale(phone: Locale = Locale.getDefault()): Locale =
     if (phone.language == Locale.ENGLISH.language) phone else Locale.ENGLISH
+
+/**
+ * Whether a screen reader is on (#325), which *Read new insights aloud* gives way to: a service
+ * that gives spoken feedback is enabled (TalkBack, with or without *Explore by touch*, or another),
+ * or touch exploration is on.
+ */
+fun screenReaderOn(accessibility: AccessibilityManager?): Boolean =
+    accessibility != null &&
+        (
+            accessibility.isTouchExplorationEnabled ||
+                accessibility.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_SPOKEN).isNotEmpty()
+        )

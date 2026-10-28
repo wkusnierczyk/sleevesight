@@ -11,6 +11,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -59,9 +60,16 @@ internal fun GenreAbout(
     val reader = shown.readAloud
     // A new subscription only when what the reason's key is made of changes, not on every state of
     // the track (a source landing, labels joining).
-    val reason by remember(track.normalized, track.evidence?.fingerprint, track.genres, genre, notes) {
+    // Null until the notes say: a rotation's first frame tells *Read aloud* nothing.
+    val said by remember(track.normalized, track.evidence?.fingerprint, track.genres, genre, notes) {
         notes.reason(track, genre)
-    }.collectAsState(GenreReason.None)
+    }.collectAsState<GenreReason, GenreReason?>(null)
+    val reason = said ?: GenreReason.None
+    // A reading of this genre's reason stops once another, or none, is shown in its place (#325).
+    LaunchedEffect(said, reader, genre) {
+        val now = said ?: return@LaunchedEffect
+        reader?.shown(Reading.genreReason(genre), ((now as? GenreReason.Shown)?.state as? InsightState.Written))
+    }
     val label =
         track.genres.all
             .firstOrNull { it.genre.identity == genre }

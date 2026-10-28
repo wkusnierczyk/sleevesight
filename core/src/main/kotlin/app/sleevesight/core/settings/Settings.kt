@@ -67,8 +67,8 @@ import kotlin.time.Duration.Companion.seconds
  *   the player, and the insight is what was asked for.
  * @property readNewInsightsAloud *Read new insights aloud* (#325): whether each insight is read
  *   aloud as soon as it is written, while Sleevesight is on screen (D6), and never while a screen
- *   reader explores by touch (TalkBack), which reads the screen itself. Off by default: speaking
- *   unasked over the music is a surprise, and *Read aloud* on the insight is one tap.
+ *   reader is on (spoken feedback, or touch exploration: TalkBack), which reads the screen itself.
+ *   Off by default: speaking unasked over the music is a surprise, and *Read aloud* is one tap.
  * @property cacheLifetimes the retrieval cache lifetime per source (D9). A source with none (the
  *   pseudo-sources, which retrieve nothing) is not cached.
  * @property keepArtistResults *Keep what sources said about each artist* (#420): whether what the
