@@ -45,7 +45,9 @@ class KeysQr(
     private val shell by lazy(terminal)
 
     /** The words cannot be read without showing them: said, with nothing read. */
-    private class WordsRefused : Exception(REFUSED)
+    private class WordsRefused(
+        message: String = REFUSED,
+    ) : Exception(message)
 
     fun run(args: List<String>): Int {
         val keys =
@@ -165,6 +167,8 @@ class KeysQr(
         require(words != STDIN || !stdinTaken) {
             "Standard input carries a key: give the words in a file ($WORDS_FROM <file>), or type them in a terminal"
         }
+        // The console is a terminal only when standard input is one, which would show the words typed.
+        if (words == STDIN && shell.console != null) throw WordsRefused(STDIN_IS_TERMINAL)
         // The paths are not repeated: one may be a key or the words, given in its place.
         require(words == null || readable(words)) { "$WORDS_FROM: no such file" }
         for ((name, path) in from) require(readable(path)) { "--${name.code}-from: no such file" }
@@ -187,6 +191,8 @@ class KeysQr(
         private const val QUIET_ZONE = 4
         private const val UNSEALED = "--unsealed"
         private const val WORDS_FROM = "--words-from"
+        private const val STDIN_IS_TERMINAL =
+            "Standard input is the terminal: drop --words-from - and type the words at the prompt."
         private const val REFUSED =
             "Type the words in a terminal (without redirecting the output), or pass --words-from FILE."
 
@@ -205,8 +211,8 @@ class KeysQr(
               --keys and --<name>-from cannot be combined.
               The code is sealed with the five words Load keys shows on the phone, typed at a prompt
               that does not show them (only in a terminal, its output not redirected), or read from
-              --words-from <file|->, - for standard input (not when a key is read from it), never
-              taken from the command line. Piping the output (| cat) needs --words-from. The code
+              --words-from <file|->, - for a pipe on standard input (not the terminal, nor when a key
+              is read from it), never taken from the command line. Piping the output (| cat) needs --words-from. The code
               opens only with those words, and the phone takes it once, within 5 minutes of showing
               them. With --unsealed, the clear code, which is the keys themselves, for a key's own
               Scan QR code.

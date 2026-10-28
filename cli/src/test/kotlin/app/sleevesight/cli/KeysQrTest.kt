@@ -352,4 +352,32 @@ class KeysQrTest {
         assertEquals("", run.out)
         assertTrue("No words given" in run.err)
     }
+
+    @Test
+    fun `--words-from - with the terminal on standard input is refused, and nothing is read`() {
+        val reads = mutableListOf<Int>()
+        val input =
+            object : InputStream() {
+                override fun read(): Int = (-1).also { reads += it }
+            }
+        var prompted = false
+        val err = ByteArrayOutputStream()
+        val out = ByteArrayOutputStream()
+        val file = File(dir, "tty.env").apply { writeText("SLEEVESIGHT_EXA_API_KEY=$exa\n") }
+        val console: (String) -> String? = {
+            prompted = true
+            words.joinToString(" ")
+        }
+        val status =
+            Cli(PrintStream(out, true), PrintStream(err, true), emptyMap(), input) { Terminal(console = console) }
+                .run(listOf("keys-qr", "--keys", file.path, "--words-from", "-"))
+        assertEquals(Cli.EXIT_USAGE, status)
+        assertEquals("", out.toString(Charsets.UTF_8))
+        assertTrue(reads.isEmpty(), "standard input was read")
+        assertFalse(prompted, "the console was asked")
+        assertEquals(
+            "Standard input is the terminal: drop --words-from - and type the words at the prompt.\n",
+            err.toString(Charsets.UTF_8),
+        )
+    }
 }

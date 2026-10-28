@@ -17,3 +17,6 @@ captures/
 
 # Python bytecode (assets/logo/src imports timeline.py)
 __pycache__/
+
+# The words `keys-qr --words-from words.txt` reads, as the README shows (#590)
+words.txt
