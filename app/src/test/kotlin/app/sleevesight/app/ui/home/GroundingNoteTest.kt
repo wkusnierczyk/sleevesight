@@ -30,9 +30,10 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
- * The line under a written insight (#437): by default no grounded count, and a plain note only for
- * sentences the sources do not back and for an insight kept from before; with *Show grounding
- * details* on, the grounding check's counts in full.
+ * The grounding line under a written insight (#437): by default no grounded count, and a plain note
+ * only for sentences the sources do not back; with *Show grounding details* on, the grounding
+ * check's counts in full. An insight kept from before says so in the footer's first line, *As
+ * written previously.* (#671), not in this line.
  */
 @RunWith(RobolectricTestRunner::class)
 class GroundingNoteTest {
@@ -129,14 +130,19 @@ class GroundingNoteTest {
         }
 
     @Test
-    fun aKeptInsightSaysSoAloneOrAfterTheNote() {
+    fun aKeptInsightSaysSoInItsOwnLineNotInTheNote() {
         show(written("It was recorded in 1973 [MB1].", cached = true)) {
-            compose.onNodeWithText(text(R.string.home_note_kept)).assertExists()
+            compose.onNodeWithText(text(R.string.home_written_before)).assertExists()
+            assertEquals(0, count(text(R.string.home_note_kept), substring = true))
             assertNoGroundedCount()
             assertNoUnbackedNote()
         }
         show(written("It was recorded in 1973 [MB1]. It is great.", cached = true)) {
-            compose.onNodeWithText("${unbacked(1)} ${text(R.string.home_note_kept)}").assertExists()
+            // Each on its own line: the note alone, under the line about the insight's history.
+            val before = compose.onNodeWithText(text(R.string.home_written_before)).fetchSemanticsNode().boundsInRoot
+            val note = compose.onNodeWithText(unbacked(1)).fetchSemanticsNode().boundsInRoot
+            assertTrue("the note under As written previously.", note.top >= before.bottom - 1f)
+            assertEquals(0, count(text(R.string.home_note_kept), substring = true))
         }
     }
 
@@ -147,9 +153,10 @@ class GroundingNoteTest {
             val grounded = plural(R.plurals.home_meta_grounded, 3, 1, 3)
             val uncited = text(R.string.home_meta_uncited, 1)
             val unknown = plural(R.plurals.home_meta_unknown, 1, 1)
-            compose
-                .onNodeWithText("$grounded · $uncited · $unknown · ${text(R.string.home_meta_kept)}")
-                .assertExists()
+            // Without *kept from before*, which the line above it says (#671).
+            compose.onNodeWithText("$grounded · $uncited · $unknown").assertExists()
+            compose.onNodeWithText(text(R.string.home_written_before)).assertExists()
+            assertEquals(0, count("kept from before", substring = true))
             assertEquals(
                 "1 of 3 sentences grounded · 1 uncited · 1 cites missing evidence",
                 "$grounded · $uncited · $unknown",

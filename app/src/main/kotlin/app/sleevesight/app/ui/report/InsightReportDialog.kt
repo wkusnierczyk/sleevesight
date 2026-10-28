@@ -2,10 +2,13 @@ package app.sleevesight.app.ui.report
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
@@ -18,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -99,13 +103,24 @@ private fun reasonLabel(reason: ReportReason): Int =
 // A note longer than this is cut: a report is a few lines, and the mail app takes it in its address.
 private const val NOTE_LIMIT = 2000
 
-/** *Report a problem*: a small text action, which a screen reader names with the insight it is for. */
+/**
+ * *Report a problem*: a small text action, which a screen reader names with the insight it is for,
+ * in the theme's error colour (#671). Its label starts where the lines above it start: the button
+ * is moved back by its own start padding, which stays round the label as part of its target.
+ */
 @Composable
 internal fun ReportAction(onReport: () -> Unit) {
     val description = stringResource(R.string.report_action_description)
+    val padding = ButtonDefaults.TextButtonContentPadding
     TextButton(
         onClick = onReport,
-        modifier = Modifier.testTag(REPORT_TAG).semantics { contentDescription = description },
+        modifier =
+            Modifier
+                .offset(x = -padding.calculateStartPadding(LocalLayoutDirection.current))
+                .testTag(REPORT_TAG)
+                .semantics { contentDescription = description },
+        contentPadding = padding,
+        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
     ) {
         Text(stringResource(R.string.report_action), style = MaterialTheme.typography.labelLarge)
     }

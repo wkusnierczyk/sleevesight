@@ -183,26 +183,34 @@
     <string name="home_insight_failed">Writing failed: %1$s.</string>
     <string name="home_insight_failed_retry">Writing failed: %1$s. Tap Write insight to try again, as a new call.</string>
     <string name="home_insight_incomplete">The reply stopped early, so this is incomplete, and it was not kept.</string>
-    <!-- Shown with Rewrite insight (#615, #625), straight under "Kept from before.". -->
-    <string name="home_rewrite_offered">Rewrite insight with updated source or model settings.</string>
-    <string name="home_rewrite_failed">Rewriting failed: %1$s. This is the insight written earlier.</string>
-    <string name="home_rewrite_stopped">Rewriting stopped. This is the insight written earlier.</string>
+    <!-- The first line of a written insight's footer (#671), for an insight not written in this run but
+         earlier: on an earlier play of the track, or before a Look again, a settings change or a
+         rewrite that failed. What follows from it goes on the same line, after it: what Look again
+         found, a rewrite that failed or was stopped, and Rewrite insight offered. Nothing for an
+         insight just written. -->
+    <string name="home_written_before">As written previously.</string>
+    <!-- After "As written previously.", with Rewrite insight offered (#615, #625, #671). -->
+    <string name="home_rewrite_offered">Tap Rewrite insight to write it with the updated source or model settings.</string>
+    <!-- After "As written previously.", which says the insight shown is the one written earlier (#671). -->
+    <string name="home_rewrite_failed">Rewriting failed: %1$s.</string>
+    <string name="home_rewrite_stopped">Rewriting stopped.</string>
     <!-- Look again (#617): the first item of the menu beside Write insight, on a written insight; it
-         makes no AI call, so it has no AI mark. Then the lines under "Kept from before." while it
-         looks the sources up (with Exa web search on, or not), once it found something new (with
-         Rewrite insight offered), and once it found nothing new. -->
+         makes no AI call, so it has no AI mark. Then what is said after "As written previously."
+         (#671) while it looks the sources up (with Exa web search on, or not), once it found
+         something new (with Rewrite insight offered), and once it found nothing new. -->
     <string name="home_look_again">Look again</string>
     <string name="home_look_again_looking_web">Looking every source up again, the web search included: a paid search on your Exa key.</string>
     <string name="home_look_again_looking">Looking every source up again.</string>
-    <string name="home_look_again_something_new">The sources found something new. Tap Rewrite insight to have the insight written from it, a paid call.</string>
-    <string name="home_look_again_nothing_new">The sources found nothing new.</string>
+    <string name="home_look_again_something_new">New findings from sources: tap Rewrite insight to use them, a paid call.</string>
+    <string name="home_look_again_nothing_new">No update from sources.</string>
     <string name="home_stop">Stop writing</string>
     <string name="home_insight_stopped">Stopped before the reply ended, so nothing was kept.</string>
     <!-- Under a stopped write, with Write insight offered again (#625). -->
     <string name="home_insight_retry">Tap Write insight to try again, as a new call.</string>
     <!-- The note under an insight and under a genre's reason (#437): only for sentences the sources do
          not back, which are underlined in red (uncited, or citing missing evidence), naming the mark
-         (#664); and for one kept from before. -->
+         (#664); and for a genre's reason kept from before (an insight says so in its own line,
+         "As written previously.", #671). -->
     <plurals name="home_note_unbacked">
         <item quantity="one">The sentence underlined in red is not backed by the sources.</item>
         <item quantity="other">The %d sentences underlined in red are not backed by the sources.</item>
@@ -219,7 +227,6 @@
         <item quantity="one">%d cites missing evidence</item>
         <item quantity="other">%d cite missing evidence</item>
     </plurals>
-    <string name="home_meta_kept">kept from before</string>
     <!-- The model corrected its own reply in the open; only the corrected version is shown (#597). -->
     <string name="home_meta_self_corrected">AI model’s self-correction taken out</string>
     <string name="home_cite">Source %1$s</string>

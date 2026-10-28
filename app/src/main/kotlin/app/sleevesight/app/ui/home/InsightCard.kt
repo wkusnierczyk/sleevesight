@@ -11,11 +11,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.isTraversalGroup
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
@@ -28,11 +24,10 @@ import app.sleevesight.core.pipeline.InsightState
  * states*). Model prose is plain text: its only interactive parts are the citation chips, built
  * from the evidence ids the app assigned, each scrolling to its line. Write, Rewrite and Stop go
  * to the pipeline as taps; whether a tap writes or stops is the pipeline's to say. Under a written
- * insight, [GroundingLine]: a note, or with [groundingDetails] (*Show grounding details*, #437) the
- * grounding check's counts in full.
- *
- * A written insight offers *Report a problem* (#390), under it, which hands the
- * insight and its track to [InsightActions.onReport].
+ * insight, its footer ([Footer], #671), each part on its own line: *As written previously.* with what
+ * follows from it, for an insight written earlier; [GroundingLine], a note, or with
+ * [groundingDetails] (*Show grounding details*, #437) the grounding check's counts in full; and
+ * *Report a problem* (#390), which hands the insight and its track to [InsightActions.onReport].
  *
  * No container of its own (#609): the heading and the text sit on Home's background with the rest.
  * At the card's end, in every state, the split button (#615, [WriteSplitButton]): the card's action
@@ -175,92 +170,72 @@ private fun Written(
     for (paragraph in paragraphs) {
         CheckedProse(paragraph, insight.grounded, context.track?.evidence, actions.onCite, insight.held)
     }
-    // The footer: the grounding line, then *Report a problem* at the row's end, or under it at a
-    // large font size.
-    Footer(
-        lines = {
-            // *Kept from before.* for the card paid for, whether or not it came from the cache, and
-            // straight under it, with no gap, what is said of that card's rewrite (#606).
-            val kept = insight.cached || context.cardShown
-            GroundingLine(insight.grounded, kept, groundingDetails)
-            // What is said of *Look again* (#617).
-            lookAgainLine(context)?.let { Quiet(stringResource(it)) }
-            RewriteLines(context)
-        },
-        action = { context.track?.let { track -> ReportAction { actions.onReport(track, insight) } } },
-    )
-    if (!insight.complete) Quiet(stringResource(R.string.home_insight_incomplete))
-}
-
-// What is said of the card paid for and its rewrite: shown again after its rewrite failed or was
-// stopped; and by the split button's *Rewrite insight* (#615, #625), that it was written with
-// earlier settings and can be written again.
-@Composable
-private fun RewriteLines(context: InsightContext) {
-    context.rewriteFailed?.let {
-        if (it == PipelineHost.STOPPED) {
-            Quiet(stringResource(R.string.home_rewrite_stopped))
-        } else {
-            Quiet(stringResource(R.string.home_rewrite_failed, failureText(it)))
-        }
-    }
-    // Not for what a look again found (#617): its own line says what Rewrite insight writes from.
-    if (offersRewrite(context) && !context.offers.somethingNew) Quiet(stringResource(R.string.home_rewrite_offered))
+    Footer(insight, context, actions, groundingDetails)
 }
 
 /**
- * The footer under a written insight: [lines] (the grounding line, and what is said of the card's
- * rewrite straight under it), and [action] (*Report a problem*) at the row's end, the two centred
- * on each other. The lines take the room whatever they
- * hold, so the action keeps its place should they show only at times. When the action would leave
- * the lines less than [FOOTER_LINES] of the row, as at a large font size or on a narrow screen
- * (#606), the action goes under them, still at the row's end, and the lines take the whole row,
- * rather than a word a line. A screen reader reads the lines, then the action, either way.
+ * The footer under a written insight (#671): each part on its own line, at the start, top to
+ * bottom, so each wraps on its own at a large font size and a screen reader reads them in order:
+ * - *As written previously.* ([writtenBefore]), with what follows from it on the same line;
+ * - the grounding line ([GroundingLine]): the note on the sentences underlined in red, or, with
+ *   [groundingDetails] (developer mode, inside its mark), the grounding check's counts. The note
+ *   stays where the counts are, which take its place in developer mode: under the line about the
+ *   insight's history and above *Report a problem*, the action it leads to;
+ * - that the reply stopped early, for an incomplete insight;
+ * - *Report a problem* ([ReportAction]), in the theme's error colour.
  */
 @Composable
 private fun Footer(
-    lines: @Composable () -> Unit,
-    action: @Composable () -> Unit,
+    insight: InsightState.Written,
+    context: InsightContext,
+    actions: InsightActions,
+    groundingDetails: Boolean,
 ) {
-    // A screen reader reads the lines, all of them, then the action, wherever the layout puts them:
-    // the footer and the lines are traversal groups, the lines first, so the action, centred on the
-    // lines beside them, is not read between two of them.
-    val content =
-        listOf(
-            @Composable {
-                Column(
-                    Modifier.semantics {
-                        isTraversalGroup = true
-                        traversalIndex = 0f
-                    },
-                ) { lines() }
-            },
-            @Composable { Box(Modifier.semantics { traversalIndex = 1f }) { action() } },
-        )
-    Layout(content, Modifier.semantics { isTraversalGroup = true }) { (lineParts, actionParts), constraints ->
-        val width = constraints.maxWidth
-        val loose = constraints.copy(minWidth = 0, minHeight = 0)
-        val acted = actionParts.map { it.measure(loose) }
-        val actionWidth = acted.maxOfOrNull { it.width } ?: 0
-        val actionHeight = acted.maxOfOrNull { it.height } ?: 0
-        val beside = width - actionWidth >= width * FOOTER_LINES
-        val text = lineParts.map { it.measure(loose.copy(maxWidth = if (beside) width - actionWidth else width)) }
-        val textHeight = text.maxOfOrNull { it.height } ?: 0
-        val height = if (beside) maxOf(textHeight, actionHeight) else textHeight + actionHeight
-        layout(width, height) {
-            if (beside) {
-                text.forEach { it.placeRelative(0, (height - it.height) / 2) }
-                acted.forEach { it.placeRelative(width - it.width, (height - it.height) / 2) }
-            } else {
-                text.forEach { it.placeRelative(0, 0) }
-                acted.forEach { it.placeRelative(width - it.width, textHeight) }
-            }
-        }
+    Column(Modifier.fillMaxWidth()) {
+        writtenBefore(insight, context)?.let { Quiet(it) }
+        // Not *Kept from before.*: the line above says so.
+        GroundingLine(insight.grounded, cached = false, details = groundingDetails)
+        if (!insight.complete) Quiet(stringResource(R.string.home_insight_incomplete))
+        context.track?.let { track -> ReportAction { actions.onReport(track, insight) } }
     }
 }
 
-/** The share of the footer's row its lines keep beside *Report a problem*, or it goes under them: half. */
-private const val FOOTER_LINES = 0.5f
+/**
+ * The footer's first line (#671): *As written previously.* for an insight not written in this run
+ * but earlier, on an earlier play of the track (from the cache, or the card paid for shown in place
+ * of an insight the run lacks, #606), or before a *Look again*, a settings change or a rewrite that
+ * failed; then, on the same line, what follows from it: what *Look again* found or is looking up
+ * (#617, [lookAgainLine]), that a rewrite failed or was stopped, and that *Rewrite insight* writes
+ * it with the updated settings, while offered (#615, #625; not for what a look again found, whose
+ * own words say what *Rewrite insight* uses). Null for an insight just written, with nothing to
+ * follow.
+ */
+@Composable
+private fun writtenBefore(
+    insight: InsightState.Written,
+    context: InsightContext,
+): String? {
+    val after =
+        buildList {
+            lookAgainLine(context)?.let { add(stringResource(it)) }
+            context.rewriteFailed?.let { add(rewriteFailure(it)) }
+            if (offersRewrite(context) && !context.offers.somethingNew) {
+                add(stringResource(R.string.home_rewrite_offered))
+            }
+        }
+    val kept = insight.cached || context.cardShown
+    if (!kept && after.isEmpty()) return null
+    return (listOf(stringResource(R.string.home_written_before)) + after).joinToString(" ")
+}
+
+// Why the card's rewrite ended without an insight: stopped, or failed and why.
+@Composable
+private fun rewriteFailure(why: String): String =
+    if (why == PipelineHost.STOPPED) {
+        stringResource(R.string.home_rewrite_stopped)
+    } else {
+        stringResource(R.string.home_rewrite_failed, failureText(why))
+    }
 
 @Composable
 private fun Prose(text: AnnotatedString) {
