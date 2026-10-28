@@ -4,6 +4,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -16,6 +17,7 @@ import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.state.ToggleableState
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
@@ -39,8 +41,9 @@ import org.robolectric.annotation.GraphicsMode
  * A settings row's mark and switch (#613): centred on the first line of the row's name, not on the
  * whole row, so that they stay level with the name however long the description under it; in both
  * fonts and at twice the font size. A row with a name only is laid out as when they were centred on
- * the row, and every row keeps its 48 dp target and is read as before. Native graphics, for the
- * text's real lines on a phone's width and density.
+ * the row, and every row keeps its 48 dp target and is read as before. A row with a value and a
+ * mark, as *How long each source's findings are kept* has (#670), lines its mark up the same way.
+ * Native graphics, for the text's real lines on a phone's width and density.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w411dp-h891dp-420dpi")
@@ -49,12 +52,16 @@ class SwitchRowAlignmentTest {
     @get:Rule
     val compose = createEmptyComposeRule()
 
-    /** One row to show: its name, its description, and whether it starts with a mark. */
+    /**
+     * One row to show: its name, its description, and whether it starts with a mark; a [SwitchRow],
+     * or with [value] a [ValueRow] showing it (#670).
+     */
     private data class Spec(
         val title: String,
         val summary: String?,
         val mark: Boolean = true,
         val font: FontChoice = FontChoice.APP_FONT,
+        val value: String? = null,
     )
 
     private var spec by mutableStateOf(Spec(NAME, LONG_SUMMARY))
@@ -65,18 +72,29 @@ class SwitchRowAlignmentTest {
                 activity.setContent {
                     val shown = spec
                     SleevesightTheme(darkTheme = false, font = shown.font) {
-                        SwitchRow(
-                            title = shown.title,
-                            summary = shown.summary,
-                            checked = true,
-                            leading =
-                                if (shown.mark) {
-                                    { Box(Modifier.size(ROW_MARK).background(Color.Gray)) }
-                                } else {
-                                    null
-                                },
-                            onChange = {},
-                        )
+                        val leading: (@Composable () -> Unit)? =
+                            if (shown.mark) {
+                                { Box(Modifier.size(ROW_MARK).background(Color.Gray)) }
+                            } else {
+                                null
+                            }
+                        if (shown.value == null) {
+                            SwitchRow(
+                                title = shown.title,
+                                summary = shown.summary,
+                                checked = true,
+                                leading = leading,
+                                onChange = {},
+                            )
+                        } else {
+                            ValueRow(
+                                title = shown.title,
+                                value = shown.value,
+                                summary = shown.summary,
+                                leading = leading,
+                                onClick = {},
+                            )
+                        }
                     }
                 }
             }
@@ -180,6 +198,66 @@ class SwitchRowAlignmentTest {
             }
         }
 
+    /**
+     * The shown [ValueRow]'s mark is centred on its name's first line; the row is read as before, its
+     * name then its value; and it is as tall as what it shows, 8 dp above and below: its text alone
+     * without a mark, as before #670, and its text and mark together with one, no more.
+     */
+    private fun assertValueRowLaidOut() {
+        val value = spec.value!!
+        val row = compose.onNode(hasClickAction() and hasText(spec.title)).fetchSemanticsNode()
+        val read = row.config[SemanticsProperties.Text].map { it.text }
+        assertEquals(listOfNotNull(spec.title, value, spec.summary), read)
+        val height = row.boundsInRoot.height / density
+        assertTrue("the row's target is 48 dp or more: $height dp", height >= 48f - 0.5f)
+
+        val title = compose.onNodeWithText(spec.title, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        val last =
+            compose
+                .onNodeWithText(spec.summary ?: value, useUnmergedTree = true)
+                .fetchSemanticsNode()
+                .boundsInRoot
+        var top = title.top
+        var bottom = last.bottom
+        if (spec.mark) {
+            val mark = bounds(ROW_LEADING_TAG)
+            val line = firstLineMiddle()
+            assertEquals("${spec.font}: the mark's middle is the name's first line's", line, mark.center.y, density)
+            assertEquals("${spec.font}: the mark is 40 dp high", ROW_MARK.value, mark.height / density, 0.5f)
+            top = minOf(top, mark.top)
+            bottom = maxOf(bottom, mark.bottom)
+        }
+        val shown = (bottom - top) / density
+        assertEquals("${spec.font}: the row is what it shows, 8 dp above and below", shown + 16f, height, 0.5f)
+    }
+
+    @Test
+    fun aValueRowHasItsMarkLevelWithItsNameAndKeepsItsHeight() =
+        show {
+            for (font in FontChoice.entries) {
+                for (mark in listOf(true, false)) {
+                    showing(Spec(NAME, null, mark = mark, font = font, value = VALUE))
+                    assertValueRowLaidOut()
+                    showing(Spec(NAME, LONG_SUMMARY, mark = mark, font = font, value = VALUE))
+                    assertValueRowLaidOut()
+                }
+            }
+        }
+
+    @Test
+    @Config(fontScale = 2f)
+    fun atTwiceTheFontSizeAValueRowsMarkStaysLevelWithItsName() =
+        show {
+            for (font in FontChoice.entries) {
+                showing(Spec(NAME, null, font = font, value = VALUE))
+                assertValueRowLaidOut()
+                showing(Spec(LONG_NAME, null, font = font, value = VALUE))
+                assertValueRowLaidOut()
+                showing(Spec(NAME, null, mark = false, font = font, value = VALUE))
+                assertValueRowLaidOut()
+            }
+        }
+
     // At twice the size, a line of the name is taller than the switch and nearly as tall as the
     // mark, and the description runs to more lines.
     @Test
@@ -198,6 +276,7 @@ class SwitchRowAlignmentTest {
 
     private companion object {
         const val NAME = "Wikipedia"
+        const val VALUE = "7 days"
         const val LONG_NAME = "A setting whose name is long enough to run past the end of its first line on a phone"
         const val LONG_SUMMARY =
             "A description long enough to take several lines under the name, as the sources' and the " +
