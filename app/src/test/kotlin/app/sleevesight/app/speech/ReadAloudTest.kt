@@ -1,5 +1,6 @@
 package app.sleevesight.app.speech
 
+import app.sleevesight.app.pipeline.GenreReason
 import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.app.ui.home.HomeFixtures.carefree
 import app.sleevesight.app.ui.home.HomeFixtures.sundown
@@ -10,8 +11,11 @@ import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.settings.ReadAloudMusic
 import app.sleevesight.core.settings.Settings
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
@@ -118,9 +122,15 @@ class ReadAloudTest {
     private var exploring = false
     private val words = SpokenWords("Unverified:") { title, artists -> "$title, by $artists." }
     private val readAloud =
-        ReadAloud(speech, focus, settings, words, { exploring }, { problem, locale -> told += problem to locale }) {
-            Locale.UK
-        }
+        ReadAloud(
+            speech,
+            focus,
+            settings,
+            words,
+            { exploring },
+            { problem, locale -> told += problem to locale },
+            CoroutineScope(Dispatchers.Unconfined),
+        ) { Locale.UK }
 
     private val insight = written("Sundown was recorded in 1973 [MB1]. It was a hit in Canada.")
     private val shown = track(insight = insight)
@@ -160,7 +170,13 @@ class ReadAloudTest {
     @Test
     fun aGenresReasonIsReadAfterItsQuestion() {
         val reason = written("It is folk rock [MB1].")
-        readAloud.readGenreReason(shown, "folk rock", "Why is this folk rock?", reason)
+        readAloud.readGenreReason(
+            shown,
+            "folk rock",
+            "Why is this folk rock?",
+            reason,
+            flowOf(GenreReason.Shown(reason)),
+        )
         assertEquals(listOf("Why is this folk rock?", "It is folk rock."), speech.spoken.single())
         assertEquals(Reading.genreReason("folk rock"), readAloud.reading.value?.id)
     }
@@ -180,7 +196,14 @@ class ReadAloudTest {
     @Test
     fun aReadingThatReplacesAnotherKeepsTheMusicDownBetweenThem() {
         readAloud.readInsight(shown, insight)
-        readAloud.readGenreReason(shown, "folk rock", "Why is this folk rock?", written("It is folk rock [MB1]."))
+        val reason = written("It is folk rock [MB1].")
+        readAloud.readGenreReason(
+            shown,
+            "folk rock",
+            "Why is this folk rock?",
+            reason,
+            flowOf(GenreReason.Shown(reason)),
+        )
         assertEquals("the focus taken once", listOf(ReadAloudMusic.LOWER), focus.taken)
         assertEquals("never given back between them", 0, focus.releases)
         assertTrue(focus.held)
@@ -190,22 +213,28 @@ class ReadAloudTest {
     }
 
     @Test
-    fun aGenresReasonReplacedOrWithdrawnStopsItsReadingAndTheSameShownAgainDoesNot() {
-        val id = Reading.genreReason("folk rock")
+    fun aGenresReasonReplacedOrWithdrawnWhateverScreenShowsStopsItsReadingAndTheSameAgainDoesNot() {
         val reason = written("It is folk rock [MB1].")
-        readAloud.readGenreReason(shown, "folk rock", "Why is this folk rock?", reason)
-        // The same reason shown again (the panel opened again, a rotation's new frame), or another genre's.
-        readAloud.shown(id, reason)
-        readAloud.shown(Reading.genreReason("jazz"), null)
-        assertEquals(id, readAloud.reading.value?.id)
-        // Offered again (a settings change): withdrawn.
-        readAloud.shown(id, null)
+        // The notes' reason, followed while it is read: no panel is composed here, as after
+        // leaving Home for the settings.
+        val reasons = MutableStateFlow<GenreReason>(GenreReason.Shown(reason))
+        readAloud.readGenreReason(shown, "folk rock", "Why is this folk rock?", reason, reasons)
+        reasons.value = GenreReason.Shown(reason.copy())
+        assertEquals("the same reason again reads on", Reading.genreReason("folk rock"), readAloud.reading.value?.id)
+        // Offered again (a settings change, *Clear history*): withdrawn.
+        reasons.value = GenreReason.Offered
         assertNull(readAloud.reading.value)
         assertFalse(focus.held)
 
-        readAloud.readGenreReason(shown, "folk rock", "Why is this folk rock?", reason)
-        readAloud.shown(id, written("It is folk rock, rewritten [MB1]."))
-        assertNull(readAloud.reading.value)
+        reasons.value = GenreReason.Shown(reason)
+        readAloud.readGenreReason(shown, "folk rock", "Why is this folk rock?", reason, reasons)
+        reasons.value = GenreReason.Shown(written("It is folk rock, rewritten [MB1]."))
+        assertNull("replaced: stopped", readAloud.reading.value)
+
+        // Once it has ended, the reason is no longer followed: an insight read next reads on.
+        readAloud.readInsight(shown, insight)
+        reasons.value = GenreReason.None
+        assertEquals(Reading.INSIGHT, readAloud.reading.value?.id)
     }
 
     @Test

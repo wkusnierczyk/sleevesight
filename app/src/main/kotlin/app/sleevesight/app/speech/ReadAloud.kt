@@ -2,6 +2,7 @@ package app.sleevesight.app.speech
 
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.view.accessibility.AccessibilityManager
+import app.sleevesight.app.pipeline.GenreReason
 import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.app.session.TrackIdentity
 import app.sleevesight.app.ui.home.SpokenWords
@@ -12,6 +13,8 @@ import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.settings.ReadAloudMusic
 import app.sleevesight.core.settings.Settings
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -65,7 +68,7 @@ enum class ReadAloudProblem {
  *
  * It stops at once on [stop] (the button again); when the track it is about stops playing (a track
  * change, or the player's session ending: [follow]); when what it reads is no longer shown (a
- * rewrite in its place: the card's followed here, a genre's reason told by its panel, [shown]);
+ * rewrite in its place: the card's followed here, a genre's reason by its notes, [shown]);
  * when another app takes the sound from it (a call); and when the app leaves the screen
  * ([activityStopped]), which releases the engine too. A rotation, which stops the
  * activity only to start it again, does not stop it.
@@ -88,6 +91,7 @@ class ReadAloud(
     private val words: SpokenWords,
     private val screenReader: () -> Boolean,
     private val tell: (ReadAloudProblem, Locale) -> Unit,
+    private val scope: CoroutineScope,
     private val locale: () -> Locale = ::insightLocale,
 ) {
     private val readingState = MutableStateFlow<Reading?>(null)
@@ -97,6 +101,9 @@ class ReadAloud(
 
     // How the audio focus is held for the reading under way, or null when it is not.
     private var held: ReadAloudMusic? = null
+
+    // What follows the genre's reason under way as its notes say it, for as long as it is read.
+    private var watch: Job? = null
 
     // Activities started, and whether one stopped for a configuration change and is starting again.
     private var started = 0
@@ -111,13 +118,27 @@ class ReadAloud(
         written: InsightState.Written,
     ) = read(Reading(Reading.INSIGHT, track.nowPlaying, written, script(track, null, written), locale()))
 
-    /** Reads [written], the reason [track] has [genre], after its [question] (*Why is this …?*). */
+    /**
+     * Reads [written], the reason [track] has [genre], after its [question] (*Why is this …?*). For
+     * as long as it is read, [reasons] (the notes' reason for it, `GenreNotes.reason`) is followed
+     * in this object's [scope], whatever screen shows: once it holds another reason, or none (a
+     * settings change offering it again, *Clear history*), the reading stops ([shown]).
+     */
     fun readGenreReason(
         track: TrackState,
         genre: String,
         question: String,
         written: InsightState.Written,
-    ) = read(Reading(Reading.genreReason(genre), track.nowPlaying, written, script(track, question, written), locale()))
+        reasons: Flow<GenreReason>,
+    ) {
+        val id = Reading.genreReason(genre)
+        read(Reading(id, track.nowPlaying, written, script(track, question, written), locale()))
+        if (readingState.value?.of !== written) return
+        watch =
+            scope.launch {
+                reasons.collect { now -> shown(id, ((now as? GenreReason.Shown)?.state as? InsightState.Written)) }
+            }
+    }
 
     // The track line with *Read the track line first*, then [heading], then the sentences.
     private fun script(
@@ -134,6 +155,7 @@ class ReadAloud(
         if (reading.parts.isEmpty()) return stop()
         // One under way is replaced, its focus kept: the music does not come up between the two.
         if (readingState.value != null) speech.stop()
+        stopWatching()
         readingState.value = reading
         speech.open { opened ->
             // Stopped, or replaced, while the engine opened.
@@ -170,7 +192,13 @@ class ReadAloud(
         return taken
     }
 
+    private fun stopWatching() {
+        watch?.cancel()
+        watch = null
+    }
+
     private fun end() {
+        stopWatching()
         readingState.value = null
         if (held != null) {
             held = null
@@ -179,10 +207,10 @@ class ReadAloud(
     }
 
     /**
-     * What a button shows for its reading [id] now ([written], or null for none: a genre's reason
-     * offered again, or gone): a reading of something else under that id stops (#325, a genre's
-     * reason replaced or withdrawn). Told only of what is shown, not of a screen's first frame, so a
-     * rotation leaves the reading as it is.
+     * What is shown now for the reading [id] ([written], or null for none: a genre's reason offered
+     * again, or gone): a reading of something else under that id stops (#325, a genre's reason
+     * replaced or withdrawn). Told by what follows the reason ([readGenreReason]), from the notes'
+     * answers alone, so neither a screen's first frame nor a rotation stops it.
      */
     fun shown(
         id: String,
@@ -281,13 +309,17 @@ fun insightLocale(phone: Locale = Locale.getDefault()): Locale =
     if (phone.language == Locale.ENGLISH.language) phone else Locale.ENGLISH
 
 /**
- * Whether a screen reader is on (#325), which *Read new insights aloud* gives way to: a service
- * that gives spoken feedback is enabled (TalkBack, with or without *Explore by touch*, or another),
- * or touch exploration is on.
+ * Whether a screen reader is on (#325), which *Read new insights aloud* gives way to: touch
+ * exploration is on, or an enabled service gives spoken feedback and declares that it can turn
+ * touch exploration on (`CAPABILITY_CAN_REQUEST_TOUCH_EXPLORATION`, from its own declaration, so it
+ * holds whether *Explore by touch* is on or off). TalkBack is caught either way; a service that
+ * speaks only what is selected (Select to Speak) declares no such capability and is not.
  */
-fun screenReaderOn(accessibility: AccessibilityManager?): Boolean =
-    accessibility != null &&
-        (
-            accessibility.isTouchExplorationEnabled ||
-                accessibility.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_SPOKEN).isNotEmpty()
-        )
+fun screenReaderOn(accessibility: AccessibilityManager?): Boolean {
+    if (accessibility == null) return false
+    val readers =
+        accessibility.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_SPOKEN).filter {
+            it.capabilities and AccessibilityServiceInfo.CAPABILITY_CAN_REQUEST_TOUCH_EXPLORATION != 0
+        }
+    return accessibility.isTouchExplorationEnabled || readers.isNotEmpty()
+}

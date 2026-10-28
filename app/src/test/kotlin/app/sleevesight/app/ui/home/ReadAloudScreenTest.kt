@@ -44,6 +44,8 @@ import app.sleevesight.core.genres.TrackLabel
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.settings.Settings
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
@@ -80,6 +82,7 @@ class ReadAloudScreenTest {
             SpokenWords("Unverified:") { title, artists -> "$title, by $artists." },
             { false },
             { _, _ -> },
+            CoroutineScope(Dispatchers.Main.immediate),
         ) { Locale.UK }
 
     private val insight = written("Sundown was recorded in 1973 [MB1]. It was a hit in Canada.")

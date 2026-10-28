@@ -546,6 +546,8 @@ class AppGraph internal constructor(
                 },
             screenReader = { screenReaderOn(appContext.getSystemService(AccessibilityManager::class.java)) },
             tell = ReadAloudMessages(appContext)::tell,
+            // A genre's reason followed while it is read, on the main thread, as long as the process.
+            scope = mainScope,
         )
     }
 

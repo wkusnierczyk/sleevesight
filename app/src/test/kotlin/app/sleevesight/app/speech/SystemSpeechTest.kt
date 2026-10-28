@@ -71,7 +71,7 @@ class SystemSpeechTest {
     }
 
     @Test
-    fun aSpeakTheEngineRefusesFailsTheReadingOnceAndTheNextOpenBindsAfresh() {
+    fun aSpeakTheEngineRefusesFailsTheReadingOnceEvenWithALateErrorAndTheNextOpenBindsAfresh() {
         val told = opened()
         made.single().start()
         idle()
@@ -86,6 +86,11 @@ class SystemSpeechTest {
         assertEquals(0, ends)
         assertEquals("nothing queued after the refusal", listOf("One."), made.single().spoken)
         assertEquals("the engine let go", 1, made.single().shutdowns)
+
+        // The engine's late error for the utterance queued before the refusal changes nothing.
+        made[0].listener!!.onError("read-1", TextToSpeech.ERROR_SYNTHESIS)
+        idle()
+        assertEquals("still failed once", 1, failures)
 
         val again = opened()
         assertEquals("a new engine bound", 2, made.size)
@@ -105,7 +110,7 @@ class SystemSpeechTest {
         idle()
         assertTrue(told.isEmpty())
         assertTrue(again.isEmpty())
-        assertTrue("the stale engine shut down", made[0].shutdowns >= 1)
+        assertEquals("the stale engine shut down once, when it was let go", 1, made[0].shutdowns)
 
         made[1].start()
         idle()

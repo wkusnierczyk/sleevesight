@@ -6,6 +6,8 @@ import android.os.Handler
 import android.os.Looper
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
+import java.util.Collections
+import java.util.IdentityHashMap
 import java.util.Locale
 
 /**
@@ -124,6 +126,10 @@ class SystemSpeech(
     // The current engine's generation: a callback carrying another is from an engine let go.
     private var generation = 0
 
+    // The engines let go (and so shut down) before they reported their start, which every engine
+    // does once: each is forgotten then, not shut down twice.
+    private val goneBeforeStart: MutableSet<SpeechEngine> = Collections.newSetFromMap(IdentityHashMap())
+
     // The callers waiting for the engine to open, called once it has.
     private val waiting = mutableListOf<(Boolean) -> Unit>()
 
@@ -155,7 +161,8 @@ class SystemSpeech(
         ok: Boolean,
     ) {
         if (made != generation || engine !== starting) {
-            starting.shutdown()
+            // One let go already was shut down then; one replaced otherwise is shut down now.
+            if (!goneBeforeStart.remove(starting)) starting.shutdown()
             return
         }
         if (ok) {
@@ -163,7 +170,7 @@ class SystemSpeech(
             starting.setAudioAttributes(ATTRIBUTES)
             starting.setOnUtteranceProgressListener(Progress(made))
         } else {
-            letGo()
+            letGo(starting = false)
         }
         val callers = waiting.toList()
         waiting.clear()
@@ -212,9 +219,13 @@ class SystemSpeech(
         waiting.clear()
     }
 
-    // The engine shut down and forgotten, its callbacks from now on ignored; the next open makes another.
-    private fun letGo() {
-        engine?.shutdown()
+    // The engine shut down and forgotten, its callbacks from now on ignored; the next open makes
+    // another. One still [starting] will report its start, which is then only forgotten.
+    private fun letGo(starting: Boolean = !opened) {
+        engine?.let { gone ->
+            gone.shutdown()
+            if (starting) goneBeforeStart += gone
+        }
         engine = null
         opened = false
         generation++

@@ -10,10 +10,12 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
+import org.robolectric.util.ReflectionHelpers
 
 /**
- * What *Read new insights aloud* gives way to (#325): a screen reader, by its spoken feedback
- * (TalkBack with *Explore by touch* off too), or touch exploration.
+ * What *Read new insights aloud* gives way to (#325): touch exploration, or a service giving spoken
+ * feedback that can turn it on (TalkBack, with *Explore by touch* off too); not a service that speaks
+ * only what is selected (Select to Speak).
  */
 @RunWith(RobolectricTestRunner::class)
 class ScreenReaderTest {
@@ -28,12 +30,27 @@ class ScreenReaderTest {
         assertFalse(screenReaderOn(null))
     }
 
+    // An enabled service giving spoken feedback, declaring it can turn touch exploration on or not.
+    private fun speaking(touchExploration: Boolean) =
+        AccessibilityServiceInfo().apply {
+            feedbackType = AccessibilityServiceInfo.FEEDBACK_SPOKEN
+            val can = if (touchExploration) AccessibilityServiceInfo.CAPABILITY_CAN_REQUEST_TOUCH_EXPLORATION else 0
+            ReflectionHelpers.setField(this, "mCapabilities", can)
+        }
+
     @Test
-    fun aServiceGivingSpokenFeedbackIsAScreenReaderWithoutTouchExploration() {
-        val talkBack = AccessibilityServiceInfo().apply { feedbackType = AccessibilityServiceInfo.FEEDBACK_SPOKEN }
-        shadowOf(manager).setEnabledAccessibilityServiceList(listOf(talkBack))
+    fun aScreenReaderIsCaughtWithExploreByTouchOff() {
+        // TalkBack: spoken feedback, able to turn touch exploration on, though it is off.
+        shadowOf(manager).setEnabledAccessibilityServiceList(listOf(speaking(touchExploration = true)))
         assertFalse(manager.isTouchExplorationEnabled)
         assertTrue(screenReaderOn(manager))
+    }
+
+    @Test
+    fun aServiceThatSpeaksOnlyWhatIsSelectedIsNoScreenReader() {
+        // Select to Speak: spoken feedback, with no touch exploration to ask for.
+        shadowOf(manager).setEnabledAccessibilityServiceList(listOf(speaking(touchExploration = false)))
+        assertFalse(screenReaderOn(manager))
     }
 
     @Test
