@@ -51,7 +51,7 @@ With nothing playing yet, the home screen lists your music players, A to Z, each
 
 The first run does not ask for an AI service or a key. Without one, Sleevesight still looks the track up and shows what the sources found, and the insight's place says *Choose an AI service and save its key in Settings to have insights written.* To have insights written, open *Settings* with the cogwheel.
 
-The settings are in sections, each folded under its name: a tap on a section's name unfolds it.
+The settings are in sections, each a chip with its name and, beside it, a line on what it holds: a tap on a chip opens that section as a panel in its place, with *Close* at its top right to turn it back into the chip, and several can be open at once. An AI service takes two steps, each in its own section: its switch, under *AI services*, and its key, under *Secrets*.
 
 **The AI service.** Under *AI services*, switch on one of *Anthropic*, *OpenAI* or *Google*. One service writes at a time: switching one on switches the other off. Switching off a service does not erase its key or the most recently used model and effort settings, so you can switch back. Under each service, *Set your Anthropic API key here.* (or OpenAI's, or Google Gemini's) links to its key under *Secrets*. Until its key is saved, the service switched on says *Needs your Anthropic key.* (or OpenAI's, or Google's), above that link.
 
