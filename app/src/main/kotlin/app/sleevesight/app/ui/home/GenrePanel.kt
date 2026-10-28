@@ -22,6 +22,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.GenreNotes
+import app.sleevesight.app.speech.ReadAloud
 import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.Panel
 import app.sleevesight.app.ui.theme.TextPart
@@ -67,13 +68,15 @@ internal fun GenrePanel(
 /**
  * What a genre's panel shows above its table ([GenreAbout]): [notes], where its definition and
  * reason come from; where a citation in the reason goes ([onCite]: on Home, *Sources* unfolded to
- * its line; under *Separate pages*, *Sources*' page at it); and whether the model's own knowledge is
- * allowed now ([modelAllowed]).
+ * its line; under *Separate pages*, *Sources*' page at it); whether the model's own knowledge is
+ * allowed now ([modelAllowed]); and what reads a written reason aloud ([readAloud], #325), null for
+ * no *Read aloud*.
  */
 internal class PanelNotes(
     val notes: GenreNotes = GenreNotes.None,
     val onCite: (String) -> Unit = {},
     val modelAllowed: Boolean = false,
+    val readAloud: ReadAloud? = null,
 )
 
 /**

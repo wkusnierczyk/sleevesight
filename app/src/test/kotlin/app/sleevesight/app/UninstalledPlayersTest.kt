@@ -10,6 +10,7 @@ import android.media.session.MediaController
 import android.media.session.MediaSession
 import android.media.session.MediaSessionManager
 import android.net.Uri
+import android.speech.tts.TextToSpeech
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.settings.PlayerRemovedReceiver
 import app.sleevesight.core.settings.Settings
@@ -155,7 +156,8 @@ class UninstalledPlayersTest {
     /**
      * What the app can see and hear of other apps (package visibility, which Robolectric does not
      * apply), read from the manifest itself: launcher apps (#435), apps with a media browser
-     * service or a media-button receiver (#535), and the removal of a package.
+     * service or a media-button receiver (#535), and the removal of a package; and the phone's
+     * text-to-speech engines, which *Read aloud* binds to (#325).
      */
     @Test
     fun theManifestQueriesPlayersAndHearsTheirRemoval() {
@@ -164,7 +166,12 @@ class UninstalledPlayersTest {
         val queries = manifest.getElementsByTagName("queries")
         assertEquals(1, queries.length)
         assertEquals(
-            listOf(Intent.ACTION_MAIN, MEDIA_BROWSER_SERVICE, Intent.ACTION_MEDIA_BUTTON),
+            listOf(
+                Intent.ACTION_MAIN,
+                MEDIA_BROWSER_SERVICE,
+                Intent.ACTION_MEDIA_BUTTON,
+                TextToSpeech.Engine.INTENT_ACTION_TTS_SERVICE,
+            ),
             (queries.item(0) as Element).actions(),
         )
 

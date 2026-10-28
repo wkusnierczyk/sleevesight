@@ -297,4 +297,14 @@
     <!-- Chips' names under Sources, beside their letters, where they differ from the settings' names. -->
     <string name="home_source_chip_wikipedia">Wikipedia</string>
     <string name="home_source_chip_player">Player</string>
+    <!-- Read aloud (#325): the button under an insight and under a genre's reason, its name while it
+         reads, the app's own words in what is read, and what is said when it cannot read. -->
+    <string name="home_read_aloud">Read aloud</string>
+    <string name="home_read_aloud_stop">Stop reading aloud</string>
+    <string name="read_aloud_unverified">Unverified:</string>
+    <string name="read_aloud_track_line">%1$s, by %2$s.</string>
+    <string name="read_aloud_no_engine">This phone has no text-to-speech engine to read the insight aloud. One can be set up in Android’s settings, under Accessibility, Text-to-speech output.</string>
+    <string name="read_aloud_no_voice">Your phone’s text-to-speech engine has no %1$s voice, so the insight is not read aloud. A voice can be added in Android’s settings, under Accessibility, Text-to-speech output.</string>
+    <string name="read_aloud_busy">The insight cannot be read aloud while another app is using the sound, as during a call.</string>
+    <string name="read_aloud_failed">Reading aloud stopped: the phone’s text-to-speech engine failed.</string>
 </resources>

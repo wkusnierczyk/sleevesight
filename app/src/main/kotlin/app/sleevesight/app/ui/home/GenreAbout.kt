@@ -1,8 +1,10 @@
 package app.sleevesight.app.ui.home
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -13,6 +15,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -21,6 +24,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.GenreReason
+import app.sleevesight.app.speech.Reading
 import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.core.genres.GenreDefinition
@@ -39,7 +43,9 @@ import app.sleevesight.core.pipeline.TrackState
  * none: no definition for a genre with no article (or Wikipedia off), no button for a genre only
  * MusicBrainz gives, with
  * *Show insights* off or no AI service ready. A reason still being written reads its `[M]` as the
- * settings allow it ([PanelNotes.modelAllowed]).
+ * settings allow it ([PanelNotes.modelAllowed]). A written reason has *Read aloud* (#325,
+ * [ReadAloudButton]) at the end of its grounding note's row, which reads the question, then the
+ * reason ([PanelNotes.readAloud]).
  */
 @Composable
 internal fun GenreAbout(
@@ -50,6 +56,7 @@ internal fun GenreAbout(
     val notes = shown.notes
     val onCite = shown.onCite
     val modelAllowed = shown.modelAllowed
+    val reader = shown.readAloud
     // A new subscription only when what the reason's key is made of changes, not on every state of
     // the track (a source landing, labels joining).
     val reason by remember(track.normalized, track.evidence?.fingerprint, track.genres, genre, notes) {
@@ -69,10 +76,19 @@ internal fun GenreAbout(
     when (val shown = reason) {
         GenreReason.None -> Unit
         GenreReason.Offered -> WhyButton(question) { notes.explain(track, genre) }
-        is GenreReason.Shown ->
-            Reason(shown.state, question, InsightContext(track, true, true, modelAllowed, InsightOffers()), onCite) {
-                notes.explain(track, genre)
-            }
+        is GenreReason.Shown -> {
+            val readAloud =
+                readAloudControl(reader, Reading.genreReason(genre)) {
+                    (shown.state as? InsightState.Written)?.let { reader?.readGenreReason(track, genre, question, it) }
+                }
+            Reason(
+                shown.state,
+                question,
+                InsightContext(track, true, true, modelAllowed, InsightOffers()),
+                onCite,
+                readAloud,
+            ) { notes.explain(track, genre) }
+        }
     }
 }
 
@@ -107,13 +123,16 @@ private fun WhyButton(
     ) { AiLabel(question) }
 }
 
-// The reason asked for, in [state], under the [question]; offered again after a failure.
+// The reason asked for, in [state], under the [question]; offered again after a failure. Written,
+// with [readAloud] at the end of its grounding note's row.
+@Suppress("LongParameterList") // What the reason shows, and its two actions.
 @Composable
 private fun Reason(
     state: InsightState,
     question: String,
     context: InsightContext,
     onCite: (String) -> Unit,
+    readAloud: ReadAloudControl?,
     again: () -> Unit,
 ) {
     Column(modifier = Modifier.testTag(GENRE_REASON_TAG), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -132,7 +151,14 @@ private fun Reason(
                 for (paragraph in state.grounded.paragraphs) {
                     CheckedProse(paragraph, state.grounded, context.track?.evidence, onCite)
                 }
-                GroundingLine(state.grounded, state.cached, details = false)
+                if (readAloud == null) {
+                    GroundingLine(state.grounded, state.cached, details = false)
+                } else {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.weight(1f)) { GroundingLine(state.grounded, state.cached, details = false) }
+                        ReadAloudButton(readAloud, GENRE_READ_ALOUD_TAG)
+                    }
+                }
                 if (!state.complete) Quiet(stringResource(R.string.genre_why_incomplete))
             }
 

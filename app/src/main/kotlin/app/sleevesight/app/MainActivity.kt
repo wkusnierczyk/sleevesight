@@ -72,6 +72,8 @@ class MainActivity : ComponentActivity() {
             hideGuide = graph.settings.homeGuideHider(graph.settingsSaves),
             // What a genre's panel shows above its table (#523).
             genreNotes = graph.genreNotes,
+            // *Read aloud* under the insight and a genre's reason (#325).
+            readAloud = graph.readAloud,
         )
     }
 
@@ -224,14 +226,17 @@ class MainActivity : ComponentActivity() {
     // possible; a stop for a configuration change (a rotation) says so, so the app stays visible
     // until the new activity starts. A start never asks for a new first action (D5): only a cold
     // start, a new process, begins without one (#190).
+    // A reading aloud stops, too, when the app leaves the screen, and not for a rotation (#325).
     override fun onStart() {
         super.onStart()
         graph.pipeline.activityStarted()
+        graph.readAloud.activityStarted()
     }
 
     override fun onStop() {
         super.onStop()
         graph.pipeline.activityStopped(changingConfigurations = isChangingConfigurations)
+        graph.readAloud.activityStopped(changingConfigurations = isChangingConfigurations)
     }
 
     override fun onResume() {

@@ -55,7 +55,12 @@ internal fun NowPlayingPageContent(
 private fun genreNotes(
     shown: Showing,
     actions: NowPlayingActions,
-) = PanelNotes(actions.genreNotes, { id -> actions.openPage(HomePage.Sources(cite = id)) }, shown.modelAllowed)
+) = PanelNotes(
+    actions.genreNotes,
+    { id -> actions.openPage(HomePage.Sources(cite = id)) },
+    shown.modelAllowed,
+    actions.readAloud,
+)
 
 /**
  * A page once nothing plays (#627): a line that says so, and no more. Not the idle Home

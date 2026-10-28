@@ -9,6 +9,7 @@ import android.graphics.drawable.Drawable
 import android.net.ConnectivityManager
 import android.os.Build
 import android.util.Log
+import android.view.accessibility.AccessibilityManager
 import androidx.datastore.core.DataMigration
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
@@ -52,7 +53,12 @@ import app.sleevesight.app.settings.LastTheme
 import app.sleevesight.app.settings.PrunePlayersMigration
 import app.sleevesight.app.settings.SeenPlayersRecorder
 import app.sleevesight.app.settings.SettingsStore
+import app.sleevesight.app.speech.ReadAloud
+import app.sleevesight.app.speech.ReadAloudMessages
+import app.sleevesight.app.speech.SystemMusicFocus
+import app.sleevesight.app.speech.SystemSpeech
 import app.sleevesight.app.ui.home.GuideDismissal
+import app.sleevesight.app.ui.home.SpokenWords
 import app.sleevesight.core.ai.AiProvider
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.normalizer.Normalizer
@@ -515,6 +521,28 @@ class AppGraph internal constructor(
     }
 
     /**
+     * *Read aloud* (#325): the insight, or a genre's reason, read by the phone's text-to-speech
+     * engine, the music lowered or paused for it as *While reading aloud* says. It follows what
+     * plays and what the pipeline shows (stopping on a track change, reading each new insight with
+     * *Read new insights aloud*), on the main thread; what it cannot read is told in a short message.
+     */
+    val readAloud: ReadAloud by lazy {
+        ReadAloud(
+            speech = SystemSpeech(appContext),
+            focus = SystemMusicFocus(appContext),
+            settings = latestSettings,
+            words =
+                SpokenWords(appContext.getString(R.string.read_aloud_unverified)) { title, artists ->
+                    appContext.getString(R.string.read_aloud_track_line, title, artists)
+                },
+            screenReader = {
+                appContext.getSystemService(AccessibilityManager::class.java)?.isTouchExplorationEnabled == true
+            },
+            tell = ReadAloudMessages(appContext)::tell,
+        )
+    }
+
+    /**
      * The diagnostics screen's: the pipeline's events kept in memory from the start of the process,
      * the track changes and the caches' sizes, read when the screen asks, and what skip detection
      * has learned, with its reset ([skipLearning]).
@@ -538,6 +566,8 @@ class AppGraph internal constructor(
         mainScope.launch { seenPlayersRecorder.run() }
         // The guide to Home, dismissed once, is back for the next time nothing plays (#627).
         mainScope.launch { guideDismissal.clearOnPlay(sessions.nowPlaying) }
+        // A reading aloud stops with its track, and a new insight is read with *Read new insights aloud* (#325).
+        mainScope.launch { readAloud.follow(sessions.nowPlaying, pipeline.state) }
         // What the session layer sees is recorded whether or not the app is visible.
         mainScope.launch { historyRecorder.run() }
         mainScope.launch { historyRetention.run() }
