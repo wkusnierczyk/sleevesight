@@ -31,7 +31,10 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlin.time.Clock
 import kotlin.time.Duration.Companion.ZERO
+import kotlin.time.Duration.Companion.microseconds
+import kotlin.time.Instant
 
 /** *Why is this …?* (#523): one call on a tap, checked, and kept in the synthesis cache like the insight. */
 class GenreReasonsTest {
@@ -67,7 +70,7 @@ class GenreReasonsTest {
         shown: MutableList<InsightState> = mutableListOf(),
     ): InsightState {
         val key = checkNotNull(reasons.key(on, "jazz", settings))
-        return reasons.write(key, on, "Jazz") { shown += it }
+        return reasons.write(key, on, "Jazz") { state, _ -> shown += state }
     }
 
     @Test
@@ -176,6 +179,27 @@ class GenreReasonsTest {
             val on = GenreReasons(AiAccess(provider, Secret("k")), failing, JvmHasher)
             val key = checkNotNull(on.key(track, "jazz", settings))
             assertNull(on.kept(key, track))
-            assertIs<InsightState.Written>(on.write(key, track, "Jazz") {})
+            assertIs<InsightState.Written>(on.write(key, track, "Jazz") { _, _ -> })
+        }
+
+    @Test
+    fun `a reason kept is kept with the time it is shown with, in whole milliseconds`() =
+        runTest {
+            // A clock that moves on, by less than a millisecond, each time it is read.
+            val clock =
+                object : Clock {
+                    var at = Instant.parse("2026-10-28T12:00:00.000400Z")
+
+                    override fun now(): Instant = at.also { at += 300.microseconds }
+                }
+            val timed = GenreReasons(AiAccess(provider, Secret("k")), cache, JvmHasher, clock)
+            val key = checkNotNull(timed.key(track, "jazz", settings))
+            val shown = mutableListOf<Pair<InsightState, Instant>>()
+            val written = timed.write(key, track, "Jazz") { state, at -> shown += state to at }
+            val (last, at) = shown.last()
+            assertIs<InsightState.Written>(written)
+            assertEquals(written, last)
+            assertEquals(at, cache.keptAt[key])
+            assertEquals(at, Instant.fromEpochMilliseconds(at.toEpochMilliseconds()))
         }
 }

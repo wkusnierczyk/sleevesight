@@ -103,7 +103,8 @@ interface GenreNotes {
  * page is left and opened again; and in the synthesis cache, read the first time the panel asks for
  * a reason ([reason]), so it shows again when the track plays again later. A settings change that
  * changes its key (another AI service, model or effort, new evidence) offers it again. Each is kept
- * in memory with when it was written (by [clock], or as the cache says), and shown no longer than
+ * in memory with when it was written (by [clock], the time the cache keeps it with too, or as the
+ * cache says), and shown no longer than
  * *Keep history for* after it, as the cache serves it: read again on each change of the settings or
  * of the reasons shown, past it, it is dropped. The writing runs in [scope], the process's, so
  * leaving the panel does not stop a call paid for; it is marked with [epoch], and after *Clear
@@ -146,7 +147,7 @@ class AppGenreNotes(
         // The reason's key, or null when none is offered.
         val keys =
             combine(parts, settings) { made, now ->
-                now?.let { made?.let { GenreReasons(it.ai, it.cache, it.hasher) }?.key(track, genre, now) }
+                now?.let { made?.let { GenreReasons(it.ai, it.cache, it.hasher, clock) }?.key(track, genre, now) }
             }
         return keys
             .distinctUntilChanged()
@@ -168,7 +169,7 @@ class AppGenreNotes(
         track: TrackState,
         genre: String,
     ) {
-        val reasons = parts.value?.let { GenreReasons(it.ai, it.cache, it.hasher) } ?: return
+        val reasons = parts.value?.let { GenreReasons(it.ai, it.cache, it.hasher, clock) } ?: return
         val key = settings.value?.let { now -> reasons.key(track, genre, now) }
         // Not offered; shown already, unless it failed or has expired; or under way.
         if (key == null || !open(key) || !writing.add(key)) return
@@ -204,7 +205,7 @@ class AppGenreNotes(
             if (kept != null) {
                 show(kept.state, kept.writtenAt ?: clock.now())
             } else {
-                reasons.write(key, track, label) { show(it, clock.now()) }
+                reasons.write(key, track, label, show)
             }
         } catch (e: CancellationException) {
             throw e
@@ -238,6 +239,7 @@ class AppGenreNotes(
                     made.ai,
                     made.cache,
                     made.hasher,
+                    clock,
                 ).kept(key, track)?.takeIf { !expired(it.writtenAt) }
             if (kept != null && epoch.isCurrent(work)) {
                 val entry = Entry(kept.state, kept.writtenAt ?: clock.now())
