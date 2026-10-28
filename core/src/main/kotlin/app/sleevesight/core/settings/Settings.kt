@@ -59,6 +59,16 @@ import kotlin.time.Duration.Companion.seconds
  *   insight's prompt leaves out the artist-level lines another insight of the listening session
  *   cited, and all of them for a track with enough lines of its own (#239, `PromptEvidence`); off,
  *   every insight is written from all its evidence, as before #239.
+ * @property readAloudMusic *While reading aloud* (#325): what happens to the music playing while an
+ *   insight is read aloud: lowered under the voice (the default, so the music is not interrupted),
+ *   or paused and resumed after it. See [ReadAloudMusic].
+ * @property readTrackLineFirst *Read the track line first* (#325): whether reading an insight aloud
+ *   starts with the track's title and artists. Off by default: the track is on the screen and in
+ *   the player, and the insight is what was asked for.
+ * @property readNewInsightsAloud *Read new insights aloud* (#325): whether each insight is read
+ *   aloud as soon as it is written, while Sleevesight is on screen (D6), and never while a screen
+ *   reader explores by touch (TalkBack), which reads the screen itself. Off by default: speaking
+ *   unasked over the music is a surprise, and *Read aloud* on the insight is one tap.
  * @property cacheLifetimes the retrieval cache lifetime per source (D9). A source with none (the
  *   pseudo-sources, which retrieve nothing) is not cached.
  * @property keepArtistResults *Keep what sources said about each artist* (#420): whether what the
@@ -161,6 +171,9 @@ data class Settings(
     val prepareNextTrack: PrepareNextTrack = PrepareNextTrack.EVIDENCE,
     val lookUpInBackground: Boolean = false,
     val artistFactsOncePerSession: Boolean = true,
+    val readAloudMusic: ReadAloudMusic = ReadAloudMusic.LOWER,
+    val readTrackLineFirst: Boolean = false,
+    val readNewInsightsAloud: Boolean = false,
     val cacheLifetimes: Map<SourceId, Duration> = DEFAULT_CACHE_LIFETIMES,
     val keepArtistResults: Boolean = false,
     val artistCacheLifetime: Duration = DEFAULT_ARTIST_CACHE_LIFETIME,
@@ -626,6 +639,24 @@ enum class WriteAutomatically {
     ON_EVERY_TRACK_CHANGE,
     WHEN_I_SKIP,
     NEVER,
+}
+
+/**
+ * *While reading aloud* (#325): what happens to the music playing while an insight is read aloud,
+ * through Android's audio focus, which the player follows.
+ */
+enum class ReadAloudMusic {
+    /**
+     * *Lower the music*: the player plays on, quieter, under the voice (transient audio focus that
+     * lets others duck). The default: the music is not interrupted.
+     */
+    LOWER,
+
+    /**
+     * *Pause the music*: the player pauses for the voice and plays on after it (transient audio
+     * focus), as players do when Android hands the focus back.
+     */
+    PAUSE,
 }
 
 /**

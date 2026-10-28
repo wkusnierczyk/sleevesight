@@ -16,6 +16,7 @@ import app.sleevesight.core.settings.FontChoice
 import app.sleevesight.core.settings.Layout
 import app.sleevesight.core.settings.LinkStyle
 import app.sleevesight.core.settings.PrepareNextTrack
+import app.sleevesight.core.settings.ReadAloudMusic
 import app.sleevesight.core.settings.ReportButton
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.SourceSwitch
@@ -79,6 +80,9 @@ class SettingsCodecTest {
                 prepareNextTrack = PrepareNextTrack.OFF,
                 lookUpInBackground = true,
                 artistFactsOncePerSession = false,
+                readAloudMusic = ReadAloudMusic.PAUSE,
+                readTrackLineFirst = true,
+                readNewInsightsAloud = true,
                 cacheLifetimes = Settings.DEFAULT_CACHE_LIFETIMES + (SourceId.WEB to 3.days),
                 keepArtistResults = true,
                 artistCacheLifetime = 30.days,

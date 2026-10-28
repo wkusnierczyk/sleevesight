@@ -131,7 +131,7 @@ internal fun insightRows(settings: Settings): List<IndexedRow> {
             stringResource(R.string.settings_artist_facts_once),
             stringResource(R.string.settings_artist_facts_once_summary, gap, history),
         ),
-    )
+    ) + readAloudIndexRows(settings)
 }
 
 @Composable

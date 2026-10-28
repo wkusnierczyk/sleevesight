@@ -63,6 +63,9 @@ internal object SettingsCodec {
     private val PREPARE_NEXT = stringPreferencesKey("insights.prepare_next_track")
     private val BACKGROUND = booleanPreferencesKey("lookups.background")
     private val ARTIST_FACTS_ONCE = booleanPreferencesKey("insights.artist_facts_once")
+    private val READ_ALOUD_MUSIC = stringPreferencesKey("read_aloud.music")
+    private val READ_TRACK_LINE = booleanPreferencesKey("read_aloud.track_line_first")
+    private val READ_NEW_INSIGHTS = booleanPreferencesKey("read_aloud.new_insights")
     private val KEEP_ARTIST_RESULTS = booleanPreferencesKey("cache.keep_artist_results")
     private val ARTIST_LIFETIME_MS = longPreferencesKey("cache.artist_lifetime_ms")
     private val CACHE_SIZE_LIMIT = longPreferencesKey("cache.size_limit")
@@ -109,6 +112,9 @@ internal object SettingsCodec {
             prepareNextTrack = enumOf(prefs[PREPARE_NEXT]) ?: defaults.prepareNextTrack,
             lookUpInBackground = prefs[BACKGROUND] ?: defaults.lookUpInBackground,
             artistFactsOncePerSession = prefs[ARTIST_FACTS_ONCE] ?: defaults.artistFactsOncePerSession,
+            readAloudMusic = enumOf(prefs[READ_ALOUD_MUSIC]) ?: defaults.readAloudMusic,
+            readTrackLineFirst = prefs[READ_TRACK_LINE] ?: defaults.readTrackLineFirst,
+            readNewInsightsAloud = prefs[READ_NEW_INSIGHTS] ?: defaults.readNewInsightsAloud,
             cacheLifetimes = readLifetimes(prefs),
             keepArtistResults = prefs[KEEP_ARTIST_RESULTS] ?: defaults.keepArtistResults,
             artistCacheLifetime =
@@ -202,6 +208,15 @@ internal object SettingsCodec {
         }
         if (moved { it.artistFactsOncePerSession }) {
             prefs.put(ARTIST_FACTS_ONCE, settings.artistFactsOncePerSession, defaults.artistFactsOncePerSession)
+        }
+        if (moved { it.readAloudMusic }) {
+            prefs.put(READ_ALOUD_MUSIC, settings.readAloudMusic.name, defaults.readAloudMusic.name)
+        }
+        if (moved { it.readTrackLineFirst }) {
+            prefs.put(READ_TRACK_LINE, settings.readTrackLineFirst, defaults.readTrackLineFirst)
+        }
+        if (moved { it.readNewInsightsAloud }) {
+            prefs.put(READ_NEW_INSIGHTS, settings.readNewInsightsAloud, defaults.readNewInsightsAloud)
         }
         for (source in Settings.DEFAULT_CACHE_LIFETIMES.keys) {
             if (!moved { it.cacheLifetimes[source] }) continue
