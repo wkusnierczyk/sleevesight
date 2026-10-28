@@ -162,6 +162,11 @@ section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-
 .box .what{margin:0 0 8px;font-size:19px;font-weight:650;font-stretch:92%}
 .box p{margin:0;font-size:16.5px;line-height:1.55}
 .box .langs{margin:0 0 8px;font-weight:600}
+/* A marker and the comma after it kept on one line. */
+.nw{white-space:nowrap}
+.box .when{margin:0 0 4px;font-weight:600}
+.box .when~.when{margin-top:12px}
+.box .by{margin-top:4px;font-size:14px;font-style:italic;color:var(--s-onv)}
 .about{padding-top:16px}
 .about p{margin:0 0 8px;font-size:17px}
 .about p:last-child{margin-bottom:0}
@@ -242,7 +247,7 @@ section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-
   <ol class="steps" role="list">
     <li class="track"><h3>Track</h3><div><p>Sleevesight is notified when your music player starts a track, and knows its title, artists, album and cover.</p><p>Audio never touched.</p></div></li>
     <li class="trace"><h3>Trace</h3><div><p>Sleevesight finds the track's traces across the sources you choose.</p><p>Nothing made up.</p></div></li>
-    <li class="tell"><h3>Tell</h3><div><p>Sleevesight shares what makes the artist, song and album worth knowing, in a few lines written by the AI service you choose, to read or to listen to.</p><p>Every fact cited.</p></div></li>
+    <li class="tell"><h3>Tell</h3><div><p>Sleevesight shares what makes the artist, song and album worth knowing, in a few lines written by the AI service you choose, to read or to listen to in the phone's own voice.</p><p>Every fact cited.</p></div></li>
   </ol>
 </section>
 
@@ -282,6 +287,11 @@ section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-
       <div class="box"><p class="label" aria-hidden="true">Language</p><p class="what">Michelle, The Beatles</p><p class="langs">English, French<span class="vh">, source&nbsp;</span><span class="cite MB">MB1</span><span class="vh">.&nbsp;</span></p><p>Paul McCartney sings it in English, with some lines in French.<span class="vh">, source&nbsp;</span><span class="cite W">W1</span><span class="vh">.&nbsp;</span> The French words came from Jan Vaughan, a French teacher and the wife of his old friend Ivan Vaughan.<span class="vh">, source&nbsp;</span><span class="cite W">W2</span><span class="vh">.&nbsp;</span></p></div>
     </li>
     <li class="ex">
+      <h3 class="vh">History</h3>
+      <div class="about"><p><b>Your listening history</b>, exported to a file of your own: each track you played, when it played, and the insight written for it, if any.</p><p>Each insight in it is marked as written by AI, with the model that wrote it. The file leaves the phone only where you save or send it.</p><p>This example's insight is the one in the mock above, based on MusicBrainz's entry for the song and Wikipedia's article on it: <span class="nw"><span class="cite MB">MB1</span>,</span> <span class="cite W">W1</span> and <span class="cite W">W2</span>.</p></div>
+      <div class="box"><p class="label" aria-hidden="true">History</p><p class="what">Export, 18 October 2026</p><p class="when">21:04 · Michelle, The Beatles</p><p>Michelle is a Beatles song from the 1965 album <i>Rubber Soul</i>.<span class="vh">, source&nbsp;</span><span class="cite MB">MB1</span><span class="vh">, source&nbsp;</span><span class="cite W">W1</span><span class="vh">.&nbsp;</span> It won the Grammy Award for Song of the Year in 1967.<span class="vh">, source&nbsp;</span><span class="cite W">W2</span><span class="vh">.&nbsp;</span></p><p class="by">Written by AI, Claude Haiku 5.5</p><p class="when">21:07 · What Goes On, The Beatles</p><p class="by">No insight written</p></div>
+    </li>
+    <li class="ex">
       <h3 class="vh">Deep dive</h3>
       <div class="about"><p><b>Questions of your own</b> about what is playing, about anyone on the track or anything in its story.</p><p>An AI service you enable answers them, on your own API key, and each answer names the model that wrote it.</p><p>This example response is based on three passages of Wikipedia's article on Paul McCartney: <span class="cite W">W1</span>, <span class="cite W">W2</span> and <span class="cite W">W3</span>.</p></div>
       <div class="box"><p class="label" aria-hidden="true">Deep dive</p><p class="what">Paul McCartney</p><div class="chat"><p><b class="who">You<span class="vh">:&nbsp;</span></b> <span class="say ask">Tell me more about his career.</span></p><p><b class="who">AI<span class="vh">:&nbsp;</span></b> <span class="say">He joined Lennon's skiffle group, the Quarrymen, in 1957, which became the Beatles in 1960.<span class="vh">, source&nbsp;</span><span class="cite W">W1</span><span class="vh">.&nbsp;</span> After the band split, he released his first solo album, <i>McCartney</i>, in 1970, and formed Wings with his wife Linda and Denny Laine.<span class="vh">, source&nbsp;</span><span class="cite W">W2</span><span class="vh">.&nbsp;</span> His songwriting partnership with Lennon remains the most successful in music history.<span class="vh">, source&nbsp;</span><span class="cite W">W3</span><span class="vh">.&nbsp;</span></span> <span class="by">by Claude Haiku 5.5</span></p></div></div>
@@ -319,7 +329,7 @@ section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-
       <div>
         <p class="lead">What leaves the phone, and to whom</p>
         <p>The sources you chose: the playing track's information; by default, the next track's title and artists to MusicBrainz, if enabled.</p>
-        <p>The AI service you chose: the track's title, artists and album, and what the sources found about those. Each insight is one request of its own, with no sustained conversation. Requests use your API key, and are handled under the terms for your AI service account.</p>
+        <p>The AI service you chose: the track's title, artists and album, and what the sources found about those. Each insight, and each explanation of a genre you ask for, is one request of its own, with no sustained conversation. Requests use your API key, and are handled under the terms for your AI service account.</p>
         <!-- Every address the app calls is `https`, and Android blocks unencrypted connections for it
              (`targetSdk` 37, no cleartext exception in the manifest). -->
         <p>All of it travels encrypted (HTTPS), your API keys included, each only to the service it belongs to.</p>
@@ -334,7 +344,7 @@ section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-
   <!-- The Google Play badge goes here once the app is listed (Phase 1.5). -->
   <p>Initial release of Sleevesight supports Android only, and is distributed on Google Play.<br>
   An iOS version may be released at a later time.</p>
-  <p>Sleevesight undergoes internal testing. Refer to the <a href="mailto:support@sleevesight.app">developer</a> for further details.</p>
+  <p>Sleevesight is in closed testing on Google Play, by invitation. Refer to the <a href="mailto:support@sleevesight.app">developer</a> for further details.</p>
 </section>
 
 <section id="more" aria-labelledby="more-h">

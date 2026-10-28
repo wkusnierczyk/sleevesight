@@ -120,14 +120,14 @@ At the end of a phase, and since release 0.1.5 at the end of each release, the g
 
 ## How it is tested and released
 
-Releases so far have gone to Google Play's internal testing track. The closed test ([#58](https://github.com/wkusnierczyk/sleevesight/issues/58)) has not yet run, so what follows from it is the plan; this section will say what happened once it has.
+Sleevesight is in closed testing on Google Play ([#58](https://github.com/wkusnierczyk/sleevesight/issues/58)); until it began, every release went to the internal testing track alone. What follows the closed test is the plan; this section will say what happened once it has run.
 
 ### 9. Testing tracks
 
 **What.** Google Play offers a sequence of tracks, each reaching more people:
 
-- **Internal testing.** A small list of testers named in Play Console, who get each release as soon as it is uploaded. Every release so far has gone here, and it is where a build is first checked on a phone installed from Play.
-- **Closed test (alpha).** *Planned.* Invited testers, at least 12, who stay opted in for 14 days in a row: Google Play asks for that before a new developer's app can go public. The [tester brief]({{ '/docs/tester/alpha/' | relative_url }}) tells them how to install the app, what to try and what to report: insights a source does not support, track changes missed, skips misread, crashes, battery or data use, the icon on their home screen.
+- **Internal testing.** A small list of testers named in Play Console, who get each release as soon as it is uploaded. Every release goes here first, and it is where a build is first checked on a phone installed from Play.
+- **Closed test (alpha).** *Under way.* Invited testers, at least 12, who stay opted in for 14 days in a row: Google Play asks for that before a new developer's app can go public. The [tester brief]({{ '/docs/tester/alpha/' | relative_url }}) tells them how to install the app, what to try and what to report: insights a source does not support, track changes missed, skips misread, crashes, battery or data use, the icon on their home screen.
 - **Open test (beta).** *Planned, if needed.* Open to anyone through the store listing, for a wider check before production.
 - **Production.** *Planned.* Play reviews the app before it is public, including what it does with notification access and what its data safety form declares.
 

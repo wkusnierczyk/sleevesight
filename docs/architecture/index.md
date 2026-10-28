@@ -88,7 +88,7 @@ flowchart LR
   end
   App -- "title and artists" --> MB["MusicBrainz"]
   App -- "song, artist and genre titles; Wikidata: identifiers only" --> WP["Wikipedia and Wikidata"]
-  App -- "artists' names, your key" --> LFM["Last.fm"]
+  App -- "artists' names; for genre labels, the title and album; your key" --> LFM["Last.fm"]
   App -- "title, artists, the film or show, your key" --> Exa["Exa web search"]
   App -- "title, artists, album, evidence, your key" --> AI["Anthropic, OpenAI or Google"]
   App -- "a request for the image" --> Art["The cover's server"]
@@ -104,7 +104,7 @@ Requests go straight from the phone to each service, over HTTPS; Android refuses
 |---|---|---|
 | MusicBrainz | Switched on (it is by default) | The title and artists of the playing track, cleaned of tags such as "2006 Remaster". While *Proactive* is on, as it is by default, the title and artists of the next track in the player's queue, before it plays. |
 | Wikipedia and Wikidata | Wikipedia switched on | Wikipedia: the title and artists, to find their articles. Wikidata: only identifiers, from MusicBrainz or Wikipedia, never a name. When you open a genre's panel, Wikidata gets the genre's MusicBrainz identifier and Wikipedia the title of the genre's article, to show what the genre is; nothing about the track. |
-| Last.fm | Switched on, with your key | The artists' names only, and your Last.fm key. |
+| Last.fm | Switched on, with your key | The artists' names, and your Last.fm key. For the genre labels, while *Show genres* is on, its tags for the track and for the album are asked for by the first artist's name with the title, and with the album name: Last.fm is the only source that gets the album name. |
 | Exa (web search) | Switched on, with your key | The title and artists, the film or show a title says it is from, and your Exa key. |
 | The AI service you choose: Anthropic, OpenAI or Google | *Show insights* on, a service switched on, with your key | The title, artists and album, and what the sources found, for the playing track only; each insight, and each *Why is this …?* you tap in a genre's panel (with the genre's name), a request of its own, with no conversation kept. Your key for that service, and the model you chose. The app also asks the service for its list of models, with your key and nothing about your listening: at start, and when you open the model choice. |
 | The server a cover's web address names | A player gives the cover only as a web address | A request for that image. The address itself may identify the album or episode. |
@@ -114,7 +114,7 @@ Requests go straight from the phone to each service, over HTTPS; Android refuses
 | Devices nearby, over Bluetooth | While a key's dialog types on a computer (*Type on a computer*) | The phone's advertisement, which any device nearby that scans for Bluetooth can see: a random identifier for the session, and the phone's Bluetooth name only with *Share phone's name with Type on a computer* on. The typed text comes from the computer, encrypted; the phone sends back only Bluetooth's acknowledgements. |
 | Google Play | Installing and updating the app | Google handles the installation under its own policy; it gives the developer aggregated install statistics and, from phones that share usage and diagnostics with Google, crash reports that name no one. The app holds no Google Play library. |
 
-The album name goes to the AI service alone, never to the sources. Each API key goes only to the service it belongs to. By default, lookups and writing happen only while Sleevesight is on screen; with *Look up in the background* on, also while it is not. A Spotify account, once the app offers connecting one, would add requests to Spotify's Web API with your own token; no build offers it yet. Nothing else leaves the phone, except a diagnostics export you make yourself, a report you hand to your mail app, an insight read aloud by an engine that speaks through its server, and, while you type a key on a computer, the phone's Bluetooth advertisement, which devices nearby can see (the session's service, and the phone's name only with *Share phone's name with Type on a computer* on).
+The album name goes to the AI service, and among the sources only to Last.fm, for its album tags. Each API key goes only to the service it belongs to. By default, lookups and writing happen only while Sleevesight is on screen; with *Look up in the background* on, also while it is not. A Spotify account, once the app offers connecting one, would add requests to Spotify's Web API with your own token; no build offers it yet. Nothing else leaves the phone, except a diagnostics export you make yourself, a report you hand to your mail app, an insight read aloud by an engine that speaks through its server, and, while you type a key on a computer, the phone's Bluetooth advertisement, which devices nearby can see (the session's service, and the phone's name only with *Share phone's name with Type on a computer* on).
 
 ## Enforced, not promised
 

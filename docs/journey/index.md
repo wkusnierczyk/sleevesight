@@ -19,7 +19,7 @@ In short: you install the app, read what it sends where, and give it notificatio
 
 ## 1. Installing, and the first-run screen
 
-**Installing.** Sleevesight is not yet listed on Google Play for everyone. Its builds go to Play's internal test track, and a closed test, which testers join by invitation, comes next; [Testing Sleevesight]({{ '/docs/tester/alpha/' | relative_url }}) says how to opt in and install once it starts. Only a copy installed from Google Play takes part in the test and gets its updates.
+**Installing.** Sleevesight is not yet listed on Google Play for everyone: it is in closed testing, which testers join by invitation; [Testing Sleevesight]({{ '/docs/tester/alpha/' | relative_url }}) says how to opt in and install. Only a copy installed from Google Play takes part in the test and gets its updates.
 
 **The first-run screen.** Opened for the first time, Sleevesight shows one screen before anything else, and reads, builds or sends nothing until you continue past it. It says, under three headings:
 
@@ -80,7 +80,7 @@ To save several keys at once, *Load keys*, under *Secrets*, reads one QR code of
 - *Exa web search*: likewise off until your Exa API key is saved and you switch it on.
 - *AI service knowledge*: off by default. On, the insight may hold at most one claim from what the model knows, marked unverified.
 
-**What you decide.** Which sources to use, and whether to add keys for Last.fm and Exa. Each source you switch on receives the playing track's title and artists (Last.fm the artists only, Wikidata only identifiers, and Exa also the film or show a title says it is from); a source switched off receives nothing. Under *Genres* you choose whose tags give the genre labels, or, with *Show genres* off, none at all. With *Proactive* on, as it is by default, under *Insights*, the next track in the player's queue is also looked up at MusicBrainz ahead of its play; off sends nothing about it. The [privacy policy]({{ '/privacy.html' | relative_url }}) lists what goes to each.
+**What you decide.** Which sources to use, and whether to add keys for Last.fm and Exa. Each source you switch on receives the playing track's title and artists (Last.fm the artists, and for the genre labels also the title and the album, Wikidata only identifiers, and Exa also the film or show a title says it is from); a source switched off receives nothing. Under *Genres* you choose whose tags give the genre labels, or, with *Show genres* off, none at all. With *Proactive* on, as it is by default, under *Insights*, the next track in the player's queue is also looked up at MusicBrainz ahead of its play; off sends nothing about it. The [privacy policy]({{ '/privacy.html' | relative_url }}) lists what goes to each.
 
 <!-- screenshot: Settings, "Sources", with the defaults: MusicBrainz and Wikipedia on, Last.fm and Exa without keys, the AI service knowledge off, from app version … -->
 
@@ -96,7 +96,7 @@ To save several keys at once, *Load keys*, under *Secrets*, reads one QR code of
 
 **The *Sources* list.** Under the insight, *Sources* starts folded, a chip alone, like a genre chip; a tap on it opens its panel. In the panel, a table of the sources that are on: each with the letter its citations use, as a chip that shows or hides its lines (dimmed when it gave none), its name and what it found; a note says when a source needs your key, could not be reached or failed; then come the evidence lines, and below them what was found but not verified, so not cited.
 
-**Listening instead of reading.** *Read aloud*, the speaker beside *Write insight*, has the phone's text-to-speech engine read the insight to you, the music lowered meanwhile; it makes no AI call. A sentence the sources do not back is read after "Unverified:". A tap on it while it reads (*Stop reading aloud*), a track change or leaving the app stops it. Whether the music is lowered or paused, the track line read first, and new insights read by themselves are settings under *Insights*.
+**Listening instead of reading.** *Read aloud*, the speaker beside *Write insight*, has the phone's text-to-speech engine read the insight to you, the music lowered meanwhile; it makes no AI call. It is the phone's own built-in text-to-speech voice, so it sounds only as good as the phone's voice: not a natural or studio voice. A sentence the sources do not back, or one from the AI model's own knowledge, is read after "Unverified:". A tap on it while it reads (*Stop reading aloud*), a track change or leaving the app stops it. Whether the music is lowered or paused, the track line read first, and new insights read by themselves are settings under *Insights*.
 
 **What you decide.** Nothing, as a rule: you listen. A wrong-looking sentence can be checked against its line under *Sources*. [Usage]({{ '/docs/tutorials/usage/' | relative_url }}) says what each state of *Key insights* means, offline or when a source fails.
 
@@ -128,7 +128,7 @@ To save several keys at once, *Load keys*, under *Secrets*, reads one QR code of
 
 ## 7. Changing settings later, and clearing what is kept
 
-**Settings.** Every choice above can be changed later, and each change is saved at once. [Settings]({{ '/docs/tutorials/settings/' | relative_url }}) describes each one, with its default and what changing it sends or keeps; among those not met above are *Theme* (light, dark or as the phone is, which the theme button on the home screen sets too) and *Theme button*, *Layout* (the sources and the genres in place on the home screen, or each on a page of its own), *Keep Sources as you left them*, how long each source's findings are kept, *Font*, *Logo intro at start* and *Home guide*, under *Appearance*; the reading-aloud rows, under *Insights*; and *Only enabled players on Home*, under *Players*.
+**Settings.** Every choice above can be changed later, and each change is saved at once. [Settings]({{ '/docs/tutorials/settings/' | relative_url }}) describes each one, with its default and what changing it sends or keeps; among those not met above are *Theme* (light, dark or as the phone is, which the theme button on the home screen sets too) and *Theme button*, *Layout* (the sources and the genres in place on the home screen, or each on a page of its own), *Keep Sources as you left them*, *Font*, *Logo intro at start* and *Home guide*, under *Appearance*; how long each source's findings are kept, under *History*; the reading-aloud rows, under *Insights*; and *Only enabled players on Home*, under *Players*.
 
 **Clearing what is kept.** Everything Sleevesight keeps stays on the phone and is left out of Android's backup. To remove it:
 
