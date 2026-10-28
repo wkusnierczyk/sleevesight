@@ -145,6 +145,11 @@ class StorePipelineCacheTest {
                 )
             assertEquals("It was a hit [W1].", stored?.text)
             assertNull(cache.card(key.copy(kind = CardKind.SONG)))
+
+            // Kept with the time the card shown carries (#643), not one the cache reads later.
+            val writtenAt = fixture.clock.now - 2.days
+            cache.keep(key, "It was a hit [W1].", writtenAt)
+            assertEquals(KeptCard("It was a hit [W1].", writtenAt), cache.keptCard(key))
         }
 
     @Test

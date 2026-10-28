@@ -18,6 +18,7 @@ import app.sleevesight.core.pipeline.RunStep
 import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WriteAutomatically
+import kotlin.time.Instant
 
 /** A card paid for: the insight written and checked, and the evidence it cites. */
 data class Card(
@@ -155,6 +156,16 @@ sealed interface CoordinatorEvent {
 
     /** A key, a web engine or the AI service changed: a new pipeline is needed. */
     data object RebuildRequested : CoordinatorEvent
+
+    /**
+     * The card paid for, written at [writtenAt], is past *Keep history for* (#643): the host no
+     * longer shows it, and the cache has stopped serving it and deletes it. The ledger forgets it
+     * (it stays written, so nothing writes the track again without a tap), so nothing shows or
+     * offers it again, under a longer setting either.
+     */
+    data class CardExpired(
+        val writtenAt: Instant,
+    ) : CoordinatorEvent
 
     /**
      * *Clear history* (#547): what is known of the tracks played goes, the insight shown and its
@@ -826,6 +837,8 @@ fun sameInsightTrack(
  * | the run holds latest | Settled | as above | none |
  * | otherwise | Settled | as above; a new run of it (of the ledger's key and report, for its written track); a preparation cancelled, the next track kept | CancelRun (old), CancelPreparation (if one is cancelled), StartRun |
  * | any | RebuildRequested | building = a new build; no run is current; a preparation cancelled, and nothing prepared on the new pipeline yet | CancelPreparation (if one is cancelled), Build |
+ * | the ledger's card written at the time | CardExpired(writtenAt) (#643) | the ledger's card forgotten, the ledger still written | none |
+ * | otherwise | CardExpired(writtenAt) | unchanged | none |
  * | any | Cleared (#547) | no run, no preparation, nothing prepared, the ledger empty; one more clear; the latest report's track cleared: it starts no run, nor does a swap, until a report of another insight track settles; a pending swap goes ahead | CancelRun (if a run), CancelPreparation (if one), Swap (if pending) |
  * | build not the one pending | RebuildFinished | unchanged | none |
  * | the pending build, the run's model call under way | RebuildFinished | built known; waits for the call | none |
@@ -903,8 +916,16 @@ class PipelineCoordinator(
             is CoordinatorEvent.NextChanged -> nextChanged(event.next)
             is CoordinatorEvent.PreparationEnded -> preparationEnded(event.prep)
             is CoordinatorEvent.NetworkChanged -> network(event.online)
+            is CoordinatorEvent.CardExpired -> cardExpired(event.writtenAt)
             else -> fromRun(event)
         }
+    }
+
+    // The ledger's card past *Keep history for* (#643), if it is the one written at [writtenAt]:
+    // forgotten, not a newer one; the ledger stays written.
+    private fun cardExpired(writtenAt: Instant) {
+        val ledger = state.ledger ?: return
+        if (ledger.card?.insight?.writtenAt == writtenAt) state = state.copy(ledger = ledger.copy(card = null))
     }
 
     // What a run reports.
