@@ -204,8 +204,9 @@ private fun Footer(
  * The footer's first line (#671): *As written previously.* for an insight not written in this run
  * but earlier, on an earlier play of the track (from the cache, or the card paid for shown in place
  * of an insight the run lacks, #606), or before a *Look again*, a settings change or a rewrite that
- * failed; then, on the same line, what follows from it: what *Look again* found or is looking up
- * (#617, [lookAgainLine]), that a rewrite failed or was stopped, and that *Rewrite insight* writes
+ * failed; then, on the same line, what follows from it, in the order it happened: that a rewrite
+ * failed or was stopped, what *Look again* found or is looking up (#617, [lookAgainLine]), and that
+ * *Rewrite insight* writes
  * it with the updated settings, while offered (#615, #625; not for what a look again found, whose
  * own words say what *Rewrite insight* uses). Null for an insight just written, with nothing to
  * follow.
@@ -217,8 +218,9 @@ private fun writtenBefore(
 ): String? {
     val after =
         buildList {
-            lookAgainLine(context)?.let { add(stringResource(it)) }
+            // In the order things happened: a rewrite that failed, then what a later look again found.
             context.rewriteFailed?.let { add(rewriteFailure(it)) }
+            lookAgainLine(context)?.let { add(stringResource(it)) }
             if (offersRewrite(context) && !context.offers.somethingNew) {
                 add(stringResource(R.string.home_rewrite_offered))
             }

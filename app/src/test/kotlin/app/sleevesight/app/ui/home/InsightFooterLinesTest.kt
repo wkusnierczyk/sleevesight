@@ -27,20 +27,30 @@ class InsightFooterLinesTest {
     @get:Rule
     val compose = createEmptyComposeRule()
 
+    // What the card is shown with: the insight from the cache or not, the pipeline's offers, the card
+    // paid for shown in place of the run's own insight, and why its rewrite failed.
+    private class Shown(
+        val offers: InsightOffers,
+        val cached: Boolean = true,
+        val cardShown: Boolean = false,
+        val rewriteFailed: String? = null,
+    )
+
     private fun show(
-        cached: Boolean,
-        offers: InsightOffers,
+        shown: Shown,
         details: Boolean,
         block: () -> Unit,
     ) {
-        val insight = HomeFixtures.written("Sundown was recorded in 1973 [MB1].", cached = cached)
+        val insight = HomeFixtures.written("Sundown was recorded in 1973 [MB1].", cached = shown.cached)
         val context =
             InsightContext(
                 HomeFixtures.track(insight = insight),
                 aiReady = true,
                 insightsOn = true,
                 modelAllowed = false,
-                offers = offers,
+                offers = shown.offers,
+                cardShown = shown.cardShown,
+                rewriteFailed = shown.rewriteFailed,
             )
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity {
@@ -68,11 +78,10 @@ class InsightFooterLinesTest {
     // the counts follow, without *kept from before*.
     private fun assertFirstLine(
         line: String,
-        offers: InsightOffers,
-        cached: Boolean = true,
+        shown: Shown,
     ) {
         for (details in listOf(false, true)) {
-            show(cached, offers, details) {
+            show(shown, details) {
                 compose.onNodeWithText(line).assertExists()
                 assertEquals("developer mode $details: said once", 1, count(BEFORE))
                 if (details) compose.onNodeWithText(COUNTS).assertExists()
@@ -84,38 +93,70 @@ class InsightFooterLinesTest {
 
     @Test
     fun afterLookAgainFoundNothingNew() =
-        assertFirstLine("As written previously. No update from sources.", InsightOffers(nothingNew = true))
+        assertFirstLine("As written previously. No update from sources.", Shown(InsightOffers(nothingNew = true)))
 
     @Test
     fun afterLookAgainFoundSomethingNew() =
         assertFirstLine(
             "As written previously. New findings from sources: tap Rewrite insight to use them, a paid call.",
-            InsightOffers(rewrite = true, somethingNew = true),
+            Shown(InsightOffers(rewrite = true, somethingNew = true)),
         )
 
     @Test
     fun withSourceOrModelSettingsChanged() =
         assertFirstLine(
             "As written previously. Tap Rewrite insight to write it with the updated source or model settings.",
-            InsightOffers(rewrite = true),
+            Shown(InsightOffers(rewrite = true)),
         )
 
     @Test
-    fun keptFromBeforeWithNothingToFollow() = assertFirstLine("As written previously.", InsightOffers())
+    fun keptFromBeforeWithNothingToFollow() = assertFirstLine("As written previously.", Shown(InsightOffers()))
 
     // A look again on an insight written in this run: written before the look again.
     @Test
     fun afterLookAgainOnAnInsightJustWritten() =
         assertFirstLine(
             "As written previously. No update from sources.",
-            InsightOffers(nothingNew = true),
-            cached = false,
+            Shown(
+                InsightOffers(nothingNew = true),
+                cached = false,
+            ),
+        )
+
+    // The card paid for, shown in place of an insight the run lacks, not from the cache.
+    @Test
+    fun theCardPaidForShownInPlaceOfTheRunsOwn() =
+        assertFirstLine("As written previously.", Shown(InsightOffers(), cached = false, cardShown = true))
+
+    @Test
+    fun afterARewriteFailedWithoutRewriteOfferedAgain() =
+        assertFirstLine(
+            "As written previously. Rewriting failed: no connection.",
+            Shown(
+                InsightOffers(),
+                cached = false,
+                cardShown = true,
+                rewriteFailed = "offline",
+            ),
+        )
+
+    // In the order things happened: the rewrite that failed, then what a later look again found.
+    @Test
+    fun aRewriteThatFailedIsSaidBeforeWhatALaterLookAgainFound() =
+        assertFirstLine(
+            "As written previously. Rewriting failed: no connection. " +
+                "New findings from sources: tap Rewrite insight to use them, a paid call.",
+            Shown(
+                InsightOffers(rewrite = true, somethingNew = true),
+                cardShown = true,
+                rewriteFailed = "offline",
+            ),
         )
 
     @Test
     fun nothingForAnInsightJustWritten() {
         for (details in listOf(false, true)) {
-            show(cached = false, offers = InsightOffers(), details = details) {
+            show(Shown(InsightOffers(), cached = false), details) {
                 assertEquals("developer mode $details", 0, count(BEFORE))
                 if (details) compose.onNodeWithText(COUNTS).assertExists()
             }
