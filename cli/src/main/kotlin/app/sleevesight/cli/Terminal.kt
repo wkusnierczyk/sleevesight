@@ -48,7 +48,9 @@ class Terminal(
          * Whether a console is one to read the words from: [present] (before Java 22, a console is
          * there only when both standard input and output are a terminal), and a terminal by its
          * `isTerminal` ([isTerminal], from Java 22, which gives a console even when the streams are
-         * redirected; null before, which has no such method).
+         * redirected; null before, which has no such method). With `java.base` forced (`main`), whose
+         * console is there only on a terminal, this check is a backstop for someone who sets the
+         * provider back by hand.
          */
         fun usable(
             present: Boolean,

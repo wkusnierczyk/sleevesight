@@ -212,10 +212,10 @@ class KeysQr(
               The code is sealed with the five words Load keys shows on the phone, typed at a prompt
               that does not show them (only in a terminal, its output not redirected), or read from
               --words-from <file|->, - for a pipe on standard input (not the terminal, nor when a key
-              is read from it), never taken from the command line. Piping the output (| cat) needs --words-from. The code
-              opens only with those words, and the phone takes it once, within 5 minutes of showing
-              them. With --unsealed, the clear code, which is the keys themselves, for a key's own
-              Scan QR code.
+              is read from it), never taken from the command line. Piping the output (| cat) needs
+              --words-from. The code opens only with those words, and the phone takes it once, within
+              5 minutes of showing them. With --unsealed, the clear code, which is the keys
+              themselves, for a key's own Scan QR code.
               Nothing is written to a file or sent anywhere. Do not make the code with an online QR
               generator: it would receive the keys.
 
