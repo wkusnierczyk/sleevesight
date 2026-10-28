@@ -129,6 +129,7 @@ internal fun GuidePicture(modifier: Modifier = Modifier) {
                 Modifier
                     .layoutId(GuideSlot.PICTURE)
                     .onPlaced { picture.coordinates = it }
+                    .testTag(GUIDE_DRAWN_TAG)
                     .clearAndSetSemantics {}
                     .pointerInput(Unit) { detectTapGestures { magnified = true } },
                 picture::report,
@@ -511,6 +512,9 @@ private fun MiniWrite(modifier: Modifier) {
 
 /** The test tag of the guide's picture. */
 const val GUIDE_PICTURE_TAG: String = "home-guide-picture"
+
+/** The test tag of the drawn Home in it, which is not read. */
+const val GUIDE_DRAWN_TAG: String = "home-guide-drawn"
 
 /** Home's width in the picture, before it is scaled down: about a phone's. */
 private val HOME_WIDTH = 360.dp

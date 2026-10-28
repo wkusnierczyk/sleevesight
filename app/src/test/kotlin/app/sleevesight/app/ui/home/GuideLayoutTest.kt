@@ -88,6 +88,31 @@ class GuideLayoutTest {
         assertTrue(shown.height >= note.y + 40f)
     }
 
+    @Test
+    fun aNotePushedUnderThePicturesCornerHasItsTargetBelowThePicture() {
+        for (heights in listOf(20f, 40f)) {
+            // Tall or crowded notes push *Sources*' note below its part, under the picture's corner.
+            val shown = laidOut(heights)
+            assertTrue(shown.arrows[GuidePart.SOURCES.ordinal].fromBelow)
+            assertTrue(shown.notes[GuidePart.SOURCES.ordinal].x < pictureWidth)
+            val target = shown.targets[GuidePart.SOURCES.ordinal]
+            assertTrue("$heights: $target", target.start >= pictureHeight)
+            assertTrue("$heights: $target", target.endInclusive - target.start >= metrics.target)
+            assertTrue(shown.height >= target.endInclusive)
+        }
+    }
+
+    @Test
+    fun eachNotesTargetIsAtLeastTheTargetHighInsideTheGuideAndNoTwoOverlap() {
+        val shown = laidOut()
+        val targets = shown.targets.sortedBy { it.start }
+        for (target in targets) {
+            assertTrue("$target", target.endInclusive - target.start >= metrics.target - 0.01f)
+            assertTrue("$target", target.start >= 0f && target.endInclusive <= shown.height)
+        }
+        targets.zipWithNext().forEach { (a, b) -> assertTrue("$a then $b", b.start >= a.endInclusive - 0.01f) }
+    }
+
     // A note's panel (#673): clear of its part and its note, in the picture where it fits.
 
     @Test

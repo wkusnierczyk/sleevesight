@@ -114,7 +114,7 @@ internal class GuideZoom(
         /** Keeps a zoom across a rotation: its scale, and the point of the picture at the box's middle. */
         val Saver: Saver<GuideZoom, Any> =
             listSaver(
-                save = { zoom -> zoom.middle().let { listOf(zoom.scale, it.x, it.y) } },
+                save = { zoom -> (zoom.middle ?: zoom.middle()).let { listOf(zoom.scale, it.x, it.y) } },
                 restore = { (scale, x, y) -> GuideZoom(scale, Offset(x, y)) },
             )
 

@@ -1,5 +1,6 @@
 package app.sleevesight.app.ui.home
 
+import androidx.compose.runtime.saveable.SaverScope
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import org.junit.Assert.assertEquals
@@ -63,6 +64,17 @@ class GuideZoomTest {
         // Far to the left and up: its right and bottom edges stop at the box's.
         zoom.transform(Offset(200f, 400f), Offset(-5_000f, -5_000f), 1f)
         assertOffset(400f - 360f * zoom.scale, 800f - 760f * zoom.scale, zoom.offset)
+    }
+
+    @Test
+    fun aRestoredZoomSavedAgainBeforeItIsLaidOutKeepsItsPoint() {
+        val restored = GuideZoom(2f, Offset(0.3f, 0.7f))
+        val saved = with(GuideZoom.Saver) { SaverScope { true }.save(restored) }!!
+        val again = GuideZoom.Saver.restore(saved)!!
+        assertEquals(2f, again.scale)
+        // Laid out, the point saved is at the box's middle.
+        again.bounds(Size(400f, 800f), Size(360f, 760f))
+        assertOffset(200f - 0.3f * 360f * 2f, 400f - 0.7f * 760f * 2f, again.offset)
     }
 
     @Test

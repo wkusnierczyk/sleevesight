@@ -190,6 +190,22 @@ class GuideMagnifierTest {
         }
 
     @Test
+    fun reopenedThePictureIsFittedAgain() =
+        show {
+            compose.onNodeWithTag(GUIDE_MAGNIFY_TAG).performScrollTo().performClick()
+            compose.waitForIdle()
+            val fitted = pictureWidth()
+            compose.onNodeWithTag(GUIDE_MAGNIFIED_PICTURE_TAG).performTouchInput { doubleClick(center) }
+            compose.waitForIdle()
+            assertTrue(pictureWidth() > fitted * 2f)
+            compose.onNodeWithTag(GUIDE_MAGNIFIED_CLOSE_TAG).performClick()
+            compose.waitForIdle()
+            compose.onNodeWithTag(GUIDE_MAGNIFY_TAG).performScrollTo().performClick()
+            compose.waitForIdle()
+            assertEquals(fitted, pictureWidth(), 1f)
+        }
+
+    @Test
     fun aMagnifiedPictureStaysMagnifiedAndWhereItWasAcrossARecreation() =
         show {
             compose.onNodeWithTag(GUIDE_MAGNIFY_TAG).performScrollTo().performClick()

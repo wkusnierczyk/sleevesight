@@ -157,6 +157,13 @@ class GuideNotesTest {
                 assertTrue("$part: $text in $target", text.top >= target.top - 1f && text.bottom <= target.bottom + 1f)
             }
             val targets = GuidePart.entries.map { bounds(guideNoteTag(it)) }
+            val guide = bounds(GUIDE_PICTURE_TAG)
+            val drawn = bounds(GUIDE_DRAWN_TAG)
+            for (target in targets) {
+                // Inside the guide; one under the picture's corner below the picture, clear of its magnifier.
+                assertTrue("$target in $guide", target.top >= guide.top - 1f && target.bottom <= guide.bottom + 1f)
+                if (target.left < drawn.right) assertTrue("$target under $drawn", target.top >= drawn.bottom - 1f)
+            }
             for ((i, a) in targets.withIndex()) {
                 for (b in targets.drop(i + 1)) {
                     assertTrue(

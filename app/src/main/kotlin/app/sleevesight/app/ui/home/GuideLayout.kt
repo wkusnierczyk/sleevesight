@@ -146,7 +146,7 @@ internal fun guideLayout(
         val floor =
             above?.let {
                 notes[it.ordinal]!!.y + noteHeights[it.ordinal] + max(5 * u, 2 * max(margin[it.ordinal], e))
-            } ?: max(-4 * u, e)
+            } ?: e
         var top = max(floor, rect.center.y - h / 2)
         var left = pictureWidth + metrics.gap
         if (part == last && top + metrics.firstLine > rect.bottom) {
@@ -157,7 +157,18 @@ internal fun guideLayout(
         above = part
         bottom = max(bottom, top + h + e)
     }
-    val targets = noteTargets(order, notes.map { it!!.y }, noteHeights, margin)
+    val targets =
+        noteTargets(order, notes.map { it!!.y }, noteHeights, margin).mapIndexed { i, target ->
+            if (notes[i]!!.x >= pictureWidth) {
+                target
+            } else {
+                // The last note, under the picture's corner: its target starts below the picture, so
+                // it takes no taps from the picture or its magnifier, and is still 48 dp high.
+                val top = max(target.start, pictureHeight.toFloat())
+                top..max(target.endInclusive, top + metrics.target)
+            }
+        }
+    targets.forEach { bottom = max(bottom, it.endInclusive) }
     val arrows =
         GuidePart.entries.map { part ->
             val rect = parts.getValue(part)
