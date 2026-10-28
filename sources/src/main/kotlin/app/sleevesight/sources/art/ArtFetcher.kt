@@ -7,8 +7,13 @@ import app.sleevesight.net.NetResult
 import kotlin.time.Duration.Companion.seconds
 
 /**
- * Fetches album art that a player gives only as an `http` or `https` URI (`design/architecture.md`,
- * *UI*): `:app` may not reach `:net`, so the session layer asks here. Castbox sends such URIs.
+ * Fetches album art that a player gives only as an `https` URI (`design/architecture.md`, *UI*):
+ * `:app` may not reach `:net`, so the session layer asks here. Castbox sends such URIs.
+ *
+ * A plain `http` URI is refused before any request (#696): the address may identify the album or
+ * episode, so it never travels unencrypted. The manifest refuses cleartext too
+ * (`usesCleartextTraffic="false"`), on Android 8 as well, whose default allows it; this check makes
+ * the refusal a plain "not https" rather than a failure inside the network layer.
  *
  * The URI is a stranger's choice, so the answer is bounded ([MAX_BYTES]) and kept only when the
  * server says it is an image, or says nothing of its type; the caller decodes it. For the same
@@ -19,7 +24,7 @@ class ArtFetcher(
     private val net: NetClient,
 ) {
     suspend fun fetch(uri: String): ArtResult {
-        if (!isHttp(uri)) return ArtResult.Failed("not http")
+        if (!isHttps(uri)) return ArtResult.Failed("not https")
         return when (val result = net.send(request(uri))) {
             is NetResult.Failure -> ArtResult.Failed(result.error::class.simpleName ?: "error")
             is NetResult.Success -> read(result.value)
@@ -46,10 +51,7 @@ class ArtFetcher(
 
         val TIMEOUT = 15.seconds
 
-        private fun isHttp(uri: String): Boolean {
-            val scheme = uri.substringBefore(':', missingDelimiterValue = "").lowercase()
-            return (scheme == "http" || scheme == "https") && uri.startsWith("$scheme://", ignoreCase = true)
-        }
+        private fun isHttps(uri: String): Boolean = uri.startsWith("https://", ignoreCase = true)
     }
 }
 

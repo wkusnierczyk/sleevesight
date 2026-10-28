@@ -64,15 +64,33 @@ class ArtFetcherTest {
     @Test
     fun `a response with no content type is kept`() =
         runTest {
-            assertIs<ArtResult.Image>(ArtFetcher(StubClient { response(type = null) }).fetch("http://img.example/a"))
+            assertIs<ArtResult.Image>(ArtFetcher(StubClient { response(type = null) }).fetch(URL))
+        }
+
+    @Test
+    fun `a plain-http cover address is not fetched`() =
+        runTest {
+            val client = StubClient { response() }
+            listOf("http://img.example/cover.jpg", "HTTP://img.example/cover.jpg", "http:img.example/a").forEach {
+                assertEquals(ArtResult.Failed("not https"), ArtFetcher(client).fetch(it), it)
+            }
+            assertTrue(client.requests.isEmpty())
+        }
+
+    @Test
+    fun `the https scheme is matched in any case`() =
+        runTest {
+            val client = StubClient { response() }
+            assertIs<ArtResult.Image>(ArtFetcher(client).fetch("HTTPS://img.example/cover.jpg"))
+            assertEquals("HTTPS://img.example/cover.jpg", client.requests.single().url)
         }
 
     @Test
     fun `other schemes are not requested`() =
         runTest {
             val client = StubClient { response() }
-            listOf("content://media/art/1", "file:///sdcard/a.jpg", "httpx://a", "http:a", "").forEach {
-                assertEquals(ArtResult.Failed("not http"), ArtFetcher(client).fetch(it), it)
+            listOf("content://media/art/1", "file:///sdcard/a.jpg", "httpsx://a", "https:a", "").forEach {
+                assertEquals(ArtResult.Failed("not https"), ArtFetcher(client).fetch(it), it)
             }
             assertTrue(client.requests.isEmpty())
         }

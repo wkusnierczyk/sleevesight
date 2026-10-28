@@ -14,7 +14,7 @@ import java.io.InputStream
 import kotlin.coroutines.CoroutineContext
 
 /**
- * Fetches album art given as an `http` or `https` URI. `:app` may not reach the network, so the
+ * Fetches album art given as an `https` URI. `:app` may not reach the network, so the
  * app graph points this at the art fetch `:wiring` builds on the process's one `NetClient`
  * (`PipelineWiring.art`, over `:sources`' `ArtFetcher`) once the pipeline runs on the phone (#51);
  * until then [NONE] fetches nothing, and such art is missing.
@@ -43,7 +43,7 @@ fun HttpArt.onlyWhen(allowed: () -> Flow<Boolean>): HttpArt =
  * Turns the art sources of a track ([SessionMapping.artSources]) into a bitmap, trying each in
  * turn: the session's bitmap as it is, a `content://` URI through the [resolver] (which works only
  * where the player grants read access: otherwise a `SecurityException`, and the next source), an
- * `http` URI through [http]. Reading and decoding run in [io].
+ * `https` URI through [http]. Reading and decoding run in [io].
  */
 class ArtLoader(
     private val resolver: ContentResolver,
