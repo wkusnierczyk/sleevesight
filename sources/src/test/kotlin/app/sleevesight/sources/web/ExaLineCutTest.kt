@@ -132,6 +132,10 @@ class ExaLineCutTest {
                 Triple("a letter and its accent", 299, "e\u0301"),
                 // A heart and the variation selector that makes it an emoji.
                 Triple("a variation selector", 299, "\u2764\uFE0F"),
+                // An ideograph and a variation selector from outside the basic plane, at 300 and 301.
+                Triple("a supplementary variation selector", 299, "\u845B\uDB40\uDD00"),
+                // A musical note built from a notehead and a combining stem, the stem at 300.
+                Triple("a supplementary combining mark", 298, "\uD834\uDD58\uD834\uDD65"),
                 // Man, zero-width joiner, woman: 296 to 300.
                 Triple("an emoji sequence", 296, "\uD83D\uDC68\u200D\uD83D\uDC69"),
                 // Thumbs up and a skin tone, the tone at 300.

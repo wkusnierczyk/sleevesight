@@ -235,10 +235,13 @@ class ExaWebSearch(
         /**
          * Whether the character at [i] in [text] belongs with the one before it, so a cut at [i]
          * would split what a reader sees as one: the second half of a surrogate pair; a combining
-         * mark or a variation selector; either side of a zero-width joiner (emoji sequences); a
-         * skin-tone modifier or a tag character (subdivision flags); or the second of a pair of
-         * regional indicators (a flag). Unicode's grapheme rules, in the part a quote meets;
-         * `java.text.BreakIterator` has them all but is JVM-only (D2).
+         * mark or a variation selector, in the basic plane or among [SUPPLEMENTARY_MARKS]; either
+         * side of a zero-width joiner (emoji sequences); a skin-tone modifier or a tag character
+         * (subdivision flags); or the second of a pair of regional indicators (a flag). Unicode's
+         * grapheme rules, in the part a quote meets; `java.text.BreakIterator` has them all but is
+         * JVM-only (D2). Left out: Hangul syllables spelled as conjoining jamo, other combining
+         * marks outside the basic plane, prepended characters and spacing marks of scripts outside
+         * the basic plane, which a cut at a word boundary, the usual case, never meets.
          */
         internal fun joinsPrevious(
             text: String,
@@ -252,6 +255,7 @@ class ExaWebSearch(
                 text[i - 1] == ZERO_WIDTH_JOINER ||
                 point in SKIN_TONES ||
                 point in TAGS ||
+                SUPPLEMENTARY_MARKS.any { point in it } ||
                 (point in REGIONAL_INDICATORS && regionalIndicatorsBefore(text, i) % 2 == 1)
         }
 
@@ -291,6 +295,21 @@ class ExaWebSearch(
         private const val SURROGATE_BITS = 10
         private val SKIN_TONES = 0x1F3FB..0x1F3FF
         private val TAGS = 0xE0020..0xE007F
+
+        /**
+         * Marks outside the basic plane that join the character before them, which a [Char]'s
+         * category cannot show: the combining marks of musical notation (`Mn` and `Mc`) and the
+         * variation selectors supplement (ideographic variants: 葛 and U+E0100).
+         */
+        private val SUPPLEMENTARY_MARKS =
+            listOf(
+                0x1D165..0x1D169,
+                0x1D16D..0x1D172,
+                0x1D17B..0x1D182,
+                0x1D185..0x1D18B,
+                0x1D1AA..0x1D1AD,
+                0xE0100..0xE01EF,
+            )
         private val REGIONAL_INDICATORS = 0x1F1E6..0x1F1FF
 
         /** A 2xx body read as a search response; null for any other status, which has no results. */
