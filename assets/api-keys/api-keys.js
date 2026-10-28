@@ -1,10 +1,12 @@
 // The API keys page (#436): the keys from a keys file the user chooses or drops, or pasted in their
 // fields, each checked against its service's form as the app checks it, and the ones that pass
-// drawn as a setup code for the app's *Scan keys*. The keys are kept only in the fields; nothing is
-// stored or sent.
+// drawn as a setup code for the app's *Load keys*, sealed with the five words the phone shows
+// (#590), unless sealing is turned off. The keys and the words are kept only in the fields; nothing
+// is stored or sent.
 
 import { qrSvg } from '../keyboard/qr-svg.js';
 import { BAD_CHARACTERS, SERVICES, check, ending, readFile, write } from './keys.js';
+import { COUNT, PREFIX_LETTERS, readWords, seal, tokens } from './seal.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -39,6 +41,40 @@ let generation = 0;
 // What `#holds` last said, so a live region is not rebuilt, and read out again, at each keystroke.
 let held = null;
 
+// Counts the codes asked to be drawn, so that a code still being sealed when the keys or the words
+// change, or when *Clear* is chosen, is dropped once sealed; and what the code drawn holds, so that
+// it is not sealed again, with a new salt, at a keystroke that changes nothing in it.
+let drawing = 0;
+let drawn = null;
+
+const NUMBERS = ['no', 'one', 'two', 'three', 'four', 'five'];
+
+/**
+ * The words typed: the five words once they are all there, and what to say of them: how many so
+ * far, or which one is not one of the list's, or that there are too many. The last word still being
+ * typed, under three letters, is not yet wrong.
+ */
+function wordsTyped() {
+  const text = $('words').value;
+  const typed = tokens(text);
+  const words = readWords(text);
+  const typing = typed.length > 0 && !/[\s,]$/.test(text) && typed.at(-1).length < PREFIX_LETTERS;
+  const wrong = words.findIndex((word, i) => word === null && !(typing && i === words.length - 1));
+  if (wrong >= 0) return { words: null, said: `Word ${wrong + 1} is not one of the phone’s words: check it.`, error: true };
+  if (words.length > COUNT) return { words: null, said: `More than ${NUMBERS[COUNT]} words: the phone shows ${NUMBERS[COUNT]}.`, error: true };
+  const done = words.filter((word) => word !== null);
+  if (done.length === COUNT) return { words: done, said: 'Five words, which seal the code.', error: false };
+  return { words: null, said: typed.length === 0 ? '' : `${done.length} of ${COUNT} words.`, error: false };
+}
+
+// Says [said] of the words, in the error colour for an [error], only when it changes, so the live
+// region is not read out again at each keystroke.
+function reportWords(said, error) {
+  const line = $('words-report');
+  if (line.textContent !== said) line.textContent = said;
+  line.className = error ? 'error' : 'ok';
+}
+
 function buildFields() {
   for (const { code, label } of SERVICES) {
     const field = document.createElement('div');
@@ -68,7 +104,8 @@ function labelOf(code) {
   return SERVICES.find((s) => s.code === code).label;
 }
 
-// Checks each field, says what is wrong with each key refused, and draws the code of the others.
+// Checks each field, says what is wrong with each key refused, and draws the code of the others,
+// sealed with the words, unless sealing is off.
 function update() {
   const keys = new Map();
   const refused = [];
@@ -90,21 +127,30 @@ function update() {
     }
     inputs.get(code).setAttribute('aria-invalid', problem === null ? 'false' : 'true');
   }
-  const said = JSON.stringify([...keys].map(([name, value]) => [name, ending(value)]).concat(refused));
+  const sealing = $('seal').checked;
+  $('words').disabled = !sealing;
+  $('show-words').disabled = !sealing;
+  $('unsealed').hidden = sealing;
+  const typed = sealing ? wordsTyped() : { words: null, said: '', error: false };
+  reportWords(typed.said, typed.error);
+  const waiting = sealing && typed.words === null;
+  const said = JSON.stringify([[...keys].map(([name, value]) => [name, ending(value)]), refused, sealing, waiting]);
   const changed = said !== held;
   held = said;
   const holds = $('holds');
-  const code = $('code');
-  if (keys.size === 0) {
-    code.hidden = true;
-    code.replaceChildren();
-    if (changed) holds.textContent = refused.length === 0 ? 'No key yet.' : 'No code: no key has its service’s form.';
+  if (keys.size === 0 || waiting) {
+    hideCode();
+    if (!changed) return;
+    if (keys.size === 0) {
+      holds.textContent = refused.length === 0 ? 'No key yet.' : 'No code: no key has its service’s form.';
+    } else {
+      holds.textContent = `No code yet: type the ${NUMBERS[COUNT]} words the phone shows, above.`;
+    }
     return;
   }
-  const { svg, side } = qrSvg(write(keys), 'Setup code of the keys listed below it');
-  code.style.width = `${side * MODULE_PX}px`;
-  code.replaceChildren(svg);
-  code.hidden = false;
+  const text = write(keys);
+  const words = sealing ? typed.words : null;
+  draw(text, words);
   if (!changed) return;
   const list = document.createElement('ul');
   for (const [name, value] of keys) {
@@ -112,7 +158,7 @@ function update() {
     item.textContent = `${labelOf(name)}, ending ${ending(value)}`;
     list.append(item);
   }
-  const lines = [document.createTextNode('The code holds:'), list];
+  const lines = [document.createTextNode(sealing ? 'The code, sealed with the phone’s words, holds:' : 'The code holds:'), list];
   if (refused.length > 0) {
     const left = document.createElement('p');
     left.className = 'error';
@@ -120,6 +166,43 @@ function update() {
     lines.push(left);
   }
   holds.replaceChildren(...lines);
+}
+
+// Hides the code, and drops one still being sealed.
+function hideCode() {
+  drawing++;
+  drawn = null;
+  const code = $('code');
+  code.hidden = true;
+  code.replaceChildren();
+}
+
+// Draws the setup code [text], sealed with [words] (none: as it is), unless the code drawn already
+// holds the same; a code sealed after another was asked for is dropped.
+async function draw(text, words) {
+  const what = JSON.stringify([text, words]);
+  if (what === drawn) return;
+  drawn = what;
+  const asked = ++drawing;
+  let content = text;
+  if (words !== null) {
+    try {
+      content = await seal(text, words);
+    } catch {
+      if (asked === drawing) {
+        drawn = null;
+        $('holds').textContent = 'The code could not be sealed: this browser lacks the cryptography it needs.';
+      }
+      return;
+    }
+    if (asked !== drawing) return;
+  }
+  const label = words === null ? 'Setup code of the keys listed below it' : 'Sealed setup code of the keys listed below it';
+  const { svg, side } = qrSvg(content, label);
+  const code = $('code');
+  code.style.width = `${side * MODULE_PX}px`;
+  code.replaceChildren(svg);
+  code.hidden = false;
 }
 
 // Sets the file report at once. The same report again (the same file read twice) ends in a
@@ -174,17 +257,38 @@ function clear() {
   report('');
   $('show').checked = false;
   show(false);
+  $('words').value = '';
+  $('show-words').checked = false;
+  showWords(false);
+  $('seal').checked = true;
+  hideCode();
   update();
 }
 
+function mask(input, shown) {
+  if (MASKS) input.classList.toggle('masked', !shown);
+  else input.type = shown ? 'text' : 'password';
+}
+
 function show(shown) {
-  for (const input of inputs.values()) {
-    if (MASKS) input.classList.toggle('masked', !shown);
-    else input.type = shown ? 'text' : 'password';
+  for (const input of inputs.values()) mask(input, shown);
+}
+
+function showWords(shown) {
+  mask($('words'), shown);
+}
+
+function buildWords() {
+  const input = $('words');
+  for (const [attribute, value] of [['autocomplete', 'off'], ['autocapitalize', 'off'], ['spellcheck', 'false']]) {
+    input.setAttribute(attribute, value);
   }
+  showWords(false);
+  input.addEventListener('input', update);
 }
 
 buildFields();
+buildWords();
 $('file').addEventListener('change', () => {
   const [file] = $('file').files;
   // Emptied, so the same file chosen again is read again.
@@ -216,5 +320,7 @@ window.addEventListener('drop', holdFile);
 window.addEventListener('beforeunload', clear);
 window.addEventListener('pagehide', clear);
 $('show').addEventListener('change', () => show($('show').checked));
+$('show-words').addEventListener('change', () => showWords($('show-words').checked));
+$('seal').addEventListener('change', update);
 $('clear').addEventListener('click', clear);
 update();

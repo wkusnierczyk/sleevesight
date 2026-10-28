@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<!-- API keys to a setup code (#436), for the app's Load keys. The page connects to nothing: it
-     fetches only its own scripts and style sheets, and the policy below forbids any other request,
-     so the browser's network panel shows that nothing is sent. The keys stay in the page's memory,
-     never in storage, and go only into the QR code drawn here. No front matter, so the site copies
-     it as it is. -->
+<!-- API keys to a setup code (#436), for the app's Load keys, sealed with the five words the phone
+     shows (#590). The page connects to nothing: it fetches only its own scripts and style sheets,
+     and the policy below forbids any other request, so the browser's network panel shows that
+     nothing is sent. The keys and the words stay in the page's memory, never in storage, and go only
+     into the QR code drawn here. No front matter, so the site copies it as it is. -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="robots" content="noindex">
@@ -21,9 +21,19 @@
 <body>
 <main>
   <h1>API keys to a QR code</h1>
-  <p>Put your API keys in one QR code, and save them all in Sleevesight at once: on the phone, <b>Settings</b>, <b>Secrets</b>, <b>Load keys</b>.</p>
+  <p>Put your API keys in one QR code, and save them all in Sleevesight at once: on the phone, <b>Settings</b>, <b>Secrets</b>, <b>Load keys</b>. The code is sealed with five words the phone shows: only that phone, with those words, can open it, so a photo or a screenshot of the code gives nothing away.</p>
 
   <ol>
+    <li>On the phone, open <b>Load keys</b>: it shows five words. Type them here, in their order, with spaces between; the first three letters of each are enough.
+      <div class="field">
+        <label for="words">The phone’s words</label>
+        <input id="words" type="text" aria-describedby="words-report">
+        <p id="words-report" role="status" aria-live="polite"></p>
+      </div>
+      <p><label class="show"><input id="show-words" type="checkbox"> Show the words</label></p>
+      <p><label class="show"><input id="seal" type="checkbox" checked> Seal the code with the phone’s words</label></p>
+      <p id="unsealed" class="error" hidden>Not sealed: the code is the keys themselves, and anyone who sees it, or a photo of it, has them. Only for a key’s own <b>Scan QR code</b>, which reads no words; <b>Load keys</b> reads a sealed code.</p>
+    </li>
     <li>Choose your keys file, drop it here, or paste each key in its field. The file has one <code>NAME=value</code> line a key, such as <code>SLEEVESIGHT_ANTHROPIC_API_KEY=sk-ant-…</code>, named as Sleevesight names it or as its provider usually does: <code>SLEEVESIGHT_ANTHROPIC_API_KEY</code> or <code>ANTHROPIC_API_KEY</code>, <code>SLEEVESIGHT_OPENAI_API_KEY</code> or <code>OPENAI_API_KEY</code>, <code>SLEEVESIGHT_GOOGLE_API_KEY</code>, <code>GEMINI_API_KEY</code> or <code>GOOGLE_API_KEY</code>, <code>SLEEVESIGHT_EXA_API_KEY</code> or <code>EXA_API_KEY</code>, and <code>SLEEVESIGHT_LASTFM_API_KEY</code> or <code>LASTFM_API_KEY</code>. Of the names a file gives one key under, the first listed wins; lines naming nothing Sleevesight uses are left out. A file replaces what is in the fields.
       <div id="drop" class="drop">
         <label class="file">Keys file <input id="file" type="file" aria-describedby="file-report"></label>
@@ -33,7 +43,7 @@
       <div id="fields" class="fields"></div>
       <p><label class="show"><input id="show" type="checkbox"> Show the keys</label></p>
     </li>
-    <li>Scan the code with <b>Load keys</b>. The phone lists what it found, each key by its last four characters, before it saves anything.
+    <li>On the phone, choose <b>Next</b>, and scan the code. The phone opens it with its words, and lists what it found, each key by its last four characters, before it saves anything.
       <div id="code" class="code" hidden></div>
       <p id="holds" role="status" aria-live="polite">No key yet.</p>
     </li>
@@ -42,8 +52,8 @@
     </li>
   </ol>
 
-  <p class="note">Nothing leaves your computer. The page is allowed no network request, uses no code from elsewhere and stores nothing: the keys are kept only while the tab is open, and the code is drawn here. Never make such a code with an online QR generator: it would receive your keys. The QR code is the keys: do not leave it on screen, or take a photo or screenshot of it.</p>
+  <p class="note">Nothing leaves your computer. The page is allowed no network request, uses no code from elsewhere and stores nothing: the keys and the words are kept only while the tab is open, and the code is drawn here. Never make such a code with an online QR generator: it would receive your keys. The words seal the code in the browser (a key derived from them with PBKDF2, 600,000 rounds, then AES-GCM): it opens only with them, on the phone that showed them, once, within a few minutes. The words are masked here, since a screenshot of both the words and the code would open it. A code made without the words is the keys: do not leave it on screen, or take a photo or screenshot of it.</p>
 </main>
-<footer><a href="https://github.com/wkusnierczyk/sleevesight/blob/main/LICENSE">Open source (GPL-3.0)</a> · <a href="https://github.com/wkusnierczyk/sleevesight/blob/main/api-keys.html">This page's source</a> · <a href="design/brand.html#fonts">Fonts</a></footer>
+<footer><a href="https://github.com/wkusnierczyk/sleevesight/blob/main/LICENSE">Open source (GPL-3.0)</a> · <a href="https://github.com/wkusnierczyk/sleevesight/blob/main/api-keys.html">This page's source</a> · <a href="design/brand.html#fonts">Fonts</a> · Words from the <a href="https://www.eff.org/dice">EFF’s short wordlist 2</a>, under <a href="https://creativecommons.org/licenses/by/3.0/us/">CC BY 3.0 US</a></footer>
 </body>
 </html>
