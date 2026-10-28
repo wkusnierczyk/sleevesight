@@ -61,8 +61,8 @@ import org.robolectric.shadows.ShadowDialog
 import java.time.Duration
 
 /**
- * *Load keys*' words (#590): five words from the list, shown first, which seal the setup code to the
- * phone; a sealed code opened with them, spent once opened, refused with a wrong word, after they
+ * *Load keys*' words (#590): five words from the list, shown first, which seal the setup code; a
+ * sealed code opened with them, spent once opened, refused with a wrong word, after they
  * expired, or when damaged; new words; and the list's credit.
  */
 @RunWith(RobolectricTestRunner::class)

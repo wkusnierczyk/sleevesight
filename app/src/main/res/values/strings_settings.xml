@@ -125,7 +125,7 @@
     <string name="settings_layout_summary">How Sources and the genres open: in place on the home screen, or each on a page of its own, with a back arrow.</string>
 
     <!-- Load keys and Purge keys (#446): the screens that replace their dialogs. Load keys starts
-         with five words, which seal the setup code to this phone (#590). -->
+         with five words, which seal the setup code (#590). -->
     <string name="load_keys_words_intro">These words seal your keys: the QR code made with them opens only with them, so a photo or a screenshot of the code alone gives nothing away.</string>
     <string name="load_keys_open">1. On your computer, open the API keys page:</string>
     <string name="load_keys_type">2. Type these words there. The first three letters of each are enough.</string>
