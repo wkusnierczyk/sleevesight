@@ -30,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -116,26 +117,35 @@ internal fun ActionButtonGroup(
     actions: List<GroupAction>,
     modifier: Modifier = Modifier,
 ) {
-    val buttons = actions.map { GroupButton(it.label, it.enabled, selected = null, read = null, onClick = it.onClick) }
+    val buttons =
+        actions.map {
+            GroupButton(it.label, it.enabled, selected = null, read = null, tag = it.tag, onClick = it.onClick)
+        }
     ConnectedButtons(buttons, modifier, checks = false)
 }
 
-/** One action of an [ActionButtonGroup]: its [label], whether it can be used ([enabled]), and what a tap does. */
+/**
+ * One action of an [ActionButtonGroup]: its [label], whether it can be used ([enabled]), a test
+ * [tag] for its button if it has one, and what a tap does.
+ */
 internal class GroupAction(
     val label: String,
     val enabled: Boolean = true,
+    val tag: String? = null,
     val onClick: () -> Unit,
 )
 
 /**
  * A button of the group: chosen or not ([selected]) in a choice, null in a row of actions; [read],
- * what a screen reader reads for it in place of its label, if not the label alone.
+ * what a screen reader reads for it in place of its label, if not the label alone; [tag], its test
+ * tag, if any.
  */
 private class GroupButton(
     val label: String,
     val enabled: Boolean,
     val selected: Boolean?,
     val read: String?,
+    val tag: String? = null,
     val onClick: () -> Unit,
 )
 
@@ -282,6 +292,7 @@ private fun GroupButtonView(
                 .clip(shape)
                 .background(fill, shape)
                 .then(action)
+                .let { view -> button.tag?.let { view.testTag(it) } ?: view }
                 .let { view -> button.read?.let { read -> view.semantics { contentDescription = read } } ?: view }
                 .padding(horizontal = GROUP_PADDING, vertical = 6.dp),
         horizontalArrangement = Arrangement.Center,
