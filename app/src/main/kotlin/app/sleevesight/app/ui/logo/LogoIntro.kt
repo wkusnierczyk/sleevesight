@@ -234,9 +234,10 @@ private const val ONE_TURN_DEG = 360f
  * screen arrives; the splash; its flight onto [target], each part ("Sleeve"; "sight"; the record)
  * onto its own place in the one-line logo, so the stacked mark comes apart into the line as it
  * shrinks, or, with no header logo to land on (the first-run screen), fading where it is; and D's
- * record turning in on the header. With a [bug] ([logoBug], a debug build's, #652), the landed
- * logo draws it in the record's place, as the header's does, so the hand-over does not jump; the
- * splash and its flight keep the record.
+ * record turning in on the header. With a [bug] ([logoBug], a debug build's, #652), the record
+ * fades into the bug over the flight, so it lands as the bug, and the landed logo draws the bug in
+ * the record's place, as the header's does, so the hand-over does not jump; the splash keeps the
+ * record, and D's bug turns in as its record would.
  */
 @Suppress("LongParameterList")
 internal fun DrawScope.drawIntro(
@@ -265,7 +266,11 @@ internal fun DrawScope.drawIntro(
                 at(sleeve) { drawSleeve(colors) }
                 at(sight) {
                     drawSight(colors)
-                    if (pose.record != null) drawRecord(colors, RecordCentre)
+                    if (pose.record != null) {
+                        // The record fades into the bug as it flies, in a debug build (#652).
+                        drawRecord(colors, RecordCentre, alpha = if (bug == null) 1f else 1 - e)
+                        if (bug != null) drawRecordPlace(colors, bug, RecordPose(RecordCentre, alpha = e))
+                    }
                 }
             }
         }

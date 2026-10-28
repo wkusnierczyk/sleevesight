@@ -117,7 +117,7 @@ class LogoPicturesTest {
     @Test
     fun theHeaderLogoIsSleeveInInkAndSightInRedWithTheRecord() {
         for (dark in listOf(false, true)) {
-            show(dark, { HeaderLogo(Modifier.testTag("logo"), height = HEADER_LOGO_HEIGHT * 3, bug = false) }) {
+            show(dark, { HeaderLogo(bug = false, Modifier.testTag("logo"), height = HEADER_LOGO_HEIGHT * 3) }) {
                 val logo = compose.onNodeWithTag("logo").captureToImage().asAndroidBitmap()
                 keep("header-logo-${if (dark) "dark" else "light"}", logo)
                 assertLogo(logo, if (dark) LogoColors.Dark else LogoColors.Light, bug = false)
@@ -128,7 +128,7 @@ class LogoPicturesTest {
     @Test
     fun theDebugLogoDrawsTheBugInTheRecordsPlace() {
         for (dark in listOf(false, true)) {
-            show(dark, { HeaderLogo(Modifier.testTag("logo"), height = HEADER_LOGO_HEIGHT * 3, bug = true) }) {
+            show(dark, { HeaderLogo(bug = true, Modifier.testTag("logo"), height = HEADER_LOGO_HEIGHT * 3) }) {
                 val logo = compose.onNodeWithTag("logo").captureToImage().asAndroidBitmap()
                 keep("header-logo-bug-${if (dark) "dark" else "light"}", logo)
                 assertLogo(logo, if (dark) LogoColors.Dark else LogoColors.Light, bug = true)
@@ -194,6 +194,27 @@ class LogoPicturesTest {
                 val off = a.indices.count { i -> !near(a[i], Color(b[i])) }
                 assertTrue("$variant: $off pixels differ", off <= MOVED_PIXELS)
             }
+        }
+    }
+
+    @Test
+    fun theFlightEndsAsTheLandedLogoBegins() {
+        // The last moment of the flight against the first landed one: the same pixels, so in a debug
+        // build the record has faded into the bug as it flew (#652), rather than turning into it
+        // on landing.
+        for (variant in listOf(IntroVariant.C, IntroVariant.F, IntroVariant.R1, IntroVariant.R2)) {
+            val pictures =
+                listOf(variant.land - 1L, variant.land).map { t ->
+                    val intro = LogoIntro(variant).apply { elapsed = t.toFloat() }
+                    var picture: Bitmap? = null
+                    show(dark = false, { IntroOverHome(intro) }) {
+                        picture = compose.onRoot().captureToImage().asAndroidBitmap()
+                    }
+                    picture!!.pixels()
+                }
+            val (a, b) = pictures
+            val off = a.indices.count { i -> !near(a[i], Color(b[i])) }
+            assertTrue("$variant: $off pixels differ", off <= MOVED_PIXELS)
         }
     }
 

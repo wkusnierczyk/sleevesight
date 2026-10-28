@@ -35,6 +35,11 @@ internal fun logoBug(shown: Boolean = LOGO_BUG): Path? {
     return remember(vector) { Path().apply { addPaths(vector.root) } }
 }
 
+/**
+ * Adds every path of [group] and its subgroups to this one, ignoring the groups' transforms, with
+ * the last path's fill type for all: right for `ic_bug_report`, one path with no group, but not
+ * for a drawing whose paths need different fill types or are moved by a group.
+ */
 private fun Path.addPaths(group: VectorGroup) {
     for (node in group) {
         when (node) {
