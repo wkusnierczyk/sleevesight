@@ -124,7 +124,7 @@ class GenreDefinitionsTest {
 
     @Test
     fun `the tags with no MusicBrainz genre are left so on purpose`() {
-        // Each has no definition, and its panel says Wikipedia has no article for it (#663). Why
+        // Each has no definition, and its panel says there is no definition from Wikipedia for it (#663). Why
         // each is left without one: MusicBrainz has no such genre (genre list, 2026-10-27), and the
         // nearest would describe something else. Two more show no definition though they have a
         // genre: *classic rock* and *singer-songwriter*, whose genres' Wikidata items have no English

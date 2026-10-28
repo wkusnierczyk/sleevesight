@@ -199,49 +199,59 @@ private fun Quiet(
 
 /**
  * The app's own line above a reason whose evidence says nothing about how the track sounds (#664):
- * that, and where the label came from, as the genre's rows give it: which sources' tags, for what
- * (the track, its artists by name, the album). The app's statement, not the model's: no citations,
- * no underline.
+ * that, and where the label came from, as the genre's rows give it: a clause for each source whose
+ * tags gave it, in [LabelSource] order, naming what it tagged (the track, its artists by name, the
+ * album). The app's statement, not the model's: no citations, no underline.
  */
 @Composable
 private fun silentLine(
     track: TrackState,
     genre: String,
 ): String {
-    val placed =
-        track.genres.rows.mapNotNull { row -> row.labels.firstOrNull { it.genre.identity == genre }?.let { row to it } }
     val thisTrack = stringResource(R.string.genre_why_this_track)
     val thisAlbum = stringResource(R.string.genre_why_this_album)
-    val subjects =
-        placed
-            .map { (row, _) ->
-                when (row.level) {
-                    GenreLevel.TRACK -> thisTrack
-                    GenreLevel.ALBUM -> thisAlbum
-                    GenreLevel.ARTIST -> row.artist ?: thisTrack
+    val theArtist = stringResource(R.string.genre_why_the_artist)
+    // What each source tagged with the genre, in row order: the track, the artists, the album.
+    val tagged =
+        track.genres.rows
+            .flatMap { row ->
+                val subject =
+                    when (row.level) {
+                        GenreLevel.TRACK -> thisTrack
+                        GenreLevel.ALBUM -> thisAlbum
+                        GenreLevel.ARTIST -> row.artist ?: theArtist
+                    }
+                row.labels
+                    .filter { it.genre.identity == genre }
+                    .flatMap { label -> label.credits.map { it.source to subject } }
+            }.groupBy({ it.first }, { it.second })
+            .mapValues { (_, subjects) -> subjects.distinct() }
+    val clauses =
+        LabelSource.entries.mapNotNull { source ->
+            tagged[source]?.let { subjects ->
+                val who = listed(subjects)
+                when (source) {
+                    LabelSource.LASTFM -> stringResource(R.string.genre_why_from_lastfm, who)
+                    LabelSource.MUSICBRAINZ -> stringResource(R.string.genre_why_from_musicbrainz, who)
                 }
-            }.distinct()
-    val sources = placed.flatMap { (_, label) -> label.credits.map { it.source } }.distinct()
-    val head = subjects.dropLast(1).joinToString(", ")
-    val who =
-        if (head.isEmpty()) {
-            subjects.lastOrNull()
-        } else {
-            stringResource(
-                R.string.genre_why_and,
-                head,
-                subjects.last(),
-            )
-        }
-    val origin =
-        who?.let {
-            when (sources.singleOrNull()) {
-                LabelSource.LASTFM -> stringResource(R.string.genre_why_from_lastfm, it)
-                LabelSource.MUSICBRAINZ -> stringResource(R.string.genre_why_from_musicbrainz, it)
-                null -> if (sources.isEmpty()) null else stringResource(R.string.genre_why_from_sources, it)
             }
         }
+    val origin =
+        clauses
+            .reduceOrNull { all, clause -> stringResource(R.string.genre_why_clauses, all, clause) }
+            ?.let { stringResource(R.string.genre_why_from, it) }
     return listOfNotNull(stringResource(R.string.genre_why_silent), origin).joinToString(" ")
+}
+
+// [items] as a sentence lists them, with the separators of the resources: "A", "A and B", "A, B and C".
+@Composable
+private fun listed(items: List<String>): String {
+    var all = items.first()
+    for (i in 1 until items.size) {
+        val separator = if (i == items.lastIndex) R.string.genre_why_and else R.string.genre_why_list
+        all = stringResource(separator, all, items[i])
+    }
+    return all
 }
 
 /**

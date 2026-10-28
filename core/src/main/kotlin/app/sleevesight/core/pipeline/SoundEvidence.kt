@@ -2,76 +2,47 @@ package app.sleevesight.core.pipeline
 
 import app.sleevesight.core.evidence.EvidenceLine
 import app.sleevesight.core.evidence.EvidenceSet
-import app.sleevesight.core.genres.GenreVocabulary
+import app.sleevesight.core.evidence.Scope
+import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.resolution.WikidataEvidence
 
 /**
  * Whether the sources say anything about how the track sounds (#664): when they say nothing, a
  * genre's reason opens with the app's own line saying so, and where the label came from, so the
  * model need not write about the evidence or its gaps (`GenreReasonPrompt`), a sentence nothing can
  * back. Decided in code, the same for the same evidence, from the evidence the reason is written
- * from.
+ * from, and in the safe direction: the line says the sources are silent only when that is certain,
+ * so no prose is read for words of sound, which a word list would miss ("melancholic", a line in
+ * Polish).
  *
- * A line speaks of the sound when it is about the track itself ([PromptEvidence.TRACK_SCOPES]: the
- * song, its original, a web result; not the artist, whose other work is another matter, nor the
- * player's release line), is not a count or list of what listeners did ([EvidenceLine.aggregate]:
- * Last.fm's tags, where the label itself comes from), and, outside quotation marks (a title,
- * "“Rock and Roll” was written by …", says nothing of the sound), names a genre of the vocabulary
- * or one of [SOUND_WORDS]: instruments, voice, melody, rhythm, arrangement, style. A word list
- * misses some ways of describing a sound, and then the line is not shown; it never shows for
- * evidence that names an instrument or a genre, as a MusicBrainz performer's credit does ("…
- * (guitar, vocals)").
+ * Silent when every line about the track itself ([PromptEvidence.TRACK_SCOPES], the song, its
+ * original and web results, and the player's release, [Scope.RELEASE]) is a templated fact that
+ * says nothing about the sound. A line is identified by its source and scope, never by its words:
+ * - templated, and silent on the sound: MusicBrainz's lines ([SourceId.MUSICBRAINZ]: the first
+ *   release, the cover and its original, writers, producers and performers), the player's release
+ *   line ([SourceId.PLAYER]), Wikidata's lines ([SourceId.WIKIDATA]: label, awards, dates) but its
+ *   genre line, and a line of counts or lists of what listeners did ([EvidenceLine.aggregate]);
+ * - speaking of the sound: Wikidata's genre line ("The genre of “…” is …", known by its template's
+ *   opening, [WikidataEvidence.namesGenre]), whose genre says how the track sounds;
+ * - free text, which may: any other line, whatever its words: a Wikipedia article's sentence, a web
+ *   result, a Last.fm biography, and a source added later until it is listed above.
+ *
+ * Lines about the artist are not read: the artist's other work is another matter than how this
+ * track sounds, and the reason may still cite them.
  */
 object SoundEvidence {
-    /** Whether no line of [evidence] speaks of the sound, a genre's name taken from [vocabulary]. */
-    fun silent(
-        evidence: EvidenceSet,
-        vocabulary: GenreVocabulary,
-    ): Boolean {
-        val genres = vocabulary.tags.map(::fold).filter(String::isNotEmpty)
-        return evidence.lines.none { speaks(it, genres) }
-    }
+    /** Whether no line of [evidence] about the track itself may speak of how it sounds. */
+    fun silent(evidence: EvidenceSet): Boolean = evidence.lines.filter(::aboutTheTrack).all(::templated)
 
-    // Whether [line] speaks of the sound, [genres] folded.
-    private fun speaks(
-        line: EvidenceLine,
-        genres: List<String>,
-    ): Boolean {
-        if (line.aggregate || line.scope !in PromptEvidence.TRACK_SCOPES) return false
-        val words = " ${fold(QUOTED.replace(line.text, " "))} "
-        return SOUND_WORDS.any { " $it " in words } || genres.any { " $it " in words }
-    }
+    private fun aboutTheTrack(line: EvidenceLine): Boolean =
+        line.scope in PromptEvidence.TRACK_SCOPES || line.scope == Scope.RELEASE
 
-    // Lower case, each run of anything but letters and digits one space: "Hip-hop" is "hip hop".
-    private fun fold(text: String): String =
-        buildString(text.length) {
-            var space = true
-            for (c in text.lowercase()) {
-                if (c.isLetterOrDigit()) {
-                    append(c)
-                    space = false
-                } else if (!space) {
-                    append(' ')
-                    space = true
-                }
+    // A templated fact that says nothing about the sound.
+    private fun templated(line: EvidenceLine): Boolean =
+        line.aggregate ||
+            when (line.source) {
+                SourceId.MUSICBRAINZ, SourceId.PLAYER -> true
+                SourceId.WIKIDATA -> !WikidataEvidence.namesGenre(line.text)
+                SourceId.WIKIPEDIA, SourceId.LASTFM, SourceId.DISCOGS, SourceId.WEB, SourceId.MODEL -> false
             }
-        }.trimEnd()
-
-    // A quotation in curly or straight double quotation marks, as titles are quoted.
-    private val QUOTED = Regex("“[^”]*”|\"[^\"]*\"")
-
-    /** The words that speak of a sound: instruments, voice, melody, rhythm, arrangement, style. */
-    val SOUND_WORDS: Set<String> =
-        listOf(
-            "sound sounds sonic sonically instrument instruments instrumental instrumentation",
-            "arrangement arrangements arranged orchestra orchestral orchestration",
-            "melody melodies melodic harmony harmonies",
-            "rhythm rhythms rhythmic tempo beat beats groove riff riffs chord chords",
-            "vocal vocals vocalist voice singing",
-            "guitar guitars guitarist bass bassist drum drums drummer percussion",
-            "piano pianist keyboard keyboards synth synths synthesizer synthesizers",
-            "organ violin violins cello strings horn horns brass",
-            "saxophone sax trumpet trombone flute accordion harmonica banjo mandolin",
-            "sample samples sampled sampling acoustic electric ballad",
-            "genre style styles influenced influences",
-        ).flatMap { it.split(' ') }.toSet()
 }

@@ -67,6 +67,7 @@ class GenreReasonNoteScreenTest {
     private fun alternative(
         credit: LabelSource,
         level: GenreLevel = GenreLevel.ARTIST,
+        artist: String? = ARTIST.takeIf { level == GenreLevel.ARTIST },
     ) = TrackLabel(
         GenreLabel(
             "alternative",
@@ -74,7 +75,7 @@ class GenreReasonNoteScreenTest {
             "Alternative",
             "alternative",
             level = level,
-            artist = ARTIST.takeIf { level == GenreLevel.ARTIST },
+            artist = artist,
         ),
         listOf(LabelCredit(credit, "https://example.org/alternative")),
     )
@@ -178,19 +179,34 @@ class GenreReasonNoteScreenTest {
     }
 
     @Test
-    fun theLineNamesEverySourceAndEverythingTagged() {
+    fun theLineGivesEachSourceItsOwnClauseWithWhatItTagged() {
         val rows =
             listOf(
                 GenreRow(GenreLevel.TRACK, null, listOf(alternative(MUSICBRAINZ, GenreLevel.TRACK))),
                 GenreRow(GenreLevel.ARTIST, ARTIST, listOf(alternative(LASTFM))),
+                GenreRow(GenreLevel.ARTIST, "Kayah", listOf(alternative(LASTFM, artist = "Kayah"))),
                 GenreRow(GenreLevel.ALBUM, null, listOf(alternative(LASTFM, GenreLevel.ALBUM))),
             )
         show(GenreReason.Shown(written(REPLY), silent = true), track(rows), chip = "track:alternative") {
             compose
                 .onNodeWithTag(GENRE_SILENT_TAG)
                 .assertTextEquals(
-                    "The sources say nothing about how this track sounds. The label comes from tags for " +
-                        "this track, Maciej Maleńczuk and this album on Last.fm and MusicBrainz.",
+                    "The sources say nothing about how this track sounds. The label comes from listeners’ tags " +
+                        "for Maciej Maleńczuk, Kayah and this album on Last.fm, and MusicBrainz contributors’ " +
+                        "tags for this track.",
+                )
+        }
+    }
+
+    @Test
+    fun anArtistRowWithNoNameIsTheArtistNeverThisTrack() {
+        val rows = listOf(GenreRow(GenreLevel.ARTIST, null, listOf(alternative(LASTFM, artist = null))))
+        show(GenreReason.Shown(written(REPLY), silent = true), track(rows), chip = "artist:alternative") {
+            compose
+                .onNodeWithTag(GENRE_SILENT_TAG)
+                .assertTextEquals(
+                    "The sources say nothing about how this track sounds. " +
+                        "The label comes from listeners’ tags for the artist on Last.fm.",
                 )
         }
     }

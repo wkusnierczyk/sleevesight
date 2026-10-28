@@ -68,6 +68,8 @@ class IdentityCheckGenresTest {
                 ),
                 texts,
             )
+            // The genre line is known by its template, and only it (#664, `SoundEvidence`).
+            assertEquals(listOf(true, false, false), texts.map(WikidataEvidence::namesGenre))
         }
 
     private companion object {

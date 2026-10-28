@@ -147,8 +147,8 @@ class AppGenreNotes(
         genre: String,
     ): Flow<GenreReason> {
         // Whether the evidence the reason is written from (its key holds the fingerprint) says nothing
-        // about how the track sounds.
-        val silent = track.evidence?.let { SoundEvidence.silent(it, definitions.vocabulary) } ?: false
+        // about how the track sounds: decided once, when the flow is first collected, off composition.
+        val silent by lazy { track.evidence?.let(SoundEvidence::silent) ?: false }
         // The reason's key, or null when none is offered.
         val keys =
             combine(parts, settings) { made, now ->

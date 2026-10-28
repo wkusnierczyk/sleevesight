@@ -270,7 +270,7 @@ class GenreAboutScreenTest {
         showBox(Notes(definition = null)) {
             assertEquals(0, count(GENRE_DEFINITION_TAG))
             compose.onNodeWithTag(GENRE_NO_DEFINITION_TAG).assertTextEquals(text(R.string.genre_definition_none))
-            assertEquals("Wikipedia has no article for this genre.", text(R.string.genre_definition_none))
+            assertEquals("No definition from Wikipedia for this genre.", text(R.string.genre_definition_none))
             val tops = listOf(GENRE_PANEL_HEADING_TAG, GENRE_NO_DEFINITION_TAG, GENRE_WHY_TAG).map(::top)
             assertEquals(tops.sorted(), tops)
         }

@@ -15,7 +15,6 @@ import app.sleevesight.core.genres.LabelSource
 import app.sleevesight.core.genres.TrackGenres
 import app.sleevesight.core.genres.TrackLabel
 import app.sleevesight.core.model.ProviderId
-import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.pipeline.AiAccess
 import app.sleevesight.core.pipeline.ClearEpoch
@@ -181,21 +180,17 @@ class AppGenreNotesTest {
     fun `a reason says whether its evidence says anything about how the track sounds`() =
         runTest {
             val notes = notes()
-            // The fixture's lines: a recording year, a chart, a single; nothing of the sound (#664).
+            // MusicBrainz's templated line alone: nothing of the sound (#664).
+            val templated = EvidenceSet.of(listOf(HomeFixtures.musicBrainzLine), JvmHasher)
+            val silent = track(HomeFixtures.track(evidence = templated))
+            notes.explain(silent, "rock")
+            advanceUntilIdle()
+            assertTrue((notes.reason(silent, "rock").first() as GenreReason.Shown).silent)
+            // The fixture adds a sentence from the song's Wikipedia article: free text, which may
+            // say how it sounds, so the app says nothing.
             notes.explain(track(), "rock")
             advanceUntilIdle()
-            assertTrue((notes.reason(track(), "rock").first() as GenreReason.Shown).silent)
-            // A line about the track naming its instruments: the app has nothing to say.
-            val guitar = HomeFixtures.draft(SourceId.MUSICBRAINZ, "Lightfoot performs on it (guitar, vocals).")
-            val evidence =
-                EvidenceSet.of(
-                    listOf(HomeFixtures.musicBrainzLine, HomeFixtures.wikipediaLine, guitar),
-                    JvmHasher,
-                )
-            val described = track(HomeFixtures.track(evidence = evidence))
-            notes.explain(described, "rock")
-            advanceUntilIdle()
-            assertFalse((notes.reason(described, "rock").first() as GenreReason.Shown).silent)
+            assertFalse((notes.reason(track(), "rock").first() as GenreReason.Shown).silent)
         }
 
     @Test

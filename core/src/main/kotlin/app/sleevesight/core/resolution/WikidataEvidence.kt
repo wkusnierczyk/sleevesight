@@ -22,6 +22,16 @@ object WikidataEvidence {
     /** At most this many genres, labels and awards: a famous song can hold dozens of each. */
     const val MAX_VALUES: Int = 3
 
+    /**
+     * Whether [text] is one of these lines naming the item's genres ("The genre of “…” is …"):
+     * a line of this template, read by its opening, not prose (#664, `SoundEvidence`).
+     */
+    fun namesGenre(text: String): Boolean = text.startsWith(GENRE_ONE) || text.startsWith(GENRES)
+
+    // The openings of the genre line, for one genre and for several.
+    private const val GENRE_ONE = "The genre of "
+    private const val GENRES = "The genres of "
+
     /** The lines for an accepted item, dated [retrievedAt]. */
     fun lines(
         accepted: IdentityCheck.Verdict.Accepted,
@@ -41,8 +51,8 @@ object WikidataEvidence {
         val texts = mutableListOf<String>()
         when (genres.size) {
             0 -> Unit
-            1 -> texts += "The genre of $name is ${genres.single()}."
-            else -> texts += "The genres of $name include ${EvidenceText.list(genres)}."
+            1 -> texts += "$GENRE_ONE$name is ${genres.single()}."
+            else -> texts += "$GENRES$name include ${EvidenceText.list(genres)}."
         }
         when (labels.size) {
             0 -> Unit
