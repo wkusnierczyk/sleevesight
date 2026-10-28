@@ -199,7 +199,9 @@ function update() {
     holds.replaceChildren(...lines);
   };
   if (drawer.holds(text, words)) {
-    // The same code: said again only when what is said of it changed (a key left out, say).
+    // The same code: the latest description kept for one still being sealed, and said again of
+    // one shown only when it changed (a key left out, say).
+    drawer.draw(text, words, describe);
     if (changed && !$('code').hidden) describe(words !== null);
     return;
   }

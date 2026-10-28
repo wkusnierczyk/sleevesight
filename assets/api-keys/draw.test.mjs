@@ -88,3 +88,15 @@ test('the same keys and words are not sealed again; clearing drops a code being 
   await again;
   assert.equal(state.shown, null);
 });
+
+test('what is said of a code is the latest asked for, also when it changed while sealing', async () => {
+  const { drawer, pending } = screen();
+  const said = [];
+  const sealing = drawer.draw('setup', WORDS, () => said.push('before'));
+  // The same keys and words, another key left out meanwhile: not sealed again, but described anew.
+  await drawer.draw('setup', WORDS, () => said.push('after'));
+  assert.equal(pending.length, 1);
+  pending[0].resolve('sealed:setup');
+  await sealing;
+  assert.deepEqual(said, ['after']);
+});
