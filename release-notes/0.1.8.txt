@@ -1,0 +1,12 @@
+What's new in 0.1.8:
+- Read aloud: hear the insight; the music is lowered.
+- A theme button on Home: light, dark, system.
+- Sources as a table, each with what it found.
+- Settings: one-tap choice buttons.
+- A service without its key stays off.
+- Home guide: tap a note, or zoom the picture.
+- Optionally list only enabled players on Home.
+- Insights follow Keep history for.
+- Genres: definitions for more tags.
+- Better MusicBrainz matches for duets.
+- The AI's own knowledge is marked AI.
