@@ -386,6 +386,7 @@ internal val SETTING_LINES: List<Pair<String, (Settings) -> String>> =
                 .joinToString { "${it.key} ${onOff(it.value)}" }
                 .ifEmpty { NONE }
         },
+        "onlyEnabledPlayersOnHome" to { onOff(it.onlyEnabledPlayersOnHome) },
         "enabledSources" to { s -> s.enabledSources.joinToString { it.name }.ifEmpty { NONE } },
         "webEngines" to { s -> s.webEngines.joinToString { it.name }.ifEmpty { NONE } },
         "labelSources" to { s -> s.labelSources.joinToString { it.name }.ifEmpty { NONE } },
