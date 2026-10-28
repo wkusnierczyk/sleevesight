@@ -125,6 +125,11 @@ internal fun <T> ChoiceDialog(
  * keyboard type, which stays `Password` so that the keyboard neither learns nor suggests the key.
  * On a phone the dialog takes the screen's width, less a margin ([keyDialogWidth]).
  *
+ * A key read from a QR code, a setup code's or a plain key's, is never shown (#702), as *Load keys*
+ * shows none in full, so that keys can be lent: while the field holds a scanned key, the eye is not
+ * there and the field stays masked, until it is emptied or takes text typed on a computer
+ * ([KeyField]).
+ *
  * Its buttons are the same for every key ([KeyDialogButtons], #543): *Cancel* at the start, then
  * *Remove*, while a key is stored, in the error colour with the trash can, and *Save*, filled.
  */
@@ -140,21 +145,15 @@ internal fun KeyDialog(
     showPhoneName: Boolean,
     onDismiss: () -> Unit,
 ) {
-    var typed by remember { mutableStateOf("") }
-    // Whether the field shows what it holds: not at first, nor once it is emptied (#432).
-    var shown by remember { mutableStateOf(false) }
-
-    fun enter(text: String) {
-        typed = text
-        shown = stillShown(shown, text)
-    }
+    // What the field holds, whether it shows it, and whether a scan put it there (#432, #702).
+    val field = remember { KeyField() }
     var busy by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf<Int?>(null) }
     var scanning by remember { mutableStateOf<ScanFor?>(null) }
     var session by remember { mutableStateOf<KeyboardSession?>(null) }
     val ledger = SessionLedger.of(LocalContext.current)
     val scope = rememberCoroutineScope()
-    val value = typed.trim()
+    val value = field.typed.trim()
     val autofill = LocalAutofillManager.current
 
     // Ends the autofill session unsaved before the field goes, which would otherwise commit it. The
@@ -182,13 +181,13 @@ internal fun KeyDialog(
             scanning = null
             val result = scanned(purpose, id, text.trim(), ledger)
             failed = result.failed
-            result.key?.let { enter(it) }
+            result.key?.let(field::scan)
             session = result.session
         }
     }
     val running =
         session?.let { s ->
-            @Composable { key(s) { keyboard(s, showPhoneName, { enter(it) }, { session = null }) } }
+            @Composable { key(s) { keyboard(s, showPhoneName, field::typeOnComputer, { session = null }) } }
         }
 
     AlertDialog(
@@ -198,7 +197,7 @@ internal fun KeyDialog(
         title = { Text(stringResource(keyName(id))) },
         text = {
             CancelAutofillOnDestroy(autofill)
-            KeyEntry(id, typed, ::enter, shown, { shown = it }, failed, busy, running) {
+            KeyEntry(id, field, failed, busy, running) {
                 failed = null
                 scanning = it
             }
@@ -244,34 +243,25 @@ private fun CancelAutofillOnDestroy(autofill: AutofillManager?) {
     }
 }
 
-/** Whether the key field, [shown] until now, still shows what it holds once it holds [text]: not when emptied. */
-private fun stillShown(
-    shown: Boolean,
-    text: String,
-): Boolean = shown && text.isNotEmpty()
-
 /**
  * The key dialog's body, scrolling where the screen is short: who gets the key [id], an AI
- * service's terms, the agreement in bold (#543), with a link to them (#409), the field showing
- * [typed], masked unless [shown], with its icons ([KeyFieldIcons]), the [keyboard] session when one
- * runs, and what [failed], if anything; the eye is off while [busy], and the scans while [busy] or
- * while a session runs.
+ * service's terms, the agreement in bold (#543), with a link to them (#409), the [field], masked
+ * unless it is shown, with its icons ([KeyFieldIcons]), the [keyboard] session when one runs, and
+ * what [failed], if anything; the eye is not there while the field holds a scanned key, and is off
+ * while [busy], and the scans while [busy] or while a session runs.
  */
 @Suppress("LongParameterList") // What the body shows, and what it hears.
 @Composable
 private fun KeyEntry(
     id: SecretId,
-    typed: String,
-    onType: (String) -> Unit,
-    shown: Boolean,
-    onShow: (Boolean) -> Unit,
+    field: KeyField,
     @StringRes failed: Int?,
     busy: Boolean,
     keyboard: (@Composable () -> Unit)?,
     onScan: (ScanFor) -> Unit,
 ) {
     // Hides the key when the app is left or the screen locks.
-    OnStop { onShow(false) }
+    OnStop { field.show(false) }
     Column(
         modifier = Modifier.verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -285,21 +275,22 @@ private fun KeyEntry(
             WebLink(terms.url)
         }
         OutlinedTextField(
-            value = typed,
-            onValueChange = onType,
+            value = field.typed,
+            onValueChange = field::enter,
             label = { Text(stringResource(R.string.settings_key_field)) },
             trailingIcon = {
                 KeyFieldIcons(
-                    entered = typed.isNotEmpty(),
-                    shown = shown,
+                    entered = field.typed.isNotEmpty(),
+                    scanned = field.scanned,
+                    shown = field.shown,
                     showable = !busy,
-                    onShow = onShow,
+                    onShow = field::show,
                     scans = !busy && keyboard == null,
                     onScan = onScan,
                 )
             },
             singleLine = true,
-            visualTransformation = if (shown) VisualTransformation.None else PasswordVisualTransformation(),
+            visualTransformation = if (field.shown) VisualTransformation.None else PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false),
             modifier = Modifier.fillMaxWidth().semantics { contentType = ContentType.Password },
         )
