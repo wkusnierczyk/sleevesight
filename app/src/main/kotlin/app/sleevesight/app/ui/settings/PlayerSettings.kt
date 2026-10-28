@@ -66,7 +66,8 @@ class InstalledPlayers(
  * links have loaded, off the main thread; each row's icon loads after, off the main thread too,
  * once per row while the section is drawn (#579): the row shows without it until it has, and for
  * good when the phone has none to give. With no [PlayerApps.installed] (tests, previews), every
- * stored player is listed, without an icon.
+ * stored player is listed, without an icon. Under the players, *Only enabled players on Home*
+ * (#674).
  */
 @Composable
 internal fun PlayersSection(
@@ -82,6 +83,12 @@ internal fun PlayersSection(
         val followed = settings.followedPlayers[player.packageName] ?: false
         key(player.packageName) { PlayerRow(player, followed, settings.developerMode, apps, update) }
     }
+    // After the players, the section's own content, so it stays put as players are added (#674).
+    SwitchRow(
+        title = stringResource(R.string.settings_players_on_home),
+        summary = stringResource(R.string.settings_players_on_home_summary),
+        checked = settings.onlyEnabledPlayersOnHome,
+    ) { on -> update { it.copy(onlyEnabledPlayersOnHome = on) } }
 }
 
 /**

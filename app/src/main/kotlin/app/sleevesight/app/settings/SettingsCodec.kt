@@ -48,6 +48,7 @@ internal object SettingsCodec {
     private val LAYOUT = stringPreferencesKey("layout")
     private val PLAYERS_ON = stringSetPreferencesKey("players.on")
     private val PLAYERS_OFF = stringSetPreferencesKey("players.off")
+    private val PLAYERS_ON_HOME = booleanPreferencesKey("players.only_enabled_on_home")
     private val SOURCES_ON = stringSetPreferencesKey("sources.on")
     private val SOURCES_OFF = stringSetPreferencesKey("sources.off")
     private val ENGINES_ON = stringSetPreferencesKey("web.engines.on")
@@ -95,6 +96,7 @@ internal object SettingsCodec {
             aiModels = AiSettingsCodec.readModels(prefs),
             aiEfforts = AiSettingsCodec.readEfforts(prefs),
             followedPlayers = readPlayers(prefs, defaults),
+            onlyEnabledPlayersOnHome = prefs[PLAYERS_ON_HOME] ?: defaults.onlyEnabledPlayersOnHome,
             enabledSources = readSwitches(prefs, SOURCES_ON, SOURCES_OFF, defaults.enabledSources),
             webEngines = readSwitches(prefs, ENGINES_ON, ENGINES_OFF, defaults.webEngines),
             labelSources = readSwitches(prefs, LABELS_ON, LABELS_OFF, defaults.labelSources),
@@ -169,6 +171,9 @@ internal object SettingsCodec {
         // A default player missing from the players is not followed, so it is stored as off.
         val players = changes(stored.followedPlayers, settings.followedPlayers)
         writeOverrides(players, { defaults.followedPlayers[it] }, prefs, PLAYERS_ON, PLAYERS_OFF)
+        if (moved { it.onlyEnabledPlayersOnHome }) {
+            prefs.put(PLAYERS_ON_HOME, settings.onlyEnabledPlayersOnHome, defaults.onlyEnabledPlayersOnHome)
+        }
         switches(SOURCES_ON, SOURCES_OFF) { it.enabledSources }
         switches(ENGINES_ON, ENGINES_OFF) { it.webEngines }
         switches(LABELS_ON, LABELS_OFF) { it.labelSources }

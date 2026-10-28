@@ -11,6 +11,8 @@
     <!-- With no player listed; %1$s is home_players_none_link, a link that opens Settings at Players. -->
     <string name="home_players_none">No music player seen yet. Play music in one, and it is listed here and in %1$s.</string>
     <string name="home_players_none_link">Settings → Players</string>
+    <!-- With Only enabled players on Home on and no player switched on (#674); %1$s is home_players_none_link. -->
+    <string name="home_players_none_enabled">No player is switched on. Switch on the players you want Sleevesight to follow in %1$s.</string>
     <!-- What a screen reader says a tap on a link to Settings → Players does. -->
     <string name="home_players_open_settings">Open Settings at Players</string>
     <!-- The guide to Home: the notes on its picture, top to bottom. -->
