@@ -22,8 +22,9 @@ import org.robolectric.RobolectricTestRunner
 
 /**
  * Before Android's own screen for notification access, which warns that the app could read every
- * notification, the first-run screen and Home's prompt to turn the access on say plainly what that
- * screen will say and what Sleevesight does with the access (#708); *What it reads* leads with it.
+ * notification, the first-run screen says plainly what that screen will say and what Sleevesight does
+ * with the access (#708), and Home's prompt to turn the access on, which leads to it, says so in one
+ * line; *What it reads* leads with it.
  */
 @RunWith(RobolectricTestRunner::class)
 class NotificationAccessStatementTest {
@@ -35,6 +36,8 @@ class NotificationAccessStatementTest {
     private fun text(id: Int) = app.getString(id)
 
     private val statement get() = text(R.string.access_statement)
+
+    private val short get() = text(R.string.home_access_statement)
 
     private fun show(
         content: @Composable () -> Unit,
@@ -90,14 +93,16 @@ class NotificationAccessStatementTest {
         }
 
     @Test
-    fun homesPromptToTurnOnAccessSaysItBeforeTheButton() =
+    fun homesPromptToTurnOnAccessSaysItInShortBeforeTheButton() =
         show({ HomeScreen(accessGranted = false, onOpenFirstRun = {}, onOpenSettings = {}) }) {
-            scrollToStatement()
+            compose.onNodeWithText(short).performScrollTo().assertIsDisplayed()
             val needs = bounds(R.string.home_access_off)
-            val said = bounds(statement)
+            val said = bounds(short)
             val button = bounds(R.string.home_turn_on_access)
-            assertTrue("the statement follows the prompt", needs.bottom <= said.top)
-            assertTrue("the button follows the statement", said.bottom <= button.top)
+            assertTrue("the line follows the prompt", needs.bottom <= said.top)
+            assertTrue("the button follows the line", said.bottom <= button.top)
+            // The button leads to the first-run screen, which says it in full.
+            compose.onNodeWithText(statement).assertDoesNotExist()
         }
 
     @Test
@@ -105,12 +110,20 @@ class NotificationAccessStatementTest {
         show({ HomeScreen(accessGranted = true, onOpenFirstRun = {}, onOpenSettings = {}) }) {
             compose.onNodeWithText(text(R.string.home_what_leaves)).performScrollTo().assertIsDisplayed()
             compose.onNodeWithText(statement).assertDoesNotExist()
+            compose.onNodeWithText(short).assertDoesNotExist()
         }
 
     @Test
     fun theStatementSaysWhatTheDialogShowsWhatTheAppReadsAndHowToCheck() {
         val said = statement
-        for (part in listOf("all your notifications", "Spotify by default", "never reads your notifications")) {
+        val parts =
+            listOf(
+                "all your notifications",
+                "Spotify by default",
+                "never reads your notifications",
+                "never acts on them",
+            )
+        for (part in parts) {
             assertTrue("it says \"$part\"", part in said)
         }
         assertTrue("it says how to check", "privacy policy" in said && "open source" in said)
