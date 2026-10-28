@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -24,6 +25,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.AlignmentLine
+import androidx.compose.ui.layout.FirstBaseline
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -31,6 +35,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.settings.ListedPlayer
@@ -44,6 +51,7 @@ import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.app.ui.theme.linkedParts
 import app.sleevesight.core.settings.Settings
+import kotlin.math.roundToInt
 
 /**
  * Home with nothing playing in a followed player (#627), for previews and the navigation's default:
@@ -59,7 +67,9 @@ fun NothingPlaying() {
  * lists, in its order, A to Z by name ([listedPlayers]); a followed one's row opens the player from
  * its launcher entry, as *Players*' *Open the app* does, and a switched-off one's is dimmed, cannot be
  * tapped, and links to *Players* (*Enable in Settings*). With no player listed, a line says so, and
- * links to *Players*. Under the players, the guide to Home ([HomeGuide]) while *Home guide* is on and
+ * links to *Players*. With *Only enabled players on Home* on (#674), only the followed players are
+ * listed; with players listed but none of them followed, a line says none is switched on, and links
+ * to *Players*. Under the players, the guide to Home ([HomeGuide]) while *Home guide* is on and
  * it is not [guideDismissed]. Nothing before the settings' first read ([settings] null), nor before
  * the players have loaded.
  */
@@ -72,16 +82,18 @@ internal fun IdleHome(
     if (settings == null) return
     val apps = remember(actions) { PlayerApps(actions.playerLabel, actions.playerLaunch, actions.installedPlayers) }
     val listed = listedPlayers(settings.followedPlayers.keys, apps) ?: return
+    val shown = if (settings.onlyEnabledPlayersOnHome) listed.filter { settings.follows(it.packageName) } else listed
     val toPlayers = { actions.openSettingsAt(SettingsTarget.players) }
     Column(Modifier.fillMaxWidth().testTag(NOTHING_PLAYING_TAG)) {
-        if (listed.isEmpty()) {
+        if (shown.isEmpty()) {
+            val line = if (listed.isEmpty()) R.string.home_players_none else R.string.home_players_none_enabled
             val link = TextPart.Action(stringResource(R.string.home_players_none_link), PLAYERS_LINK_TAG, toPlayers)
             LinkedText(
-                linkedParts(stringResource(R.string.home_players_none), link),
+                linkedParts(stringResource(line), link),
                 style = MaterialTheme.typography.bodyLarge,
             )
         }
-        for (player in listed) {
+        for (player in shown) {
             key(player.packageName) {
                 IdlePlayerRow(player, settings.follows(player.packageName), apps, toPlayers)
             }
@@ -99,9 +111,11 @@ internal fun IdleHome(
 
 /**
  * A player's row on the idle Home (#627): its icon, *Play on <player>* and the open-in-new icon,
- * a button that opens the player; [followed] off, dimmed, not a button, without the open-in-new
- * icon, and under its name *Enable in Settings*, a link to *Players* ([toPlayers]). A screen reader
- * reads a switched-off one as *Play on <player>, not followed*, then the link.
+ * a button that opens the player; [followed] off, dimmed, not a button, and in the open-in-new
+ * icon's place *Enable in Settings*, a link to *Players* ([toPlayers]), under the name only when
+ * both do not fit on one line ([NameThenLink], #675). Either row is [ROW_HEIGHT] tall at the
+ * default font size. A screen reader reads a switched-off one as *Play on <player>, not followed*,
+ * then the link.
  */
 @Composable
 private fun IdlePlayerRow(
@@ -130,7 +144,7 @@ private fun IdlePlayerRow(
             }
     }
     Row(
-        row.padding(horizontal = 8.dp, vertical = 6.dp),
+        row.padding(horizontal = 8.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
@@ -138,25 +152,27 @@ private fun IdlePlayerRow(
         Box(dim.size(ROW_MARK)) {
             icon?.let { Image(it, contentDescription = null, modifier = Modifier.size(ROW_MARK)) }
         }
-        Column(Modifier.weight(1f)) {
-            Text(
-                name,
-                style = MaterialTheme.typography.titleMedium,
-                modifier = if (followed) dim else dim.clearAndSetSemantics { contentDescription = notFollowed },
-            )
-            if (!followed) {
+        if (!followed) {
+            NameThenLink(
+                name = {
+                    Text(
+                        name,
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = dim.clearAndSetSemantics { contentDescription = notFollowed },
+                    )
+                },
+                link = stringResource(R.string.home_player_enable),
+                linkStyle = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f),
+            ) { text, style ->
                 LinkLabel(
-                    TextPart.Action(
-                        stringResource(R.string.home_player_enable),
-                        enableTag(player.packageName),
-                        toPlayers,
-                    ),
+                    TextPart.Action(text, enableTag(player.packageName), toPlayers),
                     onClickLabel = stringResource(R.string.home_players_open_settings),
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = style,
                 )
             }
-        }
-        if (followed) {
+        } else {
+            Text(name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
             Icon(
                 painterResource(R.drawable.ic_open_in_new),
                 contentDescription = null,
@@ -167,10 +183,56 @@ private fun IdlePlayerRow(
     }
 }
 
+/**
+ * A switched-off player's [name], then its *Enable in Settings* [link] (#675): at the end of the
+ * same line when both fit, where a followed player's row has its open-in-new icon, so the row is as
+ * tall as a followed one's; else, at a large font, under the name, from its start. The link's touch
+ * target, 48 dp tall around its text, then reaches up over the name's last line by the space above
+ * the text, so the link's text starts right under the name's, with no gap; the name takes no taps.
+ * That space is the link's first baseline as drawn, less the first baseline of its text alone,
+ * which [link] and [linkStyle] measure here; [linkLabel] draws the link from them.
+ */
+@Composable
+private fun NameThenLink(
+    name: @Composable () -> Unit,
+    link: String,
+    linkStyle: TextStyle,
+    modifier: Modifier = Modifier,
+    linkLabel: @Composable (String, TextStyle) -> Unit,
+) {
+    val measurer = rememberTextMeasurer()
+    val style = LocalTextStyle.current.merge(linkStyle)
+    Layout(contents = listOf(name, { linkLabel(link, style) }), modifier = modifier) { (names, links), constraints ->
+        val width = constraints.maxWidth
+        val linked = links.single().measure(Constraints(maxWidth = width))
+        val named = names.single()
+        val room = width - linked.width - LINK_GAP.roundToPx()
+        if (room > 0 && named.maxIntrinsicWidth(Constraints.Infinity) <= room) {
+            val placed = named.measure(Constraints(maxWidth = room))
+            val height = maxOf(placed.height, linked.height)
+            layout(width, height) {
+                placed.placeRelative(0, (height - placed.height) / 2)
+                linked.placeRelative(width - linked.width, (height - linked.height) / 2)
+            }
+        } else {
+            val placed = named.measure(Constraints(maxWidth = width))
+            // How far below the target's top the text starts, whatever the target adds around it.
+            val drawn = linked[FirstBaseline]
+            val own = measurer.measure(link, style, constraints = Constraints(maxWidth = width)).firstBaseline
+            val above = if (drawn == AlignmentLine.Unspecified) 0 else (drawn - own.roundToInt()).coerceAtLeast(0)
+            val top = (placed.height - above).coerceAtLeast(0)
+            layout(width, top + linked.height) {
+                placed.placeRelative(0, 0)
+                linked.placeRelative(0, top)
+            }
+        }
+    }
+}
+
 /** The test tag of the idle Home: the players and the guide. */
 const val NOTHING_PLAYING_TAG: String = "nothing-playing"
 
-/** The test tag of the link to *Players* in the line shown when no player has been seen. */
+/** The test tag of the link to *Players* in the line shown when no player is listed. */
 const val PLAYERS_LINK_TAG: String = "home-players-link"
 
 /** The test tag of the idle Home's row for [packageName]. */
@@ -179,8 +241,14 @@ fun idlePlayerTag(packageName: String): String = "home-play-on-$packageName"
 /** The test tag of the *Enable in Settings* link of [packageName]'s row. */
 fun enableTag(packageName: String): String = "home-enable-$packageName"
 
-/** A row's least height: its icon, and room around it. */
+/**
+ * A row's least height, a followed player's and a switched-off one's alike (#675): its icon, or the
+ * link's 48 dp touch target, and room around it.
+ */
 private val ROW_HEIGHT = 56.dp
+
+/** The least space between a switched-off player's name and its link on the same line. */
+private val LINK_GAP = 12.dp
 
 /** The space above the guide: a little more than between the rows. */
 private val GUIDE_SPACE = 16.dp
