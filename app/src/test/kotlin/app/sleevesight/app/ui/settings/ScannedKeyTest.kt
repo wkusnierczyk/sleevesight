@@ -248,7 +248,9 @@ class ScannedKeyTest {
         }
 
     // The keyboard app's copy and cut come to the field as the Copy and Cut keys, as do a hardware
-    // keyboard's Ctrl+C and Ctrl+X, which Robolectric cannot press (it types the letter).
+    // keyboard's Ctrl+C and Ctrl+X, which Robolectric cannot press (it types the letter). This guards
+    // the password field's own block on copy and cut, not #702's fix, which keeps the key out of the
+    // field: the `keyNowhere` checks of `InputText` and `FillableData`, and `KeyFieldTest`, guard that.
     @Test
     fun aScannedKeyCannotBeCopiedOrCut() =
         show {

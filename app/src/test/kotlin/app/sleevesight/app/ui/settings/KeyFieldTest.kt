@@ -65,6 +65,26 @@ class KeyFieldTest {
     }
 
     @Test
+    fun aBulletTypedOrPastedOnThePhoneIsDroppedAsAScannedKeysDots() {
+        val field = KeyField()
+        field.enter("sk-ant-${KeyField.MASK}typed")
+        assertEquals("sk-ant-typed", field.text)
+        assertEquals("sk-ant-typed", field.value)
+    }
+
+    @Test
+    fun aBulletTypedOnAComputerIsDroppedTooSoMasksNeverPassForText() {
+        val field = KeyField()
+        field.scan(key)
+        field.typeOnComputer(masks + "${KeyField.MASK}sk-ant-from-the-computer")
+        assertEquals("sk-ant-from-the-computer", field.text)
+        assertEquals("sk-ant-from-the-computer", field.value)
+        field.typeOnComputer(masks)
+        assertEquals("", field.value)
+        assertFalse("emptied, masked", field.shown)
+    }
+
+    @Test
     fun aKeyTypedOnAComputerOrByHandIsTheUsersOwnAndCanBeShown() {
         val field = KeyField()
         field.typeOnComputer("sk-ant-typed")

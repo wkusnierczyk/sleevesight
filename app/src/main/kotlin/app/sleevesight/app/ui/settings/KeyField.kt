@@ -41,13 +41,10 @@ internal class KeyField {
     /** Whether the field shows what it holds: only when asked, and never a [scanned] key. */
     val shown: Boolean get() = asked && !scanned
 
-    /**
-     * Text typed, pasted or filled on the phone: it replaces a scanned key whole. [MASK] characters
-     * are dropped, so that what stood for a scanned key, brought back by an undo, is not text.
-     */
-    fun enter(text: String) = replace(text.filterNot { it == MASK })
+    /** Text typed, pasted or filled on the phone: it replaces a scanned key whole. */
+    fun enter(text: String) = replace(text)
 
-    /** Text typed on a computer, which replaces the field's. */
+    /** Text typed on a computer, which replaces the field's, a scanned key's included. */
     fun typeOnComputer(text: String) = replace(text)
 
     /** A key read from a QR code: kept here, masked, and never shown. */
@@ -62,10 +59,16 @@ internal class KeyField {
         asked = show && !scanned
     }
 
+    /**
+     * Puts [text] in the field in place of what it held, without its [MASK] characters, however it
+     * came: [MASK] stands for a scanned key's characters, so what an undo brings back of one is no
+     * text, and no key's form holds it ([KeyShape][app.sleevesight.core.keys.KeyShape]).
+     */
     private fun replace(text: String) {
+        val kept = text.filterNot { it == MASK }
         scannedKey = null
-        this.text = text
-        if (text.isEmpty()) asked = false
+        this.text = kept
+        if (kept.isEmpty()) asked = false
     }
 
     companion object {
