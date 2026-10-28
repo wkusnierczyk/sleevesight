@@ -50,17 +50,18 @@ internal fun Modifier.keyDialogWidth(): Modifier =
     padding(horizontal = KEY_DIALOG_MARGIN).widthIn(max = KEY_DIALOG_MAX_WIDTH).fillMaxWidth()
 
 /**
- * The key field's trailing icons: the eye, only once something is [entered], which shows what is
- * in the field when it is not [shown] and hides it when it is, each icon naming what a tap does,
- * and is off unless [showable]; then *Scan QR code* and *Type on a computer*, which start [onScan]
- * for the key or for a keyboard session, and are off unless [scans]. The eye comes first, so that
- * the other two keep their place when it appears. Each is a 48 dp button with its name spoken and
- * shown as a tooltip.
+ * The key field's trailing icons: the eye, only once something is [entered] and never while the
+ * field holds a [scanned] key (#702), which shows what is in the field when it is not [shown] and
+ * hides it when it is, each icon naming what a tap does, and is off unless [showable]; then *Scan
+ * QR code* and *Type on a computer*, which start [onScan] for the key or for a keyboard session, and
+ * are off unless [scans]. The eye comes first, so that the other two keep their place when it
+ * appears. Each is a 48 dp button with its name spoken and shown as a tooltip.
  */
 @Suppress("LongParameterList") // The eye's state and switch, and the scans'.
 @Composable
 internal fun KeyFieldIcons(
     entered: Boolean,
+    scanned: Boolean,
     shown: Boolean,
     showable: Boolean,
     onShow: (Boolean) -> Unit,
@@ -68,7 +69,7 @@ internal fun KeyFieldIcons(
     onScan: (ScanFor) -> Unit,
 ) {
     Row {
-        if (entered) {
+        if (entered && !scanned) {
             FieldIcon(
                 icon = if (shown) R.drawable.ic_visibility_off else R.drawable.ic_visibility,
                 label = stringResource(if (shown) R.string.settings_key_hide else R.string.settings_key_show),
