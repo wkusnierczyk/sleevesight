@@ -65,7 +65,10 @@ class GuideLayoutTest {
             parts + (GuidePart.SETTINGS to Rect(130f, 25f, 140f, 35f)) + (GuidePart.PLAYER to Rect(6f, 5f, 60f, 13f))
         val shown = guideLayout(swapped, GuidePart.entries.map { 20f }, pictureWidth, pictureHeight, metrics)
         for (part in GuidePart.entries) {
-            assertEquals(part.name, swapped.getValue(part).center.y, shown.arrows[part.ordinal].end.y, 0.01f)
+            val arrow = shown.arrows[part.ordinal]
+            // The last note's, pushed below its part, ends at its bottom.
+            val at = swapped.getValue(part).let { if (arrow.fromBelow) it.bottom + 2f else it.center.y }
+            assertEquals(part.name, at, arrow.end.y, 0.01f)
         }
     }
 
@@ -83,5 +86,62 @@ class GuideLayoutTest {
         assertEquals(pictureWidth + metrics.gap - 40f, note.x, 0.01f)
         assertTrue(note.y >= pictureHeight + 8f)
         assertTrue(shown.height >= note.y + 40f)
+    }
+
+    @Test
+    fun aNotePushedUnderThePicturesCornerHasItsTargetBelowThePicture() {
+        for (heights in listOf(20f, 40f)) {
+            // Tall or crowded notes push *Sources*' note below its part, under the picture's corner.
+            val shown = laidOut(heights)
+            assertTrue(shown.arrows[GuidePart.SOURCES.ordinal].fromBelow)
+            assertTrue(shown.notes[GuidePart.SOURCES.ordinal].x < pictureWidth)
+            val target = shown.targets[GuidePart.SOURCES.ordinal]
+            assertTrue("$heights: $target", target.start >= pictureHeight)
+            assertTrue("$heights: $target", target.endInclusive - target.start >= metrics.target)
+            assertTrue(shown.height >= target.endInclusive)
+        }
+    }
+
+    @Test
+    fun eachNotesTargetIsAtLeastTheTargetHighInsideTheGuideAndNoTwoOverlap() {
+        val shown = laidOut()
+        val targets = shown.targets.sortedBy { it.start }
+        for (target in targets) {
+            assertTrue("$target", target.endInclusive - target.start >= metrics.target - 0.01f)
+            assertTrue("$target", target.start >= 0f && target.endInclusive <= shown.height)
+        }
+        targets.zipWithNext().forEach { (a, b) -> assertTrue("$a then $b", b.start >= a.endInclusive - 0.01f) }
+    }
+
+    // A note's panel (#673): clear of its part and its note, in the picture where it fits.
+
+    @Test
+    fun aPanelGoesUnderItsPartAndNoteWhenItFitsInThePicture() {
+        // The cogwheel and its note, 0 to 20: under both.
+        assertEquals(28f, panelTop(0f..20f, 100f, pictureHeight, 8f), 0.01f)
+        assertTrue(panelFits(0f..20f, 100f, pictureHeight, 8f))
+    }
+
+    @Test
+    fun aPanelGoesOverThemWhenItDoesNotFitUnder() {
+        // The Write button and its note, 298 to 318: 120 does not fit under, in 400.
+        assertEquals(298f - 8f - 120f, panelTop(298f..318f, 120f, pictureHeight, 8f), 0.01f)
+        assertTrue(panelFits(298f..318f, 120f, pictureHeight, 8f))
+    }
+
+    @Test
+    fun aPanelFittingNeitherGoesUnderThemBelowThePicture() {
+        assertEquals(256f, panelTop(228f..248f, 300f, pictureHeight, 8f), 0.01f)
+        assertFalse(panelFits(228f..248f, 300f, pictureHeight, 8f))
+    }
+
+    @Test
+    fun aPanelIsThePicturesWidthUnlessThatIsTooNarrowAtTheFontSize() {
+        assertEquals(metrics.pictureWidth(400), metrics.panelWidth(400))
+        // At twice the font size the picture narrows, and the panel widens past it, within the guide.
+        val large = GuideMetrics(density = 1f, fontScale = 2f)
+        assertTrue(large.panelWidth(400) > large.pictureWidth(400))
+        assertEquals(320, large.panelWidth(400))
+        assertEquals(300, large.panelWidth(300))
     }
 }
