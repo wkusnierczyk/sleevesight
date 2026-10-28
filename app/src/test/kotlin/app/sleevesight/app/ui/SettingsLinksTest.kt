@@ -162,12 +162,13 @@ class SettingsLinksTest {
                     val place = "${file.parentFile.name}/${file.name}"
                     KEY_SENTENCE.findAll(file.readText()).map { "$place: ${it.groupValues[1]}" }
                 }
-        assertTrue("found in values", sentences.any { it.startsWith("values/") })
+        assertEquals("both found in values", 2, sentences.count { it.startsWith("values/") })
         assertEquals(emptyList<String>(), sentences.filter { "%1\$s" !in it })
     }
 
     private companion object {
-        val KEY_SENTENCE = Regex("""<string name="settings_set_key">(.*?)</string>""")
+        // Both sentences, with no key saved and with one (#667).
+        val KEY_SENTENCE = Regex("""<string name="settings_(?:set|update)_key">(.*?)</string>""")
 
         const val ABOUT_ROWS = "About's rows"
     }

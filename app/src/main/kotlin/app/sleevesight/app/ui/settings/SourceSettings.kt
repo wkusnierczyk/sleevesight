@@ -27,19 +27,27 @@ private sealed class SourceRow(
     @StringRes val summary: Int,
     val url: String?,
 ) {
+    /** Whether it is switched on in [settings]: an engine while web search is on with it. */
+    abstract fun on(settings: Settings): Boolean
+
     class Source(
         val switch: SourceSwitch,
         name: Int,
         summary: Int,
         url: String?,
-    ) : SourceRow(badgeLetter(switch), name, summary, url)
+    ) : SourceRow(badgeLetter(switch), name, summary, url) {
+        override fun on(settings: Settings): Boolean = switch in settings.enabledSources
+    }
 
     class Engine(
         val engine: WebEngine,
         name: Int,
         summary: Int,
         url: String,
-    ) : SourceRow(WEB_BADGE, name, summary, url)
+    ) : SourceRow(WEB_BADGE, name, summary, url) {
+        override fun on(settings: Settings): Boolean =
+            SourceSwitch.WEB in settings.enabledSources && engine in settings.webEngines
+    }
 }
 
 /**
@@ -84,7 +92,8 @@ private val SOURCE_ROWS: List<SourceRow> =
 /**
  * *Sources*: a switch per source, each with its badge ([ServiceBadge]), what it is, its site,
  * and, for one that needs a key, a link to it under *Secrets*, where the keys are ([KeyLink]), and,
- * while it lacks the key, that it needs it ([keyNote]); *AI service knowledge* links to *AI
+ * while it lacks the key, that it needs it ([keyNote]), its switch off and not to be moved (#667);
+ * *AI service knowledge* links to *AI
  * services*, and says when none of them is switched on (#581). A web search engine's row is on
  * while web search is on with that engine ([Settings.isEnabled] needs both): switching it on turns
  * both on, and off turns the engine off.
@@ -98,14 +107,13 @@ internal fun SourcesSection(
     for (row in SOURCE_ROWS) {
         val key =
             when (row) {
-                is SourceRow.Source -> sourceKey(row.switch)
-                is SourceRow.Engine -> engineKey(row.engine)
+                is SourceRow.Source -> SecretId.forSource(row.switch)
+                is SourceRow.Engine -> SecretId.forEngine(row.engine)
             }
-        val checked =
-            when (row) {
-                is SourceRow.Source -> row.switch in settings.enabledSources
-                is SourceRow.Engine -> SourceSwitch.WEB in settings.enabledSources && row.engine in settings.webEngines
-            }
+        // With no key saved, the switch is off and cannot be moved (#667); stored on with none, as
+        // before the keys' gate ([app.sleevesight.app.secrets.KeyGate]) writes it off, it shows off.
+        val usable = key == null || keySaved(secrets[key])
+        val checked = row.on(settings) && (key == null || secrets[key] != SecretState.ABSENT)
         val name = stringResource(row.name)
         val model = row is SourceRow.Source && row.switch == SourceSwitch.MODEL
         val aiServices = stringResource(R.string.settings_section_ai)
@@ -125,11 +133,12 @@ internal fun SourcesSection(
             checked = checked,
             leading = { ServiceBadge(row.badge) },
             below = {
-                key?.let { KeyLink(it) }
+                key?.let { KeyLink(it, secrets[it]) }
                 row.url?.let { WebsiteLink(name, it) }
             },
             summaryLink = settingsLink(aiServices, SettingsTarget.aiServices).takeIf { model },
-        ) { on -> update { switched(it, row, on) } }
+            onChange = { on: Boolean -> update { switched(it, row, on) } }.takeIf { usable },
+        )
     }
 }
 

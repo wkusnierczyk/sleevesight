@@ -209,13 +209,15 @@ internal sealed interface ChipStatus {
 /**
  * The chips of the *Sources* section, in the evidence's order (`P` first, as the simulator shows
  * it): the player's release when there is a `P` line, each source looked up, each keyed source
- * that needs its key, and the model's own knowledge when it is allowed. The Wikipedia chip shows
- * and hides Wikidata's lines too, which its adapter brings.
+ * that needs its key, each keyed source switched off ([off]) that was not looked up, as off (#667:
+ * one with no key saved is off, not in need of its key), and the model's own knowledge when it is
+ * allowed. The Wikipedia chip shows and hides Wikidata's lines too, which its adapter brings.
  */
 internal fun sourceChips(
     track: TrackState,
     needsKey: Set<SourceId>,
     modelAllowed: Boolean,
+    off: Set<SourceId> = emptySet(),
 ): List<SourceChip> {
     val chips = mutableListOf<SourceChip>()
     if (track.evidence
@@ -247,8 +249,14 @@ internal fun sourceChips(
             }
         chips += SourceChip(source, status, filtersOf(source))
     }
-    for (source in order.filter { it in needsKey && it !in track.sources }) {
-        chips += SourceChip(source, ChipStatus.NeedsKey, filtersOf(source))
+    for (source in order.filter { it !in track.sources }) {
+        val status =
+            when (source) {
+                in needsKey -> ChipStatus.NeedsKey
+                in off -> ChipStatus.Done(Outcome.SourceOff, cached = false)
+                else -> null
+            }
+        status?.let { chips += SourceChip(source, it, filtersOf(source)) }
     }
     if (modelAllowed) chips += SourceChip(SourceId.MODEL, ChipStatus.ModelAllowed, setOf(SourceId.MODEL))
     return chips
