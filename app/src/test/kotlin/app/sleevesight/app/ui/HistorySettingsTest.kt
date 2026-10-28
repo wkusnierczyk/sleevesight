@@ -35,7 +35,8 @@ import org.robolectric.RobolectricTestRunner
 
 /**
  * *History*'s layout and text (#547): *Clear history* sits right under *Keep history for*, which
- * offers *Forever*, and no description in the section starts from the off state.
+ * offers *Forever*, and says what a tap does (#669); no description in the section starts from the
+ * off state.
  */
 @RunWith(RobolectricTestRunner::class)
 class HistorySettingsTest {
@@ -104,6 +105,14 @@ class HistorySettingsTest {
                 )
             val tops = rows.map(::top)
             assertEquals("the title, its description, then Clear history", tops.sorted(), tops)
+        }
+
+    @Test
+    fun clearHistorySaysWhatATapDoesAsAnAction() =
+        showHistory {
+            // An action, as a button's label is, not a description of the row (#669).
+            val line = "Delete everything Sleevesight kept about the tracks you played"
+            assertTrue(compose.onAllNodesWithText(line).fetchSemanticsNodes().isNotEmpty())
         }
 
     @Test

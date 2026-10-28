@@ -86,8 +86,8 @@
         <item quantity="one">%d tap from developer mode</item>
         <item quantity="other">%d taps from developer mode</item>
     </plurals>
-    <string name="settings_developer_on">Developer mode is on</string>
-    <string name="settings_developer_already_on">Developer mode is already on</string>
+    <string name="settings_developer_on">Developer mode is enabled</string>
+    <string name="settings_developer_already_on">Developer mode is already enabled</string>
     <string name="settings_grounding_details">Show grounding details</string>
     <string name="settings_grounding_details_summary">Under each insight, the grounding check’s counts in full: how many sentences are grounded, and how many come from the AI model’s own knowledge, are uncited, or cite missing evidence. Under Sources, the sources that are off too, which findings were kept from an earlier lookup or rejected, and the rejected matches.</string>
     <!-- Developer: Home's button for a tester's report (#452), shown, hidden while Home scrolls, or hidden (#518). -->

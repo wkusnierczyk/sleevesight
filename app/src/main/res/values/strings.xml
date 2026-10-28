@@ -156,7 +156,7 @@
     <string name="settings_session_gap">New session idle trigger</string>
     <string name="settings_session_gap_summary">A track that starts after a longer break begins a new listening session, counted from when the last track was heard. Earlier sessions stay in your history, for as long as “Keep history for” is set. Within a session, each artist fact is told once, unless “Don’t repeat artist facts” is off. A change applies from the next track that starts.</string>
     <string name="settings_clear_history">Clear history</string>
-    <string name="settings_clear_history_value">Deletes everything Sleevesight kept about the tracks you played</string>
+    <string name="settings_clear_history_value">Delete everything Sleevesight kept about the tracks you played</string>
     <string name="settings_clear_history_title">Clear history?</string>
     <string name="settings_clear_history_explained">The list of tracks you played, the track changes recorded to learn your skips, the insights and genre explanations written, and what the sources found are deleted from this phone. Your API keys and settings stay. Your music is not touched. This cannot be undone.</string>
     <string name="settings_clear">Clear</string>

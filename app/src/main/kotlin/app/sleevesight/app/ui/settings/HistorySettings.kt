@@ -109,7 +109,11 @@ internal fun HistorySection(
     ) { on -> update { it.copy(keepArtistResults = on) } }
 }
 
-/** How long each source's findings are kept (D9), a row per source with an adapter. */
+/**
+ * How long each source's findings are kept (D9), a row per source with an adapter, each starting
+ * with the source's badge, in the column and style of the badges under *Sources* (#670): Wikidata,
+ * kept apart from Wikipedia here, has its own letter, `WD`.
+ */
 @Composable
 private fun LifetimeRows(
     settings: Settings,
@@ -122,7 +126,11 @@ private fun LifetimeRows(
     for ((source, name) in SHOWN_LIFETIMES) {
         val lifetime = settings.cacheLifetimes[source] ?: continue
         val options = cacheLifetimes(lifetime)
-        ValueRow(title = stringResource(name), value = daysLabel(lifetime), indent = true) {
+        ValueRow(
+            title = stringResource(name),
+            value = daysLabel(lifetime),
+            leading = { ServiceBadge(badgeLetter(source)) },
+        ) {
             open(
                 SettingsDialog.Choice(name, options, lifetime) { chosen ->
                     update { it.copy(cacheLifetimes = it.cacheLifetimes + (source to chosen)) }
