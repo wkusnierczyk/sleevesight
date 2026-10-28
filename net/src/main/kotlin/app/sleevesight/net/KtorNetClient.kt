@@ -72,9 +72,17 @@ internal class KtorNetClient(
                     is Validated.Valid -> effectiveUrl(validated.url, current)
                 }
             val result = sendWithRetries(current, sent, hidden)
-            current =
-                redirectFrom(current, sent, result, staysInOrigin)?.takeIf { redirects < MAX_REDIRECTS }
-                    ?: return result
+            val redirect = redirectFrom(current, sent, result, staysInOrigin)
+            if (redirect !is Redirect.Follow || redirects >= MAX_REDIRECTS) {
+                return if (redirect == Redirect.ToHttp) {
+                    // Logged against the hop whose answer is refused; no request follows it.
+                    log.log("${Redaction.describe(current, sent, hidden)} -> ${Redirect.ToHttp.error}")
+                    NetResult.Failure(Redirect.ToHttp.error)
+                } else {
+                    result
+                }
+            }
+            current = redirect.request
             redirects++
         }
     }

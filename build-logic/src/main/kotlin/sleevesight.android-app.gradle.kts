@@ -105,7 +105,7 @@ androidComponents {
         val manifest =
             tasks.register<CheckManifest>("checkManifest$suffix") {
                 group = "verification"
-                description = "Fails on permissions outside config/permission-allowlist.txt."
+                description = "Fails on permissions outside config/permission-allowlist.txt, or on cleartext allowed."
                 mergedManifest = variant.artifacts.get(SingleArtifact.MERGED_MANIFEST)
                 allowlist = rootProject.layout.projectDirectory.file("config/permission-allowlist.txt")
                 applicationId = variant.applicationId

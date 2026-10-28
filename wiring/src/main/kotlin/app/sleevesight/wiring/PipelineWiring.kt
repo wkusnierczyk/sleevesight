@@ -195,8 +195,8 @@ class PipelineWiring internal constructor(
         engines[WebEngine.EXA]?.let { ExaWebSearch(net, it, accentFolder) }
 
     /**
-     * The image at [uri], an `http` or `https` address, as served, or null for no art
-     * (`ArtFetcher`): what `AppGraph` adapts into its `HttpArt`.
+     * The image at [uri], an `https` address, as served, or null for no art, a plain `http` address
+     * included (`ArtFetcher`): what `AppGraph` adapts into its `HttpArt`.
      */
     suspend fun art(uri: String): ByteArray? = (artFetcher.fetch(uri) as? ArtResult.Image)?.bytes
 
