@@ -28,7 +28,7 @@ object EventLine {
                 "model      ${e.key}: ${e.provider.name.lowercase()} ${e.model}" +
                     if (e.leftOut.isEmpty()) "" else ", lines left out: ${e.leftOut.joinToString()}"
             is PipelineEvent.ModelDone -> modelDone(e)
-            is PipelineEvent.ModelFailed -> "model      ${e.key}: failed, ${e.kind.name.lowercase()}"
+            is PipelineEvent.ModelFailed -> modelFailed(e)
             is PipelineEvent.ModelStopped -> "model      ${e.key}: stopped"
             is PipelineEvent.Grounded -> grounded(e)
             is PipelineEvent.NoEvidence -> "insight    ${e.key}: no evidence"
@@ -57,6 +57,20 @@ object EventLine {
     private fun modelDone(e: PipelineEvent.ModelDone): String =
         "model      ${e.key}: ${e.stopReason.name.lowercase()}, ${e.usage.inputTokens} in, " +
             "${e.usage.outputTokens} out, ${ms(e.latency)}"
+
+    // How a reply broke off, the tokens counted by then, how much of it came and when (#665); a call
+    // that failed before its reply began has none of these but the time.
+    private fun modelFailed(e: PipelineEvent.ModelFailed): String =
+        buildString {
+            append("model      ${e.key}: failed, ${e.kind.name.lowercase()}")
+            e.breakoff?.let { b ->
+                append(" (${b.cause.name.lowercase().replace('_', ' ')}")
+                b.detail?.let { append(", $it") }
+                append("), ${b.usage.inputTokens} in, ${b.usage.outputTokens} out so far")
+            }
+            e.received?.let { append(", $it characters received") }
+            e.latency?.let { append(", ${ms(it)}") }
+        }
 
     private fun grounded(e: PipelineEvent.Grounded): String =
         "grounded   ${e.key}: ok ${e.counts.ok}, model ${e.counts.model}, hedge ${e.counts.hedge}, " +

@@ -1,5 +1,6 @@
 package app.sleevesight.ai.google
 
+import app.sleevesight.ai.brokeOff
 import app.sleevesight.ai.decode
 import app.sleevesight.core.ai.AiErrorKind
 import app.sleevesight.core.ai.CompletionEvent
@@ -17,9 +18,9 @@ import kotlin.time.Clock
  * `finishReason` is the stop reason, and each `usageMetadata` replaces the counts before it. The
  * stream has no event of its own for its end: it ends after the chunk with the finish reason, so
  * [end] emits [CompletionEvent.Done] once the transport has finished, if a finish reason came, and
- * [CompletionEvent.Error] otherwise. A prompt the service blocked (`promptFeedback.blockReason`,
- * with no candidate) is a refusal; an `error` in place of a chunk ends it with its kind. After the
- * one terminal event, nothing more is emitted.
+ * [CompletionEvent.Error] otherwise, with how the reply broke off (`brokeOff`). A prompt the service
+ * blocked (`promptFeedback.blockReason`, with no candidate) is a refusal; an `error` in place of a
+ * chunk ends it with its kind. After the one terminal event, nothing more is emitted.
  */
 internal class ContentStream(
     private val clock: Clock,
@@ -87,7 +88,7 @@ internal class ContentStream(
                 reason != null -> CompletionEvent.Done(Usage(inputTokens, outputTokens), reason)
                 result is NetResult.Failure -> failure(result.error)
                 result is NetResult.Success && !result.value.isSuccess -> errorOf(result.value, clock.now())
-                else -> CompletionEvent.Error(AiErrorKind.INCOMPLETE)
+                else -> brokeOff(null, Usage(inputTokens, outputTokens))
             }
         return event?.let(::end)
     }
@@ -97,7 +98,7 @@ internal class ContentStream(
         when {
             error is NetError.RateLimited -> CompletionEvent.Error(AiErrorKind.RATE_LIMITED, error.retryAfter)
             started && (error is NetError.Offline || error is NetError.TooLarge) -> {
-                CompletionEvent.Error(AiErrorKind.INCOMPLETE)
+                brokeOff(error, Usage(inputTokens, outputTokens))
             }
             else -> CompletionEvent.Error(kindOf(error))
         }

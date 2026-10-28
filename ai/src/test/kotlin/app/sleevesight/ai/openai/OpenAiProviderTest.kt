@@ -6,6 +6,8 @@ import app.sleevesight.ai.ReplayNetClient.Companion.ok
 import app.sleevesight.ai.ReplayNetClient.Companion.recorded
 import app.sleevesight.core.Secret
 import app.sleevesight.core.ai.AiErrorKind
+import app.sleevesight.core.ai.Breakoff
+import app.sleevesight.core.ai.BreakoffCause
 import app.sleevesight.core.ai.CompletionEvent
 import app.sleevesight.core.ai.CompletionRequest
 import app.sleevesight.core.ai.ModelInfo
@@ -31,7 +33,9 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -151,6 +155,38 @@ class OpenAiProviderTest {
             }
             val (_, net) = events { ok(recorded("openai/responses-stream.sse")) }
             assertEquals(null, body(net)["reasoning"])
+        }
+
+    @Test
+    fun `the token limit stays at most 4096 for a model that takes no effort, or once it refused one`() =
+        runTest {
+            val high = request.copy(maxTokens = 16384, effort = ReasoningEffort.HIGH)
+            val (_, taken) = events(high) { ok(recorded("openai/responses-stream.sse")) }
+            assertEquals(16384, body(taken)["max_output_tokens"]?.jsonPrimitive?.int)
+            val (_, older) = events(high.copy(model = "gpt-4.1")) { ok(recorded("openai/responses-stream.sse")) }
+            assertEquals(4096, body(older)["max_output_tokens"]?.jsonPrimitive?.int)
+            var calls = 0
+            val (_, refusing) =
+                events(high) {
+                    calls++
+                    if (calls == 1) {
+                        response(
+                            400,
+                            """{"error":{"message":"m","type":"invalid_request_error","param":"reasoning.effort",""" +
+                                """"code":"unsupported_value"}}""",
+                        )
+                    } else {
+                        ok(recorded("openai/responses-stream.sse"))
+                    }
+                }
+            val limits =
+                refusing.requests.map {
+                    Json
+                        .parseToJsonElement(
+                            it.body!!.text,
+                        ).jsonObject["max_output_tokens"]
+                }
+            assertEquals(listOf(16384, 4096), limits.map { it?.jsonPrimitive?.int })
         }
 
     @Test
@@ -295,10 +331,12 @@ class OpenAiProviderTest {
         }
 
     @Test
-    fun `a stream that ends before its response does is incomplete`() =
+    fun `a stream that ends before its response does is incomplete, as having no end`() =
         runTest {
             val (events, _) = events { ok(sse(created, delta("Half"))) }
-            assertEquals(listOf(CompletionEvent.Delta("Half"), CompletionEvent.Error(AiErrorKind.INCOMPLETE)), events)
+            val incomplete =
+                CompletionEvent.Error(AiErrorKind.INCOMPLETE, breakoff = Breakoff(BreakoffCause.NO_END, Usage(0, 0)))
+            assertEquals(listOf(CompletionEvent.Delta("Half"), incomplete), events)
         }
 
     @Test
@@ -493,7 +531,7 @@ class OpenAiProviderTest {
     }
 
     @Test
-    fun `the connection lost after the response began leaves an incomplete reply`() =
+    fun `the connection lost after the response began leaves an incomplete reply, saying how`() =
         runTest {
             val net =
                 object : NetClient {
@@ -504,13 +542,15 @@ class OpenAiProviderTest {
                         onLine: suspend (String) -> Unit,
                     ): NetResult<NetResponse> {
                         sse(created, delta("Half")).lines().forEach { onLine(it) }
-                        return NetResult.Failure(NetError.Offline("IOException"))
+                        return NetResult.Failure(NetError.Offline("SocketTimeoutException"))
                     }
 
                     override fun close() = Unit
                 }
             val events = provider(net).stream(request, key).toList()
-            assertEquals(listOf(CompletionEvent.Delta("Half"), CompletionEvent.Error(AiErrorKind.INCOMPLETE)), events)
+            val breakoff = Breakoff(BreakoffCause.TIMED_OUT, Usage(0, 0), "SocketTimeoutException")
+            val incomplete = CompletionEvent.Error(AiErrorKind.INCOMPLETE, breakoff = breakoff)
+            assertEquals(listOf(CompletionEvent.Delta("Half"), incomplete), events)
         }
 
     @Test

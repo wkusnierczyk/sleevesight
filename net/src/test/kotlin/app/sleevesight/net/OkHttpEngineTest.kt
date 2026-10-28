@@ -9,6 +9,10 @@ import mockwebserver3.MockWebServer
 import mockwebserver3.SocketEffect
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
+import java.io.EOFException
+import java.io.IOException
+import java.net.SocketException
+import java.net.UnknownHostException
 import java.util.concurrent.TimeUnit
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -236,6 +240,29 @@ class OkHttpEngineTest {
         }
 
     @Test
+    fun `a lost connection is named by the platform's own IOException among its causes, with its errno only`() {
+        // Android's libcore throws a SocketException caused by an ErrnoException, which is no IOException.
+        val abort = "recvfrom failed: ECONNABORTED (Software caused connection abort)"
+        val socket = SocketException(abort).apply { initCause(object : Exception(abort) {}) }
+        assertEquals("SocketException (ECONNABORTED)", offlineReason(Wrapper(socket)))
+        assertEquals("SocketException", offlineReason(SocketException().apply { initCause(object : Exception() {}) }))
+        // A resolver failure names its errno, never the host in its message.
+        val host =
+            UnknownHostException("Unable to resolve host \"api.anthropic.com\": No address associated with hostname")
+                .apply { initCause(RuntimeException("android_getaddrinfo failed: EAI_NODATA (No address)")) }
+        assertEquals("UnknownHostException (EAI_NODATA)", offlineReason(host))
+        // OkHttp wraps the platform's EOFException in a plain IOException whose message holds the URL.
+        val cut = IOException("unexpected end of stream on https://api.anthropic.com/...", EOFException("no line"))
+        assertEquals("EOFException", offlineReason(cut))
+        assertEquals("IOException", offlineReason(Wrapper()))
+    }
+
+    // A library's own wrapper, as R8 would rename it in the release build.
+    private class Wrapper(
+        cause: Throwable? = null,
+    ) : IOException("wrapped", cause)
+
+    @Test
     fun `a stream whose body is cut off is Offline and not repeated, even for a GET`() =
         runTest {
             server.enqueue(
@@ -253,7 +280,8 @@ class OkHttpEngineTest {
                     it.stream(NetRequest(server.url("/s").toString())) { }
                 }
 
-            assertIs<NetError.Offline>(assertIs<NetResult.Failure>(result).error)
+            val lost = assertIs<NetError.Offline>(assertIs<NetResult.Failure>(result).error)
+            assertFalse(lost.timedOut, lost.reason)
             assertEquals(1, server.requestCount)
         }
 
@@ -274,7 +302,9 @@ class OkHttpEngineTest {
 
             val result = KtorNetClient(twice, okHttpEngine(), log).use { it.stream(slow) { line -> lines += line } }
 
-            assertIs<NetError.Offline>(assertIs<NetResult.Failure>(result).error)
+            val late = assertIs<NetError.Offline>(assertIs<NetResult.Failure>(result).error)
+            assertEquals("HttpRequestTimeoutException", late.reason)
+            assertTrue(late.timedOut)
             assertEquals(listOf("first"), lines)
             assertEquals(1, server.requestCount)
             assertEquals(1, log.lines.size, log.lines.joinToString("\n"))

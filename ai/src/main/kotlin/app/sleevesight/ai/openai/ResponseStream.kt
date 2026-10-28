@@ -1,5 +1,6 @@
 package app.sleevesight.ai.openai
 
+import app.sleevesight.ai.brokeOff
 import app.sleevesight.ai.decode
 import app.sleevesight.core.ai.AiErrorKind
 import app.sleevesight.core.ai.CompletionEvent
@@ -20,7 +21,9 @@ import kotlin.time.Clock
  * refusal is: [CompletionEvent.Done] with [StopReason.REFUSAL], with no usage when none is
  * given. The reasoning items, the item and part boundaries, and event types this client does not
  * know are skipped, so new ones do not break it. After the one terminal event, nothing more is
- * emitted. [clock] reads a `Retry-After` given as a date.
+ * emitted. [clock] reads a `Retry-After` given as a date. A stream that ends without a terminal
+ * event ends with [AiErrorKind.INCOMPLETE] and how it broke off (`brokeOff`), with no usage: the
+ * service gives it only in the terminal event.
  */
 internal class ResponseStream(
     private val clock: Clock,
@@ -107,7 +110,7 @@ internal class ResponseStream(
                 result is NetResult.Failure -> failure(result.error)
                 result is NetResult.Success && declinesPrompt(result.value) -> REFUSED
                 result is NetResult.Success && !result.value.isSuccess -> errorOf(result.value, clock.now())
-                else -> CompletionEvent.Error(AiErrorKind.INCOMPLETE)
+                else -> brokeOff(null, NO_USAGE)
             }
         return last?.let(::end)
     }
@@ -116,9 +119,7 @@ internal class ResponseStream(
     private fun failure(error: NetError): CompletionEvent.Error =
         when {
             error is NetError.RateLimited -> CompletionEvent.Error(AiErrorKind.RATE_LIMITED, error.retryAfter)
-            started && (error is NetError.Offline || error is NetError.TooLarge) -> {
-                CompletionEvent.Error(AiErrorKind.INCOMPLETE)
-            }
+            started && (error is NetError.Offline || error is NetError.TooLarge) -> brokeOff(error, NO_USAGE)
             else -> CompletionEvent.Error(kindOf(error))
         }
 
@@ -156,7 +157,9 @@ internal class ResponseStream(
         }
 
     private companion object {
+        val NO_USAGE = Usage(0, 0)
+
         /** A refusal with no usage given. */
-        val REFUSED = CompletionEvent.Done(Usage(0, 0), StopReason.REFUSAL)
+        val REFUSED = CompletionEvent.Done(NO_USAGE, StopReason.REFUSAL)
     }
 }

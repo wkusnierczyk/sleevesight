@@ -1,5 +1,6 @@
 package app.sleevesight.ai.anthropic
 
+import app.sleevesight.ai.brokeOff
 import app.sleevesight.ai.decode
 import app.sleevesight.core.ai.AiErrorKind
 import app.sleevesight.core.ai.CompletionEvent
@@ -17,13 +18,18 @@ import kotlin.time.Clock
  * ([CompletionEvent.Error]). `ping`, the block boundaries, other deltas and event types this client
  * does not know are skipped, so new ones do not break it. After the one terminal event, nothing
  * more is emitted. [clock] reads a `retry-after` given as a date.
+ *
+ * A stream that ends without `message_stop` ends with [AiErrorKind.INCOMPLETE] and how it broke off
+ * (`brokeOff`), unless `message_delta` had given the stop reason: it comes after the last of the
+ * content, so the reply is whole, and only the end of the stream was lost (#665), as
+ * `ContentStream` takes a finish reason read for the end.
  */
 internal class MessageStream(
     private val clock: Clock,
 ) {
     private var inputTokens = 0L
     private var outputTokens = 0L
-    private var stopReason: StopReason = StopReason.OTHER
+    private var stopReason: StopReason? = null
     private var started = false
     private var ended = false
 
@@ -71,7 +77,7 @@ internal class MessageStream(
             }
 
             "message_stop" -> {
-                end(CompletionEvent.Done(Usage(inputTokens, outputTokens), stopReason))
+                end(CompletionEvent.Done(usage(), stopReason ?: StopReason.OTHER))
             }
 
             "error" -> {
@@ -88,25 +94,27 @@ internal class MessageStream(
      * stopped here), or null if one was emitted already.
      */
     fun end(result: NetResult<NetResponse>?): CompletionEvent? {
-        val error =
+        val reason = stopReason
+        val last =
             when {
                 ended -> null
+                reason != null -> CompletionEvent.Done(usage(), reason)
                 result is NetResult.Failure -> failure(result.error)
                 result is NetResult.Success && !result.value.isSuccess -> errorOf(result.value, clock.now())
-                else -> CompletionEvent.Error(AiErrorKind.INCOMPLETE)
+                else -> brokeOff(null, usage())
             }
-        return error?.let(::end)
+        return last?.let(::end)
     }
 
     // A connection lost or cut short after the message began leaves an incomplete reply.
     private fun failure(error: NetError): CompletionEvent.Error =
         when {
             error is NetError.RateLimited -> CompletionEvent.Error(AiErrorKind.RATE_LIMITED, error.retryAfter)
-            started && (error is NetError.Offline || error is NetError.TooLarge) -> {
-                CompletionEvent.Error(AiErrorKind.INCOMPLETE)
-            }
+            started && (error is NetError.Offline || error is NetError.TooLarge) -> brokeOff(error, usage())
             else -> CompletionEvent.Error(kindOf(error))
         }
+
+    private fun usage() = Usage(inputTokens, outputTokens)
 
     private fun end(event: CompletionEvent): CompletionEvent {
         ended = true

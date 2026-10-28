@@ -111,7 +111,8 @@ class GenreReasons(
         val text = StringBuilder()
         var end: CompletionEvent? = null
         show(InsightState.Writing(""), now())
-        access.provider.stream(CompletionRequest(key.model, prompt, effort = key.effort), access.key).collect { event ->
+        val request = CompletionRequest(key.model, prompt, CompletionRequest.maxTokensFor(key.effort), key.effort)
+        access.provider.stream(request, access.key).collect { event ->
             when (event) {
                 is CompletionEvent.Delta -> {
                     text.append(event.text)
@@ -129,10 +130,16 @@ class GenreReasons(
         val at = now()
         val shown =
             when (val last = end) {
-                is CompletionEvent.Done ->
-                    when (last.stopReason) {
-                        StopReason.REFUSAL -> {
+                is CompletionEvent.Done -> {
+                    val blank = ReplyFailures.ofBlank(last, text.toString())
+                    when {
+                        last.stopReason == StopReason.REFUSAL -> {
                             InsightState.Failed(DECLINED)
+                        }
+
+                        // No text is no reason to show, nor to keep (#665).
+                        blank != null -> {
+                            InsightState.Failed(blank)
                         }
 
                         else -> {
@@ -141,9 +148,10 @@ class GenreReasons(
                             checked(text.toString(), key, track, cached = false, usage = last.usage, complete)
                         }
                     }
+                }
 
                 is CompletionEvent.Error -> {
-                    InsightState.Failed(last.kind.name.lowercase())
+                    InsightState.Failed(ReplyFailures.of(last))
                 }
 
                 else -> {
@@ -192,10 +200,10 @@ class GenreReasons(
 
     companion object {
         /** Why a reason failed when the model declined. */
-        const val DECLINED: String = "declined"
+        const val DECLINED: String = ReplyFailures.DECLINED
 
         /** Why a reason failed when its reply never ended. */
-        const val INCOMPLETE: String = "incomplete"
+        const val INCOMPLETE: String = ReplyFailures.INCOMPLETE
 
         /**
          * Whether [track]'s genre [genre] may reach a prompt: a source other than MusicBrainz gives it,

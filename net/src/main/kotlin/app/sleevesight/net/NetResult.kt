@@ -18,10 +18,29 @@ sealed interface NetResult<out T> {
  * or a header value, any of which could hold a key: only kinds, statuses, durations and field names.
  */
 sealed interface NetError {
-    /** No response: no connection, a DNS failure, a timeout, a dropped connection. [reason] is the exception's type. */
+    /**
+     * No response, or none to its end: no connection, a DNS failure, a timeout, a dropped
+     * connection. [reason] is the exception's type, as `offlineReason` labels it, or a fixed label
+     * of `:net`'s own ([CANCELLED_BODY]).
+     */
     data class Offline(
         val reason: String,
-    ) : NetError
+    ) : NetError {
+        /**
+         * Whether it was one of the client's timeouts: to connect, between two packets, or for the
+         * whole request ([Timeouts], `NetRequest.timeout`). A body that the timeout for the whole
+         * request ends cleanly under the reader is [CANCELLED_BODY], which does not say (#665).
+         */
+        val timedOut: Boolean get() = reason in TIMEOUT_REASONS
+
+        companion object {
+            /**
+             * The [reason] of a body the engine ended cleanly under the reader, as it does when the
+             * call is cancelled under it: a connection lost, or the whole request's timeout.
+             */
+            const val CANCELLED_BODY: String = "CancelledBody"
+        }
+    }
 
     /**
      * 429, or a 503 to a GET from a host whose [HostPolicy.rateLimitedOn503] says it signals its limit

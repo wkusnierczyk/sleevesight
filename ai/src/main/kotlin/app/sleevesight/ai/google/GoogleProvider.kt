@@ -2,6 +2,7 @@ package app.sleevesight.ai.google
 
 import app.sleevesight.ai.ServerSentEvents
 import app.sleevesight.ai.decode
+import app.sleevesight.ai.maxTokensSent
 import app.sleevesight.core.Secret
 import app.sleevesight.core.ai.AiErrorKind
 import app.sleevesight.core.ai.AiProvider
@@ -203,7 +204,7 @@ class GoogleProvider(
                     }
                 }
                 putJsonObject("generationConfig") {
-                    put("maxOutputTokens", request.maxTokens)
+                    put("maxOutputTokens", maxTokensSent(request, takesThinkingLevel(request.model)))
                     level?.let { putJsonObject("thinkingConfig") { put("thinkingLevel", it) } }
                 }
             }

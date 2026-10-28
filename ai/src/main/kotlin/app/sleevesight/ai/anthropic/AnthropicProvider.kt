@@ -2,6 +2,7 @@ package app.sleevesight.ai.anthropic
 
 import app.sleevesight.ai.ServerSentEvents
 import app.sleevesight.ai.decode
+import app.sleevesight.ai.maxTokensSent
 import app.sleevesight.core.Secret
 import app.sleevesight.core.ai.AiErrorKind
 import app.sleevesight.core.ai.AiProvider
@@ -179,7 +180,7 @@ class AnthropicProvider(
         val body =
             buildJsonObject {
                 put("model", request.model)
-                put("max_tokens", request.maxTokens)
+                put("max_tokens", maxTokensSent(request, takesEffort(request.model)))
                 put("stream", true)
                 request.effort?.takeIf { takesEffort(request.model) }?.let { effort ->
                     putJsonObject("output_config") { put("effort", effortName(effort)) }

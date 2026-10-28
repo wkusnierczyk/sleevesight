@@ -6,6 +6,8 @@ import app.sleevesight.ai.ReplayNetClient.Companion.ok
 import app.sleevesight.ai.ReplayNetClient.Companion.recorded
 import app.sleevesight.core.Secret
 import app.sleevesight.core.ai.AiErrorKind
+import app.sleevesight.core.ai.Breakoff
+import app.sleevesight.core.ai.BreakoffCause
 import app.sleevesight.core.ai.CompletionEvent
 import app.sleevesight.core.ai.CompletionRequest
 import app.sleevesight.core.ai.ModelInfo
@@ -29,7 +31,9 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -87,6 +91,23 @@ class GoogleProviderTest {
         val net = ReplayNetClient(answer)
         return provider(net).stream(request, key).toList() to net
     }
+
+    @Test
+    fun `the token limit follows the effort with thinking levels, and stays at most 4096 without`() =
+        runTest {
+            val high = request.copy(maxTokens = 16384, effort = ReasoningEffort.HIGH)
+            val (_, levelled) = events(high) { ok(recorded(stream)) }
+            assertEquals(16384, limit(levelled))
+            val (_, older) = events(high.copy(model = "gemini-2.5-flash")) { ok(recorded(stream)) }
+            assertEquals(4096, limit(older))
+        }
+
+    private fun limit(net: ReplayNetClient): Int? =
+        body(net)["generationConfig"]
+            ?.jsonObject
+            ?.get("maxOutputTokens")
+            ?.jsonPrimitive
+            ?.int
 
     private fun sse(vararg chunks: String): String = chunks.joinToString("") { "data: $it\r\n\r\n" }
 
@@ -298,10 +319,12 @@ class GoogleProviderTest {
         }
 
     @Test
-    fun `a stream that ends before a finish reason is incomplete`() =
+    fun `a stream that ends before a finish reason is incomplete, as having no end`() =
         runTest {
             val (events, _) = events { ok(sse(chunk("Half"))) }
-            assertEquals(listOf(CompletionEvent.Delta("Half"), CompletionEvent.Error(AiErrorKind.INCOMPLETE)), events)
+            val incomplete =
+                CompletionEvent.Error(AiErrorKind.INCOMPLETE, breakoff = Breakoff(BreakoffCause.NO_END, Usage(0, 0)))
+            assertEquals(listOf(CompletionEvent.Delta("Half"), incomplete), events)
         }
 
     @Test
@@ -369,7 +392,7 @@ class GoogleProviderTest {
         }
 
     @Test
-    fun `the connection lost after the reply began leaves an incomplete reply`() =
+    fun `the connection lost after the reply began leaves an incomplete reply, saying how`() =
         runTest {
             val net =
                 object : NetClient {
@@ -380,13 +403,15 @@ class GoogleProviderTest {
                         onLine: suspend (String) -> Unit,
                     ): NetResult<NetResponse> {
                         sse(chunk("Half")).lines().forEach { onLine(it) }
-                        return NetResult.Failure(NetError.Offline("IOException"))
+                        return NetResult.Failure(NetError.Offline("SocketTimeoutException"))
                     }
 
                     override fun close() = Unit
                 }
             val events = provider(net).stream(request, key).toList()
-            assertEquals(listOf(CompletionEvent.Delta("Half"), CompletionEvent.Error(AiErrorKind.INCOMPLETE)), events)
+            val breakoff = Breakoff(BreakoffCause.TIMED_OUT, Usage(0, 0), "SocketTimeoutException")
+            val incomplete = CompletionEvent.Error(AiErrorKind.INCOMPLETE, breakoff = breakoff)
+            assertEquals(listOf(CompletionEvent.Delta("Half"), incomplete), events)
         }
 
     @Test
