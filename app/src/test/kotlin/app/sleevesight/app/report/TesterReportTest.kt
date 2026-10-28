@@ -14,6 +14,7 @@ import app.sleevesight.core.pipeline.PipelineEvent
 import app.sleevesight.core.pipeline.WrittenBy
 import app.sleevesight.core.settings.ReportButton
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.synthesis.LEGACY_MODEL_NOTE
 import app.sleevesight.store.PlaybackStateRecord
 import app.sleevesight.store.TrackChangePage
 import app.sleevesight.store.TrackChangeRecord
@@ -150,6 +151,18 @@ class TesterReportTest {
         )) {
             assertTrue("$line in:\n$text", text.lines().contains(line))
         }
+    }
+
+    @Test
+    fun aKeptInsightCitingMIsPrintedAsWrittenWithANoteThatMIsTheOldFormOfAI() {
+        // Kept from before the model's own knowledge was cited `[AI]` (#668).
+        val kept = written("It was recorded in 1973 [MB1]. It is loved [M].", cached = true, allowModel = true)
+        val snapshot = snapshot().let { it.copy(view = PipelineView(track = track(insight = kept), aiReady = true)) }
+        val lines = TesterReport.nowPlaying(snapshot).lines()
+        assertTrue(lines.joinToString("\n"), lines.contains("- model [AI]: It is loved [M]."))
+        assertTrue(lines.joinToString("\n"), lines.contains(LEGACY_MODEL_NOTE))
+        // Written now, with `[AI]`, or without the model's own knowledge: no note.
+        assertFalse(TesterReport.nowPlaying(snapshot()).contains(LEGACY_MODEL_NOTE))
     }
 
     @Test

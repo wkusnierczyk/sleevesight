@@ -15,6 +15,8 @@ import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.resolution.NameMatcher
 import app.sleevesight.core.settings.WriteAutomatically
 import app.sleevesight.core.sources.ReleaseDate
+import app.sleevesight.core.synthesis.GroundingCheck
+import app.sleevesight.core.synthesis.citationId
 
 // What the home screen shows, worked out from what the session layer and the pipeline publish, as
 // plain functions so the tests need no screen. Nothing here decides anything for the pipeline.
@@ -142,15 +144,16 @@ internal sealed interface Segment {
 }
 
 /**
- * [sentence] split into its text and its citations (`[W1]`, `[M]`), as the grounding check reads
- * them. The citations become chips the app builds; the rest is plain text.
+ * [sentence] split into its text and its citations (`[W1]`, `[AI]`), as the grounding check reads
+ * them, a legacy `[M]` as `AI` ([citationId], #668). The citations become chips the
+ * app builds; the rest is plain text.
  */
 internal fun segments(sentence: String): List<Segment> {
     val out = mutableListOf<Segment>()
     var at = 0
     for (match in CITATION.findAll(sentence)) {
         if (match.range.first > at) out += Segment.Text(sentence.substring(at, match.range.first))
-        out += Segment.Cite(match.groupValues[1])
+        out += Segment.Cite(citationId(match.groupValues[1]))
         at = match.range.last + 1
     }
     if (at < sentence.length) out += Segment.Text(sentence.substring(at))
@@ -161,7 +164,7 @@ internal fun segments(sentence: String): List<Segment> {
 internal enum class CiteKind { LINE, MODEL, UNKNOWN }
 
 /**
- * What citing [id] points at, in [evidence]: `M` only when the model's own knowledge is allowed. A
+ * What citing [id] points at, in [evidence]: `AI` only when the model's own knowledge is allowed. A
  * line outside [held], the ids the prompt held when it left some of the track's out (#239), is no
  * line, as the grounding check reads it: the model was not given it, though the track has it.
  */
@@ -172,7 +175,7 @@ internal fun citeKind(
     held: Set<String>? = null,
 ): CiteKind =
     when {
-        id == SourceId.MODEL.tag -> if (modelAllowed) CiteKind.MODEL else CiteKind.UNKNOWN
+        id == GroundingCheck.MODEL_ID -> if (modelAllowed) CiteKind.MODEL else CiteKind.UNKNOWN
         held != null && id !in held -> CiteKind.UNKNOWN
         evidence?.get(id) != null -> CiteKind.LINE
         else -> CiteKind.UNKNOWN
