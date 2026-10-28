@@ -270,13 +270,10 @@
     <string name="home_source_note_settings">Settings</string>
     <string name="home_source_note_unreachable">%1$s could not be reached.</string>
     <string name="home_source_note_failed">%1$s failed.</string>
-    <!-- The paging of the list of sources: each control as drawn, and as a screen reader says it. -->
-    <string name="home_sources_more">show more…</string>
-    <string name="home_sources_more_words">Show more sources</string>
-    <string name="home_sources_all">show all</string>
-    <string name="home_sources_all_words">Show all sources</string>
-    <string name="home_sources_less">… show less</string>
-    <string name="home_sources_less_words">Show fewer sources</string>
+    <!-- The paging of the list of sources: one group of three buttons under it, in this order. -->
+    <string name="home_sources_less">Show less</string>
+    <string name="home_sources_more">Show more</string>
+    <string name="home_sources_all">Show all</string>
     <!-- How much of the list shows, unfolded. An entry is an evidence line, an unverified line or a rejected match. -->
     <string name="home_sources_showing">Showing %1$d of %2$d entries</string>
     <plurals name="home_sources_showing_all">

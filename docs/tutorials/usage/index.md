@@ -80,7 +80,7 @@ The labels show as chips under the album, with no title: those of the most speci
 
 **What the genre is, and why this track has it.** At the top of the panel, above the table, the genre explained. First what it is: the first two sentences of the genre's English Wikipedia article, with *From Wikipedia* under them, linking the article, and *CC BY-SA 4.0*, linking its licence. It is the same for every track, so it is looked up once per genre (through the genre's entry in MusicBrainz's list of genres and its Wikidata item), kept as long as Wikipedia's findings are (*How long each source's findings are kept*), and only while Wikipedia is on under [*Sources*]({{ '/docs/tutorials/settings/' | relative_url }}). A genre that has no English article, or is not one of MusicBrainz's genres, shows none; for a few the article opens with where and when the genre began rather than what it is, which is why the article is linked. Then **Why is this jazz?** (the genre's name in its place), a button with the small *AI* mark: a tap asks your AI service, one paid call, why this track carries the label, from the track's evidence, the same lines the insight is written from. The answer replaces the button, under the question, with citations like an insight's: a tap on one shows its line under *Sources*. When the evidence does not support the label, it says so. The answer is kept with the track, like its insight: closing the panel, opening another genre, or playing the track again later shows it again with no new call, until a change in the settings would offer *Rewrite insight* for the insight (another AI service, model or effort, or new evidence), when the button is offered again. It is kept for as long as *Keep history for* says, and *Clear history* deletes it. The button is not offered for a label only MusicBrainz gives (its tags are never sent to an AI service), with *Show insights* off, or with no AI service set up.
 
-A screen reader reads each chip as a button, says whether its genre's panel is open, and names what a double tap does ("show genre", "close genre"); it reads the panel's name as a heading, and each row's name in full, however much of it shows. Which sources give labels is set under [*Genres*]({{ '/docs/tutorials/settings/' | relative_url }}), and *Show genres* there turns them off altogether.
+With a keyboard or a screen reader, the focus moves to *Close* when a chip opens a genre's panel and back to the chip when *Close* closes it. A screen reader reads each chip as a button, says whether its genre's panel is open, and names what a double tap does ("show genre", "close genre"); it reads the panel's name as a heading, and each row's name in full, however much of it shows. Which sources give labels is set under [*Genres*]({{ '/docs/tutorials/settings/' | relative_url }}), and *Show genres* there turns them off altogether.
 
 When there are none, it says *None found.*, or *Every genre source is off in Settings.*; with *Show genres* off, nothing of the genres shows.
 
@@ -124,10 +124,12 @@ That only changes what you see: what the AI service may use is set under [*Sourc
 
 **The note.** Under the table, a note only when something needs you or went wrong, a sentence for each source: *Last.fm needs your key, in Settings.* (a tap on *Settings* opens them; the key goes under *Secrets*), *Web search could not be reached.*, or *MusicBrainz failed.* A source that found nothing, whose match was rejected, or that you switched off says nothing.
 
-**The list.** Then the evidence lines, each with its id, its text, what it is about (*song*, *artist*, *original song*, *release*, *web*) and a link to the page it was found on, which opens in the browser. After them, under their own heading, come *Found, but not verified, so not cited*: lines from matches that could not be checked against the track, which are shown but never given to the insight. Above the list, how many entries show ("Showing 8 of 12 entries"). It unfolds 8 entries at a time:
+**The list.** Then the evidence lines, each with its id, its text, what it is about (*song*, *artist*, *original song*, *release*, *web*) and a link to the page it was found on, which opens in the browser. After them, under their own heading, come *Found, but not verified, so not cited*: lines from matches that could not be checked against the track, which are shown but never given to the insight. Above the list, how many entries show ("Showing 8 of 12 entries"). It unfolds 8 entries at a time, with three buttons in one group under it, always in the same place:
 
-- *show more…* shows the next 8, and *show all* the rest, while entries remain;
-- *… show less* goes back to the first 8, once past them.
+- *Show less* goes back to the first 8;
+- *Show more* shows the next 8, and *Show all* the rest.
+
+A button that does not apply is disabled, rather than gone: *Show less* at the first 8, *Show more* and *Show all* once every entry shows. A screen reader reads three buttons, and says "disabled" for one that does not apply. Used from a keyboard or with a screen reader, a button that becomes disabled passes the focus to another in the group: *Show all*, or *Show more* at the end, to *Show less*, and *Show less* to *Show more*.
 
 A citation tapped in the insight opens the panel and unfolds the list as far as its line. When the chips hide every line, the count says so, and closing and opening *Sources* again shows them.
 
@@ -153,7 +155,7 @@ With *Layout* set to *Separate pages*, a tap on the **Sources** chip opens *Sour
 
 With *Separate pages*, the home screen is shorter, and each part opens a page of its own, on the app's background like the home screen, its accents in the album art's colours, with a back arrow and the part's name at the top:
 
-- The **Sources** chip opens the table of the sources, the note and the list, which works as it does unfolded on the home screen, *show more…* and all.
+- The **Sources** chip opens the table of the sources, the note and the list, which works as it does unfolded on the home screen, *Show more* and all.
 - A genre chip on the home screen opens the genres' page: the chips, the one tapped marked, and that genre's panel, with what the genre is and *Why is this …?*, the table and where its labels came from; a citation in the answer opens the *Sources* page at its line. A tap on another chip there switches the panel to its genre.
 - A citation chip in the insight opens *Sources*' page at the line it cites, scrolled to and flashed.
 
