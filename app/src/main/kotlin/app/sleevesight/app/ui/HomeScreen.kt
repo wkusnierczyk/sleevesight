@@ -1,5 +1,6 @@
 package app.sleevesight.app.ui
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -62,13 +63,18 @@ import kotlinx.coroutines.launch
  * report button floats at the bottom end, on Home only; what scrolls ends far enough below it that,
  * scrolled to the end, the button covers none of it. Under *Auto* (#518) it is hidden while Home
  * scrolls, and back once the scrolling stops ([TesterReportButton]).
+ *
+ * With [themeButton] (#636: *Theme button* on, the default), the header shows the theme button
+ * before the cogwheel.
  */
+@Suppress("LongParameterList") // The header's and the body's seams, each one of Home's parts.
 @Composable
 fun HomeScreen(
     accessGranted: Boolean,
     onOpenFirstRun: () -> Unit,
     onOpenSettings: () -> Unit,
     report: ReportButtonState? = null,
+    themeButton: ThemeButtonState? = null,
     pipeline: @Composable () -> Unit = {},
 ) {
     val scroll = rememberScrollState()
@@ -78,7 +84,12 @@ fun HomeScreen(
             Column {
                 // Animated under Compose's motion duration scale, which follows the phone's animator
                 // duration scale: with animations off, Home is at the top at once.
-                HomeHeader(scroll, onScrollToTop = { scope.launch { scroll.animateScrollTo(0) } }, onOpenSettings)
+                HomeHeader(
+                    scroll,
+                    onScrollToTop = { scope.launch { scroll.animateScrollTo(0) } },
+                    onOpenSettings,
+                    themeButton,
+                )
                 HomeBody(scroll, accessGranted, onOpenFirstRun, reportShown = report != null, pipeline)
             }
             report?.let {
@@ -140,15 +151,16 @@ private fun HomeBody(
 
 /**
  * Home's header (#445), pinned above what scrolls: the one-line logo ([HeaderLogo], #383), which
- * scrolls Home back to the top, and the cogwheel, which opens the settings. A divider under it
+ * scrolls Home back to the top, and at the end the cogwheel, which opens the settings, with the
+ * theme button ([themeButton], #636) before it while *Theme button* is on. A divider under it
  * shows once Home has scrolled. A menu icon, if one comes, goes beside the cogwheel.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun HomeHeader(
     scroll: ScrollState,
     onScrollToTop: () -> Unit,
     onOpenSettings: () -> Unit,
+    themeButton: ThemeButtonState?,
 ) {
     val toTop = stringResource(R.string.home_scroll_to_top, stringResource(R.string.app_name))
     val settings = stringResource(R.string.home_settings)
@@ -158,7 +170,7 @@ private fun HomeHeader(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Weighted, so the cogwheel is measured first and keeps its 48 dp at any font size; not
+            // Weighted, so the buttons are measured first and keep their 48 dp at any font size; not
             // filled, so the tap target is the logo and not the row's empty middle.
             Box(
                 modifier =
@@ -175,18 +187,35 @@ private fun HomeHeader(
                 // The one-line logo (#383), in place of the name, which the label still says.
                 HeaderLogo()
             }
-            TooltipBox(
-                positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Below),
-                tooltip = { PlainTooltip { Text(settings) } },
-                state = rememberTooltipState(),
-            ) {
-                IconButton(onClick = onOpenSettings) {
-                    Icon(painterResource(R.drawable.ic_settings), contentDescription = settings)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // The theme a tap gives, named and drawn (#636), first; the cogwheel stays at the end.
+                themeButton?.let {
+                    HeaderButton(stringResource(it.label), it.icon, it.onCycle)
                 }
+                HeaderButton(settings, R.drawable.ic_settings, onOpenSettings)
             }
         }
         // Always laid out, so the content does not move when it shows.
         HorizontalDivider(color = if (scroll.canScrollBackward) DividerDefaults.color else Color.Transparent)
+    }
+}
+
+/** A button of Home's header: [icon], 48 dp, with [label] as its content description and its tooltip. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun HeaderButton(
+    label: String,
+    @DrawableRes icon: Int,
+    onClick: () -> Unit,
+) {
+    TooltipBox(
+        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Below),
+        tooltip = { PlainTooltip { Text(label) } },
+        state = rememberTooltipState(),
+    ) {
+        IconButton(onClick = onClick) {
+            Icon(painterResource(icon), contentDescription = label)
+        }
     }
 }
 

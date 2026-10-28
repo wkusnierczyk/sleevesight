@@ -75,6 +75,7 @@ internal object SettingsCodec {
     private val LINK_STYLE = stringPreferencesKey("developer.link_style")
     private val MARK_DEVELOPER_ITEMS = booleanPreferencesKey("developer.mark_items")
     private val THEME = stringPreferencesKey("display.theme")
+    private val THEME_BUTTON = booleanPreferencesKey("display.theme_button")
     private val FONT = stringPreferencesKey("display.font")
     private val INTRO = booleanPreferencesKey("display.intro")
     private val HOME_GUIDE = booleanPreferencesKey("display.home_guide")
@@ -126,6 +127,7 @@ internal object SettingsCodec {
             linkStyle = enumOf(prefs[LINK_STYLE]) ?: defaults.linkStyle,
             markDeveloperItems = prefs[MARK_DEVELOPER_ITEMS] ?: defaults.markDeveloperItems,
             theme = enumOf(prefs[THEME]) ?: defaults.theme,
+            themeButton = prefs[THEME_BUTTON] ?: defaults.themeButton,
             font = enumOf(prefs[FONT]) ?: defaults.font,
             introAtStart = prefs[INTRO] ?: defaults.introAtStart,
             homeGuide = prefs[HOME_GUIDE] ?: defaults.homeGuide,
@@ -255,6 +257,7 @@ internal object SettingsCodec {
             prefs.put(MARK_DEVELOPER_ITEMS, settings.markDeveloperItems, defaults.markDeveloperItems)
         }
         if (moved { it.theme }) prefs.put(THEME, settings.theme.name, defaults.theme.name)
+        if (moved { it.themeButton }) prefs.put(THEME_BUTTON, settings.themeButton, defaults.themeButton)
         if (moved { it.font }) prefs.put(FONT, settings.font.name, defaults.font.name)
         if (moved { it.introAtStart }) prefs.put(INTRO, settings.introAtStart, defaults.introAtStart)
         if (moved { it.homeGuide }) prefs.put(HOME_GUIDE, settings.homeGuide, defaults.homeGuide)
