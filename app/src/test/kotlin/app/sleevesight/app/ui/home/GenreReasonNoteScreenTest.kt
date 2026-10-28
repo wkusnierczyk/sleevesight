@@ -5,7 +5,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -134,7 +136,7 @@ class GenreReasonNoteScreenTest {
         )
         show(reason) {
             compose.onNodeWithText("a Polish singer", substring = true).assertExists()
-            compose.onNodeWithText(note(1)).assertDoesNotExist()
+            compose.onAllNodesWithText("underlined in red", substring = true).assertCountEquals(0)
         }
     }
 
