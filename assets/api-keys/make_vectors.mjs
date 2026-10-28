@@ -135,10 +135,9 @@ for (const [i, { words, setup }] of sealings.entries()) {
   }
 }
 
-// Words as typed on the page: three letters or more of each, any case, spaces, line breaks or
-// commas between; a word typed wrong after its three letters, too short, or not in the list. ASCII
-// only: the page and the CLI each read what is typed on their own side, and only the words they
-// complete reach the key.
+// Words as typed on the page: three letters or more of each, any case, spaces (Unicode's too), line
+// breaks or commas between; a word typed wrong after its three letters, too short, or not in the
+// list. The CLI splits and trims as the page does, which `KeyWords` is checked against.
 const typed = [
   'aar aba abb abd abh',
   'AARDVARK, Abandoned,abbreviate\n  abdomen\tabhorrence ',
@@ -148,6 +147,8 @@ const typed = [
   'xyz qqq',
   'acid acidic acI',
   '',
+  // Unicode spaces, as JavaScript's \s has them: no-break, ideographic, U+FEFF, line separator.
+  '\u00a0aar\u00a0aba\u3000abb\ufeffabd\u2028abh\u00a0',
 ];
 lines.push(`typed=${typed.length}`);
 for (const [i, text] of typed.entries()) {

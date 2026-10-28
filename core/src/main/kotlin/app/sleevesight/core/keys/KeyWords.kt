@@ -27,17 +27,20 @@ class KeyWords(
     /**
      * The word of the list [typed] is, or null when it is none: [typed], trimmed and in lower case,
      * holds at least the word's first [PREFIX] letters and nothing that is not the word's. A word
-     * of three letters is typed whole.
+     * of three letters is typed whole. Trimmed of the spaces JavaScript's `trim` drops, as the
+     * page trims.
      */
     fun complete(typed: String): String? {
-        val token = typed.trim().lowercase()
+        val token = typed.replace(SPACES_AT_ENDS, "").lowercase()
         if (token.length < PREFIX) return null
         return byPrefix[token.take(PREFIX)]?.takeIf { it.startsWith(token) }
     }
 
     /**
      * The words in [text], as typed on the computer: split at spaces, line breaks and commas, each
-     * [complete]d, null where one is not a word of the list.
+     * [complete]d, null where one is not a word of the list. The spaces are JavaScript's `\s`, as
+     * the page splits: ASCII's, Unicode's separators (`\p{Z}`, a no-break space among them) and
+     * U+FEFF.
      */
     fun read(text: String): List<String?> = text.split(SEPARATORS).filter { it.isNotEmpty() }.map(::complete)
 
@@ -69,7 +72,9 @@ class KeyWords(
 
         // Lower-case letters, and the one hyphen of `yo-yo`.
         private val WORD = Regex("[a-z]+(-[a-z]+)?")
-        private val SEPARATORS = Regex("[\\s,]+")
+        private const val SPACE = "\\s\\p{Z}\\uFEFF"
+        private val SEPARATORS = Regex("[$SPACE,]+")
+        private val SPACES_AT_ENDS = Regex("^[$SPACE]+|[$SPACE]+$")
 
         /**
          * The words of [text], the list as the EFF publishes it: a line a word, its five dice

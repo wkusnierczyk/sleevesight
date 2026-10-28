@@ -44,6 +44,12 @@ class KeyWordsTest {
             list.read("AAR, aba,abb\n abd\tabhorrence "),
         )
         assertEquals(listOf(null, "abandoned"), list.read("aardvarx aba"))
+        // Unicode's spaces split and trim, as JavaScript's `\s` and `trim` do on the page.
+        assertEquals(
+            listOf("aardvark", "abandoned", "abbreviate", "abdomen", "abhorrence"),
+            list.read("\u00a0aar\u00a0aba\u3000abb\uFEFFabd\u2028abh\u00a0"),
+        )
+        assertEquals("aardvark", list.complete("\uFEFFaar\u00a0"))
         assertEquals(emptyList(), list.read("  "))
     }
 
