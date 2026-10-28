@@ -4,7 +4,9 @@ import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -50,7 +52,7 @@ private val LEADING_GAP = 16.dp
  */
 internal val UNDER_BADGE = ROW_MARK + LEADING_GAP
 
-/** The test tag of what starts a [SwitchRow], its [ROW_MARK] (#613). */
+/** The test tag of what starts a [SwitchRow] or a [ValueRow], its [ROW_MARK] (#613). */
 internal const val ROW_LEADING_TAG = "settings-row-leading"
 
 /** The test tag of a [SwitchRow]'s switch (#613). */
@@ -113,8 +115,7 @@ internal fun SwitchRow(
     val alpha = if (enabled) 1f else DISABLED_ALPHA
     val color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha)
     val titleColor = if (highlight) MaterialTheme.colorScheme.error.copy(alpha = alpha) else color
-    val firstLine = remember { FirstLine() }
-    Row(
+    MarkedRow(
         modifier =
             Modifier
                 .fillMaxWidth()
@@ -124,9 +125,48 @@ internal fun SwitchRow(
                     role = Role.Switch,
                     onValueChange = { onChange?.invoke(it) },
                 ).padding(start = if (indent) NESTED else 0.dp, top = 8.dp, bottom = 8.dp),
+        title = title,
+        titleColor = titleColor,
+        alpha = alpha,
+        leading = leading,
+        trailing = {
+            Spacer(Modifier.width(16.dp))
+            Switch(
+                checked = checked,
+                onCheckedChange = null,
+                modifier = Modifier.alignBy(::middle).testTag(ROW_SWITCH_TAG),
+                enabled = enabled,
+                colors = plainSwitchColors(),
+            )
+        },
     ) {
+        summary?.let { Summary(it, summaryLink, color) }
+        below?.invoke()
+    }
+}
+
+/**
+ * A settings row's layout (#613, #670): [leading], when given, at its start, [ROW_MARK] a side and
+ * [alpha] dimmed with the row's text; then [title], in [titleColor], with [content] under it; then
+ * [trailing], when given, at its end. What [leading] and [trailing] hold is lined up with the middle
+ * of the title's first line ([middle]), not the whole row, so it stays level with the name however
+ * long what is under it, at any font scale.
+ */
+@Suppress("LongParameterList") // The row's parts and how they look, each a value of its own.
+@Composable
+private fun MarkedRow(
+    modifier: Modifier,
+    title: String,
+    titleColor: Color,
+    alpha: Float,
+    leading: (@Composable () -> Unit)?,
+    trailing: (@Composable RowScope.() -> Unit)? = null,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val firstLine = remember { FirstLine() }
+    Row(modifier = modifier) {
         leading?.let {
-            // Dimmed with the row's text when the switch cannot be moved.
+            // Dimmed with the row's text when the row cannot be used.
             Box(Modifier.alignBy(::middle).testTag(ROW_LEADING_TAG).alpha(alpha)) { it() }
             Spacer(Modifier.width(LEADING_GAP))
         }
@@ -138,17 +178,9 @@ internal fun SwitchRow(
                 color = titleColor,
                 onTextLayout = { firstLine.middle = ((it.getLineTop(0) + it.getLineBottom(0)) / 2).roundToInt() },
             )
-            summary?.let { Summary(it, summaryLink, color) }
-            below?.invoke()
+            content()
         }
-        Spacer(Modifier.width(16.dp))
-        Switch(
-            checked = checked,
-            onCheckedChange = null,
-            modifier = Modifier.alignBy(::middle).testTag(ROW_SWITCH_TAG),
-            enabled = enabled,
-            colors = plainSwitchColors(),
-        )
+        trailing?.invoke(this)
     }
 }
 
@@ -169,7 +201,8 @@ private fun Summary(
 /**
  * A setting with a value, which [onClick] opens a dialog to change; null [onClick] is disabled.
  * [indent] nests it under the row above; [underBadge] starts it at the name of the badged row above
- * ([UNDER_BADGE]) instead.
+ * ([UNDER_BADGE]) instead. [leading] goes at the row's start, before the title, [ROW_MARK] a side,
+ * centred on the title's first line as a [SwitchRow]'s is: a source's badge (#670).
  */
 @Suppress("LongParameterList") // Each sets one aspect of the row; all but the title, value and action have defaults.
 @Composable
@@ -179,24 +212,23 @@ internal fun ValueRow(
     summary: String? = null,
     indent: Boolean = false,
     underBadge: Boolean = false,
+    leading: (@Composable () -> Unit)? = null,
     onClick: (() -> Unit)?,
 ) {
     if (!shownInSearch(title)) return
     val alpha = if (onClick != null) 1f else DISABLED_ALPHA
     val color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha)
-    Column(
+    MarkedRow(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .clickable(enabled = onClick != null, onClick = { onClick?.invoke() })
                 .padding(start = valueRowStart(indent, underBadge), top = 8.dp, bottom = 8.dp),
+        title = title,
+        titleColor = color,
+        alpha = alpha,
+        leading = leading,
     ) {
-        Text(
-            searchMarked(title),
-            style = MaterialTheme.typography.bodyLarge,
-            color = color,
-            modifier = Modifier.testTag(ROW_TITLE_TAG),
-        )
         Text(
             value,
             style = MaterialTheme.typography.bodyMedium,
