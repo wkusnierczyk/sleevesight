@@ -41,28 +41,38 @@ import app.sleevesight.app.ui.theme.LinkLook
 // The guide's notes as buttons, each opening a panel about its part (#673), and the pen's marks.
 
 /**
- * The note on [part] (#627), in the hand-drawn [style], marked as a link is ([LinkLook]), since a tap
- * on it opens its panel ([onClick]; a second tap closes it). A screen reader reads it as a button,
- * the part's name before the note ("Settings: tap to configure, button"). [modifier] goes on the
- * outside: a focus requester, so the focus can come back to it from the panel's *Dismiss*.
+ * The note on [part] (#627) as drawn, in the hand-drawn [style], marked as a link is ([LinkLook]),
+ * since a tap on it opens its panel; its button is [GuideNote], laid over it. Not read on its own.
+ */
+@Composable
+internal fun GuideNoteText(
+    part: GuidePart,
+    style: TextStyle,
+    modifier: Modifier = Modifier,
+) {
+    Box(modifier.testTag(guideNoteTextTag(part)).clearAndSetSemantics {}) { LinkLook(stringResource(part.note), style) }
+}
+
+/**
+ * The button of the note on [part] (#673): a target over the note's text ([GuideNoteText]), at least
+ * 48 dp high, reaching halfway to the notes above and below ([guideLayout]), whose tap opens the
+ * note's panel ([onClick]; a second tap closes it). A screen reader reads it as a button, the part's
+ * name before the note ("Settings: tap to configure, button"). [modifier] goes on the outside: a
+ * focus requester, so the focus can come back to it from the panel's *Dismiss*.
  */
 @Composable
 internal fun GuideNote(
     part: GuidePart,
-    style: TextStyle,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
-    val note = stringResource(part.note)
-    val named = stringResource(R.string.home_guide_named_note, stringResource(part.label), note)
+    val named = stringResource(R.string.home_guide_named_note, stringResource(part.label), stringResource(part.note))
     Box(
         modifier
             .testTag(guideNoteTag(part))
             .clickable(role = Role.Button, onClick = onClick)
             .clearAndSetSemantics { contentDescription = named },
-    ) {
-        LinkLook(note, style)
-    }
+    )
 }
 
 /**
@@ -139,8 +149,10 @@ internal fun GuideMarks(
     )
 }
 
-/** The test tag of the note on [part]. */
+/** The test tags of the note on [part], its button, and its text as drawn. */
 internal fun guideNoteTag(part: GuidePart): String = "home-guide-note:${part.name.lowercase()}"
+
+internal fun guideNoteTextTag(part: GuidePart): String = "home-guide-note-text:${part.name.lowercase()}"
 
 /** The test tags of a note's panel, of its name and description, and of its *Dismiss*. */
 const val GUIDE_NOTE_PANEL_TAG: String = "home-guide-note-panel"

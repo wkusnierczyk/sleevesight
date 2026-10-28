@@ -5,6 +5,12 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.LocalSaveableStateRegistry
+import androidx.compose.runtime.saveable.SaveableStateRegistry
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.Role
@@ -57,8 +63,15 @@ class GuideMagnifierTest {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity {
                 it.setContent {
-                    Column(Modifier.verticalScroll(rememberScrollState())) {
-                        NowPlayingContent(NowPlayingState(PipelineView(), playing = null, settings = settings), actions)
+                    if (emitted) {
+                        CompositionLocalProvider(LocalSaveableStateRegistry provides registry) {
+                            Column(Modifier.verticalScroll(rememberScrollState())) {
+                                NowPlayingContent(
+                                    NowPlayingState(PipelineView(), playing = null, settings = settings),
+                                    actions,
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -68,6 +81,26 @@ class GuideMagnifierTest {
             }
             block()
         }
+    }
+
+    // The screen's saved state, as an activity keeps it: [restore] saves it, drops the content and
+    // composes it afresh from what was saved, as Android does for an activity recreated on a rotation.
+    private var emitted by mutableStateOf(true)
+    private var registry by mutableStateOf(SaveableStateRegistry(null) { true })
+
+    private fun restore() {
+        val saved = registry.performSave()
+        emitted = false
+        compose.waitForIdle()
+        registry = SaveableStateRegistry(saved) { true }
+        emitted = true
+        compose.waitForIdle()
+    }
+
+    // Where the picture's top left corner is drawn, magnified.
+    private fun pictureCorner(): Offset {
+        val node = compose.onNodeWithTag(GUIDE_MAGNIFIED_PICTURE_TAG).fetchSemanticsNode()
+        return node.layoutInfo.coordinates.localToRoot(Offset.Zero)
     }
 
     private fun shown() = compose.onAllNodesWithTag(GUIDE_MAGNIFIED_TAG).fetchSemanticsNodes().isNotEmpty()
@@ -154,6 +187,24 @@ class GuideMagnifierTest {
             }
             compose.waitForIdle()
             assertTrue("${pictureWidth()} after $fitted", pictureWidth() > fitted * 2f)
+        }
+
+    @Test
+    fun aMagnifiedPictureStaysMagnifiedAndWhereItWasAcrossARecreation() =
+        show {
+            compose.onNodeWithTag(GUIDE_MAGNIFY_TAG).performScrollTo().performClick()
+            compose.waitForIdle()
+            compose.onNodeWithTag(GUIDE_MAGNIFIED_PICTURE_TAG).performTouchInput {
+                doubleClick(Offset(width * 0.3f, height * 0.7f))
+            }
+            compose.waitForIdle()
+            val width = pictureWidth()
+            val corner = pictureCorner()
+            restore()
+            assertTrue(shown())
+            assertEquals(width, pictureWidth(), 1f)
+            assertEquals(corner.x, pictureCorner().x, 1f)
+            assertEquals(corner.y, pictureCorner().y, 1f)
         }
 
     private companion object {

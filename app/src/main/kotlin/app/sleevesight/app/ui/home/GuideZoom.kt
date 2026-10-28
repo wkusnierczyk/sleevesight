@@ -2,6 +2,8 @@ package app.sleevesight.app.ui.home
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -11,11 +13,16 @@ import androidx.compose.ui.geometry.Size
  * picture fitted to the screen, to [MAX_SCALE]) and where it is ([offset], its top left corner in
  * the screen's box). At any scale the picture stays in sight: while it is smaller than the box on an
  * axis it is centred on it, and while larger its edges never come inside the box's, so a drag stops
- * at the picture's edge. Plain state, so the screen redraws as it changes.
+ * at the picture's edge. Plain state, so the screen redraws as it changes. Kept across a rotation
+ * ([Saver]): its scale, and the point of the picture at the box's middle, as a share of the
+ * picture's size, which the next [bounds] puts back at the middle of the new box.
  */
-internal class GuideZoom {
+internal class GuideZoom(
+    scale: Float = 1f,
+    private var middle: Offset? = null,
+) {
     /** How much the picture is magnified, 1 when fitted. */
-    var scale: Float by mutableStateOf(1f)
+    var scale: Float by mutableStateOf(scale)
         private set
 
     /** The picture's top left corner, in the box. */
@@ -34,10 +41,26 @@ internal class GuideZoom {
         picture: Size,
     ) {
         if (box == this.box && picture == this.picture) return
+        val keep = middle ?: middle()
+        middle = null
         this.box = box
         this.picture = picture
-        offset = kept(offset, scale)
+        val at =
+            Offset(box.width / 2 - keep.x * picture.width * scale, box.height / 2 - keep.y * picture.height * scale)
+        offset = kept(at, scale)
     }
+
+    // The point of the picture at the box's middle, as a share of the picture's size: its middle
+    // before the picture is laid out.
+    private fun middle(): Offset =
+        if (picture.width <= 0f || picture.height <= 0f) {
+            Offset(HALF, HALF)
+        } else {
+            Offset(
+                (box.width / 2 - offset.x) / (picture.width * scale),
+                (box.height / 2 - offset.y) / (picture.height * scale),
+            )
+        }
 
     /**
      * A pinch or a drag: magnified by [zoom] about [centroid], the point under the fingers staying
@@ -86,6 +109,15 @@ internal class GuideZoom {
     }
 
     companion object {
+        private const val HALF = 0.5f
+
+        /** Keeps a zoom across a rotation: its scale, and the point of the picture at the box's middle. */
+        val Saver: Saver<GuideZoom, Any> =
+            listSaver(
+                save = { zoom -> zoom.middle().let { listOf(zoom.scale, it.x, it.y) } },
+                restore = { (scale, x, y) -> GuideZoom(scale, Offset(x, y)) },
+            )
+
         /** The most the picture is magnified. */
         const val MAX_SCALE: Float = 5f
 

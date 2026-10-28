@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
@@ -16,12 +17,17 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertHeightIsAtLeast
+import androidx.compose.ui.test.assertWidthIsAtLeast
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
@@ -129,6 +135,63 @@ class GuideNotesTest {
                 listOf("Settings: tap to configure"),
                 note(GuidePart.SETTINGS).fetchSemanticsNode().config.getOrNull(SemanticsProperties.ContentDescription),
             )
+        }
+
+    private fun bounds(tag: String) = compose.onNodeWithTag(tag).fetchSemanticsNode().boundsInRoot
+
+    @Test
+    fun eachNotesTargetIsAtLeast48DpAndNoTwoOverlap() = notesHaveRoomyTargets()
+
+    @Test
+    @Config(fontScale = 2f)
+    fun atTwiceTheFontSizeEachNotesTargetIsAtLeast48DpAndNoTwoOverlap() = notesHaveRoomyTargets()
+
+    private fun notesHaveRoomyTargets() =
+        show {
+            for (part in GuidePart.entries) {
+                // Its bounds, which its touch target covers (no smaller than them).
+                note(part).assertHeightIsAtLeast(48.dp).assertWidthIsAtLeast(48.dp)
+                // Over its text as drawn.
+                val text = bounds(guideNoteTextTag(part))
+                val target = bounds(guideNoteTag(part))
+                assertTrue("$part: $text in $target", text.top >= target.top - 1f && text.bottom <= target.bottom + 1f)
+            }
+            val targets = GuidePart.entries.map { bounds(guideNoteTag(it)) }
+            for ((i, a) in targets.withIndex()) {
+                for (b in targets.drop(i + 1)) {
+                    assertTrue(
+                        "$a and $b",
+                        a.intersect(b).let {
+                            it.width <= 0f ||
+                                it.height <= 0f
+                        },
+                    )
+                }
+            }
+        }
+
+    @Test
+    fun aTapBetweenTwoStackedNotesGoesToTheNearerOne() =
+        show {
+            val upper = bounds(guideNoteTextTag(GuidePart.INSIGHT))
+            val lower = bounds(guideNoteTextTag(GuidePart.CITE))
+            val guide = bounds(GUIDE_PICTURE_TAG)
+            val gap = lower.top - upper.bottom
+            assertTrue("gap $gap", gap > 0f)
+            val tapAt = { y: Float ->
+                compose.onNodeWithTag(GUIDE_PICTURE_TAG).performTouchInput {
+                    click(Offset(lower.left + 10f - guide.left, y - guide.top))
+                }
+                compose.waitForIdle()
+            }
+            // A little nearer the upper note's text: its panel.
+            tapAt(upper.bottom + gap * 0.4f)
+            compose.onNodeWithTag(GUIDE_NOTE_PANEL_TEXT_TAG).assert(hasText(text(R.string.home_guide_about_insight)))
+            compose.onNodeWithTag(GUIDE_NOTE_DISMISS_TAG).performClick()
+            compose.waitForIdle()
+            // A little nearer the lower one's: its.
+            tapAt(upper.bottom + gap * 0.6f)
+            compose.onNodeWithTag(GUIDE_NOTE_PANEL_TEXT_TAG).assert(hasText(text(R.string.home_guide_about_cite)))
         }
 
     @Test

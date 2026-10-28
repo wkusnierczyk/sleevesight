@@ -134,10 +134,10 @@ internal fun GuidePicture(modifier: Modifier = Modifier) {
                 picture::report,
                 picture::reportCover,
             )
+            for (part in GuidePart.entries) GuideNoteText(part, hand, Modifier.layoutId(GuideNoteSlot(part)))
             for (part in GuidePart.entries) {
                 GuideNote(
                     part,
-                    hand,
                     Modifier
                         .layoutId(part)
                         .semantics { traversalIndex = part.ordinal.toFloat() }
@@ -163,11 +163,18 @@ internal fun GuidePicture(modifier: Modifier = Modifier) {
     ) { measurables, constraints ->
         measureGuide(measurables, constraints, GuideMetrics.of(density), picture, open)
     }
-    if (magnified) GuideMagnified { magnified = false }
+    // The full screen's zoom, kept across a rotation, and afresh each time it opens.
+    val zoom = rememberSaveable(magnified, saver = GuideZoom.Saver) { GuideZoom() }
+    if (magnified) GuideMagnified(onClose = { magnified = false }, zoom = zoom)
 }
 
-/** The guide's children other than the notes, which go by their [GuidePart]. */
+/** The guide's children other than the notes, whose buttons go by their [GuidePart]. */
 private enum class GuideSlot { PICTURE, MARKS, MAGNIFIER, PANEL }
+
+/** The text of the note on [part], under its button. */
+private data class GuideNoteSlot(
+    val part: GuidePart,
+)
 
 /**
  * The guide laid out (#627, #673): the picture on the left, the notes on its right as [guideLayout]
@@ -193,16 +200,25 @@ private fun MeasureScope.measureGuide(
         return layout(width, mini.height) { mini.place(0, 0) }
     }
     val noteWidth = (width - pictureWidth - metrics.gap).toInt().coerceAtLeast(0)
-    val notes = GuidePart.entries.map { slot(it)!!.measure(Constraints(maxWidth = noteWidth)) }
+    val notes = GuidePart.entries.map { slot(GuideNoteSlot(it))!!.measure(Constraints(maxWidth = noteWidth)) }
     val shown = guideLayout(found.toMap(), notes.map { it.height.toFloat() }, mini.width, mini.height, metrics)
+    // Each note's button over its text: as high as its target, as wide as the text, at least 48 dp.
+    val buttons =
+        GuidePart.entries.map { part ->
+            val target = shown.targets[part.ordinal]
+            val x = shown.notes[part.ordinal].x.roundToInt()
+            val wide = max(notes[part.ordinal].width, metrics.target.roundToInt()).coerceAtMost(width - x)
+            val high = target.endInclusive.roundToInt() - target.start.roundToInt()
+            slot(part)!!.measure(Constraints.fixed(wide.coerceAtLeast(0), high.coerceAtLeast(0)))
+        }
     val magnifier = slot(GuideSlot.MAGNIFIER)!!.measure(Constraints())
     val panel =
         open?.let { part ->
             val measurable = slot(GuideSlot.PANEL) ?: return@let null
-            val note = shown.notes[part.ordinal]
+            val note = shown.targets[part.ordinal]
             val rect = parts.getValue(part)
-            // The part and its note, which the panel leaves in sight.
-            val band = min(rect.top, note.y)..max(rect.bottom, note.y + notes[part.ordinal].height)
+            // The part and its note's button, which the panel leaves in sight and to be tapped.
+            val band = min(rect.top, note.start)..max(rect.bottom, note.endInclusive)
             // As wide as [GuideMetrics.panelWidth] says, or as the guide where that fits in the
             // picture neither under nor over them: wider, so shorter.
             val narrow = metrics.panelWidth(width)
@@ -219,6 +235,9 @@ private fun MeasureScope.measureGuide(
         mini.place(0, 0)
         shown.notes.forEachIndexed { i, at -> notes[i].place(at.x.roundToInt(), at.y.roundToInt()) }
         marks.place(0, 0)
+        buttons.forEachIndexed { i, button ->
+            button.place(shown.notes[i].x.roundToInt(), shown.targets[i].start.roundToInt())
+        }
         magnifier.place(
             corner.right.roundToInt() - magnifier.width - inset,
             corner.bottom.roundToInt() - magnifier.height - inset,

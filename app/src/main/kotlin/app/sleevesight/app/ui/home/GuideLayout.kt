@@ -54,6 +54,9 @@ internal data class GuideMetrics(
     val firstLine: Float get() = dp(FIRST_LINE_DP) * fontScale
     val unit: Float get() = dp(1f)
 
+    /** A note's touch target's least height (#673): Material's 48 dp. */
+    val target: Float get() = dp(TARGET_DP)
+
     /**
      * The picture's width in a guide [width] wide: a share of it, smaller as the font grows, so the
      * notes keep room, and never wider than [MAX_PICTURE_DP].
@@ -79,11 +82,15 @@ internal data class GuideMetrics(
     }
 }
 
-/** Where the notes go, the arrows from them, both in [GuidePart] order, and the guide's [height] (#627). */
+/**
+ * Where the notes go, the arrows from them, and each note's touch target from its top to its bottom
+ * ([targets], #673), all in [GuidePart] order, and the guide's [height] (#627).
+ */
 internal data class GuideShown(
     val notes: List<Offset>,
     val arrows: List<GuideArrow>,
     val height: Float,
+    val targets: List<ClosedFloatingPointRange<Float>> = emptyList(),
 )
 
 /**
@@ -109,6 +116,12 @@ internal data class GuideArrow(
  * note, pushed below its part, goes a little lower and to the left, under the picture's corner, and
  * points up into the part's bottom. The others' arrows run from the note's first line to just inside
  * the part's right edge, at its middle, slightly bent.
+ *
+ * Each note is a button (#673) whose touch target is at least [GuideMetrics.target] high: its text
+ * in the middle of it, the targets of two notes never overlapping, and the line between them halfway
+ * between their texts, so a tap goes to the nearer note. So two notes' texts are at least twice the
+ * larger of their margins apart (a margin: half of what a text lacks of the target's height), and
+ * the first's target starts no higher than the guide.
  */
 @Suppress("LongMethod") // One pass over the notes, then one over the arrows, as the mock-up draws them.
 internal fun guideLayout(
@@ -122,11 +135,18 @@ internal fun guideLayout(
     val order = GuidePart.entries.sortedBy { parts.getValue(it).center.y }
     val last = order.last()
     val notes = arrayOfNulls<Offset>(GuidePart.entries.size)
-    var floor = -4 * u
+    // Half of what a note's text lacks of its target's height.
+    val margin = noteHeights.map { max(0f, metrics.target - it) / 2 }
+    var above: GuidePart? = null
     var bottom = pictureHeight.toFloat()
     for (part in order) {
         val rect = parts.getValue(part)
         val h = noteHeights[part.ordinal]
+        val e = margin[part.ordinal]
+        val floor =
+            above?.let {
+                notes[it.ordinal]!!.y + noteHeights[it.ordinal] + max(5 * u, 2 * max(margin[it.ordinal], e))
+            } ?: max(-4 * u, e)
         var top = max(floor, rect.center.y - h / 2)
         var left = pictureWidth + metrics.gap
         if (part == last && top + metrics.firstLine > rect.bottom) {
@@ -134,9 +154,10 @@ internal fun guideLayout(
             left -= 40 * u
         }
         notes[part.ordinal] = Offset(left, top)
-        floor = top + h + 5 * u
-        bottom = max(bottom, top + h)
+        above = part
+        bottom = max(bottom, top + h + e)
     }
+    val targets = noteTargets(order, notes.map { it!!.y }, noteHeights, margin)
     val arrows =
         GuidePart.entries.map { part ->
             val rect = parts.getValue(part)
@@ -178,7 +199,7 @@ internal fun guideLayout(
                 )
             }
         }
-    return GuideShown(notes.map { it!! }, arrows, bottom + 6 * u)
+    return GuideShown(notes.map { it!! }, arrows, bottom + 6 * u, targets)
 }
 
 /**
@@ -210,6 +231,28 @@ internal fun panelFits(
     pictureHeight: Int,
     gap: Float,
 ): Boolean = band.endInclusive + gap + height <= pictureHeight || band.start - gap - height >= 0f
+
+/**
+ * The notes' touch targets, in [GuidePart] order, from the notes' [tops] and [heights], their
+ * [margins] and their [order] top to bottom: from halfway to the note above (the first, its margin
+ * above its text) to halfway to the note below (the last, its margin below its text).
+ */
+private fun noteTargets(
+    order: List<GuidePart>,
+    tops: List<Float>,
+    heights: List<Float>,
+    margins: List<Float>,
+): List<ClosedFloatingPointRange<Float>> {
+    val between =
+        order.zipWithNext { upper, lower -> (tops[upper.ordinal] + heights[upper.ordinal] + tops[lower.ordinal]) / 2 }
+    val targets = arrayOfNulls<ClosedFloatingPointRange<Float>>(order.size)
+    order.forEachIndexed { i, part ->
+        val top = if (i == 0) tops[part.ordinal] - margins[part.ordinal] else between[i - 1]
+        val end = tops[part.ordinal] + heights[part.ordinal]
+        targets[part.ordinal] = top..(if (i == order.lastIndex) end + margins[part.ordinal] else between[i])
+    }
+    return targets.map { it!! }
+}
 
 /** A seeded wobble in [0, 1), the mock-up's, so the arrows look drawn and stay put between draws. */
 private fun wobble(seed: Int): Float {
@@ -246,6 +289,9 @@ private const val PICTURE_SHARE = 0.42f
 private const val MAX_PICTURE_DP = 200f
 private const val GAP_DP = 14f
 private const val FIRST_LINE_DP = 12f
+
+/** A note's touch target's least height, in dp. */
+private const val TARGET_DP = 48f
 
 /** A note's panel's narrowest, in dp at the default font size, and its distance from the part. */
 private const val MIN_PANEL_DP = 160f

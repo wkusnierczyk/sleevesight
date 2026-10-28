@@ -86,10 +86,15 @@ internal fun GuideMagnifierButton(
  * The guide's picture full screen (#673): the drawn Home ([MiniHome]) alone, without the notes,
  * fitted to the screen under a bar with its name and *Close* ([onClose]), which Back does too.
  * Pinch, or double-tap, to magnify it, double-tap again to fit it back, and drag to move it
- * ([GuideZoom]). A screen reader reads the picture as one image, *Home while a track plays*.
+ * ([zoom], which its opener keeps across a rotation: state saved inside a dialog is not restored).
+ * A screen reader reads the picture as one image, *Home while
+ * a track plays*.
  */
 @Composable
-internal fun GuideMagnified(onClose: () -> Unit) {
+internal fun GuideMagnified(
+    onClose: () -> Unit,
+    zoom: GuideZoom = remember { GuideZoom() },
+) {
     Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(Modifier.fillMaxSize().testTag(GUIDE_MAGNIFIED_TAG)) {
             Column(Modifier.safeDrawingPadding()) {
@@ -106,7 +111,7 @@ internal fun GuideMagnified(onClose: () -> Unit) {
                         Text(stringResource(R.string.page_close))
                     }
                 }
-                Zoomed(Modifier.weight(1f).fillMaxWidth())
+                Zoomed(zoom, Modifier.weight(1f).fillMaxWidth())
             }
         }
     }
@@ -114,8 +119,10 @@ internal fun GuideMagnified(onClose: () -> Unit) {
 
 // The drawn Home, fitted to the box and zoomed as [GuideZoom] says, in the box's bounds.
 @Composable
-private fun Zoomed(modifier: Modifier) {
-    val zoom = remember { GuideZoom() }
+private fun Zoomed(
+    zoom: GuideZoom,
+    modifier: Modifier,
+) {
     val described = stringResource(R.string.home_guide_magnified)
     Layout(
         content = {

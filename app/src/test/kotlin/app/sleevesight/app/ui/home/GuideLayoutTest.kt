@@ -65,7 +65,10 @@ class GuideLayoutTest {
             parts + (GuidePart.SETTINGS to Rect(130f, 25f, 140f, 35f)) + (GuidePart.PLAYER to Rect(6f, 5f, 60f, 13f))
         val shown = guideLayout(swapped, GuidePart.entries.map { 20f }, pictureWidth, pictureHeight, metrics)
         for (part in GuidePart.entries) {
-            assertEquals(part.name, swapped.getValue(part).center.y, shown.arrows[part.ordinal].end.y, 0.01f)
+            val arrow = shown.arrows[part.ordinal]
+            // The last note's, pushed below its part, ends at its bottom.
+            val at = swapped.getValue(part).let { if (arrow.fromBelow) it.bottom + 2f else it.center.y }
+            assertEquals(part.name, at, arrow.end.y, 0.01f)
         }
     }
 
