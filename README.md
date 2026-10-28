@@ -25,6 +25,7 @@ Sleevesight is an open-source Android app that reads what your music player is p
 - [Usage](https://sleevesight.app/docs/tutorials/usage/): the home screen, the insight and its citations, the sources, writing, the players, and what happens offline or when something fails.
 - [Settings](https://sleevesight.app/docs/tutorials/settings/): every setting, its default and why, and what changing it sends or keeps; the API keys, and how to enter them.
 - [Architecture](https://sleevesight.app/docs/architecture/), [dependencies](https://sleevesight.app/docs/dependencies/), [solutions](https://sleevesight.app/docs/solutions/) and [process](https://sleevesight.app/docs/process/): how the app is put together, what it is built on, what it solves in its own way, and how it is built, reviewed and released.
+- [Frequently asked questions](https://sleevesight.app/docs/faq/): why notification access and what the app reads with it, why not a Spotify sign-in, other music services, Spotify Connect, and why not the microphone.
 - [What it costs you](https://sleevesight.app/docs/costs/): Sleevesight charges nothing; what each service you switch on charges, its free tier, and what a track costs.
 - [Privacy policy](https://sleevesight.app/privacy.html).
 - The design, for developers: [design/design.md](design/design.md), [design/architecture.md](design/architecture.md), and the [plan](design/plan.md).
