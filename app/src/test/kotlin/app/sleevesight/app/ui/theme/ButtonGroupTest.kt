@@ -23,6 +23,7 @@ import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
@@ -204,7 +205,7 @@ class ButtonGroupTest {
         val tapped = mutableListOf<String>()
         val actions =
             listOf(
-                GroupAction("Show less", enabled = false) { tapped += "less" },
+                GroupAction("Show less", enabled = false, modifier = Modifier.testTag("less")) { tapped += "less" },
                 GroupAction("Show more") { tapped += "more" },
                 GroupAction("Show all") { tapped += "all" },
             )
@@ -218,6 +219,8 @@ class ButtonGroupTest {
                 "not a choice",
                 SemanticsProperties.SelectableGroup in compose.onNodeWithTag(GROUP).fetchSemanticsNode().config,
             )
+            // A modifier given lands on its button.
+            compose.onNodeWithTag("less").assertTextEquals("Show less").assertIsNotEnabled()
             button("Show less").assertIsNotEnabled().performClick()
             button("Show more").assertIsEnabled().performClick()
             button("Show all").performClick()

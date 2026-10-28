@@ -121,10 +121,12 @@ That only changes what you see: what the AI service may use is set under [*Sourc
 
 **The note.** Under the table, a note only when something needs you or went wrong, a sentence for each source: *Last.fm needs your key, in Settings.* (a tap on *Settings* opens them; the key goes under *Secrets*), *Web search could not be reached.*, or *MusicBrainz failed.* A source that found nothing, whose match was rejected, or that you switched off says nothing.
 
-**The list.** Then the evidence lines, each with its id, its text, what it is about (*song*, *artist*, *original song*, *release*, *web*) and a link to the page it was found on, which opens in the browser. After them, under their own heading, come *Found, but not verified, so not cited*: lines from matches that could not be checked against the track, which are shown but never given to the insight. Above the list, how many entries show ("Showing 8 of 12 entries"). It unfolds 8 entries at a time:
+**The list.** Then the evidence lines, each with its id, its text, what it is about (*song*, *artist*, *original song*, *release*, *web*) and a link to the page it was found on, which opens in the browser. After them, under their own heading, come *Found, but not verified, so not cited*: lines from matches that could not be checked against the track, which are shown but never given to the insight. Above the list, how many entries show ("Showing 8 of 12 entries"). It unfolds 8 entries at a time, with three buttons in one group under it, always in the same place:
 
-- *show more…* shows the next 8, and *show all* the rest, while entries remain;
-- *… show less* goes back to the first 8, once past them.
+- *Show less* goes back to the first 8;
+- *Show more* shows the next 8, and *Show all* the rest.
+
+A button that does not apply is disabled, rather than gone: *Show less* at the first 8, *Show more* and *Show all* once every entry shows. A screen reader reads three buttons, and says "disabled" for one that does not apply. Used from a keyboard or with a screen reader, a button that becomes disabled passes the focus to another in the group: *Show all*, or *Show more* at the end, to *Show less*, and *Show less* to *Show more*.
 
 A citation tapped in the insight opens the panel and unfolds the list as far as its line. When the chips hide every line, the count says so, and closing and opening *Sources* again shows them.
 
@@ -150,7 +152,7 @@ With *Layout* set to *Separate pages*, a tap on the **Sources** chip opens *Sour
 
 With *Separate pages*, the home screen is shorter, and each part opens a page of its own, on the app's background like the home screen, its accents in the album art's colours, with a back arrow and the part's name at the top:
 
-- The **Sources** chip opens the table of the sources, the note and the list, which works as it does unfolded on the home screen, *show more…* and all.
+- The **Sources** chip opens the table of the sources, the note and the list, which works as it does unfolded on the home screen, *Show more* and all.
 - A genre chip on the home screen opens the genres' page: the chips, the one tapped marked, and that genre's panel, with what the genre is and *Why is this …?*, the table and where its labels came from; a citation in the answer opens the *Sources* page at its line. A tap on another chip there switches the panel to its genre.
 - A citation chip in the insight opens *Sources*' page at the line it cites, scrolled to and flashed.
 

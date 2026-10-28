@@ -67,13 +67,14 @@ import app.sleevesight.core.pipeline.TrackState
  * diagnostics ("Found the song (kept)", "Match rejected"), in the developer mark; and the list ends
  * with the matches the sources rejected, with their reasons.
  *
- * The list unfolds a screenful ([Fold.PAGE] lines) at a time ([fold], #269): *show more…* and
- * *show all* under it while lines remain, *… show less* back to the first screenful once past it.
+ * The list unfolds a screenful ([Fold.PAGE] lines) at a time ([fold], #269), paged by one group of
+ * buttons under it (#666), *Show less* | *Show more* | *Show all*, each disabled where it does not
+ * apply ([FoldControls]).
  * The unverified lines and the rejected matches are part of the list, after the evidence lines,
  * under their own headings. A citation tapped opens the panel and unfolds it to the line cited
  * ([LineFocus.cite]), the focus staying where it was. A screen reader reads the chip as a button,
- * *Sources*, collapsed; each control as one it names in words; and the list says how much of it
- * shows.
+ * *Sources*, collapsed; each paging button by its label, a disabled one as such; and the list says
+ * how much of it shows.
  *
  * When the insight shown is the one written earlier ([SourcesShown.cardKept]: the pipeline shows the card paid
  * for in place of an insight the run lacks, `PipelineView.cardShown`, whether Rewrite is offered,
