@@ -12,6 +12,7 @@ import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.SourceResult
 import app.sleevesight.core.synthesis.GroundedText
+import kotlin.time.Instant
 
 /**
  * Everything the UI renders for one track (`design/architecture.md`, *State*), immutable: the
@@ -110,7 +111,10 @@ sealed interface InsightState {
      * held every line, and for a card from the cache, which is kept only when it cites none outside
      * them (`InsightWriter.finish`). [writtenBy] is the prompt version, AI service, model and
      * effort of the card's key, the call's or the cached card's, which a problem report names
-     * (#390); null only where no pipeline wrote it (a test's fixture).
+     * (#390); null only where no pipeline wrote it (a test's fixture). [writtenAt] is when it was
+     * written: the call's end, or as the cache says for a cached card; null where the cache does not
+     * say. It is shown no longer than *Keep history for* after it (#643, `pastKeepHistory`), as
+     * the cache serves it.
      */
     data class Written(
         val grounded: GroundedText,
@@ -119,6 +123,7 @@ sealed interface InsightState {
         val complete: Boolean = true,
         val held: Set<String>? = null,
         val writtenBy: WrittenBy? = null,
+        val writtenAt: Instant? = null,
     ) : InsightState
 
     /**

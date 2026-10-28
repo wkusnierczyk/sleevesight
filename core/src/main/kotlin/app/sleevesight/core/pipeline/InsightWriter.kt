@@ -11,6 +11,7 @@ import app.sleevesight.core.synthesis.GroundingCheck
 import app.sleevesight.core.synthesis.InsightPrompt
 import app.sleevesight.core.synthesis.InsightReply
 import kotlin.time.Duration
+import kotlin.time.Instant
 import kotlin.time.TimeMark
 
 /**
@@ -79,14 +80,24 @@ internal class InsightWriter(
         control: RunControl,
     ) {
         val wanted = cardKey(ai, model)
-        val kept = guard.attempt("read insight") { card(wanted) }
+        // With when it was written, which the app checks what it shows against (#643).
+        val kept = guard.attempt("read insight") { keptCard(wanted) }
         when {
             kept != null -> {
                 emit(PipelineEvent.InsightCached(key))
                 // Against the whole evidence: a card is kept only when it cites no line its prompt
                 // left out (`finish`), so it reads as it read when it was written.
+                val sent = Prompted(evidence, evidence)
                 val shown =
-                    checked(kept, Prompted(evidence, evidence), wanted, cached = true, usage = null, complete = true)
+                    checked(
+                        kept.text,
+                        sent,
+                        wanted,
+                        cached = true,
+                        usage = null,
+                        complete = true,
+                        writtenAt = kept.writtenAt,
+                    )
                 // Its artist facts, for the next tracks of the listening session (#239).
                 (shown as? InsightState.Written)?.let {
                     parts.sessionFacts.cite(key, ArtistFact.citedIn(it.grounded, evidence.lines))
@@ -240,7 +251,19 @@ internal class InsightWriter(
 
             else -> {
                 val complete = done.stopReason == StopReason.END
-                val written = checked(text, sent, card, cached = false, usage = done.usage, complete = complete)
+                // One time, in whole milliseconds as the cache keeps it, for the card shown and the
+                // card kept, so the screen and the cache count *Keep history for* alike (#643).
+                val at = Instant.fromEpochMilliseconds(time.clock.now().toEpochMilliseconds())
+                val written =
+                    checked(
+                        text,
+                        sent,
+                        card,
+                        cached = false,
+                        usage = done.usage,
+                        complete = complete,
+                        writtenAt = at,
+                    )
                 val keepable =
                     sent.leftOut.isEmpty() ||
                         (written as? InsightState.Written)
@@ -248,7 +271,7 @@ internal class InsightWriter(
                             ?.paragraphs
                             ?.flatten()
                             ?.none { sentence -> sentence.cites.any { it in sent.leftOut } } == true
-                if (complete && keepable) guard.attempt("write insight") { keep(card, text) }
+                if (complete && keepable) guard.attempt("write insight") { keep(card, text, at) }
                 if (written is InsightState.Written) {
                     parts.sessionFacts.cite(key, ArtistFact.citedIn(written.grounded, sent.evidence.lines))
                     control.cardWritten(written, evidence)
@@ -259,7 +282,7 @@ internal class InsightWriter(
     }
 
     // [text] checked against what was [sent]; a card from the cache against the whole evidence.
-    // Written, it carries what its [card]'s key says it was written with.
+    // Written, it carries what its [card]'s key says it was written with, and when ([writtenAt]).
     @Suppress("LongParameterList") // The reply, what its prompt held, its card, and how it came.
     private fun checked(
         text: String,
@@ -268,6 +291,7 @@ internal class InsightWriter(
         cached: Boolean,
         usage: Usage?,
         complete: Boolean,
+        writtenAt: Instant?,
     ): InsightState =
         when (val reply = GroundingCheck.check(text, sent.evidence, allowModel)) {
             InsightReply.NoEvidence -> {
@@ -278,7 +302,7 @@ internal class InsightWriter(
             is InsightReply.Written -> {
                 emit(PipelineEvent.Grounded(key, reply.grounded.counts, reply.grounded.withdrawn != null))
                 val by = WrittenBy(card.promptVersion, card.provider, card.model, card.effort)
-                InsightState.Written(reply.grounded, cached, usage, complete, sent.held, by)
+                InsightState.Written(reply.grounded, cached, usage, complete, sent.held, by, writtenAt)
             }
         }
 
