@@ -42,7 +42,7 @@ internal suspend fun readLines(
         // When the caller itself was cancelled, that is the cancellation, not a lost connection.
         if (failure == null && !response.coroutineContext.isActive) {
             currentCoroutineContext().ensureActive()
-            failure = NetError.Offline("CancelledBody")
+            failure = NetError.Offline(NetError.Offline.CANCELLED_BODY)
         }
         if (failure == null) splitter.finish()
     } catch (e: IOException) {

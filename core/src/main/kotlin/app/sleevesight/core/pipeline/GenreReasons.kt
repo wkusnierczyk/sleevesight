@@ -111,7 +111,8 @@ class GenreReasons(
         val text = StringBuilder()
         var end: CompletionEvent? = null
         show(InsightState.Writing(""), now())
-        access.provider.stream(CompletionRequest(key.model, prompt, effort = key.effort), access.key).collect { event ->
+        val request = CompletionRequest(key.model, prompt, CompletionRequest.maxTokensFor(key.effort), key.effort)
+        access.provider.stream(request, access.key).collect { event ->
             when (event) {
                 is CompletionEvent.Delta -> {
                     text.append(event.text)

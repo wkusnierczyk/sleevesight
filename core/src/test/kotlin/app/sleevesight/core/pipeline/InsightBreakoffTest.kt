@@ -5,6 +5,7 @@ import app.sleevesight.core.ai.AiErrorKind
 import app.sleevesight.core.ai.Breakoff
 import app.sleevesight.core.ai.BreakoffCause
 import app.sleevesight.core.ai.CompletionEvent
+import app.sleevesight.core.ai.ReasoningEffort
 import app.sleevesight.core.ai.StopReason
 import app.sleevesight.core.ai.Usage
 import app.sleevesight.core.model.ProviderId
@@ -32,6 +33,7 @@ import kotlin.time.Duration.Companion.seconds
 @OptIn(ExperimentalCoroutinesApi::class)
 class InsightBreakoffTest {
     private val sundown = nowPlaying("Sundown", "Gordon Lightfoot", album = "Sundown")
+    private var settings = Settings(aiProvider = ProviderId.ANTHROPIC)
 
     private fun TestScope.pipeline(
         provider: FakeProvider,
@@ -47,7 +49,7 @@ class InsightBreakoffTest {
                 cache = cache,
             ),
             PipelineTime(timeSource = testTimeSource),
-        ) { Settings(aiProvider = ProviderId.ANTHROPIC) }
+        ) { settings }
 
     private fun TestScope.recording(pipeline: Pipeline): List<PipelineEvent> {
         val events = mutableListOf<PipelineEvent>()
@@ -133,6 +135,17 @@ class InsightBreakoffTest {
                 assertEquals(emptyMap(), cache.cards, label)
                 // The stop reason and the tokens are in the diagnostics, as for any reply that ended.
                 assertEquals(1, events.count { it is PipelineEvent.ModelDone }, label)
+            }
+        }
+
+    @Test
+    fun `the call's token limit follows the effort in the settings`() =
+        runTest {
+            val provider = FakeProvider()
+            for ((effort, limit) in listOf(ReasoningEffort.LOW to 4096, ReasoningEffort.HIGH to 16384)) {
+                settings = Settings(aiProvider = ProviderId.ANTHROPIC).withEffort(ProviderId.ANTHROPIC, effort)
+                pipeline(provider).run(sundown, write = true)
+                assertEquals(limit, provider.requests.last().maxTokens, "$effort")
             }
         }
 }

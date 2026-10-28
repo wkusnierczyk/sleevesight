@@ -33,7 +33,9 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -153,6 +155,38 @@ class OpenAiProviderTest {
             }
             val (_, net) = events { ok(recorded("openai/responses-stream.sse")) }
             assertEquals(null, body(net)["reasoning"])
+        }
+
+    @Test
+    fun `the token limit stays at most 4096 for a model that takes no effort, or once it refused one`() =
+        runTest {
+            val high = request.copy(maxTokens = 16384, effort = ReasoningEffort.HIGH)
+            val (_, taken) = events(high) { ok(recorded("openai/responses-stream.sse")) }
+            assertEquals(16384, body(taken)["max_output_tokens"]?.jsonPrimitive?.int)
+            val (_, older) = events(high.copy(model = "gpt-4.1")) { ok(recorded("openai/responses-stream.sse")) }
+            assertEquals(4096, body(older)["max_output_tokens"]?.jsonPrimitive?.int)
+            var calls = 0
+            val (_, refusing) =
+                events(high) {
+                    calls++
+                    if (calls == 1) {
+                        response(
+                            400,
+                            """{"error":{"message":"m","type":"invalid_request_error","param":"reasoning.effort",""" +
+                                """"code":"unsupported_value"}}""",
+                        )
+                    } else {
+                        ok(recorded("openai/responses-stream.sse"))
+                    }
+                }
+            val limits =
+                refusing.requests.map {
+                    Json
+                        .parseToJsonElement(
+                            it.body!!.text,
+                        ).jsonObject["max_output_tokens"]
+                }
+            assertEquals(listOf(16384, 4096), limits.map { it?.jsonPrimitive?.int })
         }
 
     @Test

@@ -48,9 +48,31 @@ data class CompletionRequest(
     companion object {
         /**
          * Room for a card of a few sentences or paragraphs and for the reasoning that current
-         * models do by default before it; a reply that reaches it ends with [StopReason.MAX_TOKENS].
+         * models do at low effort before it; a reply that reaches it ends with [StopReason.MAX_TOKENS].
          */
         const val DEFAULT_MAX_TOKENS: Int = 4096
+
+        /** Room for the reasoning of [ReasoningEffort.MEDIUM] as well ([maxTokensFor]). */
+        const val MEDIUM_MAX_TOKENS: Int = 8192
+
+        /** Room for the reasoning of [ReasoningEffort.HIGH], or a service's default, as well ([maxTokensFor]). */
+        const val HIGH_MAX_TOKENS: Int = 16384
+
+        /**
+         * The limit for a card written at [effort] (#665). The reasoning counts against the limit,
+         * and more effort reasons longer: 4096 left a high-effort call room to end with no text.
+         * The most a recorded insight used was 1226 tokens out, at low effort, so low keeps 4096. A
+         * service's default ([effort] null) can be its highest (Claude Opus reasons at high), so it
+         * gets the most. A higher limit costs nothing unless the model uses it. The providers keep
+         * [DEFAULT_MAX_TOKENS] for a model that takes no effort control: they know no model's
+         * output maximum, and an older model's can be as low as that.
+         */
+        fun maxTokensFor(effort: ReasoningEffort?): Int =
+            when (effort) {
+                ReasoningEffort.MINIMAL, ReasoningEffort.LOW -> DEFAULT_MAX_TOKENS
+                ReasoningEffort.MEDIUM -> MEDIUM_MAX_TOKENS
+                ReasoningEffort.HIGH, null -> HIGH_MAX_TOKENS
+            }
     }
 }
 

@@ -31,7 +31,9 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -89,6 +91,23 @@ class GoogleProviderTest {
         val net = ReplayNetClient(answer)
         return provider(net).stream(request, key).toList() to net
     }
+
+    @Test
+    fun `the token limit follows the effort with thinking levels, and stays at most 4096 without`() =
+        runTest {
+            val high = request.copy(maxTokens = 16384, effort = ReasoningEffort.HIGH)
+            val (_, levelled) = events(high) { ok(recorded(stream)) }
+            assertEquals(16384, limit(levelled))
+            val (_, older) = events(high.copy(model = "gemini-2.5-flash")) { ok(recorded(stream)) }
+            assertEquals(4096, limit(older))
+        }
+
+    private fun limit(net: ReplayNetClient): Int? =
+        body(net)["generationConfig"]
+            ?.jsonObject
+            ?.get("maxOutputTokens")
+            ?.jsonPrimitive
+            ?.int
 
     private fun sse(vararg chunks: String): String = chunks.joinToString("") { "data: $it\r\n\r\n" }
 

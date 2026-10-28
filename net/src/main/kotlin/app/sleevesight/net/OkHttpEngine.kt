@@ -5,6 +5,7 @@ import io.ktor.client.engine.okhttp.OkHttp
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
+import java.io.IOException
 import java.net.ProtocolException
 
 /**
@@ -74,17 +75,25 @@ private val protocolExceptions =
 
 /**
  * [e]'s type as the platform names it, for `offlineReason`: its class's simple name when that is a
- * class of Java or Kotlin, else that of its nearest superclass that is (OkHttp's and Okio's own
+ * class of Java or Android, else that of its nearest superclass that is (OkHttp's and Okio's own
  * become `IOException` or the like). R8 renames the app's and the libraries' classes in the release
- * build, never the platform's, so the name reads the same in a problem report from the phone as in
- * a test (#665).
+ * build, the Kotlin standard library's among them, since it ships in the app, but never the
+ * platform's, so the name reads the same in a problem report from the phone as in a test (#665).
  */
 internal fun platformTypeName(e: Throwable): String {
     var type: Class<*> = e.javaClass
-    while (PLATFORM_PACKAGES.none { type.name.startsWith(it) }) {
+    while (!isPlatform(type)) {
         type = type.superclass ?: break
     }
     return type.simpleName
 }
 
-private val PLATFORM_PACKAGES = listOf("java.", "javax.", "kotlin.")
+/**
+ * Whether [e] is an `IOException` of the platform's own class (`SocketException`,
+ * `UnknownHostException`, `EOFException`), not a library's wrapper around one, for `offlineReason`.
+ */
+internal fun isPlatformIoException(e: Throwable): Boolean = e is IOException && isPlatform(e.javaClass)
+
+private fun isPlatform(type: Class<*>): Boolean = PLATFORM_PACKAGES.any { type.name.startsWith(it) }
+
+private val PLATFORM_PACKAGES = listOf("java.", "javax.", "android.")

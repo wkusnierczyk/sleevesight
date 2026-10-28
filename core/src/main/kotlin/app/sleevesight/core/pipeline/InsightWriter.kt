@@ -158,7 +158,8 @@ internal class InsightWriter(
         val given = if (whole) evidence else PromptEvidence.of(evidence, nowPlaying.album, facts, parts.hasher, once)
         val sent = Prompted(evidence, given)
         val prompt = InsightPrompt.build(nowPlaying, track, sent.evidence, allowModel)
-        val request = CompletionRequest(model, prompt, effort = settings.effort(ai.provider.id))
+        val effort = settings.effort(ai.provider.id)
+        val request = CompletionRequest(model, prompt, CompletionRequest.maxTokensFor(effort), effort)
         val text = StringBuilder()
         var end: CompletionEvent? = null
         var started: TimeMark? = null

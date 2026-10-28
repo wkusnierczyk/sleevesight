@@ -286,22 +286,55 @@ class AnthropicProviderTest {
         }
 
     @Test
-    fun `a stream that ends after message_delta gave the stop reason is complete, though message_stop is lost`() =
+    fun `a stream that ends after message_delta gave the stop reason ends by it, though message_stop is lost`() =
         runTest {
-            for (end in listOf(null, NetError.Offline("SocketException"))) {
-                val events =
-                    provider(
-                        cutNet(
-                            """{"type":"message_start","message":{"usage":{"input_tokens":3}}}""",
-                            """{"type":"content_block_delta","index":0,""" +
-                                """"delta":{"type":"text_delta","text":"Whole."}}""",
-                            """{"type":"message_delta","delta":{"stop_reason":"end_turn"},""" +
-                                """"usage":{"output_tokens":9}}""",
-                            end = end,
-                        ),
-                    ).stream(request, key).toList()
-                val done = CompletionEvent.Done(Usage(3, 9), StopReason.END)
-                assertEquals(listOf(CompletionEvent.Delta("Whole."), done), events, "ended by $end")
+            val reasons =
+                mapOf(
+                    "end_turn" to StopReason.END,
+                    "max_tokens" to StopReason.MAX_TOKENS,
+                    "refusal" to StopReason.REFUSAL,
+                )
+            for ((wire, reason) in reasons) {
+                for (end in listOf(null, NetError.Offline("SocketException"))) {
+                    val events =
+                        provider(
+                            cutNet(
+                                """{"type":"message_start","message":{"usage":{"input_tokens":3}}}""",
+                                """{"type":"content_block_delta","index":0,""" +
+                                    """"delta":{"type":"text_delta","text":"Whole."}}""",
+                                """{"type":"message_delta","delta":{"stop_reason":"$wire"},""" +
+                                    """"usage":{"output_tokens":9}}""",
+                                end = end,
+                            ),
+                        ).stream(request, key).toList()
+                    val done = CompletionEvent.Done(Usage(3, 9), reason)
+                    assertEquals(listOf(CompletionEvent.Delta("Whole."), done), events, "$wire, ended by $end")
+                }
+            }
+        }
+
+    @Test
+    fun `the token limit follows the effort for a model that takes one, else stays at most 4096`() =
+        runTest {
+            val cases =
+                listOf(
+                    request.copy(model = "claude-opus-5-5", maxTokens = 16384, effort = ReasoningEffort.HIGH) to 16384,
+                    request.copy(model = "claude-opus-5-5", maxTokens = 16384, effort = null) to 16384,
+                    request.copy(model = "claude-haiku-4-5", maxTokens = 16384, effort = ReasoningEffort.HIGH) to 4096,
+                    request.copy(model = "claude-haiku-4-5", maxTokens = 256) to 256,
+                )
+            for ((asked, sent) in cases) {
+                val net = ReplayNetClient { ok(recorded("anthropic/messages-stream.sse")) }
+                provider(net).stream(asked, key).toList()
+                val body =
+                    Json
+                        .parseToJsonElement(
+                            net.requests
+                                .single()
+                                .body!!
+                                .text,
+                        ).jsonObject
+                assertEquals(Json.parseToJsonElement("$sent"), body["max_tokens"], "$asked")
             }
         }
 
@@ -495,8 +528,8 @@ class AnthropicProviderTest {
                 listOf(
                     NetError.Offline("IOException") to
                         Breakoff(BreakoffCause.CONNECTION_LOST, Usage(3, 0), "IOException"),
-                    NetError.Offline("CancelledBody") to
-                        Breakoff(BreakoffCause.CONNECTION_LOST, Usage(3, 0), "CancelledBody"),
+                    // A body ended under the reader may be a lost connection or the request's timeout.
+                    NetError.Offline("CancelledBody") to Breakoff(BreakoffCause.NO_END, Usage(3, 0), "CancelledBody"),
                     NetError.Offline("SocketTimeoutException") to
                         Breakoff(BreakoffCause.TIMED_OUT, Usage(3, 0), "SocketTimeoutException"),
                     NetError.Offline("HttpRequestTimeoutException") to
