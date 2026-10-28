@@ -10,6 +10,12 @@ plugins {
 application {
     mainClass = "app.sleevesight.cli.MainKt"
     applicationName = "sleevesight-cli"
+    // Java's own console, not JLine's (`jdk.internal.le`, the default in Java 22 to 24; Java 25 went
+    // back to `java.base`, JDK-8351435), whose `readPassword` echoes the words `keys-qr` reads under
+    // `TERM=dumb` (#590). Java 21 and earlier use `java.base` already, and nothing else in the CLI
+    // uses JLine. `main` sets it too, for a
+    // start without these scripts; the `run` task takes these arguments as well.
+    applicationDefaultJvmArgs = listOf("-Djdk.console=java.base")
 }
 
 dependencies {

@@ -5,16 +5,24 @@ import app.sleevesight.core.Secret
 import app.sleevesight.core.keys.KeyName
 import app.sleevesight.core.keys.KeySetup
 import app.sleevesight.core.keys.KeyShape
+import app.sleevesight.core.keys.KeyWords
+import app.sleevesight.core.keys.Opened
+import app.sleevesight.core.keys.SealedSetup
 import app.sleevesight.core.keys.SetupRead
+import app.sleevesight.core.platform.JvmKeyCrypto
+import app.sleevesight.core.platform.JvmResourceReader
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.security.MessageDigest
 import java.util.Properties
 
 /**
  * The API keys page (`api-keys.html`, #436) against the app, by the vectors its own code made
  * (`assets/api-keys/make_vectors.mjs`): its setup codes are what [KeySetup] writes and reads, its
- * QR encoder's codes are read by the app's decoder, and it checks a key's shape as [KeyShape] does.
+ * QR encoder's codes are read by the app's decoder, and it checks a key's shape as [KeyShape] does;
+ * its sealed codes (#590) are what [SealedSetup] makes from the same words, salt and nonce, and open
+ * with those words alone; it completes typed words as [KeyWords] does, from the same list.
  */
 class ApiKeysPageTest {
     private val properties =
@@ -64,6 +72,59 @@ class ApiKeysPageTest {
             val value = text("shape.$i.value")
             val expected = properties.getProperty("shape.$i.problem")
             assertEquals("shape $i ($name)", expected, KeyShape.check(name, value)?.name ?: "NONE")
+        }
+    }
+
+    @Test
+    fun `the page's word list is the app's, and the EFF's`() {
+        val bundled = checkNotNull(JvmResourceReader.text(KeyWords.RESOURCE)).toByteArray(Charsets.UTF_8)
+        val hash = MessageDigest.getInstance("SHA-256").digest(bundled).joinToString("") { "%02x".format(it) }
+        assertEquals(KeyWords.SHA256, properties.getProperty("words.sha256"))
+        assertEquals(hash, properties.getProperty("words.sha256"))
+        assertEquals(KeyWords.SIZE, count("words.count"))
+    }
+
+    @Test
+    fun `the page's sealed codes are the app's, and open with their words alone`() {
+        val list = KeyWords.load(JvmResourceReader)
+        for (i in 0 until count("sealed")) {
+            val words = properties.getProperty("sealed.$i.words").split(" ")
+            assertTrue("sealed $i", words.all { it in list.words })
+            val text = text("sealed.$i.text")
+            val code = properties.getProperty("sealed.$i.code")
+            assertEquals("sealed $i", SealedSetup.ITERATIONS, count("sealed.$i.iterations"))
+            val made =
+                SealedSetup.seal(
+                    text,
+                    words,
+                    JvmKeyCrypto,
+                    salt = bytes(properties.getProperty("sealed.$i.salt")),
+                    nonce = bytes(properties.getProperty("sealed.$i.nonce")),
+                )
+            assertEquals("sealed $i", code, made)
+            assertEquals(SetupRead.Sealed, KeySetup.read(code))
+            val opened = SealedSetup.open(code, words, JvmKeyCrypto)
+            assertEquals("sealed $i", text, (opened as Opened.Setup).text)
+            assertTrue("sealed $i", KeySetup.read(opened.text) is SetupRead.Setup)
+            val wrong = words.toMutableList().also { it[i] = list.words.first { w -> w !in words } }
+            assertEquals("sealed $i", Opened.WrongWords, SealedSetup.open(code, wrong, JvmKeyCrypto))
+        }
+    }
+
+    @Test
+    fun `the page's QR code of the largest sealed code is read by the app's decoder`() {
+        val last = count("sealed") - 1
+        val modules = properties.getProperty("sealed.$last.qr").split(",").map { row -> row.map { it == '1' } }
+        assertEquals(17 + 4 * count("sealed.$last.version"), modules.size)
+        assertEquals(properties.getProperty("sealed.$last.code"), decode(modules))
+    }
+
+    @Test
+    fun `the page completes typed words as the app does`() {
+        val list = KeyWords.load(JvmResourceReader)
+        for (i in 0 until count("typed")) {
+            val expected = properties.getProperty("typed.$i.words").split(",").filter { it.isNotEmpty() }
+            assertEquals("typed $i", expected, list.read(text("typed.$i.text")).map { it ?: "-" })
         }
     }
 

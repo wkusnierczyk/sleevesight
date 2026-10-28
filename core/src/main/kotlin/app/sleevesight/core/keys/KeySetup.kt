@@ -106,6 +106,12 @@ sealed interface SetupRead {
     /** Not a setup code: no `sleevesight-keys:` first line. */
     data object NotASetup : SetupRead
 
+    /**
+     * A sealed setup code (#590, [SealedSetup]): the keys sealed with the words *Load keys* shows,
+     * which only those words open.
+     */
+    data object Sealed : SetupRead
+
     /** A setup code of a [version] this app cannot read: a later one, from a newer CLI. */
     data class Unsupported(
         val version: String,
@@ -130,23 +136,37 @@ sealed interface SetupRead {
  * key, names from [KeyName]. Spaces around a name or a value and blank lines are dropped; a line
  * break may be `\n` or `\r\n`. Later versions keep the first line's form, so an older app can tell
  * it is too old; a service added later (#227, #228, #229) is a new name in the same version, which
- * an older app reports as unknown.
+ * an older app reports as unknown. Version 2 (#590, [SealedSetup]) is this text sealed with the
+ * words *Load keys* shows, in one line after `sleevesight-keys:v2:`.
  */
 object KeySetup {
     const val PREFIX = "sleevesight-keys:"
     const val VERSION = "v1"
 
+    /** The sealed setup code's version ([SealedSetup]). */
+    private const val SEALED = "v2"
+
     /** The longest unknown name reported as given; a longer one is cut, in case it is a key itself. */
     private const val SHOWN_NAME = 24
 
-    /** Reads [text], a scanned code, as a setup code. */
+    /**
+     * Reads [text], a scanned code, as a setup code. A sealed one ([SealedSetup], version 2) is
+     * only told apart: [SealedSetup.open] opens it with its words. A later version is named by what
+     * comes before a colon, so that nothing of a code it seals is shown.
+     */
     fun read(text: String): SetupRead {
         val lines = text.lines().map { it.trim() }.filter { it.isNotEmpty() }
         val first = lines.firstOrNull()
-        val version = first?.takeIf { it.startsWith(PREFIX) }?.removePrefix(PREFIX)?.trim()
+        val version =
+            first
+                ?.takeIf { it.startsWith(PREFIX) }
+                ?.removePrefix(PREFIX)
+                ?.trim()
+                ?.substringBefore(':')
         return when (version) {
             null -> SetupRead.NotASetup
             VERSION -> setup(lines.drop(1))
+            SEALED -> SetupRead.Sealed
             else -> SetupRead.Unsupported(version.take(SHOWN_NAME))
         }
     }

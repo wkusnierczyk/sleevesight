@@ -61,9 +61,15 @@ class Cli(
     private val err: PrintStream,
     private val environment: Map<String, String> = System.getenv(),
     private val input: InputStream = System.`in`,
+    // Where `keys-qr` reads the words: Java's console, when it is a terminal ([Terminal.of]).
+    private val terminal: () -> Terminal = { Terminal() },
 ) {
     fun run(args: List<String>): Int =
-        if (args.firstOrNull() == KEYS_QR) KeysQr(out, err, environment, input).run(args.drop(1)) else runPipeline(args)
+        if (args.firstOrNull() == KEYS_QR) {
+            KeysQr(out, err, environment, input, terminal).run(args.drop(1))
+        } else {
+            runPipeline(args)
+        }
 
     private fun runPipeline(args: List<String>): Int {
         val options =
