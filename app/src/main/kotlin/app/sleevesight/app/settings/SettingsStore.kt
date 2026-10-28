@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.edit
 import app.sleevesight.app.BuildConfig
 import app.sleevesight.core.settings.ReportButton
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.settings.ThemeChoice
 import app.sleevesight.core.settings.WriteAutomatically
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
@@ -169,6 +170,23 @@ class SettingsStore(
                     update { it.copy(homeGuide = false) }
                 } catch (_: IOException) {
                     // Only an I/O error: the guide stays, as the setting does.
+                }
+            }
+        }
+
+    /**
+     * Home's theme button (#636): each call moves *Theme* one step on ([ThemeChoice.next]) from the
+     * stored choice, in one atomic update, so two quick taps move it two steps, whatever Home showed
+     * between them. Saved in [saves], which outlives the screen: from Android 12 the change restarts
+     * the activity in the new theme. A save that fails leaves *Theme*, and so the button, as it was.
+     */
+    fun themeCycler(saves: CoroutineScope): () -> Unit =
+        {
+            saves.launch {
+                try {
+                    update { it.copy(theme = it.theme.next) }
+                } catch (_: IOException) {
+                    // Only an I/O error: the theme stays, as the setting does.
                 }
             }
         }

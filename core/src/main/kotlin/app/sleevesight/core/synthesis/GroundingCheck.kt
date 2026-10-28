@@ -1,6 +1,7 @@
 package app.sleevesight.core.synthesis
 
 import app.sleevesight.core.evidence.EvidenceSet
+import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.text.JS_WHITESPACE_CLASS
 import app.sleevesight.core.text.isJsWhitespace
 import app.sleevesight.core.text.trimJs
@@ -10,7 +11,7 @@ enum class SentenceStatus {
     /** Cites only evidence that exists. */
     OK,
 
-    /** Cites the model's own knowledge, `[M]`, which is allowed: unverified, and shown so. */
+    /** Cites the model's own knowledge, `[AI]`, which is allowed: unverified, and shown so. */
     MODEL,
 
     /** Uncited, and states a documentation gap, which may go uncited. */
@@ -19,12 +20,13 @@ enum class SentenceStatus {
     /** No citation, and not a stated gap. */
     UNCITED,
 
-    /** Cites an id that is not in the evidence, or `[M]` while model knowledge is off. */
+    /** Cites an id that is not in the evidence, or `[AI]` while model knowledge is off. */
     UNKNOWN,
 }
 
 /**
- * One sentence of a reply, its citations in order (`W1`, `M`), and its [status]; [afterLineBreak]
+ * One sentence of a reply, its citations in order (`W1`, `AI`; a legacy `M` read as `AI`,
+ * [citationId]), and its [status]; [afterLineBreak]
  * when a line break, not only spaces, came before it in its paragraph (#574), so a card shows a
  * list's items and a heading on their own lines, as the reply wrote them. Never true of a
  * paragraph's first sentence.
@@ -49,9 +51,9 @@ data class GroundingCounts(
 
 /**
  * A written reply, checked: its paragraphs, each a list of sentences, none empty, and whether the
- * model's own knowledge (`[M]`) was allowed when it was checked ([allowModel]). The card reads its
- * `[M]` citations by that, not by the setting now, and not by whether any sentence came out
- * [SentenceStatus.MODEL]: a sentence citing `[M]` beside a line that does not exist is
+ * model's own knowledge (`[AI]`) was allowed when it was checked ([allowModel]). The card reads its
+ * `[AI]` citations by that, not by the setting now, and not by whether any sentence came out
+ * [SentenceStatus.MODEL]: a sentence citing `[AI]` beside a line that does not exist is
  * [SentenceStatus.UNKNOWN] either way.
  *
  * [text] is what is shown and checked: the reply, or, when the model corrected itself in the open
@@ -102,8 +104,16 @@ sealed interface InsightReply {
  * (no lookbehind, D2): the simulator's sentence split, which uses one, is spelled out as a scan.
  */
 object GroundingCheck {
-    /** The model's id for its own knowledge. */
-    const val MODEL_ID: String = "M"
+    /** The model's id for its own knowledge, its source's tag: `AI` ([LEGACY_MODEL_ID] until 0.1.8). */
+    val MODEL_ID: String = SourceId.MODEL.tag
+
+    /**
+     * The model's id for its own knowledge until 0.1.8, `M` (#668). Replies written then, kept in the
+     * synthesis cache under the same prompt versions, cite it; [citationId] reads it as [MODEL_ID].
+     * Only replies held it: the model's own knowledge has no evidence lines, so no cache row or
+     * evidence id carries its tag.
+     */
+    const val LEGACY_MODEL_ID: String = "M"
 
     /**
      * The sentence insight prompt version 2 asked a reply to end with, uncited, to state that the
@@ -118,14 +128,14 @@ object GroundingCheck {
     /** The reply that says there is no usable evidence. */
     const val NO_EVIDENCE: String = "NO_EVIDENCE"
 
-    /** Checks [reply] against [evidence]; `[M]` is allowed only when [allowModel]. */
+    /** Checks [reply] against [evidence]; `[AI]` is allowed only when [allowModel]. */
     fun check(
         reply: String,
         evidence: EvidenceSet,
         allowModel: Boolean,
     ): InsightReply = check(reply, evidence.ids.toSet(), allowModel)
 
-    /** Checks [reply] against the evidence [ids]; `[M]` is allowed only when [allowModel]. */
+    /** Checks [reply] against the evidence [ids]; `[AI]` is allowed only when [allowModel]. */
     fun check(
         reply: String,
         ids: Set<String>,
@@ -220,7 +230,7 @@ object GroundingCheck {
         ids: Set<String>,
         allowModel: Boolean,
     ): CheckedSentence {
-        val cites = CITATION.findAll(sentence).map { it.groupValues[1] }.toList()
+        val cites = CITATION.findAll(sentence).map { citationId(it.groupValues[1]) }.toList()
         val bad = cites.any { if (it == MODEL_ID) !allowModel else it !in ids }
         val status =
             when {
@@ -373,7 +383,7 @@ object GroundingCheck {
     private val ABBREVIATIONS: Set<String> =
         setOf("Dr", "Mr", "Mrs", "Ms", "St", "feat", "Feat", "ft", "Ft", "vs", "Vs", "e.g", "E.g", "i.e", "I.e")
 
-    /** Where the citation (`[W1]`, `[MB12]`, `[M]`) that ends just before [end] starts, or null. */
+    /** Where the citation (`[W1]`, `[MB12]`, `[AI]`) that ends just before [end] starts, or null. */
     private fun citationBefore(
         t: String,
         end: Int,

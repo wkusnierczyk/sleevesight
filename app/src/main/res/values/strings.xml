@@ -152,6 +152,7 @@
     <string name="settings_section_history">History</string>
     <string name="settings_keep_history">Keep history for</string>
     <string name="settings_keep_history_forever">Forever</string>
+    <string name="settings_keep_history_summary">How long Sleevesight keeps, on this phone, the list of tracks you played, the track changes recorded to learn your skips, and the insights and genre explanations written for them, counted from when each was played or written. Anything older is no longer shown and is deleted. A shorter time applies at once.</string>
     <string name="settings_session_gap">New session idle trigger</string>
     <string name="settings_session_gap_summary">A track that starts after a longer break begins a new listening session, counted from when the last track was heard. Earlier sessions stay in your history, for as long as “Keep history for” is set. Within a session, each artist fact is told once, unless “Don’t repeat artist facts” is off. A change applies from the next track that starts.</string>
     <string name="settings_clear_history">Clear history</string>

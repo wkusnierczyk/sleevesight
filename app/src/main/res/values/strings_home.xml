@@ -67,6 +67,11 @@
     <string name="home_what_leaves_open">Show what leaves the device</string>
     <!-- The header's cogwheel: what a screen reader says, and its tooltip. -->
     <string name="home_settings">Settings</string>
+    <!-- The header's theme button (#636), named for the theme a tap gives: what a screen reader
+         says, and its tooltip. -->
+    <string name="home_theme_to_dark">Switch to dark theme</string>
+    <string name="home_theme_to_system">Switch to the system theme</string>
+    <string name="home_theme_to_light">Switch to light theme</string>
     <!-- The header's name (the logo, once it lands), as a screen reader says it; %1$s is the app's name. -->
     <string name="home_scroll_to_top">%1$s, scroll to top</string>
 

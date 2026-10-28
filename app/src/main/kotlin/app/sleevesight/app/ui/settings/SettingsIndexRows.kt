@@ -148,7 +148,7 @@ internal fun historyRows(settings: Settings): List<IndexedRow> {
     return listOf(
         choiceRow(
             stringResource(R.string.settings_keep_history),
-            null,
+            stringResource(R.string.settings_keep_history_summary),
             lifetimeLabel(settings.historyLifetime),
             lifetimes.map { it.second },
         ),
@@ -180,6 +180,10 @@ internal fun playerRows(): List<IndexedRow> =
 internal fun appearanceRows(): List<IndexedRow> =
     listOf(
         choices(R.string.settings_theme, R.string.settings_theme_summary, themes().map { it.second }),
+        indexRow(
+            stringResource(R.string.settings_theme_button),
+            stringResource(R.string.settings_theme_button_summary),
+        ),
         choices(R.string.settings_font, R.string.settings_font_summary, fonts().map { it.second }),
         choices(R.string.settings_layout, R.string.settings_layout_summary, layouts().map { it.second }),
         indexRow(

@@ -23,6 +23,7 @@ import app.sleevesight.app.report.AppBuild
 import app.sleevesight.app.report.TesterReports
 import app.sleevesight.app.ui.DiagnosticsScreen
 import app.sleevesight.app.ui.SleevesightNavHost
+import app.sleevesight.app.ui.ThemeButtonFeed
 import app.sleevesight.app.ui.home.HomeFeed
 import app.sleevesight.app.ui.home.NowPlayingHome
 import app.sleevesight.app.ui.home.NowPlayingPage
@@ -101,6 +102,12 @@ class MainActivity : ComponentActivity() {
         )
     }
 
+    // What Home's theme button reads (#636): *Theme button* and *Theme*, and the tap's save, in the
+    // process's scope, which outlives the activity the new theme restarts from Android 12.
+    private val themeButton: ThemeButtonFeed by lazy {
+        ThemeButtonFeed(graph.latestSettings, graph.settings.themeCycler(graph.settingsSaves))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // The window light or dark as *Theme* (#444) last read, from its first frame: the starting
         // window before this follows the system below Android 12, where the theme cannot reach it.
@@ -154,6 +161,7 @@ class MainActivity : ComponentActivity() {
                                     NowPlayingPage(homeFeed, page, links.openSettings, links.openPage, links.back)
                                 },
                                 testerReport = testerReport,
+                                themeButton = themeButton,
                             )
                         }
                         intro?.let { LogoIntroOverlay(it) }

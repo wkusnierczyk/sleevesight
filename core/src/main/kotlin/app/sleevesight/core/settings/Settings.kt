@@ -85,8 +85,9 @@ import kotlin.time.Duration.Companion.seconds
  * @property cacheSizeLimit the most the caches may hold, in bytes of keys and values; past it the
  *   least recently used entries are evicted. See [DEFAULT_CACHE_SIZE_LIMIT].
  * @property historyLifetime *Keep history for*: how long the session history and the track changes
- *   are kept, counted back from today to when a track began to play and a change began; null keeps
- *   them for ever. See [DEFAULT_HISTORY_LIFETIME].
+ *   are kept, counted back from today to when a track began to play and a change began, and the
+ *   insights and genre reasons written, counted back to when each was written (#523, #643); null
+ *   keeps them for ever. See [DEFAULT_HISTORY_LIFETIME].
  * @property sessionGap *New session idle trigger*: how long a break in listening, from
  *   when the last track was last heard, ends a listening session. See [DEFAULT_SESSION_GAP].
  * @property keepSourcesUnfolded *Keep Sources as you left them* (#269): whether the *Sources* list
@@ -107,7 +108,7 @@ import kotlin.time.Duration.Companion.seconds
  * @property showGroundingDetails *Show grounding details* (#437), a developer setting: whether the
  *   insight card shows the grounding check's full counts ("2 of 3 sentences grounded · 1 uncited")
  *   rather than only a note when a sentence is not backed by the sources, and whether *Sources*
- *   shows every source's chip with its status, the model's own knowledge's `M` among them, and the
+ *   shows every source's chip with its status, the model's own knowledge's `AI` among them, and the
  *   matches rejected (#440), rather than only the sources that gave lines, by name. Off: the
  *   citations already show how each sentence is grounded, and most statuses are diagnostics.
  * @property developerMode *Developer mode* (#444): whether the settings show their *Developer*
@@ -129,6 +130,9 @@ import kotlin.time.Duration.Companion.seconds
  *   default, and back on with developer mode off, as every developer option goes back to its
  *   default.
  * @property theme *Theme* (#444): light or dark as the system is, or always one of them.
+ * @property themeButton *Theme button* (#636): whether Home's header shows, beside the cogwheel, a
+ *   button that moves [theme] one step on ([ThemeChoice.next]) with each tap. On by default: one
+ *   tap, where *Theme* in the settings takes several.
  * @property font *Font* (#377): the app's own font, Roboto, bundled with it, or the phone's system
  *   font. See [FontChoice].
  * @property introAtStart *Logo intro at start* (#383): whether the app, opened from the launcher
@@ -172,6 +176,7 @@ data class Settings(
     val linkStyle: LinkStyle = LinkStyle.UNDERLINE,
     val markDeveloperItems: Boolean = true,
     val theme: ThemeChoice = ThemeChoice.SYSTEM,
+    val themeButton: Boolean = true,
     val font: FontChoice = FontChoice.APP_FONT,
     val introAtStart: Boolean = true,
     val homeGuide: Boolean = true,
@@ -441,11 +446,12 @@ data class Settings(
          * be measured at the Phase 0.5 gate, #46): some 20 KB a track with its insights, so 50 MB
          * holds about 2,500 tracks, and more when only evidence is cached. Retrieval entries expire
          * within 30 days (D9), so evidence alone reaches the limit only for someone playing over 80
-         * new tracks a day. Written cards never expire, though: they accumulate until the limit,
-         * which every listener reaches in time (at about 2 KB a card, after some 25,000 cards), and
-         * from then on the least recently used go first, the cards of tracks not played for longest.
-         * 50 MB is small beside the players' own caches, and an evicted card costs a paid call to
-         * write again, which is why it is not lower.
+         * new tracks a day. Written cards are kept for [historyLifetime] (#643), 90 days by
+         * default, so at about 2 KB a card the limit is reached only past some 25,000 cards in that
+         * time, or with *Keep history for* at *Forever*, where they accumulate until it; from then
+         * on the least recently used go first, the cards of tracks not played for longest. 50 MB is
+         * small beside the players' own caches, and an evicted card costs a paid call to write
+         * again, which is why it is not lower.
          */
         const val DEFAULT_CACHE_SIZE_LIMIT: Long = CACHE_MEGABYTES * MEGABYTE
 
@@ -544,6 +550,19 @@ enum class ThemeChoice {
     SYSTEM,
     LIGHT,
     DARK,
+    ;
+
+    /**
+     * The theme Home's theme button (#636) gives from this one: *Light*, then *Dark*, then
+     * *System*, then *Light* again.
+     */
+    val next: ThemeChoice
+        get() =
+            when (this) {
+                LIGHT -> DARK
+                DARK -> SYSTEM
+                SYSTEM -> LIGHT
+            }
 }
 
 /**
