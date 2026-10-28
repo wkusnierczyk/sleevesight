@@ -245,8 +245,8 @@ class FontSettingsTest {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity -> activity.setContent { CreditsScreen(onClose = {}) } }
             compose.onNodeWithText(text(R.string.credits_roboto)).performScrollTo().assertIsDisplayed()
-            // Roboto's, and the home guide's hand-written font's (#627).
-            compose.onNodeWithText(text(R.string.credits_caveat)).performScrollTo().assertIsDisplayed()
+            // Roboto's, and the home guide's hand-drawn font's (#627, #672).
+            compose.onNodeWithText(text(R.string.credits_shantell_sans)).performScrollTo().assertIsDisplayed()
             assertEquals(2, compose.onAllNodesWithText("SIL Open Font License 1.1").fetchSemanticsNodes().size)
         }
     }
@@ -255,10 +255,10 @@ class FontSettingsTest {
     fun theHandFontsLicenceShipsWithTheApp() {
         val licence =
             app.assets
-                .open("licences/caveat-ofl.txt")
+                .open("licences/shantell-sans-ofl.txt")
                 .bufferedReader()
                 .use { it.readText() }
-        assertTrue(licence.startsWith("Copyright 2014 The Caveat Project Authors"))
+        assertTrue(licence.startsWith("Copyright 2022 The Shantell Sans Project Authors"))
         assertTrue(licence.contains("SIL OPEN FONT LICENSE Version 1.1"))
         assertTrue(licence.contains("PERMISSION & CONDITIONS"))
     }

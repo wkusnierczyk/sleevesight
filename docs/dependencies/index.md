@@ -149,7 +149,7 @@ The AI services that write the insights (Anthropic, OpenAI or Google, on the use
 | Asset | What it is | Licence |
 |---|---|---|
 | Roboto | The app's font, from [googlefonts/roboto-3-classic](https://github.com/googlefonts/roboto-3-classic), bundled with the app; *Font* in Settings switches between *App font (Roboto)* and *System font* | [SIL Open Font License 1.1](https://openfontlicense.org), copyright 2011 The Roboto Project Authors |
-| Caveat | The hand-written font of the notes in the home screen's guide, from [googlefonts/caveat](https://github.com/googlefonts/caveat), bundled with the app | [SIL Open Font License 1.1](https://openfontlicense.org), copyright 2014 The Caveat Project Authors |
+| Shantell Sans | The hand-drawn font of the notes in the home screen's guide, from [arrowtype/shantell-sans](https://github.com/arrowtype/shantell-sans), bundled with the app | [SIL Open Font License 1.1](https://openfontlicense.org), copyright 2022 The Shantell Sans Project Authors |
 | Material Symbols | The icons in the app, such as the cogwheel, by Google | [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0) |
 
 The Open Font License lets a font be bundled with any program, a GPL one included, as long as each copy carries its copyright notice and licence. Apache-2.0 asks that each copy carry the licence. So the licences' texts ship inside the app, and the credits screen names each font with its copyright, and the icon set, each with its licence.

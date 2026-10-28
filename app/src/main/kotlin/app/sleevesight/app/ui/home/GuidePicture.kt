@@ -77,17 +77,20 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 
 /**
- * Caveat (#627), the notes' hand-written font, bundled in `res/font`: Caveat Regular, the static
- * build in `googlefonts/caveat` (`fonts/ttf/Caveat-Regular.ttf`, at commit `59745e8`, the one
- * `google/fonts` takes Caveat from), under the SIL Open Font License 1.1
- * (`assets/licences/caveat-ofl.txt`, and the credits). The smallest file of it: the repository has
- * no static Medium, and the variable font is larger by a third.
+ * Shantell Sans (#672), the notes' hand-drawn font, in place of Caveat (#627), whose small, narrow
+ * letters were hard to read on a phone; bundled in `res/font`: Shantell Sans Normal Regular, the
+ * static build in `arrowtype/shantell-sans` (`fonts/Shantell Sans/Desktop/Static/TTF/
+ * Shantell_Sans-Normal-Regular.ttf`, at its release 1.011, commit `68f5eca`, the one `google/fonts`
+ * takes Shantell Sans from), under the SIL Open Font License 1.1
+ * (`assets/licences/shantell-sans-ofl.txt`, and the credits). *Normal*, without the bounce and the
+ * informal letters, is the plainest to read and the smallest file; the variable font is six times
+ * larger.
  */
-internal val Caveat: FontFamily = FontFamily(Font(R.font.caveat_regular))
+internal val ShantellSans: FontFamily = FontFamily(Font(R.font.shantell_sans_regular))
 
 /**
  * The guide's picture (#627): Home while a track plays, drawn small from Home's own parts with a
- * fixed example track ([MiniHome]), and on its right a note in a hand-written font ([Caveat]) for
+ * fixed example track ([MiniHome]), and on its right a note in a hand-drawn font ([ShantellSans]) for
  * each [GuidePart], with a drawn arrow to it ([guideLayout]). Not interactive; a screen reader reads
  * it as one image, *Home while a track plays:* and then the notes, in order, each after the name of
  * the part it points at (*Settings: tap to configure*), since the picture's parts are not read.
@@ -106,7 +109,7 @@ internal fun GuidePicture(modifier: Modifier = Modifier) {
     val arrows = remember { mutableStateOf<List<GuideArrow>>(emptyList()) }
     val pen = MaterialTheme.colorScheme.primary
     val density = LocalDensity.current
-    val hand = TextStyle(fontFamily = Caveat, fontSize = NOTE_SIZE, lineHeight = 1.05.em, color = pen)
+    val hand = TextStyle(fontFamily = ShantellSans, fontSize = NOTE_SIZE, lineHeight = 1.05.em, color = pen)
     val report: (GuidePart, LayoutCoordinates) -> Unit = { part, coordinates ->
         val box = picture.coordinates
         if (box != null && box.isAttached && coordinates.isAttached) {
