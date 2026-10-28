@@ -239,9 +239,11 @@ class FontSettingsTest {
         val data = FlakyDataStore(MemoryStore()).apply { failures.set(Int.MAX_VALUE) }
         app.makeGraph = { AppGraph(it, settingsData = data) }
         assertEquals(FontChoice.SYSTEM_FONT, app.graph.font.value)
+        // Several collectors read at the start; the retries come only as the clock moves on.
+        val firstReads = data.reads.get()
         val looper = shadowOf(Looper.getMainLooper())
         looper.idleFor(Duration.ofSeconds(1))
-        assertTrue("the read retried", data.reads.get() >= 2)
+        assertTrue("the read retried", data.reads.get() > firstReads)
         assertEquals(FontChoice.SYSTEM_FONT, app.graph.font.value)
 
         data.failures.set(0)

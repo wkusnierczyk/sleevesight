@@ -18,15 +18,20 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.InputModeManager
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -196,7 +201,13 @@ class GenrePanelFocusScreenTest {
         show {
             tap(FOLK)
             compose.onNodeWithTag(GENRE_PANEL_CLOSE_TAG).assertIsFocused()
-            tap(BALLAD)
+            // From *Close* to the other chip, and Enter on it, as a keyboard does: the focus is
+            // on the chip, not still on *Close*, when the panel switches.
+            compose.onNodeWithTag(BALLAD).requestFocus()
+            compose.onNodeWithTag(BALLAD).assertIsFocused()
+            compose.onNodeWithTag(BALLAD).performKeyInput { pressKey(Key.Enter) }
+            compose.waitForIdle()
+            compose.onNodeWithTag(GENRE_PANEL_HEADING_TAG).assertTextEquals("Ballad")
             compose.onNodeWithTag(GENRE_PANEL_CLOSE_TAG).assertIsFocused()
             tap(GENRE_PANEL_CLOSE_TAG)
             compose.onNodeWithTag(BALLAD).assertIsFocused()
@@ -255,6 +266,18 @@ class GenrePanelFocusScreenTest {
             tap(BALLAD)
             compose.onNodeWithTag(GENRE_PANEL_CLOSE_TAG).assertIsFocused()
             nextTrack("rock", "pop")
+            compose.waitForIdle()
+            assertEquals(0, count(GENRE_PANEL_TAG))
+            compose.onNodeWithTag(GENRE_PREFIX + "track:rock").assertIsFocused()
+        }
+
+    @Test
+    fun labelsThatNoLongerHaveTheOpenGenreHandTheFocusFromCloseToTheFirstChip() =
+        show {
+            tap(BALLAD)
+            compose.onNodeWithTag(GENRE_PANEL_CLOSE_TAG).assertIsFocused()
+            // The same track, its labels replaced (a source landing later) without *Ballad*.
+            current.value = current.value.copy(genres = genres("rock", "pop"))
             compose.waitForIdle()
             assertEquals(0, count(GENRE_PANEL_TAG))
             compose.onNodeWithTag(GENRE_PREFIX + "track:rock").assertIsFocused()
