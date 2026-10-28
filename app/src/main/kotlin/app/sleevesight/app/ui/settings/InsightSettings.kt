@@ -10,7 +10,7 @@ import app.sleevesight.core.settings.WriteAutomatically
 import kotlin.time.Duration.Companion.seconds
 
 // *Insights* (#444): *Show insights*, *Reactive* with *Crossfade*, *Proactive*, *Saver*, *Look up in
-// the background* and *Don't repeat artist facts* (#407, #546).
+// the background* and *Don't repeat artist facts* (#407, #546), then reading aloud (#325).
 
 private val MAX_CROSSFADE_SECONDS =
     Crossfade.Fixed.MAX.inWholeSeconds
@@ -28,7 +28,8 @@ private val MAX_CROSSFADE_SECONDS =
  * described in its dialog (#546); a mode chosen there, the one chosen already included, goes to
  * [chooseMode], which saves it and tells the pipeline (#625: an automatic one starts automatic
  * writing from the next track), or, without one, is saved alone. The rows about writing cannot be
- * changed while *Show insights* is off; *Proactive* can, as it writes nothing.
+ * changed while *Show insights* is off; *Proactive* can, as it writes nothing, and so can the
+ * read-aloud rows at the end ([ReadAloudRows], #325).
  */
 @Composable
 internal fun InsightsSection(
@@ -88,6 +89,8 @@ internal fun InsightsSection(
     ) { on -> update { it.copy(lookUpInBackground = on) } }
 
     ArtistFactsRow(settings, update)
+
+    ReadAloudRows(settings, update)
 }
 
 /**

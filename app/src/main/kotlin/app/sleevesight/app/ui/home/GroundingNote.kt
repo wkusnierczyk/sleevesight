@@ -62,7 +62,8 @@ private fun unbacked(grounded: GroundedText): Int =
         }
     }
 
-private val UNBACKED = setOf(SentenceStatus.UNCITED, SentenceStatus.UNKNOWN, SentenceStatus.MODEL)
+/** The statuses of a sentence the sources do not back: the note counts them, and reading aloud says so (#325). */
+internal val UNBACKED = setOf(SentenceStatus.UNCITED, SentenceStatus.UNKNOWN, SentenceStatus.MODEL)
 
 /** The grounding check's counts in full, as the simulator gives them (*Show grounding details*). */
 @Composable

@@ -172,4 +172,16 @@
     <string name="purge_keys_done_none">The phone’s key that sealed your keys has been deleted.</string>
     <string name="purge_keys_more">More about safe delete</string>
     <string name="purge_keys_more_explained">Purge keys removes every saved key from this phone’s storage, and deletes the key in the phone’s Android Keystore that encrypted them. Any copy left in the storage can then never be decrypted again (crypto-erasure). Sleevesight never sent your keys anywhere but to their own services, and never logged them. Purging keys from Sleevesight does not revoke them. You can still use your API keys elsewhere if you keep another copy.</string>
+    <!-- Read aloud (#325), at the end of Insights: what reads, then its three settings. -->
+    <string name="settings_read_aloud_hint">Read aloud, the speaker button under each insight, has your phone’s text-to-speech engine read the insight to you. The engine is the one chosen in Android’s settings; some, such as Google’s network voices, send the text to their server to be spoken.</string>
+    <string name="settings_read_aloud_music">While reading aloud</string>
+    <string name="settings_read_aloud_music_summary">What happens to the music playing while an insight is read aloud.</string>
+    <string name="settings_read_aloud_lower">Lower the music</string>
+    <string name="settings_read_aloud_pause">Pause the music</string>
+    <string name="settings_read_aloud_lower_detail">The music plays on, quieter, while the insight is read.</string>
+    <string name="settings_read_aloud_pause_detail">The music pauses while the insight is read, and plays on after it. A player that does not resume by itself stays paused.</string>
+    <string name="settings_read_track_line">Read the track line first</string>
+    <string name="settings_read_track_line_summary">Reading an insight aloud starts with the track’s title and artists.</string>
+    <string name="settings_read_new_insights">Read new insights aloud</string>
+    <string name="settings_read_new_insights_summary">Reads each new insight aloud as soon as it is written, while Sleevesight is on screen. Not while TalkBack or another screen reader is on, since it reads the screen itself.</string>
 </resources>

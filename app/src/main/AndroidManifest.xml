@@ -69,6 +69,12 @@
         <intent>
             <action android:name="android.intent.action.MEDIA_BUTTON" />
         </intent>
+        <!-- The phone's text-to-speech engines, which Read aloud (#325) speaks an insight with:
+             from Android 11 on, `TextToSpeech` cannot bind to an engine this app cannot see. No
+             permission. -->
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
     </queries>
 
     <!-- No backup and no transfer to another phone: either would take the session history and
