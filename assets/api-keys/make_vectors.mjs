@@ -1,16 +1,21 @@
 // Writes the vectors the app's tests read (`ApiKeysPageTest`), made by the page's own code, so the
 // two sides are checked against each other: setup codes and their QR codes, which `KeySetup` and
 // ZXing must read back, and the shape of keys, on which `KeyShape` must agree. The keys file's names
-// and what the page reads from a file are checked against the CLI's `Keys` (`KeysTest`). Node 22 or
-// later:
+// and what the page reads from a file are checked against the CLI's `Keys` (`KeysTest`). The sealed
+// codes (#590) from fixed words, salts and nonces, which `SealedSetup` must make and open alike;
+// words as typed, which `KeyWords` must complete alike; and the word list's SHA-256, which must be
+// that of the app's copy. Node 22 or later:
 //
 //   node assets/api-keys/make_vectors.mjs           writes the file
 //   node assets/api-keys/make_vectors.mjs --check   fails if the file differs (CI)
 
+import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { encode } from '../keyboard/qr.js';
 import { SERVICES, check, readFile, write } from './keys.js';
+import { ITERATIONS, WORDS, readWords, seal } from './seal.js';
+import { WORDLIST } from './words.js';
 
 const OUT = fileURLToPath(new URL('../../app/src/test/resources/api-keys-vectors.properties', import.meta.url));
 
@@ -101,6 +106,55 @@ for (const [i, text] of files.entries()) {
   lines.push(`file.${i}.text=${hex(text)}`);
   lines.push(`file.${i}.keys=${[...keys].map(([name, value]) => `${name}:${hex(value)}`).join(',')}`);
 }
+
+// Sealed codes: each from its words, salt and nonce, the rounds the page uses, and a setup code from
+// the ones above, the largest among them (version 36 or so), so its QR code is read back too.
+const bytesOf = (length, start, step) => Uint8Array.from({ length }, (_, i) => (start + i * step) & 0xff);
+const sealings = [
+  { words: ['aardvark', 'abandoned', 'abbreviate', 'abdomen', 'abhorrence'], setup: write(setups[0]) },
+  { words: WORDS.slice(-5), setup: write(setups[2]) },
+  { words: [WORDS[100], 'yo-yo', WORDS[700], WORDS[3], WORDS[1295]], setup: write(setups[3]) },
+];
+lines.push(`words.count=${WORDS.length}`);
+lines.push(`words.sha256=${createHash('sha256').update(WORDLIST, 'utf8').digest('hex')}`);
+lines.push(`sealed=${sealings.length}`);
+for (const [i, { words, setup }] of sealings.entries()) {
+  const salt = bytesOf(16, 0x10 * (i + 1), 7);
+  const nonce = bytesOf(12, 0xc0 + i, 13);
+  const code = await seal(setup, words, salt, nonce, ITERATIONS);
+  lines.push(`sealed.${i}.words=${words.join(' ')}`);
+  lines.push(`sealed.${i}.salt=${Buffer.from(salt).toString('hex')}`);
+  lines.push(`sealed.${i}.nonce=${Buffer.from(nonce).toString('hex')}`);
+  lines.push(`sealed.${i}.iterations=${ITERATIONS}`);
+  lines.push(`sealed.${i}.text=${hex(setup)}`);
+  lines.push(`sealed.${i}.code=${code}`);
+  if (i === sealings.length - 1) {
+    const modules = encode(code);
+    lines.push(`sealed.${i}.version=${(modules.length - 17) / 4}`);
+    lines.push(`sealed.${i}.qr=${modules.map((row) => row.map((d) => (d ? '1' : '0')).join('')).join(',')}`);
+  }
+}
+
+// Words as typed on the page: three letters or more of each, any case, spaces, line breaks or
+// commas between; a word typed wrong after its three letters, too short, or not in the list. ASCII
+// only: the page and the CLI each read what is typed on their own side, and only the words they
+// complete reach the key.
+const typed = [
+  'aar aba abb abd abh',
+  'AARDVARK, Abandoned,abbreviate\n  abdomen\tabhorrence ',
+  'aardvarx aba',
+  'aa ab',
+  'yo- yo-yo yoy zuc zucchinis',
+  'xyz qqq',
+  'acid acidic acI',
+  '',
+];
+lines.push(`typed=${typed.length}`);
+for (const [i, text] of typed.entries()) {
+  lines.push(`typed.${i}.text=${hex(text)}`);
+  lines.push(`typed.${i}.words=${readWords(text).map((w) => w ?? '-').join(',')}`);
+}
+
 const content = `${lines.join('\n')}\n`;
 
 if (process.argv.includes('--check')) {

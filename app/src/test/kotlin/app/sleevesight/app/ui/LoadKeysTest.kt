@@ -273,9 +273,9 @@ class LoadKeysTest {
 
     @Test
     fun aCodeOfALaterVersionAsksForAnUpdate() =
-        show(scanner = scanning("sleevesight-keys:v2\nlastfm=$lastFmKey")) {
+        show(scanner = scanning("sleevesight-keys:v3\nlastfm=$lastFmKey")) {
             waitForText(text(R.string.setup_unsupported_title))
-            compose.onNodeWithText(app.getString(R.string.setup_unsupported, "v2")).assertIsDisplayed()
+            compose.onNodeWithText(app.getString(R.string.setup_unsupported, "v3")).assertIsDisplayed()
             compose.onNodeWithText(text(R.string.setup_scan_again)).assertIsDisplayed()
             assertTrue(!shown(text(R.string.settings_save)))
             assertNull(stored(SecretId.LASTFM))

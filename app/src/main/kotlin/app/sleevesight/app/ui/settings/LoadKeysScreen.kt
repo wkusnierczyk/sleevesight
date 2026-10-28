@@ -151,7 +151,7 @@ private fun ColumnScope.FoundStep(
     ) {
         val style = MaterialTheme.typography.bodyMedium
         when (read) {
-            SetupRead.NotASetup -> Text(stringResource(R.string.setup_not_a_setup), style = style)
+            SetupRead.NotASetup, SetupRead.Sealed -> Text(stringResource(R.string.setup_not_a_setup), style = style)
             is SetupRead.Unsupported -> Text(stringResource(R.string.setup_unsupported, read.version), style = style)
             is SetupRead.Setup -> SetupContents(read, keys, before, unsaved)
         }

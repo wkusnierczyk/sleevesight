@@ -291,7 +291,7 @@ class KeyGuidesTest {
 
     @Test
     fun aSetupCodeOfALaterVersionAsksForAnUpdate() =
-        scannedSays("sleevesight-keys:v2\nlastfm=$lastFmKey", R.string.settings_key_scan_setup_newer)
+        scannedSays("sleevesight-keys:v3\nlastfm=$lastFmKey", R.string.settings_key_scan_setup_newer)
 
     @Test
     fun aSetupCodeOfNoKeysSaysSo() = scannedSays("sleevesight-keys:v1\n", R.string.settings_key_scan_setup_empty)
