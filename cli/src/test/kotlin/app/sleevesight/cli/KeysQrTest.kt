@@ -296,4 +296,12 @@ class KeysQrTest {
         assertEquals("", run.out)
         assertTrue("--unsealed" in run.err)
     }
+
+    @Test
+    fun `no words from the terminal draws nothing, and says so`() {
+        val run = run("--lastfm-from", "-", stdin = lastFm) { null }
+        assertEquals(Cli.EXIT_USAGE, run.status)
+        assertEquals("", run.out)
+        assertTrue("No words given" in run.err)
+    }
 }

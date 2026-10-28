@@ -135,7 +135,7 @@ class KeysQr(
             terminal != null -> terminal.invoke(PROMPT)
             stdinTaken -> null.also { err.println(NO_TERMINAL) }
             else -> input.bufferedReader().readLine()
-        }
+        } ?: null.also { if (terminal != null || !stdinTaken) err.println(NO_WORDS) }
 
     // What is wrong with the words [read], or null when they are the five.
     private fun problemOf(read: List<String?>): String? {
@@ -192,7 +192,9 @@ class KeysQr(
             } else {
                 val file = File(path)
                 // The path is not repeated either: it may be the key itself, given in its place.
-                require(file.isFile) { "--${name.code}-from: no such file" }
+                // Not only a regular file: a shell's `<(pbpaste)` is a pipe, which leaves standard
+                // input free for the words.
+                require(file.exists() && !file.isDirectory) { "--${name.code}-from: no such file" }
                 file.readText()
             }
         return text
@@ -209,9 +211,11 @@ class KeysQr(
         private const val TRIES = 3
         private const val PROMPT =
             "The five words Load keys shows on the phone, in order (the first three letters of each are enough): "
+        private const val NO_WORDS = "No words given: nothing drawn."
         private const val NO_TERMINAL =
             "The words are read from the terminal, or from standard input, which a key is read from here: " +
-                "run it in a terminal, or give --unsealed."
+                "run it in a terminal, give the key as a file (such as --anthropic-from <(pbpaste)), " +
+                "or give --unsealed."
 
         /** What an option's name looks like, and nothing more: anything else may hold a key. */
         private val OPTION = Regex("--[a-z-]{1,30}")
