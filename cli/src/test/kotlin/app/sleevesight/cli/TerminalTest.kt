@@ -3,39 +3,37 @@ package app.sleevesight.cli
 import app.sleevesight.cli.Terminal.WordsSource
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
-/** Where `keys-qr` reads the words from (#590): never where they would show as typed. */
+/** Where `keys-qr` reads the words from (#590): Java's console, a terminal, or a file named for them. */
 class TerminalTest {
-    private val reader: (String) -> String? = { null }
-
-    private fun source(
-        console: Boolean = false,
-        tty: Boolean = false,
-        stdinIsTerminal: Boolean = false,
-        stdinTaken: Boolean = false,
-    ) = Terminal(reader.takeIf { console }, reader.takeIf { tty }, stdinIsTerminal).wordsSource(stdinTaken)
+    private val console = Terminal(console = { null })
+    private val none = Terminal()
 
     @Test
-    fun `Java's console, a terminal, comes first`() {
-        assertEquals(WordsSource.CONSOLE, source(console = true, tty = true, stdinIsTerminal = true))
-        assertEquals(WordsSource.CONSOLE, source(console = true, stdinTaken = true))
+    fun `Java's console, a terminal, is read`() {
+        assertEquals(WordsSource.CONSOLE, console.wordsSource(wordsFrom = false))
     }
 
     @Test
-    fun `standard input a terminal, with standard output redirected, is read through the controlling terminal`() {
-        assertEquals(WordsSource.TTY, source(tty = true, stdinIsTerminal = true))
-        assertEquals(WordsSource.TTY, source(tty = true, stdinTaken = true))
+    fun `a file named for the words is read, console or not`() {
+        assertEquals(WordsSource.FILE, none.wordsSource(wordsFrom = true))
+        assertEquals(WordsSource.FILE, console.wordsSource(wordsFrom = true))
     }
 
     @Test
-    fun `standard input a terminal whose echo cannot be turned off is refused`() {
-        assertEquals(WordsSource.NO_MASKED_TERMINAL, source(stdinIsTerminal = true))
+    fun `anything else is refused`() {
+        assertEquals(WordsSource.REFUSED, none.wordsSource(wordsFrom = false))
     }
 
     @Test
-    fun `a pipe on standard input is read as it is, unless a key comes from it`() {
-        assertEquals(WordsSource.STDIN, source())
-        assertEquals(WordsSource.STDIN, source(tty = true))
-        assertEquals(WordsSource.STDIN_TAKEN, source(stdinTaken = true))
+    fun `a console is used only when it is a terminal`() {
+        // Java 21 and before: no console unless both streams are a terminal; no `isTerminal`.
+        assertFalse(Terminal.usable(present = false, isTerminal = null))
+        assertTrue(Terminal.usable(present = true, isTerminal = null))
+        // Java 22 and later: a console whatever the streams, which says whether it is a terminal.
+        assertFalse(Terminal.usable(present = true, isTerminal = false))
+        assertTrue(Terminal.usable(present = true, isTerminal = true))
     }
 }

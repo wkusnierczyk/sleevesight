@@ -5,10 +5,8 @@ import app.sleevesight.core.keys.KeyName
 import app.sleevesight.core.keys.KeyProblem
 import app.sleevesight.core.keys.KeySetup
 import app.sleevesight.core.keys.KeyShape
-import app.sleevesight.core.keys.KeyWords
 import app.sleevesight.core.keys.SealedSetup
 import app.sleevesight.core.platform.JvmKeyCrypto
-import app.sleevesight.core.platform.JvmResourceReader
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.common.BitMatrix
@@ -21,12 +19,12 @@ import java.io.PrintStream
 
 /**
  * `keys-qr` (#268): draws a setup code ([KeySetup]) in the terminal, for the app's *Load keys*,
- * sealed (#590, [SealedSetup]) with the five words *Load keys* shows, which are read without echo
- * from the [terminal] (Java's console, or the controlling terminal with its echo off), never from
- * the command line, where the shell's history would keep them; from the first line of standard
- * input only when it is not a terminal (a pipe or a file) and no key is read from it. Where standard
- * input is a terminal whose echo cannot be turned off, nothing is read. With `--unsealed`, the clear
- * code, which is the keys themselves.
+ * sealed (#590, [SealedSetup]) with the five words *Load keys* shows, read from exactly two places:
+ * Java's console, with `readPassword`, which masks them, and only when it is a terminal ([terminal]);
+ * or the file `--words-from` names, `-` for standard input, where nothing is typed. Never from the
+ * command line, where the shell's history would keep them. Otherwise nothing is read, and it says
+ * so before reading anything: piping the output (`| cat`) needs `--words-from`. With `--unsealed`,
+ * the clear code, which is the keys themselves.
  * The keys come from the developer's environment or keys file ([Keys]); with `--keys`, from that
  * file alone, not the environment, so a tester's file cannot pick up the developer's own keys; with
  * `--<name>-from`, only from the files given, `-` for standard input, so a tester's key is drawn without being saved
@@ -43,11 +41,19 @@ class KeysQr(
 ) {
     private var unsealed = false
     private var stdinTaken = false
+    private var wordsFrom: String? = null
+    private val shell by lazy(terminal)
+
+    /** The words cannot be read without showing them: said, with nothing read. */
+    private class WordsRefused : Exception(REFUSED)
 
     fun run(args: List<String>): Int {
         val keys =
             try {
                 read(args)
+            } catch (e: WordsRefused) {
+                err.println(e.message)
+                null
             } catch (e: IllegalArgumentException) {
                 err.println(e.message)
                 err.println(USAGE)
@@ -83,7 +89,7 @@ class KeysQr(
         return when {
             problem != null -> Cli.EXIT_USAGE
             unsealed -> drawCode(keys, null)
-            else -> readWords()?.let { drawCode(keys, it) } ?: Cli.EXIT_USAGE
+            else -> WordsReader(err, input).read(wordsFrom, shell.console)?.let { drawCode(keys, it) } ?: Cli.EXIT_USAGE
         }
     }
 
@@ -108,109 +114,67 @@ class KeysQr(
         return 0
     }
 
-    // The five words, from a terminal (three tries) or standard input (one), or null, said why.
-    private fun readWords(): List<String>? {
-        val list = KeyWords.load(JvmResourceReader)
-        val shell = terminal()
-        val source = shell.wordsSource(stdinTaken)
-        val tries = if (source == Terminal.WordsSource.STDIN) 1 else TRIES
-        var words: List<String>? = null
-        var asked = 0
-        var answered = true
-        while (words == null && answered && asked < tries) {
-            asked++
-            val read = typed(shell, source)?.let(list::read)
-            val problem = read?.let(::problemOf)
-            when {
-                read == null -> answered = false
-                problem != null -> err.println(problem)
-                else -> words = read.filterNotNull()
-            }
-        }
-        if (words == null && answered) {
-            err.println("Nothing drawn: type the words Load keys shows, or give --unsealed for a clear code.")
-        }
-        return words
-    }
-
-    // A line of words, from [source], or null when there is none, said why.
-    private fun typed(
-        shell: Terminal,
-        source: Terminal.WordsSource,
-    ): String? {
-        val line =
-            when (source) {
-                Terminal.WordsSource.CONSOLE -> shell.console?.invoke(PROMPT)
-                Terminal.WordsSource.TTY -> shell.tty?.invoke(PROMPT)
-                Terminal.WordsSource.STDIN -> input.bufferedReader().readLine()
-                Terminal.WordsSource.NO_MASKED_TERMINAL -> null.also { err.println(NO_MASKED_TERMINAL) }
-                Terminal.WordsSource.STDIN_TAKEN -> null.also { err.println(NO_TERMINAL) }
-            }
-        val refused = source == Terminal.WordsSource.NO_MASKED_TERMINAL || source == Terminal.WordsSource.STDIN_TAKEN
-        if (line == null && !refused) err.println(NO_WORDS)
-        return line
-    }
-
-    // What is wrong with the words [read], or null when they are the five.
-    private fun problemOf(read: List<String?>): String? {
-        val wrong = read.indexOfFirst { it == null }
-        return when {
-            wrong >= 0 -> "Word ${wrong + 1} is not one of the phone's words."
-            read.size != KeyWords.COUNT -> "${read.size} words: the phone shows ${KeyWords.COUNT}."
-            else -> null
-        }
-    }
-
     private fun read(args: List<String>): Map<KeyName, Secret> {
-        val from = mutableMapOf<KeyName, String>()
-        var keysFile: File? = null
-        val rest = args.iterator()
-        while (rest.hasNext()) {
-            val arg = rest.next()
-            if (arg == UNSEALED) {
-                require(!unsealed) { "$arg given twice" }
-                unsealed = true
-                continue
-            }
-            val name = KeyName.entries.firstOrNull { arg == "--${it.code}-from" }
-            // No argument's value is repeated: it may be a key, typed by mistake (`--anthropic-from=sk-…`).
-            require(name != null || arg == "--keys") {
-                // Named only if it looks like an option name and nothing more.
-                if (OPTION.matches(arg)) "Unknown option $arg" else "Unknown option or unexpected argument"
-            }
-            require(if (name == null) keysFile == null else name !in from) { "$arg given twice" }
-            require(rest.hasNext()) { "$arg needs a value" }
-            val value = rest.next()
-            if (name == null) keysFile = File(value) else from[name] = value
-        }
-        require(from.values.count { it == STDIN } <= 1) { "Only one key can be read from standard input" }
-        stdinTaken = STDIN in from.values
-        val given = keysFile
-        require(given == null || given.isFile) { "--keys: no such file" }
-        require(given == null || from.isEmpty()) { "--keys and --<name>-from cannot be combined" }
+        val (from, given) = parse(args)
+        check(from, given)
         if (from.isEmpty()) {
             val loaded = if (given == null) Keys.load(environment) else Keys.load(emptyMap(), given)
             return KeyName.entries.mapNotNull { name -> keyOf(loaded, name)?.let { name to it } }.toMap()
         }
-        return from.mapValues { (name, path) -> Secret(readKey(name, path)) }
+        return from.mapValues { (_, path) -> Secret(readKey(path)) }
+    }
+
+    // The options in [args]: the files of the keys by service, and the keys file; `--unsealed` and
+    // `--words-from` are kept as they are read.
+    private fun parse(args: List<String>): Pair<Map<KeyName, String>, File?> {
+        val from = mutableMapOf<KeyName, String>()
+        var keysFile: File? = null
+        val seen = mutableSetOf<String>()
+        val rest = args.iterator()
+        while (rest.hasNext()) {
+            val arg = rest.next()
+            val name = KeyName.entries.firstOrNull { arg == "--${it.code}-from" }
+            // No argument's value is repeated: it may be a key, typed by mistake (`--anthropic-from=sk-…`).
+            require(name != null || arg == "--keys" || arg == UNSEALED || arg == WORDS_FROM) {
+                // Named only if it looks like an option name and nothing more.
+                if (OPTION.matches(arg)) "Unknown option $arg" else "Unknown option or unexpected argument"
+            }
+            require(seen.add(arg)) { "$arg given twice" }
+            require(arg == UNSEALED || rest.hasNext()) { "$arg needs a value" }
+            when {
+                arg == UNSEALED -> unsealed = true
+                arg == WORDS_FROM -> wordsFrom = rest.next()
+                name == null -> keysFile = File(rest.next())
+                else -> from[name] = rest.next()
+            }
+        }
+        return from to keysFile
+    }
+
+    // The options' rules; then, before any key is read, whether the words can be read at all.
+    private fun check(
+        from: Map<KeyName, String>,
+        given: File?,
+    ) {
+        require(from.values.count { it == STDIN } <= 1) { "Only one key can be read from standard input" }
+        stdinTaken = STDIN in from.values
+        require(given == null || given.isFile) { "--keys: no such file" }
+        require(given == null || from.isEmpty()) { "--keys and --<name>-from cannot be combined" }
+        val words = wordsFrom
+        require(words == null || !unsealed) { "$WORDS_FROM and $UNSEALED cannot be combined" }
+        require(words != STDIN || !stdinTaken) {
+            "Standard input carries a key: give the words in a file ($WORDS_FROM <file>), or type them in a terminal"
+        }
+        // The paths are not repeated: one may be a key or the words, given in its place.
+        require(words == null || readable(words)) { "$WORDS_FROM: no such file" }
+        for ((name, path) in from) require(readable(path)) { "--${name.code}-from: no such file" }
+        if (!unsealed && shell.wordsSource(words != null) == Terminal.WordsSource.REFUSED) throw WordsRefused()
     }
 
     // The key in [path], or on standard input for `-`: its first line that is not blank, trimmed.
-    private fun readKey(
-        name: KeyName,
-        path: String,
-    ): String {
-        val text =
-            if (path == STDIN) {
-                input.bufferedReader().readText()
-            } else {
-                val file = File(path)
-                // The path is not repeated either: it may be the key itself, given in its place.
-                // Not only a regular file: a shell's `<(pbpaste)` is a pipe, which leaves standard
-                // input free for the words.
-                require(file.exists() && !file.isDirectory) { "--${name.code}-from: no such file" }
-                file.readText()
-            }
+    private fun readKey(path: String): String {
+        // The path was checked ([check]).
+        val text = if (path == STDIN) input.bufferedReader().readText() else File(path).readText()
         return text
             .lines()
             .map { it.trim() }
@@ -222,17 +186,9 @@ class KeysQr(
         private const val STDIN = "-"
         private const val QUIET_ZONE = 4
         private const val UNSEALED = "--unsealed"
-        private const val TRIES = 3
-        private const val PROMPT =
-            "The five words Load keys shows on the phone, in order (the first three letters of each are enough): "
-        private const val NO_WORDS = "No words given: nothing drawn."
-        private const val NO_MASKED_TERMINAL =
-            "The words would show as they are typed: this terminal's echo cannot be turned off. Pipe them in " +
-                "(the first line of standard input), or give --unsealed."
-        private const val NO_TERMINAL =
-            "The words are read from the terminal, or from standard input, which a key is read from here: " +
-                "run it in a terminal, give the key as a file (such as --anthropic-from <(pbpaste)), " +
-                "or give --unsealed."
+        private const val WORDS_FROM = "--words-from"
+        private const val REFUSED =
+            "Type the words in a terminal (without redirecting the output), or pass --words-from FILE."
 
         /** What an option's name looks like, and nothing more: anything else may hold a key. */
         private val OPTION = Regex("--[a-z-]{1,30}")
@@ -241,17 +197,19 @@ class KeysQr(
             """
             Usage: sleevesight-cli keys-qr [--keys <file>] [--anthropic-from <file|->] [--openai-from <file|->]
                                            [--google-from <file|->] [--exa-from <file|->] [--lastfm-from <file|->]
-                                           [--unsealed]
+                                           [--words-from <file|->] [--unsealed]
 
               Draws a setup code for the app's Settings, Secrets, Load keys: the keys from the
               environment or ~/.config/sleevesight/keys.env; with --keys, from that file alone; with
               any --<name>-from, only the keys in those files, - for standard input (one at most).
               --keys and --<name>-from cannot be combined.
-              The code is sealed with the five words Load keys shows on the phone, asked for at a
-              prompt on the terminal with its echo off (from a pipe, the first line of standard
-              input), never taken from the command line: the code opens only with those words, and
-              the phone takes it once, within 5 minutes of showing them. With --unsealed, the clear
-              code, which is the keys themselves, for a key's own Scan QR code.
+              The code is sealed with the five words Load keys shows on the phone, typed at a prompt
+              that does not show them (only in a terminal, its output not redirected), or read from
+              --words-from <file|->, - for standard input (not when a key is read from it), never
+              taken from the command line. Piping the output (| cat) needs --words-from. The code
+              opens only with those words, and the phone takes it once, within 5 minutes of showing
+              them. With --unsealed, the clear code, which is the keys themselves, for a key's own
+              Scan QR code.
               Nothing is written to a file or sent anywhere. Do not make the code with an online QR
               generator: it would receive the keys.
 
@@ -338,3 +296,9 @@ class KeysQr(
             }
     }
 }
+
+/**
+ * Whether [path] is standard input (`-`) or a file to read: not only a regular one, since a shell's
+ * `<(pbpaste)` is a pipe.
+ */
+internal fun readable(path: String): Boolean = path == "-" || File(path).let { it.exists() && !it.isDirectory }

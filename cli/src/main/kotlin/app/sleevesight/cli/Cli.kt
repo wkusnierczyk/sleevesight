@@ -61,7 +61,7 @@ class Cli(
     private val err: PrintStream,
     private val environment: Map<String, String> = System.getenv(),
     private val input: InputStream = System.`in`,
-    // Where `keys-qr` reads the words: asked only then, since finding out runs `stty` and `sh`.
+    // Where `keys-qr` reads the words: Java's console, when it is a terminal ([Terminal.of]).
     private val terminal: () -> Terminal = { Terminal() },
 ) {
     fun run(args: List<String>): Int =
