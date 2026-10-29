@@ -8,6 +8,17 @@
 # explained on the settings page, and only linked from here.
 title: Using Sleevesight
 permalink: /docs/tutorials/usage/
+nav:
+  - id: the-home-screen
+    label: Home screen
+  - id: writing-an-insight
+    label: Writing
+  - id: the-history
+    label: History
+  - id: players
+    label: Players
+  - id: when-something-is-missing-or-fails
+    label: Troubleshooting
 ---
 
 # Using Sleevesight

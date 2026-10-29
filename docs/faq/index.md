@@ -9,6 +9,17 @@
 # named here (#709) changes this page too; so does the first-run statement on notification access (#708).
 title: Frequently asked questions
 permalink: /docs/faq/
+nav:
+  - id: why-does-sleevesight-need-notification-access-does-it-read-my-notifications
+    label: Notifications
+  - id: why-not-connect-to-spotify-instead-with-one-connect-button-as-garmin-connect-links-with-strava
+    label: Spotify
+  - id: what-about-youtube-music-and-other-services
+    label: Other players
+  - id: spotify-playing-on-my-amplifier-or-in-the-car-shows-nothing
+    label: Spotify Connect
+  - id: why-not-recognise-the-music-through-the-microphone
+    label: Microphone
 ---
 
 # Frequently asked questions

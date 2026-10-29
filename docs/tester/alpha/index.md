@@ -6,6 +6,19 @@
 # `assets/flyer/make_flyer.mjs` to the PDF and PNG the site serves; #566).
 title: Testing Sleevesight
 permalink: /docs/tester/alpha/
+nav:
+  - id: joining-and-installing
+    label: Installing
+  - id: first-run
+    label: First run
+  - id: the-key-we-give-you
+    label: Your key
+  - id: using-sleevesight
+    label: Using it
+  - id: what-to-tell-us
+    label: Reporting
+  - id: what-leaves-your-phone
+    label: Privacy
 ---
 
 # Testing Sleevesight

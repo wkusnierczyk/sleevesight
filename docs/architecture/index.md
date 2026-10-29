@@ -7,6 +7,17 @@
 # phone changes it, together with the privacy policy.
 title: Architecture
 permalink: /docs/architecture/
+nav:
+  - id: in-short
+    label: In short
+  - id: the-parts
+    label: The parts
+  - id: what-leaves-the-phone
+    label: What leaves
+  - id: enforced-not-promised
+    label: Enforced
+  - id: the-modules
+    label: Modules
 ---
 
 # Architecture

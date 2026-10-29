@@ -8,6 +8,17 @@
 # use or licence, the credits or the build tools changes this page by hand.
 title: Dependencies
 permalink: /docs/dependencies/
+nav:
+  - id: licences-and-gpl-30
+    label: Licences
+  - id: shipped-libraries
+    label: Libraries
+  - id: data-sources
+    label: Sources
+  - id: the-fonts-and-the-icons
+    label: Fonts & icons
+  - id: build-time-tools
+    label: Build tools
 ---
 
 # Dependencies

@@ -4,6 +4,13 @@
 title: Documentation
 permalink: /docs/
 docs_index: true
+nav:
+  - id: using-the-app
+    label: Using the app
+  - id: how-it-works
+    label: How it works
+  - id: how-it-is-made
+    label: How it is made
 ---
 
 # Documentation

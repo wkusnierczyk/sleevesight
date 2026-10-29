@@ -9,6 +9,15 @@
 # again.
 title: What it costs you
 permalink: /docs/costs/
+nav:
+  - id: sleevesight-charges-nothing
+    label: Free app
+  - id: the-services-and-their-prices
+    label: Prices
+  - id: what-a-track-costs-worked-through
+    label: Per track
+  - id: how-to-spend-less
+    label: Spend less
 ---
 
 # What it costs you

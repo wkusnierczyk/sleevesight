@@ -7,6 +7,19 @@
 # default, or what it sends or keeps changes this page too.
 title: Settings
 permalink: /docs/tutorials/settings/
+nav:
+  - id: players
+    label: Players
+  - id: sources
+    label: Sources
+  - id: ai-services
+    label: AI services
+  - id: secrets
+    label: Secrets
+  - id: insights
+    label: Insights
+  - id: history
+    label: History
 ---
 
 # Settings

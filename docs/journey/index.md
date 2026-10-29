@@ -9,6 +9,19 @@
 # the app version it comes from.
 title: A typical journey
 permalink: /docs/journey/
+nav:
+  - id: 1-installing-and-the-first-run-screen
+    label: First run
+  - id: 2-notification-access
+    label: Notifications
+  - id: 3-choosing-an-ai-service-and-saving-its-key
+    label: AI & key
+  - id: 4-choosing-the-sources
+    label: Sources
+  - id: 5-playing-music
+    label: Playing
+  - id: 6-write-automatic-writing-and-the-history
+    label: Writing
 ---
 
 # A typical journey

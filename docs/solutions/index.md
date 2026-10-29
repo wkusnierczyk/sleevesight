@@ -8,6 +8,19 @@
 # them, or a solution added or removed, changes this page.
 title: Solutions
 permalink: /docs/solutions/
+nav:
+  - id: insights-that-cite-their-sources-checked-in-code
+    label: Citations
+  - id: the-right-song-the-right-article-the-right-artist
+    label: Matching
+  - id: telling-a-skip-from-a-song-that-ended
+    label: Skips
+  - id: api-keys-by-qr-code
+    label: QR keys
+  - id: typing-on-a-computer-over-bluetooth-with-no-server
+    label: Bluetooth
+  - id: promises-the-build-enforces
+    label: Build checks
 ---
 
 # Solutions

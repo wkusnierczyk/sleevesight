@@ -6,6 +6,17 @@
 # (`app/.../ui/settings/`), `strings.xml`, `strings_settings.xml` and `strings_home.xml`.
 title: Setting up external services
 permalink: /docs/services/
+nav:
+  - id: 1-which-services-need-a-key-and-why
+    label: Need a key
+  - id: 2-how-to-get-the-keys
+    label: Get keys
+  - id: 3-how-to-enter-the-keys
+    label: Enter keys
+  - id: 4-how-to-enable-the-services
+    label: Enable
+  - id: 5-how-to-check-that-they-work
+    label: Check
 ---
 
 # Setting up external services
