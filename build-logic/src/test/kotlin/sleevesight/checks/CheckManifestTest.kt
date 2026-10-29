@@ -53,4 +53,73 @@ class CheckManifestTest {
                 .parse("""<manifest><application usesCleartextTraffic="false" /></manifest>""".byteInputStream())
         assertEquals(listOf("android:usesCleartextTraffic is not \"false\""), CheckManifest.cleartextProblems(doc))
     }
+
+    private fun listenerManifest(metaDataXml: String): Document =
+        DocumentBuilderFactory.newInstance()
+            .apply { isNamespaceAware = true }
+            .newDocumentBuilder()
+            .parse(
+                """
+                <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+                    <application>
+                        <service
+                            android:name=".session.SleevesightListenerService"
+                            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+                            <intent-filter>
+                                <action android:name="android.service.notification.NotificationListenerService" />
+                            </intent-filter>
+                            $metaDataXml
+                        </service>
+                    </application>
+                </manifest>
+                """.trimIndent().byteInputStream(),
+            )
+
+    @Test
+    fun `a notification listener that opts out of default filter types and disables all four categories passes`() {
+        val doc =
+            listenerManifest(
+                """
+                <meta-data
+                    android:name="android.service.notification.default_filter_types"
+                    android:value="" />
+                <meta-data
+                    android:name="android.service.notification.disabled_filter_types"
+                    android:value="conversations|alerting|silent|ongoing" />
+                """.trimIndent(),
+            )
+        assertEquals(emptyList(), CheckManifest.notificationFilterProblems(doc))
+    }
+
+    @Test
+    fun `a notification listener missing either filter meta-data entry fails`() {
+        assertEquals(
+            listOf(
+                ".session.SleevesightListenerService: android.service.notification.default_filter_types must be \"\"",
+                ".session.SleevesightListenerService: android.service.notification.disabled_filter_types must be \"conversations|alerting|silent|ongoing\"",
+            ),
+            CheckManifest.notificationFilterProblems(listenerManifest("")),
+        )
+    }
+
+    @Test
+    fun `a notification listener that uses comma-separated disabled_filter_types fails`() {
+        val doc =
+            listenerManifest(
+                """
+                <meta-data
+                    android:name="android.service.notification.default_filter_types"
+                    android:value="" />
+                <meta-data
+                    android:name="android.service.notification.disabled_filter_types"
+                    android:value="conversations,alerting,silent,ongoing" />
+                """.trimIndent(),
+            )
+        assertEquals(
+            listOf(
+                ".session.SleevesightListenerService: android.service.notification.disabled_filter_types must be \"conversations|alerting|silent|ongoing\"",
+            ),
+            CheckManifest.notificationFilterProblems(doc),
+        )
+    }
 }
