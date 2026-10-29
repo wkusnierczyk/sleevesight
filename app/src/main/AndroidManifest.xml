@@ -110,7 +110,9 @@
         </activity>
 
         <!-- Turned on by the user in Settings, Notification access; it gives access to the media
-             sessions. Only the system can bind it. -->
+             sessions. Only the system can bind it. On Android 12 (API 31) and later, the filter
+             meta-data tells the system not to deliver any notifications to the listener, and locks
+             every notification category off in the system settings (#739). -->
         <service
             android:name=".session.SleevesightListenerService"
             android:exported="true"
@@ -119,6 +121,12 @@
             <intent-filter>
                 <action android:name="android.service.notification.NotificationListenerService" />
             </intent-filter>
+            <meta-data
+                android:name="android.service.notification.default_filter_types"
+                android:value="" />
+            <meta-data
+                android:name="android.service.notification.disabled_filter_types"
+                android:value="conversations|alerting|silent|ongoing" />
         </service>
 
         <!-- Drops an uninstalled player from *Players* (#535). PACKAGE_FULLY_REMOVED is exempt

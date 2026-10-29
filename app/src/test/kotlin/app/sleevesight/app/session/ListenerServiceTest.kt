@@ -1,10 +1,13 @@
 package app.sleevesight.app.session
 
+import android.content.ComponentName
+import android.content.pm.PackageManager
 import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.MediaSession
 import android.media.session.MediaSessionManager
 import android.os.Looper
+import android.service.notification.NotificationListenerService
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.FirstRunAcknowledgement
 import app.sleevesight.app.SleevesightApplication
@@ -107,6 +110,21 @@ class ListenerServiceTest {
         system.stop()
         addSession("com.example.third")
         assertEquals(listOf(OTHER_PLAYER, "com.example.second"), heard)
+    }
+
+    @Test
+    fun theListenerServiceDeclaresNoDefaultNotificationFilterTypesAndDisablesAllFour() {
+        val component = ComponentName(app, SleevesightListenerService::class.java)
+        val info = app.packageManager.getServiceInfo(component, PackageManager.GET_META_DATA)
+        val metaData = requireNotNull(info.metaData) { "service meta-data must be present" }
+        assertEquals(
+            "",
+            metaData.get(NotificationListenerService.META_DATA_DEFAULT_FILTER_TYPES),
+        )
+        assertEquals(
+            "conversations|alerting|silent|ongoing",
+            metaData.getString(NotificationListenerService.META_DATA_DISABLED_FILTER_TYPES),
+        )
     }
 
     private companion object {
