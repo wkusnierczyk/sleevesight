@@ -64,8 +64,10 @@ object InsightPrompt {
      * card kept under the `[M]` wording reads and shows as one written now
      * ([citationId]), so writing every kept track afresh, a paid call each, would buy
      * nothing.
+     * Version 7 (#722): a rule leaves out the track's length ([LENGTH_RULE]). Raised so that cards
+     * kept with a sentence on the length, found by web search, are written afresh.
      */
-    const val VERSION: Int = 6
+    const val VERSION: Int = 7
 
     /**
      * The prompt for [nowPlaying], normalized as [normalized], written from [evidence]. With
@@ -136,6 +138,7 @@ object InsightPrompt {
         listOf(
             "- End every factual sentence with the id(s) that support it, like [W1] or [W2][G1].",
             "- Use only the evidence: no names, dates, places or numbers that are not in it.",
+            LENGTH_RULE,
             "- An \"original song\" line is about the song as first recorded by someone else. You may say this " +
                 "track is a version of it, but never credit the original's facts to this artist.",
             "- An \"artist\" line is about the performer, not this recording.",
@@ -150,6 +153,13 @@ object InsightPrompt {
             "- Plain text only: no headings, lists or markdown.",
             "- If no evidence is usable, reply with exactly: ${GroundingCheck.NO_EVIDENCE}",
         ).joinToString("\n")
+
+    /**
+     * The rule on the track's length (#722): the player already shows it, so a sentence on it, from
+     * a web search line or the model's own knowledge, tells the listener nothing new.
+     */
+    const val LENGTH_RULE: String =
+        "- Never mention the track's length or running time: the player already shows it."
 
     /**
      * The rule on a gap: a short insight rather than a stated gap (version 3, #193). The style's

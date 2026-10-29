@@ -673,6 +673,7 @@ Input: the now-playing title, artists and album as the player reports them (not 
 - No markdown.
 - End every factual sentence with supporting ids, like `[W1]` or `[W2][G1]`.
 - Use only the evidence; no names, dates, places or numbers outside it.
+- Never the track's length or running time: the player already shows it (prompt version 7, #722; web search lines and the model's own knowledge gave it).
 - "Original song" lines describe the song as first recorded by someone else; never credit them to this artist.
 - "Artist" lines describe the performer, not this recording.
 - Web lines may be about a different song with the same name; ignore what does not fit.
