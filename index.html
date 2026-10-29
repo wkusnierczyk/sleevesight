@@ -85,11 +85,11 @@ layout: null
 *,*::before,*::after{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-text);font-weight:350;font-size:18px;line-height:1.55}
-/* Titles, labels, the skip link, the mock's caption and the app's text in Flex (the header's in
+/* Titles, labels, the skip link and the example boxes' text in Flex (the header's in
    `_includes/site-header-style.html`); the running text in Slab (body). Before the rules below, so
    their own weights win; the containers reset Slab's text weight to Flex's regular. */
 h1,h2,h3,.lead{font-family:var(--f-ui)}
-.phone,.box,figcaption,.skip{font-family:var(--f-ui);font-weight:400}
+.box,.skip{font-family:var(--f-ui);font-weight:400}
 a{color:var(--accent);text-underline-offset:3px;text-decoration-thickness:1px}
 a:hover{text-decoration-thickness:2px}
 a:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:4px}
@@ -107,27 +107,13 @@ a:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius
 /* The players it works with, a line of its own under the lede (#577): the lede's size, muted. */
 .players{font-size:20px;color:var(--muted);margin:12px 0 0}
 
-/* The mock: one card as the home screen is designed (design.md, User interface). */
-/* At the end of its column, so the phone's right edge lines up with the header menu's. */
+/* The home screen in a phone frame, at the end of its column so the phone's right edge lines up with
+   the header menu's. */
 figure.mock{margin:0;justify-self:end;width:100%;max-width:400px}
-.phone{background:var(--s-bg);color:var(--s-on);border:10px solid #101318;border-radius:40px;padding:18px 14px 20px;box-shadow:0 24px 60px -24px rgba(0,0,0,.45)}
-.prow{display:flex;align-items:center;gap:10px;background:var(--s-c1);border-radius:14px;padding:8px 12px;font-size:13px;line-height:1.25}
-.prow b{font-weight:600}
-.prow span{color:var(--s-onv)}
-.dot{width:7px;height:7px;border-radius:50%;background:var(--s-pri);flex:none}
-.cover{margin-top:12px;border-radius:16px;overflow:hidden;aspect-ratio:1}
-.cover svg{display:block;width:100%;height:100%}
-.np-title{margin:12px 0 0;font-size:26px;line-height:1.1;font-weight:700;font-stretch:90%}
-.np-meta{font-size:15px;margin:4px 0 0;line-height:1.35}
-.genres{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 0;padding:0;list-style:none}
-.genres li{border-radius:8px;padding:4px 10px;font-size:12.5px;font-weight:550;background:hsl(var(--gh) 72% 90%);color:hsl(var(--gh) 62% 22%)}
-@media (prefers-color-scheme: dark){.genres li{background:hsl(var(--gh) 34% 25%);color:hsl(var(--gh) 75% 86%)}}
-.card{margin-top:12px;background:var(--s-c1);border-radius:16px;padding:12px 14px}
-.card h2{margin:0 0 6px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--s-onv)}
-.card p{margin:0;font-size:14px;line-height:1.5}
+.phone{background:#f8f8fa;border:10px solid #101318;border-radius:40px;padding:8px 0 10px;overflow:hidden;box-shadow:0 24px 60px -24px rgba(0,0,0,.45)}
+.phone img{display:block;width:100%;height:auto}
 .cite{display:inline-grid;place-items:center;min-width:20px;height:16px;padding:0 4px;margin-left:2px;border-radius:999px;font-family:var(--f-mono);font-size:9.5px;font-weight:500;color:var(--cite-ink);vertical-align:2px}
 .cite.W{background:var(--src-w)} .cite.L{background:var(--src-l)} .cite.G{background:var(--src-g)} .cite.MB{background:var(--src-mb)}
-figcaption{font-size:14px;color:var(--muted);text-align:center;margin-top:12px}
 
 section{padding:48px 0;border-top:1px solid var(--line)}
 section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-weight:700;font-stretch:92%;letter-spacing:-.01em}
@@ -212,33 +198,16 @@ section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-
   <div>
     <h1>Insights on what’s playing.</h1>
     <p class="lede">Facts and stories about the song, artist and album you’re listening to, each linked to its source.</p>
-    <p class="players">Works with Spotify, YouTube Music and more.</p>
+    <p class="players">Works with Spotify, YouTube Music, Qobuz, Tidal, and more.</p>
   </div>
 
-  <!-- Until the app's home screen can be captured (#52), a mock in the simulator's style, with the
-       simulator's generated cover (`coverFor("Rubber Soul|The Beatles")`), not the real art. The
-       genre labels and the insight, with its citations, are the pipeline's own output from two live
-       runs of `:cli` on the track (2026-10-18; web search off): the insight from Claude Haiku 5.5 on
-       MusicBrainz and Wikipedia, the genre labels from Last.fm, coloured by the app's genre families.
-       The card's title is the app's. -->
+  <!-- The app's home screen while Spotify plays Michelle by The Beatles, from the Sleevesight header
+       to the end of the key insight text, with the phone's top status bar and bottom navigation bar
+       cropped out. -->
   <figure class="mock">
-    <div class="phone" role="img" aria-labelledby="mock-desc">
-      <div class="prow" aria-hidden="true"><span class="dot"></span><div><b>Spotify</b> <span>· Playing</span></div></div>
-      <div class="cover" aria-hidden="true">
-        <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice"><defs><linearGradient id="g918409749" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="hsl(69 55% 32%)"/><stop offset="1" stop-color="hsl(104 50% 13%)"/></linearGradient></defs><rect width="100" height="100" fill="url(#g918409749)"/><path d="M0 69 Q 30 54 55 64 T 100 49 V100 H0z" fill="hsl(198 60% 55%)" opacity=".85"/><path d="M0 84 Q 40 64 70 70 T 100 65 V100 H0z" fill="hsl(228 55% 35%)"/></svg>
-      </div>
-      <div aria-hidden="true">
-        <p class="np-title">Michelle</p>
-        <p class="np-meta">The Beatles<br><i>Rubber Soul</i>, 1965</p>
-        <ul class="genres"><li style="--gh:8">Classic Rock</li><li style="--gh:8">Rock</li><li style="--gh:328">Pop</li></ul>
-        <div class="card">
-          <h2>Key insights</h2>
-          <p>Michelle is a Beatles song from the 1965 album <i>Rubber Soul</i>.<span class="cite MB">MB1</span><span class="cite W">W1</span> It was written by John Lennon and Paul McCartney,<span class="cite MB">MB2</span> and it won the Grammy Award for Song of the Year in 1967.<span class="cite W">W2</span> On this recording, Paul McCartney sings lead vocals and plays acoustic guitar and electric bass, with George Harrison, John Lennon and Ringo Starr also performing.<span class="cite MB">MB4</span><span class="cite MB">MB5</span><span class="cite MB">MB6</span><span class="cite MB">MB7</span></p>
-        </div>
-      </div>
+    <div class="phone">
+      <img src="assets/home-screen.png" width="472" height="1200" alt="Sleevesight showing Michelle by The Beatles from Rubber Soul (Remastered 2009), 1965, with genre labels Rock, Classic Rock and Pop, and a three-sentence key insight cited to Wikipedia, MusicBrainz and web search.">
     </div>
-    <p id="mock-desc" hidden>A phone showing Sleevesight while Spotify plays Michelle by The Beatles: the cover, the title, artist, album and year, the genre labels Classic Rock, Rock and Pop, and a short insight of three sentences, each cited, to MusicBrainz and Wikipedia.</p>
-    <figcaption>Mock home screen design</figcaption>
   </figure>
 </div>
 
@@ -288,7 +257,7 @@ section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-
     </li>
     <li class="ex">
       <h3 class="vh">History</h3>
-      <div class="about"><p><b>Your listening history</b>, exported to a file of your own: each track you played, when it played, and the insight written for it, if any.</p><p>Each insight in it is marked as written by AI, with the model that wrote it. The file leaves the phone only where you save or send it.</p><p>This example's insight is the one in the mock above, based on MusicBrainz's entry for the song and Wikipedia's article on it: <span class="nw"><span class="cite MB">MB1</span>,</span> <span class="cite W">W1</span> and <span class="cite W">W2</span>.</p></div>
+      <div class="about"><p><b>Your listening history</b>, exported to a file of your own: each track you played, when it played, and the insight written for it, if any.</p><p>Each insight in it is marked as written by AI, with the model that wrote it. The file leaves the phone only where you save or send it.</p><p>This example's insight is based on MusicBrainz's entry for the song and Wikipedia's article on it: <span class="nw"><span class="cite MB">MB1</span>,</span> <span class="cite W">W1</span> and <span class="cite W">W2</span>.</p></div>
       <div class="box"><p class="label" aria-hidden="true">History</p><p class="what">Export, 18 October 2026</p><p class="when">21:04 · Michelle, The Beatles</p><p>Michelle is a Beatles song from the 1965 album <i>Rubber Soul</i>.<span class="vh">, source&nbsp;</span><span class="cite MB">MB1</span><span class="vh">, source&nbsp;</span><span class="cite W">W1</span><span class="vh">.&nbsp;</span> It won the Grammy Award for Song of the Year in 1967.<span class="vh">, source&nbsp;</span><span class="cite W">W2</span><span class="vh">.&nbsp;</span></p><p class="by">Written by AI, Claude Haiku 5.5</p><p class="when">21:07 · What Goes On, The Beatles</p><p class="by">No insight written</p></div>
     </li>
     <li class="ex">
