@@ -54,8 +54,9 @@ internal fun scanned(
  * What a setup code [read] gives the key [id]'s field (#541): its key, when the code holds that key
  * alone, as the API keys page makes it from one key; and otherwise what to say. That key alone
  * refused says why, as a bare key would; a code that names another service points to *Load keys*,
- * which shows what it holds, as does one with lines this version cannot read; a code of a later
- * version asks for an update, and one of no keys says so.
+ * which shows what it holds, as does one with lines this version cannot read; a sealed code (#590),
+ * which only *Load keys*' words open, points there too; a code of a later version asks for an
+ * update, and one of no keys says so.
  */
 private fun setupKey(
     id: SecretId,
@@ -81,6 +82,7 @@ private fun setupFailure(
     val named = setup?.let { it.keys.keys + it.refused.keys }.orEmpty()
     val unread = setup != null && (setup.unknown.isNotEmpty() || setup.unreadable > 0)
     return when {
+        read is SetupRead.Sealed -> R.string.settings_key_scan_setup_sealed
         read is SetupRead.Unsupported -> R.string.settings_key_scan_setup_newer
         setup == null -> R.string.settings_key_scan_setup
         named.any { it != id.keyName } -> R.string.settings_key_scan_setup

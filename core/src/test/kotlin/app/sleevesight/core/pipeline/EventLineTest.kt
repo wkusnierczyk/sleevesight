@@ -1,5 +1,9 @@
 package app.sleevesight.core.pipeline
 
+import app.sleevesight.core.ai.AiErrorKind
+import app.sleevesight.core.ai.Breakoff
+import app.sleevesight.core.ai.BreakoffCause
+import app.sleevesight.core.ai.Usage
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.synthesis.GroundingCounts
 import kotlin.test.Test
@@ -8,7 +12,8 @@ import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * The diagnostics lines of MusicBrainz's resolution name why it could not be asked (#191); the
- * grounding line, whether a self-correction was taken out (#597).
+ * grounding line, whether a self-correction was taken out (#597); a failed call's, how its reply broke
+ * off (#665).
  */
 class EventLineTest {
     @Test
@@ -45,6 +50,34 @@ class EventLineTest {
         assertEquals(
             "grounded   a|song: ok 1, model 0, hedge 0, uncited 0, unknown 0",
             EventLine.of(PipelineEvent.Grounded("a|song", counts)),
+        )
+    }
+
+    @Test
+    fun `a failed call's line says how its reply broke off, the tokens so far, how much came and when (#665)`() {
+        val breakoff = Breakoff(BreakoffCause.CONNECTION_LOST, Usage(1534, 1), "SocketException")
+        assertEquals(
+            "model      a|song: failed, incomplete (connection lost, SocketException), 1534 in, 1 out so far, " +
+                "412 characters received, 8123 ms",
+            EventLine.of(
+                PipelineEvent.ModelFailed("a|song", AiErrorKind.INCOMPLETE, breakoff, 412, 8123.milliseconds),
+            ),
+        )
+        assertEquals(
+            "model      a|song: failed, incomplete (no end), 0 in, 0 out so far, 0 characters received, 30 ms",
+            EventLine.of(
+                PipelineEvent.ModelFailed(
+                    "a|song",
+                    AiErrorKind.INCOMPLETE,
+                    Breakoff(BreakoffCause.NO_END, Usage(0, 0)),
+                    0,
+                    30.milliseconds,
+                ),
+            ),
+        )
+        assertEquals(
+            "model      a|song: failed, unauthorized",
+            EventLine.of(PipelineEvent.ModelFailed("a|song", AiErrorKind.UNAUTHORIZED)),
         )
     }
 }

@@ -72,9 +72,17 @@ internal class KtorNetClient(
                     is Validated.Valid -> effectiveUrl(validated.url, current)
                 }
             val result = sendWithRetries(current, sent, hidden)
-            current =
-                redirectFrom(current, sent, result, staysInOrigin)?.takeIf { redirects < MAX_REDIRECTS }
-                    ?: return result
+            val redirect = redirectFrom(current, sent, result, staysInOrigin)
+            if (redirect !is Redirect.Follow || redirects >= MAX_REDIRECTS) {
+                return if (redirect == Redirect.ToHttp) {
+                    // Logged against the hop whose answer is refused; no request follows it.
+                    log.log("${Redaction.describe(current, sent, hidden)} -> ${Redirect.ToHttp.error}")
+                    NetResult.Failure(Redirect.ToHttp.error)
+                } else {
+                    result
+                }
+            }
+            current = redirect.request
             redirects++
         }
     }
@@ -196,7 +204,7 @@ internal class KtorNetClient(
             currentCoroutineContext().ensureActive()
             // Timeouts, refused connections, DNS failures and dropped connections are all
             // IOExceptions in Ktor 3. Only the type is kept: a message can carry the URL.
-            Attempt.Failed(NetError.Offline(e::class.simpleName ?: "IOException"), final = stream.began)
+            Attempt.Failed(NetError.Offline(offlineReason(e)), final = stream.began)
         } catch (e: IllegalArgumentException) {
             // A check in Ktor or OkHttp that validation did not foresee. Its message can quote a
             // header value, so it is reported by a fixed label.

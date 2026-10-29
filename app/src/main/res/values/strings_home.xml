@@ -61,6 +61,9 @@
     <!-- What a screen reader says a tap on it does. -->
     <string name="home_guide_reenable_open">Open Settings at Home guide</string>
     <string name="home_access_off">Sleevesight needs notification access to see what is playing.</string>
+    <!-- Under it (#708): the short form of the first-run screen's access_statement, which the
+         button below leads to, ahead of Android's own screen for the access. -->
+    <string name="home_access_statement">Despite Android’s warning, Sleevesight reads only what apps say is playing, never your notifications.</string>
     <string name="home_turn_on_access">Turn on notification access</string>
     <string name="home_what_leaves">What leaves the device?</string>
     <!-- What a screen reader says a tap on it does. -->
@@ -247,7 +250,12 @@
     <string name="home_failure_model_not_found">the AI service does not know the model</string>
     <string name="home_failure_model_refused">the AI service does not let the model be used this way for your account</string>
     <string name="home_failure_request_too_large">the request was too large</string>
-    <string name="home_failure_incomplete">the reply stopped before it ended</string>
+    <string name="home_failure_incomplete">the AI service’s reply broke off before it finished</string>
+    <string name="home_failure_connection_lost">the connection was lost before the AI service’s reply finished</string>
+    <string name="home_failure_timed_out">the AI service’s reply took too long, so the app stopped waiting</string>
+    <!-- The model's reasoning, which counts against the reply's length limit, used all of it. -->
+    <string name="home_failure_length_limit">the AI model reached its length limit before it wrote anything</string>
+    <string name="home_failure_empty">the AI model’s reply was empty</string>
     <string name="home_failure_declined">the model declined to write it</string>
     <string name="home_failure_failed">something went wrong</string>
     <string name="home_failure_other">something went wrong (%1$s)</string>

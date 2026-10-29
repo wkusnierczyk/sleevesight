@@ -1,10 +1,13 @@
 // The API keys page (#436): the keys from a keys file the user chooses or drops, or pasted in their
 // fields, each checked against its service's form as the app checks it, and the ones that pass
-// drawn as a setup code for the app's *Scan keys*. The keys are kept only in the fields; nothing is
-// stored or sent.
+// drawn as a setup code for the app's *Load keys*, sealed with the five words the phone shows
+// (#590), unless sealing is turned off. The keys and the words are kept only in the fields; nothing
+// is stored or sent.
 
 import { qrSvg } from '../keyboard/qr-svg.js';
 import { BAD_CHARACTERS, SERVICES, check, ending, readFile, write } from './keys.js';
+import { codeDrawer } from './draw.js';
+import { COUNT, PREFIX_LETTERS, readWords, seal, tokens } from './seal.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -39,6 +42,70 @@ let generation = 0;
 // What `#holds` last said, so a live region is not rebuilt, and read out again, at each keystroke.
 let held = null;
 
+// Whether the code on screen is a clear one, about which the page warns until it is gone.
+let clearShown = false;
+
+// Draws the code (`draw.js`): the one on screen goes as soon as what it holds changes, so a clear
+// code never stays while a sealed one is made, nor after sealing fails.
+const drawer = codeDrawer({
+  seal,
+  show: (content, sealed, describe) => {
+    const label = sealed ? 'Sealed setup code of the keys listed below it' : 'Setup code of the keys listed below it';
+    const { svg, side } = qrSvg(content, label);
+    const code = $('code');
+    code.style.width = `${side * MODULE_PX}px`;
+    code.replaceChildren(svg);
+    code.hidden = false;
+    clearShown = !sealed;
+    warn();
+    describe(sealed);
+  },
+  hide: () => {
+    const code = $('code');
+    code.hidden = true;
+    code.replaceChildren();
+    clearShown = false;
+    warn();
+  },
+  failed: () => {
+    held = null;
+    $('holds').textContent = 'No code: it could not be sealed, as this browser lacks the cryptography it needs.';
+  },
+});
+
+// Warns that the code is the keys themselves while sealing is off, or a clear code is still shown.
+function warn() {
+  $('unsealed').hidden = $('seal').checked && !clearShown;
+}
+
+const NUMBERS = ['no', 'one', 'two', 'three', 'four', 'five'];
+
+/**
+ * The words typed: the five words once they are all there, and what to say of them: how many so
+ * far, or which one is not one of the list's, or that there are too many. The last word still being
+ * typed, under three letters, is not yet wrong.
+ */
+function wordsTyped() {
+  const text = $('words').value;
+  const typed = tokens(text);
+  const words = readWords(text);
+  const typing = typed.length > 0 && !/[\s,]$/.test(text) && typed.at(-1).length < PREFIX_LETTERS;
+  const wrong = words.findIndex((word, i) => word === null && !(typing && i === words.length - 1));
+  if (wrong >= 0) return { words: null, said: `Word ${wrong + 1} is not one of the phone’s words: check it.`, error: true };
+  if (words.length > COUNT) return { words: null, said: `More than ${NUMBERS[COUNT]} words: the phone shows ${NUMBERS[COUNT]}.`, error: true };
+  const done = words.filter((word) => word !== null);
+  if (done.length === COUNT) return { words: done, said: 'Five words, which seal the code.', error: false };
+  return { words: null, said: typed.length === 0 ? '' : `${done.length} of ${COUNT} words.`, error: false };
+}
+
+// Says [said] of the words, in the error colour for an [error], only when it changes, so the live
+// region is not read out again at each keystroke.
+function reportWords(said, error) {
+  const line = $('words-report');
+  if (line.textContent !== said) line.textContent = said;
+  line.className = error ? 'error' : 'ok';
+}
+
 function buildFields() {
   for (const { code, label } of SERVICES) {
     const field = document.createElement('div');
@@ -68,7 +135,8 @@ function labelOf(code) {
   return SERVICES.find((s) => s.code === code).label;
 }
 
-// Checks each field, says what is wrong with each key refused, and draws the code of the others.
+// Checks each field, says what is wrong with each key refused, and draws the code of the others,
+// sealed with the words, unless sealing is off.
 function update() {
   const keys = new Map();
   const refused = [];
@@ -90,36 +158,55 @@ function update() {
     }
     inputs.get(code).setAttribute('aria-invalid', problem === null ? 'false' : 'true');
   }
-  const said = JSON.stringify([...keys].map(([name, value]) => [name, ending(value)]).concat(refused));
+  const sealing = $('seal').checked;
+  $('words').disabled = !sealing;
+  $('show-words').disabled = !sealing;
+  warn();
+  const typed = sealing ? wordsTyped() : { words: null, said: '', error: false };
+  reportWords(typed.said, typed.error);
+  const waiting = sealing && typed.words === null;
+  const said = JSON.stringify([[...keys].map(([name, value]) => [name, ending(value)]), refused, sealing, waiting]);
   const changed = said !== held;
   held = said;
   const holds = $('holds');
-  const code = $('code');
-  if (keys.size === 0) {
-    code.hidden = true;
-    code.replaceChildren();
-    if (changed) holds.textContent = refused.length === 0 ? 'No key yet.' : 'No code: no key has its service’s form.';
+  if (keys.size === 0 || waiting) {
+    drawer.clear();
+    if (!changed) return;
+    if (keys.size === 0) {
+      holds.textContent = refused.length === 0 ? 'No key yet.' : 'No code: no key has its service’s form.';
+    } else {
+      holds.textContent = `No code yet: type the ${NUMBERS[COUNT]} words the phone shows, above.`;
+    }
     return;
   }
-  const { svg, side } = qrSvg(write(keys), 'Setup code of the keys listed below it');
-  code.style.width = `${side * MODULE_PX}px`;
-  code.replaceChildren(svg);
-  code.hidden = false;
-  if (!changed) return;
-  const list = document.createElement('ul');
-  for (const [name, value] of keys) {
-    const item = document.createElement('li');
-    item.textContent = `${labelOf(name)}, ending ${ending(value)}`;
-    list.append(item);
+  const text = write(keys);
+  const words = sealing ? typed.words : null;
+  // What the code holds, said once it shows: as a sealed code only once a sealed one is drawn.
+  const describe = (sealed) => {
+    const list = document.createElement('ul');
+    for (const [name, value] of keys) {
+      const item = document.createElement('li');
+      item.textContent = `${labelOf(name)}, ending ${ending(value)}`;
+      list.append(item);
+    }
+    const lines = [document.createTextNode(sealed ? 'The code, sealed with the phone’s words, holds:' : 'The code holds:'), list];
+    if (refused.length > 0) {
+      const left = document.createElement('p');
+      left.className = 'error';
+      left.textContent = `Left out, not of its service’s form: ${refused.map(labelOf).join(', ')}.`;
+      lines.push(left);
+    }
+    holds.replaceChildren(...lines);
+  };
+  if (drawer.holds(text, words)) {
+    // The same code: the latest description kept for one still being sealed, and said again of
+    // one shown only when it changed (a key left out, say).
+    drawer.draw(text, words, describe);
+    if (changed && !$('code').hidden) describe(words !== null);
+    return;
   }
-  const lines = [document.createTextNode('The code holds:'), list];
-  if (refused.length > 0) {
-    const left = document.createElement('p');
-    left.className = 'error';
-    left.textContent = `Left out, not of its service’s form: ${refused.map(labelOf).join(', ')}.`;
-    lines.push(left);
-  }
-  holds.replaceChildren(...lines);
+  if (words !== null) holds.textContent = 'Sealing the code with the phone’s words…';
+  drawer.draw(text, words, describe);
 }
 
 // Sets the file report at once. The same report again (the same file read twice) ends in a
@@ -174,17 +261,38 @@ function clear() {
   report('');
   $('show').checked = false;
   show(false);
+  $('words').value = '';
+  $('show-words').checked = false;
+  showWords(false);
+  $('seal').checked = true;
+  drawer.clear();
   update();
 }
 
+function mask(input, shown) {
+  if (MASKS) input.classList.toggle('masked', !shown);
+  else input.type = shown ? 'text' : 'password';
+}
+
 function show(shown) {
-  for (const input of inputs.values()) {
-    if (MASKS) input.classList.toggle('masked', !shown);
-    else input.type = shown ? 'text' : 'password';
+  for (const input of inputs.values()) mask(input, shown);
+}
+
+function showWords(shown) {
+  mask($('words'), shown);
+}
+
+function buildWords() {
+  const input = $('words');
+  for (const [attribute, value] of [['autocomplete', 'off'], ['autocapitalize', 'off'], ['spellcheck', 'false']]) {
+    input.setAttribute(attribute, value);
   }
+  showWords(false);
+  input.addEventListener('input', update);
 }
 
 buildFields();
+buildWords();
 $('file').addEventListener('change', () => {
   const [file] = $('file').files;
   // Emptied, so the same file chosen again is read again.
@@ -216,5 +324,7 @@ window.addEventListener('drop', holdFile);
 window.addEventListener('beforeunload', clear);
 window.addEventListener('pagehide', clear);
 $('show').addEventListener('change', () => show($('show').checked));
+$('show-words').addEventListener('change', () => showWords($('show-words').checked));
+$('seal').addEventListener('change', update);
 $('clear').addEventListener('click', clear);
 update();

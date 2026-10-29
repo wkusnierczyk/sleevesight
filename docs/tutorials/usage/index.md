@@ -20,7 +20,7 @@ Buttons and settings are named as the app names them, in italics.
 
 The first time it is opened, the app shows its first-run screen, which says what it reads and what leaves the phone, and leads to Android's notification access. Nothing is read or sent before you continue from it. The [journey]({{ '/docs/journey/' | relative_url }}) covers that screen step by step.
 
-If notification access is turned off later, the home screen says *Sleevesight needs notification access to see what is playing.*, with *Turn on notification access*, which leads back to the first-run screen.
+If notification access is turned off later, the home screen says *Sleevesight needs notification access to see what is playing.*, with *Turn on notification access*, which leads back to the first-run screen. Right above *Open notification access*, the first-run screen says what Android's screen for the access will warn of (that the app could read all your notifications, such as messages; some phones name banking apps, or make you wait before you can allow it), and that Sleevesight uses the access only to see what apps say they are playing, to find your music players, and follows only the players you switch on; it never reads your notifications, messages or contacts, and never acts on them or on calls. The home screen's prompt says it in one line.
 
 ## The logo intro
 
@@ -278,6 +278,7 @@ Playing, pausing and skipping from inside Sleevesight are not built yet; use the
 | **The AI service refuses or fails** | *Writing failed:* and the reason: the service did not accept the key, the account needs credit, its quota is used up for now, it is busy, it is not offered in your country, and the like, then *Tap Write insight to try again, as a new call.* |
 | **The selected model is not available** | *The currently selected Anthropic model Claude Haiku 5.5 is not available. Please select another model or provider in AI services.*, when the service no longer lists the model for your key, or answers a call that it does not know the model or does not let your account use it. *AI services* opens the settings at that service's model, under *AI services*; no insight is written until you choose another model or service. |
 | **The reply stopped early** | The insight shows with *The reply stopped early, so this is incomplete, and it was not kept.* |
+| **The reply broke off** | *Writing failed:* and how, then *Tap Write insight to try again, as a new call.*: *the connection was lost before the AI service's reply finished*, *the AI service's reply took too long, so the app stopped waiting*, or, when the app cannot tell which, *the AI service's reply broke off before it finished*. A reply that reached its length limit before it wrote anything, or came back empty, says so the same way. |
 | **The app itself fails while writing** | *Writing failed: something went wrong.*, with *Write insight* greyed out; the next track runs as usual. |
 
 A key that can no longer be read, or one that cannot be saved, is dealt with in the settings; the [settings page]({{ '/docs/tutorials/settings/' | relative_url }}) says how.

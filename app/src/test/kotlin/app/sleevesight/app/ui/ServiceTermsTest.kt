@@ -174,6 +174,8 @@ class ServiceTermsTest {
     fun aSetupCodeWithAnAiKeyPointsToItsTerms() =
         show(scanner = scanning("sleevesight-keys:v1\ngoogle=AQ.Ab8RN6" + "Lq0_x-Yz.9".repeat(5))) {
             compose.onNodeWithText(text(R.string.settings_scan_keys)).performScrollTo().performClick()
+            // Past the words that seal a code (#590): these codes are clear ones.
+            compose.onNodeWithText(text(R.string.load_keys_next)).performClick()
             waitForText(text(R.string.setup_title))
             compose.onNodeWithText(text(R.string.setup_terms)).assertIsDisplayed()
         }
@@ -182,6 +184,8 @@ class ServiceTermsTest {
     fun aSetupCodeOfSourcesKeysOnlyDoesNot() =
         show(scanner = scanning("sleevesight-keys:v1\nlastfm=0123456789abcdef0123456789abcdef")) {
             compose.onNodeWithText(text(R.string.settings_scan_keys)).performScrollTo().performClick()
+            // Past the words that seal a code (#590): these codes are clear ones.
+            compose.onNodeWithText(text(R.string.load_keys_next)).performClick()
             waitForText(text(R.string.setup_title))
             assertEquals(false, shown(text(R.string.setup_terms)))
         }

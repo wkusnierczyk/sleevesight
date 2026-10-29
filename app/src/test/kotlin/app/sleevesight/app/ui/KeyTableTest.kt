@@ -223,6 +223,8 @@ class KeyTableTest {
             waitForText(text(R.string.settings_title))
             compose.openSection(SettingsSection.SECRETS)
             compose.onNodeWithText(text(R.string.settings_scan_keys)).performScrollTo().performClick()
+            // Past the words that seal a code (#590): these codes are clear ones.
+            compose.onNodeWithText(text(R.string.load_keys_next)).performClick()
             // Read: a new key and one that replaces a saved key.
             assertRow(row(R.string.setup_new, R.string.settings_ai_provider_anthropic, "Zq9x"), "Zq9x")
             assertRow(row(R.string.setup_replaces, R.string.settings_key_recipient_exa, "3e4f"), "3e4f")

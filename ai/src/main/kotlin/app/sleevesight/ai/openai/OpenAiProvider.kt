@@ -2,6 +2,7 @@ package app.sleevesight.ai.openai
 
 import app.sleevesight.ai.ServerSentEvents
 import app.sleevesight.ai.decode
+import app.sleevesight.ai.maxTokensSent
 import app.sleevesight.core.Secret
 import app.sleevesight.core.ai.AiErrorKind
 import app.sleevesight.core.ai.AiProvider
@@ -105,7 +106,9 @@ class OpenAiProvider(
         key: Secret,
     ): Flow<CompletionEvent> =
         channelFlow {
-            var effort = request.effort?.takeIf { takesEffort(request.model) }
+            // Whether the model takes an effort, until it refuses one; the token limit follows it.
+            var takesIt = takesEffort(request.model)
+            var effort = request.effort?.takeIf { takesIt }
             var waited = false
             do {
                 val reader = ResponseStream(clock)
@@ -115,7 +118,7 @@ class OpenAiProvider(
                 @Suppress("SwallowedException")
                 val result =
                     try {
-                        net.stream(responsesRequest(request, effort, key)) { line ->
+                        net.stream(responsesRequest(request, effort, maxTokensSent(request, takesIt), key)) { line ->
                             events.line(line)?.let { event -> reader.read(event.data)?.let { send(it) } }
                             if (reader.malformed) throw StopStream()
                         }
@@ -133,6 +136,7 @@ class OpenAiProvider(
 
                         effort != null && rejectsEffort(refused) -> {
                             effort = null
+                            takesIt = false
                             true
                         }
 
@@ -161,13 +165,14 @@ class OpenAiProvider(
     private fun responsesRequest(
         request: CompletionRequest,
         effort: ReasoningEffort?,
+        maxTokens: Int,
         key: Secret,
     ): NetRequest {
         val body =
             buildJsonObject {
                 put("model", request.model)
                 put("input", request.prompt)
-                put("max_output_tokens", request.maxTokens)
+                put("max_output_tokens", maxTokens)
                 put("stream", true)
                 put("store", false)
                 effort?.let { putJsonObject("reasoning") { put("effort", effortName(it)) } }

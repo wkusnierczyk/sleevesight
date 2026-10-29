@@ -5,6 +5,13 @@
 # README's roadmap, `release-notes/` and the protection of `main`. A change to how work is planned,
 # reviewed, merged or released changes it too; so does the closed test (#58), after which the
 # testing half says what happened rather than the plan.
+# The numbers after the intro (#700) are a snapshot, dated in the text and not kept current: issues
+# and pull requests from GitHub's search, CI builds and release runs from the Actions API (the `CI`
+# and `Release` workflows), reviews (completed runs) and findings from the private review records,
+# releases from the tags, commits from `main`, tests from `@Test` annotations and lines from the
+# tracked `.kt` files (files under test source sets counted as tests), and mock-ups by hand from `design/`, the
+# published mock-ups and the unpublished ones kept privately. The donate link is the platform in
+# `.github/FUNDING.yml`.
 title: Process
 permalink: /docs/process/
 ---
@@ -12,6 +19,18 @@ permalink: /docs/process/
 # Process
 
 Sleevesight is made by one developer working with AI agents. The agents write most of the code, the documents and the reviews; the developer decides what is built, judges what comes back, and does what needs a person: the phone, the Play Console, the merges into `main`. The work follows a written process, and nearly all of it is public in the [repository](https://github.com/wkusnierczyk/sleevesight): the issues, the milestones, the pull requests and the reviews posted on them.
+
+In numbers, on 28 October 2026, sixteen days after the first commit:
+
+- **411 issues**, 335 of them closed.
+- **287 pull requests**, 283 of them merged.
+- **1,250 CI builds**, and 9 runs of the release workflow.
+- **1,416 reviews**, 718 by Codex and 698 by Claude, with **2,723 findings**, 2,326 of them fixed in their pull requests.
+- **9 releases**, 0.1.0 to 0.1.8, and 253 commits on `main`.
+- **2,620 tests**, in about 71,000 lines of test code, for about 54,000 lines of the project's own Kotlin.
+- **About 50 design mock-ups**: screens, logos, icons and pages tried as HTML before they were built, most never published.
+
+Made in Switzerland, in personal time, at private expense. Donate to help cover development costs: [Buy Me a Coffee](https://buymeacoffee.com/wkusnierczyk).
 
 This page goes through that process in order, from an idea to a release on Google Play. Each step says what is done, why, and links an example.
 

@@ -42,8 +42,8 @@ private val GUIDED_GAP = 8.dp
  * own), [intro], if any, then [make], a step's heading, with the
  * link to [url] under it, which a screen reader reads as [linkDescription] (`%1$s`, its address);
  * then [scanner]'s view; then [read], the step that reads the code, and [then], a step after it, if
- * any; and *Cancel*, which calls [onCancel], at the start of its line, as in the key dialog (#543).
- * [onScanned] hears the code read.
+ * any; and *Cancel*, which calls [onCancel], at the start of its line, as in the key dialog (#543),
+ * with [actions], if any, at its end. [onScanned] hears the code read.
  *
  * The camera's view fills the height the steps leave, but never less than
  * [GUIDED_CAMERA_MIN_HEIGHT]: in a short window, in landscape or with large text, the title, the
@@ -63,6 +63,7 @@ internal fun ColumnScope.GuidedScan(
     scanner: QrScanner,
     onScanned: (String) -> Unit,
     onCancel: () -> Unit,
+    actions: @Composable () -> Unit = {},
 ) {
     BoxWithConstraints(modifier = Modifier.weight(1f).fillMaxWidth()) {
         val space = maxHeight
@@ -87,7 +88,10 @@ internal fun ColumnScope.GuidedScan(
             }
         }
     }
-    KeyScreenActions(cancel = { TextButton(onClick = onCancel) { Text(stringResource(R.string.settings_cancel)) } })
+    KeyScreenActions(
+        cancel = { TextButton(onClick = onCancel) { Text(stringResource(R.string.settings_cancel)) } },
+        content = actions,
+    )
 }
 
 /**

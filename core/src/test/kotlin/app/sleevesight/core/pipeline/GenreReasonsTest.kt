@@ -2,8 +2,11 @@ package app.sleevesight.core.pipeline
 
 import app.sleevesight.core.Secret
 import app.sleevesight.core.ai.AiErrorKind
+import app.sleevesight.core.ai.Breakoff
+import app.sleevesight.core.ai.BreakoffCause
 import app.sleevesight.core.ai.CompletionEvent
 import app.sleevesight.core.ai.StopReason
+import app.sleevesight.core.ai.Usage
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.genres.GenreLabel
@@ -31,7 +34,10 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlin.time.Clock
 import kotlin.time.Duration.Companion.ZERO
+import kotlin.time.Duration.Companion.microseconds
+import kotlin.time.Instant
 
 /** *Why is this …?* (#523): one call on a tap, checked, and kept in the synthesis cache like the insight. */
 class GenreReasonsTest {
@@ -67,7 +73,7 @@ class GenreReasonsTest {
         shown: MutableList<InsightState> = mutableListOf(),
     ): InsightState {
         val key = checkNotNull(reasons.key(on, "jazz", settings))
-        return reasons.write(key, on, "Jazz") { shown += it }
+        return reasons.write(key, on, "Jazz") { state, _ -> shown += state }
     }
 
     @Test
@@ -162,8 +168,33 @@ class GenreReasonsTest {
         }
 
     @Test
+    fun `a reply that broke off says how, and one with no text fails, and neither is kept (#665)`() =
+        runTest {
+            val cases =
+                listOf(
+                    brokeOff(BreakoffCause.CONNECTION_LOST) to ReplyFailures.CONNECTION_LOST,
+                    brokeOff(BreakoffCause.TIMED_OUT) to ReplyFailures.TIMED_OUT,
+                    brokeOff(BreakoffCause.NO_END) to ReplyFailures.INCOMPLETE,
+                    FakeProvider.done("", StopReason.MAX_TOKENS) to ReplyFailures.LENGTH_LIMIT,
+                    FakeProvider.done(" \n", StopReason.END) to ReplyFailures.EMPTY,
+                )
+            for ((reply, label) in cases) {
+                provider.reply = { reply }
+                assertEquals(InsightState.Failed(label), write(), label)
+            }
+            assertEquals(0, cache.cards.size)
+        }
+
+    private fun brokeOff(cause: BreakoffCause): List<CompletionEvent> =
+        listOf(
+            CompletionEvent.Delta("Half"),
+            CompletionEvent.Error(AiErrorKind.INCOMPLETE, breakoff = Breakoff(cause, Usage(900, 0))),
+        )
+
+    @Test
     fun `a cache that fails is a miss, and the reason is still written`() =
         runTest {
+            var writes = 0
             val failing =
                 object : PipelineCache by PipelineCache.None {
                     override suspend fun card(key: CardKey): String = error("cache down")
@@ -172,10 +203,67 @@ class GenreReasonsTest {
                         key: CardKey,
                         text: String,
                     ) = error("cache down")
+
+                    override suspend fun keep(
+                        key: CardKey,
+                        text: String,
+                        writtenAt: Instant,
+                    ) {
+                        writes++
+                        error("cache down")
+                    }
                 }
             val on = GenreReasons(AiAccess(provider, Secret("k")), failing, JvmHasher)
             val key = checkNotNull(on.key(track, "jazz", settings))
             assertNull(on.kept(key, track))
-            assertIs<InsightState.Written>(on.write(key, track, "Jazz") {})
+            assertIs<InsightState.Written>(on.write(key, track, "Jazz") { _, _ -> })
+            // The write was tried, and failed.
+            assertEquals(1, writes)
         }
+
+    @Test
+    fun `a reason kept is kept with the time it is shown with, in whole milliseconds`() =
+        runTest {
+            val (written, at, kept) = timed(FakeProvider.done("Its modal harmony and muted trumpet are jazz [W1]."))
+            assertIs<InsightState.Written>(written)
+            assertEquals(at, kept.keptAt.values.single())
+            assertEquals(at, Instant.fromEpochMilliseconds(at.toEpochMilliseconds()))
+        }
+
+    @Test
+    fun `NO_EVIDENCE is kept with the time it is shown with`() =
+        runTest {
+            val (shown, at, kept) = timed(FakeProvider.done("NO_EVIDENCE"))
+            assertEquals(InsightState.NoEvidence, shown)
+            assertEquals(at, kept.keptAt.values.single())
+        }
+
+    @Test
+    fun `a reply cut off is not kept, and is shown with a time in whole milliseconds`() =
+        runTest {
+            val (shown, at, kept) = timed(FakeProvider.done("It is jazz [W1].", StopReason.MAX_TOKENS))
+            assertEquals(false, assertIs<InsightState.Written>(shown).complete)
+            assertEquals(at, Instant.fromEpochMilliseconds(at.toEpochMilliseconds()))
+            assertTrue(kept.cards.isEmpty())
+            assertTrue(kept.keptAt.isEmpty())
+        }
+
+    // [reply] written by a reasons writer whose clock moves on, by less than a millisecond, each time
+    // it is read, into a cache of its own: the last state shown, its time, and the cache.
+    private suspend fun timed(reply: List<CompletionEvent>): Triple<InsightState, Instant, MemoryCache> {
+        val clock =
+            object : Clock {
+                var at = Instant.parse("2026-10-28T12:00:00.000400Z")
+
+                override fun now(): Instant = at.also { at += 300.microseconds }
+            }
+        provider.reply = { reply }
+        val kept = MemoryCache()
+        val timed = GenreReasons(AiAccess(provider, Secret("k")), kept, JvmHasher, clock)
+        val key = checkNotNull(timed.key(track, "jazz", settings))
+        val shown = mutableListOf<Pair<InsightState, Instant>>()
+        val last = timed.write(key, track, "Jazz") { state, at -> shown += state to at }
+        assertEquals(last, shown.last().first)
+        return Triple(last, shown.last().second, kept)
+    }
 }

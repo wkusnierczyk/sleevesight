@@ -84,7 +84,7 @@ class KeySetupTest {
         assertEquals(SetupRead.NotASetup, KeySetup.read(anthropic))
         assertEquals(SetupRead.NotASetup, KeySetup.read(""))
         assertEquals(SetupRead.NotASetup, KeySetup.read("anthropic=$anthropic"))
-        assertEquals(SetupRead.Unsupported("v2"), KeySetup.read("sleevesight-keys:v2\nanthropic=$anthropic"))
+        assertEquals(SetupRead.Unsupported("v3"), KeySetup.read("sleevesight-keys:v3\nanthropic=$anthropic"))
         assertTrue(KeySetup.isSetup("  sleevesight-keys:v1\n"))
         assertFalse(KeySetup.isSetup(anthropic))
     }

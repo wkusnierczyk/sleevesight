@@ -2,7 +2,10 @@ package app.sleevesight.cli
 
 import app.sleevesight.core.keys.KeyName
 import app.sleevesight.core.keys.KeySetup
+import app.sleevesight.core.keys.Opened
+import app.sleevesight.core.keys.SealedSetup
 import app.sleevesight.core.keys.SetupRead
+import app.sleevesight.core.platform.JvmKeyCrypto
 import com.google.zxing.BinaryBitmap
 import com.google.zxing.DecodeHintType
 import com.google.zxing.PlanarYUVLuminanceSource
@@ -29,6 +32,7 @@ class KeysQrTest {
     private val exa = "0c6d1e2f-3a4b-5c6d-7e8f-9a0b1c2d3e4f"
     private val lastFm = "0123456789abcdef0123456789abcdef"
     private val dir = createTempDirectory("keys-qr").toFile()
+    private val words = listOf("aardvark", "abandoned", "abbreviate", "abdomen", "abhorrence")
 
     private class Run(
         val status: Int,
@@ -40,12 +44,15 @@ class KeysQrTest {
         vararg args: String,
         environment: Map<String, String> = emptyMap(),
         stdin: String = "",
+        terminal: ((String) -> String?)? = null,
     ): Run {
         val out = ByteArrayOutputStream()
         val err = ByteArrayOutputStream()
+        val input = ByteArrayInputStream(stdin.toByteArray())
         val status =
-            Cli(PrintStream(out, true), PrintStream(err, true), environment, ByteArrayInputStream(stdin.toByteArray()))
-                .run(listOf("keys-qr") + args)
+            Cli(PrintStream(out, true), PrintStream(err, true), environment, input) {
+                Terminal(console = terminal)
+            }.run(listOf("keys-qr") + args)
         return Run(status, out.toString(Charsets.UTF_8), err.toString(Charsets.UTF_8))
     }
 
@@ -88,8 +95,16 @@ class KeysQrTest {
             .text
     }
 
+    /** What the sealed code drawn holds, opened with [words]. */
+    private fun opened(drawn: String): SetupRead.Setup {
+        val code = decode(drawn)
+        assertTrue(code.startsWith(SealedSetup.PREFIX), code.take(24))
+        val text = assertIs<Opened.Setup>(SealedSetup.open(code, words, JvmKeyCrypto)).text
+        return assertIs<SetupRead.Setup>(KeySetup.read(text))
+    }
+
     @Test
-    fun `the keys file's keys are drawn as a setup code, and no key is printed`() {
+    fun `the keys file's keys are drawn as a setup code sealed with the words, and no key or word is printed`() {
         val keys =
             File(dir, "keys.env").apply {
                 writeText(
@@ -97,9 +112,11 @@ class KeysQrTest {
                         "SLEEVESIGHT_GOOGLE_API_KEY=$google\nSLEEVESIGHT_LASTFM_API_KEY=$lastFm\n",
                 )
             }
-        val run = run("--keys", keys.path)
+        // No console: the words are given with --words-from, here standard input, three letters of
+        // each enough.
+        val run = run("--keys", keys.path, "--words-from", "-", stdin = "\naar aba abb abd ABH\n")
         assertEquals(0, run.status, run.err)
-        val read = assertIs<SetupRead.Setup>(KeySetup.read(decode(run.out)))
+        val read = opened(run.out)
         assertEquals(
             mapOf(
                 KeyName.ANTHROPIC to anthropic,
@@ -109,11 +126,12 @@ class KeysQrTest {
             ),
             read.keys.mapValues { it.value.reveal() },
         )
-        for (key in listOf(anthropic, openAi, google, lastFm)) {
+        for (key in listOf(anthropic, openAi, google, lastFm) + words) {
             assertFalse(key in run.out)
             assertFalse(key in run.err)
         }
         assertTrue("Anthropic, OpenAI, Google, Last.fm" in run.err)
+        assertTrue("Sealed with the phone's words" in run.err)
     }
 
     @Test
@@ -127,9 +145,10 @@ class KeysQrTest {
                 exaFile.path,
                 environment = mapOf(Keys.LASTFM to lastFm),
                 stdin = "$anthropic\n",
+                terminal = { words.joinToString(" ") },
             )
         assertEquals(0, run.status, run.err)
-        val read = assertIs<SetupRead.Setup>(KeySetup.read(decode(run.out)))
+        val read = opened(run.out)
         assertEquals(
             mapOf(KeyName.ANTHROPIC to anthropic, KeyName.EXA to exa),
             read.keys.mapValues { it.value.reveal() },
@@ -138,7 +157,7 @@ class KeysQrTest {
 
     @Test
     fun `a key of the wrong shape is refused, and nothing is drawn`() {
-        val run = run("--lastfm-from", "-", stdin = "not-a-lastfm-key")
+        val run = run("--lastfm-from", "-", "--unsealed", stdin = "not-a-lastfm-key")
         assertEquals(Cli.EXIT_USAGE, run.status)
         assertEquals("", run.out)
         assertTrue("Last.fm key does not look like one" in run.err)
@@ -146,7 +165,7 @@ class KeysQrTest {
 
     @Test
     fun `an Anthropic key given as OpenAI's is refused, and the message says why`() {
-        val run = run("--openai-from", "-", stdin = "sk-ant-api03-" + "a1B2c3D4".repeat(10))
+        val run = run("--openai-from", "-", "--unsealed", stdin = "sk-ant-api03-" + "a1B2c3D4".repeat(10))
         assertEquals(Cli.EXIT_USAGE, run.status)
         assertEquals("", run.out)
         assertTrue("OpenAI key does not look like one" in run.err)
@@ -155,7 +174,7 @@ class KeysQrTest {
 
     @Test
     fun `an Exa key of the wrong length is refused, and the message gives Exa's shape`() {
-        val run = run("--exa-from", "-", stdin = "too-short")
+        val run = run("--exa-from", "-", "--unsealed", stdin = "too-short")
         assertEquals(Cli.EXIT_USAGE, run.status)
         assertEquals("", run.out)
         assertTrue("Exa key does not look like one" in run.err)
@@ -183,7 +202,7 @@ class KeysQrTest {
         val err = ByteArrayOutputStream()
         val status =
             Cli(PrintStream(ByteArrayOutputStream(), true), PrintStream(err, true), emptyMap(), failing)
-                .run(listOf("keys-qr", "--anthropic-from", "-"))
+                .run(listOf("keys-qr", "--anthropic-from", "-", "--unsealed"))
         assertEquals(Cli.EXIT_USAGE, status)
         val said = err.toString(Charsets.UTF_8)
         assertFalse(anthropic in said)
@@ -220,7 +239,7 @@ class KeysQrTest {
     @Test
     fun `with --keys, only that file is read, not the environment, and it must exist`() {
         val file = File(dir, "tester.env").apply { writeText("SLEEVESIGHT_EXA_API_KEY=$exa\n") }
-        val run = run("--keys", file.path, environment = mapOf(Keys.ANTHROPIC to anthropic))
+        val run = run("--keys", file.path, "--unsealed", environment = mapOf(Keys.ANTHROPIC to anthropic))
         assertEquals(0, run.status, run.err)
         val read = assertIs<SetupRead.Setup>(KeySetup.read(decode(run.out)))
         assertEquals(mapOf(KeyName.EXA to exa), read.keys.mapValues { it.value.reveal() })
@@ -230,5 +249,135 @@ class KeysQrTest {
         assertEquals("", missing.out)
         assertTrue("--keys: no such file\n" in missing.err)
         assertEquals(Cli.EXIT_USAGE, run("--keys", file.path, "--keys", file.path).status)
+    }
+
+    @Test
+    fun `with --unsealed, the clear code is drawn, and the message says it is the keys`() {
+        val run = run("--lastfm-from", "-", "--unsealed", stdin = lastFm)
+        assertEquals(0, run.status, run.err)
+        val read = assertIs<SetupRead.Setup>(KeySetup.read(decode(run.out)))
+        assertEquals(mapOf(KeyName.LASTFM to lastFm), read.keys.mapValues { it.value.reveal() })
+        assertTrue("the code is the keys" in run.err)
+        assertEquals(Cli.EXIT_USAGE, run("--lastfm-from", "-", "--unsealed", "--unsealed", stdin = lastFm).status)
+    }
+
+    @Test
+    fun `the terminal is asked again after a wrong word, and three tries at most`() {
+        val answers = ArrayDeque(listOf("aar aba abb abd xyz", "aar aba abb", words.joinToString(" ")))
+        val prompts = mutableListOf<String>()
+        val run =
+            run("--lastfm-from", "-", stdin = lastFm) { prompt ->
+                prompts += prompt
+                answers.removeFirst()
+            }
+        assertEquals(0, run.status, run.err)
+        assertEquals(3, prompts.size)
+        assertTrue("Word 5 is not one of the phone's words." in run.err)
+        assertTrue("3 words: the phone shows 5." in run.err)
+        assertEquals(mapOf(KeyName.LASTFM to lastFm), opened(run.out).keys.mapValues { it.value.reveal() })
+
+        val failing = run("--lastfm-from", "-", stdin = lastFm) { "aar aba abb abd xyz" }
+        assertEquals(Cli.EXIT_USAGE, failing.status)
+        assertEquals("", failing.out)
+        assertTrue("Nothing drawn" in failing.err)
+    }
+
+    @Test
+    fun `words not of the list in --words-from draw nothing`() {
+        val file = File(dir, "one.env").apply { writeText("SLEEVESIGHT_EXA_API_KEY=$exa\n") }
+        val run = run("--keys", file.path, "--words-from", "-", stdin = "aar aba abb abd zzz\n")
+        assertEquals(Cli.EXIT_USAGE, run.status)
+        assertEquals("", run.out)
+        assertTrue("Word 5 is not one of the phone's words." in run.err)
+    }
+
+    @Test
+    fun `--words-from a file gives the words, also with a key on standard input`() {
+        val wordsFile = File(dir, "words").apply { writeText("${words.joinToString(" ")}\n") }
+        val run = run("--lastfm-from", "-", "--words-from", wordsFile.path, stdin = lastFm)
+        assertEquals(0, run.status, run.err)
+        assertEquals(mapOf(KeyName.LASTFM to lastFm), opened(run.out).keys.mapValues { it.value.reveal() })
+        for (word in words) assertFalse(word in run.err)
+    }
+
+    @Test
+    fun `with no console and no --words-from, nothing is read, and it says what to do`() {
+        // A key on standard input, which is not read: the refusal comes first.
+        val reads = mutableListOf<Int>()
+        val input =
+            object : InputStream() {
+                override fun read(): Int = (-1).also { reads += it }
+            }
+        val err = ByteArrayOutputStream()
+        val out = ByteArrayOutputStream()
+        val status =
+            Cli(PrintStream(out, true), PrintStream(err, true), emptyMap(), input) { Terminal() }
+                .run(listOf("keys-qr", "--lastfm-from", "-"))
+        assertEquals(Cli.EXIT_USAGE, status)
+        assertEquals("", out.toString(Charsets.UTF_8))
+        assertTrue(reads.isEmpty(), "standard input was read")
+        assertEquals(
+            "Type the words in a terminal (without redirecting the output), or pass --words-from FILE.\n",
+            err.toString(Charsets.UTF_8),
+        )
+        // Keys from a file, no words: the same.
+        val file = File(dir, "none-words.env").apply { writeText("SLEEVESIGHT_EXA_API_KEY=$exa\n") }
+        val run = run("--keys", file.path, stdin = "${words.joinToString(" ")}\n")
+        assertEquals(Cli.EXIT_USAGE, run.status)
+        assertTrue("pass --words-from FILE" in run.err)
+    }
+
+    @Test
+    fun `the words cannot come from standard input when a key does, nor with --unsealed or twice`() {
+        val both = run("--lastfm-from", "-", "--words-from", "-", stdin = lastFm)
+        assertEquals(Cli.EXIT_USAGE, both.status)
+        assertTrue("Standard input carries a key" in both.err)
+        val wordsFile = File(dir, "words2").apply { writeText(words.joinToString(" ")) }
+        assertEquals(
+            Cli.EXIT_USAGE,
+            run("--lastfm-from", "-", "--words-from", wordsFile.path, "--unsealed", stdin = lastFm).status,
+        )
+        assertEquals(
+            Cli.EXIT_USAGE,
+            run("--lastfm-from", "-", "--words-from", wordsFile.path, "--words-from", "-", stdin = lastFm).status,
+        )
+        val missing = run("--lastfm-from", "-", "--words-from", File(dir, "absent").path, stdin = lastFm)
+        assertTrue("--words-from: no such file" in missing.err)
+    }
+
+    @Test
+    fun `no words from the console draws nothing, and says so`() {
+        val run = run("--lastfm-from", "-", stdin = lastFm) { null }
+        assertEquals(Cli.EXIT_USAGE, run.status)
+        assertEquals("", run.out)
+        assertTrue("No words given" in run.err)
+    }
+
+    @Test
+    fun `--words-from - with the terminal on standard input is refused, and nothing is read`() {
+        val reads = mutableListOf<Int>()
+        val input =
+            object : InputStream() {
+                override fun read(): Int = (-1).also { reads += it }
+            }
+        var prompted = false
+        val err = ByteArrayOutputStream()
+        val out = ByteArrayOutputStream()
+        val file = File(dir, "tty.env").apply { writeText("SLEEVESIGHT_EXA_API_KEY=$exa\n") }
+        val console: (String) -> String? = {
+            prompted = true
+            words.joinToString(" ")
+        }
+        val status =
+            Cli(PrintStream(out, true), PrintStream(err, true), emptyMap(), input) { Terminal(console = console) }
+                .run(listOf("keys-qr", "--keys", file.path, "--words-from", "-"))
+        assertEquals(Cli.EXIT_USAGE, status)
+        assertEquals("", out.toString(Charsets.UTF_8))
+        assertTrue(reads.isEmpty(), "standard input was read")
+        assertFalse(prompted, "the console was asked")
+        assertEquals(
+            "Standard input is the terminal: drop --words-from - and type the words at the prompt.\n",
+            err.toString(Charsets.UTF_8),
+        )
     }
 }

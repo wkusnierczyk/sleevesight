@@ -331,7 +331,8 @@ section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-
         <p>The sources you chose: the playing track's information; by default, the next track's title and artists to MusicBrainz, if enabled.</p>
         <p>The AI service you chose: the track's title, artists and album, and what the sources found about those. Each insight, and each explanation of a genre you ask for, is one request of its own, with no sustained conversation. Requests use your API key, and are handled under the terms for your AI service account.</p>
         <!-- Every address the app calls is `https`, and Android blocks unencrypted connections for it
-             (`targetSdk` 37, no cleartext exception in the manifest). -->
+             on every supported version: the manifest says `usesCleartextTraffic="false"`, which
+             Android 8 needs (#696), and has no network security config. -->
         <p>All of it travels encrypted (HTTPS), your API keys included, each only to the service it belongs to.</p>
       </div>
       <p class="small">Nothing else leaves the phone, unless you export your diagnostics to a file yourself, send a report from your mail app, have an insight read aloud by a text-to-speech engine that speaks through its server, or type a key on a computer, when the phone advertises itself over Bluetooth to devices nearby. Your listening history stays on the device.</p>

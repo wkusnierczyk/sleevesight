@@ -8,6 +8,7 @@ import app.sleevesight.app.session.PlaybackStatus
 import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.pipeline.ReplyFailures
 import kotlin.time.Duration
 
 // The words the home screen puts to what it shows.
@@ -110,7 +111,7 @@ internal fun chipName(source: SourceId): String =
 internal fun failureText(reason: String): String =
     FAILURE_TEXTS[reason]?.let { stringResource(it) } ?: stringResource(R.string.home_failure_other, reason)
 
-/** Each failure label's words: an `AiErrorKind`'s name in lower case, or the pipeline's own label. */
+/** Each failure label's words: an `AiErrorKind`'s name in lower case, a `ReplyFailures` label, or the host's own. */
 private val FAILURE_TEXTS: Map<String, Int> =
     mapOf(
         "offline" to R.string.home_failure_offline,
@@ -124,8 +125,12 @@ private val FAILURE_TEXTS: Map<String, Int> =
         "model_not_found" to R.string.home_failure_model_not_found,
         "model_refused" to R.string.home_failure_model_refused,
         "request_too_large" to R.string.home_failure_request_too_large,
-        "incomplete" to R.string.home_failure_incomplete,
-        "declined" to R.string.home_failure_declined,
+        ReplyFailures.INCOMPLETE to R.string.home_failure_incomplete,
+        ReplyFailures.CONNECTION_LOST to R.string.home_failure_connection_lost,
+        ReplyFailures.TIMED_OUT to R.string.home_failure_timed_out,
+        ReplyFailures.LENGTH_LIMIT to R.string.home_failure_length_limit,
+        ReplyFailures.EMPTY to R.string.home_failure_empty,
+        ReplyFailures.DECLINED to R.string.home_failure_declined,
         PipelineHost.FAILED to R.string.home_failure_failed,
     )
 
