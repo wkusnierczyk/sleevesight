@@ -8,6 +8,19 @@
 # them, or a solution added or removed, changes this page.
 title: Solutions
 permalink: /docs/solutions/
+nav:
+  - id: insights-that-cite-their-sources-checked-in-code
+    label: Citations
+  - id: the-right-song-the-right-article-the-right-artist
+    label: Matching
+  - id: telling-a-skip-from-a-song-that-ended
+    label: Skips
+  - id: api-keys-by-qr-code
+    label: QR keys
+  - id: typing-on-a-computer-over-bluetooth-with-no-server
+    label: Bluetooth
+  - id: promises-the-build-enforces
+    label: Build checks
 ---
 
 # Solutions
@@ -20,7 +33,7 @@ Each section links the design section that holds the detail, and the issue where
 
 **The problem.** A language model asked about a song writes fluent text whether or not it knows anything. A wrong year or a misattributed cover reads as well as a true one.
 
-**What was done.** The model is not asked what it knows. The app retrieves evidence first, from MusicBrainz, Wikipedia and Wikidata, Last.fm and, if switched on, web search, and gives each line an id (`W1`, `L3`). The prompt holds only those lines, fenced and labelled as data, and asks for every factual sentence to end with the ids of the lines that support it. The reply shows as it arrives; once it is complete, the grounding check (`GroundingCheck`) splits it into sentences and classifies each: it cites only lines that exist; it cites the model's own knowledge, `[AI]`, which is allowed only with *The model’s own knowledge* switched on and is shown as unverified; it states a gap in the evidence; it cites nothing; or it cites a line that does not exist. Uncited sentences and citations to missing lines are marked in the insight, not hidden. Each citation becomes a chip the app builds from its own ids, so the model's text never becomes a link.
+**What was done.** The model is not asked what it knows. The app retrieves evidence first, from MusicBrainz, Wikipedia and Wikidata, Last.fm and, if switched on, web search, and gives each line an id (`W1`, `L3`). The prompt holds only those lines, fenced and labelled as data, and asks for every factual sentence to end with the ids of the lines that support it. The reply shows as it arrives; once it is complete, the grounding check (`GroundingCheck`) splits it into sentences and classifies each: it cites only lines that exist; it cites the model's own knowledge, `[AI]`, which is allowed only with *AI service knowledge* switched on and is shown as unverified; it states a gap in the evidence; it cites nothing; or it cites a line that does not exist. Uncited sentences and citations to missing lines are marked in the insight, not hidden. Each citation becomes a chip the app builds from its own ids, so the model's text never becomes a link.
 
 **Its limit.** The check sees whether a sentence cites real lines, not whether those lines say what the sentence says: a plausible false sentence with a valid citation passes. It narrows what the model can invent; it does not prove the text true.
 
@@ -32,7 +45,7 @@ Design: [*Synthesis*](https://github.com/wkusnierczyk/sleevesight/blob/main/desi
 
 **The problem.** Players report a title and an artist as text. Many songs share a title, many artists share a name, and the sources are searched by name: a search for a small act's song can land on a famous song of the same name, or on another artist's Wikipedia article.
 
-**What was done.** Every source is asked by name at once, and MusicBrainz resolves the track alongside them: the recording, chosen from up to 100 candidates by title, credited artists and length, the earliest released of those that fit; its artists' MusicBrainz ids; whether it is a cover, and of what. The answers of MusicBrainz, Wikipedia, Wikidata and Last.fm are then checked against those ids before any of their lines may be cited. Web search results have no id to check: a text filter keeps only pages that name the song and a distinctive credited artist, and their lines may be cited without that verification. A Wikipedia article is accepted only if its Wikidata item says it is a song, single or musical work performed by one of the credited artists, matched by MusicBrainz id where there is one; an artist's article only through the artist's MusicBrainz id. Of the sources checked against the ids, a match that cannot be checked is shown but never cited, and one that fails is shown as rejected, with the reason.
+**What was done.** Every source is asked by name at once, and MusicBrainz resolves the track alongside them: the recording, chosen from up to 100 candidates by title, credited artists and length, the earliest released of those that fit (a pair the player names as one artist, such as "Derya Yıldırım & Grup Şimşek", is also tried as the two artists MusicBrainz credits separately); its artists' MusicBrainz ids; whether it is a cover, and of what. The answers of MusicBrainz, Wikipedia, Wikidata and Last.fm are then checked against those ids before any of their lines may be cited. Web search results have no id to check: a text filter keeps only pages that name the song and a distinctive credited artist, and their lines may be cited without that verification. A Wikipedia article is accepted only if its Wikidata item says it is a song, single or musical work performed by one of the credited artists, matched by MusicBrainz id where there is one; an artist's article only through the artist's MusicBrainz id. Of the sources checked against the ids, a match that cannot be checked is shown but never cited, and one that fails is shown as rejected, with the reason.
 
 **New or known.** Matching records across databases through shared identifiers is a known technique (entity resolution, or record linkage). The rules are this project's own, tuned on its test tracks: bands credited under their leader's name (`Dick Dale and His Del-Tones` for `Dick Dale`), names with honorifics, covers whose earlier recordings are undated, a songwriter's own song later made famous by others. The rules are specific to MusicBrainz's and Wikidata's data and decide what may be cited, so they are written and tested here, with the test tracks' known cases as tests.
 

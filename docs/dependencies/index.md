@@ -8,6 +8,17 @@
 # use or licence, the credits or the build tools changes this page by hand.
 title: Dependencies
 permalink: /docs/dependencies/
+nav:
+  - id: licences-and-gpl-30
+    label: Licences
+  - id: shipped-libraries
+    label: Libraries
+  - id: data-sources
+    label: Sources
+  - id: the-fonts-and-the-icons
+    label: Fonts & icons
+  - id: build-time-tools
+    label: Build tools
 ---
 
 # Dependencies
@@ -134,15 +145,15 @@ The app's credits screen lists each source with what the app takes from it and i
 | Source | What the app takes from it | Licence or terms |
 |---|---|---|
 | MusicBrainz | Recordings, releases, artists, credits and dates | Core data under [CC0](https://creativecommons.org/publicdomain/zero/1.0/); the web service is free for non-commercial use |
-| MusicBrainz tags | Genre labels from the artists' tags; used for labels only, never sent to the AI service | Supplementary data under [CC BY-NC-SA 3.0](https://creativecommons.org/licenses/by-nc-sa/3.0/), credited to the MusicBrainz contributors |
-| Wikipedia | Sentences from articles | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/), by the Wikipedia contributors |
-| Wikidata | Facts on songs and artists | [CC0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| MusicBrainz tags | Genre labels from the track's and the artists' tags; used for labels only, never sent to the AI service | Supplementary data under [CC BY-NC-SA 3.0](https://creativecommons.org/licenses/by-nc-sa/3.0/), credited to the MusicBrainz contributors |
+| Wikipedia | Sentences from articles; in a genre's panel, the first two sentences of the genre's article | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/), by the Wikipedia contributors |
+| Wikidata | Facts on songs and artists; the way from a genre to its Wikipedia article | [CC0](https://creativecommons.org/publicdomain/zero/1.0/) |
 | Last.fm | Artist bios; listeners, tags, genre labels and similar artists | Bios under CC BY-SA, by Last.fm users; the rest under Last.fm's API terms. Needs the user's own key |
 | Exa | Web search results | Exa's terms of service. Needs the user's own key |
 
 Two of these are open questions rather than settled ones. MusicBrainz's tags are non-commercial and share-alike: showing them as labels on the user's own screen fits the licence while the app stays free, without advertising or paid features, but MetaBrainz's own reading is still to be asked for before the Play release relies on it, and the tags stay out of every prompt. Exa's terms forbid displaying or passing on what its service returns without its written leave; what that means for an app that shows a result to the user who searched with their own key is not settled. The reasoning, with the sources quoted, is in [`design/architecture.md`](https://github.com/wkusnierczyk/sleevesight/blob/main/design/architecture.md#licensing) under *Licensing*. Discogs is planned as a source for a later phase, and is not in the app.
 
-The AI services that write the insights (Anthropic, OpenAI or Google, on the user's own key) are services, not sources of what the app shows; what each receives is in the [privacy policy]({{ '/privacy.html' | relative_url }}).
+The AI services that write the insights (Anthropic, OpenAI or Google, on the user's own key) are services, not sources of what the app shows; what each receives is in the [privacy policy]({{ '/privacy.html' | relative_url }}). *Read aloud* uses the phone's own text-to-speech engine, through Android's text-to-speech service; the app ships no speech library.
 
 ## The fonts and the icons
 
