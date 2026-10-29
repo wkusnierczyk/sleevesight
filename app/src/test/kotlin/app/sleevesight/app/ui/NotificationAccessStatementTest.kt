@@ -22,9 +22,9 @@ import org.robolectric.RobolectricTestRunner
 
 /**
  * Before Android's own screen for notification access, which warns that the app could read every
- * notification, the first-run screen says plainly what that screen will say and what Sleevesight does
- * with the access (#708), and Home's prompt to turn the access on, which leads to it, says so in one
- * line; *What it reads* leads with it.
+ * notification, the first-run screen explains calmly why Sleevesight asks for notification access and
+ * what it does and does not do with it (#708, #738), and Home's prompt to turn the access on, which
+ * leads to it, says so in one line; *What it reads* leads with it.
  */
 @RunWith(RobolectricTestRunner::class)
 class NotificationAccessStatementTest {
@@ -34,6 +34,8 @@ class NotificationAccessStatementTest {
     private val app = ApplicationProvider.getApplicationContext<SleevesightApplication>()
 
     private fun text(id: Int) = app.getString(id)
+
+    private val whyTitle get() = text(R.string.access_why_title)
 
     private val statement get() = text(R.string.access_statement)
 
@@ -63,14 +65,16 @@ class NotificationAccessStatementTest {
     private fun scrollToStatement() = compose.onNodeWithText(statement).performScrollTo().assertIsDisplayed()
 
     @Test
-    fun theFirstRunScreenSaysWhatAndroidWillWarnOfRightAboveTheAccessButton() =
+    fun theFirstRunScreenExplainsWhyAccessIsNeededRightAboveTheAccessButton() =
         show({ FirstRunScreen(accessGranted = false, openAccessSettings = { true }, onContinue = {}) }) {
             scrollToStatement()
             val hint = bounds(R.string.access_off_hint)
+            val why = bounds(whyTitle)
             val said = bounds(statement)
             val button = bounds(R.string.open_access_settings)
             // Between the instruction and the button: the last thing read before the tap.
-            assertTrue("the statement follows the hint", hint.bottom <= said.top)
+            assertTrue("the heading follows the hint", hint.bottom <= why.top)
+            assertTrue("the statement follows the heading", why.bottom <= said.top)
             assertTrue("the button follows the statement", said.bottom <= button.top)
         }
 
@@ -80,8 +84,10 @@ class NotificationAccessStatementTest {
             FirstRunScreen(accessGranted = false, openAccessSettings = { true }, onContinue = {}, onClose = {})
         }) {
             scrollToStatement()
+            val why = bounds(whyTitle)
             val said = bounds(statement)
             val button = bounds(R.string.open_access_settings)
+            assertTrue("the statement follows the heading", why.bottom <= said.top)
             assertTrue("the button follows the statement", said.bottom <= button.top)
         }
 
@@ -89,6 +95,7 @@ class NotificationAccessStatementTest {
     fun withAccessOnThereIsNoDialogToPrepareFor() =
         show({ FirstRunScreen(accessGranted = true, openAccessSettings = { true }, onContinue = {}) }) {
             compose.onNodeWithText(text(R.string.access_on)).performScrollTo().assertIsDisplayed()
+            compose.onNodeWithText(whyTitle).assertDoesNotExist()
             compose.onNodeWithText(statement).assertDoesNotExist()
         }
 
@@ -109,19 +116,22 @@ class NotificationAccessStatementTest {
     fun homeWithAccessOnDoesNotSayIt() =
         show({ HomeScreen(accessGranted = true, onOpenFirstRun = {}, onOpenSettings = {}) }) {
             compose.onNodeWithText(text(R.string.home_what_leaves)).performScrollTo().assertIsDisplayed()
+            compose.onNodeWithText(whyTitle).assertDoesNotExist()
             compose.onNodeWithText(statement).assertDoesNotExist()
             compose.onNodeWithText(short).assertDoesNotExist()
         }
 
     @Test
-    fun theStatementSaysWhatTheDialogShowsWhatTheAppReadsAndHowToCheck() {
+    fun theStatementExplainsMediaSessionAccessTheOsFilterWhatTheAppReadsAndHowToCheck() {
         val said = statement
         val parts =
             listOf(
-                "all your notifications",
+                "media-session APIs",
+                "Android requires notification-listener access",
+                "configures Android not to deliver any notification types",
+                "does not use notification contents",
                 "Spotify by default",
-                "never reads your notifications",
-                "never acts on them",
+                "not used to collect or transmit your messages, contacts, or other notification contents",
             )
         for (part in parts) {
             assertTrue("it says \"$part\"", part in said)

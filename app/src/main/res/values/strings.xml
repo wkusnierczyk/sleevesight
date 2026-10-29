@@ -35,10 +35,11 @@
     <string name="no_access_settings">No settings screen for notification access opened. Look for it under Settings, Apps, Special app access.</string>
     <string name="access_on">Notification access is on.</string>
     <string name="open_access_settings">Open notification access</string>
-    <!-- Right above "Open notification access" on the first-run screen (#708): what Android's own
-         screen for the access will say, read just before it, and what Sleevesight does with the
-         access. Home's prompt, which leads to this screen, has the short home_access_statement. -->
-    <string name="access_statement">Android will warn that Sleevesight could read all your notifications, such as messages; some phones name banking apps, or make you wait before you can allow it. Sleevesight uses the access only to see what apps say they are playing, to find your music players, and follows only the players you switch on (Spotify by default). It never reads your notifications, messages or contacts, and never acts on them or on calls. Android lets an app list what other apps are playing only with this access, and the access cannot be limited to one app. The privacy policy says more, and Sleevesight’s code is open source.</string>
+    <!-- Right above "Open notification access" on the first-run screen (#708, #738): why the app
+         asks for notification access, and what it does and does not do with it. Home's prompt,
+         which leads to this screen, has the short home_access_statement. -->
+    <string name="access_why_title">Why Sleevesight asks for notification access</string>
+    <string name="access_statement">Sleevesight uses Android’s media-session APIs to discover music players and read information about the music they’re playing. Android requires notification-listener access for this functionality, even though Sleevesight doesn’t need your notifications. Granting this access technically allows Sleevesight to receive notifications from other applications, including messages; on Android 12 and newer, Sleevesight configures Android not to deliver any notification types to the app. Sleevesight does not use notification contents; it uses media-session information to identify music players and follow the ones you select (Spotify by default). This access is not used to collect or transmit your messages, contacts, or other notification contents. The privacy policy says more, and Sleevesight’s code is open source.</string>
     <string name="first_run_continue">Continue</string>
 
     <!-- Settings (design, Settings). -->

@@ -1,0 +1,3 @@
+What's new in 0.1.10:
+- On Android 12 and newer, Sleevesight configures Android not to deliver any notification categories to the app, and locks all four categories off in the phone's settings.
+- Clearer, calmer explanation of why Sleevesight asks for notification access to read music players' media sessions.

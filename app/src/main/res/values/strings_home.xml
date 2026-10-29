@@ -61,9 +61,9 @@
     <!-- What a screen reader says a tap on it does. -->
     <string name="home_guide_reenable_open">Open Settings at Home guide</string>
     <string name="home_access_off">Sleevesight needs notification access to see what is playing.</string>
-    <!-- Under it (#708): the short form of the first-run screen's access_statement, which the
+    <!-- Under it (#708, #738): the short form of the first-run screen's access_statement, which the
          button below leads to, ahead of Android's own screen for the access. -->
-    <string name="home_access_statement">Despite Android’s warning, Sleevesight reads only what apps say is playing, never your notifications.</string>
+    <string name="home_access_statement">Android requires this access to read media sessions; Sleevesight uses it only to see what is playing, never your notifications.</string>
     <string name="home_turn_on_access">Turn on notification access</string>
     <string name="home_what_leaves">What leaves the device?</string>
     <!-- What a screen reader says a tap on it does. -->
