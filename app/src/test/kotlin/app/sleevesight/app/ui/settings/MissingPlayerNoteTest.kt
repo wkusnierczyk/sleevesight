@@ -68,6 +68,8 @@ class MissingPlayerNoteTest {
                     SettingsScreen(settings, secrets, emptyMap(), { CompletableDeferred(true) }, saves) { it }
                 }
             }
+            // The screen draws once the settings have loaded, off the main thread.
+            compose.waitUntil(5_000) { compose.onAllNodesWithTag(SEARCH_FIELD_TAG).fetchSemanticsNodes().isNotEmpty() }
             block()
         }
     }
