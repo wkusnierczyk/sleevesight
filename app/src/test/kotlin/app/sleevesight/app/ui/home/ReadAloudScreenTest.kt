@@ -14,6 +14,7 @@ import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.dp
@@ -61,10 +62,11 @@ import org.robolectric.annotation.GraphicsMode
 import java.util.Locale
 
 /**
- * *Read aloud* on Home (#325): under a written insight, at the end of the split button's row, a
- * 48 dp icon button named *Read aloud*, with no **AI** mark; a tap reads the insight, and the button
- * becomes *Stop reading aloud*, which stops it. None beside an insight not written. At twice the
- * font size on a narrow phone it keeps its place and size, and the split button wraps beside it.
+ * *Read aloud* on Home (#325, #725): with a written insight, at the end of the *Key insights*
+ * heading's row, above the insight, a 48 dp icon button named *Read aloud*, with no **AI** mark; a
+ * tap reads the insight, and the button becomes *Stop reading aloud*, which stops it. None with an
+ * insight not written. At twice the font size on a narrow phone it keeps its place and size, and the
+ * heading wraps beside it.
  * Under a genre's written reason, the same button reads its question, then the reason.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -134,20 +136,23 @@ class ReadAloudScreenTest {
 
     private fun bounds(tag: String): Rect = compose.onNodeWithTag(tag).fetchSemanticsNode().boundsInRoot
 
+    private fun heading(): Rect = compose.onNodeWithText("Key insights").fetchSemanticsNode().boundsInRoot
+
     // Where a tap on the button answers: its 48 dp target, around the 40 dp it draws.
     private fun target(tag: String): Rect = compose.onNodeWithTag(tag).fetchSemanticsNode().touchBoundsInRoot
 
     private val density get() = compose.density.density
 
     @Test
-    fun aWrittenInsightHasReadAloudAtTheEndOfTheSplitButtonsRowWithNoAiMark() =
+    fun aWrittenInsightHasReadAloudAtTheEndOfTheHeadingsRowWithNoAiMark() =
         home(insight) {
             val button = compose.onNodeWithTag(READ_ALOUD_TAG)
             button.assertContentDescriptionEquals("Read aloud")
             val read = target(READ_ALOUD_TAG)
-            val split = bounds(WRITE_HALVES_TAG)
-            assertTrue("after the split button, apart from it", read.left > split.right)
-            assertEquals("on the split button's row", split.center.y, read.center.y, density)
+            val title = heading()
+            assertTrue("after the heading", read.left >= title.right)
+            assertEquals("on the heading's row", title.center.y, read.center.y, density)
+            assertTrue("above the split button", read.bottom <= bounds(WRITE_HALVES_TAG).top)
             assertTrue("a 48 dp target", read.width / density >= 47.5f && read.height / density >= 47.5f)
             val marks =
                 compose
@@ -199,14 +204,14 @@ class ReadAloudScreenTest {
 
     @Test
     @Config(qualifiers = "w320dp-h640dp", fontScale = 2f)
-    fun atTwiceTheFontSizeOnANarrowPhoneTheButtonKeepsItsPlaceAndTheSplitButtonWraps() =
+    fun atTwiceTheFontSizeOnANarrowPhoneTheButtonKeepsItsPlaceAndTheHeadingWraps() =
         card {
             val read = target(READ_ALOUD_TAG)
-            val split = bounds(WRITE_HALVES_TAG)
+            val title = heading()
             val row = bounds(CARD)
             assertEquals("at the row's end", row.right, read.right, 1f)
-            assertTrue("clear of the split button", read.left >= split.right)
-            assertTrue("the split button on the screen", split.left >= row.left - 1f)
+            assertTrue("clear of the heading", read.left >= title.right)
+            assertTrue("the heading on the screen", title.left >= row.left - 1f)
             assertTrue("still a 48 dp target", read.width / density >= 47.5f)
         }
 

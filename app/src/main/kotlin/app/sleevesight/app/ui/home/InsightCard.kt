@@ -2,7 +2,6 @@ package app.sleevesight.app.ui.home
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -35,11 +34,11 @@ import app.sleevesight.core.pipeline.InsightState
  * that is null, before the settings' first read. Beside a written insight, the menu begins with
  * *Look again* (#617), enabled while it can be tapped ([offersLookAgain]).
  *
- * Under a written insight, at the end of the split button's row, *Read aloud* (#325,
- * [ReadAloudButton]) when there is [readAloud]: a plain icon button, apart from the split button by
- * the row's free width, so it is not taken for a third half of it; it makes no AI call and carries
- * no **AI** mark. Its width is kept first: at a large font size the split button's label wraps in
- * what is left, as it does beside its arrow.
+ * With a written insight, at the end of the heading's row, *Read aloud* (#325, #725,
+ * [ReadAloudButton]) when there is [readAloud]: a plain icon button, by the text it reads rather than
+ * by the split button, where it was taken for part of the card's actions; it makes no AI call and
+ * carries no **AI** mark. With no insight written, the heading stands alone. Its width is kept first:
+ * at a large font size the heading wraps in what is left.
  */
 @Suppress("LongParameterList") // The insight, what it is shown with, and its actions, each on its own.
 @Composable
@@ -52,7 +51,19 @@ internal fun InsightCard(
     readAloud: ReadAloudControl? = null,
 ) {
     Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(stringResource(R.string.home_insight_title), style = MaterialTheme.typography.titleMedium)
+        val read = readAloud?.takeIf { insight is InsightState.Written }
+        val title = @Composable { modifier: Modifier ->
+            Text(stringResource(R.string.home_insight_title), modifier, style = MaterialTheme.typography.titleMedium)
+        }
+        if (read == null) {
+            title(Modifier)
+        } else {
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                // Measured after the button, in the width it leaves.
+                title(Modifier.weight(1f))
+                ReadAloudButton(read, READ_ALOUD_TAG)
+            }
+        }
         InsightBody(insight, context, actions, groundingDetails)
         val lookAgain =
             (insight as? InsightState.Written)?.let {
@@ -61,23 +72,7 @@ internal fun InsightCard(
                     actions.onLookAgain,
                 )
             }
-        val split = @Composable {
-            WriteSplitButton(cardOffer(insight, context), actions.onWrite, actions.onStop, writing, lookAgain)
-        }
-        val read = readAloud?.takeIf { insight is InsightState.Written }
-        if (read == null) {
-            split()
-        } else {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                // Measured after the button, in the width it leaves.
-                Box(Modifier.weight(1f, fill = false)) { split() }
-                ReadAloudButton(read, READ_ALOUD_TAG)
-            }
-        }
+        WriteSplitButton(cardOffer(insight, context), actions.onWrite, actions.onStop, writing, lookAgain)
     }
 }
 
