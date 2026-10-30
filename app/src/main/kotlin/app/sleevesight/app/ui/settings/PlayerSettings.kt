@@ -6,8 +6,14 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.Drawable
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -22,10 +28,15 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.ExternalLink
+import app.sleevesight.app.ui.rememberOpenUrl
 import app.sleevesight.app.ui.theme.DeveloperMark
 import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.Dispatchers
@@ -66,8 +77,8 @@ class InstalledPlayers(
  * links have loaded, off the main thread; each row's icon loads after, off the main thread too,
  * once per row while the section is drawn (#579): the row shows without it until it has, and for
  * good when the phone has none to give. With no [PlayerApps.installed] (tests, previews), every
- * stored player is listed, without an icon. Under the players, *Only enabled players on Home*
- * (#674).
+ * stored player is listed, without an icon. Under the players, *Can’t see your player?*
+ * ([MissingPlayerNote], #758), then *Only enabled players on Home* (#674).
  */
 @Composable
 internal fun PlayersSection(
@@ -84,12 +95,54 @@ internal fun PlayersSection(
         key(player.packageName) { PlayerRow(player, followed, settings.developerMode, apps, update) }
     }
     // After the players, the section's own content, so it stays put as players are added (#674).
+    MissingPlayerNote()
     SwitchRow(
         title = stringResource(R.string.settings_players_on_home),
         summary = stringResource(R.string.settings_players_on_home_summary),
         checked = settings.onlyEnabledPlayersOnHome,
     ) { on -> update { it.copy(onlyEnabledPlayersOnHome = on) } }
 }
+
+/**
+ * *Can’t see your player?* (#758): what a player needs to be listed, in a panel of the theme's
+ * container colour, as the first-run screen's access panel is, so it stands apart from the rows; its
+ * heading, the note's paragraphs, and *Which players work ↗*, which opens the FAQ's answer in the
+ * browser. A search shows it while it matches its heading or its text.
+ */
+@Composable
+private fun MissingPlayerNote() {
+    val title = stringResource(R.string.settings_players_missing_title)
+    if (!shownInSearch(title)) return
+    val open = rememberOpenUrl(PLAYERS_FAQ_URL)
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp).testTag(MISSING_PLAYER_NOTE_TAG),
+    ) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                searchMarked(title),
+                style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.semantics { heading() },
+            )
+            Paragraphs(
+                stringResource(R.string.settings_players_missing),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            ExternalLink(
+                text = stringResource(R.string.settings_players_missing_link),
+                description = stringResource(R.string.settings_players_missing_link_description),
+                onClick = open,
+            )
+        }
+    }
+}
+
+/** The FAQ's answer on which players work (#758), which *Can’t see your player?* links to. */
+internal const val PLAYERS_FAQ_URL = "https://sleevesight.app/docs/faq/#which-music-players-work-with-sleevesight"
+
+/** The test tag of *Can’t see your player?* ([MissingPlayerNote]). */
+internal const val MISSING_PLAYER_NOTE_TAG = "settings:missingPlayerNote"
 
 /**
  * A player as *Players* and Home list it (#627): its [packageName], its [name] as the phone shows

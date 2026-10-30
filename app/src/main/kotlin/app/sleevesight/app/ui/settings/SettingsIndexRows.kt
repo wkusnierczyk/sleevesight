@@ -166,10 +166,15 @@ internal fun historyRows(settings: Settings): List<IndexedRow> {
         indexRow(stringResource(R.string.settings_keep_artists), stringResource(R.string.settings_keep_artists_summary))
 }
 
-/** *Players*' rows after the players themselves (#674). */
+/** *Players*' rows after the players themselves: *Can’t see your player?* (#758) and #674's switch. */
 @Composable
 internal fun playerRows(): List<IndexedRow> =
     listOf(
+        indexRow(
+            stringResource(R.string.settings_players_missing_title),
+            stringResource(R.string.settings_players_missing),
+            stringResource(R.string.settings_players_missing_link),
+        ),
         indexRow(
             stringResource(R.string.settings_players_on_home),
             stringResource(R.string.settings_players_on_home_summary),
