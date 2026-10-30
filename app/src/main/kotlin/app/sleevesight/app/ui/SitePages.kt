@@ -15,6 +15,9 @@ internal const val LICENCE_URL = "https://github.com/wkusnierczyk/sleevesight/bl
 /** The dependencies page on the site (`docs/dependencies/index.md`, #412), linked from *Credits* (#502). */
 internal const val DEPENDENCIES_PAGE_URL = "https://sleevesight.app/docs/dependencies/"
 
+/** The FAQ's answer on which players work (`docs/faq`, #758), linked from *Can’t see your player?* under *Players*. */
+internal const val PLAYERS_FAQ_URL = "${DOCS_URL}faq/#which-music-players-work-with-sleevesight"
+
 /** The settings page of the documentation (`docs/tutorials/settings`, #415). */
 private const val SETTINGS_PAGE_URL = "https://sleevesight.app/docs/tutorials/settings/"
 

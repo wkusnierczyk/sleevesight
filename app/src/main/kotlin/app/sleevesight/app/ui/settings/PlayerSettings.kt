@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.ExternalLink
+import app.sleevesight.app.ui.PLAYERS_FAQ_URL
 import app.sleevesight.app.ui.rememberOpenUrl
 import app.sleevesight.app.ui.theme.DeveloperMark
 import app.sleevesight.core.settings.Settings
@@ -137,9 +138,6 @@ private fun MissingPlayerNote() {
         }
     }
 }
-
-/** The FAQ's answer on which players work (#758), which *Can’t see your player?* links to. */
-internal const val PLAYERS_FAQ_URL = "https://sleevesight.app/docs/faq/#which-music-players-work-with-sleevesight"
 
 /** The test tag of *Can’t see your player?* ([MissingPlayerNote]). */
 internal const val MISSING_PLAYER_NOTE_TAG = "settings:missingPlayerNote"
