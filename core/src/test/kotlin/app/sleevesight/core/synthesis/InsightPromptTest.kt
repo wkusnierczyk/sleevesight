@@ -32,11 +32,11 @@ class InsightPromptTest {
     // Stored prompts: a change to the wording shows up here as a reviewed diff.
 
     @Test
-    fun `the stored prompts are version 6's`() {
+    fun `the stored prompts are version 7's`() {
         // A change to the template changes the stored prompts and raises the version with them (the
-        // synthesis cache keys cards by it): update both together. Version 6 (#424) changed the
-        // evidence given, not the template, so the stored prompts are version 5's too.
-        assertEquals(6, InsightPrompt.VERSION)
+        // synthesis cache keys cards by it): update both together. Version 7 (#722) added the rule
+        // on the track's length.
+        assertEquals(7, InsightPrompt.VERSION)
     }
 
     @Test
@@ -146,6 +146,8 @@ class InsightPromptTest {
             assertEquals(noEvidence, contract.last())
             val knowledge = if (allowModel) MODEL_RULE else "- Do not use your own knowledge."
             assertTrue(knowledge in contract, knowledge)
+            // The player shows the length, so the insight leaves it out (#722).
+            assertTrue(InsightPrompt.LENGTH_RULE in contract, "the length rule")
         }
     }
 

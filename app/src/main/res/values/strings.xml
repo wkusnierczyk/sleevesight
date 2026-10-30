@@ -32,7 +32,7 @@
     <string name="first_run_no_tracking">No accounts of our own, no telemetry, no crash reporting of our own, no analytics, no ads.</string>
     <!-- What a screen reader says a tap on a web address shown as a link does (the privacy policy's, an AI service's terms). -->
     <string name="link_open">Open in your browser</string>
-    <string name="first_run_privacy">The privacy policy says more, with where Sleevesight stands under the GDPR and the EU AI Act:</string>
+    <string name="first_run_privacy">See privacy policy for details, including where Sleevesight stands under the GDPR and the EU AI Act.</string>
 
     <string name="access_off">Notification access is off.</string>
     <string name="access_off_hint">In the settings that open, turn on Sleevesight, then come back here.</string>
@@ -45,7 +45,7 @@
          manifest entry opts out of every notification type (#739). Home's prompt, which leads to
          this screen, has the short home_access_statement. -->
     <string name="access_why_title">Why notification access</string>
-    <string name="access_statement">Android lets an app see what music apps are playing only with notification access. Sleevesight uses it for that alone: on Android 12 and newer, delivery of notifications to Sleevesight is disabled at the system level; on older versions, Sleevesight ignores all notifications. It never reads your messages or contacts.</string>
+    <string name="access_statement">Android lets an app see what music apps are playing only with notification access. Sleevesight uses it for that alone: on Android 12 and newer, delivery of notifications to Sleevesight is disabled at system level and Sleevesight receives no notifications; on older versions, Sleevesight ignores all notifications. It never reads your messages or contacts.</string>
     <string name="access_more">Sleevesight is open source for you to validate compliance.</string>
     <string name="first_run_continue">Continue</string>
 

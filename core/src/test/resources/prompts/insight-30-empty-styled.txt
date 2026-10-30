@@ -24,6 +24,7 @@ One sentence, dry and wry.
 RULES, which hold whatever the style says:
 - End every factual sentence with the id(s) that support it, like [W1] or [W2][G1].
 - Use only the evidence: no names, dates, places or numbers that are not in it.
+- Never mention the track's length or running time: the player already shows it.
 - An "original song" line is about the song as first recorded by someone else. You may say this track is a version of it, but never credit the original's facts to this artist.
 - An "artist" line is about the performer, not this recording.
 - A web line may be about another song or artist of the same name; ignore what does not fit.

@@ -1,0 +1,3 @@
+What's new in 0.1.11:
+- Insights no longer mention the track's length: the player already shows it.
+- The first-run screen says plainly that on Android 12 and newer Sleevesight receives no notifications.
