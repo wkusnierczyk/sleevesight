@@ -65,8 +65,8 @@ import java.util.Locale
  * *Read aloud* on Home (#325, #725): with a written insight, at the end of the *Key insights*
  * heading's row, above the insight, a 48 dp icon button named *Read aloud*, with no **AI** mark; a
  * tap reads the insight, and the button becomes *Stop reading aloud*, which stops it. None with an
- * insight not written. At twice the font size on a narrow phone it keeps its place and size, and the
- * heading wraps beside it.
+ * insight not written, where the heading is as tall as the button would be. At twice the font size on
+ * a narrow phone it keeps its place and size, and the heading stays clear of it.
  * Under a genre's written reason, the same button reads its question, then the reason.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -191,7 +191,11 @@ class ReadAloudScreenTest {
     @Test
     fun noInsightWrittenHasNoReadAloud() {
         for (state in listOf(InsightState.Idle(canWrite = true), InsightState.Writing("Sundown was"))) {
-            home(state) { compose.onNodeWithTag(READ_ALOUD_TAG).assertDoesNotExist() }
+            home(state) {
+                compose.onNodeWithTag(READ_ALOUD_TAG).assertDoesNotExist()
+                // As tall as the button's row, so the insight does not move down once written.
+                assertTrue("the heading's row 48 dp tall", bounds(INSIGHT_HEADING_TAG).height / density >= 47.5f)
+            }
         }
     }
 
@@ -204,7 +208,7 @@ class ReadAloudScreenTest {
 
     @Test
     @Config(qualifiers = "w320dp-h640dp", fontScale = 2f)
-    fun atTwiceTheFontSizeOnANarrowPhoneTheButtonKeepsItsPlaceAndTheHeadingWraps() =
+    fun atTwiceTheFontSizeOnANarrowPhoneTheButtonKeepsItsPlaceAndTheHeadingStaysClearOfIt() =
         card {
             val read = target(READ_ALOUD_TAG)
             val title = heading()
