@@ -2,6 +2,7 @@ package app.sleevesight.core.pipeline
 
 import app.sleevesight.core.Secret
 import app.sleevesight.core.ai.AiErrorKind
+import app.sleevesight.core.ai.AiProvider
 import app.sleevesight.core.ai.Breakoff
 import app.sleevesight.core.ai.BreakoffCause
 import app.sleevesight.core.ai.CompletionEvent
@@ -148,6 +149,27 @@ class GenreReasonsTest {
         assertFalse(reasons.withheld(only.copy(evidence = null), "jazz", settings))
         // A genre the track does not have.
         assertFalse(reasons.withheld(only, "rock", settings))
+    }
+
+    @Test
+    fun `neither offered nor withheld with no model, or while a source is still pending (#721)`() {
+        // A service with no default model and none set: Ollama's, until one is chosen.
+        val ollama =
+            object : AiProvider by provider {
+                override val id: ProviderId = ProviderId.OLLAMA
+            }
+        val modelless = GenreReasons(AiAccess(ollama, Secret("k")), cache, JvmHasher)
+        val noModel = Settings(aiProvider = ProviderId.OLLAMA)
+        for (credits in listOf(listOf(LabelSource.LASTFM), listOf(LabelSource.MUSICBRAINZ))) {
+            val given = track(credits = credits)
+            assertNull(modelless.key(given, "jazz", noModel))
+            assertFalse(modelless.withheld(given, "jazz", noModel))
+            // Evidence in, but a source still to land.
+            val pending = given.copy(sources = given.sources + (SourceId.LASTFM to SourceState.Pending))
+            assertNotNull(pending.evidence)
+            assertNull(reasons.key(pending, "jazz", settings))
+            assertFalse(reasons.withheld(pending, "jazz", settings))
+        }
     }
 
     @Test
