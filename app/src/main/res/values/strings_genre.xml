@@ -15,5 +15,8 @@
     <string name="genre_why_writing">Writing…</string>
     <string name="genre_why_no_evidence">The sources say nothing that explains it.</string>
     <string name="genre_why_failed">The explanation could not be written: %1$s.</string>
+    <!-- Under the disabled button, for a genre only MusicBrainz's tags give (D12, #721): their
+         licence keeps them out of every prompt. -->
+    <string name="genre_why_withheld">This genre tag was obtained from MusicBrainz. The service explicitly forbids sending its tag to an AI API.</string>
     <string name="genre_why_incomplete">The reply stopped early, so this is incomplete, and it was not kept.</string>
 </resources>

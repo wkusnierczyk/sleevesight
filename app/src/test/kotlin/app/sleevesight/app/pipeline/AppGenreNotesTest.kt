@@ -83,11 +83,13 @@ class AppGenreNotesTest {
 
     private fun Lookup<GenreDefinition>?.found(): GenreDefinition? = (this as? Lookup.Found)?.value
 
-    private fun label(tag: String) =
-        TrackLabel(
-            GenreLabel(tag, "rock", tag.replaceFirstChar(Char::uppercase), tag, null, GenreLevel.ARTIST, "A"),
-            listOf(LabelCredit(LabelSource.LASTFM, null)),
-        )
+    private fun label(
+        tag: String,
+        source: LabelSource = LabelSource.LASTFM,
+    ) = TrackLabel(
+        GenreLabel(tag, "rock", tag.replaceFirstChar(Char::uppercase), tag, null, GenreLevel.ARTIST, "A"),
+        listOf(LabelCredit(source, null)),
+    )
 
     private fun track(playing: TrackState = HomeFixtures.track()): TrackState {
         val row = GenreRow(GenreLevel.ARTIST, "A", listOf(label("rock"), label("punk")))
@@ -251,6 +253,25 @@ class AppGenreNotesTest {
             notes.explain(track(), "rock")
             advanceUntilIdle()
             assertEquals(0, provider.requests)
+        }
+
+    @Test
+    fun `a genre only MusicBrainz gives is withheld, and a tap asks nothing (#721)`() =
+        runTest {
+            val notes = notes()
+            val row = GenreRow(GenreLevel.ARTIST, "A", listOf(label("rock"), label("punk", LabelSource.MUSICBRAINZ)))
+            val track = HomeFixtures.track().copy(genres = TrackGenres(listOf(row)))
+            assertEquals(GenreReason.Withheld, notes.reason(track, "punk").first())
+            assertEquals(GenreReason.Offered, notes.reason(track, "rock").first())
+            notes.explain(track, "punk")
+            advanceUntilIdle()
+            assertEquals(0, provider.requests)
+            // Where it would not be offered anyway, nothing.
+            settings.value = settings.value?.copy(writeInsights = false)
+            assertEquals(GenreReason.None, notes.reason(track, "punk").first())
+            settings.value = settings.value?.copy(writeInsights = true)
+            parts.value = null
+            assertEquals(GenreReason.None, notes.reason(track, "punk").first())
         }
 
     @Test

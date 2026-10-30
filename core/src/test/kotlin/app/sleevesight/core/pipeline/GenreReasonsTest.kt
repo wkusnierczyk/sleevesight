@@ -29,6 +29,7 @@ import app.sleevesight.core.synthesis.GenreReasonPrompt
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
@@ -130,6 +131,23 @@ class GenreReasonsTest {
         assertNull(reasons.key(track, "jazz", settings.copy(writeInsights = false)))
         assertNull(reasons.key(track.copy(evidence = null), "jazz", settings))
         assertNull(reasons.key(track, "rock", settings.copy(aiProvider = null)))
+    }
+
+    @Test
+    fun `a genre only MusicBrainz gives is withheld where it would otherwise be offered (#721)`() {
+        val only = track(credits = listOf(LabelSource.MUSICBRAINZ))
+        assertTrue(reasons.withheld(only, "jazz", settings))
+        // Given by another source too: offered, not withheld.
+        val both = track(credits = listOf(LabelSource.MUSICBRAINZ, LabelSource.LASTFM))
+        assertNotNull(reasons.key(both, "jazz", settings))
+        assertFalse(reasons.withheld(both, "jazz", settings))
+        assertFalse(reasons.withheld(track, "jazz", settings))
+        // Where it would not be offered anyway: neither.
+        assertFalse(GenreReasons(null, cache, JvmHasher).withheld(only, "jazz", settings))
+        assertFalse(reasons.withheld(only, "jazz", settings.copy(writeInsights = false)))
+        assertFalse(reasons.withheld(only.copy(evidence = null), "jazz", settings))
+        // A genre the track does not have.
+        assertFalse(reasons.withheld(only, "rock", settings))
     }
 
     @Test

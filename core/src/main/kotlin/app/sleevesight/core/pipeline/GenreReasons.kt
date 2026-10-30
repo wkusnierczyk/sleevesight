@@ -35,8 +35,9 @@ data class KeptReason(
  * Its states are the insight's ([InsightState]): [InsightState.Writing] while the reply comes,
  * [InsightState.Written] once checked, [InsightState.NoEvidence] when the evidence has nothing to
  * narrate (no call) or the model replies `NO_EVIDENCE`, [InsightState.Failed] when the call fails or
- * is declined. Not offered ([key] null) for a genre only MusicBrainz's tags give (D12: they never
- * reach a prompt), with *Show insights* off, with no AI service ready, or before the evidence is in.
+ * is declined. Not offered ([key] null) with *Show insights* off, with no AI service ready, before
+ * the evidence is in, or for a genre only MusicBrainz's tags give (D12: they never reach a prompt),
+ * which, where it would otherwise be offered, is [withheld], so the panel can say why (#721).
  *
  * A cache that throws is a miss, and a write that fails keeps nothing; neither stops the reason.
  * Each state written comes with its time by [clock]; a reply kept is kept with the time it is shown
@@ -58,7 +59,7 @@ class GenreReasons(
         genre: String,
         settings: Settings,
     ): CardKey? {
-        val access = ai?.takeIf { settings.writeInsights && track.gathered && prompted(track, genre) }
+        val access = ready(track, settings)?.takeIf { prompted(track, genre) }
         val model = access?.let { settings.model(it.provider.id) }
         val evidence = track.evidence
         if (access == null || model == null || evidence == null) return null
@@ -76,6 +77,33 @@ class GenreReasons(
             subject = genre,
         )
     }
+
+    /**
+     * Whether [genre]'s reason for [track] would be offered under [settings] but for D12: the track
+     * has the genre, only MusicBrainz's tags give it ([prompted] false), and all else [key] asks for
+     * holds (#721).
+     */
+    fun withheld(
+        track: TrackState,
+        genre: String,
+        settings: Settings,
+    ): Boolean =
+        !prompted(track, genre) &&
+            track.genres.all.any { it.genre.identity == genre } &&
+            ready(track, settings) != null
+
+    // The AI service, when one with a model is ready under [settings] and [track]'s evidence is in;
+    // what [key] and [withheld] both ask for besides the genre's sources.
+    private fun ready(
+        track: TrackState,
+        settings: Settings,
+    ): AiAccess? =
+        ai?.takeIf {
+            settings.writeInsights &&
+                track.gathered &&
+                track.evidence != null &&
+                settings.model(it.provider.id) != null
+        }
 
     /**
      * The reason kept for [key], checked against [track]'s evidence, with when it was written where

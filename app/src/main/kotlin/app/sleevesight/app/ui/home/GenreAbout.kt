@@ -43,11 +43,11 @@ import app.sleevesight.core.resolution.Lookup
  * ([PanelNotes.onCite]), its grounding note under it. A genre with no definition says so in the
  * definition's place, once the lookup has answered (#663). Neither shows when [PanelNotes.notes]
  * has none: no definition while it is looked up, after a failed lookup, or with Wikipedia off; no
- * button for a genre only MusicBrainz gives, with
- * *Show insights* off or no AI service ready. A reason still being written reads its `[AI]` as the
- * settings allow it ([PanelNotes.modelAllowed]). A written reason has *Read aloud* (#325,
- * [ReadAloudButton]) at the end of its grounding note's row, which reads the question, then the
- * reason ([PanelNotes.readAloud]).
+ * button with *Show insights* off, no AI service ready, or before the evidence is in. For a genre
+ * only MusicBrainz gives (D12), it is disabled, with why under it, where it would otherwise show
+ * (#721). A reason still being written reads its `[AI]` as the settings allow it
+ * ([PanelNotes.modelAllowed]). A written reason has *Read aloud* (#325, [ReadAloudButton]) at the
+ * end of its grounding note's row, which reads the question, then the reason ([PanelNotes.readAloud]).
  */
 @Composable
 internal fun GenreAbout(
@@ -83,6 +83,7 @@ internal fun GenreAbout(
     when (val shown = reason) {
         GenreReason.None -> Unit
         GenreReason.Offered -> WhyButton(question) { notes.explain(track, genre) }
+        GenreReason.Withheld -> Withheld(question)
         is GenreReason.Shown -> {
             val readAloud =
                 readAloudControl(reader, Reading.genreReason(genre)) {
@@ -124,18 +125,31 @@ private fun Definition(definition: GenreDefinition) {
     }
 }
 
-// *Why is this …?*: as tall as the genre chips, answering a tap across 48 dp, with the AI mark.
+// *Why is this …?*: as tall as the genre chips, answering a tap across 48 dp, with the AI mark;
+// disabled ([enabled] false) for a genre only MusicBrainz gives.
 @Composable
 private fun WhyButton(
     question: String,
+    enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
     OutlinedButton(
         onClick,
         Modifier.testTag(GENRE_WHY_TAG).heightIn(min = HEIGHT),
+        enabled = enabled,
         shape = RoundedCornerShape(CORNER),
         contentPadding = PADDING,
     ) { AiLabel(question) }
+}
+
+// *Why is this …?* disabled, for a genre only MusicBrainz gives (D12, #721), and why, in the
+// panel's quiet note style.
+@Composable
+private fun Withheld(question: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        WhyButton(question, enabled = false) {}
+        Quiet(stringResource(R.string.genre_why_withheld), Modifier.testTag(GENRE_WHY_WITHHELD_TAG))
+    }
 }
 
 // The reason asked for, in [state], under the [question]; offered again after a failure. Written,
@@ -189,7 +203,7 @@ private fun Reason(
             is InsightState.Idle, InsightState.Stopped -> Unit
         }
     }
-    if (state is InsightState.Failed) WhyButton(question, again)
+    if (state is InsightState.Failed) WhyButton(question, onClick = again)
 }
 
 @Composable
@@ -221,10 +235,14 @@ private val WORD = Regex("\\p{L}+")
 /** The address of the licence of Wikipedia's text, which the definition's credit links. */
 internal const val WIKIPEDIA_LICENCE: String = "https://creativecommons.org/licenses/by-sa/4.0/"
 
-/** The test tags of a genre's definition (or the line saying it has none), its *Why is this …?* and its reason. */
+/**
+ * The test tags of a genre's definition (or the line saying it has none), its *Why is this …?* (and
+ * the line saying why it is disabled) and its reason.
+ */
 const val GENRE_DEFINITION_TAG: String = "genre-panel:definition"
 const val GENRE_NO_DEFINITION_TAG: String = "genre-panel:no-definition"
 const val GENRE_WHY_TAG: String = "genre-panel:why"
+const val GENRE_WHY_WITHHELD_TAG: String = "genre-panel:why-withheld"
 const val GENRE_REASON_TAG: String = "genre-panel:reason"
 
 private val HEIGHT = 32.dp

@@ -10,6 +10,7 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertHeightIsAtLeast
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
@@ -227,6 +228,31 @@ class GenreAboutScreenTest {
     }
 
     @Test
+    fun aGenreOnlyMusicBrainzGivesShowsWhyDisabledWithWhyUnderIt() {
+        val notes = Notes(start = GenreReason.Withheld)
+        val only =
+            playing.copy(
+                genres =
+                    TrackGenres(
+                        listOf(GenreRow(GenreLevel.ARTIST, "Miles Davis", listOf(label(LabelSource.MUSICBRAINZ)))),
+                    ),
+            )
+        showBox(notes, track = only) {
+            val question = text(R.string.genre_why, "jazz")
+            // The same button, with its AI mark, disabled: TalkBack says so, and a tap does nothing.
+            compose.onNodeWithTag(GENRE_WHY_TAG).assertIsNotEnabled()
+            compose.onNodeWithTag(GENRE_WHY_TAG).assertContentDescriptionEquals("$question, uses AI")
+            compose.onNodeWithTag(GENRE_WHY_WITHHELD_TAG).assertTextEquals(text(R.string.genre_why_withheld))
+            val tops = listOf(GENRE_WHY_TAG, GENRE_WHY_WITHHELD_TAG, GENRES_ROW_PREFIX + "0").map(::top)
+            assertEquals("Why, its note, table, in that order", tops.sorted(), tops)
+            compose.onNodeWithTag(GENRE_WHY_TAG).performScrollTo().performClick()
+            compose.waitForIdle()
+            assertEquals(0, notes.taps)
+            assertEquals(0, count(GENRE_REASON_TAG))
+        }
+    }
+
+    @Test
     fun anotherGenresDefinitionNeverShowsWhileThisOnesIsLookedUp() {
         // Modal jazz's lookup never answers.
         val notes =
@@ -289,6 +315,7 @@ class GenreAboutScreenTest {
         showBox(Notes(lookedUp = { flowOf(null) }, start = GenreReason.None)) {
             assertEquals(0, count(GENRE_DEFINITION_TAG))
             assertEquals(0, count(GENRE_WHY_TAG))
+            assertEquals(0, count(GENRE_WHY_WITHHELD_TAG))
             assertEquals(0, count(GENRE_REASON_TAG))
             compose.onNodeWithTag(GENRES_ROW_PREFIX + "0").assertExists()
         }
