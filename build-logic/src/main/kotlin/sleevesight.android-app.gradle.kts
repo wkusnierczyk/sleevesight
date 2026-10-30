@@ -68,6 +68,13 @@ extensions.configure<ApplicationExtension> {
     }
 }
 
+// The unit tests in two JVMs, which share out the test classes (#746): most are Robolectric tests,
+// and in one JVM they ran one at a time. Each fork is a JVM of its own, so tests that write the same
+// file outside a temporary directory can collide.
+tasks.withType<Test>().configureEach {
+    maxParallelForks = 2
+}
+
 val graphRules = rootProject.layout.projectDirectory.file("config/module-graph.properties")
 
 // Aggregates, so `./gradlew checkManifest` runs the check for every variant: release ships, and
