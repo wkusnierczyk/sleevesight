@@ -2,15 +2,16 @@ package app.sleevesight.app.ui.home
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
@@ -35,11 +36,12 @@ import app.sleevesight.core.pipeline.InsightState
  * that is null, before the settings' first read. Beside a written insight, the menu begins with
  * *Look again* (#617), enabled while it can be tapped ([offersLookAgain]).
  *
- * Under a written insight, at the end of the split button's row, *Read aloud* (#325,
- * [ReadAloudButton]) when there is [readAloud]: a plain icon button, apart from the split button by
- * the row's free width, so it is not taken for a third half of it; it makes no AI call and carries
- * no **AI** mark. Its width is kept first: at a large font size the split button's label wraps in
- * what is left, as it does beside its arrow.
+ * With a written insight, at the end of the heading's row, *Read aloud* (#325, #725,
+ * [ReadAloudButton]) when there is [readAloud]: a plain icon button, by the text it reads rather than
+ * by the split button, where it was taken for part of the card's actions; it makes no AI call and
+ * carries no **AI** mark. With no insight written, the heading stands alone, as tall as the button, so
+ * the insight does not move down when it is written. Its width is kept first: at a large font size the
+ * heading wraps in what is left.
  */
 @Suppress("LongParameterList") // The insight, what it is shown with, and its actions, each on its own.
 @Composable
@@ -52,7 +54,19 @@ internal fun InsightCard(
     readAloud: ReadAloudControl? = null,
 ) {
     Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(stringResource(R.string.home_insight_title), style = MaterialTheme.typography.titleMedium)
+        val read = readAloud?.takeIf { insight is InsightState.Written }
+        Row(
+            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag(INSIGHT_HEADING_TAG),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // Measured after the button, in the width it leaves.
+            Text(
+                stringResource(R.string.home_insight_title),
+                Modifier.weight(1f),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            read?.let { ReadAloudButton(it, READ_ALOUD_TAG) }
+        }
         InsightBody(insight, context, actions, groundingDetails)
         val lookAgain =
             (insight as? InsightState.Written)?.let {
@@ -61,23 +75,7 @@ internal fun InsightCard(
                     actions.onLookAgain,
                 )
             }
-        val split = @Composable {
-            WriteSplitButton(cardOffer(insight, context), actions.onWrite, actions.onStop, writing, lookAgain)
-        }
-        val read = readAloud?.takeIf { insight is InsightState.Written }
-        if (read == null) {
-            split()
-        } else {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                // Measured after the button, in the width it leaves.
-                Box(Modifier.weight(1f, fill = false)) { split() }
-                ReadAloudButton(read, READ_ALOUD_TAG)
-            }
-        }
+        WriteSplitButton(cardOffer(insight, context), actions.onWrite, actions.onStop, writing, lookAgain)
     }
 }
 
@@ -248,3 +246,6 @@ private fun Prose(text: AnnotatedString) {
 private fun Quiet(text: String) {
     Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
+
+/** The test tag of the row of the *Key insights* heading, with *Read aloud* at its end. */
+const val INSIGHT_HEADING_TAG: String = "insight-heading"

@@ -65,7 +65,7 @@ import kotlinx.coroutines.flow.StateFlow
  *   *Why is this …?*.
  * @property lookAgain a tap on *Look again* (#617), with the key it was offered under and the track
  *   it was shown beside, as [write] takes a tap on Write.
- * @property readAloud *Read aloud* (#325), under the insight and under a genre's reason; null shows
+ * @property readAloud *Read aloud* (#325), beside *Key insights* (#725) and under a genre's reason; null shows
  *   no button.
  */
 @Suppress("LongParameterList") // What one screen reads, each published on its own.
@@ -306,7 +306,7 @@ internal fun NowPlayingContent(
     }
 }
 
-// *Read aloud* under the insight (#325): it reads the insight shown, for the track it is shown beside.
+// *Read aloud* beside *Key insights* (#325, #725): it reads the insight shown, for the track it is shown beside.
 @Composable
 private fun insightReading(
     readAloud: ReadAloud?,
