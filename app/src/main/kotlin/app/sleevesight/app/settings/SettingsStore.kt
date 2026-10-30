@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import app.sleevesight.app.BuildConfig
+import app.sleevesight.core.settings.Dismissable
 import app.sleevesight.core.settings.ReportButton
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.ThemeChoice
@@ -158,21 +159,20 @@ class SettingsStore(
             null
         }
 
-    /**
-     * The home guide's *Do not show again* (#627): each call switches *Home guide* off, saved in
-     * [saves], which outlives the screen. A save that fails leaves the setting, and so the guide, as
-     * it was.
-     */
-    fun homeGuideHider(saves: CoroutineScope): () -> Unit =
-        {
-            saves.launch {
-                try {
-                    update { it.copy(homeGuide = false) }
-                } catch (_: IOException) {
-                    // Only an I/O error: the guide stays, as the setting does.
-                }
-            }
-        }
+    /** Puts [item] away for good (#759): its *Dismiss*. */
+    suspend fun dismiss(item: Dismissable) {
+        update { it.copy(dismissed = it.dismissed + item) }
+    }
+
+    /** Brings [item] back (#759): *Undo* in the message after its *Dismiss*. */
+    suspend fun undismiss(item: Dismissable) {
+        update { it.copy(dismissed = it.dismissed - item) }
+    }
+
+    /** Brings back everything dismissed (#759): *Restore dismissed messages*, under *Appearance*. */
+    suspend fun restoreDismissed() {
+        update { it.copy(dismissed = emptySet()) }
+    }
 
     /**
      * Home's theme button (#636): each call moves *Theme* one step on ([ThemeChoice.next]) from the
@@ -216,6 +216,21 @@ class SettingsStore(
         }
 
     companion object {
+        /**
+         * Runs [save] in this scope, its result whether it was saved: false after an I/O error,
+         * which leaves the settings as they were. Any other failure fails the save, and reaches this
+         * scope, as the settings screen's saves do.
+         */
+        internal fun CoroutineScope.saving(save: suspend () -> Unit): Deferred<Boolean> =
+            async {
+                try {
+                    save()
+                    true
+                } catch (_: IOException) {
+                    false
+                }
+            }
+
         /**
          * The settings' defaults in this build: `:core`'s, with developer mode's as the build sets
          * it (`BuildConfig.DEVELOPER_MODE_DEFAULT`, #451): on in a build for Play's testing tracks,

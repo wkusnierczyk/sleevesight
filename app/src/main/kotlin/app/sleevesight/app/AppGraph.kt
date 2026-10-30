@@ -60,7 +60,7 @@ import app.sleevesight.app.speech.ReadAloudMessages
 import app.sleevesight.app.speech.SystemMusicFocus
 import app.sleevesight.app.speech.SystemSpeech
 import app.sleevesight.app.speech.screenReaderOn
-import app.sleevesight.app.ui.home.GuideDismissal
+import app.sleevesight.app.ui.home.GuideHiding
 import app.sleevesight.app.ui.home.SpokenWords
 import app.sleevesight.core.ai.AiProvider
 import app.sleevesight.core.model.ProviderId
@@ -325,8 +325,8 @@ class AppGraph internal constructor(
             stored = { provider -> SecretId.forProvider(provider)?.let { secrets.isStored(it) } == true },
         )
 
-    /** The guide to Home's *Dismiss once* (#627), held for the process, never stored. */
-    val guideDismissal = GuideDismissal()
+    /** The guide to Home's *Hide once* (#627, #759), held in memory, never stored. */
+    val guideHiding = GuideHiding()
 
     /**
      * The latest settings read, for the caches, which read them on every call, the pipeline and
@@ -573,8 +573,8 @@ class AppGraph internal constructor(
         pipelineScope.launch { diagnostics.log.follow(pipeline.events) }
         // Each player the session layer sees appears under *Players*, switched off.
         mainScope.launch { seenPlayersRecorder.run() }
-        // The guide to Home, dismissed once, is back for the next time nothing plays (#627).
-        mainScope.launch { guideDismissal.clearOnPlay(sessions.nowPlaying) }
+        // The guide to Home, hidden once, is back for the next time nothing plays (#627).
+        mainScope.launch { guideHiding.clearOnPlay(sessions.nowPlaying) }
         // A reading aloud stops with its track, and a new insight is read with *Read new insights aloud* (#325).
         mainScope.launch { readAloud.follow(sessions.nowPlaying, pipeline.state) }
         // What the session layer sees is recorded whether or not the app is visible.

@@ -11,25 +11,34 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** The home guide's *Dismiss once* (#627): until a track plays, held in memory only. */
+/** The home guide's *Hide once* (#627, #759): until Home is left or a track plays, held in memory only. */
 @OptIn(ExperimentalCoroutinesApi::class)
-class GuideDismissalTest {
+class GuideHidingTest {
     @Test
     fun aNewProcessShowsTheGuide() {
-        assertFalse(GuideDismissal().dismissed.value)
+        assertFalse(GuideHiding().hidden.value)
     }
 
     @Test
-    fun dismissedUntilATrackPlays() =
+    fun hiddenUntilATrackPlays() =
         runTest(UnconfinedTestDispatcher()) {
             val playing = MutableStateFlow<NowPlaying?>(null)
-            val dismissal = GuideDismissal()
-            backgroundScope.launch { dismissal.clearOnPlay(playing) }
-            dismissal.dismiss()
-            assertTrue(dismissal.dismissed.value)
+            val hiding = GuideHiding()
+            backgroundScope.launch { hiding.clearOnPlay(playing) }
+            hiding.hide()
+            assertTrue(hiding.hidden.value)
             playing.value = null
-            assertTrue(dismissal.dismissed.value)
+            assertTrue(hiding.hidden.value)
             playing.value = sundown
-            assertFalse(dismissal.dismissed.value)
+            assertFalse(hiding.hidden.value)
         }
+
+    @Test
+    fun hiddenUntilHomeIsLeft() {
+        val hiding = GuideHiding()
+        hiding.hide()
+        assertTrue(hiding.hidden.value)
+        hiding.homeLeft()
+        assertFalse(hiding.hidden.value)
+    }
 }

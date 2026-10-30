@@ -2,6 +2,7 @@ package app.sleevesight.app.settings
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -10,6 +11,7 @@ import app.sleevesight.app.FlakyDataStore
 import app.sleevesight.app.TestStores
 import app.sleevesight.core.ai.ReasoningEffort
 import app.sleevesight.core.model.ProviderId
+import app.sleevesight.core.settings.Dismissable
 import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -39,6 +41,53 @@ class SettingsStoreTest {
     fun close() = stores.close()
 
     private fun store() = SettingsStore(stores.open("settings"))
+
+    @Test
+    fun dismissedItemsAreKeptAcrossARestartUndoneOneByOneAndRestoredAll() =
+        runBlocking {
+            // As stored while the guide had a switch of its own (#627): off reads as dismissed (#759).
+            stores.open("settings").edit { it[booleanPreferencesKey("display.home_guide")] = false }
+            stores.close()
+            store().dismiss(Dismissable.PLAYERS_NOTE)
+            stores.close()
+
+            val store = store()
+            assertEquals(setOf(Dismissable.HOME_GUIDE, Dismissable.PLAYERS_NOTE), store.settings.first().dismissed)
+            store.undismiss(Dismissable.PLAYERS_NOTE)
+            assertEquals(setOf(Dismissable.HOME_GUIDE), store.settings.first().dismissed)
+            store.dismiss(Dismissable.PLAYERS_NOTE)
+            store.restoreDismissed()
+            assertTrue(
+                store.settings
+                    .first()
+                    .dismissed
+                    .isEmpty(),
+            )
+            stores.close()
+            assertTrue(
+                store()
+                    .settings
+                    .first()
+                    .dismissed
+                    .isEmpty(),
+            )
+        }
+
+    @Test
+    fun aDismissFromAScreenSaysWhetherItWasSaved() =
+        runBlocking {
+            val store = store()
+            val dismissals = store.dismissals(this)
+            assertTrue(dismissals.dismiss(Dismissable.HOME_GUIDE).await())
+            assertEquals(setOf(Dismissable.HOME_GUIDE), store.settings.first().dismissed)
+            assertTrue(dismissals.undo(Dismissable.HOME_GUIDE).await())
+            assertTrue(
+                store.settings
+                    .first()
+                    .dismissed
+                    .isEmpty(),
+            )
+        }
 
     @Test
     fun aChangeIsKeptAcrossARestart() =

@@ -148,7 +148,7 @@ class SettingsSearchTest {
                     R.string.settings_layout,
                     R.string.settings_keep_sources,
                     R.string.settings_intro,
-                    R.string.settings_home_guide,
+                    R.string.settings_restore_dismissed,
                 ).map(::text),
                 rowsOf(SettingsSection.APPEARANCE),
             )

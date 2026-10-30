@@ -47,6 +47,7 @@ import app.sleevesight.app.ui.report.ReportButtonState
 import app.sleevesight.app.ui.report.TesterReportButton
 import app.sleevesight.app.ui.theme.LinkLabel
 import app.sleevesight.app.ui.theme.LocalDeveloperMark
+import app.sleevesight.app.ui.theme.MessageHost
 import app.sleevesight.app.ui.theme.SleevesightTheme
 import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.app.ui.theme.developerMarkHeight
@@ -81,7 +82,8 @@ fun HomeScreen(
     val scroll = rememberScrollState()
     val scope = rememberCoroutineScope()
     Surface(modifier = Modifier.fillMaxSize()) {
-        Box(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
+        // The message after the guide's *Dismiss* (#759) at the bottom, over what scrolls.
+        MessageHost(Modifier.fillMaxSize().safeDrawingPadding()) {
             Column {
                 // Animated under Compose's motion duration scale, which follows the phone's animator
                 // duration scale: with animations off, Home is at the top at once.

@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -23,6 +24,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -35,10 +37,13 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import app.sleevesight.app.R
+import app.sleevesight.app.settings.Dismissals
 import app.sleevesight.app.ui.ExternalLink
 import app.sleevesight.app.ui.PLAYERS_FAQ_URL
 import app.sleevesight.app.ui.rememberOpenUrl
 import app.sleevesight.app.ui.theme.DeveloperMark
+import app.sleevesight.app.ui.theme.LocalMessages
+import app.sleevesight.core.settings.Dismissable
 import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -79,7 +84,8 @@ class InstalledPlayers(
  * once per row while the section is drawn (#579): the row shows without it until it has, and for
  * good when the phone has none to give. With no [PlayerApps.installed] (tests, previews), every
  * stored player is listed, without an icon. Under the players, *Can’t see your player?*
- * ([MissingPlayerNote], #758), then *Only enabled players on Home* (#674).
+ * ([MissingPlayerNote], #758), until its *Dismiss* puts it away for good ([dismissals], #759), then
+ * *Only enabled players on Home* (#674).
  */
 @Composable
 internal fun PlayersSection(
@@ -87,6 +93,7 @@ internal fun PlayersSection(
     listed: List<ListedPlayer>?,
     apps: PlayerApps,
     update: Update,
+    dismissals: Dismissals,
 ) {
     // Asked once, by the screen, for the search too (#649); null until loaded.
     if (listed == null) return
@@ -96,7 +103,7 @@ internal fun PlayersSection(
         key(player.packageName) { PlayerRow(player, followed, settings.developerMode, apps, update) }
     }
     // After the players, the section's own content, so it stays put as players are added (#674).
-    MissingPlayerNote()
+    if (Dismissable.PLAYERS_NOTE !in settings.dismissed) MissingPlayerNote(dismissals)
     SwitchRow(
         title = stringResource(R.string.settings_players_on_home),
         summary = stringResource(R.string.settings_players_on_home_summary),
@@ -108,13 +115,18 @@ internal fun PlayersSection(
  * *Can’t see your player?* (#758): what a player needs to be listed, in a panel of the theme's
  * container colour, as the first-run screen's access panel is, so it stands apart from the rows; its
  * heading, the note's paragraphs, and *Which players work ↗*, which opens the FAQ's answer in the
- * browser. A search shows it while it matches its heading or its text.
+ * browser; at its bottom right, *Dismiss* (#759), outlined, which puts it away for good
+ * ([Dismissals.dismiss]), then a message says where to bring it back, with *Undo*
+ * ([Dismissals.undo]). A search shows it while it matches its heading or its text.
  */
 @Composable
-private fun MissingPlayerNote() {
+private fun MissingPlayerNote(dismissals: Dismissals) {
     val title = stringResource(R.string.settings_players_missing_title)
     if (!shownInSearch(title)) return
     val open = rememberOpenUrl(PLAYERS_FAQ_URL)
+    val messages = LocalMessages.current
+    val dismissed = stringResource(R.string.settings_players_missing_dismissed)
+    val undo = stringResource(R.string.undo)
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainer,
         shape = RoundedCornerShape(16.dp),
@@ -135,12 +147,22 @@ private fun MissingPlayerNote() {
                 description = stringResource(R.string.settings_players_missing_link_description),
                 onClick = open,
             )
+            OutlinedButton(
+                onClick = {
+                    val saved = dismissals.dismiss(Dismissable.PLAYERS_NOTE)
+                    messages?.showOnceSaved(saved, dismissed, undo) { dismissals.undo(Dismissable.PLAYERS_NOTE) }
+                },
+                modifier = Modifier.align(Alignment.End).testTag(MISSING_PLAYER_NOTE_DISMISS_TAG),
+            ) { Text(stringResource(R.string.settings_players_missing_dismiss)) }
         }
     }
 }
 
 /** The test tag of *Can’t see your player?* ([MissingPlayerNote]). */
 internal const val MISSING_PLAYER_NOTE_TAG = "settings:missingPlayerNote"
+
+/** The test tag of the note's *Dismiss* (#759). */
+internal const val MISSING_PLAYER_NOTE_DISMISS_TAG = "settings:missingPlayerNoteDismiss"
 
 /**
  * A player as *Players* and Home list it (#627): its [packageName], its [name] as the phone shows

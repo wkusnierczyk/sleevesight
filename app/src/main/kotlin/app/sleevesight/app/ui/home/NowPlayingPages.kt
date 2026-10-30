@@ -66,7 +66,8 @@ private fun genreNotes(
 /**
  * A page once nothing plays (#627): a line that says so, and no more. Not the idle Home
  * ([IdleHome]): the page is titled for an item of a track, and the players and the guide are
- * Home's, a back arrow away, where the guide's *Dismiss* and the players' state are kept.
+ * Home's, a back arrow away, where the guide's split button (*Hide once*, *Dismiss*; #759) and the
+ * players' state are kept.
  */
 @Composable
 private fun PageNothingPlaying() {

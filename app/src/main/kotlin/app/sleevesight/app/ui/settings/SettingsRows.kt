@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions") // The settings' kinds of row, and the parts they share.
+
 package app.sleevesight.app.ui.settings
 
 import androidx.annotation.StringRes
@@ -14,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -28,6 +31,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
@@ -143,6 +147,42 @@ internal fun SwitchRow(
     ) {
         summary?.let { Summary(it, summaryLink, color) }
         below?.invoke()
+    }
+}
+
+/**
+ * A row that does something once rather than holding a value (#759): its [title] and [summary], and
+ * where a [SwitchRow] has its switch, a small outlined button, [label], lined up with the title's
+ * first line as a switch is; [onClick] runs on a tap on it, and a null [onClick] disables it. Only
+ * the button is a control: a screen reader reads it by the row's name, and says when it is
+ * disabled.
+ */
+@Composable
+internal fun ButtonRow(
+    title: String,
+    summary: String,
+    label: String,
+    tag: String,
+    onClick: (() -> Unit)?,
+) {
+    if (!shownInSearch(title)) return
+    val color = MaterialTheme.colorScheme.onSurface
+    MarkedRow(
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 8.dp),
+        title = title,
+        titleColor = color,
+        alpha = 1f,
+        leading = null,
+        trailing = {
+            Spacer(Modifier.width(16.dp))
+            OutlinedButton(
+                onClick = { onClick?.invoke() },
+                enabled = onClick != null,
+                modifier = Modifier.alignBy(::middle).testTag(tag).semantics { contentDescription = title },
+            ) { Text(label) }
+        },
+    ) {
+        Summary(summary, null, color)
     }
 }
 

@@ -50,16 +50,14 @@
     <string name="home_guide_magnified">Home while a track plays</string>
     <!-- The picture's example insight. -->
     <string name="home_guide_example_insight">Bill Evans wrote the chords, though Davis is credited as the sole composer</string>
-    <!-- The guide's split button: Dismiss, and the menu of what it does. -->
+    <!-- The guide's split button (#759): its menu's two choices, Hide once (for now) and Dismiss (for
+         good); the button says the one chosen. Dismiss also closes a note's panel. -->
+    <string name="home_guide_hide_once">Hide once</string>
     <string name="home_guide_dismiss">Dismiss</string>
     <!-- The menu's arrow, as a screen reader says it: %1$s is the choice in force. -->
-    <string name="home_guide_dismiss_options">Dismiss options: %1$s</string>
-    <string name="home_guide_dismiss_once">Dismiss once</string>
-    <string name="home_guide_dismiss_never">Do not show again</string>
-    <!-- Under the choices: a link that opens Settings at Appearance → Home guide. -->
-    <string name="home_guide_reenable">Re-enable in Settings</string>
-    <!-- What a screen reader says a tap on it does. -->
-    <string name="home_guide_reenable_open">Open Settings at Home guide</string>
+    <string name="home_guide_dismiss_options">Hide options: %1$s</string>
+    <!-- The message after the guide's Dismiss, with Undo. -->
+    <string name="home_guide_dismissed">Guide dismissed. To show it again: Settings → Appearance → Restore dismissed messages.</string>
     <string name="home_access_off">Sleevesight needs notification access to see what is playing.</string>
     <!-- Under it (#708, #738): the short form of the first-run screen's access_statement, which the
          button below leads to, ahead of Android's own screen for the access. -->
