@@ -257,7 +257,6 @@ jobs:
     steps:
       # A job is skipped only in a run that builds nothing; in one that builds, every job must pass.
       - name: Every job passed
-        if: ${{ always() }}
         env:
           NEEDS: ${{ toJSON(needs) }}
           BUILD: ${{ needs.changes.outputs.build }}
