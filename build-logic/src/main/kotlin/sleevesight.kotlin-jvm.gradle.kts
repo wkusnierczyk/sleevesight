@@ -27,8 +27,10 @@ dependencies {
     "testImplementation"(kotlin("test"))
 }
 
+// Two test JVMs, as in the app (`sleevesight.android-app`).
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
+    maxParallelForks = 2
 }
 
 val runtimeRoot = configurations.named("runtimeClasspath").flatMap { it.incoming.resolutionResult.rootComponent }

@@ -1,0 +1,16 @@
+name: Java and Gradle
+description: The JDK and Gradle every Gradle job of `ci.yml` builds with, and Gradle's cache.
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-java@v6
+      with:
+        distribution: temurin
+        java-version: "21"
+
+    - uses: gradle/actions/setup-gradle@v6
+      with:
+        # Pushes to `main` and `dev-*` write the cache, since an integration branch's dependencies
+        # run ahead of `main`'s. Each job keeps an entry of its own, with the outputs of its tasks.
+        cache-read-only: ${{ github.event_name == 'pull_request' }}
