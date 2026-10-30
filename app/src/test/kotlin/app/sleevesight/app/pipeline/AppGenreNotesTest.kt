@@ -16,8 +16,11 @@ import app.sleevesight.core.genres.TrackLabel
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.pipeline.AiAccess
+import app.sleevesight.core.pipeline.CardKey
 import app.sleevesight.core.pipeline.ClearEpoch
 import app.sleevesight.core.pipeline.InsightState
+import app.sleevesight.core.pipeline.KeptCard
+import app.sleevesight.core.pipeline.PipelineCache
 import app.sleevesight.core.pipeline.PipelineParts
 import app.sleevesight.core.pipeline.TrackResolver
 import app.sleevesight.core.pipeline.TrackState
@@ -41,6 +44,7 @@ import org.junit.Test
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Instant
 
 /**
  * What a genre's panel shows above its table, in the app (#523): a genre's definition found once for
@@ -83,11 +87,13 @@ class AppGenreNotesTest {
 
     private fun Lookup<GenreDefinition>?.found(): GenreDefinition? = (this as? Lookup.Found)?.value
 
-    private fun label(tag: String) =
-        TrackLabel(
-            GenreLabel(tag, "rock", tag.replaceFirstChar(Char::uppercase), tag, null, GenreLevel.ARTIST, "A"),
-            listOf(LabelCredit(LabelSource.LASTFM, null)),
-        )
+    private fun label(
+        tag: String,
+        source: LabelSource = LabelSource.LASTFM,
+    ) = TrackLabel(
+        GenreLabel(tag, "rock", tag.replaceFirstChar(Char::uppercase), tag, null, GenreLevel.ARTIST, "A"),
+        listOf(LabelCredit(source, null)),
+    )
 
     private fun track(playing: TrackState = HomeFixtures.track()): TrackState {
         val row = GenreRow(GenreLevel.ARTIST, "A", listOf(label("rock"), label("punk")))
@@ -252,6 +258,72 @@ class AppGenreNotesTest {
             advanceUntilIdle()
             assertEquals(0, provider.requests)
         }
+
+    @Test
+    fun `a genre only MusicBrainz gives is withheld, and a tap asks nothing (#721)`() =
+        runTest {
+            val notes = notes()
+            val row = GenreRow(GenreLevel.ARTIST, "A", listOf(label("rock"), label("punk", LabelSource.MUSICBRAINZ)))
+            val track = HomeFixtures.track().copy(genres = TrackGenres(listOf(row)))
+            assertEquals(GenreReason.Withheld, notes.reason(track, "punk").first())
+            assertEquals(GenreReason.Offered, notes.reason(track, "rock").first())
+            notes.explain(track, "punk")
+            advanceUntilIdle()
+            assertEquals(0, provider.requests)
+            // Where it would not be offered anyway, nothing.
+            settings.value = settings.value?.copy(writeInsights = false)
+            assertEquals(GenreReason.None, notes.reason(track, "punk").first())
+            settings.value = settings.value?.copy(writeInsights = true)
+            parts.value = null
+            assertEquals(GenreReason.None, notes.reason(track, "punk").first())
+        }
+
+    @Test
+    fun `a genre withheld neither reads nor writes the synthesis cache`() =
+        runTest {
+            val counted = CountedCache(cache)
+            parts.value =
+                PipelineParts(
+                    normalizer = Normalizer(JvmAccentFolder),
+                    adapters = emptyList(),
+                    resolver = TrackResolver { _, _ -> Resolution.NONE },
+                    hasher = JvmHasher,
+                    ai = AiAccess(provider, Secret("key")),
+                    cache = counted,
+                )
+            val notes = notes()
+            val row = GenreRow(GenreLevel.ARTIST, "A", listOf(label("punk", LabelSource.MUSICBRAINZ)))
+            val track = HomeFixtures.track().copy(genres = TrackGenres(listOf(row)))
+            assertEquals(GenreReason.Withheld, notes.reason(track, "punk").first())
+            notes.explain(track, "punk")
+            advanceUntilIdle()
+            assertEquals(0, counted.reads)
+            assertEquals(0, counted.writes)
+            assertEquals(0, provider.requests)
+        }
+
+    // [cache], counting the reads and writes of cards.
+    private class CountedCache(
+        private val cache: PipelineCache,
+    ) : PipelineCache by cache {
+        var reads = 0
+        var writes = 0
+
+        override suspend fun card(key: CardKey): String? = cache.card(key).also { reads++ }
+
+        override suspend fun keptCard(key: CardKey): KeptCard? = cache.keptCard(key).also { reads++ }
+
+        override suspend fun keep(
+            key: CardKey,
+            text: String,
+        ) = cache.keep(key, text).also { writes++ }
+
+        override suspend fun keep(
+            key: CardKey,
+            text: String,
+            writtenAt: Instant,
+        ) = cache.keep(key, text, writtenAt).also { writes++ }
+    }
 
     @Test
     fun `Clear history forgets the reasons shown`() =

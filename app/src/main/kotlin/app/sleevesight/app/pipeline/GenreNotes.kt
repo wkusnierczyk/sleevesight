@@ -44,6 +44,12 @@ sealed interface GenreReason {
     data object Offered : GenreReason
 
     /**
+     * Offered but for D12, for a genre only MusicBrainz gives ([GenreReasons.withheld]): shown
+     * disabled, with why (#721); a tap writes nothing.
+     */
+    data object Withheld : GenreReason
+
+    /**
      * Asked for, or kept from before: [state] is [InsightState.Writing], [InsightState.Written],
      * [InsightState.NoEvidence], or [InsightState.Failed], beside which it is offered again.
      */
@@ -120,6 +126,12 @@ class AppGenreNotes(
     private val io: CoroutineContext = EmptyCoroutineContext,
     private val clock: Clock = Clock.System,
 ) : GenreNotes {
+    // A reason's key, null when none is offered, and whether it is withheld (D12).
+    private data class Offer(
+        val key: CardKey?,
+        val withheld: Boolean,
+    )
+
     // A reason shown, and when it was written.
     private class Entry(
         val state: InsightState,
@@ -144,19 +156,25 @@ class AppGenreNotes(
         track: TrackState,
         genre: String,
     ): Flow<GenreReason> {
-        // The reason's key, or null when none is offered.
+        // The reason's key, or null when none is offered, and whether it is withheld (D12).
         val keys =
             combine(parts, settings) { made, now ->
-                now?.let { made?.let { GenreReasons(it.ai, it.cache, it.hasher, clock) }?.key(track, genre, now) }
+                val reasons = made?.let { GenreReasons(it.ai, it.cache, it.hasher, clock) }
+                if (now == null || reasons == null) {
+                    Offer(null, withheld = false)
+                } else {
+                    Offer(reasons.key(track, genre, now), reasons.withheld(track, genre, now))
+                }
             }
         return keys
             .distinctUntilChanged()
-            .onEach { key -> key?.let { look(it, track) } }
+            .onEach { offer -> offer.key?.let { look(it, track) } }
             .combine(
                 combine(shown, settings) { reasons, now -> reasons to now?.historyLifetime },
-            ) { key, (reasons, lifetime) ->
+            ) { (key, withheld), (reasons, lifetime) ->
                 val entry = key?.let { reasons[it] }
                 when {
+                    withheld -> GenreReason.Withheld
                     key == null -> GenreReason.None
                     entry == null -> GenreReason.Offered
                     expired(entry.writtenAt, lifetime) -> GenreReason.Offered.also { drop(key) }
