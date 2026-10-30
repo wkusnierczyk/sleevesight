@@ -73,7 +73,8 @@ private class FirstLine {
 /**
  * A line of explanation in a section, [text]. As a sub-heading over rows, [over] names them by
  * title: a search that shows only some rows shows it while any of them shows (#649); with none, it
- * is not a setting of its own, and such a search leaves it out.
+ * is not a setting of its own, and such a search leaves it out. A blank line in [text] starts a
+ * paragraph ([Paragraphs], #758).
  */
 @Composable
 internal fun Hint(
@@ -82,7 +83,7 @@ internal fun Hint(
 ) {
     val search = LocalRowSearch.current
     if (search?.filtering == true && over.none { search.shows(it) }) return
-    Text(stringResource(text), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(vertical = 4.dp))
+    Paragraphs(stringResource(text), modifier = Modifier.padding(vertical = 4.dp))
 }
 
 /**
