@@ -60,23 +60,24 @@ internal class SectionMatch(
 /**
  * The sections of [index] that [query] finds, in the order shown, each with what of it shows: all
  * of it when its name or a description has [query] in it, else the rows that have it in their
- * title, description, value or choices. Case-insensitive; empty for a blank [query].
+ * title, description, value or choices. Case-insensitive, and a typed `'` finds a `’` ([folded]);
+ * empty for a blank [query].
  */
 internal fun matches(
     index: List<IndexedSection>,
     query: String,
 ): Map<SettingsSection, SectionMatch> {
-    val needle = query.trim()
+    val needle = folded(query.trim())
     if (needle.isEmpty()) return emptyMap()
     val found = LinkedHashMap<SettingsSection, SectionMatch>()
     for (indexed in index) {
-        if (indexed.texts.any { it.contains(needle, ignoreCase = true) }) {
+        if (indexed.texts.any { folded(it).contains(needle, ignoreCase = true) }) {
             found[indexed.section] = SectionMatch(null)
             continue
         }
         val rows =
             indexed.rows
-                .filter { row -> row.texts.any { it.contains(needle, ignoreCase = true) } }
+                .filter { row -> row.texts.any { folded(it).contains(needle, ignoreCase = true) } }
                 .map { it.title }
                 .toSet()
         if (rows.isNotEmpty()) found[indexed.section] = SectionMatch(rows)
@@ -115,23 +116,31 @@ internal fun searchMarked(text: String): AnnotatedString = LocalRowSearch.curren
 @Composable
 internal fun shownInSearch(title: String): Boolean = LocalRowSearch.current?.shows(title) ?: true
 
-/** [text] with every place [query] is in it, whatever the case, set in [style]. */
+/** [text] with every place [query] is in it, whatever the case or the apostrophe ([folded]), set in [style]. */
 internal fun marked(
     text: String,
     query: String,
     style: SpanStyle,
 ): AnnotatedString {
-    val needle = query.trim()
+    val needle = folded(query.trim())
     if (needle.isEmpty()) return AnnotatedString(text)
+    // Folding keeps every character's place, so the places found in it are the text's own.
+    val haystack = folded(text)
     return buildAnnotatedString {
         append(text)
-        var at = text.indexOf(needle, ignoreCase = true)
+        var at = haystack.indexOf(needle, ignoreCase = true)
         while (at >= 0) {
             addStyle(style, at, at + needle.length)
-            at = text.indexOf(needle, at + needle.length, ignoreCase = true)
+            at = haystack.indexOf(needle, at + needle.length, ignoreCase = true)
         }
     }
 }
+
+/**
+ * [text] with the typographic apostrophes and single quotes (`’`, `‘`) as the keyboard's `'`, so
+ * that "can't" finds *Can’t see your player?* (#758). One character for one: every place stays put.
+ */
+internal fun folded(text: String): String = text.replace('’', '\'').replace('‘', '\'')
 
 /** The colour the search marks what it found with. */
 @Composable

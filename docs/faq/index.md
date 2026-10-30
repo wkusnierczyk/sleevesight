@@ -14,8 +14,10 @@ nav:
     label: Notifications
   - id: why-not-connect-to-spotify-instead-with-one-connect-button-as-garmin-connect-links-with-strava
     label: Spotify
+  - id: which-music-players-work-with-sleevesight
+    label: Players
   - id: what-about-youtube-music-and-other-services
-    label: Other players
+    label: Other services
   - id: spotify-playing-on-my-amplifier-or-in-the-car-shows-nothing
     label: Spotify Connect
   - id: why-not-recognise-the-music-through-the-microphone
@@ -42,11 +44,19 @@ That button would be Spotify's Web API, with a sign-in to Spotify (OAuth), which
 
 A Spotify developer app of your own would avoid the cap: you would register it in Spotify's developer dashboard, which takes a few minutes, add yourself to its allowlist, and give its client ID to Sleevesight, and as its only user you would be well within the five. It needs Spotify Premium. It is being looked at as an option beside notification access, not a replacement for it, subject to Spotify's terms ([#709](https://github.com/wkusnierczyk/sleevesight/issues/709)).
 
+## Which music players work with Sleevesight?
+
+Any player that tells Android what it is playing, in a *media session*, with at least a title and an artist. Sleevesight reads only that, so a player needs nothing more: no sign-in, and nothing from the player’s maker.
+
+Tested on a phone: Spotify, YouTube Music, Tidal and Qobuz. Most other music apps publish a media session the same way and should work, but have not been tested. Most video apps report no artist, so they are not listed.
+
+A player shows under [*Players*]({{ '/docs/tutorials/settings/#players' | relative_url }}) in the settings, switched off, once it has played music on the phone while Sleevesight was running, as it does in the background unless force-stopped; switch the player on there. It has to play on the phone: Spotify playing on another device shows only while the Spotify app is open on the phone ([Spotify Connect](#spotify-playing-on-my-amplifier-or-in-the-car-shows-nothing)).
+
 ## What about YouTube Music and other services?
 
 None of them offers a way in that would replace notification access, as far as we know (28 October 2026): YouTube Music has no public API for what is playing; Apple Music's API gives the tracks played recently, not the one playing now; and Tidal, Deezer and Qobuz have no known open way to ask what is playing.
 
-On the phone, Sleevesight follows these players as it follows Spotify, through their media sessions: a player is listed under [*Players*]({{ '/docs/tutorials/settings/#players' | relative_url }}) in the settings once it has played music while Sleevesight has notification access, and you switch it on there.
+On the phone, Sleevesight follows these players as it follows Spotify, through their media sessions ([which players work](#which-music-players-work-with-sleevesight)).
 
 Last.fm is being looked at ([#709](https://github.com/wkusnierczyk/sleevesight/issues/709)). Some services can report what you play to Last.fm themselves (scrobbling), and Last.fm's API marks the track playing now. For those services, it could show what is playing without notification access.
 
