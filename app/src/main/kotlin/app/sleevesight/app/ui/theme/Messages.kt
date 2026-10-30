@@ -45,14 +45,31 @@ class Messages(
         }
     }
 
-    /** Shows [message] as [show] does once [saved] says the change it is about was saved; else nothing. */
+    /**
+     * Shows [message] as [show] does once [saved] says the change it is about was saved; else
+     * [failed], when given, or nothing.
+     */
     fun showOnceSaved(
         saved: Deferred<Boolean>,
         message: String,
         action: String? = null,
+        failed: String? = null,
         onAction: () -> Unit = {},
     ) {
-        scope.launch { if (saved.await()) show(message, action, onAction) }
+        scope.launch {
+            when {
+                saved.await() -> show(message, action, onAction)
+                failed != null -> show(failed)
+            }
+        }
+    }
+
+    /** Shows [failed] if [saved] says the change it is about was not saved; else nothing. */
+    fun showIfFailed(
+        saved: Deferred<Boolean>,
+        failed: String,
+    ) {
+        scope.launch { if (!saved.await()) show(failed) }
     }
 }
 

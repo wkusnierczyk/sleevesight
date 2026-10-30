@@ -105,7 +105,7 @@ internal val ShantellSans: FontFamily = FontFamily(Font(R.font.shantell_sans_reg
  * ([GuideMagnifierButton]), opens it full screen ([GuideMagnified]); and each note is a button
  * ([GuideNote]) whose tap outlines the part it points at and lays a panel about it over the
  * picture's phone screen ([GuideNotePanel], placed by [panelTop]), which a second tap on the note,
- * or the panel's *Dismiss*, closes, *Dismiss* handing the focus back to the note. A screen reader
+ * or the panel's *Close*, closes, *Close* handing the focus back to the note. A screen reader
  * reads each note as a button and the panel as it opens, the panel right after its note; the drawn
  * Home itself is not read, and its magnifier is the way to it.
  *

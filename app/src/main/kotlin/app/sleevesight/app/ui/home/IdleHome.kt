@@ -106,12 +106,16 @@ internal fun IdleHome(
             val messages = LocalMessages.current
             val dismissed = stringResource(R.string.home_guide_dismissed)
             val undo = stringResource(R.string.undo)
+            // Home has no other notice of a failed save: a *Dismiss* or its *Undo* not saved says so.
+            val failed = stringResource(R.string.settings_change_failed)
             val dismissals = actions.dismissals
             HomeGuide(
                 onHideOnce = actions.hideGuideOnce,
                 onDismiss = {
                     val saved = dismissals.dismiss(Dismissable.HOME_GUIDE)
-                    messages?.showOnceSaved(saved, dismissed, undo) { dismissals.undo(Dismissable.HOME_GUIDE) }
+                    messages?.showOnceSaved(saved, dismissed, undo, failed) {
+                        messages.showIfFailed(dismissals.undo(Dismissable.HOME_GUIDE), failed)
+                    }
                 },
             )
         }

@@ -49,7 +49,7 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * The guide's notes (#673): each a button, named by its part, whose tap opens a panel about the part
- * over the picture, closed by a second tap or *Dismiss*, which hands the focus back to the note; the
+ * over the picture, closed by a second tap or *Close*, which hands the focus back to the note; the
  * picture no longer one image to a screen reader.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -194,7 +194,7 @@ class GuideNotesTest {
             // A little nearer the upper note's text: its panel.
             tapAt(upper.bottom + gap * 0.4f)
             compose.onNodeWithTag(GUIDE_NOTE_PANEL_TEXT_TAG).assert(hasText(text(R.string.home_guide_about_insight)))
-            compose.onNodeWithTag(GUIDE_NOTE_DISMISS_TAG).performClick()
+            compose.onNodeWithTag(GUIDE_NOTE_CLOSE_TAG).performClick()
             compose.waitForIdle()
             // A little nearer the lower one's: its.
             tapAt(upper.bottom + gap * 0.6f)
@@ -246,7 +246,7 @@ class GuideNotesTest {
             note(GuidePart.GENRES).performScrollTo().performClick()
             compose.waitForIdle()
             val before = sentSoFar()
-            compose.onNodeWithTag(GUIDE_NOTE_DISMISS_TAG).performClick()
+            compose.onNodeWithTag(GUIDE_NOTE_CLOSE_TAG).performClick()
             compose.waitForIdle()
             assertEquals(0, panels().size)
             val genres = note(GuidePart.GENRES).fetchSemanticsNode().id

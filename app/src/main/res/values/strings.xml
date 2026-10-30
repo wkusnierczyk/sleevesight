@@ -184,10 +184,10 @@
     <string name="settings_intro_summary">When you open Sleevesight while it is not already open, its logo plays a few seconds of animation first; a tap, Back or any key skips it. It never plays while your phone’s Remove animations or TalkBack is on.</string>
     <!-- Last under Appearance (#759): a row with a button that brings back everything dismissed for good. -->
     <string name="settings_restore_dismissed">Restore dismissed messages</string>
-    <string name="settings_restore_dismissed_summary">Shows again all hidden messages and popups that you dismissed.</string>
+    <string name="settings_restore_dismissed_summary">Shows again the guides and notes you dismissed.</string>
     <string name="settings_restore_dismissed_button">Restore</string>
     <!-- The message after its button. -->
-    <string name="settings_restore_dismissed_done">Dismissed items restored.</string>
+    <string name="settings_restore_dismissed_done">Dismissed messages restored.</string>
     <!-- The action of a message after a Dismiss (#759): brings back what was dismissed. -->
     <string name="undo">Undo</string>
     <string name="settings_section_keys">Secrets</string>

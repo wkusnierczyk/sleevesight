@@ -58,7 +58,7 @@ internal fun GuideNoteText(
  * 48 dp high, reaching halfway to the notes above and below ([guideLayout]), whose tap opens the
  * note's panel ([onClick]; a second tap closes it). A screen reader reads it as a button, the part's
  * name before the note ("Settings: tap to configure, button"). [modifier] goes on the outside: a
- * focus requester, so the focus can come back to it from the panel's *Dismiss*.
+ * focus requester, so the focus can come back to it from the panel's *Close*.
  */
 @Composable
 internal fun GuideNote(
@@ -77,16 +77,17 @@ internal fun GuideNote(
 
 /**
  * The panel of [part]'s note (#673), laid over the picture's phone screen: the part's name as a
- * heading, its fuller description in the app's own type, and *Dismiss* ([onDismiss], with
- * [dismissModifier]). Opaque, so the drawn Home under it does not show through, and taps on it stay
- * in it. A screen reader reads the name and description as one region as it opens.
+ * heading, its fuller description in the app's own type, and *Close* ([onClose], with
+ * [closeModifier]; #759: not *Dismiss*, which is for good). Opaque, so the drawn Home under it
+ * does not show through, and taps on it stay in it. A screen reader reads the name and description
+ * as one region as it opens.
  */
 @Composable
 internal fun GuideNotePanel(
     part: GuidePart,
     modifier: Modifier = Modifier,
-    dismissModifier: Modifier = Modifier,
-    onDismiss: () -> Unit,
+    closeModifier: Modifier = Modifier,
+    onClose: () -> Unit,
 ) {
     Surface(
         modifier = modifier.testTag(GUIDE_NOTE_PANEL_TAG),
@@ -112,9 +113,9 @@ internal fun GuideNotePanel(
                 Text(stringResource(part.about), style = MaterialTheme.typography.bodyMedium)
             }
             TextButton(
-                onClick = onDismiss,
-                modifier = dismissModifier.align(Alignment.End).testTag(GUIDE_NOTE_DISMISS_TAG),
-            ) { Text(stringResource(R.string.home_guide_dismiss)) }
+                onClick = onClose,
+                modifier = closeModifier.align(Alignment.End).testTag(GUIDE_NOTE_CLOSE_TAG),
+            ) { Text(stringResource(R.string.home_guide_note_close)) }
         }
     }
 }
@@ -154,10 +155,10 @@ internal fun guideNoteTag(part: GuidePart): String = "home-guide-note:${part.nam
 
 internal fun guideNoteTextTag(part: GuidePart): String = "home-guide-note-text:${part.name.lowercase()}"
 
-/** The test tags of a note's panel, of its name and description, and of its *Dismiss*. */
+/** The test tags of a note's panel, of its name and description, and of its *Close*. */
 const val GUIDE_NOTE_PANEL_TAG: String = "home-guide-note-panel"
 const val GUIDE_NOTE_PANEL_TEXT_TAG: String = "home-guide-note-panel-text"
-const val GUIDE_NOTE_DISMISS_TAG: String = "home-guide-note-dismiss"
+const val GUIDE_NOTE_CLOSE_TAG: String = "home-guide-note-close"
 
 private val PANEL_CORNER = 12.dp
 private val PEN = 1.5.dp

@@ -414,6 +414,39 @@ class IdleHomeTest {
         }
     }
 
+    @Test
+    fun aDismissNotSavedSaysSoAndTheGuideStays() =
+        dismissing(Dismissals({ CompletableDeferred(false) }, { CompletableDeferred(true) })) {
+            compose.waitUntil(5_000) { shows(text(R.string.settings_change_failed)) }
+            assertFalse(shows(text(R.string.home_guide_dismissed)))
+            assertEquals(1, guides())
+        }
+
+    @Test
+    fun anUndoNotSavedSaysSo() =
+        dismissing(Dismissals({ CompletableDeferred(true) }, { CompletableDeferred(false) })) {
+            compose.waitUntil(5_000) { shows(text(R.string.home_guide_dismissed)) }
+            compose.onNodeWithText(text(R.string.undo)).performClick()
+            compose.waitUntil(5_000) { shows(text(R.string.settings_change_failed)) }
+        }
+
+    // Home with [dismissals], the guide's *Dismiss* chosen and tapped, then [check].
+    private fun dismissing(
+        dismissals: Dismissals,
+        check: () -> Unit,
+    ) {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { it.setContent(content = home(feed(dismissals = dismissals))) }
+            compose.awaitIdleHome()
+            compose.onNodeWithTag(GUIDE_HIDE_MENU_TAG).performScrollTo().performClick()
+            compose.onNodeWithTag(GUIDE_DISMISS_TAG).performClick()
+            compose.onNodeWithTag(GUIDE_HIDE_TAG).performScrollTo().performClick()
+            check()
+        }
+    }
+
+    private fun shows(message: String) = compose.onAllNodesWithText(message).fetchSemanticsNodes().isNotEmpty()
+
     private companion object {
         const val ZULU = "com.a.zzz"
         const val ALPHA = "com.z.aaa"
