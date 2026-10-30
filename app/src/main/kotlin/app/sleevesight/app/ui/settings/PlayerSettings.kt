@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -21,8 +20,10 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,7 +42,9 @@ import app.sleevesight.app.settings.Dismissals
 import app.sleevesight.app.ui.ExternalLink
 import app.sleevesight.app.ui.PLAYERS_FAQ_URL
 import app.sleevesight.app.ui.rememberOpenUrl
+import app.sleevesight.app.ui.theme.ActionButtonGroup
 import app.sleevesight.app.ui.theme.DeveloperMark
+import app.sleevesight.app.ui.theme.GroupAction
 import app.sleevesight.app.ui.theme.LocalMessages
 import app.sleevesight.core.settings.Dismissable
 import app.sleevesight.core.settings.Settings
@@ -84,8 +87,8 @@ class InstalledPlayers(
  * once per row while the section is drawn (#579): the row shows without it until it has, and for
  * good when the phone has none to give. With no [PlayerApps.installed] (tests, previews), every
  * stored player is listed, without an icon. Under the players, *Can’t see your player?*
- * ([MissingPlayerNote], #758), until its *Dismiss* puts it away for good ([dismissals], #759), then
- * *Only enabled players on Home* (#674).
+ * ([MissingPlayerNote], #758), until its *Hide once* puts it away until the section is opened
+ * again, or its *Dismiss* for good ([dismissals], #759), then *Only enabled players on Home* (#674).
  */
 @Composable
 internal fun PlayersSection(
@@ -103,7 +106,12 @@ internal fun PlayersSection(
         key(player.packageName) { PlayerRow(player, followed, settings.developerMode, apps, update) }
     }
     // After the players, the section's own content, so it stays put as players are added (#674).
-    if (Dismissable.PLAYERS_NOTE !in settings.dismissed) MissingPlayerNote(dismissals)
+    // Hidden once (#759): kept through a rotation, and forgotten with the section's panel, so the
+    // note is back once *Players* is closed, or the settings left, and opened again.
+    var hiddenOnce by rememberSaveable { mutableStateOf(false) }
+    if (Dismissable.PLAYERS_NOTE !in settings.dismissed && !hiddenOnce) {
+        MissingPlayerNote(dismissals) { hiddenOnce = true }
+    }
     SwitchRow(
         title = stringResource(R.string.settings_players_on_home),
         summary = stringResource(R.string.settings_players_on_home_summary),
@@ -115,12 +123,16 @@ internal fun PlayersSection(
  * *Can’t see your player?* (#758): what a player needs to be listed, in a panel of the theme's
  * container colour, as the first-run screen's access panel is, so it stands apart from the rows; its
  * heading, the note's paragraphs, and *Which players work ↗*, which opens the FAQ's answer in the
- * browser; at its bottom right, *Dismiss* (#759), outlined, which puts it away for good
- * ([Dismissals.dismiss]), then a message says where to bring it back, with *Undo*
+ * browser; at its bottom right, *Hide once* and *Dismiss* (#759), one connected group, as the
+ * home guide's: *Hide once* ([onHideOnce]) puts it away for this visit to the section, *Dismiss*
+ * for good ([Dismissals.dismiss]), then a message says where to bring it back, with *Undo*
  * ([Dismissals.undo]). A search shows it while it matches its heading or its text.
  */
 @Composable
-private fun MissingPlayerNote(dismissals: Dismissals) {
+private fun MissingPlayerNote(
+    dismissals: Dismissals,
+    onHideOnce: () -> Unit,
+) {
     val title = stringResource(R.string.settings_players_missing_title)
     if (!shownInSearch(title)) return
     val open = rememberOpenUrl(PLAYERS_FAQ_URL)
@@ -147,19 +159,32 @@ private fun MissingPlayerNote(dismissals: Dismissals) {
                 description = stringResource(R.string.settings_players_missing_link_description),
                 onClick = open,
             )
-            OutlinedButton(
-                onClick = {
-                    val saved = dismissals.dismiss(Dismissable.PLAYERS_NOTE)
-                    messages?.showOnceSaved(saved, dismissed, undo) { dismissals.undo(Dismissable.PLAYERS_NOTE) }
-                },
-                modifier = Modifier.align(Alignment.End).testTag(MISSING_PLAYER_NOTE_DISMISS_TAG),
-            ) { Text(stringResource(R.string.settings_players_missing_dismiss)) }
+            ActionButtonGroup(
+                listOf(
+                    GroupAction(
+                        stringResource(R.string.settings_players_missing_hide_once),
+                        modifier = Modifier.testTag(MISSING_PLAYER_NOTE_HIDE_ONCE_TAG),
+                        onClick = onHideOnce,
+                    ),
+                    GroupAction(
+                        stringResource(R.string.settings_players_missing_dismiss),
+                        modifier = Modifier.testTag(MISSING_PLAYER_NOTE_DISMISS_TAG),
+                    ) {
+                        val saved = dismissals.dismiss(Dismissable.PLAYERS_NOTE)
+                        messages?.showOnceSaved(saved, dismissed, undo) { dismissals.undo(Dismissable.PLAYERS_NOTE) }
+                    },
+                ),
+                Modifier.align(Alignment.End),
+            )
         }
     }
 }
 
 /** The test tag of *Can’t see your player?* ([MissingPlayerNote]). */
 internal const val MISSING_PLAYER_NOTE_TAG = "settings:missingPlayerNote"
+
+/** The test tag of the note's *Hide once* (#759). */
+internal const val MISSING_PLAYER_NOTE_HIDE_ONCE_TAG = "settings:missingPlayerNoteHideOnce"
 
 /** The test tag of the note's *Dismiss* (#759). */
 internal const val MISSING_PLAYER_NOTE_DISMISS_TAG = "settings:missingPlayerNoteDismiss"

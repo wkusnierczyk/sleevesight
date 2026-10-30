@@ -195,7 +195,7 @@ internal class NowPlayingState(
  * a mode chosen in the insight card's menu of *Reactive*'s modes (#615). [genreNotes] gives what a
  * genre's panel shows above its table (#523); [lookAgain] takes a tap on *Look again* (#617), as
  * [write] takes one on Write. While nothing plays (#627), the players are listed with
- * [installedPlayers]' icons, and the guide's split button goes to [hideGuideOnce] (*Hide once*) or
+ * [installedPlayers]' icons, and the guide's buttons go to [hideGuideOnce] (*Hide once*) or
  * to [dismissals] (*Dismiss*, and its *Undo*; #759). [readAloud] reads the insight, or a genre's
  * reason, aloud (#325); null shows no *Read aloud*.
  */

@@ -157,8 +157,7 @@ internal fun WriteSplitButton(
 }
 
 /**
- * The two halves, [content]: the leading one, then the arrow (#624); the home guide's split button
- * (#627, #759: *Hide once* or *Dismiss*) is laid out by it too. The arrow's 48 dp width is
+ * The two halves, [content]: the leading one, then the arrow (#624). The arrow's 48 dp width is
  * kept first, and the leading half takes the width left, its label wrapping in it where it must;
  * it is at least 32 dp high, and the arrow is drawn as high as it, so the halves are always of one
  * height. The row is at least 48 dp high, the halves centred in it: each answers a tap across 48 dp

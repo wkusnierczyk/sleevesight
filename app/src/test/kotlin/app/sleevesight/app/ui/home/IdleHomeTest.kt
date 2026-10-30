@@ -177,8 +177,7 @@ class IdleHomeTest {
     private fun guides() = compose.onAllNodesWithTag(HOME_GUIDE_TAG).fetchSemanticsNodes().size
 
     private fun hideOnce() {
-        compose.onNodeWithTag(GUIDE_HIDE_TAG).performScrollTo().assert(hasText(text(R.string.home_guide_hide_once)))
-        compose.onNodeWithTag(GUIDE_HIDE_TAG).performClick()
+        compose.onNodeWithTag(GUIDE_HIDE_ONCE_TAG).performScrollTo().performClick()
         compose.waitForIdle()
         assertEquals(0, guides())
     }
@@ -341,7 +340,7 @@ class IdleHomeTest {
     }
 
     @Test
-    fun theSplitButtonSaysTheChoiceAndItsArrowNamesIt() {
+    fun theGuideOffersHideOnceAndDismissEachActingAtOnce() {
         var once = 0
         val dismissed = mutableListOf<Dismissable>()
         val dismissals =
@@ -350,42 +349,17 @@ class IdleHomeTest {
                 CompletableDeferred(true)
             }, { CompletableDeferred(true) })
         show(players, actions(hideGuideOnce = { once++ }, dismissals = dismissals)) {
-            fun says(choice: Int) {
-                compose.onNodeWithTag(GUIDE_HIDE_TAG).assert(hasText(text(choice)))
-                compose
-                    .onNodeWithTag(GUIDE_HIDE_MENU_TAG)
-                    .assert(
-                        SemanticsMatcher.expectValue(
-                            SemanticsProperties.ContentDescription,
-                            listOf(text(R.string.home_guide_dismiss_options, text(choice))),
-                        ),
-                    )
-            }
-            // *Hide once* by default.
-            says(R.string.home_guide_hide_once)
-            compose.onNodeWithTag(GUIDE_HIDE_MENU_TAG).performScrollTo().performClick()
-            compose.onNodeWithTag(GUIDE_DISMISS_TAG).performClick()
-            says(R.string.home_guide_dismiss)
-            compose.onNodeWithTag(GUIDE_HIDE_TAG).performScrollTo().performClick()
+            compose.onNodeWithTag(GUIDE_HIDE_ONCE_TAG).assert(hasText(text(R.string.home_guide_hide_once)))
+            compose.onNodeWithTag(GUIDE_DISMISS_TAG).assert(hasText(text(R.string.home_guide_dismiss)))
+            assertEquals(0, compose.onAllNodesWithText("Re-enable in Settings").fetchSemanticsNodes().size)
+            compose.onNodeWithTag(GUIDE_DISMISS_TAG).performScrollTo().performClick()
             assertEquals(listOf(Dismissable.HOME_GUIDE), dismissed)
             assertEquals(0, once)
-            compose.onNodeWithTag(GUIDE_HIDE_MENU_TAG).performScrollTo().performClick()
-            compose.onNodeWithTag(GUIDE_HIDE_ONCE_TAG).performClick()
-            says(R.string.home_guide_hide_once)
-            compose.onNodeWithTag(GUIDE_HIDE_TAG).performScrollTo().performClick()
+            compose.onNodeWithTag(GUIDE_HIDE_ONCE_TAG).performScrollTo().performClick()
             assertEquals(1, once)
             assertEquals(1, dismissed.size)
         }
     }
-
-    @Test
-    fun theMenuOffersHideOnceAndDismissOnly() =
-        show(players) {
-            compose.onNodeWithTag(GUIDE_HIDE_MENU_TAG).performScrollTo().performClick()
-            compose.onNodeWithTag(GUIDE_HIDE_ONCE_TAG).assert(hasText(text(R.string.home_guide_hide_once)))
-            compose.onNodeWithTag(GUIDE_DISMISS_TAG).assert(hasText(text(R.string.home_guide_dismiss)))
-            assertEquals(0, compose.onAllNodesWithText("Re-enable in Settings").fetchSemanticsNodes().size)
-        }
 
     @Test
     fun dismissPutsTheGuideAwayForGoodWithAMessageAndUndo() {
@@ -398,9 +372,7 @@ class IdleHomeTest {
                 val feed = feed(settings = shown, dismissals = store.dismissals(saves))
                 scenario.onActivity { it.setContent(content = home(feed)) }
                 compose.awaitIdleHome()
-                compose.onNodeWithTag(GUIDE_HIDE_MENU_TAG).performScrollTo().performClick()
-                compose.onNodeWithTag(GUIDE_DISMISS_TAG).performClick()
-                compose.onNodeWithTag(GUIDE_HIDE_TAG).performScrollTo().performClick()
+                compose.onNodeWithTag(GUIDE_DISMISS_TAG).performScrollTo().performClick()
                 compose.waitUntil(5_000) { Dismissable.HOME_GUIDE in store.now().dismissed }
                 compose.waitUntil(5_000) { guides() == 0 }
                 val message = text(R.string.home_guide_dismissed)
@@ -430,7 +402,7 @@ class IdleHomeTest {
             compose.waitUntil(5_000) { shows(text(R.string.settings_change_failed)) }
         }
 
-    // Home with [dismissals], the guide's *Dismiss* chosen and tapped, then [check].
+    // Home with [dismissals], the guide's *Dismiss* tapped, then [check].
     private fun dismissing(
         dismissals: Dismissals,
         check: () -> Unit,
@@ -438,9 +410,7 @@ class IdleHomeTest {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { it.setContent(content = home(feed(dismissals = dismissals))) }
             compose.awaitIdleHome()
-            compose.onNodeWithTag(GUIDE_HIDE_MENU_TAG).performScrollTo().performClick()
-            compose.onNodeWithTag(GUIDE_DISMISS_TAG).performClick()
-            compose.onNodeWithTag(GUIDE_HIDE_TAG).performScrollTo().performClick()
+            compose.onNodeWithTag(GUIDE_DISMISS_TAG).performScrollTo().performClick()
             check()
         }
     }

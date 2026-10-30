@@ -33,6 +33,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -42,8 +43,8 @@ import org.robolectric.RobolectricTestRunner
 /**
  * *Can’t see your player?* under *Players* (#758): a panel with its heading, the note in two
  * paragraphs and a link to the FAQ's answer, found by the search; and the section's own text, now
- * in two paragraphs. Its *Dismiss* puts it away for good, with *Undo*, and neither the section nor
- * the search shows it then (#759).
+ * in two paragraphs. Its *Hide once* puts it away until *Players* is opened again; its *Dismiss*
+ * for good, with *Undo*, and neither the section nor the search shows it then (#759).
  */
 @RunWith(RobolectricTestRunner::class)
 class MissingPlayerNoteTest {
@@ -139,6 +140,26 @@ class MissingPlayerNoteTest {
             compose.waitUntil(5_000) { count(message) == 1 }
             compose.onNodeWithText(app.getString(R.string.undo)).performClick()
             compose.waitUntil(5_000) { store.now().dismissed.isEmpty() }
+            compose.waitUntil(5_000) { notes() == 1 }
+        }
+    }
+
+    @Test
+    fun hideOnceHidesTheNoteUntilPlayersIsOpenedAgain() {
+        settings {
+            compose.openSection(SettingsSection.PLAYERS)
+            compose.waitUntil(5_000) { notes() == 1 }
+            compose
+                .onNodeWithTag(MISSING_PLAYER_NOTE_HIDE_ONCE_TAG)
+                .performScrollTo()
+                .assert(hasText(app.getString(R.string.settings_players_missing_hide_once)))
+                .performClick()
+            compose.waitUntil(5_000) { notes() == 0 }
+            // Nothing stored, and no message.
+            assertTrue(store.now().dismissed.isEmpty())
+            assertEquals(0, count(app.getString(R.string.settings_players_missing_dismissed)))
+            compose.onNodeWithTag("${SettingsSection.PLAYERS.panelTag}:close").performScrollTo().performClick()
+            compose.openSection(SettingsSection.PLAYERS)
             compose.waitUntil(5_000) { notes() == 1 }
         }
     }

@@ -50,14 +50,11 @@
     <string name="home_guide_magnified">Home while a track plays</string>
     <!-- The picture's example insight. -->
     <string name="home_guide_example_insight">Bill Evans wrote the chords, though Davis is credited as the sole composer</string>
-    <!-- The guide's split button (#759): its menu's two choices, Hide once (for now) and Dismiss (for
-         good); the button says the one chosen. Dismiss also closes a note's panel. -->
+    <!-- The guide's two buttons, one connected group (#759): Hide once (for now) and Dismiss (for good). -->
     <string name="home_guide_hide_once">Hide once</string>
     <string name="home_guide_dismiss">Dismiss</string>
     <!-- A note's panel over the guide's picture closes with it; it opens again from its note (#759). -->
     <string name="home_guide_note_close">Close</string>
-    <!-- The menu's arrow, as a screen reader says it: %1$s is the choice in force. -->
-    <string name="home_guide_dismiss_options">Hide options: %1$s</string>
     <!-- The message after the guide's Dismiss, with Undo. -->
     <string name="home_guide_dismissed">Guide dismissed. To show it again: Settings → Appearance → Restore dismissed messages.</string>
     <string name="home_access_off">Sleevesight needs notification access to see what is playing.</string>
