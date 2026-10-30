@@ -300,9 +300,13 @@ class IdleHomeTest {
             }
             compose.awaitIdleHome()
             hideOnce()
-            scenario.onActivity { nav.navigate("elsewhere") }
+            // On the UI thread in step with the compose rule, each step checked before the next.
+            compose.runOnUiThread { nav.navigate("elsewhere") }
+            compose.waitForIdle()
             compose.waitUntil(5_000) { compose.onAllNodesWithText("Elsewhere").fetchSemanticsNodes().isNotEmpty() }
-            scenario.onActivity { nav.popBackStack() }
+            assertFalse("left, no longer hidden", hiding.hidden.value)
+            compose.runOnUiThread { nav.popBackStack() }
+            compose.waitForIdle()
             compose.awaitIdleHome()
             compose.waitUntil(5_000) { guides() == 1 }
         }

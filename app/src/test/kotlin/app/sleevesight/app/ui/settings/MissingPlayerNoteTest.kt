@@ -164,6 +164,25 @@ class MissingPlayerNoteTest {
         }
     }
 
+    // The section stays open through a search started and cleared, and so does what it holds.
+    @Test
+    fun hideOnceLastsThroughASearchStartedAndCleared() {
+        settings {
+            compose.openSection(SettingsSection.PLAYERS)
+            compose.waitUntil(5_000) { notes() == 1 }
+            compose.onNodeWithTag(MISSING_PLAYER_NOTE_HIDE_ONCE_TAG).performScrollTo().performClick()
+            compose.waitUntil(5_000) { notes() == 0 }
+            val onHome = app.getString(R.string.settings_players_on_home)
+            compose.onNodeWithTag(SEARCH_FIELD_TAG).performTextReplacement("player")
+            compose.waitUntil(5_000) { count(onHome) == 1 }
+            assertEquals(0, notes())
+            compose.onNodeWithTag(SEARCH_FIELD_TAG).performTextReplacement("")
+            compose.waitForIdle()
+            compose.waitUntil(5_000) { count(onHome) == 1 }
+            assertEquals(0, notes())
+        }
+    }
+
     @Test
     fun aDismissedNoteIsNotShownNorFound() {
         runBlocking { store.dismiss(Dismissable.PLAYERS_NOTE) }

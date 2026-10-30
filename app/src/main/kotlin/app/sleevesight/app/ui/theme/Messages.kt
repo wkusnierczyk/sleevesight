@@ -2,6 +2,7 @@ package app.sleevesight.app.ui.theme
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -14,6 +15,8 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.launch
@@ -78,11 +81,12 @@ val LocalMessages = staticCompositionLocalOf<Messages?> { null }
 
 /**
  * A screen's [content], with its [Messages] ([LocalMessages]) shown over it at the bottom (#759),
- * the space [modifier] gives.
+ * the space [modifier] gives, [above] the bottom: clear of what floats there, as Home's report button.
  */
 @Composable
 fun MessageHost(
     modifier: Modifier = Modifier,
+    above: Dp = 0.dp,
     content: @Composable BoxScope.() -> Unit,
 ) {
     val host = remember { SnackbarHostState() }
@@ -91,7 +95,7 @@ fun MessageHost(
     CompositionLocalProvider(LocalMessages provides messages) {
         Box(modifier) {
             content()
-            SnackbarHost(host, Modifier.align(Alignment.BottomCenter).testTag(MESSAGE_TAG))
+            SnackbarHost(host, Modifier.align(Alignment.BottomCenter).padding(bottom = above).testTag(MESSAGE_TAG))
         }
     }
 }

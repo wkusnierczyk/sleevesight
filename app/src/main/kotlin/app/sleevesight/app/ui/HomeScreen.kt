@@ -39,6 +39,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.home.NothingPlaying
@@ -82,8 +83,10 @@ fun HomeScreen(
     val scroll = rememberScrollState()
     val scope = rememberCoroutineScope()
     Surface(modifier = Modifier.fillMaxSize()) {
-        // The message after the guide's *Dismiss* (#759) at the bottom, over what scrolls.
-        MessageHost(Modifier.fillMaxSize().safeDrawingPadding()) {
+        // The message after the guide's *Dismiss* (#759) at the bottom, over what scrolls, and
+        // above the report button while that shows.
+        val above = if (report != null) reportClearance() else 0.dp
+        MessageHost(Modifier.fillMaxSize().safeDrawingPadding(), above) {
             Column {
                 // Animated under Compose's motion duration scale, which follows the phone's animator
                 // duration scale: with animations off, Home is at the top at once.
@@ -125,13 +128,7 @@ private fun HomeBody(
                     start = 16.dp,
                     end = 16.dp,
                     top = 8.dp,
-                    bottom =
-                        when {
-                            !reportShown -> 8.dp
-                            // Marked (#536), the button is taller by the mark, which follows the font size.
-                            LocalDeveloperMark.current -> REPORT_CLEARANCE + developerMarkHeight()
-                            else -> REPORT_CLEARANCE
-                        },
+                    bottom = if (reportShown) reportClearance() else 8.dp,
                 ),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -228,9 +225,14 @@ private fun HeaderButton(
 /** The report button's margin from the screen's edges. */
 private val REPORT_MARGIN = 16.dp
 
+/** [REPORT_CLEARANCE]; marked (#536), the button is taller by the mark, which follows the font size. */
+@Composable
+private fun reportClearance(): Dp =
+    if (LocalDeveloperMark.current) REPORT_CLEARANCE + developerMarkHeight() else REPORT_CLEARANCE
+
 /**
- * The space under what scrolls while the report button shows: the small button's 40 dp, its
- * margin below and 16 dp above it, so the end of Home scrolls clear of it.
+ * The space under what scrolls, and under a message (#759), while the report button shows: the
+ * small button's 40 dp, its margin below and 16 dp above it, so the end of Home scrolls clear of it.
  */
 private val REPORT_CLEARANCE = 72.dp
 

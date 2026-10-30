@@ -458,11 +458,10 @@ private fun SettingsColumn(
         section: SettingsSection,
         content: @Composable () -> Unit,
     ) {
-        if (found == null) {
-            FoldedSection(section, folds, chip, content = content)
-        } else {
-            found[section]?.let { FoldedSection(section, folds, chip, it, content) }
-        }
+        // One call, searching or not, so starting or clearing a search keeps what the section's
+        // content holds, as the players note's *Hide once* (#759).
+        val match = found?.get(section)
+        if (found == null || match != null) FoldedSection(section, folds, chip, match, content)
     }
 
     SettingsScrollColumn(

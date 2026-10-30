@@ -281,6 +281,23 @@ class ButtonGroupTest {
             }
         }
 
+    // Compact at the end, right to left: at the left, the first button rightmost.
+    @Test
+    fun rightToLeftACompactGroupAtTheEndIsAtTheLeft() {
+        val actions = listOf(GroupAction("Hide once") {}, GroupAction("Dismiss") {})
+        show({
+            val (hide, dismiss) = actions.map { bounds(it.label) }
+            val group = groupBounds()
+            assertEquals("at the left", group.left, dismiss.left, 1f)
+            assertTrue("the first rightmost", hide.left >= dismiss.right)
+            assertTrue("narrower than the width", hide.right - dismiss.left < group.width - 1f)
+        }) {
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                ActionButtonGroup(actions, Modifier.width(GROUP_WIDTH.dp).testTag(GROUP), compact = Alignment.End)
+            }
+        }
+    }
+
     // The first button's round corners are at its start: the right, right to left.
     @Test
     fun rightToLeftTheCornersAreMirrored() {
