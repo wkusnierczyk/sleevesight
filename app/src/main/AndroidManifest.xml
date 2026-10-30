@@ -111,8 +111,8 @@
 
         <!-- Turned on by the user in Settings, Notification access; it gives access to the media
              sessions. Only the system can bind it. On Android 12 (API 31) and later, the filter
-             meta-data tells the system not to deliver any notifications to the listener, and locks
-             every notification category off in the system settings (#739). -->
+             meta-data tells the system not to deliver any notifications to the listener (#739;
+             measured on a Samsung phone with Android 17: none delivered, media sessions unaffected). -->
         <service
             android:name=".session.SleevesightListenerService"
             android:exported="true"
