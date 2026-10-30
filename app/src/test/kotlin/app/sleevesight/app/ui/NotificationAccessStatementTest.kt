@@ -178,7 +178,8 @@ class NotificationAccessStatementTest {
         val parts =
             listOf(
                 "only with notification access",
-                "on Android 12 and newer, delivery of notifications to Sleevesight is disabled at the system level",
+                "on Android 12 and newer, delivery of notifications to Sleevesight is disabled at system level " +
+                    "and Sleevesight receives no notifications",
                 "on older versions, Sleevesight ignores all notifications",
                 "never reads your messages or contacts",
             )
