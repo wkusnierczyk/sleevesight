@@ -12,7 +12,11 @@
     <string name="first_run_intro_again">Sleevesight reads what your music player is playing, looks it up in the sources you switch on, and has the AI service you choose write about it. Here is what it reads, and what leaves your phone.</string>
 
     <string name="first_run_reads_title">What it reads</string>
-    <string name="first_run_reads">Sleevesight reads what apps say they are playing, to find your music players and follow the ones you switch on, never your notifications, messages or contacts. For that it needs notification access: Android lets an app list what other apps are playing only with this access, which cannot be limited to one app. It checks which players report music (a track with a title and an artist), to list them in its settings by name, and keeps or sends nothing of the players you do not follow. From the players you follow (Spotify by default), it reads which player it is; the title, artists, album (with its year, when the player sends one, shown after it), length and cover; whether it is playing, and how far into the track; and the queue of tracks up next, with its name. It never reads calls from the phone app or sessions Android marks as voice calls, and never touches the audio.</string>
+    <!-- First what it reads and why Android makes that need notification access (#708, #738), then
+         what it checks of every player and reads of the ones followed. first_run_no_audio follows it as
+         a paragraph of its own. -->
+    <string name="first_run_reads">Sleevesight reads what apps say they are playing, to find your music players and follow the ones you switch on. To enable this, Android requires notification access. Sleevesight checks which players report music (a track with a title and an artist), to list them in its settings by name, and keeps or sends nothing of the players you do not follow. From the players you follow (Spotify by default), it reads which player it is; the title, artists, album (with its year, when the player sends one), length and cover; whether it is playing, and how far into the track; and the queue of tracks up next, with its name.</string>
+    <string name="first_run_no_audio">Sleevesight receives no audio.</string>
 
     <string name="first_run_leaves_title">What leaves the phone, and to whom</string>
     <string name="first_run_to_sources">To the sources you switch on, such as MusicBrainz and Wikipedia (with Wikidata): the title and artists of the playing track, cleaned of tags such as “2006 Remaster”. Wikidata gets only identifiers. For the genre labels, Last.fm also gets the album name, the only source that does. While “Proactive” is on, as it is by default, the title and artists of the next track in the player’s queue also go to MusicBrainz, if switched on.</string>
@@ -35,11 +39,14 @@
     <string name="no_access_settings">No settings screen for notification access opened. Look for it under Settings, Apps, Special app access.</string>
     <string name="access_on">Notification access is on.</string>
     <string name="open_access_settings">Open notification access</string>
-    <!-- Right above "Open notification access" on the first-run screen (#708, #738): why the app
-         asks for notification access, and what it does and does not do with it. Home's prompt,
-         which leads to this screen, has the short home_access_statement. -->
-    <string name="access_why_title">Why Sleevesight asks for notification access</string>
-    <string name="access_statement">Sleevesight uses Android’s media-session APIs to discover music players and read information about the music they’re playing. Android requires notification-listener access for this functionality, even though Sleevesight doesn’t need your notifications. Granting this access technically allows Sleevesight to receive notifications from other applications, including messages; on Android 12 and newer, Sleevesight configures Android not to deliver any notification types to the app. Sleevesight does not use notification contents; it uses media-session information to identify music players and follow the ones you select (Spotify by default). This access is not used to collect or transmit your messages, contacts, or other notification contents. The privacy policy says more, and Sleevesight’s code is open source.</string>
+    <!-- In the access panel, right above "Open notification access" on the first-run screen (#708,
+         #738): why the app asks for notification access, and what it does and does not do with it;
+         access_more follows as a paragraph of its own. On Android 12 and newer the listener's
+         manifest entry opts out of every notification type (#739). Home's prompt, which leads to
+         this screen, has the short home_access_statement. -->
+    <string name="access_why_title">Why notification access</string>
+    <string name="access_statement">Android lets an app see what music apps are playing only with notification access. Sleevesight uses it for that alone: on Android 12 and newer, delivery of notifications to Sleevesight is disabled at the system level; on older versions, Sleevesight ignores all notifications. It never reads your messages or contacts.</string>
+    <string name="access_more">See the privacy policy for details. Sleevesight is open source for you to validate compliance.</string>
     <string name="first_run_continue">Continue</string>
 
     <!-- Settings (design, Settings). -->

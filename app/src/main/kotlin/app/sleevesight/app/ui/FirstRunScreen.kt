@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
@@ -21,8 +22,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.home.PageCloseButton
@@ -87,9 +90,13 @@ private val SPACING = 12.dp
 
 /**
  * The screen's text, from its introduction ([intro]), the way to notification access, and the link to
- * the privacy policy; once access is on, *Continue* ([onContinue]) when there is one. While access is
- * off, right above *Open notification access*, it explains why Sleevesight asks for notification
- * access and what it does and does not do with it (#708, #738).
+ * the privacy policy. *What it reads* says that Android requires notification access for it, and, as
+ * a paragraph of its own, that Sleevesight receives no audio.
+ *
+ * The access part sits in a panel of its own ([AccessPanel]), set off from the text around it: while
+ * access is off, the instruction, then, right above *Open notification access*, why Sleevesight asks
+ * for notification access and what it does and does not do with it, and where to check (#708, #738);
+ * once access is on, *Continue* ([onContinue]) when there is one.
  */
 @Composable
 private fun FirstRunText(
@@ -103,6 +110,7 @@ private fun FirstRunText(
 
     Heading(R.string.first_run_reads_title)
     Body(R.string.first_run_reads)
+    Body(R.string.first_run_no_audio)
 
     Heading(R.string.first_run_leaves_title)
     Bullet(R.string.first_run_to_sources)
@@ -117,32 +125,35 @@ private fun FirstRunText(
     Body(R.string.first_run_stays)
     Body(R.string.first_run_no_tracking)
 
-    if (accessGranted) {
-        Heading(R.string.access_on)
-        if (onContinue != null) {
-            Button(onClick = onContinue, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.first_run_continue))
+    AccessPanel {
+        if (accessGranted) {
+            Heading(R.string.access_on, top = 0.dp)
+            if (onContinue != null) {
+                Button(onClick = onContinue, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.first_run_continue))
+                }
             }
-        }
-    } else {
-        Heading(R.string.access_off)
-        Body(R.string.access_off_hint)
-        // Read just before Android's own screen for the access, which sounds broader than what the
-        // app does with it (#708, #738).
-        Heading(R.string.access_why_title)
-        Body(R.string.access_statement)
-        Button(
-            onClick = { noSettingsScreen = !openAccessSettings() },
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text(stringResource(R.string.open_access_settings))
-        }
-        if (noSettingsScreen) {
-            Text(
-                stringResource(R.string.no_access_settings),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.error,
-            )
+        } else {
+            Heading(R.string.access_off, top = 0.dp)
+            Body(R.string.access_off_hint)
+            // Read just before Android's own screen for the access, which sounds broader than what the
+            // app does with it (#708, #738).
+            Heading(R.string.access_why_title)
+            Body(R.string.access_statement)
+            Body(R.string.access_more)
+            Button(
+                onClick = { noSettingsScreen = !openAccessSettings() },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.open_access_settings))
+            }
+            if (noSettingsScreen) {
+                Text(
+                    stringResource(R.string.no_access_settings),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
         }
     }
 
@@ -150,14 +161,38 @@ private fun FirstRunText(
     PrivacyPolicyLink()
 }
 
+/**
+ * The access part of the screen, from *Notification access is off.* or *is on.* down to its button,
+ * in a panel of the theme's container colour, so that it stands apart from the text above it.
+ */
+@Composable
+private fun AccessPanel(content: @Composable () -> Unit) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.fillMaxWidth().testTag(ACCESS_PANEL_TAG),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(SPACING),
+        ) {
+            content()
+        }
+    }
+}
+
+/** The test tag of the first-run screen's access panel. */
+const val ACCESS_PANEL_TAG: String = "firstRun:accessPanel"
+
 @Composable
 private fun Heading(
     @StringRes text: Int,
+    top: Dp = 8.dp,
 ) {
     Text(
         stringResource(text),
         style = MaterialTheme.typography.titleMedium,
-        modifier = Modifier.padding(top = 8.dp),
+        modifier = Modifier.padding(top = top),
     )
 }
 
