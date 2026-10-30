@@ -10,6 +10,7 @@ import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.toSize
 import androidx.test.core.app.ActivityScenario
@@ -124,6 +125,14 @@ class NotificationAccessStatementTest {
             )
             // The rest of the screen stays outside it.
             compose.onAllNodes(hasText(text(R.string.first_run_reads_title)) and inPanel).assertCountEquals(0)
+        }
+
+    @Test
+    fun whenNoSettingsScreenOpensTheErrorStaysInThePanel() =
+        show({ FirstRunScreen(accessGranted = false, openAccessSettings = { false }, onContinue = {}) }) {
+            compose.onNodeWithText(text(R.string.open_access_settings)).performScrollTo().performClick()
+            compose.waitForIdle()
+            assertInPanel(R.string.no_access_settings)
         }
 
     @Test
