@@ -240,7 +240,7 @@ class GuideNotesTest {
         }
 
     @Test
-    fun dismissClosesThePanelAndAScreenReadersFocusGoesBackToTheNote() {
+    fun closeClosesThePanelAndAScreenReadersFocusGoesBackToTheNote() {
         startScreenReader()
         show {
             note(GuidePart.GENRES).performScrollTo().performClick()

@@ -174,7 +174,7 @@ private fun MissingPlayerNote(
                         messages?.showOnceSaved(saved, dismissed, undo) { dismissals.undo(Dismissable.PLAYERS_NOTE) }
                     },
                 ),
-                Modifier.align(Alignment.End),
+                compact = Alignment.End,
             )
         }
     }

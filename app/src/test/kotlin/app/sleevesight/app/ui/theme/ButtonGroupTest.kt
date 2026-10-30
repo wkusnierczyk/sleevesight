@@ -9,6 +9,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
@@ -230,6 +231,40 @@ class ButtonGroupTest {
             assertTrue("one row", all.all { it.top == all.first().top })
         }) {
             ActionButtonGroup(actions, Modifier.width(GROUP_WIDTH.dp).testTag(GROUP))
+        }
+    }
+
+    // Compact (#759): as wide as the labels need, at the end, while they fit equally side by side.
+    @Test
+    fun aCompactGroupIsAsWideAsItsLabelsNeedAtTheEnd() {
+        val actions = listOf(GroupAction("Hide once") {}, GroupAction("Dismiss") {})
+        show({
+            val (hide, dismiss) = actions.map { bounds(it.label) }
+            val group = groupBounds()
+            assertEquals("one row", hide.top, dismiss.top)
+            assertEquals("as wide as each other", hide.width, dismiss.width, 1f)
+            assertEquals("at the end", group.right, dismiss.right, 1f)
+            assertTrue(
+                "narrower than the width: ${dismiss.right - hide.left} of ${group.width}",
+                dismiss.right - hide.left < group.width - 1f,
+            )
+            for (action in actions) assertWhole(action.label)
+        }) {
+            ActionButtonGroup(actions, Modifier.width(GROUP_WIDTH.dp).testTag(GROUP), compact = Alignment.End)
+        }
+    }
+
+    @Test
+    @Config(fontScale = 2f)
+    fun aCompactGroupWhoseLabelsDoNotFitEquallyTakesTheWholeWidth() {
+        val actions = LONG_AND_SHORT.map { (_, label) -> GroupAction(label) {} }
+        show({
+            val all = actions.map { bounds(it.label) }
+            val span = all.maxOf { it.right } - all.minOf { it.left }
+            assertEquals("across the whole width", GROUP_WIDTH.toFloat(), span / density, 1f)
+            for (action in actions) assertWhole(action.label)
+        }) {
+            ActionButtonGroup(actions, Modifier.width(GROUP_WIDTH.dp).testTag(GROUP), compact = Alignment.End)
         }
     }
 

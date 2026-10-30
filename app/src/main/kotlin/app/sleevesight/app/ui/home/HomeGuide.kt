@@ -40,7 +40,7 @@ internal fun HomeGuide(
                     onClick = onDismiss,
                 ),
             ),
-            Modifier.align(Alignment.End),
+            compact = Alignment.End,
         )
     }
 }

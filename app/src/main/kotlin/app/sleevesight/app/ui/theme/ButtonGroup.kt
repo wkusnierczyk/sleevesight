@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -36,6 +37,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 
@@ -109,12 +111,15 @@ internal fun <T> ChoiceButtonGroup(
  * A row of actions, as a connected button group (#637): each of [actions] a plain button, by its
  * label, which a tap runs while it is enabled; none is ever chosen, so none is filled or checked.
  * A screen reader reads each as a button, a disabled one as disabled. Laid out as
- * [ChoiceButtonGroup] is.
+ * [ChoiceButtonGroup] is, across the width it has; with [compact] (#759), only as wide as its
+ * labels need, at that side of the width, while side by side they fit, as wide as the widest
+ * needs, and across the width as before once they do not.
  */
 @Composable
 internal fun ActionButtonGroup(
     actions: List<GroupAction>,
     modifier: Modifier = Modifier,
+    compact: Alignment.Horizontal? = null,
 ) {
     val buttons =
         actions.map {
@@ -127,7 +132,7 @@ internal fun ActionButtonGroup(
                 onClick = it.onClick,
             )
         }
-    ConnectedButtons(buttons, modifier, checks = false)
+    ConnectedButtons(buttons, modifier, checks = false, compact)
 }
 
 /**
@@ -186,13 +191,16 @@ internal fun groupArrangement(
  * ([checks]), room for the check in every one, so the buttons keep their widths whichever is
  * chosen. In a row, the buttons are of one height, at least [GROUP_HEIGHT], in a row at least
  * [GROUP_TARGET] high, each answering a tap across 48 dp (Compose widens a smaller target into the
- * room around it); stacked, each is at least [GROUP_TARGET] high.
+ * room around it); stacked, each is at least [GROUP_TARGET] high. With [compact], buttons that fit
+ * as wide as the widest needs ([GroupArrangement.EQUAL]) are that wide, and the row is placed at
+ * that side; otherwise they share the width as without it.
  */
 @Composable
 private fun ConnectedButtons(
     buttons: List<GroupButton>,
     modifier: Modifier,
     checks: Boolean,
+    compact: Alignment.Horizontal? = null,
 ) {
     val style = MaterialTheme.typography.labelLarge
     val measurer = rememberTextMeasurer()
@@ -221,14 +229,17 @@ private fun ConnectedButtons(
                 }
             }
         } else {
-            Box(Modifier.fillMaxWidth().heightIn(min = GROUP_TARGET), contentAlignment = Alignment.CenterStart) {
+            // Compact only where every button fits as wide as the widest label needs.
+            val side = compact.takeIf { bounded && arrangement == GroupArrangement.EQUAL && needing.isNotEmpty() }
+            val widest = with(density) { (needing.maxOrNull() ?: 0).toDp() }
+            Box(Modifier.fillMaxWidth().heightIn(min = GROUP_TARGET), contentAlignment = rowPlace(side)) {
                 Row(
-                    Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+                    (if (side == null) Modifier.fillMaxWidth() else Modifier).height(IntrinsicSize.Min),
                     horizontalArrangement = Arrangement.spacedBy(GROUP_GAP),
                 ) {
                     buttons.forEachIndexed { index, button ->
                         val share = if (arrangement == GroupArrangement.EQUAL) 1f else needing[index].toFloat()
-                        val width = if (bounded) Modifier.weight(share) else Modifier
+                        val width = buttonWidth(if (side != null) widest else null, bounded, share)
                         GroupButtonView(
                             button,
                             groupShape(index, buttons.size, button.selected == true, stacked = false),
@@ -240,6 +251,26 @@ private fun ConnectedButtons(
         }
     }
 }
+
+/** A row's button's width: [fixed] in a compact row, else its [share] of a [bounded] row, or its own. */
+private fun RowScope.buttonWidth(
+    fixed: Dp?,
+    bounded: Boolean,
+    share: Float,
+): Modifier =
+    when {
+        fixed != null -> Modifier.width(fixed)
+        bounded -> Modifier.weight(share)
+        else -> Modifier
+    }
+
+/** Where a compact row sits in the width, [side] of it ([ConnectedButtons]); at the start otherwise. */
+private fun rowPlace(side: Alignment.Horizontal?): Alignment =
+    when (side) {
+        Alignment.End -> Alignment.CenterEnd
+        Alignment.CenterHorizontally -> Alignment.Center
+        else -> Alignment.CenterStart
+    }
 
 /**
  * The shape of the button at [index] of [count]: round at the group's ends, its outer corners, and
