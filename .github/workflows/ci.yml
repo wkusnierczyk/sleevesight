@@ -18,17 +18,26 @@ concurrency:
 permissions:
   contents: read
 
+# The Gradle build runs as three jobs side by side, each on a runner of its own (#746): the tests,
+# the release build, and lint with the static checks. Together they run every task `./gradlew build`
+# does. `build`, the check `main` requires, is the last job: it passes when every other job passed or
+# skipped the build.
 jobs:
-  build:
+  changes:
+    name: Changes
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 5
+    outputs:
+      build: ${{ steps.changes.outputs.build }}
+      version-arg: ${{ steps.version.outputs.arg }}
+      pattern: ${{ steps.version.outputs.pattern }}
     steps:
       - uses: actions/checkout@v7
         with:
           # A pull request checks out its merge commit; the first parent is the base branch.
           fetch-depth: 2
 
-      # A pull request that changes only files the build never reads skips the build, and the job
+      # A pull request that changes only files the build never reads skips the build, and `build`
       # still passes, so the required check reports. The list names those files one by one, so a new
       # file builds until it is added here. `fixtures/` stays out even for its READMEs, since the tests
       # read it as resources. `release-notes/*` is in the list although a build run without
@@ -36,20 +45,6 @@ jobs:
       # code, and the push that lands them builds and checks the version (*Build identity*).
       # Pushes to `main` and `dev-*` always build, unless they change only Markdown (`paths-ignore`
       # above), which a pull request has already built where it had to.
-      # The keyboard page's protocol and QR encoder (#394) are checked by the app's tests against
-      # vectors their own code makes; this fails if the vectors were not remade after a change to
-      # them, which `assets/*` alone would not build. The runner's Node is enough.
-      - name: Keyboard vectors current
-        run: node assets/keyboard/make_vectors.mjs --check
-
-      # Likewise the API keys page's setup format, key shapes and QR codes (#436).
-      - name: API keys page vectors current
-        run: node assets/api-keys/make_vectors.mjs --check
-
-      # The API keys page's drawing of its sealed code (#590), with sealing that is slow or fails.
-      - name: API keys page drawing
-        run: node --test assets/api-keys/draw.test.mjs
-
       - name: Changes that need a build
         id: changes
         run: |
@@ -87,106 +82,46 @@ jobs:
         run: |
           if [[ $BRANCH =~ ^dev-((0|[1-9][0-9]{0,3})\.(0|[1-9][0-9]{0,2})\.(0|[1-9][0-9]{0,2}))$ ]]; then
             version=${BASH_REMATCH[1]}
-            echo "VERSION_ARG=-Psleevesight.version=$version" >> "$GITHUB_ENV"
+            echo "arg=-Psleevesight.version=$version" >> "$GITHUB_OUTPUT"
             echo "Version $version, from \`$BRANCH\`." >> "$GITHUB_STEP_SUMMARY"
             echo "pattern=^${version//./[.]}" >> "$GITHUB_OUTPUT"
           else
-            echo "VERSION_ARG=" >> "$GITHUB_ENV"
+            echo "arg=" >> "$GITHUB_OUTPUT"
             echo "No version from \`$BRANCH\`: the newest release notes' version." >> "$GITHUB_STEP_SUMMARY"
             echo "pattern=^[0-9]+[.][0-9]+[.][0-9]+" >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: actions/setup-java@v6
-        if: steps.changes.outputs.build == 'true'
-        with:
-          distribution: temurin
-          java-version: "21"
+  # The checks that need no Gradle, in every run, including those that skip the build.
+  scripts:
+    name: Pages, release track and notes
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
 
-      - uses: gradle/actions/setup-gradle@v6
-        if: steps.changes.outputs.build == 'true'
-        with:
-          # Pushes to `main` and `dev-*` write the cache, since an integration branch's
-          # dependencies run ahead of `main`'s.
-          cache-read-only: ${{ github.event_name == 'pull_request' }}
+      # The keyboard page's protocol and QR encoder (#394) are checked by the app's tests against
+      # vectors their own code makes; this fails if the vectors were not remade after a change to
+      # them, which `assets/*` alone would not build. The runner's Node is enough.
+      - name: Keyboard vectors current
+        run: node assets/keyboard/make_vectors.mjs --check
 
-      # Robolectric downloads its Android runtime (about 150 MB) from Maven Central into `~/.m2`, which
-      # `setup-gradle` does not cache. Keyed on the Robolectric version (`libs.versions.toml`) and
-      # its configuration file: a new key downloads afresh, so old runtimes do not pile up in the
-      # cache. The SDK the tests run on is set in that file, so a new one changes the key; an SDK
-      # that a test sets for itself (`@Config(sdk = …)`) is outside the key: one new SDK alone is
-      # downloaded on each run until the key next changes, slower but never wrong.
-      - uses: actions/cache@v6
-        if: steps.changes.outputs.build == 'true'
-        with:
-          path: ~/.m2/repository/org/robolectric
-          key: robolectric-${{ runner.os }}-${{ hashFiles('gradle/libs.versions.toml', 'app/src/test/resources/robolectric.properties') }}
+      # Likewise the API keys page's setup format, key shapes and QR codes (#436).
+      - name: API keys page vectors current
+        run: node assets/api-keys/make_vectors.mjs --check
 
-      - name: Build, test and lint
-        if: steps.changes.outputs.build == 'true'
-        run: ./gradlew build ${VERSION_ARG:+"$VERSION_ARG"} --console=plain
-
-      # Nested TestKit builds of the convention plugins; they need Maven Central, so they are not
-      # part of `build`.
-      - name: Functional tests of the build logic
-        if: steps.changes.outputs.build == 'true'
-        run: ./gradlew :build-logic:functionalTest --console=plain
-
-      # `checkDependencyPage` holds the dependencies page (`docs/dependencies/index.md`, #412) to the
-      # release runtime classpath, so that page stays out of the list of files the build never reads.
-      - name: Structural checks
-        if: steps.changes.outputs.build == 'true'
-        run: |
-          ./gradlew checkDependencies checkDependencyPage checkManifest checkModuleGraph ${VERSION_ARG:+"$VERSION_ARG"} \
-            --console=plain
-
-      # `build` has assembled it already; this names the step that makes it.
-      - name: Debug APK
-        if: steps.changes.outputs.build == 'true'
-        run: ./gradlew :app:assembleDebug ${VERSION_ARG:+"$VERSION_ARG"} --console=plain
-
-      # The debug APK names itself apart from the Play build (#614), and the release APK, which
-      # `build` assembled, as before: *Sleevesight* and the bare version.
-      - name: Build identity
-        if: steps.changes.outputs.build == 'true'
-        env:
-          PATTERN: ${{ steps.version.outputs.pattern }}
-        run: |
-          .github/scripts/check-build-identity.sh app/build/outputs/apk/debug/app-debug.apk \
-            'Sleevesight Debug' "$PATTERN-debug\$"
-          .github/scripts/check-build-identity.sh app/build/outputs/apk/release/app-release-unsigned.apk \
-            Sleevesight "$PATTERN\$"
-
-      # For installing on a phone or an emulator, such as the restricted-settings test (#29).
-      - uses: actions/upload-artifact@v7
-        if: steps.changes.outputs.build == 'true'
-        with:
-          name: sleevesight-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
-          if-no-files-found: error
-          retention-days: 14
+      # The API keys page's drawing of its sealed code (#590), with sealing that is slow or fails.
+      - name: API keys page drawing
+        run: node --test assets/api-keys/draw.test.mjs
 
       # The release's track and its guard against a `PLAY_TRACK` left at `production`
-      # (`release-track.sh`, #451), tested in a throwaway repository. Shell only, so every run.
+      # (`release-track.sh`, #451), tested in a throwaway repository.
       - name: Release track
         run: .github/scripts/test-release-track.sh
 
-      # Developer mode is on by default in a build for Play's testing tracks and off in any other
-      # (#451; `release.yml` sets which). The flag's value is read back from each build, and the
-      # settings' default checked under each: the public build's by `build` above, the test build's
-      # by `DeveloperModeDefaultTest` again with the flag on. After the APK, so it is the public one.
-      - name: Developer mode by default
-        if: steps.changes.outputs.build == 'true'
-        run: |
-          .github/scripts/check-developer-mode.sh debug false
-          ./gradlew :app:testDebugUnitTest --tests 'app.sleevesight.app.settings.DeveloperModeDefaultTest' \
-            -Psleevesight.developerMode=true ${VERSION_ARG:+"$VERSION_ARG"} --console=plain
-          .github/scripts/check-developer-mode.sh debug true
-
-      # Every run, including those that skip the build, so notes that the release would not find or
-      # Play would refuse fail the pull request that adds them rather than the release
-      # (`release.yml`). Every entry in the folder is checked, whatever its name, hidden ones too.
-      # Last, and after a failed step as well, so that bad notes and a failed build are both
-      # reported in one run.
+      # Notes that the release would not find or Play would refuse fail the pull request that adds
+      # them rather than the release (`release.yml`). Every entry in the folder is checked, whatever
+      # its name, hidden ones too. After a failed step as well, so that bad notes and a failed check
+      # are both reported in one run.
       - name: Release notes
         if: ${{ !cancelled() }}
         run: |
@@ -195,3 +130,140 @@ jobs:
           if [ "${#files[@]}" -gt 0 ]; then
             .github/scripts/check-release-notes.sh "${files[@]}"
           fi
+
+  # Every module's unit tests, and the debug APK, which phones install.
+  tests:
+    name: Tests and debug APK
+    needs: changes
+    if: needs.changes.outputs.build == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      VERSION_ARG: ${{ needs.changes.outputs.version-arg }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/java-gradle
+
+      # Robolectric downloads its Android runtime (about 150 MB) from Maven Central into `~/.m2`, which
+      # `setup-gradle` does not cache. Keyed on the Robolectric version (`libs.versions.toml`) and
+      # its configuration file: a new key downloads afresh, so old runtimes do not pile up in the
+      # cache. The SDK the tests run on is set in that file, so a new one changes the key; an SDK
+      # that a test sets for itself (`@Config(sdk = …)`) is outside the key: one new SDK alone is
+      # downloaded on each run until the key next changes, slower but never wrong.
+      - uses: actions/cache@v6
+        with:
+          path: ~/.m2/repository/org/robolectric
+          key: robolectric-${{ runner.os }}-${{ hashFiles('gradle/libs.versions.toml', 'app/src/test/resources/robolectric.properties') }}
+
+      # `check` reads the debug APK (`checkApkClasses`, `checkApkNotices`), so those checks run here,
+      # where the APK is built.
+      - name: Unit tests and debug APK
+        run: |
+          ./gradlew test :app:assembleDebug :app:checkApkClassesDebug :app:checkApkNoticesDebug \
+            ${VERSION_ARG:+"$VERSION_ARG"} --console=plain
+
+      # The debug APK names itself apart from the Play build (#614).
+      - name: Build identity
+        env:
+          PATTERN: ${{ needs.changes.outputs.pattern }}
+        run: |
+          .github/scripts/check-build-identity.sh app/build/outputs/apk/debug/app-debug.apk \
+            'Sleevesight Debug' "$PATTERN-debug\$"
+
+      # For installing on a phone or an emulator, such as the restricted-settings test (#29).
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sleevesight-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      # Developer mode is on by default in a build for Play's testing tracks and off in any other
+      # (#451; `release.yml` sets which). The flag's value is read back from each build, and the
+      # settings' default checked under each: the public build's by the tests above, the test build's
+      # by `DeveloperModeDefaultTest` again with the flag on. After the APK, so it is the public one.
+      - name: Developer mode by default
+        run: |
+          .github/scripts/check-developer-mode.sh debug false
+          ./gradlew :app:testDebugUnitTest --tests 'app.sleevesight.app.settings.DeveloperModeDefaultTest' \
+            -Psleevesight.developerMode=true ${VERSION_ARG:+"$VERSION_ARG"} --console=plain
+          .github/scripts/check-developer-mode.sh debug true
+
+  # The release build as `build` makes it: the release compile, R8, `lintVital`, and the checks of the
+  # release APK.
+  release:
+    name: Release build
+    needs: changes
+    if: needs.changes.outputs.build == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      VERSION_ARG: ${{ needs.changes.outputs.version-arg }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/java-gradle
+
+      - name: Release APK
+        run: |
+          ./gradlew :app:assembleRelease :app:checkApkClassesRelease :app:checkApkNoticesRelease \
+            ${VERSION_ARG:+"$VERSION_ARG"} --console=plain
+
+      # The release APK names itself as Play's build does: *Sleevesight* and the bare version (#614).
+      - name: Build identity
+        env:
+          PATTERN: ${{ needs.changes.outputs.pattern }}
+        run: |
+          .github/scripts/check-build-identity.sh app/build/outputs/apk/release/app-release-unsigned.apk \
+            Sleevesight "$PATTERN\$"
+
+  # The rest of `build`: Android lint, Detekt, ktlint, the build logic's own tests, and the other
+  # checks. It runs `build` less what the other two jobs run, so a check added to `check` later runs
+  # here unless it is left out by name.
+  static:
+    name: Lint and static checks
+    needs: changes
+    if: needs.changes.outputs.build == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      VERSION_ARG: ${{ needs.changes.outputs.version-arg }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/java-gradle
+
+      # `checkDependencyPage` holds the dependencies page (`docs/dependencies/index.md`, #412) to the
+      # release runtime classpath, so that page stays out of the list of files the build never reads.
+      - name: Lint and static checks
+        run: |
+          ./gradlew build checkDependencies checkDependencyPage checkManifest checkModuleGraph \
+            -x test -x assembleDebug -x assembleRelease -x checkApkClasses -x checkApkNotices \
+            ${VERSION_ARG:+"$VERSION_ARG"} --console=plain
+
+      # Nested TestKit builds of the convention plugins; they need Maven Central, so they are not
+      # part of `build`.
+      - name: Functional tests of the build logic
+        run: ./gradlew :build-logic:functionalTest --console=plain
+
+  build:
+    needs: [changes, scripts, tests, release, static]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # A job is skipped only in a run that builds nothing; in one that builds, every job must pass.
+      - name: Every job passed
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+          BUILD: ${{ needs.changes.outputs.build }}
+        run: |
+          failed=$(jq -r --arg build "$BUILD" 'to_entries[]
+            | select(.value.result != "success" and (.value.result != "skipped" or $build == "true"))
+            | "\(.key): \(.value.result)"' <<< "$NEEDS")
+          if [ -n "$failed" ]; then
+            while IFS= read -r job; do echo "::error::$job"; done <<< "$failed"
+            exit 1
+          fi
+          echo "Every job passed."
