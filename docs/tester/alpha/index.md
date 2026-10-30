@@ -96,7 +96,7 @@ For an insight that is wrong or offensive, *Report a problem*, under the insight
 
 In brief: requests go from your phone straight to each service, none through a server of ours.
 
-- **To the sources you switch on:** the title and artists of the playing track (Wikidata gets only identifiers, never a name; for the genre labels, Last.fm also gets the album name, the only source that does). When a title names a film or show, as in "Main Theme (from *Some Film*)", Exa also gets that name. By default, the next track in the player's queue also goes to MusicBrainz, ahead of its play.
+- **To the sources you switch on:** the title and artists of the playing track (Wikidata is asked only by the item numbers MusicBrainz and Wikipedia link to; for genre labels, Last.fm gets the album name). When a title names a film or show, as in "Main Theme (from *Some Film*)", Exa also gets that name. By default, the next track in the player's queue also goes to MusicBrainz, ahead of its play.
 - **To the AI service:** the title, artists and album, and what the sources found, for the playing track only, with the key you saved.
 - **To the server a cover's web address names,** when a player gives the cover only as an address.
 - **To your phone's text-to-speech engine,** only when an insight is read aloud: its text. Some engines, such as Google's network voices, send it to their server to be spoken.
