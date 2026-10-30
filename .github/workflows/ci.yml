@@ -247,14 +247,17 @@ jobs:
       - name: Functional tests of the build logic
         run: ./gradlew :build-logic:functionalTest --console=plain
 
+  # `always()`, not `!cancelled()`: in a cancelled run, `build` would be skipped, and GitHub takes a
+  # skipped required check as passed. Run, it fails on the cancelled jobs.
   build:
     needs: [changes, scripts, tests, release, static]
-    if: ${{ !cancelled() }}
+    if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       # A job is skipped only in a run that builds nothing; in one that builds, every job must pass.
       - name: Every job passed
+        if: ${{ always() }}
         env:
           NEEDS: ${{ toJSON(needs) }}
           BUILD: ${{ needs.changes.outputs.build }}
