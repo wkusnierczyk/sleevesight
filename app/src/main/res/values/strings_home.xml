@@ -320,7 +320,7 @@
     <!-- Chips' names under Sources, beside their letters, where they differ from the settings' names. -->
     <string name="home_source_chip_wikipedia">Wikipedia</string>
     <string name="home_source_chip_player">Player</string>
-    <!-- Read aloud (#325): the button under an insight and under a genre's reason, its name while it
+    <!-- Read aloud (#325): the button beside Key insights (#725) and under a genre's reason, its name while it
          reads, the app's own words in what is read, and what is said when it cannot read. -->
     <string name="home_read_aloud">Read aloud</string>
     <string name="home_read_aloud_stop">Stop reading aloud</string>

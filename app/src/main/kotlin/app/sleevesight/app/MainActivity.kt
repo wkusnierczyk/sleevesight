@@ -72,7 +72,7 @@ class MainActivity : ComponentActivity() {
             hideGuide = graph.settings.homeGuideHider(graph.settingsSaves),
             // What a genre's panel shows above its table (#523).
             genreNotes = graph.genreNotes,
-            // *Read aloud* under the insight and a genre's reason (#325).
+            // *Read aloud* beside *Key insights* and under a genre's reason (#325, #725).
             readAloud = graph.readAloud,
         )
     }
