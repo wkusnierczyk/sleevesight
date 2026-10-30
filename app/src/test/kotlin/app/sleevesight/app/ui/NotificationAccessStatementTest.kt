@@ -176,7 +176,7 @@ class NotificationAccessStatementTest {
         for (part in parts) {
             assertTrue("it says \"$part\"", part in said)
         }
-        assertTrue("it says how to check", "privacy policy" in more && "open source" in more)
+        assertTrue("it says how to check", "open source" in more)
     }
 
     @Test

@@ -19,7 +19,7 @@
     <string name="first_run_no_audio">Sleevesight receives no audio.</string>
 
     <string name="first_run_leaves_title">What leaves the phone, and to whom</string>
-    <string name="first_run_to_sources">To the sources you switch on, such as MusicBrainz and Wikipedia (with Wikidata): the title and artists of the playing track, cleaned of tags such as “2006 Remaster”. Wikidata is asked only by the item numbers MusicBrainz and Wikipedia link to. For genre labels, Last.fm gets the album name. While the “Proactive” setting is on, as it is by default, the title and artists of the next track in the player’s queue also go to MusicBrainz if the service is enabled.</string>
+    <string name="first_run_to_sources">To the sources you switch on, such as MusicBrainz and Wikipedia (with Wikidata): the title and artists of the playing track, cleaned of tags such as “2006 Remaster”. Wikidata is asked only by catalogue numbers. For genre labels, Last.fm gets the album name. While the “Proactive” setting is on, as it is by default, the title and artists of the next track in the player’s queue also go to MusicBrainz if the service is enabled.</string>
     <string name="first_run_to_ai">To the AI service you choose: the title, artists and album, and what the sources found. This is for the playing track only: the next one in the queue is looked up ahead in the sources, but no AI insight is written for it until it plays.</string>
     <string name="first_run_api_keys">Your API keys: each only to the service it belongs to, with each request to it. Always encrypted.</string>
     <string name="first_run_to_art_host">To the server a cover’s web address names, when a player gives the cover only as a web address: a request for the cover image. The address itself may identify the album or episode.</string>
@@ -46,7 +46,7 @@
          this screen, has the short home_access_statement. -->
     <string name="access_why_title">Why notification access</string>
     <string name="access_statement">Android lets an app see what music apps are playing only with notification access. Sleevesight uses it for that alone: on Android 12 and newer, delivery of notifications to Sleevesight is disabled at the system level; on older versions, Sleevesight ignores all notifications. It never reads your messages or contacts.</string>
-    <string name="access_more">See the privacy policy for details. Sleevesight is open source for you to validate compliance.</string>
+    <string name="access_more">Sleevesight is open source for you to validate compliance.</string>
     <string name="first_run_continue">Continue</string>
 
     <!-- Settings (design, Settings). -->
