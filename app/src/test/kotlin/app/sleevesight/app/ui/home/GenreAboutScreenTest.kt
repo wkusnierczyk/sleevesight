@@ -242,6 +242,12 @@ class GenreAboutScreenTest {
             // The same button, with its AI mark, disabled: TalkBack says so, and a tap does nothing.
             compose.onNodeWithTag(GENRE_WHY_TAG).assertIsNotEnabled()
             compose.onNodeWithTag(GENRE_WHY_TAG).assertContentDescriptionEquals("$question, uses AI")
+            val marks =
+                compose
+                    .onAllNodes(hasTestTag(AI_MARK_TAG) and hasAnyAncestor(hasTestTag(GENRE_WHY_TAG)), true)
+                    .fetchSemanticsNodes()
+            assertEquals(1, marks.size)
+            compose.onNodeWithTag(GENRE_WHY_TAG).assertHeightIsAtLeast(48.dp)
             compose.onNodeWithTag(GENRE_WHY_WITHHELD_TAG).assertTextEquals(text(R.string.genre_why_withheld))
             val tops = listOf(GENRE_WHY_TAG, GENRE_WHY_WITHHELD_TAG, GENRES_ROW_PREFIX + "0").map(::top)
             assertEquals("Why, its note, table, in that order", tops.sorted(), tops)
