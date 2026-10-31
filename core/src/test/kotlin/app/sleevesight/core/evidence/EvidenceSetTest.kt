@@ -189,7 +189,8 @@ class EvidenceSetTest {
                 listOf("G2", "web", "A classic."),
             ).joinToString("") { fields -> fields.joinToString("") { "${it.encodeToByteArray().size}:$it" } + "\n" }
         val digest = JvmHasher.sha256(encoded.encodeToByteArray())
-        assertEquals(digest.joinToString("") { "%02x".format(it) }, evidence.fingerprint)
+        val hex = digest.joinToString("") { (it.toInt() and 0xff).toString(16).padStart(2, '0') }
+        assertEquals(hex, evidence.fingerprint)
     }
 
     @Test
