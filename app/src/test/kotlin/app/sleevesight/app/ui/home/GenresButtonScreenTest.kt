@@ -317,6 +317,69 @@ class GenresButtonScreenTest {
     }
 
     @Test
+    fun anOpenGenreStaysOpenWhileARetryAsksAgainWithTheChipsUp() =
+        show {
+            tap(GENRES_CHIP_TAG)
+            tap(FOLK)
+            // *Retry* of Last.fm: the run before's genres kept up, Last.fm asked again.
+            val asking = mapOf(SourceId.MUSICBRAINZ to done(), SourceId.LASTFM to SourceState.Pending)
+            current.value = state(labelled(sources = asking).copy(genresAssembled = false))
+            compose.waitForIdle()
+            assertEquals(1, count(FOLK))
+            compose.onNodeWithTag(GENRE_PANEL_HEADING_TAG).assertTextEquals("Folk")
+            compose.onNodeWithText("Looking on Last.fm…").assertExists()
+            // Its genres assembled: the genre still open.
+            current.value = state(labelled())
+            compose.waitForIdle()
+            compose.onNodeWithTag(GENRE_PANEL_HEADING_TAG).assertTextEquals("Folk")
+        }
+
+    @Test
+    fun anOpenGenreComesBackAfterARunThatShowedNoChipsWhileItAsked() =
+        show {
+            tap(GENRES_CHIP_TAG)
+            tap(FOLK)
+            // A back-online run whose first state has no genres: the chips go while it asks.
+            val asking = mapOf(SourceId.MUSICBRAINZ to SourceState.Pending, SourceId.LASTFM to SourceState.Pending)
+            current.value = state(labelled(TrackGenres(), sources = asking).copy(genresAssembled = false))
+            compose.waitForIdle()
+            assertEquals(0, count(FOLK))
+            compose.onNodeWithText("Looking on Last.fm and MusicBrainz…").assertExists()
+            // The genres land: the genre the user opened is open again.
+            current.value = state(labelled())
+            compose.waitForIdle()
+            compose.onNodeWithTag(GENRE_PANEL_HEADING_TAG).assertTextEquals("Folk")
+            compose.onNodeWithTag(FOLK).assertIsSelected()
+        }
+
+    @Test
+    fun aGenreTheAssembledGenresNoLongerHaveIsDropped() =
+        show {
+            tap(GENRES_CHIP_TAG)
+            tap(FOLK)
+            val ballad = TrackGenres(listOf(GenreRow(GenreLevel.TRACK, null, listOf(label("ballad")))))
+            current.value = state(labelled(ballad))
+            compose.waitForIdle()
+            assertEquals(0, count(GENRE_PANEL_TAG))
+            // Folk back later: not reopened, since it was dropped.
+            current.value = state(labelled())
+            compose.waitForIdle()
+            assertEquals(0, count(GENRE_PANEL_TAG))
+        }
+
+    @Test
+    fun aNewTrackStartsWithNoGenreOpen() =
+        show {
+            tap(GENRES_CHIP_TAG)
+            tap(FOLK)
+            current.value = state(labelled(playing = carefree))
+            compose.waitForIdle()
+            tap(GENRES_CHIP_TAG)
+            assertEquals(1, count(FOLK))
+            assertEquals(0, count(GENRE_PANEL_TAG))
+        }
+
+    @Test
     fun thePanelsCloseFoldsTheGenreOpenInItToo() =
         show {
             tap(GENRES_CHIP_TAG)

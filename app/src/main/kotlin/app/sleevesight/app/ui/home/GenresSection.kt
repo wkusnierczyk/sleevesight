@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -100,8 +101,19 @@ internal fun GenresContent(
 ) {
     val shown = GenresShown.of(track, settings)
     val style = MaterialTheme.typography.bodyLarge
+    // The genre open, kept above the chips and the lines in their place (#772): while a run asks
+    // again, the chips may go and come back, and the genre with them. Closed on each new track; kept
+    // by the genre's identity, so it outlasts labels that land later; dropped once the genres are in
+    // and no row has it any more.
+    val chosen = rememberSaveable(track?.normalized?.lookupKey) { mutableStateOf<String?>(null) }
+    val gone =
+        track != null &&
+            track.gathered &&
+            track.genresAssembled &&
+            chosen.value?.let { !track.genres.has(it) } == true
+    SideEffect { if (gone) chosen.value = null }
     if (track != null && !track.genres.isEmpty) {
-        if (everyGenre) EveryGenre(track, notes) else GenresBox(track, notes)
+        if (everyGenre) EveryGenre(track, notes) else GenresBox(track, notes, chosen)
     }
     shown.off?.let { target ->
         Text(stringResource(R.string.home_genres_off), style = style)
@@ -206,8 +218,8 @@ internal fun labelsOff(settings: Settings?): Boolean =
     settings != null && LabelSource.entries.none { settings.givesLabels(it) }
 
 /**
- * In *Genres*' panel (#772): the chips, and under them the genre chosen, if any, in a box of its own
- * ([GenrePanel], on the surface colour, which sets it apart from the panel's fill): another chip
+ * In *Genres*' panel (#772): the chips, and under them the genre chosen ([choice]), if any, in a box
+ * of its own ([GenrePanel], on the surface colour, which sets it apart from the panel's fill): another chip
  * switches it, and a second tap on the same chip, or its *Close*, folds it; the chips stay. The
  * focus moves as *Sources*' does ([FocusHandoff], #629): to the panel's *Close* when a chip opens a
  * genre, and back to the chip tapped when *Close* closes it (a keyboard's, and a screen reader's;
@@ -220,10 +232,10 @@ internal fun labelsOff(settings: Settings?): Boolean =
 private fun GenresBox(
     track: TrackState,
     notes: PanelNotes,
+    choice: MutableState<String?>,
 ) {
-    // Closed on each new track. Kept by the genre's identity, so it outlasts labels that land later;
-    // a genre no row has any more shows no panel.
-    var chosen by rememberSaveable(track.normalized.lookupKey) { mutableStateOf<String?>(null) }
+    // [GenresContent]'s: a genre no row has (yet, or any more) shows no panel.
+    var chosen by choice
     val open = chosen?.takeIf { track.genres.has(it) }
     val labels = track.genres.folded
     val handoff = rememberFocusHandoff()

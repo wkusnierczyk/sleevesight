@@ -3,6 +3,7 @@ package app.sleevesight.core.pipeline
 import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.evidence.Scope
+import app.sleevesight.core.genres.TrackGenres
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.Outcome
@@ -34,6 +35,7 @@ internal class RunInput(
     val track: NormalizedTrack,
     val again: Gathered? = null,
     val lookAgain: LookAgain? = null,
+    val genresBefore: TrackGenres = TrackGenres(),
 )
 
 /** Where a run reports: diagnostics events, and changes to its state. */
@@ -93,6 +95,9 @@ internal class TrackRun(
                         adapter.id to (keptBefore[adapter.id] ?: fresh)
                     },
                 resolution = resolvedBefore,
+                // A run that asks again shows the genres the run before it had (#772), until its own
+                // are assembled, which replace them.
+                genres = input.genresBefore,
             ),
         )
 

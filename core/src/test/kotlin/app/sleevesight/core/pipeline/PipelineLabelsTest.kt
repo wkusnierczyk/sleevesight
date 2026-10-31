@@ -663,6 +663,142 @@ class PipelineLabelsTest {
             assertFalse(LaterLabels.ASKING in state.laterLabels.values, "${state.laterLabels}")
         }
 
+    /** Last.fm's track tags as [track] says at the time, its album's none. */
+    private class ChangingReleaseTags(
+        var track: Lookup<List<String>> = Lookup.Found(listOf("soft rock")),
+    ) : ReleaseTags {
+        override suspend fun trackTags(
+            artist: String,
+            title: String,
+        ): Lookup<List<String>> = track
+
+        override suspend fun albumTags(
+            artist: String,
+            album: String,
+        ): Lookup<List<String>> = Lookup.NotFound
+
+        override fun trackPage(
+            artist: String,
+            title: String,
+        ): String? = null
+
+        override fun albumPage(
+            artist: String,
+            album: String,
+        ): String? = null
+    }
+
+    // A control that holds each run's lookups until [gate] opens.
+    private fun held(gate: CompletableDeferred<Unit>) =
+        object : RunControl by RunControl.Unattended(write = false) {
+            override suspend fun await(step: RunStep) {
+                if (step == RunStep.LOOKUPS) gate.await()
+            }
+        }
+
+    private fun TestScope.changing(tags: ChangingReleaseTags) =
+        Pipeline(
+            PipelineParts(
+                normalizer = Normalizer(JvmAccentFolder),
+                adapters = listOf(musicBrainz(), lastFm()),
+                resolver = FakeResolver(),
+                hasher = JvmHasher,
+                musicBrainzLabels = musicBrainzLabels,
+                lastFmLabels = LastFmLabels(tags, vocabulary),
+            ),
+            PipelineTime(timeSource = testTimeSource),
+        ) { settings }
+
+    private fun labelsOf(state: TrackState?) =
+        state
+            ?.genres
+            ?.all
+            ?.map { it.genre.label }
+            .orEmpty()
+
+    @Test
+    fun `a run that looks again shows the genres shown before while it asks, then replaces them with its own`() =
+        runTest {
+            val tags = ChangingReleaseTags()
+            val pipeline = changing(tags)
+            val first = pipeline.run(sundown, write = false)
+            assertTrue("Soft Rock" in labelsOf(first))
+
+            // Looked up afresh, Last.fm no longer tags the track.
+            tags.track = Lookup.NotFound
+            val gate = CompletableDeferred<Unit>()
+            val again =
+                async {
+                    pipeline.run(
+                        sundown,
+                        held(gate),
+                        lookAgain = LookAgain(Gathered(first.sources, first.resolution)),
+                    )
+                }
+            runCurrent()
+            val asking = pipeline.state.value!!
+            assertFalse(asking.genresAssembled)
+            assertEquals(first.genres, asking.genres)
+
+            gate.complete(Unit)
+            val state = again.await()
+            assertTrue(state.genresAssembled)
+            // Its own, not merged with those before: the track's tag is gone.
+            assertFalse("Soft Rock" in labelsOf(state), "${labelsOf(state)}")
+            assertEquals(listOf("Folk", "Singer-Songwriter", "Country"), labelsOf(state))
+        }
+
+    @Test
+    fun `a run asking a source again keeps the genres shown before while it asks`() =
+        runTest {
+            val pipeline = changing(ChangingReleaseTags())
+            val first = pipeline.run(sundown, write = false)
+            // As a *Retry* of MusicBrainz asks it: the run looks it up again, the rest kept.
+            val unreached =
+                SourceState.Done(
+                    SourceResult(Outcome.Unreachable, emptyList(), Duration.ZERO),
+                    cached = false,
+                )
+            val before = Gathered(first.sources + (SourceId.MUSICBRAINZ to unreached), first.resolution)
+            val gate = CompletableDeferred<Unit>()
+            val retry = before.asking(setOf(SourceId.MUSICBRAINZ))
+            val again = async { pipeline.run(sundown, held(gate), again = retry) }
+            runCurrent()
+            assertEquals(first.genres, pipeline.state.value?.genres)
+            gate.complete(Unit)
+            again.await()
+        }
+
+    @Test
+    fun `a new track starts with no genres, even one run as asked again`() =
+        runTest {
+            val pipeline = changing(ChangingReleaseTags())
+            val first = pipeline.run(sundown, write = false)
+            assertTrue(labelsOf(first).isNotEmpty())
+            // Asked again with an earlier run's sources (MusicBrainz's to ask), but another track.
+            val unreached =
+                SourceState.Done(
+                    SourceResult(Outcome.Unreachable, emptyList(), Duration.ZERO),
+                    cached = false,
+                )
+            val before = Gathered(first.sources + (SourceId.MUSICBRAINZ to unreached), first.resolution)
+            val gate = CompletableDeferred<Unit>()
+            val next = async { pipeline.run(carefree, held(gate), again = before) }
+            runCurrent()
+            assertEquals(
+                carefree.title,
+                pipeline.state.value
+                    ?.nowPlaying
+                    ?.title,
+            )
+            assertTrue(
+                pipeline.state.value!!
+                    .genres.isEmpty,
+            )
+            gate.complete(Unit)
+            next.await()
+        }
+
     @Test
     fun `with no request after the evidence, no source is said to be asked`() =
         runTest {
