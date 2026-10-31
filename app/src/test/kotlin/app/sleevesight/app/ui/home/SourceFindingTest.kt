@@ -121,8 +121,8 @@ class SourceFindingTest {
         // Lines of other sources, or of scopes not in the list (the release, the web), are none.
         val others = lines(line(SourceId.WIKIPEDIA, Scope.ARTIST), line(SourceId.MUSICBRAINZ, Scope.RELEASE))
         assertEquals("Found the track", said(chip(), others))
-        // Web search with none of its lines shown: its outcome alone, too.
-        assertEquals("Found the track", said(chip(SourceId.WEB), others))
+        // Web search with none of its lines shown: still its pages, as it finds nothing else.
+        assertEquals("Found pages about the track", said(chip(SourceId.WEB), others))
     }
 
     @Test

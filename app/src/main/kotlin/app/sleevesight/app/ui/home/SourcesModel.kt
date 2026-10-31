@@ -61,8 +61,8 @@ internal val FINDING_ORDER: List<Scope> = listOf(Scope.SONG, Scope.ORIGINAL_SONG
  * What [chip]'s source found (#768), from the scopes of its own lines in [lines] (those of the
  * sources it [SourceChip.filters]), not from its single outcome: for a lookup done with a found
  * outcome (the song's article, the artist's, the original song's), the scopes of [FINDING_ORDER]
- * its lines have, in that order; web search's with lines, [Finding.Pages]; with no line of those
- * scopes (its lines not in the evidence shown), the outcome's own scope alone. Null for any other
+ * its lines have, in that order; web search's, [Finding.Pages], with its lines shown or not; with no
+ * line of those scopes (its lines not in the evidence shown), the outcome's own scope alone. Null for any other
  * status, which says what it says ([statusText]).
  */
 internal fun finding(
@@ -71,7 +71,7 @@ internal fun finding(
 ): Finding? {
     val alone = (chip.status as? ChipStatus.Done)?.outcome?.let(FOUND_ALONE::get) ?: return null
     val own = lines.filter { it.source in chip.filters }
-    return if (chip.source == SourceId.WEB && own.isNotEmpty()) {
+    return if (chip.source == SourceId.WEB) {
         Finding.Pages
     } else {
         val scopes = own.mapTo(mutableSetOf()) { it.scope }

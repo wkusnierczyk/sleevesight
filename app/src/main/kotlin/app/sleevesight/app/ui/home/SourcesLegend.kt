@@ -112,8 +112,7 @@ private val LEGEND_WORDS =
  * outline ([look]), [SAMPLE_WIDTH] by [SAMPLE_HEIGHT] times [scale], its corners the chips'
  * ([CHIP_RADIUS]) scaled to it as it is to a letter's chip (its text's line and [CHIP_PADDING_V]
  * above and below), so a pill at the default font size, as the letters are, and rounded as they are
- * in a large one; no letter, and no button. [modifier] goes first (its fill's shape is a node of
- * its own: hidden).
+ * in a large one; no letter, and no button. [modifier] goes first (it hides the sample's node).
  */
 @Composable
 private fun LetterSample(
