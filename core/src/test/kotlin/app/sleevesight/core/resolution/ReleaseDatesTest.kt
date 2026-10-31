@@ -241,4 +241,18 @@ class ReleaseDatesTest {
         assertNull(ReleaseDate.yearIn("19"))
         assertNull(ReleaseDate.yearIn("19xx"))
     }
+
+    @Test
+    fun `by the album key, the player's Vol 2 finds MusicBrainz's Volume 2 and its year`() {
+        val dates =
+            listOf(
+                ReleaseDate("This Warm December: A Brushfire Holiday, Volume 2", "2011-11-15", "group-twd2"),
+                ReleaseDate("This Warm December: A Brushfire Holiday, Volume 1", "2008-11-18", "group-twd1"),
+            )
+        val album = "This Warm December, A Brushfire Holiday Vol. 2"
+        assertEquals("2011", ReleaseDate.albumYear(album, dates, null, names::albumKey))
+        assertEquals(listOf(dates.first()), ReleaseDate.named(album, dates, names::albumKey))
+        // By the plain key, as before: not named.
+        assertNull(ReleaseDate.albumYear(album, dates, null, names::key))
+    }
 }

@@ -8,6 +8,8 @@ import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.sources.FirstRelease
+import app.sleevesight.core.sources.OriginalRecording
 import app.sleevesight.core.sources.Rejection
 import app.sleevesight.core.sources.ReleaseDate
 import app.sleevesight.core.sources.Resolution
@@ -248,6 +250,31 @@ class RetrievalCacheTest {
     }
 
     @Test
+    fun `an entry kept before the first release's title and the original decodes without them`() {
+        // As MusicBrainz's result was kept before #724: the first release's date and the releases' dates only.
+        val old =
+            """{"outcome":"song_article","latency":"PT0.4S","firstReleased":"1974-01",""" +
+                """"releaseDates":[{"title":"Sundown","date":"1974-01","group":"rg-1"}]}"""
+        val decoded = assertNotNull(RetrievalCodec.decode(old))
+        assertEquals("1974-01", decoded.firstReleased)
+        assertEquals(listOf(ReleaseDate("Sundown", "1974-01", "rg-1")), decoded.releaseDates)
+        assertNull(decoded.firstRelease)
+        assertNull(decoded.original)
+        // And one with neither is written without them.
+        val plain = sample(Outcome.SongArticle).copy(firstRelease = null, original = null)
+        assertFalse("\"firstRelease\"" in RetrievalCodec.encode(plain))
+        assertFalse("\"original\"" in RetrievalCodec.encode(plain))
+    }
+
+    @Test
+    fun `the first release and the original, with its release or without, round-trip`() {
+        val result = sample(Outcome.SongArticle)
+        assertEquals(result, RetrievalCodec.decode(RetrievalCodec.encode(result)))
+        val unreleased = result.copy(original = result.original?.copy(release = null))
+        assertEquals(unreleased, RetrievalCodec.decode(RetrievalCodec.encode(unreleased)))
+    }
+
+    @Test
     fun `a payload it cannot read is a miss`() {
         val payload = RetrievalCodec.encode(sample(Outcome.SongArticle))
 
@@ -430,8 +457,21 @@ class RetrievalCacheTest {
                     ReleaseDate("Gord's Gold", "1975", "rg-2"),
                     ReleaseDate("Undated", null, "rg-3"),
                 ),
+            firstRelease = FirstRelease("1974-01-01", "Sundown", "rg-1", "r-1", "Album"),
+            original = original,
         )
     }
+
+    // A cover's original, with the release it first came out on (#724).
+    private val original =
+        OriginalRecording(
+            recordingMbid = "mb-original",
+            title = "Sundown",
+            artists = listOf(ResolvedArtist("Someone First", "mb-first")),
+            artistCredit = "Someone First",
+            date = "1970-05",
+            release = FirstRelease("1970-06", "Sundown / B-side", null, "r-0", "Single"),
+        )
 
     private class FakeAdapter(
         override val id: SourceId,

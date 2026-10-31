@@ -1,0 +1,1162 @@
+{
+ "id": "f331113d-43b8-4d60-af11-9461520f4554",
+ "length": 204160,
+ "first-release-date": "1935",
+ "disambiguation": "",
+ "releases": [
+  {
+   "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+   "release-events": [
+    {
+     "area": {
+      "id": "489ce91b-6658-3307-9877-795b68554c98",
+      "type-id": null,
+      "iso-3166-1-codes": [
+       "US"
+      ],
+      "sort-name": "United States",
+      "type": null,
+      "disambiguation": "",
+      "name": "United States"
+     },
+     "date": "1935"
+    }
+   ],
+   "packaging-id": "f7101ce3-0384-39ce-9fde-fbbd0044d35f",
+   "release-group": {
+    "id": "82e76ea6-6a22-4c17-a798-b5296fd4d2d7",
+    "primary-type-id": "d6038452-8ee0-3f68-affc-2de9a1ede0b9",
+    "primary-type": "Single",
+    "disambiguation": "",
+    "releases": [],
+    "first-release-date": "1935",
+    "secondary-type-ids": [],
+    "title": "Baby Please Don't Go",
+    "secondary-types": []
+   },
+   "text-representation": {
+    "script": "Latn",
+    "language": "eng"
+   },
+   "date": "1935",
+   "title": "Baby Please Don't Go",
+   "quality": "normal",
+   "barcode": "",
+   "country": "US",
+   "disambiguation": "",
+   "status": "Official",
+   "packaging": "Cardboard/Paper Sleeve",
+   "id": "a307f01b-46ba-4c49-a12c-8bc1783b1d88"
+  },
+  {
+   "text-representation": {
+    "script": null,
+    "language": "lat"
+   },
+   "release-group": {
+    "first-release-date": "1970",
+    "secondary-types": [],
+    "secondary-type-ids": [],
+    "title": "Crawling King Snake",
+    "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+    "primary-type": "Album",
+    "id": "9ca1b566-247e-4c9d-a986-27298ea208e3",
+    "releases": [],
+    "disambiguation": ""
+   },
+   "packaging-id": null,
+   "release-events": [
+    {
+     "area": {
+      "disambiguation": "",
+      "sort-name": "United Kingdom",
+      "type": null,
+      "name": "United Kingdom",
+      "iso-3166-1-codes": [
+       "GB"
+      ],
+      "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
+      "type-id": null
+     },
+     "date": "1970"
+    }
+   ],
+   "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+   "title": "Crawling King Snake",
+   "date": "1970",
+   "barcode": null,
+   "quality": "normal",
+   "country": "GB",
+   "disambiguation": "",
+   "status": "Official",
+   "packaging": null,
+   "id": "07943921-c189-49a9-961b-905aceb09e8c"
+  },
+  {
+   "id": "366fa048-d657-45f8-9545-f14a8099d923",
+   "disambiguation": "",
+   "country": null,
+   "status": "Official",
+   "packaging": null,
+   "quality": "normal",
+   "barcode": null,
+   "packaging-id": null,
+   "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+   "release-events": [
+    {
+     "area": null,
+     "date": "1991"
+    }
+   ],
+   "text-representation": {
+    "script": "Latn",
+    "language": "eng"
+   },
+   "release-group": {
+    "secondary-types": [
+     "Compilation"
+    ],
+    "secondary-type-ids": [
+     "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+    ],
+    "title": "Legendary Blues Classics Vol 1",
+    "first-release-date": "1991",
+    "releases": [],
+    "disambiguation": "",
+    "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+    "primary-type": "Album",
+    "id": "53dd25d1-3c0e-4ee6-aca5-11f196fdd145"
+   },
+   "date": "1991",
+   "title": "Legendary Blues Classics Vol 1"
+  },
+  {
+   "id": "34ac3eb7-186a-4974-95e0-214dba0de83a",
+   "packaging": null,
+   "status": "Official",
+   "disambiguation": "",
+   "country": "US",
+   "quality": "normal",
+   "barcode": "033251053020",
+   "date": "1993",
+   "title": "The Blues: A Smithsonian Collection of Classic Blues Singers",
+   "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+   "release-events": [
+    {
+     "date": "1993",
+     "area": {
+      "iso-3166-1-codes": [
+       "US"
+      ],
+      "type-id": null,
+      "id": "489ce91b-6658-3307-9877-795b68554c98",
+      "disambiguation": "",
+      "type": null,
+      "sort-name": "United States",
+      "name": "United States"
+     }
+    }
+   ],
+   "packaging-id": null,
+   "release-group": {
+    "first-release-date": "1993",
+    "secondary-type-ids": [
+     "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+    ],
+    "title": "The Blues: A Smithsonian Collection of Classic Blues Singers",
+    "secondary-types": [
+     "Compilation"
+    ],
+    "id": "f7f41a24-1564-3aad-bdc6-b8bb8804c3db",
+    "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+    "primary-type": "Album",
+    "disambiguation": "",
+    "releases": []
+   },
+   "text-representation": {
+    "script": "Latn",
+    "language": "eng"
+   }
+  },
+  {
+   "id": "cd44df60-f57e-4b5d-bfe9-3b8248de103d",
+   "status": "Official",
+   "packaging": null,
+   "disambiguation": "",
+   "country": "DE",
+   "quality": "normal",
+   "barcode": "4011222019455",
+   "date": "1994",
+   "title": "Nothing but the Blues: Meet Me Around the Corner",
+   "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+   "release-events": [
+    {
+     "date": "1994",
+     "area": {
+      "disambiguation": "",
+      "sort-name": "Germany",
+      "type": null,
+      "name": "Germany",
+      "iso-3166-1-codes": [
+       "DE"
+      ],
+      "id": "85752fda-13c4-31a3-bee5-0e5cb1f51dad",
+      "type-id": null
+     }
+    }
+   ],
+   "packaging-id": null,
+   "release-group": {
+    "id": "868dce8f-69f3-3092-a28c-801d147ea63b",
+    "primary-type": "Album",
+    "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+    "disambiguation": "",
+    "releases": [],
+    "first-release-date": "1994",
+    "secondary-type-ids": [
+     "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+    ],
+    "title": "Nothing but the Blues: Meet Me Around the Corner",
+    "secondary-types": [
+     "Compilation"
+    ]
+   },
+   "text-representation": {
+    "language": "eng",
+    "script": "Latn"
+   }
+  },
+  {
+   "status": "Official",
+   "packaging": null,
+   "disambiguation": "",
+   "country": "FR",
+   "id": "860d0b8d-c233-44c4-90eb-27a9c1a4e0b3",
+   "title": "Blues Fireworks",
+   "date": "1995-04",
+   "release-group": {
+    "disambiguation": "",
+    "releases": [],
+    "id": "d8affaf8-7b56-4658-af41-18a41cb4e687",
+    "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+    "primary-type": "Album",
+    "secondary-type-ids": [
+     "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+    ],
+    "title": "Blues Fireworks",
+    "secondary-types": [
+     "Compilation"
+    ],
+    "first-release-date": "1995-04"
+   },
+   "text-representation": {
+    "language": "eng",
+    "script": "Latn"
+   },
+   "release-events": [
+    {
+     "date": "1995-04",
+     "area": {
+      "type-id": null,
+      "id": "08310658-51eb-3801-80de-5a0739207115",
+      "iso-3166-1-codes": [
+       "FR"
+      ],
+      "name": "France",
+      "type": null,
+      "sort-name": "France",
+      "disambiguation": ""
+     }
+    }
+   ],
+   "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+   "packaging-id": null,
+   "barcode": "3298490004654",
+   "quality": "normal"
+  },
+  {
+   "text-representation": {
+    "script": "Latn",
+    "language": "eng"
+   },
+   "release-group": {
+    "title": "Dust My Broom: The Essential Recordings of Mississippi Delta Blues",
+    "secondary-type-ids": [
+     "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+    ],
+    "secondary-types": [
+     "Compilation"
+    ],
+    "first-release-date": "1995-06-20",
+    "disambiguation": "",
+    "releases": [],
+    "id": "09a76f02-7709-3f64-8bf8-411383b976a2",
+    "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+    "primary-type": "Album"
+   },
+   "packaging-id": null,
+   "release-events": [
+    {
+     "area": {
+      "name": "United States",
+      "sort-name": "United States",
+      "type": null,
+      "disambiguation": "",
+      "id": "489ce91b-6658-3307-9877-795b68554c98",
+      "type-id": null,
+      "iso-3166-1-codes": [
+       "US"
+      ]
+     },
+     "date": "1995-06-20"
+    }
+   ],
+   "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+   "title": "Dust My Broom: The Essential Recordings of Mississippi Delta Blues",
+   "date": "1995-06-20",
+   "barcode": "766126402523",
+   "quality": "normal",
+   "country": "US",
+   "disambiguation": "",
+   "status": "Official",
+   "packaging": null,
+   "id": "73a6f743-2e0a-4763-8a7c-721c7425e7a6"
+  },
+  {
+   "quality": "normal",
+   "barcode": "082333256927",
+   "date": "1995",
+   "title": "Good Morning Blues (A Classic Blues Anthology 1920-1942)",
+   "packaging-id": "4172d0bd-f980-4e5d-8994-0530f16151ab",
+   "release-events": [
+    {
+     "area": {
+      "name": "Europe",
+      "type": null,
+      "sort-name": "Europe",
+      "disambiguation": "",
+      "type-id": null,
+      "id": "89a675c2-3e37-3518-b83c-418bad59a85a",
+      "iso-3166-1-codes": [
+       "XE"
+      ]
+     },
+     "date": "1995"
+    }
+   ],
+   "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+   "text-representation": {
+    "script": "Latn",
+    "language": "eng"
+   },
+   "release-group": {
+    "releases": [],
+    "disambiguation": "",
+    "primary-type-id": null,
+    "primary-type": null,
+    "id": "5a4bbed0-61d7-4b0e-b353-2154a07d65b9",
+    "secondary-types": [
+     "Compilation"
+    ],
+    "title": "Good Morning Blues (A Classic Blues Anthology 1920-1942)",
+    "secondary-type-ids": [
+     "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+    ],
+    "first-release-date": "1995"
+   },
+   "id": "fb340998-d105-45e2-b781-91d7d6111801",
+   "status": "Official",
+   "packaging": "Longbox",
+   "disambiguation": "",
+   "country": "XE"
+  },
+  {
+   "text-representation": {
+    "script": "Latn",
+    "language": "eng"
+   },
+   "release-group": {
+    "releases": [],
+    "disambiguation": "",
+    "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+    "primary-type": "Album",
+    "id": "372e9783-32ac-3e0b-be4c-8741a5dc1399",
+    "secondary-types": [
+     "Compilation"
+    ],
+    "secondary-type-ids": [
+     "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+    ],
+    "title": "Juke Joint Blues",
+    "first-release-date": "1996-09-16"
+   },
+   "packaging-id": null,
+   "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+   "release-events": [
+    {
+     "area": {
+      "type-id": null,
+      "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
+      "iso-3166-1-codes": [
+       "GB"
+      ],
+      "name": "United Kingdom",
+      "type": null,
+      "sort-name": "United Kingdom",
+      "disambiguation": ""
+     },
+     "date": "1996-09-16"
+    }
+   ],
+   "title": "Juke Joint Blues",
+   "date": "1996-09-16",
+   "barcode": null,
+   "quality": "normal",
+   "country": "GB",
+   "disambiguation": "",
+   "packaging": null,
+   "status": "Official",
+   "id": "06b730e4-ea9a-4251-be20-e74a0f0852ed"
+  },
+  {
+   "quality": "normal",
+   "barcode": "090204758821",
+   "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+   "release-events": [
+    {
+     "date": "1998",
+     "area": {
+      "id": "89a675c2-3e37-3518-b83c-418bad59a85a",
+      "type-id": null,
+      "iso-3166-1-codes": [
+       "XE"
+      ],
+      "name": "Europe",
+      "sort-name": "Europe",
+      "type": null,
+      "disambiguation": ""
+     }
+    }
+   ],
+   "packaging-id": null,
+   "release-group": {
+    "primary-type": "Album",
+    "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+    "id": "10eaaad5-87f0-3203-9137-c064faf8bd23",
+    "releases": [],
+    "disambiguation": "",
+    "first-release-date": "1998",
+    "secondary-types": [
+     "Compilation"
+    ],
+    "title": "Baby Please Don’t Go",
+    "secondary-type-ids": [
+     "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+    ]
+   },
+   "text-representation": {
+    "language": "eng",
+    "script": "Latn"
+   },
+   "date": "1998",
+   "title": "Baby Please Don’t Go",
+   "id": "b4d97c04-9ef2-477f-8434-81e81982f019",
+   "country": "XE",
+   "disambiguation": "",
+   "status": "Official",
+   "packaging": null
+  },
+  {
+   "barcode": "3383001336420",
+   "quality": "normal",
+   "title": "Special Blues",
+   "date": "1998",
+   "text-representation": {
+    "language": "fra",
+    "script": "Latn"
+   },
+   "release-group": {
+    "disambiguation": "",
+    "releases": [],
+    "id": "c6680810-7b88-48ca-9f70-c9b38e5bd592",
+    "primary-type": "Album",
+    "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+    "title": "Special Blues",
+    "secondary-type-ids": [
+     "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+    ],
+    "secondary-types": [
+     "Compilation"
+    ],
+    "first-release-date": "1998"
+   },
+   "packaging-id": "ec27701a-4a22-37f4-bfac-6616e0f9750a",
+   "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+   "release-events": [
+    {
+     "date": "1998",
+     "area": {
+      "type-id": null,
+      "id": "08310658-51eb-3801-80de-5a0739207115",
+      "iso-3166-1-codes": [
+       "FR"
+      ],
+      "type": null,
+      "sort-name": "France",
+      "disambiguation": "",
+      "name": "France"
+     }
+    }
+   ],
+   "id": "7ce67e20-be5a-4073-b9b1-7d51eb9ef7af",
+   "packaging": "Jewel Case",
+   "status": "Official",
+   "disambiguation": "",
+   "country": "FR"
+  },
+  {
+   "id": "492564c6-9968-4d3c-847c-63f5d94cb6c9",
+   "disambiguation": "",
+   "country": "FR",
+   "packaging": null,
+   "status": "Official",
+   "quality": "normal",
+   "barcode": "3383001430524",
+   "release-events": [
+    {
+     "area": {
+      "name": "France",
+      "disambiguation": "",
+      "sort-name": "France",
+      "type": null,
+      "iso-3166-1-codes": [
+       "FR"
+      ],
+      "id": "08310658-51eb-3801-80de-5a0739207115",
+      "type-id": null
+     },
+     "date": "1998"
+    }
+   ],
+   "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+   "packaging-id": null,
+   "release-group": {
+    "disambiguation": "",
+    "releases": [],
+    "id": "c1707797-f9e0-3dc6-8cff-80c01433dfae",
+    "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+    "primary-type": "Album",
+    "secondary-type-ids": [
+     "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+    ],
+    "title": "Spirit of Blues",
+    "secondary-types": [
+     "Compilation"
+    ],
+    "first-release-date": "1998"
+   },
+   "text-representation": {
+    "language": "eng",
+    "script": "Latn"
+   },
+   "date": "1998",
+   "title": "Spirit of Blues"
+  },
+  {
+   "barcode": "",
+   "quality": "normal",
+   "text-representation": {
+    "language": "eng",
+    "script": "Latn"
+   },
+   "release-group": {
+    "secondary-types": [
+     "Compilation"
+    ],
+    "title": "Living the Blues: Blues Roots: 1930-1944",
+    "secondary-type-ids": [
+     "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+    ],
+    "first-release-date": "1999",
+    "releases": [],
+    "disambiguation": "",
+    "primary-type": "Album",
+    "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+    "id": "f3453a4f-5b92-447f-bb8e-a5ee8b72591a"
+   },
+   "packaging-id": "ec27701a-4a22-37f4-bfac-6616e0f9750a",
+   "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+   "release-events": [
+    {
+     "area": {
+      "name": "United States",
+      "sort-name": "United States",
+      "type": null,
+      "disambiguation": "",
+      "id": "489ce91b-6658-3307-9877-795b68554c98",
+      "type-id": null,
+      "iso-3166-1-codes": [
+       "US"
+      ]
+     },
+     "date": "1999"
+    }
+   ],
+   "title": "Living the Blues: Blues Roots: 1930-1944",
+   "date": "1999",
+   "id": "2334c3fa-1aa9-4ca5-81b8-255aa4dff90e",
+   "country": "US",
+   "disambiguation": "",
+   "packaging": "Jewel Case",
+   "status": "Official"
+  },
+  {
+   "status": "Official",
+   "packaging": null,
+   "disambiguation": "",
+   "country": "GB",
+   "id": "cab6fb07-949e-4147-b189-20933619998e",
+   "date": "1999",
+   "title": "Po' Joe",
+   "packaging-id": null,
+   "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+   "release-events": [
+    {
+     "date": "1999",
+     "area": {
+      "iso-3166-1-codes": [
+       "GB"
+      ],
+      "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
+      "type-id": null,
+      "name": "United Kingdom",
+      "disambiguation": "",
+      "sort-name": "United Kingdom",
+      "type": null
+     }
+    }
+   ],
+   "text-representation": {
+    "script": "Latn",
+    "language": "eng"
+   },
+   "release-group": {
+    "first-release-date": "1999",
+    "secondary-types": [
+     "Compilation"
+    ],
+    "title": "Po' Joe",
+    "secondary-type-ids": [
+     "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+    ],
+    "primary-type": "Album",
+    "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+    "id": "a87e303f-f684-45b6-81d9-30d2496be37c",
+    "releases": [],
+    "disambiguation": ""
+   },
+   "quality": "normal",
+   "barcode": "5038375000764"
+  },
+  {
+   "disambiguation": "",
+   "country": "NL",
+   "packaging": null,
+   "status": "Official",
+   "id": "57bb6c9b-d6b8-4daa-b6fe-530249994e59",
+   "release-group": {
+    "first-release-date": "2000",
+    "secondary-types": [
+     "Compilation"
+    ],
+    "title": "As Good as It Gets: Country Blues",
+    "secondary-type-ids": [
+     "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+    ],
+    "primary-type": "Album",
+    "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+    "id": "232c097a-bfcb-40d6-8a28-f407f288ca4e",
+    "releases": [],
+    "disambiguation": ""
+   },
+   "text-representation": {
+    "language": "eng",
+    "script": "Latn"
+   },
+   "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+   "release-events": [
+    {
+     "date": "2000",
+     "area": {
+      "iso-3166-1-codes": [
+       "NL"
+      ],
+      "type-id": null,
+      "id": "ef1b7cc0-cd26-36f4-8ea0-04d9623786c7",
+      "name": "Netherlands",
+      "disambiguation": "",
+      "type": null,
+      "sort-name": "Netherlands"
+     }
+    }
+   ],
+   "packaging-id": null,
+   "title": "As Good as It Gets: Country Blues",
+   "date": "2000",
+   "barcode": "0724382473022",
+   "quality": "normal"
+  },
+  {
+   "title": "Play Me the Blues... The Legendary Blues Singers, Volume 9",
+   "date": "2000",
+   "release-group": {
+    "secondary-type-ids": [
+     "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+    ],
+    "title": "Play Me the Blues... The Legendary Blues Singers, Volume 9",
+    "secondary-types": [
+     "Compilation"
+    ],
+    "first-release-date": "2000",
+    "disambiguation": "",
+    "releases": [],
+    "id": "f34bb23c-5cc7-3849-b646-09bcd2af6d73",
+    "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+    "primary-type": "Album"
+   },
+   "text-representation": {
+    "language": "eng",
+    "script": "Latn"
+   },
+   "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+   "release-events": [
+    {
+     "date": "2000",
+     "area": null
+    }
+   ],
+   "packaging-id": null,
+   "barcode": null,
+   "quality": "normal",
+   "status": "Official",
+   "packaging": null,
+   "disambiguation": "",
+   "country": null,
+   "id": "8677dca1-8fbd-4c89-b748-dc6d0bebf2cb"
+  },
+  {
+   "packaging-id": "ec27701a-4a22-37f4-bfac-6616e0f9750a",
+   "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+   "release-events": [
+    {
+     "date": "2000",
+     "area": {
+      "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
+      "type-id": null,
+      "iso-3166-1-codes": [
+       "GB"
+      ],
+      "name": "United Kingdom",
+      "sort-name": "United Kingdom",
+      "type": null,
+      "disambiguation": ""
+     }
+    }
+   ],
+   "text-representation": {
+    "language": "eng",
+    "script": "Latn"
+   },
+   "release-group": {
+    "id": "1da4f86b-d526-4213-81e7-873f2d754bec",
+    "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+    "primary-type": "Album",
+    "disambiguation": "",
+    "releases": [],
+    "first-release-date": "2000",
+    "secondary-type-ids": [
+     "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+    ],
+    "title": "Roots of Rock",
+    "secondary-types": [
+     "Compilation"
+    ]
+   },
+   "date": "2000",
+   "title": "Roots of Rock",
+   "quality": "normal",
+   "barcode": "5038375002539",
+   "disambiguation": "",
+   "country": "GB",
+   "status": "Official",
+   "packaging": "Jewel Case",
+   "id": "987fd735-972f-46da-937d-ad227a6039b6"
+  },
+  {
+   "barcode": "4011222059468",
+   "quality": "normal",
+   "text-representation": {
+    "language": "eng",
+    "script": "Latn"
+   },
+   "release-group": {
+    "first-release-date": "2001",
+    "secondary-types": [
+     "Compilation"
+    ],
+    "title": "Blues Is Black",
+    "secondary-type-ids": [
+     "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+    ],
+    "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+    "primary-type": "Album",
+    "id": "19ad56b7-1d45-485a-a83b-fa228e60b2f2",
+    "releases": [],
+    "disambiguation": ""
+   },
+   "packaging-id": "ec27701a-4a22-37f4-bfac-6616e0f9750a",
+   "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+   "release-events": [
+    {
+     "date": "2001",
+     "area": null
+    }
+   ],
+   "title": "Blues Is Black",
+   "date": "2001",
+   "id": "1a088c88-1ae7-4658-bc04-dcda12f4486d",
+   "disambiguation": "",
+   "country": null,
+   "packaging": "Jewel Case",
+   "status": "Official"
+  },
+  {
+   "barcode": "4011222057525",
+   "quality": "normal",
+   "text-representation": {
+    "script": "Latn",
+    "language": "eng"
+   },
+   "release-group": {
+    "id": "28f015fe-83ac-4704-ae5d-cc72d1f9c971",
+    "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+    "primary-type": "Album",
+    "disambiguation": "",
+    "releases": [],
+    "first-release-date": "2001",
+    "title": "Meet Me Around the Corner",
+    "secondary-type-ids": [
+     "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+    ],
+    "secondary-types": [
+     "Compilation"
+    ]
+   },
+   "packaging-id": "ec27701a-4a22-37f4-bfac-6616e0f9750a",
+   "release-events": [
+    {
+     "area": {
+      "name": "Germany",
+      "disambiguation": "",
+      "type": null,
+      "sort-name": "Germany",
+      "iso-3166-1-codes": [
+       "DE"
+      ],
+      "type-id": null,
+      "id": "85752fda-13c4-31a3-bee5-0e5cb1f51dad"
+     },
+     "date": "2001"
+    }
+   ],
+   "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+   "title": "Meet Me Around the Corner",
+   "date": "2001",
+   "id": "c8ed4bd9-f60a-4d12-ae6a-74b823dfeb8e",
+   "disambiguation": "",
+   "country": "DE",
+   "status": "Official",
+   "packaging": "Jewel Case"
+  },
+  {
+   "quality": "normal",
+   "barcode": "743218845925",
+   "date": "2001",
+   "title": "Tresors Blues: Les plus beaux Blues",
+   "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+   "release-events": [
+    {
+     "date": "2001",
+     "area": {
+      "id": "08310658-51eb-3801-80de-5a0739207115",
+      "type-id": null,
+      "iso-3166-1-codes": [
+       "FR"
+      ],
+      "name": "France",
+      "sort-name": "France",
+      "type": null,
+      "disambiguation": ""
+     }
+    }
+   ],
+   "packaging-id": "57429523-ffe6-3336-9381-32565c142c18",
+   "release-group": {
+    "disambiguation": "",
+    "releases": [],
+    "id": "4cf1fdb3-6901-4209-9cdb-97ad759cd32c",
+    "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+    "primary-type": "Album",
+    "secondary-type-ids": [
+     "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+    ],
+    "title": "Tresors Blues: Les plus beaux Blues",
+    "secondary-types": [
+     "Compilation"
+    ],
+    "first-release-date": "2001"
+   },
+   "text-representation": {
+    "language": "eng",
+    "script": "Latn"
+   },
+   "id": "fd8b55ae-8295-4ad0-b536-850152704def",
+   "packaging": "Fatbox",
+   "status": "Official",
+   "country": "FR",
+   "disambiguation": ""
+  },
+  {
+   "id": "30d02a63-dd19-4d64-b0d3-ecb5aa2f9e62",
+   "country": "US",
+   "disambiguation": "",
+   "status": "Official",
+   "packaging": "Jewel Case",
+   "quality": "normal",
+   "barcode": "090266398621",
+   "packaging-id": "ec27701a-4a22-37f4-bfac-6616e0f9750a",
+   "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+   "release-events": [
+    {
+     "area": {
+      "id": "489ce91b-6658-3307-9877-795b68554c98",
+      "type-id": null,
+      "iso-3166-1-codes": [
+       "US"
+      ],
+      "sort-name": "United States",
+      "type": null,
+      "disambiguation": "",
+      "name": "United States"
+     },
+     "date": "2002-08-20"
+    }
+   ],
+   "text-representation": {
+    "language": "eng",
+    "script": "Latn"
+   },
+   "release-group": {
+    "disambiguation": "",
+    "releases": [],
+    "id": "e275676f-1850-392d-a59c-dcfba78d3322",
+    "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+    "primary-type": "Album",
+    "secondary-type-ids": [
+     "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+    ],
+    "title": "When the Sun Goes Down, Volume 1: Walk Right In",
+    "secondary-types": [
+     "Compilation"
+    ],
+    "first-release-date": "2002-08-20"
+   },
+   "date": "2002-08-20",
+   "title": "When the Sun Goes Down, Volume 1: Walk Right In"
+  },
+  {
+   "id": "bd2d3ab6-d6b0-431f-b114-6dd0a087c44e",
+   "disambiguation": "",
+   "country": "GB",
+   "status": "Official",
+   "packaging": "Fatbox",
+   "barcode": "8712155081163",
+   "quality": "normal",
+   "text-representation": {
+    "script": "Latn",
+    "language": "eng"
+   },
+   "release-group": {
+    "disambiguation": "",
+    "releases": [],
+    "id": "32a9a35f-aa2e-3b95-882b-0e5ff56e1208",
+    "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+    "primary-type": "Album",
+    "secondary-type-ids": [
+     "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+    ],
+    "title": "Jazz & Blues Legends",
+    "secondary-types": [
+     "Compilation"
+    ],
+    "first-release-date": "2002"
+   },
+   "packaging-id": "57429523-ffe6-3336-9381-32565c142c18",
+   "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+   "release-events": [
+    {
+     "date": "2002",
+     "area": {
+      "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
+      "type-id": null,
+      "iso-3166-1-codes": [
+       "GB"
+      ],
+      "name": "United Kingdom",
+      "sort-name": "United Kingdom",
+      "type": null,
+      "disambiguation": ""
+     }
+    }
+   ],
+   "title": "Jazz & Blues Legends",
+   "date": "2002"
+  },
+  {
+   "barcode": "090266400621",
+   "quality": "normal",
+   "release-group": {
+    "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+    "primary-type": "Album",
+    "id": "fba23fb5-e49b-4daa-a734-276041e63a09",
+    "releases": [],
+    "disambiguation": "",
+    "first-release-date": "2002",
+    "secondary-types": [
+     "Compilation"
+    ],
+    "title": "When The Sun Goes Down: The Secret History Of Rock & Roll",
+    "secondary-type-ids": [
+     "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+    ]
+   },
+   "text-representation": {
+    "language": null,
+    "script": null
+   },
+   "release-events": [
+    {
+     "area": {
+      "name": "United States",
+      "disambiguation": "",
+      "type": null,
+      "sort-name": "United States",
+      "iso-3166-1-codes": [
+       "US"
+      ],
+      "type-id": null,
+      "id": "489ce91b-6658-3307-9877-795b68554c98"
+     },
+     "date": "2002"
+    }
+   ],
+   "status-id": null,
+   "packaging-id": null,
+   "title": "When The Sun Goes Down: The Secret History Of Rock & Roll",
+   "date": "2002",
+   "id": "7982a8a4-5e2e-456a-8c4b-9f526fd03681",
+   "country": "US",
+   "disambiguation": "",
+   "status": null,
+   "packaging": null
+  },
+  {
+   "id": "40c11029-0971-46cd-8479-658525199ef3",
+   "country": null,
+   "disambiguation": "",
+   "status": "Official",
+   "packaging": null,
+   "barcode": null,
+   "quality": "normal",
+   "text-representation": {
+    "language": "eng",
+    "script": "Latn"
+   },
+   "release-group": {
+    "releases": [],
+    "disambiguation": "",
+    "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+    "primary-type": "Album",
+    "id": "514e4c90-e7c9-456f-bc2e-df65cae03790",
+    "secondary-types": [
+     "Compilation"
+    ],
+    "title": "Martin Scorsese Presents The Blues (Sampler)",
+    "secondary-type-ids": [
+     "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+    ],
+    "first-release-date": "2003-08-07"
+   },
+   "packaging-id": null,
+   "release-events": [
+    {
+     "area": null,
+     "date": "2003-08-07"
+    }
+   ],
+   "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+   "title": "Martin Scorsese Presents the Blues: A Musical Journey",
+   "date": "2003-08-07"
+  },
+  {
+   "country": "US",
+   "disambiguation": "",
+   "packaging": null,
+   "status": "Official",
+   "id": "d1b654d8-0112-4a8e-ab44-ca110117d172",
+   "packaging-id": null,
+   "release-events": [
+    {
+     "date": "2003-09-09",
+     "area": {
+      "iso-3166-1-codes": [
+       "US"
+      ],
+      "id": "489ce91b-6658-3307-9877-795b68554c98",
+      "type-id": null,
+      "disambiguation": "",
+      "sort-name": "United States",
+      "type": null,
+      "name": "United States"
+     }
+    }
+   ],
+   "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+   "text-representation": {
+    "language": "eng",
+    "script": "Latn"
+   },
+   "release-group": {
+    "secondary-types": [
+     "Compilation"
+    ],
+    "title": "Martin Scorsese Presents the Blues: A Musical Journey",
+    "secondary-type-ids": [
+     "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+    ],
+    "first-release-date": "2003-09-09",
+    "releases": [],
+    "disambiguation": "",
+    "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+    "primary-type": "Album",
+    "id": "67bbd7ef-ce9c-3c7a-a45b-d8748c6e75e3"
+   },
+   "date": "2003-09-09",
+   "title": "Martin Scorsese Presents the Blues: A Musical Journey",
+   "quality": "normal",
+   "barcode": "044003952324"
+  }
+ ],
+ "title": "Baby, Please Don’t Go",
+ "video": false
+}

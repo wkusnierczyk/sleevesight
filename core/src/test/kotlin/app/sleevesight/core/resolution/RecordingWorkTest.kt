@@ -1,5 +1,7 @@
 package app.sleevesight.core.resolution
 
+import app.sleevesight.core.model.Outcome
+import app.sleevesight.core.sources.FirstRelease
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -297,4 +299,117 @@ class RecordingWorkTest {
         assertFalse(RecordingResolver.isEarlier("1978", "1978-09-18"))
         assertFalse(RecordingResolver.isEarlier("1978-09-18", "1978"))
     }
+
+    // A cover of Original Act's 1975 recording, "first" (#724).
+    private fun cover(releases: Map<String, Lookup<MbRecording>> = emptyMap()): FakeMusicBrainz {
+        val search = listOf(recording("ours", "Song", "Cover Act", 200, "1978-09-18"))
+        val detail =
+            MbRecordingDetail(
+                "ours",
+                "Song",
+                listOf(credit("Cover Act")),
+                "1978-09-18",
+                listOf(MbWorkLink("w", "Song", cover = true)),
+                emptyList(),
+                emptyList(),
+            )
+        val work =
+            MbWork(
+                "w",
+                "Song",
+                emptyList(),
+                emptyList(),
+                listOf(
+                    MbPerformance("ours", "Song", listOf(credit("Cover Act")), "1978", emptyList()),
+                    MbPerformance("first", "Song", listOf(credit("Original Act")), "1975", emptyList()),
+                ),
+            )
+        return FakeMusicBrainz(Lookup.Found(search), mapOf("ours" to detail), mapOf("w" to work), releases = releases)
+    }
+
+    @Test
+    fun `a cover's original gets the release it first came out on, from one more lookup`() =
+        runTest {
+            val single = MbReleaseGroup("group-single", "Song / B-side", "Single")
+            val album = MbReleaseGroup("group-album", "Greatest", "Album")
+            val releases =
+                recording("first", "Song", "Original Act", 200, "1975-06")
+                    .copy(
+                        releases =
+                            listOf(
+                                MbRelease("r-album", "Greatest Hits", "1980", album),
+                                MbRelease("r-single", "Song", "1975-06", single),
+                                MbRelease("r-undated", "Song", null, single),
+                            ),
+                    )
+            val musicBrainz = cover(mapOf("first" to Lookup.Found(releases)))
+            val resolution = resolve(musicBrainz, track("Song", "Cover Act"))
+            assertEquals(listOf("first"), musicBrainz.releasesAsked)
+            // The release group's title and type, the release's date.
+            assertEquals(
+                FirstRelease("1975-06", "Song / B-side", "group-single", "r-single", "Single"),
+                resolution.original?.release,
+            )
+            assertEquals("1975", resolution.original?.date)
+        }
+
+    @Test
+    fun `a failed or empty lookup of the original's releases leaves the resolution as it was`() =
+        runTest {
+            val without = resolve(cover(), track("Song", "Cover Act"))
+            val failed = resolve(cover(mapOf("first" to Lookup.Failed("Offline"))), track("Song", "Cover Act"))
+            val undated =
+                resolve(
+                    cover(
+                        mapOf(
+                            "first" to
+                                Lookup.Found(
+                                    recording("first", "Song", "Original Act", 200, null)
+                                        .copy(releases = listOf(MbRelease("r", "Song", null, null))),
+                                ),
+                        ),
+                    ),
+                    track("Song", "Cover Act"),
+                )
+            for (resolution in listOf(without, failed, undated)) {
+                assertEquals(Outcome.SongArticle, resolution.outcome)
+                assertTrue(resolution.cover)
+                assertEquals("Original Act", resolution.original?.artistCredit)
+                assertNull(resolution.original?.release)
+            }
+            assertEquals(without, failed)
+            assertEquals(without, undated)
+        }
+
+    @Test
+    fun `no original, no lookup of its releases`() =
+        runTest {
+            val search = listOf(recording("ours", "Song", "Writer", 200, "1974"))
+            val detail =
+                MbRecordingDetail(
+                    "ours",
+                    "Song",
+                    listOf(credit("Writer")),
+                    "1974",
+                    listOf(MbWorkLink("w", "Song", cover = false)),
+                    emptyList(),
+                    emptyList(),
+                )
+            val work =
+                MbWork(
+                    "w",
+                    "Song",
+                    emptyList(),
+                    emptyList(),
+                    listOf(
+                        MbPerformance("ours", "Song", listOf(credit("Writer")), "1974-03", emptyList()),
+                        MbPerformance("later", "Song", listOf(credit("Later Act")), "1990", emptyList()),
+                    ),
+                )
+            val musicBrainz = FakeMusicBrainz(Lookup.Found(search), mapOf("ours" to detail), mapOf("w" to work))
+            val resolution = resolve(musicBrainz, track("Song", "Writer"))
+            assertFalse(resolution.cover)
+            assertNull(resolution.original)
+            assertEquals(emptyList(), musicBrainz.releasesAsked)
+        }
 }

@@ -32,6 +32,22 @@ class NameMatcher(
             .joinToString(" ")
     }
 
+    /**
+     * An album's name as [key] reads it, with `vol` (`Vol.`, `Vol`) read as `volume` when a number
+     * or a letter follows it (#724): "Vol. 2", "Vol 2" and "Volume 2" are one, as are "Vol. II" and
+     * "Volume II", or "Vol. B" and "Volume B". A number is digits, or a Roman numeral; a letter, a
+     * word of one. Elsewhere they stay apart: `vol` alone or last, `volume` last, and `Volcano`, a
+     * word of its own. For album names only, matched against MusicBrainz's release titles: track
+     * titles and artists keep [key].
+     */
+    fun albumKey(text: String): String {
+        val words = key(text).split(' ')
+        return words
+            .mapIndexed { i, word ->
+                if (word == VOL && words.getOrNull(i + 1)?.let(::numbers) == true) VOLUME else word
+            }.joinToString(" ")
+    }
+
     /** Whether [a] and [b] name the same artist: equal keys, a leading `the` aside. */
     fun sameName(
         a: String,
@@ -127,6 +143,16 @@ class NameMatcher(
 
     private companion object {
         fun spelling(honorific: String): String = SPELLINGS[honorific] ?: honorific
+
+        // Whether [word], a key's word, numbers a volume: digits, a Roman numeral, or one letter.
+        fun numbers(word: String): Boolean =
+            word.isNotEmpty() && (word.all(Char::isDigit) || word.length == 1 || ROMAN.matches(word))
+
+        const val VOL = "vol"
+        const val VOLUME = "volume"
+
+        // A Roman numeral, lowercase as a key has it; not empty, as the lookahead makes sure.
+        val ROMAN = Regex("(?=[ivxlcdm])m{0,3}(cm|cd|d?c{0,3})(xc|xl|l?x{0,3})(ix|iv|v?i{0,3})")
 
         val COMBINING_MARKS = Regex("[\\u0300-\\u036F]")
         val APOSTROPHES = setOf('\'', '’', '‘', 'ʼ')

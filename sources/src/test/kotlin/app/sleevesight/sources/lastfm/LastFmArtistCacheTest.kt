@@ -293,6 +293,8 @@ class LastFmArtistCacheTest {
 
         override suspend fun recording(mbid: String): Lookup<MbRecordingDetail> = error("unexpected recording")
 
+        override suspend fun recordingReleases(mbid: String): Lookup<MbRecording> = error("unexpected releases")
+
         override suspend fun work(mbid: String): Lookup<MbWork> = error("unexpected work")
     }
 

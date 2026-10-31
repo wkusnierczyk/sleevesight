@@ -242,7 +242,16 @@ class RecordingResolver(
         return if (link == null || work == null) {
             withRecording.copy(work = link?.let { ResolvedWork(it.mbid, it.title) }, cover = link?.cover ?: false)
         } else {
-            withWork(recording, withRecording, link, work, chosen.credited)
+            val covered = withWork(recording, withRecording, link, work, chosen.credited)
+            // The release a cover's original first came out on (#724), for the home screen's *Dates*:
+            // one more lookup, of the original's recording with its releases, made only when there is
+            // an original. One that fails or finds nothing leaves the release out, and nothing else
+            // changes.
+            val release =
+                covered.original
+                    ?.let { (musicBrainz.recordingReleases(it.recordingMbid) as? Lookup.Found)?.value }
+                    ?.let(::firstRelease)
+            covered.copy(original = covered.original?.copy(release = release))
         }
     }
 
@@ -560,6 +569,8 @@ class RecordingResolver(
             return a.take(n) < b.take(n)
         }
 
+        // The release of [recording] dated its first-release date, else its earliest dated one; of ours,
+        // and of a cover's original (#724).
         private fun firstRelease(recording: MbRecording): FirstRelease? {
             val dated = recording.releases.mapNotNull { release -> release.date?.let { it to release } }
             val first =
