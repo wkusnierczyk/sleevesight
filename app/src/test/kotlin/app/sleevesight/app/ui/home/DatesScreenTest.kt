@@ -271,12 +271,8 @@ class DatesScreenTest {
                         listOf(text(R.string.home_dates)),
                     ),
                 ).assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
+                .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.StateDescription))
                 .assert(
-                    SemanticsMatcher.expectValue(
-                        SemanticsProperties.StateDescription,
-                        text(R.string.home_fold_collapsed),
-                    ),
-                ).assert(
                     SemanticsMatcher("click labelled \"show dates\"") {
                         it.config.getOrNull(SemanticsActions.OnClick)?.label == text(R.string.home_dates_show)
                     },

@@ -180,6 +180,8 @@ internal fun InPlaceLine(
                         item.name,
                         item.tag,
                         modifier = Modifier.handoffTarget(handoff, buttonOf(item.id)),
+                        // Read as picked (#724): "Dates. Button. Double-tap to show dates", no fold state.
+                        collapsed = false,
                         action = item.action,
                     ) {
                         memory.open(item.id, playing)
