@@ -5,7 +5,7 @@ import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
-import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -21,6 +21,7 @@ import app.sleevesight.app.MainActivity
 import app.sleevesight.app.MemoryStore
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.now
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.SettingsCodec
@@ -78,7 +79,7 @@ class LyricsLinksSettingTest {
     }
 
     private fun waitForText(text: String) =
-        compose.waitUntil(5_000) { compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(WAIT_MS) { compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty() }
 
     @Test
     fun bothAreOnByDefaultAlsoForAFileFromBeforeThem() {
@@ -132,15 +133,15 @@ class LyricsLinksSettingTest {
             val searchRow = compose.onNodeWithText(search).performScrollTo()
             searchRow.assertIsOn().assertIsEnabled()
             searchRow.performClick()
-            compose.waitUntil(5_000) { !settings.now().lyricsSearch }
+            compose.waitUntil(WAIT_MS) { !settings.now().lyricsSearch }
             searchRow.assertIsOff()
             searchRow.performClick()
-            compose.waitUntil(5_000) { settings.now().lyricsSearch }
+            compose.waitUntil(WAIT_MS) { settings.now().lyricsSearch }
 
             val linksRow = compose.onNodeWithText(links).performScrollTo()
             linksRow.assertIsOn()
             linksRow.performClick()
-            compose.waitUntil(5_000) { !settings.now().lyricsLinks }
+            compose.waitUntil(WAIT_MS) { !settings.now().lyricsLinks }
             linksRow.assertIsOff()
             // Kept as it was, but not to be moved.
             compose
@@ -152,14 +153,14 @@ class LyricsLinksSettingTest {
             compose.waitForIdle()
             assertTrue(settings.now().lyricsSearch)
             linksRow.performClick()
-            compose.waitUntil(5_000) { settings.now().lyricsLinks }
+            compose.waitUntil(WAIT_MS) { settings.now().lyricsLinks }
             compose.onNodeWithText(search).performScrollTo().assertIsEnabled()
         }
 
     @Test
     fun theSettingsSearchFindsBothRows() =
         showSettings {
-            compose.waitUntil(5_000) {
+            compose.waitUntil(WAIT_MS) {
                 compose
                     .onAllNodesWithText(
                         text(R.string.settings_section_appearance),
