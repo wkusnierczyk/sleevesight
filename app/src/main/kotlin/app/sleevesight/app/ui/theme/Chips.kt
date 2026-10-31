@@ -69,16 +69,20 @@ internal fun CompactChipFrame(
                 .background(fill, shape)
                 .let { chip -> outline?.let { chip.border(1.dp, it, shape) } ?: chip }
                 .then(action)
-                .padding(horizontal = CHIP_PADDING, vertical = 6.dp),
+                .padding(horizontal = CHIP_PADDING, vertical = CHIP_PADDING_V),
         content = content,
     )
 }
 
-/** The chips' rounded shape ([ChipFrame]). */
-internal val CHIP_SHAPE = RoundedCornerShape(16.dp)
+/** The chips' corners' radius, and their rounded shape ([ChipFrame]). */
+internal val CHIP_RADIUS = 16.dp
+internal val CHIP_SHAPE = RoundedCornerShape(CHIP_RADIUS)
 
 /** The space between a chip's edge and its content, at each side ([ChipFrame]). */
 internal val CHIP_PADDING = 12.dp
+
+/** The space between a chip's edge and its content, above and below ([ChipFrame]). */
+internal val CHIP_PADDING_V = 6.dp
 
 /**
  * A genre chip's fill and text colour, on Home and in the panel's table: a light fill in the text's
