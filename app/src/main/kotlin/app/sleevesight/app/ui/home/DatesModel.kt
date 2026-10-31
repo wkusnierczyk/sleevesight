@@ -94,8 +94,8 @@ internal sealed interface DateSentence {
  * its date is known: the album's release, of the album's name whose year the album line shows (the
  * earliest date of the named releases in that year; none when the year is the player's own and no
  * named release has it); the track's first release, "on this album" when it is the album being
- * played (its title has the album's key, [NameMatcher.albumKey], or its release group is one of
- * those whose year the album line shows); and, for a cover, the song's original recording, with the
+ * played (its release group is one of those whose year the album line shows; when either side
+ * has no release group, its title has the album's key, [NameMatcher.albumKey]); and, for a cover, the song's original recording, with the
  * release it first came out on when known. Empty when no date is known: the panel then says why
  * ([NoDates]).
  *
@@ -114,10 +114,16 @@ internal fun homeDates(
     album.date?.let { sentences += DateSentence.Album(it) }
     val first = kept?.firstRelease ?: resolution?.firstRelease
     val firstDate = first?.date ?: kept?.firstReleased ?: resolution?.firstReleaseDate
+    // A known release group decides: a single and a later album of one title are not one release.
+    // Only without one on either side does the title.
     val here =
         first != null &&
             album.name != null &&
-            (ALBUMS.albumKey(first.title) == ALBUMS.albumKey(album.name) || first.group in album.groups)
+            if (first.releaseGroupMbid != null && album.groups.isNotEmpty()) {
+                first.group in album.groups
+            } else {
+                ALBUMS.albumKey(first.title) == ALBUMS.albumKey(album.name)
+            }
     when {
         here -> sentences += DateSentence.FirstHere
         firstDate != null && DateWhen.of(firstDate) != null ->

@@ -79,11 +79,17 @@ class HomeDatesTest {
     @Test
     fun theFirstReleaseOnTheAlbumBeingPlayedIsSaidSo() {
         val sundownAlbum = ReleaseDate("Sundown", "1974-01", "g-sundown")
-        // By its title, as the album's key reads it.
-        val byTitle = FirstRelease("1974-01", "Sundown", "g-other", "r-1", "Album")
+        // By its title, as the album's key reads it, when it has no release group.
+        val byTitle = FirstRelease("1974-01", "Sundown", null, "r-1", "Album")
         assertEquals(
             listOf(DateSentence.Album("1974-01"), DateSentence.FirstHere),
             homeDates(resolved(sundown, byTitle, listOf(sundownAlbum)), sundown),
+        )
+        // Not by its title when its release group is another: a single of the album's title.
+        val single = FirstRelease("1973-11", "Sundown", "g-single", "r-2", "Single")
+        assertEquals(
+            listOf(DateSentence.Album("1974-01"), DateSentence.First("1973-11", "Sundown", ReleaseKind.SINGLE)),
+            homeDates(resolved(sundown, single, listOf(sundownAlbum)), sundown),
         )
         // By its release group, the one whose year the album line shows, under another title.
         val byGroup = FirstRelease("1974-01", "Sundown (Original)", "g-sundown", "r-1", "Album")

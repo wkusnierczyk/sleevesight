@@ -54,6 +54,19 @@ class PipelineCoordinatorRetryTest {
     }
 
     @Test
+    fun `a tap that brings lines writes nothing unasked, unlike back online, Write waiting for a tap`() {
+        val world = unreachable()
+        val calls = world.calls.toMap()
+        // Back online, unheard: only the tap asks again, and the web search now finds its line.
+        world.offline = false
+        world.retry(SourceId.WEB)
+        world.settle()
+
+        assertEquals(listOf("A"), world.askedAgain)
+        assertEquals(calls, world.calls)
+    }
+
+    @Test
     fun `a tap for a source that was reached, or for another run, does nothing`() {
         val world = unreachable()
         world.retry(SourceId.MUSICBRAINZ)
