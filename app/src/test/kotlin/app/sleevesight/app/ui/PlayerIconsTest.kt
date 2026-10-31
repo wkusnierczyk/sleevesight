@@ -181,7 +181,7 @@ class PlayerIconsTest {
         val loadedOn = AtomicReference<Thread>()
         val slow = { _: String ->
             loadedOn.set(Thread.currentThread())
-            release.await(5, TimeUnit.SECONDS)
+            check(release.await(WAIT_MS, TimeUnit.MILLISECONDS)) { "the icon was never released" }
             ColorDrawable(Color.RED)
         }
         try {
