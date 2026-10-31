@@ -555,6 +555,29 @@ class PipelineLaterLabelsTest {
         }
 
     @Test
+    fun `a run stopped with a label request out keeps the sources that answered done`() =
+        runTest {
+            // MusicBrainz's artist tags held; Last.fm's track tags answer. The run then stops.
+            val gate = CompletableDeferred<Unit>()
+            val counted =
+                Counted {
+                    gate.await()
+                    Lookup.Found(listOf("country"))
+                }
+            val pipeline = counting(counted, ChangingReleaseTags())
+            val run = async { pipeline.run(sundown, write = false) }
+            runCurrent()
+            assertEquals(LaterLabels.ASKING, pipeline.state.value!!.laterLabels[LabelSource.MUSICBRAINZ])
+            assertEquals(LaterLabels.DONE, pipeline.state.value!!.laterLabels[LabelSource.LASTFM])
+            run.cancel()
+            run.join()
+            // Settled: the one still out reads done, and the one that answered stays done.
+            val state = pipeline.state.value!!
+            assertEquals(LaterLabels.DONE, state.laterLabels[LabelSource.MUSICBRAINZ], "${state.laterLabels}")
+            assertEquals(LaterLabels.DONE, state.laterLabels[LabelSource.LASTFM], "${state.laterLabels}")
+        }
+
+    @Test
     fun `a Retry of another source reports a kept label failure again`() =
         runTest {
             // Last.fm's track tags fail; then a *Retry* of MusicBrainz's label requests.

@@ -191,7 +191,7 @@ internal class TrackLabels(
      */
     fun settle() {
         if (pending.value.values.none { it > 0 }) return
-        pending.value = emptyMap()
+        pending.value = pending.value.mapValues { 0 }
         sink.update { it.copy(laterLabels = states()) }
     }
 
