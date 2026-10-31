@@ -36,9 +36,9 @@ internal object RetrievalCodec {
      * artist, the artists whose MusicBrainz tags give labels are kept by name too, and MusicBrainz's
      * result holds the recording's tags (#439); a label no longer keeps a hue. The dates of the
      * releases' titles (#556) are an optional field like the first release's, made a miss the same way.
-     * What MusicBrainz says of the lyrics (#728) is an optional field too, but not made a miss: an
-     * entry kept before it reads without it, as not known ([SourceResult.lyrics] null), and keeps its
-     * lifetime, rather than asking MusicBrainz again for every track played before.
+     * What MusicBrainz says of the lyrics (#728) is an optional field too, made a miss the same way
+     * (MusicBrainz's extraction version 7), so a track played before is asked again rather than shown
+     * as having no lyrics page.
      */
     const val FORMAT: Int = 7
 
@@ -181,7 +181,9 @@ internal object RetrievalCodec {
 
     @Serializable
     private data class LyricsJson(
-        val links: List<String> = emptyList(),
+        // Null: not known (a lookup failed). Such a result is provisional and not kept, but the
+        // field says so faithfully if one ever is.
+        val links: List<String>? = emptyList(),
         val languages: List<String> = emptyList(),
         val instrumental: Boolean = false,
     )

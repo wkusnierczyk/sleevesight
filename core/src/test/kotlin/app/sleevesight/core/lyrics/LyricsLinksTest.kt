@@ -32,7 +32,7 @@ class LyricsLinksTest {
     ) = lyricsLinks(musicBrainz, track, search, JvmAccentFolder)
 
     private fun found(
-        links: List<String> = emptyList(),
+        links: List<String>? = emptyList(),
         languages: List<String> = listOf("eng"),
         instrumental: Boolean = false,
     ) = MusicBrainzAnswer.Found(WorkLyrics(links, languages, instrumental))
@@ -168,6 +168,8 @@ class LyricsLinksTest {
         val page = listOf("https://genius.com/Gerry-rafferty-right-down-the-line-lyrics")
         assertEquals(LyricsLinks.Instrumental, links(found(page, instrumental = true)))
         assertEquals(LyricsLinks.Instrumental, links(found(languages = listOf("zxx"))))
+        // An instrumental even when a failed lookup left its links not known.
+        assertEquals(LyricsLinks.Instrumental, links(found(links = null, instrumental = true)))
         // Not when one work has words, nor when no language is known.
         assertEquals(
             LyricsLinks.NoLink(NoLinkReason.NoLyricsPage, raffertySearch),
@@ -187,8 +189,9 @@ class LyricsLinksTest {
                 MusicBrainzAnswer.Unreachable to NoLinkReason.Unreachable,
                 MusicBrainzAnswer.NotFound to NoLinkReason.NotFound,
                 found() to NoLinkReason.NoLyricsPage,
-                // A result kept before #728: no link known, not instrumental.
-                MusicBrainzAnswer.Found(null) to NoLinkReason.NoLyricsPage,
+                // A lookup failed: the links are not known, so not said to be none.
+                found(links = null) to NoLinkReason.Unreachable,
+                MusicBrainzAnswer.Found(null) to NoLinkReason.Unreachable,
             )
         for ((answer, reason) in cases) {
             assertEquals(LyricsLinks.NoLink(reason, raffertySearch), links(answer), "$answer")
@@ -216,6 +219,9 @@ class LyricsLinksTest {
         assertEquals("beyonce", slug("Beyoncé!", JvmAccentFolder))
         assertEquals("ac-dc", slug("  AC/DC  ", JvmAccentFolder))
         assertEquals("", slug("!!!", JvmAccentFolder))
+        // Letters no accent folding reaches, spelled as Genius does.
+        assertEquals("royksopp", slug("Røyksopp", JvmAccentFolder))
+        assertEquals("sigur-ros-aegir-strasse-lodz", slug("Sigur Rós Ægir Straße Łódź", JvmAccentFolder))
     }
 
     @Test

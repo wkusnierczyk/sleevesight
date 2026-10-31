@@ -232,14 +232,15 @@ class RecordingResolver(
             }
         val recordingCredits = recordingCredits(detail.artistRelations)
         val link = detail.works.firstOrNull()
-        val work = link?.let { (musicBrainz.work(it.mbid) as? Lookup.Found)?.value }
+        val lookup = link?.let { musicBrainz.work(it.mbid) }
+        val work = (lookup as? Lookup.Found)?.value
         val withRecording =
             base.copy(
                 artists = artists,
                 credits = recordingCredits,
                 wikidataIds = detail.wikidataIds,
                 recordingTags = detail.tags,
-                lyrics = lyricsOf(detail, work),
+                lyrics = lyricsOf(detail, lookup),
             )
         return if (link == null || work == null) {
             withRecording.copy(work = link?.let { ResolvedWork(it.mbid, it.title) }, cover = link?.cover ?: false)
@@ -626,15 +627,23 @@ class RecordingResolver(
     }
 }
 
-// What MusicBrainz says of the lyrics (#728): the looked-up [work]'s lyrics pages (only the first
-// work is looked up), the languages of every work the recording performs, and whether its
+// What MusicBrainz says of the lyrics (#728): the lyrics pages of the work [lookup] found (only the
+// first work is looked up; none without a work, or when MusicBrainz has no such work; not known when
+// the lookup failed), the languages of every work the recording performs, and whether its
 // performance of any of them is marked instrumental.
 private fun lyricsOf(
     detail: MbRecordingDetail,
-    work: MbWork?,
-): WorkLyrics =
-    WorkLyrics(
-        links = work?.lyricsUrls.orEmpty().distinct(),
+    lookup: Lookup<MbWork>?,
+): WorkLyrics {
+    val work = (lookup as? Lookup.Found)?.value
+    return WorkLyrics(
+        links =
+            when (lookup) {
+                null, Lookup.NotFound -> emptyList()
+                is Lookup.Found -> lookup.value.lyricsUrls.distinct()
+                is Lookup.Failed -> null
+            },
         languages = (detail.works.flatMap { it.languages } + work?.languages.orEmpty()).distinct(),
         instrumental = detail.works.any { it.instrumental },
     )
+}

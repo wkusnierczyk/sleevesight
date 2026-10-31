@@ -65,7 +65,7 @@ class RecordingLyricsTest {
         }
 
     @Test
-    fun `a work that cannot be looked up still gives the languages and the instrumental mark`() =
+    fun `a work MusicBrainz does not have gives no pages, but the languages and the instrumental mark`() =
         runTest {
             val musicBrainz =
                 FakeMusicBrainz(
@@ -85,10 +85,33 @@ class RecordingLyricsTest {
         }
 
     @Test
-    fun `no work, or no recording accepted, knows nothing of the lyrics`() =
+    fun `a work lookup that fails leaves the pages not known, the languages and the mark kept`() =
+        runTest {
+            val musicBrainz =
+                FakeMusicBrainz(
+                    Lookup.Found(search),
+                    mapOf("ours" to detail(MbWorkLink("w", "Song", cover = false, languages = listOf("eng")))),
+                    mapOf("w" to work("w", listOf("https://genius.com/A-song-lyrics"))),
+                    workFailure = "HTTP 503",
+                )
+            assertEquals(
+                WorkLyrics(links = null, languages = listOf("eng"), instrumental = false),
+                resolve(musicBrainz, track("Song", "Act")).lyrics,
+            )
+        }
+
+    @Test
+    fun `a recording lookup that fails knows nothing of the lyrics`() =
+        runTest {
+            val musicBrainz = FakeMusicBrainz(Lookup.Found(search), recordingFailure = "HTTP 503")
+            assertEquals(WorkLyrics.NONE, resolve(musicBrainz, track("Song", "Act")).lyrics)
+        }
+
+    @Test
+    fun `no work has no lyrics page, and no recording accepted knows nothing of the lyrics`() =
         runTest {
             val noWork = FakeMusicBrainz(Lookup.Found(search), mapOf("ours" to detail()), emptyMap())
-            assertEquals(WorkLyrics.NONE, resolve(noWork, track("Song", "Act")).lyrics)
+            assertEquals(WorkLyrics(), resolve(noWork, track("Song", "Act")).lyrics)
             val none = FakeMusicBrainz(Lookup.Found(emptyList()), emptyMap(), emptyMap())
             assertEquals(WorkLyrics.NONE, resolve(none, track("Song", "Act")).lyrics)
         }

@@ -116,8 +116,8 @@ sealed interface MusicBrainzAnswer {
     data object NotFound : MusicBrainzAnswer
 
     /**
-     * Answered with the song, and what it says of its lyrics; [lyrics] null when not known (a result
-     * kept before #728), read as no link and not instrumental.
+     * Answered with the song, and what it says of its lyrics; [lyrics] null when not known, read as
+     * links not known and not instrumental.
      */
     data class Found(
         val lyrics: WorkLyrics?,
@@ -137,11 +137,14 @@ sealed interface MusicBrainzAnswer {
             state: SourceState?,
             enabled: Boolean = true,
         ): MusicBrainzAnswer =
-            when {
-                !enabled -> Off
-                state == null || state == SourceState.Pending -> Looking
-                state is SourceState.Failed -> Unreachable
-                else -> answerOf(state as SourceState.Done)
+            if (!enabled) {
+                Off
+            } else {
+                when (state) {
+                    null, SourceState.Pending -> Looking
+                    is SourceState.Failed -> Unreachable
+                    is SourceState.Done -> answerOf(state)
+                }
             }
 
         private fun answerOf(state: SourceState.Done): MusicBrainzAnswer =
@@ -180,8 +183,9 @@ fun lyricsLinks(
  * 3. [LyricsLinks.Links] when MusicBrainz found the song and links lyrics pages on its whitelist
  *    ([LyricsSite]): `https` only, one per site, in the sites' order; of several on one site, the
  *    first whose path names one of the [track]'s artists (compared as slugs, [slug]), else the first.
- * 4. Else [LyricsLinks.NoLink], with its reason, and the Genius search for the [track]'s title and
- *    primary artist ([searchUrl]) while [search] is on.
+ * 4. Else [LyricsLinks.NoLink], with its reason ([NoLinkReason.Unreachable] too when MusicBrainz
+ *    found the song but a lookup failed, so its links are not known), and the Genius search for the
+ *    [track]'s title and primary artist ([searchUrl]) while [search] is on.
  */
 fun lyricsLinks(
     musicBrainz: MusicBrainzAnswer,
@@ -196,10 +200,13 @@ fun lyricsLinks(
         MusicBrainzAnswer.NotFound -> noLink(NoLinkReason.NotFound, track, search)
         is MusicBrainzAnswer.Found -> {
             val lyrics = musicBrainz.lyrics ?: WorkLyrics.NONE
-            val links = pages(lyrics.links, track.artists, accentFolder)
+            val known = lyrics.links
+            val links = pages(known.orEmpty(), track.artists, accentFolder)
             when {
                 instrumental(lyrics) -> LyricsLinks.Instrumental
                 links.isNotEmpty() -> LyricsLinks.Links(links)
+                // A lookup failed: the links are not known, so not said to be none.
+                known == null -> noLink(NoLinkReason.Unreachable, track, search)
                 else -> noLink(NoLinkReason.NoLyricsPage, track, search)
             }
         }

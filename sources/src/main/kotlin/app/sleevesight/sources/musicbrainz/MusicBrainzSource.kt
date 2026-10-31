@@ -71,6 +71,9 @@ class MusicBrainzSource(
             releaseDates = resolved.releaseDates,
             // Only for an accepted recording: without one, there is no song to link the lyrics of.
             lyrics = resolved.lyrics.takeIf { resolved.resolved },
+            // Its lyrics links not known, a lookup having failed (#728): shown, but not kept, so the
+            // next run asks again rather than serving "no lyrics page" for the cache's lifetime.
+            provisional = resolved.resolved && resolved.lyrics.links == null,
             // No recording and no artist: a result that names an artist, or rejects a recording by
             // another one, is about the artists (#420).
             trackOnly = resolved.outcome == Outcome.None && resolved.artists.isEmpty() && resolved.artistCredit == null,

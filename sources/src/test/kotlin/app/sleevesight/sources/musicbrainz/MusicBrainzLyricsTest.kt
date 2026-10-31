@@ -101,6 +101,21 @@ class MusicBrainzLyricsTest {
             assertNull(MusicBrainzSource().lookup(track, CompletableDeferred(Resolution.unreachable("Offline"))).lyrics)
         }
 
+    @Test
+    fun `a result whose lyrics links are not known is shown but not kept`() =
+        runTest {
+            val track = Normalizer(JvmAccentFolder).normalize("Right Down the Line", "Gerry Rafferty")
+            val known = Resolution(outcome = Outcome.SongArticle, recordingMbid = RAFFERTY, lyrics = WorkLyrics())
+            assertFalse(MusicBrainzSource().lookup(track, CompletableDeferred(known)).provisional)
+            // A lookup failed: the result is provisional, so the retrieval cache does not keep it.
+            val failed = known.copy(lyrics = WorkLyrics(links = null, languages = listOf("eng")))
+            val result = MusicBrainzSource().lookup(track, CompletableDeferred(failed))
+            assertTrue(result.provisional)
+            assertEquals(failed.lyrics, result.lyrics)
+            // No recording accepted: nothing to link, nothing provisional.
+            assertFalse(MusicBrainzSource().lookup(track, CompletableDeferred(Resolution.NONE)).provisional)
+        }
+
     private companion object {
         const val RIGHT_DOWN_THE_LINE = "5d0e65d7-e029-47b4-9461-428f36ed7a1e"
         const val RAFFERTY = "bd129c44-6286-4f62-8d11-8d1c8437ecc0"

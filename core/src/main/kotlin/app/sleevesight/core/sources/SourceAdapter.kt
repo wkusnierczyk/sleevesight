@@ -113,9 +113,9 @@ val SourceAdapter.tag: String get() = id.tag
  * dates (`Resolution.releaseDates`, #556), kept the same way, for the year after the album the player
  * names: the cache's key does not hold the album, so the album is found among them when shown.
  * [lyrics] is what MusicBrainz's resolution says of the track's lyrics (`Resolution.lyrics`, #728),
- * for Home's lyrics links, kept the same way; null when not known: a result of no accepted recording,
- * another source's, or one kept before #728, whose links count as none and whose recording as not
- * instrumental.
+ * for Home's lyrics links, kept the same way; null on another source's result, or MusicBrainz's
+ * without an accepted recording. A result whose lyrics links are not known (a lookup failed) is
+ * [provisional].
  *
  * [provisional] marks a result that a failed request of the verification left unverified, where a
  * later lookup may verify it (Last.fm's search for other MusicBrainz artists of a name): it is

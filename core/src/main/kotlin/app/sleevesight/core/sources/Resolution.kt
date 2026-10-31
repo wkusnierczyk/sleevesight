@@ -233,19 +233,21 @@ data class ResolvedWork(
  * @property links the pages of the work's `lyrics` URL relationships, as MusicBrainz gives them
  *   (MusicBrainz allows them only to its lyrics whitelist), deduplicated. Only the work the
  *   resolution looks up gives them: the first a recording performs, which is nearly always its only one.
+ *   Empty when the recording performs no work or its work has none; null when not known, the
+ *   recording's or the work's lookup having failed, so no link is not said to be none.
  * @property languages the languages of every work the recording performs (ISO 639-3; `zxx` for no
  *   linguistic content), deduplicated; empty when MusicBrainz gives none.
  * @property instrumental whether MusicBrainz marks the recording's performance of any of its works
  *   `instrumental`.
  */
 data class WorkLyrics(
-    val links: List<String> = emptyList(),
+    val links: List<String>? = emptyList(),
     val languages: List<String> = emptyList(),
     val instrumental: Boolean = false,
 ) {
     companion object {
-        /** Nothing known of the lyrics: no link, no language, not instrumental. */
-        val NONE: WorkLyrics = WorkLyrics()
+        /** Nothing known of the lyrics: links not known, no language, not instrumental. */
+        val NONE: WorkLyrics = WorkLyrics(links = null)
     }
 }
 

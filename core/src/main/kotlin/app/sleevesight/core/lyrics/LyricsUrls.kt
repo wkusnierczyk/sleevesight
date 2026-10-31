@@ -33,7 +33,8 @@ internal fun artistSlugs(
         .distinct()
 
 /**
- * [text] as a slug, as lyrics sites write names in their paths: lowercase, accents folded,
+ * [text] as a slug, as lyrics sites write names in their paths: lowercase, accents folded, the
+ * letters no accent folding reaches spelled in ASCII ([SPELLED]: `Røyksopp` is `royksopp`),
  * apostrophes dropped (`Don’t` is `dont`, `O’Connor` `oconnor`), every other run of characters that
  * are not letters or digits one `-`, none at either end.
  */
@@ -41,7 +42,12 @@ fun slug(
     text: String,
     accentFolder: AccentFolder,
 ): String {
-    val folded = accentFolder.decompose(text.lowercase()).filterNot { it.category == CharCategory.NON_SPACING_MARK }
+    val folded =
+        accentFolder
+            .decompose(text.lowercase())
+            .filterNot { it.category == CharCategory.NON_SPACING_MARK }
+            .map { SPELLED[it] ?: it.toString() }
+            .joinToString("")
     val out = StringBuilder(folded.length)
     var gap = false
     for (c in folded) {
@@ -111,6 +117,20 @@ internal fun parse(url: String): Pair<String, String>? {
 private const val GENIUS_SEARCH = "https://genius.com/search?q="
 private const val HTTPS = "https://"
 private val APOSTROPHES = setOf('\'', '’', '‘', 'ʼ')
+
+// Letters that decompose to no ASCII base, as lyrics sites spell them (Genius's `Royksopp`, `Bjork`).
+private val SPELLED =
+    mapOf(
+        'ø' to "o",
+        'æ' to "ae",
+        'œ' to "oe",
+        'ł' to "l",
+        'đ' to "d",
+        'ð' to "d",
+        'þ' to "th",
+        'ß' to "ss",
+        'ı' to "i",
+    )
 private const val UNRESERVED = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~"
 private val ESCAPES = Regex("(?:%[0-9A-Fa-f]{2})+")
 private const val HEX = "0123456789ABCDEF"
