@@ -279,7 +279,9 @@ class LayoutPagesTest {
 
             compose.onNodeWithTag(SOURCES_CHIP_TAG).performScrollTo().performClick()
             compose.onNodeWithTag(LINE_PREFIX + "MB1").assertExists()
-            // A genre chip opens its panel on Home (#558), with the table and where its labels come from.
+            // *Genres* opens its panel in place (#772), and a chip in it its genre (#558), with the table
+            // and where its labels come from.
+            compose.onNodeWithTag(GENRES_CHIP_TAG).performScrollTo().performClick()
             compose.onNodeWithTag(GENRE_PREFIX + "track:folkpop").performScrollTo().performClick()
             compose.onNodeWithTag(GENRE_PANEL_HEADING_TAG).assertTextEquals("Folk Pop")
             compose.onNodeWithTag(GENRE_CELL_PREFIX + "artist:Gordon Lightfoot:rock").assertExists()

@@ -125,7 +125,7 @@ class GenrePanelFocusScreenTest {
                                 .focusRequester(elsewhere)
                                 .focusable(),
                         )
-                        Genres(current.value, Settings())
+                        GenresContent(current.value, Settings())
                     }
                 }
             }

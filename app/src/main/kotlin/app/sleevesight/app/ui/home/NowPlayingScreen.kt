@@ -230,7 +230,7 @@ internal class NowPlayingActions(
 
 /**
  * The home screen's content, top to bottom (design, *Home screen*): the player row, the art with
- * the playback position, the key data, the *Dates* button or panel (#724), the genre labels, *Key
+ * the playback position, the key data, the *Dates* and *Genres* buttons or panels (#724, #772), *Key
  * insights* and *Sources*,
  * straight on Home's background, their accents in the art's colours (#609). Nothing playing in a
  * followed player shows the players to start and the guide to Home ([IdleHome], #627). A track the
@@ -241,11 +241,10 @@ internal class NowPlayingActions(
  * transport controls and the handoff to the player (design, *Phase 2*).
  *
  * *Layout* (#447): under *Expandable boxes*, the default, *Sources*' chip opens its panel in place
- * (#623), a genre chip opens its genre's panel under the chips (#558), and a citation unfolds
- * *Sources* to its line. Under *Separate pages* each opens on a page of its own
- * ([NowPlayingActions.openPage]): *Sources*' chip, and a citation, which opens *Sources* at its line;
- * a genre chip, the genres' page at its genre. Under either, the line under the album ([InPlaceLine]:
- * *Dates*, #724) opens its panels in place.
+ * (#623), and a citation unfolds *Sources* to its line. Under *Separate pages* each opens on a page
+ * of its own ([NowPlayingActions.openPage]): *Sources*' chip, and a citation, which opens *Sources*
+ * at its line. Under either, the line under the album ([InPlaceLine]: *Dates*, #724, and *Genres*,
+ * #772) opens its panels in place, a genre opening in its box inside *Genres*' panel.
  * The insight shows in full on Home either way.
  */
 @Composable
@@ -288,17 +287,8 @@ internal fun NowPlayingContent(
         Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             PlayerRow(playing.player, state.playback, actions)
             ArtAndProgress(state.art, state.playback, header.duration)
-            TrackHeader(shown, header, inPlace, actions)
-            // Until the settings' first read, the layout is not known: neither item is drawn,
-            // rather than the boxes for a frame and then the pages (#447).
-            if (settings != null) {
-                Genres(
-                    track,
-                    settings,
-                    actions.openPage.takeIf { pages },
-                    PanelNotes(actions.genreNotes, cite, shown.modelAllowed, actions.readAloud),
-                )
-            }
+            val notes = PanelNotes(actions.genreNotes, cite, shown.modelAllowed, actions.readAloud)
+            TrackHeader(shown, header, UnderAlbumLine(inPlace, settings, notes), actions)
             // A tap carries what it was shown for: the run Write is offered for, beside this track.
             val onWrite: () -> Unit = { view.writeKey?.let { actions.write(it, playing) } }
             val onStop: () -> Unit = { view.stopCall?.let(actions.stop) }

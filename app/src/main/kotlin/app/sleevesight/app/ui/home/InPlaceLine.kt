@@ -28,18 +28,21 @@ import app.sleevesight.app.ui.theme.handoffTarget
 import app.sleevesight.app.ui.theme.rememberFocusHandoff
 import app.sleevesight.core.model.NowPlaying
 
-// The line of buttons under the album, each opening a panel in place (#724: *Dates*; *Genres* to come,
-// #772), and the panels open, stacked under it.
+// The line of buttons under the album, each opening a panel in place (#724: *Dates*; #772: *Genres*),
+// and the panels open, stacked under it.
 
 /** An item of the line under the album: a button that opens its panel in place. */
 internal enum class InPlace {
     /** *Dates* (#724). */
     DATES,
+
+    /** *Genres* (#772). */
+    GENRES,
 }
 
 /**
  * An item of the line as shown: [id], its button's and panel's title [name], its button's action as
- * a screen reader names it ([action]: "show dates"), the test tags of its button ([tag]) and its
+ * a screen reader names it ([action]: "show dates", "show genres"), the test tags of its button ([tag]) and its
  * panel ([panelTag], as [Panel] makes them, with `:heading` and `:close`), and what its panel holds
  * ([content]). [content] is handed `toClose`, which moves the focus to the panel's *Close* (#724),
  * for a control in it that goes once tapped (*Retry*, [RetryLine]): else a keyboard's or a screen
@@ -128,7 +131,7 @@ internal class InPlaceMemory(
 internal fun rememberInPlaceMemory(): InPlaceMemory = rememberSaveable(saver = InPlaceMemory.Saver) { InPlaceMemory() }
 
 /**
- * The line under the album (#724): the buttons of [items] whose panels are closed, on one line in
+ * The line under the album (#724, #772): the buttons of [items] whose panels are closed, on one line in
  * [items]' order (each drawn as *Sources*' chip is, [PanelChip]), then the panels open, the one
  * opened last on top ([InPlaceMemory.opened]), each in the frame of Home's other closable panels
  * ([Panel]): its title as a heading, and *Close* at its top right, which folds it back into its

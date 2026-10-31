@@ -145,7 +145,7 @@ class GenreAboutScreenTest {
             scenario.onActivity {
                 it.setContent {
                     Column(Modifier.verticalScroll(rememberScrollState())) {
-                        Genres(track, Settings(), notes = PanelNotes(notes, { id -> cited += id }))
+                        GenresContent(track, Settings(), notes = PanelNotes(notes, { id -> cited += id }))
                     }
                 }
             }
@@ -346,6 +346,9 @@ class GenreAboutScreenTest {
         val state =
             NowPlayingState(PipelineView(playing, aiReady = true), playing.nowPlaying, settings = Settings())
         show({ NowPlayingContent(state, NowPlayingActions(HomeFixtures.normalizer::normalize, genreNotes = notes)) }) {
+            // The chips are in *Genres*' panel (#772).
+            compose.onNodeWithTag(GENRES_CHIP_TAG).performScrollTo().performClick()
+            compose.waitForIdle()
             compose.onNodeWithTag(GENRE_PREFIX + "artist:Miles Davis:jazz").performScrollTo().performClick()
             compose.waitForIdle()
             compose.onNodeWithTag(GENRE_DEFINITION_TAG).assertExists()
