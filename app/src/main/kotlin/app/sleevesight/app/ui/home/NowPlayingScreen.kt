@@ -230,7 +230,7 @@ internal class NowPlayingActions(
 
 /**
  * The home screen's content, top to bottom (design, *Home screen*): the player row, the art with
- * the playback position, the key data, the *Dates* button or panel (#724), the genre labels, *Key
+ * the playback position, the key data, the *Dates* and *Lyrics* buttons or panels (#724, #728), the genre labels, *Key
  * insights* and *Sources*,
  * straight on Home's background, their accents in the art's colours (#609). Nothing playing in a
  * followed player shows the players to start and the guide to Home ([IdleHome], #627). A track the
@@ -245,7 +245,7 @@ internal class NowPlayingActions(
  * *Sources* to its line. Under *Separate pages* each opens on a page of its own
  * ([NowPlayingActions.openPage]): *Sources*' chip, and a citation, which opens *Sources* at its line;
  * a genre chip, the genres' page at its genre. Under either, the line under the album ([InPlaceLine]:
- * *Dates*, #724) opens its panels in place.
+ * *Dates*, #724; *Lyrics*, #728) opens its panels in place.
  * The insight shows in full on Home either way.
  */
 @Composable

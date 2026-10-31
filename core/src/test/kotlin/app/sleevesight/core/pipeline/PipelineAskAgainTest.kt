@@ -191,6 +191,48 @@ class PipelineAskAgainTest {
             )
         }
 
+    @Test
+    fun `a Retry of MusicBrainz shown but not kept asks it again, and resolves again`() =
+        runTest {
+            // The work's lookup failed (#728): the resolution, and so MusicBrainz's result, provisional.
+            val resolver =
+                FakeResolver(resolution = Resolution(Outcome.SongArticle, recordingMbid = "rec-1", provisional = true))
+            val musicBrainz =
+                FakeAdapter(SourceId.MUSICBRAINZ) { _, resolved ->
+                    SourceResult(
+                        Outcome.SongArticle,
+                        emptyList(),
+                        Duration.ZERO,
+                        provisional =
+                            resolved?.provisional == true,
+                    )
+                }
+            down = false
+            val web = web()
+            val pipeline = pipeline(listOf(musicBrainz, web), resolver)
+
+            val first = granting()
+            pipeline.run(sundown, first)
+            val before = first.gathered.single()
+            assertEquals(emptySet(), before.unreachable)
+            assertEquals(setOf(SourceId.MUSICBRAINZ), before.retryable)
+            // Back online asks nothing again: nothing was unreachable.
+            assertEquals(emptySet(), before.asked)
+
+            resolver.resolution = Resolution(Outcome.SongArticle, recordingMbid = "rec-1")
+            val retried = before.asking(setOf(SourceId.MUSICBRAINZ))
+            assertEquals(setOf(SourceId.MUSICBRAINZ), retried.asked)
+            val state = pipeline.run(sundown, granting(), retried)
+            runCurrent()
+
+            // Resolved again, not the provisional resolution used again; the web kept as it was.
+            assertEquals(2, resolver.calls)
+            assertEquals(listOf(key, key), musicBrainz.asked)
+            assertEquals(listOf(key), web.asked)
+            assertEquals(false, (state.sources[SourceId.MUSICBRAINZ] as SourceState.Done).result.provisional)
+            assertEquals(before.sources[SourceId.WEB], state.sources[SourceId.WEB])
+        }
+
     private fun answer(resolved: Resolution?): SourceResult =
         when {
             down -> SourceResult(Outcome.Unreachable, emptyList(), Duration.ZERO)

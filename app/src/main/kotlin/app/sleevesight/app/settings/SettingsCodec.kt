@@ -84,6 +84,8 @@ internal object SettingsCodec {
     private val THEME_BUTTON = booleanPreferencesKey("display.theme_button")
     private val FONT = stringPreferencesKey("display.font")
     private val INTRO = booleanPreferencesKey("display.intro")
+    private val LYRICS_LINKS = booleanPreferencesKey("display.lyrics_links")
+    private val LYRICS_SEARCH = booleanPreferencesKey("display.lyrics_search")
 
     /** `historyLifetime` null is *Forever*, which needs a value of its own to be stored. */
     private const val FOREVER = -1L
@@ -128,6 +130,8 @@ internal object SettingsCodec {
                 },
             sessionGap = prefs[SESSION_GAP_MS]?.takeIf { it > 0 }?.milliseconds ?: defaults.sessionGap,
             keepSourcesUnfolded = prefs[KEEP_SOURCES_UNFOLDED] ?: defaults.keepSourcesUnfolded,
+            lyricsLinks = prefs[LYRICS_LINKS] ?: defaults.lyricsLinks,
+            lyricsSearch = prefs[LYRICS_SEARCH] ?: defaults.lyricsSearch,
             showPhoneName = prefs[SHOW_PHONE_NAME] ?: defaults.showPhoneName,
             showDiagnostics = prefs[DIAGNOSTICS] ?: defaults.showDiagnostics,
             showGroundingDetails = prefs[GROUNDING_DETAILS] ?: defaults.showGroundingDetails,
@@ -251,6 +255,8 @@ internal object SettingsCodec {
         if (moved { it.keepSourcesUnfolded }) {
             prefs.put(KEEP_SOURCES_UNFOLDED, settings.keepSourcesUnfolded, defaults.keepSourcesUnfolded)
         }
+        if (moved { it.lyricsLinks }) prefs.put(LYRICS_LINKS, settings.lyricsLinks, defaults.lyricsLinks)
+        if (moved { it.lyricsSearch }) prefs.put(LYRICS_SEARCH, settings.lyricsSearch, defaults.lyricsSearch)
         if (moved { it.showPhoneName }) prefs.put(SHOW_PHONE_NAME, settings.showPhoneName, defaults.showPhoneName)
         if (moved { it.showDiagnostics }) prefs.put(DIAGNOSTICS, settings.showDiagnostics, defaults.showDiagnostics)
         if (moved { it.showGroundingDetails }) {

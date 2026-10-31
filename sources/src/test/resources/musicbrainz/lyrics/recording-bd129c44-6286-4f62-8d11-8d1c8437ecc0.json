@@ -1,0 +1,488 @@
+{
+ "artist-credit": [
+  {
+   "artist": {
+    "disambiguation": "",
+    "sort-name": "Rafferty, Gerry",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "type": "Person",
+    "country": "GB",
+    "name": "Gerry Rafferty",
+    "id": "563201cb-721c-4cfb-acca-c1ba69e3d1fb"
+   },
+   "name": "Gerry Rafferty",
+   "joinphrase": ""
+  }
+ ],
+ "video": false,
+ "length": 267773,
+ "disambiguation": "",
+ "first-release-date": "1978",
+ "id": "bd129c44-6286-4f62-8d11-8d1c8437ecc0",
+ "title": "Right Down the Line",
+ "relations": [
+  {
+   "target-type": "artist",
+   "attribute-credits": {},
+   "type-id": "59054b12-01ac-43ee-a618-285fd397e461",
+   "type": "instrument",
+   "attributes": [
+    "guitar family"
+   ],
+   "artist": {
+    "id": "879d2b62-9c23-4d7d-a45a-aa16563db99d",
+    "name": "Hugh Burns",
+    "disambiguation": "",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "country": "GB",
+    "type": "Person",
+    "sort-name": "Burns, Hugh"
+   },
+   "source-credit": "",
+   "ended": false,
+   "attribute-ids": {
+    "guitar family": "f68936f2-194c-4bcd-94a9-81e1dd947b8d"
+   },
+   "begin": null,
+   "target-credit": "",
+   "end": null,
+   "direction": "backward",
+   "attribute-values": {}
+  },
+  {
+   "target-type": "artist",
+   "attribute-credits": {},
+   "artist": {
+    "disambiguation": "",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "type": "Person",
+    "country": "GB",
+    "sort-name": "Cole, BJ",
+    "id": "a4c2ce14-cdf9-4ac1-a726-cda848dc94f7",
+    "name": "BJ Cole"
+   },
+   "attributes": [
+    "steel guitar"
+   ],
+   "type-id": "59054b12-01ac-43ee-a618-285fd397e461",
+   "type": "instrument",
+   "source-credit": "",
+   "ended": false,
+   "begin": null,
+   "target-credit": "Brian Cole",
+   "attribute-ids": {
+    "steel guitar": "921330d6-eb1b-4e59-b4b6-824ebcdb89c2"
+   },
+   "end": null,
+   "direction": "backward",
+   "attribute-values": {}
+  },
+  {
+   "direction": "backward",
+   "end": null,
+   "attribute-values": {},
+   "attributes": [
+    "organ",
+    "piano"
+   ],
+   "artist": {
+    "country": "GB",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "type": "Person",
+    "sort-name": "Eyre, Tommy",
+    "disambiguation": "",
+    "id": "47a8919a-67ac-4836-a5c0-4b84112e26dc",
+    "name": "Tommy Eyre"
+   },
+   "type-id": "59054b12-01ac-43ee-a618-285fd397e461",
+   "type": "instrument",
+   "attribute-credits": {},
+   "target-type": "artist",
+   "begin": null,
+   "target-credit": "",
+   "attribute-ids": {
+    "piano": "b3eac5f9-7859-4416-ac39-7154e2e8d348",
+    "organ": "55a37f4f-39a4-45a7-851d-586569985519"
+   },
+   "ended": false,
+   "source-credit": ""
+  },
+  {
+   "attribute-values": {},
+   "direction": "backward",
+   "end": null,
+   "attribute-ids": {
+    "percussion": "8e9abdf1-0afc-4544-b201-c6fa768d01f4"
+   },
+   "begin": null,
+   "target-credit": "",
+   "source-credit": "",
+   "ended": false,
+   "type-id": "59054b12-01ac-43ee-a618-285fd397e461",
+   "type": "instrument",
+   "artist": {
+    "disambiguation": "",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "country": "GB",
+    "type": "Person",
+    "sort-name": "LeFleur, Glen",
+    "id": "aa179ac8-2dfd-4b4c-948e-9fc9c7ec38d5",
+    "name": "Glen LeFleur"
+   },
+   "attributes": [
+    "percussion"
+   ],
+   "attribute-credits": {},
+   "target-type": "artist"
+  },
+  {
+   "attribute-values": {},
+   "end": null,
+   "direction": "backward",
+   "ended": false,
+   "source-credit": "",
+   "target-credit": "",
+   "begin": null,
+   "attribute-ids": {
+    "drums (drum set)": "12092505-6ee1-46af-a15a-b5b468b6b155"
+   },
+   "attribute-credits": {},
+   "target-type": "artist",
+   "attributes": [
+    "drums (drum set)"
+   ],
+   "artist": {
+    "disambiguation": "",
+    "sort-name": "Spinetti, Henry",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "country": "GB",
+    "type": "Person",
+    "name": "Henry Spinetti",
+    "id": "970cde2e-7007-4c01-b2d4-8f0a1a04dd00"
+   },
+   "type-id": "59054b12-01ac-43ee-a618-285fd397e461",
+   "type": "instrument"
+  },
+  {
+   "end": null,
+   "direction": "backward",
+   "attribute-values": {},
+   "target-type": "artist",
+   "attribute-credits": {},
+   "artist": {
+    "name": "Gary Taylor",
+    "id": "c5c4a24e-3e7f-471a-a015-ecc4bf1dc309",
+    "disambiguation": "UK bassist/songwriter/vocalist, member of Herd/Fox/Stealers Wheel",
+    "sort-name": "Taylor, Gary",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "type": "Person",
+    "country": "GB"
+   },
+   "attributes": [
+    "bass"
+   ],
+   "type-id": "59054b12-01ac-43ee-a618-285fd397e461",
+   "type": "instrument",
+   "source-credit": "",
+   "ended": false,
+   "begin": null,
+   "target-credit": "",
+   "attribute-ids": {
+    "bass": "6505f98c-f698-4406-8bf4-8ca43d05c36f"
+   }
+  },
+  {
+   "artist": {
+    "name": "Declan O’Doherty",
+    "id": "73760f2f-da08-442c-88b5-4c5753676232",
+    "sort-name": "O’Doherty, Declan",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "country": "CA",
+    "type": "Person",
+    "disambiguation": ""
+   },
+   "attributes": [],
+   "type-id": "3e3102e1-1896-4f50-b5b2-dd9824e46efe",
+   "type": "mix",
+   "target-type": "artist",
+   "begin": null,
+   "target-credit": "",
+   "attribute-ids": {},
+   "source-credit": "",
+   "ended": false,
+   "direction": "backward",
+   "end": null,
+   "attribute-values": {}
+  },
+  {
+   "target-type": "artist",
+   "type": "producer",
+   "type-id": "5c0ceac3-feb4-41f0-868d-dc06f6e27fc0",
+   "artist": {
+    "id": "50c2aa4e-062b-41c6-af39-e0cc392941e2",
+    "name": "Hugh Murphy",
+    "disambiguation": "UK producer, engineer",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "type": "Person",
+    "country": "GB",
+    "sort-name": "Murphy, Hugh"
+   },
+   "attributes": [],
+   "ended": false,
+   "source-credit": "",
+   "attribute-ids": {},
+   "target-credit": "",
+   "begin": null,
+   "end": null,
+   "direction": "backward",
+   "attribute-values": {}
+  },
+  {
+   "direction": "backward",
+   "end": null,
+   "attribute-values": {},
+   "type": "producer",
+   "type-id": "5c0ceac3-feb4-41f0-868d-dc06f6e27fc0",
+   "attributes": [],
+   "artist": {
+    "disambiguation": "",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "country": "GB",
+    "type": "Person",
+    "sort-name": "Rafferty, Gerry",
+    "id": "563201cb-721c-4cfb-acca-c1ba69e3d1fb",
+    "name": "Gerry Rafferty"
+   },
+   "target-type": "artist",
+   "attribute-ids": {},
+   "target-credit": "",
+   "begin": null,
+   "ended": false,
+   "source-credit": ""
+  },
+  {
+   "end": null,
+   "direction": "backward",
+   "attribute-values": {},
+   "target-type": "artist",
+   "type": "recording",
+   "type-id": "a01ee869-80a8-45ef-9447-c59e91aa7926",
+   "attributes": [],
+   "artist": {
+    "disambiguation": "",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "country": "GB",
+    "type": "Person",
+    "sort-name": "Hammond, Barry",
+    "id": "5672122d-c5f3-4762-8498-1696bd46961e",
+    "name": "Barry Hammond"
+   },
+   "ended": false,
+   "source-credit": "",
+   "attribute-ids": {},
+   "target-credit": "",
+   "begin": null
+  },
+  {
+   "ended": false,
+   "source-credit": "",
+   "attribute-ids": {
+    "lead vocals": "8e2a3255-87c2-4809-a174-98cb3704f1a5"
+   },
+   "begin": null,
+   "target-credit": "",
+   "target-type": "artist",
+   "attribute-credits": {},
+   "type": "vocal",
+   "type-id": "0fdbe3c6-7700-4a31-ae54-b53f06ae1cfa",
+   "artist": {
+    "name": "Gerry Rafferty",
+    "id": "563201cb-721c-4cfb-acca-c1ba69e3d1fb",
+    "sort-name": "Rafferty, Gerry",
+    "country": "GB",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "type": "Person",
+    "disambiguation": ""
+   },
+   "attributes": [
+    "lead vocals"
+   ],
+   "attribute-values": {},
+   "end": null,
+   "direction": "backward"
+  },
+  {
+   "attributes": [],
+   "type-id": "7e41ef12-a124-4324-afdb-fdbae687a89c",
+   "type": "free streaming",
+   "target-type": "url",
+   "begin": null,
+   "target-credit": "",
+   "attribute-ids": {},
+   "url": {
+    "id": "5e060376-86b2-467d-88d9-41f3475be4a3",
+    "resource": "https://music.youtube.com/watch?v=lnc2ljZA3bk"
+   },
+   "source-credit": "",
+   "ended": false,
+   "direction": "forward",
+   "end": null,
+   "attribute-values": {}
+  },
+  {
+   "begin": null,
+   "target-credit": "",
+   "url": {
+    "id": "853ea55f-5e93-4ba2-9bb8-2f5aa371434f",
+    "resource": "https://open.spotify.com/track/2V8hFNwG7Uu3vxGMdpFkyB"
+   },
+   "attribute-ids": {},
+   "ended": false,
+   "source-credit": "",
+   "attributes": [],
+   "type": "free streaming",
+   "type-id": "7e41ef12-a124-4324-afdb-fdbae687a89c",
+   "target-type": "url",
+   "attribute-values": {},
+   "direction": "forward",
+   "end": null
+  },
+  {
+   "end": null,
+   "direction": "forward",
+   "attribute-values": {},
+   "target-type": "url",
+   "type": "free streaming",
+   "type-id": "7e41ef12-a124-4324-afdb-fdbae687a89c",
+   "attributes": [],
+   "ended": false,
+   "source-credit": "",
+   "url": {
+    "id": "6399fa05-7d6d-4b40-83a5-5cb3c4fd12a4",
+    "resource": "https://open.spotify.com/track/7IiHRhxpZ1sfNl6yZZB6gu"
+   },
+   "attribute-ids": {},
+   "begin": null,
+   "target-credit": ""
+  },
+  {
+   "attribute-values": {},
+   "direction": "forward",
+   "end": null,
+   "attribute-ids": {},
+   "url": {
+    "resource": "https://www.deezer.com/track/4160126812",
+    "id": "a8ea237c-5f27-49a3-98fb-6a19fc671bc3"
+   },
+   "begin": null,
+   "target-credit": "",
+   "ended": false,
+   "source-credit": "",
+   "type": "free streaming",
+   "type-id": "7e41ef12-a124-4324-afdb-fdbae687a89c",
+   "attributes": [],
+   "target-type": "url"
+  },
+  {
+   "begin": null,
+   "target-credit": "",
+   "url": {
+    "id": "c460c92f-9ab3-4954-b0a7-14e4070d145e",
+    "resource": "https://open.qobuz.com/track/436393316"
+   },
+   "attribute-ids": {},
+   "ended": false,
+   "source-credit": "",
+   "attributes": [],
+   "type-id": "92777657-504c-4acb-bd33-51a201bd57e1",
+   "type": "purchase for download",
+   "target-type": "url",
+   "attribute-values": {},
+   "direction": "forward",
+   "end": null
+  },
+  {
+   "begin": null,
+   "target-credit": "",
+   "attribute-ids": {},
+   "url": {
+    "resource": "https://music.apple.com/gb/song/1714781770",
+    "id": "47da8e61-1b78-4b42-ac98-24c494f692ce"
+   },
+   "source-credit": "",
+   "ended": false,
+   "attributes": [],
+   "type": "streaming",
+   "type-id": "b5f3058a-666c-406f-aafb-f9249fc7b122",
+   "target-type": "url",
+   "attribute-values": {},
+   "direction": "forward",
+   "end": null
+  },
+  {
+   "begin": null,
+   "target-credit": "",
+   "url": {
+    "id": "c460c92f-9ab3-4954-b0a7-14e4070d145e",
+    "resource": "https://open.qobuz.com/track/436393316"
+   },
+   "attribute-ids": {},
+   "source-credit": "",
+   "ended": false,
+   "attributes": [],
+   "type": "streaming",
+   "type-id": "b5f3058a-666c-406f-aafb-f9249fc7b122",
+   "target-type": "url",
+   "attribute-values": {},
+   "direction": "forward",
+   "end": null
+  },
+  {
+   "attribute-values": {},
+   "direction": "forward",
+   "end": null,
+   "attribute-ids": {},
+   "url": {
+    "resource": "https://tidal.com/track/543978770",
+    "id": "4691cc3c-fc8e-48a3-a2e1-0b2b316601c7"
+   },
+   "begin": null,
+   "target-credit": "",
+   "source-credit": "",
+   "ended": false,
+   "type": "streaming",
+   "type-id": "b5f3058a-666c-406f-aafb-f9249fc7b122",
+   "attributes": [],
+   "target-type": "url"
+  },
+  {
+   "target-type": "work",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "type": "performance",
+   "attributes": [],
+   "ended": false,
+   "source-credit": "",
+   "attribute-ids": {},
+   "target-credit": "",
+   "begin": null,
+   "work": {
+    "disambiguation": "",
+    "language": "eng",
+    "type": "Song",
+    "type-id": "f061270a-2fd6-32f1-a641-f0f8676d14e6",
+    "attributes": [],
+    "languages": [
+     "eng"
+    ],
+    "title": "Right Down the Line",
+    "iswcs": [
+     "T-011.633.765-5"
+    ],
+    "id": "5d0e65d7-e029-47b4-9461-428f36ed7a1e"
+   },
+   "end": null,
+   "direction": "forward",
+   "attribute-values": {}
+  }
+ ]
+}

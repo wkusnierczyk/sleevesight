@@ -85,6 +85,11 @@
     <string name="settings_theme_dark">Dark</string>
     <string name="settings_theme_button">Theme button</string>
     <string name="settings_theme_button_summary">Shows a button beside Settings on Home that switches between the light, dark and system themes.</string>
+    <!-- Appearance → Lyrics links (#728): Home's Lyrics button, its links to lyrics pages MusicBrainz links to, or a Genius search. -->
+    <string name="settings_lyrics_links">Lyrics links</string>
+    <string name="settings_lyrics_links_summary">Home shows a Lyrics button for the playing track, with links to its lyrics on the lyrics sites MusicBrainz links to, or, when it links to none, a search on Genius. A link opens in your browser; Sleevesight doesn’t show lyrics.</string>
+    <!-- Appearance (#728): the switch under Lyrics links, usable only while Lyrics links is on. -->
+    <string name="settings_lyrics_search">Search Genius when there is no link</string>
 
     <!-- About. -->
     <string name="settings_version">Version</string>
