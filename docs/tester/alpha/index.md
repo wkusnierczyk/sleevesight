@@ -99,6 +99,7 @@ In brief: requests go from your phone straight to each service, none through a s
 - **To the sources you switch on:** the title and artists of the playing track (Wikidata is asked only by catalogue numbers (MusicBrainz and Wikidata identifiers), never by a name; for genre labels, Last.fm gets the album name). When a title names a film or show, as in "Main Theme (from *Some Film*)", Exa also gets that name. By default, the next track in the player's queue also goes to MusicBrainz, ahead of its play.
 - **To the AI service:** the title, artists and album, and what the sources found, for the playing track only, with the key you saved.
 - **To the server a cover's web address names,** when a player gives the cover only as an address.
+- **To a lyrics site,** only if you tap a lyrics link: your browser opens it, and a search link sends Genius the title and artist.
 - **To your phone's text-to-speech engine,** only when an insight is read aloud: its text. Some engines, such as Google's network voices, send it to their server to be spoken.
 - **Each of your API keys** is sent only to the corresponding service, with each request, over an encrypted (HTTPS) connection.
 - **To us,** only a report you send from your mail app, which you see in full first, and never your keys. A tester report holds your settings, and the track changes only if you turn them on; a report of a problem with an insight holds neither. Until you send it, your mail app handles it as any message you write, and may keep a draft in your mail account.
