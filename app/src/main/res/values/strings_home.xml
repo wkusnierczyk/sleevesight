@@ -353,9 +353,16 @@
     <string name="home_sources_title">Sources</string>
     <!-- What a source found, under its name in the Sources table; "(kept)" and "Match rejected" only under Show grounding details. -->
     <string name="home_source_pending">Looking…</string>
-    <string name="home_source_found_song">Found the song</string>
-    <string name="home_source_found_artist">Found the artist only</string>
-    <string name="home_source_found_original">Found the original song</string>
+    <!-- What a source found (#768): "Found" and the list of what its own lines are about, in this order: the track, the original song, the artist; e.g. "Found the track, the original song and the artist". -->
+    <string name="home_source_found">Found %1$s</string>
+    <string name="home_source_finding_track">the track</string>
+    <string name="home_source_finding_original_song">the original song</string>
+    <string name="home_source_finding_artist">the artist</string>
+    <!-- The list's joins: the last item after the others ("the track and the artist"), and the others before it, one after another ("the track, the original song"). -->
+    <string name="home_source_finding_and">%1$s and %2$s</string>
+    <string name="home_source_finding_comma">%1$s, %2$s</string>
+    <!-- What web search found, whose lines are web pages. -->
+    <string name="home_source_found_pages">Found pages about the track</string>
     <string name="home_source_rejected">Match rejected</string>
     <string name="home_source_none">Nothing found</string>
     <string name="home_source_off">Off in Settings</string>
@@ -368,6 +375,11 @@
     <string name="home_source_filter">Show or hide the lines of %1$s</string>
     <string name="home_source_lines_shown">lines shown</string>
     <string name="home_source_lines_hidden">lines hidden</string>
+    <!-- The legend under the Sources table (#723): the letters' three looks, each a small blank sample and its word, then how to use them. A screen reader skips it. -->
+    <string name="home_sources_legend_shown">Shown</string>
+    <string name="home_sources_legend_hidden">Hidden</string>
+    <string name="home_sources_legend_none">No results</string>
+    <string name="home_sources_legend_tap">Tap a source to show or hide its results.</string>
     <string name="home_sources_offline">Offline. The sources that could not be reached are asked again when the phone is back online.</string>
     <!-- What needs the listener, under the chips: a source's name, then what it needs or what went wrong. -->
     <string name="home_source_note_key">%1$s needs your key, in %2$s.</string>

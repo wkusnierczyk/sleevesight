@@ -6,7 +6,6 @@ import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.PipelineHost
 import app.sleevesight.app.session.PlaybackStatus
 import app.sleevesight.core.evidence.Scope
-import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.ReplyFailures
 import kotlin.time.Duration
@@ -24,45 +23,6 @@ internal fun stateText(status: PlaybackStatus): String? =
         PlaybackStatus.ERROR -> stringResource(R.string.home_state_error)
         PlaybackStatus.NONE, PlaybackStatus.OTHER -> null
     }
-
-/**
- * What a source's row in *Sources*' table says it found (#662). The statuses that are diagnostics
- * show only with grounding [details]: a match rejected, outside them, is nothing found, and a
- * finding kept from an earlier lookup says so ("Found the song (kept)") only with them.
- */
-@Composable
-internal fun statusText(
-    status: ChipStatus,
-    details: Boolean,
-): String =
-    when (status) {
-        ChipStatus.Release -> stringResource(R.string.home_source_release)
-        ChipStatus.Pending -> stringResource(R.string.home_source_pending)
-        ChipStatus.Failed -> stringResource(R.string.home_source_failed)
-        ChipStatus.NeedsKey -> stringResource(R.string.home_source_needs_key)
-        ChipStatus.ModelAllowed -> stringResource(R.string.home_source_model_allowed)
-        is ChipStatus.Done -> {
-            val outcome = outcomeText(status.outcome, details)
-            if (status.cached && details) stringResource(R.string.home_source_cached, outcome) else outcome
-        }
-    }
-
-@Composable
-private fun outcomeText(
-    outcome: Outcome,
-    details: Boolean,
-): String =
-    stringResource(
-        when (outcome) {
-            Outcome.SongArticle -> R.string.home_source_found_song
-            Outcome.ArtistArticle -> R.string.home_source_found_artist
-            Outcome.OriginalSong -> R.string.home_source_found_original
-            is Outcome.Rejected -> if (details) R.string.home_source_rejected else R.string.home_source_none
-            Outcome.None -> R.string.home_source_none
-            Outcome.SourceOff -> R.string.home_source_off
-            Outcome.Unreachable -> R.string.home_source_unreachable
-        },
-    )
 
 /** What an evidence line is about. */
 @Composable
