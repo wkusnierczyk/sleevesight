@@ -203,6 +203,11 @@ internal fun appearanceRows(): List<IndexedRow> =
             stringResource(R.string.settings_keep_sources),
             stringResource(R.string.settings_keep_sources_summary),
         ),
+        indexRow(
+            stringResource(R.string.settings_lyrics_links),
+            stringResource(R.string.settings_lyrics_links_summary),
+        ),
+        indexRow(stringResource(R.string.settings_lyrics_search)),
         indexRow(stringResource(R.string.settings_intro), stringResource(R.string.settings_intro_summary)),
         indexRow(
             stringResource(R.string.settings_restore_dismissed),

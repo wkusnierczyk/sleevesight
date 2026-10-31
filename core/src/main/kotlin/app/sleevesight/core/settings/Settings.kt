@@ -108,6 +108,13 @@ import kotlin.time.Duration.Companion.seconds
  *   at its first screenful. The fold is kept through a rotation and when Android restores the
  *   screen it closed, not when the app is started afresh. Only under *Expandable boxes* ([layout]):
  *   under *Separate pages* each page opens fresh.
+ * @property lyricsLinks *Lyrics links* (#728): whether Home shows a *Lyrics* button for the playing
+ *   track, opening into links to its lyrics on the lyrics sites its MusicBrainz work links to, or,
+ *   when it links to none, a search on Genius ([lyricsSearch]). On by default: a link sends nothing
+ *   until it is tapped, and Sleevesight never shows or fetches lyrics.
+ * @property lyricsSearch *Search Genius when there is no link* (#728): whether the *Lyrics* panel
+ *   offers a Genius search for the title and artist when MusicBrainz links to no lyrics page (never for
+ *   an instrumental). On by default; it applies only while [lyricsLinks] is on.
  * @property showPhoneName *Share phone's name with Type on a computer* (#433): whether *Type on a
  *   computer* advertises the phone's Bluetooth name, in the scan response, while a session's dialog
  *   is open, so the computer's device chooser lists the phone by it. Off by default: anyone nearby
@@ -182,6 +189,8 @@ data class Settings(
     val historyLifetime: Duration? = DEFAULT_HISTORY_LIFETIME,
     val sessionGap: Duration = DEFAULT_SESSION_GAP,
     val keepSourcesUnfolded: Boolean = false,
+    val lyricsLinks: Boolean = true,
+    val lyricsSearch: Boolean = true,
     val showPhoneName: Boolean = false,
     val showDiagnostics: Boolean = false,
     val showGroundingDetails: Boolean = false,
