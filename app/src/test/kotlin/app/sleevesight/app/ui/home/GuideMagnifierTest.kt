@@ -85,6 +85,10 @@ class GuideMagnifierTest {
 
     // The screen's saved state, as an activity keeps it: [restore] saves it, drops the content and
     // composes it afresh from what was saved, as Android does for an activity recreated on a rotation.
+    // Composed afresh, the idle Home draws nothing, so neither the guide nor its magnified picture,
+    // until the players are listed again, off the main thread, which `waitForIdle` does not wait
+    // for (#745): the wait for the idle Home does, and the `waitForIdle` after it lets the dialog's
+    // own composition run.
     private var emitted by mutableStateOf(true)
     private var registry by mutableStateOf(SaveableStateRegistry(null) { true })
 
@@ -94,6 +98,7 @@ class GuideMagnifierTest {
         compose.waitForIdle()
         registry = SaveableStateRegistry(saved) { true }
         emitted = true
+        compose.awaitIdleHome()
         compose.waitForIdle()
     }
 
