@@ -101,7 +101,7 @@ To save several keys at once, *Load keys*, under *Secrets*, reads one QR code of
 
 **The players.** Sleevesight follows Spotify by default. Any other player that plays music (a track with a title and an artist) while Sleevesight has notification access appears under *Players* in the settings, by name and switched off; switch it on to follow it too. *Open the app ↗* under its name opens it. Nothing is kept or sent of a player you do not follow.
 
-**The track appears.** Play music in a player you follow and open Sleevesight. The home screen follows the track, top to bottom: the player and its state (a tap opens the player), the cover with the playback position, the title, artists, album and year, the genre labels, *Key insights*, and *Sources*. Lookups and writing run while the app is on screen.
+**The track appears.** Play music in a player you follow and open Sleevesight. The home screen follows the track, top to bottom: the player and its state (a tap opens the player), the cover with the playback position, the title, artists, album and year, the *Dates*, *Genres* and *Lyrics* buttons (*Genres* opens the genre labels), *Key insights*, and *Sources*. Lookups and writing run while the app is on screen.
 
 **An insight is written.** While the sources are asked, *Key insights* says *Gathering evidence…*; while the AI service writes, *Writing…*, with *Stop writing*. The insight is a few sentences on why the track is interesting. On the very first track, and after the app starts afresh, it waits for a tap on *Write insight*, or for a writing mode chosen (step 6).
 
