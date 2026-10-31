@@ -247,13 +247,13 @@ class RecordingResolver(
             val covered = withWork(recording, withRecording, link, work, chosen.credited)
             // The release a cover's original first came out on (#724), for the home screen's *Dates*:
             // one more lookup, of the original's recording with its releases, made only when there is
-            // an original. One that fails or finds nothing leaves the release out, and nothing else
-            // changes.
-            val release =
-                covered.original
-                    ?.let { (musicBrainz.recordingReleases(it.recordingMbid) as? Lookup.Found)?.value }
-                    ?.let(::firstRelease)
-            covered.copy(original = covered.original?.copy(release = release))
+            // an original. One that finds nothing leaves the release out, and nothing else changes; one
+            // that fails does too, and leaves the resolution provisional, so MusicBrainz's result is
+            // not kept and a later run asks again.
+            val original = covered.original
+            val lookup = original?.let { musicBrainz.recordingReleases(it.recordingMbid) }
+            val release = (lookup as? Lookup.Found)?.value?.let(::firstRelease)
+            covered.copy(original = original?.copy(release = release), provisional = lookup is Lookup.Failed)
         }
     }
 

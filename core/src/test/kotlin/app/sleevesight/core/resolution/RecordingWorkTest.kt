@@ -354,7 +354,7 @@ class RecordingWorkTest {
         }
 
     @Test
-    fun `a failed or empty lookup of the original's releases leaves the resolution as it was`() =
+    fun `a failed lookup of the original's releases leaves it provisional, an empty one as it was`() =
         runTest {
             val without = resolve(cover(), track("Song", "Cover Act"))
             val failed = resolve(cover(mapOf("first" to Lookup.Failed("Offline"))), track("Song", "Cover Act"))
@@ -377,8 +377,12 @@ class RecordingWorkTest {
                 assertEquals("Original Act", resolution.original?.artistCredit)
                 assertNull(resolution.original?.release)
             }
-            assertEquals(without, failed)
+            // Not found, or found with no dated release: complete, and kept.
+            assertFalse(without.provisional)
             assertEquals(without, undated)
+            // Failed: provisional, so MusicBrainz's result is not kept and a later run asks again.
+            assertTrue(failed.provisional)
+            assertEquals(without, failed.copy(provisional = false))
         }
 
     @Test

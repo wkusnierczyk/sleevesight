@@ -59,6 +59,11 @@ import app.sleevesight.core.normalizer.Edition
  * @property failure why MusicBrainz could not be asked, when [outcome] is [Outcome.Unreachable]:
  *   the failed lookup's kind as the client names it (`RateLimited`, `Offline`, `Server`,
  *   `status 400`, …), never a URL or a value; for the diagnostics only (#191). Null otherwise.
+ * @property provisional a lookup made for a part of it failed, where a later run may answer: the
+ *   release a cover's original first came out on ([OriginalRecording.release], #724), left out. What
+ *   it holds stands, but MusicBrainz's result from it is not kept in the retrieval cache
+ *   ([SourceResult.provisional]), so one failed request does not leave the release out for the
+ *   entry's whole life. False when that lookup answered, found or not.
  */
 data class Resolution(
     val outcome: Outcome = Outcome.None,
@@ -77,6 +82,7 @@ data class Resolution(
     val wikidataIds: List<String> = emptyList(),
     val recordingTags: List<String> = emptyList(),
     val failure: String? = null,
+    val provisional: Boolean = false,
 ) {
     /**
      * The earliest first-release date of the recording, as MusicBrainz gives it (`1974`,
@@ -241,7 +247,8 @@ data class ResolvedWork(
  * @property date when it was recorded, as MusicBrainz gives it.
  * @property release the release it first came out on, chosen as the track's own first release is
  *   ([Resolution.firstRelease]), from one more lookup of the recording made only for a cover (#724),
- *   for the home screen's *Dates*; null when that lookup failed or found no dated release.
+ *   for the home screen's *Dates*; null when that lookup failed (and the resolution is
+ *   [Resolution.provisional]) or found no dated release.
  */
 data class OriginalRecording(
     val recordingMbid: String,

@@ -118,8 +118,9 @@ val SourceAdapter.tag: String get() = id.tag
  * before them has neither, and *Dates* says what [firstReleased] alone gives.
  *
  * [provisional] marks a result that a failed request of the verification left unverified, where a
- * later lookup may verify it (Last.fm's search for other MusicBrainz artists of a name): it is
- * shown, but not kept in the retrieval cache.
+ * later lookup may verify it (Last.fm's search for other MusicBrainz artists of a name), or left
+ * short of a part a later lookup may bring (MusicBrainz's, without the release of a cover's
+ * original, `Resolution.provisional`, #724): it is shown, but not kept in the retrieval cache.
  *
  * [freshUntil] is set on a result built from artist-level parts kept from an earlier track
  * ([ArtistResults], #238): the earliest time one of them stops being fresh. The retrieval cache
