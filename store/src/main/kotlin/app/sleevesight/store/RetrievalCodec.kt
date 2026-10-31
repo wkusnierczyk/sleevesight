@@ -37,9 +37,10 @@ internal object RetrievalCodec {
      * artist, the artists whose MusicBrainz tags give labels are kept by name too, and MusicBrainz's
      * result holds the recording's tags (#439); a label no longer keeps a hue. The dates of the
      * releases' titles (#556) are an optional field like the first release's, made a miss the same way.
-     * The first release with its title and type, and a cover's original with its release (#724), are
-     * optional fields too, which an entry kept before them decodes without: no miss, the home screen's
-     * *Dates* says what the first release's date alone gives.
+     * The first release with its title and type, a cover's original with its release, and each
+     * release date's release-group type (#724), are optional fields too, which an entry kept before
+     * them decodes without: no miss, the home screen's *Dates* says what the first release's date
+     * alone gives, and cannot tell a same-year single from its album.
      */
     const val FORMAT: Int = 7
 
@@ -76,7 +77,7 @@ internal object RetrievalCodec {
                 labelArtists = result.labelArtists.map { LabelArtistJson(it.name, it.mbid) },
                 recordingTags = result.recordingTags?.let { RecordingTagsJson(it.mbid, it.tags) },
                 firstReleased = result.firstReleased,
-                releaseDates = result.releaseDates.map { ReleaseDateJson(it.title, it.date, it.group) },
+                releaseDates = result.releaseDates.map { ReleaseDateJson(it.title, it.date, it.group, it.type) },
                 firstRelease = result.firstRelease?.let(::releaseJson),
                 original =
                     result.original?.let {
@@ -118,7 +119,7 @@ internal object RetrievalCodec {
                 labelArtists = stored.labelArtists.map { ResolvedArtist(it.name, it.mbid) },
                 recordingTags = stored.recordingTags?.let { RecordingTags(it.mbid, it.tags) },
                 firstReleased = stored.firstReleased,
-                releaseDates = stored.releaseDates.map { ReleaseDate(it.title, it.date, it.group) },
+                releaseDates = stored.releaseDates.map { ReleaseDate(it.title, it.date, it.group, it.type) },
                 firstRelease = stored.firstRelease?.let(::release),
                 original =
                     stored.original?.let {
@@ -233,6 +234,8 @@ internal object RetrievalCodec {
         val title: String,
         val date: String? = null,
         val group: String,
+        // The release group's primary type (#724); an entry kept before it decodes without.
+        val type: String? = null,
     )
 
     @Serializable

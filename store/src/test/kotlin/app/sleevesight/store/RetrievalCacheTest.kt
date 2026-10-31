@@ -267,6 +267,24 @@ class RetrievalCacheTest {
     }
 
     @Test
+    fun `a release date's type round-trips, and one kept before it or of none decodes without`() {
+        val result = sample(Outcome.SongArticle)
+        val decoded = assertNotNull(RetrievalCodec.decode(RetrievalCodec.encode(result)))
+        assertEquals(listOf("Album", "Compilation", null), decoded.releaseDates.map { it.type })
+        // An entry kept before release dates had a type (#724): none, as before.
+        val old = """{"outcome":"song_article","latency":"PT0.4S","releaseDates":[{"title":"A","group":"rg-1"}]}"""
+        assertEquals(listOf(ReleaseDate("A", null, "rg-1")), assertNotNull(RetrievalCodec.decode(old)).releaseDates)
+        // And one of no known type is written without it.
+        val untyped =
+            result.copy(
+                releaseDates = result.releaseDates.map { it.copy(type = null) },
+                firstRelease = null,
+                original = null,
+            )
+        assertFalse("\"type\"" in RetrievalCodec.encode(untyped))
+    }
+
+    @Test
     fun `the first release and the original, with its release or without, round-trip`() {
         val result = sample(Outcome.SongArticle)
         assertEquals(result, RetrievalCodec.decode(RetrievalCodec.encode(result)))
@@ -453,8 +471,9 @@ class RetrievalCacheTest {
             firstReleased = "1974-01-01",
             releaseDates =
                 listOf(
-                    ReleaseDate("Sundown", "1974-01-01", "rg-1"),
-                    ReleaseDate("Gord's Gold", "1975", "rg-2"),
+                    ReleaseDate("Sundown", "1974-01-01", "rg-1", "Album"),
+                    ReleaseDate("Gord's Gold", "1975", "rg-2", "Compilation"),
+                    // Of no known type (#724).
                     ReleaseDate("Undated", null, "rg-3"),
                 ),
             firstRelease = FirstRelease("1974-01-01", "Sundown", "rg-1", "r-1", "Album"),

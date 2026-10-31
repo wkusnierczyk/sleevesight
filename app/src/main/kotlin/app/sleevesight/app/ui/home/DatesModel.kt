@@ -92,12 +92,12 @@ internal sealed interface DateSentence {
 /**
  * The sentences of the *Dates* panel for [track] beside [header] (#724), in this order, each when
  * its date is known: the album's release, of the album's name whose year the album line shows (the
- * earliest date of the named releases in that year; none when the year is the player's own and no
- * named release has it); the track's first release, "on this album" when it is the album being
- * played ([AlbumDates.has]: its release group is one of those whose year the album line shows, or,
- * when either side has no release group, its title has the album's key); and, for a cover, the
- * song's original recording, with the release it first came out on when known. Empty when no date
- * is known: the panel then says why ([NoDates]).
+ * earliest date of the named releases in that year, a single or EP of its title left out beside an
+ * album; none when the year is the player's own and no named release has it); the track's first
+ * release, "on this album" when it is the album being played ([AlbumDates.has]: its release group
+ * is one of those whose year the album line shows, or, when either side has no release group, its
+ * title has the album's key); and, for a cover, the song's original recording, with the release it
+ * first came out on when known. Empty when no date is known: the panel then says why ([NoDates]).
  *
  * From MusicBrainz's result, which keeps them in the retrieval cache, else the run's resolution,
  * as the album's year is ([headerYears]). A result kept before #724 has the first release's date
@@ -213,7 +213,8 @@ internal sealed interface DateWhen {
 }
 
 // The album the player names and what the album line shows of it: its year, and of the releases its
-// name names in that year, the earliest date and their release groups.
+// name names in that year (without a same-year single or EP of its title beside an album, #724), the
+// earliest date and their release groups.
 private class AlbumDates(
     val name: String?,
     val year: String?,
@@ -253,7 +254,17 @@ private class AlbumDates(
                             ALBUMS::albumKey,
                         ).filter { it.date?.let(ReleaseDate::yearIn) == year }
                 }
-            return AlbumDates(name, year, earliest(inYear.mapNotNull { it.date }), inYear.map { it.group }.toSet())
+            val album = albumsOf(inYear)
+            return AlbumDates(name, year, earliest(album.mapNotNull { it.date }), album.map { it.group }.toSet())
+        }
+
+        // Of [inYear], the album's releases: a single or EP of its title out the same year (the
+        // title track's single) is not the album, so it is left out when a release of another type,
+        // or of none known, is named too (#724). A release kept before its type was has none, so
+        // none is left out of an entry kept then.
+        private fun albumsOf(inYear: List<ReleaseDate>): List<ReleaseDate> {
+            val (short, other) = inYear.partition { ReleaseKind.of(it.type) != null }
+            return if (short.isNotEmpty() && other.isNotEmpty()) other else inYear
         }
 
         // The earliest of [dates], as precise as the dates that refine it allow: of `2014` and

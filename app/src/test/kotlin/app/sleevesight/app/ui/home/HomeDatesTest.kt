@@ -107,6 +107,47 @@ class HomeDatesTest {
     }
 
     @Test
+    fun aTitleTracksSingleOfTheAlbumsYearIsNotTheAlbum() {
+        // "Like a Prayer": the single on 3 March 1989, the album on 21 March, one title.
+        val prayer = sundown.copy(title = "Like a Prayer", artists = "Madonna", album = "Like a Prayer")
+        val dates =
+            listOf(
+                ReleaseDate("Like a Prayer", "1989-03-03", "g-single", "Single"),
+                ReleaseDate("Like a Prayer", "1989-03-21", "g-album", "Album"),
+            )
+        val single = FirstRelease("1989-03-03", "Like a Prayer", "g-single", "r-single", "Single")
+        val onSingle = DateSentence.First("1989-03-03", "Like a Prayer", ReleaseKind.SINGLE)
+        assertEquals(
+            listOf(DateSentence.Album("1989-03-21"), onSingle),
+            homeDates(resolved(prayer, single, dates), prayer),
+        )
+        val album = FirstRelease("1989-03-21", "Like a Prayer", "g-album", "r-album", "Album")
+        assertEquals(
+            listOf(DateSentence.Album("1989-03-21"), DateSentence.FirstHere),
+            homeDates(resolved(prayer, album, dates), prayer),
+        )
+        assertEquals(HeaderYears(album = "1989"), headerYears(resolved(prayer, single, dates), prayer))
+        // An EP of the title is left out the same way, and an album of no known type is the album.
+        val ep = listOf(dates[0].copy(type = "EP"), dates[1].copy(type = null))
+        assertEquals(DateSentence.Album("1989-03-21"), homeDates(resolved(prayer, null, ep), prayer).single())
+        // With only a single of the title named, it is the album played.
+        assertEquals(
+            listOf(DateSentence.Album("1989-03-03"), DateSentence.FirstHere),
+            homeDates(resolved(prayer, single, dates.take(1)), prayer),
+        )
+        // Kept before the types: as before, the earliest of the year, the single's group among the album's.
+        val untyped = dates.map { it.copy(type = null) }
+        assertEquals(
+            listOf(DateSentence.Album("1989-03-03"), DateSentence.FirstHere),
+            homeDates(resolved(prayer, single, untyped), prayer),
+        )
+        assertEquals(
+            listOf(DateSentence.Album("1989-03-03"), DateSentence.First("1989-03-03", null, null)),
+            homeDates(cached(prayer, kept("1989-03-03", untyped)), prayer),
+        )
+    }
+
+    @Test
     fun aSingleOrAnEpIsNamedAsSuch() {
         val single = FirstRelease("1973", "Hooked on a Feeling", "g-s", "r-s", "Single")
         val ep = single.copy(type = "EP")

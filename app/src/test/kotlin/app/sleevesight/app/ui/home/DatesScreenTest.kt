@@ -258,6 +258,31 @@ class DatesScreenTest {
         }
 
     @Test
+    fun aTitleTracksSingleOfTheAlbumsYearIsSaidAsTheSingleAndTheAlbumKeepsItsDate() {
+        // "Like a Prayer": the single on 3 March 1989, the album on 21 March, one title.
+        val prayer = sundown.copy(title = "Like a Prayer", artists = "Madonna", album = "Like a Prayer")
+        val playing =
+            track(prayer).copy(
+                resolution =
+                    Resolution(
+                        firstRelease = FirstRelease("1989-03-03", "Like a Prayer", "g-single", "r-single", "Single"),
+                        releaseDates =
+                            listOf(
+                                ReleaseDate("Like a Prayer", "1989-03-03", "g-single", "Single"),
+                                ReleaseDate("Like a Prayer", "1989-03-21", "g-album", "Album"),
+                            ),
+                    ),
+            )
+        show(state(playing)) {
+            tap(DATES_CHIP_TAG)
+            compose.onNodeWithText("This album was released on 21 March 1989.").assertExists()
+            val first = "This track was first released on the single Like a Prayer on 3 March 1989."
+            compose.onNodeWithText(first).assertExists()
+            assertEquals(0, compose.onAllNodesWithText("on this album", substring = true).fetchSemanticsNodes().size)
+        }
+    }
+
+    @Test
     fun aScreenReaderReadsTheButtonAsDatesAButtonCollapsedToShowDates() =
         show {
             assertEquals("Dates", text(R.string.home_dates))

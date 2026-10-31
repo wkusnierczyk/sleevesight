@@ -126,12 +126,15 @@ data class FirstRelease(
  * group's id, else the release's own), so a title several release groups share (two compilations
  * named "Love Songs") keeps each one's year. As kept, one per title and release group, with the
  * earliest date of that title in the group ([collapse]): a reissue under the same title in the same
- * group has the group's year.
+ * group has the group's year. With the release group's primary [type] (`Album`, `Single`, `EP`), when
+ * MusicBrainz gives it (null for a release kept before it was, #724), so the home screen tells a
+ * title-track single from its album of the same year.
  */
 data class ReleaseDate(
     val title: String,
     val date: String?,
     val group: String,
+    val type: String? = null,
 ) {
     companion object {
         /**

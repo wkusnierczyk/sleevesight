@@ -192,10 +192,12 @@ class RecordingResolver(
         pool: List<Candidate>,
     ): Resolution {
         val recording = chosen.recording
-        // Each release, by its own title, in its release group (else alone); undated ones too.
+        // Each release, by its own title, in its release group (else alone), with the group's type;
+        // undated ones too.
         val releases =
             pool.flatMap { it.recording.releases }.map { release ->
-                ReleaseDate(release.title, release.date, release.releaseGroup?.mbid ?: release.mbid)
+                val group = release.releaseGroup
+                ReleaseDate(release.title, release.date, group?.mbid ?: release.mbid, group?.primaryType)
             }
         val base =
             Resolution(
