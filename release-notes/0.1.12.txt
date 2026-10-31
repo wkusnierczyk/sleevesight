@@ -1,0 +1,8 @@
+What's new in 0.1.12:
+- Home: Dates, Genres and Lyrics buttons under the album open in place.
+- Lyrics: links to the song's lyrics pages.
+- Sources: a legend for the letters, and a list of what each found. Web search's letter is now S.
+- Read aloud sits beside the Key insights heading.
+- A genre with no "Why is this…?" says why.
+- Settings → Players: "Can’t see your player?" says what a player needs.
+- Appearance: one button restores dismissed messages.
