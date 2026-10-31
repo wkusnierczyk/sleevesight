@@ -490,6 +490,40 @@ class GenresButtonScreenTest {
         }
 
     @Test
+    fun aFailedLabelRequestGetsRetryWhichAsksItAgainAndItsLabelsShow() {
+        // MusicBrainz's artist tags failed; the pipeline offers *Retry* for MusicBrainz.
+        val key = RunKey.of(normalizer, sundown)
+        val failed = labelled(TrackGenres(), later = mapOf(LabelSource.MUSICBRAINZ to LaterLabels.FAILED))
+        val offered =
+            state(failed) {
+                PipelineView(it, aiReady = true, askAgainKey = key, askable = setOf(SourceId.MUSICBRAINZ))
+            }
+        show(offered) {
+            opensTo("MusicBrainz could not be reached.")
+            compose
+                .onNodeWithTag(RETRY_TAG)
+                .performScrollTo()
+                .assertTextEquals(text(R.string.home_retry))
+                .assert(
+                    SemanticsMatcher("click labelled \"ask MusicBrainz again\"") {
+                        it.config.getOrNull(SemanticsActions.OnClick)?.label == "ask MusicBrainz again"
+                    },
+                )
+            tap(RETRY_TAG)
+            assertEquals(listOf(Triple(key, SourceId.MUSICBRAINZ, sundown)), retried)
+            // The run asks MusicBrainz's requests again: looking, then its labels.
+            current.value = state(labelled(TrackGenres(), later = mapOf(LabelSource.MUSICBRAINZ to LaterLabels.ASKING)))
+            compose.waitForIdle()
+            compose.onNodeWithText("Looking on MusicBrainz…").assertExists()
+            assertEquals(0, count(RETRY_TAG))
+            current.value = state(labelled(later = mapOf(LabelSource.MUSICBRAINZ to LaterLabels.DONE)))
+            compose.waitForIdle()
+            assertEquals(1, count(FOLK))
+            compose.onNodeWithText("MusicBrainz could not be reached.").assertDoesNotExist()
+        }
+    }
+
+    @Test
     fun withNoGenreFoundThePanelSaysNoneFound() =
         show(state(labelled(TrackGenres()))) {
             assertEquals("None found.", text(R.string.home_genres_none))

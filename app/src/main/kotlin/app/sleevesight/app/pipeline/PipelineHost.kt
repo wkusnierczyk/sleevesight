@@ -705,6 +705,10 @@ class PipelineHost(
             queue.trySend(CoordinatorEvent.SourcesGathered(id, gathered))
         }
 
+        override fun labelsFailed(sources: Set<SourceId>) {
+            queue.trySend(CoordinatorEvent.LabelsFailed(id, sources))
+        }
+
         override fun assembled(evidence: EvidenceSet) {
             queue.trySend(CoordinatorEvent.EvidenceAssembled(id, evidence))
         }

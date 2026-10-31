@@ -25,6 +25,7 @@ import kotlin.coroutines.cancellation.CancellationException
  * MusicBrainz's artist labels, from the tags of the artists its result names ([musicBrainz]), and
  * Last.fm's track and album labels ([lastFm], with the user's key).
  */
+@Suppress("LongParameterList") // The label sources, the run's settings and key, where it reports, and what it keeps.
 internal class TrackLabels(
     private val musicBrainz: MusicBrainzLabels?,
     private val lastFm: LastFmLabels?,
@@ -32,9 +33,16 @@ internal class TrackLabels(
     private val key: String,
     private val sink: RunSink,
     private val fold: (String) -> String,
+    kept: LaterKept? = null,
+    private val asking: Set<SourceId>? = null,
 ) {
-    /** The labels asked for after the evidence, by source, as they land. */
-    private val later = MutableStateFlow<Map<LabelSource, List<GenreLabel>>>(emptyMap())
+    // Whether the run asks [source]'s requests after the evidence: all, but for a *Retry* (#772),
+    // only those of the sources it asks again ([asking]), the others' kept as they were.
+    private fun asks(source: LabelSource): Boolean = asking == null || source.source in asking
+
+    /** The labels asked for after the evidence, by source, as they land; a *Retry* keeps the others'. */
+    private val later =
+        MutableStateFlow(kept?.found.orEmpty().filterKeys { !asks(it) })
 
     /** The genres for [current]'s results, with those asked for after the evidence that are in. */
     fun of(current: TrackState): TrackGenres {
@@ -69,6 +77,15 @@ internal class TrackLabels(
         }
     }
 
+    /**
+     * What a *Retry* keeps of the run before's requests after the evidence (#772), for the sources it
+     * does not ask again: the labels they gave ([found]) and how they stood ([states]).
+     */
+    class LaterKept(
+        val found: Map<LabelSource, List<GenreLabel>>,
+        val states: Map<LabelSource, LaterLabels>,
+    )
+
     /** A request after the evidence: [source]'s, which [ask] makes. */
     class Later(
         val source: LabelSource,
@@ -77,7 +94,20 @@ internal class TrackLabels(
 
     // The requests after the evidence not yet answered, and the sources one of whose failed (#772).
     private val pending = MutableStateFlow<Map<LabelSource, Int>>(emptyMap())
-    private val failed = MutableStateFlow<Set<LabelSource>>(emptySet())
+    private val failed =
+        MutableStateFlow(
+            kept
+                ?.states
+                .orEmpty()
+                .filter { (source, state) -> !asks(source) && state == LaterLabels.FAILED }
+                .keys,
+        )
+
+    /** The labels the requests after the evidence gave, kept ones included ([TrackState.laterFound]). */
+    val found: Map<LabelSource, List<GenreLabel>> get() = later.value
+
+    /** The sources whose requests after the evidence failed, kept ones included ([RunControl.labelsFailed]). */
+    val failedSources: Set<SourceId> get() = failed.value.map { it.source }.toSet()
 
     /**
      * The labels that come after the evidence, for [current], counted as asked for from now (#772,
@@ -94,7 +124,8 @@ internal class TrackLabels(
         val fromMusicBrainz =
             musicBrainz?.takeIf {
                 artists.isNotEmpty() &&
-                    settings.givesLabels(LabelSource.MUSICBRAINZ)
+                    settings.givesLabels(LabelSource.MUSICBRAINZ) &&
+                    asks(LabelSource.MUSICBRAINZ)
             }
         if (fromMusicBrainz != null) asks += Later(LabelSource.MUSICBRAINZ) { fromMusicBrainz.lookUp(artists) }
         val track = current.normalized
@@ -105,7 +136,14 @@ internal class TrackLabels(
                     it.scope == Scope.ARTIST &&
                         fold(it.subject) == fold(track.primary)
                 }
-        val fromLastFm = lastFm?.takeIf { shown && settings.givesLabels(LabelSource.LASTFM) }
+        val fromLastFm =
+            lastFm?.takeIf {
+                shown &&
+                    settings.givesLabels(
+                        LabelSource.LASTFM,
+                    ) &&
+                    asks(LabelSource.LASTFM)
+            }
         if (fromLastFm != null && track.primary.isNotBlank()) {
             asks += Later(LabelSource.LASTFM) { fromLastFm.trackLookup(track.primary, track.title) }
             current.nowPlaying.album
@@ -168,7 +206,7 @@ internal class TrackLabels(
         if (found.labels.isNotEmpty()) later.update { it + (source to it[source].orEmpty() + found.labels) }
         if (found.failed) failed.update { it + source }
         pending.update { it + (source to ((it[source] ?: 1) - 1).coerceAtLeast(0)) }
-        sink.update { it.copy(genres = of(it), laterLabels = states()) }
+        sink.update { it.copy(genres = of(it), laterLabels = states(), laterFound = later.value) }
     }
 
     private fun TrackState.done(source: SourceId) = (sources[source] as? SourceState.Done)?.result

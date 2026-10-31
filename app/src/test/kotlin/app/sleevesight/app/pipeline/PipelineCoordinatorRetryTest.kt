@@ -101,6 +101,33 @@ class PipelineCoordinatorRetryTest {
     }
 
     @Test
+    fun `a source whose label requests failed is offered Retry, which asks those requests alone again`() {
+        // Online, all reached; MusicBrainz's artist tags then fail (#772).
+        val world =
+            started().apply {
+                acted()
+                play("A")
+                settle()
+            }
+        assertNull(world.coordinator.state.askAgainKey)
+        val run = checkNotNull(world.coordinator.state.current).id
+        world.send(CoordinatorEvent.LabelsFailed(run, setOf(SourceId.MUSICBRAINZ)))
+        world.advance(0)
+        assertEquals(world.key("A"), world.coordinator.state.askAgainKey)
+        assertEquals(setOf(SourceId.MUSICBRAINZ), world.coordinator.state.askable)
+
+        val calls = world.calls.toMap()
+        world.retry(SourceId.MUSICBRAINZ)
+        world.settle()
+        assertEquals(listOf("A"), world.askedAgain)
+        val carried = world.carried.single()
+        // Its lookup kept, its label requests asked again; no AI call.
+        assertEquals(emptySet<SourceId>(), carried.asked)
+        assertEquals(setOf(SourceId.MUSICBRAINZ), carried.labelsAsked)
+        assertEquals(calls, world.calls)
+    }
+
+    @Test
     fun `a source shown but not kept is offered Retry, and only a tap asks it again`() {
         // Online, MusicBrainz's lyrics links not known (#728): nothing unreachable, so back online
         // asks nothing, but *Retry* is offered for MusicBrainz.

@@ -3,6 +3,7 @@ package app.sleevesight.core.pipeline
 import app.sleevesight.core.ai.ReasoningEffort
 import app.sleevesight.core.ai.Usage
 import app.sleevesight.core.evidence.EvidenceSet
+import app.sleevesight.core.genres.GenreLabel
 import app.sleevesight.core.genres.LabelSource
 import app.sleevesight.core.genres.TrackGenres
 import app.sleevesight.core.model.NormalizedTrack
@@ -31,6 +32,8 @@ import kotlin.time.Instant
  *   answer, which the insight does not wait for (`design/architecture.md`, *Evidence*).
  * @property laterLabels how those later requests stand, by label source (#772): asking, done, or
  *   failed; a source not in it has none to make.
+ * @property laterFound the labels those later requests gave, by label source (#772), which a
+ *   *Retry* of another source's keeps.
  * @property genresAssembled whether [genres] and [laterLabels] are in (#772): set with them, in one
  *   update, as the evidence is assembled. Until then, no genre may still mean genres to come, even
  *   once every source has landed ([gathered]), while the last one's result is being kept.
@@ -44,6 +47,7 @@ data class TrackState(
     val genres: TrackGenres = TrackGenres(),
     val insight: InsightState = InsightState.Idle(canWrite = false),
     val laterLabels: Map<LabelSource, LaterLabels> = emptyMap(),
+    val laterFound: Map<LabelSource, List<GenreLabel>> = emptyMap(),
     val genresAssembled: Boolean = false,
 ) {
     /** Whether every source has landed. */
@@ -91,12 +95,15 @@ sealed interface SourceState {
  * it, or it was not made). A later run of the same track started with it ([Pipeline.run]'s
  * `again`, #192) asks again only the sources [asked] here, and keeps the others as they landed:
  * every source [unreachable], or with [only] (a *Retry*'s, #724, [asking]), those of [retryable] it
- * names, the others kept as they were.
+ * names, the others kept as they were. [labelsFailed] are the sources whose label requests after
+ * the evidence failed (#772, [TrackState.laterLabels]), reported once those end: a *Retry* of one
+ * asks those requests again alone ([labelsAsked]), its lookup kept.
  */
 data class Gathered(
     val sources: Map<SourceId, SourceState>,
     val resolution: Resolution?,
     val only: Set<SourceId>? = null,
+    val labelsFailed: Set<SourceId> = emptySet(),
 ) {
     /** The sources that ended `Unreachable`: a network or source error. */
     val unreachable: Set<SourceId>
@@ -108,11 +115,25 @@ data class Gathered(
      * MusicBrainz's without the lyrics links (#728), say, which a later answer may complete.
      */
     val retryable: Set<SourceId>
+        get() = lookups + labelsFailed
+
+    // The sources whose lookup a *Retry* makes again: those [unreachable], and those provisional.
+    private val lookups: Set<SourceId>
         get() = unreachable + sources.filterValues { (it as? SourceState.Done)?.result?.provisional == true }.keys
 
-    /** The sources a run started with it asks again: those [unreachable], or those of [retryable] that [only] names. */
+    /**
+     * The sources a run started with it asks again: those [unreachable], or those of [retryable] that
+     * [only] names whose lookup is to be made again (not one whose label requests alone failed).
+     */
     val asked: Set<SourceId>
-        get() = only?.let { retryable intersect it } ?: unreachable
+        get() = only?.let { lookups intersect it } ?: unreachable
+
+    /**
+     * The sources whose label requests after the evidence a *Retry* asks again alone (#772): of
+     * [labelsFailed], those [only] names whose lookup is not [asked] again; their results are kept.
+     */
+    val labelsAsked: Set<SourceId>
+        get() = only?.let { labelsFailed intersect it }.orEmpty() - asked
 
     /**
      * As a run asking again [sources] alone starts with it (a *Retry*, #724): the other sources

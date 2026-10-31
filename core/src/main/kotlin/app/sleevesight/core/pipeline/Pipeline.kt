@@ -231,10 +231,16 @@ class Pipeline(
             shown.state.value
                 ?.takeIf { (again != null || lookAgain != null) && it.normalized.lookupKey == track.lookupKey }
                 ?.genres ?: TrackGenres()
+        // A *Retry* keeps what the run before's label requests gave for the sources it does not ask
+        // again (#772).
+        val laterKept =
+            shown.state.value
+                ?.takeIf { again?.only != null && it.normalized.lookupKey == track.lookupKey }
+                ?.let { TrackLabels.LaterKept(it.laterFound, it.laterLabels) }
         return TrackRun(
             parts = parts,
             time = time,
-            input = RunInput(current, nowPlaying, track, again, lookAgain, genresBefore),
+            input = RunInput(current, nowPlaying, track, again, lookAgain, LabelsBefore(genresBefore, laterKept)),
             control = control,
             onEvent = { if (shown.forgets == since) eventFlow.tryEmit(it) },
             publish = { state -> shown.publish(state, since) { runs.value == token } },
