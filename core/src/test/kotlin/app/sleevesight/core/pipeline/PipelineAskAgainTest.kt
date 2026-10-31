@@ -90,7 +90,7 @@ class PipelineAskAgainTest {
             assertEquals(before.sources[SourceId.MUSICBRAINZ], state.sources[SourceId.MUSICBRAINZ])
             assertEquals(Outcome.SongArticle, (state.sources[SourceId.WEB] as SourceState.Done).result.outcome)
             assertEquals(emptySet(), again.gathered.single().unreachable)
-            assertEquals(listOf("MB1", "G1", "P1"), state.evidence?.ids)
+            assertEquals(listOf("MB1", "S1", "P1"), state.evidence?.ids)
             assertEquals(listOf(SourceId.WEB), events.filterIsInstance<PipelineEvent.AskedAgain>().single().sources)
         }
 
@@ -138,6 +138,59 @@ class PipelineAskAgainTest {
         }
 
     // A web answer that holds a line only when the resolution was made; unreachable while [down].
+    @Test
+    fun `a Retry of MusicBrainz asks it alone again, and the other sources unreachable stay so`() =
+        runTest {
+            val resolver = FakeResolver(resolution = Resolution(Outcome.Unreachable))
+            // MusicBrainz's adapter gives the resolution's outcome, as `MusicBrainzSource` does.
+            val musicBrainz =
+                FakeAdapter(SourceId.MUSICBRAINZ) { _, resolved ->
+                    SourceResult(resolved?.outcome ?: Outcome.None, emptyList(), Duration.ZERO)
+                }
+            val web = web()
+            val pipeline = pipeline(listOf(musicBrainz, web), resolver)
+            val events = recording(pipeline)
+
+            val first = granting()
+            pipeline.run(sundown, first)
+            val before = first.gathered.single()
+            assertEquals(setOf(SourceId.MUSICBRAINZ, SourceId.WEB), before.unreachable)
+
+            resolver.resolution = Resolution(Outcome.SongArticle, recordingMbid = "rec-1")
+            down = false
+            val retried = before.asking(setOf(SourceId.MUSICBRAINZ))
+            assertEquals(setOf(SourceId.MUSICBRAINZ), retried.asked)
+            // Until its lookups are granted, MusicBrainz shows as being asked, the web as it was.
+            val held = Granted(write = false)
+            val running = backgroundScope.launch { pipeline.run(sundown, held, retried) }
+            runCurrent()
+            assertEquals(
+                SourceState.Pending,
+                pipeline.state.value
+                    ?.sources
+                    ?.get(SourceId.MUSICBRAINZ),
+            )
+            assertEquals(
+                before.sources[SourceId.WEB],
+                pipeline.state.value
+                    ?.sources
+                    ?.get(SourceId.WEB),
+            )
+            running.cancel()
+            val state = pipeline.run(sundown, granting(), retried)
+            runCurrent()
+
+            assertEquals(2, resolver.calls)
+            assertEquals(listOf(key, key), musicBrainz.asked)
+            assertEquals(listOf(key), web.asked)
+            assertEquals(Outcome.SongArticle, (state.sources[SourceId.MUSICBRAINZ] as SourceState.Done).result.outcome)
+            assertEquals(before.sources[SourceId.WEB], state.sources[SourceId.WEB])
+            assertEquals(
+                listOf(listOf(SourceId.MUSICBRAINZ)),
+                events.filterIsInstance<PipelineEvent.AskedAgain>().map { it.sources }.distinct(),
+            )
+        }
+
     private fun answer(resolved: Resolution?): SourceResult =
         when {
             down -> SourceResult(Outcome.Unreachable, emptyList(), Duration.ZERO)

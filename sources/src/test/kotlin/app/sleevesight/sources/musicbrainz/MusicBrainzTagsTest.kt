@@ -9,6 +9,7 @@ import app.sleevesight.core.platform.JvmResourceReader
 import app.sleevesight.core.resolution.Lookup
 import app.sleevesight.core.resolution.MbRecordingDetail
 import app.sleevesight.core.sources.FirstRelease
+import app.sleevesight.core.sources.OriginalRecording
 import app.sleevesight.core.sources.ReleaseDate
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.ResolvedArtist
@@ -114,17 +115,28 @@ class MusicBrainzTagsTest {
     fun `the adapter keeps the release dates, for a track later served from the cache`() =
         runTest {
             val dates = listOf(ReleaseDate("Gord's Gold", "1975", "rg-2"), ReleaseDate("Sundown", "1974-01", "rg-1"))
-            val released =
-                RESOLVED.copy(
-                    firstRelease = FirstRelease("1974-01", "Sundown", null, "rel", "Album"),
-                    releaseDates = dates,
+            val first = FirstRelease("1974-01", "Sundown", null, "rel", "Album")
+            val original =
+                OriginalRecording(
+                    "mb-o",
+                    "Sundown",
+                    emptyList(),
+                    "Someone First",
+                    "1970",
+                    FirstRelease("1970", "Sundown", "rg-o", "rel-o", "Single"),
                 )
+            val released = RESOLVED.copy(firstRelease = first, releaseDates = dates, original = original)
             val kept = MusicBrainzSource().lookup(TRACK, CompletableDeferred(released))
             assertEquals("1974-01", kept.firstReleased)
             assertEquals(dates, kept.releaseDates)
+            // And what the home screen's *Dates* says of them (#724).
+            assertEquals(first, kept.firstRelease)
+            assertEquals(original, kept.original)
             val none = MusicBrainzSource().lookup(TRACK, CompletableDeferred(RESOLVED))
             assertEquals(null, none.firstReleased)
             assertEquals(emptyList<ReleaseDate>(), none.releaseDates)
+            assertEquals(null, none.firstRelease)
+            assertEquals(null, none.original)
         }
 
     @Test

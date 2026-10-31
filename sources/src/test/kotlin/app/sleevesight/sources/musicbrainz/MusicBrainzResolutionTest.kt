@@ -72,6 +72,11 @@ class MusicBrainzResolutionTest {
             assertTrue(resolution.cover)
             assertEquals("1935-10-31", resolution.original?.date)
             assertEquals("Sonny Boy Williamson with Big Joe Williams", resolution.original?.artistCredit)
+            // The release the original first came out on, from one more lookup (#724): a single in 1935.
+            val release = resolution.original?.release
+            assertEquals("Baby Please Don't Go", release?.title)
+            assertEquals("Single", release?.type)
+            assertEquals("1935", release?.date)
         }
 
     @Test

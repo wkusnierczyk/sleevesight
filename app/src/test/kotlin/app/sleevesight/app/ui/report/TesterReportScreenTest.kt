@@ -13,7 +13,7 @@ import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
-import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
@@ -25,6 +25,7 @@ import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.diagnostics.Diagnostics
 import app.sleevesight.app.diagnostics.DiagnosticsLog
 import app.sleevesight.app.pipeline.PipelineView
@@ -240,7 +241,7 @@ class TesterReportScreenTest {
             assertEquals(0, historyReads)
 
             part(TesterPart.HISTORY).performClick()
-            compose.waitUntil(5_000) { preview().contains("\"Song B\"") }
+            compose.waitUntil(WAIT_MS) { preview().contains("\"Song B\"") }
             assertTrue(preview().contains("## ${TesterPart.HISTORY.label}\n"))
             assertEquals(1, historyReads)
 
@@ -299,7 +300,7 @@ class TesterReportScreenTest {
             send().assertIsNotEnabled()
 
             read.complete(Unit)
-            compose.waitUntil(5_000) { preview().contains("\"Song B\" was played.") }
+            compose.waitUntil(WAIT_MS) { preview().contains("\"Song B\" was played.") }
             send().assertIsEnabled()
             copy().assertIsEnabled()
         }

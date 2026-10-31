@@ -4,7 +4,7 @@ import android.app.NotificationManager
 import android.content.ComponentName
 import android.content.Intent
 import android.provider.Settings
-import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
@@ -53,7 +53,7 @@ class ThemeButtonWiringTest {
         ).setNotificationListenerAccessGranted(listener, true)
         FirstRunAcknowledgement(app).acknowledge()
         ActivityScenario.launch<MainActivity>(Intent(app, MainActivity::class.java)).use {
-            compose.waitUntil(5_000) { count(R.string.home_settings) == 1 }
+            compose.waitUntil(WAIT_MS) { count(R.string.home_settings) == 1 }
             block()
         }
     }
@@ -62,7 +62,7 @@ class ThemeButtonWiringTest {
     fun eachTapMovesTheStoredThemeOnAndTheAppFollows() =
         home {
             // *System* by default, so the button offers *Light*.
-            compose.waitUntil(5_000) { count(R.string.home_theme_to_light) == 1 }
+            compose.waitUntil(WAIT_MS) { count(R.string.home_theme_to_light) == 1 }
             assertEquals(ThemeChoice.SYSTEM, stored().theme)
             for ((label, theme, next) in listOf(
                 Triple(R.string.home_theme_to_light, ThemeChoice.LIGHT, R.string.home_theme_to_dark),
@@ -71,18 +71,18 @@ class ThemeButtonWiringTest {
             )) {
                 compose.onNodeWithContentDescription(text(label)).performClick()
                 idleUntil("$theme stored and applied") { stored().theme == theme && app.graph.theme.value == theme }
-                compose.waitUntil(5_000) { count(next) == 1 }
+                compose.waitUntil(WAIT_MS) { count(next) == 1 }
             }
         }
 
     @Test
     fun theSwitchHidesAndShowsTheButton() =
         home {
-            compose.waitUntil(5_000) { count(R.string.home_theme_to_light) == 1 }
+            compose.waitUntil(WAIT_MS) { count(R.string.home_theme_to_light) == 1 }
             runBlocking { app.graph.settings.update { it.copy(themeButton = false) } }
-            compose.waitUntil(5_000) { count(R.string.home_theme_to_light) == 0 }
+            compose.waitUntil(WAIT_MS) { count(R.string.home_theme_to_light) == 0 }
             assertEquals(1, count(R.string.home_settings))
             runBlocking { app.graph.settings.update { it.copy(themeButton = true) } }
-            compose.waitUntil(5_000) { count(R.string.home_theme_to_light) == 1 }
+            compose.waitUntil(WAIT_MS) { count(R.string.home_theme_to_light) == 1 }
         }
 }

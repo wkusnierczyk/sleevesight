@@ -7,7 +7,7 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isToggleable
-import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
@@ -131,7 +131,7 @@ class ServiceBadgesTest {
             assertBadge(R.string.settings_source_musicbrainz, "MB")
             assertBadge(R.string.settings_source_wikipedia, "W")
             assertBadge(R.string.settings_source_lastfm, "L")
-            assertBadge(R.string.settings_engine_exa, "G")
+            assertBadge(R.string.settings_engine_exa, "S")
             assertBadge(R.string.settings_source_model, "AI")
         }
 

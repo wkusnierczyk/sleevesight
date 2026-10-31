@@ -4,6 +4,8 @@ import app.sleevesight.core.sources.WorkLyrics
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 /**
  * What the resolution keeps of the lyrics (#728): the looked-up work's lyrics pages, the languages
@@ -94,24 +96,30 @@ class RecordingLyricsTest {
                     mapOf("w" to work("w", listOf("https://genius.com/A-song-lyrics"))),
                     workFailure = "HTTP 503",
                 )
-            assertEquals(
-                WorkLyrics(links = null, languages = listOf("eng"), instrumental = false),
-                resolve(musicBrainz, track("Song", "Act")).lyrics,
-            )
+            val resolved = resolve(musicBrainz, track("Song", "Act"))
+            assertEquals(WorkLyrics(links = null, languages = listOf("eng"), instrumental = false), resolved.lyrics)
+            // Not kept, so a later run asks again.
+            assertTrue(resolved.provisional)
         }
 
     @Test
     fun `a recording lookup that fails knows nothing of the lyrics`() =
         runTest {
             val musicBrainz = FakeMusicBrainz(Lookup.Found(search), recordingFailure = "HTTP 503")
-            assertEquals(WorkLyrics.NONE, resolve(musicBrainz, track("Song", "Act")).lyrics)
+            val resolved = resolve(musicBrainz, track("Song", "Act"))
+            assertTrue(resolved.resolved)
+            assertEquals(WorkLyrics.NONE, resolved.lyrics)
+            // Not kept, so a later run asks again.
+            assertTrue(resolved.provisional)
         }
 
     @Test
     fun `no work has no lyrics page, and no recording accepted knows nothing of the lyrics`() =
         runTest {
             val noWork = FakeMusicBrainz(Lookup.Found(search), mapOf("ours" to detail()), emptyMap())
-            assertEquals(WorkLyrics(), resolve(noWork, track("Song", "Act")).lyrics)
+            val resolved = resolve(noWork, track("Song", "Act"))
+            assertEquals(WorkLyrics(), resolved.lyrics)
+            assertFalse(resolved.provisional)
             val none = FakeMusicBrainz(Lookup.Found(emptyList()), emptyMap(), emptyMap())
             assertEquals(WorkLyrics.NONE, resolve(none, track("Song", "Act")).lyrics)
         }

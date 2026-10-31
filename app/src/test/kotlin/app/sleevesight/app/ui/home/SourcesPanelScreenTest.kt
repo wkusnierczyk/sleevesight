@@ -35,7 +35,7 @@ import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.assertTouchHeightIsEqualTo
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.isFocused
-import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -211,8 +211,13 @@ class SourcesPanelScreenTest {
 
     private fun idOf(tag: String) = compose.onNodeWithTag(tag).fetchSemanticsNode().id
 
-    // The chip as drawn, its rounded shape and no more of its 48 dp target.
-    private fun picture(tag: String): Bitmap = compose.onNodeWithTag(tag).captureToImage().asAndroidBitmap()
+    // The chip as drawn, its rounded shape and no more of its 48 dp target; scrolled to, so it is on screen.
+    private fun picture(tag: String): Bitmap =
+        compose
+            .onNodeWithTag(tag)
+            .performScrollTo()
+            .captureToImage()
+            .asAndroidBitmap()
 
     private fun px(dp: Float) = (dp * app.resources.displayMetrics.density).toInt()
 

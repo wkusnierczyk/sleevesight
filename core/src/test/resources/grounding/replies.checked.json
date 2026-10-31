@@ -15,15 +15,15 @@
      "s": "It is sung to the traditional Irish jig tune Larry O'Gaff, and its melody matches the Flanagan Brothers' 1927 recording Mick from Tralee [W2][G3].",
      "cites": [
       "W2",
-      "G3"
+      "S3"
      ],
      "status": "ok"
     },
     {
      "s": "The song is about squid jigging, where bait squid are caught with a baitless metal jigger of tiny hooks, on inshore grounds usually from July into August [G6][G8].",
      "cites": [
-      "G6",
-      "G8"
+      "S6",
+      "S8"
      ],
      "status": "ok"
     },
@@ -33,7 +33,7 @@
       "L1",
       "L2",
       "W6",
-      "G5"
+      "S5"
      ],
      "status": "ok"
     }
@@ -57,14 +57,14 @@
      "s": "He said the lyrics came from wondering what his girlfriend was doing out with friends while he wrote at home, and he tied the song to his roughly three-year relationship with Cathy Smith [W5][G4].",
      "cites": [
       "W5",
-      "G4"
+      "S4"
      ],
      "status": "ok"
     },
     {
      "s": "Despite its mellow sound, it is described as dark, expressing jealousy and paranoia [G3].",
      "cites": [
-      "G3"
+      "S3"
      ],
      "status": "ok"
     }
@@ -131,7 +131,7 @@
      "s": "It topped the charts in the US and Canada. [W3][G1]",
      "cites": [
       "W3",
-      "G1"
+      "S1"
      ],
      "status": "ok"
     },
@@ -139,7 +139,7 @@
      "s": "Listeners tag him as folk. [L3] [G2]",
      "cites": [
       "L3",
-      "G2"
+      "S2"
      ],
      "status": "ok"
     }
@@ -443,7 +443,7 @@
     {
      "s": "\"Sundown\" is still played. [G1]",
      "cites": [
-      "G1"
+      "S1"
      ],
      "status": "ok"
     },
@@ -451,7 +451,7 @@
      "s": "(It went gold.) [W4] “A classic,” one site says. [G2]",
      "cites": [
       "W4",
-      "G2"
+      "S2"
      ],
      "status": "ok"
     }

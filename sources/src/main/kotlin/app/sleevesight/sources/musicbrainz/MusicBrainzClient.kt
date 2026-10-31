@@ -101,6 +101,11 @@ class MusicBrainzClient(
         }
     }
 
+    override suspend fun recordingReleases(mbid: String): Lookup<MbRecording> {
+        val request = NetRequest("$BASE/recording/$mbid", query = mapOf("inc" to RELEASES_INC, "fmt" to "json"))
+        return net.lookup(request) { response -> recording(parseObject(response.body)) }
+    }
+
     override suspend fun work(mbid: String): Lookup<MbWork> {
         val request = NetRequest("$BASE/work/$mbid", query = mapOf("inc" to WORK_INC, "fmt" to "json"))
         return net.lookup(request) { response ->
@@ -184,6 +189,13 @@ class MusicBrainzClient(
         const val RECORDING_INC_WITHOUT_TAGS: String = "artist-credits+work-rels+artist-rels+url-rels"
 
         const val WORK_INC: String = "artist-rels+url-rels+recording-rels+artist-credits"
+
+        /**
+         * A cover's original's releases, each with its release group (#724). MusicBrainz lists at
+         * most 25 releases on a lookup, earliest first as it orders them; the first-release date
+         * comes with the recording whatever it lists.
+         */
+        const val RELEASES_INC: String = "releases+release-groups"
 
         private val WIKIDATA = Regex("^https?://www\\.wikidata\\.org/wiki/(Q[0-9]+)$")
 

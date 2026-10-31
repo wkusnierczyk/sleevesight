@@ -9,7 +9,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.isSelected
-import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ActivityScenario
@@ -18,6 +18,7 @@ import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.TestStores
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.now
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.SettingsStore
@@ -181,14 +182,14 @@ class ButtonGroupSettingsTest {
         assertEquals("one group", 1, parents.size)
         for ((label, value) in spec.choices.reversed() + spec.choices) {
             button(label).performScrollTo().performClick()
-            compose.waitUntil(5_000) { spec.stored(settings.now()) == value && selectedIs(label) }
+            compose.waitUntil(WAIT_MS) { spec.stored(settings.now()) == value && selectedIs(label) }
             assertEquals("${text(label)}: no dialog", 0, compose.onAllNodes(isDialog()).fetchSemanticsNodes().size)
             for ((other, _) in spec.choices.filter { it.first != label }) assertFalse(text(other), selectedIs(other))
         }
         // Stored elsewhere, as Home's theme button will store *Theme* (#636): the row follows.
         val (label, value) = spec.choices.first()
         runBlocking { settings.update { spec.store(it, value) } }
-        compose.waitUntil(5_000) { selectedIs(label) }
+        compose.waitUntil(WAIT_MS) { selectedIs(label) }
     }
 
     @Test
@@ -203,7 +204,7 @@ class ButtonGroupSettingsTest {
     fun reportButtonAndLinkStyleAreChosenByTheirButtonsInDeveloperMode() {
         runBlocking { settings.update { it.copy(developerMode = true) } }
         show(SettingsSection.DEVELOPER) {
-            compose.waitUntil(5_000) {
+            compose.waitUntil(WAIT_MS) {
                 compose.onAllNodes(hasText(text(R.string.settings_link_style))).fetchSemanticsNodes().isNotEmpty()
             }
             assertChosenByButtons(reportButton)

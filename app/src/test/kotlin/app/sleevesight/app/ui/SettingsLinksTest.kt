@@ -13,12 +13,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.isFocused
-import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ActivityScenario
 import app.sleevesight.app.MainActivity
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.ui.settings.FoldedSection
 import app.sleevesight.app.ui.settings.LocalSettingsNavigator
@@ -71,7 +72,7 @@ class SettingsLinksTest {
             compose.waitForIdle()
             compose.runOnUiThread { navigator!!.go(SettingsTarget(SettingsSection.ABOUT)) }
             val close = hasTestTag(SettingsSection.ABOUT.panelTag + ":close") and isFocused()
-            compose.waitUntil(conditionDescription = "the About panel's Close focused", timeoutMillis = 5_000) {
+            compose.waitUntil(conditionDescription = "the About panel's Close focused", timeoutMillis = WAIT_MS) {
                 compose.onAllNodes(close).fetchSemanticsNodes().isNotEmpty()
             }
             compose.onNodeWithTag(SettingsSection.ABOUT.panelTag + ":heading").assertIsDisplayed()

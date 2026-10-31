@@ -13,8 +13,7 @@ import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.PipelineEvent
 import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.synthesis.InsightPrompt
-import app.sleevesight.core.synthesis.LEGACY_MODEL_NOTE
-import app.sleevesight.core.synthesis.citesLegacyModelId
+import app.sleevesight.core.synthesis.legacyCitationNotes
 import app.sleevesight.store.CacheStats
 import kotlin.time.Duration
 
@@ -517,9 +516,10 @@ private class TrackSection(
                 }
             appendLine("> $text")
         }
-        if (citesLegacyModelId(insight.grounded.text)) {
+        // A kept reply's text as written, with a note on its old ids (`[M]`, #668; `[G1]`, #769).
+        for (note in legacyCitationNotes(insight.grounded.text)) {
             appendLine()
-            appendLine("_${LEGACY_MODEL_NOTE}_")
+            appendLine("_${note}_")
         }
         insight.grounded.withdrawn?.let { withdrawn ->
             appendLine()

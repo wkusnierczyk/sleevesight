@@ -112,14 +112,20 @@ val SourceAdapter.tag: String get() = id.tag
  * [releaseDates] are the releases of the track's recordings, by title and release group, with their
  * dates (`Resolution.releaseDates`, #556), kept the same way, for the year after the album the player
  * names: the cache's key does not hold the album, so the album is found among them when shown.
+ * [firstRelease] is the release the recording first came out on, with its title and type
+ * (`Resolution.firstRelease`), and [original] a cover's original, with the release it first came out
+ * on (`Resolution.original`), kept the same way for the home screen's *Dates* (#724). A result kept
+ * before them has neither, and *Dates* says what [firstReleased] alone gives.
  * [lyrics] is what MusicBrainz's resolution says of the track's lyrics (`Resolution.lyrics`, #728),
  * for Home's lyrics links, kept the same way; null on another source's result, or MusicBrainz's
  * without an accepted recording. A result whose lyrics links are not known (a lookup failed) is
  * [provisional].
  *
  * [provisional] marks a result that a failed request of the verification left unverified, where a
- * later lookup may verify it (Last.fm's search for other MusicBrainz artists of a name): it is
- * shown, but not kept in the retrieval cache.
+ * later lookup may verify it (Last.fm's search for other MusicBrainz artists of a name), or left
+ * short of a part a later lookup may bring (MusicBrainz's, without the release of a cover's
+ * original, #724, or without the lyrics links, #728: `Resolution.provisional`): it is shown, but not
+ * kept in the retrieval cache.
  *
  * [freshUntil] is set on a result built from artist-level parts kept from an earlier track
  * ([ArtistResults], #238): the earliest time one of them stops being fresh. The retrieval cache
@@ -145,6 +151,8 @@ data class SourceResult(
     val recordingTags: RecordingTags? = null,
     val firstReleased: String? = null,
     val releaseDates: List<ReleaseDate> = emptyList(),
+    val firstRelease: FirstRelease? = null,
+    val original: OriginalRecording? = null,
     val lyrics: WorkLyrics? = null,
     val freshUntil: Instant? = null,
     val trackOnly: Boolean = false,

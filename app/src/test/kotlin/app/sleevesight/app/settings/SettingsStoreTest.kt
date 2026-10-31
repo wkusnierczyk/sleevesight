@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import app.sleevesight.app.FlakyDataStore
 import app.sleevesight.app.TestStores
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.core.ai.ReasoningEffort
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.settings.Dismissable
@@ -29,7 +30,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.Duration.Companion.seconds
 
 class SettingsStoreTest {
     @get:Rule
@@ -237,15 +237,15 @@ class SettingsStoreTest {
                     launch { store.settings.collect { shown += it } },
                 )
             // A read is counted when it starts, before its value arrives: wait for both values.
-            withTimeout(5.seconds) { while (followed.isEmpty() || shown.isEmpty()) delay(10) }
+            withTimeout(WAIT_MS) { while (followed.isEmpty() || shown.isEmpty()) delay(10) }
             assertEquals(4, flaky.reads.get())
             assertEquals(listOf(emptySet<String>()), followed)
             assertEquals(listOf(mapOf(Settings.SPOTIFY to false)), shown.map { it.followedPlayers })
 
             // The flows go on after the retry: a later switch reaches both.
             store.update { it.copy(followedPlayers = it.followedPlayers + (OTHER_PLAYER to true)) }
-            withTimeout(5.seconds) { while (followed.last() != setOf(OTHER_PLAYER)) delay(10) }
-            withTimeout(5.seconds) { while (shown.last().followedPlayers[OTHER_PLAYER] != true) delay(10) }
+            withTimeout(WAIT_MS) { while (followed.last() != setOf(OTHER_PLAYER)) delay(10) }
+            withTimeout(WAIT_MS) { while (shown.last().followedPlayers[OTHER_PLAYER] != true) delay(10) }
             assertEquals(listOf(emptySet(), setOf(OTHER_PLAYER)), followed)
             jobs.forEach { it.cancel() }
         }
@@ -260,7 +260,7 @@ class SettingsStoreTest {
             // A failed first read emits nothing: the session layer waits, as for any first read.
             flaky.failures.set(1)
             val first = launch { store.followedPlayers.collect { followed += it } }
-            withTimeout(5.seconds) { while (followed.isEmpty()) delay(10) }
+            withTimeout(WAIT_MS) { while (followed.isEmpty()) delay(10) }
             assertEquals(listOf(setOf(Settings.SPOTIFY)), followed)
             first.cancel()
 
@@ -271,7 +271,7 @@ class SettingsStoreTest {
             flaky.failures.set(1)
             flaky.failuresAfterAValue.set(1)
             val second = launch { store.followedPlayers.collect { followed += it } }
-            withTimeout(5.seconds) { while (followed.size < 3) delay(10) }
+            withTimeout(WAIT_MS) { while (followed.size < 3) delay(10) }
             assertEquals(listOf(setOf(Settings.SPOTIFY), emptySet(), setOf(Settings.SPOTIFY)), followed)
             second.cancel()
         }

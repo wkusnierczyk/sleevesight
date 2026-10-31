@@ -86,11 +86,11 @@ To load any combination of AI, Last.fm and Exa keys in one scan:
 Play a song in a music player you follow (Spotify is followed by default; enable any other under *Settings → Players*) and return to Sleevesight's home screen:
 
 - **Check the sources (*Last.fm* and *Exa*):** tap the **Sources** chip at the bottom of the home screen to unfold the sources panel.
-  - The table at the top lists every enabled source: `MB` (*MusicBrainz*), `W` (*Wikipedia*), `L` (*Last.fm*) and `G` (*Web search*, for Exa).
-  - Under each source's name, its status shows *Looking…* and then what it found (such as *Found the song*, *Found the artist only*, or *Nothing found*). When a source contributed lines to the evidence below, its letter chip on the left is filled (`L`, `G`).
+  - The table at the top lists every enabled source: `MB` (*MusicBrainz*), `W` (*Wikipedia*), `L` (*Last.fm*) and `S` (*Web search*, for Exa).
+  - Under each source's name, its status shows *Looking…* and then what it found (such as *Found the song*, *Found the artist only*, or *Nothing found*). When a source contributed lines to the evidence below, its letter chip on the left is filled (`L`, `S`).
   - If a key was rejected or a source could not be reached, a note right under the table says so (for example, *Last.fm failed.* or *Web search could not be reached.*).
 - **Check the AI service:** look at **Key insights** on the home screen.
   - Once the sources finish (*Gathering evidence…*), tap **Write insight** (after your first tap, automatic modes write on their own on the next track changes).
-  - The card shows *Writing…* and streams the insight with citation chips (`MB1`, `W1`, `L1`, `G1`) at the end of each factual sentence.
+  - The card shows *Writing…* and streams the insight with citation chips (`MB1`, `W1`, `L1`, `S1`) at the end of each factual sentence.
   - If there is a problem with your AI key, account credit, or model availability, *Key insights* says *Writing failed:* followed by the exact reason (for example, *the AI service did not accept the key*, *the AI service account needs credit, or has reached its spending limit*, or *The currently selected … model … is not available*).
 - **Detailed timings and status (optional):** in *Settings → Developer* (shown in test builds, or enabled by tapping *Settings → About → Version* seven times), turn on **Diagnostics** and tap **Open diagnostics** to see each source lookup and AI request with its exact outcome and duration.

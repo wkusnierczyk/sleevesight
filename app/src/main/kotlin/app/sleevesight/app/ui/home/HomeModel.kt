@@ -11,10 +11,7 @@ import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.pipeline.TrackState
-import app.sleevesight.core.platform.JvmAccentFolder
-import app.sleevesight.core.resolution.NameMatcher
 import app.sleevesight.core.settings.WriteAutomatically
-import app.sleevesight.core.sources.ReleaseDate
 import app.sleevesight.core.synthesis.GroundingCheck
 import app.sleevesight.core.synthesis.citationId
 
@@ -31,40 +28,6 @@ internal fun trackFor(
     view: PipelineView,
     playing: NowPlaying,
 ): TrackState? = view.track?.takeIf { TrackIdentity.playsOn(it.nowPlaying, playing) }
-
-/**
- * The header's years (#556): [album], the year of the release being played, shown after the album;
- * and [firstReleased], the year the recording first came out, said as such ("First released 1990")
- * only when it is earlier than [album] or [album] is not known, so a soundtrack, compilation or
- * reissue never shows the song's first year as its own, and one year shows when they are the same.
- */
-internal data class HeaderYears(
-    val album: String? = null,
-    val firstReleased: String? = null,
-)
-
-/**
- * The years [header]'s album and recording show ([HeaderYears]). The first release is as
- * MusicBrainz's resolution gives it (`plan.md`, *Release-date semantics*). The album's is chosen from
- * the releases of the track's recordings that the player's album names and the player's own year
- * ([NowPlaying.year]), by [ReleaseDate.albumYear]'s rules (design, *Key data*); with no album
- * reported, none. Both from MusicBrainz's result, which keeps them in the retrieval cache, so a
- * track served from the cache (which makes no resolution) shows the same years; else from the
- * run's resolution.
- */
-internal fun headerYears(
-    track: TrackState?,
-    header: NowPlaying,
-): HeaderYears {
-    val kept = (track?.sources?.get(SourceId.MUSICBRAINZ) as? SourceState.Done)?.result
-    val first = (kept?.firstReleased ?: track?.resolution?.firstReleaseDate)?.let(ReleaseDate::yearIn)
-    val dates = kept?.releaseDates?.ifEmpty { null } ?: track?.resolution?.releaseDates.orEmpty()
-    val album =
-        header.album?.takeIf(String::isNotBlank)?.let { named ->
-            ReleaseDate.albumYear(named, dates, header.year?.toString(), NAMES::key)
-        }
-    return HeaderYears(album = album, firstReleased = first?.takeIf { album == null || it < album })
-}
 
 /**
  * What the insight card needs besides the insight: the [track] it is of, and from the pipeline's
@@ -145,8 +108,8 @@ internal sealed interface Segment {
 
 /**
  * [sentence] split into its text and its citations (`[W1]`, `[AI]`), as the grounding check reads
- * them, a legacy `[M]` as `AI` ([citationId], #668). The citations become chips the
- * app builds; the rest is plain text.
+ * them, a legacy `[M]` as `AI` (#668) and a legacy `[G1]` as `S1` (#769) ([citationId]). The
+ * citations become chips the app builds; the rest is plain text.
  */
 internal fun segments(sentence: String): List<Segment> {
     val out = mutableListOf<Segment>()
@@ -293,9 +256,6 @@ private fun landed(track: TrackState): List<Pair<SourceId, SourceState.Done>> {
         .mapNotNull { (source, state) -> (state as? SourceState.Done)?.let { source to it } }
         .sortedBy { (source, _) -> order.indexOf(source) }
 }
-
-// Titles compared as sources write them differently, as resolution compares them.
-private val NAMES = NameMatcher(JvmAccentFolder)
 
 // The grounding check's citation (`GroundingCheck`): one or two capitals and an optional number.
 private val CITATION = Regex("\\[([A-Z]{1,2}[0-9]*)\\]")

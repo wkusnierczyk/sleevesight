@@ -63,6 +63,8 @@ class ClearHistoryWiringTest {
 
         override suspend fun recording(mbid: String): Lookup<MbRecordingDetail> = Lookup.NotFound
 
+        override suspend fun recordingReleases(mbid: String): Lookup<MbRecording> = Lookup.NotFound
+
         override suspend fun work(mbid: String): Lookup<MbWork> = Lookup.NotFound
 
         override suspend fun searchArtists(name: String): Lookup<MbArtistSearch> = Lookup.NotFound

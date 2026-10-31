@@ -8,6 +8,8 @@ import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.sources.FirstRelease
+import app.sleevesight.core.sources.OriginalRecording
 import app.sleevesight.core.sources.Rejection
 import app.sleevesight.core.sources.ReleaseDate
 import app.sleevesight.core.sources.Resolution
@@ -267,6 +269,49 @@ class RetrievalCacheTest {
     }
 
     @Test
+    fun `an entry kept before the first release's title and the original decodes without them`() {
+        // As MusicBrainz's result was kept before #724: the first release's date and the releases' dates only.
+        val old =
+            """{"outcome":"song_article","latency":"PT0.4S","firstReleased":"1974-01",""" +
+                """"releaseDates":[{"title":"Sundown","date":"1974-01","group":"rg-1"}]}"""
+        val decoded = assertNotNull(RetrievalCodec.decode(old))
+        assertEquals("1974-01", decoded.firstReleased)
+        assertEquals(listOf(ReleaseDate("Sundown", "1974-01", "rg-1")), decoded.releaseDates)
+        assertNull(decoded.firstRelease)
+        assertNull(decoded.original)
+        // And one with neither is written without them.
+        val plain = sample(Outcome.SongArticle).copy(firstRelease = null, original = null)
+        assertFalse("\"firstRelease\"" in RetrievalCodec.encode(plain))
+        assertFalse("\"original\"" in RetrievalCodec.encode(plain))
+    }
+
+    @Test
+    fun `a release date's type round-trips, and one kept before it or of none decodes without`() {
+        val result = sample(Outcome.SongArticle)
+        val decoded = assertNotNull(RetrievalCodec.decode(RetrievalCodec.encode(result)))
+        assertEquals(listOf("Album", "Compilation", null), decoded.releaseDates.map { it.type })
+        // An entry kept before release dates had a type (#724): none, as before.
+        val old = """{"outcome":"song_article","latency":"PT0.4S","releaseDates":[{"title":"A","group":"rg-1"}]}"""
+        assertEquals(listOf(ReleaseDate("A", null, "rg-1")), assertNotNull(RetrievalCodec.decode(old)).releaseDates)
+        // And one of no known type is written without it.
+        val untyped =
+            result.copy(
+                releaseDates = result.releaseDates.map { it.copy(type = null) },
+                firstRelease = null,
+                original = null,
+            )
+        assertFalse("\"type\"" in RetrievalCodec.encode(untyped))
+    }
+
+    @Test
+    fun `the first release and the original, with its release or without, round-trip`() {
+        val result = sample(Outcome.SongArticle)
+        assertEquals(result, RetrievalCodec.decode(RetrievalCodec.encode(result)))
+        val unreleased = result.copy(original = result.original?.copy(release = null))
+        assertEquals(unreleased, RetrievalCodec.decode(RetrievalCodec.encode(unreleased)))
+    }
+
+    @Test
     fun `a payload it cannot read is a miss`() {
         val payload = RetrievalCodec.encode(sample(Outcome.SongArticle))
 
@@ -360,6 +405,20 @@ class RetrievalCacheTest {
         fixture.assertTotals()
     }
 
+    // Web search's rows from before its tag became `S` (#769) are under `G`, which no source has: a
+    // read of web search misses them (its lifetime is a day anyway), and a purge deletes them.
+    @Test
+    fun `web search's entries kept under its old tag G are misses and are purged`() {
+        val payload = RetrievalCodec.encode(sample(Outcome.SongArticle, SourceId.WEB)).replace("\"S\"", "\"G\"")
+        assertTrue("\"G\"" in payload)
+        fixture.caches.queries.retrievalInsert("G", key, " G ", RetrievalCodec.FORMAT.toLong(), 1, payload, 0, 0, 10)
+
+        assertNull(retrieval.get(SourceId.WEB, key, 1))
+        assertEquals(1, fixture.caches.purgeExpired())
+        assertEquals(0, entries())
+        fixture.assertTotals()
+    }
+
     @Test
     fun `artists and works of symbols only get keys of their own`() {
         assertNotEquals(
@@ -445,10 +504,13 @@ class RetrievalCacheTest {
             firstReleased = "1974-01-01",
             releaseDates =
                 listOf(
-                    ReleaseDate("Sundown", "1974-01-01", "rg-1"),
-                    ReleaseDate("Gord's Gold", "1975", "rg-2"),
+                    ReleaseDate("Sundown", "1974-01-01", "rg-1", "Album"),
+                    ReleaseDate("Gord's Gold", "1975", "rg-2", "Compilation"),
+                    // Of no known type (#724).
                     ReleaseDate("Undated", null, "rg-3"),
                 ),
+            firstRelease = FirstRelease("1974-01-01", "Sundown", "rg-1", "r-1", "Album"),
+            original = original,
             lyrics =
                 WorkLyrics(
                     listOf("https://genius.com/Gordon-lightfoot-sundown-lyrics"),
@@ -457,6 +519,17 @@ class RetrievalCacheTest {
                 ),
         )
     }
+
+    // A cover's original, with the release it first came out on (#724).
+    private val original =
+        OriginalRecording(
+            recordingMbid = "mb-original",
+            title = "Sundown",
+            artists = listOf(ResolvedArtist("Someone First", "mb-first")),
+            artistCredit = "Someone First",
+            date = "1970-05",
+            release = FirstRelease("1970-06", "Sundown / B-side", null, "r-0", "Single"),
+        )
 
     private class FakeAdapter(
         override val id: SourceId,

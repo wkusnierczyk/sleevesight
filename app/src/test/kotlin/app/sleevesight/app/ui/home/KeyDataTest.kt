@@ -2,7 +2,7 @@ package app.sleevesight.app.ui.home
 
 import androidx.activity.compose.setContent
 import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.text.font.FontStyle
@@ -21,8 +21,8 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
- * The track's header (#438): the title, the artists, and the album with its year after it, and the
- * recording's first release under it when it is earlier (#556).
+ * The track's header (#438): the title, the artists, and the album with its year after it (#556);
+ * with no album reported, a line that says so, the first release being in the *Dates* panel (#724).
  */
 @RunWith(RobolectricTestRunner::class)
 class KeyDataTest {
@@ -64,39 +64,22 @@ class KeyDataTest {
         }
 
     @Test
-    fun anEarlierFirstReleaseIsSaidUnderTheAlbumAndItsYear() =
-        show(sundown.copy(album = "Project Hail Mary"), HeaderYears(album = "2026", firstReleased = "1990")) {
-            assertEquals(listOf("Project Hail Mary"), italics("Project Hail Mary, 2026"))
-            // Its own line, in words, so a screen reader says what the year is.
-            compose.onNodeWithText(app.getString(R.string.home_first_released, "1990")).assertExists()
-            assertEquals("First released 1990", app.getString(R.string.home_first_released, "1990"))
-        }
-
-    @Test
-    fun withTheAlbumsYearUnknownTheFirstReleaseIsSaidUnderTheAlbum() =
-        show(sundown.copy(album = "Gord's Gold"), HeaderYears(firstReleased = "1974")) {
-            assertEquals(listOf("Gord's Gold"), italics("Gord's Gold"))
-            compose.onNodeWithText("Gord's Gold, 1974").assertDoesNotExist()
-            compose.onNodeWithText(app.getString(R.string.home_first_released, "1974")).assertExists()
-        }
-
-    @Test
     fun withNoYearTheAlbumStandsAlone() =
         show(sundown.copy(album = "Gord's Gold"), HeaderYears()) {
             assertEquals(listOf("Gord's Gold"), italics("Gord's Gold"))
-            assertEquals(0, compose.onAllNodesWithText("First released", substring = true).fetchSemanticsNodes().size)
+            compose.onNodeWithText("Gord's Gold, 1974").assertDoesNotExist()
+            // No first release under it: that is in the *Dates* panel (#724).
+            assertEquals(0, compose.onAllNodesWithText("released", substring = true).fetchSemanticsNodes().size)
         }
 
     @Test
-    fun withNoAlbumTheFirstReleaseStandsAlone() =
-        show(sundown.copy(album = null), HeaderYears(firstReleased = "1974")) {
-            assertEquals(emptyList<String>(), italics(app.getString(R.string.home_first_released, "1974")))
-            compose.onNodeWithText(app.getString(R.string.home_album_none)).assertDoesNotExist()
-        }
-
-    @Test
-    fun withNeitherTheLineSaysTheAlbumWasNotReported() =
+    fun withNoAlbumTheLineSaysTheAlbumWasNotReported() {
         show(sundown.copy(album = " "), HeaderYears()) {
             compose.onNodeWithText(app.getString(R.string.home_album_none)).assertExists()
         }
+        show(sundown.copy(album = null), HeaderYears()) {
+            compose.onNodeWithText(app.getString(R.string.home_album_none)).assertExists()
+            assertEquals("Album not reported", app.getString(R.string.home_album_none))
+        }
+    }
 }

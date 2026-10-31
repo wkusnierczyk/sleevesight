@@ -41,6 +41,11 @@ class RememberedMusicBrainzTest {
             return inner.recording(mbid)
         }
 
+        override suspend fun recordingReleases(mbid: String): Lookup<MbRecording> {
+            asked += "releases $mbid"
+            return inner.recordingReleases(mbid)
+        }
+
         override suspend fun work(mbid: String): Lookup<MbWork> {
             asked += "work $mbid"
             return inner.work(mbid)

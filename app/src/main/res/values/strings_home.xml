@@ -92,9 +92,73 @@
     <string name="home_album_none">Album not reported</string>
     <!-- The album, then the year of the release being played: "Rubber Soul, 1965". -->
     <string name="home_album_year">%1$s, %2$s</string>
-    <!-- Under the album, the year the recording first came out, when it is earlier than the album's
-         or the album's is not known (#556): "First released 1990". -->
-    <string name="home_first_released">First released %1$s</string>
+
+    <!-- The dates under the album (#724): a button that opens in place into a panel of that title,
+         with Close (page_close) at its top right. -->
+    <string name="home_dates">Dates</string>
+    <!-- The Dates button's action, as a screen reader names it ("Double-tap to show dates"). -->
+    <string name="home_dates_show">show dates</string>
+    <!-- In the Dates panel, a date as precisely as it is known, in the sentences below ({when}): a day
+         (the day, the month's name, the year: "on 29 July 2014"), a month ("in July 2014"), a year
+         ("in 2014"). -->
+    <string name="home_dates_on_day">on %1$s %2$s %3$s</string>
+    <string name="home_dates_in_month">in %1$s %2$s</string>
+    <string name="home_dates_in_year">in %1$s</string>
+    <!-- The months' names, January first, for the dates above. -->
+    <string-array name="home_dates_months">
+        <item>January</item>
+        <item>February</item>
+        <item>March</item>
+        <item>April</item>
+        <item>May</item>
+        <item>June</item>
+        <item>July</item>
+        <item>August</item>
+        <item>September</item>
+        <item>October</item>
+        <item>November</item>
+        <item>December</item>
+    </string-array>
+    <!-- The album's release, of the album's name whose year the album line shows: "This album was
+         released on 29 July 2014." The date as above. -->
+    <string name="home_dates_album">This album was released %1$s.</string>
+    <!-- Where the track first came out: the release's title (in italics), then the date as above:
+         "This track was first released on Grace on 23 August 1994."; a single's or an EP's named as
+         such. -->
+    <string name="home_dates_first">This track was first released on %1$s %2$s.</string>
+    <string name="home_dates_first_single">This track was first released on the single %1$s %2$s.</string>
+    <string name="home_dates_first_ep">This track was first released on the EP %1$s %2$s.</string>
+    <!-- The track first came out on the album being played. -->
+    <string name="home_dates_first_here">This track was first released on this album.</string>
+    <!-- The track's first release with its title not known: the date alone, as above. -->
+    <string name="home_dates_first_when">This track was first released %1$s.</string>
+    <!-- For a cover, who recorded the song first and when (the date as above), and the release it
+         first came out on (in italics): "The song was originally recorded in June 1984 by Leonard
+         Cohen, and released on Various Positions."; a single's or an EP's named as such. -->
+    <string name="home_dates_original">The song was originally recorded %1$s by %2$s, and released on %3$s.</string>
+    <string name="home_dates_original_single">The song was originally recorded %1$s by %2$s, and released on the single %3$s.</string>
+    <string name="home_dates_original_ep">The song was originally recorded %1$s by %2$s, and released on the EP %3$s.</string>
+    <!-- The same, the release it first came out on not known. -->
+    <string name="home_dates_original_unreleased">The song was originally recorded %1$s by %2$s.</string>
+    <!-- A panel on Home that has nothing from MusicBrainz to show says why (#724: Dates; Lyrics, #728, as
+         well), one of these at a time. MusicBrainz is still being asked, or asked again after Retry. -->
+    <string name="home_musicbrainz_looking">Looking on MusicBrainz…</string>
+    <!-- MusicBrainz is switched off in Settings: this line, then home_musicbrainz_off_see on its own line. -->
+    <string name="home_musicbrainz_off">MusicBrainz is disabled.</string>
+    <!-- %1$s is home_settings_sources_link, a link that opens Settings at Sources. -->
+    <string name="home_musicbrainz_off_see">See %1$s.</string>
+    <!-- A link that opens Settings at Sources; its spaces never break, so it stays on one line. -->
+    <string name="home_settings_sources_link">Settings\u00A0→\u00A0Sources</string>
+    <!-- MusicBrainz could not be reached; Retry (home_retry) beside it asks it again. -->
+    <string name="home_musicbrainz_unreachable">MusicBrainz could not be reached.</string>
+    <!-- MusicBrainz accepted no recording of the track. -->
+    <string name="home_musicbrainz_not_found">MusicBrainz didn’t find this song.</string>
+    <!-- Dates: MusicBrainz found the song, and gives no date of it. -->
+    <string name="home_dates_none">MusicBrainz gives no dates for this song.</string>
+    <!-- Beside a source that could not be reached, on the same line: asks that source alone again (#724). -->
+    <string name="home_retry">Retry</string>
+    <!-- Retry's action, as a screen reader names it ("Double-tap to ask MusicBrainz again"); %1$s is the source. -->
+    <string name="home_retry_action">ask %1$s again</string>
 
     <!-- Genre labels (#558): the chips, the genre's panel with its table, and where the table's labels come from. -->
     <string name="home_genres">Genres</string>
@@ -108,7 +172,7 @@
     <!-- A page (Sources', the genres') once nothing plays (#627): the players and the guide are on Home. -->
     <string name="page_nothing_playing">Nothing is playing in a player you follow.</string>
     <!-- The button at the end of a page opened from somewhere (the credits, the first-run screen opened again), which closes it;
-         and at the top right of a panel on Home (a genre's, Sources'), which closes the panel. -->
+         and at the top right of a panel on Home (a genre's, Sources', Dates'), which closes the panel. -->
     <string name="page_close">Close</string>
     <!-- Under Layout's Separate pages (#447): the action of a chip on Home that opens a page (Sources,
          a genre), as a screen reader names it ("Double-tap to open page"). -->

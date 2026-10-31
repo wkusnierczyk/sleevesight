@@ -18,6 +18,13 @@ interface MusicBrainzLookup {
     /** The recording [mbid], with its work, artist and URL relationships, and its tags. */
     suspend fun recording(mbid: String): Lookup<MbRecordingDetail>
 
+    /**
+     * The recording [mbid] with its releases, each with its release group, and its first-release
+     * date, for a cover's original (#724): the release it first came out on, which the work's
+     * relationships do not give. Its length and score are not read.
+     */
+    suspend fun recordingReleases(mbid: String): Lookup<MbRecording>
+
     /** The work [mbid], with its writers, URL relationships and recordings. */
     suspend fun work(mbid: String): Lookup<MbWork>
 

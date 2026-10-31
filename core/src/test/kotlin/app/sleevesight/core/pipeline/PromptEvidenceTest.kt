@@ -184,7 +184,7 @@ class PromptEvidenceTest {
         val template = "\u201CThe Song\u201D by The Band was first released in 1974, on the album \u201CSundown\u201D."
 
         assertEquals(listOf("W1", "P1"), sentOn("Sundown", line(SourceId.WIKIPEDIA, template)))
-        assertEquals(listOf("G1", "P1"), sentOn("Sundown", line(SourceId.WEB, template, Scope.WEB)))
+        assertEquals(listOf("S1", "P1"), sentOn("Sundown", line(SourceId.WEB, template, Scope.WEB)))
         assertEquals(
             listOf("MB1", "P1"),
             sentOn("Sundown", line(SourceId.MUSICBRAINZ, template, Scope.ORIGINAL_SONG)),
@@ -202,7 +202,7 @@ class PromptEvidenceTest {
         assertEquals(listOf("W1", "P1"), sentOn("Sundown", wikipedia))
         assertEquals(listOf("MB1", "W1", "P1"), sentOn("Sundown", song(1), artist))
         assertEquals(listOf("MB1", "P1"), sentOn("Sundown", original))
-        assertEquals(listOf("G1", "P1"), sentOn("Sundown", web))
+        assertEquals(listOf("S1", "P1"), sentOn("Sundown", web))
     }
 
     @Test

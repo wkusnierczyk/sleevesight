@@ -6,7 +6,7 @@ import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isSelectable
-import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -17,6 +17,7 @@ import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.TestStores
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.now
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.SettingsStore
@@ -74,7 +75,7 @@ class ReadAloudSettingsTest {
             }
             compose.openSection(SettingsSection.INSIGHTS)
             val title = text(R.string.settings_read_new_insights)
-            compose.waitUntil(5_000) { compose.onAllNodesWithText(title).fetchSemanticsNodes().isNotEmpty() }
+            compose.waitUntil(WAIT_MS) { compose.onAllNodesWithText(title).fetchSemanticsNodes().isNotEmpty() }
             block()
         }
     }
@@ -95,15 +96,15 @@ class ReadAloudSettingsTest {
     fun eachChangeIsStored() =
         showInsights {
             button(R.string.settings_read_aloud_pause).performScrollTo().performClick()
-            compose.waitUntil(5_000) { settings.now().readAloudMusic == ReadAloudMusic.PAUSE }
+            compose.waitUntil(WAIT_MS) { settings.now().readAloudMusic == ReadAloudMusic.PAUSE }
             compose.onNodeWithText(text(R.string.settings_read_aloud_pause_detail)).assertExists()
 
             compose.onNodeWithText(text(R.string.settings_read_track_line)).performScrollTo().performClick()
-            compose.waitUntil(5_000) { settings.now().readTrackLineFirst }
+            compose.waitUntil(WAIT_MS) { settings.now().readTrackLineFirst }
 
             val auto = compose.onNodeWithText(text(R.string.settings_read_new_insights)).performScrollTo()
             auto.performClick()
-            compose.waitUntil(5_000) { settings.now().readNewInsightsAloud }
+            compose.waitUntil(WAIT_MS) { settings.now().readNewInsightsAloud }
             auto.assertIsOn()
         }
 
@@ -112,7 +113,7 @@ class ReadAloudSettingsTest {
         runBlocking { settings.update { it.copy(writeInsights = false) } }
         showInsights {
             compose.onNodeWithText(text(R.string.settings_read_new_insights)).performScrollTo().performClick()
-            compose.waitUntil(5_000) { settings.now().readNewInsightsAloud }
+            compose.waitUntil(WAIT_MS) { settings.now().readNewInsightsAloud }
         }
     }
 }

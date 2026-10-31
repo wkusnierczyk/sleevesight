@@ -21,7 +21,7 @@ import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
-import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performFirstLinkClick
@@ -36,6 +36,7 @@ import app.sleevesight.app.MainActivity
 import app.sleevesight.app.MemoryStore
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.session.SleevesightListenerService
 import app.sleevesight.app.settings.SettingsStore
@@ -98,7 +99,7 @@ class SettingsSettingLinksTest {
             )
 
     private fun waitForNode(matcher: SemanticsMatcher) =
-        compose.waitUntil(conditionDescription = matcher.description, timeoutMillis = 5_000) {
+        compose.waitUntil(conditionDescription = matcher.description, timeoutMillis = WAIT_MS) {
             compose.onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty()
         }
 
@@ -204,7 +205,7 @@ class SettingsSettingLinksTest {
             assertEquals(1, count(hasText(none, substring = true)))
             // Switched on, there is a model to ask, and the row says nothing of it.
             runBlocking { settings.update { it.copy(aiProvider = ProviderId.ANTHROPIC) } }
-            compose.waitUntil(timeoutMillis = 5_000) { count(hasText(none, substring = true)) == 0 }
+            compose.waitUntil(timeoutMillis = WAIT_MS) { count(hasText(none, substring = true)) == 0 }
             waitForNode(hasText(modelSummary, substring = true))
         }
     }

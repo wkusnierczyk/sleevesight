@@ -103,4 +103,45 @@ class NameMatcherTest {
         assertEquals(1.0, names.titleSimilarity("Here Comes The Sun", "Here Comes the Sun"))
         assertTrue(names.titleSimilarity("Sundown", "Sundown (Live)") < ResolutionThresholds.TITLE_SIMILARITY)
     }
+
+    @Test
+    fun `in album names, Vol and Volume are one before a number or a letter, both ways`() {
+        val same =
+            listOf(
+                "Vol. 2" to "Volume 2",
+                "Vol 2" to "Volume 2",
+                "Vol. II" to "Volume II",
+                "Vol. B" to "Volume B",
+                "Greatest Hits, Vol. 12" to "Greatest Hits Volume 12",
+                "Awesome Mix Vol. 1 (Original Motion Picture Soundtrack)" to
+                    "Awesome Mix Volume 1 (Original Motion Picture Soundtrack)",
+            )
+        for ((a, b) in same) {
+            assertEquals(names.albumKey(a), names.albumKey(b), "$a = $b")
+            assertEquals(names.albumKey(b), names.albumKey(a), "$b = $a")
+        }
+        // The screenshot's album (#724): the comma and the colon fold away in the key already.
+        assertEquals(
+            names.albumKey("This Warm December: A Brushfire Holiday, Volume 2"),
+            names.albumKey("This Warm December, A Brushfire Holiday Vol. 2"),
+        )
+    }
+
+    @Test
+    fun `elsewhere Vol and Volume stay apart, and other keys are as before`() {
+        val apart =
+            listOf(
+                "Vol" to "Volume",
+                "Best Of Vol." to "Best Of Volume",
+                "Vol. 2" to "Volcano 2",
+                "Volume" to "Vol",
+                "Vol. Two" to "Volume Two",
+            )
+        for ((a, b) in apart) assertFalse(names.albumKey(a) == names.albumKey(b), "$a != $b")
+        assertEquals("vol", names.albumKey("Vol."))
+        assertEquals("volcano 2", names.albumKey("Volcano 2"))
+        // Only album names: [NameMatcher.key] still keeps them apart.
+        assertFalse(names.key("Vol. 2") == names.key("Volume 2"))
+        assertEquals("", names.albumKey(""))
+    }
 }

@@ -3,7 +3,7 @@ package app.sleevesight.app.ui
 import androidx.activity.compose.setContent
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
-import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
@@ -17,6 +17,7 @@ import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.TestStores
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.now
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.SettingsStore
@@ -100,7 +101,7 @@ class DeveloperSettingsTest {
                     ) { "Label of $it" }
                 }
             }
-            compose.waitUntil(5_000) { shown(R.string.settings_title) }
+            compose.waitUntil(WAIT_MS) { shown(R.string.settings_title) }
             scenario.block()
         }
     }
@@ -132,7 +133,7 @@ class DeveloperSettingsTest {
             tapVersion()
             // Literal text, not the resource, to pin the wording #669 settled on.
             assertEquals("Developer mode is enabled", ShadowToast.getTextOfLatestToast())
-            compose.waitUntil(5_000) { settings.now().developerMode && developerShown }
+            compose.waitUntil(WAIT_MS) { settings.now().developerMode && developerShown }
 
             // Once on, a tap says so.
             tapVersion()
@@ -141,11 +142,11 @@ class DeveloperSettingsTest {
             // The section's switch turns developer mode off, and its options with it.
             compose.openSection(SettingsSection.DEVELOPER)
             compose.onNodeWithText(text(R.string.settings_diagnostics)).performScrollTo().performClick()
-            compose.waitUntil(5_000) { settings.now().showDiagnostics }
+            compose.waitUntil(WAIT_MS) { settings.now().showDiagnostics }
             val mode = compose.onNodeWithText(text(R.string.settings_developer_mode)).performScrollTo()
             mode.assertIsOn()
             mode.performClick()
-            compose.waitUntil(5_000) { !settings.now().developerMode && !developerShown }
+            compose.waitUntil(WAIT_MS) { !settings.now().developerMode && !developerShown }
             assertFalse("Diagnostics off with developer mode", settings.now().showDiagnostics)
 
             // *About* still unfolded: the count starts afresh, and seven taps turn it on again.
@@ -153,7 +154,7 @@ class DeveloperSettingsTest {
             assertEquals(tapsLeft(3), ShadowToast.getTextOfLatestToast())
             repeat(3) { tapVersion() }
             assertEquals(text(R.string.settings_developer_on), ShadowToast.getTextOfLatestToast())
-            compose.waitUntil(5_000) { settings.now().developerMode && developerShown }
+            compose.waitUntil(WAIT_MS) { settings.now().developerMode && developerShown }
         }
 
     @Test
@@ -162,18 +163,18 @@ class DeveloperSettingsTest {
         var opened = 0
         show(onOpenDiagnostics = { opened++ }) {
             compose.openSection(SettingsSection.DEVELOPER)
-            compose.waitUntil(5_000) { shown(R.string.settings_diagnostics) }
+            compose.waitUntil(WAIT_MS) { shown(R.string.settings_diagnostics) }
             assertEquals(false, shown(R.string.settings_diagnostics_open))
 
             compose.onNodeWithText(text(R.string.settings_diagnostics)).performScrollTo().performClick()
-            compose.waitUntil(5_000) { shown(R.string.settings_diagnostics_open) }
+            compose.waitUntil(WAIT_MS) { shown(R.string.settings_diagnostics_open) }
             assertEquals(true, settings.now().showDiagnostics)
 
             compose.onNodeWithText(text(R.string.settings_diagnostics_open)).performScrollTo().performClick()
             assertEquals(1, opened)
 
             compose.onNodeWithText(text(R.string.settings_diagnostics)).performScrollTo().performClick()
-            compose.waitUntil(5_000) { !shown(R.string.settings_diagnostics_open) }
+            compose.waitUntil(WAIT_MS) { !shown(R.string.settings_diagnostics_open) }
         }
     }
 
@@ -182,14 +183,14 @@ class DeveloperSettingsTest {
         runBlocking { settings.update { it.copy(developerMode = true) } }
         show {
             compose.openSection(SettingsSection.DEVELOPER)
-            compose.waitUntil(5_000) { shown(R.string.settings_grounding_details) }
+            compose.waitUntil(WAIT_MS) { shown(R.string.settings_grounding_details) }
             val details = compose.onNodeWithText(text(R.string.settings_grounding_details)).performScrollTo()
             details.assertIsOff()
             details.performClick()
-            compose.waitUntil(5_000) { settings.now().showGroundingDetails }
+            compose.waitUntil(WAIT_MS) { settings.now().showGroundingDetails }
 
             compose.onNodeWithText(text(R.string.settings_developer_mode)).performScrollTo().performClick()
-            compose.waitUntil(5_000) { !settings.now().developerMode && !developerShown }
+            compose.waitUntil(WAIT_MS) { !settings.now().developerMode && !developerShown }
             assertFalse("Grounding details off with developer mode", settings.now().showGroundingDetails)
         }
     }
@@ -198,9 +199,9 @@ class DeveloperSettingsTest {
     fun aPlayersPackageNameShowsOnlyInDeveloperMode() =
         show {
             compose.openSection(SettingsSection.PLAYERS)
-            compose.waitUntil(5_000) { shown("Label of ${Settings.SPOTIFY}") }
+            compose.waitUntil(WAIT_MS) { shown("Label of ${Settings.SPOTIFY}") }
             assertFalse(shown(Settings.SPOTIFY))
             runBlocking { settings.update { it.copy(developerMode = true) } }
-            compose.waitUntil(5_000) { shown(Settings.SPOTIFY) }
+            compose.waitUntil(WAIT_MS) { shown(Settings.SPOTIFY) }
         }
 }

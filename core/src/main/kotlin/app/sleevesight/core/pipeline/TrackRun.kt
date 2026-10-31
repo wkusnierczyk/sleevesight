@@ -66,13 +66,16 @@ internal class TrackRun(
     private val looksAgain = input.lookAgain != null
 
     // What an earlier run of the track found (#192), kept as it landed: every state of a source
-    // still switched on but `Unreachable`, which is asked again. An adapter that threw (a bug, not
-    // the network) is not asked again either; a source that was off then is looked up as usual.
+    // still switched on but `Unreachable`, which is asked again, unless the run asks again only some
+    // ([Gathered.asked], a *Retry*, #724). An adapter that threw (a bug, not the network) is not
+    // asked again either; a source that was off then is looked up as usual.
     private val keptBefore: Map<SourceId, SourceState> =
         input.again
-            ?.sources
-            .orEmpty()
-            .filter { (source, before) -> enabled.any { it.id == source } && keeps(before) }
+            ?.let { again ->
+                again.sources.filter { (source, before) ->
+                    enabled.any { it.id == source } && (keeps(before) || source in again.unreachable - again.asked)
+                }
+            }.orEmpty()
 
     // A resolution an earlier run of the track made, used again rather than asked for (#192).
     private val resolvedBefore =
@@ -143,7 +146,7 @@ internal class TrackRun(
     // by name in parallel, with resolution alongside (D4).
     private suspend fun gather() {
         input.again?.let { again ->
-            val asked = again.unreachable.filter { source -> enabled.any { it.id == source } }
+            val asked = again.asked.filter { source -> enabled.any { it.id == source } }
             if (asked.isNotEmpty()) emit(PipelineEvent.AskedAgain(key, asked.sortedBy { it.ordinal }))
         }
         if (looksAgain) emit(PipelineEvent.LookedAgain(key, enabled.map { it.id }))

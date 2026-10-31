@@ -4,7 +4,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isSelectable
-import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -15,6 +15,7 @@ import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.TestStores
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.now
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.SettingsStore
@@ -87,21 +88,23 @@ class LinkStyleSettingTest {
                 }
             }
             compose.openSection(SettingsSection.DEVELOPER)
-            compose.waitUntil(5_000) { shown(R.string.settings_link_style) }
+            compose.waitUntil(WAIT_MS) { shown(R.string.settings_link_style) }
             compose.onNodeWithText(text(R.string.settings_link_style_summary)).assertExists()
             compose.onNodeWithText(text(R.string.settings_link_style_underline)).assertExists()
-            compose.waitUntil(5_000) { drawn == LinkStyle.UNDERLINE }
+            compose.waitUntil(WAIT_MS) { drawn == LinkStyle.UNDERLINE }
 
             // One tap on the choice's button in the row (#637).
             compose
                 .onNode(hasText(text(R.string.settings_link_style_highlight)) and isSelectable())
                 .performScrollTo()
                 .performClick()
-            compose.waitUntil(5_000) { settings.now().linkStyle == LinkStyle.HIGHLIGHT && drawn == LinkStyle.HIGHLIGHT }
+            compose.waitUntil(
+                WAIT_MS,
+            ) { settings.now().linkStyle == LinkStyle.HIGHLIGHT && drawn == LinkStyle.HIGHLIGHT }
             compose.onNode(hasText(text(R.string.settings_link_style_highlight)) and isSelectable()).assertIsSelected()
 
             compose.onNodeWithText(text(R.string.settings_developer_mode)).performScrollTo().performClick()
-            compose.waitUntil(5_000) {
+            compose.waitUntil(WAIT_MS) {
                 !settings.now().developerMode &&
                     settings.now().linkStyle == LinkStyle.UNDERLINE &&
                     drawn == LinkStyle.UNDERLINE

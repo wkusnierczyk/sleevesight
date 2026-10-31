@@ -193,10 +193,12 @@ class RecordingResolver(
         pool: List<Candidate>,
     ): Resolution {
         val recording = chosen.recording
-        // Each release, by its own title, in its release group (else alone); undated ones too.
+        // Each release, by its own title, in its release group (else alone), with the group's type;
+        // undated ones too.
         val releases =
             pool.flatMap { it.recording.releases }.map { release ->
-                ReleaseDate(release.title, release.date, release.releaseGroup?.mbid ?: release.mbid)
+                val group = release.releaseGroup
+                ReleaseDate(release.title, release.date, group?.mbid ?: release.mbid, group?.primaryType)
             }
         val base =
             Resolution(
@@ -212,8 +214,14 @@ class RecordingResolver(
                 firstRelease = firstRelease(recording),
                 releaseDates = ReleaseDate.collapse(releases, names::key),
             )
-        val detail = fetched ?: (musicBrainz.recording(recording.mbid) as? Lookup.Found)?.value
-        return if (detail == null) base else withDetail(track, chosen, base, detail)
+        // Without the recording's detail, nothing is known of its work, and so of its lyrics: none when
+        // MusicBrainz has no such recording; when the lookup failed, not known, and the resolution
+        // provisional (#728), so a later run asks again.
+        return when (val lookup = fetched?.let { Lookup.Found(it) } ?: musicBrainz.recording(recording.mbid)) {
+            is Lookup.Found -> withDetail(track, chosen, base, lookup.value)
+            Lookup.NotFound -> base.copy(lyrics = WorkLyrics())
+            is Lookup.Failed -> base.copy(provisional = true)
+        }
     }
 
     private suspend fun withDetail(
@@ -241,11 +249,25 @@ class RecordingResolver(
                 wikidataIds = detail.wikidataIds,
                 recordingTags = detail.tags,
                 lyrics = lyricsOf(detail, lookup),
+                // The work's lyrics links not known (#728): a later run asks again.
+                provisional = lookup is Lookup.Failed,
             )
         return if (link == null || work == null) {
             withRecording.copy(work = link?.let { ResolvedWork(it.mbid, it.title) }, cover = link?.cover ?: false)
         } else {
-            withWork(recording, withRecording, link, work, chosen.credited)
+            val covered = withWork(recording, withRecording, link, work, chosen.credited)
+            // The release a cover's original first came out on (#724), for the home screen's *Dates*:
+            // one more lookup, of the original's recording with its releases, made only when there is
+            // an original. One that finds nothing leaves the release out, and nothing else changes; one
+            // that fails does too, and leaves the resolution provisional, so MusicBrainz's result is
+            // not kept and a later run asks again.
+            val original = covered.original
+            val releases = original?.let { musicBrainz.recordingReleases(it.recordingMbid) }
+            val release = (releases as? Lookup.Found)?.value?.let { firstRelease(it, fallback = false) }
+            covered.copy(
+                original = original?.copy(release = release),
+                provisional = covered.provisional || releases is Lookup.Failed,
+            )
         }
     }
 
@@ -563,11 +585,20 @@ class RecordingResolver(
             return a.take(n) < b.take(n)
         }
 
-        private fun firstRelease(recording: MbRecording): FirstRelease? {
+        // The release of [recording] dated its first-release date, else, with [fallback], its earliest
+        // dated one. Ours falls back; a cover's original does not (#724): a lookup lists at most 25
+        // releases, so for an original with more, the earliest listed may be a later compilation, and
+        // its release is left out rather than that one named.
+        private fun firstRelease(
+            recording: MbRecording,
+            fallback: Boolean = true,
+        ): FirstRelease? {
             val dated = recording.releases.mapNotNull { release -> release.date?.let { it to release } }
             val first =
                 dated.filter { it.first == recording.firstReleaseDate }.minByOrNull { it.second.mbid }
-                    ?: dated.minWithOrNull(compareBy<Pair<String, MbRelease>> { it.first }.thenBy { it.second.mbid })
+                    ?: dated
+                        .takeIf { fallback }
+                        ?.minWithOrNull(compareBy<Pair<String, MbRelease>> { it.first }.thenBy { it.second.mbid })
             return first?.let { (date, release) ->
                 FirstRelease(
                     date = date,

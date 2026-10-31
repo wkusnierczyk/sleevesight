@@ -120,6 +120,10 @@ import kotlin.time.Instant
  *   offered for it ([CoordinatorState.foundSomethingNew]): a tap writes it, a paid call.
  * @property nothingNew whether the last look again found nothing new, so nothing is offered for it
  *   ([CoordinatorState.foundNothingNew]).
+ * @property askAgainKey the key of the run whose unreachable sources [askable] a tap on *Retry*
+ *   asks again (#724), which the tap carries back ([PipelineHost.askAgain]): its sources have
+ *   landed, some unreachable, and no call is under way ([CoordinatorState.askAgainKey]); null
+ *   otherwise.
  */
 data class PipelineView(
     val track: TrackState? = null,
@@ -139,6 +143,8 @@ data class PipelineView(
     val lookingAgain: Boolean = false,
     val nothingNew: Boolean = false,
     val somethingNew: Boolean = false,
+    val askAgainKey: RunKey? = null,
+    val askable: Set<SourceId> = emptySet(),
 )
 
 /**
@@ -332,6 +338,22 @@ class PipelineHost(
         val latest = latestPlaying() ?: return
         if (!sameInsightTrack(shown, latest)) return
         queue.trySend(CoordinatorEvent.LookAgainTapped(key))
+    }
+
+    /**
+     * The user tapped *Retry* beside [source], which could not be reached, offered under [key]
+     * ([PipelineView.askAgainKey], #724) beside the track [shown]: the coordinator asks that source
+     * alone again if it still offers it, as back online asks every one (#192), free. Dropped, as a
+     * tap on Write is, for a track the session layer no longer shows.
+     */
+    fun askAgain(
+        key: RunKey,
+        source: SourceId,
+        shown: NowPlaying,
+    ) {
+        val latest = latestPlaying() ?: return
+        if (!sameInsightTrack(shown, latest)) return
+        queue.trySend(CoordinatorEvent.RetryTapped(key, source))
     }
 
     /**
@@ -747,6 +769,8 @@ class PipelineHost(
                 lookingAgain = owner.lookingAgain,
                 nothingNew = owner.foundNothingNew && !cardPast,
                 somethingNew = owner.foundSomethingNew,
+                askAgainKey = owner.askAgainKey,
+                askable = owner.askable,
             )
         }.collect {
             view.value = it

@@ -118,7 +118,7 @@ private fun SourcesPage(
  */
 internal class Showing(
     state: NowPlayingState,
-    playing: NowPlaying,
+    val playing: NowPlaying,
 ) {
     /** The pipeline's state, as published. */
     val view = state.view

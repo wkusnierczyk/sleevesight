@@ -8,7 +8,7 @@ import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isToggleable
-import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.performScrollTo
@@ -120,7 +120,7 @@ class CacheLifetimeBadgesTest {
                     R.string.settings_cache_wikidata to "WD",
                     R.string.settings_cache_wikipedia to "W",
                     R.string.settings_source_lastfm to "L",
-                    R.string.settings_cache_web to "G",
+                    R.string.settings_cache_web to "S",
                 )
             for ((name, letter) in rows) {
                 val title = app.getString(name)

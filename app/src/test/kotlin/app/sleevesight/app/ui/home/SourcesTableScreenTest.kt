@@ -27,7 +27,7 @@ import androidx.compose.ui.test.click
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
@@ -208,11 +208,11 @@ class SourcesTableScreenTest {
             unfold()
             // Off (Discogs) or without its key (Last.fm): no row. Rejected (web search) and the
             // model's own knowledge: a row.
-            assertEquals(listOf("MB", "W", "G", "AI"), rows())
+            assertEquals(listOf("MB", "W", "S", "AI"), rows())
             assertEquals(listOf(text(R.string.home_source_found_song)), said("MB"))
             assertEquals(listOf(text(R.string.home_source_found_song)), said("W"))
             // A dimmed chip's row says its name; a rejected match is nothing found.
-            assertEquals(listOf(text(R.string.home_source_name_web), text(R.string.home_source_none)), said("G"))
+            assertEquals(listOf(text(R.string.home_source_name_web), text(R.string.home_source_none)), said("S"))
             assertEquals(
                 listOf(text(R.string.settings_source_model), text(R.string.home_source_model_allowed)),
                 said("AI"),
@@ -238,7 +238,7 @@ class SourcesTableScreenTest {
                     .config[SemanticsActions.OnClick]
                     .label,
             )
-            for (tag in listOf("G", "AI")) {
+            for (tag in listOf("S", "AI")) {
                 val chip = compose.onNodeWithTag(CHIP_PREFIX + tag).fetchSemanticsNode().config
                 assertFalse(tag, SemanticsActions.OnClick in chip)
                 assertFalse(tag, SemanticsProperties.Role in chip)
@@ -266,9 +266,10 @@ class SourcesTableScreenTest {
             // A switch says its source's name: the name beside it is not read again.
             val musicBrainz = text(R.string.settings_source_musicbrainz)
             assertEquals(0, compose.onAllNodesWithText(musicBrainz).fetchSemanticsNodes().size)
-            // Each chip answers a touch across 48 dp, though it lays out less.
+            // Each chip answers a touch across 48 dp, though it lays out less; on screen, to be measured.
             compose
                 .onNodeWithTag(CHIP_PREFIX + "W")
+                .performScrollTo()
                 .assertTouchHeightIsEqualTo(48.dp)
                 .assertTouchWidthIsEqualTo(48.dp)
         }
@@ -298,7 +299,7 @@ class SourcesTableScreenTest {
             tap(CHIP_PREFIX + "W")
             val shown = picture(CHIP_PREFIX + "MB")
             val hidden = picture(CHIP_PREFIX + "W")
-            val dimmed = picture(CHIP_PREFIX + "G")
+            val dimmed = picture(CHIP_PREFIX + "S")
             assertTrue("a shown chip is filled: ${hex(fillOf(shown))}", far(fillOf(shown), groundOf(shown)))
             assertTrue("a hidden chip is not: ${hex(fillOf(hidden))}", near(fillOf(hidden), groundOf(hidden)))
             assertTrue("a dimmed chip is not: ${hex(fillOf(dimmed))}", near(fillOf(dimmed), groundOf(dimmed)))
@@ -324,7 +325,7 @@ class SourcesTableScreenTest {
             val gaps = rows.zipWithNext { above, below -> (below.first - above.second) / density() }
             assertTrue("rows about 6 dp apart: $gaps", gaps.all { abs(it - ROW_GAP_DP) < 1f })
             val chips =
-                listOf("MB", "W", "G", "AI").map { compose.onNodeWithTag(CHIP_PREFIX + it).fetchSemanticsNode() }
+                listOf("MB", "W", "S", "AI").map { compose.onNodeWithTag(CHIP_PREFIX + it).fetchSemanticsNode() }
             val ends = chips.map { it.positionInRoot.x + it.size.width }
             assertTrue("one right edge: $ends", ends.maxOf { it } - ends.minOf { it } < 1f)
             // A chip lays out its own height, not its 48 dp target.
@@ -352,7 +353,7 @@ class SourcesTableScreenTest {
     private fun touchesGoToTheNearerChip(fontScale: Float) =
         show(mixed, fontScale = fontScale) {
             unfold()
-            compose.onNodeWithTag(ROW_PREFIX + "G", useUnmergedTree = true).performScrollTo()
+            compose.onNodeWithTag(ROW_PREFIX + "S", useUnmergedTree = true).performScrollTo()
             val height =
                 compose
                     .onNodeWithTag(CHIP_PREFIX + "MB")
@@ -419,7 +420,7 @@ class SourcesTableScreenTest {
             unfold()
             // Unclipped: a chip scrolled out of view has empty bounds in the root.
             val centres =
-                listOf("MB", "W", "G", "AI").map {
+                listOf("MB", "W", "S", "AI").map {
                     val chip = compose.onNodeWithTag(CHIP_PREFIX + it).fetchSemanticsNode()
                     chip.positionInRoot.y + chip.size.height / 2f
                 }
@@ -443,11 +444,11 @@ class SourcesTableScreenTest {
         }
         show(mixed, settings = details) {
             unfold()
-            assertNotEquals(colour("MB"), colour("G"))
+            assertNotEquals(colour("MB"), colour("S"))
         }
         show(mixed) {
             unfold()
-            assertEquals(colour("MB"), colour("G"))
+            assertEquals(colour("MB"), colour("S"))
         }
     }
 
@@ -507,7 +508,7 @@ class SourcesTableScreenTest {
             )
             assertEquals(
                 listOf(text(R.string.home_source_name_web), text(R.string.home_source_unreachable)),
-                said("G"),
+                said("S"),
             )
         }
         show(mixed, needsKey = emptySet()) {
@@ -521,12 +522,12 @@ class SourcesTableScreenTest {
         show(mixed, settings = details) {
             unfold()
             // The same table, with the sources that are off: Discogs, and Last.fm without its key.
-            assertEquals(listOf("MB", "W", "D", "G", "L", "AI"), rows())
+            assertEquals(listOf("MB", "W", "D", "S", "L", "AI"), rows())
             assertEquals(
                 listOf(text(R.string.home_source_cached, text(R.string.home_source_found_song))),
                 said("MB"),
             )
-            assertEquals(listOf(text(R.string.home_source_name_web), text(R.string.home_source_rejected)), said("G"))
+            assertEquals(listOf(text(R.string.home_source_name_web), text(R.string.home_source_rejected)), said("S"))
             assertEquals(listOf(text(R.string.home_source_name_discogs), text(R.string.home_source_off)), said("D"))
             assertEquals(
                 listOf(text(R.string.settings_source_lastfm), text(R.string.home_source_needs_key)),
@@ -547,7 +548,7 @@ class SourcesTableScreenTest {
     fun groundingDetailsStillShowNothingButTheChipWhileFolded() =
         show(mixed, settings = details) {
             assertEquals(0, count(SOURCES_TABLE_TAG))
-            for (tag in listOf("MB", "W", "G", "L", "AI")) assertEquals(tag, 0, count(CHIP_PREFIX + tag))
+            for (tag in listOf("MB", "W", "S", "L", "AI")) assertEquals(tag, 0, count(CHIP_PREFIX + tag))
             assertEquals(0, countText(text(R.string.home_rejected_title)))
             assertEquals(0, count(SOURCES_NOTE_TAG))
         }

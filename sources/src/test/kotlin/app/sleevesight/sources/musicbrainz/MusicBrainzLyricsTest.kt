@@ -107,8 +107,9 @@ class MusicBrainzLyricsTest {
             val track = Normalizer(JvmAccentFolder).normalize("Right Down the Line", "Gerry Rafferty")
             val known = Resolution(outcome = Outcome.SongArticle, recordingMbid = RAFFERTY, lyrics = WorkLyrics())
             assertFalse(MusicBrainzSource().lookup(track, CompletableDeferred(known)).provisional)
-            // A lookup failed: the result is provisional, so the retrieval cache does not keep it.
-            val failed = known.copy(lyrics = WorkLyrics(links = null, languages = listOf("eng")))
+            // A lookup failed: the resolution, and so the result, is provisional, so the retrieval
+            // cache does not keep it.
+            val failed = known.copy(lyrics = WorkLyrics(links = null, languages = listOf("eng")), provisional = true)
             val result = MusicBrainzSource().lookup(track, CompletableDeferred(failed))
             assertTrue(result.provisional)
             assertEquals(failed.lyrics, result.lyrics)

@@ -121,6 +121,16 @@
  },
  {
   "method": "GET",
+  "url": "https://musicbrainz.org/ws/2/recording/f331113d-43b8-4d60-af11-9461520f4554",
+  "query": {
+   "inc": "releases+release-groups",
+   "fmt": "json"
+  },
+  "status": 200,
+  "file": "recording-f331113d-43b8-4d60-af11-9461520f4554.json"
+ },
+ {
+  "method": "GET",
   "url": "https://musicbrainz.org/ws/2/recording",
   "query": {
    "query": "recording:\"Baby, Please Don't Go\" AND artist:\"Them\"",

@@ -25,7 +25,12 @@ internal class FakeMusicBrainz(
     val recordingFailure: String? = null,
     /** A work lookup that fails, with this reason, for every work. */
     val workFailure: String? = null,
+    /** Each recording with its releases (#724), by its id: a cover's original's. */
+    val releases: Map<String, Lookup<MbRecording>> = emptyMap(),
 ) : MusicBrainzLookup {
+    /** The recordings whose releases were looked up, in order. */
+    val releasesAsked = mutableListOf<String>()
+
     override suspend fun searchRecordings(
         title: String,
         artist: String,
@@ -33,6 +38,11 @@ internal class FakeMusicBrainz(
 
     override suspend fun recording(mbid: String): Lookup<MbRecordingDetail> =
         recordingFailure?.let { Lookup.Failed(it) } ?: recordings[mbid]?.let { Lookup.Found(it) } ?: Lookup.NotFound
+
+    override suspend fun recordingReleases(mbid: String): Lookup<MbRecording> {
+        releasesAsked += mbid
+        return releases[mbid] ?: Lookup.NotFound
+    }
 
     override suspend fun work(mbid: String): Lookup<MbWork> =
         workFailure?.let { Lookup.Failed(it) } ?: works[mbid]?.let { Lookup.Found(it) } ?: Lookup.NotFound

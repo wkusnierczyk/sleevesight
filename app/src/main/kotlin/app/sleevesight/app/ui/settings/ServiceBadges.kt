@@ -46,7 +46,7 @@ internal fun badgeLetter(source: SourceId): String = source.tag
  */
 internal fun badgeLetter(switch: SourceSwitch): String = badgeLetter(switch.sources.first())
 
-/** The letter a web search engine's badge shows: that of web search's citations, `G`. */
+/** The letter a web search engine's badge shows: that of web search's citations, `S` (#769). */
 internal val WEB_BADGE: String = badgeLetter(SourceSwitch.WEB)
 
 /** The badge of an AI service named [name]: its initial. */

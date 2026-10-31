@@ -7,6 +7,7 @@ import app.sleevesight.app.session.PlaybackInfo
 import app.sleevesight.app.session.PlaybackStatus
 import app.sleevesight.app.ui.home.HomeFixtures.sundown
 import app.sleevesight.app.ui.home.HomeFixtures.track
+import app.sleevesight.app.ui.home.HomeFixtures.withWeb
 import app.sleevesight.app.ui.home.HomeFixtures.written
 import app.sleevesight.core.ai.ReasoningEffort
 import app.sleevesight.core.model.ProviderId
@@ -15,6 +16,7 @@ import app.sleevesight.core.pipeline.WrittenBy
 import app.sleevesight.core.settings.ReportButton
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.synthesis.LEGACY_MODEL_NOTE
+import app.sleevesight.core.synthesis.LEGACY_WEB_NOTE
 import app.sleevesight.store.PlaybackStateRecord
 import app.sleevesight.store.TrackChangePage
 import app.sleevesight.store.TrackChangeRecord
@@ -163,6 +165,21 @@ class TesterReportTest {
         assertTrue(lines.joinToString("\n"), lines.contains(LEGACY_MODEL_NOTE))
         // Written now, with `[AI]`, or without the model's own knowledge: no note.
         assertFalse(TesterReport.nowPlaying(snapshot()).contains(LEGACY_MODEL_NOTE))
+    }
+
+    @Test
+    fun aKeptInsightCitingG1IsPrintedAsWrittenWithANoteThatG1IsTheOldFormOfS1() {
+        // Kept from before web search's lines were `S1`, `S2` (#769).
+        val kept = written("It was recorded in 1973 [MB1]. It went gold [G1].", cached = true, from = withWeb)
+        val view = PipelineView(track = track(insight = kept, evidence = withWeb), aiReady = true)
+        val lines = TesterReport.nowPlaying(snapshot().let { it.copy(view = view) }).lines()
+        assertTrue(lines.joinToString("\n"), lines.contains("- ok [S1]: It went gold [G1]."))
+        assertTrue(lines.joinToString("\n"), lines.contains(LEGACY_WEB_NOTE))
+        assertFalse(lines.joinToString("\n"), lines.contains(LEGACY_MODEL_NOTE))
+        // Written now, citing `[S1]`: no note.
+        val now = written("It was recorded in 1973 [MB1]. It went gold [S1].", from = withWeb)
+        val nowView = PipelineView(track = track(insight = now, evidence = withWeb), aiReady = true)
+        assertFalse(TesterReport.nowPlaying(snapshot().let { it.copy(view = nowView) }).contains(LEGACY_WEB_NOTE))
     }
 
     @Test

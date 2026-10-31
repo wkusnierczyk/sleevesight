@@ -22,7 +22,7 @@ import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
-import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
@@ -413,7 +413,7 @@ class FirstRunFlowTest {
         setAccess(granted = true)
         launch().use {
             compose.onNodeWithContentDescription(text(R.string.home_settings)).performClick()
-            compose.waitUntil(5_000) {
+            compose.waitUntil(WAIT_MS) {
                 compose.onAllNodesWithText(text(R.string.settings_section_ai)).fetchSemanticsNodes().isNotEmpty()
             }
         }
@@ -427,7 +427,7 @@ class FirstRunFlowTest {
             compose.onNodeWithContentDescription(text(R.string.home_settings)).performClick()
             // The credits are under *About* (#444).
             compose.openSection(SettingsSection.ABOUT)
-            compose.waitUntil(5_000) {
+            compose.waitUntil(WAIT_MS) {
                 compose.onAllNodesWithText(text(R.string.credits_title)).fetchSemanticsNodes().isNotEmpty()
             }
             compose.onNodeWithText(text(R.string.credits_title)).performScrollTo().performClick()
@@ -454,7 +454,7 @@ class FirstRunFlowTest {
                 compose.onNodeWithContentDescription(text(R.string.home_settings)).performClick()
                 // Under *About* (#444).
                 compose.openSection(SettingsSection.ABOUT)
-                compose.waitUntil(5_000) {
+                compose.waitUntil(WAIT_MS) {
                     compose.onAllNodesWithText(text(R.string.settings_what_leaves)).fetchSemanticsNodes().isNotEmpty()
                 }
                 compose.onNodeWithText(text(R.string.settings_what_leaves)).performScrollTo().performClick()
