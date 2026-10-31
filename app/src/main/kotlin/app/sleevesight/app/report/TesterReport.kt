@@ -13,8 +13,7 @@ import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.settings.Crossfade
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.synthesis.InsightPrompt
-import app.sleevesight.core.synthesis.LEGACY_MODEL_NOTE
-import app.sleevesight.core.synthesis.citesLegacyModelId
+import app.sleevesight.core.synthesis.legacyCitationNotes
 import app.sleevesight.store.TrackChangeRecord
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -363,7 +362,8 @@ private fun StringBuilder.appendWritten(insight: InsightState.Written) {
         val cites = if (sentence.cites.isEmpty()) "" else " ${sentence.cites.joinToString(" ") { "[$it]" }}"
         appendLine("- ${sentence.status.name.lowercase()}$cites: ${sentence.text}")
     }
-    if (citesLegacyModelId(insight.grounded.text)) appendLine(LEGACY_MODEL_NOTE)
+    // A kept reply's text as written, with a note on its old ids (`[M]`, #668; `[G1]`, #769).
+    legacyCitationNotes(insight.grounded.text).forEach { appendLine(it) }
 }
 
 /**

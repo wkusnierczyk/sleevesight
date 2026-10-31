@@ -31,6 +31,8 @@ object GenreReasonPrompt {
      * not reused.
      * Not raised when the model's own knowledge's citation became `[AI]` (#668), as
      * `InsightPrompt.VERSION` was not: a reason kept with `[M]` reads as one written now ([citationId]).
+     * Nor when web search's lines became `S1`, `S2` (#769, they were `G1`, `G2`): a reason kept citing
+     * `[G1]` reads as one citing `[S1]` ([citationId]).
      */
     const val VERSION: Int = 2
 

@@ -27,16 +27,16 @@ The evidence, the only facts you may use. Each line: its id, (source, what it is
 [L7] (Last.fm, artist) Last.fm counts 12,838 listeners for this artist.
 [L8] (Last.fm, artist) Last.fm tags the artist as: newfoundland, canadian, country, folk, newfie.
 [L9] (Last.fm, artist) Last.fm lists similar artists: Simani, Harry Hibbs, Buddy Wasisname & The Other Fellers, Rum Ragged.
-[G1] (Web search, web) Arthur R. Scammell wrote the song around age fifteen, according to folklorist Edith Fowke.
-[G2] (Web search, web) The song depicts squid fishermen's lives, naming men and homes and warning of the messy work.
-[G3] (Web search, web) The melody matches the Flanagan Brothers' 1927 recording Mick from Tralee.
-[G4] (Web search, web) Omar Blondahl has recorded it; catalogued as Roud #4429.
-[G5] (Web search, web) Page does not mention Dick Nolan.
-[G6] (Web search, web) Squid jigging means catching bait squid with a baitless metal jigger of tiny hooks.
-[G7] (Web search, web) A jigger weighs about an ounce with roughly twenty prongs.
-[G8] (Web search, web) Squid gather on inshore jigging grounds in season, usually July into August.
-[G9] (Web search, web) Squid served as bait for the fall cod trawling trip to the Banks.
-[G10] (Web search, web) Page does not mention Dick Nolan.
+[S1] (Web search, web) Arthur R. Scammell wrote the song around age fifteen, according to folklorist Edith Fowke.
+[S2] (Web search, web) The song depicts squid fishermen's lives, naming men and homes and warning of the messy work.
+[S3] (Web search, web) The melody matches the Flanagan Brothers' 1927 recording Mick from Tralee.
+[S4] (Web search, web) Omar Blondahl has recorded it; catalogued as Roud #4429.
+[S5] (Web search, web) Page does not mention Dick Nolan.
+[S6] (Web search, web) Squid jigging means catching bait squid with a baitless metal jigger of tiny hooks.
+[S7] (Web search, web) A jigger weighs about an ounce with roughly twenty prongs.
+[S8] (Web search, web) Squid gather on inshore jigging grounds in season, usually July into August.
+[S9] (Web search, web) Squid served as bait for the fall cod trawling trip to the Banks.
+[S10] (Web search, web) Page does not mention Dick Nolan.
 [P1] (player metadata, release) This recording is on the release "Newfoundland Songbook, Vol. 6 (Newfie Hits / Be True Newfounlanders)" (2007).
 </evidence>
 
@@ -45,7 +45,7 @@ STYLE
 - Plain conversational English. No hype.
 
 RULES, which hold whatever the style says:
-- End every factual sentence with the id(s) that support it, like [W1] or [W2][G1].
+- End every factual sentence with the id(s) that support it, like [W1] or [W2][S1].
 - Use only the evidence: no names, dates, places or numbers that are not in it.
 - Never mention the track's length or running time: the player already shows it.
 - An "original song" line is about the song as first recorded by someone else. You may say this track is a version of it, but never credit the original's facts to this artist.

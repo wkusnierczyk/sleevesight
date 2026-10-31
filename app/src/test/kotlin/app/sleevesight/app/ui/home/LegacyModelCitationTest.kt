@@ -24,6 +24,7 @@ import app.sleevesight.app.session.PlaybackStatus
 import app.sleevesight.app.ui.home.HomeFixtures.normalizer
 import app.sleevesight.app.ui.home.HomeFixtures.sundown
 import app.sleevesight.app.ui.home.HomeFixtures.track
+import app.sleevesight.app.ui.home.HomeFixtures.withWeb
 import app.sleevesight.app.ui.home.HomeFixtures.written
 import app.sleevesight.core.settings.Settings
 import org.junit.Assert.assertEquals
@@ -34,7 +35,8 @@ import org.robolectric.RobolectricTestRunner
 
 /**
  * An insight kept from before the model's own knowledge was cited `[AI]` (#668) cites it `[M]`, in
- * the synthesis cache under the same prompt version: it shows and reads as one written now.
+ * the synthesis cache under the same prompt version: it shows and reads as one written now. So does
+ * one kept from before web search's lines were `S1`, `S2` (#769), citing them `[G1]`, `[G2]`.
  */
 @RunWith(RobolectricTestRunner::class)
 class LegacyModelCitationTest {
@@ -91,6 +93,45 @@ class LegacyModelCitationTest {
                     listOf(
                         "It topped the charts (${app.getString(R.string.home_cite, "W1")}). " +
                             "It is loved (${app.getString(R.string.home_cite_model)}).",
+                    ),
+                ),
+            )
+        }
+    }
+
+    @Test
+    fun aKeptInsightCitingG1ShowsItsCitationAsTheS1ChipAndReachesWebSearchsLine() {
+        val reply = "It topped the charts [W1]. It went gold [G1]."
+        val kept = track(insight = written(reply, cached = true, from = withWeb), evidence = withWeb)
+        val state =
+            NowPlayingState(
+                PipelineView(kept, aiReady = true),
+                sundown,
+                PlaybackInfo(Settings.SPOTIFY, PlaybackStatus.PLAYING),
+                settings = Settings(),
+            )
+        show(state) {
+            val node =
+                compose
+                    .onNode(
+                        hasText("It topped the charts", substring = true) and
+                            SemanticsMatcher.keyIsDefined(SemanticsActions.CustomActions),
+                    ).performScrollTo()
+            val prose =
+                node
+                    .fetchSemanticsNode()
+                    .config[SemanticsProperties.Text]
+                    .first { "It went gold" in it.text }
+            val spans = prose.spanStyles.map { prose.text.substring(it.start, it.end).trim() }
+            assertEquals("no G1 chip: $spans", 0, spans.count { it == "G1" })
+            assertEquals("one S1 chip: $spans", 1, spans.count { it == "S1" })
+            // Read as a line's citation, not as one of no line.
+            node.assert(
+                SemanticsMatcher.expectValue(
+                    SemanticsProperties.ContentDescription,
+                    listOf(
+                        "It topped the charts (${app.getString(R.string.home_cite, "W1")}). " +
+                            "It went gold (${app.getString(R.string.home_cite, "S1")}).",
                     ),
                 ),
             )

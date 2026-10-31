@@ -57,7 +57,7 @@ layout: null
 :root{
   --bg:#fff; --surface:#fafbfc; --ink:#141a22; --muted:#596473; --line:#d2d8e0;
   --accent:#3346c9;
-  --src-w:#46586e; --src-l:#c0362c; --src-g:#8a560e; --src-mb:#7a4ba3;
+  --src-w:#46586e; --src-l:#c0362c; --src-s:#8a560e; --src-mb:#7a4ba3;
   --f-ui:"Sleevesight Flex",system-ui,-apple-system,"Segoe UI",sans-serif;
   --f-text:"Sleevesight Slab",ui-serif,Georgia,serif;
   --f-mono:"Sleevesight Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
@@ -74,7 +74,7 @@ layout: null
 @media (prefers-color-scheme: dark){:root{
   --bg:#0d1015; --surface:#151920; --ink:#e5e8ee; --muted:#96a0ad; --line:#29303a;
   --accent:#8e9cff;
-  --src-w:#9fb0c6; --src-l:#ff7d72; --src-g:#e3a948; --src-mb:#c39be6;
+  --src-w:#9fb0c6; --src-l:#ff7d72; --src-s:#e3a948; --src-mb:#c39be6;
   --s-c1:hsl(var(--h) 14% 12%); --s-bg:hsl(var(--h) 14% 8%); --s-on:hsl(var(--h) 22% 91%);
   --s-onv:hsl(var(--h) 10% 70%); --s-pri:hsl(var(--h) 70% 80%);
   --cite-ink:#0e1116;
@@ -113,7 +113,7 @@ figure.mock{margin:0;justify-self:end;width:100%;max-width:400px}
 .phone{background:#f8f8fa;border:10px solid #101318;border-radius:40px;padding:8px 0 10px;overflow:hidden;box-shadow:0 24px 60px -24px rgba(0,0,0,.45)}
 .phone img{display:block;width:100%;height:auto}
 .cite{display:inline-grid;place-items:center;min-width:20px;height:16px;padding:0 4px;margin-left:2px;border-radius:999px;font-family:var(--f-mono);font-size:9.5px;font-weight:500;color:var(--cite-ink);vertical-align:2px}
-.cite.W{background:var(--src-w)} .cite.L{background:var(--src-l)} .cite.G{background:var(--src-g)} .cite.MB{background:var(--src-mb)}
+.cite.W{background:var(--src-w)} .cite.L{background:var(--src-l)} .cite.S{background:var(--src-s)} .cite.MB{background:var(--src-mb)}
 
 section{padding:48px 0;border-top:1px solid var(--line)}
 section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-weight:700;font-stretch:92%;letter-spacing:-.01em}
@@ -124,7 +124,7 @@ section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-
    the sources are looked up; Tell green, go, the insight is shown. Track (`--track`) is the
    wordmark's red (`--sight`, close to Last.fm's chip) in light, and a lighter red in dark, where the
    wordmark's is too dark for text this size (3.56:1). Trace's amber (`--trace`) is yellower than
-   web search's (`--src-g`), so a header does not read as a citation; a yellow would be unreadable on
+   web search's (`--src-s`), so a header does not read as a citation; a yellow would be unreadable on
    white. Tell's green (`--tell`) is the simulator's `--ok`. Each is at least 5:1 on its ground, and
    each step is named by its verb, so the colours carry nothing alone. */
 .steps,.tiles{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px 32px}
@@ -247,8 +247,8 @@ section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-
     </li>
     <li class="ex">
       <h3 class="vh">Album</h3>
-      <div class="about"><p><b>The album's release</b>, and how it fared.</p><p>This example insight is based on two passages of the band's own page on the album, found by web search: <span class="cite G">G1</span> and <span class="cite G">G2</span>.</p></div>
-      <div class="box"><p class="label" aria-hidden="true">Album</p><p class="what">Rubber Soul, 1965</p><p>Released on 3 December 1965, just two weeks after its final mixing.<span class="vh">, source&nbsp;</span><span class="cite G">G1</span><span class="vh">.&nbsp;</span> It topped the album chart in the UK, and spent six weeks at number one in the US from early January 1966.<span class="vh">, source&nbsp;</span><span class="cite G">G2</span><span class="vh">.&nbsp;</span></p></div>
+      <div class="about"><p><b>The album's release</b>, and how it fared.</p><p>This example insight is based on two passages of the band's own page on the album, found by web search: <span class="cite S">S1</span> and <span class="cite S">S2</span>.</p></div>
+      <div class="box"><p class="label" aria-hidden="true">Album</p><p class="what">Rubber Soul, 1965</p><p>Released on 3 December 1965, just two weeks after its final mixing.<span class="vh">, source&nbsp;</span><span class="cite S">S1</span><span class="vh">.&nbsp;</span> It topped the album chart in the UK, and spent six weeks at number one in the US from early January 1966.<span class="vh">, source&nbsp;</span><span class="cite S">S2</span><span class="vh">.&nbsp;</span></p></div>
     </li>
     <li class="ex">
       <h3 class="vh">Language</h3>

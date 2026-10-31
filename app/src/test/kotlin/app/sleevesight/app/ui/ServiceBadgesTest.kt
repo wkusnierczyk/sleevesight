@@ -131,7 +131,7 @@ class ServiceBadgesTest {
             assertBadge(R.string.settings_source_musicbrainz, "MB")
             assertBadge(R.string.settings_source_wikipedia, "W")
             assertBadge(R.string.settings_source_lastfm, "L")
-            assertBadge(R.string.settings_engine_exa, "G")
+            assertBadge(R.string.settings_engine_exa, "S")
             assertBadge(R.string.settings_source_model, "AI")
         }
 

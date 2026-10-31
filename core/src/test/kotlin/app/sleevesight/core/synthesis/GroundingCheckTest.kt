@@ -41,7 +41,9 @@ class GroundingCheckTest {
     /**
      * Each reply in `grounding/replies.json` gives the result stored for it in
      * `replies.checked.json`. The stored results are the check's own: a change to what it reads
-     * changes them with it.
+     * changes them with it. The replies are kept as the models wrote them, and their evidence ids as
+     * recorded: those from before #769 cite web search's lines `[G1]` and list them as `G1`, and both
+     * read as `S1` ([citationId]), as a kept card's do.
      */
     @Test
     fun `every stored reply gives its stored result`() {
@@ -49,7 +51,7 @@ class GroundingCheckTest {
         val expected = json.decodeFromString<List<Expected>>(Fixtures.text("grounding/replies.checked.json"))
         assertEquals(replies.map { it.name }, expected.map { it.name }, "replies.checked.json, reply for reply")
         for ((reply, want) in replies.zip(expected)) {
-            val got = GroundingCheck.check(reply.reply, reply.ids.toSet(), reply.allowModel)
+            val got = GroundingCheck.check(reply.reply, reply.ids.map(::citationId).toSet(), reply.allowModel)
             val actual =
                 when (got) {
                     InsightReply.NoEvidence -> {
@@ -311,6 +313,53 @@ class GroundingCheckTest {
         assertTrue(citesLegacyModelId("It was a hit [W3][M]."))
         assertFalse(citesLegacyModelId("He was Canadian. [AI]"))
         assertFalse(citesLegacyModelId("It was a hit [MB1]."))
+    }
+
+    @Test
+    fun `a reply written before 0_1_12 citing G1 reads as citing web search's line S1`() {
+        // Cards kept in the synthesis cache cite web search's lines `[G1]` (#769).
+        val evidence = setOf("MB1", "S1", "S2")
+        val reply = "It was a hit [G1]. It was covered twice [MB1][G2]. It was never released [G3]."
+        val written = assertIs<InsightReply.Written>(GroundingCheck.check(reply, evidence, allowModel = false))
+        val sentences = written.grounded.paragraphs.flatten()
+        assertEquals(listOf(listOf("S1"), listOf("MB1", "S2"), listOf("S3")), sentences.map { it.cites })
+        assertEquals(
+            listOf(SentenceStatus.OK, SentenceStatus.OK, SentenceStatus.UNKNOWN),
+            sentences.map { it.status },
+        )
+        // As written, the text keeps its old ids.
+        assertEquals(reply, written.grounded.text)
+        // And counts as the same reply written now, citing `[S1]`.
+        val now = GroundingCheck.check(reply.replace("[G", "[S"), evidence, allowModel = false)
+        assertEquals(assertIs<InsightReply.Written>(now).grounded.counts, written.grounded.counts)
+    }
+
+    @Test
+    fun `the old ids map to today's, and no other id is touched`() {
+        assertEquals("S1", citationId("G1"))
+        assertEquals("S12", citationId("G12"))
+        assertEquals("AI", citationId("M"))
+        for (id in listOf("MB1", "W1", "WD1", "L1", "D1", "P1", "S1", "AI", "G", "GG1", "M1", "MB")) {
+            assertEquals(id, citationId(id), id)
+        }
+        assertEquals("S", SourceId.WEB.tag)
+        assertEquals(listOf(SourceId.WEB), SourceId.entries.filter { it.tag.startsWith("S") })
+        assertTrue(SourceId.entries.none { it.tag.startsWith(SourceId.LEGACY_WEB_TAG) }, "no source takes G")
+    }
+
+    @Test
+    fun `a reply citing G1, as written before 0_1_12, is told from one citing S1, and gets its note`() {
+        assertTrue(citesLegacyWebId("It was a hit [G1]."))
+        assertTrue(citesLegacyWebId("It was a hit [W3][G12]."))
+        assertFalse(citesLegacyWebId("It was a hit [S1]."))
+        assertFalse(citesLegacyWebId("It was a hit [MB1]. Gold [G]."))
+        assertEquals(emptyList(), legacyCitationNotes("It was a hit [S1]. He was Canadian. [AI]"))
+        assertEquals(listOf(LEGACY_WEB_NOTE), legacyCitationNotes("It was a hit [G1]."))
+        assertEquals(listOf(LEGACY_MODEL_NOTE), legacyCitationNotes("He was Canadian. [M]"))
+        assertEquals(
+            listOf(LEGACY_MODEL_NOTE, LEGACY_WEB_NOTE),
+            legacyCitationNotes("It was a hit [G1]. He was Canadian. [M]"),
+        )
     }
 
     @Test

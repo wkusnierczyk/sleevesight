@@ -66,6 +66,11 @@ object InsightPrompt {
      * nothing.
      * Version 7 (#722): a rule leaves out the track's length ([LENGTH_RULE]). Raised so that cards
      * kept with a sentence on the length, found by web search, are written afresh.
+     *
+     * Not raised when web search's lines became `S1`, `S2` (#769, they were `G1`, `G2`), and the
+     * rules' example `[W2][S1]` with them: a card kept citing `[G1]` reads and shows as one written
+     * now ([citationId]), and is still found, since the evidence fingerprint spells web search's ids
+     * as before (`SourceId.LEGACY_WEB_TAG`).
      */
     const val VERSION: Int = 7
 
@@ -136,7 +141,7 @@ object InsightPrompt {
      */
     fun contract(allowModel: Boolean): String =
         listOf(
-            "- End every factual sentence with the id(s) that support it, like [W1] or [W2][G1].",
+            "- End every factual sentence with the id(s) that support it, like [W1] or [W2][${SourceId.WEB.tag}1].",
             "- Use only the evidence: no names, dates, places or numbers that are not in it.",
             LENGTH_RULE,
             "- An \"original song\" line is about the song as first recorded by someone else. You may say this " +
