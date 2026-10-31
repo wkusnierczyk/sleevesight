@@ -386,6 +386,33 @@ class RecordingWorkTest {
         }
 
     @Test
+    fun `an original none of whose listed releases has its first-release date gets no release`() =
+        runTest {
+            // A lookup lists at most 25 releases: the 1975 single is not among them, a 1980 compilation is.
+            val album = MbReleaseGroup("group-album", "Greatest", "Compilation")
+            val releases =
+                recording("first", "Song", "Original Act", 200, "1975-06")
+                    .copy(
+                        releases =
+                            listOf(
+                                MbRelease("r-album", "Greatest Hits", "1980", album),
+                                MbRelease("r-undated", "Song", null, null),
+                            ),
+                    )
+            val resolution = resolve(cover(mapOf("first" to Lookup.Found(releases))), track("Song", "Cover Act"))
+            assertEquals("Original Act", resolution.original?.artistCredit)
+            assertNull(resolution.original?.release)
+            // It answered: nothing to ask again.
+            assertFalse(resolution.provisional)
+            // The track's own first release, unlike the original's, falls back to its earliest dated one.
+            val ours =
+                recording("ours", "Song", "Act", 200, "1978")
+                    .copy(releases = listOf(MbRelease("r-later", "Later", "1979", null)))
+            val own = resolve(FakeMusicBrainz(Lookup.Found(listOf(ours))), track("Song", "Act"))
+            assertEquals(FirstRelease("1979", "Later", null, "r-later", null), own.firstRelease)
+        }
+
+    @Test
     fun `no original, no lookup of its releases`() =
         runTest {
             val search = listOf(recording("ours", "Song", "Writer", 200, "1974"))

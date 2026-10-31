@@ -252,7 +252,7 @@ class RecordingResolver(
             // not kept and a later run asks again.
             val original = covered.original
             val lookup = original?.let { musicBrainz.recordingReleases(it.recordingMbid) }
-            val release = (lookup as? Lookup.Found)?.value?.let(::firstRelease)
+            val release = (lookup as? Lookup.Found)?.value?.let { firstRelease(it, fallback = false) }
             covered.copy(original = original?.copy(release = release), provisional = lookup is Lookup.Failed)
         }
     }
@@ -571,13 +571,20 @@ class RecordingResolver(
             return a.take(n) < b.take(n)
         }
 
-        // The release of [recording] dated its first-release date, else its earliest dated one; of ours,
-        // and of a cover's original (#724).
-        private fun firstRelease(recording: MbRecording): FirstRelease? {
+        // The release of [recording] dated its first-release date, else, with [fallback], its earliest
+        // dated one. Ours falls back; a cover's original does not (#724): a lookup lists at most 25
+        // releases, so for an original with more, the earliest listed may be a later compilation, and
+        // its release is left out rather than that one named.
+        private fun firstRelease(
+            recording: MbRecording,
+            fallback: Boolean = true,
+        ): FirstRelease? {
             val dated = recording.releases.mapNotNull { release -> release.date?.let { it to release } }
             val first =
                 dated.filter { it.first == recording.firstReleaseDate }.minByOrNull { it.second.mbid }
-                    ?: dated.minWithOrNull(compareBy<Pair<String, MbRelease>> { it.first }.thenBy { it.second.mbid })
+                    ?: dated
+                        .takeIf { fallback }
+                        ?.minWithOrNull(compareBy<Pair<String, MbRelease>> { it.first }.thenBy { it.second.mbid })
             return first?.let { (date, release) ->
                 FirstRelease(
                     date = date,

@@ -245,10 +245,11 @@ data class ResolvedWork(
  *
  * @property artistCredit its artist credit, as MusicBrainz writes it.
  * @property date when it was recorded, as MusicBrainz gives it.
- * @property release the release it first came out on, chosen as the track's own first release is
- *   ([Resolution.firstRelease]), from one more lookup of the recording made only for a cover (#724),
- *   for the home screen's *Dates*; null when that lookup failed (and the resolution is
- *   [Resolution.provisional]) or found no dated release.
+ * @property release the release it first came out on, from one more lookup of the recording made
+ *   only for a cover (#724), for the home screen's *Dates*: the one dated the recording's first-release
+ *   date. Null when that lookup failed (and the resolution is [Resolution.provisional]) or lists no
+ *   release of that date: a lookup lists at most 25 releases, so the earliest listed may be a later
+ *   compilation, which is not named in its place.
  */
 data class OriginalRecording(
     val recordingMbid: String,
