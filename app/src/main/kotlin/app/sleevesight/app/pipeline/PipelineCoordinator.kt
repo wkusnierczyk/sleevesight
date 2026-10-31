@@ -1616,11 +1616,10 @@ class PipelineCoordinator(
         acted: Boolean,
     ): Boolean {
         // A tap kept for it (#192) answers as a tap: one call, the ledger written. A look again
-        // (#617), of a written track, never writes: what it found is written only on a tap.
-        if (run.tapped || run.lookAgain != null) return run.tapped
-        // A run started by *Retry* (#724), or replaced from one, is free: it never writes unasked,
-        // whatever the decision before it or the first action would have done. Write waits for a tap.
-        if (run.retried) return false
+        // (#617), of a written track, never writes: what it found is written only on a tap. Nor
+        // does a run started by *Retry* (#724), or replaced from one: it is free, whatever the
+        // decision before it or the first action would have done.
+        if (run.tapped || run.lookAgain != null || run.retried) return run.tapped
         val ledger = state.ledger?.takeIf { sameInsightTrack(it.track, run.nowPlaying) }
         val written = ledger?.written == true
         // The cause of the latest report, which the run, being current, holds: the latest word
