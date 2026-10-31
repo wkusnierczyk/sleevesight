@@ -2,6 +2,7 @@ package app.sleevesight.core.pipeline
 
 import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.genres.GenreLabel
+import app.sleevesight.core.genres.LabelLookup
 import app.sleevesight.core.genres.LabelSource
 import app.sleevesight.core.genres.LastFmLabels
 import app.sleevesight.core.genres.MusicBrainzLabels
@@ -68,48 +69,89 @@ internal class TrackLabels(
         }
     }
 
+    /** A request after the evidence: [source]'s, which [ask] makes. */
+    class Later(
+        val source: LabelSource,
+        val ask: suspend () -> LabelLookup,
+    )
+
+    // The requests after the evidence not yet answered, and the sources one of whose failed (#772).
+    private val pending = MutableStateFlow<Map<LabelSource, Int>>(emptyMap())
+    private val failed = MutableStateFlow<Set<LabelSource>>(emptySet())
+
     /**
-     * Asks for the labels that come after the evidence, each source's at once, and adds each as it
-     * lands: MusicBrainz's for the artists [current]'s MusicBrainz result names; Last.fm's for the
-     * track and its album, by the primary artist, once Last.fm's result shows an artist and has not
-     * rejected the primary (an artist it rejected may be another's of the name, whose track this is
-     * not).
+     * The labels that come after the evidence, for [current], published as asked for (#772,
+     * [TrackState.laterLabels]) from now, before the run may start them: MusicBrainz's for the
+     * artists [current]'s MusicBrainz result names; Last.fm's for the track and its album, by the
+     * primary artist, once Last.fm's result shows an artist and has not rejected the primary (an
+     * artist it rejected may be another's of the name, whose track this is not). [addLater] asks
+     * them, and [settle] ends what is left unanswered.
      */
-    suspend fun addLater(current: TrackState) =
-        coroutineScope {
-            val artists = current.done(SourceId.MUSICBRAINZ)?.labelArtists.orEmpty()
-            val fromMusicBrainz =
-                musicBrainz?.takeIf {
-                    artists.isNotEmpty() &&
-                        settings.givesLabels(LabelSource.MUSICBRAINZ)
-                }
-            if (fromMusicBrainz != null) {
-                launch { add(LabelSource.MUSICBRAINZ) { fromMusicBrainz.labels(artists) } }
+    fun later(current: TrackState): List<Later> {
+        val asks = mutableListOf<Later>()
+        val artists = current.done(SourceId.MUSICBRAINZ)?.labelArtists.orEmpty()
+        val fromMusicBrainz =
+            musicBrainz?.takeIf {
+                artists.isNotEmpty() &&
+                    settings.givesLabels(LabelSource.MUSICBRAINZ)
             }
-            val track = current.normalized
-            val fromLastFmResult = current.done(SourceId.LASTFM)
-            val shown =
-                fromLastFmResult?.outcome == Outcome.ArtistArticle &&
-                    fromLastFmResult.rejections.none {
-                        it.scope == Scope.ARTIST &&
-                            fold(it.subject) == fold(track.primary)
-                    }
-            val fromLastFm = lastFm?.takeIf { shown && settings.givesLabels(LabelSource.LASTFM) }
-            if (fromLastFm != null && track.primary.isNotBlank()) {
-                launch { add(LabelSource.LASTFM) { fromLastFm.trackLabels(track.primary, track.title) } }
-                current.nowPlaying.album
-                    ?.trim()
-                    ?.takeIf(String::isNotEmpty)
-                    ?.let { album ->
-                        launch { add(LabelSource.LASTFM) { fromLastFm.albumLabels(track.primary, album) } }
-                    }
+        if (fromMusicBrainz != null) asks += Later(LabelSource.MUSICBRAINZ) { fromMusicBrainz.lookUp(artists) }
+        val track = current.normalized
+        val fromLastFmResult = current.done(SourceId.LASTFM)
+        val shown =
+            fromLastFmResult?.outcome == Outcome.ArtistArticle &&
+                fromLastFmResult.rejections.none {
+                    it.scope == Scope.ARTIST &&
+                        fold(it.subject) == fold(track.primary)
+                }
+        val fromLastFm = lastFm?.takeIf { shown && settings.givesLabels(LabelSource.LASTFM) }
+        if (fromLastFm != null && track.primary.isNotBlank()) {
+            asks += Later(LabelSource.LASTFM) { fromLastFm.trackLookup(track.primary, track.title) }
+            current.nowPlaying.album
+                ?.trim()
+                ?.takeIf(String::isNotEmpty)
+                ?.let { album -> asks += Later(LabelSource.LASTFM) { fromLastFm.albumLookup(track.primary, album) } }
+        }
+        if (asks.isNotEmpty()) {
+            pending.value = asks.groupingBy { it.source }.eachCount()
+            sink.update { it.copy(laterLabels = laterStates()) }
+        }
+        return asks
+    }
+
+    /** Asks for each of [asks] at once, and adds each one's labels as they land. */
+    suspend fun addLater(asks: List<Later>) =
+        coroutineScope {
+            for (later in asks) launch { add(later.source, later.ask) }
+        }
+
+    /**
+     * Ends the requests after the evidence still unanswered (the run cancelled, or never granted
+     * them): each such source done, so a panel never says it is still looking for a run that has
+     * stopped asking. Published while the run is the current one only, as every state is.
+     */
+    fun settle() {
+        if (pending.value.values.none { it > 0 }) return
+        pending.value = emptyMap()
+        sink.update { it.copy(laterLabels = laterStates()) }
+    }
+
+    // How each source asked after the evidence stands: asking while a request is unanswered, else
+    // failed when one failed, else done.
+    private fun laterStates(): Map<LabelSource, LaterLabels> =
+        (pending.value.keys + failed.value).associateWith { source ->
+            when {
+                (pending.value[source] ?: 0) > 0 -> LaterLabels.ASKING
+                source in failed.value -> LaterLabels.FAILED
+                else -> LaterLabels.DONE
             }
         }
 
-    // [ask]'s labels, added to [source]'s and published; a failure gives none, and is logged.
+    // [ask]'s labels, added to [source]'s and published, with how [source]'s requests stand; a
+    // failure gives none, is logged, and marks the source failed.
     private suspend fun add(
         source: LabelSource,
-        ask: suspend () -> List<GenreLabel>,
+        ask: suspend () -> LabelLookup,
     ) {
         val found =
             try {
@@ -121,11 +163,12 @@ internal class TrackLabels(
             ) {
                 // A bug in the labels must not take the insight down; its type is logged.
                 sink.emit(PipelineEvent.SourceFailed(key, source.source, "labels: ${TrackRun.nameOf(e)}"))
-                return
+                LabelLookup(emptyList(), failed = true)
             }
-        if (found.isEmpty()) return
-        later.update { it + (source to it[source].orEmpty() + found) }
-        sink.update { it.copy(genres = of(it)) }
+        if (found.labels.isNotEmpty()) later.update { it + (source to it[source].orEmpty() + found.labels) }
+        if (found.failed) failed.update { it + source }
+        pending.update { it + (source to ((it[source] ?: 1) - 1).coerceAtLeast(0)) }
+        sink.update { it.copy(genres = of(it), laterLabels = laterStates()) }
     }
 
     private fun TrackState.done(source: SourceId) = (sources[source] as? SourceState.Done)?.result

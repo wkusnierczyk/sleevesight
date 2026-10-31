@@ -48,6 +48,7 @@ import app.sleevesight.core.genres.TrackLabel
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.pipeline.LaterLabels
 import app.sleevesight.core.pipeline.RunKey
 import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.pipeline.TrackState
@@ -88,13 +89,14 @@ class GenresButtonScreenTest {
     private val folkAndBallad =
         TrackGenres(listOf(GenreRow(GenreLevel.TRACK, null, listOf(label("folk"), label("ballad")))))
 
-    // [playing] with the genres [genres] and the sources [sources].
+    // [playing] with the genres [genres], the sources [sources], and the requests after the evidence [later].
     private fun labelled(
         genres: TrackGenres = folkAndBallad,
         playing: NowPlaying = sundown,
         sources: Map<SourceId, SourceState> =
             mapOf(SourceId.MUSICBRAINZ to done(), SourceId.LASTFM to done()),
-    ): TrackState = track(playing, sources = sources).copy(genres = genres)
+        later: Map<LabelSource, LaterLabels> = emptyMap(),
+    ): TrackState = track(playing, sources = sources).copy(genres = genres, laterLabels = later)
 
     private fun state(
         track: TrackState = labelled(),
@@ -367,6 +369,54 @@ class GenresButtonScreenTest {
             opensTo("Looking on MusicBrainz…")
         }
     }
+
+    @Test
+    fun untilTheRequestsAfterTheEvidenceAnswerThePanelSaysItIsLookingThenWhatTheyFound() {
+        val asking = mapOf(LabelSource.LASTFM to LaterLabels.ASKING, LabelSource.MUSICBRAINZ to LaterLabels.ASKING)
+        show(state(labelled(TrackGenres(), later = asking))) {
+            opensTo("Looking on Last.fm and MusicBrainz…")
+            compose.onNodeWithText(text(R.string.home_genres_none)).assertDoesNotExist()
+            // They answer with genres: the chips, and no more looking.
+            val done = mapOf(LabelSource.LASTFM to LaterLabels.DONE, LabelSource.MUSICBRAINZ to LaterLabels.DONE)
+            current.value = state(labelled(later = done))
+            compose.waitForIdle()
+            assertEquals(1, count(FOLK))
+            compose.onNodeWithText("Looking on", substring = true).assertDoesNotExist()
+            // Or with none: none found.
+            current.value = state(labelled(TrackGenres(), later = done))
+            compose.waitForIdle()
+            compose.onNodeWithText(text(R.string.home_genres_none)).assertExists()
+        }
+    }
+
+    @Test
+    fun underChipsAlreadyInTheSourceStillAskedIsNamed() =
+        show(
+            state(
+                labelled(
+                    later =
+                        mapOf(
+                            LabelSource.LASTFM to LaterLabels.ASKING,
+                            LabelSource.MUSICBRAINZ to LaterLabels.DONE,
+                        ),
+                ),
+            ),
+        ) {
+            tap(GENRES_CHIP_TAG)
+            assertEquals(1, count(FOLK))
+            val looking = compose.onNodeWithText("Looking on Last.fm…")
+            looking.assertExists()
+            assertTrue(top(FOLK) < looking.fetchSemanticsNode().boundsInRoot.top)
+        }
+
+    @Test
+    fun aRequestAfterTheEvidenceThatFailedSaysItsSourceCouldNotBeReachedNotNoneFound() =
+        show(state(labelled(TrackGenres(), later = mapOf(LabelSource.MUSICBRAINZ to LaterLabels.FAILED)))) {
+            opensTo("MusicBrainz could not be reached.")
+            compose.onNodeWithText(text(R.string.home_genres_none)).assertDoesNotExist()
+            // *Retry* only where the pipeline offers it, for a source its lookup did not reach.
+            assertEquals(0, count(RETRY_TAG))
+        }
 
     @Test
     fun withNoGenreFoundThePanelSaysNoneFound() =

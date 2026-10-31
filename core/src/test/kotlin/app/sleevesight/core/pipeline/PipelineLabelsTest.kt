@@ -24,11 +24,13 @@ import app.sleevesight.core.sources.Rejection
 import app.sleevesight.core.sources.ResolvedArtist
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.SourceResult
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.testTimeSource
 import kotlin.coroutines.cancellation.CancellationException
@@ -380,6 +382,7 @@ class PipelineLabelsTest {
         tags: FakeReleaseTags,
         adapters: List<SourceAdapter> = listOf(musicBrainz(), lastFm()),
         cache: PipelineCache = PipelineCache.None,
+        labels: MusicBrainzLabels = musicBrainzLabels,
     ) = Pipeline(
         PipelineParts(
             normalizer = Normalizer(JvmAccentFolder),
@@ -387,7 +390,7 @@ class PipelineLabelsTest {
             resolver = FakeResolver(),
             hasher = JvmHasher,
             cache = cache,
-            musicBrainzLabels = musicBrainzLabels,
+            musicBrainzLabels = labels,
             lastFmLabels = LastFmLabels(tags, vocabulary),
         ),
         PipelineTime(timeSource = testTimeSource),
@@ -533,6 +536,79 @@ class PipelineLabelsTest {
                         .url,
                 )
             }
+        }
+
+    @Test
+    fun `the requests after the evidence show as asked for until they answer, then done`() =
+        runTest {
+            // MusicBrainz's artist tags take a second; Last.fm's track and album tags answer at once.
+            val pipeline = withRelease(FakeReleaseTags())
+            val run = async { pipeline.run(sundown, write = false) }
+            advanceTimeBy(500)
+            assertEquals(
+                mapOf(LabelSource.MUSICBRAINZ to LaterLabels.ASKING, LabelSource.LASTFM to LaterLabels.DONE),
+                pipeline.state.value?.laterLabels,
+            )
+            val state = run.await()
+            assertEquals(
+                mapOf(LabelSource.MUSICBRAINZ to LaterLabels.DONE, LabelSource.LASTFM to LaterLabels.DONE),
+                state.laterLabels,
+            )
+            assertEquals(
+                listOf("Folk", "Singer-Songwriter", "Country"),
+                state.genres.rows[1]
+                    .labels
+                    .map { it.genre.label },
+            )
+        }
+
+    @Test
+    fun `the requests after the evidence are asked for as soon as the evidence is in, before they may start`() =
+        runTest {
+            val pipeline = withRelease(FakeReleaseTags())
+            val run = async { pipeline.run(sundown, write = false) }
+            runCurrent()
+            assertEquals(
+                LaterLabels.ASKING,
+                pipeline.state.value
+                    ?.laterLabels
+                    ?.get(LabelSource.MUSICBRAINZ),
+            )
+            run.await()
+        }
+
+    @Test
+    fun `a request that finds nothing leaves its source done, one that fails or is not answered failed`() =
+        runTest {
+            val none = withRelease(FakeReleaseTags(track = Lookup.NotFound, album = Lookup.NotFound))
+            assertEquals(LaterLabels.DONE, none.run(sundown, write = false).laterLabels[LabelSource.LASTFM])
+
+            // Last.fm's album tags not reached; MusicBrainz's artist tags failing.
+            val down = MusicBrainzLabels({ Lookup.Failed("network") }, vocabulary)
+            val failing = withRelease(FakeReleaseTags(album = Lookup.Failed("network")), labels = down)
+            val state = failing.run(sundown, write = false)
+            assertEquals(
+                mapOf(LabelSource.MUSICBRAINZ to LaterLabels.FAILED, LabelSource.LASTFM to LaterLabels.FAILED),
+                state.laterLabels,
+            )
+            // The track's own Last.fm tags still show.
+            assertEquals(listOf("Soft Rock"), state.genres.folded.map { it.label.genre.label })
+        }
+
+    @Test
+    fun `a request that throws leaves its source failed`() =
+        runTest {
+            val broken = MusicBrainzLabels({ error("a bug") }, vocabulary)
+            val state = withRelease(FakeReleaseTags(), labels = broken).run(sundown, write = false)
+            assertEquals(LaterLabels.FAILED, state.laterLabels[LabelSource.MUSICBRAINZ])
+            assertEquals(LaterLabels.DONE, state.laterLabels[LabelSource.LASTFM])
+        }
+
+    @Test
+    fun `with no request after the evidence, no source is said to be asked`() =
+        runTest {
+            settings = settings.copy(labelSources = emptySet())
+            assertEquals(emptyMap(), withRelease(FakeReleaseTags()).run(sundown, write = false).laterLabels)
         }
 
     private companion object {

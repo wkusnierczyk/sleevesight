@@ -39,6 +39,7 @@ import app.sleevesight.core.genres.PlacedLabel
 import app.sleevesight.core.genres.TrackGenres
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.pipeline.LaterLabels
 import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.settings.Settings
@@ -156,8 +157,10 @@ internal data class GenresShown(
          * *Genres*, where their genre switches are ([Settings.givesLabels]). While the track's sources
          * are still asked ([TrackState.gathered], or before the pipeline reaches the track), the
          * label sources on that are still pending, or, with none pending (another source is), all
-         * those on. Once gathered, each label source on whose lookup ended unreachable (or failed);
-         * with none and no genre, none found.
+         * those on. Once gathered, the label sources on whose requests after the evidence are still
+         * asked ([TrackState.laterLabels]: MusicBrainz's artist tags, Last.fm's track and album tags),
+         * which may yet bring genres; and each whose lookup ended unreachable (or failed), or whose
+         * later request failed. None found only when every label source on is done with nothing.
          */
         fun of(
             track: TrackState?,
@@ -169,13 +172,25 @@ internal data class GenresShown(
                 return GenresShown(off = if (sourcesOff) SettingsTarget.sources else SettingsTarget.genres)
             }
             val on = LabelSource.entries.filter(settings::givesLabels)
-            val states = track?.sources.orEmpty()
             return if (track == null || !track.gathered) {
+                val states = track?.sources.orEmpty()
                 GenresShown(looking = on.filter { states[it.source] is SourceState.Pending }.ifEmpty { on })
             } else {
-                val unreachable = on.filter { unreachable(states[it.source]) }
-                GenresShown(unreachable = unreachable, none = empty && unreachable.isEmpty())
+                gathered(track, on, empty)
             }
+        }
+
+        // Once [track]'s sources are in: of the label sources [on], those whose later requests are
+        // still asked, and those not reached; with none of either and no genre ([empty]), none found.
+        private fun gathered(
+            track: TrackState,
+            on: List<LabelSource>,
+            empty: Boolean,
+        ): GenresShown {
+            val later = track.laterLabels
+            val looking = on.filter { later[it] == LaterLabels.ASKING }
+            val unreachable = on.filter { unreachable(track.sources[it.source]) || later[it] == LaterLabels.FAILED }
+            return GenresShown(looking, unreachable, none = empty && looking.isEmpty() && unreachable.isEmpty())
         }
 
         // Whether a source's lookup ended unreachable, or failed: *Retry* asks it again.

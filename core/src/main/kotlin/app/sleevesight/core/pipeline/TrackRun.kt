@@ -118,12 +118,18 @@ internal class TrackRun(
                 control.gathered(Gathered(state.value.sources, state.value.resolution))
                 val evidence = assemble()
                 control.assembled(evidence)
+                // Published as asked for before they may start (#772): a panel says it is still looking.
+                val later = labels.later(state.value)
                 launch {
-                    control.await(RunStep.LABELS)
                     try {
-                        labels.addLater(state.value)
+                        control.await(RunStep.LABELS)
+                        try {
+                            labels.addLater(later)
+                        } finally {
+                            control.ended(RunStep.LABELS)
+                        }
                     } finally {
-                        control.ended(RunStep.LABELS)
+                        labels.settle()
                     }
                 }
                 InsightWriter(parts, time, input, evidence, guard, this@TrackRun).write(control)
