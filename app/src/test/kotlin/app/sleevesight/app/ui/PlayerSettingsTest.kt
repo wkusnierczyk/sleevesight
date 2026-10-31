@@ -4,7 +4,7 @@ import android.content.ComponentName
 import android.content.Intent
 import androidx.activity.compose.setContent
 import androidx.compose.ui.test.hasContentDescription
-import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText

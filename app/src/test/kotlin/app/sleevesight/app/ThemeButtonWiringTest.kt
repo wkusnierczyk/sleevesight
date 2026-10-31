@@ -4,7 +4,7 @@ import android.app.NotificationManager
 import android.content.ComponentName
 import android.content.Intent
 import android.provider.Settings
-import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
