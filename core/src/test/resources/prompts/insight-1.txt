@@ -24,14 +24,14 @@ The evidence, the only facts you may use. Each line: its id, (source, what it is
 [L4] (Last.fm, artist) Last.fm counts 683,942 listeners for this artist.
 [L5] (Last.fm, artist) Last.fm tags the artist as: folk, singer-songwriter, 70s, canadian, acoustic.
 [L6] (Last.fm, artist) Last.fm lists similar artists: Jim Croce, John Denver, James Taylor, Harry Chapin.
-[G1] (Web search, web) Sundown was the lead single and title track of Lightfoot's ninth studio album, released January 1974.
-[G2] (Web search, web) The album hit number one in the US and Canada, staying top in Canada for five straight weeks.
-[G3] (Web search, web) Despite its mellow sound the song is described as dark, expressing jealousy and paranoia.
-[G4] (Web search, web) Lightfoot said it concerned his roughly three-year relationship with Cathy Smith, not his ex-wife.
-[G5] (Web search, web) He said he wrote it around sunset at a farm he rented as a writing retreat.
-[G6] (Web search, web) Obituary lists Sundown among Lightfoot's staple pop radio hits alongside Rainy Day People and Carefree Highway.
-[G7] (Web search, web) Gordon Lightfoot died aged 84; he was born 17 November 1938 in Orillia, Ontario.
-[G8] (Web search, web) His first hit as a singer was If You Could Read My Mind in 1970.
+[S1] (Web search, web) Sundown was the lead single and title track of Lightfoot's ninth studio album, released January 1974.
+[S2] (Web search, web) The album hit number one in the US and Canada, staying top in Canada for five straight weeks.
+[S3] (Web search, web) Despite its mellow sound the song is described as dark, expressing jealousy and paranoia.
+[S4] (Web search, web) Lightfoot said it concerned his roughly three-year relationship with Cathy Smith, not his ex-wife.
+[S5] (Web search, web) He said he wrote it around sunset at a farm he rented as a writing retreat.
+[S6] (Web search, web) Obituary lists Sundown among Lightfoot's staple pop radio hits alongside Rainy Day People and Carefree Highway.
+[S7] (Web search, web) Gordon Lightfoot died aged 84; he was born 17 November 1938 in Orillia, Ontario.
+[S8] (Web search, web) His first hit as a singer was If You Could Read My Mind in 1970.
 [P1] (player metadata, release) This recording is on the release "Sundown" (1974).
 </evidence>
 
@@ -40,7 +40,7 @@ STYLE
 - Plain conversational English. No hype.
 
 RULES, which hold whatever the style says:
-- End every factual sentence with the id(s) that support it, like [W1] or [W2][G1].
+- End every factual sentence with the id(s) that support it, like [W1] or [W2][S1].
 - Use only the evidence: no names, dates, places or numbers that are not in it.
 - Never mention the track's length or running time: the player already shows it.
 - An "original song" line is about the song as first recorded by someone else. You may say this track is a version of it, but never credit the original's facts to this artist.

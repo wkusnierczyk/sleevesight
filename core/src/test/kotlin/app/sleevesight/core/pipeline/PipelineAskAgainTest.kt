@@ -90,7 +90,7 @@ class PipelineAskAgainTest {
             assertEquals(before.sources[SourceId.MUSICBRAINZ], state.sources[SourceId.MUSICBRAINZ])
             assertEquals(Outcome.SongArticle, (state.sources[SourceId.WEB] as SourceState.Done).result.outcome)
             assertEquals(emptySet(), again.gathered.single().unreachable)
-            assertEquals(listOf("MB1", "G1", "P1"), state.evidence?.ids)
+            assertEquals(listOf("MB1", "S1", "P1"), state.evidence?.ids)
             assertEquals(listOf(SourceId.WEB), events.filterIsInstance<PipelineEvent.AskedAgain>().single().sources)
         }
 

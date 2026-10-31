@@ -90,12 +90,12 @@ class EvidenceSetTest {
         val evidence = landingIn(SourceId.WEB, SourceId.PLAYER, SourceId.LASTFM, SourceId.WIKIPEDIA)
         assertEquals(listOf("W1", "W2", "W3", "W4", "W5", "W6"), evidence.ids.filter { it.startsWith("W") })
         assertEquals(listOf("L1", "L2", "L3"), evidence.ids.filter { it.startsWith("L") })
-        assertEquals((1..8).map { "G$it" }, evidence.ids.filter { it.startsWith("G") })
+        assertEquals((1..8).map { "S$it" }, evidence.ids.filter { it.startsWith("S") })
         assertEquals(listOf("P1"), evidence.ids.filter { it.startsWith("P") })
         // Sorted by source, each source's own order kept.
         assertEquals(retrieval.getValue(SourceId.WIKIPEDIA).first().text, evidence["W1"]?.text)
         assertEquals(retrieval.getValue(SourceId.WIKIPEDIA).last().text, evidence["W6"]?.text)
-        assertEquals(listOf("W", "L", "G", "P"), evidence.lines.map { it.source.tag }.distinct())
+        assertEquals(listOf("W", "L", "S", "P"), evidence.lines.map { it.source.tag }.distinct())
         assertNull(evidence["W7"])
     }
 
@@ -169,6 +169,29 @@ class EvidenceSetTest {
         assertEquals("cd591087279e96ba2aa214f2410314ed882d0a163bb8630e86b23c5624109d21", evidence.fingerprint)
     }
 
+    // A card kept from before web search's lines were `S1`, `S2` (#769) is keyed by a fingerprint
+    // over `G1`, `G2`: the fingerprint still spells them so, or every such card would be lost.
+    @Test
+    fun `web search's lines are fingerprinted with their ids before 0_1_12`() {
+        val drafts =
+            listOf(
+                draft(SourceId.WIKIPEDIA, Scope.SONG, "Released in 1974 on Reprise.", null),
+                draft(SourceId.WEB, Scope.WEB, "It went gold.", "https://example.org"),
+                draft(SourceId.WEB, Scope.WEB, "A classic.", "https://example.org"),
+            )
+        val evidence = set(drafts)
+        assertEquals(listOf("W1", "S1", "S2"), evidence.ids)
+        // The encoding documented on `EvidenceSet`, with the ids `W1`, `G1`, `G2`.
+        val encoded =
+            listOf(
+                listOf("W1", "song", "Released in 1974 on Reprise."),
+                listOf("G1", "web", "It went gold."),
+                listOf("G2", "web", "A classic."),
+            ).joinToString("") { fields -> fields.joinToString("") { "${it.encodeToByteArray().size}:$it" } + "\n" }
+        val digest = JvmHasher.sha256(encoded.encodeToByteArray())
+        assertEquals(digest.joinToString("") { "%02x".format(it) }, evidence.fingerprint)
+    }
+
     @Test
     fun `the source order covers every source`() {
         assertEquals(SourceId.entries.toSet(), EvidenceSet.SOURCE_ORDER.toSet())
@@ -187,7 +210,8 @@ class EvidenceSetTest {
         // The fingerprint hashes the stored text, so it is the same on every platform, and differs
         // from a literal `?`.
         val evidence = set(listOf(high))
-        assertEquals("a\uFFFD", evidence["G1"]?.text)
+        assertEquals("a\uFFFD", evidence["S1"]?.text)
+        // Computed when web search's line was `G1`, and unchanged since it is `S1` (#769).
         assertEquals("e83ba8ff851937cc00fe3aa062d69290ede7e357b018cf1779d891cb8669fdf0", evidence.fingerprint)
         assertNotEquals(evidence.fingerprint, set(listOf(draft(SourceId.WEB, Scope.WEB, "a?", null))).fingerprint)
     }

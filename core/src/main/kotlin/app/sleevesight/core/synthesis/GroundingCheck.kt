@@ -25,8 +25,8 @@ enum class SentenceStatus {
 }
 
 /**
- * One sentence of a reply, its citations in order (`W1`, `AI`; a legacy `M` read as `AI`,
- * [citationId]), and its [status]; [afterLineBreak]
+ * One sentence of a reply, its citations in order (`W1`, `AI`; a legacy `M` read as `AI`, a legacy
+ * `G1` as `S1`, [citationId]), and its [status]; [afterLineBreak]
  * when a line break, not only spaces, came before it in its paragraph (#574), so a card shows a
  * list's items and a heading on their own lines, as the reply wrote them. Never true of a
  * paragraph's first sentence.
@@ -159,7 +159,7 @@ object GroundingCheck {
     /**
      * Splits [text] into sentences, as the simulator does: spaces and tabs collapse to one space,
      * and a sentence ends at whitespace that follows `.`, `!` or `?` (and any citations after it,
-     * like `. [W1][G2]`) and comes before a capital letter, `"`, `“` or `(`.
+     * like `. [W1][S2]`) and comes before a capital letter, `"`, `“` or `(`.
      *
      * One deviation from the simulator (#46): a `.` that ends an abbreviation, with nothing after it
      * but the whitespace, does not end the sentence. An abbreviation is a run of capital initials

@@ -71,7 +71,7 @@ class EvidenceDraft(
 
 /**
  * An evidence line with its id, the source tag plus its position among that source's lines, from
- * 1: `W1`, `L3`, `G2`, `P1`. Ids are assigned by [EvidenceSet], from [EvidenceDraft]s, whose text
+ * 1: `W1`, `L3`, `S2`, `P1`. Ids are assigned by [EvidenceSet], from [EvidenceDraft]s, whose text
  * is already well-formed.
  */
 data class EvidenceLine(
