@@ -151,7 +151,8 @@ internal fun Notes(
  * *Sources*' table (#662): a row for each of [rows], in two columns, so a citation's letter can be
  * matched to its source. On the left, right-aligned in a column as wide as the widest, a chip with
  * the letter the source's lines and citations use (`SourceId.tag`, the one place it is set); on the
- * right, the source's name on one line and what it found on the next ([statusText]). The chip
+ * right, the source's name on one line and what it found on the next ([statusText]: from the
+ * scopes of its own [lines], *Found the track and the artist*, #768). The chip
  * shows, at a glance, what a tap does to its source's [lines] ([focus]): filled while they show,
  * outlined while they are hidden, a tap showing them again (unfolded to by [fold]); dimmed for a
  * source that gave none, with nothing to show or hide, and no button. The rows sit close, the
@@ -199,7 +200,7 @@ private fun Table(
                     else -> LetterState.HIDDEN
                 }
             // Lines shown again are unfolded to, wherever they fall in the list.
-            SourceRow(row, width, state, details) { focus.toggle(row)?.let(fold::reach) }
+            SourceRow(row, width, state, lines, details) { focus.toggle(row)?.let(fold::reach) }
         }
     }
 }
@@ -208,12 +209,17 @@ private fun Table(
 private val ChipStatus.wentWrong: Boolean
     get() = this == ChipStatus.Failed || (this as? ChipStatus.Done)?.outcome is Outcome.Rejected
 
-/** One row of the table: [chip]'s letter, right-aligned in a column [width] wide, its name and what it found. */
+/**
+ * One row of the table: [chip]'s letter, right-aligned in a column [width] wide, its name and what
+ * it found, from its own lines among [lines] (#768).
+ */
+@Suppress("LongParameterList") // The row, its letter's column and state, what it found from, and what a tap does.
 @Composable
 private fun SourceRow(
     chip: SourceChip,
     width: Dp,
     state: LetterState,
+    lines: List<EvidenceLine>,
     details: Boolean,
     onToggle: () -> Unit,
 ) {
@@ -247,7 +253,7 @@ private fun SourceRow(
             // status chips had them (#440).
             val colors = MaterialTheme.colorScheme
             Text(
-                statusText(chip.status, details),
+                statusText(chip, lines, details),
                 style = MaterialTheme.typography.bodySmall,
                 color = if (details && chip.status.wentWrong) colors.error else colors.onSurfaceVariant,
                 modifier = Modifier.testTag(STATUS_PREFIX + chip.source.tag),

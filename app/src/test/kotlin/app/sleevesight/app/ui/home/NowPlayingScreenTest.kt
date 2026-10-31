@@ -644,7 +644,11 @@ class NowPlayingScreenTest {
         // Under *Show grounding details* (#440, #662): the diagnostics, and the sources that are off.
         show(state(PipelineView(state, needsKey = setOf(SourceId.LASTFM)), Settings(showGroundingDetails = true))) {
             unfold()
-            val kept = text(R.string.home_source_cached, text(R.string.home_source_found_song))
+            val kept =
+                text(
+                    R.string.home_source_cached,
+                    text(R.string.home_source_found, text(R.string.home_source_finding_track)),
+                )
             compose.onNodeWithText(kept).assertExists()
             compose.onNodeWithText(text(R.string.home_source_needs_key)).assertExists()
             val wikipedia = text(R.string.settings_source_wikipedia)

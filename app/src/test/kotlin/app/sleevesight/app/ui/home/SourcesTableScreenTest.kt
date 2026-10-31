@@ -56,6 +56,7 @@ import app.sleevesight.app.ui.home.HomeFixtures.track
 import app.sleevesight.app.ui.home.HomeFixtures.wikidataLine
 import app.sleevesight.app.ui.home.HomeFixtures.wikipediaLine
 import app.sleevesight.core.evidence.EvidenceSet
+import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.SourceState
@@ -209,8 +210,8 @@ class SourcesTableScreenTest {
             // Off (Discogs) or without its key (Last.fm): no row. Rejected (web search) and the
             // model's own knowledge: a row.
             assertEquals(listOf("MB", "W", "S", "AI"), rows())
-            assertEquals(listOf(text(R.string.home_source_found_song)), said("MB"))
-            assertEquals(listOf(text(R.string.home_source_found_song)), said("W"))
+            assertEquals(listOf(text(R.string.home_source_found, text(R.string.home_source_finding_track))), said("MB"))
+            assertEquals(listOf(text(R.string.home_source_found, text(R.string.home_source_finding_track))), said("W"))
             // A dimmed chip's row says its name; a rejected match is nothing found.
             assertEquals(listOf(text(R.string.home_source_name_web), text(R.string.home_source_none)), said("S"))
             assertEquals(
@@ -223,6 +224,33 @@ class SourcesTableScreenTest {
             assertEquals(0, countText(text(R.string.home_source_off)))
             assertEquals(0, countText(text(R.string.home_rejected_title)))
         }
+
+    @Test
+    fun eachSourceSaysWhatItsOwnLinesFoundAsAList() {
+        val artist = draft(SourceId.MUSICBRAINZ, "Gordon Lightfoot is a Canadian singer.", scope = Scope.ARTIST)
+        val original = draft(SourceId.WIKIDATA, "It is a cover.", scope = Scope.ORIGINAL_SONG)
+        val evidence =
+            EvidenceSet.of(listOf(musicBrainzLine, artist, wikipediaLine, original, HomeFixtures.webLine), JvmHasher)
+        val sources =
+            mapOf(
+                SourceId.MUSICBRAINZ to done(evidence = listOf(musicBrainzLine, artist)),
+                // The outcome says the artist; the lines say more, Wikidata's too.
+                SourceId.WIKIPEDIA to done(Outcome.ArtistArticle, evidence = listOf(wikipediaLine, original)),
+                SourceId.WEB to done(evidence = listOf(HomeFixtures.webLine)),
+            )
+        show(track(sources = sources, evidence = evidence), needsKey = emptySet()) {
+            unfold()
+            val track = text(R.string.home_source_finding_track)
+            val and = text(R.string.home_source_finding_and, track, text(R.string.home_source_finding_artist))
+            assertEquals(listOf(text(R.string.home_source_found, and)), said("MB"))
+            val pair = text(R.string.home_source_finding_and, track, text(R.string.home_source_finding_original_song))
+            assertEquals(listOf(text(R.string.home_source_found, pair)), said("W"))
+            assertEquals(listOf(text(R.string.home_source_found_pages)), said("S"))
+            // The words as the owner picked them.
+            assertEquals("Found the track and the artist", text(R.string.home_source_found, and))
+            assertEquals("Found pages about the track", text(R.string.home_source_found_pages))
+        }
+    }
 
     @Test
     fun aChipWithLinesIsASwitchNamedByItsSourceAndADimmedOneIsNoButton() =
@@ -524,7 +552,12 @@ class SourcesTableScreenTest {
             // The same table, with the sources that are off: Discogs, and Last.fm without its key.
             assertEquals(listOf("MB", "W", "D", "S", "L", "AI"), rows())
             assertEquals(
-                listOf(text(R.string.home_source_cached, text(R.string.home_source_found_song))),
+                listOf(
+                    text(
+                        R.string.home_source_cached,
+                        text(R.string.home_source_found, text(R.string.home_source_finding_track)),
+                    ),
+                ),
                 said("MB"),
             )
             assertEquals(listOf(text(R.string.home_source_name_web), text(R.string.home_source_rejected)), said("S"))
