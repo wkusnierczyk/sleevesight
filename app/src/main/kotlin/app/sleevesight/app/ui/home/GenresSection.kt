@@ -154,11 +154,12 @@ internal data class GenresShown(
         /**
          * What the panel says for [track] under [settings]. With no genre and every genre source off
          * ([labelsOff]), the link: to *Sources* when every label source is switched off there, else to
-         * *Genres*, where their genre switches are ([Settings.givesLabels]). While the track's sources
-         * are still asked ([TrackState.gathered], or before the pipeline reaches the track), the
-         * label sources on that are still pending, or, with none pending (another source is), all
-         * those on. Once gathered, the label sources on whose requests after the evidence are still
-         * asked ([TrackState.laterLabels]: MusicBrainz's artist tags, Last.fm's track and album tags),
+         * *Genres*, where their genre switches are ([Settings.givesLabels]). Until the genres are
+         * assembled with the evidence ([TrackState.gathered] and [TrackState.genresAssembled]: the
+         * sources still asked, the last one's result being kept, or before the pipeline reaches the
+         * track), the label sources on that are still pending, or, with none pending, all those on.
+         * Then, the label sources on whose requests after the evidence are still asked
+         * ([TrackState.laterLabels]: MusicBrainz's artist tags, Last.fm's track and album tags),
          * which may yet bring genres; and each whose lookup ended unreachable (or failed), or whose
          * later request failed. None found only when every label source on is done with nothing.
          */
@@ -172,7 +173,7 @@ internal data class GenresShown(
                 return GenresShown(off = if (sourcesOff) SettingsTarget.sources else SettingsTarget.genres)
             }
             val on = LabelSource.entries.filter(settings::givesLabels)
-            return if (track == null || !track.gathered) {
+            return if (track == null || !track.gathered || !track.genresAssembled) {
                 val states = track?.sources.orEmpty()
                 GenresShown(looking = on.filter { states[it.source] is SourceState.Pending }.ifEmpty { on })
             } else {
@@ -180,7 +181,7 @@ internal data class GenresShown(
             }
         }
 
-        // Once [track]'s sources are in: of the label sources [on], those whose later requests are
+        // Once [track]'s genres are assembled: of the label sources [on], those whose later requests are
         // still asked, and those not reached; with none of either and no genre ([empty]), none found.
         private fun gathered(
             track: TrackState,

@@ -116,20 +116,17 @@ internal class TrackRun(
             withContext(if (looksAgain) FreshLookups else EmptyCoroutineContext) {
                 gather()
                 control.gathered(Gathered(state.value.sources, state.value.resolution))
+                // Published as asked for with the assembled genres, before they may start (#772): a
+                // panel says it is still looking.
+                val later = labels.later(state.value)
                 val evidence = assemble()
                 control.assembled(evidence)
-                // Published as asked for before they may start (#772): a panel says it is still looking.
-                val later = labels.later(state.value)
                 launch {
+                    control.await(RunStep.LABELS)
                     try {
-                        control.await(RunStep.LABELS)
-                        try {
-                            labels.addLater(later)
-                        } finally {
-                            control.ended(RunStep.LABELS)
-                        }
+                        labels.addLater(later)
                     } finally {
-                        labels.settle()
+                        control.ended(RunStep.LABELS)
                     }
                 }
                 InsightWriter(parts, time, input, evidence, guard, this@TrackRun).write(control)
@@ -138,6 +135,10 @@ internal class TrackRun(
         } catch (e: CancellationException) {
             emit(PipelineEvent.Superseded(key))
             throw e
+        } finally {
+            // Whatever ends the run, before its label requests start or while they run: none stays
+            // asked for (#772).
+            labels.settle()
         }
     }
 
@@ -297,7 +298,10 @@ internal class TrackRun(
         val drafts =
             playerLines() + results.flatMap { it.evidence }.filter { settings.isEnabled(it.source) }
         val evidence = EvidenceSet.of(drafts, parts.hasher)
-        update { it.copy(evidence = evidence, genres = labels.of(it)) }
+        // The genres and how their later requests stand, in one update with the evidence (#772).
+        update {
+            it.copy(evidence = evidence, genres = labels.of(it), laterLabels = labels.states(), genresAssembled = true)
+        }
         emit(
             PipelineEvent.EvidenceAssembled(
                 key = key,

@@ -1,6 +1,7 @@
 package app.sleevesight.core.pipeline
 
 import app.sleevesight.core.Secret
+import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.genres.GenreLevel
 import app.sleevesight.core.genres.GenreVocabulary
@@ -9,6 +10,7 @@ import app.sleevesight.core.genres.LastFmLabels
 import app.sleevesight.core.genres.MusicBrainzLabels
 import app.sleevesight.core.genres.RecordingTags
 import app.sleevesight.core.genres.ReleaseTags
+import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.ProviderId
@@ -24,6 +26,8 @@ import app.sleevesight.core.sources.Rejection
 import app.sleevesight.core.sources.ResolvedArtist
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.SourceResult
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -602,6 +606,61 @@ class PipelineLabelsTest {
             val state = withRelease(FakeReleaseTags(), labels = broken).run(sundown, write = false)
             assertEquals(LaterLabels.FAILED, state.laterLabels[LabelSource.MUSICBRAINZ])
             assertEquals(LaterLabels.DONE, state.laterLabels[LabelSource.LASTFM])
+        }
+
+    /** [MemoryCache], with each keep of a source's result held until [release]d. */
+    private class HeldCache : PipelineCache by MemoryCache() {
+        val release = CompletableDeferred<Unit>()
+
+        override suspend fun keep(
+            adapter: SourceAdapter,
+            track: NormalizedTrack,
+            duration: Duration?,
+            result: SourceResult,
+        ) = release.await()
+    }
+
+    @Test
+    fun `the genres and their later requests are published together, after the last result is kept`() =
+        runTest {
+            val cache = HeldCache()
+            val pipeline = withRelease(FakeReleaseTags(), cache = cache)
+            val seen = mutableListOf<TrackState>()
+            backgroundScope.launch { pipeline.state.collect { state -> state?.let { seen += it } } }
+            val run = async { pipeline.run(sundown, write = false) }
+            runCurrent()
+            // Every source has landed, its result still being kept: no genre yet, and not assembled.
+            val held = pipeline.state.value!!
+            assertTrue(held.gathered)
+            assertFalse(held.genresAssembled)
+            assertTrue(held.genres.isEmpty)
+            cache.release.complete(Unit)
+            val state = run.await()
+            assertTrue(state.genresAssembled)
+            // No state is assembled without its later requests: none says none found too soon.
+            val assembled = seen.filter { it.genresAssembled }
+            assertTrue(assembled.isNotEmpty())
+            assertTrue(assembled.all { it.laterLabels.keys == setOf(LabelSource.MUSICBRAINZ, LabelSource.LASTFM) })
+            assertEquals(LaterLabels.ASKING, assembled.first().laterLabels[LabelSource.MUSICBRAINZ])
+        }
+
+    @Test
+    fun `a run cancelled before its label requests start leaves none asked for`() =
+        runTest {
+            val pipeline = withRelease(FakeReleaseTags())
+            lateinit var job: Job
+            // Cancelled as the evidence is assembled: the requests are published as asked for, and
+            // the coroutine that would ask them never starts.
+            val control =
+                object : RunControl by RunControl.Unattended(write = false) {
+                    override fun assembled(evidence: EvidenceSet) = job.cancel()
+                }
+            job = launch { pipeline.run(sundown, control) }
+            job.join()
+            assertTrue(job.isCancelled)
+            val state = pipeline.state.value!!
+            assertTrue(state.genresAssembled)
+            assertFalse(LaterLabels.ASKING in state.laterLabels.values, "${state.laterLabels}")
         }
 
     @Test

@@ -419,6 +419,14 @@ class GenresButtonScreenTest {
         }
 
     @Test
+    fun withEverySourceInButTheGenresNotYetAssembledThePanelIsStillLooking() =
+        // The last source landed, its result still being kept: no genre yet is not none found.
+        show(state(labelled(TrackGenres()).copy(genresAssembled = false))) {
+            opensTo("Looking on Last.fm and MusicBrainz…")
+            compose.onNodeWithText(text(R.string.home_genres_none)).assertDoesNotExist()
+        }
+
+    @Test
     fun withNoGenreFoundThePanelSaysNoneFound() =
         show(state(labelled(TrackGenres()))) {
             assertEquals("None found.", text(R.string.home_genres_none))

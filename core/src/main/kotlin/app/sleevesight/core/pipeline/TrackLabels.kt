@@ -80,8 +80,9 @@ internal class TrackLabels(
     private val failed = MutableStateFlow<Set<LabelSource>>(emptySet())
 
     /**
-     * The labels that come after the evidence, for [current], published as asked for (#772,
-     * [TrackState.laterLabels]) from now, before the run may start them: MusicBrainz's for the
+     * The labels that come after the evidence, for [current], counted as asked for from now (#772,
+     * [states], which the run publishes with the assembled genres), before the run may start them:
+     * MusicBrainz's for the
      * artists [current]'s MusicBrainz result names; Last.fm's for the track and its album, by the
      * primary artist, once Last.fm's result shows an artist and has not rejected the primary (an
      * artist it rejected may be another's of the name, whose track this is not). [addLater] asks
@@ -112,10 +113,7 @@ internal class TrackLabels(
                 ?.takeIf(String::isNotEmpty)
                 ?.let { album -> asks += Later(LabelSource.LASTFM) { fromLastFm.albumLookup(track.primary, album) } }
         }
-        if (asks.isNotEmpty()) {
-            pending.value = asks.groupingBy { it.source }.eachCount()
-            sink.update { it.copy(laterLabels = laterStates()) }
-        }
+        pending.value = asks.groupingBy { it.source }.eachCount()
         return asks
     }
 
@@ -133,12 +131,14 @@ internal class TrackLabels(
     fun settle() {
         if (pending.value.values.none { it > 0 }) return
         pending.value = emptyMap()
-        sink.update { it.copy(laterLabels = laterStates()) }
+        sink.update { it.copy(laterLabels = states()) }
     }
 
-    // How each source asked after the evidence stands: asking while a request is unanswered, else
-    // failed when one failed, else done.
-    private fun laterStates(): Map<LabelSource, LaterLabels> =
+    /**
+     * How each source asked after the evidence stands ([TrackState.laterLabels]): asking while a
+     * request is unanswered, else failed when one failed, else done.
+     */
+    fun states(): Map<LabelSource, LaterLabels> =
         (pending.value.keys + failed.value).associateWith { source ->
             when {
                 (pending.value[source] ?: 0) > 0 -> LaterLabels.ASKING
@@ -168,7 +168,7 @@ internal class TrackLabels(
         if (found.labels.isNotEmpty()) later.update { it + (source to it[source].orEmpty() + found.labels) }
         if (found.failed) failed.update { it + source }
         pending.update { it + (source to ((it[source] ?: 1) - 1).coerceAtLeast(0)) }
-        sink.update { it.copy(genres = of(it), laterLabels = laterStates()) }
+        sink.update { it.copy(genres = of(it), laterLabels = states()) }
     }
 
     private fun TrackState.done(source: SourceId) = (sources[source] as? SourceState.Done)?.result

@@ -30,7 +30,10 @@ import kotlin.time.Instant
  *   landed; MusicBrainz's artists' and Last.fm's track's and album's join later, as their requests
  *   answer, which the insight does not wait for (`design/architecture.md`, *Evidence*).
  * @property laterLabels how those later requests stand, by label source (#772): asking, done, or
- *   failed; a source not in it has none to make, or the run has not reached them yet.
+ *   failed; a source not in it has none to make.
+ * @property genresAssembled whether [genres] and [laterLabels] are in (#772): set with them, in one
+ *   update, as the evidence is assembled. Until then, no genre may still mean genres to come, even
+ *   once every source has landed ([gathered]), while the last one's result is being kept.
  */
 data class TrackState(
     val nowPlaying: NowPlaying,
@@ -41,6 +44,7 @@ data class TrackState(
     val genres: TrackGenres = TrackGenres(),
     val insight: InsightState = InsightState.Idle(canWrite = false),
     val laterLabels: Map<LabelSource, LaterLabels> = emptyMap(),
+    val genresAssembled: Boolean = false,
 ) {
     /** Whether every source has landed. */
     val gathered: Boolean get() = sources.values.none { it is SourceState.Pending }
