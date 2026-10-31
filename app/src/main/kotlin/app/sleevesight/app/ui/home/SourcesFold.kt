@@ -103,19 +103,13 @@ internal class FoldMemory(
             listSaver(
                 save = { memory ->
                     val fold = memory.fold
-                    val track = memory.track
                     listOf(
                         when (fold) {
                             Fold.Folded -> FOLDED
                             is Fold.Pages -> fold.count
                             Fold.All -> ALL
                         },
-                        track?.player,
-                        track?.mediaId,
-                        track?.queueItemId,
-                        track?.title,
-                        track?.artists,
-                    )
+                    ) + savedTrack(memory.track)
                 },
                 restore = { saved ->
                     val fold =
@@ -124,18 +118,7 @@ internal class FoldMemory(
                             ALL -> Fold.All
                             else -> Fold.Pages(count)
                         }
-                    val player = saved[1] as String?
-                    val track =
-                        player?.let {
-                            NowPlaying(
-                                title = saved[4] as String,
-                                artists = saved[5] as String,
-                                player = it,
-                                mediaId = saved[2] as String?,
-                                queueItemId = saved[3] as Long?,
-                            )
-                        }
-                    FoldMemory(fold, track)
+                    FoldMemory(fold, restoredTrack(saved.drop(1)))
                 },
             )
 
@@ -143,6 +126,25 @@ internal class FoldMemory(
         private const val ALL = -1
     }
 }
+
+/**
+ * Of [track], what [TrackIdentity.playsOn] reads (the player, the media id, the queue item, the title
+ * and the artists), as plain values a saver keeps; [restoredTrack] reads them back.
+ */
+internal fun savedTrack(track: NowPlaying?): List<Any?> =
+    listOf(track?.player, track?.mediaId, track?.queueItemId, track?.title, track?.artists)
+
+/** The track [savedTrack] kept in [saved], or null when it kept none. */
+internal fun restoredTrack(saved: List<Any?>): NowPlaying? =
+    (saved[0] as String?)?.let { player ->
+        NowPlaying(
+            title = saved[3] as String,
+            artists = saved[4] as String,
+            player = player,
+            mediaId = saved[1] as String?,
+            queueItemId = saved[2] as Long?,
+        )
+    }
 
 /**
  * The fold of the list shown beside [playing]: as it is kept while [playing] plays on the track

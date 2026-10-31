@@ -266,9 +266,10 @@ class SourcesTableScreenTest {
             // A switch says its source's name: the name beside it is not read again.
             val musicBrainz = text(R.string.settings_source_musicbrainz)
             assertEquals(0, compose.onAllNodesWithText(musicBrainz).fetchSemanticsNodes().size)
-            // Each chip answers a touch across 48 dp, though it lays out less.
+            // Each chip answers a touch across 48 dp, though it lays out less; on screen, to be measured.
             compose
                 .onNodeWithTag(CHIP_PREFIX + "W")
+                .performScrollTo()
                 .assertTouchHeightIsEqualTo(48.dp)
                 .assertTouchWidthIsEqualTo(48.dp)
         }

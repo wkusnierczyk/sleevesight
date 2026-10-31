@@ -57,20 +57,47 @@ internal fun SourcesChip(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
-    val name = stringResource(R.string.home_sources_title)
-    val collapsed = stringResource(R.string.home_fold_collapsed)
-    val open = stringResource(R.string.home_page_open)
+    PanelChip(
+        stringResource(R.string.home_sources_title),
+        if (opensPage) SOURCES_PAGE_LINK_TAG else SOURCES_CHIP_TAG,
+        modifier = modifier,
+        action = stringResource(R.string.home_page_open).takeIf { opensPage },
+        collapsed = !opensPage,
+        heading = true,
+        onClick = onClick,
+    )
+}
+
+/**
+ * A chip on Home that opens a panel in its place, or a page, drawn as a genre chip is
+ * ([ChipFrame]): *Sources*' ([SourcesChip], #623) and *Dates*' (#724). Named [name], tagged [tag]; a
+ * screen reader reads it as a button, named [name], a [heading] when it is one, collapsed while
+ * [collapsed] (its panel opens in its place, so it is only ever collapsed), its action named
+ * [action] when given. [modifier] goes on the chip's outside: a focus requester.
+ */
+@Suppress("LongParameterList") // What the chip says and is, each its own.
+@Composable
+internal fun PanelChip(
+    name: String,
+    tag: String,
+    modifier: Modifier = Modifier,
+    action: String? = null,
+    collapsed: Boolean = true,
+    heading: Boolean = false,
+    onClick: () -> Unit,
+) {
+    val folded = stringResource(R.string.home_fold_collapsed)
     val (fill, content) = chipColours(marked = false)
     ChipFrame(
         fill,
-        modifier = modifier.testTag(if (opensPage) SOURCES_PAGE_LINK_TAG else SOURCES_CHIP_TAG),
+        modifier = modifier.testTag(tag),
         action =
             Modifier
-                .clickable(role = Role.Button, onClickLabel = open.takeIf { opensPage }, onClick = onClick)
+                .clickable(role = Role.Button, onClickLabel = action, onClick = onClick)
                 .clearAndSetSemantics {
-                    heading()
+                    if (heading) heading()
                     contentDescription = name
-                    if (!opensPage) stateDescription = collapsed
+                    if (collapsed) stateDescription = folded
                 },
     ) {
         Text(name, style = MaterialTheme.typography.labelLarge, color = content)

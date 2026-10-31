@@ -99,6 +99,9 @@ data class SettingsTarget(
         /** The section *Players* itself, its panel's heading, from Home's list of players (#627). */
         internal val players: SettingsTarget = SettingsTarget(SettingsSection.PLAYERS)
 
+        /** The section *Sources* itself, its panel's heading, from a panel on Home whose source is off (#724). */
+        internal val sources: SettingsTarget = SettingsTarget(SettingsSection.SOURCES)
+
         /**
          * The target [section] (a [SettingsSection]'s name) and [row] name, as a route or a saved
          * state carries it; null for no section, or a name no section has.
