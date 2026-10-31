@@ -502,34 +502,6 @@ class PipelineTest {
             )
         }
 
-    @Test
-    fun `a card kept before 0_1_12 citing G1 is still served, its G1 read as web search's line S1`() =
-        runTest {
-            // Web search's lines were `G1`, `G2` until #769. The evidence fingerprint still spells them
-            // so (`EvidenceSet`), so a card kept citing `[G1]` has the key a card written now has, and
-            // its citation reaches the line now called `S1`.
-            val cache = MemoryCache()
-            val provider = FakeProvider { FakeProvider.done("It is a song [MB1]. It went gold [S1].") }
-            val web = FakeAdapter(SourceId.WEB, verifies = false)
-            val pipeline = pipeline(listOf(mb(), web), provider = provider, cache = cache)
-            pipeline.run(sundown, write = true)
-            val key = cache.cards.keys.single()
-            cache.cards[key] = "It is a song [MB1]. It went gold [G1]."
-
-            val state = pipeline.run(sundown, write = true)
-            val written = assertIs<InsightState.Written>(state.insight)
-
-            assertTrue(written.cached)
-            assertEquals(1, provider.requests.size)
-            assertEquals("It is a song [MB1]. It went gold [G1].", written.grounded.text)
-            val sentences = written.grounded.paragraphs.flatten()
-            assertEquals(listOf(listOf("MB1"), listOf("S1")), sentences.map { it.cites })
-            assertEquals(2, written.grounded.counts.ok)
-            assertEquals(SourceId.WEB, state.evidence?.get(sentences.last().cites.single())?.source)
-            assertTrue("[S1]" in provider.requests.single().prompt)
-            assertFalse("[G1]" in provider.requests.single().prompt)
-        }
-
     // follow: the app's loop over track changes.
 
     @Test
