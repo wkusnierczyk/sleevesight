@@ -492,6 +492,141 @@ class PipelineLaterLabelsTest {
             assertEquals(emptyMap(), withRelease(FakeReleaseTags()).run(sundown, write = false).laterLabels)
         }
 
+    // A pipeline whose MusicBrainz artist tags answer with [artistTags] (each call counted in
+    // [tagAsks]) and whose Last.fm track tags with [releaseTags]'s.
+    private class Counted(
+        val artistTags: suspend (Int) -> Lookup<List<String>>,
+    ) {
+        var tagAsks = 0
+    }
+
+    private fun TestScope.counting(
+        counted: Counted,
+        releaseTags: ReleaseTags,
+    ) = Pipeline(
+        PipelineParts(
+            normalizer = Normalizer(JvmAccentFolder),
+            adapters = listOf(musicBrainz(), lastFm()),
+            resolver = FakeResolver(),
+            hasher = JvmHasher,
+            musicBrainzLabels = MusicBrainzLabels({ counted.artistTags(++counted.tagAsks) }, vocabulary),
+            lastFmLabels = LastFmLabels(releaseTags, vocabulary),
+        ),
+        PipelineTime(timeSource = testTimeSource),
+    ) { settings }
+
+    // A control that records the label requests a run reports failed.
+    private class Reporting : RunControl by RunControl.Unattended(write = false) {
+        val failed = mutableListOf<Set<SourceId>>()
+
+        override fun labelsFailed(sources: Set<SourceId>) {
+            failed += sources
+        }
+    }
+
+    @Test
+    fun `a Retry while another source's label requests are unanswered asks those again too`() =
+        runTest {
+            // MusicBrainz's artist tags held on the first run; Last.fm's track tags failing.
+            val gate = CompletableDeferred<Unit>()
+            val counted =
+                Counted { call ->
+                    if (call == 1) gate.await()
+                    Lookup.Found(listOf("country"))
+                }
+            val pipeline = counting(counted, ChangingReleaseTags(Lookup.Failed("network")))
+            val first = async { pipeline.run(sundown, write = false) }
+            runCurrent()
+            val asking = pipeline.state.value!!
+            assertEquals(LaterLabels.ASKING, asking.laterLabels[LabelSource.MUSICBRAINZ])
+            assertEquals(LaterLabels.FAILED, asking.laterLabels[LabelSource.LASTFM])
+
+            // *Retry* of Last.fm's label requests while MusicBrainz's are still out.
+            val retry =
+                Gathered(asking.sources, asking.resolution, labelsFailed = setOf(SourceId.LASTFM))
+                    .asking(setOf(SourceId.LASTFM))
+            val again = async { pipeline.run(sundown, RunControl.Unattended(write = false), again = retry) }
+            first.cancel()
+            val state = again.await()
+            // MusicBrainz's artist tags asked again, never answered before, and in.
+            assertEquals(2, counted.tagAsks)
+            assertTrue("Country" in labelsOf(state), "${labelsOf(state)}")
+            assertEquals(LaterLabels.DONE, state.laterLabels[LabelSource.MUSICBRAINZ])
+        }
+
+    @Test
+    fun `a Retry of another source reports a kept label failure again`() =
+        runTest {
+            // Last.fm's track tags fail; then a *Retry* of MusicBrainz's label requests.
+            val counted =
+                Counted { call ->
+                    if (call ==
+                        1
+                    ) {
+                        Lookup.Failed("network")
+                    } else {
+                        Lookup.Found(listOf("country"))
+                    }
+                }
+            val pipeline = counting(counted, ChangingReleaseTags(Lookup.Failed("network")))
+            val reporting = Reporting()
+            val first = pipeline.run(sundown, reporting)
+            assertEquals(listOf(setOf(SourceId.MUSICBRAINZ, SourceId.LASTFM)), reporting.failed)
+            val before = Gathered(first.sources, first.resolution, labelsFailed = reporting.failed.single())
+
+            val retried = Reporting()
+            val state = pipeline.run(sundown, retried, again = before.asking(setOf(SourceId.MUSICBRAINZ)))
+            assertEquals(listOf(setOf(SourceId.LASTFM)), retried.failed)
+            assertEquals(LaterLabels.FAILED, state.laterLabels[LabelSource.LASTFM])
+            assertEquals(LaterLabels.DONE, state.laterLabels[LabelSource.MUSICBRAINZ])
+        }
+
+    @Test
+    fun `a Retry of a lookup carries an earlier label failure through`() =
+        runTest {
+            val counted = Counted { Lookup.Found(listOf("country")) }
+            val pipeline = counting(counted, ChangingReleaseTags(Lookup.Failed("network")))
+            val reporting = Reporting()
+            val first = pipeline.run(sundown, reporting)
+            assertEquals(listOf(setOf(SourceId.LASTFM)), reporting.failed)
+            // MusicBrainz's lookup to be made again, as a *Retry* of an unreachable source makes it.
+            val unreached =
+                SourceState.Done(
+                    SourceResult(Outcome.Unreachable, emptyList(), Duration.ZERO),
+                    cached = false,
+                )
+            val before =
+                Gathered(
+                    first.sources + (SourceId.MUSICBRAINZ to unreached),
+                    first.resolution,
+                    labelsFailed = reporting.failed.single(),
+                ).asking(setOf(SourceId.MUSICBRAINZ))
+            assertEquals(setOf(SourceId.MUSICBRAINZ), before.asked)
+
+            val retried = Reporting()
+            val state = pipeline.run(sundown, retried, again = before)
+            assertEquals(listOf(setOf(SourceId.LASTFM)), retried.failed)
+            assertEquals(LaterLabels.FAILED, state.laterLabels[LabelSource.LASTFM])
+        }
+
+    @Test
+    fun `a source kept done by a Retry stays done in how the requests stand`() =
+        runTest {
+            // Both answer; then MusicBrainz's label requests are asked again on a *Retry* of them.
+            val counted = Counted { Lookup.Found(listOf("country")) }
+            val pipeline = counting(counted, ChangingReleaseTags())
+            val first = pipeline.run(sundown, write = false)
+            val before = Gathered(first.sources, first.resolution, labelsFailed = setOf(SourceId.MUSICBRAINZ))
+            val state =
+                pipeline.run(
+                    sundown,
+                    RunControl.Unattended(write = false),
+                    again = before.asking(setOf(SourceId.MUSICBRAINZ)),
+                )
+            assertEquals(LaterLabels.DONE, state.laterLabels[LabelSource.LASTFM])
+            assertEquals(LaterLabels.DONE, state.laterLabels[LabelSource.MUSICBRAINZ])
+        }
+
     private companion object {
         const val MB_ARTIST = "mb-gl"
         const val LASTFM_PAGE = "https://www.last.fm/music/Gordon+Lightfoot"

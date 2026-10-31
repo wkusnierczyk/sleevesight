@@ -34,6 +34,9 @@ import kotlin.time.Instant
  *   failed; a source not in it has none to make.
  * @property laterFound the labels those later requests gave, by label source (#772), which a
  *   *Retry* of another source's keeps.
+ * @property laterAnswered the label sources all of whose later requests answered (#772): a *Retry*
+ *   keeps only their [laterFound], and asks those of any other again (one still out as it was
+ *   replaced), whatever [laterLabels] says of it.
  * @property genresAssembled whether [genres] and [laterLabels] are in (#772): set with them, in one
  *   update, as the evidence is assembled. Until then, no genre may still mean genres to come, even
  *   once every source has landed ([gathered]), while the last one's result is being kept.
@@ -48,6 +51,7 @@ data class TrackState(
     val insight: InsightState = InsightState.Idle(canWrite = false),
     val laterLabels: Map<LabelSource, LaterLabels> = emptyMap(),
     val laterFound: Map<LabelSource, List<GenreLabel>> = emptyMap(),
+    val laterAnswered: Set<LabelSource> = emptySet(),
     val genresAssembled: Boolean = false,
 ) {
     /** Whether every source has landed. */

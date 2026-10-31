@@ -236,7 +236,7 @@ class Pipeline(
         val laterKept =
             shown.state.value
                 ?.takeIf { again?.only != null && it.normalized.lookupKey == track.lookupKey }
-                ?.let { TrackLabels.LaterKept(it.laterFound, it.laterLabels) }
+                ?.let { TrackLabels.LaterKept(it.laterFound, it.laterLabels, it.laterAnswered) }
         return TrackRun(
             parts = parts,
             time = time,

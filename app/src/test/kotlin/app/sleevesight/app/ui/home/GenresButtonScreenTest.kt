@@ -511,9 +511,10 @@ class GenresButtonScreenTest {
                 )
             tap(RETRY_TAG)
             assertEquals(listOf(Triple(key, SourceId.MUSICBRAINZ, sundown)), retried)
-            // The run asks MusicBrainz's requests again: looking, then its labels.
-            current.value = state(labelled(TrackGenres(), later = mapOf(LabelSource.MUSICBRAINZ to LaterLabels.ASKING)))
+            // The run asks MusicBrainz's requests again, other sources' chips up: looking, then its labels.
+            current.value = state(labelled(later = mapOf(LabelSource.MUSICBRAINZ to LaterLabels.ASKING)))
             compose.waitForIdle()
+            assertEquals(1, count(FOLK))
             compose.onNodeWithText("Looking on MusicBrainz…").assertExists()
             assertEquals(0, count(RETRY_TAG))
             current.value = state(labelled(later = mapOf(LabelSource.MUSICBRAINZ to LaterLabels.DONE)))

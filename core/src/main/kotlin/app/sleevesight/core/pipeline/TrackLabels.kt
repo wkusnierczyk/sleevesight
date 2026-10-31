@@ -14,6 +14,7 @@ import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.updateAndGet
 import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -36,9 +37,14 @@ internal class TrackLabels(
     kept: LaterKept? = null,
     private val asking: Set<SourceId>? = null,
 ) {
+    // The sources all of whose requests the run before answered: only those a *Retry* may keep.
+    private val keptAnswered: Set<LabelSource> = kept?.answered.orEmpty()
+
     // Whether the run asks [source]'s requests after the evidence: all, but for a *Retry* (#772),
-    // only those of the sources it asks again ([asking]), the others' kept as they were.
-    private fun asks(source: LabelSource): Boolean = asking == null || source.source in asking
+    // only those of the sources it asks again ([asking]) and of any whose requests the run before
+    // left unanswered (still out as it was replaced); the others' kept as they were.
+    private fun asks(source: LabelSource): Boolean =
+        asking == null || source.source in asking || source !in keptAnswered
 
     /** The labels asked for after the evidence, by source, as they land; a *Retry* keeps the others'. */
     private val later =
@@ -79,11 +85,13 @@ internal class TrackLabels(
 
     /**
      * What a *Retry* keeps of the run before's requests after the evidence (#772), for the sources it
-     * does not ask again: the labels they gave ([found]) and how they stood ([states]).
+     * does not ask again: the labels they gave ([found]), how they stood ([states]), and the sources
+     * all of whose requests answered ([answered]), the only ones it keeps.
      */
     class LaterKept(
         val found: Map<LabelSource, List<GenreLabel>>,
         val states: Map<LabelSource, LaterLabels>,
+        val answered: Set<LabelSource>,
     )
 
     /** A request after the evidence: [source]'s, which [ask] makes. */
@@ -102,6 +110,21 @@ internal class TrackLabels(
                 .filter { (source, state) -> !asks(source) && state == LaterLabels.FAILED }
                 .keys,
         )
+
+    // The sources kept done from the run before, and those all of whose requests have answered.
+    private val keptDone: Set<LabelSource> =
+        kept
+            ?.states
+            .orEmpty()
+            .filter { (source, state) -> !asks(source) && state == LaterLabels.DONE }
+            .keys
+    private val answeredFlow = MutableStateFlow(keptAnswered.filterNot(::asks).toSet())
+
+    /**
+     * The sources all of whose requests after the evidence answered, kept ones included
+     * ([TrackState.laterAnswered]).
+     */
+    val answered: Set<LabelSource> get() = answeredFlow.value
 
     /** The labels the requests after the evidence gave, kept ones included ([TrackState.laterFound]). */
     val found: Map<LabelSource, List<GenreLabel>> get() = later.value
@@ -177,7 +200,7 @@ internal class TrackLabels(
      * request is unanswered, else failed when one failed, else done.
      */
     fun states(): Map<LabelSource, LaterLabels> =
-        (pending.value.keys + failed.value).associateWith { source ->
+        (pending.value.keys + failed.value + keptDone).associateWith { source ->
             when {
                 (pending.value[source] ?: 0) > 0 -> LaterLabels.ASKING
                 source in failed.value -> LaterLabels.FAILED
@@ -205,8 +228,11 @@ internal class TrackLabels(
             }
         if (found.labels.isNotEmpty()) later.update { it + (source to it[source].orEmpty() + found.labels) }
         if (found.failed) failed.update { it + source }
-        pending.update { it + (source to ((it[source] ?: 1) - 1).coerceAtLeast(0)) }
-        sink.update { it.copy(genres = of(it), laterLabels = states(), laterFound = later.value) }
+        val left = pending.updateAndGet { it + (source to ((it[source] ?: 1) - 1).coerceAtLeast(0)) }
+        if (left[source] == 0) answeredFlow.update { it + source }
+        sink.update {
+            it.copy(genres = of(it), laterLabels = states(), laterFound = later.value, laterAnswered = answered)
+        }
     }
 
     private fun TrackState.done(source: SourceId) = (sources[source] as? SourceState.Done)?.result
