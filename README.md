@@ -54,7 +54,7 @@ Every choice is a setting, with a reasoned default:
 
 ## Privacy
 
-No accounts, no ads, and no telemetry, crash reporting or analytics. Your API keys are encrypted with a key in the phone's Android Keystore and go only to the service they belong to. The playing track goes to the sources and the AI service you switched on; the history and the insights are kept on the phone. *Read aloud* hands the insight to the phone’s text-to-speech engine, which may send it to its own server. Nothing reaches the developer unless you send it yourself.
+No accounts, no ads, and no telemetry, crash reporting or analytics of its own. Your API keys are encrypted with a key in the phone's Android Keystore and go only to the service they belong to. The playing track goes to the sources and the AI service you switched on, and a cover the player gives only as a web address is fetched from that address’s server; the history and the insights are kept on the phone. *Read aloud* hands the insight to the phone’s text-to-speech engine, which may send it to its own server. Nothing the app sends on its own reaches the developer; only a report you send does.
 
 The [privacy policy](https://sleevesight.app/privacy.html) says what leaves the phone and to whom, and where Sleevesight stands under the GDPR and the EU AI Act.
 
