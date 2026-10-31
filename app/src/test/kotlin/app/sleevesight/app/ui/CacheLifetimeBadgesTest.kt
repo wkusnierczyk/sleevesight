@@ -120,7 +120,7 @@ class CacheLifetimeBadgesTest {
                     R.string.settings_cache_wikidata to "WD",
                     R.string.settings_cache_wikipedia to "W",
                     R.string.settings_source_lastfm to "L",
-                    R.string.settings_cache_web to "G",
+                    R.string.settings_cache_web to "S",
                 )
             for ((name, letter) in rows) {
                 val title = app.getString(name)

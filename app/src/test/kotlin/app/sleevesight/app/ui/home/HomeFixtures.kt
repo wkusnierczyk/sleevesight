@@ -53,6 +53,12 @@ internal object HomeFixtures {
 
     val evidence: EvidenceSet = EvidenceSet.of(listOf(musicBrainzLine, wikipediaLine, wikidataLine), JvmHasher)
 
+    val webLine = draft(SourceId.WEB, "It went gold.", "https://example.org/sundown", Scope.WEB)
+
+    /** [evidence] and web search's line, `S1` (`G1` before #769). */
+    val withWeb: EvidenceSet =
+        EvidenceSet.of(listOf(musicBrainzLine, wikipediaLine, wikidataLine, webLine), JvmHasher)
+
     fun done(
         outcome: Outcome = Outcome.SongArticle,
         evidence: List<EvidenceDraft> = emptyList(),
@@ -81,15 +87,17 @@ internal object HomeFixtures {
 
     /**
      * [reply], checked against [evidence] as written, the model's own knowledge allowed or not; with
-     * [held], against only those of its lines, as a prompt that left the others out (#239).
+     * [held], against only those of its lines, as a prompt that left the others out (#239); [from]
+     * another set than [evidence].
      */
     fun written(
         reply: String,
         cached: Boolean = false,
         allowModel: Boolean = false,
         held: Set<String>? = null,
+        from: EvidenceSet = evidence,
     ): InsightState.Written {
-        val against = held?.let { ids -> evidence.without(JvmHasher) { it.id !in ids } } ?: evidence
+        val against = held?.let { ids -> from.without(JvmHasher) { it.id !in ids } } ?: from
         val grounded = (GroundingCheck.check(reply, against, allowModel) as InsightReply.Written).grounded
         return InsightState.Written(grounded, cached, held = held)
     }
