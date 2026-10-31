@@ -20,7 +20,8 @@ import app.sleevesight.core.model.SourceId
  * *Dates* in the line under the album ([InPlaceLine]), shown for every track (#724): its button,
  * and its panel, which says each of [sentences] as a sentence of its own; with none, why
  * ([NoDates], [none]): with MusicBrainz off, a link to *Settings → Sources* ([openSources]), and
- * when it could not be reached, *Retry* ([retry], [RetryLine]).
+ * when it could not be reached, *Retry* ([retry], [RetryLine]), which hands the focus to the panel's
+ * *Close* as it goes.
  */
 @Composable
 internal fun datesItem(
@@ -35,8 +36,8 @@ internal fun datesItem(
         action = stringResource(R.string.home_dates_show),
         tag = DATES_CHIP_TAG,
         panelTag = DATES_PANEL_TAG,
-    ) {
-        if (sentences.isEmpty()) NoDatesText(none, retry, openSources) else DatesPanel(sentences)
+    ) { toClose ->
+        if (sentences.isEmpty()) NoDatesText(none, retry, openSources, toClose) else DatesPanel(sentences)
     }
 
 /** The panel's content: each of [sentences] on its own, a release's title in italics. */
@@ -49,13 +50,16 @@ internal fun DatesPanel(sentences: List<DateSentence>) {
 
 /**
  * Why the panel has no date ([none]), in place of the sentences: MusicBrainz off on two lines, the
- * second a link to *Settings → Sources* ([openSources]); unreachable with *Retry* ([retry]) beside it.
+ * second a link to *Settings → Sources* ([openSources]); unreachable with *Retry* ([retry]) beside it,
+ * whose tap then runs [afterRetry] (the focus handed to the panel's *Close*, #724), since the line
+ * gives way to "Looking on MusicBrainz…".
  */
 @Composable
 internal fun NoDatesText(
     none: NoDates,
     retry: (() -> Unit)?,
     openSources: () -> Unit,
+    afterRetry: () -> Unit = {},
 ) {
     val style = MaterialTheme.typography.bodyLarge
     when (none) {
@@ -75,6 +79,7 @@ internal fun NoDatesText(
                 stringResource(R.string.home_musicbrainz_unreachable),
                 sourceName(SourceId.MUSICBRAINZ),
                 retry,
+                afterRetry = afterRetry,
             )
         NoDates.NOT_FOUND -> Text(stringResource(R.string.home_musicbrainz_not_found), style = style)
         NoDates.NO_DATES -> Text(stringResource(R.string.home_dates_none), style = style)

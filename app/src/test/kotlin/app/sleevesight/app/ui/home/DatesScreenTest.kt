@@ -28,6 +28,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performFirstLinkClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
@@ -403,6 +404,22 @@ class DatesScreenTest {
             assertEquals(message.boundsInRoot.center.y, retry.boundsInRoot.center.y, 1f)
             tap(RETRY_TAG)
             assertEquals(listOf(Triple(RunKey.of(normalizer, sundown), SourceId.MUSICBRAINZ, sundown)), retried)
+        }
+
+    @Test
+    fun aTapOnRetryHandsTheFocusToCloseAsTheLineGivesWayToLooking() =
+        show(unreachable(offered = true)) {
+            tap(DATES_CHIP_TAG)
+            compose.onNodeWithTag(RETRY_TAG).requestFocus()
+            compose.waitForIdle()
+            compose.onNodeWithTag(RETRY_TAG).assertIsFocused()
+            tap(RETRY_TAG)
+            // The pipeline asks MusicBrainz again: the line gives way to "Looking on MusicBrainz…".
+            current.value = undated(SourceState.Pending)
+            compose.waitForIdle()
+            assertEquals(0, count(RETRY_TAG))
+            compose.onNodeWithText(text(R.string.home_musicbrainz_looking)).assertExists()
+            compose.onNodeWithTag(DATES_PANEL_CLOSE_TAG).assertIsFocused()
         }
 
     @Test

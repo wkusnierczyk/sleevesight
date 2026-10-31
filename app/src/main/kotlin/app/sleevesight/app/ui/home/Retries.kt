@@ -52,6 +52,10 @@ internal class Retries(
  * with *Retry* on the same line at its right, centred on the text, which [onRetry] runs; without
  * [onRetry] (the pipeline does not offer it now), the message alone. A screen reader reads *Retry*
  * as a button whose action is "ask MusicBrainz again" ("Double-tap to ask MusicBrainz again").
+ *
+ * A tap then runs [afterRetry]: the source asked again, the line gives way to the panel's "Looking
+ * on …", and *Retry*, holding the focus, goes, so the caller hands the focus on (to its panel's
+ * *Close*, #724), or a keyboard's or a screen reader's would fall to the top of the screen.
  */
 @Composable
 internal fun RetryLine(
@@ -59,6 +63,7 @@ internal fun RetryLine(
     source: String,
     onRetry: (() -> Unit)?,
     modifier: Modifier = Modifier,
+    afterRetry: () -> Unit = {},
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
@@ -79,7 +84,10 @@ internal fun RetryLine(
                         .clickable(
                             role = Role.Button,
                             onClickLabel = stringResource(R.string.home_retry_action, source),
-                            onClick = onRetry,
+                            onClick = {
+                                onRetry()
+                                afterRetry()
+                            },
                         ).padding(horizontal = 12.dp, vertical = 8.dp),
             ) {
                 Text(

@@ -41,7 +41,9 @@ internal enum class InPlace {
  * An item of the line as shown: [id], its button's and panel's title [name], its button's action as
  * a screen reader names it ([action]: "show dates"), the test tags of its button ([tag]) and its
  * panel ([panelTag], as [Panel] makes them, with `:heading` and `:close`), and what its panel holds
- * ([content]).
+ * ([content]). [content] is handed `toClose`, which moves the focus to the panel's *Close* (#724),
+ * for a control in it that goes once tapped (*Retry*, [RetryLine]): else a keyboard's or a screen
+ * reader's focus would fall to the top of the screen.
  */
 internal class InPlaceItem(
     val id: InPlace,
@@ -49,7 +51,7 @@ internal class InPlaceItem(
     val action: String,
     val tag: String,
     val panelTag: String,
-    val content: @Composable ColumnScope.() -> Unit,
+    val content: @Composable ColumnScope.(toClose: () -> Unit) -> Unit,
 )
 
 /**
@@ -136,7 +138,8 @@ internal fun rememberInPlaceMemory(): InPlaceMemory = rememberSaveable(saver = I
  * The focus moves as *Sources*' does ([FocusHandoff], #629): to a panel's *Close* when its button
  * opens it, back to its button when *Close* closes it (a keyboard's, and a screen reader's; nothing
  * moves while merely touched), and to its button when a new track closes a panel while the focus is
- * in it, if the new track has that button. Nothing at all when [items] is empty.
+ * in it, if the new track has that button; and to its *Close* when a control in it that goes once
+ * tapped asks for it ([InPlaceItem.content]'s `toClose`). Nothing at all when [items] is empty.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -195,6 +198,7 @@ internal fun InPlaceLine(
                 items.first { it.id == id },
                 Modifier.handoffTarget(handoff, closeOf(id)),
                 focused = { if (it) inside += id else inside -= id },
+                toClose = { handoff.moveTo(closeOf(id)) },
             ) {
                 memory.close(id, playing)
                 handoff.moveTo(buttonOf(id))
@@ -204,12 +208,13 @@ internal fun InPlaceLine(
 }
 
 // [item]'s panel, open: told whether the input focus is in it ([focused]); its *Close*, under
-// [closeModifier] (a focus requester), [close]s it.
+// [closeModifier] (a focus requester), [close]s it, and [toClose] moves the focus to it.
 @Composable
 private fun OpenPanel(
     item: InPlaceItem,
     closeModifier: Modifier,
     focused: (Boolean) -> Unit,
+    toClose: () -> Unit,
     close: () -> Unit,
 ) {
     Box(Modifier.onFocusChanged { focused(it.hasFocus) }) {
@@ -218,7 +223,6 @@ private fun OpenPanel(
             item.panelTag,
             onClose = close,
             closeModifier = closeModifier,
-            content = item.content,
-        )
+        ) { item.content(this, toClose) }
     }
 }
