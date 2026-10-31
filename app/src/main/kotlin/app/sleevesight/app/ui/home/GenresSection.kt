@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -26,44 +27,189 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
+import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.app.ui.theme.ChipFrame
+import app.sleevesight.app.ui.theme.LinkedText
+import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.app.ui.theme.chipColours
 import app.sleevesight.app.ui.theme.handoffTarget
+import app.sleevesight.app.ui.theme.linkedParts
 import app.sleevesight.app.ui.theme.rememberFocusHandoff
 import app.sleevesight.core.genres.LabelSource
 import app.sleevesight.core.genres.PlacedLabel
 import app.sleevesight.core.genres.TrackGenres
+import app.sleevesight.core.model.Outcome
+import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.pipeline.LaterLabels
+import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.settings.Settings
 
 /**
- * The genre labels (#439, #558; `design/design.md`, *Genre labels*), of the track, its artists and
- * its album. On Home, the chips alone, with no title: those of the most specific level
- * ([TrackGenres.folded]). A chip opens the genre's panel ([GenrePanel]): under *Expandable boxes*,
- * under the chips, where a second tap on the same chip, or *Close*, closes it and another chip
- * switches it; under *Separate pages* ([openPage], #447), on the genres' page ([HomePage.GenresAt]),
- * the chip's genre open there. The panel shows what the genre is and *Why is this …?* from [notes]
- * (#523). Chips are plain, told apart by their fill, not by a hue per genre
- * family.
+ * *Genres* in the line under the album ([InPlaceLine], #772), beside *Dates*: its button, shown for
+ * every track while *Show genres* is on in [settings] (with it off, #444, none, as no genres are
+ * asked for; nor before the settings' first read), and its panel, which holds the genre labels
+ * (#439, #558; `design/design.md`, *Genre labels*) of the track, its artists and its album
+ * ([GenresContent]). [retries] asks a label source that could not be reached again, and
+ * [openSettingsAt] opens the settings where the genre sources are switched on. Under *Separate
+ * pages*, with [openPage], the button opens the genres' page instead ([GenresPage]), and a screen
+ * reader names its action "open page", as *Sources*' (#447).
  */
+@Suppress("LongParameterList") // What the panel shows, and each of its ways out.
 @Composable
-internal fun Genres(
+internal fun genresItem(
     track: TrackState?,
     settings: Settings?,
-    openPage: ((HomePage) -> Unit)? = null,
+    notes: PanelNotes,
+    retries: Retries,
+    openSettingsAt: (SettingsTarget) -> Unit,
+    openPage: (() -> Unit)? = null,
+): InPlaceItem? {
+    if (settings?.showGenres != true) return null
+    return InPlaceItem(
+        id = InPlace.GENRES,
+        name = stringResource(R.string.home_genres),
+        action = stringResource(if (openPage != null) R.string.home_page_open else R.string.home_genres_show),
+        tag = if (openPage != null) GENRES_PAGE_LINK_TAG else GENRES_CHIP_TAG,
+        panelTag = GENRES_PANEL_TAG,
+        page = openPage,
+    ) { toClose -> GenresContent(track, settings, notes, retries::of, openSettingsAt, toClose) }
+}
+
+/**
+ * What *Genres*' panel holds (#772), as [GenresShown] works it out from [track] and [settings]: the
+ * chips of the most specific level ([TrackGenres.folded]), each opening its genre in a box of its
+ * own under them ([GenresBox], [GenrePanel]); under the chips, or in their place with none, why
+ * there are no more: "Looking on Last.fm and MusicBrainz…" while the genres are gathered (the
+ * sources still asked), a source that could not be reached with *Retry* beside it ([retry] of its
+ * [SourceId], [RetryLine], which then hands the focus to the panel's *Close*, [toClose]), "None
+ * found."; and with every genre source off, two lines, the second a link to where they are switched
+ * on ([openSettingsAt]: *Settings → Sources*, or *Settings → Genres* when the sources are on and
+ * their genre switches are not). With [everyGenre] (the genres' page, #772), no chips: every
+ * genre of the chips, in their order, in a panel of its own ([GenrePanel], with no *Close*).
+ */
+@Suppress("LongParameterList") // What the panel shows, and each of its ways out.
+@Composable
+internal fun GenresContent(
+    track: TrackState?,
+    settings: Settings,
     notes: PanelNotes = PanelNotes(),
+    retry: (SourceId) -> (() -> Unit)? = { null },
+    openSettingsAt: (SettingsTarget) -> Unit = {},
+    toClose: () -> Unit = {},
+    everyGenre: Boolean = false,
 ) {
-    // *Show genres* off (#444): no genres are asked for, and none shown, not even that they are off.
-    if (track == null || !track.gathered || settings?.showGenres == false) return
-    val genres = track.genres
-    when {
-        genres.isEmpty && labelsOff(settings) -> QuietLine(stringResource(R.string.home_genres_off))
-        genres.isEmpty -> QuietLine(stringResource(R.string.home_genres_none))
-        // Each chip opens the page, of one level too (#548): a chip that looks like a button and
-        // opens nothing reads as broken.
-        openPage != null ->
-            Chips(genres.folded, open = null, opensPage = true) { openPage(HomePage.GenresAt(it.label.genre.identity)) }
-        else -> GenresBox(track, notes)
+    val shown = GenresShown.of(track, settings)
+    val style = MaterialTheme.typography.bodyLarge
+    // The genre open, kept above the chips and the lines in their place (#772): while a run asks
+    // again, the chips may go and come back, and the genre with them. Closed on each new track; kept
+    // by the genre's identity, so it outlasts labels that land later; dropped once the genres are in
+    // and no row has it any more.
+    val chosen = rememberSaveable(track?.normalized?.lookupKey) { mutableStateOf<String?>(null) }
+    val gone =
+        track != null &&
+            track.gathered &&
+            track.genresAssembled &&
+            chosen.value?.let { !track.genres.has(it) } == true
+    SideEffect { if (gone) chosen.value = null }
+    if (track != null && !track.genres.isEmpty) {
+        if (everyGenre) EveryGenre(track, notes) else GenresBox(track, notes, chosen)
+    }
+    shown.off?.let { target ->
+        Text(stringResource(R.string.home_genres_off), style = style)
+        val linkText =
+            if (target ==
+                SettingsTarget.sources
+            ) {
+                R.string.home_settings_sources_link
+            } else {
+                R.string.home_settings_genres_link
+            }
+        val link = TextPart.Action(stringResource(linkText), target.linkTag) { openSettingsAt(target) }
+        LinkedText(linkedParts(stringResource(R.string.home_genres_off_see), link), style = style)
+    }
+    if (shown.looking.isNotEmpty()) {
+        Text(stringResource(R.string.home_genres_looking, sourcesNamed(shown.looking)), style = style)
+    }
+    for (source in shown.unreachable) {
+        val name = sourceName(source.source)
+        RetryLine(
+            stringResource(R.string.home_genre_source_unreachable, name),
+            name,
+            retry(source.source),
+            afterRetry = toClose,
+        )
+    }
+    if (shown.none) Text(stringResource(R.string.home_genres_none), style = style)
+}
+
+// [sources] named together: "Last.fm", "Last.fm and MusicBrainz".
+@Composable
+private fun sourcesNamed(sources: List<LabelSource>): String {
+    val names = sources.map { sourceName(it.source) }
+    return names.drop(1).fold(names.first()) { all, next -> stringResource(R.string.home_sources_two, all, next) }
+}
+
+/**
+ * What *Genres*' panel says besides its chips (#772), for a track and the settings: the label
+ * sources still being asked while the genres are gathered, by name ([looking]); those that could
+ * not be reached, each with *Retry* ([unreachable]); with every genre source off and no genre, where
+ * its link leads ([off]); and whether it says none were found ([none]).
+ */
+internal data class GenresShown(
+    val looking: List<LabelSource> = emptyList(),
+    val unreachable: List<LabelSource> = emptyList(),
+    val off: SettingsTarget? = null,
+    val none: Boolean = false,
+) {
+    companion object {
+        /**
+         * What the panel says for [track] under [settings]. With no genre and every genre source off
+         * ([labelsOff]), the link: to *Sources* when every label source is switched off there, else to
+         * *Genres*, where their genre switches are ([Settings.givesLabels]). Until the genres are
+         * assembled with the evidence ([TrackState.gathered] and [TrackState.genresAssembled]: the
+         * sources still asked, the last one's result being kept, or before the pipeline reaches the
+         * track), the label sources on that are still pending, or, with none pending, all those on.
+         * Then, the label sources on whose requests after the evidence are still asked
+         * ([TrackState.laterLabels]: MusicBrainz's artist tags, Last.fm's track and album tags),
+         * which may yet bring genres; and each whose lookup ended unreachable (or failed), or whose
+         * later request failed. None found only when every label source on is done with nothing.
+         */
+        fun of(
+            track: TrackState?,
+            settings: Settings,
+        ): GenresShown {
+            val empty = track?.genres?.isEmpty ?: true
+            if (empty && labelsOff(settings)) {
+                val sourcesOff = LabelSource.entries.none { settings.isEnabled(it.source) }
+                return GenresShown(off = if (sourcesOff) SettingsTarget.sources else SettingsTarget.genres)
+            }
+            val on = LabelSource.entries.filter(settings::givesLabels)
+            return if (track == null || !track.gathered || !track.genresAssembled) {
+                val states = track?.sources.orEmpty()
+                GenresShown(looking = on.filter { states[it.source] is SourceState.Pending }.ifEmpty { on })
+            } else {
+                gathered(track, on, empty)
+            }
+        }
+
+        // Once [track]'s genres are assembled: of the label sources [on], those whose later requests are
+        // still asked, and those not reached; with none of either and no genre ([empty]), none found.
+        private fun gathered(
+            track: TrackState,
+            on: List<LabelSource>,
+            empty: Boolean,
+        ): GenresShown {
+            val later = track.laterLabels
+            val looking = on.filter { later[it] == LaterLabels.ASKING }
+            val unreachable = on.filter { unreachable(track.sources[it.source]) || later[it] == LaterLabels.FAILED }
+            return GenresShown(looking, unreachable, none = empty && looking.isEmpty() && unreachable.isEmpty())
+        }
+
+        // Whether a source's lookup ended unreachable, or failed: *Retry* asks it again.
+        private fun unreachable(state: SourceState?): Boolean =
+            state is SourceState.Failed ||
+                (state is SourceState.Done && state.result.outcome == Outcome.Unreachable)
     }
 }
 
@@ -72,7 +218,9 @@ internal fun labelsOff(settings: Settings?): Boolean =
     settings != null && LabelSource.entries.none { settings.givesLabels(it) }
 
 /**
- * Under *Expandable boxes*: the chips, and under them the panel of the genre chosen, if any. The
+ * In *Genres*' panel (#772): the chips, and under them the genre chosen ([choice]), if any, in a box
+ * of its own ([GenrePanel], on the surface colour, which sets it apart from the panel's fill): another chip
+ * switches it, and a second tap on the same chip, or its *Close*, folds it; the chips stay. The
  * focus moves as *Sources*' does ([FocusHandoff], #629): to the panel's *Close* when a chip opens a
  * genre, and back to the chip tapped when *Close* closes it (a keyboard's, and a screen reader's;
  * nothing moves while merely touched). A panel that goes for another reason (a new track, or labels
@@ -84,10 +232,10 @@ internal fun labelsOff(settings: Settings?): Boolean =
 private fun GenresBox(
     track: TrackState,
     notes: PanelNotes,
+    choice: MutableState<String?>,
 ) {
-    // Closed on each new track. Kept by the genre's identity, so it outlasts labels that land later;
-    // a genre no row has any more shows no panel.
-    var chosen by rememberSaveable(track.normalized.lookupKey) { mutableStateOf<String?>(null) }
+    // [GenresContent]'s: a genre no row has (yet, or any more) shows no panel.
+    var chosen by choice
     val open = chosen?.takeIf { track.genres.has(it) }
     val labels = track.genres.folded
     val handoff = rememberFocusHandoff()
@@ -135,76 +283,76 @@ private fun GenresBox(
                     },
                     notes = notes,
                     closeModifier = Modifier.handoffTarget(handoff, close),
+                    fill = MaterialTheme.colorScheme.surface,
                 )
             }
         }
     }
 }
 
+// Every genre of [track]'s chips, in their order, each in a panel of its own, with no *Close* (the
+// genres' page, #772): a genre several artists share, once.
+@Composable
+private fun EveryGenre(
+    track: TrackState,
+    notes: PanelNotes,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        for (label in track.genres.folded.distinctBy { it.label.genre.identity }) {
+            GenrePanel(track, label.label.genre.identity, notes = notes)
+        }
+    }
+}
+
 /**
- * [labels] as chips, the one of the genre [open] marked, each under [chipModifier]'s modifier for it
- * (a focus requester); each chip a button that [tap]s it: with [opensPage], to open the genres'
- * page (a screen reader names the action "open page"), else to show the genre's panel, or, the one
- * [open], to close it; unless it does not [close], when the one [open] is not a button.
+ * [labels] as chips, in *Genres*' panel (#772), the one of the genre [open] marked, each under
+ * [chipModifier]'s modifier for it (a focus requester); each chip a button that [tap]s it: to show
+ * the genre's box, or, the one [open], to fold it.
  */
-@Suppress("LongParameterList") // What the chips show and do, and a focus target for each.
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun Chips(
     labels: List<PlacedLabel>,
     open: String?,
-    opensPage: Boolean = false,
-    close: Boolean = true,
     chipModifier: (PlacedLabel) -> Modifier = { Modifier },
     tap: (PlacedLabel) -> Unit,
 ) {
     val showAction = stringResource(R.string.home_genre_show)
     val closeAction = stringResource(R.string.home_genre_close)
-    val pageAction = stringResource(R.string.home_page_open)
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
         itemVerticalAlignment = Alignment.CenterVertically,
     ) {
         for (label in labels) {
-            // A chip that opens the page is never selected: it opens the page, not a panel beside it.
-            val selected = if (opensPage) null else label.label.genre.identity == open
-            // On the genres' page the marked chip has nothing to do: not a button there.
-            val action =
-                when {
-                    opensPage -> pageAction
-                    selected == true -> closeAction.takeIf { close }
-                    else -> showAction
-                }
-            GenreChip(label, selected, action, chipModifier(label)) { tap(label) }
+            val selected = label.label.genre.identity == open
+            GenreChip(label, selected, if (selected) closeAction else showAction, chipModifier(label)) { tap(label) }
         }
     }
 }
 
 /**
- * A chip on Home and the genres' page (#439, #558): a light fill in the text's colour; while
- * [selected], the text's colour, with the box's colour for the text. A button whose action a screen
- * reader names [action], and says is selected while its genre's panel shows; with [selected] null
- * (a chip that opens the page), neither; with no [action], not a button, and a tap does nothing.
- * [modifier] goes outside its target (a focus requester).
+ * A chip in *Genres*' panel (#439, #558, #772): a light fill in the text's colour; while [selected],
+ * the text's colour, with the box's colour for the text. A button whose action a screen reader
+ * names [action], and says is selected while its genre's box shows. [modifier] goes outside its
+ * target (a focus requester).
  */
 @Composable
 private fun GenreChip(
     placed: PlacedLabel,
-    selected: Boolean?,
-    action: String?,
+    selected: Boolean,
+    action: String,
     modifier: Modifier,
     onClick: () -> Unit,
 ) {
-    val (fill, content) = chipColours(selected == true)
+    val (fill, content) = chipColours(selected)
     ChipFrame(
         fill,
         modifier = modifier.testTag(tagOf(GENRE_PREFIX, placed)),
         action =
             Modifier
-                .let { chip ->
-                    action?.let { chip.clickable(role = Role.Button, onClickLabel = it, onClick = onClick) } ?: chip
-                }.let { chip -> selected?.let { chip.semantics { this.selected = it } } ?: chip },
+                .clickable(role = Role.Button, onClickLabel = action, onClick = onClick)
+                .semantics { this.selected = selected },
     ) {
         Text(placed.label.genre.label, style = MaterialTheme.typography.labelLarge, color = content)
     }
@@ -213,8 +361,17 @@ private fun GenreChip(
 // Whether any row has [genre].
 private fun TrackGenres.has(genre: String): Boolean = all.any { it.genre.identity == genre }
 
+/** The test tags of *Genres*' button and its panel (#772), the panel's heading and *Close* as [Panel] makes them. */
+const val GENRES_CHIP_TAG: String = "genres-chip"
+const val GENRES_PANEL_TAG: String = "genres-panel"
+const val GENRES_PANEL_HEADING_TAG: String = "genres-panel:heading"
+const val GENRES_PANEL_CLOSE_TAG: String = "genres-panel:close"
+
+/** The test tag of *Genres*' button under *Separate pages* (#772), which opens the genres' page. */
+const val GENRES_PAGE_LINK_TAG: String = "genres-page-link"
+
 /**
- * The test tag of a chip on Home or the genres' page, before its level (`track`, `artist`,
+ * The test tag of a chip in *Genres*' panel, before its level (`track`, `artist`,
  * `album`), a colon, for an artist's the artist and a colon, and its identity:
  * `genre:artist:The Beatles:rock`.
  */

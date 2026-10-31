@@ -284,9 +284,9 @@ private class PictureBox {
  * track. The header's logo and the key data are Home's own ([HeaderLogo], [KeyData]); the rest are
  * plain copies of Home's parts, since Home's own need a run's state, take taps and carry their own
  * semantics: the player row, a fixed cover (beige, with no blue, so the pen's arrows stand out), the
- * position, *Key insights* with its citation and the Write button; the genre chips and *Sources*' chip
- * are Home's own [ChipFrame], without a click. Each part the notes name tells [report] where it is,
- * and the cover tells [cover].
+ * position, *Key insights* with its citation and the Write button; the *Dates* and *Genres* buttons
+ * (#724, #772) and *Sources*' chip are Home's own [ChipFrame], without a click. Each part the notes
+ * name tells [report] where it is, and the cover tells [cover].
  * Left to right whatever the phone's language: a picture of Home as the notes, on its right, name it.
  */
 @Composable
@@ -330,7 +330,7 @@ internal fun MiniHome(
                 MiniPlayer(at(GuidePart.PLAYER))
                 MiniCover(Modifier.onGloballyPositioned(cover))
                 KeyData(EXAMPLE_NORMALIZED, EXAMPLE_TRACK, HeaderYears(album = EXAMPLE_YEAR))
-                MiniChips(at(GuidePart.GENRES))
+                MiniLine(at(GuidePart.GENRES))
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(stringResource(R.string.home_insight_title), style = MaterialTheme.typography.titleMedium)
                     MiniInsight(at(GuidePart.INSIGHT), at(GuidePart.CITE))
@@ -432,13 +432,16 @@ private fun MiniCover(cover: Modifier) {
     }
 }
 
-// The genre chips, drawn by Home's own [ChipFrame], not buttons here.
+// The line under the album, closed, as Home shows it (#724, #772): *Dates* and *Genres*, drawn by Home's
+// own [ChipFrame], not buttons here; [genres] on *Genres*' as drawn, where the genres are now.
 @Composable
-private fun MiniChips(modifier: Modifier) {
+private fun MiniLine(genres: Modifier) {
     val (fill, content) = chipColours(marked = false)
-    Row(modifier, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        for (genre in EXAMPLE_GENRES) {
-            ChipFrame(fill) { Text(genre, style = MaterialTheme.typography.labelLarge, color = content) }
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        for ((name, at) in listOf(R.string.home_dates to Modifier, R.string.home_genres to genres)) {
+            ChipFrame(fill, action = at) {
+                Text(stringResource(name), style = MaterialTheme.typography.labelLarge, color = content)
+            }
         }
     }
 }
@@ -539,7 +542,6 @@ private const val EXAMPLE_LENGTH = "5:37"
 private const val EXAMPLE_PROGRESS = 0.4f
 private const val EXAMPLE_CITE = "W1"
 private const val CITE_ID = "cite"
-private val EXAMPLE_GENRES = listOf("Modal jazz", "Cool jazz")
 private val EXAMPLE_TRACK = NowPlaying(EXAMPLE_TITLE, EXAMPLE_ARTIST, EXAMPLE_ALBUM, player = EXAMPLE_PLAYER)
 private val EXAMPLE_NORMALIZED =
     NormalizedTrack(EXAMPLE_TITLE, listOf(EXAMPLE_ARTIST), EXAMPLE_ARTIST, null, null, emptyList(), "")

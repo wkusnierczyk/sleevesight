@@ -318,6 +318,15 @@ sealed interface CoordinatorEvent {
         val run: RunId,
         val gathered: Gathered,
     ) : CoordinatorEvent
+
+    /**
+     * Of run [run]'s label requests after the evidence, those of [sources] failed (#772,
+     * `RunControl.labelsFailed`): sent before its labels step ends, so *Retry* may ask them again.
+     */
+    data class LabelsFailed(
+        val run: RunId,
+        val sources: Set<SourceId>,
+    ) : CoordinatorEvent
 }
 
 /** What the coordinator has done, for the host to carry out. */
@@ -899,6 +908,8 @@ fun sameInsightTrack(
  * | any | NetworkChanged(online) | online = it; one more return when it was offline and is online | none |
  * | the run | SourcesGathered(gathered) | what its sources ended with kept | none |
  * | an old run | SourcesGathered | unchanged | none |
+ * | the run, its sources landed | LabelsFailed(sources) (#772) | those of its label requests that failed kept with what its sources ended with (`Gathered.labelsFailed`), which *Retry* may ask again | none |
+ * | otherwise | LabelsFailed | unchanged | none |
  */
 @Suppress("TooManyFunctions") // One for each kind of event, mostly: the table, row by row.
 class PipelineCoordinator(
@@ -949,6 +960,7 @@ class PipelineCoordinator(
             is CoordinatorEvent.PreparationEnded -> preparationEnded(event.prep)
             is CoordinatorEvent.NetworkChanged -> network(event.online)
             is CoordinatorEvent.CardExpired -> cardExpired(event.writtenAt)
+            is CoordinatorEvent.LabelsFailed -> labelsFailed(event.run, event.sources)
             else -> fromRun(event)
         }
     }
@@ -963,6 +975,13 @@ class PipelineCoordinator(
             else -> Unit
         }
     }
+
+    // Of [run]'s label requests after the evidence, [sources]' failed (#772): kept with what its
+    // sources ended with, for *Retry*.
+    private fun labelsFailed(
+        run: RunId,
+        sources: Set<SourceId>,
+    ) = ofRun(run) { it.copy(gathered = it.gathered?.let { g -> g.copy(labelsFailed = g.labelsFailed + sources) }) }
 
     // The ledger's card past *Keep history for* (#643), if it is the one written at [writtenAt]:
     // forgotten, not a newer one; the ledger stays written.

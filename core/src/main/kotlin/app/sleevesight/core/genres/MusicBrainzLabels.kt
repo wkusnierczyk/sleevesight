@@ -46,14 +46,22 @@ class MusicBrainzLabels(
      * The labels from the tags of [artists], the credited artists MusicBrainz resolved, in credit
      * order, each label naming its artist; none for one whose request failed.
      */
-    suspend fun labels(artists: List<ResolvedArtist>): List<GenreLabel> =
-        artists
-            .mapNotNull { artist -> artist.mbid?.let { artist.name to it } }
-            .distinctBy { it.second }
-            .flatMap { (name, mbid) ->
-                val found = kept.tagsOf(mbid) { tags.artistTags(mbid) }.orEmpty()
-                vocabulary.labelsFor(found, artistPage(mbid), GenreLevel.ARTIST, name)
-            }
+    suspend fun labels(artists: List<ResolvedArtist>): List<GenreLabel> = lookUp(artists).labels
+
+    /** As [labels], and whether any artist's request failed ([LabelLookup.failed], #772). */
+    suspend fun lookUp(artists: List<ResolvedArtist>): LabelLookup {
+        var failed = false
+        val labels =
+            artists
+                .mapNotNull { artist -> artist.mbid?.let { artist.name to it } }
+                .distinctBy { it.second }
+                .flatMap { (name, mbid) ->
+                    val found = kept.tagsOf(mbid) { tags.artistTags(mbid) }
+                    if (found == null) failed = true
+                    vocabulary.labelsFor(found.orEmpty(), artistPage(mbid), GenreLevel.ARTIST, name)
+                }
+        return LabelLookup(labels, failed)
+    }
 
     /** The labels from the recording's tags ([RecordingTags]), each linking its MusicBrainz page. */
     fun recordingLabels(recording: RecordingTags): List<GenreLabel> =

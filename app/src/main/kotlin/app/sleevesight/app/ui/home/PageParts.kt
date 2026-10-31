@@ -42,6 +42,8 @@ import app.sleevesight.app.R
  * [title], which it reads as a heading; under it, [content], scrolling, [padding] in from the edges,
  * its items [spacing] apart. The bar and the page are in [containerColor]: for Home's pages, the
  * app's own background, as Home's is (#609), with the album art's colours on the accents only.
+ * [backModifier] goes on the back arrow: a focus requester, for a control on the page that goes once
+ * tapped (the genres' page's *Retry*, #772).
  */
 @Suppress("LongParameterList") // The title and the way back; how the page looks, each with a default; its content.
 @Composable
@@ -51,6 +53,7 @@ internal fun PageFrame(
     containerColor: Color = MaterialTheme.colorScheme.surface,
     padding: PaddingValues = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
     spacing: Dp = 12.dp,
+    backModifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Scaffold(
@@ -59,7 +62,7 @@ internal fun PageFrame(
         // art's scheme, which has no role of that colour, and the lookup would fall through.
         contentColor = MaterialTheme.colorScheme.onSurface,
         contentWindowInsets = WindowInsets.safeDrawing,
-        topBar = { PageBar(title, onBack, containerColor) },
+        topBar = { PageBar(title, onBack, containerColor, backModifier = backModifier) },
     ) { bars ->
         Column(
             modifier =
@@ -76,9 +79,9 @@ internal fun PageFrame(
 }
 
 /**
- * A page's bar, in [containerColor]: the back arrow ([onBack]), which a screen reader reads as
- * *Back*; [title], which it reads as a heading; and at the end, [actions], if any (the diagnostics'
- * *Export*).
+ * A page's bar, in [containerColor]: the back arrow ([onBack], under [backModifier]), which a screen
+ * reader reads as *Back*; [title], which it reads as a heading; and at the end, [actions], if any
+ * (the diagnostics' *Export*).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -86,6 +89,7 @@ internal fun PageBar(
     title: String,
     onBack: () -> Unit,
     containerColor: Color,
+    backModifier: Modifier = Modifier,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     TopAppBar(
@@ -98,7 +102,7 @@ internal fun PageBar(
             )
         },
         navigationIcon = {
-            IconButton(onClick = onBack, modifier = Modifier.testTag(PAGE_BACK_TAG)) {
+            IconButton(onClick = onBack, modifier = backModifier.testTag(PAGE_BACK_TAG)) {
                 Icon(
                     painterResource(R.drawable.ic_arrow_back),
                     contentDescription = stringResource(R.string.page_back),
@@ -128,7 +132,7 @@ internal fun PageCloseButton(
 
 /**
  * The test tags of a page's title, its back arrow and its closing button, and of the way to
- * *Sources*' page from Home, its chip under *Separate pages* (the genres' page opens from a genre chip).
+ * *Sources*' page from Home, its chip under *Separate pages* (the genres' page opens from *Genres*, #772).
  */
 const val PAGE_TITLE_TAG: String = "page:title"
 const val PAGE_BACK_TAG: String = "page:back"

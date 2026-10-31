@@ -6,13 +6,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.PipelineHost
+import app.sleevesight.app.ui.theme.handoffTarget
+import app.sleevesight.app.ui.theme.rememberFocusHandoff
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.TrackState
@@ -37,16 +41,31 @@ internal fun NowPlayingPageContent(
     val shown = playing?.let { Showing(state, it) }
     // The app's background, read outside the art's scheme, so the page's ground is Home's (#609).
     val ground = MaterialTheme.colorScheme.surface
+    // The back arrow, where a control on the page that goes once tapped hands the focus (#772).
+    val handoff = rememberFocusHandoff()
+    val back = remember { FocusRequester() }
     ArtTheme(state.art) {
-        PageFrame(pageTitle(page), onBack, containerColor = ground) {
+        PageFrame(
+            pageTitle(page),
+            onBack,
+            containerColor = ground,
+            backModifier = Modifier.handoffTarget(handoff, back),
+        ) {
             if (playing == null || shown == null) {
                 PageNothingPlaying()
                 return@PageFrame
             }
             when (page) {
                 is HomePage.Sources -> SourcesPage(shown, playing, page.cite, actions.openSettings)
-                HomePage.Genres -> GenresPage(shown.track, state.settings, genre = null, genreNotes(shown, actions))
-                is HomePage.GenresAt -> GenresPage(shown.track, state.settings, page.genre, genreNotes(shown, actions))
+                HomePage.Genres, is HomePage.GenresAt -> {
+                    val retries = Retries(shown.view, playing, actions.askAgain)
+                    GenresPage(
+                        shown.track,
+                        state.settings,
+                        genreNotes(shown, actions),
+                        GenresWays(retries::of, actions.openSettingsAt) { handoff.moveTo(back) },
+                    )
+                }
             }
         }
     }

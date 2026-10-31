@@ -83,6 +83,7 @@ internal object HomeFixtures {
         sources = sources,
         evidence = evidence,
         insight = insight,
+        genresAssembled = true,
     )
 
     /**

@@ -380,6 +380,7 @@ class PipelineLabelsTest {
         tags: FakeReleaseTags,
         adapters: List<SourceAdapter> = listOf(musicBrainz(), lastFm()),
         cache: PipelineCache = PipelineCache.None,
+        labels: MusicBrainzLabels = musicBrainzLabels,
     ) = Pipeline(
         PipelineParts(
             normalizer = Normalizer(JvmAccentFolder),
@@ -387,7 +388,7 @@ class PipelineLabelsTest {
             resolver = FakeResolver(),
             hasher = JvmHasher,
             cache = cache,
-            musicBrainzLabels = musicBrainzLabels,
+            musicBrainzLabels = labels,
             lastFmLabels = LastFmLabels(tags, vocabulary),
         ),
         PipelineTime(timeSource = testTimeSource),

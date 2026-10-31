@@ -32,6 +32,15 @@ enum class LabelSource(
     ),
 }
 
+/**
+ * What a request for labels gave (#772): its [labels], and whether a request failed ([failed]: the
+ * source could not be reached or answered unusably), which tells "none" from "not known".
+ */
+data class LabelLookup(
+    val labels: List<GenreLabel>,
+    val failed: Boolean = false,
+)
+
 /** A label source that gave a label, with the page whose tags gave it ([GenreLabel.url]). */
 data class LabelCredit(
     val source: LabelSource,

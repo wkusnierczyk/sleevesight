@@ -67,18 +67,37 @@ class LastFmLabels(
     suspend fun trackLabels(
         artist: String,
         title: String,
-    ): List<GenreLabel> {
-        val found = (tags.trackTags(artist, title) as? Lookup.Found)?.value.orEmpty()
-        return vocabulary.labelsFor(found, tags.trackPage(artist, title), GenreLevel.TRACK)
+    ): List<GenreLabel> = trackLookup(artist, title).labels
+
+    /** As [trackLabels], and whether the request failed ([LabelLookup.failed], #772). */
+    suspend fun trackLookup(
+        artist: String,
+        title: String,
+    ): LabelLookup {
+        val answer = tags.trackTags(artist, title)
+        val found = (answer as? Lookup.Found)?.value.orEmpty()
+        return LabelLookup(
+            vocabulary.labelsFor(found, tags.trackPage(artist, title), GenreLevel.TRACK),
+            failed = answer is Lookup.Failed,
+        )
     }
 
     /** The labels from the tags of [album] by [artist], kept or asked for; none when the request failed. */
     suspend fun albumLabels(
         artist: String,
         album: String,
-    ): List<GenreLabel> {
-        val found = albums.tagsOf(albumKey(fold(artist), fold(album))) { tags.albumTags(artist, album) }.orEmpty()
-        return vocabulary.labelsFor(found, tags.albumPage(artist, album), GenreLevel.ALBUM)
+    ): List<GenreLabel> = albumLookup(artist, album).labels
+
+    /** As [albumLabels], and whether the request failed ([LabelLookup.failed], #772). */
+    suspend fun albumLookup(
+        artist: String,
+        album: String,
+    ): LabelLookup {
+        val found = albums.tagsOf(albumKey(fold(artist), fold(album))) { tags.albumTags(artist, album) }
+        return LabelLookup(
+            vocabulary.labelsFor(found.orEmpty(), tags.albumPage(artist, album), GenreLevel.ALBUM),
+            failed = found == null,
+        )
     }
 
     companion object {
