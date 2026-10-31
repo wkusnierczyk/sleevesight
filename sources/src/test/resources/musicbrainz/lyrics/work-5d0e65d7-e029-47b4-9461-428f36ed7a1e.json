@@ -1,0 +1,666 @@
+{
+ "iswcs": [
+  "T-011.633.765-5"
+ ],
+ "id": "5d0e65d7-e029-47b4-9461-428f36ed7a1e",
+ "relations": [
+  {
+   "attributes": [],
+   "target-credit": "",
+   "type": "composer",
+   "source-credit": "",
+   "begin": null,
+   "target-type": "artist",
+   "attribute-ids": {},
+   "artist": {
+    "name": "Gerry Rafferty",
+    "sort-name": "Rafferty, Gerry",
+    "type": "Person",
+    "country": "GB",
+    "disambiguation": "",
+    "id": "563201cb-721c-4cfb-acca-c1ba69e3d1fb",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df"
+   },
+   "ended": false,
+   "type-id": "d59d99ea-23d4-4a80-b066-edca32ee158f",
+   "direction": "backward",
+   "end": null,
+   "attribute-values": {}
+  },
+  {
+   "source-credit": "",
+   "type": "lyricist",
+   "target-credit": "",
+   "attribute-ids": {},
+   "target-type": "artist",
+   "begin": null,
+   "end": null,
+   "direction": "backward",
+   "type-id": "3e48faba-ec01-47fd-8e89-30e81161661c",
+   "ended": false,
+   "artist": {
+    "type": "Person",
+    "sort-name": "Rafferty, Gerry",
+    "disambiguation": "",
+    "country": "GB",
+    "name": "Gerry Rafferty",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "id": "563201cb-721c-4cfb-acca-c1ba69e3d1fb"
+   },
+   "attribute-values": {},
+   "attributes": []
+  },
+  {
+   "recording": {
+    "disambiguation": "live, 1993-02-12: Musikhalle, Hamburg, Germany",
+    "title": "Right Down the Line",
+    "video": false,
+    "length": 338755,
+    "id": "5e51c408-8f28-4847-827b-3568be62d305",
+    "artist-credit": [
+     {
+      "name": "Gerry Rafferty",
+      "joinphrase": "",
+      "artist": {
+       "type-id": null,
+       "id": "563201cb-721c-4cfb-acca-c1ba69e3d1fb",
+       "disambiguation": "",
+       "country": "GB",
+       "type": null,
+       "sort-name": "Rafferty, Gerry",
+       "name": "Gerry Rafferty"
+      }
+     }
+    ]
+   },
+   "attributes": [
+    "live"
+   ],
+   "target-credit": "",
+   "type": "performance",
+   "source-credit": "",
+   "begin": "1993-02-12",
+   "target-type": "recording",
+   "attribute-ids": {
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a"
+   },
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "end": "1993-02-12",
+   "ended": true,
+   "attribute-values": {}
+  },
+  {
+   "recording": {
+    "disambiguation": "",
+    "video": false,
+    "title": "Right Down the Line",
+    "id": "aa044f92-44bf-4158-951e-d63aa0c23fae",
+    "artist-credit": [
+     {
+      "name": "Bonnie Raitt",
+      "joinphrase": "",
+      "artist": {
+       "name": "Bonnie Raitt",
+       "country": "US",
+       "disambiguation": "",
+       "type": null,
+       "sort-name": "Raitt, Bonnie",
+       "type-id": null,
+       "id": "0f0da09c-3940-4cb5-879f-4cea28907810"
+      }
+     }
+    ],
+    "length": 327760
+   },
+   "attributes": [
+    "cover"
+   ],
+   "ended": true,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "end": "2011",
+   "attribute-values": {},
+   "source-credit": "",
+   "type": "performance",
+   "target-credit": "",
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "target-type": "recording",
+   "begin": "2011"
+  },
+  {
+   "recording": {
+    "disambiguation": "",
+    "title": "Right Down The Line",
+    "video": false,
+    "id": "458b9605-22d0-4ddf-8f9f-1a86217c7fa4",
+    "length": 342000,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "type-id": null,
+       "id": "0f0da09c-3940-4cb5-879f-4cea28907810",
+       "name": "Bonnie Raitt",
+       "country": "US",
+       "disambiguation": "",
+       "type": null,
+       "sort-name": "Raitt, Bonnie"
+      },
+      "name": "Bonnie Raitt"
+     }
+    ]
+   },
+   "attributes": [
+    "cover",
+    "live"
+   ],
+   "target-credit": "",
+   "source-credit": "",
+   "type": "performance",
+   "target-type": "recording",
+   "begin": "2012-04-13",
+   "attribute-ids": {
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a",
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "ended": true,
+   "direction": "backward",
+   "end": "2012-04-13",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {}
+  },
+  {
+   "recording": {
+    "artist-credit": [
+     {
+      "name": "Josh Homme",
+      "joinphrase": "",
+      "artist": {
+       "disambiguation": "Queens of the Stone Age frontman",
+       "country": "US",
+       "type": null,
+       "sort-name": "Homme, Josh",
+       "name": "Josh Homme",
+       "type-id": null,
+       "id": "dbecd515-aac9-4e7b-808e-bca22809c316"
+      }
+     }
+    ],
+    "id": "fb1c37f8-6f53-4a03-9a04-aef2c31aff50",
+    "length": 298493,
+    "disambiguation": "live, 2022-11-11: The Plaza Theatre, Palm Springs, CA, USA",
+    "title": "Right Down the Line",
+    "video": false
+   },
+   "attributes": [
+    "cover",
+    "live"
+   ],
+   "target-credit": "",
+   "type": "performance",
+   "source-credit": "",
+   "target-type": "recording",
+   "begin": "2022-11-11",
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113",
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a"
+   },
+   "direction": "backward",
+   "end": "2022-11-11",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "ended": true,
+   "attribute-values": {}
+  },
+  {
+   "ended": false,
+   "end": null,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "attribute-values": {},
+   "target-credit": "",
+   "type": "performance",
+   "source-credit": "",
+   "begin": null,
+   "target-type": "recording",
+   "attribute-ids": {},
+   "recording": {
+    "title": "Right Down the Line",
+    "video": false,
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "name": "Gerry Rafferty",
+      "joinphrase": "",
+      "artist": {
+       "type-id": null,
+       "id": "563201cb-721c-4cfb-acca-c1ba69e3d1fb",
+       "name": "Gerry Rafferty",
+       "type": null,
+       "sort-name": "Rafferty, Gerry",
+       "disambiguation": "",
+       "country": "GB"
+      }
+     }
+    ],
+    "id": "bd129c44-6286-4f62-8d11-8d1c8437ecc0",
+    "length": 267773
+   },
+   "attributes": []
+  },
+  {
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "end": null,
+   "ended": false,
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "begin": null,
+   "target-type": "recording",
+   "type": "performance",
+   "source-credit": "",
+   "target-credit": "",
+   "attributes": [
+    "cover"
+   ],
+   "recording": {
+    "title": "Right Down the Line",
+    "video": false,
+    "disambiguation": "",
+    "id": "d92b0a8e-1787-416f-9903-1f0bac5806ad",
+    "length": 257733,
+    "artist-credit": [
+     {
+      "name": "Bonnie Raitt",
+      "artist": {
+       "id": "0f0da09c-3940-4cb5-879f-4cea28907810",
+       "type-id": null,
+       "name": "Bonnie Raitt",
+       "sort-name": "Raitt, Bonnie",
+       "type": null,
+       "country": "US",
+       "disambiguation": ""
+      },
+      "joinphrase": ""
+     }
+    ]
+   }
+  },
+  {
+   "begin": null,
+   "target-type": "recording",
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "target-credit": "",
+   "source-credit": "",
+   "type": "performance",
+   "attribute-values": {},
+   "ended": false,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "end": null,
+   "direction": "backward",
+   "attributes": [
+    "cover"
+   ],
+   "recording": {
+    "length": 263000,
+    "id": "929234d7-b520-4295-8f80-acdcda57389f",
+    "artist-credit": [
+     {
+      "artist": {
+       "id": "0bd25c15-886d-463e-9763-48369d65d2d1",
+       "type-id": null,
+       "country": "US",
+       "disambiguation": "American jazz vocalist/actress/dancer",
+       "sort-name": "Ruby, Kama",
+       "type": null,
+       "name": "Kama Ruby"
+      },
+      "joinphrase": " feat. ",
+      "name": "Kama Ruby"
+     },
+     {
+      "artist": {
+       "type-id": null,
+       "id": "987deaf6-f297-423b-94e0-fc135c02b355",
+       "name": "Ezekiel Victor",
+       "country": null,
+       "disambiguation": "",
+       "type": null,
+       "sort-name": "Victor, Ezekiel"
+      },
+      "joinphrase": "",
+      "name": "Ezekiel Victor"
+     }
+    ],
+    "disambiguation": "",
+    "title": "Right Down the Line",
+    "video": false
+   }
+  },
+  {
+   "attributes": [
+    "cover"
+   ],
+   "recording": {
+    "artist-credit": [
+     {
+      "name": "Brady Harris",
+      "artist": {
+       "name": "Brady Harris",
+       "country": "US",
+       "disambiguation": "wine bar troubadour",
+       "type": null,
+       "sort-name": "Harris, Brady",
+       "type-id": null,
+       "id": "418760fa-c709-4bf6-9743-e9d6883055fc"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "id": "3f8f58e8-77b7-4e4e-a3d4-a7bc9b327a72",
+    "length": 316000,
+    "video": false,
+    "title": "Right Down the Line",
+    "disambiguation": ""
+   },
+   "attribute-values": {},
+   "ended": false,
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "end": null,
+   "target-type": "recording",
+   "begin": null,
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "target-credit": "",
+   "source-credit": "",
+   "type": "performance"
+  },
+  {
+   "recording": {
+    "length": 269613,
+    "id": "ab39b92e-9a69-48a8-b20b-13a76a468218",
+    "artist-credit": [
+     {
+      "name": "Brendan Benson",
+      "artist": {
+       "name": "Brendan Benson",
+       "country": "US",
+       "disambiguation": "",
+       "sort-name": "Benson, Brendan",
+       "type": null,
+       "id": "f1999057-4be4-40f5-bfc9-c33b362a94e5",
+       "type-id": null
+      },
+      "joinphrase": ""
+     }
+    ],
+    "video": false,
+    "title": "Right Down the Line",
+    "disambiguation": ""
+   },
+   "attributes": [
+    "cover"
+   ],
+   "target-credit": "",
+   "source-credit": "",
+   "type": "performance",
+   "target-type": "recording",
+   "begin": null,
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "ended": false,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "end": null,
+   "attribute-values": {}
+  },
+  {
+   "attributes": [
+    "cover"
+   ],
+   "recording": {
+    "video": false,
+    "title": "Right Down the Line",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "name": "Dent May",
+      "artist": {
+       "name": "Dent May",
+       "country": "US",
+       "disambiguation": "",
+       "sort-name": "May, Dent",
+       "type": null,
+       "id": "6448f68d-85fd-401d-bfa3-3d85a7b64452",
+       "type-id": null
+      },
+      "joinphrase": ""
+     }
+    ],
+    "id": "04d89493-f444-477b-bbb1-824cffe09669",
+    "length": null
+   },
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "target-type": "recording",
+   "begin": null,
+   "source-credit": "",
+   "type": "performance",
+   "target-credit": "",
+   "attribute-values": {},
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "end": null,
+   "ended": false
+  },
+  {
+   "attributes": [
+    "cover",
+    "live"
+   ],
+   "recording": {
+    "id": "60ab78b2-3d39-4c42-bee9-acbb6175a6ef",
+    "length": 349000,
+    "artist-credit": [
+     {
+      "name": "Bonnie Raitt",
+      "artist": {
+       "type-id": null,
+       "id": "0f0da09c-3940-4cb5-879f-4cea28907810",
+       "country": "US",
+       "disambiguation": "",
+       "type": null,
+       "sort-name": "Raitt, Bonnie",
+       "name": "Bonnie Raitt"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "live, SiriusXM Studios",
+    "title": "Right Down the Line",
+    "video": false
+   },
+   "attribute-values": {},
+   "ended": false,
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "end": null,
+   "begin": null,
+   "target-type": "recording",
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113",
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a"
+   },
+   "target-credit": "",
+   "source-credit": "",
+   "type": "performance"
+  },
+  {
+   "attributes": [
+    "cover"
+   ],
+   "recording": {
+    "id": "e323ac41-a64e-41e1-87eb-b39727114d3c",
+    "length": 274000,
+    "artist-credit": [
+     {
+      "artist": {
+       "type-id": null,
+       "id": "1bbf31dc-dbc0-4a7a-bf3f-48bc665878e1",
+       "name": "Local Natives",
+       "type": null,
+       "sort-name": "Local Natives",
+       "country": "US",
+       "disambiguation": "fka Cavil at Rest"
+      },
+      "joinphrase": "",
+      "name": "Local Natives"
+     }
+    ],
+    "disambiguation": "",
+    "title": "Right Down The Line (Gerry Raferty cover)",
+    "video": false
+   },
+   "attribute-values": {},
+   "ended": false,
+   "end": null,
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "begin": null,
+   "target-type": "recording",
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "target-credit": "",
+   "source-credit": "",
+   "type": "performance"
+  },
+  {
+   "attribute-values": {},
+   "ended": false,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "end": null,
+   "direction": "backward",
+   "begin": null,
+   "target-type": "recording",
+   "attribute-ids": {},
+   "target-credit": "",
+   "source-credit": "",
+   "type": "performance",
+   "attributes": [],
+   "recording": {
+    "artist-credit": [
+     {
+      "name": "Gerry Rafferty",
+      "joinphrase": "",
+      "artist": {
+       "id": "563201cb-721c-4cfb-acca-c1ba69e3d1fb",
+       "type-id": null,
+       "name": "Gerry Rafferty",
+       "country": "GB",
+       "disambiguation": "",
+       "sort-name": "Rafferty, Gerry",
+       "type": null
+      }
+     }
+    ],
+    "id": "d311746a-8038-446b-8651-7bf840036c24",
+    "length": 213000,
+    "video": false,
+    "title": "Right Down the Line (single edit)",
+    "disambiguation": ""
+   }
+  },
+  {
+   "url": {
+    "resource": "https://genius.com/Bonnie-raitt-right-down-the-line-lyrics",
+    "id": "85c309b5-0a7d-4ba3-9e9d-dae46328f34c"
+   },
+   "attributes": [],
+   "type": "lyrics",
+   "source-credit": "",
+   "target-credit": "",
+   "attribute-ids": {},
+   "target-type": "url",
+   "begin": null,
+   "type-id": "e38e65aa-75e0-42ba-ace0-072aeb91a538",
+   "end": null,
+   "direction": "backward",
+   "ended": false,
+   "attribute-values": {}
+  },
+  {
+   "url": {
+    "resource": "https://genius.com/Gerry-rafferty-right-down-the-line-lyrics",
+    "id": "f9bd0d8c-b33c-406e-8977-9b3474750f99"
+   },
+   "attributes": [],
+   "ended": false,
+   "direction": "backward",
+   "type-id": "e38e65aa-75e0-42ba-ace0-072aeb91a538",
+   "end": null,
+   "attribute-values": {},
+   "target-credit": "",
+   "type": "lyrics",
+   "source-credit": "",
+   "begin": null,
+   "target-type": "url",
+   "attribute-ids": {}
+  },
+  {
+   "ended": false,
+   "type-id": "b80dff64-9560-445a-b824-c8b432d77a52",
+   "direction": "backward",
+   "end": null,
+   "attribute-values": {},
+   "source-credit": "",
+   "type": "secondhandsongs",
+   "target-credit": "",
+   "attribute-ids": {},
+   "begin": null,
+   "target-type": "url",
+   "url": {
+    "resource": "https://secondhandsongs.com/work/118559",
+    "id": "02429b0f-c943-4997-abe9-49f8b5025245"
+   },
+   "attributes": []
+  },
+  {
+   "url": {
+    "id": "8cb14c81-1c17-4c92-89d1-183618c15996",
+    "resource": "https://www.wikidata.org/wiki/Q28444210"
+   },
+   "attributes": [],
+   "type-id": "587fdd8f-080e-46a9-97af-6425ebbcb3a2",
+   "direction": "backward",
+   "end": null,
+   "ended": false,
+   "attribute-values": {},
+   "source-credit": "",
+   "type": "wikidata",
+   "target-credit": "",
+   "attribute-ids": {},
+   "target-type": "url",
+   "begin": null
+  }
+ ],
+ "type-id": "f061270a-2fd6-32f1-a641-f0f8676d14e6",
+ "languages": [
+  "eng"
+ ],
+ "attributes": [],
+ "type": "Song",
+ "disambiguation": "",
+ "title": "Right Down the Line",
+ "language": "eng"
+}

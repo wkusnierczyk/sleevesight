@@ -66,21 +66,29 @@ internal class TrackRun(
     private val looksAgain = input.lookAgain != null
 
     // What an earlier run of the track found (#192), kept as it landed: every state of a source
-    // still switched on but `Unreachable`, which is asked again, unless the run asks again only some
-    // ([Gathered.asked], a *Retry*, #724). An adapter that threw (a bug, not the network) is not
-    // asked again either; a source that was off then is looked up as usual.
+    // still switched on but those it asks again ([Gathered.asked]): the `Unreachable` ones, or those a
+    // *Retry* names (#724), a provisional one among them (#728), the other `Unreachable` ones kept so.
+    // An adapter that threw (a bug, not the network) is not asked again; a source that was off then
+    // is looked up as usual.
     private val keptBefore: Map<SourceId, SourceState> =
         input.again
             ?.let { again ->
                 again.sources.filter { (source, before) ->
-                    enabled.any { it.id == source } && (keeps(before) || source in again.unreachable - again.asked)
+                    enabled.any { it.id == source } &&
+                        source !in again.asked &&
+                        (keeps(before) || source in again.unreachable)
                 }
             }.orEmpty()
 
-    // A resolution an earlier run of the track made, used again rather than asked for (#192).
+    // A resolution an earlier run of the track made, used again rather than asked for (#192); not
+    // one a failed lookup left provisional, when MusicBrainz is asked again (a *Retry*, #728).
     private val resolvedBefore =
-        input.again?.resolution?.takeIf {
-            it.outcome != Outcome.Unreachable && settings.isEnabled(SourceId.MUSICBRAINZ)
+        input.again?.let { again ->
+            again.resolution?.takeIf {
+                it.outcome != Outcome.Unreachable &&
+                    !(it.provisional && SourceId.MUSICBRAINZ in again.asked) &&
+                    settings.isEnabled(SourceId.MUSICBRAINZ)
+            }
         }
     private val state =
         MutableStateFlow(

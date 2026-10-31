@@ -19,11 +19,14 @@ import kotlinx.coroutines.Deferred
  * (*Expandable boxes*, the default) or each on a page of its own (*Separate pages*). *Keep Sources
  * as you left them* (#269), off by default, so the *Sources* list under each new track's insight
  * starts folded; under *Expandable boxes* only, so it is shown, but not offered, under *Separate
- * pages*, where each page opens fresh. *Logo intro at start* (#383), from the next time the app is
- * opened. *Theme*, *Font* and *Layout* show their choices as button groups (#637), one tap to
- * choose. Last, *Restore dismissed messages* (#759): its button brings back everything dismissed for
- * good ([restore]: the guide to Home, *Players*' note), then a message says so; disabled while
- * nothing is dismissed.
+ * pages*, where each page opens fresh. *Lyrics links* (#728), on by default: whether Home shows a
+ * *Lyrics* button for the playing track, with links to its lyrics pages or a Genius search; under it,
+ * indented, *Search Genius when there is no link*, on by default, which can be moved only while
+ * *Lyrics links* is on, as *Keep Sources as you left them* only under *Expandable boxes*. *Logo intro
+ * at start* (#383), from the next time the app is opened. *Theme*, *Font* and *Layout* show their
+ * choices as button groups (#637), one tap to choose. Last, *Restore dismissed messages* (#759): its
+ * button brings back everything dismissed for good ([restore]: the guide to Home, *Players*' note),
+ * then a message says so; disabled while nothing is dismissed.
  */
 @Composable
 internal fun AppearanceSection(
@@ -62,6 +65,7 @@ internal fun AppearanceSection(
         checked = settings.keepSourcesUnfolded,
         onChange = if (boxes) ({ on -> update { it.copy(keepSourcesUnfolded = on) } }) else null,
     )
+    LyricsRows(settings, update)
     SwitchRow(
         title = stringResource(R.string.settings_intro),
         summary = stringResource(R.string.settings_intro_summary),
@@ -82,6 +86,32 @@ internal fun AppearanceSection(
                 { messages?.showOnceSaved(restore(), restored) }
             },
     )
+}
+
+/**
+ * *Lyrics links* (#728), and under it, indented, *Search Genius when there is no link*, which keeps
+ * its value but cannot be moved while the links are off.
+ */
+@Composable
+private fun LyricsRows(
+    settings: Settings,
+    update: Update,
+) {
+    SwitchRow(
+        title = stringResource(R.string.settings_lyrics_links),
+        summary = stringResource(R.string.settings_lyrics_links_summary),
+        checked = settings.lyricsLinks,
+    ) { on -> update { it.copy(lyricsLinks = on) } }
+    // Landed on from Home's *Lyrics*, where the search is off (#728).
+    LandingSpot(SettingsTarget.lyricsSearch) {
+        SwitchRow(
+            title = stringResource(R.string.settings_lyrics_search),
+            summary = null,
+            checked = settings.lyricsSearch,
+            indent = true,
+            onChange = if (settings.lyricsLinks) ({ on -> update { it.copy(lyricsSearch = on) } }) else null,
+        )
+    }
 }
 
 /** The test tag of *Restore dismissed messages*' button (#759). */
