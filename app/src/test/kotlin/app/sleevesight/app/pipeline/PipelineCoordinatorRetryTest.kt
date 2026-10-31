@@ -67,6 +67,31 @@ class PipelineCoordinatorRetryTest {
     }
 
     @Test
+    fun `the network returning while Retry asks keeps its run from writing unasked`() {
+        val world = unreachable()
+        val calls = world.calls.toMap()
+        world.offline = false
+        world.retry(SourceId.WEB)
+        // Back online before the retried run has landed: back online replaces it, still retried.
+        world.network(online = true)
+        world.settle()
+
+        assertEquals(calls, world.calls)
+    }
+
+    @Test
+    fun `after Retry, Write is offered and a tap on it writes`() {
+        val world = unreachable()
+        world.offline = false
+        world.retry(SourceId.WEB)
+        world.settle()
+        world.tap()
+        world.settle()
+
+        assertEquals(1, world.calls["A"])
+    }
+
+    @Test
     fun `a tap for a source that was reached, or for another run, does nothing`() {
         val world = unreachable()
         world.retry(SourceId.MUSICBRAINZ)

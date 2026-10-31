@@ -554,7 +554,7 @@ data class CoordinatorState(
      * because its track followed the last one by itself, a cause its settings do not write on
      * (*On track skip (auto)*, #625), the first action made. [lookAgain] on a run started by a tap
      * on *Look again* (#617) ([LookingAgain]). [retried] on a run started by a tap on *Retry*
-     * (#724): free, so it never writes unasked, even where back online would have.
+     * (#724), and on every run replacing it: free, so it never writes unasked, only on a tap.
      */
     data class Run(
         val id: RunId,
@@ -879,7 +879,7 @@ fun sameInsightTrack(
  * | otherwise (a tap for another run's key included) | WriteTapped(key) | unchanged | none |
  * | current run of the ledger's written track, its card citing evidence, its sources landed, no model call under way, not itself looking again still, allowed, of the tap's key | LookAgainTapped(key) (#617) | a new run of its key and report, looking again, with the card's evidence; a preparation cancelled; not the first action | CancelRun (old), CancelPreparation (if one is cancelled), StartRun (looking again, with what the old run gathered), Acted |
  * | otherwise | LookAgainTapped(key) | unchanged | none |
- * | current run, its sources landed with [source] among those unreachable, no model call under way, allowed, of the tap's key | RetryTapped(key, source) (#724) | a new run of its key and report asking again [source] alone, as back online does all of them (a tap kept likewise), but never writing unasked (`retried`); a preparation cancelled; not the first action | CancelRun (old), CancelPreparation (if one is cancelled), StartRun (new, `again` asking [source]), Acted |
+ * | current run, its sources landed with [source] among those unreachable, no model call under way, allowed, of the tap's key | RetryTapped(key, source) (#724) | a new run of its key and report asking again [source] alone, as back online does all of them (a tap kept likewise), but never writing unasked, nor any run replacing it (`retried`); a preparation cancelled; not the first action | CancelRun (old), CancelPreparation (if one is cancelled), StartRun (new, `again` asking [source]), Acted |
  * | otherwise | RetryTapped(key, source) | unchanged | none |
  * | the run | EvidenceAssembled(evidence) | a look again's: whether it holds a line the card's evidence does not say; its question is then answered by offering *Rewrite insight* if so (else only if the run it replaced offered it), never by writing | none |
  * | the run, the tap's call under way | StopTapped(call) | unchanged (the call ends with its StepEnded; the ledger stays written, so nothing writes it again without a tap) | StopCall(call) |
@@ -1213,7 +1213,8 @@ class PipelineCoordinator(
                 again = true,
                 keepsTap = run.offered || run.keepsTap,
                 tapped = run.keepsTap && run.tapped,
-                retried = retried,
+                // Once retried, a run stays so through back online's replacements (#724).
+                retried = retried || run.retried,
             )
         state = state.copy(runs = id.value, run = replacement)
         effects += CoordinatorEffect.StartRun(id, run.nowPlaying, again = gathered)
@@ -1617,6 +1618,9 @@ class PipelineCoordinator(
         // A tap kept for it (#192) answers as a tap: one call, the ledger written. A look again
         // (#617), of a written track, never writes: what it found is written only on a tap.
         if (run.tapped || run.lookAgain != null) return run.tapped
+        // A run started by *Retry* (#724), or replaced from one, is free: it never writes unasked,
+        // whatever the decision before it or the first action would have done. Write waits for a tap.
+        if (run.retried) return false
         val ledger = state.ledger?.takeIf { sameInsightTrack(it.track, run.nowPlaying) }
         val written = ledger?.written == true
         // The cause of the latest report, which the run, being current, holds: the latest word
@@ -1627,13 +1631,11 @@ class PipelineCoordinator(
         val writes = cause != null && cause in writesOn && state.modeWrites(cause) && acted && !written
         // A key the ledger decided: a rebuild's run of it is not a track change (D5). A run that
         // asks again (#192) writes only as the decision for nothing to narrate would have, under
-        // the same settings, once a source unreachable when it was made has returned lines; a
-        // run started by *Retry* (#724), which is free, never does: Write waits for a tap.
+        // the same settings, once a source unreachable when it was made has returned lines.
         val decided = ledger != null && ledger.key == run.key
         val would = ledger?.wouldWrite
         val asWouldHave =
             run.again &&
-                !run.retried &&
                 would?.settings == WriteSettings(writesOn, run.allowModel) &&
                 would.brought(run.gathered)
         return writes && (!decided || asWouldHave)
