@@ -18,24 +18,44 @@ import app.sleevesight.core.settings.Settings
  * the chips would show, of [track], in their order, each in a panel of its own titled with its name
  * ([GenrePanel], with no *Close*: the back arrow closes the page), holding what the genre's box in
  * place holds, what it is and *Why is this …?* from [notes] (#523). With none, it says why as
- * *Genres*' panel does ([GenresContent]): still looking, a source not reached with *Retry* ([retry]),
- * none found, or every genre source off with a link to the settings ([openSettingsAt]). With *Show
- * genres* off in [settings], it says so; before the settings' first read, nothing.
+ * *Genres*' panel does ([GenresContent]): still looking, a source not reached with *Retry*, none
+ * found, or every genre source off with a link to the settings ([ways]). With *Show genres* off in
+ * [settings], it says so; before the settings' first read, nothing.
  */
 @Composable
 internal fun GenresPage(
     track: TrackState?,
     settings: Settings?,
     notes: PanelNotes = PanelNotes(),
-    retry: (SourceId) -> (() -> Unit)? = { null },
-    openSettingsAt: (SettingsTarget) -> Unit = {},
+    ways: GenresWays = GenresWays(),
 ) {
     when {
         settings == null -> Unit
         !settings.showGenres -> QuietLine(stringResource(R.string.home_genres_hidden))
-        else -> GenresContent(track, settings, notes, retry, openSettingsAt, everyGenre = true)
+        else ->
+            GenresContent(
+                track,
+                settings,
+                notes,
+                ways.retry,
+                ways.openSettingsAt,
+                ways.afterRetry,
+                everyGenre = true,
+            )
     }
 }
+
+/**
+ * The genres' page's ways out when it has no genre to show (#772): [retry] of a label source not
+ * reached, [openSettingsAt] where the genre sources are switched on, and [afterRetry], where the
+ * focus goes as *Retry* gives way to "Looking on …" (the page's back arrow), or a keyboard's or a
+ * screen reader's would fall to the top of the screen.
+ */
+internal class GenresWays(
+    val retry: (SourceId) -> (() -> Unit)? = { null },
+    val openSettingsAt: (SettingsTarget) -> Unit = {},
+    val afterRetry: () -> Unit = {},
+)
 
 /** A quiet line of the genres: small, in the muted colour. */
 @Composable

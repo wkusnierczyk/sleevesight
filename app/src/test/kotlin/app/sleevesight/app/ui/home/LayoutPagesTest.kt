@@ -13,6 +13,7 @@ import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.assertTouchHeightIsEqualTo
@@ -27,6 +28,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performFirstLinkClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
@@ -60,9 +62,11 @@ import app.sleevesight.core.genres.LabelSource
 import app.sleevesight.core.genres.TrackGenres
 import app.sleevesight.core.genres.TrackLabel
 import app.sleevesight.core.model.NowPlaying
+import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.RunKey
+import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.settings.Layout
@@ -488,6 +492,38 @@ class LayoutPagesTest {
             compose.onNodeWithText(text(R.string.home_genres_none)).assertExists()
             assertEquals(0, count(GENRE_PANEL_TAG))
         }
+
+    @Test
+    fun onTheGenresPageATapOnRetryHandsTheFocusToTheBackArrow() {
+        // Last.fm not reached, *Retry* offered for it, under MusicBrainz's genres' panels, which hold
+        // controls of their own a falling focus could land on.
+        val sources = mapOf(SourceId.MUSICBRAINZ to done(), SourceId.LASTFM to done(Outcome.Unreachable))
+        val unreached = long().copy(sources = sources)
+        val key = RunKey.of(normalizer, sundown)
+        val offered =
+            NowPlayingState(
+                PipelineView(unreached, aiReady = true, askAgainKey = key, askable = setOf(SourceId.LASTFM)),
+                unreached.nowPlaying,
+                PlaybackInfo(Settings.SPOTIFY, PlaybackStatus.PLAYING),
+                settings = pages,
+            )
+        show(offered) { current ->
+            compose.onNodeWithTag(GENRES_PAGE_LINK_TAG).performScrollTo().performClick()
+            compose.waitForIdle()
+            compose.onNodeWithText("Last.fm could not be reached.").assertExists()
+            compose.onNodeWithTag(RETRY_TAG).performScrollTo().requestFocus()
+            compose.waitForIdle()
+            compose.onNodeWithTag(RETRY_TAG).assertIsFocused().performClick()
+            compose.waitForIdle()
+            // Last.fm asked again: the line gives way to "Looking on Last.fm…".
+            val asked = mapOf(SourceId.MUSICBRAINZ to done(), SourceId.LASTFM to SourceState.Pending)
+            current.value = state(unreached.copy(sources = asked), pages)
+            compose.waitForIdle()
+            assertEquals(0, count(RETRY_TAG))
+            compose.onNodeWithText("Looking on Last.fm…").assertExists()
+            compose.onNodeWithTag(PAGE_BACK_TAG).assertIsFocused()
+        }
+    }
 
     @Test
     fun withOneLevelThePagesPanelHasTheTablesOneRow() =
