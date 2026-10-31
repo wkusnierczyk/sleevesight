@@ -1,7 +1,9 @@
 package app.sleevesight.app.ui.home
 
 import app.sleevesight.app.pipeline.PipelineView
+import app.sleevesight.core.evidence.EvidenceLine
 import app.sleevesight.core.evidence.EvidenceSet
+import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.SourceState
@@ -25,6 +27,65 @@ internal fun tableRows(
     val sources = evidence?.lines.orEmpty().mapTo(mutableSetOf()) { it.source }
     return chips.filter { chip -> !chip.isOff || chip.filters.any { it in sources } }
 }
+
+/** The app's strings by their resource ids, formatted with [args]: the resources', or a test's. */
+internal fun interface Words {
+    fun get(
+        id: Int,
+        vararg args: Any,
+    ): String
+}
+
+/**
+ * What a source found, as its row in *Sources*' table says it (#768): a list of what its own lines
+ * are about ([Of]), or, for web search, whose lines are all [Scope.WEB], pages about the track
+ * ([Pages]).
+ */
+internal sealed interface Finding {
+    /** [scopes], each a thing found, in [FINDING_ORDER]'s order; never empty. */
+    data class Of(
+        val scopes: List<Scope>,
+    ) : Finding
+
+    /** Web search's pages. */
+    data object Pages : Finding
+}
+
+/**
+ * The order of a finding's list (#768), the track first: the track, the original song, the artist.
+ * *The album* goes between the original song and the artist once a scope for it exists (#522).
+ */
+internal val FINDING_ORDER: List<Scope> = listOf(Scope.SONG, Scope.ORIGINAL_SONG, Scope.ARTIST)
+
+/**
+ * What [chip]'s source found (#768), from the scopes of its own lines in [lines] (those of the
+ * sources it [SourceChip.filters]), not from its single outcome: for a lookup done with a found
+ * outcome (the song's article, the artist's, the original song's), the scopes of [FINDING_ORDER]
+ * its lines have, in that order; web search's with lines, [Finding.Pages]; with no line of those
+ * scopes (its lines not in the evidence shown), the outcome's own scope alone. Null for any other
+ * status, which says what it says ([statusText]).
+ */
+internal fun finding(
+    chip: SourceChip,
+    lines: List<EvidenceLine>,
+): Finding? {
+    val alone = (chip.status as? ChipStatus.Done)?.outcome?.let(FOUND_ALONE::get) ?: return null
+    val own = lines.filter { it.source in chip.filters }
+    return if (chip.source == SourceId.WEB && own.isNotEmpty()) {
+        Finding.Pages
+    } else {
+        val scopes = own.mapTo(mutableSetOf()) { it.scope }
+        Finding.Of(FINDING_ORDER.filter { it in scopes }.ifEmpty { listOf(alone) })
+    }
+}
+
+/** The outcomes that found something, each with what it found alone (#768). */
+private val FOUND_ALONE: Map<Outcome, Scope> =
+    mapOf(
+        Outcome.SongArticle to Scope.SONG,
+        Outcome.ArtistArticle to Scope.ARTIST,
+        Outcome.OriginalSong to Scope.ORIGINAL_SONG,
+    )
 
 /**
  * Whether [this] source is off: switched off in the settings, or on but without its key, so not

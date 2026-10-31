@@ -64,7 +64,7 @@ import app.sleevesight.core.pipeline.TrackState
  *
  * With *Show grounding details* on ([SourcesShown.details]), the table has every source's row, as
  * [SourcesShown.chips] has them, the sources that are off too, with the statuses that are
- * diagnostics ("Found the song (kept)", "Match rejected"), in the developer mark; and the list ends
+ * diagnostics ("Found the track and the artist (kept)", "Match rejected"), in the developer mark; and the list ends
  * with the matches the sources rejected, with their reasons.
  *
  * The list unfolds a screenful ([Fold.PAGE] lines) at a time ([fold], #269), paged by one group of
