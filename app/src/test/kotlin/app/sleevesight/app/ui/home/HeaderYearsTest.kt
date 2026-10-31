@@ -15,7 +15,10 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 import kotlin.time.Duration.Companion.seconds
 
-/** The header's years (#556): the album's, and the recording's first release when it differs. */
+/**
+ * The header's year (#556): the album's. The recording's first release is said in the *Dates* panel
+ * (#724, `HomeDatesTest`), not here.
+ */
 class HeaderYearsTest {
     private val soundtrack = "Project Hail Mary (Original Motion Picture Soundtrack)"
 
@@ -42,9 +45,9 @@ class HeaderYearsTest {
         )
 
     @Test
-    fun aSoundtrackShowsItsOwnYearAndTheFirstReleaseApart() {
+    fun aSoundtrackShowsItsOwnYear() {
         assertEquals(
-            HeaderYears(album = "2026", firstReleased = "1990"),
+            HeaderYears(album = "2026"),
             headerYears(resolved(windOfChange, "1990-11-06"), windOfChange),
         )
     }
@@ -56,40 +59,40 @@ class HeaderYearsTest {
     }
 
     @Test
-    fun anAlbumOfUnknownYearShowsNoYearAndTheFirstReleaseApart() {
+    fun anAlbumOfUnknownYearShowsNoYear() {
         val unknown = windOfChange.copy(album = "Rock Ballads Forever")
-        assertEquals(HeaderYears(firstReleased = "1990"), headerYears(resolved(unknown, "1990-11-06"), unknown))
+        assertEquals(HeaderYears(), headerYears(resolved(unknown, "1990-11-06"), unknown))
     }
 
     @Test
     fun theAlbumsYearFallsBackToThePlayersOwn() {
         val tagged = windOfChange.copy(album = "Rock Ballads Forever", year = 2003)
         assertEquals(
-            HeaderYears(album = "2003", firstReleased = "1990"),
+            HeaderYears(album = "2003"),
             headerYears(resolved(tagged, "1990-11-06"), tagged),
         )
         // MusicBrainz's one year for the album comes first.
         val both = windOfChange.copy(year = 2025)
-        assertEquals(HeaderYears(album = "2026", firstReleased = "1990"), headerYears(resolved(both, "1990"), both))
+        assertEquals(HeaderYears(album = "2026"), headerYears(resolved(both, "1990"), both))
         // Of a title's several years, the player's; with none of them the player's, no year.
         val loveSongs = listOf(ReleaseDate("Love Songs", "1985", "g-1"), ReleaseDate("Love Songs", "2015", "g-2"))
         val compilation = windOfChange.copy(album = "Love Songs", year = 2015)
         assertEquals(
-            HeaderYears(album = "2015", firstReleased = "1990"),
+            HeaderYears(album = "2015"),
             headerYears(resolved(compilation, "1990", loveSongs), compilation),
         )
         val untagged = compilation.copy(year = null)
-        assertEquals(HeaderYears(firstReleased = "1990"), headerYears(resolved(untagged, "1990", loveSongs), untagged))
+        assertEquals(HeaderYears(), headerYears(resolved(untagged, "1990", loveSongs), untagged))
         // Without MusicBrainz, the player's year alone.
         assertEquals(HeaderYears(album = "2025"), headerYears(track(both).copy(resolution = null), both))
     }
 
     @Test
-    fun withNoAlbumOnlyTheFirstReleaseShows() {
+    fun withNoAlbumNoYearShows() {
         val none = windOfChange.copy(album = null, year = 2026)
-        assertEquals(HeaderYears(firstReleased = "1990"), headerYears(resolved(none, "1990-11-06"), none))
+        assertEquals(HeaderYears(), headerYears(resolved(none, "1990-11-06"), none))
         val blank = windOfChange.copy(album = " ")
-        assertEquals(HeaderYears(firstReleased = "1990"), headerYears(resolved(blank, "1990-11-06"), blank))
+        assertEquals(HeaderYears(), headerYears(resolved(blank, "1990-11-06"), blank))
     }
 
     @Test
@@ -121,7 +124,7 @@ class HeaderYearsTest {
         // Every source from the cache: no resolution, MusicBrainz's result as it was kept.
         val kept = mapOf(SourceId.MUSICBRAINZ to SourceState.Done(result, cached = true))
         val cached = track(windOfChange, sources = kept)
-        assertEquals(HeaderYears(album = "2026", firstReleased = "1990"), headerYears(fresh, windOfChange))
+        assertEquals(HeaderYears(album = "2026"), headerYears(fresh, windOfChange))
         assertEquals(headerYears(fresh, windOfChange), headerYears(cached, windOfChange))
     }
 }

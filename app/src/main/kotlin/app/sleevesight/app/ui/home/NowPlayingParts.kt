@@ -226,13 +226,11 @@ private fun Progress(
 
 /**
  * The song's title, large and bold, then each artist, then the album in italics (#438), followed by
- * the year of the release being played when it is known, and under it, small, the year the
- * recording first came out when it is earlier or the album's is not known, "First released 1990"
- * (#556, [HeaderYears]). The title is as normalized, with the source work and the variant it named
- * under it; the artists are the credited ones, featured artists included. The album and its year
- * are one text, so a screen reader reads them as one line, and the first release as the next; with
- * no album reported, the first release stands in the album's place, and with neither, the line says
- * so.
+ * the year of the release being played when it is known (#556, [HeaderYears]). The title is as
+ * normalized, with the source work and the variant it named under it; the artists are the credited
+ * ones, featured artists included. The album and its year are one text, so a screen reader reads
+ * them as one line; with no album reported, the line says so. When the recording first came out is
+ * in the *Dates* panel under it ([DatesPanel], #724), never in the album's place.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -257,12 +255,10 @@ internal fun KeyData(
             }
         }
         val album = header.album?.takeIf(String::isNotBlank)
-        val firstReleased = years.firstReleased?.let { stringResource(R.string.home_first_released, it) }
         if (album == null) {
-            Text(firstReleased ?: stringResource(R.string.home_album_none), style = MaterialTheme.typography.bodyLarge)
+            Text(stringResource(R.string.home_album_none), style = MaterialTheme.typography.bodyLarge)
         } else {
             Text(albumLine(album, years.album), style = MaterialTheme.typography.bodyLarge)
-            firstReleased?.let { Small(it) }
         }
     }
 }
@@ -272,12 +268,21 @@ internal fun KeyData(
 private fun albumLine(
     album: String,
     year: String?,
+): AnnotatedString =
+    withAlbum(if (year != null) stringResource(R.string.home_album_year, ALBUM_MARK, year) else ALBUM_MARK, album)
+
+/**
+ * [line], a format given [ALBUM_MARK] in the album's place, with [album] there in italics: the mark
+ * says where the format puts it, whatever the album and the rest hold. A format that leaves the
+ * album out is shown as it is, rather than failing. For the album line and the *Dates* panel's
+ * sentences (#724).
+ */
+internal fun withAlbum(
+    line: String,
+    album: String,
 ): AnnotatedString {
-    // A mark in the album's place says where the format puts it, whatever the album and year hold.
-    val line = if (year != null) stringResource(R.string.home_album_year, ALBUM_MARK, year) else ALBUM_MARK
     val at = line.indexOf(ALBUM_MARK)
     return buildAnnotatedString {
-        // A format that leaves the album out is shown as it is, rather than failing.
         if (at < 0) {
             append(line)
         } else {
@@ -299,4 +304,6 @@ const val PLAYER_TAG: String = "player"
 private val ART_WIDTH = 360.dp
 private val TICK = 1.seconds
 private const val TAG = "Sleevesight"
-private const val ALBUM_MARK = "\u0000"
+
+/** What a format is given in the album's place, for [withAlbum] to set the album there in italics. */
+internal const val ALBUM_MARK: String = "\u0000"

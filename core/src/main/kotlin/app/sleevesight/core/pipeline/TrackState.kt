@@ -70,16 +70,28 @@ sealed interface SourceState {
  * What a run's sources ended with, once every one has landed ([RunControl.gathered]): each
  * source's state, and MusicBrainz's resolution when the run made one (null when nothing needed
  * it, or it was not made). A later run of the same track started with it ([Pipeline.run]'s
- * `again`, #192) asks again only the sources [unreachable] here, and keeps the others as they
- * landed.
+ * `again`, #192) asks again only the sources [asked] here, and keeps the others as they landed:
+ * every source [unreachable], or with [only] (a *Retry*'s, #724, [asking]), those of them it
+ * names, the others kept unreachable.
  */
 data class Gathered(
     val sources: Map<SourceId, SourceState>,
     val resolution: Resolution?,
+    val only: Set<SourceId>? = null,
 ) {
     /** The sources that ended `Unreachable`: a network or source error. */
     val unreachable: Set<SourceId>
         get() = sources.filterValues { (it as? SourceState.Done)?.result?.outcome == Outcome.Unreachable }.keys
+
+    /** The sources a run started with it asks again: those [unreachable], of [only] when it names some. */
+    val asked: Set<SourceId>
+        get() = only?.let { unreachable intersect it } ?: unreachable
+
+    /**
+     * As a run asking again [sources] alone starts with it (a *Retry*, #724): the other sources
+     * unreachable stay so, not asked.
+     */
+    fun asking(sources: Set<SourceId>): Gathered = copy(only = sources)
 }
 
 /** The home insight's progress (`design/architecture.md`, *State*; *Errors and empty states*). */

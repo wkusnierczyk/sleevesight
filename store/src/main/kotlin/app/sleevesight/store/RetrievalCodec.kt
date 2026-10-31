@@ -7,6 +7,8 @@ import app.sleevesight.core.genres.GenreLevel
 import app.sleevesight.core.genres.RecordingTags
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.sources.FirstRelease
+import app.sleevesight.core.sources.OriginalRecording
 import app.sleevesight.core.sources.Rejection
 import app.sleevesight.core.sources.ReleaseDate
 import app.sleevesight.core.sources.ResolvedArtist
@@ -35,6 +37,10 @@ internal object RetrievalCodec {
      * artist, the artists whose MusicBrainz tags give labels are kept by name too, and MusicBrainz's
      * result holds the recording's tags (#439); a label no longer keeps a hue. The dates of the
      * releases' titles (#556) are an optional field like the first release's, made a miss the same way.
+     * The first release with its title and type, a cover's original with its release, and each
+     * release date's release-group type (#724), are optional fields too, which an entry kept before
+     * them decodes without: no miss, the home screen's *Dates* says what the first release's date
+     * alone gives, and cannot tell a same-year single from its album.
      */
     const val FORMAT: Int = 7
 
@@ -71,7 +77,19 @@ internal object RetrievalCodec {
                 labelArtists = result.labelArtists.map { LabelArtistJson(it.name, it.mbid) },
                 recordingTags = result.recordingTags?.let { RecordingTagsJson(it.mbid, it.tags) },
                 firstReleased = result.firstReleased,
-                releaseDates = result.releaseDates.map { ReleaseDateJson(it.title, it.date, it.group) },
+                releaseDates = result.releaseDates.map { ReleaseDateJson(it.title, it.date, it.group, it.type) },
+                firstRelease = result.firstRelease?.let(::releaseJson),
+                original =
+                    result.original?.let {
+                        OriginalJson(
+                            recordingMbid = it.recordingMbid,
+                            title = it.title,
+                            artists = it.artists.map { artist -> LabelArtistJson(artist.name, artist.mbid) },
+                            artistCredit = it.artistCredit,
+                            date = it.date,
+                            release = it.release?.let(::releaseJson),
+                        )
+                    },
                 trackOnly = result.trackOnly,
             ),
         )
@@ -101,7 +119,19 @@ internal object RetrievalCodec {
                 labelArtists = stored.labelArtists.map { ResolvedArtist(it.name, it.mbid) },
                 recordingTags = stored.recordingTags?.let { RecordingTags(it.mbid, it.tags) },
                 firstReleased = stored.firstReleased,
-                releaseDates = stored.releaseDates.map { ReleaseDate(it.title, it.date, it.group) },
+                releaseDates = stored.releaseDates.map { ReleaseDate(it.title, it.date, it.group, it.type) },
+                firstRelease = stored.firstRelease?.let(::release),
+                original =
+                    stored.original?.let {
+                        OriginalRecording(
+                            recordingMbid = it.recordingMbid,
+                            title = it.title,
+                            artists = it.artists.map { artist -> ResolvedArtist(artist.name, artist.mbid) },
+                            artistCredit = it.artistCredit,
+                            date = it.date,
+                            release = it.release?.let(::release),
+                        )
+                    },
                 trackOnly = stored.trackOnly,
             )
         } catch (_: IllegalArgumentException) {
@@ -134,6 +164,12 @@ internal object RetrievalCodec {
             "unreachable" -> Outcome.Unreachable
             else -> throw IllegalArgumentException("Unknown outcome $key")
         }
+
+    private fun releaseJson(release: FirstRelease): FirstReleaseJson =
+        FirstReleaseJson(release.date, release.title, release.releaseGroupMbid, release.releaseMbid, release.type)
+
+    private fun release(stored: FirstReleaseJson): FirstRelease =
+        FirstRelease(stored.date, stored.title, stored.releaseGroupMbid, stored.releaseMbid, stored.type)
 
     private fun draftJson(draft: EvidenceDraft): DraftJson =
         DraftJson(
@@ -168,7 +204,29 @@ internal object RetrievalCodec {
         val recordingTags: RecordingTagsJson? = null,
         val firstReleased: String? = null,
         val releaseDates: List<ReleaseDateJson> = emptyList(),
+        val firstRelease: FirstReleaseJson? = null,
+        val original: OriginalJson? = null,
         val trackOnly: Boolean = false,
+    )
+
+    // A first release (#724): of the recording, or of a cover's original.
+    @Serializable
+    private data class FirstReleaseJson(
+        val date: String,
+        val title: String,
+        val releaseGroupMbid: String? = null,
+        val releaseMbid: String,
+        val type: String? = null,
+    )
+
+    @Serializable
+    private data class OriginalJson(
+        val recordingMbid: String,
+        val title: String,
+        val artists: List<LabelArtistJson> = emptyList(),
+        val artistCredit: String,
+        val date: String,
+        val release: FirstReleaseJson? = null,
     )
 
     @Serializable
@@ -176,6 +234,8 @@ internal object RetrievalCodec {
         val title: String,
         val date: String? = null,
         val group: String,
+        // The release group's primary type (#724); an entry kept before it decodes without.
+        val type: String? = null,
     )
 
     @Serializable

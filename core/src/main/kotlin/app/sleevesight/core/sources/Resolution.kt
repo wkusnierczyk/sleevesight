@@ -36,7 +36,8 @@ import app.sleevesight.core.normalizer.Edition
  * @property original the work's earliest dated recording by another artist, when this recording
  *   is a cover or version (step 4) and that recording predates every dated one by the track's
  *   artists; null otherwise. MusicBrainz leaves many recordings undated, so it is the earliest
- *   known, not necessarily the first.
+ *   known, not necessarily the first. With the release it first came out on, when a lookup of its
+ *   own found one ([OriginalRecording.release], #724).
  * @property cover whether this recording is a cover or version of a song first recorded by someone
  *   else: MusicBrainz marks the performance as a cover, or the work has a recording by another
  *   artist dated before every recording of it by the track's artists, all of which are dated.
@@ -58,6 +59,11 @@ import app.sleevesight.core.normalizer.Edition
  * @property failure why MusicBrainz could not be asked, when [outcome] is [Outcome.Unreachable]:
  *   the failed lookup's kind as the client names it (`RateLimited`, `Offline`, `Server`,
  *   `status 400`, …), never a URL or a value; for the diagnostics only (#191). Null otherwise.
+ * @property provisional a lookup made for a part of it failed, where a later run may answer: the
+ *   release a cover's original first came out on ([OriginalRecording.release], #724), left out. What
+ *   it holds stands, but MusicBrainz's result from it is not kept in the retrieval cache
+ *   ([SourceResult.provisional]), so one failed request does not leave the release out for the
+ *   entry's whole life. False when that lookup answered, found or not.
  */
 data class Resolution(
     val outcome: Outcome = Outcome.None,
@@ -76,6 +82,7 @@ data class Resolution(
     val wikidataIds: List<String> = emptyList(),
     val recordingTags: List<String> = emptyList(),
     val failure: String? = null,
+    val provisional: Boolean = false,
 ) {
     /**
      * The earliest first-release date of the recording, as MusicBrainz gives it (`1974`,
@@ -125,12 +132,15 @@ data class FirstRelease(
  * group's id, else the release's own), so a title several release groups share (two compilations
  * named "Love Songs") keeps each one's year. As kept, one per title and release group, with the
  * earliest date of that title in the group ([collapse]): a reissue under the same title in the same
- * group has the group's year.
+ * group has the group's year. With the release group's primary [type] (`Album`, `Single`, `EP`), when
+ * MusicBrainz gives it (null for a release kept before it was, #724), so the home screen tells a
+ * title-track single from its album of the same year.
  */
 data class ReleaseDate(
     val title: String,
     val date: String?,
     val group: String,
+    val type: String? = null,
 ) {
     companion object {
         /**
@@ -181,26 +191,35 @@ data class ReleaseDate(
         }
 
         /**
-         * The distinct years, earliest first, of the releases of [dates] whose title has [album]'s
-         * [key], else, when none has (an undated one has), of those whose title has the key of
-         * [album] without its bracketed editions ([Edition.stripEditions]); empty when neither names
-         * a dated one.
+         * The distinct years, earliest first, of the releases [album] names ([named]); empty when it
+         * names no dated one.
          */
         fun yearsOf(
             album: String,
             dates: List<ReleaseDate>,
             key: (String) -> String,
-        ): List<String> {
-            fun named(name: String): List<ReleaseDate> {
+        ): List<String> =
+            named(album, dates, key)
+                .mapNotNull { it.date?.let(::yearIn) }
+                .distinct()
+                .sorted()
+
+        /**
+         * The releases of [dates] whose title has [album]'s [key], dated or not, else, when none has,
+         * those whose title has the key of [album] without its bracketed editions
+         * ([Edition.stripEditions]); empty when neither names one.
+         */
+        fun named(
+            album: String,
+            dates: List<ReleaseDate>,
+            key: (String) -> String,
+        ): List<ReleaseDate> {
+            fun of(name: String): List<ReleaseDate> {
                 val wanted = key(name).takeIf { it.isNotEmpty() } ?: return emptyList()
                 return dates.filter { key(it.title) == wanted }
             }
             val stripped = Edition.stripEditions(album)
-            val releases = named(album).ifEmpty { if (stripped != album.trim()) named(stripped) else emptyList() }
-            return releases
-                .mapNotNull { it.date?.let(::yearIn) }
-                .distinct()
-                .sorted()
+            return of(album).ifEmpty { if (stripped != album.trim()) of(stripped) else emptyList() }
         }
 
         /** The year [date] begins with (`1974` of `1974-03-25`), or null when it has none. */
@@ -226,6 +245,11 @@ data class ResolvedWork(
  *
  * @property artistCredit its artist credit, as MusicBrainz writes it.
  * @property date when it was recorded, as MusicBrainz gives it.
+ * @property release the release it first came out on, from one more lookup of the recording made
+ *   only for a cover (#724), for the home screen's *Dates*: the one dated the recording's first-release
+ *   date. Null when that lookup failed (and the resolution is [Resolution.provisional]) or lists no
+ *   release of that date: a lookup lists at most 25 releases, so the earliest listed may be a later
+ *   compilation, which is not named in its place.
  */
 data class OriginalRecording(
     val recordingMbid: String,
@@ -233,6 +257,7 @@ data class OriginalRecording(
     val artists: List<ResolvedArtist>,
     val artistCredit: String,
     val date: String,
+    val release: FirstRelease? = null,
 )
 
 /**

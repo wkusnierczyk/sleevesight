@@ -30,6 +30,7 @@ import app.sleevesight.app.ui.settings.InstalledPlayers
 import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
+import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.RunKey
@@ -71,6 +72,9 @@ import kotlinx.coroutines.flow.StateFlow
  *   it was shown beside, as [write] takes a tap on Write.
  * @property readAloud *Read aloud* (#325), beside *Key insights* (#725) and under a genre's reason; null shows
  *   no button.
+ * @property askAgain a tap on *Retry* beside a source that could not be reached (#724), with the key
+ *   it was offered under, the source, and the track it was shown beside: that source alone is asked
+ *   again (`PipelineHost.askAgain`), free.
  */
 @Suppress("LongParameterList") // What one screen reads, each published on its own.
 class HomeFeed(
@@ -95,6 +99,7 @@ class HomeFeed(
     val genreNotes: GenreNotes = GenreNotes.None,
     val lookAgain: (RunKey, NowPlaying) -> Unit = { _, _ -> },
     val readAloud: ReadAloud? = null,
+    val askAgain: (RunKey, SourceId, NowPlaying) -> Unit = { _, _, _ -> },
 )
 
 /**
@@ -167,6 +172,7 @@ private fun HomeFeed.actions(
     openPage = openPage,
     openSettingsAt = openSettingsAt,
     readAloud = readAloud,
+    askAgain = askAgain,
 )
 
 /**
@@ -197,7 +203,8 @@ internal class NowPlayingState(
  * [write] takes one on Write. While nothing plays (#627), the players are listed with
  * [installedPlayers]' icons, and the guide's buttons go to [hideGuideOnce] (*Hide once*) or
  * to [dismissals] (*Dismiss*, and its *Undo*; #759). [readAloud] reads the insight, or a genre's
- * reason, aloud (#325); null shows no *Read aloud*.
+ * reason, aloud (#325); null shows no *Read aloud*. [askAgain] takes a tap on *Retry* beside a
+ * source that could not be reached (#724), as [write] takes one on Write.
  */
 @Suppress("LongParameterList") // Each of the screen's ways out, on its own.
 internal class NowPlayingActions(
@@ -218,11 +225,13 @@ internal class NowPlayingActions(
     val genreNotes: GenreNotes = GenreNotes.None,
     val lookAgain: (RunKey, NowPlaying) -> Unit = { _, _ -> },
     val readAloud: ReadAloud? = null,
+    val askAgain: (RunKey, SourceId, NowPlaying) -> Unit = { _, _, _ -> },
 )
 
 /**
  * The home screen's content, top to bottom (design, *Home screen*): the player row, the art with
- * the playback position, the key data, the genre labels, *Key insights* and *Sources*,
+ * the playback position, the key data, the *Dates* button or panel (#724), the genre labels, *Key
+ * insights* and *Sources*,
  * straight on Home's background, their accents in the art's colours (#609). Nothing playing in a
  * followed player shows the players to start and the guide to Home ([IdleHome], #627). A track the
  * pipeline has not reached yet shows at once, its evidence and insight to come.
@@ -235,7 +244,8 @@ internal class NowPlayingActions(
  * (#623), a genre chip opens its genre's panel under the chips (#558), and a citation unfolds
  * *Sources* to its line. Under *Separate pages* each opens on a page of its own
  * ([NowPlayingActions.openPage]): *Sources*' chip, and a citation, which opens *Sources* at its line;
- * a genre chip, the genres' page at its genre.
+ * a genre chip, the genres' page at its genre. Under either, the line under the album ([InPlaceLine]:
+ * *Dates*, #724) opens its panels in place.
  * The insight shows in full on Home either way.
  */
 @Composable
@@ -248,8 +258,9 @@ internal fun NowPlayingContent(
     // the insight and track it was opened on, whatever plays meanwhile.
     var reporting by remember { mutableStateOf<Reported?>(null) }
     reporting?.let { ReportOpen(it, actions.mail) { reporting = null } }
-    // Above the return, so the fold outlives a while with nothing playing.
+    // Above the return, so the fold and the panels open under the album outlive a while with nothing playing.
     val foldMemory = rememberFoldMemory()
+    val inPlace = rememberInPlaceMemory()
     if (playing == null) {
         IdleHome(state.settings, state.guideHidden, actions)
         return
@@ -259,7 +270,6 @@ internal fun NowPlayingContent(
     val track = shown.track
     // The header from the pipeline's track (its latest report of the track) once it has one.
     val header = track?.nowPlaying ?: playing
-    val normalized = remember(header) { actions.normalize(header) }
     val settings = state.settings
     val pages = settings?.layout == Layout.SEPARATE_PAGES
     val focus = rememberLineFocus(track?.evidence)
@@ -278,7 +288,7 @@ internal fun NowPlayingContent(
         Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             PlayerRow(playing.player, state.playback, actions)
             ArtAndProgress(state.art, state.playback, header.duration)
-            KeyData(normalized, header, headerYears(track, header))
+            TrackHeader(shown, header, inPlace, actions)
             // Until the settings' first read, the layout is not known: neither item is drawn,
             // rather than the boxes for a frame and then the pages (#447).
             if (settings != null) {

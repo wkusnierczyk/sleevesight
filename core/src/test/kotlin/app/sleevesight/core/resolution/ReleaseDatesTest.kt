@@ -61,10 +61,11 @@ class ReleaseDatesTest {
             assertEquals("original", resolution.recordingMbid)
             assertEquals(
                 listOf(
-                    ReleaseDate("Crazy World", "1990-11-06", "group-crazy-world"),
-                    ReleaseDate(soundtrack, "2026-03-20", "group-phm"),
+                    // With the release group's type (#724).
+                    ReleaseDate("Crazy World", "1990-11-06", "group-crazy-world", "Album"),
+                    ReleaseDate(soundtrack, "2026-03-20", "group-phm", "Album"),
                     // Undated, kept: it says the album is named.
-                    ReleaseDate("Undated Hits", null, "group-undated"),
+                    ReleaseDate("Undated Hits", null, "group-undated", "Album"),
                 ),
                 resolution.releaseDates,
             )
@@ -80,7 +81,7 @@ class ReleaseDatesTest {
                     .copy(credits = listOf(credit("Artist", "mbid-namesake")))
             val resolution = resolve(searched(ours, namesake), track("Wind of Change", "Artist"))
             assertEquals("ours", resolution.recordingMbid)
-            assertEquals(listOf(ReleaseDate("Hits", "2020", "group-hits-2020")), resolution.releaseDates)
+            assertEquals(listOf(ReleaseDate("Hits", "2020", "group-hits-2020", "Album")), resolution.releaseDates)
             assertEquals("2020", year("Hits", resolution.releaseDates))
         }
 
@@ -91,7 +92,7 @@ class ReleaseDatesTest {
             val unmeasured = recording("unmeasured", "Mr. A Balladeer", null, release("b-1940", "Ballads", "1940"))
             val resolution = resolve(searched(measured, unmeasured), track("Wind of Change", "A Balladeer"))
             assertEquals("measured", resolution.recordingMbid)
-            assertEquals(listOf(ReleaseDate("Ballads", "1950", "group-b-1950")), resolution.releaseDates)
+            assertEquals(listOf(ReleaseDate("Ballads", "1950", "group-b-1950", "Album")), resolution.releaseDates)
         }
 
     @Test
@@ -100,7 +101,7 @@ class ReleaseDatesTest {
             val edition = release("edition", "Album (Deluxe Edition)", "2005", group = "Album")
             val musicBrainz = searched(recording("song", "Artist", 200, edition))
             val resolution = resolve(musicBrainz, track("Wind of Change", "Artist"))
-            val deluxe = ReleaseDate("Album (Deluxe Edition)", "2005", "group-edition")
+            val deluxe = ReleaseDate("Album (Deluxe Edition)", "2005", "group-edition", "Album")
             assertEquals(listOf(deluxe), resolution.releaseDates)
             // "Album" is the deluxe edition's release group, not a release of 2005: the player's year.
             assertEquals("1990", year("Album", resolution.releaseDates, playerYear = "1990"))
@@ -240,5 +241,19 @@ class ReleaseDatesTest {
         assertEquals("1974", ReleaseDate.yearIn("1974"))
         assertNull(ReleaseDate.yearIn("19"))
         assertNull(ReleaseDate.yearIn("19xx"))
+    }
+
+    @Test
+    fun `by the album key, the player's Vol 2 finds MusicBrainz's Volume 2 and its year`() {
+        val dates =
+            listOf(
+                ReleaseDate("This Warm December: A Brushfire Holiday, Volume 2", "2011-11-15", "group-twd2"),
+                ReleaseDate("This Warm December: A Brushfire Holiday, Volume 1", "2008-11-18", "group-twd1"),
+            )
+        val album = "This Warm December, A Brushfire Holiday Vol. 2"
+        assertEquals("2011", ReleaseDate.albumYear(album, dates, null, names::albumKey))
+        assertEquals(listOf(dates.first()), ReleaseDate.named(album, dates, names::albumKey))
+        // By the plain key, as before: not named.
+        assertNull(ReleaseDate.albumYear(album, dates, null, names::key))
     }
 }

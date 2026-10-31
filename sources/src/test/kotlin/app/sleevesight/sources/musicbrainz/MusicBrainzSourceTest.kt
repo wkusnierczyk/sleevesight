@@ -12,7 +12,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-/** Which of MusicBrainz's results are about the track alone (#420). */
+/** Which of MusicBrainz's results are about the track alone (#420), and which are provisional (#724). */
 class MusicBrainzSourceTest {
     private val track = Normalizer(JvmAccentFolder).normalize("Sundown", "Gordon Lightfoot")
 
@@ -34,5 +34,13 @@ class MusicBrainzSourceTest {
             assertFalse(lookup(Resolution(artists = listOf(ResolvedArtist("Gordon Lightfoot", null)))).trackOnly)
             val namesakes = Outcome.Rejected("several MusicBrainz artists named Reem have a matching recording")
             assertFalse(lookup(Resolution(outcome = namesakes)).trackOnly)
+        }
+
+    @Test
+    fun `a resolution whose lookup of the original's release failed gives a provisional result`() =
+        runTest {
+            val resolved = Resolution(outcome = Outcome.SongArticle, recordingMbid = "mb-sundown", cover = true)
+            assertTrue(lookup(resolved.copy(provisional = true)).provisional)
+            assertFalse(lookup(resolved).provisional)
         }
 }

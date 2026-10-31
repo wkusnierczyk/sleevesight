@@ -26,7 +26,10 @@ import kotlin.time.TimeSource
  * asks for the artists', after the evidence, so the insight never waits for them; no tag reaches a
  * line. It also keeps the
  * date of the first release ([SourceResult.firstReleased]) and the dates of the releases' titles
- * ([SourceResult.releaseDates], #556), for a track later served from the cache.
+ * ([SourceResult.releaseDates], #556), the first release itself ([SourceResult.firstRelease]) and a
+ * cover's original with its release ([SourceResult.original], #724), for a track later served from
+ * the cache. A resolution whose lookup of the original's release failed ([Resolution.provisional])
+ * gives a [SourceResult.provisional] result: shown, not kept, so a later run asks again.
  */
 class MusicBrainzSource(
     private val clock: Clock = Clock.System,
@@ -66,6 +69,9 @@ class MusicBrainzSource(
                 },
             firstReleased = resolved.firstReleaseDate,
             releaseDates = resolved.releaseDates,
+            firstRelease = resolved.firstRelease,
+            original = resolved.original,
+            provisional = resolved.provisional,
             // No recording and no artist: a result that names an artist, or rejects a recording by
             // another one, is about the artists (#420).
             trackOnly = resolved.outcome == Outcome.None && resolved.artists.isEmpty() && resolved.artistCredit == null,
