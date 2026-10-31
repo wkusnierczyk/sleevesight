@@ -35,6 +35,7 @@ import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.secrets.SaveResult
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretState
@@ -134,7 +135,7 @@ class KeyDialogButtonsTest {
     private val inKeyDialog get() = hasAnyAncestor(hasAnyDescendant(hasSetTextAction()))
 
     private fun waitFor(matcher: SemanticsMatcher) =
-        compose.waitUntil(timeoutMillis = 5_000) { compose.onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(timeoutMillis = WAIT_MS) { compose.onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty() }
 
     private fun count(matcher: SemanticsMatcher) = compose.onAllNodes(matcher).fetchSemanticsNodes().size
 
@@ -258,7 +259,7 @@ class KeyDialogButtonsTest {
             waitFor(hasText(confirmTitle(SecretId.LASTFM)))
             assertEquals("nothing removed before it is confirmed", 0, shown.removed)
             compose.onNode(remove and inConfirmation(SecretId.LASTFM)).performClick()
-            compose.waitUntil(timeoutMillis = 5_000) { shown.dismissed == 1 }
+            compose.waitUntil(timeoutMillis = WAIT_MS) { shown.dismissed == 1 }
             assertEquals(1, shown.removed)
             compose.waitForIdle()
             assertEquals("the confirmation gone", 0, count(hasText(confirmTitle(SecretId.LASTFM))))

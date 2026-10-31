@@ -1,6 +1,7 @@
 package app.sleevesight.app.pipeline
 
 import app.sleevesight.app.TestStores
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.testCipher
@@ -81,7 +82,7 @@ class AppPipelinePartsTest {
             assertFalse(collected)
 
             acknowledged.value = true
-            assertEquals(Settings(), withTimeout(5_000) { first.await() })
+            assertEquals(Settings(), withTimeout(WAIT_MS) { first.await() })
             assertTrue(collected)
         }
 

@@ -8,7 +8,7 @@ import android.util.TypedValue
 import androidx.activity.compose.setContent
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isSelectable
-import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.core.view.WindowCompat
@@ -21,6 +21,7 @@ import app.sleevesight.app.MemoryStore
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.TestStores
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.idleUntil
 import app.sleevesight.app.now
 import app.sleevesight.app.secrets.SecretStore
@@ -101,16 +102,16 @@ class ThemeSettingTest {
             }
             compose.openSection(SettingsSection.APPEARANCE)
             // Robolectric's system is light.
-            compose.waitUntil(5_000) { dark == false }
+            compose.waitUntil(WAIT_MS) { dark == false }
 
             choose(R.string.settings_theme_dark)
-            compose.waitUntil(5_000) { settings.now().theme == ThemeChoice.DARK && dark == true }
+            compose.waitUntil(WAIT_MS) { settings.now().theme == ThemeChoice.DARK && dark == true }
 
             choose(R.string.settings_theme_light)
-            compose.waitUntil(5_000) { settings.now().theme == ThemeChoice.LIGHT && dark == false }
+            compose.waitUntil(WAIT_MS) { settings.now().theme == ThemeChoice.LIGHT && dark == false }
 
             choose(R.string.settings_theme_system)
-            compose.waitUntil(5_000) { settings.now().theme == ThemeChoice.SYSTEM }
+            compose.waitUntil(WAIT_MS) { settings.now().theme == ThemeChoice.SYSTEM }
         }
     }
 

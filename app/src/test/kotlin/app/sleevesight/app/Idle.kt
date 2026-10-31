@@ -21,6 +21,16 @@ import java.time.Duration
 
 private const val STEP_MS = 10L
 
+/**
+ * How long a test waits for work done on another thread (DataStore's own threads, `Dispatchers.IO`,
+ * `Dispatchers.Default`) before it fails: [idleUntil], [Flow.now], `awaitIdleHome` and the tests'
+ * `waitUntil`s. Counted in real time, since the main looper's clock does not move those threads. It
+ * was 5 s, which a busy CI runner (4 vCPUs shared by two test JVMs, #746) could starve those threads
+ * past (#525). A wait that is met returns at once, so a longer limit costs only a failing test's time.
+ * Not for a check that something does not happen within a time ([idleFor]).
+ */
+const val WAIT_MS = 20_000L
+
 private fun step() {
     shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(STEP_MS))
     Thread.sleep(STEP_MS)
@@ -29,7 +39,7 @@ private fun step() {
 /** Runs the main looper until [condition] holds, or fails, naming [what], after [timeoutMs]. */
 fun idleUntil(
     what: String,
-    timeoutMs: Long = 5_000,
+    timeoutMs: Long = WAIT_MS,
     condition: () -> Boolean,
 ) {
     val end = System.currentTimeMillis() + timeoutMs
@@ -59,15 +69,12 @@ fun idleFor(
     }
 }
 
-/** How long [now] waits for a value. */
-private const val READ_LIMIT_MS = 5_000L
-
 /**
- * This flow's first value, failing after [READ_LIMIT_MS] rather than waiting on one that never
+ * This flow's first value, failing after [WAIT_MS] rather than waiting on one that never
  * comes: the settings store retries a failed read for ever, with a growing backoff, so an
  * unbounded `first()` on the main thread could hang a test with no limit.
  */
-fun <T> Flow<T>.now(): T = runBlocking { withTimeout(READ_LIMIT_MS) { first() } }
+fun <T> Flow<T>.now(): T = runBlocking { withTimeout(WAIT_MS) { first() } }
 
-/** The settings as this store reads them now, within [READ_LIMIT_MS] ([Flow.now]). */
+/** The settings as this store reads them now, within [WAIT_MS] ([Flow.now]). */
 fun SettingsStore.now(): Settings = settings.now()

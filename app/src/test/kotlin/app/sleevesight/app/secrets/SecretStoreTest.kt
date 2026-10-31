@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import app.sleevesight.app.FlakyDataStore
 import app.sleevesight.app.SoftwareKeySource
 import app.sleevesight.app.TestStores
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.softwareKey
 import app.sleevesight.app.testCipher
 import app.sleevesight.core.Secret
@@ -354,7 +355,7 @@ class SecretStoreTest {
             val store = SecretStore(dataStore, SecretCipher(keys), legacyKeystore = false)
             val seen = mutableListOf<SecretState>()
             val watcher = launch(Dispatchers.IO) { store.states.collect { seen += it.getValue(SecretId.LASTFM) } }
-            withTimeout(5_000) { while (seen.isEmpty()) delay(10) }
+            withTimeout(WAIT_MS) { while (seen.isEmpty()) delay(10) }
 
             keys.down = true
             assertEquals(SaveResult.NOT_SEALED, store.set(SecretId.EXA, Secret("exa")))
@@ -402,7 +403,7 @@ class SecretStoreTest {
         val seen = AtomicInteger()
         private val job = scope.launch(Dispatchers.Default) { store.changes.collect { seen.incrementAndGet() } }
 
-        suspend fun reach(n: Int) = withTimeout(5_000) { while (seen.get() < n) delay(10) }
+        suspend fun reach(n: Int) = withTimeout(WAIT_MS) { while (seen.get() < n) delay(10) }
 
         fun stop() = job.cancel()
     }

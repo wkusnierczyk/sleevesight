@@ -7,7 +7,7 @@ import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
@@ -19,6 +19,7 @@ import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.TestStores
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.now
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.SettingsStore
@@ -75,7 +76,7 @@ class RestoreDismissedTest {
                 }
             }
             compose.openSection(SettingsSection.APPEARANCE)
-            compose.waitUntil(5_000) {
+            compose.waitUntil(WAIT_MS) {
                 compose.onAllNodesWithTag(RESTORE_DISMISSED_TAG).fetchSemanticsNodes().isNotEmpty()
             }
             block()
@@ -122,17 +123,17 @@ class RestoreDismissedTest {
             settings.dismiss(Dismissable.PLAYERS_NOTE)
         }
         appearance {
-            compose.waitUntil(5_000) {
+            compose.waitUntil(WAIT_MS) {
                 runCatching { button().assertIsEnabled() }.isSuccess
             }
             button().performClick()
-            compose.waitUntil(5_000) { settings.now().dismissed.isEmpty() }
+            compose.waitUntil(WAIT_MS) { settings.now().dismissed.isEmpty() }
             val done = app.getString(R.string.settings_restore_dismissed_done)
-            compose.waitUntil(5_000) { compose.onAllNodesWithText(done).fetchSemanticsNodes().isNotEmpty() }
-            compose.waitUntil(5_000) { runCatching { button().assertIsNotEnabled() }.isSuccess }
+            compose.waitUntil(WAIT_MS) { compose.onAllNodesWithText(done).fetchSemanticsNodes().isNotEmpty() }
+            compose.waitUntil(WAIT_MS) { runCatching { button().assertIsNotEnabled() }.isSuccess }
             // Enabled again as soon as anything is dismissed.
             runBlocking { settings.dismiss(Dismissable.PLAYERS_NOTE) }
-            compose.waitUntil(5_000) { runCatching { button().assertIsEnabled() }.isSuccess }
+            compose.waitUntil(WAIT_MS) { runCatching { button().assertIsEnabled() }.isSuccess }
         }
     }
 }

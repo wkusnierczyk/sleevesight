@@ -6,7 +6,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsOff
-import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
@@ -21,6 +21,7 @@ import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.TestStores
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.now
 import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.app.secrets.SecretStore
@@ -158,12 +159,12 @@ class EnabledPlayersOnHomeTest {
             }
             val title = app.getString(R.string.settings_players_on_home)
             compose.openSection(SettingsSection.PLAYERS)
-            compose.waitUntil(5_000) { compose.onAllNodesWithText(title).fetchSemanticsNodes().isNotEmpty() }
+            compose.waitUntil(WAIT_MS) { compose.onAllNodesWithText(title).fetchSemanticsNodes().isNotEmpty() }
             compose.onNodeWithText(app.getString(R.string.settings_players_on_home_summary)).assertExists()
             val row = compose.onNodeWithText(title).performScrollTo()
             row.assertIsOff()
             row.performClick()
-            compose.waitUntil(5_000) { settings.now().onlyEnabledPlayersOnHome }
+            compose.waitUntil(WAIT_MS) { settings.now().onlyEnabledPlayersOnHome }
         }
     }
 

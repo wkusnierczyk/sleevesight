@@ -13,7 +13,7 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -29,6 +29,7 @@ import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.keyboard.KeyboardVectors
 import app.sleevesight.app.secrets.SaveResult
 import app.sleevesight.app.secrets.SecretId
@@ -98,7 +99,7 @@ class ScannedKeyTest {
     }
 
     private fun waitFor(matcher: SemanticsMatcher) =
-        compose.waitUntil(timeoutMillis = 5_000) { compose.onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(timeoutMillis = WAIT_MS) { compose.onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty() }
 
     private fun count(matcher: SemanticsMatcher) = compose.onAllNodes(matcher).fetchSemanticsNodes().size
 
@@ -118,7 +119,7 @@ class ScannedKeyTest {
     /** Scans with the QR icon, and waits until the field holds as many characters as [KEY]. */
     private fun scanKey() {
         compose.onNodeWithContentDescription(scan).performClick()
-        compose.waitUntil(timeoutMillis = 5_000) { showing()?.length == KEY.length }
+        compose.waitUntil(timeoutMillis = WAIT_MS) { showing()?.length == KEY.length }
     }
 
     /** Keys pressed on a hardware keyboard, or sent by the keyboard app, into the field. */
@@ -287,7 +288,7 @@ class ScannedKeyTest {
             waitFor(hasText(text(R.string.settings_key_field)))
             scanKey()
             compose.onNodeWithText(text(R.string.settings_save)).performClick()
-            compose.waitUntil(timeoutMillis = 5_000) { saved != null }
+            compose.waitUntil(timeoutMillis = WAIT_MS) { saved != null }
             assertEquals(KEY, saved)
         }
     }

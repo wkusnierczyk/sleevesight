@@ -9,7 +9,7 @@ import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
-import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
@@ -23,6 +23,7 @@ import app.sleevesight.app.MainActivity
 import app.sleevesight.app.MemoryStore
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.SettingsStore
@@ -75,7 +76,7 @@ class SettingsSectionChipsTest {
     private fun text(id: Int) = app.getString(id)
 
     private fun waitForNode(matcher: SemanticsMatcher) =
-        compose.waitUntil(conditionDescription = matcher.description, timeoutMillis = 5_000) {
+        compose.waitUntil(conditionDescription = matcher.description, timeoutMillis = WAIT_MS) {
             compose.onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty()
         }
 

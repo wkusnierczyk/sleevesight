@@ -19,7 +19,7 @@ import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -34,6 +34,7 @@ import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.keyboard.KeyboardVectors
 import app.sleevesight.app.secrets.SaveResult
 import app.sleevesight.app.secrets.SecretId
@@ -113,7 +114,7 @@ class KeyFieldIconsTest {
     }
 
     private fun waitFor(matcher: SemanticsMatcher) =
-        compose.waitUntil(timeoutMillis = 5_000) { compose.onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(timeoutMillis = WAIT_MS) { compose.onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty() }
 
     private fun count(matcher: SemanticsMatcher) = compose.onAllNodes(matcher).fetchSemanticsNodes().size
 
@@ -205,7 +206,7 @@ class KeyFieldIconsTest {
             assertFalse(masked())
 
             compose.onNodeWithText(text(R.string.settings_cancel)).performClick()
-            compose.waitUntil(timeoutMillis = 5_000) { !shown.open }
+            compose.waitUntil(timeoutMillis = WAIT_MS) { !shown.open }
             compose.runOnIdle { shown.open = true }
             waitFor(hasText(text(R.string.settings_key_field)))
             // Opened again: empty, with no eye, and masked once something is entered.

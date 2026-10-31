@@ -19,7 +19,7 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.doubleClick
-import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
@@ -31,6 +31,7 @@ import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.app.ui.home.HomeFixtures.normalizer
 import app.sleevesight.core.settings.Settings
@@ -76,7 +77,7 @@ class GuideMagnifierTest {
                 }
             }
             compose.awaitIdleHome()
-            compose.waitUntil(WAIT) {
+            compose.waitUntil(WAIT_MS) {
                 compose.onAllNodesWithTag(guideNoteTag(GuidePart.SOURCES)).fetchSemanticsNodes().isNotEmpty()
             }
             block()
@@ -85,6 +86,10 @@ class GuideMagnifierTest {
 
     // The screen's saved state, as an activity keeps it: [restore] saves it, drops the content and
     // composes it afresh from what was saved, as Android does for an activity recreated on a rotation.
+    // Composed afresh, the idle Home draws nothing, so neither the guide nor its magnified picture,
+    // until the players are listed again, off the main thread, which `waitForIdle` does not wait
+    // for (#745): the wait for the idle Home does, and the `waitForIdle` after it lets the dialog's
+    // own composition run.
     private var emitted by mutableStateOf(true)
     private var registry by mutableStateOf(SaveableStateRegistry(null) { true })
 
@@ -94,6 +99,7 @@ class GuideMagnifierTest {
         compose.waitForIdle()
         registry = SaveableStateRegistry(saved) { true }
         emitted = true
+        compose.awaitIdleHome()
         compose.waitForIdle()
     }
 
@@ -222,8 +228,4 @@ class GuideMagnifierTest {
             assertEquals(corner.x, pictureCorner().x, 1f)
             assertEquals(corner.y, pictureCorner().y, 1f)
         }
-
-    private companion object {
-        const val WAIT = 5_000L
-    }
 }
