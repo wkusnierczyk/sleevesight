@@ -280,6 +280,18 @@ class LyricsScreenTest {
         }
 
     @Test
+    fun withPagesTheSearchOffSaysNothingOfTheSearch() =
+        show(state(sundownLinks, Settings(lyricsSearch = false))) {
+            tap(LYRICS_CHIP_TAG)
+            assertTrue(shows("Lyrics on Genius"))
+            assertTrue(shows(text(R.string.home_lyrics_browser)))
+            assertEquals(0, count(LYRICS_SEARCH_TAG))
+            assertTrue(!shows(text(R.string.home_lyrics_search_off)))
+            val see = app.getString(R.string.home_lyrics_search_off_see, text(R.string.home_settings_appearance_link))
+            assertTrue(!shows(see))
+        }
+
+    @Test
     fun anInstrumentalSaysSoWithNoSearch() =
         show(state(found(WorkLyrics(instrumental = true)))) {
             tap(LYRICS_CHIP_TAG)
