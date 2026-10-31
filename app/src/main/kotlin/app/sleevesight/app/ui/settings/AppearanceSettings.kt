@@ -102,13 +102,16 @@ private fun LyricsRows(
         summary = stringResource(R.string.settings_lyrics_links_summary),
         checked = settings.lyricsLinks,
     ) { on -> update { it.copy(lyricsLinks = on) } }
-    SwitchRow(
-        title = stringResource(R.string.settings_lyrics_search),
-        summary = null,
-        checked = settings.lyricsSearch,
-        indent = true,
-        onChange = if (settings.lyricsLinks) ({ on -> update { it.copy(lyricsSearch = on) } }) else null,
-    )
+    // Landed on from Home's *Lyrics*, where the search is off (#728).
+    LandingSpot(SettingsTarget.lyricsSearch) {
+        SwitchRow(
+            title = stringResource(R.string.settings_lyrics_search),
+            summary = null,
+            checked = settings.lyricsSearch,
+            indent = true,
+            onChange = if (settings.lyricsLinks) ({ on -> update { it.copy(lyricsSearch = on) } }) else null,
+        )
+    }
 }
 
 /** The test tag of *Restore dismissed messages*' button (#759). */
