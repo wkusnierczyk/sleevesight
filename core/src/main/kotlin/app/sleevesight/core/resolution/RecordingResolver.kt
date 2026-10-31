@@ -10,6 +10,7 @@ import app.sleevesight.core.sources.ReleaseDate
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.ResolvedArtist
 import app.sleevesight.core.sources.ResolvedWork
+import app.sleevesight.core.sources.WorkLyrics
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -238,6 +239,7 @@ class RecordingResolver(
                 credits = recordingCredits,
                 wikidataIds = detail.wikidataIds,
                 recordingTags = detail.tags,
+                lyrics = lyricsOf(detail, work),
             )
         return if (link == null || work == null) {
             withRecording.copy(work = link?.let { ResolvedWork(it.mbid, it.title) }, cover = link?.cover ?: false)
@@ -623,3 +625,16 @@ class RecordingResolver(
                 .map { same -> same.first().copy(detail = same.flatMap { it.detail }.distinct()) }
     }
 }
+
+// What MusicBrainz says of the lyrics (#728): the looked-up [work]'s lyrics pages (only the first
+// work is looked up), the languages of every work the recording performs, and whether its
+// performance of any of them is marked instrumental.
+private fun lyricsOf(
+    detail: MbRecordingDetail,
+    work: MbWork?,
+): WorkLyrics =
+    WorkLyrics(
+        links = work?.lyricsUrls.orEmpty().distinct(),
+        languages = (detail.works.flatMap { it.languages } + work?.languages.orEmpty()).distinct(),
+        instrumental = detail.works.any { it.instrumental },
+    )

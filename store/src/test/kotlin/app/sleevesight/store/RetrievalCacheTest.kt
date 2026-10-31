@@ -14,6 +14,7 @@ import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.ResolvedArtist
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.SourceResult
+import app.sleevesight.core.sources.WorkLyrics
 import kotlinx.coroutines.Deferred
 import kotlin.test.AfterTest
 import kotlin.test.Test
@@ -248,6 +249,24 @@ class RetrievalCacheTest {
     }
 
     @Test
+    fun `what MusicBrainz says of the lyrics round-trips, and an entry kept before it reads as not known`() {
+        val result = sample(Outcome.SongArticle, SourceId.MUSICBRAINZ)
+        assertEquals(result.lyrics, RetrievalCodec.decode(RetrievalCodec.encode(result))?.lyrics)
+        // Known and empty stays known: no link, not instrumental.
+        val none = result.copy(lyrics = WorkLyrics.NONE)
+        assertEquals(WorkLyrics.NONE, RetrievalCodec.decode(RetrievalCodec.encode(none))?.lyrics)
+        // An entry as kept before #728, without the field: read, as not known (#728).
+        val before = RetrievalCodec.encode(result.copy(lyrics = null))
+        assertFalse("lyrics" in before)
+        val decoded = assertNotNull(RetrievalCodec.decode(before))
+        assertNull(decoded.lyrics)
+        assertEquals(result.copy(lyrics = null), decoded)
+        // Through the cache too, under the same extraction version: not a miss.
+        assertTrue(retrieval.put(SourceId.MUSICBRAINZ, key, 1, result))
+        assertEquals(result.lyrics, assertNotNull(retrieval.get(SourceId.MUSICBRAINZ, key, 1)).result.lyrics)
+    }
+
+    @Test
     fun `a payload it cannot read is a miss`() {
         val payload = RetrievalCodec.encode(sample(Outcome.SongArticle))
 
@@ -429,6 +448,12 @@ class RetrievalCacheTest {
                     ReleaseDate("Sundown", "1974-01-01", "rg-1"),
                     ReleaseDate("Gord's Gold", "1975", "rg-2"),
                     ReleaseDate("Undated", null, "rg-3"),
+                ),
+            lyrics =
+                WorkLyrics(
+                    listOf("https://genius.com/Gordon-lightfoot-sundown-lyrics"),
+                    listOf("eng"),
+                    instrumental = true,
                 ),
         )
     }

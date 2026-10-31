@@ -113,11 +113,21 @@ data class MbArtistRelation(
     val attributes: List<String>,
 )
 
-/** A recording's performance of a work. [cover] when MusicBrainz marks the performance as one. */
+/**
+ * A recording's performance of a work. [cover] when MusicBrainz marks the performance as one.
+ *
+ * @property languages the work's languages as the relationship embeds them (ISO 639-3: `eng`; `zxx`
+ *   for no linguistic content, `mul` for several), for the lyrics links (#728); empty when MusicBrainz
+ *   gives none.
+ * @property instrumental whether MusicBrainz marks this performance `instrumental` (#728): the
+ *   recording has no lyrics, whatever the work's.
+ */
 data class MbWorkLink(
     val mbid: String,
     val title: String,
     val cover: Boolean,
+    val languages: List<String> = emptyList(),
+    val instrumental: Boolean = false,
 )
 
 /**
@@ -151,11 +161,20 @@ data class MbPerformance(
     val attributes: List<String>,
 )
 
-/** A work looked up by id. */
+/**
+ * A work looked up by id.
+ *
+ * @property lyricsUrls the pages of its `lyrics` URL relationships, in MusicBrainz's order, as it
+ *   gives them (#728): MusicBrainz allows them only to the sites on its lyrics whitelist, which the
+ *   lyrics links check again ([app.sleevesight.core.lyrics.LyricsLinks]).
+ * @property languages its languages (ISO 639-3; `zxx` for no linguistic content), empty when none.
+ */
 data class MbWork(
     val mbid: String,
     val title: String,
     val artistRelations: List<MbArtistRelation>,
     val wikidataIds: List<String>,
     val performances: List<MbPerformance>,
+    val lyricsUrls: List<String> = emptyList(),
+    val languages: List<String> = emptyList(),
 )

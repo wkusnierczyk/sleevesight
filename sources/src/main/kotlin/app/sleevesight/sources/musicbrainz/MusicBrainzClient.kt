@@ -84,7 +84,14 @@ class MusicBrainzClient(
                         .filter { it.string("target-type") == "work" && it.string("type") == "performance" }
                         .mapNotNull { relation ->
                             relation.obj("work")?.let { work ->
-                                MbWorkLink(work.required("id"), work.required("title"), "cover" in attributes(relation))
+                                val attributes = attributes(relation)
+                                MbWorkLink(
+                                    mbid = work.required("id"),
+                                    title = work.required("title"),
+                                    cover = "cover" in attributes,
+                                    languages = languages(work),
+                                    instrumental = "instrumental" in attributes,
+                                )
                             }
                         },
                 artistRelations = artistRelations(relations),
@@ -104,6 +111,8 @@ class MusicBrainzClient(
                 title = json.required("title"),
                 artistRelations = artistRelations(relations),
                 wikidataIds = wikidataIds(relations),
+                lyricsUrls = lyricsUrls(relations),
+                languages = languages(json),
                 performances =
                     relations
                         .filter { it.string("target-type") == "recording" && it.string("type") == "performance" }
@@ -248,6 +257,23 @@ class MusicBrainzClient(
                 .mapNotNull { relation ->
                     relation.obj("url")?.string("resource")?.let { WIKIDATA.find(it)?.groupValues?.get(1) }
                 }.distinct()
+
+        // The pages of the work's `lyrics` URL relationships (#728), as MusicBrainz gives them.
+        private fun lyricsUrls(relations: List<JsonElement>): List<String> =
+            relations
+                .filter { it.string("target-type") == "url" && it.string("type") == "lyrics" }
+                .mapNotNull { relation -> relation.obj("url")?.string("resource")?.ifEmpty { null } }
+                .distinct()
+
+        // A work's languages (#728): `languages`, the list, or the older single `language` where the
+        // answer has no list. A work or a work relationship's embedded work alike.
+        private fun languages(work: JsonElement): List<String> =
+            work
+                .array("languages")
+                .mapNotNull { language ->
+                    (language as? JsonPrimitive)?.takeIf { it.isString }?.content?.ifEmpty { null }
+                }.ifEmpty { listOfNotNull(work.string("language")?.ifEmpty { null }) }
+                .distinct()
 
         private fun JsonElement.required(key: String): String = string(key) ?: throw MissingField(key)
     }
