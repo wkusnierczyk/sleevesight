@@ -56,6 +56,7 @@ import app.sleevesight.app.ui.home.HomeFixtures.track
 import app.sleevesight.app.ui.home.HomeFixtures.wikidataLine
 import app.sleevesight.app.ui.home.HomeFixtures.wikipediaLine
 import app.sleevesight.core.evidence.EvidenceSet
+import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.SourceState
@@ -209,8 +210,8 @@ class SourcesTableScreenTest {
             // Off (Discogs) or without its key (Last.fm): no row. Rejected (web search) and the
             // model's own knowledge: a row.
             assertEquals(listOf("MB", "W", "S", "AI"), rows())
-            assertEquals(listOf(text(R.string.home_source_found_song)), said("MB"))
-            assertEquals(listOf(text(R.string.home_source_found_song)), said("W"))
+            assertEquals(listOf(text(R.string.home_source_found, text(R.string.home_source_finding_track))), said("MB"))
+            assertEquals(listOf(text(R.string.home_source_found, text(R.string.home_source_finding_track))), said("W"))
             // A dimmed chip's row says its name; a rejected match is nothing found.
             assertEquals(listOf(text(R.string.home_source_name_web), text(R.string.home_source_none)), said("S"))
             assertEquals(
@@ -223,6 +224,33 @@ class SourcesTableScreenTest {
             assertEquals(0, countText(text(R.string.home_source_off)))
             assertEquals(0, countText(text(R.string.home_rejected_title)))
         }
+
+    @Test
+    fun eachSourceSaysWhatItsOwnLinesFoundAsAList() {
+        val artist = draft(SourceId.MUSICBRAINZ, "Gordon Lightfoot is a Canadian singer.", scope = Scope.ARTIST)
+        val original = draft(SourceId.WIKIDATA, "It is a cover.", scope = Scope.ORIGINAL_SONG)
+        val evidence =
+            EvidenceSet.of(listOf(musicBrainzLine, artist, wikipediaLine, original, HomeFixtures.webLine), JvmHasher)
+        val sources =
+            mapOf(
+                SourceId.MUSICBRAINZ to done(evidence = listOf(musicBrainzLine, artist)),
+                // The outcome says the artist; the lines say more, Wikidata's too.
+                SourceId.WIKIPEDIA to done(Outcome.ArtistArticle, evidence = listOf(wikipediaLine, original)),
+                SourceId.WEB to done(evidence = listOf(HomeFixtures.webLine)),
+            )
+        show(track(sources = sources, evidence = evidence), needsKey = emptySet()) {
+            unfold()
+            val track = text(R.string.home_source_finding_track)
+            val and = text(R.string.home_source_finding_and, track, text(R.string.home_source_finding_artist))
+            assertEquals(listOf(text(R.string.home_source_found, and)), said("MB"))
+            val pair = text(R.string.home_source_finding_and, track, text(R.string.home_source_finding_original_song))
+            assertEquals(listOf(text(R.string.home_source_found, pair)), said("W"))
+            assertEquals(listOf(text(R.string.home_source_found_pages)), said("S"))
+            // The words as the owner picked them.
+            assertEquals("Found the track and the artist", text(R.string.home_source_found, and))
+            assertEquals("Found pages about the track", text(R.string.home_source_found_pages))
+        }
+    }
 
     @Test
     fun aChipWithLinesIsASwitchNamedByItsSourceAndADimmedOneIsNoButton() =
@@ -524,7 +552,12 @@ class SourcesTableScreenTest {
             // The same table, with the sources that are off: Discogs, and Last.fm without its key.
             assertEquals(listOf("MB", "W", "D", "S", "L", "AI"), rows())
             assertEquals(
-                listOf(text(R.string.home_source_cached, text(R.string.home_source_found_song))),
+                listOf(
+                    text(
+                        R.string.home_source_cached,
+                        text(R.string.home_source_found, text(R.string.home_source_finding_track)),
+                    ),
+                ),
                 said("MB"),
             )
             assertEquals(listOf(text(R.string.home_source_name_web), text(R.string.home_source_rejected)), said("S"))
@@ -551,6 +584,81 @@ class SourcesTableScreenTest {
             for (tag in listOf("MB", "W", "S", "L", "AI")) assertEquals(tag, 0, count(CHIP_PREFIX + tag))
             assertEquals(0, countText(text(R.string.home_rejected_title)))
             assertEquals(0, count(SOURCES_NOTE_TAG))
+        }
+
+    private val legendWords =
+        listOf(
+            R.string.home_sources_legend_shown,
+            R.string.home_sources_legend_hidden,
+            R.string.home_sources_legend_none,
+            R.string.home_sources_legend_tap,
+        )
+
+    private fun bounds(tag: String) =
+        compose.onNodeWithTag(tag, useUnmergedTree = true).fetchSemanticsNode().let {
+            it.positionInRoot.y to it.positionInRoot.y + it.size.height
+        }
+
+    @Test
+    fun theLegendShowsUnderTheTableBeforeTheNoteWithItsFourTexts() =
+        show(mixed) {
+            // Folded: no table, no legend.
+            assertEquals(0, count(SOURCES_LEGEND_TAG))
+            unfold()
+            for (word in legendWords) {
+                val inLegend = hasText(text(word)) and hasAnyAncestor(hasTestTag(SOURCES_LEGEND_TAG))
+                val found = compose.onAllNodes(inLegend, useUnmergedTree = true).fetchSemanticsNodes()
+                assertEquals(text(word), 1, found.size)
+            }
+            val (_, tableBottom) = bounds(SOURCES_TABLE_TAG)
+            val (legendTop, legendBottom) = bounds(SOURCES_LEGEND_TAG)
+            val (noteTop, _) = bounds(SOURCES_NOTE_TAG)
+            assertTrue("legend at $legendTop, table ends at $tableBottom", legendTop >= tableBottom)
+            assertTrue("legend ends at $legendBottom, note at $noteTop", legendBottom <= noteTop)
+            // The words in a line, the second line under them.
+            val shown = compose.onNodeWithText(text(R.string.home_sources_legend_shown), useUnmergedTree = true)
+            val none = compose.onNodeWithText(text(R.string.home_sources_legend_none), useUnmergedTree = true)
+            val tap = compose.onNodeWithText(text(R.string.home_sources_legend_tap), useUnmergedTree = true)
+            val first = shown.fetchSemanticsNode()
+            assertEquals(first.positionInRoot.y, none.fetchSemanticsNode().positionInRoot.y, 1f)
+            assertTrue(tap.fetchSemanticsNode().positionInRoot.y >= first.positionInRoot.y + first.size.height)
+        }
+
+    @Test
+    fun aTableWithNoRowsHasNoLegend() =
+        show(track(sources = emptyMap(), evidence = null), settings = Settings(), needsKey = emptySet()) {
+            unfold()
+            assertEquals(0, count(SOURCES_TABLE_TAG))
+            assertEquals(0, count(SOURCES_LEGEND_TAG))
+            for (word in legendWords) assertEquals(text(word), 0, countText(text(word)))
+        }
+
+    @Test
+    fun aScreenReaderFindsNoNodeOfTheLegend() =
+        show(mixed) {
+            unfold()
+            // Every node of it, its words too, hidden from accessibility services; none merges.
+            val nodes =
+                compose
+                    .onAllNodes(
+                        hasTestTag(SOURCES_LEGEND_TAG) or hasAnyAncestor(hasTestTag(SOURCES_LEGEND_TAG)),
+                        useUnmergedTree = true,
+                    ).fetchSemanticsNodes()
+            assertTrue("${nodes.size} nodes", nodes.size >= 1 + legendWords.size)
+            for (node in nodes) {
+                assertTrue("${node.config}", SemanticsProperties.HideFromAccessibility in node.config)
+                assertFalse("${node.config}", node.config.isMergingSemanticsOfDescendants)
+                assertFalse("${node.config}", SemanticsActions.OnClick in node.config)
+            }
+            // Nor is a word of it read as part of another node.
+            for (word in legendWords) {
+                val readElsewhere =
+                    compose
+                        .onAllNodes(hasText(text(word), substring = true))
+                        .fetchSemanticsNodes()
+                        .filterNot { SemanticsProperties.HideFromAccessibility in it.config }
+                assertEquals(text(word), emptyList<SemanticsNode>(), readElsewhere)
+            }
         }
 
     // The chip as drawn, its rounded shape and no more, scrolled into view.
