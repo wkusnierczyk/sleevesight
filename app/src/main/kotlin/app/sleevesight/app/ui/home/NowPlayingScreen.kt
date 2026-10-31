@@ -243,8 +243,9 @@ internal class NowPlayingActions(
  * *Layout* (#447): under *Expandable boxes*, the default, *Sources*' chip opens its panel in place
  * (#623), and a citation unfolds *Sources* to its line. Under *Separate pages* each opens on a page
  * of its own ([NowPlayingActions.openPage]): *Sources*' chip, and a citation, which opens *Sources*
- * at its line. Under either, the line under the album ([InPlaceLine]: *Dates*, #724, and *Genres*,
- * #772) opens its panels in place, a genre opening in its box inside *Genres*' panel.
+ * at its line; *Genres*, the genres' page, every genre in a panel of its own (#772). The line under
+ * the album ([InPlaceLine]) opens *Dates* in place under either (#724), and under *Expandable boxes*
+ * *Genres* too, a genre opening in its box inside *Genres*' panel.
  * The insight shows in full on Home either way.
  */
 @Composable
@@ -288,7 +289,8 @@ internal fun NowPlayingContent(
             PlayerRow(playing.player, state.playback, actions)
             ArtAndProgress(state.art, state.playback, header.duration)
             val notes = PanelNotes(actions.genreNotes, cite, shown.modelAllowed, actions.readAloud)
-            TrackHeader(shown, header, UnderAlbumLine(inPlace, settings, notes), actions)
+            val genresPage = { actions.openPage(HomePage.Genres) }.takeIf { pages }
+            TrackHeader(shown, header, UnderAlbumLine(inPlace, settings, notes, genresPage), actions)
             // A tap carries what it was shown for: the run Write is offered for, beside this track.
             val onWrite: () -> Unit = { view.writeKey?.let { actions.write(it, playing) } }
             val onStop: () -> Unit = { view.stopCall?.let(actions.stop) }

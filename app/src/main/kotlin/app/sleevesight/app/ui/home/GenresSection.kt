@@ -49,8 +49,11 @@ import app.sleevesight.core.settings.Settings
  * asked for; nor before the settings' first read), and its panel, which holds the genre labels
  * (#439, #558; `design/design.md`, *Genre labels*) of the track, its artists and its album
  * ([GenresContent]). [retries] asks a label source that could not be reached again, and
- * [openSettingsAt] opens the settings where the genre sources are switched on.
+ * [openSettingsAt] opens the settings where the genre sources are switched on. Under *Separate
+ * pages*, with [openPage], the button opens the genres' page instead ([GenresPage]), and a screen
+ * reader names its action "open page", as *Sources*' (#447).
  */
+@Suppress("LongParameterList") // What the panel shows, and each of its ways out.
 @Composable
 internal fun genresItem(
     track: TrackState?,
@@ -58,14 +61,16 @@ internal fun genresItem(
     notes: PanelNotes,
     retries: Retries,
     openSettingsAt: (SettingsTarget) -> Unit,
+    openPage: (() -> Unit)? = null,
 ): InPlaceItem? {
     if (settings?.showGenres != true) return null
     return InPlaceItem(
         id = InPlace.GENRES,
         name = stringResource(R.string.home_genres),
-        action = stringResource(R.string.home_genres_show),
-        tag = GENRES_CHIP_TAG,
+        action = stringResource(if (openPage != null) R.string.home_page_open else R.string.home_genres_show),
+        tag = if (openPage != null) GENRES_PAGE_LINK_TAG else GENRES_CHIP_TAG,
         panelTag = GENRES_PANEL_TAG,
+        page = openPage,
     ) { toClose -> GenresContent(track, settings, notes, retries::of, openSettingsAt, toClose) }
 }
 
@@ -78,7 +83,8 @@ internal fun genresItem(
  * [SourceId], [RetryLine], which then hands the focus to the panel's *Close*, [toClose]), "None
  * found."; and with every genre source off, two lines, the second a link to where they are switched
  * on ([openSettingsAt]: *Settings → Sources*, or *Settings → Genres* when the sources are on and
- * their genre switches are not).
+ * their genre switches are not). With [everyGenre] (the genres' page, #772), no chips: every
+ * genre of the chips, in their order, in a panel of its own ([GenrePanel], with no *Close*).
  */
 @Suppress("LongParameterList") // What the panel shows, and each of its ways out.
 @Composable
@@ -89,10 +95,13 @@ internal fun GenresContent(
     retry: (SourceId) -> (() -> Unit)? = { null },
     openSettingsAt: (SettingsTarget) -> Unit = {},
     toClose: () -> Unit = {},
+    everyGenre: Boolean = false,
 ) {
     val shown = GenresShown.of(track, settings)
     val style = MaterialTheme.typography.bodyLarge
-    if (track != null && !track.genres.isEmpty) GenresBox(track, notes)
+    if (track != null && !track.genres.isEmpty) {
+        if (everyGenre) EveryGenre(track, notes) else GenresBox(track, notes)
+    }
     shown.off?.let { target ->
         Text(stringResource(R.string.home_genres_off), style = style)
         val linkText =
@@ -253,70 +262,69 @@ private fun GenresBox(
     }
 }
 
+// Every genre of [track]'s chips, in their order, each in a panel of its own, with no *Close* (the
+// genres' page, #772): a genre several artists share, once.
+@Composable
+private fun EveryGenre(
+    track: TrackState,
+    notes: PanelNotes,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        for (label in track.genres.folded.distinctBy { it.label.genre.identity }) {
+            GenrePanel(track, label.label.genre.identity, notes = notes)
+        }
+    }
+}
+
 /**
- * [labels] as chips, the one of the genre [open] marked, each under [chipModifier]'s modifier for it
- * (a focus requester); each chip a button that [tap]s it: with [opensPage], to open the genres'
- * page (a screen reader names the action "open page"), else to show the genre's panel, or, the one
- * [open], to close it; unless it does not [close], when the one [open] is not a button.
+ * [labels] as chips, in *Genres*' panel (#772), the one of the genre [open] marked, each under
+ * [chipModifier]'s modifier for it (a focus requester); each chip a button that [tap]s it: to show
+ * the genre's box, or, the one [open], to fold it.
  */
-@Suppress("LongParameterList") // What the chips show and do, and a focus target for each.
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun Chips(
     labels: List<PlacedLabel>,
     open: String?,
-    opensPage: Boolean = false,
-    close: Boolean = true,
     chipModifier: (PlacedLabel) -> Modifier = { Modifier },
     tap: (PlacedLabel) -> Unit,
 ) {
     val showAction = stringResource(R.string.home_genre_show)
     val closeAction = stringResource(R.string.home_genre_close)
-    val pageAction = stringResource(R.string.home_page_open)
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
         itemVerticalAlignment = Alignment.CenterVertically,
     ) {
         for (label in labels) {
-            // A chip that opens the page is never selected: it opens the page, not a panel beside it.
-            val selected = if (opensPage) null else label.label.genre.identity == open
-            // On the genres' page the marked chip has nothing to do: not a button there.
-            val action =
-                when {
-                    opensPage -> pageAction
-                    selected == true -> closeAction.takeIf { close }
-                    else -> showAction
-                }
-            GenreChip(label, selected, action, chipModifier(label)) { tap(label) }
+            val selected = label.label.genre.identity == open
+            GenreChip(label, selected, if (selected) closeAction else showAction, chipModifier(label)) { tap(label) }
         }
     }
 }
 
 /**
- * A chip on Home and the genres' page (#439, #558): a light fill in the text's colour; while
- * [selected], the text's colour, with the box's colour for the text. A button whose action a screen
- * reader names [action], and says is selected while its genre's panel shows; with [selected] null
- * (a chip that opens the page), neither; with no [action], not a button, and a tap does nothing.
- * [modifier] goes outside its target (a focus requester).
+ * A chip in *Genres*' panel (#439, #558, #772): a light fill in the text's colour; while [selected],
+ * the text's colour, with the box's colour for the text. A button whose action a screen reader
+ * names [action], and says is selected while its genre's box shows. [modifier] goes outside its
+ * target (a focus requester).
  */
 @Composable
 private fun GenreChip(
     placed: PlacedLabel,
-    selected: Boolean?,
-    action: String?,
+    selected: Boolean,
+    action: String,
     modifier: Modifier,
     onClick: () -> Unit,
 ) {
-    val (fill, content) = chipColours(selected == true)
+    val (fill, content) = chipColours(selected)
     ChipFrame(
         fill,
         modifier = modifier.testTag(tagOf(GENRE_PREFIX, placed)),
         action =
             Modifier
-                .let { chip ->
-                    action?.let { chip.clickable(role = Role.Button, onClickLabel = it, onClick = onClick) } ?: chip
-                }.let { chip -> selected?.let { chip.semantics { this.selected = it } } ?: chip },
+                .clickable(role = Role.Button, onClickLabel = action, onClick = onClick)
+                .semantics { this.selected = selected },
     ) {
         Text(placed.label.genre.label, style = MaterialTheme.typography.labelLarge, color = content)
     }
@@ -331,8 +339,11 @@ const val GENRES_PANEL_TAG: String = "genres-panel"
 const val GENRES_PANEL_HEADING_TAG: String = "genres-panel:heading"
 const val GENRES_PANEL_CLOSE_TAG: String = "genres-panel:close"
 
+/** The test tag of *Genres*' button under *Separate pages* (#772), which opens the genres' page. */
+const val GENRES_PAGE_LINK_TAG: String = "genres-page-link"
+
 /**
- * The test tag of a chip on Home or the genres' page, before its level (`track`, `artist`,
+ * The test tag of a chip in *Genres*' panel, before its level (`track`, `artist`,
  * `album`), a colon, for an artist's the artist and a colon, and its identity:
  * `genre:artist:The Beatles:rock`.
  */

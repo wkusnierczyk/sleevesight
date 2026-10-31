@@ -27,12 +27,14 @@ internal fun TrackHeader(
 
 /**
  * What the line under the album needs besides the track: its [memory] of the panels open, the
- * [settings] (null until their first read), and what a genre's box shows above its table ([notes]).
+ * [settings] (null until their first read), what a genre's box shows above its table ([notes]),
+ * and, under *Separate pages*, the way to the genres' page ([genresPage], #772).
  */
 internal class UnderAlbumLine(
     val memory: InPlaceMemory,
     val settings: Settings?,
     val notes: PanelNotes,
+    val genresPage: (() -> Unit)? = null,
 )
 
 /**
@@ -40,7 +42,8 @@ internal class UnderAlbumLine(
  * says: *Dates*, for every track ([datesItem]), its *Retry* asking MusicBrainz again ([Retries])
  * and its link opening *Settings → Sources*; then *Genres* (#772), for every track while *Show
  * genres* is on ([genresItem]), its *Retry* asking a label source again and its link opening
- * *Settings → Sources* or *Settings → Genres*.
+ * *Settings → Sources* or *Settings → Genres*; under *Separate pages*, it opens the genres' page.
+ * *Dates* opens in place under either.
  */
 @Composable
 internal fun UnderAlbum(
@@ -56,6 +59,6 @@ internal fun UnderAlbum(
         datesItem(homeDates(track, header), NoDates.of(track), retries.of(SourceId.MUSICBRAINZ)) {
             actions.openSettingsAt(SettingsTarget.sources)
         }
-    val genres = genresItem(track, line.settings, line.notes, retries, actions.openSettingsAt)
+    val genres = genresItem(track, line.settings, line.notes, retries, actions.openSettingsAt, line.genresPage)
     InPlaceLine(listOfNotNull(dates, genres), line.memory, playing)
 }

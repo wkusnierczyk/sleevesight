@@ -45,8 +45,16 @@ internal fun NowPlayingPageContent(
             }
             when (page) {
                 is HomePage.Sources -> SourcesPage(shown, playing, page.cite, actions.openSettings)
-                HomePage.Genres -> GenresPage(shown.track, state.settings, genre = null, genreNotes(shown, actions))
-                is HomePage.GenresAt -> GenresPage(shown.track, state.settings, page.genre, genreNotes(shown, actions))
+                HomePage.Genres, is HomePage.GenresAt -> {
+                    val retries = Retries(shown.view, playing, actions.askAgain)
+                    GenresPage(
+                        shown.track,
+                        state.settings,
+                        genreNotes(shown, actions),
+                        retries::of,
+                        actions.openSettingsAt,
+                    )
+                }
             }
         }
     }

@@ -16,17 +16,17 @@ sealed interface HomePage {
     ) : HomePage
 
     /**
-     * The genres' page with no genre given: the chips, and the first chip's panel. Kept as it was
-     * before [GenresAt] (#558): a back stack saved by an earlier version, with the genres' page on
-     * it, is restored by its destination, whose id is the hash of this serial name.
+     * The genres' page, from *Genres* on Home (#772): every genre in a panel of its own. Kept as it
+     * was before [GenresAt] (#558): a back stack saved by an earlier version, with the genres' page
+     * on it, is restored by its destination, whose id is the hash of this serial name.
      */
     @Serializable
     data object Genres : HomePage
 
     /**
-     * The genres' page opened at a genre (#558), by its identity, [genre], the chip tapped on Home:
-     * the chips, and that genre's panel, with the table, a row per level. A route of its own beside
-     * [Genres], which stays as it was.
+     * The genres' page opened at a genre (#558), by its identity, [genre], once a chip tapped on
+     * Home. Since #772 no chip opens it, and the page shows every genre whatever [genre] says; kept
+     * so that a back stack an earlier version saved with it is restored.
      */
     @Serializable
     data class GenresAt(

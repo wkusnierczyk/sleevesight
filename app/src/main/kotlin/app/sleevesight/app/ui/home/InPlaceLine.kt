@@ -46,14 +46,17 @@ internal enum class InPlace {
  * panel ([panelTag], as [Panel] makes them, with `:heading` and `:close`), and what its panel holds
  * ([content]). [content] is handed `toClose`, which moves the focus to the panel's *Close* (#724),
  * for a control in it that goes once tapped (*Retry*, [RetryLine]): else a keyboard's or a screen
- * reader's focus would fall to the top of the screen.
+ * reader's focus would fall to the top of the screen. With [page], its button opens that page in
+ * place of the panel (*Genres* under *Separate pages*, #772), and [action] names that.
  */
+@Suppress("LongParameterList") // What the item shows and does, each its own.
 internal class InPlaceItem(
     val id: InPlace,
     val name: String,
     val action: String,
     val tag: String,
     val panelTag: String,
+    val page: (() -> Unit)? = null,
     val content: @Composable ColumnScope.(toClose: () -> Unit) -> Unit,
 )
 
@@ -135,8 +138,9 @@ internal fun rememberInPlaceMemory(): InPlaceMemory = rememberSaveable(saver = I
  * [items]' order (each drawn as *Sources*' chip is, [PanelChip]), then the panels open, the one
  * opened last on top ([InPlaceMemory.opened]), each in the frame of Home's other closable panels
  * ([Panel]): its title as a heading, and *Close* at its top right, which folds it back into its
- * button. A button opens its panel in its place, whatever *Layout* says: no item of the line has a
- * page of its own. Beside [playing], from [memory]: a new track closes every panel.
+ * button. A button opens its panel in its place, whatever *Layout* says, but for an item with a
+ * page ([InPlaceItem.page]: *Genres* under *Separate pages*, #772), whose button opens the page and
+ * stays. Beside [playing], from [memory]: a new track closes every panel.
  *
  * The focus moves as *Sources*' does ([FocusHandoff], #629): to a panel's *Close* when its button
  * opens it, back to its button when *Close* closes it (a keyboard's, and a screen reader's; nothing
@@ -156,7 +160,7 @@ internal fun InPlaceLine(
     val closes = remember { mutableMapOf<InPlace, FocusRequester>() }
     val buttonOf = { id: InPlace -> buttons.getOrPut(id) { FocusRequester() } }
     val closeOf = { id: InPlace -> closes.getOrPut(id) { FocusRequester() } }
-    val shown = items.map { it.id }
+    val shown = items.filter { it.page == null }.map { it.id }
     val open = memory.openOn(playing).filter { it in shown }
     // Which panels hold the input focus, as last told, and which were open: plain, read as a panel goes.
     val inside = remember { mutableSetOf<InPlace>() }
@@ -190,8 +194,13 @@ internal fun InPlaceLine(
                         collapsed = false,
                         action = item.action,
                     ) {
-                        memory.open(item.id, playing)
-                        handoff.moveTo(closeOf(item.id))
+                        val page = item.page
+                        if (page != null) {
+                            page()
+                        } else {
+                            memory.open(item.id, playing)
+                            handoff.moveTo(closeOf(item.id))
+                        }
                     }
                 }
             }

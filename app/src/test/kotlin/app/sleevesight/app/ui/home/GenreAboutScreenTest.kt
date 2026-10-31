@@ -329,7 +329,7 @@ class GenreAboutScreenTest {
     @Test
     fun theGenresPageShowsTheSameAboveItsTable() {
         val notes = Notes()
-        show({ GenresPage(playing, Settings(layout = Layout.SEPARATE_PAGES), "jazz", PanelNotes(notes)) }) {
+        show({ GenresPage(playing, Settings(layout = Layout.SEPARATE_PAGES), PanelNotes(notes)) }) {
             compose.onNodeWithText(jazz.text).assertExists()
             val tops = listOf(GENRE_DEFINITION_TAG, GENRE_WHY_TAG, GENRES_ROW_PREFIX + "0").map(::top)
             assertEquals(tops.sorted(), tops)
