@@ -94,14 +94,14 @@ internal sealed interface DateSentence {
  * its date is known: the album's release, of the album's name whose year the album line shows (the
  * earliest date of the named releases in that year; none when the year is the player's own and no
  * named release has it); the track's first release, "on this album" when it is the album being
- * played (its release group is one of those whose year the album line shows; when either side
- * has no release group, its title has the album's key, [NameMatcher.albumKey]); and, for a cover, the song's original recording, with the
- * release it first came out on when known. Empty when no date is known: the panel then says why
- * ([NoDates]).
+ * played ([AlbumDates.has]: its release group is one of those whose year the album line shows, or,
+ * when either side has no release group, its title has the album's key); and, for a cover, the
+ * song's original recording, with the release it first came out on when known. Empty when no date
+ * is known: the panel then says why ([NoDates]).
  *
- * From MusicBrainz's result, which keeps them in the retrieval cache, else the run's resolution, as
- * the album's year is ([headerYears]). A result kept before #724 has the first release's date only,
- * and no original: the track's sentence says the date alone, and there is no cover sentence.
+ * From MusicBrainz's result, which keeps them in the retrieval cache, else the run's resolution,
+ * as the album's year is ([headerYears]). A result kept before #724 has the first release's date
+ * only, and no original: the track's sentence says the date alone, and there is no cover sentence.
  */
 internal fun homeDates(
     track: TrackState?,
@@ -114,16 +114,7 @@ internal fun homeDates(
     album.date?.let { sentences += DateSentence.Album(it) }
     val first = kept?.firstRelease ?: resolution?.firstRelease
     val firstDate = first?.date ?: kept?.firstReleased ?: resolution?.firstReleaseDate
-    // A known release group decides: a single and a later album of one title are not one release.
-    // Only without one on either side does the title.
-    val here =
-        first != null &&
-            album.name != null &&
-            if (first.releaseGroupMbid != null && album.groups.isNotEmpty()) {
-                first.group in album.groups
-            } else {
-                ALBUMS.albumKey(first.title) == ALBUMS.albumKey(album.name)
-            }
+    val here = first != null && album.has(first)
     when {
         here -> sentences += DateSentence.FirstHere
         firstDate != null && DateWhen.of(firstDate) != null ->
@@ -229,6 +220,19 @@ private class AlbumDates(
     val date: String?,
     val groups: Set<String>,
 ) {
+    /**
+     * Whether [first] is this album: a known release group decides (a single and a later album of
+     * one title are not one release); only without one on either side does the title, as
+     * [NameMatcher.albumKey] reads it.
+     */
+    fun has(first: FirstRelease): Boolean =
+        name != null &&
+            if (first.releaseGroupMbid != null && groups.isNotEmpty()) {
+                first.group in groups
+            } else {
+                ALBUMS.albumKey(first.title) == ALBUMS.albumKey(name)
+            }
+
     companion object {
         fun of(
             track: TrackState?,
