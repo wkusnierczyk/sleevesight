@@ -18,7 +18,10 @@ import app.sleevesight.core.model.SourceId
  * [Scope.key] and the text, its UTF-8 byte length in decimal, `:`, and its UTF-8 bytes; then
  * `\n`. The text is well-formed Unicode (see [EvidenceDraft]), so the encoding is the same on every
  * platform. Changing the encoding, [SOURCE_ORDER], a tag or a scope key changes every fingerprint,
- * which empties the synthesis cache in effect; a golden test pins them.
+ * which empties the synthesis cache in effect; a golden test pins them. So web search's lines are
+ * fingerprinted with their ids as they were before its tag became `S` (#769): `G1`, `G2`
+ * ([SourceId.LEGACY_WEB_TAG]). A card kept citing `[G1]` is then still found for the same lines, and
+ * reads its citations as `S1` (`citationId`).
  */
 class EvidenceSet private constructor(
     val lines: List<EvidenceLine>,
@@ -128,7 +131,7 @@ class EvidenceSet private constructor(
         ): String {
             val parts = mutableListOf<ByteArray>()
             for (line in lines) {
-                for (field in listOf(line.id, line.scope.key, line.text.withoutLoneSurrogates())) {
+                for (field in listOf(fingerprintId(line), line.scope.key, line.text.withoutLoneSurrogates())) {
                     val bytes = field.encodeToByteArray()
                     parts += "${bytes.size}:".encodeToByteArray()
                     parts += bytes
@@ -137,6 +140,14 @@ class EvidenceSet private constructor(
             }
             return hasher.sha256(concat(parts)).toHex()
         }
+
+        // A line's id as the fingerprint spells it: web search's with its tag before #769, `G`.
+        private fun fingerprintId(line: EvidenceLine): String =
+            if (line.source == SourceId.WEB) {
+                SourceId.LEGACY_WEB_TAG + line.id.removePrefix(SourceId.WEB.tag)
+            } else {
+                line.id
+            }
 
         private val NEWLINE = "\n".encodeToByteArray()
 

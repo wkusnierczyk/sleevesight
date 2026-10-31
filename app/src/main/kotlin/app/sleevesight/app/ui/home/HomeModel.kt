@@ -145,8 +145,8 @@ internal sealed interface Segment {
 
 /**
  * [sentence] split into its text and its citations (`[W1]`, `[AI]`), as the grounding check reads
- * them, a legacy `[M]` as `AI` ([citationId], #668). The citations become chips the
- * app builds; the rest is plain text.
+ * them, a legacy `[M]` as `AI` (#668) and a legacy `[G1]` as `S1` (#769) ([citationId]). The
+ * citations become chips the app builds; the rest is plain text.
  */
 internal fun segments(sentence: String): List<Segment> {
     val out = mutableListOf<Segment>()

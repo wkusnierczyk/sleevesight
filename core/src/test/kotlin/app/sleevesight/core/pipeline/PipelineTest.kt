@@ -105,7 +105,7 @@ class PipelineTest {
             assertEquals(1.seconds, testScheduler.currentTime.milliseconds)
             assertEquals(listOf("gordon lightfoot|sundown"), wikipedia.asked)
             assertTrue(wikipedia.resolutions.single().resolved)
-            assertEquals(listOf("MB1", "W1", "WD1", "G1", "P1"), state.evidence?.ids)
+            assertEquals(listOf("MB1", "W1", "WD1", "S1", "P1"), state.evidence?.ids)
             assertTrue(state.gathered)
         }
 

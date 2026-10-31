@@ -77,6 +77,21 @@ class HomeModelTest {
     }
 
     @Test
+    fun aCitationOfG1WrittenBefore0_1_12IsWebSearchsLineShownAsS1() {
+        // A reply kept from before web search's lines were `S1`, `S2` (#769) cites `[G1]`.
+        val legacy = segments("It went gold [G1].")
+        assertEquals(listOf(Segment.Text("It went gold "), Segment.Cite("S1"), Segment.Text(".")), legacy)
+        val id = legacy.filterIsInstance<Segment.Cite>().single().id
+        assertEquals(CiteKind.LINE, citeKind(id, HomeFixtures.withWeb, modelAllowed = false))
+        assertEquals(SourceId.WEB, HomeFixtures.withWeb[id]?.source)
+        assertEquals(segments("It went gold [S1]."), legacy)
+        // Other ids are as written.
+        for (other in listOf("MB1", "W1", "WD1", "L1", "P1", "AI")) {
+            assertEquals(listOf(Segment.Cite(other)), segments("[$other]"))
+        }
+    }
+
+    @Test
     fun theChipsFollowTheEvidenceOrderAndSayEachSourcesState() {
         val withRelease =
             EvidenceSet.of(

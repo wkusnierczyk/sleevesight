@@ -341,6 +341,20 @@ class RetrievalCacheTest {
         fixture.assertTotals()
     }
 
+    // Web search's rows from before its tag became `S` (#769) are under `G`, which no source has: a
+    // read of web search misses them (its lifetime is a day anyway), and a purge deletes them.
+    @Test
+    fun `web search's entries kept under its old tag G are misses and are purged`() {
+        val payload = RetrievalCodec.encode(sample(Outcome.SongArticle, SourceId.WEB)).replace("\"S\"", "\"G\"")
+        assertTrue("\"G\"" in payload)
+        fixture.caches.queries.retrievalInsert("G", key, " G ", RetrievalCodec.FORMAT.toLong(), 1, payload, 0, 0, 10)
+
+        assertNull(retrieval.get(SourceId.WEB, key, 1))
+        assertEquals(1, fixture.caches.purgeExpired())
+        assertEquals(0, entries())
+        fixture.assertTotals()
+    }
+
     @Test
     fun `artists and works of symbols only get keys of their own`() {
         assertNotEquals(
