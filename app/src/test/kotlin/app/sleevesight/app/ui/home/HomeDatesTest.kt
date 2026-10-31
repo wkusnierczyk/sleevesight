@@ -107,6 +107,32 @@ class HomeDatesTest {
     }
 
     @Test
+    fun aFreshOriginalWithItsReleaseWinsOverAKeptOneWithout() {
+        // A look again that found the release a failed lookup missed keeps the earlier state.
+        val keptOriginal = cohen.copy(release = null)
+        val result =
+            SourceResult(
+                Outcome.SongArticle,
+                emptyList(),
+                1.seconds,
+                releaseDates = listOf(soReal),
+                original = keptOriginal,
+            )
+        val state =
+            track(hallelujah, sources = mapOf(SourceId.MUSICBRAINZ to SourceState.Done(result, cached = true)))
+                .copy(resolution = Resolution(releaseDates = listOf(soReal), original = cohen))
+        assertEquals(
+            DateSentence.Original("1984-06", "Leonard Cohen", "Various Positions", null),
+            homeDates(state, hallelujah).last(),
+        )
+        // With no fresh one, the kept original says what it can.
+        assertEquals(
+            DateSentence.Original("1984-06", "Leonard Cohen", null, null),
+            homeDates(cached(hallelujah, result), hallelujah).last(),
+        )
+    }
+
+    @Test
     fun aTitleTracksSingleOfTheAlbumsYearIsNotTheAlbum() {
         // "Like a Prayer": the single on 3 March 1989, the album on 21 March, one title.
         val prayer = sundown.copy(title = "Like a Prayer", artists = "Madonna", album = "Like a Prayer")
@@ -135,6 +161,10 @@ class HomeDatesTest {
             listOf(DateSentence.Album("1989-03-03"), DateSentence.FirstHere),
             homeDates(resolved(prayer, single, dates.take(1)), prayer),
         )
+        // The album named but undated, the single dated in the year: no album date, and the single
+        // is not the album.
+        val undatedAlbum = listOf(dates[0], dates[1].copy(date = null))
+        assertEquals(listOf(onSingle), homeDates(resolved(prayer, single, undatedAlbum), prayer))
         // Kept before the types: as before, the earliest of the year, the single's group among the album's.
         val untyped = dates.map { it.copy(type = null) }
         assertEquals(

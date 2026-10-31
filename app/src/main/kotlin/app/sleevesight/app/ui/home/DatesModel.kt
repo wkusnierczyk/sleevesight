@@ -120,7 +120,9 @@ internal fun homeDates(
         firstDate != null && DateWhen.of(firstDate) != null ->
             sentences += DateSentence.First(firstDate, first?.title, ReleaseKind.of(first?.type))
     }
-    val original = kept?.original ?: resolution?.original
+    // A fresh lookup's original wins over a kept one without its release (#724): a *Look again*
+    // that finds the release a failed lookup missed keeps the earlier state, which lacks it.
+    val original = kept?.original?.takeIf { it.release != null } ?: resolution?.original ?: kept?.original
     if (original != null && DateWhen.of(original.date) != null) {
         val release = original.release
         sentences +=
@@ -243,28 +245,30 @@ private class AlbumDates(
             val dates = kept?.releaseDates?.ifEmpty { null } ?: track?.resolution?.releaseDates.orEmpty()
             val name = header.album?.takeIf(String::isNotBlank)
             val year = name?.let { ReleaseDate.albumYear(it, dates, header.year?.toString(), ALBUMS::albumKey) }
-            val inYear =
-                if (name == null || year == null) {
-                    emptyList()
-                } else {
-                    ReleaseDate
-                        .named(
-                            name,
-                            dates,
-                            ALBUMS::albumKey,
-                        ).filter { it.date?.let(ReleaseDate::yearIn) == year }
-                }
-            val album = albumsOf(inYear)
+            val named =
+                if (name == null || year == null) emptyList() else ReleaseDate.named(name, dates, ALBUMS::albumKey)
+            val album = albumsOf(named.filter { it.date?.let(ReleaseDate::yearIn) == year }, named)
             return AlbumDates(name, year, earliest(album.mapNotNull { it.date }), album.map { it.group }.toSet())
         }
 
         // Of [inYear], the album's releases: a single or EP of its title out the same year (the
         // title track's single) is not the album, so it is left out when a release of another type,
-        // or of none known, is named too (#724). A release kept before its type was has none, so
-        // none is left out of an entry kept then.
-        private fun albumsOf(inYear: List<ReleaseDate>): List<ReleaseDate> {
+        // or of none known, is named too (#724). When only singles or EPs are dated in the year and
+        // [named] has an undated album of the name, that album is the one: no date, its groups. A
+        // release kept before its type was has none, so none is left out of an entry kept then. A
+        // track that is the title track's single itself, with the album out the same year, is
+        // therefore never "on this album": the panel then says less, never something wrong.
+        private fun albumsOf(
+            inYear: List<ReleaseDate>,
+            named: List<ReleaseDate>,
+        ): List<ReleaseDate> {
             val (short, other) = inYear.partition { ReleaseKind.of(it.type) != null }
-            return if (short.isNotEmpty() && other.isNotEmpty()) other else inYear
+            val undated = named.filter { it.date == null && it.type != null && ReleaseKind.of(it.type) == null }
+            return when {
+                short.isNotEmpty() && other.isNotEmpty() -> other
+                short.isNotEmpty() && undated.isNotEmpty() -> undated
+                else -> inYear
+            }
         }
 
         // The earliest of [dates], as precise as the dates that refine it allow: of `2014` and
