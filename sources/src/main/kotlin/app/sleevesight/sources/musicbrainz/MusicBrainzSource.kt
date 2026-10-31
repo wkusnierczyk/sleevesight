@@ -41,7 +41,9 @@ class MusicBrainzSource(
      * first release, for the home screen's year (#52). 4: the artists by name too, and the
      * recording's tags, for the genre rows (#439). 5: and the dates of the releases' titles, for the
      * year after the album (#556). 6: a joint credit resolves (#661), so a track kept as *nothing found*
-     * or *rejected* by the rules before is asked again, and its artists give the genre labels. Without
+     * or *rejected* by the rules before is asked again, and its artists give the genre labels. 7: and
+     * the work's lyrics links, languages and whether the recording is instrumental, for *Lyrics* (#728),
+     * so a track kept before is asked again rather than shown as having no lyrics page. Without
      * [genres] (*Show genres* off, #444), it keeps no tags, and its results are kept apart ([WITHOUT_GENRES_VERSION]).
      */
     override val extractionVersion: Int = EXTRACTION_VERSION + if (genres) 0 else WITHOUT_GENRES_VERSION
@@ -76,4 +78,4 @@ class MusicBrainzSource(
     }
 }
 
-private const val EXTRACTION_VERSION = 6
+private const val EXTRACTION_VERSION = 7
