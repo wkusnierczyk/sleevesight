@@ -28,8 +28,10 @@ import kotlin.time.TimeSource
  * date of the first release ([SourceResult.firstReleased]) and the dates of the releases' titles
  * ([SourceResult.releaseDates], #556), the first release itself ([SourceResult.firstRelease]) and a
  * cover's original with its release ([SourceResult.original], #724), for a track later served from
- * the cache. A resolution whose lookup of the original's release failed ([Resolution.provisional])
- * gives a [SourceResult.provisional] result: shown, not kept, so a later run asks again.
+ * the cache, and, for the accepted recording, what MusicBrainz says of its lyrics
+ * ([SourceResult.lyrics], #728). A resolution a failed lookup left short ([Resolution.provisional]:
+ * of the original's release, or of the lyrics links) gives a [SourceResult.provisional] result:
+ * shown, not kept, so a later run asks again.
  */
 class MusicBrainzSource(
     private val clock: Clock = Clock.System,
@@ -43,7 +45,10 @@ class MusicBrainzSource(
      * first release, for the home screen's year (#52). 4: the artists by name too, and the
      * recording's tags, for the genre rows (#439). 5: and the dates of the releases' titles, for the
      * year after the album (#556). 6: a joint credit resolves (#661), so a track kept as *nothing found*
-     * or *rejected* by the rules before is asked again, and its artists give the genre labels. Without
+     * or *rejected* by the rules before is asked again, and its artists give the genre labels. 7: and
+     * the work's lyrics links, languages and whether the recording is instrumental, for *Lyrics* (#728),
+     * so a track kept before is asked again rather than shown as having no lyrics page, and the first
+     * release's title and type and the original's release, for *Dates* (#724). Without
      * [genres] (*Show genres* off, #444), it keeps no tags, and its results are kept apart ([WITHOUT_GENRES_VERSION]).
      */
     override val extractionVersion: Int = EXTRACTION_VERSION + if (genres) 0 else WITHOUT_GENRES_VERSION
@@ -71,6 +76,8 @@ class MusicBrainzSource(
             releaseDates = resolved.releaseDates,
             firstRelease = resolved.firstRelease,
             original = resolved.original,
+            // Only for an accepted recording: without one, there is no song to link the lyrics of.
+            lyrics = resolved.lyrics.takeIf { resolved.resolved },
             provisional = resolved.provisional,
             // No recording and no artist: a result that names an artist, or rejects a recording by
             // another one, is about the artists (#420).
@@ -79,4 +86,4 @@ class MusicBrainzSource(
     }
 }
 
-private const val EXTRACTION_VERSION = 6
+private const val EXTRACTION_VERSION = 7

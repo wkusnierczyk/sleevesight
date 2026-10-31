@@ -101,6 +101,28 @@ class PipelineCoordinatorRetryTest {
     }
 
     @Test
+    fun `a source shown but not kept is offered Retry, and only a tap asks it again`() {
+        // Online, MusicBrainz's lyrics links not known (#728): nothing unreachable, so back online
+        // asks nothing, but *Retry* is offered for MusicBrainz.
+        val world =
+            started().apply {
+                acted()
+                musicBrainzProvisional = true
+                play("A")
+                settle()
+            }
+        assertEquals(world.key("A"), world.coordinator.state.askAgainKey)
+        assertEquals(setOf(SourceId.MUSICBRAINZ), world.coordinator.state.askable)
+        val calls = world.calls.toMap()
+        world.retry(SourceId.MUSICBRAINZ)
+        world.settle()
+
+        assertEquals(listOf("A"), world.askedAgain)
+        assertEquals(setOf(SourceId.MUSICBRAINZ), world.carried.single().asked)
+        assertEquals(calls, world.calls)
+    }
+
+    @Test
     fun `with every source reached, no Retry is offered`() {
         val world =
             started().apply {

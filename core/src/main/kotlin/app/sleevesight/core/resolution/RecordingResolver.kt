@@ -10,6 +10,7 @@ import app.sleevesight.core.sources.ReleaseDate
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.ResolvedArtist
 import app.sleevesight.core.sources.ResolvedWork
+import app.sleevesight.core.sources.WorkLyrics
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -213,8 +214,14 @@ class RecordingResolver(
                 firstRelease = firstRelease(recording),
                 releaseDates = ReleaseDate.collapse(releases, names::key),
             )
-        val detail = fetched ?: (musicBrainz.recording(recording.mbid) as? Lookup.Found)?.value
-        return if (detail == null) base else withDetail(track, chosen, base, detail)
+        // Without the recording's detail, nothing is known of its work, and so of its lyrics: none when
+        // MusicBrainz has no such recording; when the lookup failed, not known, and the resolution
+        // provisional (#728), so a later run asks again.
+        return when (val lookup = fetched?.let { Lookup.Found(it) } ?: musicBrainz.recording(recording.mbid)) {
+            is Lookup.Found -> withDetail(track, chosen, base, lookup.value)
+            Lookup.NotFound -> base.copy(lyrics = WorkLyrics())
+            is Lookup.Failed -> base.copy(provisional = true)
+        }
     }
 
     private suspend fun withDetail(
@@ -233,13 +240,17 @@ class RecordingResolver(
             }
         val recordingCredits = recordingCredits(detail.artistRelations)
         val link = detail.works.firstOrNull()
-        val work = link?.let { (musicBrainz.work(it.mbid) as? Lookup.Found)?.value }
+        val lookup = link?.let { musicBrainz.work(it.mbid) }
+        val work = (lookup as? Lookup.Found)?.value
         val withRecording =
             base.copy(
                 artists = artists,
                 credits = recordingCredits,
                 wikidataIds = detail.wikidataIds,
                 recordingTags = detail.tags,
+                lyrics = lyricsOf(detail, lookup),
+                // The work's lyrics links not known (#728): a later run asks again.
+                provisional = lookup is Lookup.Failed,
             )
         return if (link == null || work == null) {
             withRecording.copy(work = link?.let { ResolvedWork(it.mbid, it.title) }, cover = link?.cover ?: false)
@@ -251,9 +262,12 @@ class RecordingResolver(
             // that fails does too, and leaves the resolution provisional, so MusicBrainz's result is
             // not kept and a later run asks again.
             val original = covered.original
-            val lookup = original?.let { musicBrainz.recordingReleases(it.recordingMbid) }
-            val release = (lookup as? Lookup.Found)?.value?.let { firstRelease(it, fallback = false) }
-            covered.copy(original = original?.copy(release = release), provisional = lookup is Lookup.Failed)
+            val releases = original?.let { musicBrainz.recordingReleases(it.recordingMbid) }
+            val release = (releases as? Lookup.Found)?.value?.let { firstRelease(it, fallback = false) }
+            covered.copy(
+                original = original?.copy(release = release),
+                provisional = covered.provisional || releases is Lookup.Failed,
+            )
         }
     }
 
@@ -642,4 +656,25 @@ class RecordingResolver(
                 .values
                 .map { same -> same.first().copy(detail = same.flatMap { it.detail }.distinct()) }
     }
+}
+
+// What MusicBrainz says of the lyrics (#728): the lyrics pages of the work [lookup] found (only the
+// first work is looked up; none without a work, or when MusicBrainz has no such work; not known when
+// the lookup failed), the languages of every work the recording performs, and whether its
+// performance of any of them is marked instrumental.
+private fun lyricsOf(
+    detail: MbRecordingDetail,
+    lookup: Lookup<MbWork>?,
+): WorkLyrics {
+    val work = (lookup as? Lookup.Found)?.value
+    return WorkLyrics(
+        links =
+            when (lookup) {
+                null, Lookup.NotFound -> emptyList()
+                is Lookup.Found -> lookup.value.lyricsUrls.distinct()
+                is Lookup.Failed -> null
+            },
+        languages = (detail.works.flatMap { it.languages } + work?.languages.orEmpty()).distinct(),
+        instrumental = detail.works.any { it.instrumental },
+    )
 }

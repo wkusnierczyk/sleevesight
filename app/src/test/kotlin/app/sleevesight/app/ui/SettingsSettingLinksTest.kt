@@ -233,6 +233,18 @@ class SettingsSettingLinksTest {
         }
 
     @Test
+    fun theSettingsOpenedAtTheGeniusSearchLandOnItsRow() =
+        // From Home's *Lyrics*, where the search is off: "See Settings → Appearance." (#728).
+        show(landOn = SettingsTarget.lyricsSearch) {
+            landedOnRow(SettingsTarget.lyricsSearch)
+            compose
+                .onNode(
+                    hasAnyAncestor(hasTestTag(SettingsTarget.lyricsSearch.tag)) and
+                        hasText(app.getString(R.string.settings_lyrics_search)),
+                ).assertExists()
+        }
+
+    @Test
     fun theSettingsOpenedAtASettingLandOnceAVisit() {
         val target = SettingsTarget(SettingsSection.AI_SERVICES, "model_GOOGLE")
         show(landOn = target) {

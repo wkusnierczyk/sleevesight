@@ -127,6 +127,9 @@ internal class World {
      */
     var wikipediaDown: Boolean? = null
 
+    /** Whether MusicBrainz's result is shown but not kept, a lookup for a part of it having failed (#728). */
+    var musicBrainzProvisional = false
+
     /** The runs started to ask their unreachable sources again (#192), by title, and what they carried. */
     val askedAgain = mutableListOf<String>()
     val carried = mutableListOf<Gathered>()
@@ -371,14 +374,18 @@ internal class World {
         fun done(
             source: SourceId,
             outcome: Outcome,
+            provisional: Boolean = false,
         ): SourceState {
             val lines = if (outcome == Outcome.SongArticle) listOf(line(source)) else emptyList()
-            return SourceState.Done(SourceResult(outcome, lines, Duration.ZERO), cached = false)
+            return SourceState.Done(
+                SourceResult(outcome, lines, Duration.ZERO, provisional = provisional),
+                cached = false,
+            )
         }
         val web = if (unreachable) Outcome.Unreachable else Outcome.SongArticle
         val found =
             mapOf(
-                SourceId.MUSICBRAINZ to done(SourceId.MUSICBRAINZ, Outcome.None),
+                SourceId.MUSICBRAINZ to done(SourceId.MUSICBRAINZ, Outcome.None, musicBrainzProvisional),
                 SourceId.WEB to done(SourceId.WEB, web),
             )
         val lastFm = if (newSource) mapOf(SourceId.LASTFM to done(SourceId.LASTFM, Outcome.SongArticle)) else emptyMap()

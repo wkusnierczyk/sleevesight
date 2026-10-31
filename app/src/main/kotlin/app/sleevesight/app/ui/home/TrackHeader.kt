@@ -26,8 +26,10 @@ internal fun TrackHeader(
 
 /**
  * Under the album, the line of buttons that open in place ([InPlaceLine], #724), whatever *Layout*
- * says: *Dates*, for every track ([datesItem]), its *Retry* asking MusicBrainz again ([Retries])
- * and its link opening *Settings → Sources*. #772 adds *Genres* to [InPlaceLine]'s items here.
+ * says: *Dates*, for every track ([datesItem]), and *Lyrics* while *Lyrics links* is on
+ * ([lyricsItem], #728), each one's *Retry* asking MusicBrainz again ([Retries]) and its links opening
+ * the settings: *Sources*, and for *Lyrics*' search *Appearance*. #772 adds *Genres* to
+ * [InPlaceLine]'s items here.
  */
 @Composable
 internal fun UnderAlbum(
@@ -39,9 +41,15 @@ internal fun UnderAlbum(
     val track = shown.track
     val playing = shown.playing
     val retries = Retries(shown.view, playing, actions.askAgain)
-    val dates =
-        datesItem(homeDates(track, header), NoDates.of(track), retries.of(SourceId.MUSICBRAINZ)) {
-            actions.openSettingsAt(SettingsTarget.sources)
+    val retry = retries.of(SourceId.MUSICBRAINZ)
+    val openSources = { actions.openSettingsAt(SettingsTarget.sources) }
+    val dates = datesItem(homeDates(track, header), NoDates.of(track), retry, openSources)
+    val lyrics =
+        if (shown.lyricsLinks) {
+            val links = remember(track, shown.lyricsSearch) { homeLyrics(track, shown.lyricsSearch) }
+            lyricsItem(links, retry, openSources) { actions.openSettingsAt(SettingsTarget.lyricsSearch) }
+        } else {
+            null
         }
-    InPlaceLine(listOf(dates), memory, playing)
+    InPlaceLine(listOfNotNull(dates, lyrics), memory, playing)
 }

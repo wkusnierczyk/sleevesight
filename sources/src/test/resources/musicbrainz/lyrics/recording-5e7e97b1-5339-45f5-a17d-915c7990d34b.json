@@ -1,0 +1,60 @@
+{
+ "id": "5e7e97b1-5339-45f5-a17d-915c7990d34b",
+ "title": "Snowbird",
+ "relations": [
+  {
+   "begin": null,
+   "target-credit": "",
+   "attribute-ids": {
+    "instrumental": "c031ed4f-c9bb-4394-8cf5-e8ce4db512ae",
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "source-credit": "",
+   "ended": false,
+   "attributes": [
+    "cover",
+    "instrumental"
+   ],
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "type": "performance",
+   "target-type": "work",
+   "attribute-values": {},
+   "direction": "forward",
+   "end": null,
+   "work": {
+    "languages": [
+     "eng"
+    ],
+    "attributes": [],
+    "type-id": "f061270a-2fd6-32f1-a641-f0f8676d14e6",
+    "type": "Song",
+    "language": "eng",
+    "disambiguation": "",
+    "id": "f17eefd3-54ad-371a-90da-488571c94f99",
+    "iswcs": [
+     "T-072.147.417-4"
+    ],
+    "title": "Snowbird"
+   }
+  }
+ ],
+ "artist-credit": [
+  {
+   "joinphrase": "",
+   "artist": {
+    "name": "Ossie Scott",
+    "id": "65cf428e-494c-48d6-9371-a9d2cab1d887",
+    "disambiguation": "saxophonist",
+    "sort-name": "Scott, Ossie",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "country": null,
+    "type": "Person"
+   },
+   "name": "Ossie Scott"
+  }
+ ],
+ "length": 173000,
+ "video": false,
+ "disambiguation": "",
+ "first-release-date": "1971"
+}

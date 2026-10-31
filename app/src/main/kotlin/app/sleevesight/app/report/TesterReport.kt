@@ -427,6 +427,8 @@ internal val SETTING_LINES: List<Pair<String, (Settings) -> String>> =
         "themeButton" to { onOff(it.themeButton) },
         "font" to { it.font.name },
         "introAtStart" to { onOff(it.introAtStart) },
+        "lyricsLinks" to { onOff(it.lyricsLinks) },
+        "lyricsSearch" to { onOff(it.lyricsSearch) },
         "dismissed" to { s ->
             s.dismissed
                 .sorted()

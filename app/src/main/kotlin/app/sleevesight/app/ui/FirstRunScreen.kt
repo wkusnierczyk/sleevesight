@@ -117,6 +117,7 @@ private fun FirstRunText(
     Bullet(R.string.first_run_to_ai)
     Bullet(R.string.first_run_api_keys)
     Bullet(R.string.first_run_to_art_host)
+    Bullet(R.string.first_run_to_lyrics)
     Bullet(R.string.first_run_to_speech)
     Bullet(R.string.first_run_to_developer)
     Body(R.string.first_run_ip_address)

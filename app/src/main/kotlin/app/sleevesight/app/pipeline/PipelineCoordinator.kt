@@ -720,18 +720,19 @@ data class CoordinatorState(
 
     /**
      * The key of the run whose unreachable sources a tap on *Retry* asks again (#724): the current
-     * run, its sources landed with some unreachable ([Gathered.unreachable], which a tap may name),
-     * no model call under way, requests allowed. Null otherwise. Free: only the sources are asked,
-     * as back online (#192), and a written insight is not written again unasked.
+     * run, its sources landed with some unreachable, or shown but not kept for a failed lookup
+     * ([Gathered.retryable], which a tap may name: MusicBrainz without the lyrics links, #728), no
+     * model call under way, requests allowed. Null otherwise. Free: only the sources are asked, as
+     * back online (#192), and a written insight is not written again unasked.
      */
     val askAgainKey: RunKey?
         get() {
             val run = current?.takeIf { allowed && !it.calling } ?: return null
-            return run.key.takeIf { run.gathered?.unreachable?.isNotEmpty() == true }
+            return run.key.takeIf { run.gathered?.retryable?.isNotEmpty() == true }
         }
 
-    /** The sources a tap on *Retry* may ask again for the current run ([askAgainKey]): those it found unreachable. */
-    val askable: Set<SourceId> get() = askAgainKey?.let { current?.gathered?.unreachable }.orEmpty()
+    /** The sources a tap on *Retry* may ask again for the current run ([askAgainKey]): [Gathered.retryable]. */
+    val askable: Set<SourceId> get() = askAgainKey?.let { current?.gathered?.retryable }.orEmpty()
 
     /** Whether the current run looks again (#617) and has not yet assembled its evidence. */
     val lookingAgain: Boolean get() = current?.lookAgain?.let { it.foundNew == null } == true
