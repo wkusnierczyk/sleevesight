@@ -30,7 +30,7 @@
     <!-- The notes. -->
     <string name="home_guide_note_settings">tap to configure</string>
     <string name="home_guide_note_player">tap to open</string>
-    <string name="home_guide_note_genres">tap a genre for details</string>
+    <string name="home_guide_note_genres">tap to see the genres</string>
     <string name="home_guide_note_insight">read about what’s playing</string>
     <string name="home_guide_note_cite">follow to references</string>
     <string name="home_guide_note_write">generate an insight (paid)</string>
@@ -39,7 +39,7 @@
          name (home_guide_part_…). Each says what the app does; keep them in step with it. -->
     <string name="home_guide_about_settings">Opens Settings: the players Sleevesight follows, which sources it looks up, your AI service and the API keys, genres, when insights are written, history, and how the app looks (theme, font, layout).</string>
     <string name="home_guide_about_player">The player Sleevesight follows, and whether it is playing. A tap opens the player.</string>
-    <string name="home_guide_about_genres">The track’s genres, from MusicBrainz or Last.fm. A tap on one shows which of the track, the artist and the album carry it and where the label comes from; what the genre is, where Wikipedia has an article on it; and, where your AI service can explain it, Why is this …?, a paid call.</string>
+    <string name="home_guide_about_genres">The track’s genres, from MusicBrainz or Last.fm, behind the Genres button. A tap on one shows which of the track, the artist and the album carry it and where the label comes from; what the genre is, where Wikipedia has an article on it; and, where your AI service can explain it, Why is this …?, a paid call.</string>
     <string name="home_guide_about_insight">A few sentences about the track, written by your AI service from what the sources found, and checked against them.</string>
     <string name="home_guide_about_cite">Each sentence names the source lines it rests on. A tap on one opens Sources at that line. A sentence underlined in red rests on none.</string>
     <string name="home_guide_about_write">Write insight has your AI service write the insight, a paid call on your key. The arrow beside it chooses when insights are written: On demand, On track change (auto) or On track skip (auto). Once an insight is written, it also offers Look again, which looks every source up afresh without an AI call (a paid search on your Exa key when Exa web search is on); when they found something new, Rewrite insight writes the insight from it.</string>
@@ -188,10 +188,28 @@
          never break, so it stays on one line. -->
     <string name="home_settings_appearance_link">Settings\u00A0→\u00A0Appearance</string>
 
-    <!-- Genre labels (#558): the chips, the genre's panel with its table, and where the table's labels come from. -->
+    <!-- Genre labels (#558): the chips, the genre's panel with its table, and where the table's labels come from.
+         On Home (#772), a button under the album beside Dates that opens in place into a panel of that
+         title, with Close (page_close) at its top right, the chips inside. -->
     <string name="home_genres">Genres</string>
+    <!-- The Genres button's action, as a screen reader names it ("Double-tap to show genres"). -->
+    <string name="home_genres_show">show genres</string>
+    <!-- In the Genres panel, while the genres are being gathered: %1$s the genre sources still asked,
+         one (Last.fm) or two (home_sources_two). -->
+    <string name="home_genres_looking">Looking on %1$s…</string>
+    <!-- Two sources named together: "Last.fm and MusicBrainz". -->
+    <string name="home_sources_two">%1$s and %2$s</string>
+    <!-- In the Genres panel, a genre source that could not be reached; Retry (home_retry) beside it asks
+         it again. %1$s is the source. -->
+    <string name="home_genre_source_unreachable">%1$s could not be reached.</string>
     <string name="home_genres_none">None found.</string>
-    <string name="home_genres_off">Every genre source is off in Settings.</string>
+    <!-- Every genre source off: this line, then home_genres_off_see on its own line. -->
+    <string name="home_genres_off">Genre sources are disabled.</string>
+    <!-- %1$s is home_settings_sources_link when the sources are off in Settings, home_settings_genres_link
+         when they are on but their genre switches are off; a link that opens Settings there. -->
+    <string name="home_genres_off_see">See %1$s.</string>
+    <!-- A link that opens Settings at Genres; its spaces never break, so it stays on one line. -->
+    <string name="home_settings_genres_link">Settings\u00A0→\u00A0Genres</string>
     <!-- The disclosure triangles of the settings' sections: folded, unfolded. -->
     <string name="home_fold_folded">▸</string>
     <string name="home_fold_unfolded">▾</string>
@@ -200,7 +218,7 @@
     <!-- A page (Sources', the genres') once nothing plays (#627): the players and the guide are on Home. -->
     <string name="page_nothing_playing">Nothing is playing in a player you follow.</string>
     <!-- The button at the end of a page opened from somewhere (the credits, the first-run screen opened again), which closes it;
-         and at the top right of a panel on Home (a genre's, Sources', Dates'), which closes the panel. -->
+         and at the top right of a panel on Home (a genre's, Sources', Dates', Genres'), which closes the panel. -->
     <string name="page_close">Close</string>
     <!-- Under Layout's Separate pages (#447): the action of a chip on Home that opens a page (Sources,
          a genre), as a screen reader names it ("Double-tap to open page"). -->

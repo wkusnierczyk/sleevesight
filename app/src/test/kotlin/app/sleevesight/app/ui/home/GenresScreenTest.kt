@@ -50,6 +50,8 @@ import org.robolectric.annotation.GraphicsMode
  * panel, another switches it, the same chip or *Close* closes it; the panel's table names its rows
  * by the track's title, the artist's name and the album's title, on one line each and read whole,
  * the genre marked wherever it shows; where the table's labels come from, a line per row; none, and off.
+ * Inside *Genres*' panel (#772), as [GenresContent] draws it; the button, the panel and why it has no
+ * chip are `GenresButtonScreenTest`'s.
  */
 @RunWith(RobolectricTestRunner::class)
 class GenresScreenTest {
@@ -95,7 +97,7 @@ class GenresScreenTest {
             scenario.onActivity {
                 it.setContent {
                     Column(Modifier.verticalScroll(rememberScrollState())) {
-                        Genres(playing.copy(genres = genres), settings)
+                        GenresContent(playing.copy(genres = genres), settings)
                     }
                 }
             }
@@ -345,22 +347,12 @@ class GenresScreenTest {
     }
 
     @Test
-    fun showGenresOffShowsNoGenresAtAll() {
-        // Labels the run holds still show nothing: *Show genres* off (#444) hides them all.
-        show(three, Settings(showGenres = false)) {
-            compose.onNodeWithText(text(R.string.home_genres_off)).assertDoesNotExist()
-            compose.onNodeWithText(text(R.string.home_genres_none)).assertDoesNotExist()
-            assertEquals(0, compose.onAllNodesWithTag(GENRE_PREFIX + "track:baroquepop").fetchSemanticsNodes().size)
-        }
-    }
-
-    @Test
     fun anOpenPanelOutlastsLabelsThatLandLaterAndANewTrackStartsClosed() {
         val genres = mutableStateOf(TrackGenres(listOf(beatles)))
         val playing = mutableStateOf(track())
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity {
-                it.setContent { Genres(playing.value.copy(genres = genres.value), Settings()) }
+                it.setContent { Column { GenresContent(playing.value.copy(genres = genres.value), Settings()) } }
             }
             scenario.onActivity {
                 tap(GENRE_PREFIX + "artist:The Beatles:rock")

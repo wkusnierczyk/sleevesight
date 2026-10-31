@@ -13,6 +13,7 @@ import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.assertTouchHeightIsEqualTo
@@ -27,6 +28,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performFirstLinkClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
@@ -60,9 +62,11 @@ import app.sleevesight.core.genres.LabelSource
 import app.sleevesight.core.genres.TrackGenres
 import app.sleevesight.core.genres.TrackLabel
 import app.sleevesight.core.model.NowPlaying
+import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.RunKey
+import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.settings.Layout
@@ -80,7 +84,7 @@ import org.robolectric.Shadows.shadowOf
 
 /**
  * *Layout* (#447), through the app's navigation graph: under *Expandable boxes* each item of Home
- * expands in place; under *Separate pages* *Sources* and the genres (from a genre chip, #558) each
+ * expands in place; under *Separate pages* *Sources* and the genres (from *Genres*, #772) each
  * open on a page of their own, with a back arrow and a title a screen reader reads as a heading, and back returns to
  * Home where it was scrolled to. The insight shows in full on Home either way.
  */
@@ -279,7 +283,9 @@ class LayoutPagesTest {
 
             compose.onNodeWithTag(SOURCES_CHIP_TAG).performScrollTo().performClick()
             compose.onNodeWithTag(LINE_PREFIX + "MB1").assertExists()
-            // A genre chip opens its panel on Home (#558), with the table and where its labels come from.
+            // *Genres* opens its panel in place (#772), and a chip in it its genre (#558), with the table
+            // and where its labels come from.
+            compose.onNodeWithTag(GENRES_CHIP_TAG).performScrollTo().performClick()
             compose.onNodeWithTag(GENRE_PREFIX + "track:folkpop").performScrollTo().performClick()
             compose.onNodeWithTag(GENRE_PANEL_HEADING_TAG).assertTextEquals("Folk Pop")
             compose.onNodeWithTag(GENRE_CELL_PREFIX + "artist:Gordon Lightfoot:rock").assertExists()
@@ -354,7 +360,8 @@ class LayoutPagesTest {
             compose.onNodeWithText(text(R.string.home_insight_title)).assertExists()
             assertEquals(0, count(SOURCES_CHIP_TAG))
             assertEquals(0, count(SOURCES_PAGE_LINK_TAG))
-            assertEquals(0, count(GENRE_PREFIX + "track:folkpop"))
+            assertEquals(0, count(GENRES_CHIP_TAG))
+            assertEquals(0, count(GENRES_PAGE_LINK_TAG))
 
             // The settings' first read, frame by frame: the pages' layout, never the boxes'.
             compose.mainClock.autoAdvance = false
@@ -367,9 +374,10 @@ class LayoutPagesTest {
             }
             assertTrue(drawn)
             compose.mainClock.autoAdvance = true
-            // A genre chip opens the genres' page.
+            // *Genres* opens the genres' page.
+            assertEquals(0, count(GENRES_CHIP_TAG))
             compose
-                .onNodeWithTag(GENRE_PREFIX + "track:folkpop")
+                .onNodeWithTag(GENRES_PAGE_LINK_TAG)
                 .assert(clickLabelled(text(R.string.home_page_open)))
         }
     }
@@ -409,48 +417,118 @@ class LayoutPagesTest {
         }
 
     @Test
-    fun aChipOpensTheGenresPageAtItsGenreWithTheChipsAndThePanel() =
+    fun genresOpensTheGenresPageWithEveryGenreInAPanelOfItsOwnAndNoChips() =
         show(state(long(), pages)) {
-            // On Home, the chips alone: no `Genres ›`, no panel.
-            compose.onNodeWithTag(GENRE_PREFIX + "track:folkpop").assertExists()
-            assertEquals(0, count(GENRE_PREFIX + "artist:Gordon Lightfoot:rock"))
+            // On Home, the button alone: no chip, no panel.
+            assertEquals(0, count(GENRE_PREFIX + "track:folkpop"))
+            assertEquals(0, count(GENRES_CHIP_TAG))
             assertEquals(0, count(GENRE_PANEL_TAG))
-            val titles = compose.onAllNodesWithText(text(R.string.home_genres), substring = true)
-            assertEquals(0, titles.fetchSemanticsNodes().size)
 
-            compose.onNodeWithTag(GENRE_PREFIX + "track:folkpop").performScrollTo().performClick()
+            compose.onNodeWithTag(GENRES_PAGE_LINK_TAG).performScrollTo().performClick()
             compose.waitForIdle()
             title(text(R.string.home_genres))
-            // The chips, the tapped one marked, and its panel, with no *Close*: the back arrow closes the page.
-            compose.onNodeWithTag(GENRE_PREFIX + "track:folkpop").assertIsSelected()
-            compose.onNodeWithTag(GENRE_PANEL_HEADING_TAG).assertTextEquals("Folk Pop")
+            // No chips: the chips' genres, in their order, each in a panel titled with its name, a
+            // heading, with no *Close*: the back arrow closes the page.
+            assertEquals(0, count(GENRE_PREFIX + "track:folkpop"))
+            val headings = compose.onAllNodesWithTag(GENRE_PANEL_HEADING_TAG).fetchSemanticsNodes()
+            assertEquals(
+                listOf("Folk Pop"),
+                headings.map {
+                    it.config[SemanticsProperties.Text].joinToString { t ->
+                        t.text
+                    }
+                },
+            )
+            assertTrue(headings.all { SemanticsProperties.Heading in it.config })
             assertEquals(0, count(GENRE_PANEL_CLOSE_TAG))
+            // Each holds what the genre's box in place does: the table, the genre marked, and where it comes from.
             compose.onNodeWithTag(GENRES_ROW_PREFIX + "1").assertTextEquals("Gordon Lightfoot")
             compose.onNodeWithTag(GENRE_CELL_PREFIX + "track:folkpop").assertIsSelected()
+            compose.onNodeWithText(text(R.string.home_genre_from_track), substring = true).assertExists()
             // The table's labels are plain: nothing opens from them.
             compose
                 .onNodeWithTag(GENRE_CELL_PREFIX + "artist:Gordon Lightfoot:rock")
-                .assert(SemanticsMatcher.keyNotDefined(SemanticsActions.OnClick))
-            // The marked chip has nothing to do on the page: not a button, so a screen reader offers no action.
-            compose
-                .onNodeWithTag(GENRE_PREFIX + "track:folkpop")
                 .assert(SemanticsMatcher.keyNotDefined(SemanticsActions.OnClick))
 
             back()
             onHome()
             assertEquals(0, count(GENRE_PANEL_TAG))
+            assertEquals(0, count(GENRES_PANEL_TAG))
         }
 
     @Test
-    fun withOneLevelEachChipOpensThePageWithTheTablesOneRow() =
+    fun onTheGenresPageEveryGenreOfTheChipsHasItsPanelInTheChipsOrder() {
+        val two =
+            TrackGenres(
+                listOf(
+                    GenreRow(
+                        GenreLevel.TRACK,
+                        null,
+                        listOf(label("folk pop", GenreLevel.TRACK), label("ballad", GenreLevel.TRACK)),
+                    ),
+                    GenreRow(GenreLevel.ARTIST, "Gordon Lightfoot", listOf(rock)),
+                ),
+            )
+        show(state(long().copy(genres = two), pages)) {
+            compose.onNodeWithTag(GENRES_PAGE_LINK_TAG).performScrollTo().performClick()
+            compose.waitForIdle()
+            val headings = compose.onAllNodesWithTag(GENRE_PANEL_HEADING_TAG).fetchSemanticsNodes()
+            assertEquals(
+                listOf("Folk Pop", "Ballad"),
+                headings.map { it.config[SemanticsProperties.Text].joinToString { t -> t.text } },
+            )
+            assertTrue(headings[0].boundsInRoot.top < headings[1].boundsInRoot.top)
+            assertEquals(0, count(GENRE_PANEL_CLOSE_TAG))
+            assertEquals(0, count(GENRE_PREFIX + "track:ballad"))
+        }
+    }
+
+    @Test
+    fun theGenresPageWithNoGenreSaysWhyAsThePanelDoes() =
+        show(state(long().copy(genres = TrackGenres()), pages)) {
+            compose.onNodeWithTag(GENRES_PAGE_LINK_TAG).performScrollTo().performClick()
+            compose.waitForIdle()
+            title(text(R.string.home_genres))
+            compose.onNodeWithText(text(R.string.home_genres_none)).assertExists()
+            assertEquals(0, count(GENRE_PANEL_TAG))
+        }
+
+    @Test
+    fun onTheGenresPageATapOnRetryHandsTheFocusToTheBackArrow() {
+        // Last.fm not reached, *Retry* offered for it, under MusicBrainz's genres' panels, which hold
+        // controls of their own a falling focus could land on.
+        val sources = mapOf(SourceId.MUSICBRAINZ to done(), SourceId.LASTFM to done(Outcome.Unreachable))
+        val unreached = long().copy(sources = sources)
+        val key = RunKey.of(normalizer, sundown)
+        val offered =
+            NowPlayingState(
+                PipelineView(unreached, aiReady = true, askAgainKey = key, askable = setOf(SourceId.LASTFM)),
+                unreached.nowPlaying,
+                PlaybackInfo(Settings.SPOTIFY, PlaybackStatus.PLAYING),
+                settings = pages,
+            )
+        show(offered) { current ->
+            compose.onNodeWithTag(GENRES_PAGE_LINK_TAG).performScrollTo().performClick()
+            compose.waitForIdle()
+            compose.onNodeWithText("Last.fm could not be reached.").assertExists()
+            compose.onNodeWithTag(RETRY_TAG).performScrollTo().requestFocus()
+            compose.waitForIdle()
+            compose.onNodeWithTag(RETRY_TAG).assertIsFocused().performClick()
+            compose.waitForIdle()
+            // Last.fm asked again: the line gives way to "Looking on Last.fm…".
+            val asked = mapOf(SourceId.MUSICBRAINZ to done(), SourceId.LASTFM to SourceState.Pending)
+            current.value = state(unreached.copy(sources = asked), pages)
+            compose.waitForIdle()
+            assertEquals(0, count(RETRY_TAG))
+            compose.onNodeWithText("Looking on Last.fm…").assertExists()
+            compose.onNodeWithTag(PAGE_BACK_TAG).assertIsFocused()
+        }
+    }
+
+    @Test
+    fun withOneLevelThePagesPanelHasTheTablesOneRow() =
         show(state(long().copy(genres = TrackGenres(genres.rows.take(1))), pages)) {
-            // A button a screen reader names "open page", never selected, as with more levels (#548).
-            compose
-                .onNodeWithTag(GENRE_PREFIX + "track:folkpop")
-                .performScrollTo()
-                .assert(clickLabelled(text(R.string.home_page_open)))
-                .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Selected))
-                .performClick()
+            compose.onNodeWithTag(GENRES_PAGE_LINK_TAG).performScrollTo().performClick()
             compose.waitForIdle()
             title(text(R.string.home_genres))
             compose.onNodeWithTag(GENRES_ROW_PREFIX + "0").assertExists()
@@ -516,7 +594,7 @@ class LayoutPagesTest {
     @Test
     fun genresPageFollowsANewTrackAOneLevelTrackAndShowGenres() =
         show(state(long(), pages)) { current ->
-            compose.onNodeWithTag(GENRE_PREFIX + "track:folkpop").performScrollTo().performClick()
+            compose.onNodeWithTag(GENRES_PAGE_LINK_TAG).performScrollTo().performClick()
             compose.waitForIdle()
             compose.onNodeWithTag(GENRE_CELL_PREFIX + "artist:Gordon Lightfoot:rock").assertExists()
 
@@ -532,7 +610,7 @@ class LayoutPagesTest {
             current.value = state(next.copy(genres = jazz), pages)
             compose.waitForIdle()
             title(text(R.string.home_genres))
-            // The genre tapped on Home is not this track's: the first chip's panel shows.
+            // The new track's genres, each in its panel.
             compose.onNodeWithTag(GENRE_PANEL_HEADING_TAG).assertTextEquals("Jazz")
             compose.onNodeWithTag(GENRE_CELL_PREFIX + "album:bebop").assertExists()
             assertEquals(0, count(GENRE_CELL_PREFIX + "artist:Gordon Lightfoot:rock"))
@@ -586,13 +664,19 @@ class LayoutPagesTest {
                 // A chip since #623, as the genres' are; it opens a page, so it is never collapsed.
                 .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.StateDescription))
                 .assertTouchHeightIsEqualTo(48.dp)
-            // A chip opens the genres' page: a button, never selected.
+            // *Genres* opens the genres' page (#772): a button named Genres, no state, "open page".
             compose
-                .onNodeWithTag(GENRE_PREFIX + "track:folkpop")
+                .onNodeWithTag(GENRES_PAGE_LINK_TAG)
                 .performScrollTo()
                 .assertTouchHeightIsEqualTo(48.dp)
-                .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
+                .assert(
+                    SemanticsMatcher.expectValue(
+                        SemanticsProperties.ContentDescription,
+                        listOf(text(R.string.home_genres)),
+                    ),
+                ).assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
                 .assert(clickLabelled(open))
+                .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.StateDescription))
                 .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Selected))
         }
 }

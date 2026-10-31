@@ -3,6 +3,7 @@ package app.sleevesight.core.pipeline
 import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.evidence.Scope
+import app.sleevesight.core.genres.TrackGenres
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.Outcome
@@ -34,6 +35,17 @@ internal class RunInput(
     val track: NormalizedTrack,
     val again: Gathered? = null,
     val lookAgain: LookAgain? = null,
+    val before: LabelsBefore = LabelsBefore(),
+)
+
+/**
+ * What a run that asks again starts with of the genres shown for its track (#772): the [genres],
+ * until its own are assembled; and for a *Retry*, what the run before's label requests after the
+ * evidence gave ([kept]), for the sources it does not ask again.
+ */
+internal class LabelsBefore(
+    val genres: TrackGenres = TrackGenres(),
+    val kept: TrackLabels.LaterKept? = null,
 )
 
 /** Where a run reports: diagnostics events, and changes to its state. */
@@ -101,12 +113,25 @@ internal class TrackRun(
                         adapter.id to (keptBefore[adapter.id] ?: fresh)
                     },
                 resolution = resolvedBefore,
+                // A run that asks again shows the genres the run before it had (#772), until its own
+                // are assembled, which replace them.
+                genres = input.before.genres,
             ),
         )
 
     private val guard = CacheGuard(parts.cache, key, onEvent)
     private val labels =
-        TrackLabels(parts.musicBrainzLabels, parts.lastFmLabels, settings, key, this, parts.normalizer::foldForKey)
+        TrackLabels(
+            parts.musicBrainzLabels,
+            parts.lastFmLabels,
+            settings,
+            key,
+            this,
+            parts.normalizer::foldForKey,
+            input.before.kept,
+            // A *Retry* asks the label requests of the sources it asks again only (#772).
+            asking = input.again?.takeIf { it.only != null }?.let { it.asked + it.labelsAsked },
+        )
 
     /**
      * Gathers the evidence, then the insight: written at once when [control] decides so; else,
@@ -124,12 +149,17 @@ internal class TrackRun(
             withContext(if (looksAgain) FreshLookups else EmptyCoroutineContext) {
                 gather()
                 control.gathered(Gathered(state.value.sources, state.value.resolution))
+                // Published as asked for with the assembled genres, before they may start (#772): a
+                // panel says it is still looking.
+                val later = labels.later(state.value)
                 val evidence = assemble()
                 control.assembled(evidence)
                 launch {
                     control.await(RunStep.LABELS)
                     try {
-                        labels.addLater(state.value)
+                        labels.addLater(later)
+                        // Those that failed, a *Retry* may ask again (#772).
+                        labels.failedSources.takeIf { it.isNotEmpty() }?.let(control::labelsFailed)
                     } finally {
                         control.ended(RunStep.LABELS)
                     }
@@ -140,6 +170,10 @@ internal class TrackRun(
         } catch (e: CancellationException) {
             emit(PipelineEvent.Superseded(key))
             throw e
+        } finally {
+            // Whatever ends the run, before its label requests start or while they run: none stays
+            // asked for (#772).
+            labels.settle()
         }
     }
 
@@ -299,7 +333,17 @@ internal class TrackRun(
         val drafts =
             playerLines() + results.flatMap { it.evidence }.filter { settings.isEnabled(it.source) }
         val evidence = EvidenceSet.of(drafts, parts.hasher)
-        update { it.copy(evidence = evidence, genres = labels.of(it)) }
+        // The genres and how their later requests stand, in one update with the evidence (#772).
+        update {
+            it.copy(
+                evidence = evidence,
+                genres = labels.of(it),
+                laterLabels = labels.states(),
+                laterFound = labels.found,
+                laterAnswered = labels.answered,
+                genresAssembled = true,
+            )
+        }
         emit(
             PipelineEvent.EvidenceAssembled(
                 key = key,

@@ -1,6 +1,7 @@
 package app.sleevesight.core.pipeline
 
 import app.sleevesight.core.evidence.EvidenceSet
+import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.awaitCancellation
@@ -81,6 +82,13 @@ interface RunControl {
      * card's when the run looks again (#617), and writes only when it changed. By default nothing.
      */
     fun assembled(evidence: EvidenceSet) = Unit
+
+    /**
+     * Of the run's label requests after the evidence, those of [sources] failed (#772,
+     * [Gathered.labelsFailed]): reported as they end, before [ended] for [RunStep.LABELS], when any
+     * did, so a *Retry* may ask them again.
+     */
+    fun labelsFailed(sources: Set<SourceId>) = Unit
 
     /**
      * The insight was decided with no model call and nothing from the cache: insights off, or no
