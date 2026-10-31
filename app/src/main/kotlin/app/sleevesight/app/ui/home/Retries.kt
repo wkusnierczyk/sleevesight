@@ -25,8 +25,8 @@ import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.RunKey
 
 // *Retry* beside a source that could not be reached (#724): the line that offers it, and what a tap
-// on it asks. For any panel on Home whose source did not answer: *Dates*' MusicBrainz, and the
-// lyrics' (#728) and the genres' (#772) to come.
+// on it asks. For any panel on Home whose source did not answer: *Dates*' MusicBrainz, and *Lyrics*'
+// (#728), also when its lyrics links are not known; the genres' (#772) to come.
 
 /**
  * Where a tap on *Retry* goes, from the pipeline's [view] beside the track [playing]: [of] a source

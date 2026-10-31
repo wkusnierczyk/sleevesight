@@ -29,8 +29,8 @@ import app.sleevesight.app.ui.theme.handoffTarget
 import app.sleevesight.app.ui.theme.rememberFocusHandoff
 import app.sleevesight.core.model.NowPlaying
 
-// The line of buttons under the album, each opening a panel in place (#724: *Dates*; #772: *Genres*),
-// and the panels open, stacked under it.
+// The line of buttons under the album, each opening a panel in place (#724: *Dates*; #772: *Genres*;
+// #728: *Lyrics*), and the panels open, stacked under it.
 
 /** An item of the line under the album: a button that opens its panel in place. */
 internal enum class InPlace {
@@ -39,6 +39,9 @@ internal enum class InPlace {
 
     /** *Genres* (#772). */
     GENRES,
+
+    /** *Lyrics* (#728). */
+    LYRICS,
 }
 
 /**

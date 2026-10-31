@@ -148,6 +148,8 @@ class SettingsSearchTest {
                     R.string.settings_font,
                     R.string.settings_layout,
                     R.string.settings_keep_sources,
+                    R.string.settings_lyrics_links,
+                    R.string.settings_lyrics_search,
                     R.string.settings_intro,
                     R.string.settings_restore_dismissed,
                 ).map(::text),

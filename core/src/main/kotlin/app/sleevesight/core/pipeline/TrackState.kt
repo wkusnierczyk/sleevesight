@@ -90,8 +90,8 @@ sealed interface SourceState {
  * source's state, and MusicBrainz's resolution when the run made one (null when nothing needed
  * it, or it was not made). A later run of the same track started with it ([Pipeline.run]'s
  * `again`, #192) asks again only the sources [asked] here, and keeps the others as they landed:
- * every source [unreachable], or with [only] (a *Retry*'s, #724, [asking]), those of them it
- * names, the others kept unreachable.
+ * every source [unreachable], or with [only] (a *Retry*'s, #724, [asking]), those of [retryable] it
+ * names, the others kept as they were.
  */
 data class Gathered(
     val sources: Map<SourceId, SourceState>,
@@ -102,9 +102,17 @@ data class Gathered(
     val unreachable: Set<SourceId>
         get() = sources.filterValues { (it as? SourceState.Done)?.result?.outcome == Outcome.Unreachable }.keys
 
-    /** The sources a run started with it asks again: those [unreachable], of [only] when it names some. */
+    /**
+     * The sources a *Retry* may ask again (#724): those [unreachable], and those whose result was
+     * shown but not kept, a lookup for a part of it having failed ([SourceResult.provisional]):
+     * MusicBrainz's without the lyrics links (#728), say, which a later answer may complete.
+     */
+    val retryable: Set<SourceId>
+        get() = unreachable + sources.filterValues { (it as? SourceState.Done)?.result?.provisional == true }.keys
+
+    /** The sources a run started with it asks again: those [unreachable], or those of [retryable] that [only] names. */
     val asked: Set<SourceId>
-        get() = only?.let { unreachable intersect it } ?: unreachable
+        get() = only?.let { retryable intersect it } ?: unreachable
 
     /**
      * As a run asking again [sources] alone starts with it (a *Retry*, #724): the other sources

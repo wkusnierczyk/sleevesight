@@ -56,14 +56,18 @@ import app.sleevesight.core.normalizer.Edition
  * @property recordingTags the accepted recording's MusicBrainz tags
  *   ([app.sleevesight.core.resolution.MbRecordingDetail.tags], #439), for the track's genre labels
  *   only: no line templates them, and no prompt holds them.
+ * @property lyrics what MusicBrainz says of the track's lyrics (#728): the lyrics pages its works
+ *   link, their languages, and whether the recording is marked instrumental ([WorkLyrics]); none
+ *   when no recording was accepted.
  * @property failure why MusicBrainz could not be asked, when [outcome] is [Outcome.Unreachable]:
  *   the failed lookup's kind as the client names it (`RateLimited`, `Offline`, `Server`,
  *   `status 400`, …), never a URL or a value; for the diagnostics only (#191). Null otherwise.
  * @property provisional a lookup made for a part of it failed, where a later run may answer: the
- *   release a cover's original first came out on ([OriginalRecording.release], #724), left out. What
- *   it holds stands, but MusicBrainz's result from it is not kept in the retrieval cache
- *   ([SourceResult.provisional]), so one failed request does not leave the release out for the
- *   entry's whole life. False when that lookup answered, found or not.
+ *   release a cover's original first came out on ([OriginalRecording.release], #724), left out, or
+ *   the recording's detail or its work, which leaves the lyrics links not known ([lyrics], #728).
+ *   What it holds stands, but MusicBrainz's result from it is not kept in the retrieval cache
+ *   ([SourceResult.provisional]), so one failed request does not leave the part out for the entry's
+ *   whole life. False when those lookups answered, found or not.
  */
 data class Resolution(
     val outcome: Outcome = Outcome.None,
@@ -81,6 +85,7 @@ data class Resolution(
     val credits: List<Credit> = emptyList(),
     val wikidataIds: List<String> = emptyList(),
     val recordingTags: List<String> = emptyList(),
+    val lyrics: WorkLyrics = WorkLyrics.NONE,
     val failure: String? = null,
     val provisional: Boolean = false,
 ) {
@@ -239,6 +244,32 @@ data class ResolvedWork(
     val mbid: String,
     val title: String,
 )
+
+/**
+ * What MusicBrainz says of a recording's lyrics (#728), for Home's lyrics links
+ * ([app.sleevesight.core.lyrics.LyricsLinks]), from the recording's lookup and its work's, which the
+ * resolution makes anyway: no request of its own.
+ *
+ * @property links the pages of the work's `lyrics` URL relationships, as MusicBrainz gives them
+ *   (MusicBrainz allows them only to its lyrics whitelist), deduplicated. Only the work the
+ *   resolution looks up gives them: the first a recording performs, which is nearly always its only one.
+ *   Empty when the recording performs no work or its work has none; null when not known, the
+ *   recording's or the work's lookup having failed, so no link is not said to be none.
+ * @property languages the languages of every work the recording performs (ISO 639-3; `zxx` for no
+ *   linguistic content), deduplicated; empty when MusicBrainz gives none.
+ * @property instrumental whether MusicBrainz marks the recording's performance of any of its works
+ *   `instrumental`.
+ */
+data class WorkLyrics(
+    val links: List<String>? = emptyList(),
+    val languages: List<String> = emptyList(),
+    val instrumental: Boolean = false,
+) {
+    companion object {
+        /** Nothing known of the lyrics: links not known, no language, not instrumental. */
+        val NONE: WorkLyrics = WorkLyrics(links = null)
+    }
+}
 
 /**
  * The first recording of a work by an artist other than the track's.

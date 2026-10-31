@@ -102,6 +102,9 @@ data class SettingsTarget(
         /** The section *Sources* itself, its panel's heading, from a panel on Home whose source is off (#724). */
         internal val sources: SettingsTarget = SettingsTarget(SettingsSection.SOURCES)
 
+        /** *Search Genius when there is no link*'s row under *Appearance*, from Home's *Lyrics* (#728). */
+        internal val lyricsSearch: SettingsTarget = SettingsTarget(SettingsSection.APPEARANCE, "lyrics_search")
+
         /**
          * The section *Genres* itself, its panel's heading, from *Genres* on Home when the label
          * sources are on but their genre switches are off (#772).

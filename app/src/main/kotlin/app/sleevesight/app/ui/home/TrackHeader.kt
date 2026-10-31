@@ -42,8 +42,10 @@ internal class UnderAlbumLine(
  * says: *Dates*, for every track ([datesItem]), its *Retry* asking MusicBrainz again ([Retries])
  * and its link opening *Settings → Sources*; then *Genres* (#772), for every track while *Show
  * genres* is on ([genresItem]), its *Retry* asking a label source again and its link opening
- * *Settings → Sources* or *Settings → Genres*; under *Separate pages*, it opens the genres' page.
- * *Dates* opens in place under either.
+ * *Settings → Sources* or *Settings → Genres*; under *Separate pages*, it opens the genres' page;
+ * then *Lyrics* while *Lyrics links* is on ([lyricsItem], #728), its *Retry* asking MusicBrainz
+ * again and its links opening the settings: *Sources*, and for *Lyrics*' search *Appearance*.
+ * *Dates* and *Lyrics* open in place under either.
  */
 @Composable
 internal fun UnderAlbum(
@@ -55,10 +57,16 @@ internal fun UnderAlbum(
     val track = shown.track
     val playing = shown.playing
     val retries = Retries(shown.view, playing, actions.askAgain)
-    val dates =
-        datesItem(homeDates(track, header), NoDates.of(track), retries.of(SourceId.MUSICBRAINZ)) {
-            actions.openSettingsAt(SettingsTarget.sources)
+    val retry = retries.of(SourceId.MUSICBRAINZ)
+    val openSources = { actions.openSettingsAt(SettingsTarget.sources) }
+    val dates = datesItem(homeDates(track, header), NoDates.of(track), retry, openSources)
+    val lyrics =
+        if (shown.lyricsLinks) {
+            val links = remember(track, shown.lyricsSearch) { homeLyrics(track, shown.lyricsSearch) }
+            lyricsItem(links, retry, openSources) { actions.openSettingsAt(SettingsTarget.lyricsSearch) }
+        } else {
+            null
         }
     val genres = genresItem(track, line.settings, line.notes, retries, actions.openSettingsAt, line.genresPage)
-    InPlaceLine(listOfNotNull(dates, genres), line.memory, playing)
+    InPlaceLine(listOfNotNull(dates, genres, lyrics), line.memory, playing)
 }

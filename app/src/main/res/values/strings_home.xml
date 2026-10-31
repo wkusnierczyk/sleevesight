@@ -160,6 +160,34 @@
     <!-- Retry's action, as a screen reader names it ("Double-tap to ask MusicBrainz again"); %1$s is the source. -->
     <string name="home_retry_action">ask %1$s again</string>
 
+    <!-- The lyrics links under the album (#728): a button that opens in place into a panel of that
+         title, with Close (page_close) at its top right. Sleevesight links to lyrics, never shows them. -->
+    <string name="home_lyrics">Lyrics</string>
+    <!-- The Lyrics button's action, as a screen reader names it ("Double-tap to show lyrics links"). -->
+    <string name="home_lyrics_show">show lyrics links</string>
+    <!-- A link to the song's lyrics page on a site MusicBrainz links to; %1$s is the site's name
+         ("Lyrics on Genius"). Under it, home_lyrics_page_note. -->
+    <string name="home_lyrics_page">Lyrics on %1$s</string>
+    <string name="home_lyrics_page_note">The song’s page, linked from MusicBrainz.</string>
+    <!-- With no page to link: a search for the title and artist on %1$s, the site ("Search Genius
+         for the lyrics"). Under it, home_lyrics_search_note. -->
+    <string name="home_lyrics_search">Search %1$s for the lyrics</string>
+    <string name="home_lyrics_search_note">A search for the title and artist; it may find another song of the same name.</string>
+    <!-- Under the links: where a tap goes. -->
+    <string name="home_lyrics_browser">Opens in your browser.</string>
+    <!-- MusicBrainz found the song, and links to no lyrics page for it. Why there is no link, as
+         home_musicbrainz_looking and those after it say for the other cases. -->
+    <string name="home_lyrics_none">MusicBrainz links to no lyrics page for this song.</string>
+    <!-- MusicBrainz marks the recording instrumental, or its work as without words: no link, no search. -->
+    <string name="home_lyrics_instrumental">MusicBrainz lists this track as instrumental, without lyrics.</string>
+    <!-- Search Genius when there is no link is off: this line, then home_lyrics_search_off_see on its own line. -->
+    <string name="home_lyrics_search_off">Genius search is disabled.</string>
+    <!-- %1$s is home_settings_appearance_link, a link that opens Settings at Appearance. -->
+    <string name="home_lyrics_search_off_see">See %1$s.</string>
+    <!-- A link that opens Settings at Appearance, at Search Genius when there is no link; its spaces
+         never break, so it stays on one line. -->
+    <string name="home_settings_appearance_link">Settings\u00A0→\u00A0Appearance</string>
+
     <!-- Genre labels (#558): the chips, the genre's panel with its table, and where the table's labels come from.
          On Home (#772), a button under the album beside Dates that opens in place into a panel of that
          title, with Close (page_close) at its top right, the chips inside. -->

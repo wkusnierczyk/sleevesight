@@ -13,6 +13,7 @@ import app.sleevesight.core.sources.Rejection
 import app.sleevesight.core.sources.ReleaseDate
 import app.sleevesight.core.sources.ResolvedArtist
 import app.sleevesight.core.sources.SourceResult
+import app.sleevesight.core.sources.WorkLyrics
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlin.time.Duration
@@ -41,6 +42,9 @@ internal object RetrievalCodec {
      * release date's release-group type (#724), are optional fields too, which an entry kept before
      * them decodes without: no miss, the home screen's *Dates* says what the first release's date
      * alone gives, and cannot tell a same-year single from its album.
+     * What MusicBrainz says of the lyrics (#728) is an optional field too, made a miss the same way
+     * (MusicBrainz's extraction version 7), so a track played before is asked again rather than shown
+     * as having no lyrics page.
      */
     const val FORMAT: Int = 7
 
@@ -90,6 +94,7 @@ internal object RetrievalCodec {
                             release = it.release?.let(::releaseJson),
                         )
                     },
+                lyrics = result.lyrics?.let { LyricsJson(it.links, it.languages, it.instrumental) },
                 trackOnly = result.trackOnly,
             ),
         )
@@ -132,6 +137,7 @@ internal object RetrievalCodec {
                             release = it.release?.let(::release),
                         )
                     },
+                lyrics = stored.lyrics?.let { WorkLyrics(it.links, it.languages, it.instrumental) },
                 trackOnly = stored.trackOnly,
             )
         } catch (_: IllegalArgumentException) {
@@ -206,6 +212,8 @@ internal object RetrievalCodec {
         val releaseDates: List<ReleaseDateJson> = emptyList(),
         val firstRelease: FirstReleaseJson? = null,
         val original: OriginalJson? = null,
+        // Absent in an entry kept before #728: not known.
+        val lyrics: LyricsJson? = null,
         val trackOnly: Boolean = false,
     )
 
@@ -227,6 +235,15 @@ internal object RetrievalCodec {
         val artistCredit: String,
         val date: String,
         val release: FirstReleaseJson? = null,
+    )
+
+    @Serializable
+    private data class LyricsJson(
+        // Null: not known (a lookup failed). Such a result is provisional and not kept, but the
+        // field says so faithfully if one ever is.
+        val links: List<String>? = emptyList(),
+        val languages: List<String> = emptyList(),
+        val instrumental: Boolean = false,
     )
 
     @Serializable

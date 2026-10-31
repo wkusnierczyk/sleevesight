@@ -159,6 +159,12 @@ internal class Showing(
     /** *Show grounding details* (#437, #440). */
     val details: Boolean = settings?.showGroundingDetails == true
 
+    /** *Lyrics links* (#728), on until the settings are read, as by default. */
+    val lyricsLinks: Boolean = settings?.lyricsLinks ?: true
+
+    /** *Search Genius when there is no link* (#728), on until the settings are read, as by default. */
+    val lyricsSearch: Boolean = settings?.lyricsSearch ?: true
+
     /** What *Sources* shows of [track]. */
     fun sources() =
         SourcesShown(
