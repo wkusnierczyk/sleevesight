@@ -122,8 +122,8 @@ import kotlin.time.Instant
  *   ([CoordinatorState.foundNothingNew]).
  * @property askAgainKey the key of the run whose unreachable sources [askable] a tap on *Retry*
  *   asks again (#724), which the tap carries back ([PipelineHost.askAgain]): its sources have
- *   landed, some unreachable, and no call is under way ([CoordinatorState.askAgainKey]); null
- *   otherwise.
+ *   landed, some unreachable or shown but not kept for a failed lookup (#728), and no call is under
+ *   way ([CoordinatorState.askAgainKey]); null otherwise.
  */
 data class PipelineView(
     val track: TrackState? = null,
