@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.Saver
@@ -148,7 +149,6 @@ internal fun rememberInPlaceMemory(): InPlaceMemory = rememberSaveable(saver = I
  * in it, if the new track has that button; and to its *Close* when a control in it that goes once
  * tapped asks for it ([InPlaceItem.content]'s `toClose`). Nothing at all when [items] is empty.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun InPlaceLine(
     items: List<InPlaceItem>,
@@ -180,40 +180,52 @@ internal fun InPlaceLine(
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         val closed = items.filter { it.id !in open }
         if (closed.isNotEmpty()) {
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-                itemVerticalAlignment = Alignment.CenterVertically,
-            ) {
-                for (item in closed) {
-                    PanelChip(
-                        item.name,
-                        item.tag,
-                        modifier = Modifier.handoffTarget(handoff, buttonOf(item.id)),
-                        // Read as picked (#724): "Dates. Button. Double-tap to show dates", no fold state.
-                        collapsed = false,
-                        action = item.action,
-                    ) {
-                        val page = item.page
-                        if (page != null) {
-                            page()
-                        } else {
-                            memory.open(item.id, playing)
-                            handoff.moveTo(closeOf(item.id))
-                        }
-                    }
+            ClosedButtons(closed, { Modifier.handoffTarget(handoff, buttonOf(it)) }) { item ->
+                val page = item.page
+                if (page != null) {
+                    page()
+                } else {
+                    memory.open(item.id, playing)
+                    handoff.moveTo(closeOf(item.id))
                 }
             }
         }
         for (id in open) {
-            OpenPanel(
-                items.first { it.id == id },
-                Modifier.handoffTarget(handoff, closeOf(id)),
-                focused = { if (it) inside += id else inside -= id },
-                toClose = { handoff.moveTo(closeOf(id)) },
-            ) {
-                memory.close(id, playing)
-                handoff.moveTo(buttonOf(id))
+            // Keyed by the item, not its place: a panel opened above another keeps the other's state
+            // (the genre open in *Genres*, #772), which a place in the list would hand to the newcomer.
+            key(id) {
+                OpenPanel(
+                    items.first { it.id == id },
+                    Modifier.handoffTarget(handoff, closeOf(id)),
+                    focused = { if (it) inside += id else inside -= id },
+                    toClose = { handoff.moveTo(closeOf(id)) },
+                ) {
+                    memory.close(id, playing)
+                    handoff.moveTo(buttonOf(id))
+                }
+            }
+        }
+    }
+}
+
+// The buttons of [closed], on one line in their order, each under [target]'s modifier for it (a focus
+// requester), each [tap]ped as drawn; keyed by the item, as the open panels are.
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ClosedButtons(
+    closed: List<InPlaceItem>,
+    target: (InPlace) -> Modifier,
+    tap: (InPlaceItem) -> Unit,
+) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+        itemVerticalAlignment = Alignment.CenterVertically,
+    ) {
+        for (item in closed) {
+            key(item.id) {
+                // Read as picked (#724): "Dates. Button. Double-tap to show dates", no fold state.
+                PanelChip(item.name, item.tag, target(item.id), collapsed = false, action = item.action) { tap(item) }
             }
         }
     }

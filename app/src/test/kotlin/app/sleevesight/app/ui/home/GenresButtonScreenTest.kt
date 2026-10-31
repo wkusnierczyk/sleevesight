@@ -289,6 +289,32 @@ class GenresButtonScreenTest {
         }
 
     @Test
+    fun aGenreOpenInGenresStaysOpenAsDatesOpensAboveItOrClosesOverIt() {
+        // Genres first, a genre open, then Dates above it.
+        show {
+            tap(GENRES_CHIP_TAG)
+            tap(FOLK)
+            tap(DATES_CHIP_TAG)
+            assertTrue(top(DATES_PANEL_TAG) < top(GENRES_PANEL_TAG))
+            compose.onNodeWithTag(GENRE_PANEL_HEADING_TAG).assertTextEquals("Folk")
+            compose.onNodeWithTag(FOLK).assertIsSelected()
+            // And Dates closed again.
+            tap(DATES_PANEL_CLOSE_TAG)
+            compose.onNodeWithTag(GENRE_PANEL_HEADING_TAG).assertTextEquals("Folk")
+        }
+        // Dates first, then Genres above it with a genre open, then Dates closed under it.
+        show {
+            tap(DATES_CHIP_TAG)
+            tap(GENRES_CHIP_TAG)
+            tap(FOLK)
+            tap(DATES_PANEL_CLOSE_TAG)
+            compose.onNodeWithTag(GENRE_PANEL_HEADING_TAG).assertTextEquals("Folk")
+            tap(DATES_CHIP_TAG)
+            compose.onNodeWithTag(GENRE_PANEL_HEADING_TAG).assertTextEquals("Folk")
+        }
+    }
+
+    @Test
     fun thePanelsCloseFoldsTheGenreOpenInItToo() =
         show {
             tap(GENRES_CHIP_TAG)
