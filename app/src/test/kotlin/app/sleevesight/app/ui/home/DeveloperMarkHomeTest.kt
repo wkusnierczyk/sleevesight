@@ -6,6 +6,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
@@ -36,6 +37,7 @@ import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.sources.Rejection
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -124,6 +126,27 @@ class DeveloperMarkHomeTest {
             // The tag is drawn only: no text of it.
             val tag = app.getString(R.string.developer_mark_tag)
             assertEquals(0, compose.onAllNodesWithText(tag, useUnmergedTree = true).fetchSemanticsNodes().size)
+        }
+
+    @Test
+    fun theSourcesLegendStaysOutsideTheMarkUnderIt() =
+        show(details, marked = true) {
+            // The table in the mark (#536); its legend not, under it (#723).
+            val legend = compose.onNodeWithTag(SOURCES_LEGEND_TAG, useUnmergedTree = true).fetchSemanticsNode()
+            val inMark = hasTestTag(SOURCES_LEGEND_TAG) and hasAnyAncestor(hasTestTag(DEVELOPER_MARK_TAG))
+            assertEquals(0, compose.onAllNodes(inMark, useUnmergedTree = true).fetchSemanticsNodes().size)
+            assertEquals(0, marked(app.getString(R.string.home_sources_legend_shown)))
+            assertEquals(0, marked(app.getString(R.string.home_sources_legend_tap)))
+            val mark =
+                compose
+                    .onAllNodes(
+                        hasTestTag(DEVELOPER_MARK_TAG) and hasAnyDescendant(hasTestTag(SOURCES_TABLE_TAG)),
+                        useUnmergedTree = true,
+                    ).fetchSemanticsNodes()
+                    .single()
+            val markBottom = mark.positionInRoot.y + mark.size.height
+            val legendTop = legend.positionInRoot.y
+            assertTrue("legend at $legendTop, mark ends at $markBottom", legendTop >= markBottom)
         }
 
     @Test

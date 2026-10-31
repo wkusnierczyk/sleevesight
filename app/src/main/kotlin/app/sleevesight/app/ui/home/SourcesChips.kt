@@ -14,7 +14,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -152,7 +151,8 @@ internal fun Notes(
  * *Sources*' table (#662): a row for each of [rows], in two columns, so a citation's letter can be
  * matched to its source. On the left, right-aligned in a column as wide as the widest, a chip with
  * the letter the source's lines and citations use (`SourceId.tag`, the one place it is set); on the
- * right, the source's name on one line and what it found on the next ([statusText]). The chip
+ * right, the source's name on one line and what it found on the next ([statusText]: from the
+ * scopes of its own [lines], *Found the track and the artist*, #768). The chip
  * shows, at a glance, what a tap does to its source's [lines] ([focus]): filled while they show,
  * outlined while they are hidden, a tap showing them again (unfolded to by [fold]); dimmed for a
  * source that gave none, with nothing to show or hide, and no button. The rows sit close, the
@@ -160,7 +160,7 @@ internal fun Notes(
  * of the sources that are off and the statuses that are diagnostics show too, the whole table in
  * the developer mark (#536). A screen reader reads a chip that filters as a switch, its source's
  * name, with its lines shown or hidden, and then what it found; a dimmed one's row as text, its
- * name and what it found.
+ * name and what it found. Under the table, outside the mark, its legend ([Legend], #723).
  */
 @Composable
 internal fun SourceTable(
@@ -176,6 +176,7 @@ internal fun SourceTable(
     } else {
         Table(rows, false, lines, focus, fold)
     }
+    Legend()
 }
 
 @Composable
@@ -199,7 +200,7 @@ private fun Table(
                     else -> LetterState.HIDDEN
                 }
             // Lines shown again are unfolded to, wherever they fall in the list.
-            SourceRow(row, width, state, details) { focus.toggle(row)?.let(fold::reach) }
+            SourceRow(row, width, state, lines, details) { focus.toggle(row)?.let(fold::reach) }
         }
     }
 }
@@ -208,15 +209,17 @@ private fun Table(
 private val ChipStatus.wentWrong: Boolean
     get() = this == ChipStatus.Failed || (this as? ChipStatus.Done)?.outcome is Outcome.Rejected
 
-/** What a source's chip in the table shows: its lines shown or hidden, or none to show. */
-private enum class LetterState { SHOWN, HIDDEN, DIMMED }
-
-/** One row of the table: [chip]'s letter, right-aligned in a column [width] wide, its name and what it found. */
+/**
+ * One row of the table: [chip]'s letter, right-aligned in a column [width] wide, its name and what
+ * it found, from its own lines among [lines] (#768).
+ */
+@Suppress("LongParameterList") // The row, its letter's column and state, what it found from, and what a tap does.
 @Composable
 private fun SourceRow(
     chip: SourceChip,
     width: Dp,
     state: LetterState,
+    lines: List<EvidenceLine>,
     details: Boolean,
     onToggle: () -> Unit,
 ) {
@@ -250,7 +253,7 @@ private fun SourceRow(
             // status chips had them (#440).
             val colors = MaterialTheme.colorScheme
             Text(
-                statusText(chip.status, details),
+                statusText(chip, lines, details),
                 style = MaterialTheme.typography.bodySmall,
                 color = if (details && chip.status.wentWrong) colors.error else colors.onSurfaceVariant,
                 modifier = Modifier.testTag(STATUS_PREFIX + chip.source.tag),
@@ -261,10 +264,8 @@ private fun SourceRow(
 
 /**
  * A source's letter as a chip, drawn as a genre chip is but without its 48 dp laid out
- * ([CompactChipFrame]): [LetterState.SHOWN], filled as a genre marked in its panel is
- * (`chipColours(marked = true)`); [LetterState.HIDDEN], a solid outline in the text's colour,
- * a little heavier, and no fill; [LetterState.DIMMED], a faint outline, the letter quieter (still
- * 4.5:1 on the panel, `onSurfaceVariant`), and not a button, nor a node a screen reader stops on.
+ * ([CompactChipFrame]), in its [state]'s look ([look]): filled while its lines show, outlined while
+ * hidden, and dimmed with none, then not a button, nor a node a screen reader stops on.
  */
 @Composable
 private fun LetterChip(
@@ -273,19 +274,9 @@ private fun LetterChip(
     state: LetterState,
     onToggle: () -> Unit,
 ) {
-    val colors = MaterialTheme.colorScheme
-    val (marked, onMarked) = chipColours(marked = true)
-    val fill = if (state == LetterState.SHOWN) marked else Color.Transparent
-    // Hidden, the heavier outline drawn over the frame's; dimmed, the frame's faint hairline.
-    val outline = if (state == LetterState.DIMMED) colors.outlineVariant else null
-    val heavy =
-        if (state == LetterState.HIDDEN) Modifier.border(HIDDEN_OUTLINE, colors.onSurface, CHIP_SHAPE) else Modifier
-    val letter =
-        when (state) {
-            LetterState.SHOWN -> onMarked
-            LetterState.HIDDEN -> colors.onSurface
-            LetterState.DIMMED -> colors.onSurfaceVariant
-        }
+    val look = state.look()
+    // The outline drawn over the chip, in its shape.
+    val outline = look.outline?.let { Modifier.border(it, CHIP_SHAPE) } ?: Modifier
     val action =
         if (state == LetterState.DIMMED) {
             Modifier.clearAndSetSemantics {}
@@ -304,15 +295,14 @@ private fun LetterChip(
                 }
         }
     CompactChipFrame(
-        fill,
-        modifier = Modifier.testTag(CHIP_PREFIX + chip.source.tag).then(heavy),
-        outline = outline,
+        look.fill,
+        modifier = Modifier.testTag(CHIP_PREFIX + chip.source.tag).then(outline),
         action = action,
     ) {
         Text(
             chip.source.tag,
             style = MaterialTheme.typography.labelLarge,
-            color = letter,
+            color = look.ink,
             maxLines = 1,
             softWrap = false,
         )
@@ -335,11 +325,10 @@ private fun letterColumnWidth(tags: List<String>): Dp {
 }
 
 // The space between two rows of the table, and between its columns; a row's least height, which
-// with the gap makes rows 48 dp apart at the least, a chip's touch area; a hidden chip's outline.
+// with the gap makes rows 48 dp apart at the least, a chip's touch area.
 private val ROW_GAP = 6.dp
 private val COLUMN_GAP = 12.dp
 private val ROW_HEIGHT = 42.dp
-private val HIDDEN_OUTLINE = 1.5.dp
 
 // The note's link to the settings.
 private const val SETTINGS_LINK = "settings"

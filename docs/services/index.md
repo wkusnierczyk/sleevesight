@@ -87,7 +87,7 @@ Play a song in a music player you follow (Spotify is followed by default; enable
 
 - **Check the sources (*Last.fm* and *Exa*):** tap the **Sources** chip at the bottom of the home screen to unfold the sources panel.
   - The table at the top lists every enabled source: `MB` (*MusicBrainz*), `W` (*Wikipedia*), `L` (*Last.fm*) and `S` (*Web search*, for Exa).
-  - Under each source's name, its status shows *Looking…* and then what it found (such as *Found the song*, *Found the artist only*, or *Nothing found*). When a source contributed lines to the evidence below, its letter chip on the left is filled (`L`, `S`).
+  - Under each source's name, its status shows *Looking…* and then what it found (such as *Found the track and the artist*, *Found the artist*, or *Nothing found*). When a source contributed lines to the evidence below, its letter chip on the left is filled (`L`, `S`).
   - If a key was rejected or a source could not be reached, a note right under the table says so (for example, *Last.fm failed.* or *Web search could not be reached.*).
 - **Check the AI service:** look at **Key insights** on the home screen.
   - Once the sources finish (*Gathering evidence…*), tap **Write insight** (after your first tap, automatic modes write on their own on the next track changes).
