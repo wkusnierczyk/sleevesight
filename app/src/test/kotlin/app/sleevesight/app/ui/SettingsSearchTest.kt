@@ -26,6 +26,7 @@ import app.sleevesight.app.MainActivity
 import app.sleevesight.app.MemoryStore
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.testCipher
@@ -104,7 +105,7 @@ class SettingsSearchTest {
                     }
                 }
             }
-            compose.waitUntil(5_000) { count(SettingsSection.PLAYERS.tag) == 1 }
+            compose.waitUntil(WAIT_MS) { count(SettingsSection.PLAYERS.tag) == 1 }
             block()
         }
     }
@@ -213,7 +214,7 @@ class SettingsSearchTest {
         show {
             search("groovebox")
             // The players are listed off the main thread (#579), which the clock does not wait for.
-            compose.waitUntil(5_000) { "Groovebox" in rowsOf(SettingsSection.PLAYERS) }
+            compose.waitUntil(WAIT_MS) { "Groovebox" in rowsOf(SettingsSection.PLAYERS) }
             assertEquals(listOf(SettingsSection.PLAYERS), shownSections())
             assertEquals(listOf("Groovebox"), rowsOf(SettingsSection.PLAYERS))
         }
@@ -267,7 +268,7 @@ class SettingsSearchTest {
         show {
             search(text(R.string.settings_layout_pages))
             restore()
-            compose.waitUntil(5_000) { count(SettingsSection.APPEARANCE.panelTag) == 1 }
+            compose.waitUntil(WAIT_MS) { count(SettingsSection.APPEARANCE.panelTag) == 1 }
             assertEquals(listOf(SettingsSection.APPEARANCE), shownSections())
         }
 

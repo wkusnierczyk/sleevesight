@@ -15,6 +15,7 @@ import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.TestStores
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.now
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.SettingsStore
@@ -83,7 +84,7 @@ class ReportButtonSettingsScreenTest {
                 }
             }
             compose.openSection(SettingsSection.DEVELOPER)
-            compose.waitUntil(5_000) { shown(R.string.settings_report_button) }
+            compose.waitUntil(WAIT_MS) { shown(R.string.settings_report_button) }
             compose.onNodeWithText(text(R.string.settings_report_button_summary)).assertExists()
             // `:core`'s default, as in any build but the test build.
             assertEquals(true, rowShows(R.string.settings_report_button_hide))
@@ -98,11 +99,11 @@ class ReportButtonSettingsScreenTest {
             )
             ) {
                 choose(option)
-                compose.waitUntil(5_000) { settings.now().reportButton == choice && rowShows(option) }
+                compose.waitUntil(WAIT_MS) { settings.now().reportButton == choice && rowShows(option) }
             }
 
             compose.onNodeWithText(text(R.string.settings_developer_mode)).performScrollTo().performClick()
-            compose.waitUntil(5_000) { !settings.now().developerMode }
+            compose.waitUntil(WAIT_MS) { !settings.now().developerMode }
             assertEquals("Hidden with developer mode off", ReportButton.HIDE, settings.now().reportButton)
         }
     }

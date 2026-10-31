@@ -33,6 +33,7 @@ import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.app.ui.home.HomeFixtures.normalizer
 import app.sleevesight.core.settings.Settings
@@ -79,7 +80,7 @@ class GuideNotesTest {
                 }
             }
             compose.awaitIdleHome()
-            compose.waitUntil(WAIT) {
+            compose.waitUntil(WAIT_MS) {
                 compose.onAllNodesWithTag(guideNoteTag(GuidePart.SOURCES)).fetchSemanticsNodes().isNotEmpty()
             }
             block()
@@ -295,7 +296,6 @@ class GuideNotesTest {
         }
 
     private companion object {
-        const val WAIT = 5_000L
         const val VIRTUAL_ID_SHIFT = 32
     }
 }

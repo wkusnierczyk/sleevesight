@@ -19,6 +19,7 @@ import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.TestStores
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.now
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.SettingsStore
@@ -80,7 +81,9 @@ class MissingPlayerNoteTest {
                 }
             }
             // The screen draws once the settings have loaded, off the main thread.
-            compose.waitUntil(5_000) { compose.onAllNodesWithTag(SEARCH_FIELD_TAG).fetchSemanticsNodes().isNotEmpty() }
+            compose.waitUntil(
+                WAIT_MS,
+            ) { compose.onAllNodesWithTag(SEARCH_FIELD_TAG).fetchSemanticsNodes().isNotEmpty() }
             block()
         }
     }
@@ -90,7 +93,7 @@ class MissingPlayerNoteTest {
         settings {
             val title = app.getString(R.string.settings_players_missing_title)
             compose.openSection(SettingsSection.PLAYERS)
-            compose.waitUntil(5_000) { count(title) == 1 }
+            compose.waitUntil(WAIT_MS) { count(title) == 1 }
             compose.onNodeWithTag(MISSING_PLAYER_NOTE_TAG).performScrollTo()
             val note = paragraphs(R.string.settings_players_missing)
             assertEquals(2, note.size)
@@ -107,7 +110,7 @@ class MissingPlayerNoteTest {
             compose.openSection(SettingsSection.PLAYERS)
             val text = paragraphs(R.string.settings_players_long)
             assertEquals(2, text.size)
-            compose.waitUntil(5_000) { count(text.last()) == 1 }
+            compose.waitUntil(WAIT_MS) { count(text.last()) == 1 }
             assertEquals(1, count(text.first()))
         }
     }
@@ -116,10 +119,10 @@ class MissingPlayerNoteTest {
     fun theSearchFindsTheNoteByItsText() {
         settings {
             compose.onNodeWithTag(SEARCH_FIELD_TAG).performTextReplacement("video apps")
-            compose.waitUntil(5_000) { notes() == 1 }
+            compose.waitUntil(WAIT_MS) { notes() == 1 }
             val onHome = app.getString(R.string.settings_players_on_home)
             compose.onNodeWithTag(SEARCH_FIELD_TAG).performTextReplacement(onHome)
-            compose.waitUntil(5_000) { count(app.getString(R.string.settings_players_on_home_summary)) == 1 }
+            compose.waitUntil(WAIT_MS) { count(app.getString(R.string.settings_players_on_home_summary)) == 1 }
             assertEquals(0, notes())
         }
     }
@@ -128,19 +131,19 @@ class MissingPlayerNoteTest {
     fun dismissPutsTheNoteAwayForGoodWithAMessageAndUndo() {
         settings {
             compose.openSection(SettingsSection.PLAYERS)
-            compose.waitUntil(5_000) { notes() == 1 }
+            compose.waitUntil(WAIT_MS) { notes() == 1 }
             compose
                 .onNodeWithTag(MISSING_PLAYER_NOTE_DISMISS_TAG)
                 .performScrollTo()
                 .assert(hasText(app.getString(R.string.settings_players_missing_dismiss)))
                 .performClick()
-            compose.waitUntil(5_000) { Dismissable.PLAYERS_NOTE in store.now().dismissed }
-            compose.waitUntil(5_000) { notes() == 0 }
+            compose.waitUntil(WAIT_MS) { Dismissable.PLAYERS_NOTE in store.now().dismissed }
+            compose.waitUntil(WAIT_MS) { notes() == 0 }
             val message = app.getString(R.string.settings_players_missing_dismissed)
-            compose.waitUntil(5_000) { count(message) == 1 }
+            compose.waitUntil(WAIT_MS) { count(message) == 1 }
             compose.onNodeWithText(app.getString(R.string.undo)).performClick()
-            compose.waitUntil(5_000) { store.now().dismissed.isEmpty() }
-            compose.waitUntil(5_000) { notes() == 1 }
+            compose.waitUntil(WAIT_MS) { store.now().dismissed.isEmpty() }
+            compose.waitUntil(WAIT_MS) { notes() == 1 }
         }
     }
 
@@ -148,19 +151,19 @@ class MissingPlayerNoteTest {
     fun hideOnceHidesTheNoteUntilPlayersIsOpenedAgain() {
         settings {
             compose.openSection(SettingsSection.PLAYERS)
-            compose.waitUntil(5_000) { notes() == 1 }
+            compose.waitUntil(WAIT_MS) { notes() == 1 }
             compose
                 .onNodeWithTag(MISSING_PLAYER_NOTE_HIDE_ONCE_TAG)
                 .performScrollTo()
                 .assert(hasText(app.getString(R.string.settings_players_missing_hide_once)))
                 .performClick()
-            compose.waitUntil(5_000) { notes() == 0 }
+            compose.waitUntil(WAIT_MS) { notes() == 0 }
             // Nothing stored, and no message.
             assertTrue(store.now().dismissed.isEmpty())
             assertEquals(0, count(app.getString(R.string.settings_players_missing_dismissed)))
             compose.onNodeWithTag("${SettingsSection.PLAYERS.panelTag}:close").performScrollTo().performClick()
             compose.openSection(SettingsSection.PLAYERS)
-            compose.waitUntil(5_000) { notes() == 1 }
+            compose.waitUntil(WAIT_MS) { notes() == 1 }
         }
     }
 
@@ -169,16 +172,16 @@ class MissingPlayerNoteTest {
     fun hideOnceLastsThroughASearchStartedAndCleared() {
         settings {
             compose.openSection(SettingsSection.PLAYERS)
-            compose.waitUntil(5_000) { notes() == 1 }
+            compose.waitUntil(WAIT_MS) { notes() == 1 }
             compose.onNodeWithTag(MISSING_PLAYER_NOTE_HIDE_ONCE_TAG).performScrollTo().performClick()
-            compose.waitUntil(5_000) { notes() == 0 }
+            compose.waitUntil(WAIT_MS) { notes() == 0 }
             val onHome = app.getString(R.string.settings_players_on_home)
             compose.onNodeWithTag(SEARCH_FIELD_TAG).performTextReplacement("player")
-            compose.waitUntil(5_000) { count(onHome) == 1 }
+            compose.waitUntil(WAIT_MS) { count(onHome) == 1 }
             assertEquals(0, notes())
             compose.onNodeWithTag(SEARCH_FIELD_TAG).performTextReplacement("")
             compose.waitForIdle()
-            compose.waitUntil(5_000) { count(onHome) == 1 }
+            compose.waitUntil(WAIT_MS) { count(onHome) == 1 }
             assertEquals(0, notes())
         }
     }
@@ -189,11 +192,11 @@ class MissingPlayerNoteTest {
         settings {
             compose.openSection(SettingsSection.PLAYERS)
             val onHome = app.getString(R.string.settings_players_on_home)
-            compose.waitUntil(5_000) { count(onHome) == 1 }
+            compose.waitUntil(WAIT_MS) { count(onHome) == 1 }
             assertEquals(0, notes())
             compose.onNodeWithTag(SEARCH_FIELD_TAG).performTextReplacement("video apps")
             val none = app.getString(R.string.settings_search_none, "video apps")
-            compose.waitUntil(5_000) { count(none) == 1 }
+            compose.waitUntil(WAIT_MS) { count(none) == 1 }
             assertEquals(0, notes())
         }
     }

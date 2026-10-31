@@ -24,6 +24,7 @@ import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.TestStores
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.testCipher
@@ -118,7 +119,7 @@ class ChoiceDetailsSettingsTest {
     fun reportButtonSaysWhatTheChosenChoiceDoesUnderItsButtons() {
         runBlocking { settings.update { it.copy(developerMode = true) } }
         show(SettingsSection.DEVELOPER) {
-            compose.waitUntil(5_000) {
+            compose.waitUntil(WAIT_MS) {
                 compose.onAllNodes(hasText(text(R.string.settings_report_button))).fetchSemanticsNodes().isNotEmpty()
             }
             val choices =
@@ -139,7 +140,9 @@ class ChoiceDetailsSettingsTest {
             }
             for ((label, detail) in choices) {
                 compose.onNode(hasText(text(label)) and isSelectable()).performScrollTo().performClick()
-                compose.waitUntil(5_000) { compose.onAllNodesWithText(text(detail)).fetchSemanticsNodes().isNotEmpty() }
+                compose.waitUntil(
+                    WAIT_MS,
+                ) { compose.onAllNodesWithText(text(detail)).fetchSemanticsNodes().isNotEmpty() }
                 // Only the chosen one's, announced as it changes.
                 val line = compose.onNode(hasText(text(detail)) and !isSelectable()).fetchSemanticsNode()
                 assertEquals(LiveRegionMode.Polite, line.config.getOrNull(SemanticsProperties.LiveRegion))
@@ -155,7 +158,7 @@ class ChoiceDetailsSettingsTest {
     fun aSearchForAnotherChoicesDescriptionShowsIt() {
         runBlocking { settings.update { it.copy(developerMode = true, reportButton = ReportButton.HIDE) } }
         show(SettingsSection.DEVELOPER) {
-            compose.waitUntil(5_000) {
+            compose.waitUntil(WAIT_MS) {
                 compose.onAllNodes(hasText(text(R.string.settings_report_button))).fetchSemanticsNodes().isNotEmpty()
             }
             val always = text(R.string.settings_report_button_show_detail)

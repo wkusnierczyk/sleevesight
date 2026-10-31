@@ -23,6 +23,7 @@ import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.diagnostics.Diagnostics
 import app.sleevesight.app.diagnostics.DiagnosticsLog
 import app.sleevesight.app.diagnostics.SkipLearning
@@ -137,7 +138,7 @@ class DiagnosticsScreenTest {
     }
 
     private fun waitForText(text: String) =
-        compose.waitUntil(conditionDescription = text, timeoutMillis = 5_000) {
+        compose.waitUntil(conditionDescription = text, timeoutMillis = WAIT_MS) {
             compose.onAllNodesWithText(text, substring = true).fetchSemanticsNodes().isNotEmpty()
         }
 

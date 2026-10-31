@@ -23,6 +23,7 @@ import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
+import app.sleevesight.app.WAIT_MS
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -50,7 +51,7 @@ class LibraryLicenceTest {
     private fun waitForText(
         text: String,
         substring: Boolean = false,
-    ) = compose.waitUntil(conditionDescription = text, timeoutMillis = 5_000) {
+    ) = compose.waitUntil(conditionDescription = text, timeoutMillis = WAIT_MS) {
         compose.onAllNodesWithText(text, substring = substring).fetchSemanticsNodes().isNotEmpty()
     }
 

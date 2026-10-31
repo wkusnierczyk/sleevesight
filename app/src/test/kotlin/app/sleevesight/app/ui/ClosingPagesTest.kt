@@ -34,6 +34,7 @@ import app.sleevesight.app.FirstRunAcknowledgement
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.session.SleevesightListenerService
 import app.sleevesight.app.ui.home.PAGE_BACK_TAG
 import app.sleevesight.app.ui.home.PAGE_CLOSE_TAG
@@ -83,7 +84,7 @@ class ClosingPagesTest {
     private fun openSettings() {
         compose.onNodeWithContentDescription(text(R.string.home_settings)).performClick()
         compose.openSection(SettingsSection.ABOUT)
-        compose.waitUntil(5_000) {
+        compose.waitUntil(WAIT_MS) {
             compose.onAllNodesWithText(text(R.string.settings_what_leaves)).fetchSemanticsNodes().isNotEmpty()
         }
     }
@@ -353,7 +354,7 @@ class ClosingPagesTest {
             compose.onNodeWithContentDescription(text(R.string.home_settings)).performClick()
             compose.openSection(SettingsSection.DEVELOPER)
             val open = text(R.string.settings_diagnostics_open)
-            compose.waitUntil(5_000) { compose.onAllNodesWithText(open).fetchSemanticsNodes().isNotEmpty() }
+            compose.waitUntil(WAIT_MS) { compose.onAllNodesWithText(open).fetchSemanticsNodes().isNotEmpty() }
             compose.onNodeWithText(open).performScrollTo().performClick()
             compose.waitForIdle()
             assertBar(R.string.diagnostics_title)

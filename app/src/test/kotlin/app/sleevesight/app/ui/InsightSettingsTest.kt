@@ -19,6 +19,7 @@ import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.TestStores
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.now
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.SettingsStore
@@ -77,7 +78,7 @@ class InsightSettingsTest {
     private fun waitFor(
         what: String,
         condition: () -> Boolean,
-    ) = compose.waitUntil(conditionDescription = what, timeoutMillis = 5_000) { condition() }
+    ) = compose.waitUntil(conditionDescription = what, timeoutMillis = WAIT_MS) { condition() }
 
     // The modes chosen for *Reactive*, as the pipeline hears them (#625).
     private val chosen = mutableListOf<WriteAutomatically>()

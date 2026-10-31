@@ -31,6 +31,7 @@ import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.app.ui.home.HomeFixtures.normalizer
 import app.sleevesight.core.settings.Settings
@@ -76,7 +77,7 @@ class GuideMagnifierTest {
                 }
             }
             compose.awaitIdleHome()
-            compose.waitUntil(WAIT) {
+            compose.waitUntil(WAIT_MS) {
                 compose.onAllNodesWithTag(guideNoteTag(GuidePart.SOURCES)).fetchSemanticsNodes().isNotEmpty()
             }
             block()
@@ -227,8 +228,4 @@ class GuideMagnifierTest {
             assertEquals(corner.x, pictureCorner().x, 1f)
             assertEquals(corner.y, pictureCorner().y, 1f)
         }
-
-    private companion object {
-        const val WAIT = 5_000L
-    }
 }

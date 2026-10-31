@@ -16,6 +16,7 @@ import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.TestStores
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.now
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.SettingsStore
@@ -83,7 +84,7 @@ class PlayerSettingsTest {
             }
             compose.openSection(SettingsSection.PLAYERS)
             // Each row shows once its name and link, asked off the main thread, have arrived.
-            compose.waitUntil(5_000) {
+            compose.waitUntil(WAIT_MS) {
                 listOf("Example", "Spotify").all { compose.onAllNodesWithText(it).fetchSemanticsNodes().isNotEmpty() }
             }
             // No launcher entry, no link.
@@ -114,7 +115,7 @@ class PlayerSettingsTest {
                 }
             }
             compose.openSection(SettingsSection.PLAYERS)
-            compose.waitUntil(5_000) {
+            compose.waitUntil(WAIT_MS) {
                 listOf("Alpha", "Zulu").all { compose.onAllNodesWithText(it).fetchSemanticsNodes().isNotEmpty() }
             }
             val top = { name: String ->

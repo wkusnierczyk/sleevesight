@@ -21,6 +21,7 @@ import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.TestStores
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.keyboard.KeyboardVectors
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretStore
@@ -103,7 +104,7 @@ class KeyScanTest {
     private fun waitFor(
         what: String,
         condition: () -> Boolean,
-    ) = compose.waitUntil(conditionDescription = what, timeoutMillis = 5_000) { condition() }
+    ) = compose.waitUntil(conditionDescription = what, timeoutMillis = WAIT_MS) { condition() }
 
     private fun waitForNode(matcher: SemanticsMatcher) =
         waitFor("a node: ${matcher.description}") { compose.onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty() }

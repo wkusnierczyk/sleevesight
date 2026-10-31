@@ -28,6 +28,7 @@ import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.TestStores
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.SettingsStore
@@ -105,7 +106,7 @@ class KeyGuidesTest {
     }
 
     private fun waitForNode(matcher: SemanticsMatcher) =
-        compose.waitUntil(conditionDescription = matcher.description, timeoutMillis = 5_000) {
+        compose.waitUntil(conditionDescription = matcher.description, timeoutMillis = WAIT_MS) {
             compose.onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty()
         }
 
@@ -211,7 +212,7 @@ class KeyGuidesTest {
 
             // *Cancel* returns to the key's dialog, which stays open.
             compose.onNode(inScreenWith(text(R.string.settings_cancel), make)).performClick()
-            compose.waitUntil(5_000) { !shown(hasText(make)) }
+            compose.waitUntil(WAIT_MS) { !shown(hasText(make)) }
             compose.onNodeWithText(text(R.string.settings_key_field)).assertIsDisplayed()
         }
 
@@ -235,7 +236,7 @@ class KeyGuidesTest {
             assertEquals("https://sleevesight.app/keyboard.html", opened()?.dataString)
 
             compose.onNode(inScreenWith(text(R.string.settings_cancel), explained)).performClick()
-            compose.waitUntil(5_000) { !shown(hasText(explained)) }
+            compose.waitUntil(WAIT_MS) { !shown(hasText(explained)) }
             compose.onNodeWithText(text(R.string.settings_key_field)).assertIsDisplayed()
         }
 
@@ -246,7 +247,7 @@ class KeyGuidesTest {
             compose.onNodeWithContentDescription(text(R.string.settings_key_scan)).performClick()
             waitForNode(hasText(text(R.string.settings_save)) and isEnabled())
             compose.onNodeWithText(text(R.string.settings_save)).performClick()
-            compose.waitUntil(5_000) { stored(SecretId.LASTFM) == lastFmKey }
+            compose.waitUntil(WAIT_MS) { stored(SecretId.LASTFM) == lastFmKey }
         }
 
     @Test
@@ -319,9 +320,9 @@ class KeyGuidesTest {
             val make = text(R.string.key_scan_make)
             waitForText(make)
             compose.onNode(inScreenWith(text(R.string.settings_cancel), make)).performClick()
-            compose.waitUntil(5_000) { !shown(hasText(make)) }
+            compose.waitUntil(WAIT_MS) { !shown(hasText(make)) }
 
             compose.onNodeWithText(text(R.string.settings_save)).assertIsEnabled().performClick()
-            compose.waitUntil(5_000) { stored(SecretId.LASTFM) == lastFmKey }
+            compose.waitUntil(WAIT_MS) { stored(SecretId.LASTFM) == lastFmKey }
         }
 }

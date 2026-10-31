@@ -29,6 +29,7 @@ import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.app.report.Handed
 import app.sleevesight.app.report.Mail
@@ -259,7 +260,7 @@ class ReportProblemScreenTest {
             update(NowPlayingState(PipelineView(), playing = null, settings = Settings()))
 
             compose.waitUntil(
-                5_000,
+                WAIT_MS,
             ) { compose.onAllNodesWithTag(NOTHING_PLAYING_TAG).fetchSemanticsNodes().isNotEmpty() }
             compose.onNodeWithTag(REPORT_SEND_TAG).performClick()
             assertTrue("Note: It charted in 1974.\n" in mail.sent.single().body)

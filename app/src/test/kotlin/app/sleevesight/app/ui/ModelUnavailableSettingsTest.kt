@@ -14,6 +14,7 @@ import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.TestStores
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.now
 import app.sleevesight.app.pipeline.ModelCheck
 import app.sleevesight.app.secrets.SecretId
@@ -99,7 +100,7 @@ class ModelUnavailableSettingsTest {
         compose.onAllNodes(hasText(text) and hasAnyAncestor(isDialog())).fetchSemanticsNodes().isEmpty()
 
     private fun waitForText(text: String) =
-        compose.waitUntil(conditionDescription = text, timeoutMillis = 5_000) {
+        compose.waitUntil(conditionDescription = text, timeoutMillis = WAIT_MS) {
             compose.onAllNodes(hasText(text, substring = true)).fetchSemanticsNodes().isNotEmpty()
         }
 
@@ -134,7 +135,7 @@ class ModelUnavailableSettingsTest {
             compose.onNodeWithText(app.getString(R.string.settings_cancel)).performClick()
 
             // The row says so, from the check the list made.
-            compose.waitUntil(timeoutMillis = 5_000) {
+            compose.waitUntil(timeoutMillis = WAIT_MS) {
                 check.unavailable.value[ProviderId.ANTHROPIC]?.model == "claude-haiku-5-5"
             }
             compose.onNodeWithText(said).performScrollTo()
@@ -143,10 +144,10 @@ class ModelUnavailableSettingsTest {
             compose.onNodeWithText("Anthropic model").performScrollTo().performClick()
             waitForText("Claude Opus 5.5")
             compose.onNode(hasText("Claude Opus 5.5") and hasAnyAncestor(isDialog())).performClick()
-            compose.waitUntil(timeoutMillis = 5_000) {
+            compose.waitUntil(timeoutMillis = WAIT_MS) {
                 settings.now().aiModels[ProviderId.ANTHROPIC] == "claude-opus-5-5"
             }
-            compose.waitUntil(timeoutMillis = 5_000) { absent(said) }
+            compose.waitUntil(timeoutMillis = WAIT_MS) { absent(said) }
         }
     }
 }

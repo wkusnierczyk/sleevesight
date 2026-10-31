@@ -96,7 +96,7 @@ class ReportButtonWiringTest {
         FirstRunAcknowledgement(app).acknowledge()
         runBlocking { app.graph.settings.update { it.copy(developerMode = true, reportButton = ReportButton.SHOW) } }
         ActivityScenario.launch<MainActivity>(Intent(app, MainActivity::class.java)).use { scenario ->
-            compose.waitUntil(5_000) { buttons() == 1 }
+            compose.waitUntil(WAIT_MS) { buttons() == 1 }
             block(scenario)
         }
     }
@@ -110,7 +110,7 @@ class ReportButtonWiringTest {
     fun theMenusHideStoresHideAndItHoldsAfterTheActivityIsRecreated() =
         home { scenario ->
             hide()
-            compose.waitUntil(5_000) { shown(TESTER_REPORT_HIDDEN_TAG) }
+            compose.waitUntil(WAIT_MS) { shown(TESTER_REPORT_HIDDEN_TAG) }
             assertEquals(ReportButton.HIDE, stored())
             assertEquals(0, buttons())
 
@@ -126,7 +126,7 @@ class ReportButtonWiringTest {
             val gate = CompletableDeferred<Unit>()
             store.gate = gate
             hide()
-            compose.waitUntil(5_000) { store.started.isCompleted }
+            compose.waitUntil(WAIT_MS) { store.started.isCompleted }
             assertEquals("The write is held", ReportButton.SHOW, stored())
 
             scenario.recreate()
@@ -134,7 +134,7 @@ class ReportButtonWiringTest {
             gate.complete(Unit)
             // The released save goes on in turns on the main thread and off it: run the main
             // thread's turns while waiting for the file.
-            compose.waitUntil(5_000) {
+            compose.waitUntil(WAIT_MS) {
                 shadowOf(Looper.getMainLooper()).idle()
                 stored() == ReportButton.HIDE
             }

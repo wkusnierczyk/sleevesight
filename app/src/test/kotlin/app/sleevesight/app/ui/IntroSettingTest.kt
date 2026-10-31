@@ -14,6 +14,7 @@ import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.TestStores
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.idleUntil
 import app.sleevesight.app.now
 import app.sleevesight.app.secrets.SecretStore
@@ -73,14 +74,14 @@ class IntroSettingTest {
             }
             val title = text(R.string.settings_intro)
             compose.openSection(SettingsSection.APPEARANCE)
-            compose.waitUntil(5_000) { compose.onAllNodesWithText(title).fetchSemanticsNodes().isNotEmpty() }
+            compose.waitUntil(WAIT_MS) { compose.onAllNodesWithText(title).fetchSemanticsNodes().isNotEmpty() }
             val row = compose.onNodeWithText(title).performScrollTo()
             row.assertIsOn()
             row.performClick()
-            compose.waitUntil(5_000) { !settings.now().introAtStart }
+            compose.waitUntil(WAIT_MS) { !settings.now().introAtStart }
             row.assertIsOff()
             row.performClick()
-            compose.waitUntil(5_000) { settings.now().introAtStart }
+            compose.waitUntil(WAIT_MS) { settings.now().introAtStart }
         }
     }
 

@@ -16,6 +16,7 @@ import app.sleevesight.app.MainActivity
 import app.sleevesight.app.MemoryStore
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.SettingsStore
@@ -126,7 +127,7 @@ class SettingsIndexTest {
                     SettingsScreen(settings, secrets, emptyMap(), { CompletableDeferred(true) }, saves) { "Player $it" }
                 }
             }
-            compose.waitUntil(5_000) { count(SettingsSection.DEVELOPER.tag) == 1 }
+            compose.waitUntil(WAIT_MS) { count(SettingsSection.DEVELOPER.tag) == 1 }
             val drawn =
                 SettingsSection.entries.associateWith { section ->
                     compose.onNodeWithTag(section.tag).performScrollTo().performClick()

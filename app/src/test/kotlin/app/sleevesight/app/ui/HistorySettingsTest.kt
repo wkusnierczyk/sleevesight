@@ -14,6 +14,7 @@ import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.TestStores
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.testCipher
@@ -70,7 +71,7 @@ class HistorySettingsTest {
             }
             compose.openSection(SettingsSection.HISTORY)
             val title = text(R.string.settings_clear_history)
-            compose.waitUntil(5_000) { compose.onAllNodesWithText(title).fetchSemanticsNodes().isNotEmpty() }
+            compose.waitUntil(WAIT_MS) { compose.onAllNodesWithText(title).fetchSemanticsNodes().isNotEmpty() }
             check()
         }
     }

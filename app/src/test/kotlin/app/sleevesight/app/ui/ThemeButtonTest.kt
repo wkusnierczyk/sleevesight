@@ -17,6 +17,7 @@ import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.ui.theme.SleevesightTheme
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.ThemeChoice
@@ -110,7 +111,7 @@ class ThemeButtonTest {
         showing(ThemeButtonState(ThemeChoice.LIGHT) {}) {
             val label = text(R.string.home_theme_to_dark)
             compose.onNodeWithContentDescription(label).performTouchInput { longClick() }
-            compose.waitUntil(5_000) {
+            compose.waitUntil(WAIT_MS) {
                 compose.onAllNodesWithText(label, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
             }
         }

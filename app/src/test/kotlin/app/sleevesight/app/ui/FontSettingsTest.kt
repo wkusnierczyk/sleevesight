@@ -25,6 +25,7 @@ import app.sleevesight.app.MemoryStore
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.TestStores
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.idleUntil
 import app.sleevesight.app.now
 import app.sleevesight.app.secrets.SecretStore
@@ -128,17 +129,17 @@ class FontSettingsTest {
             val appFont = text(R.string.settings_font_app)
             val systemFont = text(R.string.settings_font_system)
             compose.openSection(SettingsSection.APPEARANCE)
-            compose.waitUntil(5_000) { shown(appFont) }
+            compose.waitUntil(WAIT_MS) { shown(appFont) }
             assertEquals(Roboto, typography?.bodyLarge?.fontFamily)
 
             // One tap on the choice's button in *Font*'s row (#637).
             compose.onNode(hasText(systemFont) and isSelectable()).performScrollTo().performClick()
-            compose.waitUntil(5_000) { shown(systemFont) && typography?.bodyLarge?.fontFamily != Roboto }
+            compose.waitUntil(WAIT_MS) { shown(systemFont) && typography?.bodyLarge?.fontFamily != Roboto }
             assertEquals(FontChoice.SYSTEM_FONT, settings.now().font)
             assertEquals(Typography(), typography)
 
             compose.onNode(hasText(appFont) and isSelectable()).performScrollTo().performClick()
-            compose.waitUntil(5_000) { typography?.bodyLarge?.fontFamily == Roboto }
+            compose.waitUntil(WAIT_MS) { typography?.bodyLarge?.fontFamily == Roboto }
             assertEquals(FontChoice.APP_FONT, settings.now().font)
         }
     }
@@ -216,9 +217,9 @@ class FontSettingsTest {
             compose.mainClock.autoAdvance = true
 
             runBlocking { app.graph.settings.update { it.copy(font = FontChoice.APP_FONT) } }
-            compose.waitUntil(5_000) { familyOf(title) == Roboto }
+            compose.waitUntil(WAIT_MS) { familyOf(title) == Roboto }
             runBlocking { app.graph.settings.update { it.copy(font = FontChoice.SYSTEM_FONT) } }
-            compose.waitUntil(5_000) { familyOf(title) != Roboto }
+            compose.waitUntil(WAIT_MS) { familyOf(title) != Roboto }
 
             // A new activity, as after a rotation or a return to the app, starts in it too.
             compose.mainClock.autoAdvance = false

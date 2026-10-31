@@ -19,6 +19,7 @@ import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.TestStores
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.now
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.SettingsStore
@@ -96,12 +97,12 @@ class LayoutSettingTest {
             button(R.string.settings_layout_boxes).performScrollTo().assertIsSelected()
 
             choose(R.string.settings_layout_pages)
-            compose.waitUntil(5_000) { settings.now().layout == Layout.SEPARATE_PAGES }
+            compose.waitUntil(WAIT_MS) { settings.now().layout == Layout.SEPARATE_PAGES }
             button(R.string.settings_layout_pages).assertIsSelected()
             button(R.string.settings_layout_boxes).assertIsNotSelected()
 
             choose(R.string.settings_layout_boxes)
-            compose.waitUntil(5_000) { settings.now().layout == Layout.EXPANDABLE_BOXES }
+            compose.waitUntil(WAIT_MS) { settings.now().layout == Layout.EXPANDABLE_BOXES }
         }
 
     @Test
@@ -112,16 +113,16 @@ class LayoutSettingTest {
                 .assertIsEnabled()
                 .assertIsOff()
                 .performClick()
-            compose.waitUntil(5_000) { settings.now().keepSourcesUnfolded }
+            compose.waitUntil(WAIT_MS) { settings.now().keepSourcesUnfolded }
 
             choose(R.string.settings_layout_pages)
-            compose.waitUntil(5_000) { settings.now().layout == Layout.SEPARATE_PAGES }
+            compose.waitUntil(WAIT_MS) { settings.now().layout == Layout.SEPARATE_PAGES }
             // Not offered, but kept as it was.
             keepSources().performScrollTo().assertIsNotEnabled().assertIsOn()
             assertTrue(settings.now().keepSourcesUnfolded)
 
             choose(R.string.settings_layout_boxes)
-            compose.waitUntil(5_000) { settings.now().layout == Layout.EXPANDABLE_BOXES }
+            compose.waitUntil(WAIT_MS) { settings.now().layout == Layout.EXPANDABLE_BOXES }
             keepSources().performScrollTo().assertIsEnabled().assertIsOn()
             assertTrue(settings.now().keepSourcesUnfolded)
         }

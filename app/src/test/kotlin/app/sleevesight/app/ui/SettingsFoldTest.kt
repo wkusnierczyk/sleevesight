@@ -24,6 +24,7 @@ import app.sleevesight.app.MainActivity
 import app.sleevesight.app.MemoryStore
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.testCipher
@@ -95,7 +96,7 @@ class SettingsFoldTest {
                     }
                 }
             }
-            compose.waitUntil(5_000) { shown(R.string.settings_title) }
+            compose.waitUntil(WAIT_MS) { shown(R.string.settings_title) }
             block()
         }
     }
@@ -195,7 +196,7 @@ class SettingsFoldTest {
         show {
             open(SettingsSection.HISTORY)
             restore()
-            compose.waitUntil(5_000) { shown(R.string.settings_title) }
+            compose.waitUntil(WAIT_MS) { shown(R.string.settings_title) }
             assertTrue(isOpen(SettingsSection.HISTORY))
             assertTrue(shown(R.string.settings_keep_history))
             assertTrue(!isOpen(SettingsSection.ABOUT))

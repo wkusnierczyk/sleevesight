@@ -18,6 +18,7 @@ import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.TestStores
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.now
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.SettingsStore
@@ -109,7 +110,7 @@ class DeveloperMarkSettingTest {
                     }
                 }
             }
-            compose.waitUntil(5_000) { shown(R.string.settings_title) }
+            compose.waitUntil(WAIT_MS) { shown(R.string.settings_title) }
             block()
         }
     }
@@ -121,10 +122,10 @@ class DeveloperMarkSettingTest {
         show {
             compose.openSection(SettingsSection.PLAYERS)
             compose.openSection(SettingsSection.DEVELOPER)
-            compose.waitUntil(5_000) { shown(R.string.settings_mark_developer) }
+            compose.waitUntil(WAIT_MS) { shown(R.string.settings_mark_developer) }
             compose.onNodeWithText(text(R.string.settings_mark_developer_summary)).assertExists()
             compose.onNodeWithText(text(R.string.settings_mark_developer)).performScrollTo().assertIsOn()
-            compose.waitUntil(5_000) { packageMarked() }
+            compose.waitUntil(WAIT_MS) { packageMarked() }
             // The section and Spotify's package name.
             assertEquals(2, marks())
             assertEquals(1, developerTexts())
@@ -137,18 +138,18 @@ class DeveloperMarkSettingTest {
         show {
             compose.openSection(SettingsSection.PLAYERS)
             compose.openSection(SettingsSection.DEVELOPER)
-            compose.waitUntil(5_000) { marks() == 2 }
+            compose.waitUntil(WAIT_MS) { marks() == 2 }
 
             val row = compose.onNodeWithText(text(R.string.settings_mark_developer))
             row.performScrollTo().performClick()
-            compose.waitUntil(5_000) { !settings.now().markDeveloperItems && marks() == 0 }
+            compose.waitUntil(WAIT_MS) { !settings.now().markDeveloperItems && marks() == 0 }
             row.assertIsOff()
             // The package name still shows, unmarked.
             compose.onNodeWithText(Settings.SPOTIFY, useUnmergedTree = true).assertExists()
             assertEquals(1, developerTexts())
 
             row.performScrollTo().performClick()
-            compose.waitUntil(5_000) { settings.now().markDeveloperItems && marks() == 2 }
+            compose.waitUntil(WAIT_MS) { settings.now().markDeveloperItems && marks() == 2 }
         }
     }
 
@@ -159,10 +160,10 @@ class DeveloperMarkSettingTest {
             compose.openSection(SettingsSection.PLAYERS)
             compose.openSection(SettingsSection.DEVELOPER)
             compose.onNodeWithText(text(R.string.settings_mark_developer)).performScrollTo().performClick()
-            compose.waitUntil(5_000) { settings.now().markDeveloperItems && marks() == 2 }
+            compose.waitUntil(WAIT_MS) { settings.now().markDeveloperItems && marks() == 2 }
 
             compose.onNodeWithText(text(R.string.settings_developer_mode)).performScrollTo().performClick()
-            compose.waitUntil(5_000) { !settings.now().developerMode && marks() == 0 }
+            compose.waitUntil(WAIT_MS) { !settings.now().developerMode && marks() == 0 }
             assertTrue("back on for the next time", settings.now().markDeveloperItems)
             val spotify = compose.onAllNodesWithText(Settings.SPOTIFY, useUnmergedTree = true)
             assertEquals(0, spotify.fetchSemanticsNodes().size)

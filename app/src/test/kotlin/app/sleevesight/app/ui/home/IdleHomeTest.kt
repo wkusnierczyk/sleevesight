@@ -34,6 +34,7 @@ import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.TestStores
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.now
 import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.app.session.PlaybackInfo
@@ -303,12 +304,12 @@ class IdleHomeTest {
             // On the UI thread in step with the compose rule, each step checked before the next.
             compose.runOnUiThread { nav.navigate("elsewhere") }
             compose.waitForIdle()
-            compose.waitUntil(5_000) { compose.onAllNodesWithText("Elsewhere").fetchSemanticsNodes().isNotEmpty() }
+            compose.waitUntil(WAIT_MS) { compose.onAllNodesWithText("Elsewhere").fetchSemanticsNodes().isNotEmpty() }
             assertFalse("left, no longer hidden", hiding.hidden.value)
             compose.runOnUiThread { nav.popBackStack() }
             compose.waitForIdle()
             compose.awaitIdleHome()
-            compose.waitUntil(5_000) { guides() == 1 }
+            compose.waitUntil(WAIT_MS) { guides() == 1 }
         }
     }
 
@@ -326,7 +327,7 @@ class IdleHomeTest {
             scenario.moveToState(Lifecycle.State.CREATED)
             scenario.moveToState(Lifecycle.State.RESUMED)
             compose.awaitIdleHome()
-            compose.waitUntil(5_000) { guides() == 1 }
+            compose.waitUntil(WAIT_MS) { guides() == 1 }
         }
     }
 
@@ -377,13 +378,13 @@ class IdleHomeTest {
                 scenario.onActivity { it.setContent(content = home(feed)) }
                 compose.awaitIdleHome()
                 compose.onNodeWithTag(GUIDE_DISMISS_TAG).performScrollTo().performClick()
-                compose.waitUntil(5_000) { Dismissable.HOME_GUIDE in store.now().dismissed }
-                compose.waitUntil(5_000) { guides() == 0 }
+                compose.waitUntil(WAIT_MS) { Dismissable.HOME_GUIDE in store.now().dismissed }
+                compose.waitUntil(WAIT_MS) { guides() == 0 }
                 val message = text(R.string.home_guide_dismissed)
-                compose.waitUntil(5_000) { compose.onAllNodesWithText(message).fetchSemanticsNodes().isNotEmpty() }
+                compose.waitUntil(WAIT_MS) { compose.onAllNodesWithText(message).fetchSemanticsNodes().isNotEmpty() }
                 compose.onNodeWithText(text(R.string.undo)).performClick()
-                compose.waitUntil(5_000) { store.now().dismissed.isEmpty() }
-                compose.waitUntil(5_000) { guides() == 1 }
+                compose.waitUntil(WAIT_MS) { store.now().dismissed.isEmpty() }
+                compose.waitUntil(WAIT_MS) { guides() == 1 }
             }
         } finally {
             reading.cancel()
@@ -393,7 +394,7 @@ class IdleHomeTest {
     @Test
     fun aDismissNotSavedSaysSoAndTheGuideStays() =
         dismissing(Dismissals({ CompletableDeferred(false) }, { CompletableDeferred(true) })) {
-            compose.waitUntil(5_000) { shows(text(R.string.settings_change_failed)) }
+            compose.waitUntil(WAIT_MS) { shows(text(R.string.settings_change_failed)) }
             assertFalse(shows(text(R.string.home_guide_dismissed)))
             assertEquals(1, guides())
         }
@@ -401,9 +402,9 @@ class IdleHomeTest {
     @Test
     fun anUndoNotSavedSaysSo() =
         dismissing(Dismissals({ CompletableDeferred(true) }, { CompletableDeferred(false) })) {
-            compose.waitUntil(5_000) { shows(text(R.string.home_guide_dismissed)) }
+            compose.waitUntil(WAIT_MS) { shows(text(R.string.home_guide_dismissed)) }
             compose.onNodeWithText(text(R.string.undo)).performClick()
-            compose.waitUntil(5_000) { shows(text(R.string.settings_change_failed)) }
+            compose.waitUntil(WAIT_MS) { shows(text(R.string.settings_change_failed)) }
         }
 
     // Home with [dismissals], the guide's *Dismiss* tapped, then [check].

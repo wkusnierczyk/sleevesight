@@ -28,6 +28,7 @@ import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.secrets.SaveResult
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretState
@@ -155,7 +156,7 @@ class KeyAutofillTest {
                     }
                 }
             }
-            compose.waitUntil(timeoutMillis = 5_000) {
+            compose.waitUntil(timeoutMillis = WAIT_MS) {
                 compose.onAllNodes(hasText(text(R.string.settings_key_field))).fetchSemanticsNodes().isNotEmpty()
             }
             scenario.block(shown)
@@ -186,7 +187,7 @@ class KeyAutofillTest {
 
                 fill(" filled-key ")
                 compose.onNodeWithText(text(R.string.settings_save)).assertIsEnabled().performClick()
-                compose.waitUntil(timeoutMillis = 5_000) { shown.saved.isNotEmpty() }
+                compose.waitUntil(timeoutMillis = WAIT_MS) { shown.saved.isNotEmpty() }
                 assertEquals("$id saves what was filled", listOf("filled-key"), shown.saved)
             }
         }
@@ -206,7 +207,7 @@ class KeyAutofillTest {
         show { shown ->
             fill("filled-key")
             compose.onNodeWithText(text(R.string.settings_save)).performClick()
-            compose.waitUntil(timeoutMillis = 5_000) { shown.dismissed == 1 }
+            compose.waitUntil(timeoutMillis = WAIT_MS) { shown.dismissed == 1 }
             compose.waitForIdle()
             assertCancelledThenClosed()
         }
@@ -217,13 +218,13 @@ class KeyAutofillTest {
             compose.onNodeWithText(text(R.string.settings_remove)).performClick()
             // *Remove* asks first (#543): the confirmation's own *Remove* removes the key.
             val title = app.getString(R.string.settings_key_remove_title, text(R.string.settings_key_name_anthropic))
-            compose.waitUntil(timeoutMillis = 5_000) {
+            compose.waitUntil(timeoutMillis = WAIT_MS) {
                 compose.onAllNodes(hasText(title)).fetchSemanticsNodes().isNotEmpty()
             }
             compose
                 .onNode(hasText(text(R.string.settings_remove)) and hasAnyAncestor(hasAnyDescendant(hasText(title))))
                 .performClick()
-            compose.waitUntil(timeoutMillis = 5_000) { shown.dismissed == 1 }
+            compose.waitUntil(timeoutMillis = WAIT_MS) { shown.dismissed == 1 }
             compose.waitForIdle()
             assertEquals(1, shown.removed)
             assertCancelledThenClosed()
@@ -237,7 +238,7 @@ class KeyAutofillTest {
             assertTrue("Compose tracks the field for autofill", RecordingAutofillManager.ENTERED in calls)
             fill("filled-key")
             compose.onNodeWithText(text(R.string.settings_save)).performClick()
-            compose.waitUntil(timeoutMillis = 5_000) {
+            compose.waitUntil(timeoutMillis = WAIT_MS) {
                 compose.onAllNodes(hasText(text(R.string.settings_key_write_failed))).fetchSemanticsNodes().isNotEmpty()
             }
             assertEquals(0, shown.dismissed)

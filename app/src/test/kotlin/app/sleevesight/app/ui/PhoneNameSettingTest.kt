@@ -25,6 +25,7 @@ import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.TestStores
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.keyboard.KeyboardVectors
 import app.sleevesight.app.now
 import app.sleevesight.app.secrets.SecretStore
@@ -83,7 +84,7 @@ class PhoneNameSettingTest {
     private fun text(id: Int) = app.getString(id)
 
     private fun waitForText(text: String) =
-        compose.waitUntil(conditionDescription = "the text $text", timeoutMillis = 5_000) {
+        compose.waitUntil(conditionDescription = "the text $text", timeoutMillis = WAIT_MS) {
             compose.onAllNodes(hasText(text)).fetchSemanticsNodes().isNotEmpty()
         }
 
@@ -148,7 +149,7 @@ class PhoneNameSettingTest {
         show {
             val row = compose.onNodeWithText(text(R.string.settings_show_phone_name)).performScrollTo()
             row.performClick()
-            compose.waitUntil(5_000) { settings.now().showPhoneName }
+            compose.waitUntil(WAIT_MS) { settings.now().showPhoneName }
             row.assertIsOn()
             typeOnAComputer()
             assertEquals(listOf(true), given)
@@ -193,7 +194,7 @@ class PhoneNameSettingTest {
             // the setting would have changed.
             compose.waitForIdle()
             val pending = saves.coroutineContext.job
-            compose.waitUntil(5_000) { pending.children.none { it.isActive } }
+            compose.waitUntil(WAIT_MS) { pending.children.none { it.isActive } }
             assertFalse(settings.now().showPhoneName)
             row.assertIsOff()
         }

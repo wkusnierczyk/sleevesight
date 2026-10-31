@@ -20,6 +20,7 @@ import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.TestStores
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.now
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.SettingsCodec
@@ -106,26 +107,26 @@ class ThemeButtonSettingTest {
         val cycle = settings.themeCycler(saves)
         for (expected in listOf(ThemeChoice.LIGHT, ThemeChoice.DARK, ThemeChoice.SYSTEM)) {
             cycle()
-            compose.waitUntil(5_000) { settings.now().theme == expected }
+            compose.waitUntil(WAIT_MS) { settings.now().theme == expected }
         }
         // Two taps before either is saved still move it two steps: each reads what is stored.
         cycle()
         cycle()
-        compose.waitUntil(5_000) { settings.now().theme == ThemeChoice.DARK }
+        compose.waitUntil(WAIT_MS) { settings.now().theme == ThemeChoice.DARK }
     }
 
     @Test
     fun theSwitchUnderAppearanceTurnsTheButtonOffAndOn() =
         showSettings {
             val title = text(R.string.settings_theme_button)
-            compose.waitUntil(5_000) { compose.onAllNodesWithText(title).fetchSemanticsNodes().isNotEmpty() }
+            compose.waitUntil(WAIT_MS) { compose.onAllNodesWithText(title).fetchSemanticsNodes().isNotEmpty() }
             val row = compose.onNodeWithText(title).performScrollTo()
             row.assertIsOn()
             row.performClick()
-            compose.waitUntil(5_000) { !settings.now().themeButton }
+            compose.waitUntil(WAIT_MS) { !settings.now().themeButton }
             row.assertIsOff()
             row.performClick()
-            compose.waitUntil(5_000) { settings.now().themeButton }
+            compose.waitUntil(WAIT_MS) { settings.now().themeButton }
         }
 
     @Test
@@ -138,7 +139,7 @@ class ThemeButtonSettingTest {
                 ThemeChoice.SYSTEM to R.string.settings_theme_system,
             )) {
                 cycle()
-                compose.waitUntil(5_000) { settings.now().theme == theme }
+                compose.waitUntil(WAIT_MS) { settings.now().theme == theme }
                 compose.waitForIdle()
                 compose.onNode(hasText(text(label)) and isSelectable()).performScrollTo().assertIsSelected()
             }

@@ -39,6 +39,7 @@ import app.sleevesight.app.MainActivity
 import app.sleevesight.app.MemoryStore
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.SettingsStore
@@ -201,7 +202,7 @@ class SettingsKeyLinksTest {
     }
 
     private fun waitForNode(matcher: SemanticsMatcher) =
-        compose.waitUntil(conditionDescription = matcher.description, timeoutMillis = 5_000) {
+        compose.waitUntil(conditionDescription = matcher.description, timeoutMillis = WAIT_MS) {
             compose.onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty()
         }
 

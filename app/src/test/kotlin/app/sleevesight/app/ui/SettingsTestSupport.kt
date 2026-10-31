@@ -5,6 +5,7 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.ui.settings.SettingsSection
 
 /**
@@ -12,7 +13,7 @@ import app.sleevesight.app.ui.settings.SettingsSection
  * only then. Waits for the screen to show the heading first.
  */
 internal fun ComposeTestRule.openSection(section: SettingsSection) {
-    waitUntil(conditionDescription = "the ${section.name} heading", timeoutMillis = 5_000) {
+    waitUntil(conditionDescription = "the ${section.name} heading", timeoutMillis = WAIT_MS) {
         onAllNodesWithTag(section.tag).fetchSemanticsNodes().isNotEmpty()
     }
     onNodeWithTag(section.tag).performScrollTo().performClick()

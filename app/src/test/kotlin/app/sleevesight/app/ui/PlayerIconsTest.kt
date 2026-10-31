@@ -25,6 +25,7 @@ import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.TestStores
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.idleUntil
 import app.sleevesight.app.now
 import app.sleevesight.app.secrets.SecretStore
@@ -136,12 +137,12 @@ class PlayerIconsTest {
     fun aShownPlayerHasItsIconAndOneNeitherShownNorSeenIsHiddenWithItsEntryKept() {
         stored(VISIBLE to false, HIDDEN to true)
         showPlayers(phone(visible = setOf(VISIBLE))) {
-            compose.waitUntil(5_000) { shown("Example") }
+            compose.waitUntil(WAIT_MS) { shown("Example") }
             assertTrue("Spotify, not shown, is not listed", !shown("Spotify"))
             assertTrue("a player neither shown nor seen is not listed", !shown("Hidden"))
 
             // The icon is at the row's start, before the name: 40 dp and a 16 dp gap.
-            compose.waitUntil(5_000) { indent("Example") >= 56.dp }
+            compose.waitUntil(WAIT_MS) { indent("Example") >= 56.dp }
             // And is decorative: the row is read by its name alone, as before.
             row("Example").assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.ContentDescription))
             assertEquals(
@@ -162,7 +163,7 @@ class PlayerIconsTest {
     fun aPlayerSeenButNotShownIsListedByNameAndCanBeSwitchedOnAndOff() {
         stored(HIDDEN to false)
         showPlayers(phone(visible = emptySet(), seen = setOf(HIDDEN))) {
-            compose.waitUntil(5_000) { shown("Hidden") }
+            compose.waitUntil(WAIT_MS) { shown("Hidden") }
             // No icon to give: the name starts the row.
             assertTrue(indent("Hidden") < 16.dp)
 
@@ -185,10 +186,10 @@ class PlayerIconsTest {
         }
         try {
             showPlayers(phone(visible = setOf(VISIBLE), icon = slow)) {
-                compose.waitUntil(5_000) { shown("Example") }
+                compose.waitUntil(WAIT_MS) { shown("Example") }
                 assertTrue("no icon yet", indent("Example") < 16.dp)
                 release.countDown()
-                compose.waitUntil(5_000) { indent("Example") >= 56.dp }
+                compose.waitUntil(WAIT_MS) { indent("Example") >= 56.dp }
                 assertNotSame(Looper.getMainLooper().thread, loadedOn.get())
             }
         } finally {
@@ -210,7 +211,7 @@ class PlayerIconsTest {
             NAMES.getValue(player)
         }
         showPlayers(phone(visible = setOf(VISIBLE)), label) {
-            compose.waitUntil(5_000) { shown("Example") }
+            compose.waitUntil(WAIT_MS) { shown("Example") }
             assertEquals(setOf("label", "launch"), asked.keys)
             assertTrue(asked.values.none { it == Looper.getMainLooper().thread })
         }
@@ -222,13 +223,13 @@ class PlayerIconsTest {
         stored(VISIBLE to false)
         val visible = CopyOnWriteArraySet<String>()
         showPlayers(phone(visible = visible)) { scenario ->
-            compose.waitUntil(5_000) { shown(app.getString(R.string.settings_players_none)) }
+            compose.waitUntil(WAIT_MS) { shown(app.getString(R.string.settings_players_none)) }
             assertTrue(!shown("Example"))
 
             visible += VISIBLE
             scenario.moveToState(Lifecycle.State.CREATED)
             scenario.moveToState(Lifecycle.State.RESUMED)
-            compose.waitUntil(5_000) { shown("Example") }
+            compose.waitUntil(WAIT_MS) { shown("Example") }
         }
     }
 
@@ -236,7 +237,7 @@ class PlayerIconsTest {
     fun withNoPlayerShownTheSectionSaysHowOneIsAdded() {
         showPlayers(phone(visible = emptySet())) {
             val none = app.getString(R.string.settings_players_none)
-            compose.waitUntil(5_000) { shown(none) }
+            compose.waitUntil(WAIT_MS) { shown(none) }
             assertTrue(!shown("Spotify"))
             // Spotify's entry is kept, still on, for when it is installed.
             assertEquals(mapOf(Settings.SPOTIFY to true), settings.now().followedPlayers)

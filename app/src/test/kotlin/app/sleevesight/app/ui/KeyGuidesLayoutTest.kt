@@ -24,6 +24,7 @@ import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.TestStores
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.testCipher
@@ -76,7 +77,7 @@ class KeyGuidesLayoutTest {
     private val camera: QrScanner = { Box(Modifier.fillMaxSize().testTag(CAMERA)) }
 
     private fun waitForNode(matcher: SemanticsMatcher) =
-        compose.waitUntil(conditionDescription = matcher.description, timeoutMillis = 5_000) {
+        compose.waitUntil(conditionDescription = matcher.description, timeoutMillis = WAIT_MS) {
             compose.onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty()
         }
 
