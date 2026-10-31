@@ -198,7 +198,7 @@ interface SourceAdapter {
     suspend fun lookup(track: NormalizedTrack, resolution: Deferred<Resolution>): SourceResult  // typed outcome + evidence lines; see architecture.md, Source adapters
 }
 
-val SourceAdapter.tag: String get() = id.tag   // MB, W (and WD), L, D, G
+val SourceAdapter.tag: String get() = id.tag   // MB, W (and WD), L, D, S
 ```
 
 | Source | Role | Notes |
