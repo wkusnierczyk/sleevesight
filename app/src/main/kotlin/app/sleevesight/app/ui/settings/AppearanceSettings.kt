@@ -3,10 +3,12 @@ package app.sleevesight.app.ui.settings
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import app.sleevesight.app.R
+import app.sleevesight.app.ui.theme.LocalMessages
 import app.sleevesight.core.settings.FontChoice
 import app.sleevesight.core.settings.Layout
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.ThemeChoice
+import kotlinx.coroutines.Deferred
 
 /**
  * How the app looks: *Theme* (#444), light or dark as the system is, or always one of them;
@@ -18,14 +20,16 @@ import app.sleevesight.core.settings.ThemeChoice
  * as you left them* (#269), off by default, so the *Sources* list under each new track's insight
  * starts folded; under *Expandable boxes* only, so it is shown, but not offered, under *Separate
  * pages*, where each page opens fresh. *Logo intro at start* (#383), from the next time the app is
- * opened. *Home guide* (#627): whether Home, with nothing playing, shows the guide to Home, where
- * its *Re-enable in Settings* lands. *Theme*, *Font* and *Layout* show their choices as button
- * groups (#637), one tap to choose.
+ * opened. *Theme*, *Font* and *Layout* show their choices as button groups (#637), one tap to
+ * choose. Last, *Restore dismissed messages* (#759): its button brings back everything dismissed for
+ * good ([restore]: the guide to Home, *Players*' note), then a message says so; disabled while
+ * nothing is dismissed.
  */
 @Composable
 internal fun AppearanceSection(
     settings: Settings,
     update: Update,
+    restore: () -> Deferred<Boolean>,
 ) {
     // *Theme*, *Font* and *Layout*: a few short choices each, as button groups (#637).
     ChoiceButtonsRow(
@@ -63,15 +67,25 @@ internal fun AppearanceSection(
         summary = stringResource(R.string.settings_intro_summary),
         checked = settings.introAtStart,
     ) { on -> update { it.copy(introAtStart = on) } }
-    // Where the home guide's *Re-enable in Settings* links to (#627).
-    LandingSpot(SettingsTarget.homeGuide) {
-        SwitchRow(
-            title = stringResource(R.string.settings_home_guide),
-            summary = stringResource(R.string.settings_home_guide_summary),
-            checked = settings.homeGuide,
-        ) { on -> update { it.copy(homeGuide = on) } }
-    }
+    // Last (#759), where *Home guide* was: disabled while nothing is dismissed.
+    val messages = LocalMessages.current
+    val restored = stringResource(R.string.settings_restore_dismissed_done)
+    ButtonRow(
+        title = stringResource(R.string.settings_restore_dismissed),
+        summary = stringResource(R.string.settings_restore_dismissed_summary),
+        label = stringResource(R.string.settings_restore_dismissed_button),
+        tag = RESTORE_DISMISSED_TAG,
+        onClick =
+            if (settings.dismissed.isEmpty()) {
+                null
+            } else {
+                { messages?.showOnceSaved(restore(), restored) }
+            },
+    )
 }
+
+/** The test tag of *Restore dismissed messages*' button (#759). */
+internal const val RESTORE_DISMISSED_TAG = "settings:restoreDismissed"
 
 /** *Theme*'s choices. */
 @Composable

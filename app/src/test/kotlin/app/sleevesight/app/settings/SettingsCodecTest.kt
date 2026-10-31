@@ -12,6 +12,7 @@ import app.sleevesight.core.genres.LabelSource
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.settings.Crossfade
+import app.sleevesight.core.settings.Dismissable
 import app.sleevesight.core.settings.FontChoice
 import app.sleevesight.core.settings.Layout
 import app.sleevesight.core.settings.LinkStyle
@@ -100,7 +101,7 @@ class SettingsCodecTest {
                 theme = ThemeChoice.DARK,
                 font = FontChoice.SYSTEM_FONT,
                 introAtStart = false,
-                homeGuide = false,
+                dismissed = setOf(Dismissable.HOME_GUIDE, Dismissable.PLAYERS_NOTE),
             )
         assertEquals(changed, roundTrip(changed))
     }
@@ -269,12 +270,54 @@ class SettingsCodecTest {
     }
 
     @Test
-    fun theHomeGuideIsOnByDefaultAndOffIsStoredUnderItsKey() {
-        // As stored before the setting existed (#627): other settings, and no guide.
-        assertTrue(SettingsCodec.read(mutablePreferencesOf(booleanPreferencesKey("display.intro") to false)).homeGuide)
+    fun nothingIsDismissedByDefaultAndWhatIsIsStoredByNameUnderItsKey() {
+        // As stored before the setting existed (#759): other settings, and nothing dismissed.
+        assertTrue(
+            SettingsCodec
+                .read(
+                    mutablePreferencesOf(booleanPreferencesKey("display.intro") to false),
+                ).dismissed
+                .isEmpty(),
+        )
         val prefs = mutablePreferencesOf()
-        SettingsCodec.write(Settings(homeGuide = false), prefs)
-        assertEquals(mutablePreferencesOf(booleanPreferencesKey("display.home_guide") to false), prefs)
+        SettingsCodec.write(Settings(dismissed = setOf(Dismissable.PLAYERS_NOTE)), prefs)
+        assertEquals(mutablePreferencesOf(DISMISSED to setOf("PLAYERS_NOTE")), prefs)
+        SettingsCodec.write(Settings(), prefs)
+        assertTrue("restored, nothing is dismissed and it has no key", prefs.asMap().isEmpty())
+    }
+
+    @Test
+    fun theHomeGuideSwitchedOffReadsAsTheGuideDismissed() {
+        // As stored while the guide had a switch of its own (#627).
+        val before = mutablePreferencesOf(HOME_GUIDE_SWITCH to false)
+        assertEquals(setOf(Dismissable.HOME_GUIDE), SettingsCodec.read(before).dismissed)
+        // Switched on, as no write stored it, it reads as nothing dismissed.
+        assertTrue(SettingsCodec.read(mutablePreferencesOf(HOME_GUIDE_SWITCH to true)).dismissed.isEmpty())
+    }
+
+    @Test
+    fun theOldSwitchGoesOnceWhatIsDismissedChanges() {
+        val prefs = mutablePreferencesOf(HOME_GUIDE_SWITCH to false)
+        // Another dismissed: the guide stays dismissed, under the new key alone.
+        SettingsCodec.write(Settings(dismissed = setOf(Dismissable.HOME_GUIDE, Dismissable.PLAYERS_NOTE)), prefs)
+        assertEquals(mutablePreferencesOf(DISMISSED to setOf("HOME_GUIDE", "PLAYERS_NOTE")), prefs)
+        // Restored: the guide is not dismissed again by the old switch.
+        val old = mutablePreferencesOf(HOME_GUIDE_SWITCH to false)
+        SettingsCodec.write(Settings(), old)
+        assertTrue(old.asMap().isEmpty())
+        assertTrue(SettingsCodec.read(old).dismissed.isEmpty())
+    }
+
+    @Test
+    fun aDismissedNameThisVersionDoesNotKnowIsSkippedAndKeptUntilARestore() {
+        val prefs = mutablePreferencesOf(DISMISSED to setOf("LATER_PANEL", "HOME_GUIDE"))
+        assertEquals(setOf(Dismissable.HOME_GUIDE), SettingsCodec.read(prefs).dismissed)
+        // Another dismissed: the later version's name stays.
+        SettingsCodec.write(Settings(dismissed = setOf(Dismissable.HOME_GUIDE, Dismissable.PLAYERS_NOTE)), prefs)
+        assertEquals(setOf("LATER_PANEL", "HOME_GUIDE", "PLAYERS_NOTE"), prefs[DISMISSED])
+        // Restored: nothing is dismissed, the later version's item included.
+        SettingsCodec.write(Settings(), prefs)
+        assertTrue(prefs.asMap().isEmpty())
     }
 
     @Test
@@ -704,5 +747,7 @@ class SettingsCodecTest {
     private companion object {
         const val OTHER_PLAYER = "com.example.player"
         const val TELECOM = "com.android.server.telecom"
+        val DISMISSED = stringSetPreferencesKey("display.dismissed")
+        val HOME_GUIDE_SWITCH = booleanPreferencesKey("display.home_guide")
     }
 }

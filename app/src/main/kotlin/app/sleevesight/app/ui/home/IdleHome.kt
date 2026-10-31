@@ -48,8 +48,10 @@ import app.sleevesight.app.ui.settings.listedPlayers
 import app.sleevesight.app.ui.settings.playerIcon
 import app.sleevesight.app.ui.theme.LinkLabel
 import app.sleevesight.app.ui.theme.LinkedText
+import app.sleevesight.app.ui.theme.LocalMessages
 import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.app.ui.theme.linkedParts
+import app.sleevesight.core.settings.Dismissable
 import app.sleevesight.core.settings.Settings
 import kotlin.math.roundToInt
 
@@ -59,7 +61,7 @@ import kotlin.math.roundToInt
  */
 @Composable
 fun NothingPlaying() {
-    IdleHome(Settings(), guideDismissed = false, NowPlayingActions(normalize = { error("Nothing plays") }))
+    IdleHome(Settings(), guideHidden = false, NowPlayingActions(normalize = { error("Nothing plays") }))
 }
 
 /**
@@ -69,14 +71,15 @@ fun NothingPlaying() {
  * tapped, and links to *Players* (*Enable in Settings*). With no player listed, a line says so, and
  * links to *Players*. With *Only enabled players on Home* on (#674), only the followed players are
  * listed; with players listed but none of them followed, a line says none is switched on, and links
- * to *Players*. Under the players, the guide to Home ([HomeGuide]) while *Home guide* is on and
- * it is not [guideDismissed]. Nothing before the settings' first read ([settings] null), nor before
- * the players have loaded.
+ * to *Players*. Under the players, the guide to Home ([HomeGuide]) while it is neither dismissed, for
+ * good, nor [guideHidden], for now (#759). After its *Dismiss*, a message says where to bring it
+ * back, with *Undo*. Nothing before the settings' first read ([settings] null), nor before the
+ * players have loaded.
  */
 @Composable
 internal fun IdleHome(
     settings: Settings?,
-    guideDismissed: Boolean,
+    guideHidden: Boolean,
     actions: NowPlayingActions,
 ) {
     if (settings == null) return
@@ -98,12 +101,22 @@ internal fun IdleHome(
                 IdlePlayerRow(player, settings.follows(player.packageName), apps, toPlayers)
             }
         }
-        if (settings.homeGuide && !guideDismissed) {
+        if (Dismissable.HOME_GUIDE !in settings.dismissed && !guideHidden) {
             Spacer(Modifier.height(GUIDE_SPACE))
+            val messages = LocalMessages.current
+            val dismissed = stringResource(R.string.home_guide_dismissed)
+            val undo = stringResource(R.string.undo)
+            // Home has no other notice of a failed save: a *Dismiss* or its *Undo* not saved says so.
+            val failed = stringResource(R.string.settings_change_failed)
+            val dismissals = actions.dismissals
             HomeGuide(
-                onDismissOnce = actions.dismissGuide,
-                onNever = actions.hideGuide,
-                onReenable = { actions.openSettingsAt(SettingsTarget.homeGuide) },
+                onHideOnce = actions.hideGuideOnce,
+                onDismiss = {
+                    val saved = dismissals.dismiss(Dismissable.HOME_GUIDE)
+                    messages?.showOnceSaved(saved, dismissed, undo, failed) {
+                        messages.showIfFailed(dismissals.undo(Dismissable.HOME_GUIDE), failed)
+                    }
+                },
             )
         }
     }

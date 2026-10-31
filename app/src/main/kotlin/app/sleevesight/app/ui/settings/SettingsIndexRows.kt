@@ -6,6 +6,7 @@ import app.sleevesight.app.BuildConfig
 import app.sleevesight.app.R
 import app.sleevesight.core.genres.LabelSource
 import app.sleevesight.core.model.ProviderId
+import app.sleevesight.core.settings.Dismissable
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WriteAutomatically
 
@@ -166,15 +167,22 @@ internal fun historyRows(settings: Settings): List<IndexedRow> {
         indexRow(stringResource(R.string.settings_keep_artists), stringResource(R.string.settings_keep_artists_summary))
 }
 
-/** *Players*' rows after the players themselves: *Can’t see your player?* (#758) and #674's switch. */
+/**
+ * *Players*' rows after the players themselves: *Can’t see your player?* (#758), unless it is
+ * dismissed (#759), and #674's switch.
+ */
 @Composable
-internal fun playerRows(): List<IndexedRow> =
-    listOf(
-        indexRow(
-            stringResource(R.string.settings_players_missing_title),
-            stringResource(R.string.settings_players_missing),
-            stringResource(R.string.settings_players_missing_link),
-        ),
+internal fun playerRows(settings: Settings): List<IndexedRow> =
+    listOfNotNull(
+        if (Dismissable.PLAYERS_NOTE in settings.dismissed) {
+            null
+        } else {
+            indexRow(
+                stringResource(R.string.settings_players_missing_title),
+                stringResource(R.string.settings_players_missing),
+                stringResource(R.string.settings_players_missing_link),
+            )
+        },
         indexRow(
             stringResource(R.string.settings_players_on_home),
             stringResource(R.string.settings_players_on_home_summary),
@@ -196,7 +204,10 @@ internal fun appearanceRows(): List<IndexedRow> =
             stringResource(R.string.settings_keep_sources_summary),
         ),
         indexRow(stringResource(R.string.settings_intro), stringResource(R.string.settings_intro_summary)),
-        indexRow(stringResource(R.string.settings_home_guide), stringResource(R.string.settings_home_guide_summary)),
+        indexRow(
+            stringResource(R.string.settings_restore_dismissed),
+            stringResource(R.string.settings_restore_dismissed_summary),
+        ),
     )
 
 /** A row whose value is one of [choices] (its current value among them), titled and described by the ids given. */

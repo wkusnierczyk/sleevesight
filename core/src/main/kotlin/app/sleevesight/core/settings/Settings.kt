@@ -149,9 +149,10 @@ import kotlin.time.Duration.Companion.seconds
  *   while it is not open (not a return to it), plays one of the logo's intros before showing its
  *   screen. On by default: it is a few seconds, and a tap, Back or any key ends it; it never plays
  *   while the phone's *Remove animations* is on. Off, for someone who would rather not wait.
- * @property homeGuide *Home guide* (#627): whether Home, with nothing playing, shows under the
- *   players a small picture of Home while a track plays, with notes on what each part does. On by
- *   default, for someone new to the app; its *Dismiss* hides it for a while, or switches this off.
+ * @property dismissed what the user dismissed for good (#759): each message or panel whose
+ *   *Dismiss* was tapped ([Dismissable]), not shown again until *Restore dismissed messages*, under
+ *   *Appearance*, brings them all back. None by default: the guide to Home (#627) shows for someone
+ *   new to the app, and *Players*' note (#758) for someone who looks for a player.
  */
 data class Settings(
     val layout: Layout = Layout.EXPANDABLE_BOXES,
@@ -192,7 +193,7 @@ data class Settings(
     val themeButton: Boolean = true,
     val font: FontChoice = FontChoice.APP_FONT,
     val introAtStart: Boolean = true,
-    val homeGuide: Boolean = true,
+    val dismissed: Set<Dismissable> = emptySet(),
 ) {
     init {
         require(cacheSizeLimit >= 0) { "The cache size limit must not be negative, was $cacheSizeLimit" }
@@ -580,6 +581,20 @@ enum class ThemeChoice {
                 DARK -> SYSTEM
                 SYSTEM -> LIGHT
             }
+}
+
+/**
+ * A message or panel that its *Dismiss* puts away for good (#759), until *Restore dismissed
+ * messages*, under *Appearance*, brings back all of them ([Settings.dismissed]). The one place that
+ * names them: each new one joins this list. A *Hide once* is not here: it lasts only for a while,
+ * and is never stored.
+ */
+enum class Dismissable {
+    /** The guide to Home, shown while nothing plays (#627). */
+    HOME_GUIDE,
+
+    /** *Players*' *Can’t see your player?* (#758). */
+    PLAYERS_NOTE,
 }
 
 /**

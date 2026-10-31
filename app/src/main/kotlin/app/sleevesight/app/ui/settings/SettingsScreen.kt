@@ -34,24 +34,25 @@ import app.sleevesight.app.pipeline.UnavailableMark
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretState
 import app.sleevesight.app.secrets.SecretStore
+import app.sleevesight.app.settings.Dismissals
 import app.sleevesight.app.settings.ListedModelNames
 import app.sleevesight.app.settings.SettingsStore
+import app.sleevesight.app.settings.SettingsStore.Companion.saving
 import app.sleevesight.app.ui.keyboard.BluetoothComputerKeyboard
 import app.sleevesight.app.ui.keyboard.ComputerKeyboard
 import app.sleevesight.app.ui.scan.CameraQrScanner
 import app.sleevesight.app.ui.scan.QrScanner
 import app.sleevesight.app.ui.theme.DeveloperMark
+import app.sleevesight.app.ui.theme.MessageHost
 import app.sleevesight.core.ai.AiProvider
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WriteAutomatically
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import java.io.IOException
 
 /**
  * The settings screen (design, *Settings*; #444): its sections, each a chip with its short
@@ -121,7 +122,16 @@ fun SettingsScreen(
     var changeFailures by remember { mutableIntStateOf(0) }
     val clearing = remember(scope) { Clearing(scope) }
     val failed = { failed: Boolean -> changeFailures = if (failed) changeFailures + 1 else 0 }
-    val update = scope.updater(settingsStore, saves, failed)
+    val save = scope.saver(saves, failed)
+    val update: Update = { transform -> save { settingsStore.update(transform) } }
+    // *Dismiss* and its *Undo* (#759: *Players*' note), and *Restore dismissed messages*, saved as
+    // any change is, a failure announced as any change's is.
+    val dismissals =
+        Dismissals(
+            dismiss = { item -> save { settingsStore.dismiss(item) } },
+            undo = { item -> save { settingsStore.undismiss(item) } },
+        )
+    val restoreDismissed = { save { settingsStore.restoreDismissed() } }
     // *Reactive*'s mode through the app's chooser (#625), its save announced as any change's is.
     val chooseMode: ((WriteAutomatically) -> Unit)? =
         chooseWritingMode?.let { choose ->
@@ -135,20 +145,25 @@ fun SettingsScreen(
     val modelNames = remember(context) { ListedModelNames(context) }
 
     Surface(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.safeDrawingPadding()) {
-            // Above the list, so it shows wherever the list is scrolled to.
-            Notices(changeFailures, clearing.ended)
-            settings?.let { current ->
-                val navigation =
-                    Navigation(
-                        PlayerApps(playerLabel, playerLaunch, installedPlayers),
-                        modelNames::of,
-                        onOpenCredits,
-                        onOpenDiagnostics,
-                        onOpenWhatLeaves,
-                        chooseMode,
-                    )
-                SettingsContent(current, keys, navigation, unavailable, landOn, update) { dialog = it }
+        // The messages after a *Dismiss* and a restore (#759) at the bottom, over the list.
+        MessageHost(Modifier.safeDrawingPadding()) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                // Above the list, so it shows wherever the list is scrolled to.
+                Notices(changeFailures, clearing.ended)
+                settings?.let { current ->
+                    val navigation =
+                        Navigation(
+                            PlayerApps(playerLabel, playerLaunch, installedPlayers),
+                            modelNames::of,
+                            onOpenCredits,
+                            onOpenDiagnostics,
+                            onOpenWhatLeaves,
+                            chooseMode,
+                            dismissals,
+                            restoreDismissed,
+                        )
+                    SettingsContent(current, keys, navigation, unavailable, landOn, update) { dialog = it }
+                }
             }
         }
     }
@@ -213,26 +228,19 @@ private val NONE_UNAVAILABLE: StateFlow<Map<ProviderId, UnavailableMark>> = Muta
 internal typealias Update = ((Settings) -> Settings) -> Unit
 
 /**
- * Saves each change to [store] in [saves], which outlives the screen, and waits for it in this
- * scope, the screen's, telling [failed] whether it could not be saved.
+ * Saves each change to the store in [saves], which outlives the screen ([saving]: only an I/O error
+ * counts as not saved; cancellation and any other failure propagate), and waits for it in this
+ * scope, the screen's, telling [failed] whether it could not be saved; the result says whether it
+ * was.
  */
-private fun CoroutineScope.updater(
-    store: SettingsStore,
+private fun CoroutineScope.saver(
     saves: CoroutineScope,
     failed: (Boolean) -> Unit,
-): Update =
-    { transform ->
-        val saved =
-            saves.async {
-                try {
-                    store.update(transform)
-                    true
-                } catch (_: IOException) {
-                    // Only an I/O error: cancellation and any other failure propagate.
-                    false
-                }
-            }
+): (suspend () -> Unit) -> Deferred<Boolean> =
+    { change ->
+        val saved = saves.saving(change)
         launch { failed(!saved.await()) }
+        saved
     }
 
 /**
@@ -311,16 +319,20 @@ internal class PlayerApps(
 )
 
 /**
- * How the screen names players and models, where it leads, and how it saves a mode chosen for
- * *Reactive* ([chooseMode], #625; null: as any setting).
+ * How the screen names players and models, where it leads, how it saves a mode chosen for
+ * *Reactive* ([chooseMode], #625; null: as any setting), and how it saves a *Dismiss* and its *Undo*
+ * ([dismissals], #759) and *Restore dismissed messages* ([restoreDismissed]).
  */
+@Suppress("LongParameterList") // Each one of the screen's ways out.
 private class Navigation(
     val players: PlayerApps,
     val modelName: (String) -> String,
     val openCredits: () -> Unit,
     val openDiagnostics: () -> Unit,
     val openWhatLeaves: () -> Unit,
-    val chooseMode: ((WriteAutomatically) -> Unit)? = null,
+    val chooseMode: ((WriteAutomatically) -> Unit)?,
+    val dismissals: Dismissals,
+    val restoreDismissed: () -> Deferred<Boolean>,
 )
 
 /**
@@ -446,11 +458,10 @@ private fun SettingsColumn(
         section: SettingsSection,
         content: @Composable () -> Unit,
     ) {
-        if (found == null) {
-            FoldedSection(section, folds, chip, content = content)
-        } else {
-            found[section]?.let { FoldedSection(section, folds, chip, it, content) }
-        }
+        // One call, searching or not, so starting or clearing a search keeps what the section's
+        // content holds, as the players note's *Hide once* (#759).
+        val match = found?.get(section)
+        if (found == null || match != null) FoldedSection(section, folds, chip, match, content)
     }
 
     SettingsScrollColumn(
@@ -458,7 +469,9 @@ private fun SettingsColumn(
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         if (found?.isEmpty() == true) NothingFound(folds.query)
-        Section(SettingsSection.PLAYERS) { PlayersSection(settings, listed, navigation.players, update) }
+        Section(SettingsSection.PLAYERS) {
+            PlayersSection(settings, listed, navigation.players, update, navigation.dismissals)
+        }
         Section(SettingsSection.SOURCES) { SourcesSection(settings, secrets, update) }
         Section(SettingsSection.AI_SERVICES) {
             AiSection(settings, secrets, navigation.modelName, update, open, unavailable)
@@ -467,7 +480,7 @@ private fun SettingsColumn(
         Section(SettingsSection.GENRES) { GenresSection(settings, secrets, update) }
         Section(SettingsSection.INSIGHTS) { InsightsSection(settings, update, open, navigation.chooseMode) }
         Section(SettingsSection.HISTORY) { HistorySection(settings, update, open) }
-        Section(SettingsSection.APPEARANCE) { AppearanceSection(settings, update) }
+        Section(SettingsSection.APPEARANCE) { AppearanceSection(settings, update, navigation.restoreDismissed) }
         Section(SettingsSection.ABOUT) {
             AboutSection(settings, update, navigation.openCredits, navigation.openWhatLeaves)
         }

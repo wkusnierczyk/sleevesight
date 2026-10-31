@@ -16,7 +16,7 @@ import app.sleevesight.core.settings.Settings
  * skip (auto)*, *Developer* only in developer mode), with the players [players] lists by name and
  * the AI services' models by name ([modelName]), as their rows show them, with the models found
  * unavailable ([unavailable], #540) said so as their rows say it. [keys] says whether
- * *Purge keys* shows, and each key's state.
+ * *Purge keys* shows, and each key's state. What is dismissed (#759) is not found while it is.
  */
 @Composable
 internal fun settingsIndex(
@@ -27,7 +27,7 @@ internal fun settingsIndex(
     unavailable: Map<ProviderId, String> = emptyMap(),
 ): List<IndexedSection> =
     listOfNotNull(
-        indexed(SettingsSection.PLAYERS, players.map { indexRow(it) } + playerRows()),
+        indexed(SettingsSection.PLAYERS, players.map { indexRow(it) } + playerRows(settings)),
         indexed(SettingsSection.SOURCES, sourceIndexRows()),
         indexed(SettingsSection.AI_SERVICES, aiRows(settings, modelName, unavailable)),
         indexed(SettingsSection.SECRETS, secretRows(keys)),

@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.settings.Crossfade
+import app.sleevesight.core.settings.Dismissable
 import app.sleevesight.core.settings.ReportButton
 import app.sleevesight.core.settings.Settings
 import kotlin.time.Duration
@@ -25,11 +26,12 @@ import kotlin.time.Duration.Companion.milliseconds
  * default; *Players* is stored the same way, by package name ([readPlayers]).
  *
  * Reading never fails: a value that is missing, of a name this version does not know (written by a
- * later one), or out of range reads as that setting's default, and the others are unaffected. Two
+ * later one), or out of range reads as that setting's default, and the others are unaffected. Three
  * exceptions: *Developer mode* (#444), stored by no earlier version, reads as on in a file with
- * *Diagnostics* on, so someone who used the diagnostics keeps the way to them; and *Report button*
+ * *Diagnostics* on, so someone who used the diagnostics keeps the way to them; *Report button*
  * (#518), a choice stored under a key of its own, reads in a file from when it was a switch as that
- * switch was ([reportButtonOf]).
+ * switch was ([reportButtonOf]); and what is dismissed (#759) reads in a file with *Home guide*
+ * (#627) switched off as the guide dismissed.
  *
  * Writing keeps what a later version stored, as after a downgrade: [write] rewrites only the
  * settings that changed, so a value this version cannot read stays until the user changes that
@@ -82,7 +84,6 @@ internal object SettingsCodec {
     private val THEME_BUTTON = booleanPreferencesKey("display.theme_button")
     private val FONT = stringPreferencesKey("display.font")
     private val INTRO = booleanPreferencesKey("display.intro")
-    private val HOME_GUIDE = booleanPreferencesKey("display.home_guide")
 
     /** `historyLifetime` null is *Forever*, which needs a value of its own to be stored. */
     private const val FOREVER = -1L
@@ -138,7 +139,7 @@ internal object SettingsCodec {
             themeButton = prefs[THEME_BUTTON] ?: defaults.themeButton,
             font = enumOf(prefs[FONT]) ?: defaults.font,
             introAtStart = prefs[INTRO] ?: defaults.introAtStart,
-            homeGuide = prefs[HOME_GUIDE] ?: defaults.homeGuide,
+            dismissed = dismissedOf(prefs),
         )
 
     /**
@@ -280,7 +281,16 @@ internal object SettingsCodec {
         if (moved { it.themeButton }) prefs.put(THEME_BUTTON, settings.themeButton, defaults.themeButton)
         if (moved { it.font }) prefs.put(FONT, settings.font.name, defaults.font.name)
         if (moved { it.introAtStart }) prefs.put(INTRO, settings.introAtStart, defaults.introAtStart)
-        if (moved { it.homeGuide }) prefs.put(HOME_GUIDE, settings.homeGuide, defaults.homeGuide)
+        // The names a later version stored stay, as with a set of switches, but for a set left
+        // empty: nothing is dismissed then, a later version's items included, as after *Restore
+        // dismissed messages*. The guide's old switch goes: left off, it would read as the guide
+        // dismissed again.
+        if (moved { it.dismissed }) {
+            val unknown = prefs[DISMISSED].orEmpty().filter { enumOf<Dismissable>(it) == null }
+            val names = settings.dismissed.map { it.name }
+            prefs.remove(HOME_GUIDE_SWITCH)
+            prefs.put(DISMISSED, if (names.isEmpty()) null else (unknown + names).toSet(), null)
+        }
     }
 
     /**
@@ -410,6 +420,22 @@ private fun reportButtonOf(
         false -> ReportButton.HIDE
         null -> defaults.reportButton
     }
+}
+
+/** What is dismissed for good (#759), by name; read through [dismissedOf]. */
+private val DISMISSED = stringSetPreferencesKey("display.dismissed")
+
+/** *Home guide* (#627), the guide's switch before *Restore dismissed messages* (#759); read only. */
+private val HOME_GUIDE_SWITCH = booleanPreferencesKey("display.home_guide")
+
+/**
+ * What is dismissed for good (#759), stored by name; a name this version does not know, as a later
+ * version may store, is skipped. A file from when the guide to Home had a switch of its own, *Home
+ * guide* (#627), with it off, reads as the guide dismissed. None by default, whatever the build.
+ */
+private fun dismissedOf(prefs: Preferences): Set<Dismissable> {
+    val named = prefs[DISMISSED].orEmpty().mapNotNull { enumOf<Dismissable>(it) }.toSet()
+    return if (prefs[HOME_GUIDE_SWITCH] == false) named + Dismissable.HOME_GUIDE else named
 }
 
 internal inline fun <reified E : Enum<E>> enumOf(name: String?): E? = enumValues<E>().firstOrNull { it.name == name }

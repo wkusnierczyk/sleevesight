@@ -22,6 +22,7 @@ import app.sleevesight.app.pipeline.UnavailableModel
 import app.sleevesight.app.report.MailHandoff
 import app.sleevesight.app.report.PhoneMail
 import app.sleevesight.app.session.PlaybackInfo
+import app.sleevesight.app.settings.Dismissals
 import app.sleevesight.app.speech.ReadAloud
 import app.sleevesight.app.speech.Reading
 import app.sleevesight.app.ui.report.InsightReportDialog
@@ -59,8 +60,11 @@ import kotlinx.coroutines.flow.StateFlow
  * @property installedPlayers the players' icons, whether the phone shows them, and the players seen,
  *   for the players listed while nothing plays (#627); null lists every stored player, without an
  *   icon.
- * @property guideDismissed whether the guide to Home is dismissed for now (#627: *Dismiss once*),
- *   which [dismissGuide] does, until a track plays; [hideGuide] switches *Home guide* off.
+ * @property guideHidden whether the guide to Home is hidden for now (#627, #759: *Hide once*), which
+ *   [hideGuideOnce] does, until Home is left ([homeLeft]: for another screen, or the app going to
+ *   the background) or a track plays.
+ * @property dismissals the guide's *Dismiss*, for good, and the *Undo* in the message after it
+ *   (#759).
  * @property genreNotes what a genre's panel shows above its table (#523): what the genre is, and
  *   *Why is this …?*.
  * @property lookAgain a tap on *Look again* (#617), with the key it was offered under and the track
@@ -84,9 +88,10 @@ class HomeFeed(
     val unavailableModel: StateFlow<UnavailableModel?> = MutableStateFlow(null),
     val chooseWritingMode: (WriteAutomatically) -> Deferred<Boolean> = { CompletableDeferred(true) },
     val installedPlayers: InstalledPlayers? = null,
-    val guideDismissed: StateFlow<Boolean> = MutableStateFlow(false),
-    val dismissGuide: () -> Unit = {},
-    val hideGuide: () -> Unit = {},
+    val guideHidden: StateFlow<Boolean> = MutableStateFlow(false),
+    val hideGuideOnce: () -> Unit = {},
+    val homeLeft: () -> Unit = {},
+    val dismissals: Dismissals = Dismissals.NONE,
     val genreNotes: GenreNotes = GenreNotes.None,
     val lookAgain: (RunKey, NowPlaying) -> Unit = { _, _ -> },
     val readAloud: ReadAloud? = null,
@@ -95,7 +100,8 @@ class HomeFeed(
 /**
  * The now-playing part of the home screen, from [feed]; a link to the settings goes to
  * [openSettings], or, to a setting, to [openSettingsAt] (#581), and an item opened on a page of its
- * own (*Layout*'s *Separate pages*, #447) to [openPage].
+ * own (*Layout*'s *Separate pages*, #447) to [openPage]. Home left ([OnHomeLeft]) is told to
+ * [HomeFeed.homeLeft] (#759).
  */
 @Composable
 fun NowPlayingHome(
@@ -104,6 +110,7 @@ fun NowPlayingHome(
     openPage: (HomePage) -> Unit = {},
     openSettingsAt: (SettingsTarget) -> Unit = { openSettings() },
 ) {
+    OnHomeLeft(feed.homeLeft)
     NowPlayingContent(nowPlayingState(feed), feed.actions(openSettings, openPage, openSettingsAt))
 }
 
@@ -134,8 +141,8 @@ private fun nowPlayingState(feed: HomeFeed): NowPlayingState {
     val art by feed.art.collectAsState()
     val settings by feed.settings.collectAsState()
     val unavailable by feed.unavailableModel.collectAsState()
-    val guideDismissed by feed.guideDismissed.collectAsState()
-    return NowPlayingState(view, playing, playback, art, settings, unavailable, guideDismissed)
+    val guideHidden by feed.guideHidden.collectAsState()
+    return NowPlayingState(view, playing, playback, art, settings, unavailable, guideHidden)
 }
 
 private fun HomeFeed.actions(
@@ -153,8 +160,8 @@ private fun HomeFeed.actions(
     lookAgain = lookAgain,
     chooseWritingMode = chooseWritingMode,
     installedPlayers = installedPlayers,
-    dismissGuide = dismissGuide,
-    hideGuide = hideGuide,
+    hideGuideOnce = hideGuideOnce,
+    dismissals = dismissals,
     genreNotes = genreNotes,
     openSettings = openSettings,
     openPage = openPage,
@@ -164,8 +171,8 @@ private fun HomeFeed.actions(
 
 /**
  * What the screen shows, as published: [settings] is null until the first read; [unavailable] is
- * the switched-on AI service's model while it is found unavailable (#540); [guideDismissed], whether
- * the guide to Home shown while nothing plays is dismissed for now (#627).
+ * the switched-on AI service's model while it is found unavailable (#540); [guideHidden], whether
+ * the guide to Home shown while nothing plays is hidden for now (#627, #759: *Hide once*).
  */
 @Suppress("LongParameterList") // What the screen shows, each published on its own.
 internal class NowPlayingState(
@@ -175,7 +182,7 @@ internal class NowPlayingState(
     val art: Bitmap? = null,
     val settings: Settings? = null,
     val unavailable: UnavailableModel? = null,
-    val guideDismissed: Boolean = false,
+    val guideHidden: Boolean = false,
 )
 
 /**
@@ -187,10 +194,10 @@ internal class NowPlayingState(
  * an item on a page of its own, under *Layout*'s *Separate pages* (#447). [chooseWritingMode] saves
  * a mode chosen in the insight card's menu of *Reactive*'s modes (#615). [genreNotes] gives what a
  * genre's panel shows above its table (#523); [lookAgain] takes a tap on *Look again* (#617), as
- * [write] takes one on Write. While nothing plays (#627), the players are listed
- * with [installedPlayers]' icons, and the guide's *Dismiss* goes to [dismissGuide] (*Dismiss once*)
- * or [hideGuide] (*Do not show again*). [readAloud] reads the insight, or a genre's reason, aloud
- * (#325); null shows no *Read aloud*.
+ * [write] takes one on Write. While nothing plays (#627), the players are listed with
+ * [installedPlayers]' icons, and the guide's buttons go to [hideGuideOnce] (*Hide once*) or
+ * to [dismissals] (*Dismiss*, and its *Undo*; #759). [readAloud] reads the insight, or a genre's
+ * reason, aloud (#325); null shows no *Read aloud*.
  */
 @Suppress("LongParameterList") // Each of the screen's ways out, on its own.
 internal class NowPlayingActions(
@@ -206,8 +213,8 @@ internal class NowPlayingActions(
     val openSettingsAt: (SettingsTarget) -> Unit = { openSettings() },
     val chooseWritingMode: (WriteAutomatically) -> Deferred<Boolean> = { CompletableDeferred(true) },
     val installedPlayers: InstalledPlayers? = null,
-    val dismissGuide: () -> Unit = {},
-    val hideGuide: () -> Unit = {},
+    val hideGuideOnce: () -> Unit = {},
+    val dismissals: Dismissals = Dismissals.NONE,
     val genreNotes: GenreNotes = GenreNotes.None,
     val lookAgain: (RunKey, NowPlaying) -> Unit = { _, _ -> },
     val readAloud: ReadAloud? = null,
@@ -244,7 +251,7 @@ internal fun NowPlayingContent(
     // Above the return, so the fold outlives a while with nothing playing.
     val foldMemory = rememberFoldMemory()
     if (playing == null) {
-        IdleHome(state.settings, state.guideDismissed, actions)
+        IdleHome(state.settings, state.guideHidden, actions)
         return
     }
     val shown = Showing(state, playing)

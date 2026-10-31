@@ -19,6 +19,10 @@
     <string name="settings_players_missing">A player appears here, switched off, once it has played music on this phone while Sleevesight was running (whether in foreground or background).\n\nPlay a track in your player for a few seconds. Your player has to tell Android what it is playing, with at least a title and an artist. Most music apps do; most video apps do not.</string>
     <string name="settings_players_missing_link">Which players work</string>
     <string name="settings_players_missing_link_description">Which players work: open the answer in your browser</string>
+    <!-- At the panel's bottom right (#759): puts the note away for good; then the message, with Undo. -->
+    <string name="settings_players_missing_hide_once">Hide once</string>
+    <string name="settings_players_missing_dismiss">Dismiss</string>
+    <string name="settings_players_missing_dismissed">Note dismissed. To show it again: Settings → Appearance → Restore dismissed messages.</string>
     <!-- Under the players (#674): whether Home, with nothing playing, lists only the players switched on. -->
     <string name="settings_players_on_home">Only enabled players on Home</string>
     <string name="settings_players_on_home_summary">Home lists only the players Sleevesight follows, not every player it has recognized.</string>

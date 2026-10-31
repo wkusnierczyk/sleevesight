@@ -232,18 +232,6 @@ class SettingsSettingLinksTest {
         }
 
     @Test
-    fun theSettingsOpenedAtHomeGuideLandOnItsRow() =
-        // From the home guide's *Re-enable in Settings* (#627).
-        show(landOn = SettingsTarget.homeGuide) {
-            landedOnRow(SettingsTarget.homeGuide)
-            compose
-                .onNode(
-                    hasAnyAncestor(hasTestTag(SettingsTarget.homeGuide.tag)) and
-                        hasText(text(R.string.settings_home_guide)),
-                ).assertIsDisplayed()
-        }
-
-    @Test
     fun theSettingsOpenedAtASettingLandOnceAVisit() {
         val target = SettingsTarget(SettingsSection.AI_SERVICES, "model_GOOGLE")
         show(landOn = target) {

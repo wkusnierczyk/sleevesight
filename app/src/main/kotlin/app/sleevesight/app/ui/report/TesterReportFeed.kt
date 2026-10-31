@@ -170,7 +170,7 @@ private fun ReportMenu(
 
 /**
  * After the menu's *Hide* (#518): once [saved], where to bring the button back; else that it could
- * not be hidden. With *Dismiss*.
+ * not be hidden. With *OK* (#759: not *Dismiss*, which puts a message away for good).
  */
 @Composable
 private fun ReportButtonHiddenDialog(
@@ -212,5 +212,5 @@ const val TESTER_REPORT_MENU_HIDE_TAG: String = "tester_report_menu_hide"
 /** The test tag of the message after *Hide* (#518). */
 const val TESTER_REPORT_HIDDEN_TAG: String = "tester_report_hidden"
 
-/** The test tag of that message's *Dismiss*. */
+/** The test tag of that message's *OK*. */
 const val TESTER_REPORT_HIDDEN_DISMISS_TAG: String = "tester_report_hidden_dismiss"

@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import app.sleevesight.app.report.AppBuild
 import app.sleevesight.app.report.TesterReports
+import app.sleevesight.app.settings.dismissals
 import app.sleevesight.app.ui.DiagnosticsScreen
 import app.sleevesight.app.ui.SleevesightNavHost
 import app.sleevesight.app.ui.ThemeButtonFeed
@@ -67,9 +68,12 @@ class MainActivity : ComponentActivity() {
             chooseWritingMode = graph.chooseWritingMode,
             // While nothing plays (#627): the players as *Players* lists them, and the guide.
             installedPlayers = installedPlayers,
-            guideDismissed = graph.guideDismissal.dismissed,
-            dismissGuide = graph.guideDismissal::dismiss,
-            hideGuide = graph.settings.homeGuideHider(graph.settingsSaves),
+            // Its *Hide once*, until Home is left, and its *Dismiss*, for good, saved in the process's
+            // scope (#759).
+            guideHidden = graph.guideHiding.hidden,
+            hideGuideOnce = graph.guideHiding::hide,
+            homeLeft = graph.guideHiding::homeLeft,
+            dismissals = graph.settings.dismissals(graph.settingsSaves),
             // What a genre's panel shows above its table (#523).
             genreNotes = graph.genreNotes,
             // *Read aloud* beside *Key insights* and under a genre's reason (#325, #725).
