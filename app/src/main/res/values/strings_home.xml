@@ -30,7 +30,7 @@
     <!-- The notes. -->
     <string name="home_guide_note_settings">tap to configure</string>
     <string name="home_guide_note_player">tap to open</string>
-    <string name="home_guide_note_genres">tap a genre for details</string>
+    <string name="home_guide_note_genres">tap to see the genres</string>
     <string name="home_guide_note_insight">read about what’s playing</string>
     <string name="home_guide_note_cite">follow to references</string>
     <string name="home_guide_note_write">generate an insight (paid)</string>
@@ -39,7 +39,7 @@
          name (home_guide_part_…). Each says what the app does; keep them in step with it. -->
     <string name="home_guide_about_settings">Opens Settings: the players Sleevesight follows, which sources it looks up, your AI service and the API keys, genres, when insights are written, history, and how the app looks (theme, font, layout).</string>
     <string name="home_guide_about_player">The player Sleevesight follows, and whether it is playing. A tap opens the player.</string>
-    <string name="home_guide_about_genres">The track’s genres, from MusicBrainz or Last.fm. A tap on one shows which of the track, the artist and the album carry it and where the label comes from; what the genre is, where Wikipedia has an article on it; and, where your AI service can explain it, Why is this …?, a paid call.</string>
+    <string name="home_guide_about_genres">The track’s genres, from MusicBrainz or Last.fm, behind the Genres button. A tap on one shows which of the track, the artist and the album carry it and where the label comes from; what the genre is, where Wikipedia has an article on it; and, where your AI service can explain it, Why is this …?, a paid call.</string>
     <string name="home_guide_about_insight">A few sentences about the track, written by your AI service from what the sources found, and checked against them.</string>
     <string name="home_guide_about_cite">Each sentence names the source lines it rests on. A tap on one opens Sources at that line. A sentence underlined in red rests on none.</string>
     <string name="home_guide_about_write">Write insight has your AI service write the insight, a paid call on your key. The arrow beside it chooses when insights are written: On demand, On track change (auto) or On track skip (auto). Once an insight is written, it also offers Look again, which looks every source up afresh without an AI call (a paid search on your Exa key when Exa web search is on); when they found something new, Rewrite insight writes the insight from it.</string>
