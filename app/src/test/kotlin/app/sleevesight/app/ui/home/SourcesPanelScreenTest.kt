@@ -241,7 +241,9 @@ class SourcesPanelScreenTest {
     fun theChipIsDrawnAsAGenreChip() =
         show(track().copy(genres = folk)) {
             val sources = picture(SOURCES_CHIP_TAG)
-            val genre = picture(GENRE_PREFIX + "track:folk")
+            // The genre chips are inside *Genres*' panel, on its fill, since #772: the *Genres* button,
+            // drawn as they are on Home's ground.
+            val genre = picture(GENRES_CHIP_TAG)
             assertTrue(
                 "the chip's fill ${hex(fillOf(sources))} is a genre chip's, ${hex(fillOf(genre))}",
                 near(fillOf(sources), fillOf(genre)),

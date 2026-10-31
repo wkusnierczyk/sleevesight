@@ -3,6 +3,7 @@ package app.sleevesight.core.pipeline
 import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.evidence.Scope
+import app.sleevesight.core.genres.TrackGenres
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.Outcome
@@ -34,6 +35,7 @@ internal class RunInput(
     val track: NormalizedTrack,
     val again: Gathered? = null,
     val lookAgain: LookAgain? = null,
+    val genresBefore: TrackGenres = TrackGenres(),
 )
 
 /** Where a run reports: diagnostics events, and changes to its state. */
@@ -93,6 +95,9 @@ internal class TrackRun(
                         adapter.id to (keptBefore[adapter.id] ?: fresh)
                     },
                 resolution = resolvedBefore,
+                // A run that asks again shows the genres the run before it had (#772), until its own
+                // are assembled, which replace them.
+                genres = input.genresBefore,
             ),
         )
 
@@ -116,12 +121,15 @@ internal class TrackRun(
             withContext(if (looksAgain) FreshLookups else EmptyCoroutineContext) {
                 gather()
                 control.gathered(Gathered(state.value.sources, state.value.resolution))
+                // Published as asked for with the assembled genres, before they may start (#772): a
+                // panel says it is still looking.
+                val later = labels.later(state.value)
                 val evidence = assemble()
                 control.assembled(evidence)
                 launch {
                     control.await(RunStep.LABELS)
                     try {
-                        labels.addLater(state.value)
+                        labels.addLater(later)
                     } finally {
                         control.ended(RunStep.LABELS)
                     }
@@ -132,6 +140,10 @@ internal class TrackRun(
         } catch (e: CancellationException) {
             emit(PipelineEvent.Superseded(key))
             throw e
+        } finally {
+            // Whatever ends the run, before its label requests start or while they run: none stays
+            // asked for (#772).
+            labels.settle()
         }
     }
 
@@ -291,7 +303,10 @@ internal class TrackRun(
         val drafts =
             playerLines() + results.flatMap { it.evidence }.filter { settings.isEnabled(it.source) }
         val evidence = EvidenceSet.of(drafts, parts.hasher)
-        update { it.copy(evidence = evidence, genres = labels.of(it)) }
+        // The genres and how their later requests stand, in one update with the evidence (#772).
+        update {
+            it.copy(evidence = evidence, genres = labels.of(it), laterLabels = labels.states(), genresAssembled = true)
+        }
         emit(
             PipelineEvent.EvidenceAssembled(
                 key = key,

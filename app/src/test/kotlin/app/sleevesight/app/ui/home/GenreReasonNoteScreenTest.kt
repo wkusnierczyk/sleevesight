@@ -113,7 +113,7 @@ class GenreReasonNoteScreenTest {
             scenario.onActivity {
                 it.setContent {
                     Column(Modifier.verticalScroll(rememberScrollState())) {
-                        Genres(track, Settings(), notes = PanelNotes(Notes(GenreReason.Shown(reason))))
+                        GenresContent(track, Settings(), notes = PanelNotes(Notes(GenreReason.Shown(reason))))
                     }
                 }
             }

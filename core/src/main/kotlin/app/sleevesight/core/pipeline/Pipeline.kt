@@ -5,6 +5,7 @@ import app.sleevesight.core.ai.AiProvider
 import app.sleevesight.core.evidence.Hasher
 import app.sleevesight.core.genres.LastFmLabels
 import app.sleevesight.core.genres.MusicBrainzLabels
+import app.sleevesight.core.genres.TrackGenres
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.normalizer.Normalizer
@@ -224,10 +225,16 @@ class Pipeline(
     ): TrackRun {
         val token = runs.updateAndGetValue()
         val since = shown.forgets
+        // A run that asks again (a *Retry*, back online, *Look again*) starts with the genres shown
+        // for the same track (#772), so they stay up while it asks; a new track starts with none.
+        val genresBefore =
+            shown.state.value
+                ?.takeIf { (again != null || lookAgain != null) && it.normalized.lookupKey == track.lookupKey }
+                ?.genres ?: TrackGenres()
         return TrackRun(
             parts = parts,
             time = time,
-            input = RunInput(current, nowPlaying, track, again, lookAgain),
+            input = RunInput(current, nowPlaying, track, again, lookAgain, genresBefore),
             control = control,
             onEvent = { if (shown.forgets == since) eventFlow.tryEmit(it) },
             publish = { state -> shown.publish(state, since) { runs.value == token } },

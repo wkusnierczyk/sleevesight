@@ -12,6 +12,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.selected
@@ -43,8 +44,10 @@ import app.sleevesight.core.pipeline.TrackState
  * [GenreLevel] order, each row's name (the track's title, the artist's name, the album's title) on
  * one line above its labels, [genre] marked wherever it shows; then where the table's labels come
  * from, a line per row, each source linked to its page there, and MusicBrainz's licence (D12).
+ * On [fill]: inside *Genres*' panel on Home (#772), the surface colour, which sets it apart there.
  * Nothing when no row has [genre].
  */
+@Suppress("LongParameterList") // What the panel shows, and how it is closed and drawn.
 @Composable
 internal fun GenrePanel(
     track: TrackState,
@@ -52,6 +55,7 @@ internal fun GenrePanel(
     onClose: (() -> Unit)? = null,
     notes: PanelNotes = PanelNotes(),
     closeModifier: Modifier = Modifier,
+    fill: Color = Color.Unspecified,
 ) {
     val genres = track.genres
     val name =
@@ -59,7 +63,7 @@ internal fun GenrePanel(
             .firstOrNull { it.genre.identity == genre }
             ?.genre
             ?.label ?: return
-    Panel(AnnotatedString(name), GENRE_PANEL_TAG, onClose, closeModifier = closeModifier) {
+    Panel(AnnotatedString(name), GENRE_PANEL_TAG, onClose, closeModifier = closeModifier, fill = fill) {
         // What the genre is, and *Why is this …?* (#523), above the table.
         GenreAbout(track, genre, notes)
         Table(track, genre)

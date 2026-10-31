@@ -3,6 +3,7 @@ package app.sleevesight.core.pipeline
 import app.sleevesight.core.ai.ReasoningEffort
 import app.sleevesight.core.ai.Usage
 import app.sleevesight.core.evidence.EvidenceSet
+import app.sleevesight.core.genres.LabelSource
 import app.sleevesight.core.genres.TrackGenres
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
@@ -28,6 +29,11 @@ import kotlin.time.Instant
  *   Last.fm's artists' and MusicBrainz's recording's with the evidence, once every source has
  *   landed; MusicBrainz's artists' and Last.fm's track's and album's join later, as their requests
  *   answer, which the insight does not wait for (`design/architecture.md`, *Evidence*).
+ * @property laterLabels how those later requests stand, by label source (#772): asking, done, or
+ *   failed; a source not in it has none to make.
+ * @property genresAssembled whether [genres] and [laterLabels] are in (#772): set with them, in one
+ *   update, as the evidence is assembled. Until then, no genre may still mean genres to come, even
+ *   once every source has landed ([gathered]), while the last one's result is being kept.
  */
 data class TrackState(
     val nowPlaying: NowPlaying,
@@ -37,9 +43,22 @@ data class TrackState(
     val evidence: EvidenceSet? = null,
     val genres: TrackGenres = TrackGenres(),
     val insight: InsightState = InsightState.Idle(canWrite = false),
+    val laterLabels: Map<LabelSource, LaterLabels> = emptyMap(),
+    val genresAssembled: Boolean = false,
 ) {
     /** Whether every source has landed. */
     val gathered: Boolean get() = sources.values.none { it is SourceState.Pending }
+}
+
+/**
+ * How a label source's requests after the evidence stand (#772; [TrackState.laterLabels]): still
+ * [ASKING] (or waiting to start), [DONE], or [FAILED] (a request could not reach the source, or
+ * failed).
+ */
+enum class LaterLabels {
+    ASKING,
+    DONE,
+    FAILED,
 }
 
 /** One source's progress for the current track. */
