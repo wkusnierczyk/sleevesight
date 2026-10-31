@@ -33,8 +33,8 @@ Sleevesight is an open-source Android app that reads what your music player is p
 
 1. **Read.** A notification listener gives the app the player's media session: the title, artists, album and cover. Sleevesight never touches the audio, and never reads your notifications ([why it needs notification access](https://sleevesight.app/docs/faq/)).
 2. **Look up.** The title and artists are cleaned up and matched against the sources you switched on: MusicBrainz, Wikipedia and Wikidata, Last.fm, and the Exa web search. Matches that fail an identity check are never used.
-3. **Write.** The AI service you chose turns what the sources found into the insight, citing it line by line. It adds no facts of its own unless you allow it, and then they are marked unverified.
-4. **Check.** The citations are checked in code, and a sentence the sources do not back is flagged.
+3. **Write.** The AI service you chose turns what the sources found into the insight, citing it line by line. It is told to add no facts of its own unless you allow it, and those it adds are then marked unverified.
+4. **Check.** The citations are checked in code: a sentence with no citation, or one citing evidence that does not exist, is flagged.
 5. **Report.** *Report a problem* sends the developer an insight that is wrong or offensive, from your own mail app, once you have seen what it holds.
 
 [Architecture](https://sleevesight.app/docs/architecture/) shows the parts and what talks to what.
@@ -54,7 +54,7 @@ Every choice is a setting, with a reasoned default:
 
 ## Privacy
 
-No accounts, no ads, and no telemetry, crash reporting or analytics. Your API keys are encrypted with a key in the phone's Android Keystore and go only to the service they belong to. The playing track goes to the sources and the AI service you switched on; the history and the insights stay on the phone. Nothing reaches the developer unless you send it yourself.
+No accounts, no ads, and no telemetry, crash reporting or analytics. Your API keys are encrypted with a key in the phone's Android Keystore and go only to the service they belong to. The playing track goes to the sources and the AI service you switched on; the history and the insights are kept on the phone. *Read aloud* hands the insight to the phone’s text-to-speech engine, which may send it to its own server. Nothing reaches the developer unless you send it yourself.
 
 The [privacy policy](https://sleevesight.app/privacy.html) says what leaves the phone and to whom, and where Sleevesight stands under the GDPR and the EU AI Act.
 
