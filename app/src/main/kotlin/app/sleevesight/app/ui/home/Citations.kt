@@ -19,7 +19,6 @@ import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.em
@@ -36,7 +35,7 @@ import app.sleevesight.core.synthesis.SentenceStatus
 
 // A paragraph of the insight as shown (its citations as chips) and as a screen reader reads it
 // (each chip by what it points at, `home_cite`, `home_cite_model` or `home_cite_unknown`, rather
-// than its bare id, and an uncited sentence said to be so, as the underline shows it), with the
+// than its bare id, and an uncited sentence said to be so, as the dimmed text shows it), with the
 // lines its chips scroll to, in order, each once, at most [MAX_LINE_ACTIONS].
 private class ProseText(
     val text: AnnotatedString,
@@ -50,9 +49,10 @@ internal fun paragraphsOf(text: String): List<String> =
 
 /**
  * A checked paragraph of [grounded]: a sentence uncited, or citing a line that does not exist, is
- * underlined. Its citations are read as the check read them, against the card's own evidence and
- * with the model's own knowledge as it was allowed when the card was written
- * ([GroundedText.allowModel]), not as the settings now allow it: a card kept stays as it was checked.
+ * dimmed, in the muted colour and in italics (#819). Its citations are read as the check read them,
+ * against the card's own evidence and with the model's own knowledge as it was allowed when the
+ * card was written ([GroundedText.allowModel]), not as the settings now allow it: a card kept stays
+ * as it was checked.
  * A line outside [held], the ids its prompt held when it left some out (#239), reads as no line.
  */
 @Composable
@@ -65,7 +65,7 @@ internal fun CheckedProse(
 ) {
     val styles = citeStyles()
     val resources = LocalResources.current
-    val flagged = SpanStyle(textDecoration = TextDecoration.Underline, color = MaterialTheme.colorScheme.error)
+    val flagged = SpanStyle(fontStyle = FontStyle.Italic, color = MaterialTheme.colorScheme.onSurfaceVariant)
     val policy = CitePolicy(evidence, grounded.allowModel, held)
     val sentences = paragraph.map { it.text }
     // A sentence of Markdown alone (a rule, a heading's `#`) shows as nothing, and is not read out;
@@ -107,7 +107,7 @@ internal fun CheckedProse(
 
 /**
  * A paragraph still being written: its citations show, read as the settings allow them now, under
- * which it is written, and against the ids its prompt [held]; the underlines wait for the check.
+ * which it is written, and against the ids its prompt [held]; the dimming waits for the check.
  */
 @Composable
 internal fun UncheckedProse(
@@ -220,7 +220,7 @@ private fun citeStyles(): CiteStyles {
     )
 }
 
-// A sentence's [runs], its titles in italics (#555), underlined when [flagged].
+// A sentence's [runs], its titles in italics (#555), dimmed when [flagged].
 private fun AnnotatedString.Builder.appendSentence(
     runs: List<ShownRun>,
     policy: CitePolicy,
@@ -243,9 +243,11 @@ private fun AnnotatedString.Builder.appendText(
     text: ShownRun.Text,
     flagged: SpanStyle?,
 ) {
+    // In a dimmed sentence, already in italics, a title is set upright, as in any italic text (#819).
+    val title = if (flagged?.fontStyle == FontStyle.Italic) FontStyle.Normal else FontStyle.Italic
     val marked =
         SpanStyle(
-            fontStyle = if (text.italic) FontStyle.Italic else null,
+            fontStyle = if (text.italic) title else null,
             fontWeight = if (text.bold) FontWeight.Bold else null,
         )
     val style = flagged?.merge(marked) ?: marked

@@ -105,21 +105,21 @@ class GroundingNoteTest {
     fun anUncitedSentenceGetsAPlainNoteInTheSingular() =
         show(written("It was recorded in 1973 [MB1]. It is great.")) {
             compose.onNodeWithText(unbacked(1)).assertExists()
-            assertEquals("The sentence underlined in red is not backed by the sources.", unbacked(1))
+            assertEquals("The dimmed sentence is not backed by the sources.", unbacked(1))
             assertNoGroundedCount()
         }
 
     @Test
-    fun theNoteCountsTheUnderlinedSentencesUncitedAndMissingTogetherInThePlural() =
+    fun theNoteCountsTheDimmedSentencesUncitedAndMissingTogetherInThePlural() =
         show(
             written(
                 "It was recorded in 1973 [MB1]. It is great. It was a hit [MB9]. It is loved [AI].",
                 allowModel = true,
             ),
         ) {
-            // The model's own sentence carries its chip and no underline, so the note leaves it out.
+            // The model's own sentence carries its chip and is not dimmed, so the note leaves it out.
             compose.onNodeWithText(unbacked(2)).assertExists()
-            assertEquals("The 2 sentences underlined in red are not backed by the sources.", unbacked(2))
+            assertEquals("The 2 dimmed sentences are not backed by the sources.", unbacked(2))
             assertNoGroundedCount()
         }
 

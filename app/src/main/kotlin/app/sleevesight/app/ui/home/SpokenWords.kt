@@ -22,7 +22,7 @@ class SpokenWords(
  * parsed again: its runs as the card shows them ([shown]), the Markdown cleaned, with the citation
  * runs left out, whatever their id (`[MB1]`, web search's `[S1]` or `[G1]`, the model's own `[M]` or
  * `[AI]`); a sentence the card shows as nothing (a rule on its own) is not read. A sentence the sources do not back
- * ([UNBACKED]: uncited or citing a line that does not exist, both underlined in red, or from the
+ * ([UNBACKED]: uncited or citing a line that does not exist, both dimmed, or from the
  * model's own knowledge, with its chip), starts with [SpokenWords.unverified], so listening keeps
  * what the screen marks. A text the check found no sentence in is read whole, as the card shows
  * it, without its citations.
