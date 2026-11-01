@@ -8,6 +8,7 @@ import app.sleevesight.app.session.PlaybackInfo
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.outcomeKey
 import app.sleevesight.core.pipeline.InsightState
+import app.sleevesight.core.pipeline.QuestionCost
 import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.settings.Crossfade
@@ -37,7 +38,8 @@ data class AppBuild(
  * the keys are not settings, and nothing here reaches the key store); what the player reports
  * ([playing], [playback], with the [position] worked out at the tap); the pipeline's [view], with
  * the track's evidence, insight and citation check; and the diagnostics: the pipeline's [events]
- * kept in memory and what skip detection has [learned] (null when nothing supplies it). The
+ * kept in memory and what skip detection has [learned] (null when nothing supplies it); what *Ask
+ * AI* has cost since the app started ([askedAi], #801: its web searches and AI calls). The
  * track-change history is not in it: it is read only once the tester turns it on
  * ([TesterReports.history]), as of [at].
  */
@@ -53,6 +55,7 @@ class TesterSnapshot(
     val view: PipelineView,
     val events: List<LoggedEvent>,
     val learned: Map<String, Duration>?,
+    val askedAi: QuestionCost? = null,
 )
 
 /**
@@ -168,6 +171,14 @@ object TesterReport {
             appendLine("Skip detection")
             DiagnosticsText.appendLearned(this, snapshot.learned)
             appendLine()
+            snapshot.askedAi?.let { cost ->
+                // Each paid for (#801): those of questions stopped or failed too.
+                appendLine(
+                    "Ask AI, genre reasons and lists since the app started: ${cost.searches} web searches, " +
+                        "${cost.calls} AI calls",
+                )
+                appendLine()
+            }
             appendLine("Pipeline events, oldest first (${snapshot.events.size})")
             DiagnosticsText.appendEvents(this, snapshot.events)
         }.trimEnd()
@@ -407,6 +418,7 @@ internal val SETTING_LINES: List<Pair<String, (Settings) -> String>> =
         "lookUpInBackground" to { onOff(it.lookUpInBackground) },
         "artistFactsOncePerSession" to { onOff(it.artistFactsOncePerSession) },
         "searchWithAi" to { onOff(it.searchWithAi) },
+        "aiWebSearch" to { it.aiWebSearch.name },
         "readAloudMusic" to { it.readAloudMusic.name },
         "readTrackLineFirst" to { onOff(it.readTrackLineFirst) },
         "readNewInsightsAloud" to { onOff(it.readNewInsightsAloud) },

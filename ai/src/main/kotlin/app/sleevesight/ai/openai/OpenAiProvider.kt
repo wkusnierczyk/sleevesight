@@ -12,6 +12,7 @@ import app.sleevesight.core.ai.ModelInfo
 import app.sleevesight.core.ai.ModelList
 import app.sleevesight.core.ai.ModelNames
 import app.sleevesight.core.ai.ReasoningEffort
+import app.sleevesight.core.ai.ToolSpec
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.net.HostPolicy
 import app.sleevesight.net.NetBody
@@ -26,8 +27,17 @@ import app.sleevesight.net.RetryPolicy
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonArrayBuilder
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.addJsonObject
+import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 import kotlin.time.Clock
 import kotlin.time.Duration
@@ -38,6 +48,16 @@ import kotlin.time.Instant
  * OpenAI's Responses API, as a small client over `:net` (D3): one streaming call, `POST
  * /v1/responses` with `stream: true`, read as server-sent events; and the model list, `GET
  * /v1/models`. The key goes in `Authorization: Bearer`, through `NetSecrets`, so it is never logged.
+ *
+ * With [CompletionRequest.tools] (#801), they go in `tools` as functions; a response that calls one
+ * ends in [CompletionEvent.ToolUse] (`ResponseStream`), and, for a model that reasons
+ * ([takesEffort]), its reasoning comes encrypted (`include`), since nothing is stored; a model that
+ * does not reason gets no `include`, which it would refuse, and a 400 naming `include` is sent once
+ * more without it, whatever the effort (tracked apart from it), as one naming the effort is. A
+ * reasoning item with no encrypted content is not sent back. The next request's `input` is then a list: the prompt as
+ * the user's message, and for each exchange the output items as they came and a
+ * `function_call_output` for each call; with [CompletionRequest.toolsAllowed] false, `tool_choice`
+ * `none`, so the model answers now.
  *
  * The prompt is the request's `input`, as one user message. `store` is `false`: the response is
  * not kept on OpenAI's side for later retrieval, which a one-shot card never does (by default the
@@ -82,6 +102,8 @@ class OpenAiProvider(
 ) : AiProvider {
     override val id: ProviderId = ProviderId.OPENAI
 
+    override val usesTools: Boolean = true
+
     override suspend fun models(key: Secret): ModelList {
         val request = NetRequest("$baseUrl/v1/models", secrets = secrets(key))
         return when (val result = net.send(request)) {
@@ -106,9 +128,8 @@ class OpenAiProvider(
         key: Secret,
     ): Flow<CompletionEvent> =
         channelFlow {
-            // Whether the model takes an effort, until it refuses one; the token limit follows it.
-            var takesIt = takesEffort(request.model)
-            var effort = request.effort?.takeIf { takesIt }
+            // What is asked for, until the service refuses it: the effort, the encrypted reasoning.
+            val asked = Asked(takesEffort(request.model), request.effort)
             var waited = false
             do {
                 val reader = ResponseStream(clock)
@@ -118,8 +139,16 @@ class OpenAiProvider(
                 @Suppress("SwallowedException")
                 val result =
                     try {
-                        net.stream(responsesRequest(request, effort, maxTokensSent(request, takesIt), key)) { line ->
-                            events.line(line)?.let { event -> reader.read(event.data)?.let { send(it) } }
+                        net.stream(
+                            responsesRequest(
+                                request,
+                                asked.effort,
+                                maxTokensSent(request, asked.takesIt),
+                                asked.includes,
+                                key,
+                            ),
+                        ) { line ->
+                            events.line(line)?.let { event -> reader.read(event.data).forEach { send(it) } }
                             if (reader.malformed) throw StopStream()
                         }
                     } catch (e: StopStream) {
@@ -134,9 +163,7 @@ class OpenAiProvider(
                             false
                         }
 
-                        effort != null && rejectsEffort(refused) -> {
-                            effort = null
-                            takesIt = false
+                        asked.without(refused, request.tools.isNotEmpty()) -> {
                             true
                         }
 
@@ -150,7 +177,7 @@ class OpenAiProvider(
                             false
                         }
                     }
-                if (!again) reader.end(result)?.let { send(it) }
+                if (!again) reader.end(result).forEach { send(it) }
             } while (again)
         }
 
@@ -166,16 +193,24 @@ class OpenAiProvider(
         request: CompletionRequest,
         effort: ReasoningEffort?,
         maxTokens: Int,
+        reasons: Boolean,
         key: Secret,
     ): NetRequest {
         val body =
             buildJsonObject {
                 put("model", request.model)
-                put("input", request.prompt)
+                if (request.exchanges.isEmpty()) put("input", request.prompt) else put("input", inputOf(request))
                 put("max_output_tokens", maxTokens)
                 put("stream", true)
                 put("store", false)
                 effort?.let { putJsonObject("reasoning") { put("effort", effortName(it)) } }
+                if (request.tools.isNotEmpty()) {
+                    putJsonArray("tools") { request.tools.forEach { addTool(it) } }
+                    if (!request.toolsAllowed) put("tool_choice", "none")
+                    // Nothing is stored (`store`), so a reasoning model's reasoning goes back with the
+                    // calls, encrypted; a model that does not reason refuses the field (a 400).
+                    if (reasons) putJsonArray("include") { add("reasoning.encrypted_content") }
+                }
             }
         return NetRequest(
             url = "$baseUrl/v1/responses",
@@ -189,6 +224,77 @@ class OpenAiProvider(
 
     /** Thrown from the line handler to end a stream whose events cannot be read. */
     private class StopStream : RuntimeException()
+
+    /**
+     * What a request asks for until the service refuses it: whether the model takes an effort
+     * ([takesIt], which the token limit follows), the [effort], and the encrypted reasoning
+     * ([includes], #801, a reasoning model's with tools).
+     */
+    private class Asked(
+        var takesIt: Boolean,
+        effort: ReasoningEffort?,
+    ) {
+        var effort: ReasoningEffort? = effort?.takeIf { takesIt }
+        var includes: Boolean = takesIt
+
+        /**
+         * Whether [refused] is sent again without what it names: the `include` (when [tools] made
+         * one), whatever the effort; else the effort, and the `include` with it.
+         */
+        fun without(
+            refused: NetResponse,
+            tools: Boolean,
+        ): Boolean =
+            when {
+                includes && tools && rejectsInclude(refused) -> {
+                    includes = false
+                    true
+                }
+
+                effort != null && rejectsEffort(refused) -> {
+                    effort = null
+                    takesIt = false
+                    includes = false
+                    true
+                }
+
+                else -> {
+                    false
+                }
+            }
+    }
+
+    // [tool] as `tools` lists it: a function, with its name, description and parameters' schema.
+    private fun JsonArrayBuilder.addTool(tool: ToolSpec) =
+        addJsonObject {
+            put("type", "function")
+            put("name", tool.name)
+            put("description", tool.description)
+            put("parameters", decode<JsonObject>(tool.parameters) ?: JsonObject(emptyMap()))
+        }
+
+    // The input of a request after tool use (#801): the prompt as the user's message, then each
+    // exchange's output items as they came and its calls' outputs.
+    private fun inputOf(request: CompletionRequest): JsonArray =
+        buildJsonArray {
+            addJsonObject {
+                put("role", "user")
+                put("content", request.prompt)
+            }
+            request.exchanges.forEach { exchange ->
+                // A reasoning item without its encrypted content cannot be sent back unstored.
+                (decode<JsonArray>(exchange.turn.replay) ?: JsonArray(emptyList()))
+                    .filterNot { it.isUnreplayableReasoning() }
+                    .forEach { add(it) }
+                exchange.results.forEach { result ->
+                    addJsonObject {
+                        put("type", "function_call_output")
+                        put("call_id", result.callId)
+                        put("output", result.content)
+                    }
+                }
+            }
+        }
 
     companion object {
         const val HOST: String = "api.openai.com"
@@ -402,6 +508,18 @@ internal fun rejectsEffort(response: NetResponse): Boolean =
         decode<WireErrorBody>(response.body)?.error?.param in EFFORT_PARAMS
 
 private val EFFORT_PARAMS = setOf("reasoning.effort", "reasoning")
+
+/** Whether [response] refuses the request for its `include` (#801): a 400 naming it, whatever the effort. */
+internal fun rejectsInclude(response: NetResponse): Boolean =
+    response.status == BAD_REQUEST && decode<WireErrorBody>(response.body)?.error?.param?.startsWith("include") == true
+
+// Whether this output item is reasoning with no encrypted content, which a request with nothing
+// stored cannot refer to (#801).
+private fun JsonElement.isUnreplayableReasoning(): Boolean {
+    val item = this as? JsonObject ?: return false
+    val type = (item["type"] as? JsonPrimitive)?.content
+    return type == "reasoning" && item["encrypted_content"] !is JsonPrimitive
+}
 
 /**
  * The parameter a 400 names when the account may not stream the model: "Your organization must be

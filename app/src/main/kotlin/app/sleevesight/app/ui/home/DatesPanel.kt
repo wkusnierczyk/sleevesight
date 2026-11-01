@@ -47,13 +47,25 @@ internal fun datesItem(
             if (none != NoDates.LOOKING) {
                 AiSearchBlock(search, SearchKind.DATES) { answer, _ ->
                     val header = search.header ?: search.track?.nowPlaying
-                    if (answer is SearchAnswer.Dates && header != null) DatesPanel(aiDates(answer, header))
+                    if (answer is SearchAnswer.Dates && header != null) AiDatesPanel(aiDatesCited(answer, header))
                 }
             }
         } else {
             DatesPanel(sentences)
         }
     }
+
+/**
+ * What *Ask AI* found for *Dates* (#773): each of [sentences] as [DatesPanel] says it, and under one
+ * found on the web its page, "From {site}" (#801, [FromSite]).
+ */
+@Composable
+private fun AiDatesPanel(sentences: List<Pair<DateSentence, String?>>) {
+    for ((sentence, source) in sentences) {
+        Text(dateText(sentence), style = MaterialTheme.typography.bodyLarge)
+        source?.let { FromSite(it) }
+    }
+}
 
 /** The panel's content: each of [sentences] on its own, a release's title in italics. */
 @Composable

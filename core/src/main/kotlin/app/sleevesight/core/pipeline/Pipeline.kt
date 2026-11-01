@@ -12,6 +12,7 @@ import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.SourceAdapter
+import app.sleevesight.core.sources.WebSearcher
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
@@ -57,9 +58,10 @@ class AiAccess(
  * (#439), likewise, made on the user's Last.fm key; without it, Last.fm gives its artists' only.
  * [sessionFacts] holds the artist facts the listening session's insights cited (#239), which a
  * later track's prompt leaves out (`PromptEvidence`); it outlives a rebuild of the parts, so the
- * app passes the same one to each.
+ * app passes the same one to each. [webSearch] is the web search engine *AI web search* asks with
+ * (#801, [AiSearches]), on the user's key, or none: no engine switched on with its key.
  */
-@Suppress("LongParameterList") // Nine independent stages; the last five are optional.
+@Suppress("LongParameterList") // Ten independent stages; the last six are optional.
 class PipelineParts(
     val normalizer: Normalizer,
     val adapters: List<SourceAdapter>,
@@ -70,6 +72,7 @@ class PipelineParts(
     val musicBrainzLabels: MusicBrainzLabels? = null,
     val lastFmLabels: LastFmLabels? = null,
     val sessionFacts: SessionFacts = SessionFacts.None,
+    val webSearch: WebSearcher? = null,
 ) {
     init {
         require(adapters.map { it.id }.distinct().size == adapters.size) { "One adapter per source" }

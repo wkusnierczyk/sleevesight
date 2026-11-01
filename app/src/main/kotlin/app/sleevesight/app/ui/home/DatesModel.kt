@@ -292,9 +292,18 @@ private class AlbumDates(
 internal fun aiDates(
     answer: SearchAnswer.Dates,
     header: NowPlaying,
-): List<DateSentence> {
-    val sentences = mutableListOf<DateSentence>()
-    answer.album?.let { sentences += DateSentence.Album(it) }
+): List<DateSentence> = aiDatesCited(answer, header).map { it.first }
+
+/**
+ * [aiDates]' sentences, each with the page it came from (#801), null for an answer from the model's
+ * knowledge.
+ */
+internal fun aiDatesCited(
+    answer: SearchAnswer.Dates,
+    header: NowPlaying,
+): List<Pair<DateSentence, String?>> {
+    val sentences = mutableListOf<Pair<DateSentence, String?>>()
+    answer.album?.let { sentences += DateSentence.Album(it) to answer.albumSource }
     answer.first?.let { first ->
         val album = header.album?.takeIf(String::isNotBlank)
         val title = first.title
@@ -304,11 +313,14 @@ internal fun aiDates(
                 title != null &&
                 kindOf(first.type) == null &&
                 ALBUMS.albumKey(title) == ALBUMS.albumKey(album)
-        sentences += if (here) DateSentence.FirstHere else DateSentence.First(first.date, title, kindOf(first.type))
+        val sentence = if (here) DateSentence.FirstHere else DateSentence.First(first.date, title, kindOf(first.type))
+        sentences += sentence to first.source
     }
     answer.original?.let { original ->
         val release = original.release
-        sentences += DateSentence.Original(original.date, original.artist, release?.title, kindOf(release?.type))
+        sentences +=
+            DateSentence.Original(original.date, original.artist, release?.title, kindOf(release?.type)) to
+            original.source
     }
     return sentences
 }

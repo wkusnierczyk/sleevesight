@@ -22,7 +22,7 @@ Sleevesight is an open-source Android app that reads what your music player is p
 ## What it does
 
 - Notices the track change in Spotify, or any other player you follow that publishes an Android media session.
-- Shows the cover, title, artists and album, with *Dates*, *Genres* and *Lyrics* buttons: when the album and the track came out, the track's genres with what each one is and, on a tap, why the track has it, from your AI service (which may add genres of its own, marked AI), and links to the lyrics; when the sources have nothing, *Search with AI* asks your AI service.
+- Shows the cover, title, artists and album, with *Dates*, *Genres* and *Lyrics* buttons: when the album and the track came out, the track's genres with what each one is and, on a tap, why the track has it, from your AI service (which may add genres of its own, marked AI), and links to the lyrics; when the sources have nothing, *Ask AI* asks your AI service, which can search the web with Exa first (*AI web search*: off, once, or up to a few times of its own), and each value it finds from the web names the page it came from. A lyrics page already among the track's web search results is shown with no AI call.
 - Writes a few sentences on why the track is interesting, each factual one linked to the source it came from.
 - Shows the sources behind the insight: what each one found, and where.
 - Reads the insight aloud, in the phone's own voice, for listening without looking at the phone.
@@ -47,6 +47,7 @@ Every choice is a setting, with a reasoned default:
 - **Sources:** each one a switch; MusicBrainz and Wikipedia need no key, Last.fm and Exa your own.
 - **AI service:** Anthropic, OpenAI or Google, with your own key, model and reasoning effort.
 - **When it writes:** on every track change, only on a skip, or only when you tap *Write insight*.
+- **Ask AI:** whether a panel with nothing from its sources asks your AI service by itself (*Ask AI automatically*, off by default), and how it searches the web with Exa (*AI web search*: *Off*, *Once*, the default, or *Up to 3 times*).
 - **History:** what is kept on the phone, for how long, and *Clear history*.
 - **Keys:** typed, scanned from a QR code, or typed on a computer; kept encrypted on the phone.
 

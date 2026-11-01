@@ -184,14 +184,18 @@ class ExaWebSearch(
 
         /**
          * The result's highlights joined as Exa joins its own fragments, whitespace collapsed, and
-         * [cut] to at most [LINE_CHARACTERS].
+         * [cut] to at most [max], [LINE_CHARACTERS] for a source's line.
          */
-        internal fun snippetOf(result: ExaResult): String =
+        internal fun snippetOf(
+            result: ExaResult,
+            max: Int = LINE_CHARACTERS,
+        ): String =
             cut(
                 result.highlights
                     .map { it.replace(WHITESPACE, " ").trim() }
                     .filter { it.isNotEmpty() }
                     .joinToString(SEPARATOR),
+                max,
             )
 
         /**

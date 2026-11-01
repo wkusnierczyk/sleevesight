@@ -121,7 +121,7 @@ class GenreListsTest {
         assertNull(lists.key(track, settings.copy(writeInsights = false)))
         assertNull(lists.key(track.copy(evidence = null), settings))
         assertNull(GenreLists(null, cache, JvmHasher, vocabulary).key(track, settings))
-        assertEquals(listOf(GenreListMode.KNOWLEDGE), GenreLists.MODES)
+        assertEquals(listOf(GenreListMode.KNOWLEDGE, GenreListMode.WEB), GenreLists.MODES)
     }
 
     @Test

@@ -369,10 +369,10 @@ class GenreAboutScreenTest {
             compose.onNodeWithTag(AI_SEARCH_TAG).performClick()
             compose.waitForIdle()
             assertEquals(listOf("jazz" to "Jazz"), feed.asked)
-            // Under way: the record, "Searching with AI…", and *Stop*.
-            feed.state.value = AiSearch.Searching
+            // Under way: the record, "Asking AI…" (a definition is asked from the model's knowledge), and *Stop*.
+            feed.state.value = AiSearch.Searching()
             compose.waitForIdle()
-            compose.onNodeWithTag(AI_SEARCHING_TAG, useUnmergedTree = true).assertTextEquals("Searching with AI…")
+            compose.onNodeWithTag(AI_SEARCHING_TAG, useUnmergedTree = true).assertTextEquals("Asking AI…")
             compose.onNodeWithTag(AI_SEARCH_STOP_TAG).performClick()
             compose.waitForIdle()
             assertEquals(listOf<String?>("jazz"), feed.stopped)
@@ -391,7 +391,7 @@ class GenreAboutScreenTest {
             // Nothing found.
             feed.state.value = AiSearch.NothingFound(MODEL)
             compose.waitForIdle()
-            compose.onNodeWithTag(AI_SEARCH_NOTHING_TAG).assertTextEquals("$MODEL found nothing.")
+            compose.onNodeWithTag(AI_SEARCH_NOTHING_TAG).assertTextEquals("$MODEL couldn’t say from its own knowledge.")
             // Failed, with *Retry*, which asks again.
             feed.state.value = AiSearch.Failed("offline")
             compose.waitForIdle()

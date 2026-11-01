@@ -4,6 +4,7 @@ import app.sleevesight.core.ai.ModelNames
 import app.sleevesight.core.genres.GenreDefinitions
 import app.sleevesight.core.genres.GenreLabel
 import app.sleevesight.core.genres.GenreVocabulary
+import app.sleevesight.core.pipeline.AiSearches
 import app.sleevesight.core.pipeline.CardKey
 import app.sleevesight.core.pipeline.ClearEpoch
 import app.sleevesight.core.pipeline.GenreListState
@@ -11,6 +12,7 @@ import app.sleevesight.core.pipeline.GenreLists
 import app.sleevesight.core.pipeline.GenreReasons
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.PipelineParts
+import app.sleevesight.core.pipeline.QuestionCost
 import app.sleevesight.core.pipeline.ReasonPath
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.settings.Settings
@@ -82,11 +84,18 @@ enum class Unavailability {
 data class AiGenreList(
     val genres: List<GenreLabel>,
     val model: String,
+    val sources: List<String> = emptyList(),
 )
 
 /** [this] with [list]'s genres in its track's row (`TrackGenres.withAi`); itself for none. */
 fun TrackState.withAi(list: AiGenreList?): TrackState =
-    if (list == null || list.genres.isEmpty()) this else copy(genres = genres.withAi(list.genres, list.model))
+    if (list == null ||
+        list.genres.isEmpty()
+    ) {
+        this
+    } else {
+        copy(genres = genres.withAi(list.genres, list.model, list.sources))
+    }
 
 /**
  * What a genre's panel shows besides its table (#523): what the genre is ([DefinitionFeed.definition],
@@ -167,6 +176,7 @@ class AppGenreNotes private constructor(
     private val epoch: ClearEpoch,
     private val clock: Clock,
     private val modelName: (String) -> String,
+    private val paid: (QuestionCost) -> Unit,
 ) : GenreNotes,
     DefinitionFeed by lookups {
     /**
@@ -184,6 +194,7 @@ class AppGenreNotes private constructor(
         io: CoroutineContext = EmptyCoroutineContext,
         clock: Clock = Clock.System,
         modelName: (String) -> String = { ModelNames.of(it) ?: it },
+        paid: (QuestionCost) -> Unit = {},
     ) : this(
         AppGenreDefinitions(definitions, settings, scope, epoch, io),
         definitions.vocabulary,
@@ -193,6 +204,7 @@ class AppGenreNotes private constructor(
         epoch,
         clock,
         modelName,
+        paid,
     )
 
     // A reason shown, or a list, and when it was written.
@@ -229,7 +241,14 @@ class AppGenreNotes private constructor(
             .combine(
                 combine(lists, settings) { known, now -> known to now?.historyLifetime },
             ) { key, (known, lifetime) ->
-                key?.let { listed(it, known, lifetime) }?.let { AiGenreList(it.genres, modelName(it.model)) }
+                key
+                    ?.let {
+                        listed(
+                            it,
+                            known,
+                            lifetime,
+                        )
+                    }?.let { AiGenreList(it.genres, modelName(it.model), it.sources) }
             }.distinctUntilChanged()
 
     override fun reason(
@@ -383,9 +402,13 @@ class AppGenreNotes private constructor(
             ?.label ?: genre
     }
 
-    private fun reasonsOf(made: PipelineParts) = GenreReasons(made.ai, made.cache, made.hasher, clock)
+    private fun reasonsOf(made: PipelineParts) = GenreReasons(made.ai, made.cache, made.hasher, clock, made.webSearch)
 
-    private fun listsOf(made: PipelineParts) = GenreLists(made.ai, made.cache, made.hasher, vocabulary, clock)
+    private fun listsOf(made: PipelineParts) =
+        GenreLists(made.ai, made.cache, made.hasher, vocabulary, clock, made.webSearch)
+
+    // How a reason or a list searches the web (#801), as the settings last read say; by a tap.
+    private fun asking(): AiSearches.Asking = AiSearches.Asking.of(settings.value, automatic = false)
 
     // Whether [key]'s reason may be asked for: not shown, shown as failed, or past *Keep history for*.
     private fun open(key: CardKey): Boolean {
@@ -399,8 +422,9 @@ class AppGenreNotes private constructor(
         return entry == null || entry.state is GenreListState.Failed || expired(entry.writtenAt)
     }
 
-    // [key]'s reason, kept meanwhile (another panel's), with no call, or written; each state shown
-    // while no *Clear history* came since it started.
+    // [key]'s reason, kept meanwhile (another panel's, or from the evidence alone under another *AI
+    // web search*, `GenreReasons.found`), with no call, or written; each state shown while no *Clear
+    // history* came since it started.
     private suspend fun write(
         reasons: GenreReasons,
         key: CardKey,
@@ -413,11 +437,11 @@ class AppGenreNotes private constructor(
             Instant,
         ) -> Unit = { state, at -> publish(work) { shown.update { it.with(key, Entry(state, at)) } } }
         try {
-            val kept = reasons.kept(key, track)?.takeIf { !expired(it.writtenAt) }
+            val kept = reasons.found(key, track)?.takeIf { !expired(it.writtenAt) }
             if (kept != null) {
                 show(kept.state, kept.writtenAt ?: clock.now())
             } else {
-                reasons.write(key, track, label, show)
+                reasons.write(key, track, label, asking(), paid, fresh = { !expired(it) }, show = show)
             }
         } catch (e: CancellationException) {
             throw e
@@ -456,7 +480,11 @@ class AppGenreNotes private constructor(
         }
         try {
             val kept = asker.kept(key)?.takeIf { !expired(it.writtenAt) }
-            if (kept != null) show(kept.state, kept.writtenAt ?: clock.now()) else asker.ask(key, track, show)
+            if (kept != null) {
+                show(kept.state, kept.writtenAt ?: clock.now())
+            } else {
+                asker.ask(key, track, asking(), paid, show)
+            }
         } catch (e: CancellationException) {
             throw e
         } catch (
@@ -534,7 +562,8 @@ class AppGenreNotes private constructor(
         }
     }
 
-    // The reason kept in the synthesis cache for [key], read once, unless one is shown already.
+    // The reason kept in the synthesis cache for [key] (`GenreReasons.found`), read once, unless one
+    // is shown already.
     private fun look(
         key: CardKey,
         track: TrackState,
@@ -543,7 +572,7 @@ class AppGenreNotes private constructor(
         val made = parts.value ?: return
         scope.launch(epoch.mark()) {
             val work = coroutineContext
-            val kept = reasonsOf(made).kept(key, track)?.takeIf { !expired(it.writtenAt) }
+            val kept = reasonsOf(made).found(key, track)?.takeIf { !expired(it.writtenAt) }
             if (kept != null) {
                 val entry = Entry(kept.state, kept.writtenAt ?: clock.now())
                 publish(work) { shown.update { if (key in it) it else it.with(key, entry) } }

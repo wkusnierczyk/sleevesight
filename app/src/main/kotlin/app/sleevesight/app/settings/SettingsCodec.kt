@@ -66,6 +66,7 @@ internal object SettingsCodec {
     private val BACKGROUND = booleanPreferencesKey("lookups.background")
     private val ARTIST_FACTS_ONCE = booleanPreferencesKey("insights.artist_facts_once")
     private val SEARCH_WITH_AI = booleanPreferencesKey("insights.search_with_ai")
+    private val AI_WEB_SEARCH = stringPreferencesKey("insights.ai_web_search")
     private val READ_ALOUD_MUSIC = stringPreferencesKey("read_aloud.music")
     private val READ_TRACK_LINE = booleanPreferencesKey("read_aloud.track_line_first")
     private val READ_NEW_INSIGHTS = booleanPreferencesKey("read_aloud.new_insights")
@@ -117,6 +118,7 @@ internal object SettingsCodec {
             lookUpInBackground = prefs[BACKGROUND] ?: defaults.lookUpInBackground,
             artistFactsOncePerSession = prefs[ARTIST_FACTS_ONCE] ?: defaults.artistFactsOncePerSession,
             searchWithAi = prefs[SEARCH_WITH_AI] ?: defaults.searchWithAi,
+            aiWebSearch = enumOf(prefs[AI_WEB_SEARCH]) ?: defaults.aiWebSearch,
             readAloudMusic = enumOf(prefs[READ_ALOUD_MUSIC]) ?: defaults.readAloudMusic,
             readTrackLineFirst = prefs[READ_TRACK_LINE] ?: defaults.readTrackLineFirst,
             readNewInsightsAloud = prefs[READ_NEW_INSIGHTS] ?: defaults.readNewInsightsAloud,
@@ -218,6 +220,9 @@ internal object SettingsCodec {
         }
         if (moved { it.searchWithAi }) {
             prefs.put(SEARCH_WITH_AI, settings.searchWithAi, defaults.searchWithAi)
+        }
+        if (moved { it.aiWebSearch }) {
+            prefs.put(AI_WEB_SEARCH, settings.aiWebSearch.name, defaults.aiWebSearch.name)
         }
         if (moved { it.readAloudMusic }) {
             prefs.put(READ_ALOUD_MUSIC, settings.readAloudMusic.name, defaults.readAloudMusic.name)

@@ -25,9 +25,11 @@ import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.platform.JvmResourceReader
 import app.sleevesight.core.resolution.Lookup
+import app.sleevesight.core.settings.AiWebSearch
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.SourceSwitch
 import app.sleevesight.core.sources.Resolution
+import app.sleevesight.core.sources.WebSearchOutcome
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -209,6 +211,42 @@ class AppGenreNotesTest {
             val shown = reason.first() as GenreReason.Shown
             assertTrue((shown.state as InsightState.Written).cached)
             assertEquals(1, provider.requests)
+        }
+
+    @Test
+    fun `a reason from the evidence alone shows again with no call after AI web search changes (#801)`() =
+        runTest {
+            val searched = mutableListOf<String>()
+            parts.value =
+                PipelineParts(
+                    normalizer = Normalizer(JvmAccentFolder),
+                    adapters = emptyList(),
+                    resolver = TrackResolver { _, _ -> Resolution.NONE },
+                    hasher = JvmHasher,
+                    ai = AiAccess(provider, Secret("key")),
+                    cache = cache,
+                    webSearch = { query ->
+                        searched += query
+                        WebSearchOutcome.Failed
+                    },
+                )
+            settings.value = settings.value?.copy(aiWebSearch = AiWebSearch.OFF)
+            val notes = notes()
+            notes.explain(track(), "rock")
+            advanceUntilIdle()
+            assertTrue((notes.reason(track(), "rock").first() as GenreReason.Shown).state is InsightState.Written)
+            assertEquals(1, provider.requests)
+            // *Once* since: the reason's key has its web part, and the one from the evidence alone is
+            // found under the key without it, shown, and a tap asks nothing.
+            settings.value = settings.value?.copy(aiWebSearch = AiWebSearch.ONCE)
+            val reason = notes.reason(track(), "rock")
+            reason.first()
+            advanceUntilIdle()
+            assertTrue((reason.first() as GenreReason.Shown).state is InsightState.Written)
+            notes.explain(track(), "rock")
+            advanceUntilIdle()
+            assertEquals(1, provider.requests)
+            assertTrue(searched.isEmpty())
         }
 
     @Test

@@ -2,6 +2,7 @@ package app.sleevesight.ai.anthropic
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonObject
 
 /*
  * The parts of Anthropic's Messages and Models APIs this client reads. Everything else in a
@@ -15,6 +16,10 @@ internal data class WireEvent(
     val delta: WireDelta? = null,
     val usage: WireUsage? = null,
     val error: WireError? = null,
+    /** The content block a `content_block_*` event is about, by its place in the message. */
+    val index: Int? = null,
+    /** A `content_block_start`'s block as it begins (#801): its type, and a tool call's id and name. */
+    @SerialName("content_block") val contentBlock: JsonObject? = null,
 )
 
 @Serializable
@@ -22,12 +27,18 @@ internal data class WireMessage(
     val usage: WireUsage? = null,
 )
 
-/** A `content_block_delta`'s delta (`text_delta` and others) or a `message_delta`'s (`stop_reason`). */
+/**
+ * A `content_block_delta`'s delta (`text_delta`; for a turn that calls a tool, #801, `input_json_delta`,
+ * `thinking_delta` and `signature_delta`) or a `message_delta`'s (`stop_reason`).
+ */
 @Serializable
 internal data class WireDelta(
     val type: String? = null,
     val text: String? = null,
     @SerialName("stop_reason") val stopReason: String? = null,
+    @SerialName("partial_json") val partialJson: String? = null,
+    val thinking: String? = null,
+    val signature: String? = null,
 )
 
 @Serializable

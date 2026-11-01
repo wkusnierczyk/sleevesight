@@ -4,6 +4,7 @@ package app.sleevesight.app.ui.settings
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -238,7 +239,17 @@ private fun Summary(
     if (link == null) {
         Paragraphs(summary, color = color)
     } else {
-        LinkedText(sentenceWith(summary, link), style = MaterialTheme.typography.bodySmall, color = color)
+        // Paragraphs as [Paragraphs] sets them, the link in the one that has it (#802's two).
+        val style = MaterialTheme.typography.bodySmall
+        Column(verticalArrangement = Arrangement.spacedBy(PARAGRAPH_GAP)) {
+            for (paragraph in paragraphsOf(summary)) {
+                if (link.text in paragraph) {
+                    LinkedText(sentenceWith(paragraph, link), style = style, color = color)
+                } else {
+                    Text(paragraph, style = style, color = color)
+                }
+            }
+        }
     }
 }
 
@@ -291,7 +302,9 @@ internal fun ValueRow(
  * shows those where the full ones do not fit side by side, and never stacks (#803). A setting
  * whose choices are many or long, or
  * described one by one, is a [ValueRow] opening a dialog instead (`design/design.md`, *Settings
- * screen*).
+ * screen*). Not [enabled], none can be chosen; a value in [disabled], that one; [oneRow] keeps the
+ * buttons in one row at any font size (#801, [ChoiceButtonGroup]); [below] comes under the line
+ * of what the value does.
  */
 @Suppress("LongParameterList") // What the row shows, each a value of its own, and what a tap does.
 @Composable
@@ -301,6 +314,10 @@ internal fun <T> ChoiceButtonsRow(
     choices: List<Pair<T, String>>,
     selected: T,
     details: Map<T, String> = emptyMap(),
+    enabled: Boolean = true,
+    disabled: Set<T> = emptySet(),
+    oneRow: Boolean = false,
+    below: (@Composable () -> Unit)? = null,
     short: Map<T, String> = emptyMap(),
     onSelect: (T) -> Unit,
 ) {
@@ -321,9 +338,13 @@ internal fun <T> ChoiceButtonsRow(
             Modifier.padding(top = 4.dp),
             name = title,
             details = details,
+            enabled = enabled,
+            disabled = disabled,
+            oneRow = oneRow,
             short = short,
         )
         ChoiceDetails(choices, selected, details)
+        below?.invoke()
     }
 }
 

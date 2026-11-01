@@ -171,6 +171,8 @@
          ("Lyrics on Genius"). Under it, home_lyrics_page_note. -->
     <string name="home_lyrics_page">Lyrics on %1$s</string>
     <string name="home_lyrics_page_note">The song’s page, linked from MusicBrainz.</string>
+    <!-- In its place for a page among the track's web search results (#801), found with no AI call. -->
+    <string name="home_lyrics_web_note">The song’s page, from the web search for this track.</string>
     <!-- With no page to link: a search for the title and artist on %1$s, the site ("Search Genius
          for the lyrics"). Under it, home_lyrics_search_note. -->
     <string name="home_lyrics_search">Search %1$s for the lyrics</string>
@@ -190,29 +192,39 @@
          never break, so it stays on one line. -->
     <string name="home_settings_appearance_link">Settings\u00A0→\u00A0Appearance</string>
 
-    <!-- Search with AI (#773): under the empty state of Dates, Genres or Lyrics (the source off,
-         unreachable, the song not found, nothing found; not while still looking), an outlined button
-         that asks the AI service, a paid call, for what the source did not give. -->
-    <string name="home_ai_search">Search with AI</string>
+    <!-- Ask AI (#773, named so by #802; once Search with AI): under the empty state of Dates, Genres or
+         Lyrics (the source off, unreachable, the song not found, nothing found; not while still
+         looking), an outlined button that asks the AI service, a paid call, for what the source did
+         not give, searching the web as AI web search (Settings → Insights) says. -->
+    <string name="home_ai_search">Ask AI</string>
     <!-- Its action, as a screen reader names it ("Double-tap to ask your AI service, a paid call"). -->
     <string name="home_ai_search_action">ask your AI service, a paid call</string>
     <!-- What a screen reader adds while it is disabled, with no AI service ready. -->
     <string name="home_ai_search_unready">No AI service is enabled.</string>
-    <!-- In its place while the call runs, after the small turning record, with Stop (home_ai_stop) at
-         the right of the same line. -->
-    <string name="home_ai_searching">Searching with AI…</string>
+    <!-- In its place while the question runs, after the small turning record, with Stop (home_ai_stop)
+         at the right of the same line: with AI web search on (#801), then with it off. -->
+    <string name="home_ai_searching">Searching the web with AI…</string>
+    <string name="home_ai_asking">Asking AI…</string>
     <!-- Stops the call; nothing from it is shown or kept. -->
     <string name="home_ai_stop">Stop</string>
     <!-- Stop's action, as a screen reader names it ("Double-tap to stop the call"). -->
     <string name="home_ai_stop_action">stop the call</string>
-    <!-- Under what the search found, on its own line, in italics; %1$s is the model ("by Claude Haiku 5.5"). -->
+    <!-- Under what the question found, on its own line, in italics; %1$s is the model ("by Claude Haiku
+         5.5"), whether it was asked by a tap or automatically (#801's revised pick). -->
     <string name="home_ai_by">by %1$s</string>
+    <!-- Under a value found on the web (#801), on its own line: %1$s is the page's site ("discogs.com"),
+         a link to the page. -->
+    <string name="home_ai_from">From %1$s</string>
     <!-- In the answer's place, under the rule, the answer having nothing usable; %1$s is the model, as
-         the AI settings name it. Kept, as an answer is; no button again. -->
-    <string name="home_ai_nothing">%1$s found nothing.</string>
-    <!-- The call failed, in the error colour, with Retry (home_retry) at the right of the same line, as
-         for a source that could not be reached; %1$s is why, as the insight says it (home_failure_*). -->
-    <string name="home_ai_failed">AI search failed: %1$s.</string>
+         the AI settings name it: with AI web search off, then on (#801, #802). Kept, as an answer is;
+         no button again. -->
+    <string name="home_ai_nothing">%1$s couldn’t say from its own knowledge.</string>
+    <string name="home_ai_nothing_web">%1$s found nothing on the web.</string>
+    <!-- Before the line above, for a question Ask AI automatically asked (#802); %1$s is that line. -->
+    <string name="home_ai_nothing_auto">Asked automatically: %1$s</string>
+    <!-- The question failed, in the error colour, with Retry (home_retry) at the right of the same line,
+         as for a source that could not be reached; %1$s is why, as the insight says it (home_failure_*). -->
+    <string name="home_ai_failed">Asking AI failed: %1$s.</string>
     <!-- Retry's action there, as a screen reader names it ("Double-tap to ask your AI service again, a paid call"). -->
     <string name="home_ai_retry_action">ask your AI service again, a paid call</string>
 
@@ -230,7 +242,8 @@
     <!-- In the Genres panel, a genre source that could not be reached; Retry (home_retry) beside it asks
          it again. %1$s is the source. -->
     <string name="home_genre_source_unreachable">%1$s could not be reached.</string>
-    <string name="home_genres_none">None found.</string>
+    <!-- No genre from any source (#801's pick): the line above Ask AI and the genres it finds. -->
+    <string name="home_genres_none">The sources give no genres.</string>
     <!-- Every genre source off: this line, then home_genres_off_see on its own line. -->
     <string name="home_genres_off">Genre sources are disabled.</string>
     <!-- %1$s is home_settings_sources_link when the sources are off in Settings, home_settings_genres_link
@@ -412,6 +425,10 @@
     <!-- Proposed (#773), to be confirmed. -->
     <!-- Search with AI: the AI model's reply was not the answer asked for. -->
     <string name="home_failure_malformed">the AI model’s answer could not be read</string>
+    <!-- The whole line, in the error colour with Retry, when the web search AI web search makes failed
+         (#801): Once's one Exa search, or every search of Up to 3 times; not the sources' own web
+         search, and not the AI call failing (home_ai_failed). -->
+    <string name="home_ai_web_search_failed">AI web search failed.</string>
 
     <!-- Sources. -->
     <string name="home_sources_title">Sources</string>

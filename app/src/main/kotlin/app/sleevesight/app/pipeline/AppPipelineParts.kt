@@ -58,6 +58,7 @@ class AppPipelineParts(
             musicBrainzLabels = wiring.musicBrainzLabels,
             lastFmLabels = keys.sources.lastFm?.let(wiring::lastFmLabels),
             sessionFacts = sessionFacts,
+            webSearch = wiring.webSearcher(keys.sources.web.filterKeys { it in settings.webEngines }),
         )
 }
 

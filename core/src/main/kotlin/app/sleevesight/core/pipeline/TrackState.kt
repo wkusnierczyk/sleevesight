@@ -178,7 +178,9 @@ sealed interface InsightState {
      * (#390); null only where no pipeline wrote it (a test's fixture). [writtenAt] is when it was
      * written: the call's end, or as the cache says for a cached card; null where the cache does not
      * say. It is shown no longer than *Keep history for* after it (#643, `pastKeepHistory`), as
-     * the cache serves it.
+     * the cache serves it. [searched] is what a genre's reason asked again with web search was
+     * checked against (#801): the track's evidence and the pages it found, numbered after its lines,
+     * which its citations name; null for one written from the track's evidence alone.
      */
     data class Written(
         val grounded: GroundedText,
@@ -188,6 +190,7 @@ sealed interface InsightState {
         val held: Set<String>? = null,
         val writtenBy: WrittenBy? = null,
         val writtenAt: Instant? = null,
+        val searched: EvidenceSet? = null,
     ) : InsightState
 
     /**

@@ -22,6 +22,7 @@ import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.app.ui.theme.linkedParts
+import app.sleevesight.core.pipeline.AiSearches
 import app.sleevesight.core.pipeline.GenreLists
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.synthesis.GenreListMode
@@ -65,8 +66,8 @@ internal fun ReasonUnavailable(
 /**
  * "Enable AI service knowledge." (#762): what to switch on so that the AI's genre list can run, each
  * of [modes] named as its setting is and linked to where it is ([openSettingsAt]), several joined by
- * "or" in their order. Built from the modes the app has (`GenreLists.MODES`), so #801's web search
- * joins the line when it adds its mode.
+ * "or" in their order. Built from the modes the app has (`GenreLists.MODES`): "Enable AI service
+ * knowledge or AI web search.", the second (#801) a link to *AI web search* under *Insights*.
  */
 @Composable
 internal fun enableParts(
@@ -79,6 +80,14 @@ internal fun enableParts(
                 GenreListMode.KNOWLEDGE -> {
                     val target = SettingsTarget.sources
                     TextPart.Action(stringResource(R.string.settings_source_model), target.linkTag) {
+                        openSettingsAt(target)
+                    }
+                }
+
+                // #801: *AI web search*, under *Insights*.
+                GenreListMode.WEB -> {
+                    val target = SettingsTarget.aiWebSearch
+                    TextPart.Action(stringResource(R.string.settings_ai_web_search), target.linkTag) {
                         openSettingsAt(target)
                     }
                 }
@@ -141,7 +150,8 @@ internal fun ReasonShown(
         is InsightState.Written ->
             Answer(question) {
                 for (paragraph in state.grounded.paragraphs) {
-                    CheckedProse(paragraph, state.grounded, context.track?.evidence, actions.onCite)
+                    // A reason asked again with web search cites the pages it found too (#801).
+                    CheckedProse(paragraph, state.grounded, state.searched ?: context.track?.evidence, actions.onCite)
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -158,7 +168,12 @@ internal fun ReasonShown(
 
         is InsightState.Failed ->
             RetryLine(
-                stringResource(R.string.genre_why_failed, failureText(state.reason)),
+                // The web search AI web search makes failed (#801): that, as the whole line.
+                if (state.reason == AiSearches.WEB_SEARCH_FAILED) {
+                    stringResource(R.string.home_ai_web_search_failed)
+                } else {
+                    stringResource(R.string.genre_why_failed, failureText(state.reason))
+                },
                 source = "",
                 onRetry = actions.again,
                 modifier = Modifier.testTag(GENRE_WHY_FAILED_TAG),
