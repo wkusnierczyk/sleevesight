@@ -78,9 +78,10 @@ class WebReply(
  *   calls it is answered with each search's pages ([WebPrompt.pages]), the searches counted; once
  *   [limit] searches are made, a call more with the tool declared but not to be called
  *   (`CompletionRequest.toolsAllowed` false), so the model answers: at most [limit] searches and
- *   [limit] + 1 calls. A call beyond the limit gets [WebPrompt.NO_SEARCHES_LEFT]; a search that
- *   fails, [WebPrompt.SEARCH_FAILED]. A service whose client takes no tools
- *   (`AiProvider.usesTools`, Google's) is asked as with *Once*.
+ *   [limit] + 1 calls, the calls bounded apart from the searches, so turns whose calls search
+ *   nothing (no query, another tool) cannot go on past them. A call beyond the limit gets
+ *   [WebPrompt.NO_SEARCHES_LEFT]; a search that fails, [WebPrompt.SEARCH_FAILED]. A service whose
+ *   client takes no tools (`AiProvider.usesTools`, Google's) is asked as with *Once*.
  *
  * Each search and call is counted to [ask]'s `counted` as it is made, before its answer, so one
  * stopped or failed still counts. Cancelling the caller cancels the whole loop: the call under way
@@ -155,7 +156,9 @@ class WebQuestions(
         val exchanges = mutableListOf<ToolExchange>()
         var cost = QuestionCost()
         while (true) {
-            val allowed = cost.searches < limit
+            // Searches left, and calls: at most [limit] + 1 in all, the last never with the tool,
+            // whatever the turns' calls look like (one with no query counts no search).
+            val allowed = cost.searches < limit && cost.calls < limit
             val request =
                 base.copy(
                     prompt = prompt,

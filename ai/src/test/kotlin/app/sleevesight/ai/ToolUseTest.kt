@@ -186,6 +186,41 @@ class ToolUseTest {
         }
 
     @Test
+    fun openAisTurnIsSentBackWholeAMessageBesideTheCallIncluded() =
+        runTest {
+            val withMessage =
+                sse(
+                    """{"type":"response.created","response":{"status":"in_progress"}}""",
+                    """{"type":"response.output_item.done","item":{"type":"reasoning","id":"rs_1","summary":[],"encrypted_content":"enc"}}""",
+                    """{"type":"response.output_item.done","item":{"type":"message","id":"msg_1","role":"assistant","content":[{"type":"output_text","text":"Searching."}]}}""",
+                    """{"type":"response.output_item.done","item":{"type":"function_call","id":"fc_1","call_id":"call_1","name":"exa_search","arguments":"{\"query\":\"Grace\"}"}}""",
+                    """{"type":"response.completed","response":{"status":"completed","usage":{"input_tokens":40,"output_tokens":12}}}""",
+                )
+            val turn =
+                OpenAiProvider(ReplayNetClient { ok(withMessage) }, RetryPolicy())
+                    .stream(request, Secret("k"))
+                    .toList()
+                    .filterIsInstance<CompletionEvent.ToolUse>()
+                    .single()
+                    .turn
+            val items = Json.parseToJsonElement(turn.replay).jsonArray
+            assertEquals(
+                listOf("reasoning", "message", "function_call"),
+                items.map {
+                    it.jsonObject["type"]!!.jsonPrimitive.content
+                },
+            )
+            val net = ReplayNetClient { ok(openAiTurn) }
+            val next = request.copy(exchanges = listOf(ToolExchange(turn, listOf(ToolResult("call_1", "PAGES")))))
+            OpenAiProvider(net, RetryPolicy()).stream(next, Secret("k")).toList()
+            val input = assertIs<JsonArray>(body(net)["input"])
+            assertEquals(
+                listOf("user", "reasoning", "message", "function_call", "function_call_output"),
+                input.map { (it.jsonObject["type"] ?: it.jsonObject.getValue("role")).jsonPrimitive.content },
+            )
+        }
+
+    @Test
     fun aRequestWithNoToolsIsSentAsBefore() =
         runTest {
             val net = ReplayNetClient { ok(openAiTurn) }

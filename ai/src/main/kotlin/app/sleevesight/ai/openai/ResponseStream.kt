@@ -33,8 +33,8 @@ import kotlin.time.Clock
  * A response whose output calls tools (#801, `function_call` items) ends with
  * [CompletionEvent.ToolUse] just before its [CompletionEvent.Done], with [StopReason.TOOL_USE]: each
  * call's `call_id`, name and arguments, and the output items to send back as the next request's
- * input ([replayed]: the reasoning, with its encrypted content, and the calls), each as its
- * `response.output_item.done` gave it.
+ * input: all of them, in order (the reasoning, with its encrypted content, an assistant message,
+ * the calls), each as its `response.output_item.done` gave it.
  */
 internal class ResponseStream(
     private val clock: Clock,
@@ -67,7 +67,8 @@ internal class ResponseStream(
             }
 
             event.type == "response.completed" && !refused && calls().isNotEmpty() -> {
-                val replay = JsonArray(items.filter { typeOf(it) in REPLAYED })
+                // Every output item, in order, as the next request's input must hold the turn.
+                val replay = JsonArray(items.toList())
                 listOf(
                     CompletionEvent.ToolUse(ToolTurn(calls(), replay.toString())),
                     end(done(event.response, StopReason.TOOL_USE)),
@@ -195,9 +196,6 @@ internal class ResponseStream(
         val NO_USAGE = Usage(0, 0)
 
         const val FUNCTION_CALL = "function_call"
-
-        /** The output items a response that calls tools is sent back with: its reasoning and its calls. */
-        val REPLAYED = setOf("reasoning", FUNCTION_CALL)
 
         fun typeOf(item: JsonObject): String? = text(item, "type")
 

@@ -207,6 +207,24 @@ class WebQuestionsTest {
         }
 
     @Test
+    fun callsThatSearchNothingCannotRunPastTheCallBudget() =
+        runTest {
+            // A model that only ever calls the tool with no query: no search is made, yet the calls end.
+            val bad =
+                listOf(
+                    CompletionEvent.ToolUse(ToolTurn(listOf(ToolCall("c", WebPrompt.TOOL_NAME, "{}")), "[]")),
+                    CompletionEvent.Done(FakeProvider.USAGE, StopReason.TOOL_USE),
+                )
+            val provider = FakeProvider(usesTools = true) { bad }
+            val web = Searches { WebSearchOutcome.Found(listOf(page)) }
+            val reply = WebQuestions(AiAccess(provider, Secret("k")), web).ask(question, AiWebSearch.UP_TO, 2, base)
+            assertTrue(web.queries.isEmpty())
+            assertEquals(3, provider.requests.size)
+            assertEquals(listOf(true, true, false), provider.requests.map { it.toolsAllowed })
+            assertEquals(QuestionCost(searches = 0, calls = 3), reply.cost)
+        }
+
+    @Test
     fun aServiceWithNoToolsIsAskedAsOnce() =
         runTest {
             val provider = FakeProvider(usesTools = false) { FakeProvider.done("{}") }
