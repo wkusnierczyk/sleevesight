@@ -203,7 +203,7 @@ class AiSearchAnswers(
             found(originalPart?.text("source"))
                 ?.let { source ->
                     originalPart?.let { original(it, today) }?.copy(source = source)
-                }?.takeUnless { found -> listOfNotNull(album, first?.date).any { later(found.date, it) } }
+                }?.takeUnless { kept -> listOfNotNull(album, first?.date).any { later(kept.date, it) } }
         return SearchAnswer
             .Dates(album, first, original, albumSource.takeIf { album != null })
             .takeIf { album != null || first != null || original != null }
