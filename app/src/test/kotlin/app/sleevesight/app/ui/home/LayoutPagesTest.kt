@@ -448,7 +448,9 @@ class LayoutPagesTest {
             assertEquals(0, compose.onAllNodesWithText(text(R.string.page_close)).fetchSemanticsNodes().size)
             // Each holds what the genre's box in place does: the table, the genre marked, and where it comes from.
             compose.onNodeWithTag(GENRES_ROW_PREFIX + "1").assert(hasText(text(R.string.home_genres_artist_row)))
-            compose.onNodeWithTag(GENRE_CELL_PREFIX + "track:folkpop", useUnmergedTree = true).assertIsSelected()
+            assertTrue(
+                compose.onNodeWithTag(GENRES_ROW_PREFIX + "0").reading()!!.startsWith("Track, Folk Pop, selected"),
+            )
             compose.onNodeWithTag(GENRE_SOURCES_ROW_PREFIX + "0").assertExists()
             // The table's labels are plain: nothing opens from them.
             compose
@@ -538,7 +540,9 @@ class LayoutPagesTest {
             title(text(R.string.home_genres))
             compose.onNodeWithTag(GENRES_ROW_PREFIX + "0").assertExists()
             assertEquals(0, count(GENRES_ROW_PREFIX + "1"))
-            compose.onNodeWithTag(GENRE_CELL_PREFIX + "track:folkpop", useUnmergedTree = true).assertIsSelected()
+            assertTrue(
+                compose.onNodeWithTag(GENRES_ROW_PREFIX + "0").reading()!!.startsWith("Track, Folk Pop, selected"),
+            )
 
             back()
             onHome()

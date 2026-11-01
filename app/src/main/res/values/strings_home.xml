@@ -262,6 +262,10 @@
     <!-- The genre's tags (#786): a bold heading, then a row per level, its name on the left, its tags
          as chips on the right. -->
     <string name="home_genre_tags">Genre tags</string>
+    <!-- How a screen reader reads the tag of the genre shown, in its row of tags (#786), as it reads the
+         chosen genre's chip: %1$s is the tag ("Rock, selected"). The row reads as one item: "Track,
+         Rock, selected, Pop". -->
+    <string name="home_genre_tag_selected">%1$s, selected</string>
     <!-- The rows' names, on the left of the tags and of their sources: the track's tags, the artist's,
          the album's. -->
     <string name="home_genres_track">Track</string>

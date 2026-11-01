@@ -8,7 +8,6 @@ import androidx.activity.BackEventCompat
 import androidx.activity.compose.setContent
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assert
-import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.hasText
@@ -316,18 +315,11 @@ class PageLinksTest {
             // Their sources name them (#786), the rows' tags as each gave them.
             compose.onAllNodesWithTag(GENRES_ROW_PREFIX + "0")[0].assert(hasText("Soul")).assert(hasText("Funk").not())
             compose.onAllNodesWithTag(GENRES_ROW_PREFIX + "1")[0].assert(hasText("Funk"))
-            compose
-                .onAllNodesWithTag(
-                    GENRE_CELL_PREFIX + "artist:Ike Turner:soul",
-                    useUnmergedTree = true,
-                )[0]
-                .assertIsSelected()
-            compose
-                .onAllNodesWithTag(
-                    GENRE_CELL_PREFIX + "artist:Tina Turner:soul",
-                    useUnmergedTree = true,
-                )[0]
-                .assertIsSelected()
+            assertEquals("Artist, Soul, selected", compose.onAllNodesWithTag(GENRES_ROW_PREFIX + "0")[0].reading())
+            assertEquals(
+                "Artist, Soul, selected, Funk",
+                compose.onAllNodesWithTag(GENRES_ROW_PREFIX + "1")[0].reading(),
+            )
             compose
                 .onAllNodesWithTag(
                     GENRE_CELL_PREFIX + "artist:Tina Turner:funk",

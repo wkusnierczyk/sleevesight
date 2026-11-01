@@ -15,6 +15,9 @@ import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
@@ -195,7 +198,10 @@ class GenresScreenTest {
             assertEquals(1, panels())
             compose.onNodeWithTag(baroque).assertIsNotSelected()
             compose.onNodeWithTag(ballad).assertIsSelected()
-            compose.onNodeWithTag(GENRE_CELL_PREFIX + "track:ballad", useUnmergedTree = true).assertIsSelected()
+            assertEquals(
+                "Track, Baroque Pop, Ballad, selected",
+                compose.onNodeWithTag(GENRES_ROW_PREFIX + "0").reading(),
+            )
 
             tap(ballad)
             assertEquals(0, panels())
@@ -290,10 +296,18 @@ class GenresScreenTest {
         val pop = TrackGenres(listOf(row(GenreLevel.TRACK, "pop"), beatles, album))
         show(pop) {
             tap(GENRE_PREFIX + "track:pop")
-            for (marked in listOf("track:pop", "artist:The Beatles:pop", "album:pop")) {
-                compose.onNodeWithTag(GENRE_CELL_PREFIX + marked, useUnmergedTree = true).assertIsSelected()
+            // Each row one item that names the tag marked, the chosen chip's wording; no row itself
+            // selected, which would not say which tag is.
+            assertEquals("Rock, selected", text(R.string.home_genre_tag_selected, "Rock"))
+            assertEquals(
+                listOf("Track, Pop, selected", "Artist, Rock, Pop, selected", "Album, Folk Rock, Pop, selected"),
+                (0..2).map { compose.onNodeWithTag(GENRES_ROW_PREFIX + it).reading() },
+            )
+            for (index in 0..2) {
+                val row = compose.onNodeWithTag(GENRES_ROW_PREFIX + index).fetchSemanticsNode().config
+                assertEquals(null, row.getOrNull(SemanticsProperties.Selected))
             }
-            for (other in listOf("artist:The Beatles:rock", "album:folkrock")) {
+            for (other in listOf("track:pop", "artist:The Beatles:rock", "album:folkrock")) {
                 val config =
                     compose
                         .onNodeWithTag(
@@ -301,7 +315,7 @@ class GenresScreenTest {
                             useUnmergedTree = true,
                         ).fetchSemanticsNode()
                         .config
-                assertTrue("$other is not marked", config.getOrNull(SemanticsProperties.Selected) != true)
+                assertEquals(null, config.getOrNull(SemanticsProperties.Selected))
                 // The grid's labels are not buttons.
                 assertEquals(null, config.getOrNull(SemanticsActions.OnClick))
             }
@@ -326,8 +340,8 @@ class GenresScreenTest {
         }
     }
 
-    @Test
-    fun eachSourceLinksTheRowsPageAndMusicBrainzsCreditAndLicenceShowOnceUnderThem() {
+    // The track's folk from Last.fm; the artist's folk from MusicBrainz, and pop from both.
+    private fun twoSources(): TrackGenres {
         val folk = label("folk", GenreLevel.ARTIST, "Gordon Lightfoot", LabelSource.MUSICBRAINZ)
         val both =
             TrackLabel(
@@ -337,14 +351,37 @@ class GenresScreenTest {
                     LabelCredit(LabelSource.MUSICBRAINZ, "https://musicbrainz.org/artist/gl"),
                 ),
             )
-        val genres =
-            TrackGenres(
-                listOf(
-                    row(GenreLevel.TRACK, "folk"),
-                    GenreRow(GenreLevel.ARTIST, "Gordon Lightfoot", listOf(folk, both)),
-                ),
+        return TrackGenres(
+            listOf(row(GenreLevel.TRACK, "folk"), GenreRow(GenreLevel.ARTIST, "Gordon Lightfoot", listOf(folk, both))),
+        )
+    }
+
+    @Test
+    fun aRowOfSourcesIsOneItemWhoseLinksStayLinksAScreenReaderReachesAndOpens() =
+        show(twoSources()) {
+            tap(GENRE_PREFIX + "track:folk")
+            // Each row of sources one item, its links still links of their own: in the merged tree,
+            // one node per source under the row, each a screen reader can focus and open.
+            val linked =
+                compose
+                    .onAllNodes(hasAnyAncestor(hasTestTag(GENRE_SOURCES_ROW_PREFIX + "1")))
+                    .fetchSemanticsNodes()
+                    .filter { SemanticsActions.OnClick in it.config }
+            assertEquals(2, linked.size)
+            assertTrue(linked.all { SemanticsActions.RequestFocus in it.config })
+            assertEquals(
+                1,
+                compose
+                    .onAllNodes(
+                        hasAnyAncestor(hasTestTag(GENRE_SOURCES_ROW_PREFIX + "0")) and hasClickAction(),
+                    ).fetchSemanticsNodes()
+                    .size,
             )
-        show(genres) {
+        }
+
+    @Test
+    fun eachSourceLinksTheRowsPageAndMusicBrainzsCreditAndLicenceShowOnceUnderThem() =
+        show(twoSources()) {
             tap(GENRE_PREFIX + "track:folk")
             assertEquals(listOf("Track, Last.fm", "Artist, Last.fm · MusicBrainz"), sources())
             assertEquals(listOf("https://example.org/folk"), links("Last.fm"))
@@ -372,7 +409,6 @@ class GenresScreenTest {
                     .boundsInRoot.left,
             )
         }
-    }
 
     @Test
     fun withNoMusicBrainzTagsNoCreditOrLicence() {
@@ -423,11 +459,7 @@ class GenresScreenTest {
             assertEquals(listOf("Rock", "Pop", "Jazz"), chips(GenreLevel.ARTIST))
             tap(GENRE_PREFIX + "artist:The Beatles:rock")
             assertEquals(listOf("Artist, Rock, Pop", "Artist, Rock, Jazz"), rows())
-            compose
-                .onNodeWithTag(
-                    GENRE_CELL_PREFIX + "artist:Miles Davis:rock",
-                    useUnmergedTree = true,
-                ).assertIsSelected()
+            assertEquals("Artist, Rock, selected, Jazz", compose.onNodeWithTag(GENRES_ROW_PREFIX + "1").reading())
         }
     }
 
@@ -456,11 +488,7 @@ class GenresScreenTest {
                 genres.value = TrackGenres(listOf(beatles, album))
                 compose.waitForIdle()
                 assertEquals(listOf("Folk Rock", "Pop"), chips(GenreLevel.ALBUM))
-                compose
-                    .onNodeWithTag(
-                        GENRE_CELL_PREFIX + "artist:The Beatles:rock",
-                        useUnmergedTree = true,
-                    ).assertIsSelected()
+                assertEquals("Artist, Rock, selected, Pop", compose.onNodeWithTag(GENRES_ROW_PREFIX + "0").reading())
                 assertEquals(listOf("Artist, Rock, Pop", "Album, Folk Rock, Pop"), rows())
 
                 playing.value = track(HomeFixtures.carefree)

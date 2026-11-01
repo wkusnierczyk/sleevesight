@@ -523,4 +523,96 @@ class AppGenreNotesTest {
         val noWikipedia = now.copy(enabledSources = now.enabledSources - SourceSwitch.WIKIPEDIA)
         assertEquals(emptySet<String>(), genresWithNoDefinition(track, noWikipedia, states))
     }
+
+    // Notes whose definitions are kept in memory for [lifetime] by [clock], as the store keeps them for
+    // Wikipedia's lifetime.
+    private fun TestScope.expiring(lifetime: Duration) =
+        AppGenreNotes(GenreDefinitions(articles, vocabulary, clock, lifetime), parts, settings, this, clock = clock)
+
+    // [track] played again, as a new play: another identity.
+    private fun TrackState.next(n: Int) = copy(normalized = normalized.copy(title = "play $n"))
+
+    @Test
+    fun `each play checks a definition again, gone past its lifetime, with no looking meanwhile (#786)`() =
+        runTest {
+            val notes = expiring(1.days)
+            val shown = mutableListOf<DefinitionState?>()
+            val watching = launch { notes.definition("rock").collect { shown += it } }
+            notes.lookups.fetchAhead(playing("rock"))
+            advanceUntilIdle()
+            assertEquals(
+                rock,
+                notes.lookups.lookedUp.value["rock"]
+                    .found()
+                    ?.url,
+            )
+            // Wikipedia's article goes; within the lifetime, the next play is served what is kept.
+            articles.answers[ids("rock").single()] = mutableListOf(Lookup.NotFound)
+            shown.clear()
+            notes.lookups.fetchAhead(playing("rock").next(1))
+            advanceUntilIdle()
+            assertEquals(1, articles.asked.size)
+            assertEquals(
+                rock,
+                notes.lookups.lookedUp.value["rock"]
+                    .found()
+                    ?.url,
+            )
+            assertTrue("no looking while it is checked: $shown", shown.none { it == DefinitionState.Looking })
+            // Past the lifetime, the next play asks Wikipedia, and the definition is gone.
+            clock.at += 1.days
+            notes.lookups.fetchAhead(playing("rock").next(2))
+            advanceUntilIdle()
+            assertEquals(2, articles.asked.size)
+            assertEquals(DefinitionState.NotFound, notes.lookups.lookedUp.value["rock"])
+            assertTrue("no looking while it is checked: $shown", shown.none { it == DefinitionState.Looking })
+            // Asked once a play: the same play again asks nothing.
+            notes.lookups.fetchAhead(playing("rock").next(2))
+            advanceUntilIdle()
+            assertEquals(2, articles.asked.size)
+            watching.cancel()
+        }
+
+    @Test
+    fun `a genre with no definition is asked again past Wikipedia's lifetime, and then found (#786)`() =
+        runTest {
+            val notes = expiring(1.days)
+            articles.answers[ids("rock").single()] = mutableListOf(Lookup.NotFound)
+            notes.lookups.fetchAhead(playing("rock"))
+            advanceUntilIdle()
+            assertEquals(DefinitionState.NotFound, notes.lookups.lookedUp.value["rock"])
+            notes.lookups.fetchAhead(playing("rock").next(1))
+            advanceUntilIdle()
+            assertEquals(DefinitionState.NotFound, notes.lookups.lookedUp.value["rock"])
+            assertEquals(1, articles.asked.size)
+            clock.at += 1.days
+            notes.lookups.fetchAhead(playing("rock").next(2))
+            advanceUntilIdle()
+            assertEquals(2, articles.asked.size)
+            assertEquals(
+                rock,
+                notes.lookups.lookedUp.value["rock"]
+                    .found()
+                    ?.url,
+            )
+        }
+
+    @Test
+    fun `a check that fails leaves the definition shown (#786)`() =
+        runTest {
+            val notes = expiring(1.days)
+            notes.lookups.fetchAhead(playing("rock"))
+            advanceUntilIdle()
+            clock.at += 1.days
+            articles.answers[ids("rock").single()] = mutableListOf(Lookup.Failed("offline"))
+            notes.lookups.fetchAhead(playing("rock").next(1))
+            advanceUntilIdle()
+            assertEquals(2, articles.asked.size)
+            assertEquals(
+                rock,
+                notes.lookups.lookedUp.value["rock"]
+                    .found()
+                    ?.url,
+            )
+        }
 }

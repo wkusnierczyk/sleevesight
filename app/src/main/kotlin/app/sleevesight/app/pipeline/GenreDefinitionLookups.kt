@@ -70,11 +70,15 @@ interface DefinitionFeed {
  * They are fetched ahead: as soon as the playing track's genres are known, and each time it gains
  * some, every genre of its table is looked up at once, whether any panel is open or not
  * ([fetchAhead], which the app graph runs on the pipeline's track). Each genre has one state
- * ([lookedUp]), shared by every panel and page that shows it: looking, found, not found or failed. A
- * genre found or not found is not asked again (nor, with a store, after a restart: [GenreDefinitions]
- * keeps it), one being looked up not twice; a failed one is asked again when the next track has it,
- * or on *Retry* ([retryDefinition]). A panel showing a genre that no track fetched ahead (one *Search
- * with AI* named) asks for it itself, as does one whose state *Clear history* forgot ([forget]). A
+ * ([lookedUp]), shared by every panel and page that shows it: looking, found, not found or failed.
+ * Each play of a track asks [definitions] again for every genre of its table, once, whatever its
+ * state: it serves what it keeps (also after a restart, with a store) and asks Wikipedia again only
+ * past Wikipedia's lifetime, so a definition, or a genre's having none, expires as the source's
+ * findings do. Meanwhile a genre found or not found keeps showing as it is, replaced only by an
+ * answer that differs (a check that fails leaves it); one being looked up is not asked twice; a
+ * failed one is also asked again on *Retry* ([retryDefinition]). A panel showing a genre that no
+ * track fetched ahead (one *Search with AI* named) asks for it itself, as does one whose state
+ * *Clear history* forgot ([forget]). A
  * state is shown only under the lock [forget] clears under, after its check that no *Clear history*
  * came since its lookup started, as `ShownSearches.publish` does.
  */
@@ -114,12 +118,13 @@ class AppGenreDefinitions(
                 }
             }
 
-    override fun retryDefinition(genre: String) = lookUp(genre, again = true)
+    override fun retryDefinition(genre: String) = lookUp(genre, Ask.RETRY)
 
     /**
      * Fetches ahead (#786) the definitions of [track]'s genres, every genre of its table, under the
-     * settings as last read: each not yet asked on this play of the track, unless found or not found
-     * already; a failed one again, once a play. Nothing while lookups are off.
+     * settings as last read: each once a play of the track, whatever its state, so [GenreDefinitions]
+     * serves what it keeps (no request) and asks Wikipedia again past its lifetime; a genre found or
+     * not found keeps showing as it is meanwhile. Nothing while lookups are off.
      */
     fun fetchAhead(track: TrackState?) {
         if (track == null || !lookingUp(settings.value)) return
@@ -133,7 +138,7 @@ class AppGenreDefinitions(
                 }
                 genres.filter(ahead::add)
             }
-        for (genre in fresh) lookUp(genre, again = true)
+        for (genre in fresh) lookUp(genre, Ask.PLAY)
     }
 
     /**
@@ -144,20 +149,31 @@ class AppGenreDefinitions(
         combine(tracks, settings) { track, _ -> track }.collect(::fetchAhead)
     }
 
-    // Looks [genre]'s definition up, unless lookups are off, it is being looked up, or it has a state
-    // (but a failed one, [again]).
+    // Who asks for a definition: a panel showing a genre with no state ([PANEL]), *Retry* under a
+    // failed lookup ([RETRY]), or the fetch ahead, once a play, whatever the state ([PLAY]).
+    private enum class Ask { PANEL, RETRY, PLAY }
+
+    // Looks [genre]'s definition up, unless lookups are off, it is being looked up, or [ask] does not
+    // reach its state. Looking shows only where there is nothing better: no state, or a failed one; a
+    // definition found or not found stays shown while it is checked again.
     private fun lookUp(
         genre: String,
-        again: Boolean = false,
+        ask: Ask = Ask.PANEL,
     ) {
         if (!lookingUp(settings.value)) return
         synchronized(lock) {
             val state = states.value[genre]
-            val open = state == null || again && state == DefinitionState.Failed
+            val held = state is DefinitionState.Found || state == DefinitionState.NotFound
+            val open =
+                when (ask) {
+                    Ask.PANEL -> state == null
+                    Ask.RETRY -> state == null || state == DefinitionState.Failed
+                    Ask.PLAY -> true
+                }
             if (!open || genre in lookups) return
             val job = scope.launch(epoch.mark(), start = CoroutineStart.LAZY) { define(genre) }
             lookups[genre] = job
-            states.update { it.with(genre, DefinitionState.Looking) }
+            if (!held) states.update { it.with(genre, DefinitionState.Looking) }
             job.invokeOnCompletion { synchronized(lock) { if (lookups[genre] === job) lookups -= genre } }
             job.start()
         }
@@ -182,7 +198,18 @@ class AppGenreDefinitions(
                 DefinitionState.Failed
             }
         synchronized(lock) {
-            if (epoch.isCurrent(work) && work.isActive) states.update { it.with(genre, state) }
+            if (epoch.isCurrent(work) && work.isActive) {
+                states.update { now ->
+                    val before = now[genre]
+                    // A check that failed leaves a definition found or not found as it was; an answer
+                    // that differs replaces it (past Wikipedia's lifetime, the article changed).
+                    val keep =
+                        before == state ||
+                            state == DefinitionState.Failed &&
+                            (before is DefinitionState.Found || before == DefinitionState.NotFound)
+                    if (keep) now else now.with(genre, state)
+                }
+            }
         }
     }
 
