@@ -48,6 +48,7 @@ import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretState
 import app.sleevesight.app.ui.WebLink
 import app.sleevesight.app.ui.keyboard.ComputerKeyboard
+import app.sleevesight.app.ui.logo.Busy
 import app.sleevesight.app.ui.scan.QrScanner
 import app.sleevesight.core.ai.AiErrorKind
 import app.sleevesight.core.ai.ModelInfo
@@ -424,11 +425,14 @@ internal fun ModelDialog(
                     )
                 }
                 modelStatus(loaded)?.let {
-                    Text(
-                        stringResource(it),
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(bottom = 8.dp),
-                    )
+                    val style = MaterialTheme.typography.bodyMedium
+                    val padding = Modifier.padding(bottom = 8.dp)
+                    // The list on its way, with the turning record before it (#785).
+                    if (loaded == ModelLoad.Loading) {
+                        Busy(stringResource(it), style, padding)
+                    } else {
+                        Text(stringResource(it), style = style, modifier = padding)
+                    }
                 }
                 default?.let { d ->
                     val label = stringResource(R.string.settings_ai_model_default, named(d))

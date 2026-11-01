@@ -121,28 +121,60 @@ internal fun DrawScope.drawRecord(
                     drawCircle(GROOVE_COLOR, GROOVE, Offset.Zero, alpha, Stroke(GROOVE_WIDTH))
                 }
                 drawCircle(LABEL_COLOR, LABEL, Offset.Zero, alpha)
-                val face = Stroke(FACE_WIDTH, cap = StrokeCap.Round)
-                // `M14.4 14.9 A2 2 0 0 1 17.6 14.9`: the arc of radius 2 about (16, 16.1), over the top.
-                drawArc(
-                    Color.White,
-                    startAngle = ARC_START,
-                    sweepAngle = ARC_SWEEP,
-                    useCenter = false,
-                    topLeft = Offset(-ARC_R, ARC_CY - ARC_R),
-                    size = Size(2 * ARC_R, 2 * ARC_R),
-                    alpha = alpha,
-                    style = face,
-                )
-                // `M15.1 18.05 H16.9`.
-                drawLine(
-                    Color.White,
-                    Offset(-LINE_HALF, LINE_Y),
-                    Offset(LINE_HALF, LINE_Y),
-                    FACE_WIDTH,
-                    StrokeCap.Round,
-                    alpha = alpha,
-                )
-                drawCircle(Color.White, HOLE, Offset.Zero, alpha)
+                drawFace(alpha)
+            }
+        }
+    }
+}
+
+/**
+ * Draws the record's white face in the symbol's units about its centre: an arc and a line about
+ * the centre hole, which show it turning ([drawRecord], [drawSpinnerRecord]).
+ */
+private fun DrawScope.drawFace(alpha: Float) {
+    val face = Stroke(FACE_WIDTH, cap = StrokeCap.Round)
+    // `M14.4 14.9 A2 2 0 0 1 17.6 14.9`: the arc of radius 2 about (16, 16.1), over the top.
+    drawArc(
+        Color.White,
+        startAngle = ARC_START,
+        sweepAngle = ARC_SWEEP,
+        useCenter = false,
+        topLeft = Offset(-ARC_R, ARC_CY - ARC_R),
+        size = Size(2 * ARC_R, 2 * ARC_R),
+        alpha = alpha,
+        style = face,
+    )
+    // `M15.1 18.05 H16.9`.
+    drawLine(
+        Color.White,
+        Offset(-LINE_HALF, LINE_Y),
+        Offset(LINE_HALF, LINE_Y),
+        FACE_WIDTH,
+        StrokeCap.Round,
+        alpha = alpha,
+    )
+    drawCircle(Color.White, HOLE, Offset.Zero, alpha)
+}
+
+/**
+ * Draws the record beside an in-progress message (#785), its 16-unit symbol across the smaller side
+ * of the drawing's box and centred in it, turned by [degrees] about its centre: the logo's record
+ * simplified, since at text size the whole one is too small to see turning. The rim, then
+ * everything inside it the red label, out to where [drawRecord]'s core ends, with no groove and no
+ * core; and the white face scaled up with the label, so the turning shows.
+ */
+internal fun DrawScope.drawSpinnerRecord(
+    colors: LogoColors,
+    degrees: Float = 0f,
+) {
+    val k = size.minDimension / SYMBOL
+    val grown = SPINNER_LABEL / LABEL
+    translate(center.x, center.y) {
+        rotate(degrees, pivot = Offset.Zero) {
+            scale(k, k, pivot = Offset.Zero) {
+                drawCircle(colors.rim, RIM, Offset.Zero)
+                drawCircle(colors.sight, SPINNER_LABEL, Offset.Zero)
+                scale(grown, grown, pivot = Offset.Zero) { drawFace(1f) }
             }
         }
     }
@@ -180,6 +212,10 @@ private const val LINE_HALF = .9f
 private const val LINE_Y = 2.05f
 private const val TILE_HALF = 71.5f
 private const val TILE_CORNER = 31.5f
+
+// The record's symbol across, and the spinner's label (#785), out to where the core ends.
+private const val SYMBOL = 16f
+private const val SPINNER_LABEL = CORE
 private val CORE_COLOR = Color.Black
 private val GROOVE_COLOR = Color(0xFF57606A)
 private val LABEL_COLOR = Color(0xFFCF222E)

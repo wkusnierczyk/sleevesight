@@ -45,6 +45,7 @@ import app.sleevesight.app.diagnostics.ExportResult
 import app.sleevesight.app.diagnostics.ExportState
 import app.sleevesight.app.diagnostics.LoggedEvent
 import app.sleevesight.app.ui.home.PageBar
+import app.sleevesight.app.ui.logo.Busy
 import app.sleevesight.app.ui.theme.DeveloperMark
 import app.sleevesight.core.pipeline.EventLine
 import app.sleevesight.store.CacheStats
@@ -143,12 +144,16 @@ private fun ExportNotice(state: ExportState) {
                     ExportResult.FAILED -> R.string.diagnostics_export_failed to true
                 }
         }
-    Text(
-        stringResource(message),
-        style = MaterialTheme.typography.bodyMedium,
-        color = if (failure) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
-        modifier = Modifier.padding(horizontal = 24.dp).semantics { liveRegion = LiveRegionMode.Polite },
-    )
+    val style = MaterialTheme.typography.bodyMedium
+    val color = if (failure) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+    val padding = Modifier.padding(horizontal = 24.dp)
+    val live = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
+    // The export under way with the turning record before it (#785), the live region on its message.
+    if (state == ExportState.Running) {
+        Busy(stringResource(message), style, padding, color, textModifier = live)
+    } else {
+        Text(stringResource(message), style = style, color = color, modifier = padding.then(live))
+    }
 }
 
 /** The caches' sizes, then the events kept, newest first. */

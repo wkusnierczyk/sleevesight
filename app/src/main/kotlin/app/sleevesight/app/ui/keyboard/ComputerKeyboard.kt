@@ -32,6 +32,7 @@ import app.sleevesight.app.R
 import app.sleevesight.app.keyboard.BleKeyboard
 import app.sleevesight.app.keyboard.KeyboardSession
 import app.sleevesight.app.keyboard.KeyboardState
+import app.sleevesight.app.ui.logo.Busy
 
 /**
  * Runs a session of *Type on a computer* (#394) while it is shown: says where it is, passes each
@@ -107,9 +108,14 @@ private fun BluetoothKeyboard(
         }
     }
     when {
-        refused -> KeyboardStatus(stringResource(R.string.keyboard_refused), onStop)
-        state == KeyboardState.WAITING -> KeyboardStatus(waitingMessage(showName, advertised), onStop)
-        else -> KeyboardStatus(stringResource(message(state)), onStop)
+        refused -> KeyboardStatus(stringResource(R.string.keyboard_refused), onStop = onStop)
+        state == KeyboardState.WAITING ->
+            KeyboardStatus(
+                waitingMessage(showName, advertised),
+                busy = true,
+                onStop = onStop,
+            )
+        else -> KeyboardStatus(stringResource(message(state)), busy = state == KeyboardState.STARTING, onStop = onStop)
     }
 }
 
@@ -134,12 +140,16 @@ internal fun waitingMessage(
 internal fun KeyboardStatus(
     @StringRes message: Int,
     onStop: () -> Unit,
-) = KeyboardStatus(stringResource(message), onStop)
+) = KeyboardStatus(stringResource(message), onStop = onStop)
 
-/** Where the session is, [message], and *Stop*. */
+/**
+ * Where the session is, [message], and *Stop*; while it is [busy] (starting, or waiting for the
+ * computer), with the turning record before the message (#785).
+ */
 @Composable
 internal fun KeyboardStatus(
     message: String,
+    busy: Boolean = false,
     onStop: () -> Unit,
 ) {
     Row(
@@ -147,7 +157,12 @@ internal fun KeyboardStatus(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(message, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+        val style = MaterialTheme.typography.bodyMedium
+        if (busy) {
+            Busy(message, style, Modifier.weight(1f))
+        } else {
+            Text(message, style = style, modifier = Modifier.weight(1f))
+        }
         TextButton(onClick = onStop) { Text(stringResource(R.string.keyboard_stop)) }
     }
 }

@@ -17,6 +17,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.PipelineHost
+import app.sleevesight.app.ui.logo.Busy
 import app.sleevesight.app.ui.report.ReportAction
 import app.sleevesight.core.pipeline.InsightState
 
@@ -97,9 +98,20 @@ private fun IdleNote(
             insight.canWrite -> stringResource(R.string.home_insight_tap_write)
             // Running by itself, the evidence in: it writes next, as the mode says.
             auto != null && runsByItself(context) -> stringResource(runningLine(auto))
-            else -> stringResource(idleReason(context))
+            else -> null
         }
-    Quiet(line)
+    val reason = idleReason(context)
+    when {
+        line != null -> Quiet(line)
+        // The evidence or the insight on its way, with the turning record before it (#785).
+        reason == R.string.home_insight_gathering || reason == R.string.home_insight_preparing ->
+            Busy(
+                stringResource(reason),
+                MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        else -> Quiet(stringResource(reason))
+    }
 }
 
 @Composable

@@ -7,6 +7,7 @@ import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import app.sleevesight.app.R
+import app.sleevesight.app.ui.logo.Busy
 import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
@@ -63,7 +64,7 @@ internal fun NoDatesText(
 ) {
     val style = MaterialTheme.typography.bodyLarge
     when (none) {
-        NoDates.LOOKING -> Text(stringResource(R.string.home_musicbrainz_looking), style = style)
+        NoDates.LOOKING -> Busy(stringResource(R.string.home_musicbrainz_looking), style)
         NoDates.OFF -> {
             Text(stringResource(R.string.home_musicbrainz_off), style = style)
             val link =

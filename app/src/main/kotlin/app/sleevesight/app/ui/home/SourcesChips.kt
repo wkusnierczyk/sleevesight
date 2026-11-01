@@ -30,6 +30,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
+import app.sleevesight.app.ui.logo.Busy
 import app.sleevesight.app.ui.theme.CHIP_PADDING
 import app.sleevesight.app.ui.theme.CHIP_SHAPE
 import app.sleevesight.app.ui.theme.ChipFrame
@@ -252,12 +253,16 @@ private fun SourceRow(
             // With grounding details, a failure and a rejected match in the error colour, as the
             // status chips had them (#440).
             val colors = MaterialTheme.colorScheme
-            Text(
-                statusText(chip, lines, details),
-                style = MaterialTheme.typography.bodySmall,
-                color = if (details && chip.status.wentWrong) colors.error else colors.onSurfaceVariant,
-                modifier = Modifier.testTag(STATUS_PREFIX + chip.source.tag),
-            )
+            val status = statusText(chip, lines, details)
+            val style = MaterialTheme.typography.bodySmall
+            val tag = Modifier.testTag(STATUS_PREFIX + chip.source.tag)
+            // A lookup under way with the turning record before its *Looking…* (#785).
+            if (chip.status == ChipStatus.Pending) {
+                Busy(status, style, color = colors.onSurfaceVariant, textModifier = tag)
+            } else {
+                val color = if (details && chip.status.wentWrong) colors.error else colors.onSurfaceVariant
+                Text(status, style = style, color = color, modifier = tag)
+            }
         }
     }
 }
