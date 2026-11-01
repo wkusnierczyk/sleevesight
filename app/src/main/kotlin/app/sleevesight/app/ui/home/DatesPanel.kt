@@ -41,12 +41,10 @@ internal fun datesItem(
         tag = DATES_CHIP_TAG,
         panelTag = DATES_PANEL_TAG,
     ) { toClose ->
-        // Above the empty state's parts, which come and go: one search by itself per opening.
-        val auto = rememberAutoSearch()
         if (sentences.isEmpty()) {
             NoDatesText(none, retry, openSources, toClose)
             if (none != NoDates.LOOKING) {
-                AiSearchBlock(search, SearchKind.DATES, auto) { answer, _ ->
+                AiSearchBlock(search, SearchKind.DATES) { answer, _ ->
                     val header = search.header ?: search.track?.nowPlaying
                     if (answer is SearchAnswer.Dates && header != null) DatesPanel(aiDates(answer, header))
                 }

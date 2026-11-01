@@ -10,8 +10,7 @@ import app.sleevesight.core.settings.WriteAutomatically
 import kotlin.time.Duration.Companion.seconds
 
 // *Insights* (#444): *Show insights*, *Reactive* with *Crossfade*, *Proactive*, *Saver*, *Look up in
-// the background*, *Don't repeat artist facts* (#407, #546) and *Search with AI when a source has
-// nothing* (#773), then reading aloud (#325).
+// the background*, *Don't repeat artist facts* (#407, #546) and *Search with AI* (#773), then reading aloud (#325).
 
 private val MAX_CROSSFADE_SECONDS =
     Crossfade.Fixed.MAX.inWholeSeconds
@@ -25,9 +24,9 @@ private val MAX_CROSSFADE_SECONDS =
  * background* (D6) beside it, since both govern what happens while Sleevesight is away; and *Don't
  * repeat artist facts* (`artistFactsOncePerSession`, #407; once *Tell an artist's facts once per
  * session*), what an insight's prompt holds of the artist's facts, its description linking to *New
- * session idle trigger* under *History* (#581); and *Search with AI when a source has nothing*
- * (`searchWithAi`, #773), which starts Home's *Search with AI* by itself, a paid call, off by
- * default. *Reactive*'s choices are
+ * session idle trigger* under *History* (#581); and *Search with AI* (`searchWithAi`, #773), which
+ * starts Home's *Search with AI* by itself as soon as a source has nothing, a paid call, off by
+ * default, its description in two paragraphs. *Reactive*'s choices are
  * described in its dialog (#546); a mode chosen there, the one chosen already included, goes to
  * [chooseMode], which saves it and tells the pipeline (#625: an automatic one starts automatic
  * writing from the next track), or, without one, is saved alone. The rows about writing cannot be

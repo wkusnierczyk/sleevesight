@@ -28,6 +28,7 @@ import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.time.Duration.Companion.days
@@ -70,7 +71,7 @@ class AppAiSearchesTest {
         runTest {
             val searches = searches()
             assertEquals(AiSearch.Offered, searches.now())
-            searches.ask(track, SearchKind.GENRES, facts)
+            assertTrue(searches.ask(track, SearchKind.GENRES, facts))
             // A second tap, or the setting's start, while it runs asks nothing more.
             searches.ask(track, SearchKind.GENRES, facts)
             advanceUntilIdle()
@@ -219,16 +220,24 @@ class AppAiSearchesTest {
         }
 
     @Test
-    fun `with no AI service ready the search is offered disabled, and a tap asks nothing`() =
+    fun `with Show insights off no search is offered at all, and none is asked`() =
         runTest {
             val searches = searches()
             settings.value = settings.value?.copy(writeInsights = false)
-            assertEquals(AiSearch.Unready, searches.now())
-            settings.value = settings.value?.copy(writeInsights = true)
+            assertEquals(AiSearch.None, searches.now())
+            assertFalse(searches.ask(track, SearchKind.GENRES, facts))
+            advanceUntilIdle()
+            assertEquals(0, provider.requests)
+        }
+
+    @Test
+    fun `with no AI service ready the search is offered disabled, and a tap asks nothing`() =
+        runTest {
+            val searches = searches()
             parts.value =
                 parts.value?.let { PipelineParts(it.normalizer, it.adapters, it.resolver, it.hasher, null, it.cache) }
             assertEquals(AiSearch.Unready, searches.now())
-            searches.ask(track, SearchKind.GENRES, facts)
+            assertFalse(searches.ask(track, SearchKind.GENRES, facts))
             advanceUntilIdle()
             assertEquals(0, provider.requests)
             // Before the pipeline or the settings are in, nothing at all.

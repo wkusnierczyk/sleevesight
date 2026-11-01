@@ -25,6 +25,7 @@ import app.sleevesight.app.history.HistoryRetention
 import app.sleevesight.app.pipeline.AppAiSearches
 import app.sleevesight.app.pipeline.AppGenreNotes
 import app.sleevesight.app.pipeline.AppPipelineParts
+import app.sleevesight.app.pipeline.AutoSearches
 import app.sleevesight.app.pipeline.ModelCheck
 import app.sleevesight.app.pipeline.PipelineHost
 import app.sleevesight.app.pipeline.UnavailableModel
@@ -64,6 +65,8 @@ import app.sleevesight.app.speech.SystemSpeech
 import app.sleevesight.app.speech.screenReaderOn
 import app.sleevesight.app.ui.home.GuideHiding
 import app.sleevesight.app.ui.home.SpokenWords
+import app.sleevesight.app.ui.home.emptyPanels
+import app.sleevesight.app.ui.home.searchFacts
 import app.sleevesight.core.ai.AiProvider
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.normalizer.Normalizer
@@ -79,6 +82,7 @@ import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.ThemeChoice
 import app.sleevesight.core.settings.WriteAutomatically
 import app.sleevesight.core.synthesis.AiSearchAnswers
+import app.sleevesight.core.synthesis.SearchKind
 import app.sleevesight.store.ArtistKeeping
 import app.sleevesight.store.Caches
 import app.sleevesight.store.SessionHistory
@@ -609,6 +613,13 @@ class AppGraph internal constructor(
             skipLearning.restore()
         }
         pipeline.start(pipelineScope)
+        // *Search with AI*, the setting (#773): a panel's search starts as soon as its source has
+        // nothing, open or not, for the playing track; again once an AI service is ready.
+        pipelineScope.launch {
+            AutoSearches<SearchKind>(::emptyPanels) { track, kind ->
+                aiSearches.ask(track, kind, searchFacts(track, track.nowPlaying))
+            }.run(pipeline.state.map { it.track }, latestSettings, pipeline.liveParts)
+        }
         // The selected model checked at start, and when the service, its model or a key changes (#540).
         pipelineScope.launch {
             modelCheck.run(latestSettings.filterNotNull(), secrets.changes, pipeline.lookupsAllowed)

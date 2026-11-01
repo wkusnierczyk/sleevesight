@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -53,10 +54,14 @@ internal class Retries(
  * [onRetry] (the pipeline does not offer it now), the message alone. A screen reader reads *Retry*
  * as a button whose action is "ask MusicBrainz again" ("Double-tap to ask MusicBrainz again").
  *
+ * [action] names *Retry*'s action otherwise, and [color] colours the message: *Search with AI*'s
+ * failure (#773), "ask your AI service again, a paid call", in the error colour.
+ *
  * A tap then runs [afterRetry]: the source asked again, the line gives way to the panel's "Looking
  * on …", and *Retry*, holding the focus, goes, so the caller hands the focus on (to its panel's
  * *Close*, #724), or a keyboard's or a screen reader's would fall to the top of the screen.
  */
+@Suppress("LongParameterList") // The line, its button, and how each reads.
 @Composable
 internal fun RetryLine(
     message: String,
@@ -64,17 +69,19 @@ internal fun RetryLine(
     onRetry: (() -> Unit)?,
     modifier: Modifier = Modifier,
     afterRetry: () -> Unit = {},
+    action: String = stringResource(R.string.home_retry_action, source),
+    color: Color = Color.Unspecified,
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text(message, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        Text(message, style = MaterialTheme.typography.bodyLarge, color = color, modifier = Modifier.weight(1f))
         if (onRetry != null) {
             LineButton(
                 stringResource(R.string.home_retry),
-                stringResource(R.string.home_retry_action, source),
+                action,
                 Modifier.testTag(RETRY_TAG),
             ) {
                 onRetry()

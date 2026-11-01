@@ -5,6 +5,8 @@ import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
@@ -46,9 +48,10 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
- * *Search with AI when a source has nothing* (#773): off by default, also for a settings file from
- * before it, stored under its own key when on; a switch row under *Insights* with the picked texts,
- * not to be changed while *Show insights* is off; the settings' search finds it.
+ * *Search with AI*, the setting (#773): off by default, also for a settings file from before it,
+ * stored under its own key when on; a switch row under *Insights* with the picked texts, its
+ * description in two paragraphs, not to be changed while *Show insights* is off; the settings'
+ * search finds it by its name.
  */
 @RunWith(RobolectricTestRunner::class)
 class SearchWithAiSettingTest {
@@ -100,12 +103,8 @@ class SearchWithAiSettingTest {
 
     @Test
     fun theRowHasThePickedTexts() {
-        assertEquals("Search with AI when a source has nothing", text(R.string.settings_search_with_ai))
-        assertEquals(
-            "Asks your AI service at once when Wikipedia has no definition for a genre, or Dates, Genres or " +
-                "Lyrics find nothing. Each search is a paid call.",
-            text(R.string.settings_search_with_ai_summary),
-        )
+        assertEquals("Search with AI", text(R.string.settings_search_with_ai))
+        assertEquals("$FIRST\n\n$SECOND", text(R.string.settings_search_with_ai_summary))
     }
 
     @Test
@@ -114,7 +113,11 @@ class SearchWithAiSettingTest {
             compose.openSection(SettingsSection.INSIGHTS)
             val title = text(R.string.settings_search_with_ai)
             waitForText(title)
-            compose.onNodeWithText(text(R.string.settings_search_with_ai_summary)).performScrollTo().assertExists()
+            // Two paragraphs, each a text of its own, the second under the first.
+            compose.onNodeWithText(title).performScrollTo()
+            val first = compose.onNodeWithText(FIRST, useUnmergedTree = true).fetchSemanticsNode()
+            val second = compose.onNodeWithText(SECOND, useUnmergedTree = true).fetchSemanticsNode()
+            assertTrue(second.positionInRoot.y >= first.positionInRoot.y + first.size.height)
             val row = compose.onNodeWithText(title).performScrollTo()
             row.assertIsOff().assertIsEnabled()
             row.performClick()
@@ -131,20 +134,24 @@ class SearchWithAiSettingTest {
                 .assertIsNotEnabled()
         }
 
+    private companion object {
+        const val FIRST = "Automatically asks the AI service when a source does not provide the required information."
+        const val SECOND = "Each search is a paid call."
+    }
+
     @Test
     fun theSettingsSearchFindsIt() =
         showSettings {
             compose.waitUntil(WAIT_MS) {
                 compose.onAllNodesWithText(text(R.string.settings_section_insights)).fetchSemanticsNodes().isNotEmpty()
             }
-            for (query in listOf("search with AI", "a source has nothing", "Each search is a paid call")) {
+            for (query in listOf("Search with AI", "the required information", "Each search is a paid call")) {
                 compose.onNodeWithTag(SEARCH_FIELD_TAG).performTextReplacement(query)
                 compose.waitForIdle()
+                // The row's title, not the search box holding the same words.
                 compose
-                    .onNodeWithText(
-                        text(R.string.settings_search_with_ai),
-                        substring = true,
-                    ).performScrollTo()
+                    .onNode(hasText(text(R.string.settings_search_with_ai)) and !hasSetTextAction())
+                    .performScrollTo()
                     .assertExists()
             }
         }

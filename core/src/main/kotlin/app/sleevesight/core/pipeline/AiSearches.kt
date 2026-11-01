@@ -21,7 +21,7 @@ import kotlin.time.Instant
 
 /** A search of *Search with AI* (#773), as its panel shows it. */
 sealed interface SearchState {
-    /** The call is under way: "Searching with {model}…", with *Stop*. */
+    /** The call is under way: the turning record and "Searching with AI…", with *Stop*. */
     data object Searching : SearchState
 
     /** The answer, as checked. */

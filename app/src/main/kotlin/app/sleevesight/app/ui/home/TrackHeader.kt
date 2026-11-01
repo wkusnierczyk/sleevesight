@@ -46,7 +46,7 @@ internal class UnderAlbumLine(
  * then *Lyrics* while *Lyrics links* is on ([lyricsItem], #728), its *Retry* asking MusicBrainz
  * again and its links opening the settings: *Sources*, and for *Lyrics*' search *Appearance*.
  * *Dates* and *Lyrics* open in place under either. Each offers *Search with AI* under its empty
- * state (#773), which starts by itself with *Search with AI when a source has nothing* on.
+ * state (#773).
  */
 @Composable
 internal fun UnderAlbum(
@@ -60,7 +60,7 @@ internal fun UnderAlbum(
     val retries = Retries(shown.view, playing, actions.askAgain)
     val retry = retries.of(SourceId.MUSICBRAINZ)
     val openSources = { actions.openSettingsAt(SettingsTarget.sources) }
-    val search = PanelSearch(actions.aiSearches, track, header, auto = line.settings?.searchWithAi == true)
+    val search = PanelSearch(actions.aiSearches, track, header)
     val dates = datesItem(homeDates(track, header), NoDates.of(track), retry, openSources, search)
     val lyrics =
         if (shown.lyricsLinks) {

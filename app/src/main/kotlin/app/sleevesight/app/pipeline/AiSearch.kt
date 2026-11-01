@@ -34,19 +34,20 @@ import kotlin.time.Instant
 
 /** *Search with AI* under an empty panel on Home (#773), as the panel shows it. */
 sealed interface AiSearch {
-    /** Not offered: no searches here (previews, tests), or before the pipeline and the settings are in. */
+    /**
+     * Not offered: no searches here (previews, tests), before the pipeline and the settings are in,
+     * or with *Show insights* off, which stops every AI call (as *Why is this …?* is not offered then).
+     */
     data object None : AiSearch
 
-    /** Offered, disabled: no AI service ready (none switched on, no key, no model, or *Show insights* off). */
+    /** Offered, disabled: no AI service ready (none switched on, no key, or no model). */
     data object Unready : AiSearch
 
     /** Offered: a tap asks the AI service, a paid call. */
     data object Offered : AiSearch
 
-    /** Under way, with [model]: "Searching with {model}…", and *Stop*. */
-    data class Searching(
-        val model: String,
-    ) : AiSearch
+    /** Under way: the turning record and "Searching with AI…", and *Stop*. */
+    data object Searching : AiSearch
 
     /** Answered by [model], as checked. */
     data class Answered(
@@ -77,15 +78,16 @@ interface AiSearchFeed {
     ): Flow<AiSearch>
 
     /**
-     * A tap on *Search with AI*, or the search starting by itself (*Search with AI when a source has
-     * nothing*): [track]'s search of [kind] asks about [facts], unless it is under way, answered or
-     * kept.
+     * A tap on *Search with AI* or *Retry*, or the search starting by itself (*Search with AI*, the
+     * setting, [AutoSearches]): [track]'s search of [kind] asks about [facts], unless it is under way,
+     * answered or kept. Returns whether the search is now asked, under way, answered or kept: false
+     * with no AI service ready, or with *Show insights* off.
      */
     fun ask(
         track: TrackState,
         kind: SearchKind,
         facts: SearchFacts,
-    )
+    ): Boolean
 
     /** A tap on *Stop*: [track]'s search of [kind] is cancelled, and nothing from it shown or kept. */
     fun stop(
@@ -104,7 +106,7 @@ interface AiSearchFeed {
             track: TrackState,
             kind: SearchKind,
             facts: SearchFacts,
-        ) = Unit
+        ) = false
 
         override fun stop(
             track: TrackState,
@@ -143,7 +145,8 @@ class AppAiSearches(
     private val modelName: (String) -> String = { ModelNames.of(it) ?: it },
     private val clock: Clock = Clock.System,
 ) : AiSearchFeed {
-    // A search's key, null with no AI service ready; and whether the pipeline and settings are in.
+    // A search's key, null with no AI service ready; and whether it is offered at all (the pipeline
+    // and settings in, *Show insights* on).
     private data class Offer(
         val key: CardKey?,
         val known: Boolean,
@@ -180,9 +183,7 @@ class AppAiSearches(
         val offers =
             combine(parts, settings) { made, now ->
                 val searches = made?.searches(answers, clock)
-                if (now == null ||
-                    searches == null
-                ) {
+                if (now == null || searches == null || !now.writeInsights) {
                     Offer(null, known = false)
                 } else {
                     Offer(searches.key(track, kind, now), known = true)
@@ -210,18 +211,21 @@ class AppAiSearches(
         track: TrackState,
         kind: SearchKind,
         facts: SearchFacts,
-    ) {
-        // Not ready; shown already, unless it failed or has expired; or under way.
-        val (searches, key) = keyOf(track, kind)?.takeIf { (_, key) -> open(key) && !asking.containsKey(key) } ?: return
-        val job = scope.launch(epoch.mark(), start = CoroutineStart.LAZY) { run(searches, key, kind, track, facts) }
-        if (asking.putIfAbsent(key, job) == null) {
-            synchronized(lock) {
-                stopped.remove(key)
-                settled.remove(key)
+    ): Boolean {
+        // Not ready: false. Shown already, unless it failed or has expired, or under way: nothing to ask.
+        val (searches, key) = keyOf(track, kind) ?: return false
+        if (open(key) && !asking.containsKey(key)) {
+            val job = scope.launch(epoch.mark(), start = CoroutineStart.LAZY) { run(searches, key, kind, track, facts) }
+            if (asking.putIfAbsent(key, job) == null) {
+                synchronized(lock) {
+                    stopped.remove(key)
+                    settled.remove(key)
+                }
+                job.invokeOnCompletion { asking.remove(key, job) }
+                job.start()
             }
-            job.invokeOnCompletion { asking.remove(key, job) }
-            job.start()
         }
+        return true
     }
 
     override fun stop(
@@ -343,7 +347,7 @@ private fun shownAs(
     model: String,
 ): AiSearch =
     when (state) {
-        SearchState.Searching -> AiSearch.Searching(model)
+        SearchState.Searching -> AiSearch.Searching
         is SearchState.Answered -> AiSearch.Answered(state.answer, model)
         SearchState.NothingFound -> AiSearch.NothingFound(model)
         is SearchState.Failed -> AiSearch.Failed(state.reason)

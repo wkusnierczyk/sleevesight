@@ -4,9 +4,11 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsNode
@@ -93,8 +95,8 @@ import kotlin.time.Duration.Companion.milliseconds
  * the button under each empty state, not while looking, nor for an instrumental, nor with something
  * to show; disabled with no AI service, a screen reader told why; under way with *Stop*; the answer
  * under a rule, credited to the model, as the panel shows its source's; nothing found; a failure,
- * with the button again; an AI-named genre opening in its box with its definition alone; and the
- * search starting by itself with *Search with AI when a source has nothing*, once per opening.
+ * with *Retry* on its line; an AI-named genre opening in its box with its definition alone; and no
+ * search at all with *Show insights* off. When the setting starts a search is `AutoSearchesTest`'s.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w411dp-h891dp-420dpi")
@@ -124,8 +126,9 @@ class AiSearchScreenTest {
                 track: TrackState,
                 kind: SearchKind,
                 facts: SearchFacts,
-            ) {
+            ): Boolean {
                 asked += kind to facts
+                return true
             }
 
             override fun stop(
@@ -182,6 +185,7 @@ class AiSearchScreenTest {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity {
                 it.setContent {
+                    ArtTheme(null) { errorColour = MaterialTheme.colorScheme.error }
                     Column(Modifier.verticalScroll(rememberScrollState())) { NowPlayingContent(current.value, actions) }
                 }
             }
@@ -221,6 +225,23 @@ class AiSearchScreenTest {
             .layoutInput.style.fontStyle
     }
 
+    // The colour [line]'s text is laid out in.
+    private fun colour(line: String): Color {
+        val layouts = mutableListOf<TextLayoutResult>()
+        compose
+            .onNodeWithText(line)
+            .fetchSemanticsNode()
+            .config[SemanticsActions.GetTextLayoutResult]
+            .action
+            ?.invoke(layouts)
+        return layouts
+            .single()
+            .layoutInput.style.color
+    }
+
+    // The error colour of Home's theme, as the art's colours leave it (no art here).
+    private var errorColour = Color.Unspecified
+
     // Where a node is in the scrolled column, not clipped to the screen.
     private fun placed(node: SemanticsNode) = Rect(node.positionInRoot, node.size.toSize())
 
@@ -233,17 +254,16 @@ class AiSearchScreenTest {
         assertEquals("Search with AI", text(R.string.home_ai_search))
         assertEquals("ask your AI service, a paid call", text(R.string.home_ai_search_action))
         assertEquals("No AI service is enabled.", text(R.string.home_ai_search_unready))
-        assertEquals("Searching with Claude Haiku 5.5…", app.getString(R.string.home_ai_searching, model))
+        assertEquals("Searching with AI…", text(R.string.home_ai_searching))
         assertEquals("Stop", text(R.string.home_ai_stop))
         assertEquals("stop the call", text(R.string.home_ai_stop_action))
         assertEquals("by Claude Haiku 5.5", app.getString(R.string.home_ai_by, model))
-        // Proposed (#773), each in a string of its own.
         assertEquals("Claude Haiku 5.5 found nothing.", app.getString(R.string.home_ai_nothing, model))
         assertEquals(
-            "The search could not be completed: no connection.",
+            "AI search failed: no connection.",
             app.getString(R.string.home_ai_failed, text(R.string.home_failure_offline)),
         )
-        assertEquals("by Claude Haiku 5.5", app.getString(R.string.genre_ai_by, model))
+        assertEquals("ask your AI service again, a paid call", text(R.string.home_ai_retry_action))
     }
 
     @Test
@@ -327,12 +347,17 @@ class AiSearchScreenTest {
         }
 
     @Test
-    fun whileItSearchesTheLineNamesTheModelWithStopBesideIt() =
+    fun whileItSearchesTheTurningRecordThenTheLineWithStopBesideIt() =
         show {
             tap(DATES_CHIP_TAG)
-            set(SearchKind.DATES, AiSearch.Searching(model))
+            set(SearchKind.DATES, AiSearch.Searching)
             assertEquals(0, count(AI_SEARCH_TAG))
-            compose.onNodeWithTag(AI_SEARCHING_TAG).assertTextEquals("Searching with Claude Haiku 5.5…")
+            compose.onNodeWithTag(AI_SEARCHING_TAG).assertTextEquals("Searching with AI…")
+            // The record first on the line, hidden from a screen reader: the text says what is under way.
+            val record = compose.onNodeWithTag(AI_SEARCH_RECORD_TAG, useUnmergedTree = true).fetchSemanticsNode()
+            assertTrue(placed(record).right <= bounds(AI_SEARCHING_TAG).left)
+            assertEquals(null, record.config.getOrNull(SemanticsProperties.ContentDescription))
+            assertEquals(null, record.config.getOrNull(SemanticsProperties.Text))
             compose
                 .onNodeWithTag(AI_SEARCH_STOP_TAG)
                 .assertTextEquals(text(R.string.home_ai_stop))
@@ -401,21 +426,41 @@ class AiSearchScreenTest {
         }
 
     @Test
-    fun aFailureSaysWhyWithTheButtonAgainUnderIt() =
+    fun aFailureSaysWhyInTheErrorColourWithRetryOnItsLineWhichAsksAgain() =
         show {
             tap(DATES_CHIP_TAG)
             set(SearchKind.DATES, AiSearch.Failed("offline"))
-            compose
-                .onNodeWithTag(AI_SEARCH_FAILED_TAG)
-                .assertTextEquals("The search could not be completed: no connection.")
-            assertTrue(bounds(AI_SEARCH_TAG).top >= bounds(AI_SEARCH_FAILED_TAG).bottom)
+            val line = "AI search failed: no connection."
+            assertTrue(shows(line))
+            // No button under it, no rule: Retry at the right of the line, centred on it.
+            assertEquals(0, count(AI_SEARCH_TAG))
             assertEquals(0, count(AI_SEARCH_RULE_TAG))
-            set(SearchKind.DATES, AiSearch.Failed(AiSearches.MALFORMED))
+            val retry = bounds(RETRY_TAG)
+            assertTrue(retry.left >= boundsOf(line).right)
+            assertEquals(boundsOf(line).center.y, retry.center.y, 1f)
             compose
-                .onNodeWithTag(AI_SEARCH_FAILED_TAG)
-                .assertTextEquals("The search could not be completed: ${text(R.string.home_failure_malformed)}.")
-            tap(AI_SEARCH_TAG)
+                .onNodeWithTag(RETRY_TAG)
+                .assertTextEquals(text(R.string.home_retry))
+                .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
+                .assert(
+                    SemanticsMatcher("click labelled \"ask your AI service again, a paid call\"") {
+                        it.config.getOrNull(SemanticsActions.OnClick)?.label == text(R.string.home_ai_retry_action)
+                    },
+                )
+            assertEquals(errorColour, colour(line))
+            set(SearchKind.DATES, AiSearch.Failed(AiSearches.MALFORMED))
+            assertTrue(shows("AI search failed: ${text(R.string.home_failure_malformed)}."))
+            tap(RETRY_TAG)
             assertEquals(listOf(SearchKind.DATES), feed.asked.map { it.first })
+        }
+
+    @Test
+    fun withShowInsightsOffThereIsNoButtonAtAll() =
+        show {
+            set(SearchKind.DATES, AiSearch.None)
+            tap(DATES_CHIP_TAG)
+            assertTrue(shows(text(R.string.home_musicbrainz_not_found)))
+            assertEquals(0, count(AI_SEARCH_TAG))
         }
 
     // A genre source's label, Last.fm's.
@@ -460,7 +505,7 @@ class AiSearchScreenTest {
     private val vocabulary = GenreVocabulary.load(JvmResourceReader)
 
     @Test
-    fun genresNamedShowAsChipsAndOneOpensItsBoxWithItsDefinitionAndTheCreditAlone() =
+    fun genresNamedShowAsChipsAndOneOpensItsBoxWithItsDefinitionAlone() =
         show {
             tap(GENRES_CHIP_TAG)
             val named = vocabulary.labelsFor(listOf("folk rock", "rock"), level = GenreLevel.TRACK)
@@ -474,9 +519,8 @@ class AiSearchScreenTest {
             compose.onNodeWithTag(GENRE_PANEL_HEADING_TAG).assertTextEquals("Folk Rock")
             compose.onNodeWithTag(GENRE_DEFINITION_TAG).assertExists()
             assertTrue(shows(folkRockDefinition))
-            compose.onNodeWithTag(AI_GENRE_BY_TAG).assertTextEquals("by Claude Haiku 5.5")
-            assertEquals(FontStyle.Italic, fontStyle(AI_GENRE_BY_TAG))
-            // Nothing else: no *Why is this …?*, no table.
+            // Nothing else: no second credit, no *Why is this …?*, no table.
+            assertEquals(1, compose.onAllNodesWithText("by Claude Haiku 5.5").fetchSemanticsNodes().size)
             assertEquals(0, count(GENRE_WHY_TAG))
             assertEquals(0, count(GENRES_ROW_PREFIX + "0"))
             // The same chip folds it, as the others do; *Close* too.
@@ -554,52 +598,11 @@ class AiSearchScreenTest {
             val link = bounds(lyricsPageTag(LyricsSite.GENIUS.name))
             assertTrue(link.top >= bounds(AI_SEARCH_RULE_TAG).bottom)
             assertTrue(shows(app.getString(R.string.home_lyrics_page, "Genius")))
-            assertTrue(shows(text(R.string.home_ai_lyrics_page_note)))
+            // "Opens in your browser." under it, not where it goes: no note of an unchecked page.
+            assertTrue(shows(text(R.string.home_lyrics_browser)))
+            assertTrue(!shows(text(R.string.home_lyrics_page_note)))
             assertTrue(bounds(AI_SEARCH_BY_TAG).top >= link.bottom)
         }
-
-    @Test
-    fun withTheSettingOnASearchStartsByItselfOnOpeningOncePerOpening() =
-        show(state(empty(), Settings(searchWithAi = true))) {
-            // Never for a closed panel.
-            assertTrue(feed.asked.isEmpty())
-            tap(DATES_CHIP_TAG)
-            assertEquals(listOf(SearchKind.DATES), feed.asked.map { it.first })
-            // Stopped, it is offered again, and does not start again while the panel stays open.
-            set(SearchKind.DATES, AiSearch.Searching(model))
-            set(SearchKind.DATES, AiSearch.Offered)
-            assertEquals(1, feed.asked.size)
-            // Opened anew, it starts again.
-            tap(DATES_PANEL_CLOSE_TAG)
-            tap(DATES_CHIP_TAG)
-            assertEquals(2, feed.asked.size)
-        }
-
-    @Test
-    fun withTheSettingOnASearchStartsWhenThePanelBecomesEmptyWhileOpen() =
-        show(state(empty(SourceState.Pending), Settings(searchWithAi = true))) {
-            tap(LYRICS_CHIP_TAG)
-            assertTrue(feed.asked.isEmpty())
-            current.value = state(empty(lyrics(WorkLyrics())), Settings(searchWithAi = true))
-            compose.waitForIdle()
-            assertEquals(listOf(SearchKind.LYRICS), feed.asked.map { it.first })
-        }
-
-    @Test
-    fun withTheSettingOnNothingStartsWhenAnsweredOrNotReadyOrWithTheSettingOff() {
-        for (search in listOf(AiSearch.Answered(SearchAnswer.Dates(album = "1974"), model), AiSearch.Unready)) {
-            show(state(empty(), Settings(searchWithAi = true))) {
-                set(SearchKind.DATES, search)
-                tap(DATES_CHIP_TAG)
-                assertTrue(feed.asked.isEmpty())
-            }
-        }
-        show(state(empty())) {
-            set(SearchKind.DATES, AiSearch.Offered)
-            tap(DATES_CHIP_TAG)
-            assertTrue(feed.asked.isEmpty())
-        }
-    }
 
     @Test
     fun withNoSearchesHereThePanelsShowTheirEmptyStatesAlone() {

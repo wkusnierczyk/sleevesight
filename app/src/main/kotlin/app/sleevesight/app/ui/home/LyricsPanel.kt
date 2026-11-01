@@ -85,8 +85,6 @@ internal fun LyricsPanel(
     afterRetry: () -> Unit = {},
     search: PanelSearch = PanelSearch(),
 ) {
-    // Above the parts that come and go with the links: one search by itself per opening.
-    val auto = rememberAutoSearch()
     val style = MaterialTheme.typography.bodyLarge
     when (links) {
         LyricsLinks.Looking -> Text(stringResource(R.string.home_musicbrainz_looking), style = style)
@@ -104,7 +102,7 @@ internal fun LyricsPanel(
                 PageLink(genius, search = true)
                 Browser()
             }
-            AiSearchBlock(search, SearchKind.LYRICS, auto) { answer, _ ->
+            AiSearchBlock(search, SearchKind.LYRICS) { answer, _ ->
                 if (answer is SearchAnswer.Lyrics) AiLyrics(answer.links)
             }
         }
@@ -112,13 +110,12 @@ internal fun LyricsPanel(
 }
 
 /**
- * The lyrics pages *Search with AI* found (#773), as MusicBrainz's show ([PageLink]), each saying it
- * is the song's page without naming MusicBrainz, then that a tap opens the browser.
+ * The lyrics pages *Search with AI* found (#773), as MusicBrainz's show ([PageLink]), "Lyrics on
+ * {site}", each with "Opens in your browser." under it in place of where it goes.
  */
 @Composable
 private fun AiLyrics(links: List<LyricsLink>) {
-    for (link in links) PageLink(link, search = false, note = stringResource(R.string.home_ai_lyrics_page_note))
-    Browser()
+    for (link in links) PageLink(link, search = false, note = stringResource(R.string.home_lyrics_browser))
 }
 
 /**

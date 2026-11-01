@@ -104,8 +104,6 @@ internal fun GenresContent(
     everyGenre: Boolean = false,
     search: PanelSearch = PanelSearch(),
 ) {
-    // Above the parts that come and go with the genres: one search by itself per opening.
-    val auto = rememberAutoSearch()
     val shown = GenresShown.of(track, settings)
     val style = MaterialTheme.typography.bodyLarge
     // The genre open, kept above the chips and the lines in their place (#772): while a run asks
@@ -148,7 +146,7 @@ internal fun GenresContent(
         )
     }
     if (shown.none) Text(stringResource(R.string.home_genres_none), style = style)
-    GenresSearch(track, shown, search, auto, notes)
+    GenresSearch(track, shown, search, notes)
 }
 
 // [sources] named together: "Last.fm", "Last.fm and MusicBrainz".

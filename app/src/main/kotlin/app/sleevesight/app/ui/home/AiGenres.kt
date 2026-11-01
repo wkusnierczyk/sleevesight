@@ -12,11 +12,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
-import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.GenreNotes
 import app.sleevesight.app.ui.theme.Panel
 import app.sleevesight.app.ui.theme.handoffTarget
@@ -43,29 +40,27 @@ internal fun GenresSearch(
     track: TrackState?,
     shown: GenresShown,
     search: PanelSearch,
-    auto: AutoSearch,
     notes: PanelNotes,
 ) {
     if (track != null && !track.genres.isEmpty || shown.looking.isNotEmpty()) return
-    AiSearchBlock(search, SearchKind.GENRES, auto) { answer, model ->
-        if (answer is SearchAnswer.Genres && track != null) AiGenres(track, answer.genres, model, notes.notes)
+    AiSearchBlock(search, SearchKind.GENRES) { answer, _ ->
+        if (answer is SearchAnswer.Genres && track != null) AiGenres(track, answer.genres, notes.notes)
     }
 }
 
 /**
- * The [genres] *Search with AI* named for [track] (#773), by [model], as *Genres*' chips ([Chips]):
+ * The [genres] *Search with AI* named for [track] (#773), as *Genres*' chips ([Chips]):
  * a tap opens the genre in a box under them, as the chips of the sources' genres do ([GenresBox]);
  * another chip switches it, the same chip or its *Close* folds it, and the focus moves to *Close*
  * and back to the chip. Closed on each new track. The box ([AiGenrePanel]) holds the genre's
- * definition from Wikipedia ([notes], with Wikipedia's own states) and the model's credit, and
- * nothing else: no *Why is this …?*, whose evidence does not carry the genre, and no table, as no
+ * definition from Wikipedia ([notes], with Wikipedia's own states) alone, the credit under the chips
+ * being the answer's: no second one, no *Why is this …?*, whose evidence does not carry the genre, and no table, as no
  * source's tags give it.
  */
 @Composable
 internal fun AiGenres(
     track: TrackState,
     genres: List<GenreLabel>,
-    model: String,
     notes: GenreNotes,
 ) {
     var chosen by rememberSaveable(track.normalized.lookupKey) { mutableStateOf<String?>(null) }
@@ -84,7 +79,7 @@ internal fun AiGenres(
         }
         open?.let { genre ->
             Box {
-                AiGenrePanel(genre, model, notes, Modifier.handoffTarget(handoff, close)) {
+                AiGenrePanel(genre, notes, Modifier.handoffTarget(handoff, close)) {
                     chosen = null
                     labels.firstOrNull { it.label.genre.identity == genre.identity }?.let { handoff.moveTo(chipOf(it)) }
                 }
@@ -94,14 +89,13 @@ internal fun AiGenres(
 }
 
 /**
- * The box of [genre], named by [model] (#773): its name as a heading, with *Close* ([onClose], under
- * [closeModifier]), on the surface colour, as a genre's panel inside *Genres*' is ([GenrePanel]);
- * what the genre is, from [notes] ([GenreDefinitionNote]), then "by {model}" in italics.
+ * The box of [genre], named by *Search with AI* (#773): its name as a heading, with *Close*
+ * ([onClose], under [closeModifier]), on the surface colour, as a genre's panel inside *Genres*' is
+ * ([GenrePanel]); what the genre is, from [notes] ([GenreDefinitionNote]), and nothing else.
  */
 @Composable
 private fun AiGenrePanel(
     genre: GenreLabel,
-    model: String,
     notes: GenreNotes,
     closeModifier: Modifier,
     onClose: () -> Unit,
@@ -114,9 +108,5 @@ private fun AiGenrePanel(
         fill = MaterialTheme.colorScheme.surface,
     ) {
         GenreDefinitionNote(genre.identity, notes)
-        SearchCredit(stringResource(R.string.genre_ai_by, model), Modifier.testTag(AI_GENRE_BY_TAG))
     }
 }
-
-/** The test tag of the credit in the box of a genre *Search with AI* named (#773). */
-const val AI_GENRE_BY_TAG: String = "genre-panel:ai-by"
