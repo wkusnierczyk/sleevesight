@@ -227,9 +227,8 @@ private fun SectionBox(
 /**
  * [section]'s chip, drawn as Home's chips are ([ChipFrame]), [width] wide, its name centred in it
  * on one line; beside it, centred on it, the section's short description, up to two lines, clipped
- * with an ellipsis past them (*Developer* has none, and shows its chip alone). A screen reader reads
- * the chip as a heading and a button, by the section's name, collapsed. [modifier] goes on the
- * chip's outside: a focus requester.
+ * with an ellipsis past them. A screen reader reads the chip as a heading and a button, by the
+ * section's name, collapsed. [modifier] goes on the chip's outside: a focus requester.
  */
 @Composable
 private fun SectionChip(
