@@ -121,31 +121,66 @@ internal fun DrawScope.drawRecord(
                     drawCircle(GROOVE_COLOR, GROOVE, Offset.Zero, alpha, Stroke(GROOVE_WIDTH))
                 }
                 drawCircle(LABEL_COLOR, LABEL, Offset.Zero, alpha)
-                val face = Stroke(FACE_WIDTH, cap = StrokeCap.Round)
-                // `M14.4 14.9 A2 2 0 0 1 17.6 14.9`: the arc of radius 2 about (16, 16.1), over the top.
-                drawArc(
-                    Color.White,
-                    startAngle = ARC_START,
-                    sweepAngle = ARC_SWEEP,
-                    useCenter = false,
-                    topLeft = Offset(-ARC_R, ARC_CY - ARC_R),
-                    size = Size(2 * ARC_R, 2 * ARC_R),
-                    alpha = alpha,
-                    style = face,
-                )
-                // `M15.1 18.05 H16.9`.
-                drawLine(
-                    Color.White,
-                    Offset(-LINE_HALF, LINE_Y),
-                    Offset(LINE_HALF, LINE_Y),
-                    FACE_WIDTH,
-                    StrokeCap.Round,
-                    alpha = alpha,
-                )
-                drawCircle(Color.White, HOLE, Offset.Zero, alpha)
+                drawFace(1f, alpha)
             }
         }
     }
+}
+
+/**
+ * Draws the record simplified for text size (#773; #785, #786: `TurningRecord`), centred at
+ * [centre], [radius] to its rim, turned by [degrees]: the rim's colour as an outline only, everything
+ * inside it the red label, with no groove and no black core, and the label's white face (the arc,
+ * the short line and the centre hole) scaled up with it, from a label of 3 to one of 5.7 in the
+ * symbol's 16 units.
+ */
+internal fun DrawScope.drawTextRecord(
+    colors: LogoColors,
+    centre: Offset,
+    radius: Float,
+    degrees: Float = 0f,
+) {
+    if (radius <= 0f) return
+    val k = radius / RIM
+    translate(centre.x, centre.y) {
+        rotate(degrees, pivot = Offset.Zero) {
+            scale(k, k, pivot = Offset.Zero) {
+                drawCircle(colors.rim, RIM, Offset.Zero)
+                drawCircle(LABEL_COLOR, TEXT_LABEL, Offset.Zero)
+                drawFace(TEXT_LABEL / LABEL, 1f)
+            }
+        }
+    }
+}
+
+// The label's white face about the centre, in the symbol's units, [grown] times the logo's.
+private fun DrawScope.drawFace(
+    grown: Float,
+    alpha: Float,
+) {
+    val face = Stroke(FACE_WIDTH * grown, cap = StrokeCap.Round)
+    val arc = ARC_R * grown
+    // `M14.4 14.9 A2 2 0 0 1 17.6 14.9`: the arc of radius 2 about (16, 16.1), over the top.
+    drawArc(
+        Color.White,
+        startAngle = ARC_START,
+        sweepAngle = ARC_SWEEP,
+        useCenter = false,
+        topLeft = Offset(-arc, ARC_CY * grown - arc),
+        size = Size(2 * arc, 2 * arc),
+        alpha = alpha,
+        style = face,
+    )
+    // `M15.1 18.05 H16.9`.
+    drawLine(
+        Color.White,
+        Offset(-LINE_HALF * grown, LINE_Y * grown),
+        Offset(LINE_HALF * grown, LINE_Y * grown),
+        FACE_WIDTH * grown,
+        StrokeCap.Round,
+        alpha = alpha,
+    )
+    drawCircle(Color.White, HOLE * grown, Offset.Zero, alpha)
 }
 
 /** Draws the tile of D and R2: a rounded square 143 units across, centred at [centre]. */
@@ -170,6 +205,9 @@ private const val CORE = 5.7f
 private const val GROOVE = 5.4f
 private const val GROOVE_WIDTH = .8f
 private const val LABEL = 3f
+
+// The label of the record at text size, which fills the rim's outline (#773).
+private const val TEXT_LABEL = 5.7f
 private const val HOLE = .9f
 private const val FACE_WIDTH = .42f
 private const val ARC_R = 2f
