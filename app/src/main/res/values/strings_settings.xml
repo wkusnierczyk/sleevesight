@@ -214,10 +214,13 @@
     <string name="purge_keys_more_explained">Purge keys removes every saved key from this phone’s storage, and deletes the key in the phone’s Android Keystore that encrypted them. Any copy left in the storage can then never be decrypted again (crypto-erasure). Sleevesight never sent your keys anywhere but to their own services, and never logged them. Purging keys from Sleevesight does not revoke them. You can still use your API keys elsewhere if you keep another copy.</string>
     <!-- Read aloud (#325), at the end of Insights: what reads, then its three settings. -->
     <string name="settings_read_aloud_hint">Read aloud, the speaker button beside Key insights, has your phone’s text-to-speech engine read the insight to you. The engine is the one chosen in Android’s settings; some, such as Google’s network voices, send the text to their server to be spoken.</string>
-    <string name="settings_read_aloud_music">While reading aloud</string>
-    <string name="settings_read_aloud_music_summary">What happens to the music playing while an insight is read aloud.</string>
-    <string name="settings_read_aloud_lower">Lower the music</string>
-    <string name="settings_read_aloud_pause">Pause the music</string>
+    <string name="settings_read_aloud_music">Music while reading aloud</string>
+    <string name="settings_read_aloud_music_summary">When an insight is read aloud while music is playing, the app can temporarily pause the playback or lower the volume.</string>
+    <string name="settings_read_aloud_lower">Reduce volume</string>
+    <string name="settings_read_aloud_pause">Pause playback</string>
+    <!-- The labels where the full ones do not fit side by side, as at a large font size. -->
+    <string name="settings_read_aloud_lower_short">Lower</string>
+    <string name="settings_read_aloud_pause_short">Pause</string>
     <string name="settings_read_aloud_lower_detail">The music plays on, quieter, while the insight is read.</string>
     <string name="settings_read_aloud_pause_detail">The music pauses while the insight is read, and plays on after it. A player that does not resume by itself stays paused.</string>
     <string name="settings_read_track_line">Read the track line first</string>

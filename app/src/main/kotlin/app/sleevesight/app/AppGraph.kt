@@ -61,7 +61,9 @@ import app.sleevesight.app.settings.SeenPlayersRecorder
 import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.speech.ReadAloud
 import app.sleevesight.app.speech.ReadAloudMessages
+import app.sleevesight.app.speech.ReadAloudMusicFocus
 import app.sleevesight.app.speech.SystemMusicFocus
+import app.sleevesight.app.speech.SystemRemoteMusic
 import app.sleevesight.app.speech.SystemSpeech
 import app.sleevesight.app.speech.screenReaderOn
 import app.sleevesight.app.ui.home.GuideHiding
@@ -615,14 +617,19 @@ class AppGraph internal constructor(
 
     /**
      * *Read aloud* (#325): the insight, or a genre's reason, read by the phone's text-to-speech
-     * engine, the music lowered or paused for it as *While reading aloud* says. It follows what
+     * engine, the music lowered or paused for it as *Music while reading aloud* says. It follows what
      * plays and what the pipeline shows (stopping on a track change, reading each new insight with
      * *Read new insights aloud*), on the main thread; what it cannot read is told in a short message.
      */
     val readAloud: ReadAloud by lazy {
         ReadAloud(
             speech = SystemSpeech(appContext),
-            focus = SystemMusicFocus(appContext),
+            // Music on another device (Spotify Connect) held through its session (#803), a followed
+            // player's only, as the settings now say.
+            focus =
+                ReadAloudMusicFocus(SystemMusicFocus(appContext)) {
+                    SystemRemoteMusic(appContext) { (latestSettings.value ?: Settings()).follows(it) }.playing()
+                },
             settings = latestSettings,
             words =
                 SpokenWords(appContext.getString(R.string.read_aloud_unverified)) { title, artists ->

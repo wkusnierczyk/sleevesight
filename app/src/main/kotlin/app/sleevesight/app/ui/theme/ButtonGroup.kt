@@ -35,8 +35,11 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextMeasurer
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
@@ -86,7 +89,9 @@ private const val DISABLED_CONTAINER_ALPHA = 0.12f
  * away says what it sets: "Theme: Light"), and then what the value does, where [details] has it
  * (as the dialogs read a choice with its description, #550). Where the labels do not fit the row
  * side by side, as at a large font size, each takes a line of its own, full width, so nothing is
- * cut ([GroupArrangement]).
+ * cut ([GroupArrangement]); unless every choice has a label in [short] (#803): the group then shows
+ * those, in one row, never a stack, a label wrapping in its button if even they do not fit. A
+ * screen reader reads the full label either way.
  */
 @Suppress("LongParameterList") // What the group shows and says, each a value of its own, and what a tap does.
 @Composable
@@ -98,13 +103,15 @@ internal fun <T> ChoiceButtonGroup(
     name: String? = null,
     details: Map<T, String> = emptyMap(),
     enabled: Boolean = true,
+    short: Map<T, String> = emptyMap(),
 ) {
     val buttons =
         choices.map { (value, label) ->
             val read = listOfNotNull(name?.let { "$it: $label" } ?: label, details[value]).joinToString(". ")
             GroupButton(label, enabled, selected = value == selected, read = read) { onSelect(value) }
         }
-    ConnectedButtons(buttons, modifier.selectableGroup(), checks = true)
+    val shorts = choices.mapNotNull { short[it.first] }.takeIf { it.isNotEmpty() && it.size == choices.size }
+    ConnectedButtons(buttons, modifier.selectableGroup(), checks = true, shorts = shorts)
 }
 
 /**
@@ -186,6 +193,26 @@ internal fun groupArrangement(
 }
 
 /**
+ * How buttons whose labels need [full] widths are laid out, [gap] apart, in [room] (null when the
+ * width is not bounded: side by side), and whether their [short] labels show in place of the full
+ * ones (#803): they do, where there are short labels, when the full ones would stack, and then in a
+ * row whether or not they fit, a label wrapping in its button if it must.
+ */
+internal fun groupLayout(
+    full: List<Int>,
+    short: List<Int>?,
+    gap: Int,
+    room: Int?,
+): Pair<GroupArrangement, Boolean> {
+    val arrangement = room?.let { groupArrangement(full, gap, it) } ?: GroupArrangement.EQUAL
+    return when {
+        room == null || short == null || arrangement != GroupArrangement.STACKED -> arrangement to false
+        groupArrangement(short, gap, room) == GroupArrangement.EQUAL -> GroupArrangement.EQUAL to true
+        else -> GroupArrangement.PROPORTIONAL to true
+    }
+}
+
+/**
  * [buttons] laid out by [groupArrangement], from the widths their labels need on one line in the
  * buttons' style (in the app's language, font and font size), their padding, and, in a choice
  * ([checks]), room for the check in every one, so the buttons keep their widths whichever is
@@ -193,7 +220,9 @@ internal fun groupArrangement(
  * [GROUP_TARGET] high, each answering a tap across 48 dp (Compose widens a smaller target into the
  * room around it); stacked, each is at least [GROUP_TARGET] high. With [compact], buttons that fit
  * as wide as the widest needs ([GroupArrangement.EQUAL]) are that wide, and the row is placed at
- * that side; otherwise they share the width as without it.
+ * that side; otherwise they share the width as without it. Where they would stack and there are
+ * [shorts], a label for every button, those are measured and shown instead, in a row in any case
+ * ([groupLayout]).
  */
 @Composable
 private fun ConnectedButtons(
@@ -201,23 +230,25 @@ private fun ConnectedButtons(
     modifier: Modifier,
     checks: Boolean,
     compact: Alignment.Horizontal? = null,
+    shorts: List<String>? = null,
 ) {
     val style = MaterialTheme.typography.labelLarge
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
     val labels = buttons.map { it.label }
-    val needing =
-        remember(labels, style, density, measurer, checks) {
-            with(density) {
-                val extra = 2 * GROUP_PADDING.roundToPx() + if (checks) (CHECK_SIZE + CHECK_GAP).roundToPx() else 0
-                // A pixel over, so that a label measured to fit is not wrapped by rounding.
-                labels.map { measurer.measure(it, style, softWrap = false, maxLines = 1).size.width + extra + 1 }
-            }
+    val needingFull =
+        remember(labels, style, density, measurer, checks) { labelWidths(labels, measurer, style, density, checks) }
+    val needingShort =
+        remember(shorts, style, density, measurer, checks) {
+            shorts?.let { labelWidths(it, measurer, style, density, checks) }
         }
     BoxWithConstraints(modifier.fillMaxWidth()) {
         val gap = with(density) { GROUP_GAP.roundToPx() }
         val bounded = constraints.hasBoundedWidth
-        val arrangement = if (bounded) groupArrangement(needing, gap, constraints.maxWidth) else GroupArrangement.EQUAL
+        val (arrangement, useShort) =
+            groupLayout(needingFull, needingShort, gap, constraints.maxWidth.takeIf { bounded })
+        val needing = if (useShort) needingShort.orEmpty() else needingFull
+        val shown = if (useShort) shorts.orEmpty() else labels
         if (arrangement == GroupArrangement.STACKED) {
             Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(GROUP_GAP)) {
                 buttons.forEachIndexed { index, button ->
@@ -244,6 +275,7 @@ private fun ConnectedButtons(
                             button,
                             groupShape(index, buttons.size, button.selected == true, stacked = false),
                             width.fillMaxHeight(),
+                            label = shown[index],
                         )
                     }
                 }
@@ -251,6 +283,23 @@ private fun ConnectedButtons(
         }
     }
 }
+
+/**
+ * The widths [labels] need on one line in [style], with the buttons' padding and, with [checks],
+ * room for the check in every one; a pixel over, so that a label measured to fit is not wrapped by
+ * rounding.
+ */
+private fun labelWidths(
+    labels: List<String>,
+    measurer: TextMeasurer,
+    style: TextStyle,
+    density: Density,
+    checks: Boolean,
+): List<Int> =
+    with(density) {
+        val extra = 2 * GROUP_PADDING.roundToPx() + if (checks) (CHECK_SIZE + CHECK_GAP).roundToPx() else 0
+        labels.map { measurer.measure(it, style, softWrap = false, maxLines = 1).size.width + extra + 1 }
+    }
 
 /** A row's button's width: [fixed] in a compact row, else its [share] of a [bounded] row, or its own. */
 private fun RowScope.buttonWidth(
@@ -306,6 +355,7 @@ private fun GroupButtonView(
     button: GroupButton,
     shape: Shape,
     modifier: Modifier,
+    label: String = button.label,
 ) {
     val chosen = button.selected == true
     val colours = MaterialTheme.colorScheme
@@ -346,7 +396,7 @@ private fun GroupButtonView(
             Spacer(Modifier.width(CHECK_GAP))
         }
         Text(
-            button.label,
+            label,
             style = MaterialTheme.typography.labelLarge,
             color = content,
             textAlign = TextAlign.Center,
