@@ -40,7 +40,7 @@ import org.robolectric.RobolectricTestRunner
 
 /**
  * The read-aloud rows under *Insights* (#325): the line on what reads aloud and who may hear its
- * text, then *While reading aloud* as two buttons, *Lower the music* chosen, with what the chosen
+ * text, then *Music while reading aloud* as two buttons, *Reduce volume* chosen, with what the chosen
  * one does under them; *Read the track line first* and *Read new insights aloud*, off. Each is
  * stored as it is changed, and can be changed with *Show insights* off, as none calls the AI service.
  */

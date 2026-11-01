@@ -287,7 +287,9 @@ internal fun ValueRow(
  * connected button group ([ChoiceButtonGroup]), the [selected] one marked; a tap on another calls
  * [onSelect] with it, at once, no dialog. Each button is read with [title] ("Theme: Light"). A
  * value in [details] is read with its button, and has a line under the group saying what it does
- * while it is the one chosen ([ChoiceDetails]). A setting whose choices are many or long, or
+ * while it is the one chosen ([ChoiceDetails]). With a label for every choice in [short], the group
+ * shows those where the full ones do not fit side by side, and never stacks (#803). A setting
+ * whose choices are many or long, or
  * described one by one, is a [ValueRow] opening a dialog instead (`design/design.md`, *Settings
  * screen*).
  */
@@ -299,6 +301,7 @@ internal fun <T> ChoiceButtonsRow(
     choices: List<Pair<T, String>>,
     selected: T,
     details: Map<T, String> = emptyMap(),
+    short: Map<T, String> = emptyMap(),
     onSelect: (T) -> Unit,
 ) {
     if (!shownInSearch(title)) return
@@ -311,7 +314,15 @@ internal fun <T> ChoiceButtonsRow(
             modifier = Modifier.testTag(ROW_TITLE_TAG),
         )
         summary?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = color) }
-        ChoiceButtonGroup(choices, selected, onSelect, Modifier.padding(top = 4.dp), name = title, details = details)
+        ChoiceButtonGroup(
+            choices,
+            selected,
+            onSelect,
+            Modifier.padding(top = 4.dp),
+            name = title,
+            details = details,
+            short = short,
+        )
         ChoiceDetails(choices, selected, details)
     }
 }
