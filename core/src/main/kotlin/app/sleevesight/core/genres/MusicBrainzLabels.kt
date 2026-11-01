@@ -63,9 +63,12 @@ class MusicBrainzLabels(
         return LabelLookup(labels, failed)
     }
 
-    /** The labels from the recording's tags ([RecordingTags]), each linking its MusicBrainz page. */
+    /**
+     * The labels from the recording's tags ([RecordingTags]), each linking its MusicBrainz page and
+     * carrying its tag's votes ([GenreLabel.votes], #799).
+     */
     fun recordingLabels(recording: RecordingTags): List<GenreLabel> =
-        vocabulary.labelsFor(recording.tags, recordingPage(recording.mbid), GenreLevel.TRACK)
+        vocabulary.labelsFor(recording.tags, recordingPage(recording.mbid), GenreLevel.TRACK, votes = recording.votes)
 
     companion object {
         /** As long as MusicBrainz's retrieval lifetime (D9): tags change no faster than its other data. */
@@ -93,9 +96,12 @@ class MusicBrainzLabels(
  * The accepted recording's MusicBrainz tags (#439), most voted first, those with no net vote up
  * left out: CC BY-NC-SA 3.0, for genre labels only and never in a prompt. The resolution's
  * recording lookup brings them (`inc=tags`), and MusicBrainz's result carries them
- * (`SourceResult.recordingTags`), kept with it in the retrieval cache.
+ * (`SourceResult.recordingTags`), kept with it in the retrieval cache. [votes] are each tag's net
+ * votes, by tag (#799): a track's label leads the folded genres with at least two
+ * ([TrackGenres.folded]); a tag it does not name has none known, and leads only as a tag with one.
  */
 data class RecordingTags(
     val mbid: String,
     val tags: List<String>,
+    val votes: Map<String, Int> = emptyMap(),
 )

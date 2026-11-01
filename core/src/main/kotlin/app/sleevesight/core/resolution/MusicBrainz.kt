@@ -142,6 +142,8 @@ data class MbWorkLink(
  *
  * @property tags its tags, most voted first, those with no net vote up left out (#439): CC BY-NC-SA
  *   3.0, for the track's genre labels only, never in a line or a prompt.
+ * @property tagVotes each of its [tags]' net votes, by tag (#799), by which a track's label may lead
+ *   its folded genres.
  */
 data class MbRecordingDetail(
     val mbid: String,
@@ -152,6 +154,7 @@ data class MbRecordingDetail(
     val artistRelations: List<MbArtistRelation>,
     val wikidataIds: List<String>,
     val tags: List<String> = emptyList(),
+    val tagVotes: Map<String, Int> = emptyMap(),
 )
 
 /**

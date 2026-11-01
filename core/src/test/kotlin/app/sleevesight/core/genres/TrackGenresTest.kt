@@ -82,21 +82,103 @@ class TrackGenresTest {
         assertTrue(genres.rows.all { it.labels.size == GenreVocabulary.MAX_LABELS })
     }
 
+    // The recording's MusicBrainz labels, with each tag's votes (#799), as [MusicBrainzLabels] gives them.
+    private fun recording(vararg voted: Pair<String, Int>) =
+        MusicBrainzLabels(ArtistTags { error("no artist asked") }, vocabulary)
+            .recordingLabels(RecordingTags("mb-rec", voted.map { it.first }, voted.toMap()))
+
+    private fun TrackGenres.foldedShown() = folded.map { it.row.level to it.label.genre.label }
+
     @Test
-    fun `folded, the most specific level shows, the track's, else the album's, else the artists' together`() {
+    fun `folded, with no track label, the album's show, else the artists' together`() {
         val artists = artist("A", "rock", "pop") + artist("B", "pop", "jazz")
 
         fun folded(vararg labels: List<GenreLabel>) =
-            combineGenres(mapOf(LabelSource.LASTFM to labels.toList().flatten()), listOf("A", "B"))
-                .folded
-                .map { it.row.level to it.label.genre.label }
+            combineGenres(mapOf(LabelSource.LASTFM to labels.toList().flatten()), listOf("A", "B")).foldedShown()
 
-        assertEquals(listOf(GenreLevel.TRACK to "Soft Rock"), folded(artists, album("folk"), track("soft rock")))
         assertEquals(listOf(GenreLevel.ALBUM to "Folk"), folded(artists, album("folk")))
         assertEquals(
             listOf(GenreLevel.ARTIST to "Rock", GenreLevel.ARTIST to "Pop", GenreLevel.ARTIST to "Jazz"),
             folded(artists),
         )
+    }
+
+    @Test
+    fun `folded, one-vote track tags that agree with nothing give way to the album's, the rows keep them`() {
+        // Emily Jane White, "The Black Oak" (#799): recording 6f5dc353-985e-4913-ac28-3c2edf86daa2's
+        // four tags, each with one vote, against the artist's labels and the album's.
+        val genres =
+            combineGenres(
+                mapOf(
+                    LabelSource.MUSICBRAINZ to
+                        recording("rock" to 1, "pop" to 1, "alternative rock" to 1, "indie rock" to 1) +
+                        artist("Emily Jane White", "folk", "singer-songwriter", "indie folk", "acoustic"),
+                    LabelSource.LASTFM to
+                        artist("Emily Jane White", "folk", "singer-songwriter", "indie folk", "acoustic", "blues") +
+                        album("folk"),
+                ),
+                listOf("Emily Jane White"),
+            )
+        assertEquals(listOf(GenreLevel.ALBUM to "Folk"), genres.foldedShown())
+        // The *Genre tags* table still shows every level's.
+        assertEquals(
+            listOf("Rock", "Pop", "Alternative Rock", "Indie Rock"),
+            genres.rows
+                .first { it.level == GenreLevel.TRACK }
+                .labels
+                .map { it.genre.label },
+        )
+    }
+
+    @Test
+    fun `folded, a track tag with two votes leads, and a one-vote one only when another level has it`() {
+        val artists = artist("A", "folk")
+
+        fun folded(vararg labels: List<GenreLabel>) =
+            combineGenres(mapOf(LabelSource.MUSICBRAINZ to labels.toList().flatten()), listOf("A")).foldedShown()
+
+        // Well voted: it leads, the one-vote tag beside it that agrees with nothing does not.
+        assertEquals(
+            listOf(GenreLevel.TRACK to "Soft Rock"),
+            folded(recording("soft rock" to 2, "pop" to 1), album("folk"), artists),
+        )
+        // One vote, but the album has it: it leads.
+        assertEquals(
+            listOf(GenreLevel.TRACK to "Folk"),
+            folded(recording("rock" to 1, "folk" to 1), album("folk", "country"), artists),
+        )
+        // One vote, an artist has it.
+        assertEquals(listOf(GenreLevel.TRACK to "Folk"), folded(recording("folk" to 1), album("country"), artists))
+        // With no other level, the track's show all the same.
+        assertEquals(listOf(GenreLevel.TRACK to "Rock"), folded(recording("rock" to 1)))
+    }
+
+    @Test
+    fun `folded, a Last_fm track tag leads only when another level has it, its weights being no votes`() {
+        fun folded(vararg labels: List<GenreLabel>) =
+            combineGenres(mapOf(LabelSource.LASTFM to labels.toList().flatten()), listOf("A")).foldedShown()
+
+        assertEquals(listOf(GenreLevel.ALBUM to "Folk"), folded(track("soft rock"), album("folk")))
+        assertEquals(listOf(GenreLevel.TRACK to "Folk"), folded(track("soft rock", "folk"), album("folk")))
+        assertEquals(listOf(GenreLevel.TRACK to "Rock"), folded(track("rock"), artist("A", "rock")))
+    }
+
+    @Test
+    fun `a track label's votes are its sources' most, kept when Last_fm gives it first`() {
+        val genres =
+            combineGenres(
+                mapOf(LabelSource.MUSICBRAINZ to recording("soft rock" to 3), LabelSource.LASTFM to track("soft rock")),
+                emptyList(),
+            )
+        val label =
+            genres.rows
+                .single()
+                .labels
+                .single()
+        assertEquals(listOf(LabelSource.LASTFM, LabelSource.MUSICBRAINZ), label.credits.map { it.source })
+        assertEquals(3, label.votes)
+        val lastFm = combineGenres(mapOf(LabelSource.LASTFM to track("soft rock")), emptyList())
+        assertEquals(null, lastFm.all.single().votes)
     }
 
     @Test

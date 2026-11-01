@@ -45,6 +45,8 @@ internal object RetrievalCodec {
      * What MusicBrainz says of the lyrics (#728) is an optional field too, made a miss the same way
      * (MusicBrainz's extraction version 7), so a track played before is asked again rather than shown
      * as having no lyrics page.
+     * The votes on the recording's tags (#799) are an optional field too, made a miss the same way
+     * (MusicBrainz's extraction version 8).
      */
     const val FORMAT: Int = 7
 
@@ -79,7 +81,7 @@ internal object RetrievalCodec {
                 rejections = result.rejections.map { RejectionJson(it.subject, it.reason, it.scope.key) },
                 genres = result.genres.map { GenreJson(it.tag, it.family, it.label, it.identity, it.url, it.artist) },
                 labelArtists = result.labelArtists.map { LabelArtistJson(it.name, it.mbid) },
-                recordingTags = result.recordingTags?.let { RecordingTagsJson(it.mbid, it.tags) },
+                recordingTags = result.recordingTags?.let { RecordingTagsJson(it.mbid, it.tags, it.votes) },
                 firstReleased = result.firstReleased,
                 releaseDates = result.releaseDates.map { ReleaseDateJson(it.title, it.date, it.group, it.type) },
                 firstRelease = result.firstRelease?.let(::releaseJson),
@@ -122,7 +124,7 @@ internal object RetrievalCodec {
                         GenreLabel(it.tag, it.family, it.label, it.identity, it.url, GenreLevel.ARTIST, it.artist)
                     },
                 labelArtists = stored.labelArtists.map { ResolvedArtist(it.name, it.mbid) },
-                recordingTags = stored.recordingTags?.let { RecordingTags(it.mbid, it.tags) },
+                recordingTags = stored.recordingTags?.let { RecordingTags(it.mbid, it.tags, it.votes) },
                 firstReleased = stored.firstReleased,
                 releaseDates = stored.releaseDates.map { ReleaseDate(it.title, it.date, it.group, it.type) },
                 firstRelease = stored.firstRelease?.let(::release),
@@ -275,6 +277,8 @@ internal object RetrievalCodec {
     private data class RecordingTagsJson(
         val mbid: String,
         val tags: List<String>,
+        // The tags' votes (#799); an entry kept before them decodes without.
+        val votes: Map<String, Int> = emptyMap(),
     )
 
     @Serializable

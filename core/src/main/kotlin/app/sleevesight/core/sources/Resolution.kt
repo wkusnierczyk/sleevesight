@@ -56,6 +56,8 @@ import app.sleevesight.core.normalizer.Edition
  * @property recordingTags the accepted recording's MusicBrainz tags
  *   ([app.sleevesight.core.resolution.MbRecordingDetail.tags], #439), for the track's genre labels
  *   only: no line templates them, and no prompt holds them.
+ * @property recordingTagVotes each of the [recordingTags]' net votes, by tag
+ *   ([app.sleevesight.core.resolution.MbRecordingDetail.tagVotes], #799).
  * @property lyrics what MusicBrainz says of the track's lyrics (#728): the lyrics pages its works
  *   link, their languages, and whether the recording is marked instrumental ([WorkLyrics]); none
  *   when no recording was accepted.
@@ -85,6 +87,7 @@ data class Resolution(
     val credits: List<Credit> = emptyList(),
     val wikidataIds: List<String> = emptyList(),
     val recordingTags: List<String> = emptyList(),
+    val recordingTagVotes: Map<String, Int> = emptyMap(),
     val lyrics: WorkLyrics = WorkLyrics.NONE,
     val failure: String? = null,
     val provisional: Boolean = false,

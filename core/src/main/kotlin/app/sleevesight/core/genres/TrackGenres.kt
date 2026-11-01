@@ -46,16 +46,25 @@ data class TrackGenres(
     val oneLevel: Boolean get() = levels.size == 1
 
     /**
-     * The labels shown folded, or with [oneLevel]: the most specific level's, the track's, else the
-     * album's, else the artists' together, each genre once (the first artist's row giving it), at
-     * most [GenreVocabulary.MAX_LABELS].
+     * The labels shown folded, or with [oneLevel] (#799): the track's that are backed, else the
+     * album's, else the artists' together, else, with no other level to give any, the track's all
+     * the same; each genre once (the first row giving it), at most [GenreVocabulary.MAX_LABELS]. A
+     * track's label is backed with at least [MIN_VOTES] net votes on its tag ([TrackLabel.votes]:
+     * MusicBrainz's; Last.fm's weights are no votes), or when the album's or an artist's row has its
+     * genre: one contributor's tag on the recording does not outweigh the album's and the artists'.
+     * The rows themselves (the *Genre tags* table) keep every label.
      */
     val folded: List<PlacedLabel>
         get() {
-            val level = SPECIFIC.firstOrNull { it in levels }
-            return rows
-                .filter { it.level == level }
-                .flatMap { row -> row.labels.map { PlacedLabel(row, it) } }
+            val others = rows.filter { it.level != GenreLevel.TRACK }.flatMap { it.labels }.map { it.genre.identity }
+            val backed =
+                placed(GenreLevel.TRACK).filter { (_, label) ->
+                    (label.votes ?: 0) >= MIN_VOTES || label.genre.identity in others
+                }
+            return backed
+                .ifEmpty { placed(GenreLevel.ALBUM) }
+                .ifEmpty { placed(GenreLevel.ARTIST) }
+                .ifEmpty { placed(GenreLevel.TRACK) }
                 .distinctBy { it.label.genre.identity }
                 .take(GenreVocabulary.MAX_LABELS)
         }
@@ -63,9 +72,16 @@ data class TrackGenres(
     /** Every label of every row, each genre once, in row order: for counting, and the CLI's report. */
     val all: List<TrackLabel> get() = rows.flatMap { it.labels }.distinctBy { it.genre.identity }
 
-    private companion object {
-        /** The levels from the most specific to the least: what [folded] shows. */
-        val SPECIFIC = listOf(GenreLevel.TRACK, GenreLevel.ALBUM, GenreLevel.ARTIST)
+    // [level]'s labels, each with its row, in row order.
+    private fun placed(level: GenreLevel): List<PlacedLabel> =
+        rows.filter { it.level == level }.flatMap { row -> row.labels.map { PlacedLabel(row, it) } }
+
+    companion object {
+        /**
+         * The net votes a track's tag needs to lead the folded labels with no other level agreeing
+         * ([folded], #799): two, so that one contributor's tags alone do not.
+         */
+        const val MIN_VOTES: Int = 2
     }
 }
 

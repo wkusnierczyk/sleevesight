@@ -89,7 +89,9 @@ class PageLinksTest {
     ): TrackLabel {
         val shown = tag.replaceFirstChar(Char::uppercase)
         val genre = GenreLabel(tag, "family", shown, tag, level = level, artist = artist)
-        return TrackLabel(genre, listOf(LabelCredit(LabelSource.LASTFM, "https://example.org/$tag")))
+        // A track's label with the votes to lead the folded chips (#799), as the tests' chips are the track's.
+        val votes = TrackGenres.MIN_VOTES.takeIf { level == GenreLevel.TRACK }
+        return TrackLabel(genre, listOf(LabelCredit(LabelSource.LASTFM, "https://example.org/$tag")), votes)
     }
 
     // Two levels: Home shows the track's chips, the page the table of both.

@@ -248,6 +248,7 @@ class RecordingResolver(
                 credits = recordingCredits,
                 wikidataIds = detail.wikidataIds,
                 recordingTags = detail.tags,
+                recordingTagVotes = detail.tagVotes,
                 lyrics = lyricsOf(detail, lookup),
                 // The work's lyrics links not known (#728): a later run asks again.
                 provisional = lookup is Lookup.Failed,
