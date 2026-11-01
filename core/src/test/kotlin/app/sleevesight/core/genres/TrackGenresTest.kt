@@ -247,21 +247,48 @@ class TrackGenresTest {
     }
 
     @Test
-    fun `a genre the album's row or chip has gets no AI copy on the track's row (#762)`() {
-        // Folk is the album's (and the artist's), and the folded chip.
-        val genres = blackOak().withAi(track("folk", "blues"), "Claude Haiku 5.5")
+    fun `a listed genre a row has gets no copy in the rows, and an AI chip only if no chip shows it (#762)`() {
+        val model = "Claude Haiku 5.5"
+        // Folk is the album's (and the artist's), and the folded chip: no second chip, no copy in the rows.
+        val folkChip = blackOak().withAi(track("folk", "indie folk", "blues"), model)
         assertEquals(
             listOf("Alternative Rock", "Rock", "Blues"),
-            genres.rows
+            folkChip.rows
                 .first()
                 .labels
                 .map { it.genre.label },
         )
-        assertEquals(listOf("Folk", "Blues"), genres.folded.map { it.label.genre.label })
-        assertEquals(listOf(false, true), genres.folded.map { it.label.aiAdded })
+        assertEquals(listOf("Folk", "Indie Folk", "Blues"), folkChip.folded.map { it.label.genre.label })
+        assertEquals(listOf(false, true, true), folkChip.folded.map { it.label.aiAdded })
         // Still listed, so it may reach a prompt.
-        val album = genres.rows.single { it.level == GenreLevel.ALBUM }
-        assertEquals("Claude Haiku 5.5", album.labels.single().aiModel)
+        assertEquals(
+            model,
+            folkChip.rows
+                .single { it.level == GenreLevel.ALBUM }
+                .labels
+                .single()
+                .aiModel,
+        )
+        // A backed track tag leads, so Folk is no chip: the list's Folk joins the chips, marked AI,
+        // and still not the track's row.
+        val rockVotes = vocabulary.labelsFor(listOf("rock"), level = GenreLevel.TRACK, votes = mapOf("rock" to 3))
+        val backed =
+            combineGenres(
+                mapOf(LabelSource.MUSICBRAINZ to rockVotes, LabelSource.LASTFM to album("folk")),
+                emptyList(),
+            )
+        assertEquals(listOf("Rock"), backed.folded.map { it.label.genre.label })
+        val listed = backed.withAi(track("folk"), model)
+        assertEquals(listOf("Rock", "Folk"), listed.folded.map { it.label.genre.label })
+        assertEquals(listOf(false, true), listed.folded.map { it.label.aiAdded })
+        assertEquals(
+            listOf("Rock"),
+            listed.rows
+                .first()
+                .labels
+                .map { it.genre.label },
+        )
+        assertEquals(listed, listed.withAi(track("folk"), model))
     }
 
     @Test

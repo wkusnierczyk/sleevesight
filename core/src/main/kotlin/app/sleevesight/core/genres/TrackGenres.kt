@@ -31,10 +31,13 @@ data class PlacedLabel(
 /**
  * A track's genre labels (#439; `design/design.md`, *Genre labels*): a row per level that has
  * labels, in [GenreLevel] order, an artist's row for each credited artist with labels, in credit
- * order. A genre found on several levels is on each of their rows.
+ * order. A genre found on several levels is on each of their rows. [aiListed] are the genres of
+ * the AI's genre list for the track (#762, [withAi]), in its order, by [aiModel], none before it.
  */
 data class TrackGenres(
     val rows: List<GenreRow> = emptyList(),
+    val aiListed: List<GenreLabel> = emptyList(),
+    val aiModel: String? = null,
 ) {
     /** Whether no row has a label. */
     val isEmpty: Boolean get() = rows.isEmpty()
@@ -54,9 +57,10 @@ data class TrackGenres(
      * genre: one contributor's tag on the recording does not outweigh the album's and the artists'.
      * The rows themselves (the *Genre tags* table) keep every label.
      *
-     * The labels the AI's genre list added to the track's row (#762, [TrackLabel.aiAdded]) follow,
-     * after the others and each genre once, those already among them left out: they neither lead nor
-     * back, so the chips shown before the list came stay as they were, in their order.
+     * The genres of the AI's genre list (#762, [aiListed]) not among them follow, in the list's
+     * order, each marked as the AI's ([TrackLabel.aiAdded]): the track row's label the list added,
+     * or, for a genre another row has, one of its own, so a chip shows it, credited to the model
+     * alone. They neither lead nor back, so the chips shown before the list came stay as they were.
      */
     val folded: List<PlacedLabel>
         get() {
@@ -79,16 +83,30 @@ data class TrackGenres(
                     .distinctBy { it.label.genre.identity }
                     .take(GenreVocabulary.MAX_LABELS)
             val shown = sources.map { it.label.genre.identity }.toSet()
-            val added = placed(GenreLevel.TRACK).filter { it.label.aiAdded && it.label.genre.identity !in shown }
+            val tracked = placed(GenreLevel.TRACK).filter { it.label.aiAdded }
+            val added =
+                aiListed
+                    .filter { it.identity !in shown }
+                    .distinctBy { it.identity }
+                    .map { genre ->
+                        tracked.firstOrNull { it.label.genre.identity == genre.identity } ?: aiChip(genre)
+                    }
             return sources + added
         }
+
+    // A chip of its own for [genre], on the AI's list, whose label another row has.
+    private fun aiChip(genre: GenreLabel): PlacedLabel {
+        val label = aiLabel(genre, aiModel.orEmpty())
+        return PlacedLabel(GenreRow(GenreLevel.TRACK, null, listOf(label)), label)
+    }
 
     /**
      * These genres with the AI's genre list for the track (#762, `GenreLists`): [genres], listed by
      * [model] (its name, as the AI settings show it). A genre some row has already is credited to the
-     * model there too, unmarked and not shown twice ([TrackLabel.aiModel]), so it may reach a prompt;
-     * one no row has joins the track's row, after its labels, with no source's credit
-     * ([TrackLabel.aiAdded]), a track row made for them where there was none. Applied twice, the same.
+     * model there too, unmarked and not shown twice in the rows ([TrackLabel.aiModel]), so it may reach
+     * a prompt; one no row has joins the track's row, after its labels, with no source's credit
+     * ([TrackLabel.aiAdded]), a track row made for them where there was none. The list is kept
+     * ([aiListed]), for the chips ([folded]). Applied twice, the same.
      */
     fun withAi(
         genres: List<GenreLabel>,
@@ -105,10 +123,7 @@ data class TrackGenres(
             genres
                 .filter { it.identity !in have }
                 .distinctBy { it.identity }
-                .map { genre ->
-                    val label = genre.copy(url = null, level = GenreLevel.TRACK, artist = null, votes = null)
-                    TrackLabel(label, emptyList(), votes = null, aiModel = model)
-                }
+                .map { aiLabel(it, model) }
         val track = marked.firstOrNull { it.level == GenreLevel.TRACK }
         val row = GenreRow(GenreLevel.TRACK, null, track?.labels.orEmpty() + added)
         return TrackGenres(
@@ -117,6 +132,8 @@ data class TrackGenres(
                 track == null -> listOf(row) + marked
                 else -> marked.map { if (it === track) row else it }
             },
+            aiListed = genres,
+            aiModel = model,
         )
     }
 
@@ -128,6 +145,18 @@ data class TrackGenres(
         rows.filter { it.level == level }.flatMap { row -> row.labels.map { PlacedLabel(row, it) } }
 
     companion object {
+        // [genre] as a track's label the AI's genre list by [model] gives, and no source (#762).
+        private fun aiLabel(
+            genre: GenreLabel,
+            model: String,
+        ): TrackLabel =
+            TrackLabel(
+                genre.copy(url = null, level = GenreLevel.TRACK, artist = null, votes = null),
+                emptyList(),
+                votes = null,
+                aiModel = model,
+            )
+
         /**
          * The net votes a track's tag needs to lead the folded labels with no other level agreeing
          * ([folded], #799): two, so that one contributor's tags alone do not.
