@@ -10,7 +10,10 @@ import org.junit.Test
 
 /**
  * A remote player's session, recorded (#803): what a reading asked of it, and its state, which the
- * test changes as the player or the user would ([report]).
+ * test changes as the player or the user would, each change reported as it is made ([reportPlaying],
+ * [reportVolume], [reportRemote]) or queued and delivered later ([queue], [deliver]), as a
+ * callback's report may arrive after the session has changed again. With [answersAtOnce], a pause
+ * is reported to a watcher while it is asked, before the call returns.
  */
 internal class FakeRemoteMusic(
     override var volumeControl: Int = VolumeProvider.VOLUME_CONTROL_FIXED,
@@ -19,11 +22,14 @@ internal class FakeRemoteMusic(
 ) : RemoteMusic {
     override var remote = true
     override var playing = true
+    var answersAtOnce = false
     val asked = mutableListOf<String>()
-    var watching: (() -> Unit)? = null
+    var watching: ((RemoteReport) -> Unit)? = null
+    private val queued = mutableListOf<RemoteReport>()
 
     override fun pause() {
         asked += "pause"
+        if (answersAtOnce) reportPlaying(false)
     }
 
     override fun play() {
@@ -38,7 +44,7 @@ internal class FakeRemoteMusic(
         asked += if (direction == AudioManager.ADJUST_LOWER) "lower" else "raise"
     }
 
-    override fun watch(changed: () -> Unit) {
+    override fun watch(changed: (RemoteReport) -> Unit) {
         watching = changed
     }
 
@@ -46,10 +52,32 @@ internal class FakeRemoteMusic(
         watching = null
     }
 
-    /** The session reports a change: [change] applied, then told. */
-    fun report(change: FakeRemoteMusic.() -> Unit) {
-        change()
-        watching?.invoke()
+    fun reportPlaying(now: Boolean) {
+        playing = now
+        watching?.invoke(RemoteReport(playing = now))
+    }
+
+    fun reportVolume(now: Int) {
+        volume = now
+        watching?.invoke(RemoteReport(remote = remote, volume = now))
+    }
+
+    fun reportRemote(now: Boolean) {
+        remote = now
+        watching?.invoke(RemoteReport(remote = now, volume = volume))
+    }
+
+    /** The session becomes [now]'s playing, its report kept for [deliver]. */
+    fun queue(now: Boolean) {
+        playing = now
+        queued += RemoteReport(playing = now)
+    }
+
+    /** The reports kept, delivered in order, after every change they report was made. */
+    fun deliver() {
+        val all = queued.toList()
+        queued.clear()
+        all.forEach { watching?.invoke(it) }
     }
 }
 
@@ -84,7 +112,7 @@ class ReadAloudMusicFocusTest {
         assertEquals(listOf("pause"), speaker.asked)
         assertTrue("said on Home", focus.pausedInstead)
 
-        speaker.report { playing = false }
+        speaker.reportPlaying(false)
         focus.release()
         assertEquals(listOf("pause", "play"), speaker.asked)
         assertFalse(focus.pausedInstead)
@@ -109,7 +137,7 @@ class ReadAloudMusicFocusTest {
         take(ReadAloudMusic.LOWER)
         assertEquals(listOf("volume 12"), speaker.asked)
         assertFalse(focus.pausedInstead)
-        speaker.report { volume = 12 }
+        speaker.reportVolume(12)
         focus.release()
         assertEquals(listOf("volume 12", "volume 40"), speaker.asked)
     }
@@ -119,8 +147,8 @@ class ReadAloudMusicFocusTest {
         val speaker = FakeRemoteMusic(VolumeProvider.VOLUME_CONTROL_ABSOLUTE, volume = 40, maxVolume = 100)
         playing = speaker
         take(ReadAloudMusic.LOWER)
-        speaker.report { volume = 12 }
-        speaker.report { volume = 20 }
+        speaker.reportVolume(12)
+        speaker.reportVolume(20)
         focus.release()
         assertEquals(listOf("volume 12"), speaker.asked)
     }
@@ -139,9 +167,9 @@ class ReadAloudMusicFocusTest {
     fun musicTheUserPlaysAndPausesAgainDuringTheReadingStaysPaused() {
         val speaker = FakeRemoteMusic().also { playing = it }
         take(ReadAloudMusic.PAUSE)
-        speaker.report { playing = false }
-        speaker.report { playing = true }
-        speaker.report { playing = false }
+        speaker.reportPlaying(false)
+        speaker.reportPlaying(true)
+        speaker.reportPlaying(false)
         focus.release()
         assertEquals(listOf("pause"), speaker.asked)
     }
@@ -150,7 +178,8 @@ class ReadAloudMusicFocusTest {
     fun aReportOfPlayingBeforeThePauseLandsIsNotTheUsers() {
         val speaker = FakeRemoteMusic().also { playing = it }
         take(ReadAloudMusic.PAUSE)
-        speaker.report { volume = 0 }
+        // Still playing: the pause has not landed.
+        speaker.reportPlaying(true)
         focus.release()
         assertEquals(listOf("pause", "play"), speaker.asked)
     }
@@ -159,7 +188,55 @@ class ReadAloudMusicFocusTest {
     fun musicMovedToThePhoneDuringTheReadingIsNotPlayedAgain() {
         val speaker = FakeRemoteMusic().also { playing = it }
         take(ReadAloudMusic.PAUSE)
-        speaker.report { remote = false }
+        speaker.reportRemote(false)
+        focus.release()
+        assertEquals(listOf("pause"), speaker.asked)
+    }
+
+    @Test
+    fun reportsDeliveredAfterTheSessionChangedAgainAreReadAsTheyWereGiven() {
+        val speaker = FakeRemoteMusic().also { playing = it }
+        take(ReadAloudMusic.PAUSE)
+        // The pause lands, the user plays and pauses again, all before a callback runs.
+        speaker.queue(false)
+        speaker.queue(true)
+        speaker.queue(false)
+        speaker.deliver()
+        focus.release()
+        assertEquals(listOf("pause"), speaker.asked)
+    }
+
+    @Test
+    fun aPauseAcknowledgedAtOnceIsSeenSoTheUsersPlayAndPauseAfterIsKept() {
+        val speaker = FakeRemoteMusic().also { playing = it }
+        speaker.answersAtOnce = true
+        take(ReadAloudMusic.PAUSE)
+        speaker.reportPlaying(true)
+        speaker.reportPlaying(false)
+        focus.release()
+        assertEquals(listOf("pause"), speaker.asked)
+    }
+
+    @Test
+    fun musicNoLongerPlayingOnceWatchedIsLeftAlone() {
+        val speaker = FakeRemoteMusic().also { playing = it }
+        speaker.playing = false
+        take(ReadAloudMusic.LOWER)
+        assertFalse(focus.pausedInstead)
+        focus.release()
+        assertTrue(speaker.asked.isEmpty())
+    }
+
+    @Test
+    fun musicTheUserTookOverIsNotHeldAgainByTheNextReading() {
+        val speaker = FakeRemoteMusic().also { playing = it }
+        take(ReadAloudMusic.PAUSE)
+        speaker.reportPlaying(false)
+        speaker.reportPlaying(true)
+        speaker.reportPlaying(false)
+        // The setting changed, and the next reading takes the focus the other way; nothing plays.
+        playing = null
+        take(ReadAloudMusic.LOWER)
         focus.release()
         assertEquals(listOf("pause"), speaker.asked)
     }

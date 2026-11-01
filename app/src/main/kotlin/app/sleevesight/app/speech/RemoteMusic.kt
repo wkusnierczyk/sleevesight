@@ -47,23 +47,42 @@ interface RemoteMusic {
     /** Turns the volume a step up or down (`AudioManager.ADJUST_RAISE`, `ADJUST_LOWER`), with a relative control. */
     fun adjustVolume(direction: Int)
 
-    /** Calls [changed] at each report of its playback state or volume, and when it ends, until [unwatch]. */
-    fun watch(changed: () -> Unit)
+    /**
+     * Calls [changed] with each report of its playback state or volume, and when it ends, as the
+     * report gave it (not as the session is when it is delivered, which may be a later state),
+     * until [unwatch].
+     */
+    fun watch(changed: (RemoteReport) -> Unit)
 
     fun unwatch()
 }
+
+/**
+ * One report of a [RemoteMusic]'s session, as its callback gave it: whether it plays ([playing],
+ * from a playback state), whether it plays on another device and at what [volume] (from its audio
+ * info), or that it ended ([remote] false); null for what the report does not say.
+ */
+class RemoteReport(
+    val playing: Boolean? = null,
+    val remote: Boolean? = null,
+    val volume: Int? = null,
+)
 
 /**
  * What a reading does to [music], a remote session that plays as it starts, as [lower] (*Reduce
  * volume*) or not (*Pause playback*) says, undone by [end]:
  * - paused through its transport controls with *Pause playback*, and with *Reduce volume* where its
  *   volume is fixed ([pausedInstead]); played again at the end unless the user took it over in
- *   between: it played again after the pause had landed (the user paused it after, or plays it
- *   now), or it no longer plays on another device;
+ *   between: a report said it played after one had said the pause landed (the user paused it after,
+ *   or plays it now), or it no longer plays on another device;
  * - lowered with an absolute volume, to [LOWERED_SHARE] of it, and set back at the end unless the
  *   user set another volume after the lowered one was reported, or it no longer plays remotely;
  * - lowered with a relative volume by as many steps as that takes (or [RELATIVE_STEPS] where it
  *   reports no volume), and raised by as many at the end, unless it no longer plays remotely.
+ *
+ * The session is watched before anything is asked of it, so no report of what is asked is missed,
+ * and checked once watched: music that no longer plays then, or no longer remotely, is left alone.
+ * Reports are read one by one, each as it was given.
  */
 class RemoteHold private constructor(
     val music: RemoteMusic,
@@ -80,11 +99,26 @@ class RemoteHold private constructor(
     private var landed = false
     private var takenOver = false
 
+    /** Whether the music is still the hold's to give back: the user has not taken it over, and it plays remotely. */
+    val owned: Boolean get() = !takenOver && music.remote
+
     /** Whether the music was paused though *Reduce volume* is chosen: its volume cannot be set from the phone. */
     var pausedInstead: Boolean = false
         private set
 
-    private fun start(lower: Boolean) {
+    private fun start(
+        lower: Boolean,
+        ours: Boolean,
+    ) {
+        if (way == Way.NONE) return
+        music.watch(::changed)
+        // Paused, or moved to the phone, between being found and being watched: nothing to hold.
+        // Music a hold before this one just gave back may not report playing yet: it is held.
+        if (!music.remote || !(ours || music.playing)) {
+            music.unwatch()
+            takenOver = true
+            return
+        }
         when (way) {
             Way.PAUSED -> {
                 pausedInstead = lower
@@ -100,30 +134,27 @@ class RemoteHold private constructor(
                 steps = if (max > 0) music.volume - lowerOf(music.volume) else RELATIVE_STEPS
                 repeat(steps) { music.adjustVolume(AudioManager.ADJUST_LOWER) }
             }
-            Way.NONE -> return
+            Way.NONE -> Unit
         }
-        music.watch(::changed)
     }
 
-    private fun changed() {
-        if (!music.remote) {
-            takenOver = true
-            return
-        }
+    private fun changed(report: RemoteReport) {
+        if (report.remote == false) takenOver = true
+        if (takenOver) return
         when (way) {
-            Way.PAUSED ->
-                if (!landed) {
-                    landed = !music.playing
-                } else if (music.playing) {
-                    takenOver = true
-                }
-            Way.ABSOLUTE ->
-                if (!landed) {
-                    landed = music.volume == lowered
-                } else if (music.volume != lowered) {
-                    takenOver = true
-                }
+            Way.PAUSED -> report.playing?.let { playing -> follow(asked = !playing) }
+            Way.ABSOLUTE -> report.volume?.let { volume -> follow(asked = volume == lowered) }
             Way.RELATIVE, Way.NONE -> Unit
+        }
+    }
+
+    // A report that the music is as asked ([asked]) lands what was asked; once landed, one that it
+    // is not is the user's change.
+    private fun follow(asked: Boolean) {
+        if (!landed) {
+            landed = asked
+        } else if (!asked) {
+            takenOver = true
         }
     }
 
@@ -150,10 +181,14 @@ class RemoteHold private constructor(
 
         private fun lowerOf(volume: Int): Int = (volume * LOWERED_SHARE).roundToInt()
 
-        /** Holds [music] for a reading, [lower] or paused, as above. */
+        /**
+         * Holds [music] for a reading, [lower] or paused, as above; [ours] when it is the music a
+         * hold for the reading before just gave back, which need not report playing yet.
+         */
         fun start(
             music: RemoteMusic,
             lower: Boolean,
+            ours: Boolean = false,
         ): RemoteHold {
             val way =
                 when {
@@ -163,7 +198,7 @@ class RemoteHold private constructor(
                     music.volumeControl == VolumeProvider.VOLUME_CONTROL_RELATIVE -> Way.RELATIVE
                     else -> Way.PAUSED
                 }
-            return RemoteHold(music, way).also { it.start(lower) }
+            return RemoteHold(music, way).also { it.start(lower, ours) }
         }
     }
 }
@@ -174,6 +209,9 @@ class ControllerRemoteMusic(
 ) : RemoteMusic {
     private var ended = false
     private var callback: MediaController.Callback? = null
+
+    // Whether it played remotely as last reported, which a playback state is read by.
+    private var reportedRemote = false
 
     // Annotated non-null, yet null from a Robolectric controller: read as possibly absent.
     private val info: MediaController.PlaybackInfo? get() = controller.playbackInfo
@@ -198,17 +236,25 @@ class ControllerRemoteMusic(
 
     override fun adjustVolume(direction: Int) = controller.adjustVolume(direction, 0)
 
-    override fun watch(changed: () -> Unit) {
+    override fun watch(changed: (RemoteReport) -> Unit) {
         unwatch()
+        reportedRemote = remote
+        val player = controller.packageName
         val watching =
             object : MediaController.Callback() {
-                override fun onPlaybackStateChanged(state: PlaybackState?) = changed()
+                override fun onPlaybackStateChanged(state: PlaybackState?) {
+                    val shown = SessionMapping.effectiveState(player, state, reportedRemote)
+                    changed(RemoteReport(playing = SessionMapping.isActive(shown)))
+                }
 
-                override fun onAudioInfoChanged(info: MediaController.PlaybackInfo) = changed()
+                override fun onAudioInfoChanged(info: MediaController.PlaybackInfo) {
+                    reportedRemote = info.playbackType == MediaController.PlaybackInfo.PLAYBACK_TYPE_REMOTE
+                    changed(RemoteReport(remote = reportedRemote, volume = info.currentVolume))
+                }
 
                 override fun onSessionDestroyed() {
                     ended = true
-                    changed()
+                    changed(RemoteReport(remote = false))
                 }
             }
         controller.registerCallback(watching, Handler(Looper.getMainLooper()))

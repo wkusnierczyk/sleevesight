@@ -54,13 +54,14 @@ class ReadAloudMusicFocus(
         how: ReadAloudMusic,
         lost: () -> Unit,
     ): Boolean {
-        // Taken another way for the reading that follows: the same music held afresh, though no
-        // longer playing once the last hold paused it.
-        val kept = hold?.music
+        // Taken another way for the reading that follows: the music the last hold still owns held
+        // afresh, though no longer playing once it paused it; music the user took over is theirs,
+        // and only music playing now is held.
+        val kept = hold?.takeIf { it.owned }?.music
         endHold()
         if (!audio.take(how, lost)) return false
-        val music = kept?.takeIf { it.remote } ?: remote()
-        hold = music?.let { RemoteHold.start(it, lower = how == ReadAloudMusic.LOWER) }
+        val music = kept ?: remote()
+        hold = music?.let { RemoteHold.start(it, lower = how == ReadAloudMusic.LOWER, ours = it === kept) }
         return true
     }
 
