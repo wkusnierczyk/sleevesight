@@ -21,12 +21,15 @@ import app.sleevesight.app.speech.ReadAloud
 
 /**
  * A *Read aloud* button's state (#325): whether its own reading is under way ([reading]); a tap
- * starts it ([onRead]) or, while it reads, stops it ([onStop]).
+ * starts it ([onRead]) or, while it reads, stops it ([onStop]). [pausedInstead]: while it reads,
+ * the music is paused though *Reduce volume* is chosen, on a speaker whose volume the phone cannot
+ * set (#803).
  */
 internal class ReadAloudControl(
     val reading: Boolean,
     val onRead: () -> Unit,
     val onStop: () -> Unit,
+    val pausedInstead: Boolean = false,
 )
 
 /**
@@ -42,7 +45,9 @@ internal fun readAloudControl(
 ): ReadAloudControl? {
     if (readAloud == null) return null
     val reading by readAloud.reading.collectAsState()
-    return ReadAloudControl(reading?.id == id, start, readAloud::stop)
+    val pausedInstead by readAloud.pausedInstead.collectAsState()
+    val own = reading?.id == id
+    return ReadAloudControl(own, start, readAloud::stop, pausedInstead = own && pausedInstead)
 }
 
 /**

@@ -59,7 +59,7 @@ import kotlin.time.Duration.Companion.seconds
  *   insight's prompt leaves out the artist-level lines another insight of the listening session
  *   cited, and all of them for a track with enough lines of its own (#239, `PromptEvidence`); off,
  *   every insight is written from all its evidence, as before #239.
- * @property readAloudMusic *While reading aloud* (#325): what happens to the music playing while an
+ * @property readAloudMusic *Music while reading aloud* (#325): what happens to the music playing while an
  *   insight is read aloud: lowered under the voice (the default, so the music is not interrupted),
  *   or paused and resumed after it. See [ReadAloudMusic].
  * @property readTrackLineFirst *Read the track line first* (#325): whether reading an insight aloud
@@ -725,18 +725,18 @@ enum class WriteAutomatically {
 }
 
 /**
- * *While reading aloud* (#325): what happens to the music playing while an insight is read aloud,
+ * *Music while reading aloud* (#325): what happens to the music playing while an insight is read aloud,
  * through Android's audio focus, which the player follows.
  */
 enum class ReadAloudMusic {
     /**
-     * *Lower the music*: the player plays on, quieter, under the voice (transient audio focus that
+     * *Reduce volume*: the player plays on, quieter, under the voice (transient audio focus that
      * lets others duck). The default: the music is not interrupted.
      */
     LOWER,
 
     /**
-     * *Pause the music*: the player pauses for the voice and plays on after it (transient audio
+     * *Pause playback*: the player pauses for the voice and plays on after it (transient audio
      * focus), as players do when Android hands the focus back.
      */
     PAUSE,

@@ -15,6 +15,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -80,7 +81,10 @@ internal class FakeSpeech(
 /** The audio focus, recorded: taken how, released, and lost from the reading when told ([lose]). */
 internal class FakeFocus(
     var grants: Boolean = true,
+    var pausesInstead: Boolean = false,
 ) : MusicFocus {
+    private val pausedState = MutableStateFlow(false)
+
     val taken = mutableListOf<ReadAloudMusic>()
     var held = false
     var releases = 0
@@ -94,20 +98,24 @@ internal class FakeFocus(
         taken += how
         held = true
         this.lost = lost
+        pausedState.value = pausesInstead
         return true
     }
 
     override fun release() {
         if (held) releases++
         held = false
+        pausedState.value = false
     }
+
+    override val pausedInstead: StateFlow<Boolean> = pausedState
 
     /** Another app takes the focus (a call). */
     fun lose() = lost?.invoke()
 }
 
 /**
- * *Read aloud* (#325): a reading takes the audio focus as *While reading aloud* says and gives it
+ * *Read aloud* (#325): a reading takes the audio focus as *Music while reading aloud* says and gives it
  * back at its end; it stops at once on Stop, on a track change, when what it reads is replaced, when
  * another app takes the sound, and when the app leaves the screen (not for a rotation); what cannot
  * be read is told, never read past; and *Read new insights aloud* reads only an insight written
@@ -158,6 +166,19 @@ class ReadAloudTest {
         settings.value = Settings(readAloudMusic = ReadAloudMusic.PAUSE)
         readAloud.readInsight(shown, insight)
         assertEquals(listOf(ReadAloudMusic.PAUSE), focus.taken)
+    }
+
+    @Test
+    fun musicPausedThoughReduceVolumeIsChosenIsToldWhileTheReadingLasts() {
+        focus.pausesInstead = true
+        readAloud.readInsight(shown, insight)
+        assertTrue(readAloud.pausedInstead.value)
+        speech.finish()
+        assertFalse(readAloud.pausedInstead.value)
+
+        readAloud.readInsight(shown, insight)
+        readAloud.stop()
+        assertFalse("stopped, nothing to tell", readAloud.pausedInstead.value)
     }
 
     @Test

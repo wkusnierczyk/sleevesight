@@ -298,7 +298,9 @@ internal fun ValueRow(
  * connected button group ([ChoiceButtonGroup]), the [selected] one marked; a tap on another calls
  * [onSelect] with it, at once, no dialog. Each button is read with [title] ("Theme: Light"). A
  * value in [details] is read with its button, and has a line under the group saying what it does
- * while it is the one chosen ([ChoiceDetails]). A setting whose choices are many or long, or
+ * while it is the one chosen ([ChoiceDetails]). With a label for every choice in [short], the group
+ * shows those where the full ones do not fit side by side, and never stacks (#803). A setting
+ * whose choices are many or long, or
  * described one by one, is a [ValueRow] opening a dialog instead (`design/design.md`, *Settings
  * screen*). Not [enabled], none can be chosen; a value in [disabled], that one; [oneRow] keeps the
  * buttons in one row at any font size (#801, [ChoiceButtonGroup]); [below] comes under the line
@@ -316,6 +318,7 @@ internal fun <T> ChoiceButtonsRow(
     disabled: Set<T> = emptySet(),
     oneRow: Boolean = false,
     below: (@Composable () -> Unit)? = null,
+    short: Map<T, String> = emptyMap(),
     onSelect: (T) -> Unit,
 ) {
     if (!shownInSearch(title)) return
@@ -338,6 +341,7 @@ internal fun <T> ChoiceButtonsRow(
             enabled = enabled,
             disabled = disabled,
             oneRow = oneRow,
+            short = short,
         )
         ChoiceDetails(choices, selected, details)
         below?.invoke()

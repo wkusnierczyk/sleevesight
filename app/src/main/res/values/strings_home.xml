@@ -503,6 +503,7 @@
          reads, the app's own words in what is read, and what is said when it cannot read. -->
     <string name="home_read_aloud">Read aloud</string>
     <string name="home_read_aloud_stop">Stop reading aloud</string>
+    <string name="home_read_aloud_paused_instead">The speaker’s volume cannot be set from the phone, so the music is paused while the insight is read.</string>
     <string name="read_aloud_unverified">Unverified:</string>
     <string name="read_aloud_track_line">%1$s, by %2$s.</string>
     <string name="read_aloud_no_engine">This phone has no text-to-speech engine to read the insight aloud. One can be set up in Android’s settings, under Accessibility, Text-to-speech output.</string>

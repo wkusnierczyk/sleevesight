@@ -66,7 +66,8 @@ import java.util.Locale
  * tap reads the insight, and the button becomes *Stop reading aloud*, which stops it. None with an
  * insight not written, where the heading is as tall as the button would be. At twice the font size on
  * a narrow phone it keeps its place and size, and the heading stays clear of it.
- * Under a genre's written reason, the same button reads its question, then the reason.
+ * Under a genre's written reason, the same button reads its question, then the reason. While the
+ * music is paused though *Reduce volume* is chosen (#803), a note under the heading says why.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w411dp-h891dp-420dpi")
@@ -76,10 +77,11 @@ class ReadAloudScreenTest {
     val compose = createEmptyComposeRule()
 
     private val speech = FakeSpeech()
+    private val focus = FakeFocus()
     private val readAloud =
         ReadAloud(
             speech,
-            FakeFocus(),
+            focus,
             MutableStateFlow(Settings()),
             SpokenWords("Unverified:") { title, artists -> "$title, by $artists." },
             { false },
@@ -175,6 +177,27 @@ class ReadAloudScreenTest {
             compose.waitForIdle()
             assertEquals(1, speech.stops)
             compose.onNodeWithTag(READ_ALOUD_TAG).assertContentDescriptionEquals("Read aloud")
+        }
+
+    @Test
+    fun whileTheMusicIsPausedThoughReduceVolumeIsChosenANoteUnderTheHeadingSaysWhy() =
+        home(insight) {
+            val note =
+                "The speaker’s volume cannot be set from the phone, so the music is paused while the insight is read."
+            compose.onNodeWithTag(READ_ALOUD_TAG).performClick()
+            compose.waitForIdle()
+            compose.onNodeWithText(note).assertDoesNotExist()
+            compose.onNodeWithTag(READ_ALOUD_TAG).performClick()
+            compose.waitForIdle()
+
+            focus.pausesInstead = true
+            compose.onNodeWithTag(READ_ALOUD_TAG).performClick()
+            compose.waitForIdle()
+            val shown = compose.onNodeWithText(note).fetchSemanticsNode().boundsInRoot
+            assertTrue("under the heading", shown.top >= heading().bottom)
+            speech.finish()
+            compose.waitForIdle()
+            compose.onNodeWithText(note).assertDoesNotExist()
         }
 
     @Test
