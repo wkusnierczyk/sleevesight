@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Settings' sections (#444): each section's short description, shown beside its chip, and its fuller explanation, shown at the top of its panel (#649). -->
+    <!-- Settings' sections (#444): each section's short description, shown beside its chip, with no full stop (#812), and its fuller explanation, shown at the top of its panel (#649). -->
     <string name="settings_section_collapsed">collapsed</string>
     <!-- The settings' search (#649): the box's hint, which a screen reader reads as its name; its clear button; nothing found, %1$s what was typed; how many sections it found, said to a screen reader. -->
     <string name="settings_search_hint">Search settings</string>
@@ -26,7 +26,7 @@
     <!-- Under the players (#674): whether Home, with nothing playing, lists only the players switched on. -->
     <string name="settings_players_on_home">Only enabled players on Home</string>
     <string name="settings_players_on_home_summary">Home lists only the players Sleevesight follows, not every player it has recognized.</string>
-    <string name="settings_sources_short">External services providing information on artists and music.</string>
+    <string name="settings_sources_short">External services providing information on artists and music</string>
     <string name="settings_sources_long">Sleevesight pulls information about the currently played music from services dedicated to music and from general information sources. Switch on the services you want Sleevesight to get information from.</string>
     <string name="settings_ai_short">Large Language Model (LLM) services</string>
     <string name="settings_ai_long">Sleevesight uses LLMs to process, aggregate, and present information retrieved from sources. Use the settings to specify the model and effort; stronger models and higher effort provide better results at a higher cost. One service at a time. Switching off a service does not erase the most recently used model and effort settings.</string>
@@ -36,14 +36,16 @@
     <string name="settings_keys_long">Sleevesight uses external services that require authentication via API keys, obtained from each service’s own website. Your keys are stored encrypted on this phone, and each is sent only to its own service.</string>
     <string name="settings_genres_short">Current music genres</string>
     <string name="settings_genres_long">Sleevesight collects genre information from sources and compiles a short list of representative categories.</string>
-    <string name="settings_insights_short">Generated current track summaries.</string>
+    <string name="settings_insights_short">Generated current track summaries</string>
     <string name="settings_insights_long">Sleevesight collects track, artist, and album information from sources and uses AI to generate readable descriptions based on the sourced evidence.</string>
-    <string name="settings_history_short">Listening history, kept on this phone.</string>
+    <string name="settings_history_short">Listening history, kept on this phone</string>
     <string name="settings_history_long">Sleevesight keeps information about the tracks you play on this phone (titles, artists, albums, and when they played), to avoid repeating itself within a listening session and to learn which track changes are your skips. Nothing of it leaves the phone.</string>
     <string name="settings_appearance_short">App customisation</string>
     <string name="settings_appearance_long">Sleevesight appearance options</string>
     <string name="settings_about_short">Product and technology information</string>
     <string name="settings_about_long">Detailed information about the design, implementation, dependencies, licencing, and policies.</string>
+    <string name="settings_developer_short">Internal settings, only in developer mode</string>
+    <string name="settings_developer_long">Options for testing Sleevesight and reporting problems to the developer. This section shows only in developer mode.</string>
 
     <!-- Links to another app or a site, with the open-in-new symbol; the _of forms are what a screen reader says. -->
     <string name="settings_open_app">Open the app</string>

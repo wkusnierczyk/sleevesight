@@ -47,10 +47,10 @@ private fun indexed(
 ): IndexedSection =
     IndexedSection(
         section,
-        listOfNotNull(
+        listOf(
             stringResource(section.title),
-            section.summary?.let { stringResource(it) },
-            section.details?.let { stringResource(it) },
+            stringResource(section.summary),
+            stringResource(section.details),
         ),
         rows,
     )
