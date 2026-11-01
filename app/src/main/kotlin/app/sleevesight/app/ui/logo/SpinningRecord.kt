@@ -82,10 +82,10 @@ private fun turn(): State<Float> =
 
 /**
  * An in-progress message (#785): the turning record ([SpinningRecord]), [RECORD_GAP], then [text]
- * in [style] and [color], which takes the rest of the width and wraps there. Where the record sits
- * by a message that wraps is [BUSY_ALIGNMENT]'s. [modifier] goes on the row (its padding);
- * [textModifier] on the message (its test tag, its live region), which a screen reader reads as it
- * is, the record not at all.
+ * in [style] and [color], which takes the rest of the width and wraps there. By a message that wraps,
+ * the record sits by its first line, its centre on the line's, as picked on the issue (#785).
+ * [modifier] goes on the row (its padding); [textModifier] on the message (its test tag, its live
+ * region, its heading), which a screen reader reads as it is, the record not at all.
  */
 @Composable
 fun Busy(
@@ -121,12 +121,7 @@ fun Busy(
                 Constraints.Infinity
             }
         val message = measurables[1].measure(Constraints(maxWidth = room))
-        val whole = message.height / 2f
-        val anchor =
-            when (BUSY_ALIGNMENT) {
-                BusyAlignment.FIRST_LINE -> firstLine.centre ?: whole
-                BusyAlignment.CENTRED -> whole
-            }
+        val anchor = firstLine.centre ?: (message.height / 2f)
         // The record's top on the anchor; above the row's top (a line less tall than the record),
         // the message goes down by as much instead.
         val top = (anchor - record.height / 2f).roundToInt()
@@ -143,21 +138,6 @@ fun Busy(
         }
     }
 }
-
-/** Where [Busy]'s record sits by a message that wraps (#785). */
-enum class BusyAlignment {
-    /** By the first line: the record's centre on the first line's. */
-    FIRST_LINE,
-
-    /** Centred on the whole message. */
-    CENTRED,
-}
-
-/**
- * Where [Busy]'s record sits by a message that wraps (#785): by the first line, for now; the pick
- * between it and [BusyAlignment.CENTRED] is still open. A message on one line has the two the same.
- */
-val BUSY_ALIGNMENT: BusyAlignment = BusyAlignment.FIRST_LINE
 
 /** The test tag of [SpinningRecord], in the unmerged tree. */
 const val SPINNING_RECORD_TAG: String = "spinning-record"
