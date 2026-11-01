@@ -1,0 +1,7 @@
+What's new in 0.1.14:
+- Search with AI is now Ask AI; its setting is Ask AI automatically.
+- Settings → Insights → AI web search: Ask AI can search the web (Exa), once or up to 3 times.
+- Genres: "Why is this…?" also for genres only MusicBrainz gives, via your AI's genre list.
+- Genres: a track tag with one vote no longer leads.
+- Key insights: no self-corrections; a web page's genre is no longer called the track's tag.
+- Read aloud: music on a speaker (Spotify Connect) is paused or lowered.
