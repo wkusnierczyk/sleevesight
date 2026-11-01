@@ -162,14 +162,15 @@ class MusicBrainzTagsTest {
     @Test
     fun `one-vote recording tags that agree with nothing give way to the album's in the folded genres`() =
         runTest {
-            // The case of #799, as the recording lookup answers it, through to the folded genres.
+            // The case of #799, as the recording lookup answers it, through to the folded genres: a
+            // recording with four one-vote tags that agree with neither the artist nor the album.
             val detail =
                 assertIs<Lookup.Found<MbRecordingDetail>>(
-                    MusicBrainzClient(ReplayNetClient.ok(BLACK_OAK)).recording(BLACK_OAK_MBID),
+                    MusicBrainzClient(ReplayNetClient.ok(ONE_VOTE)).recording("rec-one-vote"),
                 ).value
             val resolved =
                 RESOLVED.copy(
-                    recordingMbid = BLACK_OAK_MBID,
+                    recordingMbid = "rec-one-vote",
                     recordingTags = detail.tags,
                     recordingTagVotes = detail.tagVotes,
                 )
@@ -177,16 +178,16 @@ class MusicBrainzTagsTest {
             val track = MusicBrainzLabels(ArtistTags { Lookup.NotFound }, vocabulary).recordingLabels(tags)
             assertEquals(listOf(1, 1, 1, 1), track.map { it.votes })
 
-            val artist = listOf("folk", "singer-songwriter", "indie folk", "acoustic", "blues")
+            val artist = listOf("folk", "blues")
             val genres =
                 combineGenres(
                     mapOf(
                         LabelSource.MUSICBRAINZ to track,
                         LabelSource.LASTFM to
-                            vocabulary.labelsFor(artist, artist = "Emily Jane White") +
+                            vocabulary.labelsFor(artist, artist = "Gordon Lightfoot") +
                             vocabulary.labelsFor(listOf("folk"), level = GenreLevel.ALBUM),
                     ),
-                    listOf("Emily Jane White"),
+                    listOf("Gordon Lightfoot"),
                 )
             assertEquals(listOf("Folk"), genres.folded.map { it.label.genre.label })
             assertEquals(
@@ -198,14 +199,12 @@ class MusicBrainzTagsTest {
         }
 
     private companion object {
-        const val BLACK_OAK_MBID = "6f5dc353-985e-4913-ac28-3c2edf86daa2"
-
-        // Written for the test in the recording lookup's shape, with the tag names and vote counts
-        // the recording had (#799): one vote on each.
-        const val BLACK_OAK =
-            """{"id":"$BLACK_OAK_MBID","title":"The Black Oak","artist-credit":[],"relations":[],"tags":[
-              {"name":"rock","count":1},{"name":"pop","count":1},{"name":"alternative rock","count":1},
-              {"name":"indie rock","count":1}]}"""
+        // Written for the test in the recording lookup's shape, four tags with one vote each (#799);
+        // not MusicBrainz's data.
+        const val ONE_VOTE =
+            """{"id":"rec-one-vote","title":"A Song","artist-credit":[],"relations":[],"tags":[
+              {"name":"jazz","count":1},{"name":"techno","count":1},{"name":"reggae","count":1},
+              {"name":"metal","count":1}]}"""
 
         // Written for the test in the recording lookup's shape; not MusicBrainz's data.
         const val RECORDING =

@@ -105,24 +105,22 @@ class TrackGenresTest {
 
     @Test
     fun `folded, one-vote track tags that agree with nothing give way to the album's, the rows keep them`() {
-        // Emily Jane White, "The Black Oak" (#799): recording 6f5dc353-985e-4913-ac28-3c2edf86daa2's
-        // four tags, each with one vote, against the artist's labels and the album's.
+        // The case of #799, with tags written for the test: a recording with four one-vote tags that
+        // agree with neither the artist's labels nor the album's.
         val genres =
             combineGenres(
                 mapOf(
                     LabelSource.MUSICBRAINZ to
-                        recording("rock" to 1, "pop" to 1, "alternative rock" to 1, "indie rock" to 1) +
-                        artist("Emily Jane White", "folk", "singer-songwriter", "indie folk", "acoustic"),
-                    LabelSource.LASTFM to
-                        artist("Emily Jane White", "folk", "singer-songwriter", "indie folk", "acoustic", "blues") +
-                        album("folk"),
+                        recording("jazz" to 1, "techno" to 1, "reggae" to 1, "metal" to 1) +
+                        artist("A", "folk", "blues"),
+                    LabelSource.LASTFM to artist("A", "folk", "singer-songwriter") + album("folk"),
                 ),
-                listOf("Emily Jane White"),
+                listOf("A"),
             )
         assertEquals(listOf(GenreLevel.ALBUM to "Folk"), genres.foldedShown())
         // The *Genre tags* table still shows every level's.
         assertEquals(
-            listOf("Rock", "Pop", "Alternative Rock", "Indie Rock"),
+            listOf("Jazz", "Techno", "Reggae", "Metal"),
             genres.rows
                 .first { it.level == GenreLevel.TRACK }
                 .labels
@@ -151,6 +149,24 @@ class TrackGenresTest {
         assertEquals(listOf(GenreLevel.TRACK to "Folk"), folded(recording("folk" to 1), album("country"), artists))
         // With no other level, the track's show all the same.
         assertEquals(listOf(GenreLevel.TRACK to "Rock"), folded(recording("rock" to 1)))
+    }
+
+    @Test
+    fun `folded, another level backs a one-vote track tag by genre, whatever its spelling, and any artist's row`() {
+        fun folded(vararg labels: List<GenreLabel>) =
+            combineGenres(mapOf(LabelSource.MUSICBRAINZ to labels.toList().flatten()), listOf("A", "B")).foldedShown()
+
+        // `hip-hop` and `hip hop` are one genre, as `r&b` and `rnb` are.
+        assertEquals(
+            listOf(GenreLevel.TRACK to "Hip-Hop"),
+            folded(recording("hip-hop" to 1, "metal" to 1), album("hip hop")),
+        )
+        assertEquals(listOf(GenreLevel.TRACK to "R&B"), folded(recording("r&b" to 1, "metal" to 1), album("rnb")))
+        // Only the second credited artist's row has it.
+        assertEquals(
+            listOf(GenreLevel.TRACK to "Jazz"),
+            folded(recording("jazz" to 1, "metal" to 1), artist("A", "folk"), artist("B", "jazz")),
+        )
     }
 
     @Test

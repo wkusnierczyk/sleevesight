@@ -56,7 +56,12 @@ data class TrackGenres(
      */
     val folded: List<PlacedLabel>
         get() {
-            val others = rows.filter { it.level != GenreLevel.TRACK }.flatMap { it.labels }.map { it.genre.identity }
+            val others =
+                rows
+                    .filter { it.level != GenreLevel.TRACK }
+                    .flatMap { it.labels }
+                    .map { it.genre.identity }
+                    .toSet()
             val backed =
                 placed(GenreLevel.TRACK).filter { (_, label) ->
                     (label.votes ?: 0) >= MIN_VOTES || label.genre.identity in others
