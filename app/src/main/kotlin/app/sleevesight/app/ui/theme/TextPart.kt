@@ -1,6 +1,8 @@
 package app.sleevesight.app.ui.theme
 
-/** A piece of a [LinkedText]: [Words], a [Link] to a web page, or an [Action] run on a tap. */
+import androidx.compose.ui.text.SpanStyle
+
+/** A piece of a [LinkedText]: [Words], [Styled] words, a [Link] to a web page, or an [Action] run on a tap. */
 internal sealed interface TextPart {
     val text: String
 
@@ -10,6 +12,12 @@ internal sealed interface TextPart {
     /** Plain text. */
     data class Words(
         override val text: String,
+    ) : TextPart
+
+    /** Plain text in [style] (#762: the small **AI** mark after the model among a genre's tag sources). */
+    data class Styled(
+        override val text: String,
+        val style: SpanStyle,
     ) : TextPart
 
     /** A link that opens [url] in the browser. */

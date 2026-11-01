@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -13,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import app.sleevesight.app.pipeline.AiGenreList
 import app.sleevesight.app.pipeline.GenreNotes
 import app.sleevesight.app.ui.theme.PanelRule
 import app.sleevesight.app.ui.theme.handoffTarget
@@ -89,4 +91,23 @@ internal fun AiGenres(
             }
         }
     }
+}
+
+// The AI's genre list for [track] (#762) as [notes] give it: null while none is known. A new
+// subscription only when what the list's key is made of changes, not on every state of the track.
+@Composable
+internal fun aiGenres(
+    track: TrackState,
+    notes: GenreNotes,
+): AiGenreList? {
+    val list by remember(
+        track.normalized,
+        track.nowPlaying.duration,
+        track.evidence?.fingerprint,
+        track.gathered,
+        notes,
+    ) {
+        notes.aiGenres(track)
+    }.collectAsState(null)
+    return list
 }

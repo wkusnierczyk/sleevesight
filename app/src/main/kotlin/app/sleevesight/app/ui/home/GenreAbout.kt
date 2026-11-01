@@ -1,10 +1,8 @@
 package app.sleevesight.app.ui.home
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -15,12 +13,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.DefinitionState
@@ -47,12 +42,16 @@ import app.sleevesight.core.synthesis.SearchKind
  * this …?*, a button carrying the **AI** mark ([AiLabel]), or, once asked for, the reason, under the
  * question as a heading, checked and cited as the insight is: its citations chips that go to their
  * lines ([PanelNotes.onCite]), its grounding note under it. No button with *Show insights* off, no
- * AI service ready, or before the evidence is in. [afterRetry] takes the focus as a failed lookup's
- * *Retry* gives way to the loading line. For a genre
- * only MusicBrainz gives (D12), it is disabled, with why under it, where it would otherwise show
- * (#721). A reason still being written reads its `[AI]` as the settings allow it
+ * evidence is in. [afterRetry] takes the focus as a failed lookup's *Retry*, or a failed reason's,
+ * gives way to the loading line. While the AI service is asked (#762: the AI's genre list for a
+ * genre only MusicBrainz gives, then the reason), "Looking for an explanation…" in the button's
+ * place; the reason under it is credited "by {model}". Disabled, with why under it ([ReasonUnavailable]):
+ * with no AI service ready, a link to *Settings → AI services*; for a genre only MusicBrainz gives,
+ * when the AI's genre list cannot run, what to switch on, linked; when the AI could not explain it
+ * (the list does not have it, or the evidence cannot support it), "AI could not find an
+ * explanation.". A reason still being written reads its `[AI]` as the settings allow it
  * ([PanelNotes.modelAllowed]). A written reason has *Read aloud* (#325, [ReadAloudButton]) at the
- * end of its grounding note's row, which reads the question, then the reason ([PanelNotes.readAloud]).
+ * end of its credit's row, which reads the question, then the reason ([PanelNotes.readAloud]).
  */
 @Composable
 internal fun GenreAbout(
@@ -66,6 +65,7 @@ internal fun GenreAbout(
     val onCite = shown.onCite
     val modelAllowed = shown.modelAllowed
     val reader = shown.readAloud
+    val openSettingsAt = shown.openSettingsAt
     // A new subscription only when what the reason's key is made of changes, not on every state of
     // the track (a source landing, labels joining).
     val reason by remember(track.normalized, track.evidence?.fingerprint, track.genres, genre, notes) {
@@ -77,10 +77,11 @@ internal fun GenreAbout(
             ?.genre ?: return
     val question = stringResource(R.string.genre_why, inSentence(named.label))
     GenreDefinitionNote(named, notes, search, afterRetry)
+    val explain = { notes.explain(track, genre) }
     when (val shown = reason) {
         GenreReason.None -> Unit
-        GenreReason.Offered -> WhyButton(question) { notes.explain(track, genre) }
-        GenreReason.Withheld -> Withheld(question)
+        GenreReason.Offered -> WhyButton(question, onClick = explain)
+        is GenreReason.Unavailable -> ReasonUnavailable(question, shown.why, openSettingsAt)
         is GenreReason.Shown -> {
             val readAloud =
                 readAloudControl(reader, Reading.genreReason(genre)) {
@@ -89,13 +90,12 @@ internal fun GenreAbout(
                         reader?.readGenreReason(track, genre, question, written, notes.reason(track, genre))
                     }
                 }
-            Reason(
-                shown.state,
+            ReasonShown(
+                shown,
                 question,
                 InsightContext(track, true, true, modelAllowed, InsightOffers()),
-                onCite,
-                readAloud,
-            ) { notes.explain(track, genre) }
+                ReasonActions(onCite, readAloud, explain, afterRetry),
+            )
         }
     }
 }
@@ -164,7 +164,7 @@ internal fun GenreDefinitionNote(
 // In the definition's place, for a genre that has none (#663), in the panel's quiet note style.
 @Composable
 private fun NoDefinition() =
-    Quiet(stringResource(R.string.genre_definition_none), Modifier.testTag(GENRE_NO_DEFINITION_TAG))
+    QuietNote(stringResource(R.string.genre_definition_none), Modifier.testTag(GENRE_NO_DEFINITION_TAG))
 
 // The definition, then its credit: the article linked, and the licence.
 @Composable
@@ -184,9 +184,9 @@ private fun Definition(definition: GenreDefinition) {
 }
 
 // *Why is this …?*: as tall as the genre chips, answering a tap across 48 dp, with the AI mark;
-// disabled ([enabled] false) for a genre only MusicBrainz gives.
+// disabled ([enabled] false) where it cannot be asked (#762).
 @Composable
-private fun WhyButton(
+internal fun WhyButton(
     question: String,
     enabled: Boolean = true,
     onClick: () -> Unit,
@@ -200,77 +200,9 @@ private fun WhyButton(
     ) { AiLabel(question) }
 }
 
-// *Why is this …?* disabled, for a genre only MusicBrainz gives (D12, #721), and why, in the
-// panel's quiet note style.
+// [text] in the panel's quiet note style.
 @Composable
-private fun Withheld(question: String) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        WhyButton(question, enabled = false) {}
-        Quiet(stringResource(R.string.genre_why_withheld), Modifier.testTag(GENRE_WHY_WITHHELD_TAG))
-    }
-}
-
-// The reason asked for, in [state], under the [question]; offered again after a failure. Written,
-// with [readAloud] at the end of its grounding note's row.
-@Suppress("LongParameterList") // What the reason shows, and its two actions.
-@Composable
-private fun Reason(
-    state: InsightState,
-    question: String,
-    context: InsightContext,
-    onCite: (String) -> Unit,
-    readAloud: ReadAloudControl?,
-    again: () -> Unit,
-) {
-    Column(modifier = Modifier.testTag(GENRE_REASON_TAG), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(
-            question,
-            style = MaterialTheme.typography.titleSmall,
-            modifier = Modifier.semantics { heading() },
-        )
-        when (state) {
-            is InsightState.Writing -> {
-                for (paragraph in paragraphsOf(state.partial)) UncheckedProse(paragraph, context, onCite)
-                // With the turning record before it (#785).
-                Busy(
-                    stringResource(R.string.genre_why_writing),
-                    MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-
-            is InsightState.Written -> {
-                for (paragraph in state.grounded.paragraphs) {
-                    CheckedProse(paragraph, state.grounded, context.track?.evidence, onCite)
-                }
-                if (readAloud == null) {
-                    GroundingLine(state.grounded, state.cached, details = false)
-                } else {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(Modifier.weight(1f)) { GroundingLine(state.grounded, state.cached, details = false) }
-                        ReadAloudButton(readAloud, GENRE_READ_ALOUD_TAG)
-                    }
-                }
-                if (!state.complete) Quiet(stringResource(R.string.genre_why_incomplete))
-            }
-
-            InsightState.NoEvidence -> {
-                Quiet(stringResource(R.string.genre_why_no_evidence))
-            }
-
-            is InsightState.Failed -> {
-                Quiet(stringResource(R.string.genre_why_failed, failureText(state.reason)))
-            }
-
-            // Neither comes from a reason: not offered, and not stopped.
-            is InsightState.Idle, InsightState.Stopped -> Unit
-        }
-    }
-    if (state is InsightState.Failed) WhyButton(question, onClick = again)
-}
-
-@Composable
-private fun Quiet(
+internal fun QuietNote(
     text: String,
     modifier: Modifier = Modifier,
 ) {
@@ -299,8 +231,8 @@ private val WORD = Regex("\\p{L}+")
 internal const val WIKIPEDIA_LICENCE: String = "https://creativecommons.org/licenses/by-sa/4.0/"
 
 /**
- * The test tags of a genre's definition (or the line saying it has none), its *Why is this …?* (and
- * the line saying why it is disabled) and its reason.
+ * The test tags of a genre's definition (or the line saying it has none), its *Why is this …?* and
+ * its reason.
  */
 const val GENRE_DEFINITION_TAG: String = "genre-panel:definition"
 const val GENRE_NO_DEFINITION_TAG: String = "genre-panel:no-definition"
@@ -309,7 +241,6 @@ const val GENRE_NO_DEFINITION_TAG: String = "genre-panel:no-definition"
 const val GENRE_DEFINITION_LOOKING_TAG: String = "genre-panel:definition-looking"
 const val GENRE_DEFINITION_FAILED_TAG: String = "genre-panel:definition-failed"
 const val GENRE_WHY_TAG: String = "genre-panel:why"
-const val GENRE_WHY_WITHHELD_TAG: String = "genre-panel:why-withheld"
 const val GENRE_REASON_TAG: String = "genre-panel:reason"
 
 private val HEIGHT = 32.dp

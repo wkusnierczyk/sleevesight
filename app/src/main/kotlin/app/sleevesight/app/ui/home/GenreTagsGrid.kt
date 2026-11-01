@@ -16,18 +16,23 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
@@ -73,8 +78,9 @@ internal fun TagsGrid(
     Column(Modifier.testTag(GENRE_TAGS_TAG), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         GridHeading(stringResource(R.string.home_genre_tags))
         val selected = stringResource(R.string.home_genre_tag_selected)
+        val added = stringResource(R.string.genre_ai_added)
         rows.forEachIndexed { index, row ->
-            val reading = tagsReading(names[index], row, genre, selected)
+            val reading = tagsReading(names[index], row, genre, selected, added)
             val tagged = Modifier.testTag(GENRES_ROW_PREFIX + index).semantics { contentDescription = reading }
             GridRow(names[index], column, nameStyle, tagged, CHIP_INSET) { Cells(row, genre) }
         }
@@ -109,26 +115,22 @@ internal fun TagsGrid(
 
 /**
  * How a screen reader reads a row of tags (#786): its [name], then its tags in order, [genre]'s as
- * [selected] words it ("Rock, selected"), all one item: "Track, Rock, selected, Pop".
+ * [selected] words it ("Rock, selected"), all one item: "Track, Rock, selected, Pop". A tag the AI's
+ * genre list added (#762) reads with the model's name, as [added] words it ("Blues, from Claude
+ * Haiku 5.5").
  */
 internal fun tagsReading(
     name: String,
     row: GenreRow,
     genre: String,
     selected: String,
+    added: String = "%1\$s",
 ): String =
     (
         listOf(name) +
             row.labels.map { label ->
-                label.genre.label.let {
-                    if (label.genre.identity ==
-                        genre
-                    ) {
-                        selected.format(it)
-                    } else {
-                        it
-                    }
-                }
+                val named = label.aiModel?.takeIf { label.aiAdded }?.let { added.format(label.genre.label, it) }
+                (named ?: label.genre.label).let { if (label.genre.identity == genre) selected.format(it) else it }
             }
     ).joinToString(", ")
 
@@ -230,8 +232,17 @@ private fun Cells(
     }
 }
 
+// The style of the **AI** mark after a tag the AI's genre list added, or after the model among the
+// sources (#762), as on the buttons that call the AI service ([AiLabel]): [small]'s size, at
+// [MARK_ALPHA] of [ink], on the line's baseline.
+private fun markStyle(
+    ink: Color,
+    small: TextStyle,
+): SpanStyle = SpanStyle(fontSize = small.fontSize, color = ink.copy(alpha = ink.alpha * MARK_ALPHA))
+
 // A label in the grid: a smaller chip, not a button, in the chips' fills; [marked], the panel's genre,
-// which its row's reading names as selected ([tagsReading]).
+// which its row's reading names as selected ([tagsReading]). One the AI's genre list added (#762)
+// carries the **AI** mark after its name, as its chip does.
 @Composable
 private fun Cell(
     placed: PlacedLabel,
@@ -239,8 +250,18 @@ private fun Cell(
 ) {
     val shape = RoundedCornerShape(14.dp)
     val (fill, content) = chipColours(marked)
+    val mark = stringResource(R.string.home_ai_mark)
+    val markStyle = markStyle(content, MaterialTheme.typography.labelSmall)
+    val text =
+        buildAnnotatedString {
+            append(placed.label.genre.label)
+            if (placed.label.aiAdded) {
+                append(MARK_SPACE)
+                withStyle(markStyle) { append(mark) }
+            }
+        }
     Text(
-        placed.label.genre.label,
+        text,
         style = MaterialTheme.typography.labelMedium,
         color = content,
         modifier =
@@ -253,18 +274,36 @@ private fun Cell(
 }
 
 // Each source that gave any of [row]'s labels, once, in [LabelSource] order, named as the settings
-// name it ("Last.fm", "MusicBrainz") and linked to the row's page there where it has one, " · " between.
+// name it ("Last.fm", "MusicBrainz") and linked to the row's page there where it has one, " · " between;
+// then the model whose genre list gave any of its labels (#762), by name, not
+// linked, marked **AI** ([markStyle]); a screen reader reads it "Claude Haiku 5.5, AI", the comma there
+// for it alone, drawn too small to see ([HIDDEN_COMMA]): the row reads as one item with its links, so
+// it takes no description of its own.
 @Composable
 private fun sourceParts(row: GenreRow): List<TextPart> {
     val credits = row.labels.flatMap { it.credits }
-    return LabelSource.entries
-        .mapNotNull { source ->
+    val model = row.labels.firstNotNullOfOrNull { it.aiModel }
+    val mark = stringResource(R.string.home_ai_mark)
+    val markStyle = markStyle(MaterialTheme.colorScheme.onSurfaceVariant, MaterialTheme.typography.labelSmall)
+    val sources =
+        LabelSource.entries.mapNotNull { source ->
             val given = credits.filter { it.source == source }
             if (given.isEmpty()) return@mapNotNull null
             val name = sourceName(source.source)
             val url = given.firstNotNullOfOrNull { it.url }
             listOf(url?.let { TextPart.Link(name, it) } ?: TextPart.Words(name))
-        }.reduceOrNull { all, next -> all + TextPart.Words(SEPARATOR) + next }
+        }
+    val ai =
+        model?.let {
+            listOf(
+                TextPart.Words(it),
+                TextPart.Styled(",", HIDDEN_COMMA),
+                TextPart.Words(MARK_SPACE),
+                TextPart.Styled(mark, markStyle),
+            )
+        }
+    return (sources + listOfNotNull(ai))
+        .reduceOrNull { all, next -> all + TextPart.Words(SEPARATOR) + next }
         .orEmpty()
 }
 
@@ -282,6 +321,13 @@ const val GENRE_TAGS_CREDIT_TAG: String = "genre-tags:credit"
 
 private val MB = LabelSource.MUSICBRAINZ
 private const val SEPARATOR = " · "
+
+// Between a name and its **AI** mark: a narrow space that does not break, so the mark never wraps alone.
+private const val MARK_SPACE = "\u202F"
+
+// The comma between the model and its **AI** mark among the sources, for a screen reader's pause:
+// transparent, and too small to take room.
+private val HIDDEN_COMMA = SpanStyle(color = Color.Transparent, fontSize = 0.01.sp)
 private val COLUMN_GAP = 12.dp
 
 // How far a row's name sits below the top of its chips: their vertical padding, so the two read level.

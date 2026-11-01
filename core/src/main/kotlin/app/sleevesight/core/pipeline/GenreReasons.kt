@@ -22,6 +22,31 @@ data class KeptReason(
     val writtenAt: Instant?,
 )
 
+/** What a tap on *Why is this …?* does for a genre (#762), as [GenreReasons.path] works it out. */
+sealed interface ReasonPath {
+    /** Not offered: *Show insights* off, the evidence not in, or a genre the track does not have. */
+    data object None : ReasonPath
+
+    /** No AI service ready (none switched on, no key, or no model): disabled, with where to enable one. */
+    data object NoService : ReasonPath
+
+    /** Only MusicBrainz gives the genre, and the AI's genre list cannot run ([GenreLists.mode] none). */
+    data object CannotList : ReasonPath
+
+    /** Only MusicBrainz gives the genre, and the AI's genre list, known, does not have it: no call. */
+    data object NotListed : ReasonPath
+
+    /** Path B: only MusicBrainz gives the genre, and the AI's genre list, not known yet, is asked first, by [key]. */
+    data class Listing(
+        val key: CardKey,
+    ) : ReasonPath
+
+    /** Path A: the reason, by [key]. */
+    data class Reason(
+        val key: CardKey,
+    ) : ReasonPath
+}
+
 /**
  * *Why is this …?* in a genre's panel (#523; `design/design.md`, *Genre labels*): why the track
  * carries a genre label, written on a tap from its evidence by the AI service ([ai]), one call,
@@ -35,9 +60,11 @@ data class KeptReason(
  * Its states are the insight's ([InsightState]): [InsightState.Writing] while the reply comes,
  * [InsightState.Written] once checked, [InsightState.NoEvidence] when the evidence has nothing to
  * narrate (no call) or the model replies `NO_EVIDENCE`, [InsightState.Failed] when the call fails or
- * is declined. Not offered ([key] null) with *Show insights* off, with no AI service ready, before
- * the evidence is in, or for a genre only MusicBrainz's tags give (D12: they never reach a prompt),
- * which, where it would otherwise be offered, is [withheld], so the panel can say why (#721).
+ * is declined. Not written ([key] null) with *Show insights* off, with no AI service ready, before
+ * the evidence is in, or for a genre only MusicBrainz's tags give (D12: they never reach a prompt)
+ * and the AI's genre list does not have: for such a genre the list is asked first, naming no genre
+ * ([GenreLists], #762), and a genre on it is written as any other. What a tap does, and what the
+ * panel says where it does nothing, is [path].
  *
  * A cache that throws is a miss, and a write that fails keeps nothing; neither stops the reason.
  * Each state written comes with its time by [clock]; a reply kept is kept with the time it is shown
@@ -52,14 +79,17 @@ class GenreReasons(
 ) {
     /**
      * The key of [genre]'s reason for [track] under [settings] ([GenreLabel.identity]), or null when
-     * none may be written: see the class.
+     * none may be written: see the class. [listed] holds the genres of the AI's list for the track,
+     * by identity, where it is known (#762): a genre on it may reach a prompt, as one a source other
+     * than MusicBrainz gives may.
      */
     fun key(
         track: TrackState,
         genre: String,
         settings: Settings,
+        listed: Set<String>? = null,
     ): CardKey? {
-        val access = ready(track, settings)?.takeIf { prompted(track, genre) }
+        val access = ready(track, settings)?.takeIf { prompted(track, genre) || listed?.contains(genre) == true }
         val model = access?.let { settings.model(it.provider.id) }
         val evidence = track.evidence
         if (access == null || model == null || evidence == null) return null
@@ -79,31 +109,42 @@ class GenreReasons(
     }
 
     /**
-     * Whether [genre]'s reason for [track] would be offered under [settings] but for D12: the track
-     * has the genre, only MusicBrainz's tags give it ([prompted] false), and all else [key] asks for
-     * holds (#721).
+     * What a tap on *Why is this …?* does for [track]'s genre [genre] under [settings] (#762), the
+     * AI's genre list for the track ([lists]) known as [listed] (by identity; null while not known):
+     *
+     * - nothing ([ReasonPath.None]) with *Show insights* off, before the evidence is in, or for a
+     *   genre the track does not have;
+     * - with no AI service ready (none switched on, no key, no model), nothing, and the panel says
+     *   where one is enabled ([ReasonPath.NoService]);
+     * - path A ([ReasonPath.Reason]): the reason, for a genre a source other than MusicBrainz gives,
+     *   or one on the AI's list;
+     * - path B ([ReasonPath.Listing]): for a genre only MusicBrainz gives, the AI's list first, while
+     *   it is not known and it can run; [ReasonPath.CannotList] when it cannot ([GenreLists.mode]);
+     *   once known without the genre, [ReasonPath.NotListed], and no call.
      */
-    fun withheld(
+    fun path(
         track: TrackState,
         genre: String,
         settings: Settings,
-    ): Boolean =
-        !prompted(track, genre) &&
-            track.genres.all.any { it.genre.identity == genre } &&
-            ready(track, settings) != null
+        lists: GenreLists,
+        listed: Set<String>?,
+    ): ReasonPath {
+        val key = key(track, genre, settings, listed)
+        return when {
+            !offered(track, settings) || track.genres.all.none { it.genre.identity == genre } -> ReasonPath.None
+            key != null -> ReasonPath.Reason(key)
+            ready(track, settings) == null -> ReasonPath.NoService
+            listed != null -> ReasonPath.NotListed
+            else -> lists.key(track, settings)?.let(ReasonPath::Listing) ?: ReasonPath.CannotList
+        }
+    }
 
     // The AI service, when one with a model is ready under [settings] and [track]'s evidence is in;
-    // what [key] and [withheld] both ask for besides the genre's sources.
+    // what [key] and [path] ask for besides the genre's sources.
     private fun ready(
         track: TrackState,
         settings: Settings,
-    ): AiAccess? =
-        ai?.takeIf {
-            settings.writeInsights &&
-                track.gathered &&
-                track.evidence != null &&
-                settings.model(it.provider.id) != null
-        }
+    ): AiAccess? = ai?.takeIf { offered(track, settings) && settings.model(it.provider.id) != null }
 
     /**
      * The reason kept for [key], checked against [track]'s evidence, with when it was written where
@@ -236,7 +277,8 @@ class GenreReasons(
 
         /**
          * Whether [track]'s genre [genre] may reach a prompt: a source other than MusicBrainz gives it,
-         * on some row (D12: MusicBrainz's tags, CC BY-NC-SA 3.0, never reach a prompt).
+         * on some row, or the AI's genre list does (`TrackLabel.aiModel`, #762: [track]'s genres with
+         * the list, `TrackGenres.withAi`). D12: MusicBrainz's tags, CC BY-NC-SA 3.0, never reach a prompt.
          */
         fun prompted(
             track: TrackState,
@@ -245,7 +287,17 @@ class GenreReasons(
             track.genres.rows
                 .flatMap { it.labels }
                 .any { label ->
-                    label.genre.identity == genre && label.credits.any { it.source != LabelSource.MUSICBRAINZ }
+                    label.genre.identity == genre &&
+                        (label.aiModel != null || label.credits.any { it.source != LabelSource.MUSICBRAINZ })
                 }
+
+        /**
+         * Whether *Why is this …?* is offered at all for [track] under [settings]: *Show insights* on
+         * (the switch that stops every AI call), and the evidence in, every source answered.
+         */
+        fun offered(
+            track: TrackState,
+            settings: Settings,
+        ): Boolean = settings.writeInsights && track.gathered && track.evidence != null
     }
 }
