@@ -23,7 +23,7 @@ import kotlin.test.assertTrue
 
 /**
  * *AI web search*'s questions (#801): from knowledge one call; *Once* one search and one call with its
- * pages, none when the search fails or finds nothing; *Up to {n} times* a loop with the search tool,
+ * pages, none when the search fails or finds nothing; *Up to 3 times* a loop with the search tool,
  * at most n searches and n + 1 calls, the last with the tool not to be called; a service with no
  * tools asked as *Once*; every search and call counted as made; a stop cancels the loop.
  */

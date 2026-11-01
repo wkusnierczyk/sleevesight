@@ -20,7 +20,7 @@ import kotlin.time.Instant
  * [EvidenceSet.with]), which the reason cites as it cites the others. *Once* searches [query] (the
  * title, the artists and the genre's label, a genre a source other than MusicBrainz gives or the AI's
  * list named, never one only MusicBrainz's tags give: D12) and gives its pages in the evidence;
- * *Up to {n} times* gives the model the search tool ([GenreReasonPrompt.withSearch]), each search's
+ * *Up to 3 times* gives the model the search tool ([GenreReasonPrompt.withSearch]), each search's
  * pages as evidence lines ([toolResult]). [evidence] is then what the reply is checked against: the
  * track's and every page numbered, as the prompt gave them.
  */

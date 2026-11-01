@@ -20,7 +20,7 @@ enum class GenreListMode(
     KNOWLEDGE("knowledge"),
 
     /**
-     * From web pages (#801): *AI web search* on (*Once* or *Up to {n} times*), with Exa web search;
+     * From web pages (#801): *AI web search* on (*Once* or *Up to 3 times*), with Exa web search;
      * the searches name no genre, and no MusicBrainz page reaches the prompt (D12).
      */
     WEB("web"),
@@ -59,7 +59,7 @@ object GenreListPrompt {
     /**
      * The prompt from the web (#801): with the [pages] of the app's one search after the track
      * (*Once*), or, with none, the model searching up to [limit] times with the search tool
-     * (*Up to {n} times*).
+     * (*Up to 3 times*).
      */
     fun buildWeb(
         nowPlaying: NowPlaying,

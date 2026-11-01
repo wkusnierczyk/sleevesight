@@ -157,6 +157,18 @@ class AiSearchesWebTest {
         }
 
     @Test
+    fun aKeyFromTheWebAsksFromTheWebWhateverTheSettingsSaySince() =
+        runTest {
+            val key = checkNotNull(searches.key(track, SearchKind.DATES, settings))
+            // *Off* read after the key was made: still from the web, *Once*, and kept under its key.
+            val last = searches.search(key, SearchKind.DATES, track, facts, { _, _ -> })
+            assertIs<SearchState.Answered>(last)
+            assertEquals(QuestionCost(searches = 1, calls = 1), last.way.cost)
+            assertTrue(page.url in provider.requests.single().prompt)
+            assertEquals(last, searches.kept(key, SearchKind.DATES, track)?.state)
+        }
+
+    @Test
     fun aReplyKeptBeforeTheEnvelopeIsReadAsAnsweredByATapFromKnowledge() =
         runTest {
             val exaOff = settings.copy(enabledSources = settings.enabledSources - SourceSwitch.WEB)

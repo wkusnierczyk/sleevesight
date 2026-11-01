@@ -9,7 +9,7 @@ import kotlin.time.Instant
 /**
  * An AI service the user chose, with their key (`design/architecture.md`, *Synthesis and
  * grounding*). The model only narrates: one prompt in, streamed text out. The one exception is
- * *AI web search* (#801), whose *Up to {n} times* gives the model a web search tool
+ * *AI web search* (#801), whose *Up to 3 times* gives the model a web search tool
  * ([CompletionRequest.tools]), where the client supports tool use ([usesTools]). The
  * implementations are small clients in `:ai`, over `:net` (D3).
  */

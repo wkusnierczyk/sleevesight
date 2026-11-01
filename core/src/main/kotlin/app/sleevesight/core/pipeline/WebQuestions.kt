@@ -32,7 +32,7 @@ interface WebQuestion {
     /** *Once*'s prompt, with the [pages] its search found. */
     fun once(pages: List<WebPage>): String
 
-    /** *Up to {n} times*' prompt: the model searches up to [limit] times with [WebPrompt.TOOL]. */
+    /** *Up to 3 times*' prompt: the model searches up to [limit] times with [WebPrompt.TOOL]. */
     fun agent(limit: Int): String
 
     /**
@@ -62,7 +62,7 @@ data class QuestionCost(
  * What a question came back with ([WebQuestions.ask]): the last call's [text] and its [end] (null
  * when no call was made); every page the searches found, once each ([pages]), null for a question
  * from the model's knowledge; what it cost ([cost]); and the way it was asked ([used]: *Once* for
- * *Up to {n} times* with a service that takes no tools). [searchFailed]: *Once*'s search failed,
+ * *Up to 3 times* with a service that takes no tools). [searchFailed]: *Once*'s search failed,
  * so no call was made.
  */
 class WebReply(

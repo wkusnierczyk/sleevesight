@@ -72,7 +72,7 @@ data class SearchFacts(
  * With *AI web search* off (#801), the calls have no tools: the model answers from what it knows, so
  * every instruction is about not guessing. With it on ([WebPrompt]), the model answers from the web
  * pages a search found, given with the question (*Once*) or found with its own searches
- * (*Up to {n} times*, [WebPrompt.TOOL]), and every value names the page it came from. The reply is a
+ * (*Up to 3 times*, [WebPrompt.TOOL]), and every value names the page it came from. The reply is a
  * JSON object only, in a fixed shape per kind ([shape], [WebPrompt.shape]), read and checked by
  * [AiSearchAnswers]; what fails a check is dropped there, whatever the prompt said.
  */
@@ -330,7 +330,7 @@ private object DefinitionPrompt {
  *
  * - **Once** ([once]): the app searches once ([query]) and gives the pages with the question,
  *   fenced in `<pages>` ([pages]), each with its address, title and passage; one call.
- * - **Up to {n} times** ([agent]): the model searches itself with [TOOL], up to its limit,
+ * - **Up to 3 times** ([agent]): the model searches itself with [TOOL], up to its limit,
  *   each search's pages given back as the tool's result ([pages]), then answers; [NO_SEARCHES_LEFT]
  *   once the limit is reached.
  *
@@ -341,7 +341,7 @@ private object DefinitionPrompt {
  * sources' genres ([SearchFacts.genres]), and [query] names no genre at all.
  */
 object WebPrompt {
-    /** The name of the web search tool the model calls (*Up to {n} times*). */
+    /** The name of the web search tool the model calls (*Up to 3 times*). */
     const val TOOL_NAME: String = "exa_search"
 
     /** The web search tool's input's field, the query. */
@@ -410,7 +410,7 @@ object WebPrompt {
                 user.removeSuffix(question) + pages(found) + "\n\n" + question
             }
 
-    /** *Up to {n} times*' prompt for [kind] about [facts]: the model searches up to [limit] times. */
+    /** *Up to 3 times*' prompt for [kind] about [facts]: the model searches up to [limit] times. */
     fun agent(
         kind: SearchKind,
         facts: SearchFacts,

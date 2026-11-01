@@ -14,9 +14,9 @@ import app.sleevesight.core.settings.Settings
 // *Insights* → *AI web search* (#801), before *Ask AI automatically*.
 
 /**
- * *AI web search* (`aiWebSearch`, #801): *Off*, *Once* or *Up to {n} times*, a button group kept to
+ * *AI web search* (`aiWebSearch`, #801): *Off*, *Once* or *Up to 3 times*, a button group kept to
  * one row at any font size ([ChoiceButtonsRow]'s `oneRow`), and what the chosen value does under
- * it; *Up to {n} times* searches at most `Settings.AI_WEB_SEARCH_LIMIT` times, fixed and said in
+ * it; *Up to 3 times* searches at most `Settings.AI_WEB_SEARCH_LIMIT` times, fixed and said in
  * its text, with no setting of its own. It needs Exa web
  * search on (`Settings.aiWebSearchOn`): while it is off, *Off* shows chosen and the others cannot be
  * chosen, the choice saved kept for when it is on again, and two lines under the group say so, the

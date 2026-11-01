@@ -426,7 +426,7 @@
     <!-- Search with AI: the AI model's reply was not the answer asked for. -->
     <string name="home_failure_malformed">the AI model’s answer could not be read</string>
     <!-- The whole line, in the error colour with Retry, when the web search AI web search makes failed
-         (#801): Once's one Exa search, or every search of Up to n times; not the sources' own web
+         (#801): Once's one Exa search, or every search of Up to 3 times; not the sources' own web
          search, and not the AI call failing (home_ai_failed). -->
     <string name="home_ai_web_search_failed">AI web search failed.</string>
 

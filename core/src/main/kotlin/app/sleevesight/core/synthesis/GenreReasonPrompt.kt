@@ -121,7 +121,7 @@ object GenreReasonPrompt {
     const val REPLY: String = "Reply with the explanation text only."
 
     /**
-     * [prompt] ([build]'s) for a reason that may search the web (#801, *AI web search*'s *Up to {n}
+     * [prompt] ([build]'s) for a reason that may search the web (#801, *AI web search*'s *Up to 3
      * times*): before its last line, that the model may search with the search tool, at most
      * [limit] times, and that each search's pages come back as evidence lines, from [firstId] on,
      * which it cites as the others and which hold facts only as the other lines do.

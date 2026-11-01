@@ -100,7 +100,7 @@ data class KeptSearch(
  * keeps it, so the screen and the cache count *Keep history for* from the same time.
  *
  * *AI web search* (#801, [web], the web search engine, `Settings.aiWebSearch`): the question is
- * asked as [WebQuestions] asks it, *Once* or *Up to {n} times* from web pages, or from the model's
+ * asked as [WebQuestions] asks it, *Once* or *Up to 3 times* from web pages, or from the model's
  * knowledge with it off, without Exa web search on or an engine, and always for a genre's
  * definition. An answer from the web has its own key (`CardKey.modelKnowledge` false, its own
  * prompts' version), so the two are kept apart: one from the model's knowledge is not shown once
@@ -151,7 +151,7 @@ class AiSearches(
     /**
      * How a question of [kind] searches the web under [settings] (#801): *AI web search* as used
      * (`Settings.aiWebSearchUsed`: off while Exa web search is), off with no engine ([web]) or for a
-     * genre's definition, *Once* for *Up to {n} times* with a service that takes no tools.
+     * genre's definition, *Once* for *Up to 3 times* with a service that takes no tools.
      */
     fun used(
         kind: SearchKind,
@@ -212,9 +212,10 @@ class AiSearches(
 
     /**
      * Asks [key]'s search of [kind] for [track], whose [facts] the prompt gives, as [asking] says
-     * (*AI web search*, #801, as [used] reads it, and whether it started by itself): each state as
-     * it comes to [show] with when it came; returns the last. Each web search and AI call is counted
-     * to [counted] as it is made. Before the last, [settle] says whether it still counts (not stopped
+     * (*AI web search*, #801, as [used] reads it, but from the web, *Once* at least, for a key from
+     * the web, and from the model's knowledge for one from it; and whether it started by itself):
+     * each state as it comes to [show] with when it came; returns the last. Each web search and AI
+     * call is counted to [counted] as it is made. Before the last, [settle] says whether it still counts (not stopped
      * meanwhile): if not, nothing is shown or kept, and null is returned; if so, the last is kept and
      * shown whatever cancels the call then, so a stop that comes too late leaves the answer shown and
      * kept alike. An answer read and checked, usable or not, is kept with the time it is shown with;
@@ -233,8 +234,14 @@ class AiSearches(
     ): SearchState? {
         val access = checkNotNull(ai) { "no AI service" }
         val questions = WebQuestions(access, web)
-        // A key from the model's knowledge asks from it, whatever the settings say since.
-        val search = if (key.modelKnowledge) AiWebSearch.OFF else questions.used(asking.search)
+        // The way to search from the key, not the settings read since: one from the model's knowledge
+        // asks from it, and one from the web from the web, *Once* when they say *Off* (as `GenreLists.ask`).
+        val search =
+            if (key.modelKnowledge) {
+                AiWebSearch.OFF
+            } else {
+                questions.used(asking.search).takeUnless { it == AiWebSearch.OFF } ?: AiWebSearch.ONCE
+            }
         show(SearchState.Searching(web = search != AiWebSearch.OFF), now())
         val base = CompletionRequest(key.model, "", maxTokensFor(key.effort), key.effort)
         val reply = questions.ask(question(kind, facts), search, asking.limit, base, counted)

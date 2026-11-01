@@ -422,8 +422,9 @@ class AppGenreNotes private constructor(
         return entry == null || entry.state is GenreListState.Failed || expired(entry.writtenAt)
     }
 
-    // [key]'s reason, kept meanwhile (another panel's), with no call, or written; each state shown
-    // while no *Clear history* came since it started.
+    // [key]'s reason, kept meanwhile (another panel's, or from the evidence alone under another *AI
+    // web search*, `GenreReasons.found`), with no call, or written; each state shown while no *Clear
+    // history* came since it started.
     private suspend fun write(
         reasons: GenreReasons,
         key: CardKey,
@@ -436,11 +437,11 @@ class AppGenreNotes private constructor(
             Instant,
         ) -> Unit = { state, at -> publish(work) { shown.update { it.with(key, Entry(state, at)) } } }
         try {
-            val kept = reasons.kept(key, track)?.takeIf { !expired(it.writtenAt) }
+            val kept = reasons.found(key, track)?.takeIf { !expired(it.writtenAt) }
             if (kept != null) {
                 show(kept.state, kept.writtenAt ?: clock.now())
             } else {
-                reasons.write(key, track, label, asking(), paid, show)
+                reasons.write(key, track, label, asking(), paid, fresh = { !expired(it) }, show = show)
             }
         } catch (e: CancellationException) {
             throw e
@@ -561,7 +562,8 @@ class AppGenreNotes private constructor(
         }
     }
 
-    // The reason kept in the synthesis cache for [key], read once, unless one is shown already.
+    // The reason kept in the synthesis cache for [key] (`GenreReasons.found`), read once, unless one
+    // is shown already.
     private fun look(
         key: CardKey,
         track: TrackState,
@@ -570,7 +572,7 @@ class AppGenreNotes private constructor(
         val made = parts.value ?: return
         scope.launch(epoch.mark()) {
             val work = coroutineContext
-            val kept = reasonsOf(made).kept(key, track)?.takeIf { !expired(it.writtenAt) }
+            val kept = reasonsOf(made).found(key, track)?.takeIf { !expired(it.writtenAt) }
             if (kept != null) {
                 val entry = Entry(kept.state, kept.writtenAt ?: clock.now())
                 publish(work) { shown.update { if (key in it) it else it.with(key, entry) } }

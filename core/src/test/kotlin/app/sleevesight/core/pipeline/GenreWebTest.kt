@@ -266,9 +266,69 @@ class GenreWebTest {
         runTest {
             val provider = FakeProvider { FakeProvider.done(GroundingCheck.NO_EVIDENCE) }
             val reasons = GenreReasons(AiAccess(provider, Secret("k")), cache, JvmHasher, web = web)
-            val key = checkNotNull(reasons.key(track, "folk", settings))
-            assertEquals(InsightState.NoEvidence, reasons.write(key, track, "Folk") { _, _ -> })
+            val key = checkNotNull(reasons.key(track, "folk", settings.copy(aiWebSearch = AiWebSearch.OFF)))
+            // Asked with *Once* read since: a key made with web search off never searches.
+            val state = reasons.write(key, track, "Folk", AiSearches.Asking(AiWebSearch.ONCE)) { _, _ -> }
+            assertEquals(InsightState.NoEvidence, state)
             assertEquals(1, provider.requests.size)
             assertTrue(queries.isEmpty())
+        }
+
+    @Test
+    fun `a key that may search does, with Off read since`() =
+        runTest {
+            val provider =
+                FakeProvider { request ->
+                    val searched = "[S2]" in request.prompt
+                    FakeProvider.done(
+                        if (searched) "It is filed under folk for its ballads [S2]." else GroundingCheck.NO_EVIDENCE,
+                    )
+                }
+            val reasons = GenreReasons(AiAccess(provider, Secret("k")), cache, JvmHasher, web = web)
+            val key = checkNotNull(reasons.key(track, "folk", settings))
+            assertIs<InsightState.Written>(reasons.write(key, track, "Folk") { _, _ -> })
+            assertEquals(1, queries.size)
+            // The evidence alone's "no" under the key without the web part, the reason under its own.
+            assertEquals(InsightState.NoEvidence, reasons.kept(key.copy(subject = "folk"), track)?.state)
+            assertIs<InsightState.Written>(reasons.kept(key, track)?.state)
+        }
+
+    @Test
+    fun `a reason from the evidence alone is not paid for again when web search is switched`() =
+        runTest {
+            val provider = FakeProvider { FakeProvider.done("It is filed under folk for its singer-songwriter [S1].") }
+            val reasons = GenreReasons(AiAccess(provider, Secret("k")), cache, JvmHasher, web = web)
+            val off = checkNotNull(reasons.key(track, "folk", settings.copy(aiWebSearch = AiWebSearch.OFF)))
+            val written = assertIs<InsightState.Written>(reasons.write(off, track, "Folk") { _, _ -> })
+            assertEquals(1, provider.requests.size)
+            // *Once*: the reason from the evidence alone, found and written again with no call.
+            val on = checkNotNull(reasons.key(track, "folk", settings))
+            assertEquals(written.grounded, assertIs<InsightState.Written>(reasons.found(on, track)?.state).grounded)
+            val shown = mutableListOf<InsightState>()
+            val again = reasons.write(on, track, "Folk", AiSearches.Asking(AiWebSearch.ONCE)) { s, _ -> shown += s }
+            assertEquals(written.grounded, assertIs<InsightState.Written>(again).grounded)
+            assertEquals(listOf<InsightState>(again), shown)
+            assertEquals(1, provider.requests.size)
+            assertTrue(queries.isEmpty())
+            // Unless past *Keep history for*: then asked again.
+            reasons.write(on, track, "Folk", AiSearches.Asking(AiWebSearch.ONCE), fresh = { false }) { _, _ -> }
+            assertEquals(2, provider.requests.size)
+        }
+
+    @Test
+    fun `a reason from the evidence alone written with web search on is found with it off`() =
+        runTest {
+            val provider = FakeProvider { FakeProvider.done("It is filed under folk for its singer-songwriter [S1].") }
+            val reasons = GenreReasons(AiAccess(provider, Secret("k")), cache, JvmHasher, web = web)
+            val on = checkNotNull(reasons.key(track, "folk", settings))
+            val written =
+                assertIs<InsightState.Written>(
+                    reasons.write(on, track, "Folk", AiSearches.Asking(AiWebSearch.ONCE)) { _, _ -> },
+                )
+            assertTrue(queries.isEmpty())
+            // *Off*: the key without the web part holds it, so it is kept, with no call.
+            val off = checkNotNull(reasons.key(track, "folk", settings.copy(aiWebSearch = AiWebSearch.OFF)))
+            assertEquals(written.grounded, assertIs<InsightState.Written>(reasons.found(off, track)?.state).grounded)
+            assertEquals(1, provider.requests.size)
         }
 }

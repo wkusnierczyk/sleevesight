@@ -517,7 +517,7 @@ data class Settings(
         const val DEFAULT_PAUSE_AUTO_WRITE_AFTER: Int = 5
 
         /**
-         * The most searches *Up to {n} times* makes for one question (#801), fixed and said in the
+         * The most searches *Up to 3 times* makes for one question (#801), fixed and said in the
          * setting's text: 3, enough for the model to search again twice with what it learned.
          */
         const val AI_WEB_SEARCH_LIMIT: Int = 3
