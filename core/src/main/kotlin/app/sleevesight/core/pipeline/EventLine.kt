@@ -31,6 +31,7 @@ object EventLine {
             is PipelineEvent.ModelFailed -> modelFailed(e)
             is PipelineEvent.ModelStopped -> "model      ${e.key}: stopped"
             is PipelineEvent.Grounded -> grounded(e)
+            is PipelineEvent.SelfRevised -> selfRevised(e)
             is PipelineEvent.NoEvidence -> "insight    ${e.key}: no evidence"
             is PipelineEvent.Superseded -> "superseded ${e.key}"
             is PipelineEvent.AskedAgain -> "again      ${e.key}: ${e.sources.joinToString(", ") { it.tag }} asked again"
@@ -76,6 +77,14 @@ object EventLine {
         "grounded   ${e.key}: ok ${e.counts.ok}, model ${e.counts.model}, hedge ${e.counts.hedge}, " +
             "uncited ${e.counts.uncited}, unknown ${e.counts.unknown}" +
             if (e.selfCorrected) ", self-correction taken out" else ""
+
+    private fun selfRevised(e: PipelineEvent.SelfRevised): String =
+        "insight    ${e.key}: ${if (e.cached) "kept card" else "reply"} revised itself (${e.sign.label}), " +
+            when {
+                e.salvaged -> "cut to what follows"
+                e.cached -> "nothing usable, not served"
+                else -> "nothing usable"
+            }
 
     private fun notes(notes: List<String>): String = if (notes.isEmpty()) "" else "  [${notes.joinToString("; ")}]"
 
