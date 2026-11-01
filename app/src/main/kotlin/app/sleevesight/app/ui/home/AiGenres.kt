@@ -43,7 +43,11 @@ internal fun GenresSearch(
 ) {
     if (track != null && !track.genres.isEmpty || shown.looking.isNotEmpty()) return
     AiSearchBlock(search, SearchKind.GENRES) { answer, _ ->
-        if (answer is SearchAnswer.Genres && track != null) AiGenres(track, answer.genres, notes.notes, search)
+        if (answer is SearchAnswer.Genres && track != null) {
+            AiGenres(track, answer.genres, notes.notes, search)
+            // From the web (#801): the pages that give them, under the chips.
+            for (source in answer.sources) FromSite(source)
+        }
     }
 }
 

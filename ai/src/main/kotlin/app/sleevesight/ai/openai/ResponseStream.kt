@@ -5,10 +5,15 @@ import app.sleevesight.ai.decode
 import app.sleevesight.core.ai.AiErrorKind
 import app.sleevesight.core.ai.CompletionEvent
 import app.sleevesight.core.ai.StopReason
+import app.sleevesight.core.ai.ToolCall
+import app.sleevesight.core.ai.ToolTurn
 import app.sleevesight.core.ai.Usage
 import app.sleevesight.net.NetError
 import app.sleevesight.net.NetResponse
 import app.sleevesight.net.NetResult
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlin.time.Clock
 
 /**
@@ -24,6 +29,12 @@ import kotlin.time.Clock
  * emitted. [clock] reads a `Retry-After` given as a date. A stream that ends without a terminal
  * event ends with [AiErrorKind.INCOMPLETE] and how it broke off (`brokeOff`), with no usage: the
  * service gives it only in the terminal event.
+ *
+ * A response whose output calls tools (#801, `function_call` items) ends with
+ * [CompletionEvent.ToolUse] just before its [CompletionEvent.Done], with [StopReason.TOOL_USE]: each
+ * call's `call_id`, name and arguments, and the output items to send back as the next request's
+ * input ([replayed]: the reasoning, with its encrypted content, and the calls), each as its
+ * `response.output_item.done` gave it.
  */
 internal class ResponseStream(
     private val clock: Clock,
@@ -31,29 +42,51 @@ internal class ResponseStream(
     private var started = false
     private var refused = false
     private var ended = false
+    private val items = mutableListOf<JsonObject>()
 
     /** Set when an event's data was not JSON this client can read; the stream should be stopped. */
     var malformed: Boolean = false
         private set
 
-    /** The event that [data] makes, if any. */
-    fun read(data: String): CompletionEvent? {
+    /** The events that [data] makes, if any: two for the end of a response that calls tools. */
+    fun read(data: String): List<CompletionEvent> {
         val event = if (ended) null else decode<WireEvent>(data)
         return when {
             ended -> {
-                null
+                emptyList()
             }
 
             event == null -> {
                 malformed = true
-                end(CompletionEvent.Error(AiErrorKind.UNEXPECTED_RESPONSE))
+                listOf(end(CompletionEvent.Error(AiErrorKind.UNEXPECTED_RESPONSE)))
+            }
+
+            event.type == "response.output_item.done" -> {
+                event.item?.let(items::add)
+                emptyList()
+            }
+
+            event.type == "response.completed" && !refused && calls().isNotEmpty() -> {
+                val replay = JsonArray(items.filter { typeOf(it) in REPLAYED })
+                listOf(
+                    CompletionEvent.ToolUse(ToolTurn(calls(), replay.toString())),
+                    end(done(event.response, StopReason.TOOL_USE)),
+                )
             }
 
             else -> {
-                handle(event)
+                listOfNotNull(handle(event))
             }
         }
     }
+
+    // The tool calls among the output items done.
+    private fun calls(): List<ToolCall> =
+        items.filter { typeOf(it) == FUNCTION_CALL }.mapNotNull { item ->
+            val id = text(item, "call_id") ?: return@mapNotNull null
+            val name = text(item, "name") ?: return@mapNotNull null
+            ToolCall(id, name, text(item, "arguments") ?: "{}")
+        }
 
     private fun handle(event: WireEvent): CompletionEvent? =
         when (event.type) {
@@ -101,9 +134,11 @@ internal class ResponseStream(
 
     /**
      * The terminal event after the transport finished with [result] (null when the stream was
-     * stopped here), or null if one was emitted already.
+     * stopped here), or none if one was emitted already.
      */
-    fun end(result: NetResult<NetResponse>?): CompletionEvent? {
+    fun end(result: NetResult<NetResponse>?): List<CompletionEvent> = listOfNotNull(last(result))
+
+    private fun last(result: NetResult<NetResponse>?): CompletionEvent? {
         val last =
             when {
                 ended -> null
@@ -158,6 +193,18 @@ internal class ResponseStream(
 
     private companion object {
         val NO_USAGE = Usage(0, 0)
+
+        const val FUNCTION_CALL = "function_call"
+
+        /** The output items a response that calls tools is sent back with: its reasoning and its calls. */
+        val REPLAYED = setOf("reasoning", FUNCTION_CALL)
+
+        fun typeOf(item: JsonObject): String? = text(item, "type")
+
+        fun text(
+            item: JsonObject,
+            key: String,
+        ): String? = (item[key] as? JsonPrimitive)?.takeIf { it.isString }?.content
 
         /** A refusal with no usage given. */
         val REFUSED = CompletionEvent.Done(NO_USAGE, StopReason.REFUSAL)

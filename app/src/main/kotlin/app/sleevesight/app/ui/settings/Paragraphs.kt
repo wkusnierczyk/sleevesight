@@ -20,11 +20,15 @@ internal fun Paragraphs(
     modifier: Modifier = Modifier,
     color: Color = Color.Unspecified,
 ) {
-    val paragraphs = text.split(PARAGRAPH_BREAK).map { it.trim() }.filter { it.isNotEmpty() }
+    val paragraphs = paragraphsOf(text)
     Column(modifier, verticalArrangement = Arrangement.spacedBy(PARAGRAPH_GAP)) {
         for (paragraph in paragraphs) Text(paragraph, style = MaterialTheme.typography.bodySmall, color = color)
     }
 }
+
+/** [text]'s paragraphs, each trimmed, none empty. */
+internal fun paragraphsOf(text: String): List<String> =
+    text.split(PARAGRAPH_BREAK).map { it.trim() }.filter { it.isNotEmpty() }
 
 /** What separates two paragraphs in a text: a blank line. */
 private val PARAGRAPH_BREAK = Regex("""\n\s*\n""")

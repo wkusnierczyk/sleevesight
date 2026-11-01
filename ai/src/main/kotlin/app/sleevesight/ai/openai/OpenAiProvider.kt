@@ -12,6 +12,7 @@ import app.sleevesight.core.ai.ModelInfo
 import app.sleevesight.core.ai.ModelList
 import app.sleevesight.core.ai.ModelNames
 import app.sleevesight.core.ai.ReasoningEffort
+import app.sleevesight.core.ai.ToolSpec
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.net.HostPolicy
 import app.sleevesight.net.NetBody
@@ -26,8 +27,15 @@ import app.sleevesight.net.RetryPolicy
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonArrayBuilder
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.addJsonObject
+import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 import kotlin.time.Clock
 import kotlin.time.Duration
@@ -38,6 +46,13 @@ import kotlin.time.Instant
  * OpenAI's Responses API, as a small client over `:net` (D3): one streaming call, `POST
  * /v1/responses` with `stream: true`, read as server-sent events; and the model list, `GET
  * /v1/models`. The key goes in `Authorization: Bearer`, through `NetSecrets`, so it is never logged.
+ *
+ * With [CompletionRequest.tools] (#801), they go in `tools` as functions; a response that calls one
+ * ends in [CompletionEvent.ToolUse] (`ResponseStream`), and its reasoning comes encrypted
+ * (`include`), since nothing is stored. The next request's `input` is then a list: the prompt as
+ * the user's message, and for each exchange the output items as they came and a
+ * `function_call_output` for each call; with [CompletionRequest.toolsAllowed] false, `tool_choice`
+ * `none`, so the model answers now.
  *
  * The prompt is the request's `input`, as one user message. `store` is `false`: the response is
  * not kept on OpenAI's side for later retrieval, which a one-shot card never does (by default the
@@ -82,6 +97,8 @@ class OpenAiProvider(
 ) : AiProvider {
     override val id: ProviderId = ProviderId.OPENAI
 
+    override val usesTools: Boolean = true
+
     override suspend fun models(key: Secret): ModelList {
         val request = NetRequest("$baseUrl/v1/models", secrets = secrets(key))
         return when (val result = net.send(request)) {
@@ -119,7 +136,7 @@ class OpenAiProvider(
                 val result =
                     try {
                         net.stream(responsesRequest(request, effort, maxTokensSent(request, takesIt), key)) { line ->
-                            events.line(line)?.let { event -> reader.read(event.data)?.let { send(it) } }
+                            events.line(line)?.let { event -> reader.read(event.data).forEach { send(it) } }
                             if (reader.malformed) throw StopStream()
                         }
                     } catch (e: StopStream) {
@@ -150,7 +167,7 @@ class OpenAiProvider(
                             false
                         }
                     }
-                if (!again) reader.end(result)?.let { send(it) }
+                if (!again) reader.end(result).forEach { send(it) }
             } while (again)
         }
 
@@ -171,11 +188,17 @@ class OpenAiProvider(
         val body =
             buildJsonObject {
                 put("model", request.model)
-                put("input", request.prompt)
+                if (request.exchanges.isEmpty()) put("input", request.prompt) else put("input", inputOf(request))
                 put("max_output_tokens", maxTokens)
                 put("stream", true)
                 put("store", false)
                 effort?.let { putJsonObject("reasoning") { put("effort", effortName(it)) } }
+                if (request.tools.isNotEmpty()) {
+                    putJsonArray("tools") { request.tools.forEach { addTool(it) } }
+                    if (!request.toolsAllowed) put("tool_choice", "none")
+                    // Nothing is stored (`store`), so the reasoning goes back with the calls, encrypted.
+                    putJsonArray("include") { add("reasoning.encrypted_content") }
+                }
             }
         return NetRequest(
             url = "$baseUrl/v1/responses",
@@ -189,6 +212,35 @@ class OpenAiProvider(
 
     /** Thrown from the line handler to end a stream whose events cannot be read. */
     private class StopStream : RuntimeException()
+
+    // [tool] as `tools` lists it: a function, with its name, description and parameters' schema.
+    private fun JsonArrayBuilder.addTool(tool: ToolSpec) =
+        addJsonObject {
+            put("type", "function")
+            put("name", tool.name)
+            put("description", tool.description)
+            put("parameters", decode<JsonObject>(tool.parameters) ?: JsonObject(emptyMap()))
+        }
+
+    // The input of a request after tool use (#801): the prompt as the user's message, then each
+    // exchange's output items as they came and its calls' outputs.
+    private fun inputOf(request: CompletionRequest): JsonArray =
+        buildJsonArray {
+            addJsonObject {
+                put("role", "user")
+                put("content", request.prompt)
+            }
+            request.exchanges.forEach { exchange ->
+                (decode<JsonArray>(exchange.turn.replay) ?: JsonArray(emptyList())).forEach { add(it) }
+                exchange.results.forEach { result ->
+                    addJsonObject {
+                        put("type", "function_call_output")
+                        put("call_id", result.callId)
+                        put("output", result.content)
+                    }
+                }
+            }
+        }
 
     companion object {
         const val HOST: String = "api.openai.com"

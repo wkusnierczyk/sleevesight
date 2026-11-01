@@ -95,6 +95,7 @@ class FakeResolver(
 /** A provider that replies with [reply], after [delay], recording each request. */
 class FakeProvider(
     private val delay: Duration = Duration.ZERO,
+    override val usesTools: Boolean = false,
     var reply: (CompletionRequest) -> List<CompletionEvent> = { done("It is a song [MB1].") },
 ) : AiProvider {
     override val id: ProviderId = ProviderId.ANTHROPIC

@@ -8,11 +8,20 @@ import kotlin.time.Instant
 
 /**
  * An AI service the user chose, with their key (`design/architecture.md`, *Synthesis and
- * grounding*). The model only narrates: one prompt in, streamed text out, no tools. The
+ * grounding*). The model only narrates: one prompt in, streamed text out. The one exception is
+ * *AI web search* (#801), whose *Up to {n} times* gives the model a web search tool
+ * ([CompletionRequest.tools]), where the client supports tool use ([usesTools]). The
  * implementations are small clients in `:ai`, over `:net` (D3).
  */
 interface AiProvider {
     val id: ProviderId
+
+    /**
+     * Whether this client sends [CompletionRequest.tools] and reads the model's calls to them
+     * ([CompletionEvent.ToolUse]); a client that does not ignores the tools, and its model answers
+     * without them.
+     */
+    val usesTools: Boolean get() = false
 
     /** The models [key] may use, as the service lists them, or why they could not be listed. */
     suspend fun models(key: Secret): ModelList
@@ -34,12 +43,21 @@ interface AiProvider {
  * including any reasoning the model does before it, which counts against it. [effort] is how much
  * the model may reason before it answers, where the provider has such a control; null leaves the
  * provider's default.
+ *
+ * With [tools] (#801, a client that [AiProvider.usesTools]), the model may call them: its turn then
+ * ends with [CompletionEvent.ToolUse] and [StopReason.TOOL_USE], and the next request sends the
+ * same prompt and tools with that turn and the tools' answers after it ([exchanges]), as many as
+ * there have been. [toolsAllowed] false keeps the tools (a conversation that has used them must
+ * still declare them) but has the model answer without calling one: the last turn of a loop.
  */
 data class CompletionRequest(
     val model: String,
     val prompt: String,
     val maxTokens: Int = DEFAULT_MAX_TOKENS,
     val effort: ReasoningEffort? = null,
+    val tools: List<ToolSpec> = emptyList(),
+    val exchanges: List<ToolExchange> = emptyList(),
+    val toolsAllowed: Boolean = true,
 ) {
     init {
         require(maxTokens > 0) { "maxTokens must be positive, was $maxTokens" }
@@ -75,6 +93,45 @@ data class CompletionRequest(
             }
     }
 }
+
+/**
+ * A tool the model may call (#801): its [name], what it does for the model to read ([description]),
+ * and the JSON Schema of its input ([parameters], a JSON object as text).
+ */
+data class ToolSpec(
+    val name: String,
+    val description: String,
+    val parameters: String,
+)
+
+/** A call the model made: the service's [id] for it, the tool's [name], and its input ([arguments], JSON text). */
+data class ToolCall(
+    val id: String,
+    val name: String,
+    val arguments: String,
+)
+
+/**
+ * A model's turn that ended in tool calls ([calls]), and [replay]: the turn as its service must be
+ * sent it again in the next request (its content, reasoning included, as the service's own JSON),
+ * which only the client that made it reads.
+ */
+data class ToolTurn(
+    val calls: List<ToolCall>,
+    val replay: String,
+)
+
+/** A tool's answer to the call [callId], as text. */
+data class ToolResult(
+    val callId: String,
+    val content: String,
+)
+
+/** One round of tool use: the model's [turn], and the [results] sent back for its calls. */
+data class ToolExchange(
+    val turn: ToolTurn,
+    val results: List<ToolResult>,
+)
 
 /**
  * How much a model may reason before it answers: a provider maps it to its own control (Anthropic's
@@ -123,6 +180,14 @@ sealed interface CompletionEvent {
     /** The next piece of the reply's text. */
     data class Delta(
         val text: String,
+    ) : CompletionEvent
+
+    /**
+     * The model's turn ended in calls to the request's tools (#801): emitted once, just before the
+     * [Done] with [StopReason.TOOL_USE].
+     */
+    data class ToolUse(
+        val turn: ToolTurn,
     ) : CompletionEvent
 
     /** The reply is complete. */
@@ -193,6 +258,9 @@ enum class StopReason {
 
     /** It declined to answer. */
     REFUSAL,
+
+    /** It called a tool ([CompletionEvent.ToolUse]): the reply goes on once the tools have answered. */
+    TOOL_USE,
 
     /** A reason this client does not know. */
     OTHER,

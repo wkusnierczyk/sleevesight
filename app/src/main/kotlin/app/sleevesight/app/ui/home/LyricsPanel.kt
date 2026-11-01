@@ -72,9 +72,10 @@ internal fun homeLyrics(
  * The panel's content ([lyricsItem]): with pages, each ([PageLink]); else why there is none
  * ([NoLinkText]), then the search, or, while it is off, a line saying so with a link to where it is
  * switched on; a track MusicBrainz lists as instrumental has neither. Under any link, that it opens
- * in the browser. With no page (not while MusicBrainz is asked, nor for an instrumental), *Search
- * with AI* last, after the search or the line saying it is off ([search], #773), whose pages show as
- * MusicBrainz's do ([AiLyrics]).
+ * in the browser. With no page from MusicBrainz but the song's pages among the track's web search
+ * results (#801), those, each noted so, in the search's place, and nothing more. With no page at
+ * all (not while MusicBrainz is asked, nor for an instrumental), *Ask AI* last, after the search or
+ * the line saying it is off ([search], #773), whose pages show as MusicBrainz's do ([AiLyrics]).
  */
 @Suppress("LongParameterList") // What the panel shows, and each of its ways out.
 @Composable
@@ -97,11 +98,24 @@ internal fun LyricsPanel(
         is LyricsLinks.NoLink -> {
             NoLinkText(links.reason, retry, openSources, afterRetry)
             val genius = links.search
-            if (genius == null) {
-                SearchOff(openAppearance)
-            } else {
-                PageLink(genius, search = true)
-                Browser()
+            when {
+                // The song's page among the track's web results (#801): no search, no AI call.
+                links.web.isNotEmpty() -> {
+                    for (link in links.web) {
+                        PageLink(
+                            link,
+                            search = false,
+                            note = stringResource(R.string.home_lyrics_web_note),
+                        )
+                    }
+                    Browser()
+                    return
+                }
+                genius == null -> SearchOff(openAppearance)
+                else -> {
+                    PageLink(genius, search = true)
+                    Browser()
+                }
             }
             AiSearchBlock(search, SearchKind.LYRICS) { answer, _ ->
                 if (answer is SearchAnswer.Lyrics) AiLyrics(answer.links)

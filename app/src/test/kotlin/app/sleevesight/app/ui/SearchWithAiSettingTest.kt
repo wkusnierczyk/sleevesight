@@ -48,10 +48,10 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
- * *Search with AI*, the setting (#773): off by default, also for a settings file from before it,
- * stored under its own key when on; a switch row under *Insights* with the picked texts, its
- * description in two paragraphs, not to be changed while *Show insights* is off; the settings'
- * search finds it by its name.
+ * *Ask AI automatically*, the setting (#773; *Search with AI* until #802): off by default, also for a
+ * settings file from before it, stored under its own key when on, the key it had before the rename;
+ * a switch row under *Insights* with the picked texts, its description in two paragraphs, not to be
+ * changed while *Show insights* is off; the settings' search finds it by its new name.
  */
 @RunWith(RobolectricTestRunner::class)
 class SearchWithAiSettingTest {
@@ -103,8 +103,9 @@ class SearchWithAiSettingTest {
 
     @Test
     fun theRowHasThePickedTexts() {
-        assertEquals("Search with AI", text(R.string.settings_search_with_ai))
-        assertEquals("$FIRST\n\n$SECOND", text(R.string.settings_search_with_ai_summary))
+        assertEquals("Ask AI automatically", text(R.string.settings_search_with_ai))
+        assertEquals("AI web search", text(R.string.settings_ai_web_search))
+        assertEquals("$FIRST\n\n$SECOND", app.getString(R.string.settings_search_with_ai_summary, WEB))
     }
 
     @Test
@@ -135,8 +136,11 @@ class SearchWithAiSettingTest {
         }
 
     private companion object {
-        const val FIRST = "Automatically asks the AI service when a source does not provide the required information."
-        const val SECOND = "Each search is a paid call."
+        const val WEB = "AI web search"
+        const val FIRST =
+            "When Dates, Genres or Lyrics has nothing from its sources, asks your AI service, searching the web " +
+                "as set under $WEB."
+        const val SECOND = "Each question is a paid AI service call; with web search, also paid Exa searches."
     }
 
     @Test
@@ -145,7 +149,7 @@ class SearchWithAiSettingTest {
             compose.waitUntil(WAIT_MS) {
                 compose.onAllNodesWithText(text(R.string.settings_section_insights)).fetchSemanticsNodes().isNotEmpty()
             }
-            for (query in listOf("Search with AI", "the required information", "Each search is a paid call")) {
+            for (query in listOf("Ask AI automatically", "nothing from its sources", "also paid Exa searches")) {
                 compose.onNodeWithTag(SEARCH_FIELD_TAG).performTextReplacement(query)
                 compose.waitForIdle()
                 // The row's title, not the search box holding the same words.

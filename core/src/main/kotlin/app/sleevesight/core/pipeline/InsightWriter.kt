@@ -182,7 +182,8 @@ internal class InsightWriter(
                             }
                         }
 
-                        is CompletionEvent.Done, is CompletionEvent.Error -> {
+                        // Done or Error: no tools are sent, so never a tool call.
+                        else -> {
                             end = event
                         }
                     }

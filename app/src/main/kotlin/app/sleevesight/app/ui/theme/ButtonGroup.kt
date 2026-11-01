@@ -86,7 +86,9 @@ private const val DISABLED_CONTAINER_ALPHA = 0.12f
  * away says what it sets: "Theme: Light"), and then what the value does, where [details] has it
  * (as the dialogs read a choice with its description, #550). Where the labels do not fit the row
  * side by side, as at a large font size, each takes a line of its own, full width, so nothing is
- * cut ([GroupArrangement]).
+ * cut ([GroupArrangement]); with [oneRow] (#801), never: the buttons share the row by their labels'
+ * widths, and a label too long for its button wraps in it. A value in [disabled] cannot be chosen,
+ * and is dimmed, while the others can.
  */
 @Suppress("LongParameterList") // What the group shows and says, each a value of its own, and what a tap does.
 @Composable
@@ -98,13 +100,20 @@ internal fun <T> ChoiceButtonGroup(
     name: String? = null,
     details: Map<T, String> = emptyMap(),
     enabled: Boolean = true,
+    disabled: Set<T> = emptySet(),
+    oneRow: Boolean = false,
 ) {
     val buttons =
         choices.map { (value, label) ->
             val read = listOfNotNull(name?.let { "$it: $label" } ?: label, details[value]).joinToString(". ")
-            GroupButton(label, enabled, selected = value == selected, read = read) { onSelect(value) }
+            GroupButton(
+                label,
+                enabled && value !in disabled,
+                selected = value == selected,
+                read = read,
+            ) { onSelect(value) }
         }
-    ConnectedButtons(buttons, modifier.selectableGroup(), checks = true)
+    ConnectedButtons(buttons, modifier.selectableGroup(), checks = true, oneRow = oneRow)
 }
 
 /**
@@ -166,21 +175,26 @@ private class GroupButton(
  * needs ([EQUAL], as Material's connected groups are), or, where that does not fit, each as wide as
  * its label needs and the room left shared out in proportion to that ([PROPORTIONAL]); where even
  * that does not fit, one under another, each full width ([STACKED]), its label wrapping in it if it
- * must.
+ * must; or, for a group kept to one row, still side by side in proportion, each label wrapping in
+ * its button.
  */
 internal enum class GroupArrangement { EQUAL, PROPORTIONAL, STACKED }
 
-/** How buttons [needing] these widths, [gap] apart, are laid out in [room] (all in pixels). */
+/**
+ * How buttons [needing] these widths, [gap] apart, are laid out in [room] (all in pixels); with
+ * [oneRow], never [GroupArrangement.STACKED].
+ */
 internal fun groupArrangement(
     needing: List<Int>,
     gap: Int,
     room: Int,
+    oneRow: Boolean = false,
 ): GroupArrangement {
     val free = room - gap * (needing.size - 1)
     return when {
         needing.isEmpty() -> GroupArrangement.EQUAL
         needing.max() * needing.size <= free -> GroupArrangement.EQUAL
-        needing.sum() <= free -> GroupArrangement.PROPORTIONAL
+        needing.sum() <= free || oneRow -> GroupArrangement.PROPORTIONAL
         else -> GroupArrangement.STACKED
     }
 }
@@ -201,6 +215,7 @@ private fun ConnectedButtons(
     modifier: Modifier,
     checks: Boolean,
     compact: Alignment.Horizontal? = null,
+    oneRow: Boolean = false,
 ) {
     val style = MaterialTheme.typography.labelLarge
     val measurer = rememberTextMeasurer()
@@ -217,7 +232,8 @@ private fun ConnectedButtons(
     BoxWithConstraints(modifier.fillMaxWidth()) {
         val gap = with(density) { GROUP_GAP.roundToPx() }
         val bounded = constraints.hasBoundedWidth
-        val arrangement = if (bounded) groupArrangement(needing, gap, constraints.maxWidth) else GroupArrangement.EQUAL
+        val arrangement =
+            if (bounded) groupArrangement(needing, gap, constraints.maxWidth, oneRow) else GroupArrangement.EQUAL
         if (arrangement == GroupArrangement.STACKED) {
             Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(GROUP_GAP)) {
                 buttons.forEachIndexed { index, button ->

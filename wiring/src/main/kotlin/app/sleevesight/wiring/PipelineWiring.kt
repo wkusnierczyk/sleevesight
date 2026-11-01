@@ -24,6 +24,7 @@ import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WebEngine
 import app.sleevesight.core.sources.ArtistResults
 import app.sleevesight.core.sources.SourceAdapter
+import app.sleevesight.core.sources.WebSearcher
 import app.sleevesight.net.NetClient
 import app.sleevesight.sources.art.ArtFetcher
 import app.sleevesight.sources.art.ArtResult
@@ -31,6 +32,7 @@ import app.sleevesight.sources.lastfm.LastFmAdapter
 import app.sleevesight.sources.lastfm.LastFmTags
 import app.sleevesight.sources.musicbrainz.MusicBrainzClient
 import app.sleevesight.sources.musicbrainz.MusicBrainzSource
+import app.sleevesight.sources.web.ExaPageSearch
 import app.sleevesight.sources.web.ExaWebSearch
 import app.sleevesight.sources.wikidata.WikidataClient
 import app.sleevesight.sources.wikipedia.WikipediaClient
@@ -70,7 +72,10 @@ import app.sleevesight.sources.wikipedia.WikipediaSource
  * which a phone never calls (the client lives as long as the process) and Robolectric calls after
  * each test, so each test's client goes with it.
  */
-@Suppress("LongParameterList") // The client, the platform's parts, and how the app's wiring differs from the CLI's.
+@Suppress(
+    "LongParameterList", // The client, the platform's parts, and how the app's wiring differs from the CLI's.
+    "TooManyFunctions", // One for each part the pipeline is built from.
+)
 class PipelineWiring internal constructor(
     private val net: NetClient,
     private val accentFolder: AccentFolder,
@@ -199,6 +204,13 @@ class PipelineWiring internal constructor(
      */
     fun web(engines: Map<WebEngine, Secret>): SourceAdapter? =
         engines[WebEngine.EXA]?.let { ExaWebSearch(net, it, accentFolder) }
+
+    /**
+     * *AI web search*'s searches (#801, `PipelineParts.webSearch`) through the [engines] given, each
+     * with its key, or null for none: Exa's ([ExaPageSearch]), the only engine (D11).
+     */
+    fun webSearcher(engines: Map<WebEngine, Secret>): WebSearcher? =
+        engines[WebEngine.EXA]?.let { ExaPageSearch(net, it) }
 
     /**
      * The image at [uri], an `https` address, as served, or null for no art, a plain `http` address

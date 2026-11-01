@@ -31,11 +31,14 @@ sealed interface LyricsLinks {
 
     /**
      * No page to link, for [reason], and the Genius search for the title and artist ([search]),
-     * null while *Search Genius when there is no link* is off.
+     * null while *Search Genius when there is no link* is off; or, in its place, the song's pages
+     * among the track's web search results ([web], #801: one per site, as MusicBrainz's are), found
+     * with no AI call.
      */
     data class NoLink(
         val reason: NoLinkReason,
         val search: LyricsLink?,
+        val web: List<LyricsLink> = emptyList(),
     ) : LyricsLinks
 }
 
@@ -167,12 +170,32 @@ fun lyricsLinks(
     accentFolder: AccentFolder,
     musicBrainzOn: Boolean = true,
 ): LyricsLinks =
-    lyricsLinks(
-        MusicBrainzAnswer.of(track.sources[SourceId.MUSICBRAINZ], musicBrainzOn),
-        track.normalized,
-        search,
-        accentFolder,
-    )
+    when (
+        val links =
+            lyricsLinks(
+                MusicBrainzAnswer.of(track.sources[SourceId.MUSICBRAINZ], musicBrainzOn),
+                track.normalized,
+                search,
+                accentFolder,
+            )
+    ) {
+        is LyricsLinks.NoLink -> links.copy(web = webPages(track, accentFolder))
+        else -> links
+    }
+
+/**
+ * The lyrics pages among [track]'s web search results (#801, *Ask AI*'s first step, at no cost):
+ * each result's address that is a page on the whitelist, chosen as MusicBrainz's are ([pages]). The
+ * results are those the web search source kept as about the recording ([SourceId.WEB]'s evidence),
+ * so the page is this song's, by the filter's check.
+ */
+fun webPages(
+    track: TrackState,
+    accentFolder: AccentFolder,
+): List<LyricsLink> {
+    val results = (track.sources[SourceId.WEB] as? SourceState.Done)?.result?.evidence.orEmpty()
+    return pages(results.mapNotNull { it.url }, track.normalized.artists, accentFolder)
+}
 
 /**
  * The *Lyrics* panel (#728), in this order:

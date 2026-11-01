@@ -26,11 +26,16 @@ sealed interface SearchAnswer {
         val album: String? = null,
         val first: Released? = null,
         val original: Original? = null,
+        val albumSource: String? = null,
     ) : SearchAnswer
 
-    /** *Genres*' answer: labels of the app's fixed list, in the answer's order, at most five. */
+    /**
+     * *Genres*' answer: labels of the app's fixed list, in the answer's order, at most five; from the
+     * web (#801), the pages that give them ([sources]).
+     */
     data class Genres(
         val genres: List<GenreLabel>,
+        val sources: List<String> = emptyList(),
     ) : SearchAnswer
 
     /** *Lyrics*' answer: one page per site, as *Lyrics* links MusicBrainz's (`lyricsLinks`). */
@@ -44,11 +49,15 @@ sealed interface SearchAnswer {
     ) : SearchAnswer
 }
 
-/** A release dated [date], with its [title] and [type] where the answer gives them. */
+/**
+ * A release dated [date], with its [title] and [type] where the answer gives them; from the web
+ * (#801), the page that says so ([source]).
+ */
 data class Released(
     val date: String,
     val title: String? = null,
     val type: ReleaseType? = null,
+    val source: String? = null,
 )
 
 /**
@@ -59,6 +68,7 @@ data class Original(
     val artist: String,
     val date: String,
     val release: Released? = null,
+    val source: String? = null,
 )
 
 /** A release's type, as *Dates* names it: an album, a single or an EP. */
@@ -109,6 +119,13 @@ sealed interface SearchReading {
  *   and runs of spaces made one space), at most [DEFINITION_MAX] characters, and none with a link or
  *   a web address, or markup (Markdown's or HTML's marks, [MARKUP]): it stands in for Wikipedia's
  *   lead, shown as written, so a reply that rambles, links or formats is none.
+ *
+ * **From the web** (#801, `pages` given to [read]): every value names the page it came from, one of
+ * the pages the searches found ([sameAddress]: its fragment and a closing `/` aside); a value with
+ * none, or another, is dropped, as a value that fails a check is. A date's page is its own
+ * (`album_date.source`, `first_release.source`, `original.source`); the genres' pages are listed
+ * together (`sources`), and with none of them found, no genre is kept; a lyrics link is a page
+ * itself, so it must be one found.
  */
 class AiSearchAnswers(
     private val vocabulary: GenreVocabulary,
@@ -120,22 +137,76 @@ class AiSearchAnswers(
 
     /**
      * The answer to [kind] in [reply], checked; [artists] are the track's credited artists, which
-     * choose between two lyrics pages on one site.
+     * choose between two lyrics pages on one site. With [pages] (#801), the addresses of the pages
+     * the web searches found, the answer is one from the web, each value with its page among them.
      */
     fun read(
         kind: SearchKind,
         reply: String,
         artists: List<String> = emptyList(),
+        pages: Collection<String>? = null,
     ): SearchReading {
         val answer = objectIn(reply) ?: return SearchReading.Malformed
         val found =
-            when (kind) {
-                SearchKind.DATES -> dates(answer)
-                SearchKind.GENRES -> genres(answer)
-                SearchKind.LYRICS -> lyrics(answer, artists)
-                SearchKind.DEFINITION -> definition(answer)
+            if (pages != null) {
+                fromWeb(kind, answer, artists, pages)
+            } else {
+                when (kind) {
+                    SearchKind.DATES -> dates(answer)
+                    SearchKind.GENRES -> genres(answer)
+                    SearchKind.LYRICS -> lyrics(answer, artists)
+                    SearchKind.DEFINITION -> definition(answer)
+                }
             }
         return found?.let(SearchReading::Found) ?: SearchReading.NothingUsable
+    }
+
+    // [answer] from the web, each value with one of [pages] as its page; null for nothing.
+    private fun fromWeb(
+        kind: SearchKind,
+        answer: JsonObject,
+        artists: List<String>,
+        pages: Collection<String>,
+    ): SearchAnswer? {
+        val found = { address: String? -> address?.let { a -> pages.firstOrNull { sameAddress(it, a) } } }
+        return when (kind) {
+            SearchKind.DATES -> webDates(answer, found)
+            SearchKind.GENRES -> {
+                val sources = answer.strings("sources").mapNotNull(found).distinct()
+                genres(answer)?.takeIf { sources.isNotEmpty() }?.copy(sources = sources)
+            }
+            SearchKind.LYRICS ->
+                pages(answer.strings("lyrics_urls").mapNotNull(found), artists, accentFolder)
+                    .takeIf { it.isNotEmpty() }
+                    ?.let(SearchAnswer::Lyrics)
+            SearchKind.DEFINITION -> definition(answer)
+        }
+    }
+
+    // The dates from the web that pass, each with its page ([found]); null for none.
+    private fun webDates(
+        answer: JsonObject,
+        found: (String?) -> String?,
+    ): SearchAnswer.Dates? {
+        val today = today()
+        val albumPart = answer.obj("album_date")
+        val albumSource = found(albumPart?.text("source"))
+        val album = date(albumPart?.text("date"), today)?.takeIf { albumSource != null }
+        val firstPart = answer.obj("first_release")
+        val first =
+            found(firstPart?.text("source"))
+                ?.let { source ->
+                    released(firstPart, today)?.copy(source = source)
+                }?.takeUnless { album != null && later(it.date, album) }
+        val originalPart = answer.obj("original")
+        val original =
+            found(originalPart?.text("source"))
+                ?.let { source ->
+                    originalPart?.let { original(it, today) }?.copy(source = source)
+                }?.takeUnless { found -> listOfNotNull(album, first?.date).any { later(found.date, it) } }
+        return SearchAnswer
+            .Dates(album, first, original, albumSource.takeIf { album != null })
+            .takeIf { album != null || first != null || original != null }
     }
 
     // The dates that pass, or null for none.
@@ -359,3 +430,15 @@ private fun oneLine(text: String): String =
     text.map { if (InsightPrompt.breaksLine(it)) ' ' else it }.joinToString("").replace(SPACES, " ")
 
 private val SPACES = Regex(" {2,}")
+
+/**
+ * Whether [page] and [address] name the same page (#801): the same text but for a fragment (`#…`), a
+ * closing `/` and surrounding space, as a model may copy an address.
+ */
+fun sameAddress(
+    page: String,
+    address: String,
+): Boolean {
+    fun plain(text: String) = text.trim().substringBefore('#').trimEnd('/')
+    return plain(page).isNotEmpty() && plain(page) == plain(address)
+}

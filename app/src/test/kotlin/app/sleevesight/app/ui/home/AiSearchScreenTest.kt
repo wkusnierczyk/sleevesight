@@ -258,16 +258,26 @@ class AiSearchScreenTest {
 
     @Test
     fun theTextsAreThePickedOnesAndTheProposedOnesStandApart() {
-        assertEquals("Search with AI", text(R.string.home_ai_search))
+        assertEquals("Ask AI", text(R.string.home_ai_search))
         assertEquals("ask your AI service, a paid call", text(R.string.home_ai_search_action))
         assertEquals("No AI service is enabled.", text(R.string.home_ai_search_unready))
-        assertEquals("Searching with AI…", text(R.string.home_ai_searching))
+        assertEquals("Searching the web with AI…", text(R.string.home_ai_searching))
+        assertEquals("Asking AI…", text(R.string.home_ai_asking))
         assertEquals("Stop", text(R.string.home_ai_stop))
         assertEquals("stop the call", text(R.string.home_ai_stop_action))
         assertEquals("by Claude Haiku 5.5", app.getString(R.string.home_ai_by, model))
-        assertEquals("Claude Haiku 5.5 found nothing.", app.getString(R.string.home_ai_nothing, model))
+        assertEquals("Asked automatically, by Claude Haiku 5.5", app.getString(R.string.home_ai_by_auto, model))
         assertEquals(
-            "AI search failed: no connection.",
+            "Claude Haiku 5.5 couldn’t say from its own knowledge.",
+            app.getString(R.string.home_ai_nothing, model),
+        )
+        assertEquals("Claude Haiku 5.5 found nothing on the web.", app.getString(R.string.home_ai_nothing_web, model))
+        assertEquals("Asked automatically: x", app.getString(R.string.home_ai_nothing_auto, "x"))
+        assertEquals("From discogs.com", app.getString(R.string.home_ai_from, "discogs.com"))
+        assertEquals("From the AI model’s own knowledge, not verified", text(R.string.home_cite_model))
+        assertEquals("The song’s page, from the web search for this track.", text(R.string.home_lyrics_web_note))
+        assertEquals(
+            "Asking AI failed: no connection.",
             app.getString(R.string.home_ai_failed, text(R.string.home_failure_offline)),
         )
         assertEquals("ask your AI service again, a paid call", text(R.string.home_ai_retry_action))
@@ -357,9 +367,9 @@ class AiSearchScreenTest {
     fun whileItSearchesTheTurningRecordThenTheLineWithStopBesideIt() =
         show {
             tap(DATES_CHIP_TAG)
-            set(SearchKind.DATES, AiSearch.Searching)
+            set(SearchKind.DATES, AiSearch.Searching())
             assertEquals(0, count(AI_SEARCH_TAG))
-            compose.onNodeWithTag(AI_SEARCHING_TAG).assertTextEquals("Searching with AI…")
+            compose.onNodeWithTag(AI_SEARCHING_TAG).assertTextEquals("Asking AI…")
             // The record first on the line, hidden from a screen reader: the text says what is under way.
             val record = compose.onNodeWithTag(SPINNING_RECORD_TAG, useUnmergedTree = true).fetchSemanticsNode()
             assertTrue(placed(record).right <= bounds(AI_SEARCHING_TAG).left)
@@ -438,7 +448,10 @@ class AiSearchScreenTest {
         show {
             tap(DATES_CHIP_TAG)
             set(SearchKind.DATES, AiSearch.NothingFound(model))
-            compose.onNodeWithTag(AI_SEARCH_NOTHING_TAG).assertTextEquals("Claude Haiku 5.5 found nothing.")
+            compose
+                .onNodeWithTag(
+                    AI_SEARCH_NOTHING_TAG,
+                ).assertTextEquals("Claude Haiku 5.5 couldn’t say from its own knowledge.")
             assertTrue(bounds(AI_SEARCH_NOTHING_TAG).top >= bounds(AI_SEARCH_RULE_TAG).bottom)
             assertEquals(0, count(AI_SEARCH_TAG))
         }
@@ -448,7 +461,7 @@ class AiSearchScreenTest {
         show {
             tap(DATES_CHIP_TAG)
             set(SearchKind.DATES, AiSearch.Failed("offline"))
-            val line = "AI search failed: no connection."
+            val line = "Asking AI failed: no connection."
             assertTrue(shows(line))
             // No button under it, no rule: Retry at the right of the line, centred on it.
             assertEquals(0, count(AI_SEARCH_TAG))
@@ -467,7 +480,7 @@ class AiSearchScreenTest {
                 )
             assertEquals(errorColour, colour(line))
             set(SearchKind.DATES, AiSearch.Failed(AiSearches.MALFORMED))
-            assertTrue(shows("AI search failed: ${text(R.string.home_failure_malformed)}."))
+            assertTrue(shows("Asking AI failed: ${text(R.string.home_failure_malformed)}."))
             tap(RETRY_TAG)
             assertEquals(listOf(SearchKind.DATES), feed.asked.map { it.first })
         }

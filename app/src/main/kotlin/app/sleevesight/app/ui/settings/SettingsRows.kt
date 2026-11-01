@@ -4,6 +4,7 @@ package app.sleevesight.app.ui.settings
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -238,7 +239,17 @@ private fun Summary(
     if (link == null) {
         Paragraphs(summary, color = color)
     } else {
-        LinkedText(sentenceWith(summary, link), style = MaterialTheme.typography.bodySmall, color = color)
+        // Paragraphs as [Paragraphs] sets them, the link in the one that has it (#802's two).
+        val style = MaterialTheme.typography.bodySmall
+        Column(verticalArrangement = Arrangement.spacedBy(PARAGRAPH_GAP)) {
+            for (paragraph in paragraphsOf(summary)) {
+                if (link.text in paragraph) {
+                    LinkedText(sentenceWith(paragraph, link), style = style, color = color)
+                } else {
+                    Text(paragraph, style = style, color = color)
+                }
+            }
+        }
     }
 }
 
@@ -289,7 +300,9 @@ internal fun ValueRow(
  * value in [details] is read with its button, and has a line under the group saying what it does
  * while it is the one chosen ([ChoiceDetails]). A setting whose choices are many or long, or
  * described one by one, is a [ValueRow] opening a dialog instead (`design/design.md`, *Settings
- * screen*).
+ * screen*). Not [enabled], none can be chosen; a value in [disabled], that one; [oneRow] keeps the
+ * buttons in one row at any font size (#801, [ChoiceButtonGroup]); [below] comes under the line
+ * of what the value does.
  */
 @Suppress("LongParameterList") // What the row shows, each a value of its own, and what a tap does.
 @Composable
@@ -299,6 +312,10 @@ internal fun <T> ChoiceButtonsRow(
     choices: List<Pair<T, String>>,
     selected: T,
     details: Map<T, String> = emptyMap(),
+    enabled: Boolean = true,
+    disabled: Set<T> = emptySet(),
+    oneRow: Boolean = false,
+    below: (@Composable () -> Unit)? = null,
     onSelect: (T) -> Unit,
 ) {
     if (!shownInSearch(title)) return
@@ -311,8 +328,19 @@ internal fun <T> ChoiceButtonsRow(
             modifier = Modifier.testTag(ROW_TITLE_TAG),
         )
         summary?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = color) }
-        ChoiceButtonGroup(choices, selected, onSelect, Modifier.padding(top = 4.dp), name = title, details = details)
+        ChoiceButtonGroup(
+            choices,
+            selected,
+            onSelect,
+            Modifier.padding(top = 4.dp),
+            name = title,
+            details = details,
+            enabled = enabled,
+            disabled = disabled,
+            oneRow = oneRow,
+        )
         ChoiceDetails(choices, selected, details)
+        below?.invoke()
     }
 }
 

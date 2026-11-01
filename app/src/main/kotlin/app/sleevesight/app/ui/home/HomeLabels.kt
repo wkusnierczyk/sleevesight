@@ -7,6 +7,7 @@ import app.sleevesight.app.pipeline.PipelineHost
 import app.sleevesight.app.session.PlaybackStatus
 import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.pipeline.AiSearches
 import app.sleevesight.core.pipeline.ReplyFailures
 import kotlin.time.Duration
 
@@ -92,6 +93,7 @@ private val FAILURE_TEXTS: Map<String, Int> =
         ReplyFailures.EMPTY to R.string.home_failure_empty,
         ReplyFailures.DECLINED to R.string.home_failure_declined,
         PipelineHost.FAILED to R.string.home_failure_failed,
+        AiSearches.WEB_SEARCH_FAILED to R.string.home_failure_web_search,
     )
 
 /** The host of [url], for an evidence line's link; null when it has none. */

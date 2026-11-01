@@ -134,9 +134,9 @@ internal fun insightRows(settings: Settings): List<IndexedRow> {
         ),
         indexRow(
             stringResource(R.string.settings_search_with_ai),
-            stringResource(R.string.settings_search_with_ai_summary),
+            stringResource(R.string.settings_search_with_ai_summary, stringResource(R.string.settings_ai_web_search)),
         ),
-    ) + readAloudIndexRows(settings)
+    ) + aiWebSearchIndexRows(settings) + readAloudIndexRows(settings)
 }
 
 @Composable
