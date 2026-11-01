@@ -210,6 +210,9 @@ class AppAiSearches(
      */
     val paid: StateFlow<QuestionCost> = costs
 
+    /** Counts a cost in [paid]: a genre's reason or list asked with the AI service (#762, #801). */
+    val counted: (QuestionCost) -> Unit = { cost -> costs.update { it + cost } }
+
     // The keys whose kept search was looked for, and those asked, with their calls.
     private val looked: MutableSet<CardKey> = ConcurrentHashMap.newKeySet()
     private val asking = ConcurrentHashMap<CardKey, Job>()

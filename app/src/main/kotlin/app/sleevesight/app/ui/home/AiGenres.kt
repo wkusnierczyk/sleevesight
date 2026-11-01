@@ -44,9 +44,9 @@ internal fun GenresSearch(
     notes: PanelNotes,
 ) {
     if (track != null && !track.genres.isEmpty || shown.looking.isNotEmpty()) return
-    AiSearchBlock(search, SearchKind.GENRES) { answer, _ ->
+    AiSearchBlock(search, SearchKind.GENRES) { answer, model ->
         if (answer is SearchAnswer.Genres && track != null) {
-            AiGenres(track, answer.genres, notes.notes, search)
+            AiGenres(track, answer.genres, notes.notes, search, model)
             // From the web (#801): the pages that give them, under the chips.
             for (source in answer.sources) FromSite(source)
         }
@@ -68,9 +68,11 @@ internal fun AiGenres(
     genres: List<GenreLabel>,
     notes: GenreNotes,
     search: PanelSearch = PanelSearch(),
+    model: String? = null,
 ) {
     var chosen by rememberSaveable(track.normalized.lookupKey) { mutableStateOf<String?>(null) }
-    val row = GenreRow(GenreLevel.TRACK, null, genres.map { TrackLabel(it, emptyList()) })
+    // Marked AI, as the genres the AI's list adds are (#762, #801), credited to [model].
+    val row = GenreRow(GenreLevel.TRACK, null, genres.map { TrackLabel(it, emptyList(), aiModel = model) })
     val labels = row.labels.map { PlacedLabel(row, it) }
     val open = genres.firstOrNull { it.identity == chosen }
     val handoff = rememberFocusHandoff()

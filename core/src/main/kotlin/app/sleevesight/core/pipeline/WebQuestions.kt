@@ -34,6 +34,12 @@ interface WebQuestion {
 
     /** *Up to {n} times*' prompt: the model searches up to [limit] times with [WebPrompt.TOOL]. */
     fun agent(limit: Int): String
+
+    /**
+     * The search tool's answer with a search's [pages], none of them MusicBrainz's: [WebPrompt.pages],
+     * unless the question numbers them as evidence lines of its own (a genre's reason, #762).
+     */
+    fun toolResult(pages: List<WebPage>): String = WebPrompt.pages(pages)
 }
 
 /** What a question cost (#801): the web searches made and the AI service's calls, each paid for. */
@@ -184,7 +190,7 @@ class WebQuestions(
             }
             val results =
                 checkNotNull(turn).calls.map { call ->
-                    val answer = answer(call, engine, cost.searches < limit, pages, counted)
+                    val answer = answer(question, call, engine, cost.searches < limit, pages, counted)
                     if (answer.searched) cost += QuestionCost.SEARCH
                     if (answer.failed) failed++
                     answer.result
@@ -196,7 +202,9 @@ class WebQuestions(
     // What the search tool answers [call] (searching with [engine] when [searchesLeft], counted, its
     // pages added to [pages]): the pages; that the search found none, or failed (an error); that no
     // searches are left; or, for a call with no query or to another tool, an error.
+    @Suppress("LongParameterList") // The question, the call, the engine, and what the loop keeps.
     private suspend fun answer(
+        question: WebQuestion,
         call: ToolCall,
         engine: WebSearcher,
         searchesLeft: Boolean,
@@ -220,7 +228,7 @@ class WebQuestions(
                     when {
                         found !is WebSearchOutcome.Found -> ToolResult(call.id, WebPrompt.SEARCH_FAILED, isError = true)
                         kept.isEmpty() -> ToolResult(call.id, WebPrompt.FOUND_NOTHING)
-                        else -> ToolResult(call.id, WebPrompt.pages(kept))
+                        else -> ToolResult(call.id, question.toolResult(kept))
                     }
                 ToolAnswer(result, searched = true, failed = found !is WebSearchOutcome.Found)
             }

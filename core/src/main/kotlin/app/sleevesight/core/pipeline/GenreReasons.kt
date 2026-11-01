@@ -4,10 +4,13 @@ import app.sleevesight.core.ai.CompletionEvent
 import app.sleevesight.core.ai.CompletionRequest
 import app.sleevesight.core.ai.StopReason
 import app.sleevesight.core.ai.Usage
+import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.evidence.Hasher
 import app.sleevesight.core.genres.LabelSource
 import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.settings.AiWebSearch
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.sources.WebSearcher
 import app.sleevesight.core.synthesis.CardKind
 import app.sleevesight.core.synthesis.GenreReasonPrompt
 import app.sleevesight.core.synthesis.GroundingCheck
@@ -71,11 +74,13 @@ sealed interface ReasonPath {
  * with, so the screen and the cache count *Keep history for* from the same time, as the insight's
  * (#643).
  */
+@Suppress("TooManyFunctions") // Each step of a reason: its key, its path, its calls with and without the web.
 class GenreReasons(
     private val ai: AiAccess?,
     private val cache: PipelineCache,
     private val hasher: Hasher,
     private val clock: Clock = Clock.System,
+    private val web: WebSearcher? = null,
 ) {
     /**
      * The key of [genre]'s reason for [track] under [settings] ([GenreLabel.identity]), or null when
@@ -148,14 +153,24 @@ class GenreReasons(
 
     /**
      * The reason kept for [key], checked against [track]'s evidence, with when it was written where
-     * the cache says; null when none is kept.
+     * the cache says; null when none is kept. One asked again with web search (#801) is checked
+     * against the track's evidence with the pages it found, numbered as they were.
      */
     suspend fun kept(
         key: CardKey,
         track: TrackState,
     ): KeptReason? {
         val card = attempt { cache.keptCard(key) } ?: return null
-        return KeptReason(checked(card.text, key, track, cached = true, usage = null, complete = true), card.writtenAt)
+        val searched = KeptReasonText.of(card.text)
+        val evidence =
+            searched?.let { kept ->
+                track.evidence?.let { own ->
+                    ReasonQuestion.withPages(own, kept.pages.map(KeptPage::page), hasher, card.writtenAt ?: now())
+                }
+            }
+        val text = searched?.reply ?: card.text
+        val state = checked(text, key, track, cached = true, usage = null, complete = true, evidence)
+        return KeptReason(state, card.writtenAt)
     }
 
     /**
@@ -164,23 +179,116 @@ class GenreReasons(
      * label is [label] (`GenreLabel.label`, as the chip shows it). A complete reply is kept in the
      * cache, `NO_EVIDENCE` too, so a tap on the same reason asks nothing again, with the one time it
      * is shown with (`PipelineCache.keep` with `writtenAt`).
+     *
+     * When the evidence cannot support the genre (nothing to narrate, or the model replies
+     * `NO_EVIDENCE`) and *AI web search* is on ([asking]: *Once* or *Up to {n} times*, with a web
+     * search engine, [web]), the same question is asked again with web search ([ReasonQuestion],
+     * #801, path A of #762's pick): what it finds is checked against the track's evidence with its
+     * pages, and kept with them; a question whose searches all failed is a failure, not kept. Each
+     * search and call is counted to [counted].
      */
+    @Suppress("LongParameterList") // The reason, its track and label, where its states go, and how it searches.
     suspend fun write(
         key: CardKey,
         track: TrackState,
         label: String,
+        asking: AiSearches.Asking = AiSearches.Asking(),
+        counted: (QuestionCost) -> Unit = {},
         show: (InsightState, Instant) -> Unit,
     ): InsightState {
         val access = checkNotNull(ai) { "no AI service" }
         val evidence = checkNotNull(track.evidence) { "no evidence" }
-        if (evidence.nothingToNarrate(key.modelKnowledge, artistsKnown = track.normalized.artists.isNotEmpty())) {
-            return InsightState.NoEvidence.also { show(it, now()) }
+        val search = WebQuestions(access, web).used(asking.search)
+        val narrate =
+            !evidence.nothingToNarrate(
+                key.modelKnowledge,
+                artistsKnown = track.normalized.artists.isNotEmpty(),
+            )
+        val searches = search != AiWebSearch.OFF
+        val first = if (narrate) firstCall(access, key, track, label, evidence, searches, counted, show) else null
+        return when {
+            first != null && (first.state != InsightState.NoEvidence || !searches) -> first.state
+            search == AiWebSearch.OFF -> InsightState.NoEvidence.also { show(it, now()) }
+            else -> searchAgain(key, track, label, evidence, asking.copy(search = search), counted, show)
         }
+    }
+
+    // The reason's one call from the track's [evidence]; kept, and shown, unless the evidence cannot
+    // support it and the web is searched next ([searches]).
+    @Suppress("LongParameterList") // As [write]'s, with the service and the evidence.
+    private suspend fun firstCall(
+        access: AiAccess,
+        key: CardKey,
+        track: TrackState,
+        label: String,
+        evidence: EvidenceSet,
+        searches: Boolean,
+        counted: (QuestionCost) -> Unit,
+        show: (InsightState, Instant) -> Unit,
+    ): ReplyOutcome {
         val prompt = GenreReasonPrompt.build(track.nowPlaying, track.normalized, evidence, label, key.modelKnowledge)
-        val text = StringBuilder()
-        var end: CompletionEvent? = null
         show(InsightState.Writing(""), now())
         val request = CompletionRequest(key.model, prompt, CompletionRequest.maxTokensFor(key.effort), key.effort)
+        counted(QuestionCost.CALL)
+        val (text, end) = stream(access, request, show)
+        val at = now()
+        val first = outcome(end, text, key, track, evidence)
+        if (first.state != InsightState.NoEvidence || !searches) {
+            if (first.kept) attempt { cache.keep(key, text, at) }
+            show(first.state, at)
+        }
+        return first
+    }
+
+    // [key]'s reason asked again with web search (#801), from [evidence] and the pages found.
+    @Suppress("LongParameterList") // As [write]'s, with the track's evidence.
+    private suspend fun searchAgain(
+        key: CardKey,
+        track: TrackState,
+        label: String,
+        evidence: EvidenceSet,
+        asking: AiSearches.Asking,
+        counted: (QuestionCost) -> Unit,
+        show: (InsightState, Instant) -> Unit,
+    ): InsightState {
+        val access = checkNotNull(ai)
+        val question = ReasonQuestion(track, label, evidence, key.modelKnowledge, hasher, now())
+        show(InsightState.Writing(""), now())
+        val base = CompletionRequest(key.model, "", CompletionRequest.maxTokensFor(key.effort), key.effort)
+        val reply = WebQuestions(access, web).ask(question, asking.search, asking.limit, base, counted)
+        val at = now()
+        val pages = question.pages.map(KeptPage::of)
+        val result =
+            when {
+                reply.searchFailed -> ReplyOutcome(InsightState.Failed(AiSearches.WEB_SEARCH_FAILED), kept = false)
+                // No page found, so no call: the evidence still cannot support it.
+                reply.end == null -> ReplyOutcome(InsightState.NoEvidence, kept = true)
+                // The pages as kept: retrieved when the reason is written, as a read has them.
+                else ->
+                    outcome(
+                        reply.end,
+                        reply.text,
+                        key,
+                        track,
+                        ReasonQuestion.withPages(evidence, question.pages, hasher, at),
+                    )
+            }
+        if (result.kept) {
+            val text = if (reply.end == null) GroundingCheck.NO_EVIDENCE else reply.text
+            attempt { cache.keep(key, KeptReasonText(text, pages).text(), at) }
+        }
+        return result.state.also { show(it, at) }
+    }
+
+    // One call of [request]: its text, each piece shown as it comes while it may not be
+    // `NO_EVIDENCE`, and its end.
+    private suspend fun stream(
+        access: AiAccess,
+        request: CompletionRequest,
+        show: (InsightState, Instant) -> Unit,
+    ): Pair<String, CompletionEvent?> {
+        val text = StringBuilder()
+        var end: CompletionEvent? = null
         access.provider.stream(request, access.key).collect { event ->
             when (event) {
                 is CompletionEvent.Delta -> {
@@ -196,45 +304,50 @@ class GenreReasons(
                 }
             }
         }
-        // One time for the last state shown and the reply kept.
-        val at = now()
-        val shown =
-            when (val last = end) {
-                is CompletionEvent.Done -> {
-                    val blank = ReplyFailures.ofBlank(last, text.toString())
-                    when {
-                        last.stopReason == StopReason.REFUSAL -> {
-                            InsightState.Failed(DECLINED)
-                        }
+        return text.toString() to end
+    }
 
-                        // No text is no reason to show, nor to keep (#665).
-                        blank != null -> {
-                            InsightState.Failed(blank)
-                        }
-
-                        else -> {
-                            val complete = last.stopReason == StopReason.END
-                            if (complete) attempt { cache.keep(key, text.toString(), at) }
-                            checked(text.toString(), key, track, cached = false, usage = last.usage, complete)
-                        }
+    // A reply's state, and whether it is kept: [end] and [text] read as a reason of [key], checked
+    // against [evidence].
+    private fun outcome(
+        end: CompletionEvent?,
+        text: String,
+        key: CardKey,
+        track: TrackState,
+        evidence: EvidenceSet,
+    ): ReplyOutcome =
+        when (end) {
+            is CompletionEvent.Done -> {
+                val blank = ReplyFailures.ofBlank(end, text)
+                when {
+                    end.stopReason == StopReason.REFUSAL -> ReplyOutcome(InsightState.Failed(DECLINED), kept = false)
+                    // No text is no reason to show, nor to keep (#665).
+                    blank != null -> ReplyOutcome(InsightState.Failed(blank), kept = false)
+                    else -> {
+                        val complete = end.stopReason == StopReason.END
+                        val searched = evidence.takeIf { it != track.evidence }
+                        ReplyOutcome(
+                            checked(text, key, track, cached = false, usage = end.usage, complete, searched),
+                            complete,
+                        )
                     }
                 }
-
-                is CompletionEvent.Error -> {
-                    InsightState.Failed(ReplyFailures.of(last))
-                }
-
-                else -> {
-                    InsightState.Failed(INCOMPLETE)
-                }
             }
-        return shown.also { show(it, at) }
-    }
+
+            is CompletionEvent.Error -> ReplyOutcome(InsightState.Failed(ReplyFailures.of(end)), kept = false)
+            else -> ReplyOutcome(InsightState.Failed(INCOMPLETE), kept = false)
+        }
+
+    // A reply's [state], and whether its text is [kept].
+    private data class ReplyOutcome(
+        val state: InsightState,
+        val kept: Boolean,
+    )
 
     // The clock's time, in whole milliseconds, as the cache keeps it.
     private fun now(): Instant = Instant.fromEpochMilliseconds(clock.now().toEpochMilliseconds())
 
-    @Suppress("LongParameterList") // The reply, its key, its track, and how it came.
+    @Suppress("LongParameterList") // The reply, its key, its track, how it came, and what it searched.
     private fun checked(
         text: String,
         key: CardKey,
@@ -242,8 +355,9 @@ class GenreReasons(
         cached: Boolean,
         usage: Usage?,
         complete: Boolean,
+        searched: EvidenceSet? = null,
     ): InsightState {
-        val evidence = track.evidence ?: return InsightState.NoEvidence
+        val evidence = searched ?: track.evidence ?: return InsightState.NoEvidence
         return when (val reply = GroundingCheck.check(text, evidence, key.modelKnowledge)) {
             InsightReply.NoEvidence -> {
                 InsightState.NoEvidence
@@ -251,7 +365,7 @@ class GenreReasons(
 
             is InsightReply.Written -> {
                 val by = WrittenBy(key.promptVersion, key.provider, key.model, key.effort)
-                InsightState.Written(reply.grounded, cached, usage, complete, writtenBy = by)
+                InsightState.Written(reply.grounded, cached, usage, complete, writtenBy = by, searched = searched)
             }
         }
     }

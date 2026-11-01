@@ -534,6 +534,8 @@ class AppGraph internal constructor(
             io = Dispatchers.IO,
             // The model of the AI's genre list and of each reason (#762), as the AI settings name it.
             modelName = ListedModelNames(appContext)::of,
+            // Their web searches and AI calls (#801), counted with *Ask AI*'s for the tester report.
+            paid = { aiSearches.counted(it) },
         )
 
     /**

@@ -243,7 +243,8 @@
     <!-- In the Genres panel, a genre source that could not be reached; Retry (home_retry) beside it asks
          it again. %1$s is the source. -->
     <string name="home_genre_source_unreachable">%1$s could not be reached.</string>
-    <string name="home_genres_none">None found.</string>
+    <!-- No genre from any source (#801's pick): the line above Ask AI and the genres it finds. -->
+    <string name="home_genres_none">The sources give no genres.</string>
     <!-- Every genre source off: this line, then home_genres_off_see on its own line. -->
     <string name="home_genres_off">Genre sources are disabled.</string>
     <!-- %1$s is home_settings_sources_link when the sources are off in Settings, home_settings_genres_link

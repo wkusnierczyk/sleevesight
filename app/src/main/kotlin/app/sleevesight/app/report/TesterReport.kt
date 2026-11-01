@@ -173,7 +173,10 @@ object TesterReport {
             appendLine()
             snapshot.askedAi?.let { cost ->
                 // Each paid for (#801): those of questions stopped or failed too.
-                appendLine("Ask AI since the app started: ${cost.searches} web searches, ${cost.calls} AI calls")
+                appendLine(
+                    "Ask AI, genre reasons and lists since the app started: ${cost.searches} web searches, " +
+                        "${cost.calls} AI calls",
+                )
                 appendLine()
             }
             appendLine("Pipeline events, oldest first (${snapshot.events.size})")

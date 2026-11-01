@@ -4,6 +4,7 @@ import app.sleevesight.core.ai.ModelNames
 import app.sleevesight.core.genres.GenreDefinitions
 import app.sleevesight.core.genres.GenreLabel
 import app.sleevesight.core.genres.GenreVocabulary
+import app.sleevesight.core.pipeline.AiSearches
 import app.sleevesight.core.pipeline.CardKey
 import app.sleevesight.core.pipeline.ClearEpoch
 import app.sleevesight.core.pipeline.GenreListState
@@ -11,6 +12,7 @@ import app.sleevesight.core.pipeline.GenreLists
 import app.sleevesight.core.pipeline.GenreReasons
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.PipelineParts
+import app.sleevesight.core.pipeline.QuestionCost
 import app.sleevesight.core.pipeline.ReasonPath
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.settings.Settings
@@ -167,6 +169,7 @@ class AppGenreNotes private constructor(
     private val epoch: ClearEpoch,
     private val clock: Clock,
     private val modelName: (String) -> String,
+    private val paid: (QuestionCost) -> Unit,
 ) : GenreNotes,
     DefinitionFeed by lookups {
     /**
@@ -184,6 +187,7 @@ class AppGenreNotes private constructor(
         io: CoroutineContext = EmptyCoroutineContext,
         clock: Clock = Clock.System,
         modelName: (String) -> String = { ModelNames.of(it) ?: it },
+        paid: (QuestionCost) -> Unit = {},
     ) : this(
         AppGenreDefinitions(definitions, settings, scope, epoch, io),
         definitions.vocabulary,
@@ -193,6 +197,7 @@ class AppGenreNotes private constructor(
         epoch,
         clock,
         modelName,
+        paid,
     )
 
     // A reason shown, or a list, and when it was written.
@@ -383,9 +388,13 @@ class AppGenreNotes private constructor(
             ?.label ?: genre
     }
 
-    private fun reasonsOf(made: PipelineParts) = GenreReasons(made.ai, made.cache, made.hasher, clock)
+    private fun reasonsOf(made: PipelineParts) = GenreReasons(made.ai, made.cache, made.hasher, clock, made.webSearch)
 
-    private fun listsOf(made: PipelineParts) = GenreLists(made.ai, made.cache, made.hasher, vocabulary, clock)
+    private fun listsOf(made: PipelineParts) =
+        GenreLists(made.ai, made.cache, made.hasher, vocabulary, clock, made.webSearch)
+
+    // How a reason or a list searches the web (#801), as the settings last read say; by a tap.
+    private fun asking(): AiSearches.Asking = AiSearches.Asking.of(settings.value, automatic = false)
 
     // Whether [key]'s reason may be asked for: not shown, shown as failed, or past *Keep history for*.
     private fun open(key: CardKey): Boolean {
@@ -417,7 +426,7 @@ class AppGenreNotes private constructor(
             if (kept != null) {
                 show(kept.state, kept.writtenAt ?: clock.now())
             } else {
-                reasons.write(key, track, label, show)
+                reasons.write(key, track, label, asking(), paid, show)
             }
         } catch (e: CancellationException) {
             throw e
@@ -456,7 +465,11 @@ class AppGenreNotes private constructor(
         }
         try {
             val kept = asker.kept(key)?.takeIf { !expired(it.writtenAt) }
-            if (kept != null) show(kept.state, kept.writtenAt ?: clock.now()) else asker.ask(key, track, show)
+            if (kept != null) {
+                show(kept.state, kept.writtenAt ?: clock.now())
+            } else {
+                asker.ask(key, track, asking(), paid, show)
+            }
         } catch (e: CancellationException) {
             throw e
         } catch (

@@ -114,8 +114,28 @@ object GenreReasonPrompt {
             appendLine(InsightPrompt.CONTRACT_HEADING)
             appendLine(contract(allowModel))
             appendLine()
-            append("Reply with the explanation text only.")
+            append(REPLY)
         }
+
+    /** The prompt's last line. */
+    const val REPLY: String = "Reply with the explanation text only."
+
+    /**
+     * [prompt] ([build]'s) for a reason that may search the web (#801, *AI web search*'s *Up to {n}
+     * times*): before its last line, that the model may search with the search tool, at most
+     * [limit] times, and that each search's pages come back as evidence lines, from [firstId] on,
+     * which it cites as the others and which hold facts only as the other lines do.
+     */
+    fun withSearch(
+        prompt: String,
+        limit: Int,
+        firstId: String,
+    ): String =
+        prompt.removeSuffix(REPLY) +
+            "If the evidence is not enough to explain the label, search the web with the " +
+            "${WebPrompt.TOOL_NAME} tool, at most $limit times. Each search's pages come back as more " +
+            "evidence lines, in the same format, numbered from [$firstId] on: cite them as the other lines, " +
+            "and use only what they say.\n\n" + REPLY
 
     /** The insight's rules ([InsightPrompt.contract]), with the label's own first. */
     fun contract(allowModel: Boolean): String =

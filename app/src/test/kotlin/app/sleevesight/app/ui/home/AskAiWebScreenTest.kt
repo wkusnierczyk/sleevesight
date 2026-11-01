@@ -13,6 +13,7 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
@@ -279,6 +280,13 @@ class AskAiWebScreenTest {
             val named = listOf(vocabulary.labelsFor(listOf("folk rock"), level = GenreLevel.TRACK).single())
             set(SearchKind.GENRES, AiSearch.Answered(SearchAnswer.Genres(named, listOf(discogs)), model, web))
             compose.onNodeWithTag(AI_SEARCH_FROM_TAG).assertTextEquals("From discogs.com")
+            // The line above them, and the chips marked AI, read as the AI's list's are (#762).
+            assertTrue(shows("The sources give no genres."))
+            val chip = app.getString(R.string.genre_ai_added, named.single().label, model)
+            assertEquals(
+                1,
+                compose.onAllNodesWithContentDescription(chip, useUnmergedTree = true).fetchSemanticsNodes().size,
+            )
         }
 
     @Test
