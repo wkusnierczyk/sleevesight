@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -24,6 +25,7 @@ import app.sleevesight.app.R
 import app.sleevesight.app.diagnostics.Diagnostics
 import app.sleevesight.app.diagnostics.DiagnosticsText
 import app.sleevesight.app.diagnostics.PageResult
+import app.sleevesight.app.ui.logo.Busy
 import app.sleevesight.store.TrackChangeRecord
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -93,7 +95,8 @@ internal fun ChangesTab(pages: ChangePages) {
                 }
 
                 pages.loading -> {
-                    Text(stringResource(R.string.diagnostics_loading))
+                    // With the turning record before it (#785).
+                    Busy(stringResource(R.string.diagnostics_loading), LocalTextStyle.current)
                 }
 
                 else -> {}

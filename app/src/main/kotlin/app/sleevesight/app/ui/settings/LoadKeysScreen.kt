@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -406,11 +405,13 @@ private fun ColumnScope.WordsStep(
     }
 }
 
-/** While a sealed code is opened: about a second, on a slow phone. */
+/**
+ * While a sealed code is opened: about a second, on a slow phone. Its heading has the turning record
+ * before it, in place of a progress bar (#785).
+ */
 @Composable
 private fun OpeningStep() {
-    StepHeading(stringResource(R.string.load_keys_opening), announced = true)
-    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+    StepHeading(stringResource(R.string.load_keys_opening), announced = true, busy = true)
 }
 
 /**

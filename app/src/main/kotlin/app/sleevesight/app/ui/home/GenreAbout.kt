@@ -26,6 +26,7 @@ import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.GenreNotes
 import app.sleevesight.app.pipeline.GenreReason
 import app.sleevesight.app.speech.Reading
+import app.sleevesight.app.ui.logo.Busy
 import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.core.genres.GenreDefinition
@@ -188,7 +189,12 @@ private fun Reason(
         when (state) {
             is InsightState.Writing -> {
                 for (paragraph in paragraphsOf(state.partial)) UncheckedProse(paragraph, context, onCite)
-                Quiet(stringResource(R.string.genre_why_writing))
+                // With the turning record before it (#785).
+                Busy(
+                    stringResource(R.string.genre_why_writing),
+                    MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
 
             is InsightState.Written -> {

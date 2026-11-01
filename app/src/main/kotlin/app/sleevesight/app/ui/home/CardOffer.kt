@@ -84,19 +84,31 @@ internal fun offersLookAgain(context: InsightContext): Boolean =
     context.offers.lookAgain && context.insightsOn && context.aiReady && context.unavailable == null
 
 /**
- * What is said of *Look again* (#617) after *As written previously.* (#671), on the same line: while
- * it looks the sources up, what that costs, the web search named when the run looks it up; once it
- * found something new, that *Rewrite insight* uses it, a paid call, while that is offered; once it
- * found nothing new, that it did; else none.
+ * What is said of *Look again* (#617) after *As written previously.* (#671), on the same line, once
+ * it is done: once it found something new, that *Rewrite insight* uses it, a paid call, while that is
+ * offered; once it found nothing new, that it did; else none. While it looks, none: what it is doing
+ * goes on a line of its own ([lookingAgainLine], #785).
  */
 @StringRes
 internal fun lookAgainLine(context: InsightContext): Int? =
     when {
-        context.offers.lookingAgain ->
-            if (searchesWeb(context.track)) R.string.home_look_again_looking_web else R.string.home_look_again_looking
+        context.offers.lookingAgain -> null
         context.offers.somethingNew && offersRewrite(context) -> R.string.home_look_again_something_new
         context.offers.nothingNew -> R.string.home_look_again_nothing_new
         else -> null
+    }
+
+/**
+ * What *Look again* (#617) is doing while it looks the sources up, and what that costs, the web
+ * search named when the run looks it up; said on a line of its own under *As written previously.*,
+ * with the turning record before it (#785). Null while it is not looking.
+ */
+@StringRes
+internal fun lookingAgainLine(context: InsightContext): Int? =
+    when {
+        !context.offers.lookingAgain -> null
+        searchesWeb(context.track) -> R.string.home_look_again_looking_web
+        else -> R.string.home_look_again_looking
     }
 
 // Whether [track]'s run looks the web search up: an adapter for it (its key saved), switched on.

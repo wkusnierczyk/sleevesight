@@ -367,12 +367,12 @@ class WriteSplitButtonScreenTest {
         show {
             leading(STOP_TAG).assertTextEquals("Stop writing").assertIsEnabled()
             assertEquals(0, count(WRITE_TAG))
-            // One line, in place of *Writing…*.
+            // Under *Writing…*, which stays (#785).
             says(
                 "Stop writing ends the call at once. If the request has reached your AI service, it still charges " +
                     "for what it has read and written so far.",
             )
-            compose.onNodeWithText("Writing…").assertDoesNotExist()
+            compose.onNodeWithText("Writing…").assertExists()
         }
     }
 

@@ -48,6 +48,7 @@ import app.sleevesight.app.ui.home.HomeFixtures.done
 import app.sleevesight.app.ui.home.HomeFixtures.normalizer
 import app.sleevesight.app.ui.home.HomeFixtures.sundown
 import app.sleevesight.app.ui.home.HomeFixtures.track
+import app.sleevesight.app.ui.logo.SPINNING_RECORD_TAG
 import app.sleevesight.core.genres.GenreDefinition
 import app.sleevesight.core.genres.GenreLabel
 import app.sleevesight.core.genres.GenreLevel
@@ -357,7 +358,7 @@ class AiSearchScreenTest {
             assertEquals(0, count(AI_SEARCH_TAG))
             compose.onNodeWithTag(AI_SEARCHING_TAG).assertTextEquals("Searching with AI…")
             // The record first on the line, hidden from a screen reader: the text says what is under way.
-            val record = compose.onNodeWithTag(AI_SEARCH_RECORD_TAG, useUnmergedTree = true).fetchSemanticsNode()
+            val record = compose.onNodeWithTag(SPINNING_RECORD_TAG, useUnmergedTree = true).fetchSemanticsNode()
             assertTrue(placed(record).right <= bounds(AI_SEARCHING_TAG).left)
             assertEquals(null, record.config.getOrNull(SemanticsProperties.ContentDescription))
             assertEquals(null, record.config.getOrNull(SemanticsProperties.Text))

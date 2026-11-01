@@ -30,8 +30,8 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.AiSearch
+import app.sleevesight.app.ui.logo.Busy
 import app.sleevesight.app.ui.theme.PanelRule
-import app.sleevesight.app.ui.theme.TurningRecord
 import app.sleevesight.app.ui.theme.handoffTarget
 import app.sleevesight.app.ui.theme.rememberFocusHandoff
 import app.sleevesight.core.genres.LabelSource
@@ -56,8 +56,8 @@ import app.sleevesight.core.synthesis.SearchKind
  *   which a screen reader names "ask your AI service, a paid call"; disabled with no AI service or
  *   model ready, a screen reader adding why; none at all with *Show insights* off, as *Why is this
  *   …?* has none then;
- * - under way: the small turning record ([TurningRecord]), then "Searching with AI…" in the panel's
- *   quiet note style, *Stop* at the right of the line, as *Retry* is beside its line ([LineButton]);
+ * - under way: the turning record, then "Searching with AI…" in the panel's quiet note style ([Busy],
+ *   #785), *Stop* at the right of the line, as *Retry* is beside its line ([LineButton]);
  *   the focus handed from the button to *Stop* and back, as each takes the other's place;
  * - answered: a rule, the answer as the panel shows its source's ([answer]), and "by {model}" on a
  *   line of its own, in italics;
@@ -171,7 +171,7 @@ private fun SearchButton(
     }
 }
 
-// The turning record, then "Searching with AI…" in the quiet style, with *Stop* (under
+// The turning record and "Searching with AI…" in the quiet style ([Busy]), with *Stop* (under
 // [stopModifier]) at the right of the line, centred on it, as *Retry* is beside its line.
 @Composable
 private fun SearchingLine(
@@ -183,10 +183,13 @@ private fun SearchingLine(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        TurningRecord(Modifier.testTag(AI_SEARCH_RECORD_TAG))
-        Box(Modifier.weight(1f)) {
-            QuietLine(stringResource(R.string.home_ai_searching), Modifier.testTag(AI_SEARCHING_TAG))
-        }
+        Busy(
+            stringResource(R.string.home_ai_searching),
+            MaterialTheme.typography.bodySmall,
+            Modifier.weight(1f),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textModifier = Modifier.testTag(AI_SEARCHING_TAG),
+        )
         LineButton(
             stringResource(R.string.home_ai_stop),
             stringResource(R.string.home_ai_stop_action),
@@ -265,13 +268,12 @@ internal fun emptyPanels(
 }
 
 /**
- * The test tags of *Search with AI* (#773): its button, the line while it searches, its record and its *Stop*,
+ * The test tags of *Search with AI* (#773): its button, the line while it searches and its *Stop*,
  * the rule above what it found, the credit under it, the line when it found nothing, and the line
  * when it failed.
  */
 const val AI_SEARCH_TAG: String = "ai-search"
 const val AI_SEARCHING_TAG: String = "ai-search:searching"
-const val AI_SEARCH_RECORD_TAG: String = "ai-search:record"
 const val AI_SEARCH_STOP_TAG: String = "ai-search:stop"
 const val AI_SEARCH_RULE_TAG: String = "ai-search:rule"
 const val AI_SEARCH_BY_TAG: String = "ai-search:by"

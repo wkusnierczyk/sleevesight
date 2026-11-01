@@ -34,6 +34,7 @@ import app.sleevesight.app.report.MailHandoff
 import app.sleevesight.app.report.TesterPart
 import app.sleevesight.app.report.TesterReport
 import app.sleevesight.app.report.TesterSnapshot
+import app.sleevesight.app.ui.logo.Busy
 import app.sleevesight.app.ui.theme.DeveloperMark
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -210,7 +211,8 @@ private fun PartText(
     val text = draft.text
     if (text == null) {
         if (draft.reading) {
-            Text(stringResource(R.string.tester_report_history_reading), style = MaterialTheme.typography.bodySmall)
+            // With the turning record before it (#785).
+            Busy(stringResource(R.string.tester_report_history_reading), MaterialTheme.typography.bodySmall)
         }
         return
     }

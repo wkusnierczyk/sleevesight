@@ -48,6 +48,7 @@ import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretState
 import app.sleevesight.app.ui.WebLink
 import app.sleevesight.app.ui.keyboard.ComputerKeyboard
+import app.sleevesight.app.ui.logo.Busy
 import app.sleevesight.app.ui.scan.QrScanner
 import app.sleevesight.core.ai.AiErrorKind
 import app.sleevesight.core.ai.ModelInfo
@@ -424,10 +425,13 @@ internal fun ModelDialog(
                     )
                 }
                 modelStatus(loaded)?.let {
-                    Text(
+                    // The list on its way, with the turning record before it (#785); once loaded, the
+                    // same node, without.
+                    Busy(
                         stringResource(it),
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(bottom = 8.dp),
+                        MaterialTheme.typography.bodyMedium,
+                        Modifier.padding(bottom = 8.dp),
+                        record = loaded == ModelLoad.Loading,
                     )
                 }
                 default?.let { d ->

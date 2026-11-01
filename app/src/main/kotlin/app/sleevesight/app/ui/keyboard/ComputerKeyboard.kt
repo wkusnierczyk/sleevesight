@@ -11,8 +11,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -32,6 +32,7 @@ import app.sleevesight.app.R
 import app.sleevesight.app.keyboard.BleKeyboard
 import app.sleevesight.app.keyboard.KeyboardSession
 import app.sleevesight.app.keyboard.KeyboardState
+import app.sleevesight.app.ui.logo.Busy
 
 /**
  * Runs a session of *Type on a computer* (#394) while it is shown: says where it is, passes each
@@ -106,11 +107,15 @@ private fun BluetoothKeyboard(
             onDispose { keyboard.stop() }
         }
     }
-    when {
-        refused -> KeyboardStatus(stringResource(R.string.keyboard_refused), onStop)
-        state == KeyboardState.WAITING -> KeyboardStatus(waitingMessage(showName, advertised), onStop)
-        else -> KeyboardStatus(stringResource(message(state)), onStop)
-    }
+    // One status in every state, so its message's node lasts from one to the next (#785).
+    val said =
+        when {
+            refused -> stringResource(R.string.keyboard_refused)
+            state == KeyboardState.WAITING -> waitingMessage(showName, advertised)
+            else -> stringResource(message(state))
+        }
+    val busy = !refused && (state == KeyboardState.WAITING || state == KeyboardState.STARTING)
+    KeyboardStatus(said, busy = busy, onStop = onStop)
 }
 
 /**
@@ -134,12 +139,19 @@ internal fun waitingMessage(
 internal fun KeyboardStatus(
     @StringRes message: Int,
     onStop: () -> Unit,
-) = KeyboardStatus(stringResource(message), onStop)
+) = KeyboardStatus(stringResource(message), onStop = onStop)
 
-/** Where the session is, [message], and *Stop*. */
+/**
+ * Where the session is, [message], and *Stop*; while it is [busy] (starting, or waiting for the
+ * computer), with the turning record before the message, by its first line (#785). The message is
+ * the same node in every state, the record coming and going before it ([Busy]'s `record`). *Stop* is
+ * an outlined button at the right, centred on the message whether it takes one line or several
+ * (#785), in every state.
+ */
 @Composable
 internal fun KeyboardStatus(
     message: String,
+    busy: Boolean = false,
     onStop: () -> Unit,
 ) {
     Row(
@@ -147,8 +159,8 @@ internal fun KeyboardStatus(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(message, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-        TextButton(onClick = onStop) { Text(stringResource(R.string.keyboard_stop)) }
+        Busy(message, MaterialTheme.typography.bodyMedium, Modifier.weight(1f), record = busy)
+        OutlinedButton(onClick = onStop) { Text(stringResource(R.string.keyboard_stop)) }
     }
 }
 

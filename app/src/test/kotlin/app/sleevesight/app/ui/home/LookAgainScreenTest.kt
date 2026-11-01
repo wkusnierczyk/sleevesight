@@ -45,9 +45,10 @@ import org.robolectric.RobolectricTestRunner
  * *Look again* on the insight card (#617): the first item of the split button's menu beside a
  * written insight, with no **AI** mark (it makes no call); enabled while the pipeline offers it,
  * and a tap carries the key it was offered under and the track shown; absent with no written
- * insight. After *As written previously.*, on the same line (#671), while it looks: what it costs,
- * the web search named when it is looked up; once it found something new, that *Rewrite insight*
- * uses it (in place of the settings' rewrite words); once it found nothing new, that it did.
+ * insight. While it looks, under *As written previously.*, on a line of its own (#785): what it
+ * costs, the web search named when it is looked up. After *As written previously.*, on the same line
+ * (#671): once it found something new, that *Rewrite insight* uses it (in place of the settings'
+ * rewrite words); once it found nothing new, that it did.
  */
 @RunWith(RobolectricTestRunner::class)
 class LookAgainScreenTest {
@@ -134,17 +135,16 @@ class LookAgainScreenTest {
     fun whileItLooksTheCardSaysWhatItCosts() {
         view.value = PipelineView(kept, aiReady = true, cardShown = true, lookingAgain = true)
         show {
-            compose
-                .onNodeWithText("As written previously. Looking every source up again.")
-                .assertExists()
+            compose.onNodeWithText("As written previously.").assertExists()
+            compose.onNodeWithText("Looking every source up again.").assertExists()
         }
         val searching = kept.copy(sources = kept.sources + (SourceId.WEB to SourceState.Pending))
         view.value = PipelineView(searching, aiReady = true, cardShown = true, lookingAgain = true)
         show {
+            compose.onNodeWithText("As written previously.").assertExists()
             compose
                 .onNodeWithText(
-                    "As written previously. " +
-                        "Looking every source up again, the web search included: a paid search on your Exa key.",
+                    "Looking every source up again, the web search included: a paid search on your Exa key.",
                 ).assertExists()
         }
     }

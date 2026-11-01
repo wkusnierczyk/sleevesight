@@ -16,6 +16,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
+import app.sleevesight.app.ui.logo.Busy
 import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.app.ui.theme.LinkLabel
 import app.sleevesight.app.ui.theme.LinkedText
@@ -87,7 +88,7 @@ internal fun LyricsPanel(
 ) {
     val style = MaterialTheme.typography.bodyLarge
     when (links) {
-        LyricsLinks.Looking -> Text(stringResource(R.string.home_musicbrainz_looking), style = style)
+        LyricsLinks.Looking -> Busy(stringResource(R.string.home_musicbrainz_looking), style)
         LyricsLinks.Instrumental -> Text(stringResource(R.string.home_lyrics_instrumental), style = style)
         is LyricsLinks.Links -> {
             for (link in links.links) PageLink(link, search = false)
