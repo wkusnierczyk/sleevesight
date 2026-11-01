@@ -9,9 +9,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /**
- * The read-aloud settings (#325) as stored: *Lower the music*, the track line not first and new
+ * The read-aloud settings (#325) as stored: *Reduce volume*, the track line not first and new
  * insights not read by themselves by default, and for a settings file from before them; each
- * change under a key of its own, *While reading aloud* by name, and a name this version does not
+ * change under a key of its own, *Music while reading aloud* by name, and a name this version does not
  * know read as the default.
  */
 class ReadAloudCodecTest {

@@ -42,7 +42,8 @@ import app.sleevesight.core.pipeline.InsightState
  * by the split button, where it was taken for part of the card's actions; it makes no AI call and
  * carries no **AI** mark. With no insight written, the heading stands alone, as tall as the button, so
  * the insight does not move down when it is written. Its width is kept first: at a large font size the
- * heading wraps in what is left.
+ * heading wraps in what is left. While it reads with the music paused though *Reduce volume* is
+ * chosen, on a speaker whose volume the phone cannot set (#803), a quiet note under the heading says so.
  */
 @Suppress("LongParameterList") // The insight, what it is shown with, and its actions, each on its own.
 @Composable
@@ -68,6 +69,7 @@ internal fun InsightCard(
             )
             read?.let { ReadAloudButton(it, READ_ALOUD_TAG) }
         }
+        if (read?.pausedInstead == true) Quiet(stringResource(R.string.home_read_aloud_paused_instead))
         InsightBody(insight, context, actions, groundingDetails)
         val lookAgain =
             (insight as? InsightState.Written)?.let {
