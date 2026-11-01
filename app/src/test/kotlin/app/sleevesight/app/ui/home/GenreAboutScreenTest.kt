@@ -6,7 +6,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertHeightIsAtLeast
@@ -26,10 +28,14 @@ import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
+import app.sleevesight.app.pipeline.AiSearch
+import app.sleevesight.app.pipeline.AiSearchFeed
+import app.sleevesight.app.pipeline.DefinitionState
 import app.sleevesight.app.pipeline.GenreNotes
 import app.sleevesight.app.pipeline.GenreReason
 import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.app.ui.home.HomeFixtures.track
+import app.sleevesight.app.ui.logo.SPINNING_RECORD_TAG
 import app.sleevesight.core.genres.GenreDefinition
 import app.sleevesight.core.genres.GenreLabel
 import app.sleevesight.core.genres.GenreLevel
@@ -40,17 +46,20 @@ import app.sleevesight.core.genres.TrackGenres
 import app.sleevesight.core.genres.TrackLabel
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.TrackState
-import app.sleevesight.core.resolution.Lookup
 import app.sleevesight.core.settings.Layout
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.synthesis.GroundingCheck
 import app.sleevesight.core.synthesis.InsightReply
+import app.sleevesight.core.synthesis.SearchAnswer
+import app.sleevesight.core.synthesis.SearchFacts
+import app.sleevesight.core.synthesis.SearchKind
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -95,18 +104,26 @@ class GenreAboutScreenTest {
             cached = false,
         )
 
-    // Notes that give [definition], and the reason [reason] holds; a tap writes [written].
+    // Notes that give [definition], and the reason [reason] holds; a tap writes [written]. *Retry*
+    // under a failed lookup is counted in [retried], and turns [retryGives] to looking.
     private inner class Notes(
         private val definition: GenreDefinition? = jazz,
         start: GenreReason = GenreReason.Offered,
-        private val lookedUp: (String) -> Flow<Lookup<GenreDefinition>?> = {
-            flowOf(definition?.let { Lookup.Found(it) } ?: Lookup.NotFound)
+        private val lookedUp: (String) -> Flow<DefinitionState?> = {
+            flowOf(definition?.let { DefinitionState.Found(it) } ?: DefinitionState.NotFound)
         },
+        private val retryGives: MutableStateFlow<DefinitionState?> = MutableStateFlow(null),
     ) : GenreNotes {
         val reason = MutableStateFlow(start)
         var taps = 0
+        val retried = mutableListOf<String>()
 
-        override fun definition(genre: String): Flow<Lookup<GenreDefinition>?> = lookedUp(genre)
+        override fun definition(genre: String): Flow<DefinitionState?> = lookedUp(genre)
+
+        override fun retryDefinition(genre: String) {
+            retried += genre
+            retryGives.value = DefinitionState.Looking
+        }
 
         override fun reason(
             track: TrackState,
@@ -139,13 +156,19 @@ class GenreAboutScreenTest {
         notes: GenreNotes,
         cited: MutableList<String> = mutableListOf(),
         track: TrackState = playing,
+        feed: AiSearchFeed = AiSearchFeed.None,
         block: () -> Unit,
     ) {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity {
                 it.setContent {
                     Column(Modifier.verticalScroll(rememberScrollState())) {
-                        GenresContent(track, Settings(), notes = PanelNotes(notes, { id -> cited += id }))
+                        GenresContent(
+                            track,
+                            Settings(),
+                            notes = PanelNotes(notes, { id -> cited += id }),
+                            search = PanelSearch(feed, track, track.nowPlaying),
+                        )
                     }
                 }
             }
@@ -168,9 +191,9 @@ class GenreAboutScreenTest {
         showBox(Notes()) {
             compose.onNodeWithText(jazz.text).assertExists()
             compose.onNodeWithText("From Wikipedia · CC BY-SA 4.0").assertExists()
-            val order = listOf(GENRE_PANEL_HEADING_TAG, GENRE_DEFINITION_TAG, GENRE_WHY_TAG, GENRES_ROW_PREFIX + "0")
+            val order = listOf(JAZZ_CHIP, GENRE_DEFINITION_TAG, GENRE_WHY_TAG, GENRES_ROW_PREFIX + "0")
             val tops = order.map(::top)
-            assertEquals("heading, definition, Why, table, in that order", tops.sorted(), tops)
+            assertEquals("chip, definition, Why, tags, in that order", tops.sorted(), tops)
         }
 
     @Test
@@ -266,7 +289,7 @@ class GenreAboutScreenTest {
                 if (genre ==
                     "jazz"
                 ) {
-                    flowOf(Lookup.Found(jazz))
+                    flowOf(DefinitionState.Found(jazz))
                 } else {
                     flow { awaitCancellation() }
                 }
@@ -291,7 +314,6 @@ class GenreAboutScreenTest {
             compose.onNodeWithText(jazz.text).assertExists()
             compose.onNodeWithTag(GENRE_PREFIX + "artist:Miles Davis:modaljazz").performClick()
             compose.waitForIdle()
-            compose.onNodeWithTag(GENRE_PANEL_HEADING_TAG).assertTextEquals("Modal Jazz")
             assertEquals(0, count(GENRE_DEFINITION_TAG))
             compose.onNodeWithText(jazz.text).assertDoesNotExist()
         }
@@ -303,18 +325,163 @@ class GenreAboutScreenTest {
             assertEquals(0, count(GENRE_DEFINITION_TAG))
             compose.onNodeWithTag(GENRE_NO_DEFINITION_TAG).assertTextEquals(text(R.string.genre_definition_none))
             assertEquals("No definition from Wikipedia for this genre.", text(R.string.genre_definition_none))
-            val tops = listOf(GENRE_PANEL_HEADING_TAG, GENRE_NO_DEFINITION_TAG, GENRE_WHY_TAG).map(::top)
+            val tops = listOf(JAZZ_CHIP, GENRE_NO_DEFINITION_TAG, GENRE_WHY_TAG).map(::top)
             assertEquals(tops.sorted(), tops)
         }
 
     @Test
-    fun noLineWhileTheDefinitionIsLookedUpOrAfterAFailedLookup() {
-        showBox(Notes(lookedUp = { flowOf(null) })) { assertEquals(0, count(GENRE_NO_DEFINITION_TAG)) }
-        showBox(Notes(lookedUp = { flowOf(Lookup.Failed("offline")) })) {
-            assertEquals(0, count(GENRE_NO_DEFINITION_TAG))
+    fun whileTheDefinitionIsLookedUpTheRecordAndLookingOnWikipediaShowInItsPlace() =
+        showBox(Notes(lookedUp = { flowOf(DefinitionState.Looking) })) {
+            assertEquals("Looking on Wikipedia…", text(R.string.genre_definition_looking))
+            compose
+                .onNodeWithTag(GENRE_DEFINITION_LOOKING_TAG, useUnmergedTree = true)
+                .assertTextEquals(text(R.string.genre_definition_looking))
             assertEquals(0, count(GENRE_DEFINITION_TAG))
+            assertEquals(0, count(GENRE_NO_DEFINITION_TAG))
+            // The record before it, which a screen reader skips: no text, no description.
+            val record = compose.onNodeWithTag(SPINNING_RECORD_TAG, useUnmergedTree = true).fetchSemanticsNode()
+            assertEquals(null, record.config.getOrNull(SemanticsProperties.ContentDescription))
+            assertEquals(null, record.config.getOrNull(SemanticsProperties.Text))
+            val line = compose.onNodeWithTag(GENRE_DEFINITION_LOOKING_TAG, useUnmergedTree = true).fetchSemanticsNode()
+            assertTrue(record.boundsInRoot.right <= line.boundsInRoot.left)
+            // In the definition's place, above *Why is this …?*.
+            assertTrue(top(GENRE_DEFINITION_LOOKING_TAG) < top(GENRE_WHY_TAG))
+        }
+
+    @Test
+    fun aFailedLookupSaysSoWithRetryWhichAsksWikipediaAgainAndLooksAgain() {
+        val lookup = MutableStateFlow<DefinitionState?>(DefinitionState.Failed)
+        val retrying = Notes(lookedUp = { lookup }, retryGives = lookup)
+        showBox(retrying) {
+            assertEquals("Wikipedia could not be reached.", text(R.string.genre_definition_failed))
+            compose.onNodeWithText(text(R.string.genre_definition_failed)).assertExists()
+            val retry =
+                compose.onNode(
+                    hasTestTag(RETRY_TAG) and hasAnyAncestor(hasTestTag(GENRE_DEFINITION_FAILED_TAG)),
+                )
+            // "Retry. Button. Double-tap to ask Wikipedia again".
+            retry.assertTextEquals(text(R.string.home_retry))
+            assertEquals(
+                text(R.string.home_retry_action, "Wikipedia"),
+                retry
+                    .fetchSemanticsNode()
+                    .config
+                    .getOrNull(SemanticsActions.OnClick)
+                    ?.label,
+            )
+            assertEquals("ask Wikipedia again", text(R.string.home_retry_action, "Wikipedia"))
+            assertEquals(Role.Button, retry.fetchSemanticsNode().config.getOrNull(SemanticsProperties.Role))
+            retry.assertHeightIsAtLeast(48.dp)
+            // On the line's right, and in the error colour, as the line is.
+            assertTrue(retry.fetchSemanticsNode().boundsInRoot.left > lineOf(R.string.genre_definition_failed).left)
+            retry.performClick()
+            compose.waitForIdle()
+            assertEquals(listOf("jazz"), retrying.retried)
+            compose
+                .onNodeWithTag(GENRE_DEFINITION_LOOKING_TAG, useUnmergedTree = true)
+                .assertTextEquals(text(R.string.genre_definition_looking))
+            assertEquals(0, count(GENRE_DEFINITION_FAILED_TAG))
         }
     }
+
+    @Test
+    fun aGenreWithNoArticleOffersSearchWithAiForItsDefinitionInEachOfItsStates() {
+        val feed = DefinitionFeed()
+        showBox(Notes(definition = null), feed = feed) {
+            // Offered: under the line saying there is none, above *Why is this …?*.
+            assertTrue(top(GENRE_NO_DEFINITION_TAG) < top(AI_SEARCH_TAG))
+            assertTrue(top(AI_SEARCH_TAG) < top(GENRE_WHY_TAG))
+            assertEquals(listOf<String?>("jazz"), feed.searched)
+            compose.onNodeWithTag(AI_SEARCH_TAG).performClick()
+            compose.waitForIdle()
+            assertEquals(listOf("jazz" to "Jazz"), feed.asked)
+            // Under way: the record, "Searching with AI…", and *Stop*.
+            feed.state.value = AiSearch.Searching
+            compose.waitForIdle()
+            compose.onNodeWithTag(AI_SEARCHING_TAG, useUnmergedTree = true).assertTextEquals("Searching with AI…")
+            compose.onNodeWithTag(AI_SEARCH_STOP_TAG).performClick()
+            compose.waitForIdle()
+            assertEquals(listOf<String?>("jazz"), feed.stopped)
+            // Answered: under a rule, then "by {model}".
+            feed.state.value = AiSearch.Answered(SearchAnswer.Definition(AI_JAZZ), MODEL)
+            compose.waitForIdle()
+            compose.onNodeWithText(AI_JAZZ).assertExists()
+            assertTrue(
+                top(AI_SEARCH_RULE_TAG) <
+                    compose
+                        .onNodeWithText(AI_JAZZ)
+                        .fetchSemanticsNode()
+                        .boundsInRoot.top,
+            )
+            compose.onNodeWithTag(AI_SEARCH_BY_TAG).assertTextEquals("by $MODEL")
+            // Nothing found.
+            feed.state.value = AiSearch.NothingFound(MODEL)
+            compose.waitForIdle()
+            compose.onNodeWithTag(AI_SEARCH_NOTHING_TAG).assertTextEquals("$MODEL found nothing.")
+            // Failed, with *Retry*, which asks again.
+            feed.state.value = AiSearch.Failed("offline")
+            compose.waitForIdle()
+            compose.onNodeWithTag(AI_SEARCH_FAILED_TAG).assertExists()
+            compose.onNode(hasTestTag(RETRY_TAG) and hasAnyAncestor(hasTestTag(AI_SEARCH_FAILED_TAG))).performClick()
+            compose.waitForIdle()
+            assertEquals(2, feed.asked.size)
+            // No AI service: disabled, a screen reader told why.
+            feed.state.value = AiSearch.Unready
+            compose.waitForIdle()
+            compose.onNodeWithTag(AI_SEARCH_TAG).assertIsNotEnabled()
+            assertEquals(
+                text(R.string.home_ai_search_unready),
+                compose.onNodeWithTag(AI_SEARCH_TAG).fetchSemanticsNode().config.getOrNull(
+                    SemanticsProperties.StateDescription,
+                ),
+            )
+        }
+    }
+
+    @Test
+    fun aDefinitionFoundOffersNoSearch() {
+        val feed = DefinitionFeed()
+        showBox(Notes(), feed = feed) { assertEquals(0, count(AI_SEARCH_TAG)) }
+    }
+
+    // A genre's definition's search, as the test sets it, and what reached it.
+    private class DefinitionFeed : AiSearchFeed {
+        val state = MutableStateFlow<AiSearch>(AiSearch.Offered)
+        val searched = mutableListOf<String?>()
+        val asked = mutableListOf<Pair<String?, String?>>()
+        val stopped = mutableListOf<String?>()
+
+        override fun search(
+            track: TrackState,
+            kind: SearchKind,
+            genre: String?,
+        ): Flow<AiSearch> {
+            if (kind == SearchKind.DEFINITION) searched += genre
+            return if (kind == SearchKind.DEFINITION) state else flowOf(AiSearch.None)
+        }
+
+        override fun ask(
+            track: TrackState,
+            kind: SearchKind,
+            facts: SearchFacts,
+            automatic: Boolean,
+            genre: String?,
+        ): Boolean {
+            asked += genre to facts.genre
+            return true
+        }
+
+        override fun stop(
+            track: TrackState,
+            kind: SearchKind,
+            genre: String?,
+        ) {
+            stopped += genre
+        }
+    }
+
+    // Where the line [id] is laid out.
+    private fun lineOf(id: Int) = compose.onNodeWithText(text(id)).fetchSemanticsNode().boundsInRoot
 
     @Test
     fun noDefinitionAndNoWhyLeaveTheTableAlone() =
@@ -368,5 +535,8 @@ class GenreAboutScreenTest {
 
     private companion object {
         const val REASON = "Its modal tunes are jazz [MB1]."
+        const val JAZZ_CHIP = GENRE_PREFIX + "artist:Miles Davis:jazz"
+        const val MODEL = "Claude Haiku 5.5"
+        const val AI_JAZZ = "Jazz is music of swing, blue notes and improvisation, born in New Orleans."
     }
 }

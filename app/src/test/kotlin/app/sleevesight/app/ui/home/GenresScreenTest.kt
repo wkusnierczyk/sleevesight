@@ -21,6 +21,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -46,10 +47,12 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * The genres under *Expandable boxes* (#439, #558): the chips alone; a chip opens its genre's
- * panel, another switches it, the same chip or *Close* closes it; the panel's table names its rows
- * by the track's title, the artist's name and the album's title, on one line each and read whole,
- * the genre marked wherever it shows; where the table's labels come from, a line per row; none, and off.
+ * The genres under *Expandable boxes* (#439, #558, #786): the chips alone; a chip unfolds its genre
+ * under them and a rule, with no heading or *Close*, another replaces it, the same chip folds it; its
+ * tags and their sources in one grid of two columns, its rows named *Track*, *Artist* (*Artist 1*,
+ * *Artist 2* with several artists) and *Album* (with album tags), each one item to a screen reader,
+ * the genre marked wherever it shows, each source linked, MusicBrainz's credit and licence only with
+ * its tags; none, and off.
  * Inside *Genres*' panel (#772), as [GenresContent] draws it; the button, the panel and why it has no
  * chip are `GenresButtonScreenTest`'s.
  */
@@ -105,25 +108,34 @@ class GenresScreenTest {
         }
     }
 
-    private fun tagged(prefix: String): List<String> =
+    // The texts of the nodes tagged with [prefix], each node's joined: in the merged tree, a grid's
+    // row reads as one item, its name then its chips or sources; [unmerged], each node alone.
+    private fun tagged(
+        prefix: String,
+        unmerged: Boolean = false,
+    ): List<String> =
         compose
             .onAllNodes(
                 SemanticsMatcher("tagged $prefix") {
                     it.config.getOrNull(SemanticsProperties.TestTag)?.startsWith(prefix) == true
                 },
+                useUnmergedTree = unmerged,
             ).fetchSemanticsNodes()
             .map { node -> node.config[SemanticsProperties.Text].joinToString { it.text } }
 
-    // The chips on Home, and the labels in the panel's table, of [level].
+    // The chips on Home, and the labels in the grid, of [level].
     private fun chips(level: GenreLevel) = tagged(GENRE_PREFIX + level.name.lowercase())
 
-    private fun cells(level: GenreLevel) = tagged(GENRE_CELL_PREFIX + level.name.lowercase())
+    private fun cells(level: GenreLevel) = tagged(GENRE_CELL_PREFIX + level.name.lowercase(), unmerged = true)
 
-    private fun rowNames() = tagged(GENRES_ROW_PREFIX)
+    // The grid's rows of tags, and of sources, as a screen reader reads each.
+    private fun rows() = tagged(GENRES_ROW_PREFIX)
+
+    private fun sources() = tagged(GENRE_SOURCES_ROW_PREFIX)
 
     private fun panels() = compose.onAllNodesWithTag(GENRE_PANEL_TAG).fetchSemanticsNodes().size
 
-    private fun heading() = compose.onNodeWithTag(GENRE_PANEL_HEADING_TAG)
+    private fun count(tag: String) = compose.onAllNodesWithTag(tag, useUnmergedTree = true).fetchSemanticsNodes().size
 
     private fun tap(tag: String) {
         compose.onNodeWithTag(tag).performClick()
@@ -138,104 +150,166 @@ class GenresScreenTest {
             .getOrNull(SemanticsActions.OnClick)
             ?.label
 
+    private fun bounds(
+        tag: String,
+        unmerged: Boolean = true,
+    ) = compose.onNodeWithTag(tag, useUnmergedTree = unmerged).fetchSemanticsNode().boundsInRoot
+
+    // The addresses the text [line] links, in order.
+    private fun links(line: String): List<String> {
+        val text =
+            compose
+                .onNodeWithText(line, useUnmergedTree = true)
+                .fetchSemanticsNode()
+                .config[SemanticsProperties.Text]
+                .single()
+        return text.getLinkAnnotations(0, text.length).map { (it.item as LinkAnnotation.Url).url }
+    }
+
     @Test
-    fun atRestTheMostSpecificLevelsChipsShowAloneWithNoTitleAndNoPanel() {
+    fun atRestTheMostSpecificLevelsChipsShowAloneWithNoTitleAndNoGenre() {
         show(three) {
             assertEquals(listOf("Baroque Pop", "Ballad"), chips(GenreLevel.TRACK))
             assertEquals(emptyList<String>(), chips(GenreLevel.ARTIST))
             val titles = compose.onAllNodesWithText(text(R.string.home_genres), substring = true)
             assertEquals(0, titles.fetchSemanticsNodes().size)
             assertEquals(0, panels())
-            assertEquals(emptyList<String>(), rowNames())
+            assertEquals(emptyList<String>(), rows())
         }
     }
 
     @Test
-    fun aChipOpensItsPanelAnotherSwitchesItAndTheSameChipOrCloseClosesIt() {
+    fun aChipUnfoldsItsGenreUnderTheChipsAnotherReplacesItAndTheSameChipFoldsIt() {
         show(three) {
             val baroque = GENRE_PREFIX + "track:baroquepop"
             val ballad = GENRE_PREFIX + "track:ballad"
             tap(baroque)
             assertEquals(1, panels())
-            heading().assertTextEquals("Baroque Pop")
             compose.onNodeWithTag(baroque).assertIsSelected()
+            // Under the chips, with no heading or *Close* of its own (#786).
+            assertTrue(bounds(GENRE_PANEL_TAG).top >= bounds(baroque).bottom)
+            assertEquals(0, count(GENRE_PANEL_HEADING_TAG))
+            assertEquals(0, compose.onAllNodesWithText(text(R.string.page_close)).fetchSemanticsNodes().size)
 
             tap(ballad)
             assertEquals(1, panels())
-            heading().assertTextEquals("Ballad")
             compose.onNodeWithTag(baroque).assertIsNotSelected()
             compose.onNodeWithTag(ballad).assertIsSelected()
+            compose.onNodeWithTag(GENRE_CELL_PREFIX + "track:ballad", useUnmergedTree = true).assertIsSelected()
 
             tap(ballad)
             assertEquals(0, panels())
             compose.onNodeWithTag(ballad).assertIsNotSelected()
-
-            tap(baroque)
-            assertEquals(1, panels())
-            tap(GENRE_PANEL_CLOSE_TAG)
-            assertEquals(0, panels())
-            compose.onNodeWithTag(baroque).assertIsNotSelected()
         }
     }
 
     @Test
-    fun thePanelsTableNamesItsRowsByTheTracksTitleTheArtistAndTheAlbumsTitle() {
+    fun theGridNamesItsRowsTrackArtistAndAlbumAndReadsEachRowAsOneItem() {
         show(three) {
             tap(GENRE_PREFIX + "track:baroquepop")
-            // Sundown, by Gordon Lightfoot, from Sundown: the row names, not *Track*, *Artist*, *Album*.
-            assertEquals(listOf("Sundown", "The Beatles", "Sundown"), rowNames())
-            val levels = listOf(R.string.home_genres_track, R.string.home_genres_artist_row, R.string.home_genres_album)
-            for (level in levels) {
-                assertEquals(0, compose.onAllNodesWithText(text(level)).fetchSemanticsNodes().size)
-            }
+            compose
+                .onNodeWithText(
+                    text(R.string.home_genre_tags),
+                ).assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.Heading))
+            compose
+                .onNodeWithText(
+                    text(R.string.home_genre_tag_sources),
+                ).assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.Heading))
+            assertEquals("Genre tags", text(R.string.home_genre_tags))
+            assertEquals("Tag sources", text(R.string.home_genre_tag_sources))
+            // Each row one item: its name, then its chips (not buttons), or its sources.
+            assertEquals(listOf("Track, Baroque Pop, Ballad", "Artist, Rock, Pop", "Album, Folk Rock, Pop"), rows())
+            assertEquals(listOf("Track, Last.fm", "Artist, Last.fm", "Album, Last.fm"), sources())
             assertEquals(listOf("Baroque Pop", "Ballad"), cells(GenreLevel.TRACK))
             assertEquals(listOf("Rock", "Pop"), cells(GenreLevel.ARTIST))
             assertEquals(listOf("Folk Rock", "Pop"), cells(GenreLevel.ALBUM))
+            // The tags above the sources, each under its heading.
+            assertTrue(bounds(GENRES_ROW_PREFIX + "2").bottom <= bounds(GENRE_SOURCES_ROW_PREFIX + "0").top)
         }
     }
 
     @Test
-    fun theTappedGenreIsMarkedWhereverItShowsInTheTable() {
-        // Pop is the track's, and on the artist's and the album's rows.
-        val pop = TrackGenres(listOf(row(GenreLevel.TRACK, "pop"), beatles, album))
-        show(pop) {
-            tap(GENRE_PREFIX + "track:pop")
-            compose.onNodeWithTag(GENRE_CELL_PREFIX + "track:pop").assertIsSelected()
-            compose.onNodeWithTag(GENRE_CELL_PREFIX + "artist:The Beatles:pop").assertIsSelected()
-            compose.onNodeWithTag(GENRE_CELL_PREFIX + "album:pop").assertIsSelected()
-            for (other in listOf("artist:The Beatles:rock", "album:folkrock")) {
-                val config = compose.onNodeWithTag(GENRE_CELL_PREFIX + other).fetchSemanticsNode().config
-                assertTrue("$other is not marked", config.getOrNull(SemanticsProperties.Selected) != true)
-                // The table's labels are not buttons.
-                assertEquals(null, config.getOrNull(SemanticsActions.OnClick))
-            }
+    fun albumShowsOnlyWithAlbumTags() {
+        show(TrackGenres(listOf(track, beatles))) {
+            tap(GENRE_PREFIX + "track:baroquepop")
+            assertEquals(listOf("Track, Baroque Pop, Ballad", "Artist, Rock, Pop"), rows())
+            assertEquals(
+                0,
+                compose
+                    .onAllNodesWithText(
+                        text(R.string.home_genres_album),
+                        useUnmergedTree = true,
+                    ).fetchSemanticsNodes()
+                    .size,
+            )
         }
     }
 
     // Native graphics, so the text is measured as on a phone.
     @Test
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
-    fun aLongRowNameIsClippedToOneLineAndAScreenReaderReadsItWhole() {
-        val long = "Project Hail Mary (Original Motion Picture Soundtrack) [Deluxe Edition, Remastered 2026]"
-        val playing = track(HomeFixtures.sundown.copy(album = long))
-        show(three, playing = playing) {
+    fun theFirstColumnIsTheWidestNamesAndSharedByTheTagsAndTheSources() {
+        show(three) {
             tap(GENRE_PREFIX + "track:baroquepop")
-            val node = compose.onNodeWithTag(GENRES_ROW_PREFIX + "2")
-            node.assertTextEquals(long)
-            val layouts = mutableListOf<TextLayoutResult>()
-            node
-                .fetchSemanticsNode()
-                .config[SemanticsActions.GetTextLayoutResult]
-                .action
-                ?.invoke(layouts)
-            val layout = layouts.single()
-            assertEquals(1, layout.lineCount)
-            assertTrue("the album's title is clipped with an ellipsis", layout.isLineEllipsized(0))
+            // Every row's right column starts at the same place: the first chip of each row of tags,
+            // and each row's sources.
+            val starts =
+                listOf("track:baroquepop", "artist:The Beatles:rock", "album:folkrock").map {
+                    bounds(GENRE_CELL_PREFIX + it).left
+                } +
+                    listOf(0, 1, 2).map {
+                        compose
+                            .onAllNodesWithText(
+                                "Last.fm",
+                                useUnmergedTree = true,
+                            ).fetchSemanticsNodes()[it]
+                            .boundsInRoot.left
+                    }
+            assertEquals(1, starts.distinct().size)
+            // Each name whole on one line, right-aligned against that column.
+            for (name in listOf(
+                R.string.home_genres_track,
+                R.string.home_genres_artist_row,
+                R.string.home_genres_album,
+            )) {
+                val nodes = compose.onAllNodesWithText(text(name), useUnmergedTree = true).fetchSemanticsNodes()
+                for (node in nodes) {
+                    val layouts = mutableListOf<TextLayoutResult>()
+                    node.config[SemanticsActions.GetTextLayoutResult].action?.invoke(layouts)
+                    assertEquals(1, layouts.single().lineCount)
+                    assertTrue(!layouts.single().isLineEllipsized(0))
+                    assertTrue(node.boundsInRoot.right <= starts.first())
+                }
+            }
         }
     }
 
     @Test
-    fun aScreenReaderReadsTheChipsAsButtonsWithTheirStateAndThePanelsHeading() {
+    fun theTappedGenreIsMarkedWhereverItShowsInTheTags() {
+        // Pop is the track's, and on the artist's and the album's rows.
+        val pop = TrackGenres(listOf(row(GenreLevel.TRACK, "pop"), beatles, album))
+        show(pop) {
+            tap(GENRE_PREFIX + "track:pop")
+            for (marked in listOf("track:pop", "artist:The Beatles:pop", "album:pop")) {
+                compose.onNodeWithTag(GENRE_CELL_PREFIX + marked, useUnmergedTree = true).assertIsSelected()
+            }
+            for (other in listOf("artist:The Beatles:rock", "album:folkrock")) {
+                val config =
+                    compose
+                        .onNodeWithTag(
+                            GENRE_CELL_PREFIX + other,
+                            useUnmergedTree = true,
+                        ).fetchSemanticsNode()
+                        .config
+                assertTrue("$other is not marked", config.getOrNull(SemanticsProperties.Selected) != true)
+                // The grid's labels are not buttons.
+                assertEquals(null, config.getOrNull(SemanticsActions.OnClick))
+            }
+        }
+    }
+
+    @Test
+    fun aScreenReaderReadsTheChosenChipAsSelectedWithFoldAsItsAction() {
         show(three) {
             val baroque = GENRE_PREFIX + "track:baroquepop"
             compose
@@ -244,94 +318,116 @@ class GenresScreenTest {
                 .assertIsNotSelected()
             assertEquals(text(R.string.home_genre_show), clickLabel(baroque))
             tap(baroque)
-            compose.onNodeWithTag(baroque).assertIsSelected()
-            assertEquals(text(R.string.home_genre_close), clickLabel(baroque))
+            // "Baroque Pop, selected", "double-tap to fold".
+            compose.onNodeWithTag(baroque).assertIsSelected().assertTextEquals("Baroque Pop")
+            assertEquals("fold", text(R.string.home_genre_fold))
+            assertEquals(text(R.string.home_genre_fold), clickLabel(baroque))
             assertEquals(text(R.string.home_genre_show), clickLabel(GENRE_PREFIX + "track:ballad"))
-            heading().assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.Heading))
         }
     }
 
     @Test
-    fun thePanelSaysWhereTheGenreComesFromALinePerLevelWithMusicBrainzsLicence() {
+    fun eachSourceLinksTheRowsPageAndMusicBrainzsCreditAndLicenceShowOnceUnderThem() {
         val folk = label("folk", GenreLevel.ARTIST, "Gordon Lightfoot", LabelSource.MUSICBRAINZ)
+        val both =
+            TrackLabel(
+                GenreLabel("pop", "family", "Pop", "pop", level = GenreLevel.ARTIST, artist = "Gordon Lightfoot"),
+                listOf(
+                    LabelCredit(LabelSource.LASTFM, "https://www.last.fm/music/Gordon+Lightfoot"),
+                    LabelCredit(LabelSource.MUSICBRAINZ, "https://musicbrainz.org/artist/gl"),
+                ),
+            )
         val genres =
             TrackGenres(
                 listOf(
                     row(GenreLevel.TRACK, "folk"),
-                    GenreRow(GenreLevel.ARTIST, "Gordon Lightfoot", listOf(folk)),
+                    GenreRow(GenreLevel.ARTIST, "Gordon Lightfoot", listOf(folk, both)),
                 ),
             )
         show(genres) {
             tap(GENRE_PREFIX + "track:folk")
-            compose
-                .onNodeWithText(text(R.string.home_genre_from_track) + " " + LabelSource.LASTFM.credit)
-                .assertExists()
-            compose
-                .onNodeWithText(
-                    text(R.string.home_genre_from) + " " + LabelSource.MUSICBRAINZ.credit + " · " +
-                        text(R.string.home_genre_licence),
-                ).assertExists()
+            assertEquals(listOf("Track, Last.fm", "Artist, Last.fm · MusicBrainz"), sources())
+            assertEquals(listOf("https://example.org/folk"), links("Last.fm"))
+            assertEquals(
+                listOf("https://www.last.fm/music/Gordon+Lightfoot", "https://example.org/folk"),
+                links("Last.fm · MusicBrainz"),
+            )
+            // Once, in the right column, under the sources: the credit, then the licence, linked.
+            assertEquals("MusicBrainz tags by contributors", text(R.string.home_genre_tags_credit))
+            assertEquals(listOf("MusicBrainz tags by contributors, CC BY-NC-SA 3.0"), tagged(GENRE_TAGS_CREDIT_TAG))
+            assertEquals(listOf(LabelSource.MUSICBRAINZ.licenceUrl), links(text(R.string.home_genre_tags_licence)))
+            assertTrue(bounds(GENRE_TAGS_CREDIT_TAG).top >= bounds(GENRE_SOURCES_ROW_PREFIX + "1").bottom)
+            assertEquals(
+                compose
+                    .onNodeWithText(
+                        "Last.fm · MusicBrainz",
+                        useUnmergedTree = true,
+                    ).fetchSemanticsNode()
+                    .boundsInRoot.left,
+                compose
+                    .onNodeWithText(
+                        text(R.string.home_genre_tags_credit),
+                        useUnmergedTree = true,
+                    ).fetchSemanticsNode()
+                    .boundsInRoot.left,
+            )
         }
     }
 
     @Test
-    fun thePanelCreditsEverySourceOfEveryLabelInTheTableNotOnlyTheOpenGenres() {
-        // Pop only from Last.fm, on the track; Rock only from MusicBrainz, on the artist; the album's
-        // two labels from one source each.
-        val rock = label("rock", GenreLevel.ARTIST, "Gordon Lightfoot", LabelSource.MUSICBRAINZ)
-        val albumRow =
-            GenreRow(
-                GenreLevel.ALBUM,
-                null,
-                listOf(
-                    label("folk rock", GenreLevel.ALBUM),
-                    label("country", GenreLevel.ALBUM, source = LabelSource.MUSICBRAINZ),
-                ),
+    fun withNoMusicBrainzTagsNoCreditOrLicence() {
+        show(three) {
+            tap(GENRE_PREFIX + "track:baroquepop")
+            assertEquals(0, count(GENRE_TAGS_CREDIT_TAG))
+            assertEquals(
+                0,
+                compose
+                    .onAllNodesWithText(
+                        text(R.string.home_genre_tags_licence),
+                        useUnmergedTree = true,
+                    ).fetchSemanticsNodes()
+                    .size,
             )
-        val genres =
-            TrackGenres(
-                listOf(
-                    row(GenreLevel.TRACK, "pop"),
-                    GenreRow(GenreLevel.ARTIST, "Gordon Lightfoot", listOf(rock)),
-                    albumRow,
-                ),
-            )
-        show(genres) {
-            tap(GENRE_PREFIX + "track:pop")
-            val licence = " · " + text(R.string.home_genre_licence)
-            compose
-                .onNodeWithText(text(R.string.home_genre_from_track) + " " + LabelSource.LASTFM.credit)
-                .assertExists()
-            compose
-                .onNodeWithText(text(R.string.home_genre_from) + " " + LabelSource.MUSICBRAINZ.credit + licence)
-                .assertExists()
-            // Each source once a row, in the sources' order.
-            compose
-                .onNodeWithText(
-                    text(R.string.home_genre_from_album) + " " + LabelSource.LASTFM.credit + " · " +
-                        LabelSource.MUSICBRAINZ.credit + licence,
-                ).assertExists()
         }
     }
 
     @Test
-    fun withSeveralArtistsTheLineNamesTheArtistWhoseTagsGaveIt() {
+    fun withSeveralArtistsTheRowsAreArtist1AndArtist2AndTheSourcesNameEachArtist() {
         val two = track(HomeFixtures.sundown.copy(artists = "The Beatles, Billy Preston"))
-        show(TrackGenres(listOf(beatles)), playing = two) {
-            tap(GENRE_PREFIX + "artist:The Beatles:rock")
-            compose.onNodeWithText(text(R.string.home_genre_from_named, "The Beatles"), substring = true).assertExists()
+        val preston = row(GenreLevel.ARTIST, "soul", artist = "Billy Preston")
+        show(TrackGenres(listOf(track, beatles, preston)), playing = two) {
+            tap(GENRE_PREFIX + "track:baroquepop")
+            assertEquals(listOf("Track, Baroque Pop, Ballad", "Artist 1, Rock, Pop", "Artist 2, Soul"), rows())
+            assertEquals(
+                listOf("Track, Last.fm", "Artist 1, The Beatles, Last.fm", "Artist 2, Billy Preston, Last.fm"),
+                sources(),
+            )
+            // The artist's name above its sources.
+            val name = compose.onNodeWithText("The Beatles", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+            val beatlesSources =
+                compose
+                    .onAllNodesWithText(
+                        "Last.fm",
+                        useUnmergedTree = true,
+                    ).fetchSemanticsNodes()[1]
+                    .boundsInRoot
+            assertTrue(name.bottom <= beatlesSources.top)
         }
     }
 
     @Test
-    fun withOneLevelEachChipOpensThePanelWithARowPerArtist() {
+    fun withOneLevelEachChipUnfoldsTheGenreWithARowPerArtist() {
         val second = row(GenreLevel.ARTIST, "rock", "jazz", artist = "Miles Davis")
         show(TrackGenres(listOf(beatles, second))) {
             // The artists' together, each genre once.
             assertEquals(listOf("Rock", "Pop", "Jazz"), chips(GenreLevel.ARTIST))
             tap(GENRE_PREFIX + "artist:The Beatles:rock")
-            assertEquals(listOf("The Beatles", "Miles Davis"), rowNames())
-            compose.onNodeWithTag(GENRE_CELL_PREFIX + "artist:Miles Davis:rock").assertIsSelected()
+            assertEquals(listOf("Artist, Rock, Pop", "Artist, Rock, Jazz"), rows())
+            compose
+                .onNodeWithTag(
+                    GENRE_CELL_PREFIX + "artist:Miles Davis:rock",
+                    useUnmergedTree = true,
+                ).assertIsSelected()
         }
     }
 
@@ -347,7 +443,7 @@ class GenresScreenTest {
     }
 
     @Test
-    fun anOpenPanelOutlastsLabelsThatLandLaterAndANewTrackStartsClosed() {
+    fun anOpenGenreOutlastsLabelsThatLandLaterAndANewTrackStartsFolded() {
         val genres = mutableStateOf(TrackGenres(listOf(beatles)))
         val playing = mutableStateOf(track())
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
@@ -356,12 +452,16 @@ class GenresScreenTest {
             }
             scenario.onActivity {
                 tap(GENRE_PREFIX + "artist:The Beatles:rock")
-                // The album's labels land: the chips are now the album's, and the panel stays.
+                // The album's labels land: the chips are now the album's, and the genre stays.
                 genres.value = TrackGenres(listOf(beatles, album))
                 compose.waitForIdle()
                 assertEquals(listOf("Folk Rock", "Pop"), chips(GenreLevel.ALBUM))
-                heading().assertTextEquals("Rock")
-                assertEquals(listOf("The Beatles", "Sundown"), rowNames())
+                compose
+                    .onNodeWithTag(
+                        GENRE_CELL_PREFIX + "artist:The Beatles:rock",
+                        useUnmergedTree = true,
+                    ).assertIsSelected()
+                assertEquals(listOf("Artist, Rock, Pop", "Album, Folk Rock, Pop"), rows())
 
                 playing.value = track(HomeFixtures.carefree)
                 compose.waitForIdle()

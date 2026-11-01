@@ -5,7 +5,16 @@ import app.sleevesight.app.ui.home.HomeFixtures.done
 import app.sleevesight.app.ui.home.emptyPanels
 import app.sleevesight.app.ui.home.searchFacts
 import app.sleevesight.core.Secret
+import app.sleevesight.core.genres.GenreArticles
+import app.sleevesight.core.genres.GenreDefinitions
+import app.sleevesight.core.genres.GenreLabel
+import app.sleevesight.core.genres.GenreLevel
+import app.sleevesight.core.genres.GenreRow
 import app.sleevesight.core.genres.GenreVocabulary
+import app.sleevesight.core.genres.LabelCredit
+import app.sleevesight.core.genres.LabelSource
+import app.sleevesight.core.genres.TrackGenres
+import app.sleevesight.core.genres.TrackLabel
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
@@ -22,15 +31,19 @@ import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.platform.JvmResourceReader
+import app.sleevesight.core.resolution.Lookup
 import app.sleevesight.core.resolution.NameMatcher
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.SourceResult
 import app.sleevesight.core.sources.WorkLyrics
 import app.sleevesight.core.synthesis.AiSearchAnswers
+import app.sleevesight.core.synthesis.SearchAnswer
+import app.sleevesight.core.synthesis.SearchFacts
 import app.sleevesight.core.synthesis.SearchKind
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
@@ -120,7 +133,7 @@ class AutoSearchesTest {
                 answers,
                 this,
                 automaticGate = { auto.open() },
-                deferred = { track, kind -> auto.release(track, kind) },
+                deferred = { track, kind, _ -> auto.release(track, kind) },
             )
         auto = auto(searches)
         return searches to auto
@@ -458,6 +471,80 @@ class AutoSearchesTest {
         runTest {
             settings.value = settings.value?.copy(writeInsights = false)
             auto(searches()).follow(empty(), settings.value)
+            advanceUntilIdle()
+            assertEquals(0, provider.requests)
+        }
+
+    @Test
+    fun `a genre Wikipedia has no definition for is searched by itself once, no panel open (#786)`() =
+        runTest {
+            provider.reply = { "{\"definition\": \"Punk rock is fast, raw rock music.\"}" }
+            val vocabulary = GenreVocabulary.load(JvmResourceReader)
+            val punk = vocabulary.musicBrainzGenre("punk")
+            val articles = GenreArticles { genre -> if (genre == punk) Lookup.NotFound else Lookup.Failed("offline") }
+            val notes =
+                AppGenreNotes(
+                    GenreDefinitions(articles, vocabulary),
+                    parts,
+                    settings,
+                    this,
+                )
+            val searches = AppAiSearches(parts, settings, answers, this)
+            // As `AppGraph` wires them.
+            val auto =
+                AutoSearches<String>(
+                    { track, now -> genresWithNoDefinition(track, now, notes.lookups.lookedUp.value) },
+                ) { track, g ->
+                    searches.ask(track, SearchKind.DEFINITION, SearchFacts.ofGenre("Punk"), automatic = true, genre = g)
+                }
+            val labels =
+                listOf("punk", "rock").map { tag ->
+                    TrackLabel(
+                        GenreLabel(
+                            tag,
+                            "rock",
+                            tag.replaceFirstChar(Char::uppercase),
+                            tag,
+                            null,
+                            GenreLevel.ARTIST,
+                            "A",
+                        ),
+                        listOf(LabelCredit(LabelSource.LASTFM, null)),
+                    )
+                }
+            val track =
+                HomeFixtures.track().copy(
+                    genres = TrackGenres(listOf(GenreRow(GenreLevel.ARTIST, "A", labels))),
+                )
+            notes.lookups.fetchAhead(track)
+            advanceUntilIdle()
+            // Punk has no article; rock's lookup failed, which is not a search's cue.
+            auto.follow(track, settings.value)
+            advanceUntilIdle()
+            assertEquals(1, provider.requests)
+            assertEquals(1, provider.requestsFor("Name: Punk"))
+            val answered = searches.search(track, SearchKind.DEFINITION, "punk").first()
+            assertEquals(
+                SearchAnswer.Definition("Punk rock is fast, raw rock music."),
+                (answered as AiSearch.Answered).answer,
+            )
+            // Once: the track followed again, or another with the genre, asks nothing more.
+            auto.follow(track, settings.value)
+            auto.follow(track.copy(normalized = track.normalized.copy(title = "another")), settings.value)
+            advanceUntilIdle()
+            assertEquals(1, provider.requests)
+        }
+
+    @Test
+    fun `no genre's definition is searched by itself with the setting off (#786)`() =
+        runTest {
+            settings.value = settings.value?.copy(searchWithAi = false)
+            val searches = AppAiSearches(parts, settings, answers, this)
+            val auto =
+                AutoSearches<String>({ _, _ -> setOf("punk") }) { track, g ->
+                    searches.ask(track, SearchKind.DEFINITION, SearchFacts.ofGenre("Punk"), automatic = true, genre = g)
+                }
+            auto.follow(HomeFixtures.track(), settings.value)
             advanceUntilIdle()
             assertEquals(0, provider.requests)
         }

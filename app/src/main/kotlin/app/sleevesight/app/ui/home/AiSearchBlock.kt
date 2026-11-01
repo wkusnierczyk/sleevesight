@@ -34,6 +34,7 @@ import app.sleevesight.app.ui.logo.Busy
 import app.sleevesight.app.ui.theme.PanelRule
 import app.sleevesight.app.ui.theme.handoffTarget
 import app.sleevesight.app.ui.theme.rememberFocusHandoff
+import app.sleevesight.core.genres.GenreLabel
 import app.sleevesight.core.genres.LabelSource
 import app.sleevesight.core.lyrics.LyricsLinks
 import app.sleevesight.core.model.NowPlaying
@@ -66,25 +67,37 @@ import app.sleevesight.core.synthesis.SearchKind
  *   as a source that could not be reached has ([RetryLine]), which asks again, a paid call.
  *
  * Nothing before the pipeline reaches the track.
+ *
+ * Of [SearchKind.DEFINITION] (#786), the search is [genre]'s, by its identity, and asks about its name
+ * alone ([SearchFacts.ofGenre]), whatever the track.
  */
 @Composable
 internal fun AiSearchBlock(
     search: PanelSearch,
     kind: SearchKind,
+    genre: GenreLabel? = null,
     answer: @Composable (SearchAnswer, String) -> Unit,
 ) {
     val track = search.track ?: return
     val feed = search.feed
-    // A new subscription only for another track (its album too: *Dates*' key has it) or search, not
-    // on every state of the track.
-    val state by remember(feed, track.normalized, track.nowPlaying.duration, track.nowPlaying.album, kind) {
-        feed.search(track, kind)
+    val about = genre?.identity
+    // A new subscription only for another track (its album too: *Dates*' key has it), genre or
+    // search, not on every state of the track.
+    val state by remember(feed, track.normalized, track.nowPlaying.duration, track.nowPlaying.album, kind, about) {
+        feed.search(track, kind, about)
     }.collectAsState(AiSearch.None)
     val handoff = rememberFocusHandoff()
     val button = remember { FocusRequester() }
     val stop = remember { FocusRequester() }
+    val facts = {
+        genre?.let {
+            SearchFacts.ofGenre(
+                it.label,
+            )
+        } ?: searchFacts(track, search.header ?: track.nowPlaying)
+    }
     val ask = {
-        feed.ask(track, kind, searchFacts(track, search.header ?: track.nowPlaying))
+        feed.ask(track, kind, facts(), genre = about)
         handoff.moveTo(stop)
     }
     val searchButton = Modifier.handoffTarget(handoff, button)
@@ -94,7 +107,7 @@ internal fun AiSearchBlock(
         AiSearch.Offered -> SearchButton(enabled = true, searchButton, ask)
         AiSearch.Searching ->
             SearchingLine(Modifier.handoffTarget(handoff, stop)) {
-                feed.stop(track, kind)
+                feed.stop(track, kind, about)
                 handoff.moveTo(button)
             }
         is AiSearch.Answered -> {
@@ -110,7 +123,7 @@ internal fun AiSearchBlock(
             RetryLine(
                 stringResource(R.string.home_ai_failed, searchFailureText(shown.reason)),
                 source = "",
-                onRetry = { feed.ask(track, kind, searchFacts(track, search.header ?: track.nowPlaying)) },
+                onRetry = { feed.ask(track, kind, facts(), genre = about) },
                 modifier = Modifier.testTag(AI_SEARCH_FAILED_TAG),
                 afterRetry = { handoff.moveTo(stop) },
                 action = stringResource(R.string.home_ai_retry_action),
@@ -194,7 +207,7 @@ private fun SearchingLine(
             stringResource(R.string.home_ai_stop),
             stringResource(R.string.home_ai_stop_action),
             stopModifier.testTag(AI_SEARCH_STOP_TAG),
-            onStop,
+            onClick = onStop,
         )
     }
 }

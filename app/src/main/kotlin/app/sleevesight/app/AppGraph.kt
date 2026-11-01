@@ -30,6 +30,7 @@ import app.sleevesight.app.pipeline.ModelCheck
 import app.sleevesight.app.pipeline.PipelineHost
 import app.sleevesight.app.pipeline.UnavailableModel
 import app.sleevesight.app.pipeline.afterAcknowledged
+import app.sleevesight.app.pipeline.genresWithNoDefinition
 import app.sleevesight.app.pipeline.online
 import app.sleevesight.app.pipeline.pipelineKeys
 import app.sleevesight.app.pipeline.rebuilds
@@ -84,6 +85,7 @@ import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.ThemeChoice
 import app.sleevesight.core.settings.WriteAutomatically
 import app.sleevesight.core.synthesis.AiSearchAnswers
+import app.sleevesight.core.synthesis.SearchFacts
 import app.sleevesight.core.synthesis.SearchKind
 import app.sleevesight.store.ArtistKeeping
 import app.sleevesight.store.Caches
@@ -512,7 +514,8 @@ class AppGraph internal constructor(
     /**
      * What a genre's panel shows besides its table (#523): each genre's definition, kept in the
      * caches' artist-level table whatever *Keep what sources said about each artist* says, since it
-     * says nothing about what was played; and *Why is this …?*, written with the live pipeline's AI
+     * says nothing about what was played, and fetched ahead for the playing track (#786, `init`);
+     * and *Why is this …?*, written with the live pipeline's AI
      * service and kept in its synthesis cache, in the pipeline's scope, marked with [clearEpoch].
      */
     val genreNotes: AppGenreNotes =
@@ -542,9 +545,18 @@ class AppGraph internal constructor(
             scope = pipelineScope,
             epoch = clearEpoch,
             modelName = ListedModelNames(appContext)::of,
-            // An automatic search's gates, checked again just before its call, and where it goes back.
-            automaticGate = autoSearches::open,
-            deferred = autoSearches::release,
+            // An automatic search's gates, checked again just before its call, and where it goes back:
+            // the panels' own, or a genre's definition's (#786).
+            automaticGate = { kind ->
+                if (kind == SearchKind.DEFINITION) autoDefinitions.open() else autoSearches.open()
+            },
+            deferred = { track, kind, genre ->
+                if (kind == SearchKind.DEFINITION) {
+                    genre?.let { autoDefinitions.release(track, it) }
+                } else {
+                    autoSearches.release(track, kind)
+                }
+            },
         )
     }
 
@@ -564,6 +576,25 @@ class AppGraph internal constructor(
                 Triple(track.normalized, track.nowPlaying.duration, AiSearches.subject(track, kind, albums))
             },
         ) { track, kind -> aiSearches.ask(track, kind, searchFacts(track, track.nowPlaying), automatic = true) }
+    }
+
+    /**
+     * *Search with AI*, the setting, for a genre's definition (#786): each genre of the playing
+     * track's table whose Wikipedia lookup, fetched ahead, ended with none ([genresWithNoDefinition]),
+     * searched by itself, whether its panel is open or not, while the app is on screen
+     * ([AutoSearches]), each attempt by the genre.
+     */
+    private val autoDefinitions: AutoSearches<String> by lazy {
+        AutoSearches(
+            { track, now -> genresWithNoDefinition(track, now, genreNotes.lookups.lookedUp.value) },
+        ) { track, genre ->
+            val label =
+                track.genres.all
+                    .firstOrNull { it.genre.identity == genre }
+                    ?.genre
+                    ?.label ?: genre
+            aiSearches.ask(track, SearchKind.DEFINITION, SearchFacts.ofGenre(label), automatic = true, genre = genre)
+        }
     }
 
     /**
@@ -643,6 +674,19 @@ class AppGraph internal constructor(
         pipelineScope.launch {
             autoSearches.run(pipeline.state.map { it.track }, latestSettings, pipeline.onScreen, pipeline.liveParts)
         }
+        // Every genre of the playing track's table has its definition looked up as soon as the genres
+        // are known, whether a panel is open or not (#786).
+        pipelineScope.launch { genreNotes.lookups.fetchAhead(pipeline.state.map { it.track }) }
+        // A genre whose definition Wikipedia does not have is searched by itself with the setting on
+        // (#786), as a lookup ends, or an AI service comes ready.
+        pipelineScope.launch {
+            autoDefinitions.run(
+                pipeline.state.map { it.track },
+                latestSettings,
+                pipeline.onScreen,
+                combine(pipeline.liveParts, genreNotes.lookups.lookedUp) { parts, states -> parts to states },
+            )
+        }
         // The selected model checked at start, and when the service, its model or a key changes (#540).
         pipelineScope.launch {
             modelCheck.run(latestSettings.filterNotNull(), secrets.changes, pipeline.lookupsAllowed)
@@ -691,8 +735,8 @@ class AppGraph internal constructor(
      * until another one plays. Then every cache (the sources' findings, the artist resolutions and
      * results, the insights and cards written, the genres' reasons and definitions among them), in
      * one transaction and in turn with what is written about artists ([ArtistKeeping.clearWith]);
-     * MusicBrainz's answers held in memory; the genres' reasons and the AI searches shown
-     * ([AppGenreNotes.forget], [AppAiSearches.forget]); the
+     * MusicBrainz's answers held in memory; the genres' reasons and definitions, and the AI
+     * searches shown ([AppGenreNotes.forget], #786 too, [AppAiSearches.forget]); the
      * artist facts the listening session cited; the session layer's last change, which names the
      * track before; and the diagnostics' steps, which name the tracks. The API keys and the settings stay.
      * Returns whether the caches were cleared; the rest cannot fail.

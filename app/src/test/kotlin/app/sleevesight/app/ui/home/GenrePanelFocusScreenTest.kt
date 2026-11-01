@@ -22,7 +22,9 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertIsFocused
-import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -37,6 +39,9 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.SleevesightApplication
+import app.sleevesight.app.pipeline.DefinitionState
+import app.sleevesight.app.pipeline.GenreNotes
+import app.sleevesight.app.pipeline.GenreReason
 import app.sleevesight.app.ui.home.HomeFixtures.carefree
 import app.sleevesight.app.ui.home.HomeFixtures.track
 import app.sleevesight.core.genres.GenreLabel
@@ -48,6 +53,9 @@ import app.sleevesight.core.genres.TrackGenres
 import app.sleevesight.core.genres.TrackLabel
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.settings.Settings
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -58,10 +66,11 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 
 /**
- * The genre panel under *Expandable boxes* moves the focus as *Sources*' panel does (#629, as
- * `SourcesPanelScreenTest`'s focus tests): to *Close* when a chip opens a genre, from a keyboard or
- * for a screen reader, and back to the chip tapped on closing; a panel that goes with a new track
- * while the focus is in it hands the focus to a chip; nothing moves while merely touched.
+ * A genre under *Expandable boxes* unfolds under the chips with no *Close* (#786), so a tap on a chip
+ * leaves the focus on it, from a keyboard or for a screen reader, unfolding, replacing or folding; a
+ * genre that goes with a new track, or labels without it, while the focus is in it hands the focus
+ * to a chip (#629); so does *Retry* under its failed definition as it gives way to the loading line;
+ * nothing moves while merely touched.
  */
 @RunWith(RobolectricTestRunner::class)
 class GenrePanelFocusScreenTest {
@@ -125,7 +134,7 @@ class GenrePanelFocusScreenTest {
                                 .focusRequester(elsewhere)
                                 .focusable(),
                         )
-                        GenresContent(current.value, Settings())
+                        GenresContent(current.value, Settings(), PanelNotes(notes))
                     }
                 }
             }
@@ -185,41 +194,64 @@ class GenrePanelFocusScreenTest {
         current.value = track(carefree).copy(genres = genres(*tags))
     }
 
+    // A genre's notes with *Why is this …?* offered, something to hold the focus in the genre; its
+    // definition as [definition] holds it, which *Retry* turns to looking.
+    private val definition = MutableStateFlow<DefinitionState?>(null)
+    private val notes =
+        object : GenreNotes {
+            override fun definition(genre: String): Flow<DefinitionState?> = definition
+
+            override fun retryDefinition(genre: String) {
+                definition.value = DefinitionState.Looking
+            }
+
+            override fun reason(
+                track: TrackState,
+                genre: String,
+            ): Flow<GenreReason> = flowOf(GenreReason.Offered)
+
+            override fun explain(
+                track: TrackState,
+                genre: String,
+            ) = Unit
+        }
+
+    // The focus put in the genre, on its *Why is this …?*, as a keyboard's would be.
+    private fun focusInGenre() {
+        compose.onNodeWithTag(GENRE_WHY_TAG).performScrollTo().requestFocus()
+        compose.onNodeWithTag(GENRE_WHY_TAG).assertIsFocused()
+    }
+
+    // Enter on [tag], focused, as a keyboard does.
+    private fun press(tag: String) {
+        compose.onNodeWithTag(tag).requestFocus()
+        compose.onNodeWithTag(tag).performKeyInput { pressKey(Key.Enter) }
+        compose.waitForIdle()
+    }
+
     @Test
-    fun fromAKeyboardTheFocusMovesToCloseOnOpeningAndBackToTheTappedChipOnClosing() =
+    fun fromAKeyboardTheFocusStaysOnTheChipUnfoldingReplacingAndFolding() =
         show {
             // The second chip, so the focus is not merely back at the first.
-            tap(BALLAD)
-            compose.onNodeWithTag(GENRE_PANEL_CLOSE_TAG).assertIsFocused()
-            tap(GENRE_PANEL_CLOSE_TAG)
-            assertEquals(0, count(GENRE_PANEL_TAG))
+            press(BALLAD)
+            assertEquals(1, count(GENRE_PANEL_TAG))
             compose.onNodeWithTag(BALLAD).assertIsFocused()
-        }
-
-    @Test
-    fun fromAKeyboardAnotherChipSwitchesThePanelAndTheFocusMovesToCloseAgain() =
-        show {
-            tap(FOLK)
-            compose.onNodeWithTag(GENRE_PANEL_CLOSE_TAG).assertIsFocused()
-            // From *Close* to the other chip, and Enter on it, as a keyboard does: the focus is
-            // on the chip, not still on *Close*, when the panel switches.
-            compose.onNodeWithTag(BALLAD).requestFocus()
-            compose.onNodeWithTag(BALLAD).assertIsFocused()
-            compose.onNodeWithTag(BALLAD).performKeyInput { pressKey(Key.Enter) }
-            compose.waitForIdle()
-            compose.onNodeWithTag(GENRE_PANEL_HEADING_TAG).assertTextEquals("Ballad")
-            compose.onNodeWithTag(GENRE_PANEL_CLOSE_TAG).assertIsFocused()
-            tap(GENRE_PANEL_CLOSE_TAG)
-            compose.onNodeWithTag(BALLAD).assertIsFocused()
-        }
-
-    @Test
-    fun fromAKeyboardTheSameChipAgainClosesThePanelWithTheFocusOnTheChip() =
-        show {
-            tap(FOLK)
-            tap(FOLK)
+            press(FOLK)
+            compose.onNodeWithTag(FOLK).assertIsSelected().assertIsFocused()
+            press(FOLK)
             assertEquals(0, count(GENRE_PANEL_TAG))
             compose.onNodeWithTag(FOLK).assertIsFocused()
+        }
+
+    @Test
+    fun fromAKeyboardEnterOnAnotherChipReplacesTheGenreWithTheFocusOnIt() =
+        show {
+            tap(FOLK)
+            compose.onNodeWithTag(BALLAD).requestFocus()
+            compose.onNodeWithTag(BALLAD).performKeyInput { pressKey(Key.Enter) }
+            compose.waitForIdle()
+            compose.onNodeWithTag(BALLAD).assertIsSelected().assertIsFocused()
+            assertEquals(1, count(GENRE_PANEL_TAG))
         }
 
     @Test
@@ -227,33 +259,27 @@ class GenrePanelFocusScreenTest {
         show(touch = true) {
             tap(FOLK)
             assertEquals(0, focused())
-            tap(GENRE_PANEL_CLOSE_TAG)
+            tap(FOLK)
             assertEquals(0, focused())
         }
 
     @Test
-    fun aScreenReaderIsMovedToCloseOnOpeningAndBackToTheChipOnClosing() {
+    fun aScreenReaderIsMovedNowhereOnUnfoldingOrFolding() {
         startScreenReader()
         show(touch = true) {
-            var before = sentSoFar()
+            val before = sentSoFar()
             tap(BALLAD)
-            val close = idOf(GENRE_PANEL_CLOSE_TAG)
-            assertTrue("screen reader focus moved to ${movedTo(before)}, Close is $close", close in movedTo(before))
-            // Touched, the input focus is let go once the screen reader's has moved.
-            assertEquals(0, focused())
-
-            before = sentSoFar()
-            tap(GENRE_PANEL_CLOSE_TAG)
+            tap(BALLAD)
             val chip = idOf(BALLAD)
-            assertTrue("screen reader focus moved to ${movedTo(before)}, the chip is $chip", chip in movedTo(before))
+            assertTrue("screen reader focus moved to ${movedTo(before)}", movedTo(before).all { it == chip })
         }
     }
 
     @Test
-    fun aNewTrackClosingThePanelWithTheFocusInItHandsTheFocusToTheChipTappedIfStillShown() =
+    fun aNewTrackFoldingTheGenreWithTheFocusInItHandsTheFocusToTheChipTappedIfStillShown() =
         show {
             tap(BALLAD)
-            compose.onNodeWithTag(GENRE_PANEL_CLOSE_TAG).assertIsFocused()
+            focusInGenre()
             nextTrack("rock", "ballad")
             compose.waitForIdle()
             assertEquals(0, count(GENRE_PANEL_TAG))
@@ -261,10 +287,10 @@ class GenrePanelFocusScreenTest {
         }
 
     @Test
-    fun aNewTrackClosingThePanelWithTheFocusInItHandsTheFocusToTheFirstChipWhenTheOneTappedIsGone() =
+    fun aNewTrackFoldingTheGenreWithTheFocusInItHandsTheFocusToTheFirstChipWhenTheOneTappedIsGone() =
         show {
             tap(BALLAD)
-            compose.onNodeWithTag(GENRE_PANEL_CLOSE_TAG).assertIsFocused()
+            focusInGenre()
             nextTrack("rock", "pop")
             compose.waitForIdle()
             assertEquals(0, count(GENRE_PANEL_TAG))
@@ -272,10 +298,10 @@ class GenrePanelFocusScreenTest {
         }
 
     @Test
-    fun labelsThatNoLongerHaveTheOpenGenreHandTheFocusFromCloseToTheFirstChip() =
+    fun labelsThatNoLongerHaveTheOpenGenreHandTheFocusToTheFirstChip() =
         show {
             tap(BALLAD)
-            compose.onNodeWithTag(GENRE_PANEL_CLOSE_TAG).assertIsFocused()
+            focusInGenre()
             // The same track, its labels replaced (a source landing later) without *Ballad*.
             current.value = current.value.copy(genres = genres("rock", "pop"))
             compose.waitForIdle()
@@ -284,7 +310,7 @@ class GenrePanelFocusScreenTest {
         }
 
     @Test
-    fun aNewTrackClosingThePanelWithTheFocusElsewhereMovesNothing() =
+    fun aNewTrackFoldingTheGenreWithTheFocusElsewhereMovesNothing() =
         show {
             tap(FOLK)
             compose.runOnIdle { elsewhere.requestFocus() }
@@ -294,6 +320,24 @@ class GenrePanelFocusScreenTest {
             assertEquals(0, count(GENRE_PANEL_TAG))
             compose.onNodeWithTag(ELSEWHERE_TAG).assertIsFocused()
         }
+
+    @Test
+    fun retryUnderAFailedDefinitionHandsTheFocusToTheChipAsItGoes() {
+        definition.value = DefinitionState.Failed
+        show {
+            tap(BALLAD)
+            val retry =
+                compose.onNode(
+                    hasTestTag(RETRY_TAG) and hasAnyAncestor(hasTestTag(GENRE_DEFINITION_FAILED_TAG)),
+                )
+            retry.performScrollTo().requestFocus()
+            retry.assertIsFocused()
+            retry.performKeyInput { pressKey(Key.Enter) }
+            compose.waitForIdle()
+            assertEquals(0, count(GENRE_DEFINITION_FAILED_TAG))
+            compose.onNodeWithTag(BALLAD).assertIsFocused()
+        }
+    }
 
     private companion object {
         const val ELSEWHERE_TAG = "elsewhere"

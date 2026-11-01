@@ -31,6 +31,7 @@ import app.sleevesight.app.ui.logo.Busy
 import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.app.ui.theme.ChipFrame
 import app.sleevesight.app.ui.theme.LinkedText
+import app.sleevesight.app.ui.theme.PanelRule
 import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.app.ui.theme.chipColours
 import app.sleevesight.app.ui.theme.handoffTarget
@@ -80,18 +81,19 @@ internal fun genresItem(
 
 /**
  * What *Genres*' panel holds (#772), as [GenresShown] works it out from [track] and [settings]: the
- * chips of the most specific level ([TrackGenres.folded]), each opening its genre in a box of its
- * own under them ([GenresBox], [GenrePanel]); under the chips, or in their place with none, why
+ * chips of the most specific level ([TrackGenres.folded]), each unfolding its genre under them and a
+ * rule (#786, [GenresBox], [GenreBody]); under the chips, or in their place with none, why
  * there are no more: "Looking on Last.fm and MusicBrainz…" while the genres are gathered (the
  * sources still asked), a source that could not be reached with *Retry* beside it ([retry] of its
  * [SourceId], [RetryLine], which then hands the focus to the panel's *Close*, [toClose]), "None
  * found."; and with every genre source off, two lines, the second a link to where they are switched
  * on ([openSettingsAt]: *Settings → Sources*, or *Settings → Genres* when the sources are on and
  * their genre switches are not). With [everyGenre] (the genres' page, #772), no chips: every
- * genre of the chips, in their order, in a panel of its own ([GenrePanel], with no *Close*).
- * With no genre and no source still asked (every genre source off, one not reached, none found),
- * *Search with AI* under the lines ([search], #773), whose genres show as chips that open their genre
- * as the others do ([AiGenres]), on the genres' page as well.
+ * genre of the chips, in their order, in a panel of its own titled with its name ([GenrePanel], with
+ * no *Close*). With no genre and no source still asked (every genre source off, one not reached, none
+ * found), *Search with AI* under the lines ([search], #773), whose genres show as chips that unfold
+ * their genre as the others do ([AiGenres]), on the genres' page as well. A genre with no definition
+ * from Wikipedia offers *Search with AI* for one, from [search] too (#786).
  */
 @Suppress("LongParameterList") // What the panel shows, and each of its ways out.
 @Composable
@@ -119,7 +121,7 @@ internal fun GenresContent(
             chosen.value?.let { !track.genres.has(it) } == true
     SideEffect { if (gone) chosen.value = null }
     if (track != null && !track.genres.isEmpty) {
-        if (everyGenre) EveryGenre(track, notes) else GenresBox(track, notes, chosen)
+        if (everyGenre) EveryGenre(track, notes, search, toClose) else GenresBox(track, notes, chosen, search)
     }
     shown.off?.let { target ->
         Text(stringResource(R.string.home_genres_off), style = style)
@@ -225,28 +227,28 @@ internal fun labelsOff(settings: Settings?): Boolean =
     settings != null && LabelSource.entries.none { settings.givesLabels(it) }
 
 /**
- * In *Genres*' panel (#772): the chips, and under them the genre chosen ([choice]), if any, in a box
- * of its own ([GenrePanel], on the surface colour, which sets it apart from the panel's fill): another chip
- * switches it, and a second tap on the same chip, or its *Close*, folds it; the chips stay. The
- * focus moves as *Sources*' does ([FocusHandoff], #629): to the panel's *Close* when a chip opens a
- * genre, and back to the chip tapped when *Close* closes it (a keyboard's, and a screen reader's;
- * nothing moves while merely touched). A panel that goes for another reason (a new track, or labels
- * that no longer have its genre) while the focus is in it hands the focus to that chip too, or, when
- * it is gone with the old track, to the first chip; while a new track's genres are still being
- * gathered there is no chip, and nothing to hand the focus to.
+ * In *Genres*' panel (#772): the chips, and under them the genre chosen ([choice]), if any, unfolded
+ * under a rule, with no heading or *Close* of its own (#786, [GenreBody]): another chip replaces it,
+ * and a second tap on the same chip folds it (a screen reader reads that chip as selected, its action
+ * "fold"); the chips stay. A tap leaves the focus on its chip. A genre that goes for another reason
+ * (a new track, or labels that no longer have it) while the focus is in it hands the focus to the
+ * chip tapped ([FocusHandoff], #629), or, when it is gone with the old track, to the first chip, as
+ * does *Retry* under its failed definition as it gives way to the loading line; while a new track's
+ * genres are still being gathered there is no chip, and nothing to hand the focus to. Its definition's
+ * *Search with AI* comes from [search].
  */
 @Composable
 private fun GenresBox(
     track: TrackState,
     notes: PanelNotes,
     choice: MutableState<String?>,
+    search: PanelSearch,
 ) {
     // [GenresContent]'s: a genre no row has (yet, or any more) shows no panel.
     var chosen by choice
     val open = chosen?.takeIf { track.genres.has(it) }
     val labels = track.genres.folded
     val handoff = rememberFocusHandoff()
-    val close = remember { FocusRequester() }
     // A requester per chip shown, by its tag, and the tag of the chip last tapped: plain, read only
     // by the moves.
     val chips = remember(track.normalized.lookupKey) { mutableMapOf<String, FocusRequester>() }
@@ -260,8 +262,8 @@ private fun GenresBox(
     // Whether the input focus is in the panel, as last told: plain, read as the panel goes.
     val inside = remember { BooleanArray(1) }
     val before = remember { BooleanArray(1).also { it[0] = open != null } }
-    // Gone by other than *Close* while the focus was in it: back to the chip, or a keyboard's focus
-    // would fall to the top of the screen. Read before the panel goes.
+    // Gone by other than a tap on its chip while the focus was in it: back to the chip, or a
+    // keyboard's focus would fall to the top of the screen. Read before the genre goes.
     val handBack = open == null && before[0] && inside[0]
     SideEffect {
         before[0] = open != null
@@ -274,47 +276,46 @@ private fun GenresBox(
         Chips(labels, open, chipModifier = target) { label ->
             val genre = label.label.genre.identity
             tapped[0] = tagOf(GENRE_PREFIX, label)
+            // Unfolded, replaced or folded; the focus stays on the chip.
             chosen = if (genre == open) null else genre
-            // Opened, or switched to another genre: to *Close*. The same chip again closes the
-            // panel, and the focus stays on the chip.
-            if (genre != open) handoff.moveTo(close)
         }
         open?.let {
+            PanelRule()
             Box(Modifier.onFocusChanged { state -> inside[0] = state.hasFocus }) {
-                GenrePanel(
+                GenreBody(
                     track,
                     it,
-                    onClose = {
-                        chosen = null
-                        back()?.let(handoff::moveTo)
-                    },
-                    notes = notes,
-                    closeModifier = Modifier.handoffTarget(handoff, close),
-                    fill = MaterialTheme.colorScheme.surface,
+                    notes,
+                    search,
+                    afterRetry = { back()?.let(handoff::moveTo) },
+                    modifier = Modifier.testTag(GENRE_PANEL_TAG),
                 )
             }
         }
     }
 }
 
-// Every genre of [track]'s chips, in their order, each in a panel of its own, with no *Close* (the
-// genres' page, #772): a genre several artists share, once.
+// Every genre of [track]'s chips, in their order, each in a panel of its own titled with its name,
+// with no *Close* (the genres' page, #772): a genre several artists share, once. A failed definition's
+// *Retry* hands the focus to [afterRetry] (the page's back arrow) as it goes.
 @Composable
 private fun EveryGenre(
     track: TrackState,
     notes: PanelNotes,
+    search: PanelSearch,
+    afterRetry: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         for (label in track.genres.folded.distinctBy { it.label.genre.identity }) {
-            GenrePanel(track, label.label.genre.identity, notes = notes)
+            GenrePanel(track, label.label.genre.identity, notes, search, afterRetry)
         }
     }
 }
 
 /**
  * [labels] as chips, in *Genres*' panel (#772), the one of the genre [open] marked, each under
- * [chipModifier]'s modifier for it (a focus requester); each chip a button that [tap]s it: to show
- * the genre's box, or, the one [open], to fold it.
+ * [chipModifier]'s modifier for it (a focus requester); each chip a button that [tap]s it: to unfold
+ * the genre under them, or, the one [open], to fold it ("fold", #786).
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -325,7 +326,7 @@ internal fun Chips(
     tap: (PlacedLabel) -> Unit,
 ) {
     val showAction = stringResource(R.string.home_genre_show)
-    val closeAction = stringResource(R.string.home_genre_close)
+    val foldAction = stringResource(R.string.home_genre_fold)
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -333,7 +334,7 @@ internal fun Chips(
     ) {
         for (label in labels) {
             val selected = label.label.genre.identity == open
-            GenreChip(label, selected, if (selected) closeAction else showAction, chipModifier(label)) { tap(label) }
+            GenreChip(label, selected, if (selected) foldAction else showAction, chipModifier(label)) { tap(label) }
         }
     }
 }
@@ -341,7 +342,7 @@ internal fun Chips(
 /**
  * A chip in *Genres*' panel (#439, #558, #772): a light fill in the text's colour; while [selected],
  * the text's colour, with the box's colour for the text. A button whose action a screen reader
- * names [action], and says is selected while its genre's box shows. [modifier] goes outside its
+ * names [action], and says is selected while its genre shows. [modifier] goes outside its
  * target (a focus requester).
  */
 @Composable

@@ -1,5 +1,6 @@
 package app.sleevesight.app.ui.home
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.PipelineView
@@ -55,7 +57,9 @@ internal class Retries(
  * as a button whose action is "ask MusicBrainz again" ("Double-tap to ask MusicBrainz again").
  *
  * [action] names *Retry*'s action otherwise, and [color] colours the message: *Search with AI*'s
- * failure (#773), "ask your AI service again, a paid call", in the error colour.
+ * failure (#773), "ask your AI service again, a paid call", in the error colour. [style] sets the
+ * message otherwise, and [outlined] draws *Retry* outlined: a genre's definition that Wikipedia did
+ * not give (#786), in the panel's quiet note style.
  *
  * A tap then runs [afterRetry]: the source asked again, the line gives way to the panel's "Looking
  * on …", and *Retry*, holding the focus, goes, so the caller hands the focus on (to its panel's
@@ -71,18 +75,21 @@ internal fun RetryLine(
     afterRetry: () -> Unit = {},
     action: String = stringResource(R.string.home_retry_action, source),
     color: Color = Color.Unspecified,
+    style: TextStyle = MaterialTheme.typography.bodyLarge,
+    outlined: Boolean = false,
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text(message, style = MaterialTheme.typography.bodyLarge, color = color, modifier = Modifier.weight(1f))
+        Text(message, style = style, color = color, modifier = Modifier.weight(1f))
         if (onRetry != null) {
             LineButton(
                 stringResource(R.string.home_retry),
                 action,
                 Modifier.testTag(RETRY_TAG),
+                outlined,
             ) {
                 onRetry()
                 afterRetry()
@@ -95,23 +102,27 @@ internal fun RetryLine(
  * A button at the end of a line, as *Retry* is ([RetryLine]) and *Search with AI*'s *Stop* (#773):
  * a text button's look, [text] in the primary colour, with the action named for a screen reader
  * ([action]: "Double-tap to …"), which a Material `TextButton` cannot be given; at least 48 dp to
- * touch. [modifier] goes on the outside (a test tag, a focus requester).
+ * touch. [modifier] goes on the outside (a test tag, a focus requester). [outlined], with an
+ * outline, as *Search with AI* is (#786: *Retry* under a genre's failed definition).
  */
 @Composable
 internal fun LineButton(
     text: String,
     action: String,
     modifier: Modifier = Modifier,
+    outlined: Boolean = false,
     onClick: () -> Unit,
 ) {
+    val edge = MaterialTheme.colorScheme.outline
     Box(
         contentAlignment = Alignment.Center,
         modifier =
             modifier
                 .minimumInteractiveComponentSize()
                 .clip(CircleShape)
+                .let { if (outlined) it.border(1.dp, edge, CircleShape) else it }
                 .clickable(role = Role.Button, onClickLabel = action, onClick = onClick)
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+                .padding(horizontal = 12.dp, vertical = if (outlined) 6.dp else 8.dp),
     ) {
         Text(text, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
     }

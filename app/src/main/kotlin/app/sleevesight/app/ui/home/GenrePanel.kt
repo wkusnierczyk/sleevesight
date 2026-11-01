@@ -2,24 +2,32 @@ package app.sleevesight.app.ui.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.GenreNotes
@@ -32,47 +40,62 @@ import app.sleevesight.core.genres.GenreLevel
 import app.sleevesight.core.genres.GenreRow
 import app.sleevesight.core.genres.LabelSource
 import app.sleevesight.core.genres.PlacedLabel
-import app.sleevesight.core.genres.TrackGenres
 import app.sleevesight.core.pipeline.TrackState
 
-// The genre's panel (#558): its heading, the table, and where the table's labels come from, a line per row.
+// A genre's body (#558, #786): what it is and why the track has it, then its tags and where they come
+// from, in one grid; in a panel of its own, titled with its name, on the genres' page.
 
 /**
- * The panel of [genre] (#558; frame B of the agreed mock-ups): its name as a heading, with *Close*
- * when there is [onClose] (under [closeModifier]: a focus requester); then what the genre is and
- * *Why is this …?*, from [notes] (#523, [GenreAbout]); then the table, a row per level in
- * [GenreLevel] order, each row's name (the track's title, the artist's name, the album's title) on
- * one line above its labels, [genre] marked wherever it shows; then where the table's labels come
- * from, a line per row, each source linked to its page there, and MusicBrainz's licence (D12).
- * On [fill]: inside *Genres*' panel on Home (#772), the surface colour, which sets it apart there.
- * Nothing when no row has [genre].
+ * The panel of [genre] on the genres' page under *Separate pages* (#558, #772): its name as a heading,
+ * with no *Close* (the page's back arrow closes it), over its body ([GenreBody]). Nothing when no
+ * row has [genre].
  */
-@Suppress("LongParameterList") // What the panel shows, and how it is closed and drawn.
 @Composable
 internal fun GenrePanel(
     track: TrackState,
     genre: String,
-    onClose: (() -> Unit)? = null,
     notes: PanelNotes = PanelNotes(),
-    closeModifier: Modifier = Modifier,
-    fill: Color = Color.Unspecified,
+    search: PanelSearch = PanelSearch(),
+    afterRetry: () -> Unit = {},
 ) {
-    val genres = track.genres
     val name =
-        genres.all
+        track.genres.all
             .firstOrNull { it.genre.identity == genre }
             ?.genre
             ?.label ?: return
-    Panel(AnnotatedString(name), GENRE_PANEL_TAG, onClose, closeModifier = closeModifier, fill = fill) {
-        // What the genre is, and *Why is this …?* (#523), above the table.
-        GenreAbout(track, genre, notes)
-        Table(track, genre)
-        Credits(genres, several = track.normalized.artists.size > 1)
+    Panel(AnnotatedString(name), GENRE_PANEL_TAG, onClose = null) {
+        GenreBody(track, genre, notes, search, afterRetry)
     }
 }
 
 /**
- * What a genre's panel shows above its table ([GenreAbout]): [notes], where its definition and
+ * What [genre] shows for [track] (#558, #786; `design/design.md`, *Genre labels*): what the genre is
+ * and *Why is this …?*, from [notes], with *Search with AI* for a definition Wikipedia does not give
+ * ([search]; [GenreAbout], whose failed lookup's *Retry* hands the focus to [afterRetry]); then its
+ * tags and their sources ([TagsGrid]). Unfolded under *Genres*' chips on Home ([GenresBox]), with no
+ * heading of its own; in a panel titled with its name on the genres' page ([GenrePanel]). [modifier]
+ * goes on its column (a test tag). Nothing when no row has [genre].
+ */
+@Suppress("LongParameterList") // What the body shows, where its notes and search come from, and the focus.
+@Composable
+internal fun GenreBody(
+    track: TrackState,
+    genre: String,
+    notes: PanelNotes,
+    search: PanelSearch,
+    afterRetry: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (track.genres.all.none { it.genre.identity == genre }) return
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        // What the genre is, and *Why is this …?* (#523), above the tags.
+        GenreAbout(track, genre, notes, search, afterRetry)
+        TagsGrid(track, genre)
+    }
+}
+
+/**
+ * What a genre's body shows above its tags ([GenreAbout]): [notes], where its definition and
  * reason come from; where a citation in the reason goes ([onCite]: on Home, *Sources* unfolded to
  * its line; under *Separate pages*, *Sources*' page at it); whether the model's own knowledge is
  * allowed now ([modelAllowed]); and what reads a written reason aloud ([readAloud], #325), null for
@@ -86,59 +109,163 @@ internal class PanelNotes(
 )
 
 /**
- * The table of [track]'s genres: a row per level with labels, in [GenreLevel] order, each row's
- * name on one line, clipped with an ellipsis when longer (a screen reader reads it whole), above
- * its labels; [genre] marked wherever it shows, which a screen reader says is selected.
+ * [track]'s genre tags and where they come from (#786), in one grid of two columns, so its first
+ * column lines up across both parts: "Genre tags", a heading, then a row per level with tags, in
+ * [GenreLevel] order, its name on the left, right-aligned (*Track*, *Artist*, *Album*; with several
+ * credited artists *Artist 1*, *Artist 2*, … rather than their names), its tags as chips on the
+ * right, [genre] marked wherever it shows ([Cell]); then "Tag sources", a heading, and the same rows,
+ * each with the sources that gave any of its tags, each named and linked to the row's page there
+ * ([sourceParts]), an artist's name on its own line above them with several artists; then, in the
+ * right column, once, when MusicBrainz gave any tag, its credit and its licence, linked (D12).
+ *
+ * The first column is as wide as its widest name, measured in the names' style at the current font
+ * size, so it holds at large font sizes. Each row is one item to a screen reader, its name then its
+ * chips or its sources ("Track, Rock, Pop"; the chips are not buttons); the links in a sources' row
+ * stay links.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun Table(
+private fun TagsGrid(
     track: TrackState,
     genre: String,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        track.genres.rows.forEachIndexed { index, row ->
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                // The track's title a little stronger, so the rows read as track, then who, then where.
-                val isTrack = row.level == GenreLevel.TRACK
-                Text(
-                    rowName(track, row),
-                    style = if (isTrack) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodySmall,
-                    fontWeight = if (isTrack) FontWeight.Medium else null,
-                    color = MaterialTheme.colorScheme.run { if (isTrack) onSurface else onSurfaceVariant },
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.testTag(GENRES_ROW_PREFIX + index),
-                )
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    for (label in row.labels) Cell(PlacedLabel(row, label), marked = label.genre.identity == genre)
+    val rows = track.genres.rows
+    val several = track.normalized.artists.size > 1
+    val names = rowNames(rows, several)
+    val nameStyle = MaterialTheme.typography.bodySmall
+    val column = columnWidth(names, nameStyle)
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    Column(Modifier.testTag(GENRE_TAGS_TAG), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        GridHeading(stringResource(R.string.home_genre_tags))
+        rows.forEachIndexed { index, row ->
+            GridRow(names[index], column, nameStyle, Modifier.testTag(GENRES_ROW_PREFIX + index), CHIP_INSET) {
+                Cells(row, genre)
+            }
+        }
+        GridHeading(stringResource(R.string.home_genre_tag_sources))
+        rows.forEachIndexed { index, row ->
+            val parts = sourceParts(row)
+            if (parts.isEmpty()) return@forEachIndexed
+            GridRow(names[index], column, nameStyle, Modifier.testTag(GENRE_SOURCES_ROW_PREFIX + index)) {
+                Column {
+                    row.artist?.takeIf { several && row.level == GenreLevel.ARTIST }?.let { artist ->
+                        Text(artist, style = nameStyle, color = MaterialTheme.colorScheme.onSurface)
+                    }
+                    LinkedText(parts, style = nameStyle, color = muted)
+                }
+            }
+        }
+        val musicBrainz = rows.any { row -> row.labels.any { label -> label.credits.any { it.source == MB } } }
+        MB.licenceUrl?.takeIf { musicBrainz }?.let { licence ->
+            GridRow(null, column, nameStyle, Modifier.testTag(GENRE_TAGS_CREDIT_TAG)) {
+                Column {
+                    Text(stringResource(R.string.home_genre_tags_credit), style = nameStyle, color = muted)
+                    LinkedText(
+                        listOf(TextPart.Link(stringResource(R.string.home_genre_tags_licence), licence)),
+                        style = nameStyle,
+                        color = muted,
+                    )
                 }
             }
         }
     }
 }
 
-// A row's name: the track's title, the artist's name, the album's title; the level's name where the
-// player gave none.
+// Each row's name: *Track*, *Album*, *Artist*, or with [several] credited artists *Artist 1*, *Artist
+// 2*, … in the rows' order.
 @Composable
-private fun rowName(
-    track: TrackState,
-    row: GenreRow,
-): String =
-    when (row.level) {
-        GenreLevel.TRACK ->
-            track.normalized.title
-                .ifBlank { track.nowPlaying.title }
-                .ifBlank { stringResource(R.string.home_genres_track) }
-        GenreLevel.ARTIST -> row.artist?.takeIf(String::isNotBlank) ?: stringResource(R.string.home_genres_artist_row)
-        GenreLevel.ALBUM ->
-            track.nowPlaying.album?.takeIf(String::isNotBlank) ?: stringResource(R.string.home_genres_album)
+private fun rowNames(
+    rows: List<GenreRow>,
+    several: Boolean,
+): List<String> {
+    var artists = 0
+    return rows.map { row ->
+        when (row.level) {
+            GenreLevel.TRACK -> stringResource(R.string.home_genres_track)
+            GenreLevel.ALBUM -> stringResource(R.string.home_genres_album)
+            GenreLevel.ARTIST ->
+                if (several) {
+                    stringResource(R.string.home_genre_artist_n, ++artists)
+                } else {
+                    stringResource(R.string.home_genres_artist_row)
+                }
+        }
     }
+}
 
-// A label in the table: a smaller chip, not a button, in the chips' fills; [marked], the panel's genre.
+// The width of the widest of [names] in [style], as the current font size sets it.
+@Composable
+private fun columnWidth(
+    names: List<String>,
+    style: TextStyle,
+): Dp {
+    val measurer = rememberTextMeasurer()
+    val widest = names.maxOfOrNull { measurer.measure(it, style, maxLines = 1).size.width } ?: 0
+    // A pixel to spare, so a name measured to the pixel's edge never wraps.
+    return with(LocalDensity.current) { (widest + 1).toDp() }
+}
+
+// A heading of the grid, across both columns: bold, a heading to a screen reader.
+@Composable
+private fun GridHeading(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.bodyMedium,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.semantics { heading() },
+    )
+}
+
+/**
+ * A row of the grid: [name] (none for the credit under the sources) on the left, right-aligned in a
+ * column [width] wide, [inset] from the top to sit level with the first line on the right; [content]
+ * on the right, left-aligned, in the rest. One item to a screen reader.
+ */
+@Suppress("LongParameterList") // The row's name, its column, its style and inset, and what it holds.
+@Composable
+private fun GridRow(
+    name: String?,
+    width: Dp,
+    style: TextStyle,
+    modifier: Modifier,
+    inset: Dp = 0.dp,
+    content: @Composable () -> Unit,
+) {
+    Row(
+        modifier.semantics(mergeDescendants = true) {},
+        horizontalArrangement = Arrangement.spacedBy(COLUMN_GAP),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Box(Modifier.width(width).padding(top = inset), contentAlignment = Alignment.TopEnd) {
+            if (name != null) {
+                Text(
+                    name,
+                    style = style,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.End,
+                    maxLines = 1,
+                )
+            }
+        }
+        Box(Modifier.weight(1f)) { content() }
+    }
+}
+
+// A row's tags as chips, [genre] marked.
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun Cells(
+    row: GenreRow,
+    genre: String,
+) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        for (label in row.labels) Cell(PlacedLabel(row, label), marked = label.genre.identity == genre)
+    }
+}
+
+// A label in the grid: a smaller chip, not a button, in the chips' fills; [marked], the panel's genre.
 @Composable
 private fun Cell(
     placed: PlacedLabel,
@@ -160,65 +287,41 @@ private fun Cell(
     )
 }
 
-/**
- * Where the table's labels come from (D12: each label from MusicBrainz's tags credits it, with its
- * licence): a line for each row, naming the level ("From the track's tags:"; with [several]
- * credited artists, the artist), then each source that gave any of the row's labels, once, linked
- * to the row's page there, and for MusicBrainz its licence.
- */
+// Each source that gave any of [row]'s labels, once, in [LabelSource] order, named as the settings
+// name it ("Last.fm", "MusicBrainz") and linked to the row's page there where it has one, " · " between.
 @Composable
-private fun Credits(
-    genres: TrackGenres,
-    several: Boolean,
-) {
-    val licence = stringResource(R.string.home_genre_licence)
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        for (row in genres.rows) {
-            val parts = sourceParts(row, licence)
-            if (parts.isEmpty()) continue
-            val from =
-                when (row.level) {
-                    GenreLevel.TRACK -> stringResource(R.string.home_genre_from_track)
-                    GenreLevel.ALBUM -> stringResource(R.string.home_genre_from_album)
-                    GenreLevel.ARTIST ->
-                        row.artist?.takeIf { several }?.let { stringResource(R.string.home_genre_from_named, it) }
-                            ?: stringResource(R.string.home_genre_from)
-                }
-            LinkedText(
-                listOf(TextPart.Words("$from ")) + parts,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
-
-// Each source that gave any of [row]'s labels, once, in [LabelSource] order, linked to the row's page
-// there where it has one, then its licence, if any.
-private fun sourceParts(
-    row: GenreRow,
-    licence: String,
-): List<TextPart> {
+private fun sourceParts(row: GenreRow): List<TextPart> {
     val credits = row.labels.flatMap { it.credits }
     return LabelSource.entries
         .mapNotNull { source ->
             val given = credits.filter { it.source == source }
             if (given.isEmpty()) return@mapNotNull null
+            val name = sourceName(source.source)
             val url = given.firstNotNullOfOrNull { it.url }
-            listOf(url?.let { TextPart.Link(source.credit, it) } ?: TextPart.Words(source.credit)) +
-                source.licenceUrl
-                    ?.let { listOf(TextPart.Words(SEPARATOR), TextPart.Link(licence, it)) }
-                    .orEmpty()
+            listOf(url?.let { TextPart.Link(name, it) } ?: TextPart.Words(name))
         }.reduceOrNull { all, next -> all + TextPart.Words(SEPARATOR) + next }
         .orEmpty()
 }
 
-/** The test tags of the genre's panel, its heading and its *Close*, as [Panel] makes them. */
+/** The test tags of the genre's panel on the genres' page and its heading, as [Panel] makes them. */
 const val GENRE_PANEL_TAG: String = "genre-panel"
 const val GENRE_PANEL_HEADING_TAG: String = "genre-panel:heading"
-const val GENRE_PANEL_CLOSE_TAG: String = "genre-panel:close"
 
-/** The test tag of a row's name in the panel's table, before its index. */
+/** The test tag of a genre's tags and sources' grid (#786). */
+const val GENRE_TAGS_TAG: String = "genre-tags"
+
+/** The test tag of a row of tags in the grid, before its index. */
 const val GENRES_ROW_PREFIX: String = "genres-row:"
 
+/** The test tag of a row of sources in the grid, before the index of its row of tags (#786). */
+const val GENRE_SOURCES_ROW_PREFIX: String = "genre-sources-row:"
+
+/** The test tag of MusicBrainz's credit and licence under the sources (#786). */
+const val GENRE_TAGS_CREDIT_TAG: String = "genre-tags:credit"
+
+private val MB = LabelSource.MUSICBRAINZ
 private const val SEPARATOR = " · "
+private val COLUMN_GAP = 12.dp
+
+// How far a row's name sits below the top of its chips: their vertical padding, so the two read level.
+private val CHIP_INSET = 5.dp

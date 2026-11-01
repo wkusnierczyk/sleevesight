@@ -16,8 +16,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
@@ -37,8 +35,6 @@ import app.sleevesight.app.R
  * at the top right when there is [onClose] (with [closeModifier], such as a focus requester); under
  * a rule, [content], its items [spacing] apart. [headingFrame] wraps the heading's row, the title
  * and *Close*: in the settings, where a link to the section lands. [modifier] goes on the outside.
- * [fill] replaces the light fill: a genre's panel inside *Genres*' (#772) is set apart from it on
- * the surface colour.
  * Tagged [tag] for tests, its heading `<tag>:heading` and its *Close* `<tag>:close`.
  */
 @Suppress("LongParameterList") // What the panel shows, and where its users hook into it.
@@ -51,11 +47,10 @@ internal fun Panel(
     closeModifier: Modifier = Modifier,
     spacing: Dp = 10.dp,
     headingFrame: @Composable (@Composable () -> Unit) -> Unit = { it() },
-    fill: Color = Color.Unspecified,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val shape = RoundedCornerShape(12.dp)
-    val ground = fill.takeOrElse { MaterialTheme.colorScheme.onSurface.copy(alpha = PANEL_FILL) }
+    val ground = MaterialTheme.colorScheme.onSurface.copy(alpha = PANEL_FILL)
     Column(
         modifier =
             modifier
@@ -95,7 +90,8 @@ internal fun Panel(
 
 /**
  * The rule a panel draws under its heading ([Panel]), for a panel's content to draw where it sets a
- * part apart: what *Search with AI* found, under what the sources gave (#773).
+ * part apart: what *Search with AI* found, under what the sources gave (#773); a genre unfolded
+ * under *Genres*' chips (#786).
  */
 @Composable
 internal fun PanelRule(modifier: Modifier = Modifier) {

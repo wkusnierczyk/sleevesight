@@ -16,12 +16,12 @@ import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
+import app.sleevesight.app.pipeline.DefinitionState
 import app.sleevesight.app.pipeline.GenreNotes
 import app.sleevesight.app.pipeline.GenreReason
 import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.evidence.Scope
-import app.sleevesight.core.genres.GenreDefinition
 import app.sleevesight.core.genres.GenreLabel
 import app.sleevesight.core.genres.GenreLevel
 import app.sleevesight.core.genres.GenreRow
@@ -34,7 +34,6 @@ import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.platform.JvmHasher
-import app.sleevesight.core.resolution.Lookup
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.synthesis.GroundingCheck
 import app.sleevesight.core.synthesis.InsightReply
@@ -92,7 +91,7 @@ class GenreReasonNoteScreenTest {
     private class Notes(
         private val reason: GenreReason,
     ) : GenreNotes {
-        override fun definition(genre: String): Flow<Lookup<GenreDefinition>?> = flowOf(null)
+        override fun definition(genre: String): Flow<DefinitionState?> = flowOf(null)
 
         override fun reason(
             track: TrackState,

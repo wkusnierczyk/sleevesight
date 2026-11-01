@@ -18,6 +18,7 @@ import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.assertTouchHeightIsEqualTo
 import androidx.compose.ui.test.click
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
@@ -251,7 +252,7 @@ class LayoutPagesTest {
         }
     }
 
-    private fun count(tag: String) = compose.onAllNodesWithTag(tag).fetchSemanticsNodes().size
+    private fun count(tag: String) = compose.onAllNodesWithTag(tag, useUnmergedTree = true).fetchSemanticsNodes().size
 
     private fun onHome() = assertEquals(Home.serializer().descriptor.serialName, nav.currentDestination?.route)
 
@@ -287,9 +288,13 @@ class LayoutPagesTest {
             // and where its labels come from.
             compose.onNodeWithTag(GENRES_CHIP_TAG).performScrollTo().performClick()
             compose.onNodeWithTag(GENRE_PREFIX + "track:folkpop").performScrollTo().performClick()
-            compose.onNodeWithTag(GENRE_PANEL_HEADING_TAG).assertTextEquals("Folk Pop")
-            compose.onNodeWithTag(GENRE_CELL_PREFIX + "artist:Gordon Lightfoot:rock").assertExists()
-            compose.onNodeWithText(text(R.string.home_genre_from_track), substring = true).assertExists()
+            compose.onNodeWithTag(GENRE_PREFIX + "track:folkpop").assertIsSelected()
+            compose
+                .onNodeWithTag(
+                    GENRE_CELL_PREFIX + "artist:Gordon Lightfoot:rock",
+                    useUnmergedTree = true,
+                ).assertExists()
+            compose.onNodeWithTag(GENRE_SOURCES_ROW_PREFIX + "0").assertExists()
             onHome()
         }
 
@@ -440,14 +445,14 @@ class LayoutPagesTest {
                 },
             )
             assertTrue(headings.all { SemanticsProperties.Heading in it.config })
-            assertEquals(0, count(GENRE_PANEL_CLOSE_TAG))
+            assertEquals(0, compose.onAllNodesWithText(text(R.string.page_close)).fetchSemanticsNodes().size)
             // Each holds what the genre's box in place does: the table, the genre marked, and where it comes from.
-            compose.onNodeWithTag(GENRES_ROW_PREFIX + "1").assertTextEquals("Gordon Lightfoot")
-            compose.onNodeWithTag(GENRE_CELL_PREFIX + "track:folkpop").assertIsSelected()
-            compose.onNodeWithText(text(R.string.home_genre_from_track), substring = true).assertExists()
+            compose.onNodeWithTag(GENRES_ROW_PREFIX + "1").assert(hasText(text(R.string.home_genres_artist_row)))
+            compose.onNodeWithTag(GENRE_CELL_PREFIX + "track:folkpop", useUnmergedTree = true).assertIsSelected()
+            compose.onNodeWithTag(GENRE_SOURCES_ROW_PREFIX + "0").assertExists()
             // The table's labels are plain: nothing opens from them.
             compose
-                .onNodeWithTag(GENRE_CELL_PREFIX + "artist:Gordon Lightfoot:rock")
+                .onNodeWithTag(GENRE_CELL_PREFIX + "artist:Gordon Lightfoot:rock", useUnmergedTree = true)
                 .assert(SemanticsMatcher.keyNotDefined(SemanticsActions.OnClick))
 
             back()
@@ -478,7 +483,7 @@ class LayoutPagesTest {
                 headings.map { it.config[SemanticsProperties.Text].joinToString { t -> t.text } },
             )
             assertTrue(headings[0].boundsInRoot.top < headings[1].boundsInRoot.top)
-            assertEquals(0, count(GENRE_PANEL_CLOSE_TAG))
+            assertEquals(0, compose.onAllNodesWithText(text(R.string.page_close)).fetchSemanticsNodes().size)
             assertEquals(0, count(GENRE_PREFIX + "track:ballad"))
         }
     }
@@ -533,7 +538,7 @@ class LayoutPagesTest {
             title(text(R.string.home_genres))
             compose.onNodeWithTag(GENRES_ROW_PREFIX + "0").assertExists()
             assertEquals(0, count(GENRES_ROW_PREFIX + "1"))
-            compose.onNodeWithTag(GENRE_CELL_PREFIX + "track:folkpop").assertIsSelected()
+            compose.onNodeWithTag(GENRE_CELL_PREFIX + "track:folkpop", useUnmergedTree = true).assertIsSelected()
 
             back()
             onHome()
@@ -596,7 +601,11 @@ class LayoutPagesTest {
         show(state(long(), pages)) { current ->
             compose.onNodeWithTag(GENRES_PAGE_LINK_TAG).performScrollTo().performClick()
             compose.waitForIdle()
-            compose.onNodeWithTag(GENRE_CELL_PREFIX + "artist:Gordon Lightfoot:rock").assertExists()
+            compose
+                .onNodeWithTag(
+                    GENRE_CELL_PREFIX + "artist:Gordon Lightfoot:rock",
+                    useUnmergedTree = true,
+                ).assertExists()
 
             // Another track, with genres of its own.
             val jazz =
@@ -612,7 +621,7 @@ class LayoutPagesTest {
             title(text(R.string.home_genres))
             // The new track's genres, each in its panel.
             compose.onNodeWithTag(GENRE_PANEL_HEADING_TAG).assertTextEquals("Jazz")
-            compose.onNodeWithTag(GENRE_CELL_PREFIX + "album:bebop").assertExists()
+            compose.onNodeWithTag(GENRE_CELL_PREFIX + "album:bebop", useUnmergedTree = true).assertExists()
             assertEquals(0, count(GENRE_CELL_PREFIX + "artist:Gordon Lightfoot:rock"))
 
             // One level: the table's one row, its labels plain.
@@ -621,7 +630,7 @@ class LayoutPagesTest {
             compose.onNodeWithTag(GENRES_ROW_PREFIX + "0").assertExists()
             assertEquals(0, count(GENRES_ROW_PREFIX + "1"))
             compose
-                .onNodeWithTag(GENRE_CELL_PREFIX + "track:jazz")
+                .onNodeWithTag(GENRE_CELL_PREFIX + "track:jazz", useUnmergedTree = true)
                 .assert(SemanticsMatcher.keyNotDefined(SemanticsActions.OnClick))
 
             // *Show genres* turned off.

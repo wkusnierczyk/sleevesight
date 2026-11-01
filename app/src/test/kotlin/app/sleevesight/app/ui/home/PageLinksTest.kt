@@ -7,9 +7,11 @@ import android.provider.Settings.Secure
 import androidx.activity.BackEventCompat
 import androidx.activity.compose.setContent
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.click
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
@@ -24,6 +26,7 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.FirstRunAcknowledgement
 import app.sleevesight.app.MainActivity
+import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.app.session.PlaybackInfo
@@ -231,7 +234,10 @@ class PageLinksTest {
             onGenres()
             assertEquals(genresPage, route())
             compose.onNodeWithTag(GENRE_PANEL_HEADING_TAG).assertTextEquals("Folk")
-            compose.onNodeWithTag(GENRES_ROW_PREFIX + "1").assertTextEquals("Gordon Lightfoot")
+            compose
+                .onNodeWithTag(
+                    GENRES_ROW_PREFIX + "1",
+                ).assert(hasText(app.getString(R.string.home_genres_artist_row)))
             backArrow()
             onHome()
             assertEquals(scrolled, top(link))
@@ -307,11 +313,27 @@ class PageLinksTest {
             headings[1].assertTextEquals("Funk")
             assertEquals(2, headings.fetchSemanticsNodes().size)
             // In soul's, a row per artist, each with its own label of the genre, both marked.
-            compose.onAllNodesWithTag(GENRES_ROW_PREFIX + "0")[0].assertTextEquals("Ike Turner")
-            compose.onAllNodesWithTag(GENRES_ROW_PREFIX + "1")[0].assertTextEquals("Tina Turner")
-            compose.onAllNodesWithTag(GENRE_CELL_PREFIX + "artist:Ike Turner:soul")[0].assertIsSelected()
-            compose.onAllNodesWithTag(GENRE_CELL_PREFIX + "artist:Tina Turner:soul")[0].assertIsSelected()
-            compose.onAllNodesWithTag(GENRE_CELL_PREFIX + "artist:Tina Turner:funk")[0].assertExists()
+            // Their sources name them (#786), the rows' tags as each gave them.
+            compose.onAllNodesWithTag(GENRES_ROW_PREFIX + "0")[0].assert(hasText("Soul")).assert(hasText("Funk").not())
+            compose.onAllNodesWithTag(GENRES_ROW_PREFIX + "1")[0].assert(hasText("Funk"))
+            compose
+                .onAllNodesWithTag(
+                    GENRE_CELL_PREFIX + "artist:Ike Turner:soul",
+                    useUnmergedTree = true,
+                )[0]
+                .assertIsSelected()
+            compose
+                .onAllNodesWithTag(
+                    GENRE_CELL_PREFIX + "artist:Tina Turner:soul",
+                    useUnmergedTree = true,
+                )[0]
+                .assertIsSelected()
+            compose
+                .onAllNodesWithTag(
+                    GENRE_CELL_PREFIX + "artist:Tina Turner:funk",
+                    useUnmergedTree = true,
+                )[0]
+                .assertExists()
         }
 
     @Test
