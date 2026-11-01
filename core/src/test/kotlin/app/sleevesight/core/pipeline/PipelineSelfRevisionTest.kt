@@ -29,10 +29,11 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
 /**
- * A reply that revises itself in its text (#798, `SelfRevision`) is neither shown nor kept: it is
- * asked for once more, a second paid call within the same granted call, logged and counted as one,
- * and the card counts the tokens of every reply of the call; a second such reply leaves the error
- * state; a Stop cancels the second call; a card kept from before that revises itself is not served.
+ * A reply that revises itself in its text (#798, `SelfRevision`) is not shown as written: when what
+ * follows the revision is usable, that is shown, with no second call, and the reply kept as written
+ * is cut again when it is served; else it is asked for once more, a second paid call within the same
+ * granted call, and the card counts the tokens of every reply of the call; a second reply with
+ * nothing usable leaves the error state; a Stop cancels the second call.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class PipelineSelfRevisionTest {
@@ -72,11 +73,50 @@ class PipelineSelfRevisionTest {
         return FakeProvider { FakeProvider.done(replies[minOf(n++, replies.lastIndex)]) }
     }
 
+    private fun List<PipelineEvent>.revisions() = filterIsInstance<PipelineEvent.SelfRevised>()
+
+    private fun revised(
+        state: TrackState,
+        sign: SelfRevision,
+        salvaged: Boolean = false,
+        cached: Boolean = false,
+    ) = PipelineEvent.SelfRevised(state.normalized.lookupKey, sign, salvaged, cached)
+
     @Test
-    fun `a reply that revises itself is asked for once more, and the second is shown, kept and counted`() =
+    fun `a reply that revises itself is cut to what follows, with no second call`() =
         runTest {
             val cache = MemoryCache()
-            val provider = replying(REVISED, CLEAN)
+            val provider = replying(REVISED)
+            val pipeline = pipeline(provider, cache)
+            val events = recording(pipeline)
+            val state = pipeline.run(sundown, granted())
+            runCurrent()
+
+            assertEquals(1, provider.requests.size)
+            val written = assertIs<InsightState.Written>(state.insight)
+            assertEquals(CLEAN, written.grounded.text)
+            assertTrue(written.grounded.withdrawn!!.startsWith("It is a song from nothing"))
+            // Kept as written, and cut again when served.
+            assertEquals(listOf(REVISED), cache.cards.values.toList())
+            assertEquals(listOf(revised(state, SelfRevision.ASIDE, salvaged = true)), events.revisions())
+            assertTrue(events.filterIsInstance<PipelineEvent.Grounded>().single().selfCorrected)
+        }
+
+    @Test
+    fun `a correction set as a header in emphasis is cut to the corrected sentence`() =
+        runTest {
+            val provider = replying(HEADED)
+            val state = pipeline(provider).run(sundown, granted())
+
+            assertEquals(1, provider.requests.size)
+            assertEquals("It came out in 1975 [MB1].", assertIs<InsightState.Written>(state.insight).grounded.text)
+        }
+
+    @Test
+    fun `a reply with nothing usable after its revision is asked again, the second shown, kept and counted`() =
+        runTest {
+            val cache = MemoryCache()
+            val provider = replying(ENDS, CLEAN)
             val pipeline = pipeline(provider, cache)
             val events = recording(pipeline)
             val control = granted()
@@ -94,25 +134,10 @@ class PipelineSelfRevisionTest {
             // Two calls in the log, one granted call ended, nothing offered again.
             assertEquals(2, events.count { it is PipelineEvent.ModelCall })
             assertEquals(2, events.count { it is PipelineEvent.ModelDone })
-            assertEquals(
-                listOf(PipelineEvent.SelfRevised(state.normalized.lookupKey, SelfRevision.ASIDE, askedAgain = true)),
-                events.filterIsInstance<PipelineEvent.SelfRevised>(),
-            )
+            assertEquals(listOf(revised(state, SelfRevision.ASIDE)), events.revisions())
             assertEquals(1, events.count { it is PipelineEvent.Grounded })
             assertEquals(1, control.ended.count { it == RunStep.MODEL_CALL })
             assertEquals(0, control.retriesAsked)
-        }
-
-    @Test
-    fun `a reply with a correction set as a header in emphasis is asked for once more`() =
-        runTest {
-            val cache = MemoryCache()
-            val provider = replying(HEADED, CLEAN)
-            val state = pipeline(provider, cache).run(sundown, granted())
-
-            assertEquals(2, provider.requests.size)
-            assertEquals(CLEAN, assertIs<InsightState.Written>(state.insight).grounded.text)
-            assertEquals(listOf(CLEAN), cache.cards.values.toList())
         }
 
     @Test
@@ -125,15 +150,7 @@ class PipelineSelfRevisionTest {
                     val first = "“Carefree Highway” was first released in 1974, on the album “Sundown”."
                     SourceResult(Outcome.SongArticle, listOf(line(SourceId.MUSICBRAINZ, first)), Duration.ZERO)
                 }
-            var n = 0
-            val provider =
-                FakeProvider {
-                    when (n++) {
-                        0 -> FakeProvider.done(REVISED)
-                        1 -> FakeProvider.done(GroundingCheck.NO_EVIDENCE)
-                        else -> FakeProvider.done(CLEAN)
-                    }
-                }
+            val provider = replying(ENDS, GroundingCheck.NO_EVIDENCE, CLEAN)
             val highway = nowPlaying("Carefree Highway", "Gordon Lightfoot", "Sundown")
             val state = pipeline(provider, adapter = adapter).run(highway, granted())
 
@@ -147,10 +164,10 @@ class PipelineSelfRevisionTest {
         }
 
     @Test
-    fun `when the second reply revises itself too, the error state shows and nothing is kept`() =
+    fun `when the second reply has nothing usable either, the error state shows and nothing is kept`() =
         runTest {
             val cache = MemoryCache()
-            val provider = replying(REVISED, REPEATED)
+            val provider = replying(ENDS, ENDS_TOO)
             val pipeline = pipeline(provider, cache)
             val events = recording(pipeline)
             val control = granted()
@@ -163,10 +180,7 @@ class PipelineSelfRevisionTest {
             assertEquals(emptyMap(), cache.cards)
             assertEquals(emptyList(), control.cardsWritten)
             assertEquals(
-                listOf(
-                    PipelineEvent.SelfRevised(state.normalized.lookupKey, SelfRevision.ASIDE, askedAgain = true),
-                    PipelineEvent.SelfRevised(state.normalized.lookupKey, SelfRevision.REPEATED_OPENING),
-                ),
+                listOf(revised(state, SelfRevision.ASIDE), revised(state, SelfRevision.ASIDE)),
                 events.filterIsInstance<PipelineEvent.SelfRevised>(),
             )
             assertEquals(0, events.count { it is PipelineEvent.Grounded })
@@ -189,7 +203,7 @@ class PipelineSelfRevisionTest {
         runTest {
             val cache = MemoryCache()
             var n = 0
-            val provider = FakeProvider(delay = 10.seconds) { FakeProvider.done(if (n++ == 0) REVISED else CLEAN) }
+            val provider = FakeProvider(delay = 10.seconds) { FakeProvider.done(if (n++ == 0) ENDS else CLEAN) }
             val pipeline = pipeline(provider, cache)
             val events = recording(pipeline)
             val control = granted()
@@ -211,27 +225,37 @@ class PipelineSelfRevisionTest {
         }
 
     @Test
-    fun `a kept card that revises itself is not served, and the track is written afresh`() =
+    fun `a kept card that revises itself is served cut, or not at all when nothing usable is left`() =
         runTest {
             val cache = MemoryCache()
             pipeline(replying(CLEAN), cache).run(sundown, granted())
             assertEquals(1, cache.cards.size)
-            // A card kept before the check, or by an older version, that revises itself.
-            cache.cards.replaceAll { _, _ -> REVISED }
 
+            // Kept before the check, or by an older version: cut, with no call.
+            cache.cards.replaceAll { _, _ -> HEADED }
+            val served = replying(CLEAN)
+            val first = pipeline(served, cache)
+            val firstEvents = recording(first)
+            val shown = first.run(sundown, granted())
+            runCurrent()
+            assertEquals(0, served.requests.size)
+            assertEquals("It came out in 1975 [MB1].", assertIs<InsightState.Written>(shown.insight).grounded.text)
+            assertEquals(
+                listOf(revised(shown, SelfRevision.ASIDE, salvaged = true, cached = true)),
+                firstEvents.filterIsInstance<PipelineEvent.SelfRevised>(),
+            )
+
+            // Nothing usable: not served, and the track is written afresh.
+            cache.cards.replaceAll { _, _ -> ENDS }
             val provider = replying(CLEAN)
             val pipeline = pipeline(provider, cache)
             val events = recording(pipeline)
             val state = pipeline.run(sundown, granted())
             runCurrent()
-
             assertEquals(1, provider.requests.size)
             assertEquals(CLEAN, assertIs<InsightState.Written>(state.insight).grounded.text)
             assertTrue(events.none { it is PipelineEvent.InsightCached })
-            assertEquals(
-                listOf(PipelineEvent.SelfRevised(state.normalized.lookupKey, SelfRevision.ASIDE, cached = true)),
-                events.filterIsInstance<PipelineEvent.SelfRevised>(),
-            )
+            assertEquals(listOf(revised(state, SelfRevision.ASIDE, cached = true)), events.revisions())
             assertEquals(listOf(CLEAN), cache.cards.values.toList())
         }
 
@@ -241,10 +265,13 @@ class PipelineSelfRevisionTest {
             "It is a song from nothing in particular [MB1].\n\n" +
                 "Wait, I need to correct that: the line says it is a song [MB1], so I'll keep only that.\n\n" +
                 "It is a song [MB1]."
-        const val REPEATED =
-            "Sundown is a song by Gordon Lightfoot from 1974 [MB1].\n\n" +
-                "Sundown is a song by Gordon Lightfoot from 1974 [MB1]."
-        const val HEADED = "It is a song from 1973 [MB1].\n\n**Correction:** It is a song [MB1]."
+
+        // A draft, then a correction that ends the reply: nothing usable after it.
+        const val ENDS =
+            "It is a song from nothing in particular [MB1].\n\n" +
+                "Wait, I need to correct that, so I'll keep only what the line says [MB1]."
+        const val ENDS_TOO = "It is a song [MB1]. Hmm, that is all the evidence lines give."
+        const val HEADED = "It came out in 1974 [MB1].\n\n**Correction:** It came out in 1975 [MB1]."
         const val CLEAN = "It is a song [MB1]."
         const val QUOTED_WAIT = "\"Wait, Let Me Fix It\" is not this song, which came out in 1974 [MB1]."
     }

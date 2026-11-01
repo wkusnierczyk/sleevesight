@@ -6,6 +6,7 @@ import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -100,6 +101,56 @@ class SelfRevisionTest {
                 "",
             )
         for (reply in replies) assertNull(SelfRevision.of(reply), reply)
+    }
+
+    // What the card shows of [reply] once a revision is cut out ([SelfRevision.salvage]); null when
+    // nothing usable is left.
+    private fun salvaged(reply: String): String? {
+        val grounded = assertIs<InsightReply.Written>(GroundingCheck.check(reply, IDS, allowModel = false)).grounded
+        val found = assertNotNull(SelfRevision.find(grounded.text), reply)
+        return SelfRevision.salvage(grounded, found, IDS)?.text
+    }
+
+    @Test
+    fun `a revision is cut to what follows it, when that is usable`() {
+        // The phone's: the draft and the comment go, the last paragraph stays.
+        assertEquals(
+            "Basia Bulat's \"Already Forgiven\" was first released as a single in February 2020 [MB1]. " +
+                "It appears on the album \"Are You in Love?\" [S3][S4].",
+            salvaged(PHONE),
+        )
+        // A header: only the header goes with the draft, not the sentence it opens.
+        val corrected = "It came out in 1975 [MB1]."
+        assertEquals(corrected, salvaged("It came out in 1974 [MB1].\n\n**Correction:** $corrected"))
+        assertEquals(corrected, salvaged("It came out in 1974 [MB1]. *Wait,* $corrected"))
+        // A repeated opening: kept from its second occurrence.
+        assertEquals(
+            "It came out on the album Sundown in 1974 [MB1]. It topped the charts [W1].",
+            salvaged(
+                "It came out on the album Sundown in 1974 [MB1]. It is a classic.\n\n" +
+                    "It came out on the album Sundown in 1974 [MB1]. It topped the charts [W1].",
+            ),
+        )
+        // The withdrawn part is kept for the developer.
+        val grounded = assertIs<InsightReply.Written>(GroundingCheck.check(PHONE, IDS, allowModel = false)).grounded
+        val cut = assertNotNull(SelfRevision.salvage(grounded, assertNotNull(SelfRevision.find(grounded.text)), IDS))
+        assertTrue(cut.withdrawn!!.endsWith("so I'll keep only what is supported."), cut.withdrawn)
+        assertEquals(0, cut.counts.uncited)
+    }
+
+    @Test
+    fun `nothing usable after a revision is no salvage`() {
+        val replies =
+            listOf(
+                // The correction ends the reply.
+                "It came out in 1974 [MB1].\n\nWait, I need to correct that [MB1].",
+                "It came out in 1974 [MB1]. **Correction:**",
+                // What follows is uncited, cites a line that is not there, or revises itself again.
+                "It came out in 1974 [MB1].\n\nWait, that is wrong [MB1]. It is a classic.",
+                "It came out in 1974 [MB1].\n\nWait, that is wrong [MB1]. It came out in 1975 [X9].",
+                "It came out in 1974 [MB1].\n\nWait, that is wrong [MB1]. It came out in 1975 [MB1]. Hmm, maybe.",
+            )
+        for (reply in replies) assertNull(salvaged(reply), reply)
     }
 
     /** No stored reply of the grounding check's (`grounding/replies.json`) revises itself. */

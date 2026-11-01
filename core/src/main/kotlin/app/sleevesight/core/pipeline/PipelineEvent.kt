@@ -192,15 +192,16 @@ sealed interface PipelineEvent {
     ) : PipelineEvent
 
     /**
-     * A reply that revises itself where the card would show it, as [sign] says (`SelfRevision`,
-     * #798): not shown, not kept. [askedAgain] when it was a call's first reply and is asked for once
-     * more; false for the second, which leaves the error state. [cached] for a card kept from before,
-     * not served, so the track is written as though it had none.
+     * A reply that revised itself where the card would show it, as [sign] says (`SelfRevision`,
+     * #798). [salvaged] when what follows the revision is usable and is what the card shows and
+     * keeps; else nothing of it is shown or kept, and a call's first such reply is asked for once
+     * more. [cached] for a card kept from before: cut the same way, or not served when nothing
+     * usable is left, so the track is written as though it had none.
      */
     data class SelfRevised(
         override val key: String,
         val sign: SelfRevision,
-        val askedAgain: Boolean = false,
+        val salvaged: Boolean = false,
         val cached: Boolean = false,
     ) : PipelineEvent
 

@@ -57,16 +57,20 @@ class EventLineTest {
     @Test
     fun `a reply that revised itself says its sign, and what came of it (#798)`() {
         assertEquals(
-            "insight    a|song: reply revised itself (aside), asked again",
-            EventLine.of(PipelineEvent.SelfRevised("a|song", SelfRevision.ASIDE, askedAgain = true)),
+            "insight    a|song: reply revised itself (aside), cut to what follows",
+            EventLine.of(PipelineEvent.SelfRevised("a|song", SelfRevision.ASIDE, salvaged = true)),
         )
         assertEquals(
-            "insight    a|song: reply revised itself again (opening repeated), not shown",
+            "insight    a|song: reply revised itself (opening repeated), nothing usable",
             EventLine.of(PipelineEvent.SelfRevised("a|song", SelfRevision.REPEATED_OPENING)),
         )
         assertEquals(
-            "insight    a|song: kept card revised itself (first person), not served",
+            "insight    a|song: kept card revised itself (first person), nothing usable, not served",
             EventLine.of(PipelineEvent.SelfRevised("a|song", SelfRevision.FIRST_PERSON, cached = true)),
+        )
+        assertEquals(
+            "insight    a|song: kept card revised itself (aside), cut to what follows",
+            EventLine.of(PipelineEvent.SelfRevised("a|song", SelfRevision.ASIDE, salvaged = true, cached = true)),
         )
     }
 

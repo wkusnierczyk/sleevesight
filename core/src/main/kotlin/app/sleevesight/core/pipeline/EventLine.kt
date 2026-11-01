@@ -79,11 +79,11 @@ object EventLine {
             if (e.selfCorrected) ", self-correction taken out" else ""
 
     private fun selfRevised(e: PipelineEvent.SelfRevised): String =
-        "insight    ${e.key}: " +
+        "insight    ${e.key}: ${if (e.cached) "kept card" else "reply"} revised itself (${e.sign.label}), " +
             when {
-                e.cached -> "kept card revised itself (${e.sign.label}), not served"
-                e.askedAgain -> "reply revised itself (${e.sign.label}), asked again"
-                else -> "reply revised itself again (${e.sign.label}), not shown"
+                e.salvaged -> "cut to what follows"
+                e.cached -> "nothing usable, not served"
+                else -> "nothing usable"
             }
 
     private fun notes(notes: List<String>): String = if (notes.isEmpty()) "" else "  [${notes.joinToString("; ")}]"

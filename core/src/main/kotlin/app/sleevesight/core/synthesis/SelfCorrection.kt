@@ -204,11 +204,14 @@ data class SelfCorrection(
 /**
  * A text read for its quotations: what is [outside] them, each quotation as an ellipsis; whether a
  * quotation is still [open] at its end; and whether a closing `”` came with none open ([stray]).
+ * [sources] gives, for each character of [outside], where in the text it came from: an ellipsis,
+ * where its quotation opened (#798, so a sentence read without its quotations is found in the text).
  */
 internal class Quotations(
     val outside: String,
     val open: Boolean,
     val stray: Boolean,
+    val sources: IntArray = IntArray(0),
 ) {
     companion object {
         /**
@@ -226,10 +229,12 @@ internal class Quotations(
             end: Int = text.length,
         ): Quotations {
             val out = StringBuilder()
+            val sources = IntArray(end)
             var close: Char? = null
             var stray = false
             for (i in 0 until end) {
                 val c = text[i]
+                sources[out.length] = i
                 when {
                     close == SINGLE && blankLineAt(text, i) -> {
                         close = null
@@ -245,7 +250,7 @@ internal class Quotations(
                     else -> out.append(c)
                 }
             }
-            return Quotations(out.toString(), open = close != null, stray = stray)
+            return Quotations(out.toString(), open = close != null, stray = stray, sources.copyOf(out.length))
         }
 
         // The mark that closes the quotation [opening] opens.
