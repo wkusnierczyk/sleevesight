@@ -49,7 +49,7 @@ import org.robolectric.RobolectricTestRunner
 import kotlin.time.Instant
 
 /**
- * The note under a genre's reason (#664), as under an insight: it names the red underline, and a
+ * The note under a genre's reason (#664), as under an insight: it names the dimmed text (#819), and a
  * reply whose sentences are all cited, as the prompt now asks, has none.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -135,26 +135,26 @@ class GenreReasonNoteScreenTest {
         )
         show(reason) {
             compose.onNodeWithText("a Polish singer", substring = true).assertExists()
-            compose.onAllNodesWithText("underlined in red", substring = true).assertCountEquals(0)
+            compose.onAllNodesWithText("dimmed", substring = true).assertCountEquals(0)
         }
     }
 
     @Test
-    fun theNoteUnderAReasonNamesTheRedUnderline() =
+    fun theNoteUnderAReasonNamesTheDimmedText() =
         show(
             written(
                 "$REPLY The evidence does not support the Alternative label, because it says nothing about " +
                     "this track's instruments or sound.",
             ),
         ) {
-            assertEquals("The sentence underlined in red is not backed by the sources.", note(1))
+            assertEquals("The dimmed sentence is not backed by the sources.", note(1))
             compose.onNodeWithText(note(1)).assertExists()
         }
 
     @Test
-    fun twoUnderlinedSentencesAreCountedInThePlural() =
+    fun twoDimmedSentencesAreCountedInThePlural() =
         show(written("$REPLY It feels alternative. It is loud.")) {
-            assertEquals("The 2 sentences underlined in red are not backed by the sources.", note(2))
+            assertEquals("The 2 dimmed sentences are not backed by the sources.", note(2))
             compose.onNodeWithText(note(2)).assertExists()
         }
 

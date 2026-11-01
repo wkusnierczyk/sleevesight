@@ -41,7 +41,7 @@
     <string name="home_guide_about_player">The player Sleevesight follows, and whether it is playing. A tap opens the player.</string>
     <string name="home_guide_about_genres">The track’s genres, from MusicBrainz or Last.fm, behind the Genres button. A tap on one shows which of the track, the artist and the album carry it and where the label comes from; what the genre is, where Wikipedia has an article on it; and, where your AI service can explain it, Why is this …?, a paid call.</string>
     <string name="home_guide_about_insight">A few sentences about the track, written by your AI service from what the sources found, and checked against them.</string>
-    <string name="home_guide_about_cite">Each sentence names the source lines it rests on. A tap on one opens Sources at that line. A sentence underlined in red rests on none.</string>
+    <string name="home_guide_about_cite">Each sentence names the source lines it rests on. A tap on one opens Sources at that line. A dimmed sentence rests on none.</string>
     <string name="home_guide_about_write">Write insight has your AI service write the insight, a paid call on your key. The arrow beside it chooses when insights are written: On demand, On track change (auto) or On track skip (auto). Once an insight is written, it also offers Look again, which looks every source up afresh without an AI call (a paid search on your Exa key when Exa web search is on); when they found something new, Rewrite insight writes the insight from it.</string>
     <string name="home_guide_about_sources">What each source found about the track. A tap opens a table of the sources, each with what it found, and under it the lines they found, each with a link to where it was found. A tap on a source’s letter shows or hides its lines.</string>
     <!-- The magnifier at the picture's corner (#673), as a screen reader names it; it opens the picture full screen. -->
@@ -370,12 +370,12 @@
     <!-- Under a stopped write, with Write insight offered again (#625). -->
     <string name="home_insight_retry">Tap Write insight to try again, as a new call.</string>
     <!-- The note under an insight and under a genre's reason (#437): only for sentences the sources do
-         not back, which are underlined in red (uncited, or citing missing evidence), naming the mark
+         not back, which are dimmed (uncited, or citing missing evidence; #819), naming the mark
          (#664); and for a genre's reason kept from before (an insight says so in its own line,
          "As written previously.", #671). -->
     <plurals name="home_note_unbacked">
-        <item quantity="one">The sentence underlined in red is not backed by the sources.</item>
-        <item quantity="other">The %d sentences underlined in red are not backed by the sources.</item>
+        <item quantity="one">The dimmed sentence is not backed by the sources.</item>
+        <item quantity="other">The %d dimmed sentences are not backed by the sources.</item>
     </plurals>
     <string name="home_note_kept">Kept from before.</string>
     <!-- The grounding check's counts in full, under Show grounding details (a developer setting). -->
