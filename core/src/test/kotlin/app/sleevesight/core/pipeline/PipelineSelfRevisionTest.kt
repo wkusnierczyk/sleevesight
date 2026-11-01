@@ -13,6 +13,7 @@ import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.sources.SourceResult
 import app.sleevesight.core.synthesis.GroundingCheck
 import app.sleevesight.core.synthesis.SelfRevision
+import app.sleevesight.core.synthesis.SelfRevisionTest
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
@@ -110,6 +111,26 @@ class PipelineSelfRevisionTest {
 
             assertEquals(1, provider.requests.size)
             assertEquals("It came out in 1975 [MB1].", assertIs<InsightState.Written>(state.insight).grounded.text)
+        }
+
+    @Test
+    fun `formatting, an introduction or an odd space hides no correction, fresh or kept`() =
+        runTest {
+            val corrected = "It came out in 1975 [MB1]."
+            for (reply in SelfRevisionTest.HIDDEN) {
+                val cache = MemoryCache()
+                val provider = replying(reply)
+                val fresh = pipeline(provider, cache).run(sundown, granted())
+                assertEquals(1, provider.requests.size, reply)
+                assertEquals(corrected, assertIs<InsightState.Written>(fresh.insight).grounded.text, reply)
+                assertEquals(listOf(reply), cache.cards.values.toList(), reply)
+
+                // Kept as written, served cut, with no call.
+                val served = replying(CLEAN)
+                val kept = pipeline(served, cache).run(sundown, granted())
+                assertEquals(0, served.requests.size, reply)
+                assertEquals(corrected, assertIs<InsightState.Written>(kept.insight).grounded.text, reply)
+            }
         }
 
     @Test

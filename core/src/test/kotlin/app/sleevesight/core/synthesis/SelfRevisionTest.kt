@@ -123,6 +123,8 @@ class SelfRevisionTest {
         val corrected = "It came out in 1975 [MB1]."
         assertEquals(corrected, salvaged("It came out in 1974 [MB1].\n\n**Correction:** $corrected"))
         assertEquals(corrected, salvaged("It came out in 1974 [MB1]. *Wait,* $corrected"))
+        // Markdown, introductions and odd whitespace hide nothing: each is cut through its label.
+        for (reply in HIDDEN) assertEquals(corrected, salvaged(reply), reply)
         // A repeated opening: kept from its second occurrence.
         assertEquals(
             "It came out on the album Sundown in 1974 [MB1]. It topped the charts [W1].",
@@ -168,8 +170,23 @@ class SelfRevisionTest {
         val reply: String,
     )
 
-    private companion object {
+    internal companion object {
         val IDS = setOf("MB1", "MB2", "W1", "P1", "S3", "S4")
+
+        /**
+         * Corrections that formatting, an introduction or an unusual space once hid, each to be cut to
+         * `It came out in 1975 [MB1].`: a list's mark before a header, a Markdown heading, an
+         * introduction after an aside or in emphasis, a zero-width no-break space before an aside.
+         */
+        val HIDDEN =
+            listOf(
+                "It came out in 1974 [MB1].\n\n- **Correction:** It came out in 1975 [MB1].",
+                "It came out in 1974 [MB1].\n\n### Correction:\nIt came out in 1975 [MB1].",
+                "It came out in 1974 [MB1]. Wait, that is wrong [MB1]. Here is the corrected insight: " +
+                    "It came out in 1975 [MB1].",
+                "It came out in 1974 [MB1].\n\n**Corrected insight:** It came out in 1975 [MB1].",
+                "It came out in 1974 [MB1].\n\n\uFEFFWait, that is wrong [MB1].\n\nIt came out in 1975 [MB1].",
+            )
 
         // The phone's reply (#798, Basia Bulat, "Already Forgiven"), the parts the issue elides filled
         // in from what it quotes.

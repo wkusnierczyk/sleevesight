@@ -194,10 +194,12 @@ object GroundingCheck {
      */
     fun splitSentences(text: String): List<String> = sentencesOf(text).map { it.first }
 
-    // The sentences of [text] ([splitSentences]), each with whether a line break came before it.
-    private fun sentencesOf(text: String): List<Pair<String, Boolean>> {
-        val t = text.replace(SPACES_AND_TABS, " ").trimJs()
-        val sentences = mutableListOf<Pair<String, Boolean>>()
+    /**
+     * The sentences of [t] as ranges, each with whether a line break came before it, as
+     * [splitSentences] splits a paragraph whose spaces and tabs are one space each by then.
+     */
+    internal fun sentenceRanges(t: String): List<Pair<IntRange, Boolean>> {
+        val sentences = mutableListOf<Pair<IntRange, Boolean>>()
         var start = 0
         var startsLine = false
         var i = 0
@@ -215,14 +217,14 @@ object GroundingCheck {
             val listed = lineBreak && MarkdownMarks.isLineMark(t, end)
             val opens = listed || MarkdownMarks.opens(t, end, OPENERS)
             if (opens && endsSentence(t, i, listed)) {
-                sentences += t.substring(start, i) to startsLine
+                sentences += (start until i) to startsLine
                 start = end
                 startsLine = lineBreak
             }
             i = end
         }
-        sentences += t.substring(start) to startsLine
-        return sentences.filter { it.first.trimJs().isNotEmpty() }
+        sentences += (start until t.length) to startsLine
+        return sentences
     }
 
     private fun classify(
@@ -406,7 +408,6 @@ object GroundingCheck {
     private const val NEXT_WORD_OPENERS = WORD_OPENERS + MarkdownMarks.EMPHASIS
     private const val WORD_CLOSERS = ",;:" + MarkdownMarks.EMPHASIS
     private val INITIALS = Regex("(?:[A-Z]\\.)+")
-    private val SPACES_AND_TABS = Regex("[ \\t]+")
     private val PARAGRAPH_BREAK = Regex("\\n$JS_WHITESPACE_CLASS*\\n")
     private val CITATION = Regex("\\[([A-Z]{1,2}[0-9]*)\\]")
 
@@ -419,3 +420,29 @@ object GroundingCheck {
 
 // The simulator's hedge pattern is matched with `/i` and no `u`, which folds ASCII letters only.
 private fun String.asciiLowercase(): String = map { if (it in 'A'..'Z') it + ('a' - 'A') else it }.joinToString("")
+
+// The sentences of [text] ([GroundingCheck.splitSentences]), each with whether a line break came
+// before it.
+private fun sentencesOf(text: String): List<Pair<String, Boolean>> {
+    val t = text.replace(SPACES_AND_TABS, " ").trimJs()
+    return GroundingCheck
+        .sentenceRanges(t)
+        .map { (range, startsLine) -> t.substring(range) to startsLine }
+        .filter { it.first.trimJs().isNotEmpty() }
+}
+
+/**
+ * Where each sentence of [t] is, split as [GroundingCheck.splitSentences] splits a paragraph, each
+ * without the whitespace around it, for a text whose spaces and tabs are already spaces and whose
+ * paragraphs are split (`SelfRevision`, #798): what is read there is cut where it was read.
+ */
+internal fun sentenceSpans(t: String): List<IntRange> =
+    GroundingCheck.sentenceRanges(t).mapNotNull { (range, _) ->
+        var first = range.first
+        var last = range.last
+        while (first <= last && isJsWhitespace(t[first])) first++
+        while (last >= first && isJsWhitespace(t[last])) last--
+        (first..last).takeIf { !it.isEmpty() }
+    }
+
+private val SPACES_AND_TABS = Regex("[ \\t]+")
