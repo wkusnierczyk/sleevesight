@@ -117,8 +117,7 @@ class PipelineSelfRevisionTest {
     @Test
     fun `formatting, an introduction or an odd space hides no correction, fresh or kept`() =
         runTest {
-            val corrected = "It came out in 1975 [MB1]."
-            for (reply in SelfRevisionTest.HIDDEN) {
+            for ((reply, corrected) in SelfRevisionTest.HIDDEN) {
                 val cache = MemoryCache()
                 val provider = replying(reply)
                 val fresh = pipeline(provider, cache).run(sundown, granted())

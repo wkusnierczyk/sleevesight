@@ -194,7 +194,7 @@ internal class InsightWriter(
                             // the marker is no prose for the card; nor once it revises itself, as
                             // the card would show it (#798): the draft shown so far stays until the
                             // check decides.
-                            frozen = frozen || SelfRevision.ofPartial(text.toString()) != null
+                            frozen = frozen || SelfRevision.ofPartial(text.toString()).freezes()
                             if (!GroundingCheck.mayBeNoEvidence(text.toString()) && !frozen) {
                                 show(InsightState.Writing(text.toString(), sent.held))
                             }
@@ -417,6 +417,10 @@ private class Asked(
     val revisedOnce: Boolean,
     val paid: Usage,
 )
+
+// Whether a sign read while the reply streams stops what the card shows (#798): an aside, the first
+// person or talk of the evidence; not a repeated opening, whose second occurrence is what is kept.
+private fun SelfRevision?.freezes(): Boolean = this != null && this != SelfRevision.REPEATED_OPENING
 
 // These tokens and [other]'s; these alone when there are none before them.
 private fun Usage.and(other: Usage?): Usage =

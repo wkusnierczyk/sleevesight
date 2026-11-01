@@ -96,6 +96,7 @@ class SelfRevisionTest {
                 // Titles in emphasis that end in a stop mid-sentence, or hold an aside's words.
                 "*Wait!* is the album's single [MB1]. *Help!* came out in 1965 [W1].",
                 "*Wait, Let Me Fix It* is the album's sixth track [MB1].",
+                "*Wait*, the sixth track, came out in 1974 [MB1].",
                 // Titles in emphasis that are an aside's word, but no header.
                 "*Correction* is the album's opener [MB1]. *Wait* followed it [MB2].",
                 "*Update* was the band's second single [MB1]. It charted in 1999 [W1].",
@@ -130,7 +131,7 @@ class SelfRevisionTest {
         assertEquals(corrected, salvaged("It came out in 1974 [MB1].\n\n**Correction:** $corrected"))
         assertEquals(corrected, salvaged("It came out in 1974 [MB1]. *Wait,* $corrected"))
         // Markdown, introductions and odd whitespace hide nothing: each is cut through its label.
-        for (reply in HIDDEN) assertEquals(corrected, salvaged(reply), reply)
+        for ((reply, cut) in HIDDEN) assertEquals(cut, salvaged(reply), reply)
         // A repeated opening: kept from its second occurrence.
         assertEquals(
             "It came out on the album Sundown in 1974 [MB1]. It topped the charts [W1].",
@@ -196,23 +197,37 @@ class SelfRevisionTest {
         val IDS = setOf("MB1", "MB2", "W1", "P1", "S3", "S4")
 
         /**
-         * Corrections that formatting, an introduction or an unusual space once hid, each to be cut to
-         * `It came out in 1975 [MB1].`: a list's mark before a header, a Markdown heading, an
-         * introduction after an aside or in emphasis, a zero-width no-break space before an aside.
+         * Corrections that formatting, an introduction or an unusual space once hid, each with what it
+         * is cut to: a list's mark before a header, a Markdown heading, an introduction after an aside
+         * or in emphasis, a zero-width no-break space before an aside, a sentence in emphasis, an
+         * aside in emphasis with no citation, a label opening an emphasis, a bold aside before a
+         * comma, a header at a line's start inside a sentence, a heading with no colon.
          */
-        val HIDDEN =
+        val HIDDEN: List<Pair<String, String>> =
             listOf(
-                "It came out in 1974 [MB1].\n\n- **Correction:** It came out in 1975 [MB1].",
-                "It came out in 1974 [MB1].\n\n### Correction:\nIt came out in 1975 [MB1].",
-                "It came out in 1974 [MB1]. Wait, that is wrong [MB1]. Here is the corrected insight: " +
-                    "It came out in 1975 [MB1].",
-                "It came out in 1974 [MB1].\n\n**Corrected insight:** It came out in 1975 [MB1].",
-                "It came out in 1974 [MB1].\n\n\uFEFFWait, that is wrong [MB1].\n\nIt came out in 1975 [MB1].",
-                // A whole sentence in emphasis is read, not set aside as a title.
-                "It came out in 1974 [MB1].\n\n*Wait, that's wrong [MB1]; I'll correct it.*\n\n" +
-                    "It came out in 1975 [MB1].",
-                "It came out in 1974 [MB1].\n\n**Correction: It came out in 1975 [MB1].**",
-            )
+                "It came out in 1974 [MB1].\n\n- **Correction:** $FIXED",
+                "It came out in 1974 [MB1].\n\n### Correction:\n$FIXED",
+                "It came out in 1974 [MB1]. Wait, that is wrong [MB1]. Here is the corrected insight: $FIXED",
+                "It came out in 1974 [MB1].\n\n**Corrected insight:** $FIXED",
+                "It came out in 1974 [MB1].\n\n\uFEFFWait, that is wrong [MB1].\n\n$FIXED",
+                "It came out in 1974 [MB1].\n\n*Wait, that's wrong [MB1]; I'll correct it.*\n\n$FIXED",
+                "It came out in 1974 [MB1].\n\n**Correction: $FIXED**",
+                "It came out in 1974 [MB1]. *Hmm, that's wrong.* $FIXED",
+                "It came out in 1974 [MB1].\n\n*Wait, that's not supported, so I'll drop it.*\n\n$FIXED",
+                "It came out in 1974 [MB1]. _Wait, that's wrong._ $FIXED",
+                "It came out in 1974 [MB1]. *Oops, wrong year.* $FIXED",
+                "It came out in 1974 [MB1]. *On second thought, the year is wrong.* $FIXED",
+                "It came out in 1974 [MB1].\n\n### Correction\n$FIXED",
+                "It came out in 1974 [MB1].\n\n*Correction: It came out in 1975* [MB1].",
+            ).map { it to FIXED } +
+                listOf(
+                    "It came out in 1974 [MB1].\n\n**Wait**, it came out in 1975 [MB1]." to
+                        "it came out in 1975 [MB1].",
+                    "- It came out in 1974 [MB1]\n- **Correction:** it came out in 1975 [MB1]" to
+                        "it came out in 1975 [MB1]",
+                )
+
+        const val FIXED = "It came out in 1975 [MB1]."
 
         // The phone's reply (#798, Basia Bulat, "Already Forgiven"), the parts the issue elides filled
         // in from what it quotes.
