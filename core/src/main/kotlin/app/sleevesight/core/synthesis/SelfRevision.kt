@@ -37,8 +37,11 @@ enum class SelfRevision(
          * The first sign of revision in [text], what a card would show ([GroundedText.text]), or
          * null when it has none.
          *
-         * - [ASIDE]: a sentence, any opening bracket or space aside, starts with one of [ASIDES], or
-         *   breaks off for one ([BREAK_OFF]: "It is the opening song on... no, that is not ...").
+         * - [ASIDE]: a sentence, any opening bracket or space aside, starts with one of [ASIDES],
+         *   or with one set as a header in emphasis ([HEADER]: `**Correction:**`, `*Wait,*`,
+         *   `_Update:_`; read before emphasis is taken out, and only when the emphasis holds the
+         *   aside alone, so `*Wait, Let Me Fix It*`, a title, is none), or breaks off for one
+         *   ([BREAK_OFF]: "It is the opening song on... no, that is not ...").
          * - [FIRST_PERSON]: a sentence has `I`, `I'll`, `I need to`, `let me` and so on before a word
          *   of revision ([FIRST_PERSON_REVISES]: correct, revise, rewrite, fix, drop, remove, cut,
          *   keep only, stick to), or speaks of its own earlier draft, reply or answer.
@@ -47,10 +50,13 @@ enum class SelfRevision(
          *   evidence lines", "my citations"). A stated gap ("The evidence doesn't say more about this
          *   recording.") is no sign: the prompt asks against it, but it reads as prose, and a
          *   second call for it would often end in the error state instead of a fair insight.
-         * - [REPEATED_OPENING]: a later sentence, of at least [REPEAT_MIN_WORDS] words, shares at
-         *   least [REPEAT_SHARE] of its words, each counted once, with the opening sentence, and
-         *   the opening one as many of its own with it. Quotations are read here too: the insight
-         *   written twice repeats its quoted title.
+         * - [REPEATED_OPENING]: a later sentence, of at least [REPEAT_MIN_WORDS] words, is the
+         *   opening sentence again: the same words in the same order, case, punctuation and
+         *   citations aside. Quotations are read here too: the insight written twice repeats its
+         *   quoted title. Only the same words: two sentences that share most of theirs may state two
+         *   facts ("The studio version was recorded at Abbey Road in 1965. The live version was
+         *   recorded at Abbey Road in 1966."), and a restatement with words changed is mostly found
+         *   by the comment before it.
          *
          * The cost: a lyric or a title written without quotation marks or emphasis that opens with
          * `Wait,` or says "let me fix", and an insight that restates its own opening sentence,
@@ -59,9 +65,11 @@ enum class SelfRevision(
         fun of(text: String): SelfRevision? {
             val whole = text.trimJs()
             if (whole.isEmpty()) return null
-            val read = EMPHASIS.replace(Quotations.of(whole).outside, "…")
+            val unquoted = Quotations.of(whole).outside
+            val read = EMPHASIS.replace(unquoted, "…")
             val sentences = sentencesOf(read)
             return when {
+                sentencesOf(unquoted).any { HEADER.containsMatchIn(it.trimStart('(', '[', ' ')) } -> ASIDE
                 sentences.any { ASIDES.containsMatchIn(it.trimStart('(', '[', ' ')) } -> ASIDE
                 BREAK_OFF.containsMatchIn(read) -> ASIDE
                 sentences.any { FIRST_PERSON_REVISES.containsMatchIn(it) } -> FIRST_PERSON
@@ -75,31 +83,35 @@ enum class SelfRevision(
         private fun sentencesOf(text: String): List<String> =
             text.split(PARAGRAPH_BREAK).flatMap { GroundingCheck.splitSentences(it) }.filter { it.isNotBlank() }
 
-        // Whether a sentence after the first of [sentences] restates it ([of], [REPEATED_OPENING]).
+        // Whether a sentence after the first of [sentences] is it again ([of], [REPEATED_OPENING]).
         private fun repeatsOpening(sentences: List<String>): Boolean {
             val opening = words(sentences.firstOrNull().orEmpty())
-            return opening.size >= REPEAT_MIN_WORDS &&
-                sentences.drop(1).any { sentence ->
-                    val later = words(sentence)
-                    val shared = later.count { it in opening }
-                    later.size >= REPEAT_MIN_WORDS &&
-                        shared >= later.size * REPEAT_SHARE &&
-                        shared >= opening.size * REPEAT_SHARE
-                }
+            return opening.size >= REPEAT_MIN_WORDS && sentences.drop(1).any { words(it) == opening }
         }
 
-        // The words of [text], lower case, each once, without citations.
-        private fun words(text: String): Set<String> =
+        // The words of [text], lower case, in order, without citations.
+        private fun words(text: String): List<String> =
             WORD
                 .findAll(CITATION.replace(text, " "))
                 .map { it.value.lowercase() }
-                .toSet()
+                .toList()
 
         /** How only an aside opens a sentence, with its case. */
         private val ASIDES =
             Regex(
                 "^(?:(?:Wait|Oops|Whoops|Hmm+)\\s*[,.!:—–-]|On second thought\\b|" +
-                    "Correction\\s*[:,—–-]|Scratch that\\b)",
+                    "Correction\\s*[:,—–-]|(?:Update|Edit)\\s*:|Scratch that\\b)",
+            )
+
+        /**
+         * An aside set as a header in emphasis, the emphasis holding it alone: its stop inside the
+         * marks (`*Wait,*`, `**Correction:**`) or a colon or dash after them (`**Correction**:`).
+         */
+        private val HEADER =
+            Regex(
+                "^(?:\\*{1,2}|_{1,2})(?:Wait|Oops|Whoops|Hmm+|Correction|Corrected|Update|Edit|Revision|" +
+                    "Revised|On second thought|Scratch that)\\s*" +
+                    "(?:[,.:!—–-]\\s*(?:\\*{1,2}|_{1,2})|(?:\\*{1,2}|_{1,2})\\s*[:—–-])",
             )
 
         /** An aside that breaks off a sentence: three stops, then `no,`, `wait,` or `oops,`. */
@@ -131,11 +143,8 @@ enum class SelfRevision(
 
         private val PARAGRAPH_BREAK = Regex("\\n\\s*\\n")
 
-        /** The fewest words a sentence needs to count as a restated opening. */
+        /** The fewest words a sentence needs to count as the opening written again. */
         private const val REPEAT_MIN_WORDS = 6
-
-        /** The share of words two sentences must share to be one written twice. */
-        private const val REPEAT_SHARE = 0.8
 
         /** A word: letters and digits, with any apostrophes inside it. */
         private val WORD = Regex("[\\p{L}\\p{N}]+(?:['’][\\p{L}\\p{N}]+)*")

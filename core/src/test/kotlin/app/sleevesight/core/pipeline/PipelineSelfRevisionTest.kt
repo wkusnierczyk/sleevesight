@@ -3,12 +3,15 @@ package app.sleevesight.core.pipeline
 import app.sleevesight.core.Secret
 import app.sleevesight.core.ai.AiProvider
 import app.sleevesight.core.ai.Usage
+import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.sources.SourceResult
+import app.sleevesight.core.synthesis.GroundingCheck
 import app.sleevesight.core.synthesis.SelfRevision
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.toList
@@ -22,13 +25,14 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
 /**
  * A reply that revises itself in its text (#798, `SelfRevision`) is neither shown nor kept: it is
- * asked for once more, a second paid call within the same granted call, logged and counted as one;
- * a second such reply leaves the error state; a Stop cancels the second call; a card kept from
- * before that revises itself is not served.
+ * asked for once more, a second paid call within the same granted call, logged and counted as one,
+ * and the card counts the tokens of every reply of the call; a second such reply leaves the error
+ * state; a Stop cancels the second call; a card kept from before that revises itself is not served.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class PipelineSelfRevisionTest {
@@ -38,11 +42,12 @@ class PipelineSelfRevisionTest {
     private fun TestScope.pipeline(
         provider: AiProvider,
         cache: PipelineCache = PipelineCache.None,
+        adapter: FakeAdapter = FakeAdapter(SourceId.MUSICBRAINZ),
     ): Pipeline =
         Pipeline(
             PipelineParts(
                 normalizer = Normalizer(JvmAccentFolder),
-                adapters = listOf(FakeAdapter(SourceId.MUSICBRAINZ)),
+                adapters = listOf(adapter),
                 resolver = FakeResolver(),
                 hasher = JvmHasher,
                 ai = AiAccess(provider, Secret("sk-test")),
@@ -96,6 +101,49 @@ class PipelineSelfRevisionTest {
             assertEquals(1, events.count { it is PipelineEvent.Grounded })
             assertEquals(1, control.ended.count { it == RunStep.MODEL_CALL })
             assertEquals(0, control.retriesAsked)
+        }
+
+    @Test
+    fun `a reply with a correction set as a header in emphasis is asked for once more`() =
+        runTest {
+            val cache = MemoryCache()
+            val provider = replying(HEADED, CLEAN)
+            val state = pipeline(provider, cache).run(sundown, granted())
+
+            assertEquals(2, provider.requests.size)
+            assertEquals(CLEAN, assertIs<InsightState.Written>(state.insight).grounded.text)
+            assertEquals(listOf(CLEAN), cache.cards.values.toList())
+        }
+
+    @Test
+    fun `the card counts every reply of the call, a NO_EVIDENCE between them too`() =
+        runTest {
+            // MusicBrainz's first-release line names the album, so the player's release line is left
+            // out of the prompt (#424), and `NO_EVIDENCE` to it asks again with it.
+            val adapter =
+                FakeAdapter(SourceId.MUSICBRAINZ) { _, _ ->
+                    val first = "“Carefree Highway” was first released in 1974, on the album “Sundown”."
+                    SourceResult(Outcome.SongArticle, listOf(line(SourceId.MUSICBRAINZ, first)), Duration.ZERO)
+                }
+            var n = 0
+            val provider =
+                FakeProvider {
+                    when (n++) {
+                        0 -> FakeProvider.done(REVISED)
+                        1 -> FakeProvider.done(GroundingCheck.NO_EVIDENCE)
+                        else -> FakeProvider.done(CLEAN)
+                    }
+                }
+            val highway = nowPlaying("Carefree Highway", "Gordon Lightfoot", "Sundown")
+            val state = pipeline(provider, adapter = adapter).run(highway, granted())
+
+            assertEquals(3, provider.requests.size)
+            assertTrue("(player metadata, release)" in provider.requests[2].prompt)
+            val usage = FakeProvider.USAGE
+            assertEquals(
+                Usage(usage.inputTokens * 3, usage.outputTokens * 3),
+                assertIs<InsightState.Written>(state.insight).usage,
+            )
         }
 
     @Test
@@ -196,6 +244,7 @@ class PipelineSelfRevisionTest {
         const val REPEATED =
             "Sundown is a song by Gordon Lightfoot from 1974 [MB1].\n\n" +
                 "Sundown is a song by Gordon Lightfoot from 1974 [MB1]."
+        const val HEADED = "It is a song from 1973 [MB1].\n\n**Correction:** It is a song [MB1]."
         const val CLEAN = "It is a song [MB1]."
         const val QUOTED_WAIT = "\"Wait, Let Me Fix It\" is not this song, which came out in 1974 [MB1]."
     }

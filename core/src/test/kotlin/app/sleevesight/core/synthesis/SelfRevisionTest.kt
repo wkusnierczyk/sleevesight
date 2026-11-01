@@ -36,6 +36,12 @@ class SelfRevisionTest {
         assertEquals(SelfRevision.ASIDE, sign("$draft\n\nHmm, that is not right [MB1]."))
         assertEquals(SelfRevision.ASIDE, sign("$draft (Oops, I was wrong.)"))
         assertEquals(SelfRevision.ASIDE, sign("It is the opening song on... no, it is the closer [MB1]."))
+        // A correction set as a header in emphasis, read before emphasis is taken out.
+        for (header in listOf("**Correction:**", "*Wait,*", "_Update:_", "**Correction**:", "Update:")) {
+            val reply = "It came out in 1974 [MB1].\n\n$header It came out in 1975 [MB1]."
+            assertEquals(SelfRevision.ASIDE, sign(reply), header)
+        }
+        assertEquals(SelfRevision.ASIDE, sign("It came out in 1974 [MB1]. **Correction:** It came out in 1975 [MB1]."))
         assertEquals(SelfRevision.FIRST_PERSON, sign("$draft So I'll keep only the release [MB1]."))
         assertEquals(SelfRevision.FIRST_PERSON, sign("$draft Let me correct the second one [MB1]."))
         assertEquals(SelfRevision.FIRST_PERSON, sign("$draft My earlier draft said more [MB1]."))
@@ -83,6 +89,14 @@ class SelfRevisionTest {
                 // Two paragraphs that open alike, but go on to say different things.
                 "Gordon Lightfoot wrote it in 1973 [MB1].\n\nGordon Lightfoot recorded it with Red Shea in 1974 [W1].",
                 "It came out in 1965... and it was a hit [MB1].",
+                // Titles in emphasis that are an aside's word, but no header.
+                "*Correction* is the album's opener [MB1]. *Wait* followed it [MB2].",
+                "*Update* was the band's second single [MB1]. It charted in 1999 [W1].",
+                // Two facts in sentences that share most of their words (four fifths here).
+                "The studio version was recorded at Abbey Road in 1965 [MB1]. " +
+                    "The live version was recorded at Abbey Road in 1966 [MB2].",
+                "The studio version was recorded at Abbey Road [MB1]. " +
+                    "The live version was recorded at Abbey Road [MB1].",
                 "",
             )
         for (reply in replies) assertNull(SelfRevision.of(reply), reply)

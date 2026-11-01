@@ -158,14 +158,17 @@ internal class InsightWriter(
     // fingerprint, so a track played again finds its card, whatever the session cited. The facts an
     // insight cites are kept with the switch off too, so turning it on mid-session leaves out what
     // the session already told.
-    // [discarded] is what the reply before this one was billed, when it revised itself ([SelfRevision],
-    // #798) and this call asks once more; null for a first call.
+    // [revisedOnce] when a reply before this one revised itself ([SelfRevision], #798) and this call
+    // asks once more; [billed] the tokens of the replies before this one in this call, discarded or
+    // `NO_EVIDENCE` (#239), null for none: a card counts every reply it took.
+    @Suppress("LongParameterList") // The call, and what the replies before it in this call came to.
     private suspend fun stream(
         ai: AiAccess,
         model: String,
         card: CardKey,
         control: RunControl,
-        discarded: Usage? = null,
+        revisedOnce: Boolean = false,
+        billed: Usage? = null,
     ): InsightState {
         val facts = parts.sessionFacts.citedByOthers(key)
         val once = settings.artistFactsOncePerSession
@@ -209,10 +212,11 @@ internal class InsightWriter(
         val outcome =
             when (val last = end) {
                 is CompletionEvent.Done -> {
-                    val latency = checkNotNull(started).elapsedNow()
-                    // Null: the reply revised itself, the first time (`finish`); asked once more.
-                    finish(last, text.toString(), card, latency, control, sent, discarded)
-                        ?: return stream(ai, model, card, control, discarded = last.usage)
+                    // This reply's tokens with those before it. Null: the reply revised itself, the
+                    // first time (`finish`); asked once more.
+                    val asked = Asked(revisedOnce, last.usage.and(billed))
+                    finish(last, text.toString(), card, checkNotNull(started).elapsedNow(), control, sent, asked)
+                        ?: return stream(ai, model, card, control, revisedOnce = true, billed = asked.paid)
                 }
                 is CompletionEvent.Error -> {
                     // How far the reply got, for the diagnostics: its length, never its text (#665).
@@ -236,7 +240,7 @@ internal class InsightWriter(
         // than none. A Retry tapped after that call failed or was stopped asks with them all too.
         return if (outcome == InsightState.NoEvidence && sent.leftOut.isNotEmpty()) {
             whole = true
-            stream(ai, model, card, control, discarded)
+            stream(ai, model, card, control, revisedOnce, (end as? CompletionEvent.Done)?.usage?.and(billed))
         } else {
             outcome
         }
@@ -249,8 +253,8 @@ internal class InsightWriter(
     // same when it is served again and checked against the whole evidence, whatever a later session
     // leaves out. A reply not kept is written again, a paid call, the next time the track plays.
     // A reply that revises itself ([SelfRevision], #798) is not shown or kept either: null, for
-    // `stream` to ask once more, when it is the first ([discarded] null); else the error state. A
-    // card written after one counts both replies' tokens, [discarded] and its own.
+    // `stream` to ask once more, when it is the first ([Asked.revisedOnce] false); else the error
+    // state. A card counts the tokens of every reply of the call ([Asked.paid]).
     @Suppress("LongParameterList") // The reply, its card, and what its prompt was given.
     private suspend fun finish(
         done: CompletionEvent.Done,
@@ -259,7 +263,7 @@ internal class InsightWriter(
         latency: Duration,
         control: RunControl,
         sent: Prompted,
-        discarded: Usage?,
+        asked: Asked,
     ): InsightState? {
         emit(PipelineEvent.ModelDone(key, done.usage, done.stopReason, latency))
         // `NO_EVIDENCE` to fewer lines than the track has is asked again (`stream`): not shown, not
@@ -284,7 +288,7 @@ internal class InsightWriter(
             }
 
             revised != null -> {
-                revisedReply(revised, discarded)
+                revisedReply(revised, asked.revisedOnce)
             }
 
             else -> {
@@ -298,7 +302,7 @@ internal class InsightWriter(
                         sent,
                         card,
                         cached = false,
-                        usage = done.usage.and(discarded),
+                        usage = asked.paid,
                         complete = complete,
                         writtenAt = at,
                     )
@@ -345,13 +349,13 @@ internal class InsightWriter(
         }
 
     // A fresh reply that revised itself, as [sign] says (#798): null, for `stream` to ask once more,
-    // when it was the first ([discarded] null); else the error state, shown.
+    // when it was the first (not [revisedOnce]); else the error state, shown.
     private fun revisedReply(
         sign: SelfRevision,
-        discarded: Usage?,
+        revisedOnce: Boolean,
     ): InsightState? {
-        emit(PipelineEvent.SelfRevised(key, sign, askedAgain = discarded == null))
-        return if (discarded == null) null else show(InsightState.Failed(ReplyFailures.SELF_REVISED))
+        emit(PipelineEvent.SelfRevised(key, sign, askedAgain = !revisedOnce))
+        return if (revisedOnce) show(InsightState.Failed(ReplyFailures.SELF_REVISED)) else null
     }
 
     private fun cardKey(
@@ -407,6 +411,13 @@ private fun revision(
         SelfRevision.of(it.grounded.text)
     }
 
-// These tokens and [other]'s, when a reply before was discarded (#798); these alone when none was.
+// What a reply's call came to before it ([InsightWriter]'s `finish`): whether a reply before it
+// revised itself ([revisedOnce], #798), and the tokens of every reply of the call, its own too ([paid]).
+private class Asked(
+    val revisedOnce: Boolean,
+    val paid: Usage,
+)
+
+// These tokens and [other]'s; these alone when there are none before them.
 private fun Usage.and(other: Usage?): Usage =
     if (other == null) this else Usage(inputTokens + other.inputTokens, outputTokens + other.outputTokens)
