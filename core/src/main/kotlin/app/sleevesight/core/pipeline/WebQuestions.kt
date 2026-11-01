@@ -10,6 +10,7 @@ import app.sleevesight.core.settings.AiWebSearch
 import app.sleevesight.core.sources.WebPage
 import app.sleevesight.core.sources.WebSearchOutcome
 import app.sleevesight.core.sources.WebSearcher
+import app.sleevesight.core.sources.isMusicBrainzPage
 import app.sleevesight.core.synthesis.AiSearchAnswers
 import app.sleevesight.core.synthesis.WebPrompt
 import kotlinx.serialization.json.JsonPrimitive
@@ -83,6 +84,9 @@ class WebReply(
  *   [WebPrompt.NO_SEARCHES_LEFT]; a search that fails, [WebPrompt.SEARCH_FAILED]. A service whose
  *   client takes no tools (`AiProvider.usesTools`, Google's) is asked as with *Once*.
  *
+ * A search's pages on MusicBrainz are left out of the prompt and the tool's results (D12: its pages
+ * carry its tags), whatever the engine let through ([isMusicBrainzPage]).
+ *
  * Each search and call is counted to [ask]'s `counted` as it is made, before its answer, so one
  * stopped or failed still counts. Cancelling the caller cancels the whole loop: the call under way
  * and any search after it.
@@ -129,7 +133,7 @@ class WebQuestions(
     ): WebReply {
         counted(QuestionCost.SEARCH)
         val found = checkNotNull(web).search(question.query)
-        val pages = (found as? WebSearchOutcome.Found)?.pages.orEmpty().distinctBy { it.url }
+        val pages = (found as? WebSearchOutcome.Found)?.pages.orEmpty().let(::usable)
         if (found !is WebSearchOutcome.Found || pages.isEmpty()) {
             return WebReply(
                 "",
@@ -181,14 +185,18 @@ class WebQuestions(
                                 cost += QuestionCost.SEARCH
                                 counted(QuestionCost.SEARCH)
                                 when (val found = engine.search(query)) {
-                                    WebSearchOutcome.Failed -> WebPrompt.SEARCH_FAILED
-                                    is WebSearchOutcome.Found ->
-                                        if (found.pages.isEmpty()) {
+                                    WebSearchOutcome.Failed -> {
+                                        WebPrompt.SEARCH_FAILED
+                                    }
+                                    is WebSearchOutcome.Found -> {
+                                        val kept = usable(found.pages)
+                                        if (kept.isEmpty()) {
                                             WebPrompt.FOUND_NOTHING
                                         } else {
-                                            found.pages.forEach { pages.putIfAbsent(it.url, it) }
-                                            WebPrompt.pages(found.pages)
+                                            kept.forEach { pages.putIfAbsent(it.url, it) }
+                                            WebPrompt.pages(kept)
                                         }
+                                    }
                                 }
                             }
                         }
@@ -233,6 +241,11 @@ class WebQuestions(
     )
 
     private companion object {
+        // Of [found], each page once, none of MusicBrainz's, whose tags never reach a prompt (D12),
+        // whatever the engine let through.
+        fun usable(found: List<WebPage>): List<WebPage> =
+            found.distinctBy { it.url }.filterNot { isMusicBrainzPage(it.url) }
+
         // The query in a call's [arguments], the tool's JSON input; null when it has none.
         fun queryOf(arguments: String): String? =
             AiSearchAnswers

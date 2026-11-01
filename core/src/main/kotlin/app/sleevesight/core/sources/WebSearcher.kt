@@ -22,6 +22,27 @@ sealed interface WebSearchOutcome {
 }
 
 /**
+ * Whether [url] is a page on MusicBrainz (`musicbrainz.org` or a subdomain of it), whose pages
+ * carry its tags: a question's pages leave them out (D12, #801), so no tag reaches a prompt.
+ */
+fun isMusicBrainzPage(url: String): Boolean {
+    val host =
+        url
+            .substringAfter("://", "")
+            .substringBefore('/')
+            .substringBefore('?')
+            .substringBefore('#')
+            .substringAfterLast('@')
+            .substringBefore(':')
+            .lowercase()
+            .trimEnd('.')
+    return host == MUSICBRAINZ_HOST || host.endsWith(".$MUSICBRAINZ_HOST")
+}
+
+/** MusicBrainz's host, which a question's web search leaves out (D12). */
+const val MUSICBRAINZ_HOST: String = "musicbrainz.org"
+
+/**
  * A web search engine a question to the AI service searches with (*AI web search*, #801;
  * `design/design.md`, *Ask AI*): each [search] is one paid search for [query], a query in words,
  * which the app builds (*Once*) or the model writes (*Up to {n} times*). Exa's is

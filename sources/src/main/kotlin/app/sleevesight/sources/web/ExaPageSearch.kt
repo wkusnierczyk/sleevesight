@@ -1,9 +1,11 @@
 package app.sleevesight.sources.web
 
 import app.sleevesight.core.Secret
+import app.sleevesight.core.sources.MUSICBRAINZ_HOST
 import app.sleevesight.core.sources.WebPage
 import app.sleevesight.core.sources.WebSearchOutcome
 import app.sleevesight.core.sources.WebSearcher
+import app.sleevesight.core.sources.isMusicBrainzPage
 import app.sleevesight.net.NetBody
 import app.sleevesight.net.NetClient
 import app.sleevesight.net.NetMethod
@@ -23,8 +25,10 @@ import kotlinx.serialization.Serializable
  *
  * Unlike the source's, the results are not filtered: they are not evidence about the recording but
  * pages for the model to answer from, and a value it gives from one is kept only with that page
- * named and among those found (`AiSearchAnswers`). No domain is left out, Discogs and Wikipedia
- * included, which the source leaves out as sources of their own. A failure (the network, a status
+ * named and among those found (`AiSearchAnswers`). One domain is left out, MusicBrainz's, in the
+ * request and again from what comes back ([isMusicBrainzPage]): its pages carry its tags, which
+ * never reach a prompt (D12). Discogs and Wikipedia are kept, which the source leaves out as
+ * sources of their own. A failure (the network, a status
  * other than 2xx) is [WebSearchOutcome.Failed]; a page with no highlight is left out.
  */
 class ExaPageSearch(
@@ -53,7 +57,9 @@ class ExaPageSearch(
         val seen = mutableSetOf<String>()
         return response.results.mapNotNull { result ->
             val text = ExaWebSearch.snippetOf(result, PAGE_CHARACTERS)
-            WebPage(result.url, result.title, text).takeIf { text.isNotEmpty() && seen.add(result.url) }
+            WebPage(result.url, result.title, text).takeIf {
+                text.isNotEmpty() && !isMusicBrainzPage(result.url) && seen.add(result.url)
+            }
         }
     }
 
@@ -71,14 +77,15 @@ class ExaPageSearch(
 
 /**
  * The body of *AI web search*'s `POST /search` (#801): the query as given, Exa's cheapest type,
- * `lite`, as the source's ([ExaSearchRequest]), [ExaPageSearch.RESULTS] results, and highlights
- * steered by the same query, at [ExaPageSearch.PAGE_CHARACTERS].
+ * `lite`, as the source's ([ExaSearchRequest]), [ExaPageSearch.RESULTS] results, MusicBrainz's
+ * domain left out (D12), and highlights steered by the same query, at [ExaPageSearch.PAGE_CHARACTERS].
  */
 @Serializable
 internal data class ExaPageRequest(
     val query: String,
     val type: String = "lite",
     val numResults: Int = ExaPageSearch.RESULTS,
+    val excludeDomains: List<String> = listOf(MUSICBRAINZ_HOST),
     val contents: ExaContents,
 ) {
     companion object {

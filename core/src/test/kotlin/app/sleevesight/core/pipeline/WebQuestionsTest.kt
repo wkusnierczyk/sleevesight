@@ -225,6 +225,37 @@ class WebQuestionsTest {
         }
 
     @Test
+    fun musicBrainzPagesReachNoPromptNorToolResult() =
+        runTest {
+            // D12: an engine that lets MusicBrainz's pages through, its tags in their text.
+            val tags = WebPage("https://beta.musicbrainz.org/recording/x", "Grace", "Tags: shoegaze")
+            val web = Searches { WebSearchOutcome.Found(listOf(tags, page)) }
+            val once = FakeProvider { FakeProvider.done("{}") }
+            val reply = WebQuestions(AiAccess(once, Secret("k")), web).ask(question, AiWebSearch.ONCE, 3, base)
+            assertEquals(listOf("ONCE ${page.url}"), once.requests.map { it.prompt })
+            assertEquals(listOf(page), reply.pages)
+            val loop =
+                FakeProvider(usesTools = true) { request ->
+                    if (request.exchanges.isEmpty()) toolTurn("grace") else FakeProvider.done("{}")
+                }
+            val looped = WebQuestions(AiAccess(loop, Secret("k")), web).ask(question, AiWebSearch.UP_TO, 3, base)
+            val result =
+                loop.requests[1]
+                    .exchanges
+                    .single()
+                    .results
+                    .single()
+                    .content
+            assertEquals(WebPrompt.pages(listOf(page)), result)
+            assertFalse("shoegaze" in result)
+            assertEquals(listOf(page), looped.pages)
+            // Only MusicBrainz's found: nothing to answer from.
+            val only = Searches { WebSearchOutcome.Found(listOf(tags)) }
+            val none = WebQuestions(AiAccess(FakeProvider { FakeProvider.done("{}") }, Secret("k")), only)
+            assertEquals(emptyList(), none.ask(question, AiWebSearch.ONCE, 3, base).pages)
+        }
+
+    @Test
     fun aServiceWithNoToolsIsAskedAsOnce() =
         runTest {
             val provider = FakeProvider(usesTools = false) { FakeProvider.done("{}") }
