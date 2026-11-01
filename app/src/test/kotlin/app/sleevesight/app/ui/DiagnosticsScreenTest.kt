@@ -1,6 +1,7 @@
 package app.sleevesight.app.ui
 
 import androidx.activity.compose.setContent
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
@@ -12,6 +13,7 @@ import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -29,6 +31,7 @@ import app.sleevesight.app.diagnostics.DiagnosticsLog
 import app.sleevesight.app.diagnostics.SkipLearning
 import app.sleevesight.app.ui.home.PAGE_BACK_TAG
 import app.sleevesight.app.ui.home.PAGE_TITLE_TAG
+import app.sleevesight.app.ui.logo.SPINNING_RECORD_TAG
 import app.sleevesight.core.pipeline.EventLine
 import app.sleevesight.core.pipeline.PipelineEvent
 import app.sleevesight.store.CacheStats
@@ -287,4 +290,44 @@ class DiagnosticsScreenTest {
             assertTrue(out.toString(Charsets.UTF_8).contains("\"Song 1\" -> \"Song 2\""))
         }
     }
+
+    @Test
+    fun theExportsResultReplacesExportingInTheSameLiveRegionNodeAndTheRecordGoes() {
+        val gate = CountDownLatch(1)
+        val diagnostics =
+            Diagnostics(
+                log = DiagnosticsLog(),
+                // Held until *Exporting…* has been read.
+                readChanges = { _, _ ->
+                    gate.await()
+                    TrackChangePage(listOf(change(1)), next = null)
+                },
+                readCacheStats = { CacheStats(TableStats(0, 0), TableStats(0, 0), TableStats(0, 0), TableStats(0, 0)) },
+                io = Dispatchers.IO,
+                scope = appScope,
+                version = "test",
+            )
+        val exporting = text(R.string.diagnostics_exporting)
+        val exported = text(R.string.diagnostics_exported)
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { it.setContent { DiagnosticsScreen(diagnostics, onBack = {}) } }
+            scenario.onActivity { diagnostics.export { ByteArrayOutputStream() } }
+            waitForText(exporting)
+            val before = compose.onNodeWithText(exporting).fetchSemanticsNode()
+            assertEquals(LiveRegionMode.Polite, before.config[SemanticsProperties.LiveRegion])
+            assertEquals(1, records())
+
+            gate.countDown()
+            waitForText(exported)
+            // The same node, its text changed: the change a screen reader announces (#785).
+            val after = compose.onNodeWithText(exported).fetchSemanticsNode()
+            assertEquals(before.id, after.id)
+            assertEquals(listOf(exported), after.config[SemanticsProperties.Text].map { it.text })
+            assertEquals(LiveRegionMode.Polite, after.config[SemanticsProperties.LiveRegion])
+            assertEquals(0, records())
+        }
+    }
+
+    private fun records() =
+        compose.onAllNodesWithTag(SPINNING_RECORD_TAG, useUnmergedTree = true).fetchSemanticsNodes().size
 }

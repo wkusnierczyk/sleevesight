@@ -29,6 +29,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.SecureFlagPolicy
 import app.sleevesight.app.secrets.SecretId
+import app.sleevesight.app.ui.logo.Busy
 import app.sleevesight.app.ui.theme.appendCode
 import app.sleevesight.app.ui.theme.codeStyle
 
@@ -128,22 +129,24 @@ internal fun KeyScreenTitle(
 
 /**
  * A step's heading on a key screen: a screen reader reads it as a heading, and, when [announced],
- * says it as soon as it shows, as a result that replaces what was there.
+ * says it as soon as it shows, as a result that replaces what was there. When [busy], something is
+ * under way, and the turning record goes before it on its line ([Busy], #785), which a screen
+ * reader skips: the heading reads, and is announced, as it is, the same node with the record or
+ * without.
  */
 @Composable
 internal fun StepHeading(
     text: String,
     announced: Boolean = false,
+    busy: Boolean = false,
 ) {
-    Text(
-        text,
-        style = MaterialTheme.typography.titleMedium,
-        modifier =
-            Modifier.semantics {
-                heading()
-                if (announced) liveRegion = LiveRegionMode.Polite
-            },
-    )
+    val style = MaterialTheme.typography.titleMedium
+    val semantics =
+        Modifier.semantics {
+            heading()
+            if (announced) liveRegion = LiveRegionMode.Polite
+        }
+    Busy(text, style, textModifier = semantics, record = busy)
 }
 
 /**

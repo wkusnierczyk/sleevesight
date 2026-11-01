@@ -17,6 +17,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.PipelineHost
+import app.sleevesight.app.ui.logo.Busy
 import app.sleevesight.app.ui.report.ReportAction
 import app.sleevesight.core.pipeline.InsightState
 
@@ -97,9 +98,17 @@ private fun IdleNote(
             insight.canWrite -> stringResource(R.string.home_insight_tap_write)
             // Running by itself, the evidence in: it writes next, as the mode says.
             auto != null && runsByItself(context) -> stringResource(runningLine(auto))
-            else -> stringResource(idleReason(context))
+            else -> null
         }
-    Quiet(line)
+    val reason = idleReason(context)
+    // The evidence or the insight on its way, with the turning record before it (#785); one note in
+    // every case, so its node lasts as the record comes and goes.
+    Busy(
+        line ?: stringResource(reason),
+        MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        record = line == null && reason in ON_ITS_WAY,
+    )
 }
 
 @Composable
@@ -120,13 +129,17 @@ private fun InsightBody(
         is InsightState.Idle -> IdleNote(insight, context)
 
         is InsightState.Writing -> {
-            val paragraphs = paragraphsOf(insight.partial)
-            for (paragraph in paragraphs) UncheckedProse(paragraph, context, actions.onCite, insight.held)
-            // One line, by the split button's Stop while it can stop the call (#615).
-            when {
-                context.offers.stop -> Quiet(stringResource(R.string.home_insight_writing_stop))
-                paragraphs.isEmpty() -> Quiet(stringResource(R.string.home_insight_writing))
+            for (paragraph in paragraphsOf(insight.partial)) {
+                UncheckedProse(paragraph, context, actions.onCite, insight.held)
             }
+            // *Writing…* with the turning record, for the whole write, under what is written so far
+            // (#785); while the split button's Stop can end the call, what stopping costs under it (#615).
+            Busy(
+                stringResource(R.string.home_insight_writing),
+                MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (context.offers.stop) Quiet(stringResource(R.string.home_insight_writing_stop))
         }
 
         is InsightState.Written -> Written(insight, context, actions, groundingDetails)
@@ -175,6 +188,8 @@ private fun Written(
  * The footer under a written insight (#671): each part on its own line, at the start, top to
  * bottom, so each wraps on its own at a large font size and a screen reader reads them in order:
  * - *As written previously.* ([writtenBefore]), with what follows from it on the same line;
+ * - while *Look again* looks the sources up, what it is doing ([lookingAgainLine]), with the turning
+ *   record before it (#785);
  * - the grounding line ([GroundingLine]): the note on the sentences underlined in red, or, with
  *   [groundingDetails] (developer mode, inside its mark), the grounding check's counts. The note
  *   stays where the counts are, which take its place in developer mode: under the line about the
@@ -190,7 +205,15 @@ private fun Footer(
     groundingDetails: Boolean,
 ) {
     Column(Modifier.fillMaxWidth()) {
-        writtenBefore(insight, context)?.let { Quiet(it) }
+        val looking = lookingAgainLine(context)
+        writtenBefore(insight, context, looking != null)?.let { Quiet(it) }
+        looking?.let {
+            Busy(
+                stringResource(it),
+                MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         // Not *Kept from before.*: the line above says so.
         GroundingLine(insight.grounded, cached = false, details = groundingDetails)
         if (!insight.complete) Quiet(stringResource(R.string.home_insight_incomplete))
@@ -203,16 +226,17 @@ private fun Footer(
  * but earlier, on an earlier play of the track (from the cache, or the card paid for shown in place
  * of an insight the run lacks, #606), or before a *Look again*, a settings change or a rewrite that
  * failed; then, on the same line, what follows from it, in the order it happened: that a rewrite
- * failed or was stopped, what *Look again* found or is looking up (#617, [lookAgainLine]), and that
- * *Rewrite insight* writes
- * it with the updated settings, while offered (#615, #625; not for what a look again found, whose
- * own words say what *Rewrite insight* uses). Null for an insight just written, with nothing to
- * follow.
+ * failed or was stopped, what *Look again* found (#617, [lookAgainLine]), and that *Rewrite insight*
+ * writes it with the updated settings, while offered (#615, #625; not for what a look again found,
+ * whose own words say what *Rewrite insight* uses). What *Look again* is looking up is not on this
+ * line but on its own under it (#785, [lookingAgainLine]); while it looks ([lookingAgain]), the line
+ * shows all the same. Null for an insight just written, with nothing to follow.
  */
 @Composable
 private fun writtenBefore(
     insight: InsightState.Written,
     context: InsightContext,
+    lookingAgain: Boolean,
 ): String? {
     val after =
         buildList {
@@ -224,7 +248,7 @@ private fun writtenBefore(
             }
         }
     val kept = insight.cached || context.cardShown
-    if (!kept && after.isEmpty()) return null
+    if (!kept && after.isEmpty() && !lookingAgain) return null
     return (listOf(stringResource(R.string.home_written_before)) + after).joinToString(" ")
 }
 
@@ -246,6 +270,9 @@ private fun Prose(text: AnnotatedString) {
 private fun Quiet(text: String) {
     Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
+
+// The idle notes that say something is on its way, with the turning record (#785).
+private val ON_ITS_WAY = setOf(R.string.home_insight_gathering, R.string.home_insight_preparing)
 
 /** The test tag of the row of the *Key insights* heading, with *Read aloud* at its end. */
 const val INSIGHT_HEADING_TAG: String = "insight-heading"

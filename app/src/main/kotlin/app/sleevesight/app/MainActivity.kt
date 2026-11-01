@@ -28,10 +28,12 @@ import app.sleevesight.app.ui.ThemeButtonFeed
 import app.sleevesight.app.ui.home.HomeFeed
 import app.sleevesight.app.ui.home.NowPlayingHome
 import app.sleevesight.app.ui.home.NowPlayingPage
+import app.sleevesight.app.ui.logo.LocalAnimatorDurationScale
 import app.sleevesight.app.ui.logo.LocalLogoIntro
 import app.sleevesight.app.ui.logo.LogoIntro
 import app.sleevesight.app.ui.logo.LogoIntroOverlay
 import app.sleevesight.app.ui.logo.endsOnKeys
+import app.sleevesight.app.ui.logo.followedAnimatorDurationScale
 import app.sleevesight.app.ui.report.TesterReportFeed
 import app.sleevesight.app.ui.settings.InstalledPlayers
 import app.sleevesight.app.ui.settings.SettingsScreen
@@ -132,7 +134,11 @@ class MainActivity : ComponentActivity() {
         setContent {
             SleevesightTheme(graph.font, graph.theme, graph.linkStyle, graph.developerMark) {
                 SystemBarsFollowTheme()
-                CompositionLocalProvider(LocalLogoIntro provides intro) {
+                CompositionLocalProvider(
+                    LocalLogoIntro provides intro,
+                    // One observer of *Remove animations* for every turning record (#785).
+                    LocalAnimatorDurationScale provides followedAnimatorDurationScale(),
+                ) {
                     // While the intro plays, the screen beneath is out of reach of keys and of
                     // accessibility services (Switch Access and the like), as it is of touch.
                     val hidden = intro != null && !intro.finished

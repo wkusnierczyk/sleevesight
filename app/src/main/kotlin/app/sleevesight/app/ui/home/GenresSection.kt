@@ -27,6 +27,7 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
+import app.sleevesight.app.ui.logo.Busy
 import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.app.ui.theme.ChipFrame
 import app.sleevesight.app.ui.theme.LinkedText
@@ -129,7 +130,7 @@ internal fun GenresContent(
         LinkedText(linkedParts(stringResource(R.string.home_genres_off_see), link), style = style)
     }
     if (shown.looking.isNotEmpty()) {
-        Text(stringResource(R.string.home_genres_looking, sourcesNamed(shown.looking)), style = style)
+        Busy(stringResource(R.string.home_genres_looking, sourcesNamed(shown.looking)), style)
     }
     for (source in shown.unreachable) {
         val name = sourceName(source.source)
