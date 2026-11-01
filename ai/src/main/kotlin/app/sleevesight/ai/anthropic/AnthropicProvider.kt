@@ -245,6 +245,7 @@ class AnthropicProvider(
                         put("type", "tool_result")
                         put("tool_use_id", result.callId)
                         put("content", result.content)
+                        if (result.isError) put("is_error", true)
                     }
                 }
             }

@@ -3,6 +3,7 @@ package app.sleevesight.core.pipeline
 import app.sleevesight.core.ai.CompletionEvent
 import app.sleevesight.core.ai.CompletionRequest
 import app.sleevesight.core.ai.StopReason
+import app.sleevesight.core.ai.ToolCall
 import app.sleevesight.core.ai.ToolExchange
 import app.sleevesight.core.ai.ToolResult
 import app.sleevesight.core.ai.ToolTurn
@@ -81,7 +82,9 @@ class WebReply(
  *   (`CompletionRequest.toolsAllowed` false), so the model answers: at most [limit] searches and
  *   [limit] + 1 calls, the calls bounded apart from the searches, so turns whose calls search
  *   nothing (no query, another tool) cannot go on past them. A call beyond the limit gets
- *   [WebPrompt.NO_SEARCHES_LEFT]; a search that fails, [WebPrompt.SEARCH_FAILED]. A service whose
+ *   [WebPrompt.NO_SEARCHES_LEFT]; a search that fails, [WebPrompt.SEARCH_FAILED], marked an error,
+ *   as is a call with no query; and when searches were made and every one failed, the question has
+ *   failed ([WebReply.searchFailed]), so its answer is not kept. A service whose
  *   client takes no tools (`AiProvider.usesTools`, Google's) is asked as with *Once*.
  *
  * A search's pages on MusicBrainz are left out of the prompt and the tool's results (D12: its pages
@@ -159,6 +162,7 @@ class WebQuestions(
         val pages = LinkedHashMap<String, WebPage>()
         val exchanges = mutableListOf<ToolExchange>()
         var cost = QuestionCost()
+        var failed = 0
         while (true) {
             // Searches left, and calls: at most [limit] + 1 in all, the last never with the tool,
             // whatever the turns' calls look like (one with no query counts no search).
@@ -173,38 +177,62 @@ class WebQuestions(
             cost += QuestionCost.CALL
             val (text, end, turn) = turn(request, counted)
             val calledTools = (end as? CompletionEvent.Done)?.stopReason == StopReason.TOOL_USE && turn != null
-            if (!calledTools || !allowed) return WebReply(text, end, pages.values.toList(), cost, AiWebSearch.UP_TO)
+            if (!calledTools || !allowed) {
+                // Searches made and every one failed: the answer had nothing to go on, and is not kept.
+                val allFailed = cost.searches > 0 && failed == cost.searches
+                return WebReply(text, end, pages.values.toList(), cost, AiWebSearch.UP_TO, searchFailed = allFailed)
+            }
             val results =
                 checkNotNull(turn).calls.map { call ->
-                    val query = queryOf(call.arguments)
-                    val content =
-                        when {
-                            call.name != WebPrompt.TOOL_NAME || query == null -> WebPrompt.SEARCH_FAILED
-                            cost.searches >= limit -> WebPrompt.NO_SEARCHES_LEFT
-                            else -> {
-                                cost += QuestionCost.SEARCH
-                                counted(QuestionCost.SEARCH)
-                                when (val found = engine.search(query)) {
-                                    WebSearchOutcome.Failed -> {
-                                        WebPrompt.SEARCH_FAILED
-                                    }
-                                    is WebSearchOutcome.Found -> {
-                                        val kept = usable(found.pages)
-                                        if (kept.isEmpty()) {
-                                            WebPrompt.FOUND_NOTHING
-                                        } else {
-                                            kept.forEach { pages.putIfAbsent(it.url, it) }
-                                            WebPrompt.pages(kept)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    ToolResult(call.id, content)
+                    val answer = answer(call, engine, cost.searches < limit, pages, counted)
+                    if (answer.searched) cost += QuestionCost.SEARCH
+                    if (answer.failed) failed++
+                    answer.result
                 }
             exchanges += ToolExchange(turn, results)
         }
     }
+
+    // What the search tool answers [call] (searching with [engine] when [searchesLeft], counted, its
+    // pages added to [pages]): the pages; that the search found none, or failed (an error); that no
+    // searches are left; or, for a call with no query or to another tool, an error.
+    private suspend fun answer(
+        call: ToolCall,
+        engine: WebSearcher,
+        searchesLeft: Boolean,
+        pages: MutableMap<String, WebPage>,
+        counted: (QuestionCost) -> Unit,
+    ): ToolAnswer {
+        val query = queryOf(call.arguments)
+        return when {
+            call.name != WebPrompt.TOOL_NAME || query == null -> {
+                ToolAnswer(ToolResult(call.id, WebPrompt.SEARCH_FAILED, isError = true))
+            }
+            !searchesLeft -> {
+                ToolAnswer(ToolResult(call.id, WebPrompt.NO_SEARCHES_LEFT))
+            }
+            else -> {
+                counted(QuestionCost.SEARCH)
+                val found = engine.search(query)
+                val kept = (found as? WebSearchOutcome.Found)?.pages?.let(::usable).orEmpty()
+                kept.forEach { pages.putIfAbsent(it.url, it) }
+                val result =
+                    when {
+                        found !is WebSearchOutcome.Found -> ToolResult(call.id, WebPrompt.SEARCH_FAILED, isError = true)
+                        kept.isEmpty() -> ToolResult(call.id, WebPrompt.FOUND_NOTHING)
+                        else -> ToolResult(call.id, WebPrompt.pages(kept))
+                    }
+                ToolAnswer(result, searched = true, failed = found !is WebSearchOutcome.Found)
+            }
+        }
+    }
+
+    // A tool's answer, whether a search was made for it, and whether that search failed.
+    private class ToolAnswer(
+        val result: ToolResult,
+        val searched: Boolean = false,
+        val failed: Boolean = false,
+    )
 
     // One call of [request], counted: its text and its end.
     private suspend fun call(

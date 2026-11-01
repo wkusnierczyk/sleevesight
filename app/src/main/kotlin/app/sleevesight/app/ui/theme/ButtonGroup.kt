@@ -240,6 +240,7 @@ internal fun groupLayout(
  * [shorts], a label for every button, those are measured and shown instead, in a row in any case
  * ([groupLayout]).
  */
+@Suppress("LongParameterList") // The buttons, and each way a group may lay them out.
 @Composable
 private fun ConnectedButtons(
     buttons: List<GroupButton>,

@@ -201,6 +201,16 @@ class WebQuestionsTest {
                     .results
                     .map { it.content }
             assertEquals(listOf(WebPrompt.SEARCH_FAILED, WebPrompt.SEARCH_FAILED, WebPrompt.NO_SEARCHES_LEFT), results)
+            assertEquals(
+                listOf(true, true, false),
+                provider.requests[1]
+                    .exchanges
+                    .single()
+                    .results
+                    .map { it.isError },
+            )
+            // Every search made failed: the question failed, and nothing of it is kept.
+            assertTrue(reply.searchFailed)
             // The limit reached: the next call may not search.
             assertFalse(provider.requests[1].toolsAllowed)
             assertEquals(QuestionCost(searches = 2, calls = 2), reply.cost)
@@ -222,6 +232,8 @@ class WebQuestionsTest {
             assertEquals(3, provider.requests.size)
             assertEquals(listOf(true, true, false), provider.requests.map { it.toolsAllowed })
             assertEquals(QuestionCost(searches = 0, calls = 3), reply.cost)
+            // No search made: not a failed search.
+            assertFalse(reply.searchFailed)
         }
 
     @Test

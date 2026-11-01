@@ -163,6 +163,7 @@ internal fun aiWebSearchIndexRows(settings: Settings): List<IndexedRow> {
     val off =
         listOf(
             stringResource(R.string.settings_ai_web_search_exa_off),
+            stringResource(R.string.settings_ai_web_search_exa_see, stringResource(R.string.settings_sources_link)),
         ).takeIf { !settings.aiWebSearchOn }.orEmpty()
     val web =
         IndexedRow(

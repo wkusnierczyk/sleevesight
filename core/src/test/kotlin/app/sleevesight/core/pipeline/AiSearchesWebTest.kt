@@ -97,6 +97,47 @@ class AiSearchesWebTest {
         }
 
     @Test
+    fun upToNWhoseSearchesAllFailFailsAndKeepsNothing() =
+        runTest {
+            outcome = WebSearchOutcome.Failed
+            val loop =
+                FakeProvider(usesTools = true) { request ->
+                    if (request.exchanges.isEmpty()) {
+                        listOf(
+                            app.sleevesight.core.ai.CompletionEvent.ToolUse(
+                                app.sleevesight.core.ai.ToolTurn(
+                                    listOf(
+                                        app.sleevesight.core.ai
+                                            .ToolCall("c", "exa_search", "{\"query\":\"Grace\"}"),
+                                    ),
+                                    "[]",
+                                ),
+                            ),
+                            app.sleevesight.core.ai.CompletionEvent.Done(
+                                FakeProvider.USAGE,
+                                app.sleevesight.core.ai.StopReason.TOOL_USE,
+                            ),
+                        )
+                    } else {
+                        FakeProvider.done("{}")
+                    }
+                }
+            val made = AiSearches(AiAccess(loop, Secret("k")), cache, JvmHasher, answers, web = { outcome })
+            val key = checkNotNull(made.key(track, SearchKind.DATES, settings))
+            val last =
+                made.search(
+                    key,
+                    SearchKind.DATES,
+                    track,
+                    facts,
+                    { _, _ -> },
+                    asking = AiSearches.Asking(AiWebSearch.UP_TO, 3),
+                )
+            assertEquals(SearchState.Failed(AiSearches.WEB_SEARCH_FAILED), last)
+            assertTrue(cache.cards.isEmpty())
+        }
+
+    @Test
     fun aSearchThatFindsNoPageIsNothingFoundOnTheWebAndKept() =
         runTest {
             outcome = WebSearchOutcome.Found(emptyList())

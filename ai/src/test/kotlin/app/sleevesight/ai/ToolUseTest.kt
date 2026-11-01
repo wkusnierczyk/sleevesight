@@ -13,6 +13,7 @@ import app.sleevesight.core.ai.ToolCall
 import app.sleevesight.core.ai.ToolExchange
 import app.sleevesight.core.ai.ToolResult
 import app.sleevesight.core.ai.ToolSpec
+import app.sleevesight.core.ai.ToolTurn
 import app.sleevesight.core.ai.Usage
 import app.sleevesight.net.RetryPolicy
 import kotlinx.coroutines.flow.toList
@@ -37,7 +38,7 @@ import kotlin.test.assertTrue
 class ToolUseTest {
     private val tool =
         ToolSpec("exa_search", "Searches the web.", """{"type":"object","properties":{"query":{"type":"string"}}}""")
-    private val request = CompletionRequest("m", "Question?", 256, tools = listOf(tool))
+    private val request = CompletionRequest("gpt-5.5", "Question?", 256, tools = listOf(tool))
 
     private fun sse(vararg events: String): String = events.joinToString("") { "data: $it\n\n" }
 
@@ -111,7 +112,16 @@ class ToolUseTest {
             val net = ReplayNetClient { ok(anthropicTurn) }
             val next =
                 request.copy(
-                    exchanges = listOf(ToolExchange(turn, listOf(ToolResult("toolu_1", "PAGES")))),
+                    exchanges =
+                        listOf(
+                            ToolExchange(
+                                turn,
+                                listOf(
+                                    ToolResult("toolu_1", "PAGES"),
+                                    ToolResult("toolu_2", "The search failed.", isError = true),
+                                ),
+                            ),
+                        ),
                     toolsAllowed = false,
                 )
             AnthropicProvider(net, RetryPolicy()).stream(next, Secret("k")).toList()
@@ -126,6 +136,9 @@ class ToolUseTest {
             assertEquals("tool_result", result["type"]!!.jsonPrimitive.content)
             assertEquals("toolu_1", result["tool_use_id"]!!.jsonPrimitive.content)
             assertEquals("PAGES", result["content"]!!.jsonPrimitive.content)
+            assertTrue("is_error" !in result)
+            val failed = messages[2].jsonObject["content"]!!.jsonArray[1].jsonObject
+            assertEquals("true", failed["is_error"]!!.jsonPrimitive.content)
             assertEquals(Json.parseToJsonElement("""{"type":"none"}"""), sent["tool_choice"])
         }
 
@@ -216,6 +229,29 @@ class ToolUseTest {
             val input = assertIs<JsonArray>(body(net)["input"])
             assertEquals(
                 listOf("user", "reasoning", "message", "function_call", "function_call_output"),
+                input.map { (it.jsonObject["type"] ?: it.jsonObject.getValue("role")).jsonPrimitive.content },
+            )
+        }
+
+    @Test
+    fun aModelThatDoesNotReasonGetsNoIncludeAndNoUnencryptedReasoningBack() =
+        runTest {
+            val plain = request.copy(model = "gpt-4.1")
+            val net = ReplayNetClient { ok(openAiTurn) }
+            OpenAiProvider(net, RetryPolicy()).stream(plain, Secret("k")).toList()
+            assertTrue("include" !in body(net))
+            // A reasoning item with no encrypted content is not sent back; the call is.
+            val turn =
+                ToolTurn(
+                    listOf(ToolCall("call_1", "exa_search", "{}")),
+                    """[{"type":"reasoning","id":"rs_1","summary":[]},""" +
+                        """{"type":"function_call","id":"fc_1","call_id":"call_1","name":"exa_search","arguments":"{}"}]""",
+                )
+            val next = plain.copy(exchanges = listOf(ToolExchange(turn, listOf(ToolResult("call_1", "PAGES")))))
+            OpenAiProvider(net, RetryPolicy()).stream(next, Secret("k")).toList()
+            val input = assertIs<JsonArray>(body(net)["input"])
+            assertEquals(
+                listOf("user", "function_call", "function_call_output"),
                 input.map { (it.jsonObject["type"] ?: it.jsonObject.getValue("role")).jsonPrimitive.content },
             )
         }

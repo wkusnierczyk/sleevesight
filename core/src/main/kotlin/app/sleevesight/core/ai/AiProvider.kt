@@ -121,10 +121,14 @@ data class ToolTurn(
     val replay: String,
 )
 
-/** A tool's answer to the call [callId], as text. */
+/**
+ * A tool's answer to the call [callId], as text; [isError] when the tool failed or the call could not
+ * be made (Anthropic's `is_error`; a service with no such mark reads the text alone).
+ */
 data class ToolResult(
     val callId: String,
     val content: String,
+    val isError: Boolean = false,
 )
 
 /** One round of tool use: the model's [turn], and the [results] sent back for its calls. */
