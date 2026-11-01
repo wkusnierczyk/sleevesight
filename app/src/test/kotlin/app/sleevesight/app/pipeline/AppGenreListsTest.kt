@@ -256,6 +256,63 @@ class AppGenreListsTest {
             assertNull(later.aiGenres(mixed()).first())
         }
 
+    // Between a state's check and its showing, *Clear history* runs on another thread, once: the
+    // epoch's advance, then [AppGenreNotes.forget], which must wait for the showing, and clear it.
+    private fun clearDuringPublish(
+        notes: AppGenreNotes,
+        epoch: ClearEpoch,
+    ): () -> Thread? {
+        var clearing: Thread? = null
+        notes.beforePublish = {
+            if (clearing == null) {
+                clearing =
+                    Thread {
+                        kotlinx.coroutines.runBlocking { epoch.advance() }
+                        notes.forget()
+                    }.also { it.start() }
+                // Long enough for a clear that did not wait to have run.
+                clearing?.join(CLEAR_WAIT_MS)
+            }
+        }
+        return { clearing }
+    }
+
+    @Test
+    fun `Clear history during a genre list's showing leaves nothing of it, and no reason is asked (#762)`() =
+        runTest {
+            knowing()
+            provider.reply = { n -> if (n == 1) LIST else "Its loud guitars are punk [MB1]." }
+            val epoch = ClearEpoch()
+            val notes = notes(epoch)
+            val clearing = clearDuringPublish(notes, epoch)
+            notes.explain(mixed(), "punk")
+            advanceUntilIdle()
+            clearing()?.join()
+            notes.beforePublish = {}
+            assertNull(notes.aiGenres(mixed()).first())
+            assertEquals(GenreReason.Offered, notes.reason(mixed(), "punk").first())
+            assertEquals(1, provider.requests)
+        }
+
+    @Test
+    fun `Clear history during a kept genre list's showing leaves nothing of it (#762)`() =
+        runTest {
+            knowing()
+            provider.reply = { n -> if (n == 1) LIST else "Its loud guitars are punk [MB1]." }
+            notes().explain(mixed(), "punk")
+            advanceUntilIdle()
+            // A process later, the list read from the cache as the panel asks for it.
+            val epoch = ClearEpoch()
+            val later = notes(epoch)
+            val clearing = clearDuringPublish(later, epoch)
+            val list = later.aiGenres(mixed())
+            list.first()
+            advanceUntilIdle()
+            clearing()?.join()
+            later.beforePublish = {}
+            assertNull(list.first())
+        }
+
     // [cache], counting the reads and writes of cards.
     private class CountedCache(
         private val cache: PipelineCache,
@@ -282,5 +339,8 @@ class AppGenreListsTest {
     private companion object {
         /** The AI's genre list: punk, which MusicBrainz gives, and blues, which no source does. */
         const val LIST = """{"genres": ["Punk", "Blues"]}"""
+
+        /** How long a *Clear history* that did not wait for a showing would take, at most. */
+        const val CLEAR_WAIT_MS = 300L
     }
 }

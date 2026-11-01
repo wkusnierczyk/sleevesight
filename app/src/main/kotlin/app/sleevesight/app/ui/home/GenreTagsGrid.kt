@@ -32,6 +32,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
@@ -274,11 +275,14 @@ private fun Cell(
 
 // Each source that gave any of [row]'s labels, once, in [LabelSource] order, named as the settings
 // name it ("Last.fm", "MusicBrainz") and linked to the row's page there where it has one, " · " between;
-// then the model whose genre list gave any (#762), by name, not linked, marked **AI** ([markStyle]).
+// then, on the track's row, the model whose genre list gave any of its labels (#762), by name, not
+// linked, marked **AI** ([markStyle]); a screen reader reads it "Claude Haiku 5.5, AI", the comma there
+// for it alone, drawn too small to see ([HIDDEN_COMMA]): the row reads as one item with its links, so
+// it takes no description of its own.
 @Composable
 private fun sourceParts(row: GenreRow): List<TextPart> {
     val credits = row.labels.flatMap { it.credits }
-    val model = row.labels.firstNotNullOfOrNull { it.aiModel }
+    val model = row.labels.firstNotNullOfOrNull { it.aiModel }?.takeIf { row.level == GenreLevel.TRACK }
     val mark = stringResource(R.string.home_ai_mark)
     val markStyle = markStyle(MaterialTheme.colorScheme.onSurfaceVariant, MaterialTheme.typography.labelSmall)
     val sources =
@@ -289,7 +293,15 @@ private fun sourceParts(row: GenreRow): List<TextPart> {
             val url = given.firstNotNullOfOrNull { it.url }
             listOf(url?.let { TextPart.Link(name, it) } ?: TextPart.Words(name))
         }
-    val ai = model?.let { listOf(TextPart.Words(it + MARK_SPACE), TextPart.Styled(mark, markStyle)) }
+    val ai =
+        model?.let {
+            listOf(
+                TextPart.Words(it),
+                TextPart.Styled(",", HIDDEN_COMMA),
+                TextPart.Words(MARK_SPACE),
+                TextPart.Styled(mark, markStyle),
+            )
+        }
     return (sources + listOfNotNull(ai))
         .reduceOrNull { all, next -> all + TextPart.Words(SEPARATOR) + next }
         .orEmpty()
@@ -312,6 +324,10 @@ private const val SEPARATOR = " · "
 
 // Between a name and its **AI** mark: a narrow space that does not break, so the mark never wraps alone.
 private const val MARK_SPACE = "\u202F"
+
+// The comma between the model and its **AI** mark among the sources, for a screen reader's pause:
+// transparent, and too small to take room.
+private val HIDDEN_COMMA = SpanStyle(color = Color.Transparent, fontSize = 0.01.sp)
 private val COLUMN_GAP = 12.dp
 
 // How far a row's name sits below the top of its chips: their vertical padding, so the two read level.

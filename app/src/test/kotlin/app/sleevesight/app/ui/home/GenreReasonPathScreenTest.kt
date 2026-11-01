@@ -227,7 +227,12 @@ class GenreReasonPathScreenTest {
                 .onNodeWithTag(GENRES_ROW_PREFIX + "0")
                 .assertContentDescriptionEquals("Track, Rock, selected, Blues, from $MODEL")
             compose.onNodeWithTag(GENRE_SOURCES_ROW_PREFIX + "0").performScrollTo()
-            compose.onNodeWithText("MusicBrainz · $MODEL AI", substring = true, useUnmergedTree = true).assertExists()
+            compose
+                .onNodeWithText(
+                    "MusicBrainz · $MODEL,\u202FAI",
+                    substring = true,
+                    useUnmergedTree = true,
+                ).assertExists()
             // A chip the AI added opens its genre as any other.
             compose.onNodeWithTag(BLUES_CHIP).performScrollTo().performClick()
             compose.waitForIdle()

@@ -392,7 +392,7 @@ class AppGenreNotes private constructor(
         val show: (
             InsightState,
             Instant,
-        ) -> Unit = { state, at -> if (epoch.isCurrent(work)) shown.update { it.with(key, Entry(state, at)) } }
+        ) -> Unit = { state, at -> publish(work) { shown.update { it.with(key, Entry(state, at)) } } }
         try {
             val kept = reasons.kept(key, track)?.takeIf { !expired(it.writtenAt) }
             if (kept != null) {
@@ -427,7 +427,7 @@ class AppGenreNotes private constructor(
         val reasons = reasonsOf(made)
         var next: CardKey? = null
         val show: (GenreListState, Instant) -> Unit = { state, at ->
-            if (epoch.isCurrent(work)) {
+            publish(work) {
                 if (state is GenreListState.Listed) next = follow(reasons, state, track, genre, at)
                 lists.update { it.with(key, Entry(state, at)) }
             }
@@ -474,10 +474,33 @@ class AppGenreNotes private constructor(
      * it, never after.
      */
     fun forget() {
-        shown.value = emptyMap()
-        lists.value = emptyMap()
-        looked.clear()
+        synchronized(lock) {
+            shown.value = emptyMap()
+            lists.value = emptyMap()
+            looked.clear()
+        }
         lookups.forget()
+    }
+
+    // Guards each reason or list shown against *Clear history* ([forget]).
+    private val lock = Any()
+
+    /** For tests: runs between a state's check and its showing ([publish]). */
+    @Volatile
+    internal var beforePublish: () -> Unit = {}
+
+    // Runs [show], a reason or a list shown, if no *Clear history* came since [work] started,
+    // checked under the lock [forget] clears under: so its clear, which comes after the epoch's
+    // advance, either comes after the state shown, and clears it, or before the check, which then
+    // fails. As `ShownSearches.publish`.
+    private fun publish(
+        work: CoroutineContext,
+        show: () -> Unit,
+    ) = synchronized(lock) {
+        if (epoch.isCurrent(work)) {
+            beforePublish()
+            show()
+        }
     }
 
     // The reason kept in the synthesis cache for [key], read once, unless one is shown already.
@@ -490,9 +513,9 @@ class AppGenreNotes private constructor(
         scope.launch(epoch.mark()) {
             val work = coroutineContext
             val kept = reasonsOf(made).kept(key, track)?.takeIf { !expired(it.writtenAt) }
-            if (kept != null && epoch.isCurrent(work)) {
+            if (kept != null) {
                 val entry = Entry(kept.state, kept.writtenAt ?: clock.now())
-                shown.update { if (key in it) it else it.with(key, entry) }
+                publish(work) { shown.update { if (key in it) it else it.with(key, entry) } }
             }
         }
     }
@@ -504,9 +527,9 @@ class AppGenreNotes private constructor(
         scope.launch(epoch.mark()) {
             val work = coroutineContext
             val kept = listsOf(made).kept(key)?.takeIf { !expired(it.writtenAt) }
-            if (kept != null && epoch.isCurrent(work)) {
+            if (kept != null) {
                 val entry = Entry<GenreListState>(kept.state, kept.writtenAt ?: clock.now())
-                lists.update { if (key in it) it else it.with(key, entry) }
+                publish(work) { lists.update { if (key in it) it else it.with(key, entry) } }
             }
         }
     }

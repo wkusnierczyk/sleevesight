@@ -85,10 +85,10 @@ data class TrackGenres(
 
     /**
      * These genres with the AI's genre list for the track (#762, `GenreLists`): [genres], listed by
-     * [model] (its name, as the AI settings show it). A genre the track's row has already is credited
-     * to the model too, unmarked and not shown twice ([TrackLabel.aiModel]); one it does not have
-     * joins the row, after its labels, with no source's credit ([TrackLabel.aiAdded]), a track row
-     * made for them where there was none. The other rows are as they were. Applied twice, the same.
+     * [model] (its name, as the AI settings show it). A genre some row has already is credited to the
+     * model there too, unmarked and not shown twice ([TrackLabel.aiModel]), so it may reach a prompt;
+     * one no row has joins the track's row, after its labels, with no source's credit
+     * ([TrackLabel.aiAdded]), a track row made for them where there was none. Applied twice, the same.
      */
     fun withAi(
         genres: List<GenreLabel>,
@@ -96,13 +96,11 @@ data class TrackGenres(
     ): TrackGenres {
         if (genres.isEmpty()) return this
         val listed = genres.map { it.identity }.toSet()
-        val track = rows.firstOrNull { it.level == GenreLevel.TRACK }
-        val kept =
-            track
-                ?.labels
-                .orEmpty()
-                .map { if (it.genre.identity in listed) it.copy(aiModel = model) else it }
-        val have = kept.map { it.genre.identity }.toSet()
+        val have = all.map { it.genre.identity }.toSet()
+        val marked =
+            rows.map { row ->
+                row.copy(labels = row.labels.map { if (it.genre.identity in listed) it.copy(aiModel = model) else it })
+            }
         val added =
             genres
                 .filter { it.identity !in have }
@@ -111,8 +109,15 @@ data class TrackGenres(
                     val label = genre.copy(url = null, level = GenreLevel.TRACK, artist = null, votes = null)
                     TrackLabel(label, emptyList(), votes = null, aiModel = model)
                 }
-        val row = GenreRow(GenreLevel.TRACK, null, kept + added)
-        return TrackGenres(if (track == null) listOf(row) + rows else rows.map { if (it === track) row else it })
+        val track = marked.firstOrNull { it.level == GenreLevel.TRACK }
+        val row = GenreRow(GenreLevel.TRACK, null, track?.labels.orEmpty() + added)
+        return TrackGenres(
+            when {
+                added.isEmpty() -> marked
+                track == null -> listOf(row) + marked
+                else -> marked.map { if (it === track) row else it }
+            },
+        )
     }
 
     /** Every label of every row, each genre once, in row order: for counting, and the CLI's report. */
