@@ -84,9 +84,11 @@ data class TrackGenres(
                     .take(GenreVocabulary.MAX_LABELS)
             val shown = sources.map { it.label.genre.identity }.toSet()
             val tracked = placed(GenreLevel.TRACK).filter { it.label.aiAdded }
+            // A listed genre the cap left out of every row shows nowhere, a chip included.
+            val have = all.map { it.genre.identity }.toSet()
             val added =
                 aiListed
-                    .filter { it.identity !in shown }
+                    .filter { it.identity !in shown && it.identity in have }
                     .distinctBy { it.identity }
                     .map { genre ->
                         tracked.firstOrNull { it.label.genre.identity == genre.identity } ?: aiChip(genre)
@@ -105,7 +107,8 @@ data class TrackGenres(
      * [model] (its name, as the AI settings show it). A genre some row has already is credited to the
      * model there too, unmarked and not shown twice in the rows ([TrackLabel.aiModel]), so it may reach
      * a prompt; one no row has joins the track's row, after its labels, with no source's credit
-     * ([TrackLabel.aiAdded]), a track row made for them where there was none. The list is kept
+     * ([TrackLabel.aiAdded]), as many as leave the row at most [GenreVocabulary.MAX_LABELS], a
+     * track row made for them where there was none. The list is kept
      * ([aiListed]), for the chips ([folded]). Applied twice, the same.
      */
     fun withAi(
@@ -125,10 +128,11 @@ data class TrackGenres(
                 .distinctBy { it.identity }
                 .map { aiLabel(it, model) }
         val track = marked.firstOrNull { it.level == GenreLevel.TRACK }
-        val row = GenreRow(GenreLevel.TRACK, null, track?.labels.orEmpty() + added)
+        val room = GenreVocabulary.MAX_LABELS - track?.labels.orEmpty().size
+        val row = GenreRow(GenreLevel.TRACK, null, track?.labels.orEmpty() + added.take(room.coerceAtLeast(0)))
         return TrackGenres(
             when {
-                added.isEmpty() -> marked
+                added.isEmpty() || room <= 0 -> marked
                 track == null -> listOf(row) + marked
                 else -> marked.map { if (it === track) row else it }
             },

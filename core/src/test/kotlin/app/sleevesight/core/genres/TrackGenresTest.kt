@@ -303,4 +303,16 @@ class TrackGenresTest {
         assertEquals(listOf(GenreLevel.TRACK, GenreLevel.ALBUM), made.levels)
         assertEquals(listOf("Folk", "Blues"), made.folded.map { it.label.genre.label })
     }
+
+    @Test
+    fun `the AI's genres fill the track's row up to the cap, and a genre left out shows nowhere (#762)`() {
+        val four = combineGenres(mapOf(LabelSource.LASTFM to track("rock", "pop", "punk", "soul")), emptyList())
+        val genres = four.withAi(track("blues", "jazz"), "Claude Haiku 5.5")
+        val row = genres.rows.single()
+        assertEquals(GenreVocabulary.MAX_LABELS, row.labels.size)
+        assertEquals(listOf("Rock", "Pop", "Punk", "Soul", "Blues"), row.labels.map { it.genre.label })
+        // The chips the same: Jazz, on no row, has no chip either.
+        assertEquals(listOf("Rock", "Pop", "Punk", "Soul", "Blues"), genres.folded.map { it.label.genre.label })
+        assertEquals(genres, genres.withAi(track("blues", "jazz"), "Claude Haiku 5.5"))
+    }
 }

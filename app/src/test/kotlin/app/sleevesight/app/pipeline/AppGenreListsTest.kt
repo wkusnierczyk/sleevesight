@@ -38,6 +38,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -45,6 +46,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.concurrent.CountDownLatch
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
 /**
@@ -291,17 +293,19 @@ class AppGenreListsTest {
             assertEquals(calls, provider.requests)
         }
 
-    // Between a state's check and its showing, *Clear history* runs on another thread, once: the
+    // Between the [at]th state's check and its showing, *Clear history* runs on another thread: the
     // epoch's advance, then [AppGenreNotes.forget]. The showing goes on only once the epoch has
     // advanced and the clear is either blocked, waiting for the showing (as it must be), or done
     // (when it did not wait, and the showing then outlives it). No clock: the thread's own state.
     private fun clearDuringPublish(
         notes: AppGenreNotes,
         epoch: ClearEpoch,
+        at: Int = 1,
     ): () -> Thread? {
         var clearing: Thread? = null
+        var published = 0
         notes.beforePublish = {
-            if (clearing == null) {
+            if (clearing == null && ++published == at) {
                 val advanced = CountDownLatch(1)
                 val thread =
                     Thread {
@@ -352,6 +356,55 @@ class AppGenreListsTest {
             clearing()?.join()
             later.beforePublish = {}
             assertNull(list.first())
+        }
+
+    @Test
+    fun `Clear history as the list shows asks no reason after it (#762)`() =
+        runTest {
+            knowing()
+            provider.reply = { n -> if (n == 1) LIST else "Its loud guitars are punk [MB1]." }
+            val epoch = ClearEpoch()
+            val notes = notes(epoch)
+            // The first showing is the call's looking, the second the list.
+            val clearing = clearDuringPublish(notes, epoch, at = 2)
+            notes.explain(mixed(), "punk")
+            advanceUntilIdle()
+            clearing()?.join()
+            notes.beforePublish = {}
+            assertEquals(1, provider.requests)
+            assertNull(notes.aiGenres(mixed()).first())
+            assertEquals(GenreReason.Offered, notes.reason(mixed(), "punk").first())
+        }
+
+    @Test
+    fun `a genre tapped while the list is asked is written once listed, one not tapped offered (#762)`() =
+        runTest {
+            knowing()
+            provider.reply = { n -> if (n == 1) LIST else "Its loud guitars are rock [MB1]." }
+            provider.streaming = 1.seconds
+            val notes = notes()
+            // Punk and blues, both from MusicBrainz alone.
+            val row =
+                GenreRow(
+                    GenreLevel.ARTIST,
+                    "A",
+                    listOf(label("punk", LabelSource.MUSICBRAINZ), label("blues", LabelSource.MUSICBRAINZ)),
+                )
+            val track = HomeFixtures.track().copy(genres = TrackGenres(listOf(row)))
+            notes.explain(track, "punk")
+            runCurrent()
+            // The list under way: blues, not tapped, is offered; tapped, it waits on the list.
+            assertEquals(GenreReason.Shown(InsightState.Writing("")), notes.reason(track, "punk").first())
+            assertEquals(GenreReason.Offered, notes.reason(track, "blues").first())
+            notes.explain(track, "blues")
+            assertEquals(GenreReason.Shown(InsightState.Writing("")), notes.reason(track, "blues").first())
+            advanceUntilIdle()
+            for (genre in listOf("punk", "blues")) {
+                assertTrue((notes.reason(track, genre).first() as GenreReason.Shown).state is InsightState.Written)
+            }
+            // One list, and a reason for each.
+            assertEquals(3, provider.requests)
+            assertEquals(1, provider.prompts.count { GenreListPrompt.QUESTION in it })
         }
 
     // [cache], counting the reads and writes of cards.

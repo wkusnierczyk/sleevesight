@@ -275,14 +275,14 @@ private fun Cell(
 
 // Each source that gave any of [row]'s labels, once, in [LabelSource] order, named as the settings
 // name it ("Last.fm", "MusicBrainz") and linked to the row's page there where it has one, " · " between;
-// then, on the track's row, the model whose genre list gave any of its labels (#762), by name, not
+// then the model whose genre list gave any of its labels (#762), by name, not
 // linked, marked **AI** ([markStyle]); a screen reader reads it "Claude Haiku 5.5, AI", the comma there
 // for it alone, drawn too small to see ([HIDDEN_COMMA]): the row reads as one item with its links, so
 // it takes no description of its own.
 @Composable
 private fun sourceParts(row: GenreRow): List<TextPart> {
     val credits = row.labels.flatMap { it.credits }
-    val model = row.labels.firstNotNullOfOrNull { it.aiModel }?.takeIf { row.level == GenreLevel.TRACK }
+    val model = row.labels.firstNotNullOfOrNull { it.aiModel }
     val mark = stringResource(R.string.home_ai_mark)
     val markStyle = markStyle(MaterialTheme.colorScheme.onSurfaceVariant, MaterialTheme.typography.labelSmall)
     val sources =

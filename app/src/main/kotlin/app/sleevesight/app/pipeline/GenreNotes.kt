@@ -16,6 +16,7 @@ import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.pastKeepHistory
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -206,6 +207,10 @@ class AppGenreNotes private constructor(
     // The AI's genre lists (#762), by key, oldest first, at most [KEPT].
     private val lists = MutableStateFlow<Map<CardKey, Entry<GenreListState>>>(emptyMap())
 
+    // The genres whose *Why is this …?* was tapped while their list was asked, or when it failed, by
+    // the list's key (#762): each followed by its reason once the list has it.
+    private val waiting = MutableStateFlow<Map<CardKey, Set<String>>>(emptyMap())
+
     // The keys whose cached reason or list was looked for, and those being written.
     private val looked: MutableSet<CardKey> = ConcurrentHashMap.newKeySet()
     private val writing: MutableSet<CardKey> = ConcurrentHashMap.newKeySet()
@@ -245,16 +250,26 @@ class AppGenreNotes private constructor(
                     else -> Unit
                 }
             }.combine(
-                combine(shown, lists, settings) { reasons, known, now -> Triple(reasons, known, now?.historyLifetime) },
-            ) { path, (reasons, known, lifetime) -> shownFor(path, reasons, known, lifetime) }
+                combine(shown, lists, waiting, settings) { reasons, known, asked, now ->
+                    Shown(reasons, known, asked, now?.historyLifetime)
+                },
+            ) { path, now -> shownFor(path, genre, now) }
     }
 
-    // What the panel shows for [path], as [reasons] and the lists [known] have it, under [lifetime].
+    // What the panel's states are made of: the reasons, the lists, the genres waiting on each, and
+    // *Keep history for*.
+    private class Shown(
+        val reasons: Map<CardKey, Entry<InsightState>>,
+        val known: Map<CardKey, Entry<GenreListState>>,
+        val waiting: Map<CardKey, Set<String>>,
+        val lifetime: Duration?,
+    )
+
+    // What the panel shows for [genre]'s [path], as [now] has it.
     private fun shownFor(
         path: ReasonPath,
-        reasons: Map<CardKey, Entry<InsightState>>,
-        known: Map<CardKey, Entry<GenreListState>>,
-        lifetime: Duration?,
+        genre: String,
+        now: Shown,
     ): GenreReason =
         when (path) {
             ReasonPath.None -> {
@@ -274,21 +289,22 @@ class AppGenreNotes private constructor(
             }
 
             is ReasonPath.Listing -> {
-                listShown(path.key, known[path.key], lifetime)
+                val asked = genre in now.waiting[path.key].orEmpty()
+                listShown(path.key, now.known[path.key].takeIf { asked }, now.lifetime)
             }
 
             is ReasonPath.Reason -> {
-                val entry = reasons[path.key]
+                val entry = now.reasons[path.key]
                 when {
                     entry == null -> GenreReason.Offered
-                    expired(entry.writtenAt, lifetime) -> GenreReason.Offered.also { drop(path.key) }
+                    expired(entry.writtenAt, now.lifetime) -> GenreReason.Offered.also { drop(path.key) }
                     else -> GenreReason.Shown(entry.state, modelName(path.key.model))
                 }
             }
         }
 
-    // [key]'s list ([entry]), while the path still asks for it: offered, none known or past *Keep
-    // history for* ([lifetime]); looking; or failed, offered again.
+    // [key]'s list ([entry]), while the path still asks for it: offered, none known, not asked for
+    // this genre, or past *Keep history for* ([lifetime]); looking; or failed, offered again.
     private fun listShown(
         key: CardKey,
         entry: Entry<GenreListState>?,
@@ -316,9 +332,12 @@ class AppGenreNotes private constructor(
                 }
             }
 
+            // Asked for this genre too while the list is under way; asked, unless known.
             is ReasonPath.Listing -> {
-                if (openList(path.key) && writing.add(path.key)) {
-                    scope.launch(epoch.mark()) { list(made, path.key, track, genre) }
+                val underWay = path.key in writing
+                if (underWay || openList(path.key)) {
+                    synchronized(lock) { waiting.update { it + (path.key to (it[path.key].orEmpty() + genre)) } }
+                    if (writing.add(path.key)) scope.launch(epoch.mark()) { list(made, path.key, track) }
                 }
             }
 
@@ -420,15 +439,18 @@ class AppGenreNotes private constructor(
         made: PipelineParts,
         key: CardKey,
         track: TrackState,
-        genre: String,
     ) {
         val work = currentCoroutineContext()
         val asker = listsOf(made)
         val reasons = reasonsOf(made)
-        var next: CardKey? = null
+        var next: List<Pair<CardKey, String>> = emptyList()
         val show: (GenreListState, Instant) -> Unit = { state, at ->
             publish(work) {
-                if (state is GenreListState.Listed) next = follow(reasons, state, track, genre, at)
+                if (state is GenreListState.Listed) {
+                    val asked = waiting.value[key].orEmpty()
+                    waiting.update { it - key }
+                    next = asked.mapNotNull { genre -> follow(reasons, state, track, genre, at)?.let { it to genre } }
+                }
                 lists.update { it.with(key, Entry(state, at)) }
             }
         }
@@ -445,7 +467,15 @@ class AppGenreNotes private constructor(
         } finally {
             writing.remove(key)
         }
-        next?.let { write(reasons, it, track, label(track, genre)) }
+        // Each genre asked for, on the list, written; none after a *Clear history* since the list
+        // was asked, which drops their claims.
+        if (epoch.isCurrent(work)) {
+            coroutineScope {
+                for ((reason, genre) in next) launch { write(reasons, reason, track, label(track, genre)) }
+            }
+        } else {
+            next.forEach { (reason, _) -> writing.remove(reason) }
+        }
     }
 
     // The key of [genre]'s reason to write after [listed] for [track], marked as being written at
@@ -477,6 +507,7 @@ class AppGenreNotes private constructor(
         synchronized(lock) {
             shown.value = emptyMap()
             lists.value = emptyMap()
+            waiting.value = emptyMap()
             looked.clear()
         }
         lookups.forget()

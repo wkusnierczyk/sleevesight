@@ -12,6 +12,7 @@ import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -241,6 +242,51 @@ class GenreReasonPathScreenTest {
                     GENRES_ROW_PREFIX + "0",
                 ).assertContentDescriptionEquals("Track, Rock, Blues, from $MODEL, selected")
         }
+
+    @Test
+    fun aListedGenreOnlyTheAlbumHasCreditsTheModelAmongTheAlbumRowsSources() {
+        val folk = GenreLabel("folk", "folk", "Folk", "folk", level = GenreLevel.ALBUM)
+        val withAlbum =
+            playing.copy(
+                genres =
+                    TrackGenres(
+                        playing.genres.rows +
+                            GenreRow(
+                                GenreLevel.ALBUM,
+                                null,
+                                listOf(TrackLabel(folk, listOf(LabelCredit(LabelSource.LASTFM, null)))),
+                            ),
+                    ),
+            )
+        val notes = Notes(GenreReason.Offered, AiGenreList(listOf(folk.copy(level = GenreLevel.TRACK)), MODEL))
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity {
+                it.setContent {
+                    Column(Modifier.verticalScroll(rememberScrollState())) {
+                        GenresContent(withAlbum, Settings(), notes = PanelNotes(notes))
+                    }
+                }
+            }
+            // Folk, the album's, leads the chips; no second chip, no copy on the track's row.
+            compose.onNodeWithTag(GENRE_PREFIX + "album:folk").performClick()
+            compose.waitForIdle()
+            assertEquals(0, count(GENRE_PREFIX + "track:folk"))
+            compose.onNodeWithTag(GENRES_ROW_PREFIX + "0").assertContentDescriptionEquals("Track, Rock")
+            compose.onNodeWithTag(GENRE_SOURCES_ROW_PREFIX + "1").performScrollTo()
+            compose.onNodeWithText("Last.fm · $MODEL,\u202FAI", substring = true, useUnmergedTree = true).assertExists()
+            compose.onNodeWithText("MusicBrainz", useUnmergedTree = true).assertExists()
+            assertEquals(
+                0,
+                compose
+                    .onAllNodesWithText(
+                        "MusicBrainz · $MODEL",
+                        substring = true,
+                        useUnmergedTree = true,
+                    ).fetchSemanticsNodes()
+                    .size,
+            )
+        }
+    }
 
     private companion object {
         const val MODEL = "Claude Haiku 5.5"
