@@ -159,7 +159,8 @@ internal fun animatorDurationScale(): Float = LocalAnimatorDurationScale.current
  * also reads for the intro; *Remove animations* sets it to 0), read once and followed with one
  * `ContentObserver`, registered while this is composed and unregistered when it leaves (#785). The
  * app's root provides it as [LocalAnimatorDurationScale]; a record reads it itself only for want of
- * a provider. A change reaches only what reads it: the records shown.
+ * a provider. Read at the root, a change recomposes the root's scope, where children that do not
+ * read it skip; the setting changes rarely.
  */
 @Composable
 fun followedAnimatorDurationScale(): Float {
