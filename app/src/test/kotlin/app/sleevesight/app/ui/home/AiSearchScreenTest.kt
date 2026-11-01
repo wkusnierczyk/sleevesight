@@ -36,6 +36,7 @@ import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.pipeline.AiSearch
 import app.sleevesight.app.pipeline.AiSearchFeed
 import app.sleevesight.app.pipeline.GenreNotes
@@ -82,6 +83,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -408,12 +410,23 @@ class AiSearchScreenTest {
         }
 
     @Test
-    fun aFirstReleaseNamedAsTheAlbumPlayedIsSaidToBeThisAlbum() =
+    fun aFirstReleaseNamedAsTheAlbumPlayedBesideTheAlbumsDateIsSaidToBeThisAlbum() =
+        show {
+            tap(DATES_CHIP_TAG)
+            val first = Released("1974-01", sundown.album, ReleaseType.ALBUM)
+            set(SearchKind.DATES, AiSearch.Answered(SearchAnswer.Dates(album = "1974-01", first = first), model))
+            compose.waitUntil(WAIT_MS) { shows("This album was released in January 1974.") }
+            assertTrue(shows(text(R.string.home_dates_first_here)))
+        }
+
+    @Test
+    fun aFirstReleaseNamedAsTheAlbumPlayedWithNoAlbumDateKeepsItsDate() =
         show {
             tap(DATES_CHIP_TAG)
             val first = Released("1974-01", sundown.album, ReleaseType.ALBUM)
             set(SearchKind.DATES, AiSearch.Answered(SearchAnswer.Dates(first = first), model))
-            assertTrue(shows(text(R.string.home_dates_first_here)))
+            compose.waitUntil(WAIT_MS) { shows("This track was first released on Sundown in January 1974.") }
+            assertFalse(shows(text(R.string.home_dates_first_here)))
         }
 
     @Test

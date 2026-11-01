@@ -171,6 +171,45 @@ class AppAiSearchesTest {
         }
 
     @Test
+    fun `a tap right after Stop, before the call has ended, asks afresh`() =
+        runTest {
+            provider.streaming = 10.seconds
+            val searches = searches()
+            searches.ask(track, SearchKind.GENRES, facts)
+            advanceTimeBy(1.seconds)
+            searches.stop(track, SearchKind.GENRES)
+            // No time for the stopped job to end.
+            provider.streaming = 0.seconds
+            searches.ask(track, SearchKind.GENRES, facts)
+            advanceUntilIdle()
+            assertEquals(2, provider.requests)
+            assertTrue(searches.now() is AiSearch.Answered)
+            assertEquals(1, cache.held)
+        }
+
+    @Test
+    fun `a search handed back by its gate is no longer under way, so it can start again at once`() =
+        runTest {
+            var gateReads = 0
+            lateinit var searches: AppAiSearches
+            searches =
+                AppAiSearches(
+                    parts,
+                    settings,
+                    answers,
+                    this,
+                    clock = clock,
+                    automaticGate = { gateReads++ > 0 },
+                    deferred = { again, kind -> searches.ask(again, kind, facts, automatic = true) },
+                )
+            searches.ask(track, SearchKind.GENRES, facts, automatic = true)
+            advanceUntilIdle()
+            assertEquals(2, gateReads)
+            assertEquals(1, provider.requests)
+            assertTrue(searches.now() is AiSearch.Answered)
+        }
+
+    @Test
     fun `leaving the panel does not stop a call`() =
         runTest {
             provider.streaming = 10.seconds

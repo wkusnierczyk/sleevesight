@@ -75,7 +75,8 @@ class AutoSearches<K>(
 
     /**
      * [track]'s [wish], started but not asked, its gates closed before its call: as if it had not been
-     * tried, so it starts once they open again, at once if they already have.
+     * tried, so it starts once they open again, at once if they already have. Called once that search
+     * is no longer under way, so [start] does not take it for one still asking.
      */
     fun release(
         track: TrackState,

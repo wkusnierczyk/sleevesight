@@ -349,6 +349,32 @@ class AutoSearchesTest {
         }
 
     @Test
+    fun `the setting off and on again during the cache lookup, before the trigger sees it, still searches`() =
+        runTest {
+            val on =
+                Settings(
+                    aiProvider = ProviderId.ANTHROPIC,
+                    searchWithAi = true,
+                    showGenres = false,
+                    lyricsLinks = false,
+                )
+            settings.value = on
+            val held = HeldCache(CardCache()).apply { holding = true }
+            val (_, auto) = wired(held)
+            auto.follow(empty(), on)
+            runCurrent()
+            // Off in the settings while the cache is read, not yet followed by the trigger.
+            settings.value = on.copy(searchWithAi = false)
+            held.holding = false
+            held.open.complete(Unit)
+            runCurrent()
+            // On again: the trigger's collector, conflated, never sees a change.
+            settings.value = on
+            advanceUntilIdle()
+            assertEquals(1, provider.requests)
+        }
+
+    @Test
     fun `a tap is not gated by the app's visibility or the setting`() =
         runTest {
             settings.value = settings.value?.copy(searchWithAi = false, showGenres = false, lyricsLinks = false)

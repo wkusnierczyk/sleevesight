@@ -242,5 +242,6 @@ object InsightPrompt {
 
     private const val TAG_OPEN_STANDIN = '\u2039'
 
-    private fun breaksLine(c: Char): Boolean = c < ' ' || c in '\u007F'..'\u009F' || c == '\u2028' || c == '\u2029'
+    /** Whether [c] would break a line: a control character, or a Unicode line or paragraph separator. */
+    internal fun breaksLine(c: Char): Boolean = c < ' ' || c in '\u007F'..'\u009F' || c == '\u2028' || c == '\u2029'
 }

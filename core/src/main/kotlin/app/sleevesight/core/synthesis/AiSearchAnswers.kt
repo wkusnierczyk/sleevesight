@@ -89,7 +89,9 @@ sealed interface SearchReading {
  *   release later than the album's date is dropped (the recording is on the album, so it came out
  *   by then), and a cover's original later than either: of two that contradict each other, the one
  *   the other is checked against is kept. They are compared as precisely as both are known (`2014`
- *   and `2014-07` agree).
+ *   and `2014-07` agree). A name (a release's title, an original's artist) on one line, its line
+ *   breaks and runs of spaces made one space, and dropped when longer than [NAME_MAX]: a title that
+ *   injects instructions, or a model that rambles, cannot fill the panel.
  * - **Genres** ([SearchKind.GENRES]): only names on the app's fixed list ([vocabulary]), matched as a
  *   source's tags are ([GenreVocabulary.labelsFor]: case and spacing aside, a synonym's spelling as
  *   one genre), once each, in the answer's order, at most five.
@@ -144,7 +146,7 @@ class AiSearchAnswers(
         today: String,
     ): Released? {
         val date = date(part?.text("date"), today) ?: return null
-        return Released(date, part?.text("title"), typeOf(part?.text("type")))
+        return Released(date, part?.name("title"), typeOf(part?.text("type")))
     }
 
     // A cover's original in [part]: an artist, and a date, its year's or else its release's.
@@ -152,9 +154,9 @@ class AiSearchAnswers(
         part: JsonObject,
         today: String,
     ): Original? {
-        val artist = part.text("artist")
+        val artist = part.name("artist")
         val release = part.obj("release")
-        val title = release?.text("title")
+        val title = release?.name("title")
         val releaseDate = date(release?.text("date"), today)
         val date = date(part.text("year"), today) ?: releaseDate
         if (artist == null || date == null) return null
@@ -186,6 +188,9 @@ class AiSearchAnswers(
     companion object {
         /** The year of the first recording: no recording, and no release, is dated before it. */
         const val FIRST_YEAR: Int = 1877
+
+        /** The longest name kept (a release's title, an original's artist), in characters. */
+        const val NAME_MAX: Int = 200
 
         private val lenient = Json { ignoreUnknownKeys = true }
         private val DATE = Regex("(\\d{4})(?:-(\\d{2})(?:-(\\d{2}))?)?")
@@ -288,14 +293,6 @@ class AiSearchAnswers(
                 else -> null
             }
 
-        // The string at [key], trimmed, when it is one and not blank.
-        private fun JsonObject.text(key: String): String? =
-            (get(key) as? JsonPrimitive)
-                ?.takeIf { it.isString }
-                ?.content
-                ?.trim()
-                ?.takeIf { it.isNotEmpty() }
-
         // The object at [key], when it is one.
         private fun JsonObject.obj(key: String): JsonObject? = get(key) as? JsonObject
 
@@ -310,3 +307,23 @@ class AiSearchAnswers(
             }
     }
 }
+
+// The string at [key], trimmed, when it is one and not blank.
+private fun JsonObject.text(key: String): String? =
+    (get(key) as? JsonPrimitive)
+        ?.takeIf { it.isString }
+        ?.content
+        ?.trim()
+        ?.takeIf { it.isNotEmpty() }
+
+// The name at [key] ([text]) on one line ([oneLine]); null when longer than
+// [AiSearchAnswers.NAME_MAX].
+private fun JsonObject.name(key: String): String? =
+    text(key)?.let(::oneLine)?.takeIf { it.length <= AiSearchAnswers.NAME_MAX }
+
+// [text] on one line: every control character and line or paragraph separator, and each run of
+// spaces, one space.
+private fun oneLine(text: String): String =
+    text.map { if (InsightPrompt.breaksLine(it)) ' ' else it }.joinToString("").replace(SPACES, " ")
+
+private val SPACES = Regex(" {2,}")

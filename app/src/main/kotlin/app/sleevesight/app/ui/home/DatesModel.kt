@@ -285,8 +285,9 @@ private class AlbumDates(
 /**
  * The sentences of what *Search with AI* found for *Dates* ([answer], #773), as [homeDates] says
  * MusicBrainz's, each part only where the answer gives it: the album's release; the track's first
- * release, "on this album" when its title is the album's beside [header] ([NameMatcher.albumKey]) and
- * it is not named a single or an EP; and a cover's original.
+ * release, "on this album" when its title is the album's beside [header] ([NameMatcher.albumKey]), it
+ * is not named a single or an EP, and the answer gives the album's date too (else its own date would
+ * be lost: then said with it); and a cover's original.
  */
 internal fun aiDates(
     answer: SearchAnswer.Dates,
@@ -298,7 +299,8 @@ internal fun aiDates(
         val album = header.album?.takeIf(String::isNotBlank)
         val title = first.title
         val here =
-            album != null &&
+            answer.album != null &&
+                album != null &&
                 title != null &&
                 kindOf(first.type) == null &&
                 ALBUMS.albumKey(title) == ALBUMS.albumKey(album)

@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.cancellation.CancellationException
@@ -142,10 +143,11 @@ interface AiSearchFeed {
  * the track coming back included, for as long as the process lives; a tap asks it, and lifts the "no".
  * A search asked by itself ([ask]'s `automatic`) checks its gates again once the cache has missed,
  * just before the paid call: [automaticGate] (the app on screen, the setting on, as `AutoSearches`
- * last read them), the setting and *Show insights* as last read, and its key (the AI service ready,
- * the same model and effort). If one no longer holds, it asks nothing and shows nothing, and is
- * handed back to [deferred], to start later as if it had not been tried (off screen, on return). A
- * tap is gated by none of the app's visibility and the setting.
+ * last read them: the same reading that starts it, so the two cannot disagree), and its key under the
+ * settings as last read (*Show insights* on, the AI service ready, the same model and effort). If one
+ * no longer holds, it asks nothing and shows nothing, and is handed back to [deferred], once it is no
+ * longer under way (so a start at once is not taken for it), to start later as if it had not been
+ * tried (off screen, on return). A tap is gated by none of the app's visibility and the setting.
  * Each search is marked with [epoch], and after *Clear history* ([forget]) nothing it finds is shown
  * or kept: a state is shown only under the lock [forget] clears under ([ShownSearches.publish]), so
  * one that passed the check cannot land after the clear. *Clear history* forgets the stops too.
@@ -258,6 +260,9 @@ class AppAiSearches(
                 }
                 job.invokeOnCompletion { asking.remove(key, job) }
                 job.start()
+            } else {
+                // Another ask got there first (a tap and an automatic one at once): this one never runs.
+                job.cancel()
             }
         }
         return true
@@ -275,7 +280,10 @@ class AppAiSearches(
                 (key !in settled && stopped.add(key)).also { if (it) declined[Declined.of(key)] = Unit }
             }
         if (stops) {
+            // No longer under way at once, as the button comes back: a tap right after asks again.
+            // What the cancelled job still does is neither shown nor settled (no longer active).
             job.cancel()
+            asking.remove(key, job)
             shown.removeSearching(key)
         }
     }
@@ -287,8 +295,9 @@ class AppAiSearches(
     }
 
     // [key]'s search, kept meanwhile (another panel's), with no call, or asked; each state shown while
-    // no *Clear history* came since it started and it was not stopped. One [automatic] asks only if
-    // its gates still hold once the cache missed, else it is handed back ([deferred]).
+    // no *Clear history* came since it started and it was not stopped (nor cancelled: a job stopped
+    // may outlive a tap that asks again). One [automatic] asks only if its gates still hold once the
+    // cache missed, else it is handed back ([deferred]) once out of [asking].
     @Suppress("LongParameterList") // The search, its key, kind and track, what it asks about, and who asked.
     private suspend fun run(
         searches: AiSearches,
@@ -300,21 +309,23 @@ class AppAiSearches(
     ) {
         val work = currentCoroutineContext()
         val show: (SearchState, Instant) -> Unit = { state, at ->
-            shown.publish(key, Entry(state, at)) { epoch.isCurrent(work) && synchronized(lock) { key !in stopped } }
+            shown.publish(key, Entry(state, at)) {
+                epoch.isCurrent(work) && synchronized(lock) { key !in stopped && work.isActive }
+            }
         }
         try {
             val kept = searches.kept(key, kind, track)?.takeIf { !expired(it.writtenAt) }
-            val gated =
-                automatic &&
-                    !(automaticGate() && settings.value?.searchWithAi == true && keyOf(track, kind)?.second == key)
+            val gated = automatic && !(automaticGate() && keyOf(track, kind)?.second == key)
             if (kept != null) {
                 show(kept.state, kept.writtenAt ?: clock.now())
             } else if (gated) {
+                work[Job]?.let { asking.remove(key, it) }
                 deferred(track, kind)
             } else {
                 searches.search(key, kind, track, facts, show) {
                     synchronized(lock) {
                         key !in stopped &&
+                            work.isActive &&
                             settled.add(key)
                     }
                 }
