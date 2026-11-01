@@ -46,6 +46,7 @@ RULES, which hold whatever the style says:
 - An "original song" line is about the song as first recorded by someone else. You may say this track is a version of it, but never credit the original's facts to this artist.
 - An "artist" line is about the performer, not this recording.
 - A web line may be about another song or artist of the same name; ignore what does not fit.
+- A genre named only in a web line belongs to that page: if you mention it, attribute it to the page as the line describes it (say, "a store listing files it under blues"), never state it as the track's tag or genre.
 - If the evidence supports fewer sentences than the style asks for, write fewer; a short insight is enough. Do not say what the evidence leaves out. Write no sentence without a citation.
 - Do not use your own knowledge.
 - Plain text only: no headings, lists or markdown.
