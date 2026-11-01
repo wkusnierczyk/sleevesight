@@ -60,8 +60,9 @@ class GenreReasonPromptTest {
         // #800: the insight's rule asks for the attribution, so the reason's own rule must not forbid it.
         val text = prompt()
         assertTrue(InsightPrompt.WEB_GENRE_RULE in text)
-        assertTrue("except to attribute a genre a web line names to its page" in GenreReasonPrompt.ABOUT_THE_MUSIC_RULE)
-        assertTrue("what they say, do not say or leave out" in GenreReasonPrompt.ABOUT_THE_MUSIC_RULE, "the ban stands")
+        val rule = GenreReasonPrompt.ABOUT_THE_MUSIC_RULE
+        assertTrue("except to attribute to its page a genre only a web line names" in rule)
+        assertTrue("what they say, do not say or leave out" in rule, "the ban stands")
         assertTrue(text.indexOf(GenreReasonPrompt.ABOUT_THE_MUSIC_RULE) < text.indexOf(InsightPrompt.WEB_GENRE_RULE))
     }
 

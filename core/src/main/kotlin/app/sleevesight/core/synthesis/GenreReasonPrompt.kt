@@ -61,9 +61,9 @@ object GenreReasonPrompt {
      */
     const val ABOUT_THE_MUSIC_RULE: String =
         "- Write about the music and the artists, never about the evidence or the sources: no sentence on " +
-            "what they say, do not say or leave out, except to attribute a genre a web line names to its page " +
-            "as a rule below asks. If the evidence does not support the label, do not argue for it: write only " +
-            "what the evidence does say about the music, cited."
+            "what they say, do not say or leave out, except to attribute to its page a genre only a web line " +
+            "names, as a rule below says. If the evidence does not support the label, do not argue for it: " +
+            "write only what the evidence does say about the music, cited."
 
     /**
      * The prompt for why [nowPlaying], normalized as [normalized], carries the genre label [genre],

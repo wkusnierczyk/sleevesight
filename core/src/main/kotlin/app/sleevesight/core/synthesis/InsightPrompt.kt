@@ -174,12 +174,15 @@ object InsightPrompt {
      * listing, a review) files the track under, not a tag of the track's; the Genres panel takes its
      * labels from the label sources, never from web pages, so an insight stating it as the track's tag
      * disagreed with the panel. A web line is told apart by its source, `Web search`, in the evidence
-     * line ([evidenceLine]). A label source's genres (Last.fm's tags; MusicBrainz's never reach a
-     * prompt, D12) are cited as before.
+     * line ([evidenceLine]). Conditional ("if you mention it"), so the rule does not ask for a web
+     * genre in an insight that would not have named one, and the page named as its line describes
+     * it, so the example's store listing is not copied for a page of another kind. A label source's
+     * genres (Last.fm's tags; MusicBrainz's never reach a prompt, D12) are cited as before.
      */
     const val WEB_GENRE_RULE: String =
-        "- A genre named only in a web line belongs to that page: attribute it (\"a store listing files it " +
-            "under blues\"), never state it as the track's tag or genre."
+        "- A genre named only in a web line belongs to that page: if you mention it, attribute it to the page " +
+            "as the line describes it (say, \"a store listing files it under blues\"), never state it as the " +
+            "track's tag or genre."
 
     /**
      * The rule on a gap: a short insight rather than a stated gap (version 3, #193). The style's
