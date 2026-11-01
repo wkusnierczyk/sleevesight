@@ -206,4 +206,34 @@ class AiSearchesTest {
             cache.keep(key, "nonsense")
             assertNull(searches.kept(key, SearchKind.LYRICS, track))
         }
+
+    @Test
+    fun aDefinitionsKeyIsTheGenreNotTheTrack() {
+        val key = checkNotNull(searches.key(track, SearchKind.DEFINITION, settings, genre = "rock"))
+        assertEquals(CardKind.SEARCH, key.kind)
+        assertEquals(AiSearches.GENRE_ENTITY, key.track)
+        assertNull(key.duration)
+        assertEquals("definition\nrock", key.subject)
+        assertEquals(AiSearchPrompt.DEFINITION_VERSION, key.promptVersion)
+        // Another track, the same key; another genre, another.
+        val other =
+            TrackState(nowPlaying("Numb", "Linkin Park", "Meteora"), track.normalized.copy(title = "numb"), emptyMap())
+        assertEquals(key, searches.key(other, SearchKind.DEFINITION, settings, genre = "rock"))
+        assertNotEquals(key, searches.key(track, SearchKind.DEFINITION, settings, genre = "metal"))
+        // No genre, no key.
+        assertNull(searches.key(track, SearchKind.DEFINITION, settings))
+    }
+
+    @Test
+    fun aDefinitionIsAskedAboutTheGenreAndKept() =
+        runTest {
+            val asking = FakeProvider { FakeProvider.done("{\"definition\": \"Rock is a genre of popular music.\"}") }
+            val made = AiSearches(AiAccess(asking, Secret("k")), cache, JvmHasher, answers)
+            val key = checkNotNull(made.key(track, SearchKind.DEFINITION, settings, genre = "rock"))
+            val state = made.search(key, SearchKind.DEFINITION, track, SearchFacts.ofGenre("Rock"), { _, _ -> })
+            assertEquals(SearchState.Answered(SearchAnswer.Definition("Rock is a genre of popular music.")), state)
+            assertTrue("Name: Rock" in asking.requests.single().prompt)
+            val kept = assertNotNull(made.kept(key, SearchKind.DEFINITION, track))
+            assertEquals(state, kept.state)
+        }
 }

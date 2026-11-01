@@ -279,4 +279,39 @@ class AiSearchAnswersTest {
             lyrics("{\"lyrics_urls\": [\"https://jeffbuckley.bandcamp.com/track/hallelujah\"]}")?.map { it.site },
         )
     }
+
+    private fun definition(reply: String): SearchReading = answers.read(SearchKind.DEFINITION, reply)
+
+    @Test
+    fun aDefinitionIsKeptOnOneLine() {
+        assertEquals(
+            SearchReading.Found(
+                SearchAnswer.Definition("Rap rock joins rapped vocals with rock. It arose in the 1980s."),
+            ),
+            definition("{\"definition\": \"Rap rock joins rapped vocals\nwith rock.  It arose in the 1980s.\"}"),
+        )
+    }
+
+    @Test
+    fun aDefinitionThatIsEmptyLongLinkedOrMarkedUpIsNothingUsable() {
+        val long = "Rock is loud. ".repeat(50)
+        for (text in listOf(
+            "",
+            "   ",
+            long,
+            "Rock, see https://en.wikipedia.org/wiki/Rock.",
+            "Rock, as on www.example.com.",
+            "Rock, as allmusic.com says.",
+            "**Rock** is a genre.",
+            "Rock is a [genre](x).",
+            "<b>Rock</b> is a genre.",
+            "# Rock",
+            "Rock is `loud`.",
+        )) {
+            assertEquals(SearchReading.NothingUsable, definition("{\"definition\": \"$text\"}"), text)
+        }
+        assertEquals(SearchReading.NothingUsable, definition("{}"))
+        assertEquals(SearchReading.NothingUsable, definition("{\"definition\": 3}"))
+        assertEquals(SearchReading.Malformed, definition("Rock is a genre."))
+    }
 }

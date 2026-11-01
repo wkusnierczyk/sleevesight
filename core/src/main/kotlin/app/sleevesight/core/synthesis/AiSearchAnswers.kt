@@ -37,6 +37,11 @@ sealed interface SearchAnswer {
     data class Lyrics(
         val links: List<LyricsLink>,
     ) : SearchAnswer
+
+    /** A genre's definition (#786), where Wikipedia has none: plain text, on one line. */
+    data class Definition(
+        val text: String,
+    ) : SearchAnswer
 }
 
 /** A release dated [date], with its [title] and [type] where the answer gives them. */
@@ -100,6 +105,10 @@ sealed interface SearchReading {
  *   one whose path names the track's artist where there are several, as `lyricsLinks` chooses
  *   MusicBrainz's ([pages], with [accentFolder]). No request is made to a link: the app links to
  *   lyrics, it never fetches them (#728).
+ * - **A genre's definition** ([SearchKind.DEFINITION], #786): plain text, on one line (line breaks
+ *   and runs of spaces made one space), at most [DEFINITION_MAX] characters, and none with a link or
+ *   a web address, or markup (Markdown's or HTML's marks, [MARKUP]): it stands in for Wikipedia's
+ *   lead, shown as written, so a reply that rambles, links or formats is none.
  */
 class AiSearchAnswers(
     private val vocabulary: GenreVocabulary,
@@ -124,6 +133,7 @@ class AiSearchAnswers(
                 SearchKind.DATES -> dates(answer)
                 SearchKind.GENRES -> genres(answer)
                 SearchKind.LYRICS -> lyrics(answer, artists)
+                SearchKind.DEFINITION -> definition(answer)
             }
         return found?.let(SearchReading::Found) ?: SearchReading.NothingUsable
     }
@@ -182,6 +192,13 @@ class AiSearchAnswers(
             accentFolder,
         ).takeIf { it.isNotEmpty() }?.let(SearchAnswer::Lyrics)
 
+    private fun definition(answer: JsonObject): SearchAnswer.Definition? =
+        answer
+            .text("definition")
+            ?.let(::oneLine)
+            ?.takeIf { it.length <= DEFINITION_MAX && !linksOrMarks(it) }
+            ?.let(SearchAnswer::Definition)
+
     // Today by [clock], in UTC, as `YYYY-MM-DD`.
     private fun today(): String = isoDay(clock.now().toEpochMilliseconds().floorDiv(1.days.inWholeMilliseconds))
 
@@ -191,6 +208,21 @@ class AiSearchAnswers(
 
         /** The longest name kept (a release's title, an original's artist), in characters. */
         const val NAME_MAX: Int = 200
+
+        /**
+         * The longest genre's definition kept (#786), in characters: three sentences of an
+         * encyclopedia's lead, with room to spare.
+         */
+        const val DEFINITION_MAX: Int = 600
+
+        /** The marks of Markdown or HTML a definition (#786) may not carry. */
+        const val MARKUP: String = "<>[]`*#|"
+
+        // A link or a web address: a scheme, `www.`, or a name under a common top-level domain.
+        private val ADDRESS = Regex("""(?i)\b[a-z][a-z0-9+.-]*://|\bwww\.|\b[a-z0-9-]+\.(com|org|net|io|info)\b""")
+
+        // Whether [text] has a link, a web address, or a mark of [MARKUP].
+        private fun linksOrMarks(text: String): Boolean = text.any { it in MARKUP } || ADDRESS.containsMatchIn(text)
 
         private val lenient = Json { ignoreUnknownKeys = true }
         private val DATE = Regex("(\\d{4})(?:-(\\d{2})(?:-(\\d{2}))?)?")
