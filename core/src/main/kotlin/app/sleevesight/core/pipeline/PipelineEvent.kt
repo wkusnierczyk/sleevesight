@@ -10,6 +10,7 @@ import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.synthesis.GroundingCounts
+import app.sleevesight.core.synthesis.SelfRevision
 import kotlin.time.Duration
 
 /**
@@ -188,6 +189,19 @@ sealed interface PipelineEvent {
         override val key: String,
         val counts: GroundingCounts,
         val selfCorrected: Boolean = false,
+    ) : PipelineEvent
+
+    /**
+     * A reply that revises itself where the card would show it, as [sign] says (`SelfRevision`,
+     * #798): not shown, not kept. [askedAgain] when it was a call's first reply and is asked for once
+     * more; false for the second, which leaves the error state. [cached] for a card kept from before,
+     * not served, so the track is written as though it had none.
+     */
+    data class SelfRevised(
+        override val key: String,
+        val sign: SelfRevision,
+        val askedAgain: Boolean = false,
+        val cached: Boolean = false,
     ) : PipelineEvent
 
     /** The model replied `NO_EVIDENCE`, or the evidence had nothing to narrate (`EvidenceSet.nothingToNarrate`). */

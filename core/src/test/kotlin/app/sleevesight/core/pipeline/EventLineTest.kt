@@ -6,6 +6,7 @@ import app.sleevesight.core.ai.BreakoffCause
 import app.sleevesight.core.ai.Usage
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.synthesis.GroundingCounts
+import app.sleevesight.core.synthesis.SelfRevision
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.time.Duration.Companion.milliseconds
@@ -13,7 +14,7 @@ import kotlin.time.Duration.Companion.milliseconds
 /**
  * The diagnostics lines of MusicBrainz's resolution name why it could not be asked (#191); the
  * grounding line, whether a self-correction was taken out (#597); a failed call's, how its reply broke
- * off (#665).
+ * off (#665); a reply that revised itself, its sign (#798).
  */
 class EventLineTest {
     @Test
@@ -50,6 +51,22 @@ class EventLineTest {
         assertEquals(
             "grounded   a|song: ok 1, model 0, hedge 0, uncited 0, unknown 0",
             EventLine.of(PipelineEvent.Grounded("a|song", counts)),
+        )
+    }
+
+    @Test
+    fun `a reply that revised itself says its sign, and what came of it (#798)`() {
+        assertEquals(
+            "insight    a|song: reply revised itself (aside), asked again",
+            EventLine.of(PipelineEvent.SelfRevised("a|song", SelfRevision.ASIDE, askedAgain = true)),
+        )
+        assertEquals(
+            "insight    a|song: reply revised itself again (opening repeated), not shown",
+            EventLine.of(PipelineEvent.SelfRevised("a|song", SelfRevision.REPEATED_OPENING)),
+        )
+        assertEquals(
+            "insight    a|song: kept card revised itself (first person), not served",
+            EventLine.of(PipelineEvent.SelfRevised("a|song", SelfRevision.FIRST_PERSON, cached = true)),
         )
     }
 

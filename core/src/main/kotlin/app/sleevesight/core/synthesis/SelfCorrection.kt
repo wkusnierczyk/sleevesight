@@ -205,7 +205,7 @@ data class SelfCorrection(
  * A text read for its quotations: what is [outside] them, each quotation as an ellipsis; whether a
  * quotation is still [open] at its end; and whether a closing `”` came with none open ([stray]).
  */
-private class Quotations(
+internal class Quotations(
     val outside: String,
     val open: Boolean,
     val stray: Boolean,

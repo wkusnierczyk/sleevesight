@@ -91,6 +91,7 @@ private val FAILURE_TEXTS: Map<String, Int> =
         ReplyFailures.LENGTH_LIMIT to R.string.home_failure_length_limit,
         ReplyFailures.EMPTY to R.string.home_failure_empty,
         ReplyFailures.DECLINED to R.string.home_failure_declined,
+        ReplyFailures.SELF_REVISED to R.string.home_failure_self_revised,
         PipelineHost.FAILED to R.string.home_failure_failed,
     )
 
