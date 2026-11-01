@@ -414,6 +414,10 @@
     <string name="home_failure_length_limit">the AI model reached its length limit before it wrote anything</string>
     <string name="home_failure_empty">the AI model’s reply was empty</string>
     <string name="home_failure_declined">the model declined to write it</string>
+    <!-- Developer mode only (Show grounding details, #798): the reply corrected itself in its text
+         with nothing usable after it, and so did the one asked for once more. Without developer
+         mode the card says home_failure_malformed. -->
+    <string name="home_failure_self_revised">the AI model’s reply corrected itself in its text, twice</string>
     <string name="home_failure_failed">something went wrong</string>
     <string name="home_failure_other">something went wrong (%1$s)</string>
     <!-- Proposed (#773), to be confirmed. -->

@@ -29,6 +29,12 @@ object ReplyFailures {
      */
     const val LENGTH_LIMIT: String = "length_limit"
 
+    /**
+     * The reply revised itself in its text (`SelfRevision`, #798), and so did the one asked for once
+     * more: neither is shown.
+     */
+    const val SELF_REVISED: String = "self_revised"
+
     /** The reply ended with no text, for any other reason. */
     const val EMPTY: String = "empty"
 

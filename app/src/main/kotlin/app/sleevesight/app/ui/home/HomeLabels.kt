@@ -72,6 +72,20 @@ internal fun chipName(source: SourceId): String =
 internal fun failureText(reason: String): String =
     FAILURE_TEXTS[reason]?.let { stringResource(it) } ?: stringResource(R.string.home_failure_other, reason)
 
+// Why writing failed, in words; with *Show grounding details* (developer mode, [details]), a reply
+// that revised itself with nothing usable left, twice, says so (#798), where the card otherwise says
+// only that the answer could not be read.
+@Composable
+internal fun failedReason(
+    reason: String,
+    details: Boolean,
+): String =
+    if (details && reason == ReplyFailures.SELF_REVISED) {
+        stringResource(R.string.home_failure_self_revised)
+    } else {
+        failureText(reason)
+    }
+
 /** Each failure label's words: an `AiErrorKind`'s name in lower case, a `ReplyFailures` label, or the host's own. */
 private val FAILURE_TEXTS: Map<String, Int> =
     mapOf(
@@ -92,6 +106,9 @@ private val FAILURE_TEXTS: Map<String, Int> =
         ReplyFailures.LENGTH_LIMIT to R.string.home_failure_length_limit,
         ReplyFailures.EMPTY to R.string.home_failure_empty,
         ReplyFailures.DECLINED to R.string.home_failure_declined,
+        // A reply that revised itself, twice (#798): the generic words for an unusable reply; the
+        // specific ones only in developer mode (`InsightCard`).
+        ReplyFailures.SELF_REVISED to R.string.home_failure_malformed,
         PipelineHost.FAILED to R.string.home_failure_failed,
         AiSearches.WEB_SEARCH_FAILED to R.string.home_failure_web_search,
     )
