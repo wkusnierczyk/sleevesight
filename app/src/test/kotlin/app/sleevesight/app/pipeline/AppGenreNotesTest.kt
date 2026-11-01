@@ -35,6 +35,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
@@ -508,21 +509,72 @@ class AppGenreNotesTest {
         }
 
     @Test
-    fun `the genres searched by themselves are those Wikipedia has no definition for (#786)`() {
-        val now = checkNotNull(settings.value)
-        val track = playing("rock", "punk", album = listOf("jazz"))
-        val states =
-            mapOf(
-                "rock" to DefinitionState.NotFound,
-                "punk" to DefinitionState.Failed,
-                "jazz" to DefinitionState.NotFound,
-                "metal" to DefinitionState.NotFound,
-            )
-        assertEquals(setOf("rock", "jazz"), genresWithNoDefinition(track, now, states))
-        assertEquals(emptySet<String>(), genresWithNoDefinition(track, now.copy(showGenres = false), states))
-        val noWikipedia = now.copy(enabledSources = now.enabledSources - SourceSwitch.WIKIPEDIA)
-        assertEquals(emptySet<String>(), genresWithNoDefinition(track, noWikipedia, states))
-    }
+    fun `the genres searched by themselves are those settled as having no definition on this play (#786)`() =
+        runTest {
+            val notes = expiring(1.days)
+            val track = playing("rock", "punk", album = listOf("jazz"))
+            articles.answers[ids("rock").single()] = mutableListOf(Lookup.NotFound, Lookup.NotFound)
+            articles.answers[ids("jazz").single()] = mutableListOf(Lookup.NotFound)
+            notes.lookups.fetchAhead(track)
+            advanceUntilIdle()
+            val settled = notes.lookups::settledNoDefinition
+            assertEquals(setOf("rock", "jazz"), genresWithNoDefinition(track, settled))
+            // Another play: none settled until its check answers, while the shown state stays.
+            clock.at += 1.days
+            articles.gate = CompletableDeferred()
+            val next = track.next(1)
+            notes.lookups.fetchAhead(next)
+            runCurrent()
+            assertEquals(DefinitionState.NotFound, notes.lookups.lookedUp.value["rock"])
+            assertEquals(emptySet<String>(), genresWithNoDefinition(next, settled))
+            assertEquals(emptySet<String>(), genresWithNoDefinition(track, settled))
+            checkNotNull(articles.gate).complete(Unit)
+            advanceUntilIdle()
+            // Rock still has none; jazz is found now.
+            assertEquals(setOf("rock"), genresWithNoDefinition(next, settled))
+            // Off with *Show genres* or Wikipedia off.
+            val now = checkNotNull(settings.value)
+            settings.value = now.copy(showGenres = false)
+            assertEquals(emptySet<String>(), genresWithNoDefinition(next, settled))
+            settings.value = now.copy(enabledSources = now.enabledSources - SourceSwitch.WIKIPEDIA)
+            assertEquals(emptySet<String>(), genresWithNoDefinition(next, settled))
+        }
+
+    @Test
+    fun `a Clear history between the choice of the genres and their lookups ends the batch (#786)`() =
+        runTest {
+            val epoch = ClearEpoch()
+            val notes = notes(epoch)
+            notes.lookups.afterChoice = {
+                runBlocking { epoch.advance() }
+                notes.forget()
+            }
+            notes.lookups.fetchAhead(playing("rock", "punk"))
+            advanceUntilIdle()
+            // Nothing asked, so nothing kept; nothing shown.
+            assertEquals(emptyList<String>(), articles.asked)
+            assertEquals(emptyMap<String, DefinitionState>(), notes.lookups.lookedUp.value)
+            // The track's next fetch ahead asks, once.
+            notes.lookups.afterChoice = {}
+            notes.lookups.fetchAhead(playing("rock", "punk"))
+            advanceUntilIdle()
+            assertEquals(ids("rock", "punk"), articles.asked)
+        }
+
+    @Test
+    fun `a Clear history while a batch's lookups run lets none of them show (#786)`() =
+        runTest {
+            val epoch = ClearEpoch()
+            val notes = notes(epoch)
+            articles.gate = CompletableDeferred()
+            notes.lookups.fetchAhead(playing("rock", "punk"))
+            runCurrent()
+            epoch.advance()
+            notes.forget()
+            checkNotNull(articles.gate).complete(Unit)
+            advanceUntilIdle()
+            assertEquals(emptyMap<String, DefinitionState>(), notes.lookups.lookedUp.value)
+        }
 
     // Notes whose definitions are kept in memory for [lifetime] by [clock], as the store keeps them for
     // Wikipedia's lifetime.

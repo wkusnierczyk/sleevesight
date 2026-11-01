@@ -90,15 +90,32 @@ class AppGenreDefinitions(
     private val io: CoroutineContext = EmptyCoroutineContext,
 ) : DefinitionFeed {
     // The states, by genre, and their lookups under way; the play fetched ahead (the track's
-    // identity) and the genres asked on it. Changed under [lock].
+    // identity), the genres asked on it, and those whose lookup has answered since it began; and the
+    // clears ([forget]) so far, which a batch of lookups started before one never outlives. Changed
+    // under [lock].
     private val lock = Any()
     private val states = MutableStateFlow<Map<String, DefinitionState>>(emptyMap())
     private val lookups = mutableMapOf<String, Job>()
     private var playing: Any? = null
     private val ahead = mutableSetOf<String>()
+    private val answered = mutableSetOf<String>()
+    private var clears = 0L
+
+    // Each change of what is settled (a lookup started or answered, a play begun), for [settled].
+    private val changes = MutableStateFlow(0L)
 
     /** Each genre's definition as looked up (#786), by its identity, whatever the settings say now. */
     val lookedUp: StateFlow<Map<String, DefinitionState>> = states
+
+    /**
+     * Changes as a genre's state settles or unsettles (#786): a lookup started or answered, a play
+     * begun, whatever the state shown; for what follows [settledNoDefinition] (`AutoSearches`).
+     */
+    val settled: StateFlow<Long> = changes
+
+    /** For tests: runs in [fetchAhead] between the choice of its genres and their lookups. */
+    @Volatile
+    internal var afterChoice: () -> Unit = {}
 
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun definition(genre: String): Flow<DefinitionState?> =
@@ -128,18 +145,40 @@ class AppGenreDefinitions(
      */
     fun fetchAhead(track: TrackState?) {
         if (track == null || !lookingUp(settings.value)) return
-        val identity = track.normalized to track.nowPlaying.duration
+        val identity = playOf(track)
         val genres = track.genres.all.map { it.genre.identity }
-        val fresh =
+        // The genres and the batch's mark chosen together: a *Clear history* after this outlives none.
+        val (fresh, batch) =
             synchronized(lock) {
                 if (identity != playing) {
                     playing = identity
                     ahead.clear()
+                    answered.clear()
+                    changes.update { it + 1 }
                 }
-                genres.filter(ahead::add)
+                genres.filter(ahead::add) to Batch(epoch.mark(), clears)
             }
-        for (genre in fresh) lookUp(genre, Ask.PLAY)
+        afterChoice()
+        for (genre in fresh) lookUp(genre, Ask.PLAY, batch)
     }
+
+    /**
+     * Whether [genre] has no definition from Wikipedia, settled on [track]'s play (#786): its lookup
+     * answered not found since the play began and none is under way, with *Show genres* and Wikipedia
+     * on. A genre shown as not found from an earlier play is not, while this play checks it again:
+     * what *Search with AI*, the setting, searches by itself, checked again just before its call.
+     */
+    fun settledNoDefinition(
+        track: TrackState,
+        genre: String,
+    ): Boolean =
+        lookingUp(settings.value) &&
+            synchronized(lock) {
+                playing == playOf(track) &&
+                    genre in answered &&
+                    genre !in lookups &&
+                    states.value[genre] == DefinitionState.NotFound
+            }
 
     /**
      * Fetches ahead ([fetchAhead]) the definitions of each of [tracks] (the pipeline's track), and
@@ -148,6 +187,19 @@ class AppGenreDefinitions(
     suspend fun fetchAhead(tracks: Flow<TrackState?>) {
         combine(tracks, settings) { track, _ -> track }.collect(::fetchAhead)
     }
+
+    // A batch of lookups: the epoch's mark and the clears as they were when it began, under [lock].
+    private class Batch(
+        val mark: CoroutineContext.Element,
+        val clears: Long,
+    )
+
+    // Whether [batch]'s work, [work], may still show or keep anything: no *Clear history* since it
+    // began. Under [lock], which [forget] clears under.
+    private fun current(
+        batch: Batch,
+        work: CoroutineContext,
+    ) = batch.clears == clears && epoch.isCurrent(work) && work.isActive
 
     // Who asks for a definition: a panel showing a genre with no state ([PANEL]), *Retry* under a
     // failed lookup ([RETRY]), or the fetch ahead, once a play, whatever the state ([PLAY]).
@@ -159,9 +211,11 @@ class AppGenreDefinitions(
     private fun lookUp(
         genre: String,
         ask: Ask = Ask.PANEL,
+        chosen: Batch? = null,
     ) {
         if (!lookingUp(settings.value)) return
         synchronized(lock) {
+            val batch = chosen ?: Batch(epoch.mark(), clears)
             val state = states.value[genre]
             val held = state is DefinitionState.Found || state == DefinitionState.NotFound
             val open =
@@ -170,18 +224,33 @@ class AppGenreDefinitions(
                     Ask.RETRY -> state == null || state == DefinitionState.Failed
                     Ask.PLAY -> true
                 }
-            if (!open || genre in lookups) return
-            val job = scope.launch(epoch.mark(), start = CoroutineStart.LAZY) { define(genre) }
+            // A batch chosen before a *Clear history* starts nothing.
+            if (batch.clears != clears || !open || genre in lookups) return
+            val job = scope.launch(batch.mark, start = CoroutineStart.LAZY) { define(genre, batch) }
             lookups[genre] = job
+            changes.update { it + 1 }
             if (!held) states.update { it.with(genre, DefinitionState.Looking) }
-            job.invokeOnCompletion { synchronized(lock) { if (lookups[genre] === job) lookups -= genre } }
+            job.invokeOnCompletion {
+                synchronized(lock) {
+                    if (lookups[genre] === job) {
+                        lookups -= genre
+                        changes.update { it + 1 }
+                    }
+                }
+            }
             job.start()
         }
     }
 
-    // [genre]'s definition from Wikipedia, shown unless *Clear history* came since it started.
-    private suspend fun define(genre: String) {
+    // [genre]'s definition from Wikipedia, asked and shown unless *Clear history* came since [batch]
+    // began: checked before the lookup, so nothing is kept for it, and again under the lock before it
+    // is shown.
+    private suspend fun define(
+        genre: String,
+        batch: Batch,
+    ) {
         val work = currentCoroutineContext()
+        if (!synchronized(lock) { current(batch, work) }) return
         val state =
             try {
                 when (val found = withContext(io) { definitions.lookup(genre) }) {
@@ -198,7 +267,8 @@ class AppGenreDefinitions(
                 DefinitionState.Failed
             }
         synchronized(lock) {
-            if (epoch.isCurrent(work) && work.isActive) {
+            if (current(batch, work)) {
+                answered += genre
                 states.update { now ->
                     val before = now[genre]
                     // A check that failed leaves a definition found or not found as it was; an answer
@@ -213,9 +283,6 @@ class AppGenreDefinitions(
         }
     }
 
-    // Whether definitions are looked up under [now]: *Show genres* and Wikipedia on.
-    private fun lookingUp(now: Settings?): Boolean = now != null && now.showGenres && now.isEnabled(SourceId.WIKIPEDIA)
-
     /**
      * Forgets the states, their lookups under way cancelled, for *Clear history* (#547); the cache's
      * are deleted with it. After the epoch's advance: a lookup that checked it before shows its state
@@ -223,43 +290,48 @@ class AppGenreDefinitions(
      */
     fun forget() =
         synchronized(lock) {
+            // Every batch begun before ends here: none starts, shows or keeps anything after.
+            clears++
             lookups.values.forEach { it.cancel() }
             lookups.clear()
             states.value = emptyMap()
             playing = null
             ahead.clear()
+            answered.clear()
+            changes.update { it + 1 }
         }
-
-    // [this] with [state] for [genre], last, the oldest dropped past [DEFINITIONS_KEPT].
-    private fun Map<String, DefinitionState>.with(
-        genre: String,
-        state: DefinitionState,
-    ): Map<String, DefinitionState> {
-        val next = LinkedHashMap(this)
-        next.remove(genre)
-        next[genre] = state
-        while (next.size > DEFINITIONS_KEPT) next.remove(next.keys.first())
-        return next
-    }
-
-    private companion object {
-        /** Every genre of the vocabulary, as many as [GenreDefinitions] keeps in memory. */
-        const val DEFINITIONS_KEPT = GenreDefinitions.DEFAULT_CAPACITY
-    }
 }
 
+// A track's play, as the fetch ahead tells plays apart.
+private fun playOf(track: TrackState): Any = track.normalized to track.nowPlaying.duration
+
+// Whether definitions are looked up under [now]: *Show genres* and Wikipedia on.
+private fun lookingUp(now: Settings?): Boolean = now != null && now.showGenres && now.isEnabled(SourceId.WIKIPEDIA)
+
+// [this] with [state] for [genre], last, the oldest dropped past [DEFINITIONS_KEPT].
+private fun Map<String, DefinitionState>.with(
+    genre: String,
+    state: DefinitionState,
+): Map<String, DefinitionState> {
+    val next = LinkedHashMap(this)
+    next.remove(genre)
+    next[genre] = state
+    while (next.size > DEFINITIONS_KEPT) next.remove(next.keys.first())
+    return next
+}
+
+/** Every genre of the vocabulary, as many as [GenreDefinitions] keeps in memory. */
+private const val DEFINITIONS_KEPT = GenreDefinitions.DEFAULT_CAPACITY
+
 /**
- * The genres of [track]'s table whose definition, as looked up ([states], `AppGenreNotes.lookedUp`),
- * Wikipedia does not have (#786), while definitions are looked up under [settings] (*Show genres*
- * and Wikipedia on): those *Search with AI*, the setting, searches by itself (`AutoSearches`).
+ * The genres of [track]'s table with no definition from Wikipedia, settled on its play ([settled],
+ * `AppGenreDefinitions.settledNoDefinition`, #786): those *Search with AI*, the setting, searches by
+ * itself (`AutoSearches`); not one shown as not found while this play checks it again.
  */
 internal fun genresWithNoDefinition(
     track: TrackState,
-    settings: Settings,
-    states: Map<String, DefinitionState>,
-): Set<String> {
-    if (!settings.showGenres || !settings.isEnabled(SourceId.WIKIPEDIA)) return emptySet()
-    return track.genres.all
+    settled: (TrackState, String) -> Boolean,
+): Set<String> =
+    track.genres.all
         .map { it.genre.identity }
-        .filterTo(LinkedHashSet()) { states[it] == DefinitionState.NotFound }
-}
+        .filterTo(LinkedHashSet()) { settled(track, it) }

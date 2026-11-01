@@ -199,7 +199,7 @@ class AppAiSearchesTest {
                     answers,
                     this,
                     clock = clock,
-                    automaticGate = { gateReads++ > 0 },
+                    automaticGate = { _, _, _ -> gateReads++ > 0 },
                     deferred = { again, kind, _ -> searches.ask(again, kind, facts, automatic = true) },
                 )
             searches.ask(track, SearchKind.GENRES, facts, automatic = true)

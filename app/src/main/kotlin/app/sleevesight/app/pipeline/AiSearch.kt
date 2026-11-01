@@ -154,13 +154,15 @@ interface AiSearchFeed {
  * a search stopped, asked by a tap or by itself, is not asked by itself again ([ask]'s `automatic`),
  * the track coming back included, for as long as the process lives; a tap asks it, and lifts the "no".
  * A search asked by itself ([ask]'s `automatic`) checks its gates again once the cache has missed,
- * just before the paid call: [automaticGate] of its kind (the app on screen, the setting on, as the
- * `AutoSearches` that started it last read them: the same reading that starts it, so the two cannot
- * disagree; the panels' own, or the genres' definitions', #786), and its key under the settings as
- * last read (*Show insights* on, the AI service ready, the same model and effort). If one no longer
- * holds, it asks nothing and shows nothing, and is handed back to [deferred] with its kind and genre,
- * once it is no longer under way (so a start at once is not taken for it), to start later as if it
- * had not been tried (off screen, on return). A tap is gated by none of the app's visibility and the setting.
+ * just before the paid call: [automaticGate] of its track, kind and genre (the app on screen, the
+ * setting on, as the `AutoSearches` that started it last read them: the same reading that starts it,
+ * so the two cannot disagree; the panels' own, or the genres' definitions', #786, which also asks
+ * that the genre still has no definition, settled on this play, with *Show genres* and Wikipedia
+ * on), and its key under the settings as last read (*Show insights* on, the AI service ready, the
+ * same model and effort). If one no longer holds, it asks nothing and shows nothing, and is handed
+ * back to [deferred] with its kind and genre, once it is no longer under way (so a start at once is
+ * not taken for it), to start later as if it had not been tried (off screen, on return). A tap is
+ * gated by none of these: not the app's visibility, the setting, nor a genre's definition.
  * Each search is marked with [epoch], and after *Clear history* ([forget]) nothing it finds is shown
  * or kept: a state is shown only under the lock [forget] clears under ([ShownSearches.publish]), so
  * one that passed the check cannot land after the clear. *Clear history* forgets the stops too.
@@ -174,7 +176,7 @@ class AppAiSearches(
     private val epoch: ClearEpoch = ClearEpoch(),
     private val modelName: (String) -> String = { ModelNames.of(it) ?: it },
     private val clock: Clock = Clock.System,
-    private val automaticGate: (SearchKind) -> Boolean = { true },
+    private val automaticGate: (TrackState, SearchKind, String?) -> Boolean = { _, _, _ -> true },
     private val deferred: (TrackState, SearchKind, String?) -> Unit = { _, _, _ -> },
 ) : AiSearchFeed {
     // A search's key, null with no AI service ready; and whether it is offered at all (the pipeline
@@ -331,7 +333,9 @@ class AppAiSearches(
         }
         try {
             val kept = searches.kept(key, kind, track)?.takeIf { !expired(it.writtenAt) }
-            val gated = asked.automatic && !(automaticGate(kind) && keyOf(track, kind, asked.genre)?.second == key)
+            val gated =
+                asked.automatic &&
+                    !(automaticGate(track, kind, asked.genre) && keyOf(track, kind, asked.genre)?.second == key)
             if (kept != null) {
                 show(kept.state, kept.writtenAt ?: clock.now())
             } else if (gated) {

@@ -547,8 +547,13 @@ class AppGraph internal constructor(
             modelName = ListedModelNames(appContext)::of,
             // An automatic search's gates, checked again just before its call, and where it goes back:
             // the panels' own, or a genre's definition's (#786).
-            automaticGate = { kind ->
-                if (kind == SearchKind.DEFINITION) autoDefinitions.open() else autoSearches.open()
+            automaticGate = { track, kind, genre ->
+                if (kind == SearchKind.DEFINITION) {
+                    // Still no definition, settled on this play, Wikipedia and *Show genres* on (#786).
+                    autoDefinitions.open() && genre != null && genreNotes.lookups.settledNoDefinition(track, genre)
+                } else {
+                    autoSearches.open()
+                }
             },
             deferred = { track, kind, genre ->
                 if (kind == SearchKind.DEFINITION) {
@@ -580,13 +585,14 @@ class AppGraph internal constructor(
 
     /**
      * *Search with AI*, the setting, for a genre's definition (#786): each genre of the playing
-     * track's table whose Wikipedia lookup, fetched ahead, ended with none ([genresWithNoDefinition]),
-     * searched by itself, whether its panel is open or not, while the app is on screen
-     * ([AutoSearches]), each attempt by the genre.
+     * track's table whose Wikipedia lookup, fetched ahead, ended with none on this play
+     * ([genresWithNoDefinition]: not one still checked again), searched by itself, whether its panel
+     * is open or not, while the app is on screen ([AutoSearches]), each attempt by the genre; just
+     * before its call, the genre is checked to have none still (`automaticGate` above).
      */
     private val autoDefinitions: AutoSearches<String> by lazy {
         AutoSearches(
-            { track, now -> genresWithNoDefinition(track, now, genreNotes.lookups.lookedUp.value) },
+            { track, _ -> genresWithNoDefinition(track, genreNotes.lookups::settledNoDefinition) },
         ) { track, genre ->
             val label =
                 track.genres.all
@@ -684,7 +690,7 @@ class AppGraph internal constructor(
                 pipeline.state.map { it.track },
                 latestSettings,
                 pipeline.onScreen,
-                combine(pipeline.liveParts, genreNotes.lookups.lookedUp) { parts, states -> parts to states },
+                combine(pipeline.liveParts, genreNotes.lookups.settled) { parts, settled -> parts to settled },
             )
         }
         // The selected model checked at start, and when the service, its model or a key changes (#540).
