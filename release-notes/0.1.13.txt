@@ -1,0 +1,7 @@
+What's new in 0.1.13:
+- Dates, Genres and Lyrics: when the sources find nothing, optional Search with AI asks your AI service.
+- Settings → Insights → Search with AI: enables automatic AI search.
+- Genres: a genre unfolds under the chips, its tags and their sources in one table.
+- A genre with no Wikipedia definition can be searched with AI.
+- Genre definitions are looked up ahead; Retry when Wikipedia can’t be reached.
+- A small spinning record beside every in-progress message.
