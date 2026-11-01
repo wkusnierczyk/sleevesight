@@ -406,6 +406,7 @@ internal val SETTING_LINES: List<Pair<String, (Settings) -> String>> =
         "prepareNextTrack" to { it.prepareNextTrack.name },
         "lookUpInBackground" to { onOff(it.lookUpInBackground) },
         "artistFactsOncePerSession" to { onOff(it.artistFactsOncePerSession) },
+        "searchWithAi" to { onOff(it.searchWithAi) },
         "readAloudMusic" to { it.readAloudMusic.name },
         "readTrackLineFirst" to { onOff(it.readTrackLineFirst) },
         "readNewInsightsAloud" to { onOff(it.readNewInsightsAloud) },

@@ -300,6 +300,13 @@ class PipelineHost(
      */
     val lookupsAllowed: Flow<Boolean> = snapshot.map { it.allowed }.distinctUntilChanged()
 
+    /**
+     * Whether Sleevesight is on screen: an activity started, or one restarting after a configuration
+     * change ([CoordinatorState.visible]), as *Saver* and the background lookups read it. *Search with
+     * AI*'s automatic searches start only then (#773, `AutoSearches`).
+     */
+    val onScreen: Flow<Boolean> = snapshot.map { it.visible }.distinctUntilChanged()
+
     /** An activity started (`MainActivity.onStart`). */
     fun activityStarted() {
         queue.trySend(CoordinatorEvent.ActivityStarted)

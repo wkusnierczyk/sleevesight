@@ -65,6 +65,7 @@ internal fun genresItem(
     retries: Retries,
     openSettingsAt: (SettingsTarget) -> Unit,
     openPage: (() -> Unit)? = null,
+    search: PanelSearch = PanelSearch(),
 ): InPlaceItem? {
     if (settings?.showGenres != true) return null
     return InPlaceItem(
@@ -74,7 +75,7 @@ internal fun genresItem(
         tag = if (openPage != null) GENRES_PAGE_LINK_TAG else GENRES_CHIP_TAG,
         panelTag = GENRES_PANEL_TAG,
         page = openPage,
-    ) { toClose -> GenresContent(track, settings, notes, retries::of, openSettingsAt, toClose) }
+    ) { toClose -> GenresContent(track, settings, notes, retries::of, openSettingsAt, toClose, search = search) }
 }
 
 /**
@@ -88,6 +89,9 @@ internal fun genresItem(
  * on ([openSettingsAt]: *Settings → Sources*, or *Settings → Genres* when the sources are on and
  * their genre switches are not). With [everyGenre] (the genres' page, #772), no chips: every
  * genre of the chips, in their order, in a panel of its own ([GenrePanel], with no *Close*).
+ * With no genre and no source still asked (every genre source off, one not reached, none found),
+ * *Search with AI* under the lines ([search], #773), whose genres show as chips that open their genre
+ * as the others do ([AiGenres]), on the genres' page as well.
  */
 @Suppress("LongParameterList") // What the panel shows, and each of its ways out.
 @Composable
@@ -99,6 +103,7 @@ internal fun GenresContent(
     openSettingsAt: (SettingsTarget) -> Unit = {},
     toClose: () -> Unit = {},
     everyGenre: Boolean = false,
+    search: PanelSearch = PanelSearch(),
 ) {
     val shown = GenresShown.of(track, settings)
     val style = MaterialTheme.typography.bodyLarge
@@ -142,6 +147,7 @@ internal fun GenresContent(
         )
     }
     if (shown.none) Text(stringResource(R.string.home_genres_none), style = style)
+    GenresSearch(track, shown, search, notes)
 }
 
 // [sources] named together: "Last.fm", "Last.fm and MusicBrainz".

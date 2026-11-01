@@ -82,6 +82,8 @@ class MainActivity : ComponentActivity() {
             genreNotes = graph.genreNotes,
             // *Read aloud* beside *Key insights* and under a genre's reason (#325, #725).
             readAloud = graph.readAloud,
+            // *Search with AI* under the empty Dates, Genres and Lyrics (#773).
+            aiSearches = graph.aiSearches,
         )
     }
 

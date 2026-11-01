@@ -10,6 +10,8 @@ import app.sleevesight.core.resolution.NameMatcher
 import app.sleevesight.core.sources.FirstRelease
 import app.sleevesight.core.sources.ReleaseDate
 import app.sleevesight.core.sources.SourceResult
+import app.sleevesight.core.synthesis.ReleaseType
+import app.sleevesight.core.synthesis.SearchAnswer
 
 // The dates the home screen shows (#556, #724): the year after the album, and the *Dates* panel's
 // sentences, or why it has none, worked out from what the pipeline publishes, as plain functions.
@@ -279,6 +281,52 @@ private class AlbumDates(
             }.lastOrNull()
     }
 }
+
+/**
+ * The sentences of what *Search with AI* found for *Dates* ([answer], #773), as [homeDates] says
+ * MusicBrainz's, each part only where the answer gives it: the album's release; the track's first
+ * release, "on this album" when its title is the album's beside [header] ([NameMatcher.albumKey]), it
+ * is not named a single or an EP, and the answer gives the album's date too (else its own date would
+ * be lost: then said with it); and a cover's original.
+ */
+internal fun aiDates(
+    answer: SearchAnswer.Dates,
+    header: NowPlaying,
+): List<DateSentence> {
+    val sentences = mutableListOf<DateSentence>()
+    answer.album?.let { sentences += DateSentence.Album(it) }
+    answer.first?.let { first ->
+        val album = header.album?.takeIf(String::isNotBlank)
+        val title = first.title
+        val here =
+            answer.album != null &&
+                album != null &&
+                title != null &&
+                kindOf(first.type) == null &&
+                ALBUMS.albumKey(title) == ALBUMS.albumKey(album)
+        sentences += if (here) DateSentence.FirstHere else DateSentence.First(first.date, title, kindOf(first.type))
+    }
+    answer.original?.let { original ->
+        val release = original.release
+        sentences += DateSentence.Original(original.date, original.artist, release?.title, kindOf(release?.type))
+    }
+    return sentences
+}
+
+// A release's type as the answer named it, as *Dates* names it: an album, none.
+private fun kindOf(type: ReleaseType?): ReleaseKind? =
+    when (type) {
+        ReleaseType.SINGLE -> ReleaseKind.SINGLE
+        ReleaseType.EP -> ReleaseKind.EP
+        ReleaseType.ALBUM, null -> null
+    }
+
+/**
+ * The recording's first release as MusicBrainz gives it for [track], as *Dates* reads it: from its
+ * result, else the run's resolution; for what *Search with AI* tells the model (#773).
+ */
+internal fun firstReleaseOf(track: TrackState?): FirstRelease? =
+    keptMusicBrainz(track)?.firstRelease ?: track?.resolution?.firstRelease
 
 // MusicBrainz's result for [track], as the run gave it or the retrieval cache kept it.
 private fun keptMusicBrainz(track: TrackState?): SourceResult? =

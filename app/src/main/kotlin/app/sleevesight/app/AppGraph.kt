@@ -22,8 +22,10 @@ import app.sleevesight.app.diagnostics.Diagnostics
 import app.sleevesight.app.diagnostics.DiagnosticsLog
 import app.sleevesight.app.history.HistoryRecorder
 import app.sleevesight.app.history.HistoryRetention
+import app.sleevesight.app.pipeline.AppAiSearches
 import app.sleevesight.app.pipeline.AppGenreNotes
 import app.sleevesight.app.pipeline.AppPipelineParts
+import app.sleevesight.app.pipeline.AutoSearches
 import app.sleevesight.app.pipeline.ModelCheck
 import app.sleevesight.app.pipeline.PipelineHost
 import app.sleevesight.app.pipeline.UnavailableModel
@@ -52,6 +54,7 @@ import app.sleevesight.app.session.onlyWhen
 import app.sleevesight.app.settings.LastFont
 import app.sleevesight.app.settings.LastIntro
 import app.sleevesight.app.settings.LastTheme
+import app.sleevesight.app.settings.ListedModelNames
 import app.sleevesight.app.settings.PrunePlayersMigration
 import app.sleevesight.app.settings.SeenPlayersRecorder
 import app.sleevesight.app.settings.SettingsStore
@@ -62,20 +65,26 @@ import app.sleevesight.app.speech.SystemSpeech
 import app.sleevesight.app.speech.screenReaderOn
 import app.sleevesight.app.ui.home.GuideHiding
 import app.sleevesight.app.ui.home.SpokenWords
+import app.sleevesight.app.ui.home.emptyPanels
+import app.sleevesight.app.ui.home.searchFacts
 import app.sleevesight.core.ai.AiProvider
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.normalizer.Normalizer
+import app.sleevesight.core.pipeline.AiSearches
 import app.sleevesight.core.pipeline.ClearEpoch
 import app.sleevesight.core.pipeline.ListeningSessionFacts
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmResourceReader
 import app.sleevesight.core.resolution.MusicBrainzLookup
+import app.sleevesight.core.resolution.NameMatcher
 import app.sleevesight.core.settings.Crossfade
 import app.sleevesight.core.settings.FontChoice
 import app.sleevesight.core.settings.LinkStyle
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.ThemeChoice
 import app.sleevesight.core.settings.WriteAutomatically
+import app.sleevesight.core.synthesis.AiSearchAnswers
+import app.sleevesight.core.synthesis.SearchKind
 import app.sleevesight.store.ArtistKeeping
 import app.sleevesight.store.Caches
 import app.sleevesight.store.SessionHistory
@@ -520,6 +529,44 @@ class AppGraph internal constructor(
         )
 
     /**
+     * *Search with AI* under an empty *Dates*, *Genres* or *Lyrics* on Home (#773): asked with the
+     * live pipeline's AI service and kept in its synthesis cache, as a genre's reason is, in the
+     * pipeline's scope, marked with [clearEpoch]; its answers checked against the app's genre list and
+     * the lyrics whitelist; the model named as the AI settings name it ([ListedModelNames]).
+     */
+    val aiSearches: AppAiSearches by lazy {
+        AppAiSearches(
+            parts = pipeline.liveParts,
+            settings = latestSettings,
+            answers = AiSearchAnswers(wiring.genreVocabulary, JvmAccentFolder),
+            scope = pipelineScope,
+            epoch = clearEpoch,
+            modelName = ListedModelNames(appContext)::of,
+            // An automatic search's gates, checked again just before its call, and where it goes back.
+            automaticGate = autoSearches::open,
+            deferred = autoSearches::release,
+        )
+    }
+
+    /**
+     * *Search with AI*, the setting (#773): a panel's search started as soon as its source has
+     * nothing, open or not, while the app is on screen ([AutoSearches]), each attempt by its panel's
+     * subject (for *Dates* with the album, `AiSearches.subject`).
+     */
+    private val autoSearches: AutoSearches<SearchKind> by lazy {
+        val albums = NameMatcher(JvmAccentFolder)
+        AutoSearches(
+            ::emptyPanels,
+            {
+                track,
+                kind,
+                ->
+                Triple(track.normalized, track.nowPlaying.duration, AiSearches.subject(track, kind, albums))
+            },
+        ) { track, kind -> aiSearches.ask(track, kind, searchFacts(track, track.nowPlaying), automatic = true) }
+    }
+
+    /**
      * *Reactive*'s mode chosen, in the insight card's menu or in the settings (#615, #625): saved in
      * [settingsSaves], and told to the pipeline before the save and once it has ended, so the mode
      * the pipeline writes by is the latest choice, then the narrower of the choice and what the
@@ -590,6 +637,12 @@ class AppGraph internal constructor(
             skipLearning.restore()
         }
         pipeline.start(pipelineScope)
+        // *Search with AI*, the setting (#773): a panel's search starts as soon as its source has
+        // nothing, open or not, for the playing track, while the app is on screen; again once an AI
+        // service is ready.
+        pipelineScope.launch {
+            autoSearches.run(pipeline.state.map { it.track }, latestSettings, pipeline.onScreen, pipeline.liveParts)
+        }
         // The selected model checked at start, and when the service, its model or a key changes (#540).
         pipelineScope.launch {
             modelCheck.run(latestSettings.filterNotNull(), secrets.changes, pipeline.lookupsAllowed)
@@ -638,7 +691,8 @@ class AppGraph internal constructor(
      * until another one plays. Then every cache (the sources' findings, the artist resolutions and
      * results, the insights and cards written, the genres' reasons and definitions among them), in
      * one transaction and in turn with what is written about artists ([ArtistKeeping.clearWith]);
-     * MusicBrainz's answers held in memory; the genres' reasons shown ([AppGenreNotes.forget]); the
+     * MusicBrainz's answers held in memory; the genres' reasons and the AI searches shown
+     * ([AppGenreNotes.forget], [AppAiSearches.forget]); the
      * artist facts the listening session cited; the session layer's last change, which names the
      * track before; and the diagnostics' steps, which name the tracks. The API keys and the settings stay.
      * Returns whether the caches were cleared; the rest cannot fail.
@@ -652,6 +706,7 @@ class AppGraph internal constructor(
         if (!cleared) Log.w(TAG, "The caches could not be cleared")
         wiring.forgetRemembered()
         genreNotes.forget()
+        aiSearches.forget()
         sessionFacts.forget()
         sessions.forgetLastChange()
         diagnostics.log.clear()

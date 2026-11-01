@@ -76,6 +76,8 @@ Web search, once Exa's key is saved and you switch it on, adds what it found to 
 
 **Why is this …?**, in a genre's panel ([usage]({{ '/docs/tutorials/usage/#genre-labels' | relative_url }})), asks your AI service why the track has that genre, from the same evidence as the insight: one call, of about the insight's cost, made only when you tap it, and kept with the track, so opening the genre again costs nothing.
 
+**Search with AI**, under an empty *Dates*, *Genres* or *Lyrics* panel ([usage]({{ '/docs/tutorials/usage/#search-with-ai' | relative_url }})), asks your AI service for what the sources did not give: one short call, made only when you tap it, or by itself for each such panel with the *Search with AI* setting on. The answer is kept with the track, so it shows again at no cost.
+
 **Read aloud** costs nothing: the phone's own text-to-speech engine reads what is already written, with no call to your AI service.
 
 Tracks played before cost less: a track looked up again within the day costs no search, and a track played again with the same evidence and the same AI settings shows the insight written then, with no call, as long as it is within *Keep history for* (90 days by default; [*What costs nothing*]({{ '/docs/tutorials/usage/#what-costs-nothing' | relative_url }})).

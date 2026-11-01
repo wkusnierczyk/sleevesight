@@ -64,6 +64,8 @@ internal fun NowPlayingPageContent(
                         state.settings,
                         genreNotes(shown, actions),
                         GenresWays(retries::of, actions.openSettingsAt) { handoff.moveTo(back) },
+                        // *Search with AI* under no genre (#773), as in the panel on Home.
+                        PanelSearch(actions.aiSearches, shown.track, shown.track?.nowPlaying ?: playing),
                     )
                 }
             }

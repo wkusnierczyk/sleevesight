@@ -69,6 +69,12 @@ import kotlin.time.Duration.Companion.seconds
  *   aloud as soon as it is written, while Sleevesight is on screen (D6), and never while a screen
  *   reader is on (spoken feedback, or touch exploration: TalkBack), which reads the screen itself.
  *   Off by default: speaking unasked over the music is a surprise, and *Read aloud* is one tap.
+ * @property searchWithAi *Search with AI*, the setting (#773): on, a panel on Home whose source has
+ *   nothing asks the AI service as soon as every source has answered, as a tap on its *Search with
+ *   AI* would, whether the panel is open or not (*Dates*, *Genres* and *Lyrics*, #773; a genre with
+ *   no definition from Wikipedia, #786): once per panel and track, not for a panel hidden in
+ *   *Appearance*, never again for a search answered or kept. Off by default, since each search is a
+ *   paid call.
  * @property cacheLifetimes the retrieval cache lifetime per source (D9). A source with none (the
  *   pseudo-sources, which retrieve nothing) is not cached.
  * @property keepArtistResults *Keep what sources said about each artist* (#420): whether what the
@@ -182,6 +188,7 @@ data class Settings(
     val readAloudMusic: ReadAloudMusic = ReadAloudMusic.LOWER,
     val readTrackLineFirst: Boolean = false,
     val readNewInsightsAloud: Boolean = false,
+    val searchWithAi: Boolean = false,
     val cacheLifetimes: Map<SourceId, Duration> = DEFAULT_CACHE_LIFETIMES,
     val keepArtistResults: Boolean = false,
     val artistCacheLifetime: Duration = DEFAULT_ARTIST_CACHE_LIFETIME,

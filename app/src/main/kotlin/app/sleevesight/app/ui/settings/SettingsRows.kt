@@ -225,7 +225,10 @@ private fun MarkedRow(
     }
 }
 
-/** A row's [summary], in [color], with [link] set in it where it has the link's text. */
+/**
+ * A row's [summary], in [color], with [link] set in it where it has the link's text; without one, a
+ * paragraph for each part a blank line starts ([Paragraphs]: *Search with AI*'s, #773).
+ */
 @Composable
 private fun Summary(
     summary: String,
@@ -233,7 +236,7 @@ private fun Summary(
     color: Color,
 ) {
     if (link == null) {
-        Text(summary, style = MaterialTheme.typography.bodySmall, color = color)
+        Paragraphs(summary, color = color)
     } else {
         LinkedText(sentenceWith(summary, link), style = MaterialTheme.typography.bodySmall, color = color)
     }

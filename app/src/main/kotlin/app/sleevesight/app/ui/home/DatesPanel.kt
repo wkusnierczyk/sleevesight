@@ -13,6 +13,8 @@ import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.app.ui.theme.linkedParts
 import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.synthesis.SearchAnswer
+import app.sleevesight.core.synthesis.SearchKind
 
 // The *Dates* panel under the album (#724): each date known about the album, the track and the song,
 // said in full.
@@ -22,7 +24,8 @@ import app.sleevesight.core.model.SourceId
  * and its panel, which says each of [sentences] as a sentence of its own; with none, why
  * ([NoDates], [none]): with MusicBrainz off, a link to *Settings → Sources* ([openSources]), and
  * when it could not be reached, *Retry* ([retry], [RetryLine]), which hands the focus to the panel's
- * *Close* as it goes.
+ * *Close* as it goes. Under why, but while MusicBrainz is still asked, *Search with AI* ([search],
+ * #773), which says what it found as the panel says MusicBrainz's dates ([aiDates]).
  */
 @Composable
 internal fun datesItem(
@@ -30,6 +33,7 @@ internal fun datesItem(
     none: NoDates,
     retry: (() -> Unit)?,
     openSources: () -> Unit,
+    search: PanelSearch = PanelSearch(),
 ): InPlaceItem =
     InPlaceItem(
         id = InPlace.DATES,
@@ -38,7 +42,17 @@ internal fun datesItem(
         tag = DATES_CHIP_TAG,
         panelTag = DATES_PANEL_TAG,
     ) { toClose ->
-        if (sentences.isEmpty()) NoDatesText(none, retry, openSources, toClose) else DatesPanel(sentences)
+        if (sentences.isEmpty()) {
+            NoDatesText(none, retry, openSources, toClose)
+            if (none != NoDates.LOOKING) {
+                AiSearchBlock(search, SearchKind.DATES) { answer, _ ->
+                    val header = search.header ?: search.track?.nowPlaying
+                    if (answer is SearchAnswer.Dates && header != null) DatesPanel(aiDates(answer, header))
+                }
+            }
+        } else {
+            DatesPanel(sentences)
+        }
     }
 
 /** The panel's content: each of [sentences] on its own, a release's title in italics. */

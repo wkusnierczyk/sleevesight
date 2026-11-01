@@ -23,6 +23,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
+import app.sleevesight.app.pipeline.GenreNotes
 import app.sleevesight.app.pipeline.GenreReason
 import app.sleevesight.app.speech.Reading
 import app.sleevesight.app.ui.logo.Busy
@@ -71,16 +72,7 @@ internal fun GenreAbout(
             ?.genre
             ?.label ?: return
     val question = stringResource(R.string.genre_why, inSentence(label))
-    // Its own state per genre: another genre's definition never shows while this one's is looked up.
-    key(genre, notes) {
-        val definition by remember { notes.definition(genre) }.collectAsState(null)
-        when (val found = definition) {
-            is Lookup.Found -> Definition(found.value)
-            // Said only once the lookup answered: not while it runs, after it failed, or with it off.
-            Lookup.NotFound -> NoDefinition()
-            is Lookup.Failed, null -> Unit
-        }
-    }
+    GenreDefinitionNote(genre, notes)
     when (val shown = reason) {
         GenreReason.None -> Unit
         GenreReason.Offered -> WhyButton(question) { notes.explain(track, genre) }
@@ -100,6 +92,29 @@ internal fun GenreAbout(
                 onCite,
                 readAloud,
             ) { notes.explain(track, genre) }
+        }
+    }
+}
+
+/**
+ * What the genre [genre] is, as [notes] give it (#523): its definition from Wikipedia, with its
+ * credit; that it has none, once the lookup has answered (#663); nothing while it is looked up,
+ * after a failed lookup, or with Wikipedia off. At the top of a genre's panel ([GenreAbout]), and
+ * alone in the box of a genre *Search with AI* named (#773), which no source's tags give.
+ */
+@Composable
+internal fun GenreDefinitionNote(
+    genre: String,
+    notes: GenreNotes,
+) {
+    // Its own state per genre: another genre's definition never shows while this one's is looked up.
+    key(genre, notes) {
+        val definition by remember { notes.definition(genre) }.collectAsState(null)
+        when (val found = definition) {
+            is Lookup.Found -> Definition(found.value)
+            // Said only once the lookup answered: not while it runs, after it failed, or with it off.
+            Lookup.NotFound -> NoDefinition()
+            is Lookup.Failed, null -> Unit
         }
     }
 }

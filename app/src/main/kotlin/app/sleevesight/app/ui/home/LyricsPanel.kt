@@ -29,6 +29,8 @@ import app.sleevesight.core.lyrics.lyricsLinks
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.platform.JvmAccentFolder
+import app.sleevesight.core.synthesis.SearchAnswer
+import app.sleevesight.core.synthesis.SearchKind
 
 // The *Lyrics* panel under the album (#728): links to the song's lyrics on the sites MusicBrainz
 // links to, or a search on Genius; Sleevesight never fetches or shows lyrics.
@@ -39,13 +41,14 @@ import app.sleevesight.core.platform.JvmAccentFolder
  * one per site, or why there is none, then the Genius search, or that it is off. MusicBrainz off
  * links to *Settings → Sources* ([openSources]), the search off to *Settings → Appearance*
  * ([openAppearance]); MusicBrainz not reached shows *Retry* ([retry], [RetryLine]), which hands the
- * focus to the panel's *Close* as it goes.
+ * focus to the panel's *Close* as it goes. With no page, *Search with AI* under the rest ([search], #773).
  */
 @Composable
 internal fun lyricsItem(
     links: LyricsLinks,
     retry: (() -> Unit)?,
     openSources: () -> Unit,
+    search: PanelSearch = PanelSearch(),
     openAppearance: () -> Unit,
 ): InPlaceItem =
     InPlaceItem(
@@ -54,7 +57,7 @@ internal fun lyricsItem(
         action = stringResource(R.string.home_lyrics_show),
         tag = LYRICS_CHIP_TAG,
         panelTag = LYRICS_PANEL_TAG,
-    ) { toClose -> LyricsPanel(links, retry, openSources, openAppearance, toClose) }
+    ) { toClose -> LyricsPanel(links, retry, openSources, openAppearance, toClose, search) }
 
 /**
  * What the *Lyrics* panel holds for [track] ([lyricsLinks], #728), MusicBrainz's state read from it;
@@ -69,8 +72,11 @@ internal fun homeLyrics(
  * The panel's content ([lyricsItem]): with pages, each ([PageLink]); else why there is none
  * ([NoLinkText]), then the search, or, while it is off, a line saying so with a link to where it is
  * switched on; a track MusicBrainz lists as instrumental has neither. Under any link, that it opens
- * in the browser.
+ * in the browser. With no page (not while MusicBrainz is asked, nor for an instrumental), *Search
+ * with AI* last, after the search or the line saying it is off ([search], #773), whose pages show as
+ * MusicBrainz's do ([AiLyrics]).
  */
+@Suppress("LongParameterList") // What the panel shows, and each of its ways out.
 @Composable
 internal fun LyricsPanel(
     links: LyricsLinks,
@@ -78,6 +84,7 @@ internal fun LyricsPanel(
     openSources: () -> Unit,
     openAppearance: () -> Unit,
     afterRetry: () -> Unit = {},
+    search: PanelSearch = PanelSearch(),
 ) {
     val style = MaterialTheme.typography.bodyLarge
     when (links) {
@@ -89,15 +96,27 @@ internal fun LyricsPanel(
         }
         is LyricsLinks.NoLink -> {
             NoLinkText(links.reason, retry, openSources, afterRetry)
-            val search = links.search
-            if (search == null) {
+            val genius = links.search
+            if (genius == null) {
                 SearchOff(openAppearance)
             } else {
-                PageLink(search, search = true)
+                PageLink(genius, search = true)
                 Browser()
+            }
+            AiSearchBlock(search, SearchKind.LYRICS) { answer, _ ->
+                if (answer is SearchAnswer.Lyrics) AiLyrics(answer.links)
             }
         }
     }
+}
+
+/**
+ * The lyrics pages *Search with AI* found (#773), as MusicBrainz's show ([PageLink]), "Lyrics on
+ * {site}", each with "Opens in your browser." under it in place of where it goes.
+ */
+@Composable
+private fun AiLyrics(links: List<LyricsLink>) {
+    for (link in links) PageLink(link, search = false, note = stringResource(R.string.home_lyrics_browser))
 }
 
 /**
@@ -130,17 +149,17 @@ private fun NoLinkText(
 
 /**
  * [link] as a link of its own ([LinkLabel]), with the mark of a page that opens outside the app,
- * and under it where it goes: the song's page, or, for a [search], a search that may find another
- * song of the same name.
+ * and under it where it goes ([note]): the song's page, or, for a [search], a search that may find
+ * another song of the same name.
  */
 @Composable
 private fun PageLink(
     link: LyricsLink,
     search: Boolean,
+    note: String = stringResource(if (search) R.string.home_lyrics_search_note else R.string.home_lyrics_page_note),
 ) {
     val site = link.site.siteName
     val text = stringResource(if (search) R.string.home_lyrics_search else R.string.home_lyrics_page, site)
-    val note = stringResource(if (search) R.string.home_lyrics_search_note else R.string.home_lyrics_page_note)
     Column(Modifier.testTag(if (search) LYRICS_SEARCH_TAG else lyricsPageTag(link.site.name))) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             LinkLabel(
