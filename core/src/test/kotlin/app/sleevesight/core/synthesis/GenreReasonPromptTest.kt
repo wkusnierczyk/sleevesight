@@ -52,7 +52,7 @@ class GenreReasonPromptTest {
         val text = prompt()
         assertTrue("never about the evidence or the sources" in text)
         assertFalse("say so plainly in your first sentence" in text)
-        assertEquals(2, GenreReasonPrompt.VERSION)
+        assertEquals(3, GenreReasonPrompt.VERSION)
     }
 
     @Test

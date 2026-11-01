@@ -32,11 +32,11 @@ class InsightPromptTest {
     // Stored prompts: a change to the wording shows up here as a reviewed diff.
 
     @Test
-    fun `the stored prompts are version 7's`() {
+    fun `the stored prompts are version 8's`() {
         // A change to the template changes the stored prompts and raises the version with them (the
         // synthesis cache keys cards by it): update both together. Version 7 (#722) added the rule
-        // on the track's length.
-        assertEquals(7, InsightPrompt.VERSION)
+        // on the track's length, version 8 (#800) the rule on a genre from a web page.
+        assertEquals(8, InsightPrompt.VERSION)
     }
 
     @Test
@@ -148,6 +148,8 @@ class InsightPromptTest {
             assertTrue(knowledge in contract, knowledge)
             // The player shows the length, so the insight leaves it out (#722).
             assertTrue(InsightPrompt.LENGTH_RULE in contract, "the length rule")
+            // A genre only a web page names is that page's, not the track's tag (#800).
+            assertTrue(InsightPrompt.WEB_GENRE_RULE in contract, "the web genre rule")
         }
     }
 

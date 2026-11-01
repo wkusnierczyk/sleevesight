@@ -33,8 +33,10 @@ object GenreReasonPrompt {
      * `InsightPrompt.VERSION` was not: a reason kept with `[M]` reads as one written now ([citationId]).
      * Nor when web search's lines became `S1`, `S2` (#769, they were `G1`, `G2`): a reason kept citing
      * `[G1]` reads as one citing `[S1]` ([citationId]).
+     * Version 3 (#800): the insight's rules gained [InsightPrompt.WEB_GENRE_RULE], a genre named only
+     * by a web page kept to that page.
      */
-    const val VERSION: Int = 2
+    const val VERSION: Int = 3
 
     /** The built-in style: shorter than the insight's, since it answers one question. */
     const val BUILT_IN_STYLE: String =

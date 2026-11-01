@@ -71,8 +71,10 @@ object InsightPrompt {
      * rules' example `[W2][S1]` with them: a card kept citing `[G1]` reads and shows as one written
      * now ([citationId]), and is still found, since the evidence fingerprint spells web search's ids
      * as before (`SourceId.LEGACY_WEB_TAG`).
+     * Version 8 (#800): a rule keeps a genre named only by a web page to that page ([WEB_GENRE_RULE]).
+     * Raised so that cards kept stating such a genre as the track's tag are written afresh.
      */
-    const val VERSION: Int = 7
+    const val VERSION: Int = 8
 
     /**
      * The prompt for [nowPlaying], normalized as [normalized], written from [evidence]. With
@@ -148,6 +150,7 @@ object InsightPrompt {
                 "track is a version of it, but never credit the original's facts to this artist.",
             "- An \"artist\" line is about the performer, not this recording.",
             "- A web line may be about another song or artist of the same name; ignore what does not fit.",
+            WEB_GENRE_RULE,
             GAP_RULE,
             if (allowModel) {
                 "- You may add at most one sentence of your own general knowledge if it adds real value, " +
@@ -165,6 +168,18 @@ object InsightPrompt {
      */
     const val LENGTH_RULE: String =
         "- Never mention the track's length or running time: the player already shows it."
+
+    /**
+     * The rule on a genre from a web page (#800): a web line's genre is what that page (a store
+     * listing, a review) files the track under, not a tag of the track's; the Genres panel takes its
+     * labels from the label sources, never from web pages, so an insight stating it as the track's tag
+     * disagreed with the panel. A web line is told apart by its source, `Web search`, in the evidence
+     * line ([evidenceLine]). A label source's genres (Last.fm's tags; MusicBrainz's never reach a
+     * prompt, D12) are cited as before.
+     */
+    const val WEB_GENRE_RULE: String =
+        "- A genre named only in a web line belongs to that page: attribute it (\"a store listing files it " +
+            "under blues\"), never state it as the track's tag or genre."
 
     /**
      * The rule on a gap: a short insight rather than a stated gap (version 3, #193). The style's
