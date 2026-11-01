@@ -649,6 +649,28 @@ class AutoSearchesTest {
         }
 
     @Test
+    fun `a genre shown as not found is not searched when the next play's check fails (#786)`() =
+        runTest {
+            val punk = Punk()
+            val clock = MovedClock()
+            val (notes, _, auto) = definitionsWired(punk, CardCache(), clock)
+            notes.lookups.fetchAhead(punkTrack)
+            advanceUntilIdle()
+            // Past Wikipedia's lifetime, the next play's check fails: not found stays shown, but this
+            // play has not reached Wikipedia, so it is not settled.
+            clock.at += 1.days
+            punk.answer = Lookup.Failed("offline")
+            val next = punkTrack.next()
+            notes.lookups.fetchAhead(next)
+            advanceUntilIdle()
+            assertEquals(2, punk.asked)
+            assertEquals(DefinitionState.NotFound, notes.lookups.lookedUp.value["punk"])
+            auto.follow(next, settings.value)
+            advanceUntilIdle()
+            assertEquals(0, provider.requests)
+        }
+
+    @Test
     fun `an automatic search makes no call once the genre is found, or Wikipedia off, during the cache read (#786)`() =
         runTest {
             val closes =

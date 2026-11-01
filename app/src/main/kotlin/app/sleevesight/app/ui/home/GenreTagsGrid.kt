@@ -44,11 +44,12 @@ import app.sleevesight.core.pipeline.TrackState
  * [track]'s genre tags and where they come from (#786), in one grid of two columns, so its first
  * column lines up across both parts: "Genre tags", a heading, then a row per level with tags, in
  * [GenreLevel] order, its name on the left, right-aligned (*Track*, *Artist*, *Album*; with several
- * credited artists *Artist 1*, *Artist 2*, … rather than their names), its tags as chips on the
- * right, [genre] marked wherever it shows ([Cell]); then "Tag sources", a heading, and the same rows,
- * each with the sources that gave any of its tags, each named and linked to the row's page there
- * ([sourceParts]), an artist's name on its own line above them with several artists; then, in the
- * right column, once, when MusicBrainz gave any tag, its credit and its licence, linked (D12).
+ * credited artists *Artist 1*, *Artist 2*, … by their place in the credit, rather than their names),
+ * its tags as chips on the right, [genre] marked wherever it shows ([Cell]); then "Tag sources", a
+ * heading, and the same rows, each with the sources that gave any of its tags, each named and linked
+ * to the row's page there ([sourceParts]), an artist's name on its own line above them with several
+ * artists; then, in the right column, once, when MusicBrainz gave any tag, its credit and its
+ * licence, linked (D12).
  *
  * The first column is as wide as its widest name, measured in the names' style at the current font
  * size, so it holds at large font sizes. Each row is one item to a screen reader. A row of tags has
@@ -63,8 +64,9 @@ internal fun TagsGrid(
     genre: String,
 ) {
     val rows = track.genres.rows
-    val several = track.normalized.artists.size > 1
-    val names = rowNames(rows, several)
+    val credit = track.normalized.artists
+    val several = credit.size > 1
+    val names = rowNames(rows, several, credit)
     val nameStyle = MaterialTheme.typography.bodySmall
     val column = columnWidth(names, nameStyle)
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
@@ -131,20 +133,23 @@ internal fun tagsReading(
     ).joinToString(", ")
 
 // Each row's name: *Track*, *Album*, *Artist*, or with [several] credited artists *Artist 1*, *Artist
-// 2*, … in the rows' order.
+// 2*, … by the artist's place in [credit], as the rows name it, whether or not the artists before it
+// have tags; one the credit does not name takes the next number past it.
 @Composable
 private fun rowNames(
     rows: List<GenreRow>,
     several: Boolean,
+    credit: List<String>,
 ): List<String> {
-    var artists = 0
+    var past = credit.size
     return rows.map { row ->
         when (row.level) {
             GenreLevel.TRACK -> stringResource(R.string.home_genres_track)
             GenreLevel.ALBUM -> stringResource(R.string.home_genres_album)
             GenreLevel.ARTIST ->
                 if (several) {
-                    stringResource(R.string.home_genre_artist_n, ++artists)
+                    val place = credit.indexOf(row.artist) + 1
+                    stringResource(R.string.home_genre_artist_n, if (place > 0) place else ++past)
                 } else {
                     stringResource(R.string.home_genres_artist_row)
                 }

@@ -41,6 +41,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -544,19 +545,23 @@ class AppGenreNotesTest {
     fun `a Clear history between the choice of the genres and their lookups ends the batch (#786)`() =
         runTest {
             val epoch = ClearEpoch()
-            val notes = notes(epoch)
-            notes.lookups.afterChoice = {
-                runBlocking { epoch.advance() }
-                notes.forget()
-            }
-            notes.lookups.fetchAhead(playing("rock", "punk"))
+            var clearing = true
+            lateinit var lookups: AppGenreDefinitions
+            lookups =
+                AppGenreDefinitions(definitions, settings, this, epoch) {
+                    if (clearing) {
+                        runBlocking { epoch.advance() }
+                        lookups.forget()
+                    }
+                }
+            lookups.fetchAhead(playing("rock", "punk"))
             advanceUntilIdle()
             // Nothing asked, so nothing kept; nothing shown.
             assertEquals(emptyList<String>(), articles.asked)
-            assertEquals(emptyMap<String, DefinitionState>(), notes.lookups.lookedUp.value)
+            assertEquals(emptyMap<String, DefinitionState>(), lookups.lookedUp.value)
             // The track's next fetch ahead asks, once.
-            notes.lookups.afterChoice = {}
-            notes.lookups.fetchAhead(playing("rock", "punk"))
+            clearing = false
+            lookups.fetchAhead(playing("rock", "punk"))
             advanceUntilIdle()
             assertEquals(ids("rock", "punk"), articles.asked)
         }
@@ -647,6 +652,27 @@ class AppGenreNotesTest {
                     .found()
                     ?.url,
             )
+        }
+
+    @Test
+    fun `a check that fails leaves not found shown, but does not settle on this play that there is none (#786)`() =
+        runTest {
+            val notes = expiring(1.days)
+            articles.answers[ids("rock").single()] = mutableListOf(Lookup.NotFound, Lookup.Failed("offline"))
+            val track = playing("rock")
+            notes.lookups.fetchAhead(track)
+            advanceUntilIdle()
+            assertTrue(notes.lookups.settledNoDefinition(track, "rock"))
+            // Past Wikipedia's lifetime, the next play's check fails: still shown as not found, but
+            // Wikipedia was not reached on this play, so nothing is searched by itself.
+            clock.at += 1.days
+            val next = track.next(1)
+            notes.lookups.fetchAhead(next)
+            advanceUntilIdle()
+            assertEquals(2, articles.asked.size)
+            assertEquals(DefinitionState.NotFound, notes.lookups.lookedUp.value["rock"])
+            assertFalse(notes.lookups.settledNoDefinition(next, "rock"))
+            assertEquals(emptySet<String>(), genresWithNoDefinition(next, notes.lookups::settledNoDefinition))
         }
 
     @Test

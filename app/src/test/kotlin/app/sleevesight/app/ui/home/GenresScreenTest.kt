@@ -53,9 +53,9 @@ import org.robolectric.annotation.GraphicsMode
  * The genres under *Expandable boxes* (#439, #558, #786): the chips alone; a chip unfolds its genre
  * under them and a rule, with no heading or *Close*, another replaces it, the same chip folds it; its
  * tags and their sources in one grid of two columns, its rows named *Track*, *Artist* (*Artist 1*,
- * *Artist 2* with several artists) and *Album* (with album tags), each one item to a screen reader,
- * the genre marked wherever it shows, each source linked, MusicBrainz's credit and licence only with
- * its tags; none, and off.
+ * *Artist 2* with several artists, by their place in the credit) and *Album* (with album tags), each
+ * one item to a screen reader, the genre marked wherever it shows, each source linked, MusicBrainz's
+ * credit and licence only with its tags; none, and off.
  * Inside *Genres*' panel (#772), as [GenresContent] draws it; the button, the panel and why it has no
  * chip are `GenresButtonScreenTest`'s.
  */
@@ -448,6 +448,18 @@ class GenresScreenTest {
                     ).fetchSemanticsNodes()[1]
                     .boundsInRoot
             assertTrue(name.bottom <= beatlesSources.top)
+        }
+    }
+
+    @Test
+    fun anArtistsRowIsNumberedByItsPlaceInTheCreditNotAmongTheRowsWithTags() {
+        // The first credited artist has no tags: the second's row is still *Artist 2*.
+        val two = track(HomeFixtures.sundown.copy(artists = "The Beatles, Billy Preston"))
+        val preston = row(GenreLevel.ARTIST, "soul", artist = "Billy Preston")
+        show(TrackGenres(listOf(track, preston)), playing = two) {
+            tap(GENRE_PREFIX + "track:baroquepop")
+            assertEquals(listOf("Track, Baroque Pop, Ballad", "Artist 2, Soul"), rows())
+            assertEquals(listOf("Track, Last.fm", "Artist 2, Billy Preston, Last.fm"), sources())
         }
     }
 
