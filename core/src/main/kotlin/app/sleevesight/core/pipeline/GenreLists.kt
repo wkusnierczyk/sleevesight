@@ -19,9 +19,14 @@ import app.sleevesight.core.synthesis.GenreListPrompt
 import app.sleevesight.core.synthesis.SearchFacts
 import app.sleevesight.core.synthesis.SearchKind
 import app.sleevesight.core.synthesis.WebPrompt
+import app.sleevesight.core.synthesis.sameAddress
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Clock
@@ -39,6 +44,7 @@ sealed interface GenreListState {
     data class Listed(
         val genres: List<GenreLabel>,
         val model: String,
+        val sources: List<String> = emptyList(),
     ) : GenreListState
 
     /** The call failed, for [reason] (a `ReplyFailures` label, or [GenreLists.MALFORMED]); not kept. */
@@ -114,7 +120,8 @@ class GenreLists(
     /** The list kept for [key], read and checked again; null when none is kept. */
     suspend fun kept(key: CardKey): KeptList? {
         val card = attempt { cache.keptCard(key) } ?: return null
-        return read(card.text, key)?.let { KeptList(it, card.writtenAt) }
+        val web = KeptListText.of(card.text)
+        return read(web?.reply ?: card.text, key, web?.pages)?.let { KeptList(it, card.writtenAt) }
     }
 
     /**
@@ -147,19 +154,23 @@ class GenreLists(
         val reply = asked.text
         val end = asked.end
         val done = (end as? CompletionEvent.Done)?.takeIf { it.stopReason == StopReason.END }
+        val pages = asked.pages?.map(WebPage::url)
         val listed =
             when {
                 asked.searchFailed -> null
                 // From the web, no page found: no call, and no genre.
-                end == null && asked.pages != null -> GenreListState.Listed(emptyList(), key.model)
-                else -> done?.let { read(reply, key) }
+                end == null && pages != null -> GenreListState.Listed(emptyList(), key.model)
+                else -> done?.let { read(reply, key, pages) }
             }
         val state =
             listed
                 ?: GenreListState.Failed(if (asked.searchFailed) AiSearches.WEB_SEARCH_FAILED else failure(end, reply))
         return withContext(NonCancellable) {
             val at = now()
-            if (listed != null) attempt { cache.keep(key, reply.ifEmpty { "{}" }, at) }
+            if (listed != null) {
+                val text = reply.ifEmpty { "{}" }
+                attempt { cache.keep(key, if (pages == null) text else KeptListText(text, pages).text(), at) }
+            }
             show(state, at)
             state
         }
@@ -186,17 +197,33 @@ class GenreLists(
         }
 
     // The list in [reply], checked, by [key]'s model; null when it is not the JSON object asked for.
+    // From the web ([pages], the addresses found), its genres only with a page among them, as *Ask
+    // AI*'s are (`sameAddress`), and none without (#801).
     private fun read(
         reply: String,
         key: CardKey,
+        pages: List<String>? = null,
     ): GenreListState.Listed? {
         val answer = AiSearchAnswers.objectIn(reply) ?: return null
-        val names =
-            (answer["genres"] as? JsonArray).orEmpty().mapNotNull { element ->
-                (element as? JsonPrimitive)?.takeIf { it.isString }?.content
+        val names = strings(answer["genres"])
+        val sources =
+            pages?.let { found ->
+                strings(answer["sources"])
+                    .mapNotNull { s ->
+                        found.firstOrNull { sameAddress(it, s) }
+                    }.distinct()
             }
-        return GenreListState.Listed(vocabulary.labelsFor(names, level = GenreLevel.TRACK), key.model)
+        val genres =
+            vocabulary.labelsFor(names, level = GenreLevel.TRACK).takeIf {
+                sources == null ||
+                    sources.isNotEmpty()
+            }
+        return GenreListState.Listed(genres.orEmpty(), key.model, sources.orEmpty())
     }
+
+    // The strings of [element], an array; none when it is not one.
+    private fun strings(element: JsonElement?): List<String> =
+        (element as? JsonArray).orEmpty().mapNotNull { (it as? JsonPrimitive)?.takeIf { p -> p.isString }?.content }
 
     // The clock's time, in whole milliseconds, as the cache keeps it.
     private fun now(): Instant = Instant.fromEpochMilliseconds(clock.now().toEpochMilliseconds())
@@ -250,6 +277,43 @@ class GenreLists(
                 else ->
                     ReplyFailures.ofBlank(end, reply)
                         ?: if (end.stopReason == StopReason.END) MALFORMED else ReplyFailures.INCOMPLETE
+            }
+    }
+}
+
+/**
+ * What a list from the web keeps in the synthesis cache (#801): its [reply], and the addresses of
+ * the [pages] its searches found, which check its sources again as it is read. Marked [MARK]; a
+ * text without it is a list from the model's knowledge, as kept before.
+ */
+@Serializable
+internal class KeptListText(
+    val reply: String,
+    val pages: List<String>,
+    @SerialName(MARK) val mark: Int = 1,
+) {
+    fun text(): String = JSON.encodeToString(serializer(), this)
+
+    companion object {
+        const val MARK: String = "sleevesight_list"
+
+        private val JSON =
+            Json {
+                ignoreUnknownKeys = true
+                encodeDefaults = true
+            }
+
+        /** The kept list in [text], or null when it is not marked. */
+        fun of(text: String): KeptListText? =
+            if (!text.contains("\"$MARK\"")) {
+                null
+            } else {
+                @Suppress("SwallowedException") // Not one: read as a reply.
+                try {
+                    JSON.decodeFromString(serializer(), text)
+                } catch (e: IllegalArgumentException) {
+                    null
+                }
             }
     }
 }

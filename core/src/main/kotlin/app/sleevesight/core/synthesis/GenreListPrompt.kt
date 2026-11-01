@@ -106,11 +106,34 @@ object GenreListPrompt {
             )
             appendLine()
             appendLine("Reply with one JSON object only, in this shape, with no other text and no code fence:")
-            appendLine(AiSearchPrompt.shape(SearchKind.GENRES))
+            appendLine(
+                if (mode ==
+                    GenreListMode.WEB
+                ) {
+                    WebPrompt.shape(SearchKind.GENRES)
+                } else {
+                    AiSearchPrompt.shape(SearchKind.GENRES)
+                },
+            )
             appendLine()
             appendLine("RULES:")
             append(RULES.joinToString("\n"))
+            if (mode == GenreListMode.WEB) {
+                append("\n")
+                append(WEB_RULES.joinToString("\n"))
+            }
         }
+
+    /**
+     * The rules of a reply from the web (#801): its genres only from the pages, each named by a
+     * page among them, never from the model's own knowledge.
+     */
+    val WEB_RULES: List<String> =
+        listOf(
+            "- Name only genres the pages give for this track or its artist, not from your own knowledge.",
+            "- sources: the addresses of the pages that give these genres, exactly as given. " +
+                "With no such page, reply {}.",
+        )
 
     /** The rules of the reply. */
     val RULES: List<String> =

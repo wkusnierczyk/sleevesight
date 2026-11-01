@@ -84,11 +84,18 @@ enum class Unavailability {
 data class AiGenreList(
     val genres: List<GenreLabel>,
     val model: String,
+    val sources: List<String> = emptyList(),
 )
 
 /** [this] with [list]'s genres in its track's row (`TrackGenres.withAi`); itself for none. */
 fun TrackState.withAi(list: AiGenreList?): TrackState =
-    if (list == null || list.genres.isEmpty()) this else copy(genres = genres.withAi(list.genres, list.model))
+    if (list == null ||
+        list.genres.isEmpty()
+    ) {
+        this
+    } else {
+        copy(genres = genres.withAi(list.genres, list.model, list.sources))
+    }
 
 /**
  * What a genre's panel shows besides its table (#523): what the genre is ([DefinitionFeed.definition],
@@ -234,7 +241,14 @@ class AppGenreNotes private constructor(
             .combine(
                 combine(lists, settings) { known, now -> known to now?.historyLifetime },
             ) { key, (known, lifetime) ->
-                key?.let { listed(it, known, lifetime) }?.let { AiGenreList(it.genres, modelName(it.model)) }
+                key
+                    ?.let {
+                        listed(
+                            it,
+                            known,
+                            lifetime,
+                        )
+                    }?.let { AiGenreList(it.genres, modelName(it.model), it.sources) }
             }.distinctUntilChanged()
 
     override fun reason(

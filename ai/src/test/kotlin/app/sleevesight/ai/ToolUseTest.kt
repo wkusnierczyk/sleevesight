@@ -257,6 +257,22 @@ class ToolUseTest {
         }
 
     @Test
+    fun aRefusedIncludeIsSentAgainWithoutItWhateverTheEffort() =
+        runTest {
+            // No effort asked for, so the effort's retry would not run: `include` has its own.
+            val refused =
+                """{"error":{"type":"invalid_request_error","code":"unsupported_parameter",""" +
+                    """"param":"include"}}"""
+            var calls = 0
+            val net = ReplayNetClient { if (calls++ == 0) ok(refused, status = 400) else ok(openAiTurn) }
+            val events = OpenAiProvider(net, RetryPolicy()).stream(request, Secret("k")).toList()
+            assertEquals(2, net.requests.size)
+            assertTrue("include" in Json.parseToJsonElement(net.requests[0].body!!.text).jsonObject)
+            assertTrue("include" !in body(net))
+            assertIs<CompletionEvent.Done>(events.last())
+        }
+
+    @Test
     fun aRequestWithNoToolsIsSentAsBefore() =
         runTest {
             val net = ReplayNetClient { ok(openAiTurn) }

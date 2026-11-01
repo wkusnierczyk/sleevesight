@@ -103,7 +103,8 @@ class GenreWebTest {
     @Test
     fun `path B's genres call from the web names no genre and gets no MusicBrainz page`() =
         runTest {
-            val provider = FakeProvider { FakeProvider.done("""{"genres": ["folk", "blues"]}""") }
+            val provider =
+                FakeProvider { FakeProvider.done("""{"genres": ["folk", "blues"], "sources": ["${page.url}"]}""") }
             val lists = GenreLists(AiAccess(provider, Secret("k")), cache, JvmHasher, vocabulary, web = web)
             val key = checkNotNull(lists.key(track, settings))
             assertEquals(GenreListMode.WEB.key, key.subject)
@@ -121,6 +122,64 @@ class GenreWebTest {
             )
             assertEquals(listOf(QuestionCost.SEARCH, QuestionCost.CALL), counted)
             assertEquals(listed, lists.kept(key)?.state)
+        }
+
+    @Test
+    fun `path B's web genres need a page found, and keep it`() =
+        runTest {
+            val made =
+                FakeProvider { FakeProvider.done("""{"genres": ["folk"], "sources": ["https://made.up/page"]}""") }
+            val lists = GenreLists(AiAccess(made, Secret("k")), cache, JvmHasher, vocabulary, web = web)
+            val key = checkNotNull(lists.key(track, settings))
+            val none = lists.ask(key, track, AiSearches.Asking(AiWebSearch.ONCE)) { _, _ -> }
+            assertEquals(emptyList(), assertIs<GenreListState.Listed>(none).genres)
+            val found = FakeProvider { FakeProvider.done("""{"genres": ["folk"], "sources": ["${page.url}/"]}""") }
+            val again = GenreLists(AiAccess(found, Secret("k")), MemoryCache(), JvmHasher, vocabulary, web = web)
+            val listed =
+                assertIs<GenreListState.Listed>(again.ask(key, track, AiSearches.Asking(AiWebSearch.ONCE)) { _, _ -> })
+            assertEquals(listOf(page.url), listed.sources)
+            assertEquals(listed, again.kept(key)?.state)
+        }
+
+    @Test
+    fun `a reason from the evidence alone, then with web search on, goes straight to the search`() =
+        runTest {
+            val provider =
+                FakeProvider { request ->
+                    FakeProvider.done(
+                        if ("[S2]" in
+                            request.prompt
+                        ) {
+                            "It is filed under folk for its ballads [S2]."
+                        } else {
+                            GroundingCheck.NO_EVIDENCE
+                        },
+                    )
+                }
+            val reasons = GenreReasons(AiAccess(provider, Secret("k")), cache, JvmHasher, web = web)
+            val off = checkNotNull(reasons.key(track, "folk", settings.copy(aiWebSearch = AiWebSearch.OFF)))
+            assertEquals(InsightState.NoEvidence, reasons.write(key = off, track = track, label = "Folk") { _, _ -> })
+            // On: a key of its own, so the kept "no" is not shown as its answer.
+            val on = checkNotNull(reasons.key(track, "folk", settings))
+            assertEquals(off.subject + GenreReasons.WEB, on.subject)
+            assertNull(reasons.kept(on, track))
+            val state = reasons.write(on, track, "Folk", AiSearches.Asking(AiWebSearch.ONCE)) { _, _ -> }
+            assertIs<InsightState.Written>(state)
+            // The evidence alone was not asked again: one call before, one with the page.
+            assertEquals(2, provider.requests.size)
+            assertEquals(1, queries.size)
+        }
+
+    @Test
+    fun `a failed search asked again repays no call from the evidence`() =
+        runTest {
+            outcome = WebSearchOutcome.Failed
+            val provider = FakeProvider { FakeProvider.done(GroundingCheck.NO_EVIDENCE) }
+            val reasons = GenreReasons(AiAccess(provider, Secret("k")), cache, JvmHasher, web = web)
+            val key = checkNotNull(reasons.key(track, "folk", settings))
+            repeat(2) { reasons.write(key, track, "Folk", AiSearches.Asking(AiWebSearch.ONCE)) { _, _ -> } }
+            assertEquals(1, provider.requests.size)
+            assertEquals(2, queries.size)
         }
 
     @Test
@@ -189,7 +248,7 @@ class GenreWebTest {
         }
 
     @Test
-    fun `path A with a search that fails keeps nothing`() =
+    fun `path A with a search that fails keeps no reason`() =
         runTest {
             outcome = WebSearchOutcome.Failed
             val provider = FakeProvider { FakeProvider.done(GroundingCheck.NO_EVIDENCE) }
@@ -197,7 +256,9 @@ class GenreWebTest {
             val key = checkNotNull(reasons.key(track, "folk", settings))
             val state = reasons.write(key, track, "Folk", AiSearches.Asking(AiWebSearch.ONCE)) { _, _ -> }
             assertEquals(InsightState.Failed(AiSearches.WEB_SEARCH_FAILED), state)
-            assertTrue(cache.cards.isEmpty())
+            // Nothing under the reason's key; the evidence alone's "no" under the key without the web part.
+            assertNull(cache.cards[key])
+            assertEquals(setOf(key.copy(subject = "folk")), cache.cards.keys)
         }
 
     @Test

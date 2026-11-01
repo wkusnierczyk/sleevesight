@@ -38,6 +38,7 @@ data class TrackGenres(
     val rows: List<GenreRow> = emptyList(),
     val aiListed: List<GenreLabel> = emptyList(),
     val aiModel: String? = null,
+    val aiSources: List<String> = emptyList(),
 ) {
     /** Whether no row has a label. */
     val isEmpty: Boolean get() = rows.isEmpty()
@@ -109,11 +110,13 @@ data class TrackGenres(
      * a prompt; one no row has joins the track's row, after its labels, with no source's credit
      * ([TrackLabel.aiAdded]), as many as leave the row at most [GenreVocabulary.MAX_LABELS], a
      * track row made for them where there was none. The list is kept
-     * ([aiListed]), for the chips ([folded]). Applied twice, the same.
+     * ([aiListed]), for the chips ([folded]), with the pages it came from when it is from the web
+     * ([sources], #801: shown "From {site}" under the chips). Applied twice, the same.
      */
     fun withAi(
         genres: List<GenreLabel>,
         model: String,
+        sources: List<String> = emptyList(),
     ): TrackGenres {
         if (genres.isEmpty()) return this
         val listed = genres.map { it.identity }.toSet()
@@ -138,6 +141,7 @@ data class TrackGenres(
             },
             aiListed = genres,
             aiModel = model,
+            aiSources = sources,
         )
     }
 

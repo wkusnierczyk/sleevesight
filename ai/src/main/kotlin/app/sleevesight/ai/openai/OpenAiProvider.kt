@@ -53,8 +53,8 @@ import kotlin.time.Instant
  * ends in [CompletionEvent.ToolUse] (`ResponseStream`), and, for a model that reasons
  * ([takesEffort]), its reasoning comes encrypted (`include`), since nothing is stored; a model that
  * does not reason gets no `include`, which it would refuse, and a 400 naming `include` is sent once
- * more without it, as one naming the effort is. A reasoning item with no encrypted content is not
- * sent back. The next request's `input` is then a list: the prompt as
+ * more without it, whatever the effort (tracked apart from it), as one naming the effort is. A
+ * reasoning item with no encrypted content is not sent back. The next request's `input` is then a list: the prompt as
  * the user's message, and for each exchange the output items as they came and a
  * `function_call_output` for each call; with [CompletionRequest.toolsAllowed] false, `tool_choice`
  * `none`, so the model answers now.
@@ -128,9 +128,8 @@ class OpenAiProvider(
         key: Secret,
     ): Flow<CompletionEvent> =
         channelFlow {
-            // Whether the model takes an effort, until it refuses one; the token limit follows it.
-            var takesIt = takesEffort(request.model)
-            var effort = request.effort?.takeIf { takesIt }
+            // What is asked for, until the service refuses it: the effort, the encrypted reasoning.
+            val asked = Asked(takesEffort(request.model), request.effort)
             var waited = false
             do {
                 val reader = ResponseStream(clock)
@@ -141,7 +140,13 @@ class OpenAiProvider(
                 val result =
                     try {
                         net.stream(
-                            responsesRequest(request, effort, maxTokensSent(request, takesIt), takesIt, key),
+                            responsesRequest(
+                                request,
+                                asked.effort,
+                                maxTokensSent(request, asked.takesIt),
+                                asked.includes,
+                                key,
+                            ),
                         ) { line ->
                             events.line(line)?.let { event -> reader.read(event.data).forEach { send(it) } }
                             if (reader.malformed) throw StopStream()
@@ -158,9 +163,7 @@ class OpenAiProvider(
                             false
                         }
 
-                        effort != null && rejectsEffort(refused) -> {
-                            effort = null
-                            takesIt = false
+                        asked.without(refused, request.tools.isNotEmpty()) -> {
                             true
                         }
 
@@ -221,6 +224,45 @@ class OpenAiProvider(
 
     /** Thrown from the line handler to end a stream whose events cannot be read. */
     private class StopStream : RuntimeException()
+
+    /**
+     * What a request asks for until the service refuses it: whether the model takes an effort
+     * ([takesIt], which the token limit follows), the [effort], and the encrypted reasoning
+     * ([includes], #801, a reasoning model's with tools).
+     */
+    private class Asked(
+        var takesIt: Boolean,
+        effort: ReasoningEffort?,
+    ) {
+        var effort: ReasoningEffort? = effort?.takeIf { takesIt }
+        var includes: Boolean = takesIt
+
+        /**
+         * Whether [refused] is sent again without what it names: the `include` (when [tools] made
+         * one), whatever the effort; else the effort, and the `include` with it.
+         */
+        fun without(
+            refused: NetResponse,
+            tools: Boolean,
+        ): Boolean =
+            when {
+                includes && tools && rejectsInclude(refused) -> {
+                    includes = false
+                    true
+                }
+
+                effort != null && rejectsEffort(refused) -> {
+                    effort = null
+                    takesIt = false
+                    includes = false
+                    true
+                }
+
+                else -> {
+                    false
+                }
+            }
+    }
 
     // [tool] as `tools` lists it: a function, with its name, description and parameters' schema.
     private fun JsonArrayBuilder.addTool(tool: ToolSpec) =
@@ -465,7 +507,11 @@ internal fun rejectsEffort(response: NetResponse): Boolean =
     response.status == BAD_REQUEST &&
         decode<WireErrorBody>(response.body)?.error?.param in EFFORT_PARAMS
 
-private val EFFORT_PARAMS = setOf("reasoning.effort", "reasoning", "include")
+private val EFFORT_PARAMS = setOf("reasoning.effort", "reasoning")
+
+/** Whether [response] refuses the request for its `include` (#801): a 400 naming it, whatever the effort. */
+internal fun rejectsInclude(response: NetResponse): Boolean =
+    response.status == BAD_REQUEST && decode<WireErrorBody>(response.body)?.error?.param?.startsWith("include") == true
 
 // Whether this output item is reasoning with no encrypted content, which a request with nothing
 // stored cannot refer to (#801).

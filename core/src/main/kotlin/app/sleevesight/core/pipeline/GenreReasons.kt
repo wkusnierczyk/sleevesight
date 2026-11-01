@@ -109,7 +109,16 @@ class GenreReasons(
             model = model,
             modelKnowledge = settings.isEnabled(SourceId.MODEL),
             effort = settings.effort(access.provider.id),
-            subject = genre,
+            // With *AI web search* used (#801), a key of its own: a reason kept from the evidence
+            // alone is not taken for one that may search; the keys from before stay as they were.
+            subject =
+                if (WebQuestions(access, web).used(settings.aiWebSearchUsed) ==
+                    AiWebSearch.OFF
+                ) {
+                    genre
+                } else {
+                    genre + WEB
+                },
         )
     }
 
@@ -205,7 +214,15 @@ class GenreReasons(
                 artistsKnown = track.normalized.artists.isNotEmpty(),
             )
         val searches = search != AiWebSearch.OFF
-        val first = if (narrate) firstCall(access, key, track, label, evidence, searches, counted, show) else null
+        // The evidence alone, under the key with no web part: once it could not support the genre,
+        // a tap that searches goes straight to the search, and a failed search repays no call.
+        val alone = key.copy(subject = key.subject?.removeSuffix(WEB))
+        val known = searches && alone != key && kept(alone, track)?.state == InsightState.NoEvidence
+        val first =
+            if (narrate && !known) firstCall(access, key, track, label, evidence, searches, counted, show) else null
+        if (searches && alone != key && first?.state == InsightState.NoEvidence) {
+            attempt { cache.keep(alone, GroundingCheck.NO_EVIDENCE, now()) }
+        }
         return when {
             first != null && (first.state != InsightState.NoEvidence || !searches) -> first.state
             search == AiWebSearch.OFF -> InsightState.NoEvidence.also { show(it, now()) }
@@ -383,6 +400,9 @@ class GenreReasons(
         }
 
     companion object {
+        /** What a reason's key that may search the web (#801) has after the genre, in its subject. */
+        const val WEB: String = "\nweb"
+
         /** Why a reason failed when the model declined. */
         const val DECLINED: String = ReplyFailures.DECLINED
 
