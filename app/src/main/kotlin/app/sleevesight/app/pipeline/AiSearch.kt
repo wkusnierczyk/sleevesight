@@ -1,6 +1,7 @@
 package app.sleevesight.app.pipeline
 
 import app.sleevesight.core.ai.ModelNames
+import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.pipeline.AiSearches
 import app.sleevesight.core.pipeline.CardKey
 import app.sleevesight.core.pipeline.ClearEpoch
@@ -78,15 +79,17 @@ interface AiSearchFeed {
     ): Flow<AiSearch>
 
     /**
-     * A tap on *Search with AI* or *Retry*, or the search starting by itself (*Search with AI*, the
-     * setting, [AutoSearches]): [track]'s search of [kind] asks about [facts], unless it is under way,
-     * answered or kept. Returns whether the search is now asked, under way, answered or kept: false
+     * A tap on *Search with AI* or *Retry*, or, [automatic], the search starting by itself (*Search
+     * with AI*, the setting, [AutoSearches]): [track]'s search of [kind] asks about [facts], unless it
+     * is under way, answered or kept, or, [automatic], once stopped (*Stop* is the user's "no" to it).
+     * Returns whether that is settled: the search asked, under way, answered, kept or declined; false
      * with no AI service ready, or with *Show insights* off.
      */
     fun ask(
         track: TrackState,
         kind: SearchKind,
         facts: SearchFacts,
+        automatic: Boolean = false,
     ): Boolean
 
     /** A tap on *Stop*: [track]'s search of [kind] is cancelled, and nothing from it shown or kept. */
@@ -106,6 +109,7 @@ interface AiSearchFeed {
             track: TrackState,
             kind: SearchKind,
             facts: SearchFacts,
+            automatic: Boolean,
         ) = false
 
         override fun stop(
@@ -132,8 +136,13 @@ interface AiSearchFeed {
  *
  * The call runs in [scope], the process's, so leaving the panel or the page does not stop a call
  * paid for; *Stop* ([stop]) does, and nothing from it is shown or kept: a stop that comes once the
- * answer has settled leaves it. Each search is marked with [epoch], and after *Clear history*
- * ([forget]) nothing it finds is shown or kept.
+ * answer has settled leaves it. A stop is the user's "no" to that panel of that track: remembered in
+ * memory (the track, its length and the key's subject, so whatever AI service; the last few hundred),
+ * a search stopped, asked by a tap or by itself, is not asked by itself again ([ask]'s `automatic`),
+ * the track coming back included, for as long as the process lives; a tap asks it, and lifts the "no".
+ * Each search is marked with [epoch], and after *Clear history* ([forget]) nothing it finds is shown
+ * or kept: a state is shown only under the lock [forget] clears under ([ShownSearches.publish]), so
+ * one that passed the check cannot land after the clear. *Clear history* forgets the stops too.
  */
 @Suppress("LongParameterList") // Where searches are made and checked, where they run, the names, and the time.
 class AppAiSearches(
@@ -152,8 +161,8 @@ class AppAiSearches(
         val known: Boolean,
     )
 
-    // The searches shown, by key, oldest first, at most [KEPT].
-    private val shown = MutableStateFlow<Map<CardKey, Entry>>(emptyMap())
+    /** The searches shown (internal for the tests of *Clear history*'s race). */
+    internal val shown = ShownSearches()
 
     // The keys whose kept search was looked for, and those asked, with their calls.
     private val looked: MutableSet<CardKey> = ConcurrentHashMap.newKeySet()
@@ -164,6 +173,14 @@ class AppAiSearches(
     private val lock = Any()
     private val settled = mutableSetOf<CardKey>()
     private val stopped = mutableSetOf<CardKey>()
+
+    // The searches stopped, by what they are about whatever the AI service, the last [STOPS_KEPT],
+    // under [lock]: none is asked by itself again.
+    private val declined =
+        object : LinkedHashMap<Declined, Unit>(STOPS_KEPT, LOAD, true) {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Declined, Unit>?): Boolean =
+                size > STOPS_KEPT
+        }
 
     // The searches as made now, and [track]'s search of [kind]'s key under the settings as last
     // read; null with no AI service ready, or before the pipeline and the settings are in.
@@ -193,7 +210,7 @@ class AppAiSearches(
             .distinctUntilChanged()
             .onEach { offer -> offer.key?.let { look(it, kind, track) } }
             .combine(
-                combine(shown, settings) { entries, now -> entries to now?.historyLifetime },
+                combine(shown.entries, settings) { entries, now -> entries to now?.historyLifetime },
             ) { offer, (entries, lifetime) ->
                 val key = offer.key
                 val entry = key?.let { entries[it] }
@@ -211,10 +228,16 @@ class AppAiSearches(
         track: TrackState,
         kind: SearchKind,
         facts: SearchFacts,
+        automatic: Boolean,
     ): Boolean {
-        // Not ready: false. Shown already, unless it failed or has expired, or under way: nothing to ask.
+        // Not ready: false. Declined (by itself), shown already, unless it failed or has expired, or
+        // under way: nothing to ask. A tap lifts a "no".
         val (searches, key) = keyOf(track, kind) ?: return false
-        if (open(key) && !asking.containsKey(key)) {
+        val declines =
+            synchronized(lock) {
+                if (automatic) Declined.of(key) in declined else declined.remove(Declined.of(key)).let { false }
+            }
+        if (!declines && open(key) && !asking.containsKey(key)) {
             val job = scope.launch(epoch.mark(), start = CoroutineStart.LAZY) { run(searches, key, kind, track, facts) }
             if (asking.putIfAbsent(key, job) == null) {
                 synchronized(lock) {
@@ -234,16 +257,20 @@ class AppAiSearches(
     ) {
         val key = keyOf(track, kind)?.second ?: return
         val job = asking[key] ?: return
-        // Once settled, the answer stands: it is shown and kept alike.
-        if (synchronized(lock) { key !in settled && stopped.add(key) }) {
+        // Once settled, the answer stands: it is shown and kept alike. Else the user's "no" to it.
+        val stops =
+            synchronized(lock) {
+                (key !in settled && stopped.add(key)).also { if (it) declined[Declined.of(key)] = Unit }
+            }
+        if (stops) {
             job.cancel()
-            shown.update { if (it[key]?.state == SearchState.Searching) it - key else it }
+            shown.removeSearching(key)
         }
     }
 
     // Whether [key]'s search may be asked: not shown, shown as failed, or past *Keep history for*.
     private fun open(key: CardKey): Boolean {
-        val entry = shown.value[key]
+        val entry = shown.entries.value[key]
         return entry == null || entry.state is SearchState.Failed || expired(entry.writtenAt)
     }
 
@@ -259,8 +286,7 @@ class AppAiSearches(
     ) {
         val work = currentCoroutineContext()
         val show: (SearchState, Instant) -> Unit = { state, at ->
-            val stops = synchronized(lock) { key in stopped }
-            if (epoch.isCurrent(work) && !stops) shown.update { it.with(key, Entry(state, at)) }
+            shown.publish(key, Entry(state, at)) { epoch.isCurrent(work) && synchronized(lock) { key !in stopped } }
         }
         try {
             val kept = searches.kept(key, kind, track)?.takeIf { !expired(it.writtenAt) }
@@ -285,13 +311,15 @@ class AppAiSearches(
     }
 
     /**
-     * Forgets the searches shown and stops those under way, for *Clear history* (#547); the cache's
-     * are deleted with it.
+     * Forgets the searches shown and the stops, and stops those under way, for *Clear history* (#547);
+     * the cache's are deleted with it. After the epoch's advance: a search that checked it before
+     * shows its state before this clears it, never after ([ShownSearches.publish]).
      */
     fun forget() {
         asking.values.forEach { it.cancel() }
-        shown.value = emptyMap()
+        shown.clear()
         looked.clear()
+        synchronized(lock) { declined.clear() }
     }
 
     // The search kept in the synthesis cache for [key], read once, unless one is shown already.
@@ -300,14 +328,15 @@ class AppAiSearches(
         kind: SearchKind,
         track: TrackState,
     ) {
-        if (key in shown.value || !looked.add(key)) return
+        if (key in shown.entries.value || !looked.add(key)) return
         val searches = parts.value?.searches(answers, clock) ?: return
         scope.launch(epoch.mark()) {
             val work = coroutineContext
             val kept = searches.kept(key, kind, track)?.takeIf { !expired(it.writtenAt) }
-            if (kept != null && epoch.isCurrent(work)) {
-                val entry = Entry(kept.state, kept.writtenAt ?: clock.now())
-                shown.update { if (key in it) it else it.with(key, entry) }
+            if (kept != null) {
+                shown.publish(key, Entry(kept.state, kept.writtenAt ?: clock.now()), replace = false) {
+                    epoch.isCurrent(work)
+                }
             }
         }
     }
@@ -320,13 +349,73 @@ class AppAiSearches(
 
     // Drops [key]'s search, past *Keep history for*, so the cache is read again (and misses).
     private fun drop(key: CardKey) {
-        shown.update { it - key }
+        shown.remove(key)
         looked.remove(key)
+    }
+
+    // What a stop is remembered by: the track, its length and the key's subject (the kind, and for
+    // *Dates* the album), whatever the AI service, model or effort.
+    private data class Declined(
+        val track: NormalizedTrack,
+        val duration: Duration?,
+        val subject: String?,
+    ) {
+        companion object {
+            fun of(key: CardKey) = Declined(key.track, key.duration, key.subject)
+        }
     }
 
     private companion object {
         const val FAILED = "failed"
+
+        /** The stops remembered: those of the panels of the last tracks played, a few hundred. */
+        const val STOPS_KEPT = 256
+
+        const val LOAD = .75f
     }
+}
+
+/**
+ * The searches shown by [AppAiSearches] ([entries]), by key, oldest first, at most [KEPT], each with
+ * when it was written. A state is shown ([publish]) only under the lock [clear] holds, after its own
+ * check that it may be (no *Clear history* since its search started, not stopped): so *Clear
+ * history*'s clear, which comes after the epoch's advance, either comes after a state shown, and
+ * clears it, or before its check, which then fails. [beforePublish] runs between the check and the
+ * showing, for the tests of that race.
+ */
+internal class ShownSearches {
+    private val lock = Any()
+    private val shown = MutableStateFlow<Map<CardKey, Entry>>(emptyMap())
+
+    /** The searches shown, as they change. */
+    val entries: StateFlow<Map<CardKey, Entry>> = shown
+
+    /** For tests: runs between a state's check and its showing. */
+    @Volatile
+    var beforePublish: () -> Unit = {}
+
+    /** Shows [entry] for [key] if [current] holds, checked under the lock; with [replace] false, not over one shown. */
+    fun publish(
+        key: CardKey,
+        entry: Entry,
+        replace: Boolean = true,
+        current: () -> Boolean,
+    ) = synchronized(lock) {
+        if (current()) {
+            beforePublish()
+            shown.update { if (!replace && key in it) it else it.with(key, entry) }
+        }
+    }
+
+    /** Drops [key]'s search. */
+    fun remove(key: CardKey) = synchronized(lock) { shown.update { it - key } }
+
+    /** Drops [key]'s search while it is under way: stopped, it offers the button again. */
+    fun removeSearching(key: CardKey) =
+        synchronized(lock) { shown.update { if (it[key]?.state == SearchState.Searching) it - key else it } }
+
+    /** Drops every search shown (*Clear history*). */
+    fun clear() = synchronized(lock) { shown.value = emptyMap() }
 }
 
 // The searches these parts make, their answers read by [answers], their times by [clock].
@@ -335,8 +424,8 @@ private fun PipelineParts.searches(
     clock: Clock,
 ): AiSearches = AiSearches(ai, cache, hasher, answers, clock)
 
-// A search shown, and when it was written.
-private class Entry(
+/** A search shown, and when it was written. */
+internal class Entry(
     val state: SearchState,
     val writtenAt: Instant,
 )

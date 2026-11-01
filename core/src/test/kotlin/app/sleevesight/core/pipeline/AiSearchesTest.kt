@@ -57,7 +57,7 @@ class AiSearchesTest {
         val key = checkNotNull(searches.key(track, SearchKind.DATES, settings))
         assertEquals(CardKind.SEARCH, key.kind)
         assertEquals(track.normalized, key.track)
-        assertEquals("dates", key.subject)
+        assertEquals("dates\ngrace", key.subject)
         assertEquals(ProviderId.ANTHROPIC, key.provider)
         assertEquals(settings.model(ProviderId.ANTHROPIC), key.model)
         assertEquals(AiSearchPrompt.VERSION, key.promptVersion)
@@ -80,6 +80,22 @@ class AiSearchesTest {
             key,
             searches.key(track, SearchKind.DATES, settings.withEffort(ProviderId.ANTHROPIC, ReasoningEffort.HIGH)),
         )
+    }
+
+    @Test
+    fun oneRecordingFromTwoAlbumsHasTwoDatesKeysAndOneForTheOtherKinds() {
+        val compilation = track.copy(nowPlaying = playing.copy(album = "The Best of Jeff Buckley"))
+        val volume = track.copy(nowPlaying = playing.copy(album = "Grace, Vol. 2"))
+        val same = track.copy(nowPlaying = playing.copy(album = "Grace, Volume 2"))
+        val dates = { t: TrackState -> searches.key(t, SearchKind.DATES, settings) }
+        assertNotEquals(dates(track), dates(compilation))
+        // Album names read as the panels compare them.
+        assertEquals(dates(volume), dates(same))
+        assertEquals(
+            searches.key(track, SearchKind.LYRICS, settings),
+            searches.key(compilation, SearchKind.LYRICS, settings),
+        )
+        assertEquals("dates\n", searches.subject(track.copy(nowPlaying = playing.copy(album = null)), SearchKind.DATES))
     }
 
     @Test

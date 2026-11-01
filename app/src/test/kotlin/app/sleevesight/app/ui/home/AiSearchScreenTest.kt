@@ -126,6 +126,7 @@ class AiSearchScreenTest {
                 track: TrackState,
                 kind: SearchKind,
                 facts: SearchFacts,
+                automatic: Boolean,
             ): Boolean {
                 asked += kind to facts
                 return true

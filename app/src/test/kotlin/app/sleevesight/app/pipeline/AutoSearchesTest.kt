@@ -39,10 +39,12 @@ import kotlin.time.Duration.Companion.seconds
 
 /**
  * *Search with AI*, the setting (#773): with it on, a panel's search starts as soon as its source has
- * nothing, with no panel open (no screen at all here), once per panel and track: not while a source
- * is still looking, not for a panel hidden in *Appearance* or an instrumental's lyrics, not after
- * *Stop* until the track plays again, not without an AI service (and once one is ready), never again
- * for a search answered; and nothing with the setting off, as by default.
+ * nothing, with no panel open (no screen at all here), while the app is on screen: once per panel and
+ * play of the track; not while a source is still looking, not for a panel hidden in *Appearance* or
+ * an instrumental's lyrics, never again once stopped (by a tap or by itself, before the sources
+ * answered too, the track coming back included) until *Clear history*, again for a failure only
+ * when the track plays again, not without an AI service (and once one is ready), never again for a
+ * search answered, not in the background (and on return); nothing with the setting off, as by default.
  */
 class AutoSearchesTest {
     private val provider = CountingProvider().apply { reply = { "{}" } }
@@ -66,7 +68,7 @@ class AutoSearchesTest {
 
     private fun auto(searches: AppAiSearches) =
         AutoSearches<SearchKind>(::emptyPanels) { track, kind ->
-            searches.ask(track, kind, searchFacts(track, track.nowPlaying))
+            searches.ask(track, kind, searchFacts(track, track.nowPlaying), automatic = true)
         }
 
     // Sundown, every source done: MusicBrainz with [musicBrainz], Last.fm with nothing; no date, genre or lyrics page.
@@ -156,7 +158,7 @@ class AutoSearchesTest {
         }
 
     @Test
-    fun `after Stop it does not start again until the track plays again`() =
+    fun `a search stopped is not started by itself again, the track coming back included`() =
         runTest {
             settings.value = settings.value?.copy(showGenres = false, lyricsLinks = false)
             provider.streaming = 10.seconds
@@ -167,15 +169,93 @@ class AutoSearchesTest {
             searches.stop(empty(), SearchKind.DATES)
             advanceUntilIdle()
             auto.follow(empty(), settings.value)
+            // Another track, then this one again: still the user's "no".
+            provider.streaming = 0.seconds
+            auto.follow(empty(playing = HomeFixtures.carefree), settings.value)
+            advanceUntilIdle()
+            auto.follow(empty(), settings.value)
+            advanceUntilIdle()
+            assertEquals(listOf(SearchKind.DATES, SearchKind.DATES), asked())
+            assertEquals(2, provider.requests)
+            assertEquals(1, provider.completed)
+            // A tap asks it, and lifts the "no".
+            searches.ask(empty(), SearchKind.DATES, searchFacts(empty(), HomeFixtures.sundown))
+            advanceUntilIdle()
+            assertEquals(3, provider.requests)
+        }
+
+    @Test
+    fun `a search stopped by hand before the sources answered does not start by itself when they do`() =
+        runTest {
+            settings.value = settings.value?.copy(showGenres = false, lyricsLinks = false)
+            provider.streaming = 10.seconds
+            val searches = searches()
+            val auto = auto(searches)
+            val looking = empty(SourceState.Pending)
+            auto.follow(looking, settings.value)
+            searches.ask(looking, SearchKind.DATES, searchFacts(looking, HomeFixtures.sundown))
+            advanceTimeBy(1.seconds)
+            searches.stop(looking, SearchKind.DATES)
+            advanceUntilIdle()
+            auto.follow(empty(), settings.value)
             advanceUntilIdle()
             assertEquals(1, provider.requests)
             assertEquals(0, provider.completed)
-            // Another track, then this one again: it starts again.
+        }
+
+    @Test
+    fun `a failure is tried again when the track plays again, not on the same play`() =
+        runTest {
+            settings.value = settings.value?.copy(showGenres = false, lyricsLinks = false)
+            provider.error = app.sleevesight.core.ai.AiErrorKind.OVERLOADED
+            val auto = auto(searches())
+            auto.follow(empty(), settings.value)
+            advanceUntilIdle()
+            auto.follow(empty(), settings.value)
+            advanceUntilIdle()
+            assertEquals(1, provider.requests)
+            provider.error = null
+            auto.follow(empty(playing = HomeFixtures.carefree), settings.value)
+            auto.follow(empty(), settings.value)
+            advanceUntilIdle()
+            // Carefree Highway's, and Sundown's again.
+            assertEquals(3, provider.requests)
+        }
+
+    @Test
+    fun `Clear history forgets the stops`() =
+        runTest {
+            settings.value = settings.value?.copy(showGenres = false, lyricsLinks = false)
+            provider.streaming = 10.seconds
+            val searches = searches()
+            val auto = auto(searches)
+            auto.follow(empty(), settings.value)
+            advanceTimeBy(1.seconds)
+            searches.stop(empty(), SearchKind.DATES)
+            advanceUntilIdle()
+            searches.forget()
             provider.streaming = 0.seconds
             auto.follow(empty(playing = HomeFixtures.carefree), settings.value)
             auto.follow(empty(), settings.value)
             advanceUntilIdle()
             assertEquals(3, provider.requests)
+        }
+
+    @Test
+    fun `nothing starts while the app is off screen, and it starts on return`() =
+        runTest {
+            settings.value = settings.value?.copy(showGenres = false, lyricsLinks = false)
+            val onScreen = MutableStateFlow(false)
+            val auto = auto(searches())
+            val following = launch { auto.run(MutableStateFlow(empty()), settings, onScreen, parts) }
+            runCurrent()
+            advanceUntilIdle()
+            assertEquals(0, provider.requests)
+            onScreen.value = true
+            runCurrent()
+            advanceUntilIdle()
+            following.cancel()
+            assertEquals(1, provider.requests)
         }
 
     @Test
@@ -202,7 +282,7 @@ class AutoSearchesTest {
                 ready?.let { PipelineParts(it.normalizer, it.adapters, it.resolver, it.hasher, null, it.cache) }
             val searches = searches()
             val auto = auto(searches)
-            val following = launch { auto.run(MutableStateFlow(empty()), settings, parts) }
+            val following = launch { auto.run(MutableStateFlow(empty()), settings, MutableStateFlow(true), parts) }
             runCurrent()
             assertEquals(0, provider.requests)
             // A key saved: the parts are rebuilt with the AI service.

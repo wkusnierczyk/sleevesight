@@ -101,7 +101,7 @@ sealed interface SearchReading {
  */
 class AiSearchAnswers(
     private val vocabulary: GenreVocabulary,
-    private val accentFolder: AccentFolder,
+    internal val accentFolder: AccentFolder,
     private val clock: Clock = Clock.System,
 ) {
     /** The names of the app's fixed genre list, which a search of [SearchKind.GENRES] chooses from. */

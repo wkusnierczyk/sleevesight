@@ -42,6 +42,10 @@ import kotlin.time.Duration.Companion.seconds
  * name it.
  */
 class AppAiSearchesTest {
+    private companion object {
+        const val CLEAR_WAIT_MS = 300L
+    }
+
     private val provider = CountingProvider().apply { reply = { "{\"genres\": [\"folk rock\"]}" } }
     private val clock = MovedClock()
     private val settings = MutableStateFlow<Settings?>(Settings(aiProvider = ProviderId.ANTHROPIC))
@@ -218,6 +222,61 @@ class AppAiSearchesTest {
             assertEquals(AiSearch.Offered, searches.now(SearchKind.DATES))
             assertEquals(0, cache.held)
         }
+
+    @Test
+    fun `a state that passed its check before Clear history cannot land after the clear`() =
+        runTest {
+            val epoch = ClearEpoch()
+            val searches = searches(epoch)
+            // Between a state's check and its showing, Clear history runs on another thread: the
+            // epoch's advance, then the clear, which waits for the showing, and clears it.
+            var clearing: Thread? = null
+            searches.shown.beforePublish = {
+                if (clearing == null) {
+                    clearing =
+                        Thread {
+                            kotlinx.coroutines.runBlocking { epoch.advance() }
+                            searches.forget()
+                        }.also { it.start() }
+                    // Long enough for a clear that did not wait to have run.
+                    clearing?.join(CLEAR_WAIT_MS)
+                }
+            }
+            provider.streaming = 0.seconds
+            searches.ask(track, SearchKind.GENRES, facts)
+            advanceUntilIdle()
+            clearing?.join()
+            searches.shown.beforePublish = {}
+            assertTrue(
+                searches.shown.entries.value
+                    .isEmpty(),
+            )
+            assertEquals(AiSearch.Offered, searches.now())
+        }
+
+    @Test
+    fun `one recording played from two albums keeps two answers for Dates`() =
+        runTest {
+            provider.reply = { n -> "{\"album_date\": \"${1973 + n}\"}" }
+            val searches = searches()
+            val compilation = track.copy(nowPlaying = track.nowPlaying.copy(album = "Gord's Gold"))
+            searches.ask(track, SearchKind.DATES, facts)
+            advanceUntilIdle()
+            assertEquals(AiSearch.Offered, searches.search(compilation, SearchKind.DATES).first())
+            searches.ask(compilation, SearchKind.DATES, facts)
+            advanceUntilIdle()
+            assertEquals(2, provider.requests)
+            val dates = { t: TrackState ->
+                ((runBlockingSearch(searches, t) as AiSearch.Answered).answer as SearchAnswer.Dates).album
+            }
+            assertEquals("1974", dates(track))
+            assertEquals("1975", dates(compilation))
+        }
+
+    private fun runBlockingSearch(
+        searches: AppAiSearches,
+        t: TrackState,
+    ): AiSearch = kotlinx.coroutines.runBlocking { searches.search(t, SearchKind.DATES).first() }
 
     @Test
     fun `with Show insights off no search is offered at all, and none is asked`() =

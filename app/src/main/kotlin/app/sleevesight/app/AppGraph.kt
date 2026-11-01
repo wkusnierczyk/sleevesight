@@ -614,11 +614,12 @@ class AppGraph internal constructor(
         }
         pipeline.start(pipelineScope)
         // *Search with AI*, the setting (#773): a panel's search starts as soon as its source has
-        // nothing, open or not, for the playing track; again once an AI service is ready.
+        // nothing, open or not, for the playing track, while the app is on screen; again once an AI
+        // service is ready.
         pipelineScope.launch {
             AutoSearches<SearchKind>(::emptyPanels) { track, kind ->
-                aiSearches.ask(track, kind, searchFacts(track, track.nowPlaying))
-            }.run(pipeline.state.map { it.track }, latestSettings, pipeline.liveParts)
+                aiSearches.ask(track, kind, searchFacts(track, track.nowPlaying), automatic = true)
+            }.run(pipeline.state.map { it.track }, latestSettings, pipeline.onScreen, pipeline.liveParts)
         }
         // The selected model checked at start, and when the service, its model or a key changes (#540).
         pipelineScope.launch {

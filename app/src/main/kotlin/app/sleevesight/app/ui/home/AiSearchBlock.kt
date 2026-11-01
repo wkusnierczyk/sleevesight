@@ -75,8 +75,9 @@ internal fun AiSearchBlock(
 ) {
     val track = search.track ?: return
     val feed = search.feed
-    // A new subscription only for another track or search, not on every state of the track.
-    val state by remember(feed, track.normalized, track.nowPlaying.duration, kind) {
+    // A new subscription only for another track (its album too: *Dates*' key has it) or search, not
+    // on every state of the track.
+    val state by remember(feed, track.normalized, track.nowPlaying.duration, track.nowPlaying.album, kind) {
         feed.search(track, kind)
     }.collectAsState(AiSearch.None)
     val handoff = rememberFocusHandoff()

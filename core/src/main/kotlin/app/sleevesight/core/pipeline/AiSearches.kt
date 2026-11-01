@@ -5,6 +5,7 @@ import app.sleevesight.core.ai.CompletionRequest
 import app.sleevesight.core.ai.ReasoningEffort
 import app.sleevesight.core.ai.StopReason
 import app.sleevesight.core.evidence.Hasher
+import app.sleevesight.core.resolution.NameMatcher
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.synthesis.AiSearchAnswers
 import app.sleevesight.core.synthesis.AiSearchPrompt
@@ -52,11 +53,12 @@ data class KeptSearch(
  * [CardKind.SEARCH], its kind's key as the card's subject, so it is found again with no call
  * ([kept]), and checked again as it is read, so a stricter check applies to what was kept before.
  *
- * Its key ([key]) is the track (as the sources name it, and its length), the kind, the AI service,
- * its model and effort, and the prompts' version; not the evidence's fingerprint, since the panel is
- * empty whatever the evidence says. Another service, model or effort, or a new prompt, asks again.
- * None with no AI service ready: none switched on, no key, no model, or *Show insights* off, the
- * switch that stops every AI call.
+ * Its key ([key]) is the track (as the sources name it, and its length), the kind (for *Dates*, with
+ * the album as the player reports it, [subject]: a recording on its album and on a later compilation
+ * has two albums' dates), the AI service, its model and effort, and the prompts' version; not the
+ * evidence's fingerprint, since the panel is empty whatever the evidence says. Another service,
+ * model or effort, or a new prompt, asks again. None with no AI service ready: none switched on, no
+ * key, no model, or *Show insights* off, the switch that stops every AI call.
  *
  * An answer is the panel's alone: it never enters the evidence, the insight, the track's genre
  * labels, *Sources* or what is read aloud. A cache that throws is a miss, and a keep that fails
@@ -91,9 +93,28 @@ class AiSearches(
             // The model answers from its own knowledge, whatever *Model's own knowledge* says: fixed.
             modelKnowledge = true,
             effort = settings.effort(access.provider.id),
-            subject = kind.key,
+            subject = subject(track, kind),
         )
     }
+
+    /**
+     * What [track]'s search of [kind] is about besides the track, its key's `CardKey.subject`: the
+     * kind's key, and for [SearchKind.DATES] the album as the player reports it, read as album names
+     * are compared ([NameMatcher.albumKey]: "Vol. 2" is "Volume 2"), after a line break (empty for
+     * none), since the prompt asks when that album came out. The same whatever the AI service: what
+     * a stop is remembered by too (`AppAiSearches`).
+     */
+    fun subject(
+        track: TrackState,
+        kind: SearchKind,
+    ): String =
+        when (kind) {
+            SearchKind.DATES -> kind.key + "\n" + albums.albumKey(track.nowPlaying.album.orEmpty())
+            SearchKind.GENRES, SearchKind.LYRICS -> kind.key
+        }
+
+    // Album names compared as the panels compare them.
+    private val albums = NameMatcher(answers.accentFolder)
 
     /** The search kept for [key], of [kind], read and checked for [track]; null when none is kept. */
     suspend fun kept(
