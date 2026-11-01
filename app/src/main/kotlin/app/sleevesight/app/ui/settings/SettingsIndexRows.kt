@@ -132,6 +132,10 @@ internal fun insightRows(settings: Settings): List<IndexedRow> {
             stringResource(R.string.settings_artist_facts_once),
             stringResource(R.string.settings_artist_facts_once_summary, gap, history),
         ),
+        indexRow(
+            stringResource(R.string.settings_search_with_ai),
+            stringResource(R.string.settings_search_with_ai_summary),
+        ),
     ) + readAloudIndexRows(settings)
 }
 

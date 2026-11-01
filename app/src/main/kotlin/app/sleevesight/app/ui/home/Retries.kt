@@ -72,31 +72,41 @@ internal fun RetryLine(
     ) {
         Text(message, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
         if (onRetry != null) {
-            // A text button's look, with the action named for a screen reader, which a Material
-            // `TextButton` cannot be given.
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier =
-                    Modifier
-                        .testTag(RETRY_TAG)
-                        .minimumInteractiveComponentSize()
-                        .clip(CircleShape)
-                        .clickable(
-                            role = Role.Button,
-                            onClickLabel = stringResource(R.string.home_retry_action, source),
-                            onClick = {
-                                onRetry()
-                                afterRetry()
-                            },
-                        ).padding(horizontal = 12.dp, vertical = 8.dp),
+            LineButton(
+                stringResource(R.string.home_retry),
+                stringResource(R.string.home_retry_action, source),
+                Modifier.testTag(RETRY_TAG),
             ) {
-                Text(
-                    stringResource(R.string.home_retry),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                )
+                onRetry()
+                afterRetry()
             }
         }
+    }
+}
+
+/**
+ * A button at the end of a line, as *Retry* is ([RetryLine]) and *Search with AI*'s *Stop* (#773):
+ * a text button's look, [text] in the primary colour, with the action named for a screen reader
+ * ([action]: "Double-tap to …"), which a Material `TextButton` cannot be given; at least 48 dp to
+ * touch. [modifier] goes on the outside (a test tag, a focus requester).
+ */
+@Composable
+internal fun LineButton(
+    text: String,
+    action: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier =
+            modifier
+                .minimumInteractiveComponentSize()
+                .clip(CircleShape)
+                .clickable(role = Role.Button, onClickLabel = action, onClick = onClick)
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+    ) {
+        Text(text, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
     }
 }
 

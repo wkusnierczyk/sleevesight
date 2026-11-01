@@ -22,6 +22,7 @@ import app.sleevesight.app.diagnostics.Diagnostics
 import app.sleevesight.app.diagnostics.DiagnosticsLog
 import app.sleevesight.app.history.HistoryRecorder
 import app.sleevesight.app.history.HistoryRetention
+import app.sleevesight.app.pipeline.AppAiSearches
 import app.sleevesight.app.pipeline.AppGenreNotes
 import app.sleevesight.app.pipeline.AppPipelineParts
 import app.sleevesight.app.pipeline.ModelCheck
@@ -52,6 +53,7 @@ import app.sleevesight.app.session.onlyWhen
 import app.sleevesight.app.settings.LastFont
 import app.sleevesight.app.settings.LastIntro
 import app.sleevesight.app.settings.LastTheme
+import app.sleevesight.app.settings.ListedModelNames
 import app.sleevesight.app.settings.PrunePlayersMigration
 import app.sleevesight.app.settings.SeenPlayersRecorder
 import app.sleevesight.app.settings.SettingsStore
@@ -76,6 +78,7 @@ import app.sleevesight.core.settings.LinkStyle
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.ThemeChoice
 import app.sleevesight.core.settings.WriteAutomatically
+import app.sleevesight.core.synthesis.AiSearchAnswers
 import app.sleevesight.store.ArtistKeeping
 import app.sleevesight.store.Caches
 import app.sleevesight.store.SessionHistory
@@ -520,6 +523,22 @@ class AppGraph internal constructor(
         )
 
     /**
+     * *Search with AI* under an empty *Dates*, *Genres* or *Lyrics* on Home (#773): asked with the
+     * live pipeline's AI service and kept in its synthesis cache, as a genre's reason is, in the
+     * pipeline's scope, marked with [clearEpoch]; its answers checked against the app's genre list and
+     * the lyrics whitelist; the model named as the AI settings name it ([ListedModelNames]).
+     */
+    val aiSearches: AppAiSearches =
+        AppAiSearches(
+            parts = pipeline.liveParts,
+            settings = latestSettings,
+            answers = AiSearchAnswers(wiring.genreVocabulary, JvmAccentFolder),
+            scope = pipelineScope,
+            epoch = clearEpoch,
+            modelName = ListedModelNames(appContext)::of,
+        )
+
+    /**
      * *Reactive*'s mode chosen, in the insight card's menu or in the settings (#615, #625): saved in
      * [settingsSaves], and told to the pipeline before the save and once it has ended, so the mode
      * the pipeline writes by is the latest choice, then the narrower of the choice and what the
@@ -638,7 +657,8 @@ class AppGraph internal constructor(
      * until another one plays. Then every cache (the sources' findings, the artist resolutions and
      * results, the insights and cards written, the genres' reasons and definitions among them), in
      * one transaction and in turn with what is written about artists ([ArtistKeeping.clearWith]);
-     * MusicBrainz's answers held in memory; the genres' reasons shown ([AppGenreNotes.forget]); the
+     * MusicBrainz's answers held in memory; the genres' reasons and the AI searches shown
+     * ([AppGenreNotes.forget], [AppAiSearches.forget]); the
      * artist facts the listening session cited; the session layer's last change, which names the
      * track before; and the diagnostics' steps, which name the tracks. The API keys and the settings stay.
      * Returns whether the caches were cleared; the rest cannot fail.
@@ -652,6 +672,7 @@ class AppGraph internal constructor(
         if (!cleared) Log.w(TAG, "The caches could not be cleared")
         wiring.forgetRemembered()
         genreNotes.forget()
+        aiSearches.forget()
         sessionFacts.forget()
         sessions.forgetLastChange()
         diagnostics.log.clear()

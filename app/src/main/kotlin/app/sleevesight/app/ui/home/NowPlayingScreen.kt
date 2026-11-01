@@ -15,6 +15,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import app.sleevesight.app.pipeline.AiSearchFeed
 import app.sleevesight.app.pipeline.CallId
 import app.sleevesight.app.pipeline.GenreNotes
 import app.sleevesight.app.pipeline.PipelineView
@@ -75,6 +76,8 @@ import kotlinx.coroutines.flow.StateFlow
  * @property askAgain a tap on *Retry* beside a source that could not be reached (#724), with the key
  *   it was offered under, the source, and the track it was shown beside: that source alone is asked
  *   again (`PipelineHost.askAgain`), free.
+ * @property aiSearches *Search with AI* under the empty state of *Dates*, *Genres* and *Lyrics*
+ *   (#773): each panel's search, a paid call, and its *Stop*.
  */
 @Suppress("LongParameterList") // What one screen reads, each published on its own.
 class HomeFeed(
@@ -100,6 +103,7 @@ class HomeFeed(
     val lookAgain: (RunKey, NowPlaying) -> Unit = { _, _ -> },
     val readAloud: ReadAloud? = null,
     val askAgain: (RunKey, SourceId, NowPlaying) -> Unit = { _, _, _ -> },
+    val aiSearches: AiSearchFeed = AiSearchFeed.None,
 )
 
 /**
@@ -173,6 +177,7 @@ private fun HomeFeed.actions(
     openSettingsAt = openSettingsAt,
     readAloud = readAloud,
     askAgain = askAgain,
+    aiSearches = aiSearches,
 )
 
 /**
@@ -204,7 +209,8 @@ internal class NowPlayingState(
  * [installedPlayers]' icons, and the guide's buttons go to [hideGuideOnce] (*Hide once*) or
  * to [dismissals] (*Dismiss*, and its *Undo*; #759). [readAloud] reads the insight, or a genre's
  * reason, aloud (#325); null shows no *Read aloud*. [askAgain] takes a tap on *Retry* beside a
- * source that could not be reached (#724), as [write] takes one on Write.
+ * source that could not be reached (#724), as [write] takes one on Write. [aiSearches] gives *Search
+ * with AI* under the empty *Dates*, *Genres* and *Lyrics* (#773).
  */
 @Suppress("LongParameterList") // Each of the screen's ways out, on its own.
 internal class NowPlayingActions(
@@ -226,6 +232,7 @@ internal class NowPlayingActions(
     val lookAgain: (RunKey, NowPlaying) -> Unit = { _, _ -> },
     val readAloud: ReadAloud? = null,
     val askAgain: (RunKey, SourceId, NowPlaying) -> Unit = { _, _, _ -> },
+    val aiSearches: AiSearchFeed = AiSearchFeed.None,
 )
 
 /**

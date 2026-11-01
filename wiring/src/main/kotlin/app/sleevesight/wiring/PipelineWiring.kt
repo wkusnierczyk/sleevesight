@@ -90,6 +90,12 @@ class PipelineWiring internal constructor(
             if (rememberMusicBrainz) RememberedMusicBrainz(it, tags = genres, epoch = epoch) else it
         }
     private val vocabulary by lazy { GenreVocabulary.load(resources) }
+
+    /**
+     * The app's fixed genre list (D12, #439), which the sources' tags are matched to, for what else
+     * is matched to it: the genres *Search with AI* names (#773, `AiSearchAnswers`).
+     */
+    val genreVocabulary: GenreVocabulary get() = vocabulary
     private val artFetcher = ArtFetcher(net)
 
     /** Resolution over MusicBrainz (`RecordingResolver`), for `PipelineParts.resolver`. */

@@ -9,6 +9,10 @@
          its genre's Wikidata item has no English article (Wikipedia may still have one by the
          genre's name, which the app does not reach, so it does not say there is none). -->
     <string name="genre_definition_none">No definition from Wikipedia for this genre.</string>
+    <!-- Proposed (#773), to be confirmed. -->
+    <!-- Under the definition in the box of a genre Search with AI named (#773), in italics, as under
+         the genres it named (home_ai_by); %1$s is the model ("by Claude Haiku 5.5"). -->
+    <string name="genre_ai_by">by %1$s</string>
     <!-- The button that writes the reason, and the reason's heading once written. %1$s is the genre,
          as a sentence names it ("jazz", "UK garage"). -->
     <string name="genre_why">Why is this %1$s?</string>

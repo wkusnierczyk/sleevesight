@@ -87,10 +87,19 @@ internal fun Panel(
             }
         }
         Column(modifier = Modifier.padding(end = 8.dp), verticalArrangement = Arrangement.spacedBy(spacing)) {
-            HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = RULE))
+            PanelRule()
             content()
         }
     }
+}
+
+/**
+ * The rule a panel draws under its heading ([Panel]), for a panel's content to draw where it sets a
+ * part apart: what *Search with AI* found, under what the sources gave (#773).
+ */
+@Composable
+internal fun PanelRule(modifier: Modifier = Modifier) {
+    HorizontalDivider(modifier, color = MaterialTheme.colorScheme.onSurface.copy(alpha = RULE))
 }
 
 private const val PANEL_FILL = 0.05f

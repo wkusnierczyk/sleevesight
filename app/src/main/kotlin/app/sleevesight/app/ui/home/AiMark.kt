@@ -36,7 +36,8 @@ internal const val MARK_ALPHA = 0.75f
  * dimmed **AI**, set as the source chips' letters were (`labelSmall`, at [MARK_ALPHA] of the
  * label's colour) but after the label, on its baseline. It goes in the button's content slot, in
  * place of the label's `Text`: `Button(onClick) { AiLabel(label) }`. Every button that calls the AI
- * shows its label through it, and no other does: not *Stop writing*, not the split button's arrow.
+ * shows its label through it, but *Search with AI* (#773), whose plain label was picked, its name
+ * saying it; and no other does: not *Stop writing*, not the split button's arrow.
  *
  * A label too long for its width wraps rather than being cut off; the mark then follows its last
  * line's end, on that line's baseline. Room for the mark is kept at the end of every line, so it

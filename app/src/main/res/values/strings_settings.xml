@@ -224,4 +224,7 @@
     <string name="settings_read_track_line_summary">Reading an insight aloud starts with the track’s title and artists.</string>
     <string name="settings_read_new_insights">Read new insights aloud</string>
     <string name="settings_read_new_insights_summary">Reads each new insight aloud as soon as it is written, while Sleevesight is on screen. Not while TalkBack or another screen reader is on, since it reads the screen itself.</string>
+    <!-- Insights → Search with AI when a source has nothing (#773, #786): Search with AI starts by itself under an empty Dates, Genres or Lyrics panel, and for a genre with no definition. -->
+    <string name="settings_search_with_ai">Search with AI when a source has nothing</string>
+    <string name="settings_search_with_ai_summary">Asks your AI service at once when Wikipedia has no definition for a genre, or Dates, Genres or Lyrics find nothing. Each search is a paid call.</string>
 </resources>
