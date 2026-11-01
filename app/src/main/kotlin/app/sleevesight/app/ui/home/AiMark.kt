@@ -50,13 +50,16 @@ internal const val MARK_ALPHA = 0.75f
  * read as one only inside a parent that merges its children's semantics, as a clickable one does
  * (`Button`, `TextButton`, `OutlinedButton`, a `clickable` row): elsewhere a screen reader would read
  * them as two items, so it belongs in a button and nowhere else.
+ *
+ * One other use (#762): a genre chip the AI's genre list added, whose tap only unfolds the genre, so
+ * it reads [described] instead, "Blues, from Claude Haiku 5.5".
  */
 @Composable
 internal fun AiLabel(
     label: String,
     modifier: Modifier = Modifier,
+    described: String = stringResource(R.string.home_uses_ai, label),
 ) {
-    val described = stringResource(R.string.home_uses_ai, label)
     val content = LocalContentColor.current
     // Set as the label is measured, read as it is placed: no state, so no second pass.
     val lines = remember { arrayOfNulls<TextLayoutResult>(1) }

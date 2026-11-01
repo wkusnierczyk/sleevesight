@@ -295,7 +295,8 @@ internal fun NowPlayingContent(
         Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             PlayerRow(playing.player, state.playback, actions)
             ArtAndProgress(state.art, state.playback, header.duration)
-            val notes = PanelNotes(actions.genreNotes, cite, shown.modelAllowed, actions.readAloud)
+            val notes =
+                PanelNotes(actions.genreNotes, cite, shown.modelAllowed, actions.readAloud, actions.openSettingsAt)
             val genresPage = { actions.openPage(HomePage.Genres) }.takeIf { pages }
             TrackHeader(shown, header, UnderAlbumLine(inPlace, settings, notes, genresPage), actions)
             // A tap carries what it was shown for: the run Write is offered for, beside this track.

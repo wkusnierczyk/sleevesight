@@ -517,8 +517,9 @@ class AppGraph internal constructor(
      * What a genre's panel shows besides its table (#523): each genre's definition, kept in the
      * caches' artist-level table whatever *Keep what sources said about each artist* says, since it
      * says nothing about what was played, and fetched ahead for the playing track (#786, `init`);
-     * and *Why is this …?*, written with the live pipeline's AI
-     * service and kept in its synthesis cache, in the pipeline's scope, marked with [clearEpoch].
+     * and *Why is this …?*, written with the live pipeline's AI service, after the AI's genre list
+     * for a genre only MusicBrainz gives (#762), both kept in its synthesis cache, in the pipeline's
+     * scope, marked with [clearEpoch].
      */
     val genreNotes: AppGenreNotes =
         AppGenreNotes(
@@ -531,6 +532,8 @@ class AppGraph internal constructor(
             scope = pipelineScope,
             epoch = clearEpoch,
             io = Dispatchers.IO,
+            // The model of the AI's genre list and of each reason (#762), as the AI settings name it.
+            modelName = ListedModelNames(appContext)::of,
         )
 
     /**

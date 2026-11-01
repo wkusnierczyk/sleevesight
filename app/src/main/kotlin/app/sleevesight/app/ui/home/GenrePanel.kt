@@ -8,6 +8,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.pipeline.GenreNotes
 import app.sleevesight.app.speech.ReadAloud
+import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.app.ui.theme.Panel
 import app.sleevesight.core.pipeline.TrackState
 
@@ -67,14 +68,16 @@ internal fun GenreBody(
  * What a genre's body shows above its tags ([GenreAbout]): [notes], where its definition and
  * reason come from; where a citation in the reason goes ([onCite]: on Home, *Sources* unfolded to
  * its line; under *Separate pages*, *Sources*' page at it); whether the model's own knowledge is
- * allowed now ([modelAllowed]); and what reads a written reason aloud ([readAloud], #325), null for
- * no *Read aloud*.
+ * allowed now ([modelAllowed]); what reads a written reason aloud ([readAloud], #325), null for
+ * no *Read aloud*; and where a link under a disabled *Why is this …?* opens the settings
+ * ([openSettingsAt], #762).
  */
 internal class PanelNotes(
     val notes: GenreNotes = GenreNotes.None,
     val onCite: (String) -> Unit = {},
     val modelAllowed: Boolean = false,
     val readAloud: ReadAloud? = null,
+    val openSettingsAt: (SettingsTarget) -> Unit = {},
 )
 
 /** The test tags of the genre's panel on the genres' page and its heading, as [Panel] makes them. */

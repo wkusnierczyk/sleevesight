@@ -44,7 +44,8 @@ fun interface GenreArticles {
  */
 class GenreDefinitions(
     private val articles: GenreArticles,
-    private val vocabulary: GenreVocabulary,
+    /** The genre vocabulary; also what the AI's genre list (#762) is read against, as a source's tags are. */
+    val vocabulary: GenreVocabulary,
     clock: Clock = Clock.System,
     lifetime: Duration = DEFAULT_LIFETIME,
     capacity: Int = DEFAULT_CAPACITY,
