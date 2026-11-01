@@ -10,6 +10,7 @@ import app.sleevesight.core.synthesis.CardKind
 import app.sleevesight.core.synthesis.GroundingCheck
 import app.sleevesight.core.synthesis.InsightPrompt
 import app.sleevesight.core.synthesis.InsightReply
+import app.sleevesight.core.synthesis.SelfRevision
 import kotlin.time.Duration
 import kotlin.time.Instant
 import kotlin.time.TimeMark
@@ -27,7 +28,11 @@ import kotlin.time.TimeMark
  * `Settings.artistFactsOncePerSession`). Either way, it leaves out the player's release line when
  * MusicBrainz's first-release line names that album (#424). A fresh reply is checked against what
  * its prompt held, a card from the cache against the whole evidence (see `finish`); both cite the
- * whole evidence's ids.
+ * whole evidence's ids. A reply that still revises itself where the card would show it
+ * ([SelfRevision], #798) is cut to what follows the revision when that is usable, with no further
+ * call; else it is asked for once more, a second paid call, and if that reply leaves nothing usable
+ * either, the card shows the error state. A card kept from before is cut the same way, or, with
+ * nothing usable, not served, as though there were none.
  */
 internal class InsightWriter(
     private val parts: PipelineParts,
@@ -80,17 +85,20 @@ internal class InsightWriter(
         control: RunControl,
     ) {
         val wanted = cardKey(ai, model)
-        // With when it was written, which the app checks what it shows against (#643).
+        // With when it was written, which the app checks what it shows against (#643). Against the
+        // whole evidence: a card is kept only when it cites no line its prompt left out (`finish`), so
+        // it reads as it read when it was written. One kept before the check that revises itself
+        // (#798) is cut to its usable part, as when it was written; with none, the track is written
+        // as though it had no card.
         val kept = guard.attempt("read insight") { keptCard(wanted) }
+        val keptReply = kept?.let { reading(it.text, evidence, allowModel, cached = true) }
         when {
-            kept != null -> {
+            kept != null && keptReply != null -> {
                 emit(PipelineEvent.InsightCached(key))
-                // Against the whole evidence: a card is kept only when it cites no line its prompt
-                // left out (`finish`), so it reads as it read when it was written.
                 val sent = Prompted(evidence, evidence)
                 val shown =
                     checked(
-                        kept.text,
+                        keptReply,
                         sent,
                         wanted,
                         cached = true,
@@ -147,11 +155,17 @@ internal class InsightWriter(
     // fingerprint, so a track played again finds its card, whatever the session cited. The facts an
     // insight cites are kept with the switch off too, so turning it on mid-session leaves out what
     // the session already told.
+    // [revisedOnce] when a reply before this one revised itself ([SelfRevision], #798) and this call
+    // asks once more; [billed] the tokens of the replies before this one in this call, discarded or
+    // `NO_EVIDENCE` (#239), null for none: a card counts every reply it took.
+    @Suppress("LongParameterList") // The call, and what the replies before it in this call came to.
     private suspend fun stream(
         ai: AiAccess,
         model: String,
         card: CardKey,
         control: RunControl,
+        revisedOnce: Boolean = false,
+        billed: Usage? = null,
     ): InsightState {
         val facts = parts.sessionFacts.citedByOthers(key)
         val once = settings.artistFactsOncePerSession
@@ -161,6 +175,7 @@ internal class InsightWriter(
         val effort = settings.effort(ai.provider.id)
         val request = CompletionRequest(model, prompt, CompletionRequest.maxTokensFor(effort), effort)
         val text = StringBuilder()
+        var frozen = false
         var end: CompletionEvent? = null
         var started: TimeMark? = null
         // The request goes out only if no Stop came first. The stream is read to its end, as the
@@ -176,8 +191,11 @@ internal class InsightWriter(
                         is CompletionEvent.Delta -> {
                             text.append(event.text)
                             // Not while it may still be `NO_EVIDENCE`, or is, as the check reads it:
-                            // the marker is no prose for the card.
-                            if (!GroundingCheck.mayBeNoEvidence(text.toString())) {
+                            // the marker is no prose for the card; nor once it revises itself, as
+                            // the card would show it (#798): the draft shown so far stays until the
+                            // check decides.
+                            frozen = frozen || SelfRevision.ofPartial(text.toString()).freezes()
+                            if (!GroundingCheck.mayBeNoEvidence(text.toString()) && !frozen) {
                                 show(InsightState.Writing(text.toString(), sent.held))
                             }
                         }
@@ -192,12 +210,16 @@ internal class InsightWriter(
         // after it while the transport was still open: what was paid for is kept.
         val outcome =
             when (val last = end) {
-                is CompletionEvent.Done ->
-                    finish(last, text.toString(), card, checkNotNull(started).elapsedNow(), control, sent)
+                is CompletionEvent.Done -> {
+                    // This reply's tokens with those before it. Null: the reply revised itself, the
+                    // first time (`finish`); asked once more.
+                    val asked = Asked(revisedOnce, last.usage.and(billed))
+                    finish(last, text.toString(), card, checkNotNull(started).elapsedNow(), control, sent, asked)
+                        ?: return stream(ai, model, card, control, revisedOnce = true, billed = asked.paid)
+                }
                 is CompletionEvent.Error -> {
                     // How far the reply got, for the diagnostics: its length, never its text (#665).
-                    val latency = started?.elapsedNow()
-                    emit(PipelineEvent.ModelFailed(key, last.kind, last.breakoff, text.length, latency))
+                    emit(PipelineEvent.ModelFailed(key, last.kind, last.breakoff, text.length, started?.elapsedNow()))
                     show(InsightState.Failed(ReplyFailures.of(last)))
                 }
 
@@ -216,7 +238,7 @@ internal class InsightWriter(
         // than none. A Retry tapped after that call failed or was stopped asks with them all too.
         return if (outcome == InsightState.NoEvidence && sent.leftOut.isNotEmpty()) {
             whole = true
-            stream(ai, model, card, control)
+            stream(ai, model, card, control, revisedOnce, (end as? CompletionEvent.Done)?.usage?.and(billed))
         } else {
             outcome
         }
@@ -228,6 +250,9 @@ internal class InsightWriter(
     // asks again with them all): every card in the cache cites only lines its prompt held, and reads the
     // same when it is served again and checked against the whole evidence, whatever a later session
     // leaves out. A reply not kept is written again, a paid call, the next time the track plays.
+    // A reply that revises itself ([SelfRevision], #798) is not shown or kept either: null, for
+    // `stream` to ask once more, when it is the first ([Asked.revisedOnce] false); else the error
+    // state. A card counts the tokens of every reply of the call ([Asked.paid]).
     @Suppress("LongParameterList") // The reply, its card, and what its prompt was given.
     private suspend fun finish(
         done: CompletionEvent.Done,
@@ -236,7 +261,8 @@ internal class InsightWriter(
         latency: Duration,
         control: RunControl,
         sent: Prompted,
-    ): InsightState {
+        asked: Asked,
+    ): InsightState? {
         emit(PipelineEvent.ModelDone(key, done.usage, done.stopReason, latency))
         // `NO_EVIDENCE` to fewer lines than the track has is asked again (`stream`): not shown, not
         // reported as the track's outcome, not kept.
@@ -245,8 +271,11 @@ internal class InsightWriter(
                 GroundingCheck.check(text, sent.evidence, allowModel) == InsightReply.NoEvidence
         // A reply with no text is no card: an empty one would be shown, and kept when it ended (#665).
         val blank = ReplyFailures.ofBlank(done, text)
+        // What the card would show: null when the reply revised itself and nothing usable is left (#798).
+        val refused = done.stopReason == StopReason.REFUSAL
+        val reply = if (blank == null && !refused) reading(text, sent.evidence, allowModel, cached = false) else null
         return when {
-            done.stopReason == StopReason.REFUSAL -> {
+            refused -> {
                 show(InsightState.Failed(ReplyFailures.DECLINED))
             }
 
@@ -258,6 +287,12 @@ internal class InsightWriter(
                 InsightState.NoEvidence
             }
 
+            // It revised itself with nothing usable left (#798): asked once more (null, for
+            // `stream`) when it was the first; else the error state.
+            reply == null -> {
+                if (asked.revisedOnce) show(InsightState.Failed(ReplyFailures.SELF_REVISED)) else null
+            }
+
             else -> {
                 val complete = done.stopReason == StopReason.END
                 // One time, in whole milliseconds as the cache keeps it, for the card shown and the
@@ -265,11 +300,11 @@ internal class InsightWriter(
                 val at = Instant.fromEpochMilliseconds(time.clock.now().toEpochMilliseconds())
                 val written =
                     checked(
-                        text,
+                        reply,
                         sent,
                         card,
                         cached = false,
-                        usage = done.usage,
+                        usage = asked.paid,
                         complete = complete,
                         writtenAt = at,
                     )
@@ -290,11 +325,12 @@ internal class InsightWriter(
         }
     }
 
-    // [text] checked against what was [sent]; a card from the cache against the whole evidence.
-    // Written, it carries what its [card]'s key says it was written with, and when ([writtenAt]).
+    // [reply], checked against what was [sent] (a card from the cache against the whole evidence),
+    // as a state. Written, it carries what its [card]'s key says it was written with, and when
+    // ([writtenAt]).
     @Suppress("LongParameterList") // The reply, what its prompt held, its card, and how it came.
     private fun checked(
-        text: String,
+        reply: InsightReply,
         sent: Prompted,
         card: CardKey,
         cached: Boolean,
@@ -302,7 +338,7 @@ internal class InsightWriter(
         complete: Boolean,
         writtenAt: Instant?,
     ): InsightState =
-        when (val reply = GroundingCheck.check(text, sent.evidence, allowModel)) {
+        when (reply) {
             InsightReply.NoEvidence -> {
                 emit(PipelineEvent.NoEvidence(key))
                 InsightState.NoEvidence
@@ -314,6 +350,24 @@ internal class InsightWriter(
                 InsightState.Written(reply.grounded, cached, usage, complete, sent.held, by, writtenAt)
             }
         }
+
+    // [text] as the card would show it, checked against [evidence]: the grounding check's reply; or,
+    // when that still revises itself ([SelfRevision], #798), the part after the revision
+    // ([SelfRevision.salvage]), the rest withdrawn, logged as [cached] or not; null when nothing
+    // usable is left (logged too).
+    private fun reading(
+        text: String,
+        evidence: EvidenceSet,
+        allowModel: Boolean,
+        cached: Boolean,
+    ): InsightReply? {
+        val reply = GroundingCheck.check(text, evidence, allowModel)
+        val grounded = (reply as? InsightReply.Written)?.grounded
+        val found = grounded?.let { SelfRevision.find(it.text) } ?: return reply
+        val salvaged = SelfRevision.salvage(checkNotNull(grounded), found, evidence.ids.toSet())
+        emit(PipelineEvent.SelfRevised(key, found.sign, cached = cached, salvaged = salvaged != null))
+        return salvaged?.let { InsightReply.Written(it) }
+    }
 
     private fun cardKey(
         ai: AiAccess,
@@ -356,3 +410,18 @@ internal class InsightWriter(
         const val WAITS_FOR_TAP = "waits for a tap on Write (Reactive)"
     }
 }
+
+// What a reply's call came to before it ([InsightWriter]'s `finish`): whether a reply before it
+// revised itself ([revisedOnce], #798), and the tokens of every reply of the call, its own too ([paid]).
+private class Asked(
+    val revisedOnce: Boolean,
+    val paid: Usage,
+)
+
+// Whether a sign read while the reply streams stops what the card shows (#798): an aside, the first
+// person or talk of the evidence; not a repeated opening, whose second occurrence is what is kept.
+private fun SelfRevision?.freezes(): Boolean = this != null && this != SelfRevision.REPEATED_OPENING
+
+// These tokens and [other]'s; these alone when there are none before them.
+private fun Usage.and(other: Usage?): Usage =
+    if (other == null) this else Usage(inputTokens + other.inputTokens, outputTokens + other.outputTokens)
