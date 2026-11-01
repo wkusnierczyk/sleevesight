@@ -44,13 +44,13 @@ import app.sleevesight.app.ui.theme.rememberFocusHandoff
 
 /**
  * The settings' sections (#444), in the order shown, each with its name, the short description
- * shown beside its chip, and the fuller explanation shown at the top of its panel, where one is
- * needed. [DEVELOPER] shows only in developer mode, and has neither.
+ * shown beside its chip, and the fuller explanation shown at the top of its panel. [DEVELOPER]
+ * shows only in developer mode.
  */
 enum class SettingsSection(
     @StringRes val title: Int,
-    @StringRes val summary: Int?,
-    @StringRes val details: Int?,
+    @StringRes val summary: Int,
+    @StringRes val details: Int,
 ) {
     PLAYERS(R.string.settings_section_players, R.string.settings_players_short, R.string.settings_players_long),
     SOURCES(R.string.settings_section_sources, R.string.settings_sources_short, R.string.settings_sources_long),
@@ -65,7 +65,11 @@ enum class SettingsSection(
         R.string.settings_appearance_long,
     ),
     ABOUT(R.string.settings_section_about, R.string.settings_about_short, R.string.settings_about_long),
-    DEVELOPER(R.string.settings_section_developer, null, null),
+    DEVELOPER(
+        R.string.settings_section_developer,
+        R.string.settings_developer_short,
+        R.string.settings_developer_long,
+    ),
     ;
 
     /** The tag of the section's chip, shown while it is closed, for tests. */
@@ -214,7 +218,7 @@ private fun SectionBox(
             spacing = 4.dp,
             headingFrame = { heading -> LandingSpot(SettingsTarget(section)) { heading() } },
         ) {
-            section.details?.let { Hint(it) }
+            Hint(section.details)
             content()
         }
     }
@@ -223,9 +227,8 @@ private fun SectionBox(
 /**
  * [section]'s chip, drawn as Home's chips are ([ChipFrame]), [width] wide, its name centred in it
  * on one line; beside it, centred on it, the section's short description, up to two lines, clipped
- * with an ellipsis past them (*Developer* has none, and shows its chip alone). A screen reader reads
- * the chip as a heading and a button, by the section's name, collapsed. [modifier] goes on the
- * chip's outside: a focus requester.
+ * with an ellipsis past them. A screen reader reads the chip as a heading and a button, by the
+ * section's name, collapsed. [modifier] goes on the chip's outside: a focus requester.
  */
 @Composable
 private fun SectionChip(
@@ -259,16 +262,14 @@ private fun SectionChip(
                 modifier = Modifier.weight(1f),
             )
         }
-        section.summary?.let {
-            Text(
-                stringResource(it),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f),
-            )
-        }
+        Text(
+            stringResource(section.summary),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
     }
 }
 

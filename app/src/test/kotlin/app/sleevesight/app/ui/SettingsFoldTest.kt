@@ -144,8 +144,8 @@ class SettingsFoldTest {
                         ),
                     )
                 // The short description beside the chip, not part of it; the fuller one only in the panel.
-                section.summary?.let { assertTrue(section.name, shown(it)) }
-                section.details?.let { assertTrue(section.name, !shown(it)) }
+                assertTrue(section.name, shown(section.summary))
+                assertTrue(section.name, !shown(section.details))
             }
             // Developer is hidden until developer mode is on.
             assertEquals(0, count(SettingsSection.DEVELOPER.tag))
