@@ -8,7 +8,7 @@ import java.io.File
 /**
  * Every link in the app is made in `Accents.kt` (#442), by `LinkedText` or `LinkLabel`, so none
  * takes another look or loses its line: the app's sources make no link, link style or underline
- * anywhere else, the citations' chips and the sentences they flag aside. A line struck through (as a
+ * anywhere else, the citations' chips aside. A line struck through (as a
  * hidden source's filter chip's name was, #623, before *Sources*' table, #662) is neither, and is
  * let through.
  */
@@ -102,17 +102,14 @@ class LinkSourcesTest {
             )
 
         /**
-         * The citations' lines that make their chips, links of their own kind styled as chips, and
-         * underline the sentences they flag: these lines as they are, and no other.
+         * The citations' lines that make their chips, links of their own kind styled as chips: these
+         * lines as they are, and no other. The sentences they flag are dimmed, not underlined (#819).
          */
         val CITATIONS =
             listOf(
                 "import androidx.compose.ui.text.LinkAnnotation",
                 "import androidx.compose.ui.text.TextLinkStyles",
-                "import androidx.compose.ui.text.style.TextDecoration",
                 "import androidx.compose.ui.text.withLink",
-                "val flagged = SpanStyle(textDecoration = TextDecoration.Underline, " +
-                    "color = MaterialTheme.colorScheme.error)",
                 "val link = LinkAnnotation.Clickable(CITE_PREFIX + id, TextLinkStyles(styles.line)) { onCite(id) }",
                 "withLink(link) { append(label) }",
             )

@@ -35,10 +35,10 @@ internal fun GroundingLine(
 
 /**
  * The note under the insight (#437), shown only when there is something to say: the sentences the
- * sources do not back, which are underlined in red (uncited, or citing missing evidence), named by
- * that mark ("The sentence underlined in red is not backed by the sources.", #664), and, for a
+ * sources do not back, which are dimmed (uncited, or citing missing evidence; #819), named by
+ * that mark ("The dimmed sentence is not backed by the sources.", #664), and, for a
  * genre's reason, that it was kept from before. A sentence from the model's own knowledge is not counted: it is
- * not underlined, and its own chip says where it is from. A sentence the sources back
+ * not dimmed, and its own chip says where it is from. A sentence the sources back
  * needs no word: its citations show it. The full counts are [Meta]'s, behind *Show grounding details*.
  * A sentence that shows as nothing once its Markdown is cleaned (a rule on its own, #555) is not
  * counted: the reader could not find it.
@@ -58,20 +58,20 @@ private fun Note(
     if (parts.isNotEmpty()) MetaLine(parts.joinToString(" "), modifier)
 }
 
-// The sentences the sources do not back that show on the card, underlined.
+// The sentences the sources do not back that show on the card, dimmed.
 private fun unbacked(grounded: GroundedText): Int =
     grounded.paragraphs.sumOf { paragraph ->
         paragraph.zip(shown(paragraph.map { it.text })).count { (sentence, runs) ->
-            sentence.status in UNDERLINED && !runs.isBlank()
+            sentence.status in DIMMED && !runs.isBlank()
         }
     }
 
-// The statuses `CheckedProse` underlines in red, which the note counts.
-private val UNDERLINED = setOf(SentenceStatus.UNCITED, SentenceStatus.UNKNOWN)
+// The statuses `CheckedProse` dims, which the note counts.
+private val DIMMED = setOf(SentenceStatus.UNCITED, SentenceStatus.UNKNOWN)
 
 /**
  * The statuses of a sentence the sources do not back, which reading aloud marks "Unverified:" (#325):
- * the ones underlined in red ([UNDERLINED], which the note counts) and the model's own knowledge.
+ * the ones dimmed ([DIMMED], which the note counts) and the model's own knowledge.
  */
 internal val UNBACKED = setOf(SentenceStatus.UNCITED, SentenceStatus.UNKNOWN, SentenceStatus.MODEL)
 

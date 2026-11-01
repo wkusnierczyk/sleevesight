@@ -22,7 +22,6 @@ import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
@@ -156,23 +155,24 @@ class InsightMarkdownScreenTest {
             assertEquals("It was recorded in 1973 ${chip("MB1")}.\nIt is great.", second.text)
             assertFalse('#' in first.text || '-' in second.text)
             // The second item is a sentence of its own, on its own line, and flagged as uncited (#574).
-            val flagged = second.spanStyles.filter { it.item.textDecoration == TextDecoration.Underline }
+            val muted = lightColorScheme().onSurfaceVariant
+            val flagged = second.spanStyles.filter { it.item.color == muted }
             assertEquals(listOf("It is great."), flagged.map { second.text.substring(it.start, it.end) })
         }
 
     @Test
-    fun anUncitedSentenceWithBoldAndItalicsIsFlaggedAndSaidToBeSo() =
+    fun anUncitedSentenceWithBoldAndItalicsIsDimmedAndSaidToBeSo() =
         show(written("It topped the charts [W1]. It is **really** *great*.")) {
             val prose = textOf("It topped the charts")
-            val flagged = lightColorScheme().error
+            // Dimmed: the muted colour and italics (#819); a title in it is set upright.
+            val muted = lightColorScheme().onSurfaceVariant
             val really = prose.spanStyles.single { prose.text.substring(it.start, it.end) == "really" }.item
             assertEquals(FontWeight.Bold, really.fontWeight)
-            assertEquals(TextDecoration.Underline, really.textDecoration)
-            assertEquals(flagged, really.color)
+            assertEquals(FontStyle.Italic, really.fontStyle)
+            assertEquals(muted, really.color)
             val great = prose.spanStyles.single { prose.text.substring(it.start, it.end) == "great" }.item
-            assertEquals(FontStyle.Italic, great.fontStyle)
-            assertEquals(TextDecoration.Underline, great.textDecoration)
-            assertEquals(flagged, great.color)
+            assertEquals(FontStyle.Normal, great.fontStyle)
+            assertEquals(muted, great.color)
             assertEquals(
                 listOf(
                     "It topped the charts (${text(R.string.home_cite, "W1")}). " +

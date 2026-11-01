@@ -192,7 +192,7 @@ private fun Written(
  * - *As written previously.* ([writtenBefore]), with what follows from it on the same line;
  * - while *Look again* looks the sources up, what it is doing ([lookingAgainLine]), with the turning
  *   record before it (#785);
- * - the grounding line ([GroundingLine]): the note on the sentences underlined in red, or, with
+ * - the grounding line ([GroundingLine]): the note on the dimmed sentences, or, with
  *   [groundingDetails] (developer mode, inside its mark), the grounding check's counts. The note
  *   stays where the counts are, which take its place in developer mode: under the line about the
  *   insight's history and above *Report a problem*, the action it leads to;
