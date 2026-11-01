@@ -40,8 +40,11 @@ internal class FakeRemoteMusic(
         asked += "volume $volume"
     }
 
+    // A step reported as it is made, where the session reports its volume.
     override fun adjustVolume(direction: Int) {
-        asked += if (direction == AudioManager.ADJUST_LOWER) "lower" else "raise"
+        val lower = direction == AudioManager.ADJUST_LOWER
+        asked += if (lower) "lower" else "raise"
+        if (maxVolume > 0) reportVolume(volume + if (lower) -1 else 1)
     }
 
     override fun watch(changed: (RemoteReport) -> Unit) {
@@ -243,6 +246,66 @@ class ReadAloudMusicFocusTest {
         take(ReadAloudMusic.LOWER)
         speaker.reportRemote(false)
         assertFalse(focus.pausedInstead.value)
+    }
+
+    @Test
+    fun aSpeakerThatAnswersAStepOffIsNotTakenForTheUser() {
+        val speaker = FakeRemoteMusic(VolumeProvider.VOLUME_CONTROL_ABSOLUTE, volume = 40, maxVolume = 100)
+        playing = speaker
+        take(ReadAloudMusic.LOWER)
+        speaker.reportVolume(13)
+        speaker.reportVolume(12)
+        focus.release()
+        assertEquals(listOf("volume 12", "volume 40"), speaker.asked)
+    }
+
+    @Test
+    fun aSpeakerThatNeverAnswersWithTheVolumeAskedIsSetBackAfter() {
+        val speaker = FakeRemoteMusic(VolumeProvider.VOLUME_CONTROL_ABSOLUTE, volume = 40, maxVolume = 100)
+        playing = speaker
+        take(ReadAloudMusic.LOWER)
+        speaker.reportVolume(15)
+        speaker.reportVolume(15)
+        focus.release()
+        assertEquals(listOf("volume 12", "volume 40"), speaker.asked)
+    }
+
+    @Test
+    fun aLowVolumeIsLoweredNeverMuted() {
+        val speaker = FakeRemoteMusic(VolumeProvider.VOLUME_CONTROL_ABSOLUTE, volume = 2, maxVolume = 100)
+        playing = speaker
+        take(ReadAloudMusic.LOWER)
+        assertEquals(listOf("volume 1"), speaker.asked)
+    }
+
+    @Test
+    fun aRelativeVolumeTheUserChangesDuringTheReadingIsKept() {
+        val speaker = FakeRemoteMusic(VolumeProvider.VOLUME_CONTROL_RELATIVE, volume = 10, maxVolume = 20)
+        playing = speaker
+        take(ReadAloudMusic.LOWER)
+        speaker.reportVolume(8)
+        focus.release()
+        assertEquals(List(7) { "lower" }, speaker.asked)
+    }
+
+    @Test
+    fun aRelativeVolumeIsRaisedOnlyBackToWhereItWas() {
+        val speaker = FakeRemoteMusic(VolumeProvider.VOLUME_CONTROL_RELATIVE, volume = 10, maxVolume = 20)
+        playing = speaker
+        take(ReadAloudMusic.LOWER)
+        // The speaker stopped a step short of the volume aimed at.
+        speaker.volume = 4
+        focus.release()
+        assertEquals(List(7) { "lower" } + List(6) { "raise" }, speaker.asked)
+    }
+
+    @Test
+    fun aRelativeVolumeThatReportsNoneIsSteppedBlind() {
+        val speaker = FakeRemoteMusic(VolumeProvider.VOLUME_CONTROL_RELATIVE)
+        playing = speaker
+        take(ReadAloudMusic.LOWER)
+        focus.release()
+        assertEquals(List(3) { "lower" } + List(3) { "raise" }, speaker.asked)
     }
 
     @Test
