@@ -132,11 +132,11 @@ internal fun insightRows(settings: Settings): List<IndexedRow> {
             stringResource(R.string.settings_artist_facts_once),
             stringResource(R.string.settings_artist_facts_once_summary, gap, history),
         ),
+    ) + aiWebSearchIndexRows(settings) +
         indexRow(
             stringResource(R.string.settings_search_with_ai),
             stringResource(R.string.settings_search_with_ai_summary, stringResource(R.string.settings_ai_web_search)),
-        ),
-    ) + aiWebSearchIndexRows(settings) + readAloudIndexRows(settings)
+        ) + readAloudIndexRows(settings)
 }
 
 @Composable

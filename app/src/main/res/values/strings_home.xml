@@ -210,9 +210,8 @@
     <!-- Stop's action, as a screen reader names it ("Double-tap to stop the call"). -->
     <string name="home_ai_stop_action">stop the call</string>
     <!-- Under what the question found, on its own line, in italics; %1$s is the model ("by Claude Haiku
-         5.5"); for a question Ask AI automatically asked, the second (#802). -->
+         5.5"), whether it was asked by a tap or automatically (#801's revised pick). -->
     <string name="home_ai_by">by %1$s</string>
-    <string name="home_ai_by_auto">Asked automatically, by %1$s</string>
     <!-- Under a value found on the web (#801), on its own line: %1$s is the page's site ("discogs.com"),
          a link to the page. -->
     <string name="home_ai_from">From %1$s</string>
@@ -426,9 +425,10 @@
     <!-- Proposed (#773), to be confirmed. -->
     <!-- Search with AI: the AI model's reply was not the answer asked for. -->
     <string name="home_failure_malformed">the AI model’s answer could not be read</string>
-    <!-- Ask AI with AI web search set to Once (#801): its one Exa search failed, so the AI service was
-         not asked. -->
-    <string name="home_failure_web_search">the web search with Exa failed</string>
+    <!-- The whole line, in the error colour with Retry, when the web search AI web search makes failed
+         (#801): Once's one Exa search, or every search of Up to n times; not the sources' own web
+         search, and not the AI call failing (home_ai_failed). -->
+    <string name="home_ai_web_search_failed">AI web search failed.</string>
 
     <!-- Sources. -->
     <string name="home_sources_title">Sources</string>

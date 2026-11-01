@@ -79,8 +79,6 @@ import kotlin.time.Duration.Companion.seconds
  *   AI* or automatically, searches the web with Exa ([AiWebSearch]); *Once* by default. It needs Exa
  *   web search on ([aiWebSearchOn]); with it off, the questions are asked as with *Off*, and this
  *   choice is kept for when it is on again.
- * @property aiWebSearchLimit *Web searches at most* (#801): the most searches *Up to {n} times*
- *   makes for one question, [AI_WEB_SEARCH_LIMITS], [DEFAULT_AI_WEB_SEARCH_LIMIT] by default.
  * @property cacheLifetimes the retrieval cache lifetime per source (D9). A source with none (the
  *   pseudo-sources, which retrieve nothing) is not cached.
  * @property keepArtistResults *Keep what sources said about each artist* (#420): whether what the
@@ -196,7 +194,6 @@ data class Settings(
     val readNewInsightsAloud: Boolean = false,
     val searchWithAi: Boolean = false,
     val aiWebSearch: AiWebSearch = AiWebSearch.ONCE,
-    val aiWebSearchLimit: Int = DEFAULT_AI_WEB_SEARCH_LIMIT,
     val cacheLifetimes: Map<SourceId, Duration> = DEFAULT_CACHE_LIFETIMES,
     val keepArtistResults: Boolean = false,
     val artistCacheLifetime: Duration = DEFAULT_ARTIST_CACHE_LIFETIME,
@@ -227,9 +224,6 @@ data class Settings(
         require(sessionGap.isPositive()) { "The session gap must be positive, was $sessionGap" }
         require(pauseAutoWriteAfter == null || pauseAutoWriteAfter > 0) {
             "Automatic writing must pause after a positive number of track changes, was $pauseAutoWriteAfter"
-        }
-        require(aiWebSearchLimit in AI_WEB_SEARCH_LIMITS) {
-            "AI web search makes $AI_WEB_SEARCH_LIMITS searches at most, was $aiWebSearchLimit"
         }
     }
 
@@ -523,13 +517,10 @@ data class Settings(
         const val DEFAULT_PAUSE_AUTO_WRITE_AFTER: Int = 5
 
         /**
-         * *Web searches at most*'s choices (#801): 2 to 5. One is *Once*'s, with no tool; more than five
-         * makes a question's cost hard to foresee, each search one more paid AI call as well.
+         * The most searches *Up to {n} times* makes for one question (#801), fixed and said in the
+         * setting's text: 3, enough for the model to search again twice with what it learned.
          */
-        val AI_WEB_SEARCH_LIMITS: IntRange = 2..5
-
-        /** 3: enough for the model to search again twice with what it learned, as #801 suggested. */
-        const val DEFAULT_AI_WEB_SEARCH_LIMIT: Int = 3
+        const val AI_WEB_SEARCH_LIMIT: Int = 3
 
         /**
          * The choices of *Saver*, besides *Off*: 3 (a few minutes away), 5
@@ -593,8 +584,8 @@ enum class AiWebSearch {
     ONCE,
 
     /**
-     * The model searches itself, with a search tool, up to *Web searches at most*
-     * ([Settings.aiWebSearchLimit]) times, then answers: up to that many searches, and a call more.
+     * The model searches itself, with a search tool, up to [Settings.AI_WEB_SEARCH_LIMIT] times (3,
+     * fixed), then answers: up to that many searches, and a call more.
      */
     UP_TO,
 }

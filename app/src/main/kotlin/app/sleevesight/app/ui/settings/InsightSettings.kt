@@ -10,8 +10,8 @@ import app.sleevesight.core.settings.WriteAutomatically
 import kotlin.time.Duration.Companion.seconds
 
 // *Insights* (#444): *Show insights*, *Reactive* with *Crossfade*, *Proactive*, *Saver*, *Look up in
-// the background*, *Don't repeat artist facts* (#407, #546), *Ask AI automatically* (#773, #802) and
-// *AI web search* (#801), then reading aloud (#325).
+// the background*, *Don't repeat artist facts* (#407, #546), *AI web search* (#801) and *Ask AI
+// automatically* (#773, #802), then reading aloud (#325).
 
 private val MAX_CROSSFADE_SECONDS =
     Crossfade.Fixed.MAX.inWholeSeconds
@@ -28,7 +28,7 @@ private val MAX_CROSSFADE_SECONDS =
  * session idle trigger* under *History* (#581); *Ask AI automatically* (`searchWithAi`, #773, named
  * so by #802), which starts Home's *Ask AI* by itself as soon as a source has nothing, a paid call,
  * off by default, its description in two paragraphs, the first naming *AI web search* as a link to
- * it; and *AI web search* (#801, [AiWebSearchRows]). *Reactive*'s choices are
+ * it, after *AI web search* (#801, [AiWebSearchRows]). *Reactive*'s choices are
  * described in its dialog (#546); a mode chosen there, the one chosen already included, goes to
  * [chooseMode], which saves it and tells the pipeline (#625: an automatic one starts automatic
  * writing from the next track), or, without one, is saved alone. The rows about writing cannot be
@@ -95,6 +95,8 @@ internal fun InsightsSection(
     ArtistFactsRow(settings, update)
 
     // A paid call, as writing is: not to be changed while *Show insights* is off, as the rows above.
+    // *AI web search* first, then the toggle whose text names it (#801's revised pick).
+    AiWebSearchRows(settings, update)
     val web = stringResource(R.string.settings_ai_web_search)
     SwitchRow(
         title = stringResource(R.string.settings_search_with_ai),
@@ -103,7 +105,6 @@ internal fun InsightsSection(
         summaryLink = settingsLink(web, SettingsTarget.aiWebSearch),
         onChange = { on: Boolean -> update { it.copy(searchWithAi = on) } }.takeIf { settings.writeInsights },
     )
-    AiWebSearchRows(settings, update)
 
     ReadAloudRows(settings, update)
 }

@@ -5,14 +5,10 @@ import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
-import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
-import androidx.compose.ui.test.onNodeWithContentDescription
-import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
-import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.mutablePreferencesOf
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.test.core.app.ActivityScenario
@@ -27,7 +23,6 @@ import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.SettingsCodec
 import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.testCipher
-import app.sleevesight.app.ui.settings.LIMIT_VALUE_TAG
 import app.sleevesight.app.ui.settings.SettingsScreen
 import app.sleevesight.app.ui.settings.SettingsSection
 import app.sleevesight.app.ui.theme.GroupArrangement
@@ -50,10 +45,10 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
- * *AI web search* (#801): *Once* by default, stored under its own key with its limit; under *Insights*
- * after *Ask AI automatically*, a group of three kept to one row, *Web searches at most* only with
- * *Up to {n} times*, stepping 2 to 5; with Exa web search off, *Off* chosen, the others disabled, the
- * choice kept, and the two lines with the link to *Sources*.
+ * *AI web search* (#801): *Once* by default, stored under its own key; under *Insights* before *Ask
+ * AI automatically*, a group of three kept to one row, *Up to 3 times* with its limit fixed, no
+ * setting for it; with Exa web search off, *Off* chosen, the others disabled, the choice kept, and
+ * the two lines with the link to *Sources*.
  */
 @RunWith(RobolectricTestRunner::class)
 class AiWebSearchSettingTest {
@@ -89,28 +84,15 @@ class AiWebSearchSettingTest {
     private fun shows(text: String) = compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty()
 
     @Test
-    fun onceIsTheDefaultAndTheChoiceAndLimitAreStoredUnderTheirOwnKeys() {
+    fun onceIsTheDefaultAndTheChoiceIsStoredUnderItsOwnKey() {
         assertEquals(AiWebSearch.ONCE, Settings().aiWebSearch)
-        assertEquals(3, Settings().aiWebSearchLimit)
         val prefs = mutablePreferencesOf()
-        val chosen = Settings(aiWebSearch = AiWebSearch.UP_TO, aiWebSearchLimit = 5)
+        val chosen = Settings(aiWebSearch = AiWebSearch.UP_TO)
         SettingsCodec.write(chosen, prefs)
-        assertEquals(
-            mutablePreferencesOf(
-                stringPreferencesKey("insights.ai_web_search") to "UP_TO",
-                intPreferencesKey("insights.ai_web_search_limit") to 5,
-            ),
-            prefs,
-        )
+        assertEquals(mutablePreferencesOf(stringPreferencesKey("insights.ai_web_search") to "UP_TO"), prefs)
         assertEquals(chosen, SettingsCodec.read(prefs))
-        // A limit off the choices is the default.
-        assertEquals(
-            3,
-            SettingsCodec
-                .read(
-                    mutablePreferencesOf(intPreferencesKey("insights.ai_web_search_limit") to 9),
-                ).aiWebSearchLimit,
-        )
+        // The limit is fixed, not a setting: none is stored.
+        assertEquals(3, Settings.AI_WEB_SEARCH_LIMIT)
     }
 
     @Test
@@ -122,11 +104,15 @@ class AiWebSearchSettingTest {
         )
         assertEquals("Up to 3 times", app.resources.getQuantityString(R.plurals.settings_ai_web_search_up_to, 3, 3))
         assertEquals(
+            "Sleevesight searches the web once with Exa and gives the pages it finds to your AI service, which " +
+                "answers from them. One Exa API call and one paid AI call.",
+            text(R.string.settings_ai_web_search_once_detail),
+        )
+        assertEquals(
             "Your AI service searches the web with Exa itself, up to 3 times, changing the search as it learns, then " +
-                "answers from the pages. Up to 3 paid Exa searches and 4 paid AI calls.",
+                "answers from the pages. Up to 3 Exa API calls and 4 paid AI calls.",
             app.resources.getQuantityString(R.plurals.settings_ai_web_search_up_to_detail, 3, 3, 4),
         )
-        assertEquals("Web searches at most", text(R.string.settings_ai_web_search_limit))
         assertEquals("Exa web search is disabled.", text(R.string.settings_ai_web_search_exa_off))
     }
 
@@ -137,22 +123,22 @@ class AiWebSearchSettingTest {
     }
 
     @Test
-    fun upToNShowsTheLimitWhichStepsFromTwoToFive() =
+    fun theGroupComesBeforeTheToggleWithUpToThreeTimesAndNoLimitToSet() =
         showSettings {
             compose.openSection(SettingsSection.INSIGHTS)
             waitForText(text(R.string.settings_ai_web_search))
+            val group =
+                compose
+                    .onNodeWithText(
+                        text(R.string.settings_ai_web_search),
+                    ).performScrollTo()
+                    .fetchSemanticsNode()
+            val toggle = compose.onNodeWithText(text(R.string.settings_search_with_ai)).fetchSemanticsNode()
+            assertTrue(group.positionInRoot.y < toggle.positionInRoot.y)
             compose.onNodeWithText(text(R.string.settings_ai_web_search_once)).performScrollTo().assertIsSelected()
-            assertTrue(compose.onAllNodesWithTag(LIMIT_VALUE_TAG).fetchSemanticsNodes().isEmpty())
             compose.onNodeWithText("Up to 3 times").performScrollTo().performClick()
             compose.waitUntil(WAIT_MS) { settings.now().aiWebSearch == AiWebSearch.UP_TO }
-            val increase = compose.onNodeWithContentDescription(text(R.string.settings_stepper_increase))
-            increase.performScrollTo().performClick()
-            compose.waitUntil(WAIT_MS) { settings.now().aiWebSearchLimit == 4 }
-            increase.performClick()
-            compose.waitUntil(WAIT_MS) { settings.now().aiWebSearchLimit == 5 }
-            increase.assertIsNotEnabled()
-            waitForText("Up to 5 times")
-            compose.onNodeWithTag(LIMIT_VALUE_TAG).assertExists()
+            assertTrue(compose.onAllNodesWithText("Web searches at most").fetchSemanticsNodes().isEmpty())
         }
 
     @Test
@@ -174,8 +160,7 @@ class AiWebSearchSettingTest {
             compose.onNodeWithText(text(R.string.settings_ai_web_search_once)).assertIsNotEnabled()
             compose.onNodeWithText("Up to 3 times").assertIsNotEnabled()
             assertTrue(shows("See Settings → Sources."))
-            // No limit while it cannot search; a tap on Off keeps the choice saved.
-            assertTrue(compose.onAllNodesWithTag(LIMIT_VALUE_TAG).fetchSemanticsNodes().isEmpty())
+            // A tap on Off keeps the choice saved.
             compose.onNodeWithText(text(R.string.settings_ai_web_search_off)).performClick()
             compose.waitForIdle()
             assertEquals(AiWebSearch.UP_TO, settings.now().aiWebSearch)

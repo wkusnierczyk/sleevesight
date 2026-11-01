@@ -283,7 +283,7 @@ class AiSearches(
      */
     data class Asking(
         val search: AiWebSearch = AiWebSearch.OFF,
-        val limit: Int = Settings.DEFAULT_AI_WEB_SEARCH_LIMIT,
+        val limit: Int = Settings.AI_WEB_SEARCH_LIMIT,
         val automatic: Boolean = false,
     ) {
         companion object {
@@ -294,7 +294,7 @@ class AiSearches(
             ): Asking =
                 Asking(
                     settings?.aiWebSearchUsed ?: AiWebSearch.OFF,
-                    settings?.aiWebSearchLimit ?: Settings.DEFAULT_AI_WEB_SEARCH_LIMIT,
+                    Settings.AI_WEB_SEARCH_LIMIT,
                     automatic,
                 )
         }

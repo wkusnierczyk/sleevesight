@@ -266,7 +266,7 @@ class AiSearchScreenTest {
         assertEquals("Stop", text(R.string.home_ai_stop))
         assertEquals("stop the call", text(R.string.home_ai_stop_action))
         assertEquals("by Claude Haiku 5.5", app.getString(R.string.home_ai_by, model))
-        assertEquals("Asked automatically, by Claude Haiku 5.5", app.getString(R.string.home_ai_by_auto, model))
+        assertEquals("AI web search failed.", text(R.string.home_ai_web_search_failed))
         assertEquals(
             "Claude Haiku 5.5 couldn’t say from its own knowledge.",
             app.getString(R.string.home_ai_nothing, model),

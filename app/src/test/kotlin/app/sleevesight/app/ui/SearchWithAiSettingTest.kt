@@ -140,7 +140,7 @@ class SearchWithAiSettingTest {
         const val FIRST =
             "When Dates, Genres or Lyrics has nothing from its sources, asks your AI service, searching the web " +
                 "as set under $WEB."
-        const val SECOND = "Each question is a paid AI service call; with web search, also paid Exa searches."
+        const val SECOND = "Each question is a paid AI service call; with web search, also Exa API calls"
     }
 
     @Test
@@ -149,7 +149,7 @@ class SearchWithAiSettingTest {
             compose.waitUntil(WAIT_MS) {
                 compose.onAllNodesWithText(text(R.string.settings_section_insights)).fetchSemanticsNodes().isNotEmpty()
             }
-            for (query in listOf("Ask AI automatically", "nothing from its sources", "also paid Exa searches")) {
+            for (query in listOf("Ask AI automatically", "nothing from its sources", "also Exa API calls")) {
                 compose.onNodeWithTag(SEARCH_FIELD_TAG).performTextReplacement(query)
                 compose.waitForIdle()
                 // The row's title, not the search box holding the same words.

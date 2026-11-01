@@ -22,6 +22,7 @@ import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.app.ui.theme.linkedParts
+import app.sleevesight.core.pipeline.AiSearches
 import app.sleevesight.core.pipeline.GenreLists
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.synthesis.GenreListMode
@@ -167,7 +168,12 @@ internal fun ReasonShown(
 
         is InsightState.Failed ->
             RetryLine(
-                stringResource(R.string.genre_why_failed, failureText(state.reason)),
+                // The web search AI web search makes failed (#801): that, as the whole line.
+                if (state.reason == AiSearches.WEB_SEARCH_FAILED) {
+                    stringResource(R.string.home_ai_web_search_failed)
+                } else {
+                    stringResource(R.string.genre_why_failed, failureText(state.reason))
+                },
                 source = "",
                 onRetry = actions.again,
                 modifier = Modifier.testTag(GENRE_WHY_FAILED_TAG),

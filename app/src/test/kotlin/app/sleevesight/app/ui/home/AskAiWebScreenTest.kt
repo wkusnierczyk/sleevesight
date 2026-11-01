@@ -48,6 +48,7 @@ import app.sleevesight.core.genres.GenreVocabulary
 import app.sleevesight.core.lyrics.LyricsSite
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.pipeline.AiSearches
 import app.sleevesight.core.pipeline.QuestionCost
 import app.sleevesight.core.pipeline.SearchWay
 import app.sleevesight.core.pipeline.SourceState
@@ -258,7 +259,7 @@ class AskAiWebScreenTest {
         }
 
     @Test
-    fun aQuestionAskedAutomaticallySaysSoInItsCreditAndItsNothingLine() =
+    fun aQuestionAskedAutomaticallySaysSoInItsNothingLineOnly() =
         show {
             tap(DATES_CHIP_TAG)
             val auto = web.copy(automatic = true)
@@ -266,7 +267,8 @@ class AskAiWebScreenTest {
                 SearchKind.DATES,
                 AiSearch.Answered(SearchAnswer.Dates(album = "1974-01", albumSource = discogs), model, auto),
             )
-            compose.onNodeWithTag(AI_SEARCH_BY_TAG).assertTextEquals("Asked automatically, by Claude Haiku 5.5")
+            // Found: the plain credit; only the nothing line says it was asked automatically.
+            compose.onNodeWithTag(AI_SEARCH_BY_TAG).assertTextEquals("by Claude Haiku 5.5")
             set(SearchKind.DATES, AiSearch.NothingFound(model, auto))
             compose
                 .onNodeWithTag(AI_SEARCH_NOTHING_TAG)
@@ -318,6 +320,16 @@ class AskAiWebScreenTest {
             assertEquals(0, count(AI_SEARCH_TAG))
         }
     }
+
+    @Test
+    fun aFailedWebSearchSaysSoAsTheWholeLine() =
+        show {
+            tap(DATES_CHIP_TAG)
+            set(SearchKind.DATES, AiSearch.Failed(AiSearches.WEB_SEARCH_FAILED))
+            assertTrue(shows("AI web search failed."))
+            val asking = compose.onAllNodesWithText("Asking AI failed", substring = true).fetchSemanticsNodes()
+            assertTrue(asking.isEmpty())
+        }
 
     @Test
     fun theSiteIsTheHostWithoutWww() {

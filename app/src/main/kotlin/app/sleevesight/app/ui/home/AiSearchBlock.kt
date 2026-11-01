@@ -63,11 +63,11 @@ import app.sleevesight.core.synthesis.SearchKind
  *   *Stop* and back, as each takes the other's place;
  * - answered: a rule, the answer as the panel shows its source's ([answer]: from the web, each value
  *   with its page, [FromSite]), from the model's knowledge "From the AI model's own knowledge, not
- *   verified", then "by {model}" on a line of its own, in italics, "Asked automatically, by {model}"
- *   for a question *Ask AI automatically* asked;
+ *   verified", then "by {model}" on a line of its own, in italics, however it was asked;
  * - nothing usable: a rule, and "{model} found nothing on the web." or "{model} couldn't say from
  *   its own knowledge." in the answer's place, after "Asked automatically: " for one asked by itself;
- * - failed: "Asking AI failed: {reason}." in the error colour, with *Retry* at the right of the line,
+ * - failed: "Asking AI failed: {reason}.", or "AI web search failed." ([askFailedText]), in the
+ *   error colour, with *Retry* at the right of the line,
  *   as a source that could not be reached has ([RetryLine]), which asks again, a paid call.
  *
  * Nothing before the pipeline reaches the track.
@@ -118,7 +118,7 @@ internal fun AiSearchBlock(
         is AiSearch.NothingFound -> NothingFound(shown)
         is AiSearch.Failed ->
             RetryLine(
-                stringResource(R.string.home_ai_failed, searchFailureText(shown.reason)),
+                askFailedText(shown.reason),
                 source = "",
                 onRetry = { feed.ask(track, kind, facts(), genre = about) },
                 modifier = Modifier.testTag(AI_SEARCH_FAILED_TAG),
@@ -142,8 +142,8 @@ private fun Answered(
     if (!shown.way.web) {
         SearchCredit(stringResource(R.string.home_cite_model), Modifier.testTag(AI_SEARCH_KNOWLEDGE_TAG))
     }
-    val by = if (shown.way.automatic) R.string.home_ai_by_auto else R.string.home_ai_by
-    SearchCredit(stringResource(by, shown.model), Modifier.testTag(AI_SEARCH_BY_TAG))
+    // The plain credit, asked by a tap or automatically (#801's revised pick).
+    SearchCredit(stringResource(R.string.home_ai_by, shown.model), Modifier.testTag(AI_SEARCH_BY_TAG))
 }
 
 // Nothing found, under a rule: on the web or from the model's knowledge, after "Asked
@@ -243,6 +243,18 @@ private fun SearchingLine(
         )
     }
 }
+
+/**
+ * The line of a question that failed for [reason]: "AI web search failed." when the web search AI web
+ * search makes failed (#801, the whole line), else "Asking AI failed: {why}.".
+ */
+@Composable
+internal fun askFailedText(reason: String): String =
+    if (reason == AiSearches.WEB_SEARCH_FAILED) {
+        stringResource(R.string.home_ai_web_search_failed)
+    } else {
+        stringResource(R.string.home_ai_failed, searchFailureText(reason))
+    }
 
 // Why a search failed, in words: the insight's ([failureText]), or that the answer could not be read.
 @Composable

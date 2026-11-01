@@ -47,7 +47,7 @@ Every choice is a setting, with a reasoned default:
 - **Sources:** each one a switch; MusicBrainz and Wikipedia need no key, Last.fm and Exa your own.
 - **AI service:** Anthropic, OpenAI or Google, with your own key, model and reasoning effort.
 - **When it writes:** on every track change, only on a skip, or only when you tap *Write insight*.
-- **Ask AI:** whether a panel with nothing from its sources asks your AI service by itself (*Ask AI automatically*, off by default), and how it searches the web with Exa (*AI web search*: *Off*, *Once*, the default, or *Up to {n} times*, 2 to 5).
+- **Ask AI:** whether a panel with nothing from its sources asks your AI service by itself (*Ask AI automatically*, off by default), and how it searches the web with Exa (*AI web search*: *Off*, *Once*, the default, or *Up to 3 times*).
 - **History:** what is kept on the phone, for how long, and *Clear history*.
 - **Keys:** typed, scanned from a QR code, or typed on a computer; kept encrypted on the phone.
 
