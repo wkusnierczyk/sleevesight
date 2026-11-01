@@ -17,4 +17,11 @@ enum class CardKind(
     ALBUM("album"),
     GENRE("genre"),
     SOUNDS_LIKE("sounds_like"),
+
+    /**
+     * An answer of *Search with AI* (#773) under an empty *Dates*, *Genres* or *Lyrics*, its kind's
+     * key (`SearchKind.key`) as the card's subject: not a card the model writes for the reader, but
+     * the model's reply, kept to be read and checked again (`AiSearches`).
+     */
+    SEARCH("search"),
 }
