@@ -81,7 +81,8 @@ internal fun genresItem(
 
 /**
  * What *Genres*' panel holds (#772), as [GenresShown] works it out from [track] and [settings]: the
- * chips of the most specific level ([TrackGenres.folded]), each unfolding its genre under them and a
+ * chips of the folded labels ([TrackGenres.folded]: the track's backed by votes or by another level,
+ * else the album's, else the artists', #799), each unfolding its genre under them and a
  * rule (#786, [GenresBox], [GenreBody]); under the chips, or in their place with none, why
  * there are no more: "Looking on Last.fm and MusicBrainz…" while the genres are gathered (the
  * sources still asked), a source that could not be reached with *Retry* beside it ([retry] of its

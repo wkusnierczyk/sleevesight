@@ -49,11 +49,13 @@ data class LabelCredit(
 
 /**
  * A genre label as a track shows it: [genre], as the first source to give it has it, and
- * [credits], each source whose tags gave it, in [LabelSource] order.
+ * [credits], each source whose tags gave it, in [LabelSource] order; [votes], the most net votes a
+ * source that counts them gave its tag ([GenreLabel.votes], #799), null where none does.
  */
 data class TrackLabel(
     val genre: GenreLabel,
     val credits: List<LabelCredit>,
+    val votes: Int? = genre.votes,
 ) {
     /**
      * Whether it may open AI-written genre card content: an artist's label (as before the track's
@@ -88,10 +90,13 @@ fun combineLabels(bySource: Map<LabelSource, List<GenreLabel>>): List<TrackLabel
         val credit = LabelCredit(source, label.url)
         when {
             at < 0 -> if (combined.size < GenreVocabulary.MAX_LABELS) combined += TrackLabel(label, listOf(credit))
-            combined[at].credits.none { it.source == source } -> combined[at] = combined[at].credited(credit)
+            combined[at].credits.none { it.source == source } -> combined[at] = combined[at].credited(credit, label)
         }
     }
     return combined
 }
 
-private fun TrackLabel.credited(credit: LabelCredit): TrackLabel = copy(credits = credits + credit)
+private fun TrackLabel.credited(
+    credit: LabelCredit,
+    label: GenreLabel,
+): TrackLabel = copy(credits = credits + credit, votes = listOfNotNull(votes, label.votes).maxOrNull())

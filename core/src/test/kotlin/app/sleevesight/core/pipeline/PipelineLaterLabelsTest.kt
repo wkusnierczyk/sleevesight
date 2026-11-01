@@ -2,6 +2,7 @@ package app.sleevesight.core.pipeline
 
 import app.sleevesight.core.Secret
 import app.sleevesight.core.evidence.EvidenceSet
+import app.sleevesight.core.genres.GenreLevel
 import app.sleevesight.core.genres.GenreVocabulary
 import app.sleevesight.core.genres.LabelSource
 import app.sleevesight.core.genres.LastFmLabels
@@ -211,7 +212,13 @@ class PipelineLaterLabelsTest {
                 state.laterLabels,
             )
             // The track's own Last.fm tags still show.
-            assertEquals(listOf("Soft Rock"), state.genres.folded.map { it.label.genre.label })
+            assertEquals(
+                listOf("Soft Rock"),
+                state.genres.rows
+                    .single { it.level == GenreLevel.TRACK }
+                    .labels
+                    .map { it.genre.label },
+            )
         }
 
     @Test

@@ -409,8 +409,9 @@ class PipelineLabelsTest {
             )
             assertEquals("Gordon Lightfoot", state.genres.rows[1].artist)
             assertEquals(listOf("track Gordon Lightfoot / Sundown", "album Gordon Lightfoot / Sundown"), tags.asked)
-            // Folded, the most specific level shows; only an artist's label opens a genre card.
-            assertEquals(listOf("Soft Rock"), state.genres.folded.map { it.label.genre.label })
+            // Folded, the album's show: the track's Last.fm tag agrees with no other level (#799).
+            // Only an artist's label opens a genre card.
+            assertEquals(listOf("Folk Rock"), state.genres.folded.map { it.label.genre.label })
             assertEquals(
                 listOf(false, true, true, false, false),
                 state.genres.rows

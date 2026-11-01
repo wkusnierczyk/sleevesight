@@ -74,6 +74,7 @@ class MusicBrainzClient(
         return net.lookup(request) { response ->
             val json = parseObject(response.body)
             val relations = json.array("relations")
+            val tags = tags(json)
             MbRecordingDetail(
                 mbid = json.required("id"),
                 title = json.required("title"),
@@ -96,7 +97,8 @@ class MusicBrainzClient(
                         },
                 artistRelations = artistRelations(relations),
                 wikidataIds = wikidataIds(relations),
-                tags = tags(json),
+                tags = tags.map { it.first },
+                tagVotes = tags.toMap(),
             )
         }
     }
@@ -161,7 +163,7 @@ class MusicBrainzClient(
         return net.lookup(request) { response ->
             val json = parseObject(response.body)
             json.required("id")
-            tags(json)
+            tags(json).map { it.first }
         }
     }
 
@@ -224,14 +226,14 @@ class MusicBrainzClient(
                 score = json.int("score") ?: 0,
             )
 
-        // An entity's tags, most voted first, ties by name, those with no net vote up left out.
-        private fun tags(json: JsonElement): List<String> =
+        // An entity's tags, each with its net votes (#799), most voted first, ties by name, those
+        // with no net vote up left out.
+        private fun tags(json: JsonElement): List<Pair<String, Int>> =
             json
                 .array("tags")
                 .mapNotNull { tag -> tag.string("name")?.let { name -> name to (tag.int("count") ?: 0) } }
                 .filter { (_, count) -> count > 0 }
                 .sortedWith(compareByDescending<Pair<String, Int>> { it.second }.thenBy { it.first })
-                .map { it.first }
 
         private fun credits(json: JsonElement): List<MbCredit> =
             json.array("artist-credit").mapNotNull { credit ->
