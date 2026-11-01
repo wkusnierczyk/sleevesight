@@ -59,8 +59,7 @@ flowchart TD
   gate --> main
   main --> tag["Version tag"]
   tag --> release["Release workflow: signed bundle to Play"]
-  release --> internal["Internal testing"]
-  internal --> closed["Closed test"]
+  release --> closed["Closed test"]
   closed --> open["Open test"]
   open --> prod["Production review, then the store"]
   closed --> prod
@@ -144,13 +143,13 @@ At the end of a phase, and since release 0.1.5 at the end of each release, the g
 
 ## How it is tested and released
 
-Sleevesight is in closed testing on Google Play ([#58](https://github.com/wkusnierczyk/sleevesight/issues/58)); until it began, every release went to the internal testing track alone. What follows the closed test is the plan; this section will say what happened once it has run.
+Sleevesight is in closed testing on Google Play ([#58](https://github.com/wkusnierczyk/sleevesight/issues/58)). Until it began, every release went to the internal testing track alone; from 0.1.13 on, each goes straight to the closed test. What follows the closed test is the plan; this section will say what happened once it has run.
 
 ### 9. Testing tracks
 
 **What.** Google Play offers a sequence of tracks, each reaching more people:
 
-- **Internal testing.** A small list of testers named in Play Console, who get each release as soon as it is uploaded. Every release goes here first, and it is where a build is first checked on a phone installed from Play.
+- **Internal testing.** *No longer used.* A small list of testers named in Play Console, who got each release as soon as it was uploaded. Until 0.1.12 every release went here first; from 0.1.13 each goes straight to the closed test, and a build is checked before then by installing it on a phone over `adb`.
 - **Closed test (alpha).** *Under way.* Invited testers, at least 12, who stay opted in for 14 days in a row: Google Play asks for that before a new developer's app can go public. The [tester brief]({{ '/docs/tester/alpha/' | relative_url }}) tells them how to install the app, what to try and what to report: insights a source does not support, track changes missed, skips misread, crashes, battery or data use, the icon on their home screen.
 - **Open test (beta).** *Planned, if needed.* Open to anyone through the store listing, for a wider check before production.
 - **Production.** *Planned.* Play reviews the app before it is public, including what it does with notification access and what its data safety form declares.
