@@ -44,6 +44,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.concurrent.CountDownLatch
 import kotlin.time.Instant
 
 /**
@@ -256,8 +257,44 @@ class AppGenreListsTest {
             assertNull(later.aiGenres(mixed()).first())
         }
 
+    @Test
+    fun `a track's list and reason dropped from memory by later tracks' are read from the cache again (#762)`() =
+        runTest {
+            knowing()
+            provider.reply = { n -> if (n % 2 == 1) LIST else "Its loud guitars are punk [MB1]." }
+            val notes = notes()
+            // More tracks than the notes keep in memory, each listed and explained once: the first goes.
+            val tracks =
+                (0..MEMORY).map { i ->
+                    mixed().let { it.copy(normalized = it.normalized.copy(title = "Song $i", lookupKey = "song $i")) }
+                }
+            for (track in tracks) {
+                // The panel open on it, as on the phone: the cache is looked in first.
+                notes.aiGenres(track).first()
+                notes.reason(track, "punk").first()
+                advanceUntilIdle()
+                notes.explain(track, "punk")
+                advanceUntilIdle()
+            }
+            val calls = provider.requests
+            assertEquals(2 * tracks.size, calls)
+            // The first track again: its chips and its reason come back from the cache, with no call.
+            val first = tracks.first()
+            val list = notes.aiGenres(first)
+            list.first()
+            advanceUntilIdle()
+            assertEquals(listOf("punk", "blues"), list.first()?.genres?.map { it.identity })
+            val reason = notes.reason(first, "punk")
+            reason.first()
+            advanceUntilIdle()
+            assertTrue(((reason.first() as GenreReason.Shown).state as InsightState.Written).cached)
+            assertEquals(calls, provider.requests)
+        }
+
     // Between a state's check and its showing, *Clear history* runs on another thread, once: the
-    // epoch's advance, then [AppGenreNotes.forget], which must wait for the showing, and clear it.
+    // epoch's advance, then [AppGenreNotes.forget]. The showing goes on only once the epoch has
+    // advanced and the clear is either blocked, waiting for the showing (as it must be), or done
+    // (when it did not wait, and the showing then outlives it). No clock: the thread's own state.
     private fun clearDuringPublish(
         notes: AppGenreNotes,
         epoch: ClearEpoch,
@@ -265,13 +302,17 @@ class AppGenreListsTest {
         var clearing: Thread? = null
         notes.beforePublish = {
             if (clearing == null) {
-                clearing =
+                val advanced = CountDownLatch(1)
+                val thread =
                     Thread {
                         kotlinx.coroutines.runBlocking { epoch.advance() }
+                        advanced.countDown()
                         notes.forget()
-                    }.also { it.start() }
-                // Long enough for a clear that did not wait to have run.
-                clearing?.join(CLEAR_WAIT_MS)
+                    }
+                clearing = thread
+                thread.start()
+                advanced.await()
+                while (thread.isAlive && thread.state != Thread.State.BLOCKED) Thread.onSpinWait()
             }
         }
         return { clearing }
@@ -340,7 +381,7 @@ class AppGenreListsTest {
         /** The AI's genre list: punk, which MusicBrainz gives, and blues, which no source does. */
         const val LIST = """{"genres": ["Punk", "Blues"]}"""
 
-        /** How long a *Clear history* that did not wait for a showing would take, at most. */
-        const val CLEAR_WAIT_MS = 300L
+        /** As many lists, and reasons, as the notes keep in memory (`AppGenreNotes`' `KEPT`). */
+        const val MEMORY = 64
     }
 }

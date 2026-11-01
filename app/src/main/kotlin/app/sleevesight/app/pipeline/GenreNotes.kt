@@ -552,7 +552,8 @@ class AppGenreNotes private constructor(
         looked.remove(key)
     }
 
-    // [this] with [entry] for [key], last, the oldest dropped past [KEPT].
+    // [this] with [entry] for [key], last, the oldest dropped past [KEPT], and no longer counted as
+    // looked for in the cache.
     private fun <S> Map<CardKey, Entry<S>>.with(
         key: CardKey,
         entry: Entry<S>,
@@ -560,7 +561,12 @@ class AppGenreNotes private constructor(
         val next = LinkedHashMap(this)
         next.remove(key)
         next[key] = entry
-        while (next.size > KEPT) next.remove(next.keys.first())
+        while (next.size > KEPT) {
+            // Dropped from memory, so read from the cache again when it is asked for.
+            val oldest = next.keys.first()
+            next.remove(oldest)
+            looked.remove(oldest)
+        }
         return next
     }
 
