@@ -11,6 +11,10 @@ import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.pipeline.AiAccess
+import app.sleevesight.core.pipeline.AiSearches
+import app.sleevesight.core.pipeline.CardKey
+import app.sleevesight.core.pipeline.KeptCard
+import app.sleevesight.core.pipeline.PipelineCache
 import app.sleevesight.core.pipeline.PipelineParts
 import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.pipeline.TrackResolver
@@ -18,12 +22,14 @@ import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.platform.JvmResourceReader
+import app.sleevesight.core.resolution.NameMatcher
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.SourceResult
 import app.sleevesight.core.sources.WorkLyrics
 import app.sleevesight.core.synthesis.AiSearchAnswers
 import app.sleevesight.core.synthesis.SearchKind
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
@@ -67,9 +73,58 @@ class AutoSearchesTest {
     private fun TestScope.searches() = AppAiSearches(parts, settings, answers, this)
 
     private fun auto(searches: AppAiSearches) =
-        AutoSearches<SearchKind>(::emptyPanels) { track, kind ->
+        AutoSearches<SearchKind>(::emptyPanels, subject) { track, kind ->
             searches.ask(track, kind, searchFacts(track, track.nowPlaying), automatic = true)
         }
+
+    // Each attempt by its panel's subject, as `AppGraph` keys them: for *Dates*, with the album.
+    private val albums = NameMatcher(JvmAccentFolder)
+    private val subject = { track: TrackState, kind: SearchKind ->
+        Triple(track.normalized, track.nowPlaying.duration, AiSearches.subject(track, kind, albums))
+    }
+
+    // A cache whose reads wait for [open] while [holding]: a slow lookup, during which the gates change.
+    private class HeldCache(
+        private val cache: PipelineCache,
+    ) : PipelineCache by cache {
+        var holding = false
+        val open = CompletableDeferred<Unit>()
+
+        override suspend fun keptCard(key: CardKey): KeptCard? {
+            if (holding) open.await()
+            return cache.keptCard(key)
+        }
+    }
+
+    // The searches and the trigger wired to each other, as `AppGraph` wires them, on [cache].
+    private fun TestScope.wired(cache: PipelineCache): Pair<AppAiSearches, AutoSearches<SearchKind>> {
+        parts.value =
+            PipelineParts(
+                Normalizer(JvmAccentFolder),
+                emptyList(),
+                TrackResolver {
+                    _,
+                    _,
+                    ->
+                    Resolution.NONE
+                },
+                JvmHasher,
+                ai,
+                cache,
+            )
+        lateinit var auto: AutoSearches<SearchKind>
+        val searches =
+            AppAiSearches(
+                parts,
+                settings,
+                answers,
+                this,
+                automaticGate = { auto.open() },
+                deferred = { track, kind -> auto.release(track, kind) },
+            )
+        auto = auto(searches)
+        return searches to auto
+    }
 
     // Sundown, every source done: MusicBrainz with [musicBrainz], Last.fm with nothing; no date, genre or lyrics page.
     private fun empty(
@@ -239,6 +294,85 @@ class AutoSearchesTest {
             auto.follow(empty(), settings.value)
             advanceUntilIdle()
             assertEquals(3, provider.requests)
+        }
+
+    @Test
+    fun `the app leaving the screen during the cache lookup stops the call, and its return starts it`() =
+        runTest {
+            settings.value = settings.value?.copy(showGenres = false, lyricsLinks = false)
+            val held = HeldCache(CardCache()).apply { holding = true }
+            val (_, auto) = wired(held)
+            auto.follow(empty(), settings.value, onScreen = true)
+            runCurrent()
+            // Off screen while the cache is read; it misses.
+            auto.follow(empty(), settings.value, onScreen = false)
+            held.holding = false
+            held.open.complete(Unit)
+            advanceUntilIdle()
+            assertEquals(0, provider.requests)
+            // Back on screen: as if it had not been tried.
+            auto.follow(empty(), settings.value, onScreen = true)
+            advanceUntilIdle()
+            assertEquals(1, provider.requests)
+        }
+
+    @Test
+    fun `the setting or Show insights switched off during the cache lookup stops the call`() =
+        runTest {
+            val gates =
+                listOf<(Settings) -> Settings>({ it.copy(searchWithAi = false) }, { it.copy(writeInsights = false) })
+            for (close in gates) {
+                provider.requests = 0
+                val on =
+                    Settings(
+                        aiProvider = ProviderId.ANTHROPIC,
+                        searchWithAi = true,
+                        showGenres = false,
+                        lyricsLinks = false,
+                    )
+                settings.value = on
+                val held = HeldCache(CardCache()).apply { holding = true }
+                val (_, auto) = wired(held)
+                auto.follow(empty(), on)
+                runCurrent()
+                settings.value = close(on)
+                auto.follow(empty(), settings.value)
+                held.holding = false
+                held.open.complete(Unit)
+                advanceUntilIdle()
+                assertEquals(0, provider.requests)
+                settings.value = on
+                auto.follow(empty(), on)
+                advanceUntilIdle()
+                assertEquals(1, provider.requests)
+            }
+        }
+
+    @Test
+    fun `a tap is not gated by the app's visibility or the setting`() =
+        runTest {
+            settings.value = settings.value?.copy(searchWithAi = false, showGenres = false, lyricsLinks = false)
+            val (searches, auto) = wired(CardCache())
+            auto.follow(empty(), settings.value, onScreen = false)
+            searches.ask(empty(), SearchKind.DATES, searchFacts(empty(), HomeFixtures.sundown))
+            advanceUntilIdle()
+            assertEquals(1, provider.requests)
+        }
+
+    @Test
+    fun `the same recording played next from another album is searched again for Dates alone`() =
+        runTest {
+            val auto = auto(searches())
+            auto.follow(empty(), settings.value)
+            advanceUntilIdle()
+            assertEquals(3, provider.requests)
+            val compilation = HomeFixtures.sundown.copy(album = "Gord's Gold")
+            auto.follow(empty(playing = compilation), settings.value)
+            advanceUntilIdle()
+            assertEquals(
+                listOf(SearchKind.DATES, SearchKind.DATES, SearchKind.GENRES, SearchKind.LYRICS),
+                asked().sorted(),
+            )
         }
 
     @Test

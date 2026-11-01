@@ -70,11 +70,13 @@ import app.sleevesight.app.ui.home.searchFacts
 import app.sleevesight.core.ai.AiProvider
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.normalizer.Normalizer
+import app.sleevesight.core.pipeline.AiSearches
 import app.sleevesight.core.pipeline.ClearEpoch
 import app.sleevesight.core.pipeline.ListeningSessionFacts
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmResourceReader
 import app.sleevesight.core.resolution.MusicBrainzLookup
+import app.sleevesight.core.resolution.NameMatcher
 import app.sleevesight.core.settings.Crossfade
 import app.sleevesight.core.settings.FontChoice
 import app.sleevesight.core.settings.LinkStyle
@@ -532,7 +534,7 @@ class AppGraph internal constructor(
      * pipeline's scope, marked with [clearEpoch]; its answers checked against the app's genre list and
      * the lyrics whitelist; the model named as the AI settings name it ([ListedModelNames]).
      */
-    val aiSearches: AppAiSearches =
+    val aiSearches: AppAiSearches by lazy {
         AppAiSearches(
             parts = pipeline.liveParts,
             settings = latestSettings,
@@ -540,7 +542,29 @@ class AppGraph internal constructor(
             scope = pipelineScope,
             epoch = clearEpoch,
             modelName = ListedModelNames(appContext)::of,
+            // An automatic search's gates, checked again just before its call, and where it goes back.
+            automaticGate = autoSearches::open,
+            deferred = autoSearches::release,
         )
+    }
+
+    /**
+     * *Search with AI*, the setting (#773): a panel's search started as soon as its source has
+     * nothing, open or not, while the app is on screen ([AutoSearches]), each attempt by its panel's
+     * subject (for *Dates* with the album, `AiSearches.subject`).
+     */
+    private val autoSearches: AutoSearches<SearchKind> by lazy {
+        val albums = NameMatcher(JvmAccentFolder)
+        AutoSearches(
+            ::emptyPanels,
+            {
+                track,
+                kind,
+                ->
+                Triple(track.normalized, track.nowPlaying.duration, AiSearches.subject(track, kind, albums))
+            },
+        ) { track, kind -> aiSearches.ask(track, kind, searchFacts(track, track.nowPlaying), automatic = true) }
+    }
 
     /**
      * *Reactive*'s mode chosen, in the insight card's menu or in the settings (#615, #625): saved in
@@ -617,9 +641,7 @@ class AppGraph internal constructor(
         // nothing, open or not, for the playing track, while the app is on screen; again once an AI
         // service is ready.
         pipelineScope.launch {
-            AutoSearches<SearchKind>(::emptyPanels) { track, kind ->
-                aiSearches.ask(track, kind, searchFacts(track, track.nowPlaying), automatic = true)
-            }.run(pipeline.state.map { it.track }, latestSettings, pipeline.onScreen, pipeline.liveParts)
+            autoSearches.run(pipeline.state.map { it.track }, latestSettings, pipeline.onScreen, pipeline.liveParts)
         }
         // The selected model checked at start, and when the service, its model or a key changes (#540).
         pipelineScope.launch {

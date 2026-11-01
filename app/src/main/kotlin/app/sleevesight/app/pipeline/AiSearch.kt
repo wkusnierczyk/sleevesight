@@ -140,6 +140,12 @@ interface AiSearchFeed {
  * memory (the track, its length and the key's subject, so whatever AI service; the last few hundred),
  * a search stopped, asked by a tap or by itself, is not asked by itself again ([ask]'s `automatic`),
  * the track coming back included, for as long as the process lives; a tap asks it, and lifts the "no".
+ * A search asked by itself ([ask]'s `automatic`) checks its gates again once the cache has missed,
+ * just before the paid call: [automaticGate] (the app on screen, the setting on, as `AutoSearches`
+ * last read them), the setting and *Show insights* as last read, and its key (the AI service ready,
+ * the same model and effort). If one no longer holds, it asks nothing and shows nothing, and is
+ * handed back to [deferred], to start later as if it had not been tried (off screen, on return). A
+ * tap is gated by none of the app's visibility and the setting.
  * Each search is marked with [epoch], and after *Clear history* ([forget]) nothing it finds is shown
  * or kept: a state is shown only under the lock [forget] clears under ([ShownSearches.publish]), so
  * one that passed the check cannot land after the clear. *Clear history* forgets the stops too.
@@ -153,6 +159,8 @@ class AppAiSearches(
     private val epoch: ClearEpoch = ClearEpoch(),
     private val modelName: (String) -> String = { ModelNames.of(it) ?: it },
     private val clock: Clock = Clock.System,
+    private val automaticGate: () -> Boolean = { true },
+    private val deferred: (TrackState, SearchKind) -> Unit = { _, _ -> },
 ) : AiSearchFeed {
     // A search's key, null with no AI service ready; and whether it is offered at all (the pipeline
     // and settings in, *Show insights* on).
@@ -238,7 +246,11 @@ class AppAiSearches(
                 if (automatic) Declined.of(key) in declined else declined.remove(Declined.of(key)).let { false }
             }
         if (!declines && open(key) && !asking.containsKey(key)) {
-            val job = scope.launch(epoch.mark(), start = CoroutineStart.LAZY) { run(searches, key, kind, track, facts) }
+            val job =
+                scope.launch(
+                    epoch.mark(),
+                    start = CoroutineStart.LAZY,
+                ) { run(searches, key, kind, track, facts, automatic) }
             if (asking.putIfAbsent(key, job) == null) {
                 synchronized(lock) {
                     stopped.remove(key)
@@ -275,14 +287,16 @@ class AppAiSearches(
     }
 
     // [key]'s search, kept meanwhile (another panel's), with no call, or asked; each state shown while
-    // no *Clear history* came since it started and it was not stopped.
-    @Suppress("LongParameterList") // The search, its key, kind and track, and what it asks about.
+    // no *Clear history* came since it started and it was not stopped. One [automatic] asks only if
+    // its gates still hold once the cache missed, else it is handed back ([deferred]).
+    @Suppress("LongParameterList") // The search, its key, kind and track, what it asks about, and who asked.
     private suspend fun run(
         searches: AiSearches,
         key: CardKey,
         kind: SearchKind,
         track: TrackState,
         facts: SearchFacts,
+        automatic: Boolean,
     ) {
         val work = currentCoroutineContext()
         val show: (SearchState, Instant) -> Unit = { state, at ->
@@ -290,8 +304,13 @@ class AppAiSearches(
         }
         try {
             val kept = searches.kept(key, kind, track)?.takeIf { !expired(it.writtenAt) }
+            val gated =
+                automatic &&
+                    !(automaticGate() && settings.value?.searchWithAi == true && keyOf(track, kind)?.second == key)
             if (kept != null) {
                 show(kept.state, kept.writtenAt ?: clock.now())
+            } else if (gated) {
+                deferred(track, kind)
             } else {
                 searches.search(key, kind, track, facts, show) {
                     synchronized(lock) {

@@ -18,20 +18,27 @@ import kotlinx.coroutines.flow.combine
  * [wanted] (for *Dates*, *Genres* and *Lyrics*, those whose panel shows an empty state, once every
  * source has answered, not while any is still looking, and not for a panel hidden in *Appearance*)
  * is handed to [start], which asks it and says whether that is settled: false with no AI service
- * ready, so it is tried again on the next change (a key saved, a service switched on). One settled
- * is not started again on this play of the track: a failure is tried again only when the track plays
- * again. A search once stopped is never started by itself again, the track coming back included
- * ([start] declines it: `AppAiSearches`), nor is one answered or kept. A search under way when the
- * track changes runs on, and is kept (its call is paid for).
+ * ready, so it is tried again on the next change (a key saved, a service switched on). One settled,
+ * by its [subject] (for *Dates* the album too, so the same recording next from a compilation is
+ * searched), is not started again on this play of the track, unless its search hands it back
+ * ([release]: its gates, [open], closed while the cache was read, before its call): a failure is
+ * tried again only when the track plays again. A search once stopped is never started by itself
+ * again, the track coming back included ([start] declines it: `AppAiSearches`), nor is one answered
+ * or kept. A search under way when the track changes runs on, and is kept (its call is paid for).
  */
 class AutoSearches<K>(
     private val wanted: (TrackState, Settings) -> Set<K>,
+    private val subject: (TrackState, K) -> Any = { _, wish -> wish as Any },
     private val start: (TrackState, K) -> Boolean,
 ) {
-    // The track followed, by its identity as the sources name it, and what settled on this play of
-    // it. Touched only by [follow], which one collector calls ([run]).
+    // The play followed, by the track's identity as the sources name it; what settled on it, by
+    // each wish's [subject] (for *Dates*, its album: the same recording from a compilation is
+    // another); and the inputs last followed. Under [lock]: [follow] runs in one collector ([run]),
+    // [release] wherever a search hands one back.
+    private val lock = Any()
     private var playing: Any? = null
-    private val started = mutableSetOf<K>()
+    private val started = mutableSetOf<Any>()
+    private var last: Triple<TrackState?, Settings?, Boolean>? = null
 
     /**
      * [track] as the pipeline publishes it, under [settings] as last read, while the app is [onScreen]
@@ -41,17 +48,41 @@ class AutoSearches<K>(
         track: TrackState?,
         settings: Settings?,
         onScreen: Boolean = true,
-    ) {
-        if (track == null || settings == null) return
+    ) = synchronized(lock) {
+        last = Triple(track, settings, onScreen)
+        if (track == null || settings == null) return@synchronized
         val identity = track.normalized to track.nowPlaying.duration
         if (identity != playing) {
             playing = identity
             started.clear()
         }
-        if (!settings.searchWithAi || !onScreen) return
+        if (!settings.searchWithAi || !onScreen) return@synchronized
         for (wish in wanted(track, settings)) {
-            if (wish !in started && start(track, wish)) started += wish
+            val about = subject(track, wish)
+            if (about !in started && start(track, wish)) started += about
         }
+    }
+
+    /**
+     * Whether a search started by itself may still make its call (`AppAiSearches` asks just before
+     * it): the setting on and the app on screen, as last followed.
+     */
+    fun open(): Boolean =
+        synchronized(lock) {
+            last?.let { (_, now, shown) -> now?.searchWithAi == true && shown } ==
+                true
+        }
+
+    /**
+     * [track]'s [wish], started but not asked, its gates closed before its call: as if it had not been
+     * tried, so it starts once they open again, at once if they already have.
+     */
+    fun release(
+        track: TrackState,
+        wish: K,
+    ) = synchronized(lock) {
+        started.remove(subject(track, wish))
+        last?.let { (now, settings, shown) -> follow(now, settings, shown) }
     }
 
     /**

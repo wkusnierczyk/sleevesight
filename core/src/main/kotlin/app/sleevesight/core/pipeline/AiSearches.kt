@@ -107,11 +107,7 @@ class AiSearches(
     fun subject(
         track: TrackState,
         kind: SearchKind,
-    ): String =
-        when (kind) {
-            SearchKind.DATES -> kind.key + "\n" + albums.albumKey(track.nowPlaying.album.orEmpty())
-            SearchKind.GENRES, SearchKind.LYRICS -> kind.key
-        }
+    ): String = subject(track, kind, albums)
 
     // Album names compared as the panels compare them.
     private val albums = NameMatcher(answers.accentFolder)
@@ -192,6 +188,20 @@ class AiSearches(
         }
 
     companion object {
+        /**
+         * [track]'s search of [kind]'s subject, as [subject] gives it, album names read by [albums]:
+         * for what tells one search from another without the AI service (`AutoSearches`' attempts).
+         */
+        fun subject(
+            track: TrackState,
+            kind: SearchKind,
+            albums: NameMatcher,
+        ): String =
+            when (kind) {
+                SearchKind.DATES -> kind.key + "\n" + albums.albumKey(track.nowPlaying.album.orEmpty())
+                SearchKind.GENRES, SearchKind.LYRICS -> kind.key
+            }
+
         /** Why a search failed when its reply was not the JSON object asked for. */
         const val MALFORMED: String = "malformed"
 
