@@ -394,7 +394,7 @@
     <string name="home_cite">Source %1$s</string>
     <string name="home_cite_model">From the AI model’s own knowledge, not verified</string>
     <string name="home_cite_unknown">%1$s: no such evidence line</string>
-    <!-- Said by a screen reader after a sentence that cites nothing, which the screen underlines. -->
+    <!-- Said by a screen reader after a sentence that cites nothing, which the screen dims. -->
     <string name="home_cite_none">not cited</string>
 
     <!-- Why an insight could not be written: the fixed labels the pipeline gives. -->
