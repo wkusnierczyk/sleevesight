@@ -1,6 +1,10 @@
 package app.sleevesight.app.ui.logo
 
+import android.content.ContentResolver
+import android.content.Context
 import android.graphics.Bitmap
+import android.os.Looper
+import android.provider.Settings
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -8,14 +12,19 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
@@ -26,6 +35,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.test.core.app.ActivityScenario
+import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.ui.theme.SleevesightTheme
 import org.junit.Assert.assertEquals
@@ -34,6 +44,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import kotlin.math.abs
@@ -208,6 +219,100 @@ class SpinningRecordTest {
             )
         }
     }
+
+    @Test
+    fun besideASmallMessageTheRowIsAsTallAsTheMessageAndTheRecordOverhangsIt() {
+        show(content = {
+            val style = MaterialTheme.typography.bodySmall
+            Column {
+                Box(Modifier.testTag("with")) { Busy("Looking…", style, textModifier = Modifier.testTag("message")) }
+                Box(Modifier.testTag("without")) { Busy("Found the track.", style, record = false) }
+            }
+        }) {
+            val withRecord = compose.onNodeWithTag("with").fetchSemanticsNode().boundsInRoot
+            val withoutRecord = compose.onNodeWithTag("without").fetchSemanticsNode().boundsInRoot
+            val message = compose.onNodeWithTag("message", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+            val disc = record().fetchSemanticsNode().boundsInRoot
+            // A row keeps its height when its record goes (#785): the message's, not the record's.
+            assertEquals(withoutRecord.height, withRecord.height, 1f)
+            assertEquals(message.height, withRecord.height, 1f)
+            // The record, taller than the 16 sp line, on its centre, over the row's top and bottom alike.
+            assertTrue("taller than the line", disc.height > message.height + 2f)
+            assertEquals(message.center.y, disc.center.y, 1f)
+            assertEquals(withRecord.top - disc.top, disc.bottom - withRecord.bottom, 1f)
+        }
+    }
+
+    @Test
+    fun theMessageKeepsItsNodeAsTheRecordGoes() {
+        var busy by mutableStateOf(true)
+        show(content = {
+            Busy(
+                if (busy) "Exporting…" else "Exported.",
+                MaterialTheme.typography.bodyMedium,
+                textModifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                record = busy,
+            )
+        }) {
+            val before = compose.onNodeWithText("Exporting…").fetchSemanticsNode()
+            assertEquals(1, records())
+            busy = false
+            compose.waitForIdle()
+            val after = compose.onNodeWithText("Exported.").fetchSemanticsNode()
+            assertEquals(before.id, after.id)
+            assertEquals(LiveRegionMode.Polite, after.config[SemanticsProperties.LiveRegion])
+            assertEquals(0, records())
+        }
+    }
+
+    @Test
+    fun theRootFollowsThePhonesSettingWithOneObserverGoneWithIt() {
+        val uri = Settings.Global.getUriFor(Settings.Global.ANIMATOR_DURATION_SCALE)
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        Settings.Global.putFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 0f)
+        var shown by mutableStateOf(true)
+        compose.mainClock.autoAdvance = false
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            lateinit var resolver: ContentResolver
+            scenario.onActivity {
+                resolver = it.contentResolver
+                it.setContent {
+                    SleevesightTheme(darkTheme = false) {
+                        // As `MainActivity` provides it, with nothing of a test's.
+                        if (shown) {
+                            CompositionLocalProvider(
+                                LocalAnimatorDurationScale provides followedAnimatorDurationScale(),
+                            ) { Box { SpinningRecord() } }
+                        }
+                    }
+                }
+            }
+            compose.mainClock.advanceTimeByFrame()
+            // Under *Remove animations*, still; one observer, the root's, for the records under it.
+            assertEquals(1, shadowOf(resolver).getContentObservers(uri).size)
+            assertEquals(Facing.UPRIGHT, facing())
+            compose.mainClock.advanceTimeBy(TURN_QUARTER_MS)
+            assertEquals(Facing.UPRIGHT, facing())
+
+            // Animations on again while it shows: it turns.
+            Settings.Global.putFloat(resolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f)
+            resolver.notifyChange(uri, null)
+            shadowOf(Looper.getMainLooper()).idle()
+            compose.mainClock.advanceTimeByFrame()
+            assertEquals(Facing.UPRIGHT, facing())
+            compose.mainClock.advanceTimeBy(TURN_QUARTER_MS)
+            assertEquals(Facing.QUARTER, facing())
+
+            // Gone with the root: the observer too.
+            shown = false
+            compose.mainClock.advanceTimeByFrame()
+            assertEquals(0, records())
+            assertEquals(emptyList<Any>(), shadowOf(resolver).getContentObservers(uri).toList())
+        }
+    }
+
+    private fun records() =
+        compose.onAllNodesWithTag(SPINNING_RECORD_TAG, useUnmergedTree = true).fetchSemanticsNodes().size
 
     private companion object {
         const val TURN_QUARTER_MS = 450L

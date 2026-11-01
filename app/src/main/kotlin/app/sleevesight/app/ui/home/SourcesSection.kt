@@ -174,16 +174,15 @@ internal fun SourcesBody(
         Notes(sourceNotes(chips, shown.offline), openSettings)
         if (shown.offline) Small(stringResource(R.string.home_sources_offline))
         if (lines.isEmpty()) {
-            // Still looking, with the turning record before it (#785); nothing found, without.
-            if (track?.gathered == true) {
-                Small(stringResource(R.string.home_evidence_empty))
-            } else {
-                Busy(
-                    stringResource(R.string.home_evidence_looking),
-                    MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            // Still looking, with the turning record before it (#785); nothing found, without, the
+            // same node.
+            val gathered = track?.gathered == true
+            Busy(
+                stringResource(if (gathered) R.string.home_evidence_empty else R.string.home_evidence_looking),
+                MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                record = !gathered,
+            )
         }
         if (entries.isEmpty() && filtered == 0) return@Column
         val total = entries.size

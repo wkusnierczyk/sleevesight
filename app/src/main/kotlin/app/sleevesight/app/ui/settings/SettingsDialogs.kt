@@ -425,14 +425,14 @@ internal fun ModelDialog(
                     )
                 }
                 modelStatus(loaded)?.let {
-                    val style = MaterialTheme.typography.bodyMedium
-                    val padding = Modifier.padding(bottom = 8.dp)
-                    // The list on its way, with the turning record before it (#785).
-                    if (loaded == ModelLoad.Loading) {
-                        Busy(stringResource(it), style, padding)
-                    } else {
-                        Text(stringResource(it), style = style, modifier = padding)
-                    }
+                    // The list on its way, with the turning record before it (#785); once loaded, the
+                    // same node, without.
+                    Busy(
+                        stringResource(it),
+                        MaterialTheme.typography.bodyMedium,
+                        Modifier.padding(bottom = 8.dp),
+                        record = loaded == ModelLoad.Loading,
+                    )
                 }
                 default?.let { d ->
                     val label = stringResource(R.string.settings_ai_model_default, named(d))

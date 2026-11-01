@@ -107,16 +107,15 @@ private fun BluetoothKeyboard(
             onDispose { keyboard.stop() }
         }
     }
-    when {
-        refused -> KeyboardStatus(stringResource(R.string.keyboard_refused), onStop = onStop)
-        state == KeyboardState.WAITING ->
-            KeyboardStatus(
-                waitingMessage(showName, advertised),
-                busy = true,
-                onStop = onStop,
-            )
-        else -> KeyboardStatus(stringResource(message(state)), busy = state == KeyboardState.STARTING, onStop = onStop)
-    }
+    // One status in every state, so its message's node lasts from one to the next (#785).
+    val said =
+        when {
+            refused -> stringResource(R.string.keyboard_refused)
+            state == KeyboardState.WAITING -> waitingMessage(showName, advertised)
+            else -> stringResource(message(state))
+        }
+    val busy = !refused && (state == KeyboardState.WAITING || state == KeyboardState.STARTING)
+    KeyboardStatus(said, busy = busy, onStop = onStop)
 }
 
 /**
@@ -144,9 +143,10 @@ internal fun KeyboardStatus(
 
 /**
  * Where the session is, [message], and *Stop*; while it is [busy] (starting, or waiting for the
- * computer), with the turning record before the message, by its first line (#785). *Stop* is an
- * outlined button at the right, centred on the message whether it takes one line or several (#785),
- * in every state.
+ * computer), with the turning record before the message, by its first line (#785). The message is
+ * the same node in every state, the record coming and going before it ([Busy]'s `record`). *Stop* is
+ * an outlined button at the right, centred on the message whether it takes one line or several
+ * (#785), in every state.
  */
 @Composable
 internal fun KeyboardStatus(
@@ -159,12 +159,7 @@ internal fun KeyboardStatus(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        val style = MaterialTheme.typography.bodyMedium
-        if (busy) {
-            Busy(message, style, Modifier.weight(1f))
-        } else {
-            Text(message, style = style, modifier = Modifier.weight(1f))
-        }
+        Busy(message, MaterialTheme.typography.bodyMedium, Modifier.weight(1f), record = busy)
         OutlinedButton(onClick = onStop) { Text(stringResource(R.string.keyboard_stop)) }
     }
 }

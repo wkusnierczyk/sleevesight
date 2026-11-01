@@ -256,13 +256,10 @@ private fun SourceRow(
             val status = statusText(chip, lines, details)
             val style = MaterialTheme.typography.bodySmall
             val tag = Modifier.testTag(STATUS_PREFIX + chip.source.tag)
-            // A lookup under way with the turning record before its *Looking…* (#785).
-            if (chip.status == ChipStatus.Pending) {
-                Busy(status, style, color = colors.onSurfaceVariant, textModifier = tag)
-            } else {
-                val color = if (details && chip.status.wentWrong) colors.error else colors.onSurfaceVariant
-                Text(status, style = style, color = color, modifier = tag)
-            }
+            val color = if (details && chip.status.wentWrong) colors.error else colors.onSurfaceVariant
+            // A lookup under way with the turning record before its *Looking…* (#785); the status the
+            // same node, and the row as tall, once it ends.
+            Busy(status, style, color = color, textModifier = tag, record = chip.status == ChipStatus.Pending)
         }
     }
 }

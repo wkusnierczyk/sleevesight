@@ -86,4 +86,27 @@ class KeyboardStatusRecordTest {
             assertEquals(emptyList<Rect>(), records())
         }
     }
+
+    @Test
+    fun theMessageKeepsItsNodeFromWaitingToConnected() {
+        val connected = app.getString(R.string.keyboard_connected)
+        val waiting = app.getString(R.string.keyboard_waiting_named, "Pixel 9")
+        var busy by mutableStateOf(true)
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                activity.setContent {
+                    // As the session calls it, once for every state (#785).
+                    val message = if (busy) waitingMessage(showName = true, advertised = "Pixel 9") else connected
+                    KeyboardStatus(message, busy) {}
+                }
+            }
+            compose.waitForIdle()
+            val before = compose.onNodeWithText(waiting).fetchSemanticsNode().id
+            assertEquals(1, records().size)
+            busy = false
+            compose.waitForIdle()
+            assertEquals(before, compose.onNodeWithText(connected).fetchSemanticsNode().id)
+            assertEquals(emptyList<Rect>(), records())
+        }
+    }
 }

@@ -148,12 +148,10 @@ private fun ExportNotice(state: ExportState) {
     val color = if (failure) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
     val padding = Modifier.padding(horizontal = 24.dp)
     val live = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
-    // The export under way with the turning record before it (#785), the live region on its message.
-    if (state == ExportState.Running) {
-        Busy(stringResource(message), style, padding, color, textModifier = live)
-    } else {
-        Text(stringResource(message), style = style, color = color, modifier = padding.then(live))
-    }
+    // The export under way with the turning record before it (#785). One message in every state, so
+    // its node and its live region last, and how the export ended is announced as it replaces
+    // *Exporting…*.
+    Busy(stringResource(message), style, padding, color, textModifier = live, record = state == ExportState.Running)
 }
 
 /** The caches' sizes, then the events kept, newest first. */

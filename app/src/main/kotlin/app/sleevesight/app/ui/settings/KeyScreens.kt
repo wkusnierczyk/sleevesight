@@ -131,7 +131,8 @@ internal fun KeyScreenTitle(
  * A step's heading on a key screen: a screen reader reads it as a heading, and, when [announced],
  * says it as soon as it shows, as a result that replaces what was there. When [busy], something is
  * under way, and the turning record goes before it on its line ([Busy], #785), which a screen
- * reader skips: the heading reads, and is announced, as it is.
+ * reader skips: the heading reads, and is announced, as it is, the same node with the record or
+ * without.
  */
 @Composable
 internal fun StepHeading(
@@ -145,11 +146,7 @@ internal fun StepHeading(
             heading()
             if (announced) liveRegion = LiveRegionMode.Polite
         }
-    if (busy) {
-        Busy(text, style, textModifier = semantics)
-    } else {
-        Text(text, style = style, modifier = semantics)
-    }
+    Busy(text, style, textModifier = semantics, record = busy)
 }
 
 /**

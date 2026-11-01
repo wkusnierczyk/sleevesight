@@ -101,17 +101,14 @@ private fun IdleNote(
             else -> null
         }
     val reason = idleReason(context)
-    when {
-        line != null -> Quiet(line)
-        // The evidence or the insight on its way, with the turning record before it (#785).
-        reason == R.string.home_insight_gathering || reason == R.string.home_insight_preparing ->
-            Busy(
-                stringResource(reason),
-                MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        else -> Quiet(stringResource(reason))
-    }
+    // The evidence or the insight on its way, with the turning record before it (#785); one note in
+    // every case, so its node lasts as the record comes and goes.
+    Busy(
+        line ?: stringResource(reason),
+        MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        record = line == null && reason in ON_ITS_WAY,
+    )
 }
 
 @Composable
@@ -273,6 +270,9 @@ private fun Prose(text: AnnotatedString) {
 private fun Quiet(text: String) {
     Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
+
+// The idle notes that say something is on its way, with the turning record (#785).
+private val ON_ITS_WAY = setOf(R.string.home_insight_gathering, R.string.home_insight_preparing)
 
 /** The test tag of the row of the *Key insights* heading, with *Read aloud* at its end. */
 const val INSIGHT_HEADING_TAG: String = "insight-heading"
