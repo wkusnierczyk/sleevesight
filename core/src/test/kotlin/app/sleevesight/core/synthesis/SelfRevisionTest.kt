@@ -90,6 +90,12 @@ class SelfRevisionTest {
                 // Two paragraphs that open alike, but go on to say different things.
                 "Gordon Lightfoot wrote it in 1973 [MB1].\n\nGordon Lightfoot recorded it with Red Shea in 1974 [W1].",
                 "It came out in 1965... and it was a hit [MB1].",
+                // A Roman numeral is no first person.
+                "Part I was cut live at Abbey Road [MB1]. Volume I was released in 1971 [MB2].",
+                "Act I closes with it [W1]. Book I was revised in 1980 [MB1].",
+                // Titles in emphasis that end in a stop mid-sentence, or hold an aside's words.
+                "*Wait!* is the album's single [MB1]. *Help!* came out in 1965 [W1].",
+                "*Wait, Let Me Fix It* is the album's sixth track [MB1].",
                 // Titles in emphasis that are an aside's word, but no header.
                 "*Correction* is the album's opener [MB1]. *Wait* followed it [MB2].",
                 "*Update* was the band's second single [MB1]. It charted in 1999 [W1].",
@@ -133,6 +139,14 @@ class SelfRevisionTest {
                     "It came out on the album Sundown in 1974 [MB1]. It topped the charts [W1].",
             ),
         )
+        // A cut at a sentence's start keeps the marks that open it.
+        assertEquals(
+            "*Sundown* came out on the album in 1974 [MB1]. It topped the charts [W1].",
+            salvaged(
+                "*Sundown* came out on the album in 1974 [MB1]. It is a classic.\n\n" +
+                    "*Sundown* came out on the album in 1974 [MB1]. It topped the charts [W1].",
+            ),
+        )
         // The withdrawn part is kept for the developer.
         val grounded = assertIs<InsightReply.Written>(GroundingCheck.check(PHONE, IDS, allowModel = false)).grounded
         val cut = assertNotNull(SelfRevision.salvage(grounded, assertNotNull(SelfRevision.find(grounded.text)), IDS))
@@ -153,6 +167,14 @@ class SelfRevisionTest {
                 "It came out in 1974 [MB1].\n\nWait, that is wrong [MB1]. It came out in 1975 [MB1]. Hmm, maybe.",
             )
         for (reply in replies) assertNull(salvaged(reply), reply)
+    }
+
+    @Test
+    fun `a streaming reply is read once no quotation or emphasis is open`() {
+        assertEquals(SelfRevision.ASIDE, SelfRevision.ofPartial("It came out in 1974 [MB1]. Wait, that"))
+        assertNull(SelfRevision.ofPartial("It came out in 1974 [MB1]. *Wait, Let Me"))
+        assertNull(SelfRevision.ofPartial("It came out in 1974 [MB1]. \"Wait, Let Me"))
+        assertNull(SelfRevision.ofPartial("It came out in 1974 [MB1]. *Wait, Let Me Fix It* is"))
     }
 
     /** No stored reply of the grounding check's (`grounding/replies.json`) revises itself. */
@@ -186,6 +208,10 @@ class SelfRevisionTest {
                     "It came out in 1975 [MB1].",
                 "It came out in 1974 [MB1].\n\n**Corrected insight:** It came out in 1975 [MB1].",
                 "It came out in 1974 [MB1].\n\n\uFEFFWait, that is wrong [MB1].\n\nIt came out in 1975 [MB1].",
+                // A whole sentence in emphasis is read, not set aside as a title.
+                "It came out in 1974 [MB1].\n\n*Wait, that's wrong [MB1]; I'll correct it.*\n\n" +
+                    "It came out in 1975 [MB1].",
+                "It came out in 1974 [MB1].\n\n**Correction: It came out in 1975 [MB1].**",
             )
 
         // The phone's reply (#798, Basia Bulat, "Already Forgiven"), the parts the issue elides filled

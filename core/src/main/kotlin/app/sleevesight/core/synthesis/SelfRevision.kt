@@ -13,11 +13,12 @@ import app.sleevesight.core.text.trimJs
  * card would show, after [SelfCorrection], so a correction that code takes out costs nothing more.
  *
  * Read on the reply as plain text ([PlainView]): Markdown's line marks, emphasis marks and backticks
- * set aside, so no formatting hides a sign (`- **Correction:**`, `### Correction:`). Narrow on
- * purpose, so an insight's own text never fails: what the text quotes (`"..."`, `“...”`, single
- * quotations as [Quotations] reads them) or sets in emphasis as a title or a lyric (`*Wait, Let Me
- * Fix It*`) is not read for the first three signs, and the words they look for are lower case where
- * a title would capitalise them (`I Will Survive`, Monk's `Evidence`).
+ * set aside, so they hide no sign (`- **Correction:**`, `### Correction:`, a sentence in emphasis).
+ * Narrow on purpose, so an insight's own text never fails: what the text quotes (`"..."`, `“...”`,
+ * single quotations as [Quotations] reads them) or sets in emphasis as a title or a lyric (no
+ * citation, no sentence's end: `*Wait, Let Me Fix It*`) is not read for the first three signs, and
+ * the words they look for are lower case where a title would capitalise them (`I Will Survive`,
+ * Monk's `Evidence`); a sign the model words otherwise is not found.
  */
 enum class SelfRevision(
     /** The sign's name in the diagnostics log. */
@@ -91,6 +92,17 @@ enum class SelfRevision(
         fun of(text: String): SelfRevision? = find(text)?.sign
 
         /**
+         * The sign in [partial], a reply still streaming, as the card would show it once
+         * [SelfCorrection] took out what it can; null when it has none, or while a quotation or an
+         * emphasis is open at its end, which may yet set aside what it holds.
+         */
+        fun ofPartial(partial: String): SelfRevision? {
+            val shown = (SelfCorrection.of(partial)?.kept ?: partial).trimJs()
+            val view = PlainView.of(shown)
+            return if (view.open || Quotations.of(view.masked).open) null else find(shown)?.sign
+        }
+
+        /**
          * The revision in [text] ([of]), with what follows the last sentence that shows a sign
          * ([Found.rest]): after an aside's, a first-person correction's or the evidence talk's
          * sentence; after a label or an emphasised aside, not the sentence it opens
@@ -111,8 +123,10 @@ enum class SelfRevision(
                 }
             return marks.lastOrNull()?.let { last ->
                 val sign = marks.minBy { it.sign.ordinal }.sign
-                val cut = view.source(last.cut, whole.length)
-                Found(sign, whole.substring(0, cut).trimJs(), whole.substring(cut).trimJs())
+                // A cut at a sentence's start keeps the marks that open it (`*Sundown* came out`).
+                val cut =
+                    if (last.sign == REPEATED_OPENING) view.after(last.cut) else view.source(last.cut, whole.length)
+                Found(sign, whole.substring(0, cut).trimJs(), balanced(whole.substring(cut).trimJs()))
             }
         }
 
@@ -186,6 +200,17 @@ enum class SelfRevision(
             return read.substring(at(span.first), at(span.last + 1))
         }
 
+        // [text] without a run of emphasis marks at its end that closes nothing in it, left by a cut
+        // inside an emphasis (`**Correction: It came out in 1975 [MB1].**`).
+        private fun balanced(text: String): String {
+            var t = text
+            for (mark in "*_") {
+                val run = Regex("\\$mark+$").find(t) ?: continue
+                if (Regex("\\$mark+").findAll(t).count() % 2 == 1) t = t.substring(0, run.range.first).trimJs()
+            }
+            return t
+        }
+
         // [this] without what a sentence may open with before its aside: brackets and spaces.
         private fun String.lead(): String = trimStart { it in "([ " }
 
@@ -226,8 +251,8 @@ enum class SelfRevision(
         /** The first person correcting or withdrawing what it wrote, or speaking of its own draft. */
         private val FIRST_PERSON_REVISES =
             Regex(
-                "\\b(?:(?:I|I'll|I’ll|I will|I should|I need to|I must|I have to|I'm going to|I’m going to|" +
-                    "[Ll]et me)\\s+(?:\\w+\\s+)?(?:correct|revise|rewrite|fix|redo|drop|remove|cut|" +
+                "\\b(?:(?:I|(?:I'll|I’ll|I will|I should|I need to|I must|I have to|I'm going to|I’m going to|" +
+                    "[Ll]et me)\\s+(?:\\w+\\s+)?)\\s*(?:correct|revise|rewrite|fix|redo|drop|remove|cut|" +
                     "keep only|stick to|retract)\\b|" +
                     "[Mm]y (?:previous|earlier|first|last) (?:draft|reply|answer|version|sentence)s?\\b)",
             )
@@ -268,7 +293,11 @@ private class PlainView(
     val masked: String,
     val sources: IntArray,
     val headers: List<IntRange>,
+    val open: Boolean = false,
 ) {
+    /** Where in the reply, just after the character before [at], a cut at [at] starts. */
+    fun after(at: Int): Int = if (at == 0) 0 else sources[at - 1] + 1
+
     /** Where in the reply the character at [at] came from; [end] past the last. */
     fun source(
         at: Int,
@@ -302,17 +331,48 @@ private class PlainView(
                     HELD_ASIDE.matches(held) ||
                         SelfRevision.LABEL.matches(held) ||
                         (BARE_ASIDE.matches(held) && reply.getOrNull(emphasis.after) in LABEL_AFTER)
-                if (header) {
-                    headers += emphasis.span
-                } else {
-                    for (k in emphasis.span) masked.setCharAt(k, '…')
+                when {
+                    header -> headers += emphasis.span
+                    readsAsTitle(held, reply, emphasis.after) -> for (k in emphasis.span) masked.setCharAt(k, '…')
+                    // Else, a sentence or more in emphasis, read as plain text.
                 }
             }
-            return PlainView(reading.out.toString(), masked.toString(), reading.sources.toIntArray(), headers)
+            return PlainView(
+                reading.out.toString(),
+                masked.toString(),
+                reading.sources.toIntArray(),
+                headers,
+                open = reading.unclosed,
+            )
         }
 
-        /** An emphasis that holds an aside alone, its stop inside the marks: `*Wait,*`, `**Correction:**`. */
-        private val HELD_ASIDE = Regex("(?:${SelfRevision.ASIDE_WORDS})\\s*[,.:!—–-]")
+        // Whether an emphasis that holds [held], its closing marks ending at [after] in [reply], reads
+        // as a title or a lyric, set aside as a quotation is: it holds no citation and ends no
+        // sentence, neither inside (a stop before a capital) nor at its close before a citation.
+        private fun readsAsTitle(
+            held: String,
+            reply: String,
+            after: Int,
+        ): Boolean {
+            val stopAtClose = STOP_AT_END.containsMatchIn(held) && CITATION_NEXT.matchesAt(reply, after)
+            return !CITATION_IN.containsMatchIn(held) && !STOP_INSIDE.containsMatchIn(held) && !stopAtClose
+        }
+
+        private val CITATION_IN = Regex("\\[[A-Z]{1,2}[0-9]*\\]")
+
+        /** A stop that ends a sentence inside an emphasis: before a capital, after any closing marks. */
+        private val STOP_INSIDE = Regex("[.!?][\"”'’)]*\\s+[\"“(]?\\p{Lu}")
+
+        private val STOP_AT_END = Regex("[.!?][\"”'’)]*$")
+
+        /** A citation next, after any spaces. */
+        private val CITATION_NEXT = Regex("[ \\t]*\\[[A-Z]{1,2}[0-9]*\\]")
+
+        /**
+         * An emphasis that holds an aside alone, a comma, colon or dash inside the marks: `*Wait,*`,
+         * `**Correction:**`. Not a stop, as a title may end in one (`*Wait!*`, `*Oops.*`).
+         */
+        private val HELD_ASIDE = Regex("(?:${SelfRevision.ASIDE_WORDS})\\s*[,:—–-]")
 
         /** An aside's word alone, a header when a colon or a dash follows the marks: `**Correction**:`. */
         private val BARE_ASIDE = Regex("(?:${SelfRevision.ASIDE_WORDS})")
@@ -342,6 +402,9 @@ private class Reading(
 
     // The emphasis marks opened and not yet closed: the mark, how many, where in [out].
     private val open = ArrayDeque<Triple<Char, Int, Int>>()
+
+    /** Whether an emphasis is still open at the end. */
+    val unclosed: Boolean get() = open.isNotEmpty()
 
     fun read() {
         var i = 0

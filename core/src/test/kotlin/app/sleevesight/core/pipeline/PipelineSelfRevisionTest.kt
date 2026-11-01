@@ -2,6 +2,7 @@ package app.sleevesight.core.pipeline
 
 import app.sleevesight.core.Secret
 import app.sleevesight.core.ai.AiProvider
+import app.sleevesight.core.ai.StopReason
 import app.sleevesight.core.ai.Usage
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.ProviderId
@@ -131,6 +132,22 @@ class PipelineSelfRevisionTest {
                 assertEquals(0, served.requests.size, reply)
                 assertEquals(corrected, assertIs<InsightState.Written>(kept.insight).grounded.text, reply)
             }
+        }
+
+    @Test
+    fun `a refusal is declined, whatever its text, with no revision logged`() =
+        runTest {
+            val provider = FakeProvider { FakeProvider.done(ENDS, StopReason.REFUSAL) }
+            val pipeline = pipeline(provider)
+            val events = recording(pipeline)
+            val control = granted()
+            control.retries.send(false)
+            val state = pipeline.run(sundown, control)
+            runCurrent()
+
+            assertEquals(InsightState.Failed(ReplyFailures.DECLINED), state.insight)
+            assertEquals(1, provider.requests.size)
+            assertEquals(emptyList(), events.revisions())
         }
 
     @Test

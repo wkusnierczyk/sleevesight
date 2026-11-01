@@ -175,6 +175,7 @@ internal class InsightWriter(
         val effort = settings.effort(ai.provider.id)
         val request = CompletionRequest(model, prompt, CompletionRequest.maxTokensFor(effort), effort)
         val text = StringBuilder()
+        var frozen = false
         var end: CompletionEvent? = null
         var started: TimeMark? = null
         // The request goes out only if no Stop came first. The stream is read to its end, as the
@@ -190,11 +191,12 @@ internal class InsightWriter(
                         is CompletionEvent.Delta -> {
                             text.append(event.text)
                             // Not while it may still be `NO_EVIDENCE`, or is, as the check reads it:
-                            // the marker is no prose for the card; nor once it revises itself
-                            // (#798): the draft shown so far stays until the check decides.
-                            val partial = text.toString()
-                            if (!GroundingCheck.mayBeNoEvidence(partial) && SelfRevision.of(partial) == null) {
-                                show(InsightState.Writing(partial, sent.held))
+                            // the marker is no prose for the card; nor once it revises itself, as
+                            // the card would show it (#798): the draft shown so far stays until the
+                            // check decides.
+                            frozen = frozen || SelfRevision.ofPartial(text.toString()) != null
+                            if (!GroundingCheck.mayBeNoEvidence(text.toString()) && !frozen) {
+                                show(InsightState.Writing(text.toString(), sent.held))
                             }
                         }
 
@@ -217,8 +219,7 @@ internal class InsightWriter(
                 }
                 is CompletionEvent.Error -> {
                     // How far the reply got, for the diagnostics: its length, never its text (#665).
-                    val latency = started?.elapsedNow()
-                    emit(PipelineEvent.ModelFailed(key, last.kind, last.breakoff, text.length, latency))
+                    emit(PipelineEvent.ModelFailed(key, last.kind, last.breakoff, text.length, started?.elapsedNow()))
                     show(InsightState.Failed(ReplyFailures.of(last)))
                 }
 
@@ -271,9 +272,10 @@ internal class InsightWriter(
         // A reply with no text is no card: an empty one would be shown, and kept when it ended (#665).
         val blank = ReplyFailures.ofBlank(done, text)
         // What the card would show: null when the reply revised itself and nothing usable is left (#798).
-        val reply = if (blank == null) reading(text, sent.evidence, allowModel, cached = false) else null
+        val refused = done.stopReason == StopReason.REFUSAL
+        val reply = if (blank == null && !refused) reading(text, sent.evidence, allowModel, cached = false) else null
         return when {
-            done.stopReason == StopReason.REFUSAL -> {
+            refused -> {
                 show(InsightState.Failed(ReplyFailures.DECLINED))
             }
 
