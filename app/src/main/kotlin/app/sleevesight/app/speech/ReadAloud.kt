@@ -61,7 +61,7 @@ enum class ReadAloudProblem {
 
 /**
  * *Read aloud* (#325): an insight, or a genre's reason (#523), read by the phone's text-to-speech
- * engine ([speech]), with the music lowered or paused for it ([focus]) as *While reading aloud*
+ * engine ([speech]), with the music lowered or paused for it ([focus]) as *Music while reading aloud*
  * says ([settings]). One reading at a time: a new one replaces the last, keeping its audio focus,
  * so the music does not come up between them. [reading] is the one under way, from the tap until
  * its last word, which a button shows as *Stop reading aloud*.
@@ -98,6 +98,15 @@ class ReadAloud(
 
     /** The reading under way, from the tap until its last word, or null. */
     val reading: StateFlow<Reading?> = readingState.asStateFlow()
+
+    private val pausedInsteadState = MutableStateFlow(false)
+
+    /**
+     * Whether the music is paused for the reading under way though *Reduce volume* is chosen (#803):
+     * it plays on a speaker whose volume the phone cannot set ([MusicFocus.pausedInstead]), which
+     * Home says under *Key insights*. False when no reading is under way.
+     */
+    val pausedInstead: StateFlow<Boolean> = pausedInsteadState.asStateFlow()
 
     // How the audio focus is held for the reading under way, or null when it is not.
     private var held: ReadAloudMusic? = null
@@ -189,6 +198,7 @@ class ReadAloud(
         if (held == music) return true
         val taken = focus.take(music) { stop() }
         held = music.takeIf { taken }
+        pausedInsteadState.value = taken && focus.pausedInstead
         return taken
     }
 
@@ -204,6 +214,7 @@ class ReadAloud(
             held = null
             focus.release()
         }
+        pausedInsteadState.value = false
     }
 
     /**
