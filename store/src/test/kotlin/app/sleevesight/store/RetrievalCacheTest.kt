@@ -269,6 +269,21 @@ class RetrievalCacheTest {
     }
 
     @Test
+    fun `the votes on the recording's tags round-trip, and an entry kept before them decodes without`() {
+        val result = sample(Outcome.SongArticle, SourceId.MUSICBRAINZ)
+        val decoded = assertNotNull(RetrievalCodec.decode(RetrievalCodec.encode(result)))
+        assertEquals(mapOf("folk rock" to 3, "soft rock" to 1), decoded.recordingTags?.votes)
+        // As MusicBrainz's result was kept before #799: the tags alone, their votes not known.
+        val old =
+            """{"outcome":"song_article","latency":"PT0.4S",""" +
+                """"recordingTags":{"mbid":"mb-sundown","tags":["folk rock"]}}"""
+        assertEquals(
+            RecordingTags("mb-sundown", listOf("folk rock")),
+            assertNotNull(RetrievalCodec.decode(old)).recordingTags,
+        )
+    }
+
+    @Test
     fun `an entry kept before the first release's title and the original decodes without them`() {
         // As MusicBrainz's result was kept before #724: the first release's date and the releases' dates only.
         val old =
@@ -500,7 +515,7 @@ class RetrievalCacheTest {
                     ResolvedArtist("Gordon Lightfoot", "mb-gl"),
                     ResolvedArtist("Terry Clements", "mb-other"),
                 ),
-            recordingTags = RecordingTags("mb-sundown", listOf("folk rock", "soft rock")),
+            recordingTags = recordingTags,
             firstReleased = "1974-01-01",
             releaseDates =
                 listOf(
@@ -519,6 +534,10 @@ class RetrievalCacheTest {
                 ),
         )
     }
+
+    // The recording's tags, with their votes (#799).
+    private val recordingTags =
+        RecordingTags("mb-sundown", listOf("folk rock", "soft rock"), mapOf("folk rock" to 3, "soft rock" to 1))
 
     // A cover's original, with the release it first came out on (#724).
     private val original =

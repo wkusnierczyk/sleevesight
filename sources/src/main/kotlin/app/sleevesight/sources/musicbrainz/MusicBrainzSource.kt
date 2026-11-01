@@ -48,7 +48,9 @@ class MusicBrainzSource(
      * or *rejected* by the rules before is asked again, and its artists give the genre labels. 7: and
      * the work's lyrics links, languages and whether the recording is instrumental, for *Lyrics* (#728),
      * so a track kept before is asked again rather than shown as having no lyrics page, and the first
-     * release's title and type and the original's release, for *Dates* (#724). Without
+     * release's title and type and the original's release, for *Dates* (#724). 8: and the votes on
+     * the recording's tags, by which a track's label leads its folded genres only with two (#799), so
+     * a track kept before is asked again rather than shown under the album's labels. Without
      * [genres] (*Show genres* off, #444), it keeps no tags, and its results are kept apart ([WITHOUT_GENRES_VERSION]).
      */
     override val extractionVersion: Int = EXTRACTION_VERSION + if (genres) 0 else WITHOUT_GENRES_VERSION
@@ -70,7 +72,7 @@ class MusicBrainzSource(
             labelArtists = (resolved.artists.filter { it.mbid != null } + resolved.jointArtists).distinctBy { it.mbid },
             recordingTags =
                 resolved.recordingMbid?.takeIf { genres && resolved.recordingTags.isNotEmpty() }?.let {
-                    RecordingTags(it, resolved.recordingTags)
+                    RecordingTags(it, resolved.recordingTags, resolved.recordingTagVotes)
                 },
             firstReleased = resolved.firstReleaseDate,
             releaseDates = resolved.releaseDates,
@@ -86,4 +88,4 @@ class MusicBrainzSource(
     }
 }
 
-private const val EXTRACTION_VERSION = 7
+private const val EXTRACTION_VERSION = 8

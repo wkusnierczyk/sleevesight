@@ -79,7 +79,9 @@ class GenresScreenTest {
     ): TrackLabel {
         val shown = tag.split(' ').joinToString(" ") { it.replaceFirstChar(Char::uppercase) }
         val genre = GenreLabel(tag, "family", shown, tag.replace(" ", ""), level = level, artist = artist)
-        return TrackLabel(genre, listOf(LabelCredit(source, "https://example.org/$tag")))
+        // A track's label with the votes to lead the folded chips (#799), as the tests' chips are the track's.
+        val votes = TrackGenres.MIN_VOTES.takeIf { level == GenreLevel.TRACK }
+        return TrackLabel(genre, listOf(LabelCredit(source, "https://example.org/$tag")), votes)
     }
 
     private fun row(

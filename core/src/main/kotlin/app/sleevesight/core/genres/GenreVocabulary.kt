@@ -76,15 +76,18 @@ class GenreVocabulary(
      * label, the first. As the simulator's `genresFrom`, except for that. [url] is the page the tags
      * are from (the track's, artist's or album's, at the source), for the label's credit; null when
      * there is none. [level] is what the tags were given to, and [artist] the credited artist they
-     * describe, for an artist's ([GenreLabel.artist]).
+     * describe, for an artist's ([GenreLabel.artist]). [votes] are the tags' votes, by tag, where the
+     * source counts them (MusicBrainz's recording tags, #799), for each label's [GenreLabel.votes].
      */
     fun labelsFor(
         tags: List<String>,
         url: String? = null,
         level: GenreLevel = GenreLevel.ARTIST,
         artist: String? = null,
+        votes: Map<String, Int> = emptyMap(),
     ): List<GenreLabel> {
         val seen = mutableSetOf<String>()
+        val votesOf = votes.mapKeys { key(it.key) }
         return tags
             .asSequence()
             .map(::key)
@@ -93,7 +96,8 @@ class GenreVocabulary(
             .filter { (_, _, identity) -> seen.add(identity) }
             .take(MAX_LABELS)
             .map { (tag, family, identity) ->
-                GenreLabel(tag, family.id, labelOverrides[tag] ?: titleCase(tag), identity, url, level, artist)
+                val label = labelOverrides[tag] ?: titleCase(tag)
+                GenreLabel(tag, family.id, label, identity, url, level, artist, votesOf[tag])
             }.toList()
     }
 
@@ -156,6 +160,10 @@ data class GenreFamily(
  * @property level what the tags were given to: the track, an artist or the album (#439).
  * @property artist for an artist's label, the credited artist, as the track names it, whose tags
  *   gave it; null for the track's and the album's.
+ * @property votes the net votes on the tag that gave it, where the source counts votes: MusicBrainz's
+ *   recording tags (#799), by which a track's label may lead the folded genres
+ *   ([TrackGenres.folded]). Null where it does not: Last.fm's counts are weights out of 100, not
+ *   votes, and an artist's MusicBrainz tags are kept without theirs.
  */
 data class GenreLabel(
     val tag: String,
@@ -165,6 +173,7 @@ data class GenreLabel(
     val url: String? = null,
     val level: GenreLevel = GenreLevel.ARTIST,
     val artist: String? = null,
+    val votes: Int? = null,
 )
 
 @Serializable
