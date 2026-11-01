@@ -43,6 +43,9 @@ class AiSearchesTest {
         TrackState(playing, Normalizer(JvmAccentFolder).normalize(playing), sources = emptyMap())
     private val facts = SearchFacts(track.normalized.title, track.normalized.artists, "Grace")
 
+    // How a question from the model's knowledge, by a tap, was asked: one call.
+    private val oneCall = SearchWay(cost = QuestionCost(calls = 1))
+
     private suspend fun search(
         kind: SearchKind = SearchKind.GENRES,
         shown: MutableList<SearchState> = mutableListOf(),
@@ -111,7 +114,7 @@ class AiSearchesTest {
             val last = search(shown = shown)
             assertIs<SearchState.Answered>(last)
             assertEquals(listOf("Folk Rock", "Rock"), (last.answer as SearchAnswer.Genres).genres.map { it.label })
-            assertEquals(listOf(SearchState.Searching, last), shown)
+            assertEquals(listOf(SearchState.Searching(), last), shown)
             assertEquals(1, provider.requests.size)
             val request = provider.requests.single()
             assertEquals(AiSearchPrompt.build(SearchKind.GENRES, facts, answers.genreNames), request.prompt)
@@ -119,7 +122,10 @@ class AiSearchesTest {
             assertEquals(AiSearches.maxTokensFor(request.effort), request.maxTokens)
             // Kept as the reply, read and checked again when found.
             val key = checkNotNull(searches.key(track, SearchKind.GENRES, settings))
-            assertEquals("{\"genres\": [\"folk rock\", \"rock\"]}", cache.cards[key])
+            // Kept in its envelope (#801), with how it was asked.
+            val kept = AiSearches.Kept.of(checkNotNull(cache.cards[key]))
+            assertEquals("{\"genres\": [\"folk rock\", \"rock\"]}", kept.reply)
+            assertEquals(1, kept.calls)
             assertEquals(last, searches.kept(key, SearchKind.GENRES, track)?.state)
         }
 
@@ -134,10 +140,10 @@ class AiSearchesTest {
     fun anAnswerWithNothingUsableIsNothingFoundAndKept() =
         runTest {
             provider.reply = { FakeProvider.done("{}") }
-            assertEquals(SearchState.NothingFound, search())
+            assertEquals(SearchState.NothingFound(oneCall), search())
             val key = checkNotNull(searches.key(track, SearchKind.GENRES, settings))
-            assertEquals("{}", cache.cards[key])
-            assertEquals(SearchState.NothingFound, searches.kept(key, SearchKind.GENRES, track)?.state)
+            assertEquals("{}", AiSearches.Kept.of(checkNotNull(cache.cards[key])).reply)
+            assertEquals(SearchState.NothingFound(oneCall), searches.kept(key, SearchKind.GENRES, track)?.state)
         }
 
     @Test
@@ -167,7 +173,7 @@ class AiSearchesTest {
         runTest {
             val shown = mutableListOf<SearchState>()
             assertNull(search(shown = shown) { false })
-            assertEquals(listOf<SearchState>(SearchState.Searching), shown)
+            assertEquals(listOf<SearchState>(SearchState.Searching()), shown)
             assertTrue(cache.cards.isEmpty())
         }
 
@@ -231,7 +237,10 @@ class AiSearchesTest {
             val made = AiSearches(AiAccess(asking, Secret("k")), cache, JvmHasher, answers)
             val key = checkNotNull(made.key(track, SearchKind.DEFINITION, settings, genre = "rock"))
             val state = made.search(key, SearchKind.DEFINITION, track, SearchFacts.ofGenre("Rock"), { _, _ -> })
-            assertEquals(SearchState.Answered(SearchAnswer.Definition("Rock is a genre of popular music.")), state)
+            assertEquals(
+                SearchState.Answered(SearchAnswer.Definition("Rock is a genre of popular music."), oneCall),
+                state,
+            )
             assertTrue("Name: Rock" in asking.requests.single().prompt)
             val kept = assertNotNull(made.kept(key, SearchKind.DEFINITION, track))
             assertEquals(state, kept.state)

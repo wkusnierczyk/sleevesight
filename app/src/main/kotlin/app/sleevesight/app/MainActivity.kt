@@ -110,6 +110,7 @@ class MainActivity : ComponentActivity() {
                     playing = graph.sessions.nowPlaying,
                     playback = graph.sessions.playback,
                     diagnostics = graph.diagnostics,
+                    askedAi = graph.aiSearches.paid,
                 ),
         )
     }

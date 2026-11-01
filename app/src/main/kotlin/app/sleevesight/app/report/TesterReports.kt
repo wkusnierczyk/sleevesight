@@ -5,6 +5,7 @@ import app.sleevesight.app.diagnostics.Diagnostics
 import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.app.session.PlaybackInfo
 import app.sleevesight.core.model.NowPlaying
+import app.sleevesight.core.pipeline.QuestionCost
 import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.flow.StateFlow
 import java.time.ZoneId
@@ -14,7 +15,8 @@ import kotlin.time.Clock
  * Where a tester's report (#452) takes what the app knows: what the pipeline publishes ([view]),
  * what the session layer reports of the player ([playing], [playback]), and the [diagnostics]: its
  * events kept in memory, what skip detection has learned, and the track changes recorded, read
- * only when the tester turns the history on. Never the key store: nothing here can read a key.
+ * only when the tester turns the history on; and what *Ask AI* has cost this process ([askedAi],
+ * #801). Never the key store: nothing here can read a key.
  *
  * [clock], [zone] and [elapsedRealtime] are the time of the tap, its time zone and the clock the
  * playback's position is reported on.
@@ -26,6 +28,7 @@ class TesterReports(
     private val playing: StateFlow<NowPlaying?>,
     private val playback: StateFlow<PlaybackInfo>,
     private val diagnostics: Diagnostics,
+    private val askedAi: StateFlow<QuestionCost>? = null,
     private val clock: Clock = Clock.System,
     private val zone: () -> ZoneId = ZoneId::systemDefault,
     private val elapsedRealtime: () -> Long = SystemClock::elapsedRealtime,
@@ -44,6 +47,7 @@ class TesterReports(
             view = view.value,
             events = diagnostics.log.entries.value,
             learned = diagnostics.skipLearning?.learnedCrossfades?.value,
+            askedAi = askedAi?.value,
         )
     }
 

@@ -289,6 +289,8 @@ private fun GenresBox(
             // Unfolded, replaced or folded; the focus stays on the chip.
             chosen = if (genre == open) null else genre
         }
+        // The pages the AI's genres came from, when from the web (#801), under the chips they marked.
+        if (labels.any { it.label.aiAdded }) for (source in track.genres.aiSources) FromSite(source)
         open?.let {
             PanelRule()
             Box(Modifier.onFocusChanged { state -> inside[0] = state.hasFocus }) {

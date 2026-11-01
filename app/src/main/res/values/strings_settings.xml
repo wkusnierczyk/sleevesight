@@ -229,7 +229,29 @@
     <string name="settings_read_track_line_summary">Reading an insight aloud starts with the track’s title and artists.</string>
     <string name="settings_read_new_insights">Read new insights aloud</string>
     <string name="settings_read_new_insights_summary">Reads each new insight aloud as soon as it is written, while Sleevesight is on screen. Not while TalkBack or another screen reader is on, since it reads the screen itself.</string>
-    <!-- Insights → Search with AI (#773, #786): Search with AI starts by itself as soon as Dates, Genres or Lyrics has nothing, open or not, and for a genre with no definition. Two paragraphs, a blank line between. -->
-    <string name="settings_search_with_ai">Search with AI</string>
-    <string name="settings_search_with_ai_summary">Automatically asks the AI service when a source does not provide the required information.\n\nEach search is a paid call.</string>
+    <!-- Insights → Ask AI automatically (#773, #786; named so by #802, once Search with AI): Ask AI starts by itself as soon as Dates, Genres or Lyrics has nothing, open or not, and for a genre with no definition. Two paragraphs, a blank line between; %1$s is settings_ai_web_search, a link to that row. -->
+    <string name="settings_search_with_ai">Ask AI automatically</string>
+    <string name="settings_search_with_ai_summary">When Dates, Genres or Lyrics has nothing from its sources, asks your AI service, searching the web as set under %1$s.\n\nEach question is a paid AI service call; with web search, also Exa API calls</string>
+    <!-- Insights → AI web search (#801), before Ask AI automatically: how a question to the AI service searches the web with Exa; a button group of three, one row always. -->
+    <string name="settings_ai_web_search">AI web search</string>
+    <string name="settings_ai_web_search_summary">Lets your AI service search the web with Exa when it is asked, by a tap on Ask AI or automatically.</string>
+    <string name="settings_ai_web_search_off">Off</string>
+    <string name="settings_ai_web_search_once">Once</string>
+    <!-- %1$d is the limit, Settings.AI_WEB_SEARCH_LIMIT (3). -->
+    <plurals name="settings_ai_web_search_up_to">
+        <item quantity="one">Up to %1$d time</item>
+        <item quantity="other">Up to %1$d times</item>
+    </plurals>
+    <!-- Under the group, what the chosen value does. -->
+    <string name="settings_ai_web_search_off_detail">Your AI service answers from what its model learned in training, which can miss new or little-known songs. One paid AI call.</string>
+    <string name="settings_ai_web_search_once_detail">Sleevesight searches the web once with Exa and gives the pages it finds to your AI service, which answers from them. One Exa API call and one paid AI call.</string>
+    <!-- %1$d is the limit, Settings.AI_WEB_SEARCH_LIMIT (3); %2$d the AI calls at most, one more. -->
+    <plurals name="settings_ai_web_search_up_to_detail">
+        <item quantity="one">Your AI service searches the web with Exa itself, up to %1$d time, changing the search as it learns, then answers from the pages. Up to %1$d Exa API call and %2$d paid AI calls.</item>
+        <item quantity="other">Your AI service searches the web with Exa itself, up to %1$d times, changing the search as it learns, then answers from the pages. Up to %1$d Exa API calls and %2$d paid AI calls.</item>
+    </plurals>
+    <!-- Under the group while Exa web search is off: Off shows chosen and the others cannot be; %1$s is settings_sources_link, a link that opens Settings at Sources. -->
+    <string name="settings_ai_web_search_exa_off">Exa web search is disabled.</string>
+    <string name="settings_ai_web_search_exa_see">See %1$s.</string>
+    <string name="settings_sources_link">Settings\u00A0→\u00A0Sources</string>
 </resources>

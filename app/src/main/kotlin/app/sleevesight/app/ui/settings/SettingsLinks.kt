@@ -99,6 +99,9 @@ data class SettingsTarget(
         /** The section *Players* itself, its panel's heading, from Home's list of players (#627). */
         internal val players: SettingsTarget = SettingsTarget(SettingsSection.PLAYERS)
 
+        /** *AI web search*'s row under *Insights*, from *Ask AI automatically*'s description (#801). */
+        internal val aiWebSearch: SettingsTarget = SettingsTarget(SettingsSection.INSIGHTS, "ai_web_search")
+
         /** The section *Sources* itself, its panel's heading, from a panel on Home whose source is off (#724). */
         internal val sources: SettingsTarget = SettingsTarget(SettingsSection.SOURCES)
 

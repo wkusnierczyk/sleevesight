@@ -11,6 +11,8 @@ import app.sleevesight.core.ai.CompletionRequest
 import app.sleevesight.core.ai.ModelInfo
 import app.sleevesight.core.ai.ModelList
 import app.sleevesight.core.ai.ReasoningEffort
+import app.sleevesight.core.ai.ToolExchange
+import app.sleevesight.core.ai.ToolSpec
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.net.HostPolicy
 import app.sleevesight.net.NetBody
@@ -25,6 +27,9 @@ import app.sleevesight.net.RetryPolicy
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonArrayBuilder
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.addJsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -46,6 +51,12 @@ import kotlin.time.Instant
  * applies.
  * Thinking is left at the API's default, which current models reason with: it cannot be switched
  * off on all of them, and the effort is what bounds it.
+ *
+ * With [CompletionRequest.tools] (#801), they go in `tools`, each with its schema as
+ * `input_schema`; a turn that calls one ends in [CompletionEvent.ToolUse] (`MessageStream`). The
+ * next request sends the prompt, then for each exchange the assistant's turn as it came (its
+ * content blocks, reasoning included) and a user message of its `tool_result`s; with
+ * [CompletionRequest.toolsAllowed] false, `tool_choice` `none`, so the model answers now.
  *
  * The stream's text deltas become [CompletionEvent.Delta]s; other content (a model's reasoning,
  * which current models do by default and return without its text) is skipped. `message_stop`
@@ -76,6 +87,8 @@ class AnthropicProvider(
     private val clock: Clock = Clock.System,
 ) : AiProvider {
     override val id: ProviderId = ProviderId.ANTHROPIC
+
+    override val usesTools: Boolean = true
 
     override suspend fun models(key: Secret): ModelList {
         val models = mutableListOf<ModelInfo>()
@@ -113,7 +126,7 @@ class AnthropicProvider(
                 val result =
                     try {
                         net.stream(messagesRequest(request, key)) { line ->
-                            events.line(line)?.let { event -> reader.read(event.data)?.let { send(it) } }
+                            events.line(line)?.let { event -> reader.read(event.data).forEach { send(it) } }
                             if (reader.malformed) throw StopStream()
                         }
                     } catch (e: StopStream) {
@@ -126,7 +139,7 @@ class AnthropicProvider(
                     delay(wait)
                     waited = true
                 } else {
-                    reader.end(result)?.let { send(it) }
+                    reader.end(result).forEach { send(it) }
                 }
             } while (wait != null)
         }
@@ -185,11 +198,16 @@ class AnthropicProvider(
                 request.effort?.takeIf { takesEffort(request.model) }?.let { effort ->
                     putJsonObject("output_config") { put("effort", effortName(effort)) }
                 }
+                if (request.tools.isNotEmpty()) {
+                    putJsonArray("tools") { request.tools.forEach { addTool(it) } }
+                    if (!request.toolsAllowed) putJsonObject("tool_choice") { put("type", "none") }
+                }
                 putJsonArray("messages") {
                     addJsonObject {
                         put("role", "user")
                         put("content", request.prompt)
                     }
+                    request.exchanges.forEach { addExchange(it) }
                 }
             }
         return NetRequest(
@@ -204,6 +222,35 @@ class AnthropicProvider(
 
     /** Thrown from the line handler to end a stream whose events cannot be read. */
     private class StopStream : RuntimeException()
+
+    // [tool] as `tools` lists it: its name, description and input's schema.
+    private fun JsonArrayBuilder.addTool(tool: ToolSpec) =
+        addJsonObject {
+            put("name", tool.name)
+            put("description", tool.description)
+            put("input_schema", decode<JsonObject>(tool.parameters) ?: JsonObject(emptyMap()))
+        }
+
+    // [exchange] as two messages: the assistant's turn as it came, and its tools' results.
+    private fun JsonArrayBuilder.addExchange(exchange: ToolExchange) {
+        addJsonObject {
+            put("role", "assistant")
+            put("content", decode<JsonArray>(exchange.turn.replay) ?: JsonArray(emptyList()))
+        }
+        addJsonObject {
+            put("role", "user")
+            putJsonArray("content") {
+                exchange.results.forEach { result ->
+                    addJsonObject {
+                        put("type", "tool_result")
+                        put("tool_use_id", result.callId)
+                        put("content", result.content)
+                        if (result.isError) put("is_error", true)
+                    }
+                }
+            }
+        }
+    }
 
     companion object {
         const val HOST: String = "api.anthropic.com"

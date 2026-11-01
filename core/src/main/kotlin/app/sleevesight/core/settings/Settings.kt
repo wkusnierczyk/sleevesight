@@ -69,12 +69,16 @@ import kotlin.time.Duration.Companion.seconds
  *   aloud as soon as it is written, while Sleevesight is on screen (D6), and never while a screen
  *   reader is on (spoken feedback, or touch exploration: TalkBack), which reads the screen itself.
  *   Off by default: speaking unasked over the music is a surprise, and *Read aloud* is one tap.
- * @property searchWithAi *Search with AI*, the setting (#773): on, a panel on Home whose source has
- *   nothing asks the AI service as soon as every source has answered, as a tap on its *Search with
- *   AI* would, whether the panel is open or not (*Dates*, *Genres* and *Lyrics*, #773; a genre with
- *   no definition from Wikipedia, #786): once per panel and track, not for a panel hidden in
- *   *Appearance*, never again for a search answered or kept. Off by default, since each search is a
- *   paid call.
+ * @property searchWithAi *Ask AI automatically* (#773, named so by #802; once *Search with AI*,
+ *   the name its stored key keeps): on, a panel on Home whose source has nothing asks the AI service
+ *   as soon as every source has answered, as a tap on its *Ask AI* would, whether the panel is open
+ *   or not (*Dates*, *Genres* and *Lyrics*, #773; a genre with no definition from Wikipedia, #786):
+ *   once per panel and track, not for a panel hidden in *Appearance*, never again for a question
+ *   answered or kept. Off by default, since each question is a paid call.
+ * @property aiWebSearch *AI web search* (#801): how a question to the AI service, by a tap on *Ask
+ *   AI* or automatically, searches the web with Exa ([AiWebSearch]); *Once* by default. It needs Exa
+ *   web search on ([aiWebSearchOn]); with it off, the questions are asked as with *Off*, and this
+ *   choice is kept for when it is on again.
  * @property cacheLifetimes the retrieval cache lifetime per source (D9). A source with none (the
  *   pseudo-sources, which retrieve nothing) is not cached.
  * @property keepArtistResults *Keep what sources said about each artist* (#420): whether what the
@@ -189,6 +193,7 @@ data class Settings(
     val readTrackLineFirst: Boolean = false,
     val readNewInsightsAloud: Boolean = false,
     val searchWithAi: Boolean = false,
+    val aiWebSearch: AiWebSearch = AiWebSearch.ONCE,
     val cacheLifetimes: Map<SourceId, Duration> = DEFAULT_CACHE_LIFETIMES,
     val keepArtistResults: Boolean = false,
     val artistCacheLifetime: Duration = DEFAULT_ARTIST_CACHE_LIFETIME,
@@ -221,6 +226,15 @@ data class Settings(
             "Automatic writing must pause after a positive number of track changes, was $pauseAutoWriteAfter"
         }
     }
+
+    /**
+     * *AI web search* as the questions use it (#801): [aiWebSearch], or [AiWebSearch.OFF] while Exa
+     * web search is off ([aiWebSearchOn] false), the choice kept.
+     */
+    val aiWebSearchUsed: AiWebSearch get() = if (aiWebSearchOn) aiWebSearch else AiWebSearch.OFF
+
+    /** Whether *AI web search* can search (#801): Exa web search on under *Sources* ([isEnabled]). */
+    val aiWebSearchOn: Boolean get() = isEnabled(SourceId.WEB)
 
     /** Whether *Reactive* writes automatically: *On track change (auto)* or *On track skip (auto)*, not *On demand*. */
     val writesAutomatically: Boolean get() = writeAutomatically != WriteAutomatically.NEVER
@@ -503,6 +517,12 @@ data class Settings(
         const val DEFAULT_PAUSE_AUTO_WRITE_AFTER: Int = 5
 
         /**
+         * The most searches *Up to 3 times* makes for one question (#801), fixed and said in the
+         * setting's text: 3, enough for the model to search again twice with what it learned.
+         */
+        const val AI_WEB_SEARCH_LIMIT: Int = 3
+
+        /**
          * The choices of *Saver*, besides *Off*: 3 (a few minutes away), 5
          * (the default), 10 (an album side or a commute).
          */
@@ -549,6 +569,25 @@ enum class SourceSwitch(
         /** The switch that covers [source], or null for the player's metadata. */
         fun of(source: SourceId): SourceSwitch? = entries.firstOrNull { source in it.sources }
     }
+}
+
+/**
+ * *AI web search* (#801; `design/design.md`, *Ask AI*): how a question to the AI service, by a tap on
+ * *Ask AI* or automatically, searches the web with Exa. The name is stored, so a value is never
+ * renamed.
+ */
+enum class AiWebSearch {
+    /** No search: the model answers from what it learned in training. One paid AI call. */
+    OFF,
+
+    /** One search the app builds, its pages given to the model with the question. One paid search and one call. */
+    ONCE,
+
+    /**
+     * The model searches itself, with a search tool, up to [Settings.AI_WEB_SEARCH_LIMIT] times (3,
+     * fixed), then answers: up to that many searches, and a call more.
+     */
+    UP_TO,
 }
 
 /**

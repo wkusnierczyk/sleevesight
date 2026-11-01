@@ -6,7 +6,9 @@ import app.sleevesight.core.pipeline.AiSearches
 import app.sleevesight.core.pipeline.CardKey
 import app.sleevesight.core.pipeline.ClearEpoch
 import app.sleevesight.core.pipeline.PipelineParts
+import app.sleevesight.core.pipeline.QuestionCost
 import app.sleevesight.core.pipeline.SearchState
+import app.sleevesight.core.pipeline.SearchWay
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.pastKeepHistory
@@ -34,7 +36,7 @@ import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Instant
 
-/** *Search with AI* under an empty panel on Home (#773), as the panel shows it. */
+/** *Ask AI* under an empty panel on Home (#773; *Search with AI* until #802), as the panel shows it. */
 sealed interface AiSearch {
     /**
      * Not offered: no searches here (previews, tests), before the pipeline and the settings are in,
@@ -48,18 +50,28 @@ sealed interface AiSearch {
     /** Offered: a tap asks the AI service, a paid call. */
     data object Offered : AiSearch
 
-    /** Under way: the turning record and "Searching with AI…", and *Stop*. */
-    data object Searching : AiSearch
+    /**
+     * Under way: the turning record and "Searching the web with AI…", or from the model's knowledge
+     * ([web] false) "Asking AI…", and *Stop*.
+     */
+    data class Searching(
+        val web: Boolean = false,
+    ) : AiSearch
 
-    /** Answered by [model], as checked. */
+    /** Answered by [model], as checked, asked as [way] says (#801, #802). */
     data class Answered(
         val answer: SearchAnswer,
         val model: String,
+        val way: SearchWay = SearchWay(),
     ) : AiSearch
 
-    /** Answered by [model] with nothing usable: "{model} found nothing.". */
+    /**
+     * Answered by [model] with nothing usable: "{model} found nothing on the web.", or from its
+     * knowledge "{model} couldn't say from its own knowledge.", asked as [way] says.
+     */
     data class NothingFound(
         val model: String,
+        val way: SearchWay = SearchWay(),
     ) : AiSearch
 
     /** The call failed, for [reason]; offered again. */
@@ -188,6 +200,18 @@ class AppAiSearches(
 
     /** The searches shown (internal for the tests of *Clear history*'s race). */
     internal val shown = ShownSearches()
+
+    // Every web search and AI call the questions made, this process.
+    private val costs = MutableStateFlow(QuestionCost())
+
+    /**
+     * What every question made cost this process (#801): its web searches and AI calls, each counted
+     * as it is made, those of questions stopped or failed included, for the tester report.
+     */
+    val paid: StateFlow<QuestionCost> = costs
+
+    /** Counts a cost in [paid]: a genre's reason or list asked with the AI service (#762, #801). */
+    val counted: (QuestionCost) -> Unit = { cost -> costs.update { it + cost } }
 
     // The keys whose kept search was looked for, and those asked, with their calls.
     private val looked: MutableSet<CardKey> = ConcurrentHashMap.newKeySet()
@@ -342,13 +366,22 @@ class AppAiSearches(
                 work[Job]?.let { asking.remove(key, it) }
                 deferred(track, kind, asked.genre)
             } else {
-                searches.search(key, kind, track, asked.facts, show) {
-                    synchronized(lock) {
-                        key !in stopped &&
-                            work.isActive &&
-                            settled.add(key)
-                    }
-                }
+                searches.search(
+                    key,
+                    kind,
+                    track,
+                    asked.facts,
+                    show,
+                    settle = {
+                        synchronized(lock) {
+                            key !in stopped &&
+                                work.isActive &&
+                                settled.add(key)
+                        }
+                    },
+                    asking = AiSearches.Asking.of(settings.value, asked.automatic),
+                    counted = { cost -> costs.update { it + cost } },
+                )
             }
         } catch (e: CancellationException) {
             throw e
@@ -473,17 +506,18 @@ internal class ShownSearches {
 
     /** Drops [key]'s search while it is under way: stopped, it offers the button again. */
     fun removeSearching(key: CardKey) =
-        synchronized(lock) { shown.update { if (it[key]?.state == SearchState.Searching) it - key else it } }
+        synchronized(lock) { shown.update { if (it[key]?.state is SearchState.Searching) it - key else it } }
 
     /** Drops every search shown (*Clear history*). */
     fun clear() = synchronized(lock) { shown.value = emptyMap() }
 }
 
-// The searches these parts make, their answers read by [answers], their times by [clock].
+// The searches these parts make, their answers read by [answers], their times by [clock], searching
+// the web with their engine (#801).
 private fun PipelineParts.searches(
     answers: AiSearchAnswers,
     clock: Clock,
-): AiSearches = AiSearches(ai, cache, hasher, answers, clock)
+): AiSearches = AiSearches(ai, cache, hasher, answers, clock, webSearch)
 
 /** A search shown, and when it was written. */
 internal class Entry(
@@ -497,9 +531,9 @@ private fun shownAs(
     model: String,
 ): AiSearch =
     when (state) {
-        SearchState.Searching -> AiSearch.Searching
-        is SearchState.Answered -> AiSearch.Answered(state.answer, model)
-        SearchState.NothingFound -> AiSearch.NothingFound(model)
+        is SearchState.Searching -> AiSearch.Searching(state.web)
+        is SearchState.Answered -> AiSearch.Answered(state.answer, model, state.way)
+        is SearchState.NothingFound -> AiSearch.NothingFound(model, state.way)
         is SearchState.Failed -> AiSearch.Failed(state.reason)
     }
 

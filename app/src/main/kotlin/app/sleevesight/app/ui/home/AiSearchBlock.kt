@@ -57,13 +57,17 @@ import app.sleevesight.core.synthesis.SearchKind
  *   which a screen reader names "ask your AI service, a paid call"; disabled with no AI service or
  *   model ready, a screen reader adding why; none at all with *Show insights* off, as *Why is this
  *   …?* has none then;
- * - under way: the turning record, then "Searching with AI…" in the panel's quiet note style ([Busy],
- *   #785), *Stop* at the right of the line, as *Retry* is beside its line ([LineButton]);
- *   the focus handed from the button to *Stop* and back, as each takes the other's place;
- * - answered: a rule, the answer as the panel shows its source's ([answer]), and "by {model}" on a
- *   line of its own, in italics;
- * - nothing usable: a rule, and "{model} found nothing." in the answer's place;
- * - failed: "AI search failed: {reason}." in the error colour, with *Retry* at the right of the line,
+ * - under way: the turning record, then "Searching the web with AI…", or with *AI web search* off
+ *   "Asking AI…" (#801, #802), in the panel's quiet note style ([Busy], #785), *Stop* at the right
+ *   of the line, as *Retry* is beside its line ([LineButton]); the focus handed from the button to
+ *   *Stop* and back, as each takes the other's place;
+ * - answered: a rule, the answer as the panel shows its source's ([answer]: from the web, each value
+ *   with its page, [FromSite]), from the model's knowledge "From the AI model's own knowledge, not
+ *   verified", then "by {model}" on a line of its own, in italics, however it was asked;
+ * - nothing usable: a rule, and "{model} found nothing on the web." or "{model} couldn't say from
+ *   its own knowledge." in the answer's place, after "Asked automatically: " for one asked by itself;
+ * - failed: "Asking AI failed: {reason}.", or "AI web search failed." ([askFailedText]), in the
+ *   error colour, with *Retry* at the right of the line,
  *   as a source that could not be reached has ([RetryLine]), which asks again, a paid call.
  *
  * Nothing before the pipeline reaches the track.
@@ -105,23 +109,16 @@ internal fun AiSearchBlock(
         AiSearch.None -> Unit
         AiSearch.Unready -> SearchButton(enabled = false, searchButton) {}
         AiSearch.Offered -> SearchButton(enabled = true, searchButton, ask)
-        AiSearch.Searching ->
-            SearchingLine(Modifier.handoffTarget(handoff, stop)) {
+        is AiSearch.Searching ->
+            SearchingLine(shown.web, Modifier.handoffTarget(handoff, stop)) {
                 feed.stop(track, kind, about)
                 handoff.moveTo(button)
             }
-        is AiSearch.Answered -> {
-            PanelRule(Modifier.testTag(AI_SEARCH_RULE_TAG))
-            answer(shown.answer, shown.model)
-            SearchCredit(stringResource(R.string.home_ai_by, shown.model), Modifier.testTag(AI_SEARCH_BY_TAG))
-        }
-        is AiSearch.NothingFound -> {
-            PanelRule(Modifier.testTag(AI_SEARCH_RULE_TAG))
-            QuietLine(stringResource(R.string.home_ai_nothing, shown.model), Modifier.testTag(AI_SEARCH_NOTHING_TAG))
-        }
+        is AiSearch.Answered -> Answered(shown, answer)
+        is AiSearch.NothingFound -> NothingFound(shown)
         is AiSearch.Failed ->
             RetryLine(
-                stringResource(R.string.home_ai_failed, searchFailureText(shown.reason)),
+                askFailedText(shown.reason),
                 source = "",
                 onRetry = { feed.ask(track, kind, facts(), genre = about) },
                 modifier = Modifier.testTag(AI_SEARCH_FAILED_TAG),
@@ -132,7 +129,40 @@ internal fun AiSearchBlock(
     }
 }
 
-/** "by {model}" under what *Search with AI* found ([text]), on a line of its own, in italics (#773). */
+// What [shown] found, under a rule, as the panel shows it ([answer]); from the model's knowledge
+// marked so, as an insight's claim from it is (#801); then its credit, which says when it was asked
+// automatically (#802).
+@Composable
+private fun Answered(
+    shown: AiSearch.Answered,
+    answer: @Composable (SearchAnswer, String) -> Unit,
+) {
+    PanelRule(Modifier.testTag(AI_SEARCH_RULE_TAG))
+    answer(shown.answer, shown.model)
+    if (!shown.way.web) {
+        SearchCredit(stringResource(R.string.home_cite_model), Modifier.testTag(AI_SEARCH_KNOWLEDGE_TAG))
+    }
+    // The plain credit, asked by a tap or automatically (#801's revised pick).
+    SearchCredit(stringResource(R.string.home_ai_by, shown.model), Modifier.testTag(AI_SEARCH_BY_TAG))
+}
+
+// Nothing found, under a rule: on the web or from the model's knowledge, after "Asked
+// automatically: " for a question asked by itself (#801, #802).
+@Composable
+private fun NothingFound(shown: AiSearch.NothingFound) {
+    PanelRule(Modifier.testTag(AI_SEARCH_RULE_TAG))
+    val nothing =
+        stringResource(if (shown.way.web) R.string.home_ai_nothing_web else R.string.home_ai_nothing, shown.model)
+    QuietLine(
+        if (shown.way.automatic) stringResource(R.string.home_ai_nothing_auto, nothing) else nothing,
+        Modifier.testTag(AI_SEARCH_NOTHING_TAG),
+    )
+}
+
+/**
+ * "by {model}" under what *Ask AI* found ([text]), on a line of its own, in italics (#773); and above
+ * it, for an answer from the model's knowledge, that it is (#801).
+ */
 @Composable
 internal fun SearchCredit(
     text: String,
@@ -184,10 +214,12 @@ private fun SearchButton(
     }
 }
 
-// The turning record and "Searching with AI…" in the quiet style ([Busy]), with *Stop* (under
-// [stopModifier]) at the right of the line, centred on it, as *Retry* is beside its line.
+// The turning record and "Searching the web with AI…" ([web]), or "Asking AI…", in the quiet style
+// ([Busy]), with *Stop* (under [stopModifier]) at the right of the line, centred on it, as *Retry*
+// is beside its line.
 @Composable
 private fun SearchingLine(
+    web: Boolean,
     stopModifier: Modifier,
     onStop: () -> Unit,
 ) {
@@ -197,7 +229,7 @@ private fun SearchingLine(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Busy(
-            stringResource(R.string.home_ai_searching),
+            stringResource(if (web) R.string.home_ai_searching else R.string.home_ai_asking),
             MaterialTheme.typography.bodySmall,
             Modifier.weight(1f),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -211,6 +243,18 @@ private fun SearchingLine(
         )
     }
 }
+
+/**
+ * The line of a question that failed for [reason]: "AI web search failed." when the web search AI web
+ * search makes failed (#801, the whole line), else "Asking AI failed: {why}.".
+ */
+@Composable
+internal fun askFailedText(reason: String): String =
+    if (reason == AiSearches.WEB_SEARCH_FAILED) {
+        stringResource(R.string.home_ai_web_search_failed)
+    } else {
+        stringResource(R.string.home_ai_failed, searchFailureText(reason))
+    }
 
 // Why a search failed, in words: the insight's ([failureText]), or that the answer could not be read.
 @Composable
@@ -260,7 +304,8 @@ internal fun searchFacts(
  * setting to start by itself (`AutoSearches`): none until every source has answered and no panel is
  * still looking (MusicBrainz, the genres gathered and assembled, the label requests after the
  * evidence answered); then *Dates* with no date, *Genres* with no genre (while *Show genres* is on)
- * and *Lyrics* with no page (while *Lyrics links* is on; not for an instrumental), as each panel
+ * and *Lyrics* with no page (while *Lyrics links* is on; not for an instrumental, nor with a page
+ * among the track's web search results, #801), as each panel
  * tells its empty states ([NoDates], [GenresShown], [homeLyrics]), beside the header the pipeline's
  * track reports.
  */
@@ -274,7 +319,8 @@ internal fun emptyPanels(
     return buildSet {
         if (homeDates(track, track.nowPlaying).isEmpty()) add(SearchKind.DATES)
         if (settings.showGenres && track.genres.isEmpty) add(SearchKind.GENRES)
-        if (settings.lyricsLinks && homeLyrics(track, settings.lyricsSearch) is LyricsLinks.NoLink) {
+        val lyrics = homeLyrics(track, settings.lyricsSearch)
+        if (settings.lyricsLinks && lyrics is LyricsLinks.NoLink && lyrics.web.isEmpty()) {
             add(SearchKind.LYRICS)
         }
     }
@@ -290,6 +336,8 @@ const val AI_SEARCHING_TAG: String = "ai-search:searching"
 const val AI_SEARCH_STOP_TAG: String = "ai-search:stop"
 const val AI_SEARCH_RULE_TAG: String = "ai-search:rule"
 const val AI_SEARCH_BY_TAG: String = "ai-search:by"
+const val AI_SEARCH_KNOWLEDGE_TAG: String = "ai-search:knowledge"
+const val AI_SEARCH_FROM_TAG: String = "ai-search:from"
 const val AI_SEARCH_NOTHING_TAG: String = "ai-search:nothing"
 const val AI_SEARCH_FAILED_TAG: String = "ai-search:failed"
 

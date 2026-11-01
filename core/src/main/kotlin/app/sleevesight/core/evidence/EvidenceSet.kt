@@ -72,6 +72,22 @@ class EvidenceSet private constructor(
         return if (kept.size == lines.size) this else EvidenceSet(kept, fingerprint(kept, hasher))
     }
 
+    /**
+     * This set with [more] lines after its own, fingerprinted with [hasher]: each line of this set
+     * keeps its id, and a source's new lines are numbered after its own (#801: the pages a genre's
+     * reason found on the web are `S6`, `S7` after the track's `S1` to `S5`). This set itself with
+     * none.
+     */
+    fun with(
+        more: List<EvidenceDraft>,
+        hasher: Hasher,
+    ): EvidenceSet {
+        if (more.isEmpty()) return this
+        val drafts =
+            lines.map { EvidenceDraft(it.source, it.scope, it.text, it.url, it.retrievedAt, it.aggregate) }
+        return of(drafts + more, hasher)
+    }
+
     override fun equals(other: Any?): Boolean = other is EvidenceSet && lines == other.lines
 
     override fun hashCode(): Int = lines.hashCode()

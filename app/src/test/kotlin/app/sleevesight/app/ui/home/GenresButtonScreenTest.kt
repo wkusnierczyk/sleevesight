@@ -534,7 +534,7 @@ class GenresButtonScreenTest {
     @Test
     fun withNoGenreFoundThePanelSaysNoneFound() =
         show(state(labelled(TrackGenres()))) {
-            assertEquals("None found.", text(R.string.home_genres_none))
+            assertEquals("The sources give no genres.", text(R.string.home_genres_none))
             opensTo(text(R.string.home_genres_none))
         }
 

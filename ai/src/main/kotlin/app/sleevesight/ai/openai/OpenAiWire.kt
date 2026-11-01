@@ -2,19 +2,24 @@ package app.sleevesight.ai.openai
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonObject
 
 /*
  * The parts of OpenAI's Responses and Models APIs this client reads. Everything else in a response
  * is ignored, so new fields do not break it.
  */
 
-/** One streaming event: its `type`, a text or refusal `delta`, the `response` so far, or an error's `code`. */
+/**
+ * One streaming event: its `type`, a text or refusal `delta`, the `response` so far, or an error's
+ * `code`; for `response.output_item.done`, the output [item] done (#801: a reasoning item, a tool call).
+ */
 @Serializable
 internal data class WireEvent(
     val type: String,
     val delta: String? = null,
     val response: WireResponse? = null,
     val code: String? = null,
+    val item: JsonObject? = null,
 )
 
 /** The response object, as the lifecycle events (`response.completed` and the like) carry it. */

@@ -169,10 +169,15 @@ class GenreReasonPathScreenTest {
         show(notes, opened) {
             disabled(notes)
             compose.onNodeWithText("No AI service enabled.").assertExists()
-            compose.onNodeWithText("Enable AI service knowledge.").performFirstLinkClick {
+            // Both modes the list can run in (#801): the model's knowledge, and AI web search.
+            val line = "Enable AI service knowledge or AI web search."
+            compose.onNodeWithText(line).performFirstLinkClick {
                 (it.item as? LinkAnnotation.Clickable)?.tag == SettingsTarget.sources.linkTag
             }
-            assertEquals(listOf(SettingsTarget.sources), opened)
+            compose.onNodeWithText(line).performFirstLinkClick {
+                (it.item as? LinkAnnotation.Clickable)?.tag == SettingsTarget.aiWebSearch.linkTag
+            }
+            assertEquals(listOf(SettingsTarget.sources, SettingsTarget.aiWebSearch), opened)
         }
     }
 
