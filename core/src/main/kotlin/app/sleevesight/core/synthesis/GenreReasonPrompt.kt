@@ -33,8 +33,10 @@ object GenreReasonPrompt {
      * `InsightPrompt.VERSION` was not: a reason kept with `[M]` reads as one written now ([citationId]).
      * Nor when web search's lines became `S1`, `S2` (#769, they were `G1`, `G2`): a reason kept citing
      * `[G1]` reads as one citing `[S1]` ([citationId]).
+     * Version 3 (#800): the insight's rules gained [InsightPrompt.WEB_GENRE_RULE], a genre named only
+     * by a web page kept to that page.
      */
-    const val VERSION: Int = 2
+    const val VERSION: Int = 3
 
     /** The built-in style: shorter than the insight's, since it answers one question. */
     const val BUILT_IN_STYLE: String =
@@ -48,11 +50,20 @@ object GenreReasonPrompt {
      * instruments or sound.": a sentence about the evidence, which no line can back, so it was
      * underlined as uncited. Now the model writes what the evidence does say, cited, without arguing
      * for the label. Saying in the app when the sources do not establish a genre is #695.
+     *
+     * Version 3 (#800) makes one exception, for the insight's [InsightPrompt.WEB_GENRE_RULE], which
+     * this prompt's contract includes: a genre a web page names is attributed to that page ("a store
+     * listing files it under blues"), a sentence on what a source says that this rule would otherwise
+     * forbid. Kept rather than left out of the reason's rules: a web page filing the track under the
+     * genre is part of why it carries the label, and without the rule a reason could state the page's
+     * genre as the track's tag, the slip the insight had. The ban on commentary about the evidence and
+     * its gaps stands.
      */
     const val ABOUT_THE_MUSIC_RULE: String =
         "- Write about the music and the artists, never about the evidence or the sources: no sentence on " +
-            "what they say, do not say or leave out. If the evidence does not support the label, do not argue " +
-            "for it: write only what the evidence does say about the music, cited."
+            "what they say, do not say or leave out, except to attribute to its page a genre only a web line " +
+            "names, as a rule below says. If the evidence does not support the label, do not argue for it: " +
+            "write only what the evidence does say about the music, cited."
 
     /**
      * The prompt for why [nowPlaying], normalized as [normalized], carries the genre label [genre],

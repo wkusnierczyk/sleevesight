@@ -52,7 +52,18 @@ class GenreReasonPromptTest {
         val text = prompt()
         assertTrue("never about the evidence or the sources" in text)
         assertFalse("say so plainly in your first sentence" in text)
-        assertEquals(2, GenreReasonPrompt.VERSION)
+        assertEquals(3, GenreReasonPrompt.VERSION)
+    }
+
+    @Test
+    fun `its ban on sentences about the sources lets a web page's genre be attributed to the page`() {
+        // #800: the insight's rule asks for the attribution, so the reason's own rule must not forbid it.
+        val text = prompt()
+        assertTrue(InsightPrompt.WEB_GENRE_RULE in text)
+        val rule = GenreReasonPrompt.ABOUT_THE_MUSIC_RULE
+        assertTrue("except to attribute to its page a genre only a web line names" in rule)
+        assertTrue("what they say, do not say or leave out" in rule, "the ban stands")
+        assertTrue(text.indexOf(GenreReasonPrompt.ABOUT_THE_MUSIC_RULE) < text.indexOf(InsightPrompt.WEB_GENRE_RULE))
     }
 
     @Test
