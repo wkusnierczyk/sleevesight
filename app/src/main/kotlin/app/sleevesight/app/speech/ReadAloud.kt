@@ -99,17 +99,16 @@ class ReadAloud(
     /** The reading under way, from the tap until its last word, or null. */
     val reading: StateFlow<Reading?> = readingState.asStateFlow()
 
-    private val pausedInsteadState = MutableStateFlow(false)
-
     /**
      * Whether the music is paused for the reading under way though *Reduce volume* is chosen (#803):
-     * it plays on a speaker whose volume the phone cannot set ([MusicFocus.pausedInstead]), which
-     * Home says under *Key insights*. False when no reading is under way.
+     * it plays on a speaker whose volume the phone cannot set, which Home says under *Key insights*;
+     * as [MusicFocus.pausedInstead] has it, false once the user plays the music again or moves it to
+     * the phone, and when no reading is under way.
      */
-    val pausedInstead: StateFlow<Boolean> = pausedInsteadState.asStateFlow()
+    val pausedInstead: StateFlow<Boolean> = focus.pausedInstead
 
-    // How the audio focus is held for the reading under way, or null when it is not.
-    private var held: ReadAloudMusic? = null
+    // Whether the audio focus is held for the reading under way.
+    private var held = false
 
     // What follows the genre's reason under way as its notes say it, for as long as it is read.
     private var watch: Job? = null
@@ -192,14 +191,14 @@ class ReadAloud(
         end()
     }
 
-    // The audio focus for a reading, as [music] says: kept from the reading this one replaced when
-    // it was taken the same way. Another app taking it stops whatever is read.
+    // The audio focus for a reading, as [music] says. A reading that replaces another goes on under
+    // the focus that one took, held as it was (#803): the music is not given back and taken again
+    // between them, and a change of the setting applies from the next reading that takes it.
+    // Another app taking it stops whatever is read.
     private fun takeFocus(music: ReadAloudMusic): Boolean {
-        if (held == music) return true
-        val taken = focus.take(music) { stop() }
-        held = music.takeIf { taken }
-        pausedInsteadState.value = taken && focus.pausedInstead
-        return taken
+        if (held) return true
+        held = focus.take(music) { stop() }
+        return held
     }
 
     private fun stopWatching() {
@@ -210,11 +209,10 @@ class ReadAloud(
     private fun end() {
         stopWatching()
         readingState.value = null
-        if (held != null) {
-            held = null
+        if (held) {
+            held = false
             focus.release()
         }
-        pausedInsteadState.value = false
     }
 
     /**

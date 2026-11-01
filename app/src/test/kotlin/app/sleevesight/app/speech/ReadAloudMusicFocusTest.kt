@@ -99,7 +99,7 @@ class ReadAloudMusicFocusTest {
     fun musicOnThePhoneIsHeldByTheAudioFocusAloneAsBefore() {
         take(ReadAloudMusic.LOWER)
         assertEquals(listOf(ReadAloudMusic.LOWER), audio.taken)
-        assertFalse(focus.pausedInstead)
+        assertFalse(focus.pausedInstead.value)
         focus.release()
         assertEquals(1, audio.releases)
     }
@@ -110,12 +110,12 @@ class ReadAloudMusicFocusTest {
         take(ReadAloudMusic.LOWER)
         assertEquals("the focus too, for the voice", listOf(ReadAloudMusic.LOWER), audio.taken)
         assertEquals(listOf("pause"), speaker.asked)
-        assertTrue("said on Home", focus.pausedInstead)
+        assertTrue("said on Home", focus.pausedInstead.value)
 
         speaker.reportPlaying(false)
         focus.release()
         assertEquals(listOf("pause", "play"), speaker.asked)
-        assertFalse(focus.pausedInstead)
+        assertFalse(focus.pausedInstead.value)
         assertEquals(1, audio.releases)
     }
 
@@ -125,7 +125,7 @@ class ReadAloudMusicFocusTest {
         playing = speaker
         take(ReadAloudMusic.PAUSE)
         assertEquals(listOf("pause"), speaker.asked)
-        assertFalse("paused as chosen: nothing to say", focus.pausedInstead)
+        assertFalse("paused as chosen: nothing to say", focus.pausedInstead.value)
         focus.release()
         assertEquals(listOf("pause", "play"), speaker.asked)
     }
@@ -136,7 +136,7 @@ class ReadAloudMusicFocusTest {
         playing = speaker
         take(ReadAloudMusic.LOWER)
         assertEquals(listOf("volume 12"), speaker.asked)
-        assertFalse(focus.pausedInstead)
+        assertFalse(focus.pausedInstead.value)
         speaker.reportVolume(12)
         focus.release()
         assertEquals(listOf("volume 12", "volume 40"), speaker.asked)
@@ -222,23 +222,38 @@ class ReadAloudMusicFocusTest {
         val speaker = FakeRemoteMusic().also { playing = it }
         speaker.playing = false
         take(ReadAloudMusic.LOWER)
-        assertFalse(focus.pausedInstead)
+        assertFalse(focus.pausedInstead.value)
         focus.release()
         assertTrue(speaker.asked.isEmpty())
     }
 
     @Test
-    fun musicTheUserTookOverIsNotHeldAgainByTheNextReading() {
+    fun theMusicIsNoLongerSaidToBePausedOnceTheUserPlaysItAgain() {
         val speaker = FakeRemoteMusic().also { playing = it }
-        take(ReadAloudMusic.PAUSE)
-        speaker.reportPlaying(false)
-        speaker.reportPlaying(true)
-        speaker.reportPlaying(false)
-        // The setting changed, and the next reading takes the focus the other way; nothing plays.
-        playing = null
         take(ReadAloudMusic.LOWER)
+        speaker.reportPlaying(false)
+        assertTrue(focus.pausedInstead.value)
+        speaker.reportPlaying(true)
+        assertFalse(focus.pausedInstead.value)
+    }
+
+    @Test
+    fun theMusicIsNoLongerSaidToBePausedOnceItMovesToThePhone() {
+        val speaker = FakeRemoteMusic().also { playing = it }
+        take(ReadAloudMusic.LOWER)
+        speaker.reportRemote(false)
+        assertFalse(focus.pausedInstead.value)
+    }
+
+    @Test
+    fun aVolumeHoldSetsTheVolumeBackAndNeverPlaysMusicTheUserPaused() {
+        val speaker = FakeRemoteMusic(VolumeProvider.VOLUME_CONTROL_ABSOLUTE, volume = 40, maxVolume = 100)
+        playing = speaker
+        take(ReadAloudMusic.LOWER)
+        speaker.reportVolume(12)
+        speaker.reportPlaying(false)
         focus.release()
-        assertEquals(listOf("pause"), speaker.asked)
+        assertEquals(listOf("volume 12", "volume 40"), speaker.asked)
     }
 
     @Test
@@ -247,7 +262,7 @@ class ReadAloudMusicFocusTest {
         audio.grants = false
         assertFalse(focus.take(ReadAloudMusic.PAUSE) {})
         assertTrue(speaker.asked.isEmpty())
-        assertFalse(focus.pausedInstead)
+        assertFalse(focus.pausedInstead.value)
     }
 
     @Test
@@ -258,16 +273,5 @@ class ReadAloudMusicFocusTest {
         focus.release()
         assertEquals(listOf("pause", "play"), speaker.asked)
         assertEquals(null, speaker.watching)
-    }
-
-    @Test
-    fun takenAnotherWayForTheNextReadingTheSameSpeakerIsHeldAfresh() {
-        val speaker = FakeRemoteMusic(VolumeProvider.VOLUME_CONTROL_ABSOLUTE, volume = 40, maxVolume = 100)
-        playing = speaker
-        take(ReadAloudMusic.PAUSE)
-        // Paused by the reading, so no longer found playing.
-        playing = null
-        take(ReadAloudMusic.LOWER)
-        assertEquals(listOf("pause", "play", "volume 12"), speaker.asked)
     }
 }

@@ -69,24 +69,29 @@ class RemoteReport(
 )
 
 /**
- * What a reading does to [music], a remote session that plays as it starts, as [lower] (*Reduce
- * volume*) or not (*Pause playback*) says, undone by [end]:
+ * What readings do to [music], a remote session that plays as the first starts, as [lower]
+ * (*Reduce volume*) or not (*Pause playback*) says, undone by [end] once the last ends; readings
+ * that replace one another go on under one hold, its session and its way fixed when it starts:
  * - paused through its transport controls with *Pause playback*, and with *Reduce volume* where its
- *   volume is fixed ([pausedInstead]); played again at the end unless the user took it over in
- *   between: a report said it played after one had said the pause landed (the user paused it after,
- *   or plays it now), or it no longer plays on another device;
+ *   volume is fixed (told to [pausedInstead] while it stays paused); played again at the end
+ *   unless the user took it over in between: a report said it played after one had said the pause
+ *   landed (the user paused it after, or plays it now), or it no longer plays on another device;
  * - lowered with an absolute volume, to [LOWERED_SHARE] of it, and set back at the end unless the
  *   user set another volume after the lowered one was reported, or it no longer plays remotely;
  * - lowered with a relative volume by as many steps as that takes (or [RELATIVE_STEPS] where it
  *   reports no volume), and raised by as many at the end, unless it no longer plays remotely.
+ *
+ * A volume hold only ever sets the volume: a pause or play the user makes meanwhile is theirs, and
+ * the volume set back at the end does not play the music again.
  *
  * The session is watched before anything is asked of it, so no report of what is asked is missed,
  * and checked once watched: music that no longer plays then, or no longer remotely, is left alone.
  * Reports are read one by one, each as it was given.
  */
 class RemoteHold private constructor(
-    val music: RemoteMusic,
+    private val music: RemoteMusic,
     private val way: Way,
+    private val pausedInstead: (Boolean) -> Unit,
 ) {
     private enum class Way { PAUSED, ABSOLUTE, RELATIVE, NONE }
 
@@ -99,29 +104,22 @@ class RemoteHold private constructor(
     private var landed = false
     private var takenOver = false
 
-    /** Whether the music is still the hold's to give back: the user has not taken it over, and it plays remotely. */
-    val owned: Boolean get() = !takenOver && music.remote
+    // Whether the music was paused though *Reduce volume* is chosen, and is still.
+    private var instead = false
 
-    /** Whether the music was paused though *Reduce volume* is chosen: its volume cannot be set from the phone. */
-    var pausedInstead: Boolean = false
-        private set
-
-    private fun start(
-        lower: Boolean,
-        ours: Boolean,
-    ) {
+    private fun start(lower: Boolean) {
         if (way == Way.NONE) return
         music.watch(::changed)
         // Paused, or moved to the phone, between being found and being watched: nothing to hold.
-        // Music a hold before this one just gave back may not report playing yet: it is held.
-        if (!music.remote || !(ours || music.playing)) {
+        if (!music.remote || !music.playing) {
             music.unwatch()
             takenOver = true
             return
         }
         when (way) {
             Way.PAUSED -> {
-                pausedInstead = lower
+                instead = lower
+                pausedInstead(instead)
                 music.pause()
             }
             Way.ABSOLUTE -> {
@@ -139,7 +137,7 @@ class RemoteHold private constructor(
     }
 
     private fun changed(report: RemoteReport) {
-        if (report.remote == false) takenOver = true
+        if (report.remote == false) takeOver()
         if (takenOver) return
         when (way) {
             Way.PAUSED -> report.playing?.let { playing -> follow(asked = !playing) }
@@ -154,11 +152,20 @@ class RemoteHold private constructor(
         if (!landed) {
             landed = asked
         } else if (!asked) {
-            takenOver = true
+            takeOver()
         }
     }
 
-    /** Gives the music back, as the reading ends however it ends; once. */
+    // The user's now: nothing is given back, and the music is no longer said to be paused.
+    private fun takeOver() {
+        takenOver = true
+        if (instead) {
+            instead = false
+            pausedInstead(false)
+        }
+    }
+
+    /** Gives the music back, as the last reading ends however it ends; once. */
     fun end() {
         if (way == Way.NONE) return
         music.unwatch()
@@ -182,13 +189,13 @@ class RemoteHold private constructor(
         private fun lowerOf(volume: Int): Int = (volume * LOWERED_SHARE).roundToInt()
 
         /**
-         * Holds [music] for a reading, [lower] or paused, as above; [ours] when it is the music a
-         * hold for the reading before just gave back, which need not report playing yet.
+         * Holds [music] for the readings, [lower] or paused, as above, telling [pausedInstead]
+         * whether it is paused though *Reduce volume* is chosen, as that changes.
          */
         fun start(
             music: RemoteMusic,
             lower: Boolean,
-            ours: Boolean = false,
+            pausedInstead: (Boolean) -> Unit = {},
         ): RemoteHold {
             val way =
                 when {
@@ -198,7 +205,7 @@ class RemoteHold private constructor(
                     music.volumeControl == VolumeProvider.VOLUME_CONTROL_RELATIVE -> Way.RELATIVE
                     else -> Way.PAUSED
                 }
-            return RemoteHold(music, way).also { it.start(lower, ours) }
+            return RemoteHold(music, way, pausedInstead).also { it.start(lower) }
         }
     }
 }

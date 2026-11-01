@@ -15,6 +15,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -82,6 +83,8 @@ internal class FakeFocus(
     var grants: Boolean = true,
     var pausesInstead: Boolean = false,
 ) : MusicFocus {
+    private val pausedState = MutableStateFlow(false)
+
     val taken = mutableListOf<ReadAloudMusic>()
     var held = false
     var releases = 0
@@ -95,15 +98,17 @@ internal class FakeFocus(
         taken += how
         held = true
         this.lost = lost
+        pausedState.value = pausesInstead
         return true
     }
 
     override fun release() {
         if (held) releases++
         held = false
+        pausedState.value = false
     }
 
-    override val pausedInstead: Boolean get() = held && pausesInstead
+    override val pausedInstead: StateFlow<Boolean> = pausedState
 
     /** Another app takes the focus (a call). */
     fun lose() = lost?.invoke()

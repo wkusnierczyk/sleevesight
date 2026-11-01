@@ -5,6 +5,9 @@ import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
 import app.sleevesight.core.settings.ReadAloudMusic
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * The music playing, while an insight is read aloud (#325): Android's audio focus, which the
@@ -27,11 +30,14 @@ interface MusicFocus {
     fun release()
 
     /**
-     * Whether the music held for the reading was paused though *Reduce volume* is chosen (#803):
-     * it plays on another device whose volume the phone cannot set. False when nothing is held.
+     * Whether the music is paused for the readings though *Reduce volume* is chosen (#803): it plays
+     * on another device whose volume the phone cannot set. False once the user plays it again or
+     * moves it to the phone, and when nothing is held.
      */
-    val pausedInstead: Boolean get() = false
+    val pausedInstead: StateFlow<Boolean> get() = NEVER_PAUSED_INSTEAD
 }
+
+private val NEVER_PAUSED_INSTEAD: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
 
 /**
  * [MusicFocus] for music played on the phone and on another device (#803): the audio focus
@@ -39,29 +45,30 @@ interface MusicFocus {
  * reading from starting during a call; and, where a followed player plays on another device
  * ([remote], Spotify Connect on a speaker), which the focus does not reach, the music held through
  * its session as well ([RemoteHold]): lowered through it where its volume can be set, else paused
- * and played again after. Released however the reading ends: its end, *Stop*, a failure, the focus
- * lost, the app leaving the screen.
+ * and played again after. Taken once for readings that follow one another ([ReadAloud] keeps it
+ * when a reading replaces another), so the session and the way it is held are fixed for as long as
+ * it is held; released however the last reading ends: its end, *Stop*, a failure, the focus lost,
+ * the app leaving the screen.
  */
 class ReadAloudMusicFocus(
     private val audio: MusicFocus,
     private val remote: () -> RemoteMusic?,
 ) : MusicFocus {
     private var hold: RemoteHold? = null
+    private val pausedInsteadState = MutableStateFlow(false)
 
-    override val pausedInstead: Boolean get() = hold?.pausedInstead == true
+    override val pausedInstead: StateFlow<Boolean> = pausedInsteadState.asStateFlow()
 
     override fun take(
         how: ReadAloudMusic,
         lost: () -> Unit,
     ): Boolean {
-        // Taken another way for the reading that follows: the music the last hold still owns held
-        // afresh, though no longer playing once it paused it; music the user took over is theirs,
-        // and only music playing now is held.
-        val kept = hold?.takeIf { it.owned }?.music
         endHold()
         if (!audio.take(how, lost)) return false
-        val music = kept ?: remote()
-        hold = music?.let { RemoteHold.start(it, lower = how == ReadAloudMusic.LOWER, ours = it === kept) }
+        hold =
+            remote()?.let { music ->
+                RemoteHold.start(music, lower = how == ReadAloudMusic.LOWER) { pausedInsteadState.value = it }
+            }
         return true
     }
 
@@ -73,6 +80,7 @@ class ReadAloudMusicFocus(
     private fun endHold() {
         hold?.end()
         hold = null
+        pausedInsteadState.value = false
     }
 }
 
