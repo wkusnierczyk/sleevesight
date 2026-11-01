@@ -13,6 +13,7 @@ import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.genres.GenreLabel
 import app.sleevesight.core.genres.GenreLevel
 import app.sleevesight.core.genres.GenreRow
+import app.sleevesight.core.genres.GenreVocabulary
 import app.sleevesight.core.genres.LabelCredit
 import app.sleevesight.core.genres.LabelSource
 import app.sleevesight.core.genres.TrackGenres
@@ -23,7 +24,9 @@ import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmHasher
+import app.sleevesight.core.platform.JvmResourceReader
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.settings.SourceSwitch
 import app.sleevesight.core.sources.SourceResult
 import app.sleevesight.core.synthesis.CardKind
 import app.sleevesight.core.synthesis.GenreReasonPrompt
@@ -134,25 +137,57 @@ class GenreReasonsTest {
         assertNull(reasons.key(track, "rock", settings.copy(aiProvider = null)))
     }
 
+    private val vocabulary = GenreVocabulary.load(JvmResourceReader)
+    private val lists = GenreLists(AiAccess(provider, Secret("k")), cache, JvmHasher, vocabulary)
+
+    // *AI service knowledge* on (off by default): the AI's genre list can run.
+    private val knowing = settings.copy(enabledSources = Settings.DEFAULT_SOURCES + SourceSwitch.MODEL)
+
     @Test
-    fun `a genre only MusicBrainz gives is withheld where it would otherwise be offered (#721)`() {
+    fun `a genre only MusicBrainz gives asks the AI's genre list first, then is written once listed (#762)`() {
         val only = track(credits = listOf(LabelSource.MUSICBRAINZ))
-        assertTrue(reasons.withheld(only, "jazz", settings))
-        // Given by another source too: offered, not withheld.
+        val listing = assertIs<ReasonPath.Listing>(reasons.path(only, "jazz", knowing, lists, listed = null))
+        assertEquals(CardKind.GENRE_LIST, listing.key.kind)
+        // On the list: path A, the reason's own key.
+        val reason = assertIs<ReasonPath.Reason>(reasons.path(only, "jazz", knowing, lists, setOf("jazz")))
+        assertEquals("jazz", reason.key.subject)
+        // Not on it: no call.
+        assertEquals(ReasonPath.NotListed, reasons.path(only, "jazz", knowing, lists, setOf("blues")))
+        // Given by another source too: path A, whatever the list.
         val both = track(credits = listOf(LabelSource.MUSICBRAINZ, LabelSource.LASTFM))
-        assertNotNull(reasons.key(both, "jazz", settings))
-        assertFalse(reasons.withheld(both, "jazz", settings))
-        assertFalse(reasons.withheld(track, "jazz", settings))
-        // Where it would not be offered anyway: neither.
-        assertFalse(GenreReasons(null, cache, JvmHasher).withheld(only, "jazz", settings))
-        assertFalse(reasons.withheld(only, "jazz", settings.copy(writeInsights = false)))
-        assertFalse(reasons.withheld(only.copy(evidence = null), "jazz", settings))
-        // A genre the track does not have.
-        assertFalse(reasons.withheld(only, "rock", settings))
+        assertIs<ReasonPath.Reason>(reasons.path(both, "jazz", knowing, lists, listed = null))
+        assertIs<ReasonPath.Reason>(reasons.path(both, "jazz", knowing, lists, setOf("blues")))
     }
 
     @Test
-    fun `neither offered nor withheld with no model, or while a source is still pending (#721)`() {
+    fun `the genre list cannot run with the model's knowledge off, and says so (#762)`() {
+        val only = track(credits = listOf(LabelSource.MUSICBRAINZ))
+        // Off by default.
+        val off = settings
+        assertFalse(off.isEnabled(SourceId.MODEL))
+        assertEquals(ReasonPath.CannotList, reasons.path(only, "jazz", off, lists, listed = null))
+        assertNull(lists.key(only, off))
+        // A genre another source gives is written all the same.
+        assertIs<ReasonPath.Reason>(reasons.path(track, "jazz", off, lists, listed = null))
+    }
+
+    @Test
+    fun `no AI service says so, and nothing with insights off, no evidence, or a genre the track lacks`() {
+        val only = track(credits = listOf(LabelSource.MUSICBRAINZ))
+        val none = GenreReasons(null, cache, JvmHasher)
+        for (given in listOf(track, only)) {
+            assertEquals(ReasonPath.NoService, none.path(given, "jazz", knowing, lists, listed = null))
+            assertEquals(
+                ReasonPath.None,
+                reasons.path(given, "jazz", settings.copy(writeInsights = false), lists, null),
+            )
+            assertEquals(ReasonPath.None, reasons.path(given.copy(evidence = null), "jazz", settings, lists, null))
+        }
+        assertEquals(ReasonPath.None, reasons.path(track, "rock", settings, lists, listed = null))
+    }
+
+    @Test
+    fun `no model, or a source still pending, offers nothing to write (#721)`() {
         // A service with no default model and none set: Ollama's, until one is chosen.
         val ollama =
             object : AiProvider by provider {
@@ -163,12 +198,12 @@ class GenreReasonsTest {
         for (credits in listOf(listOf(LabelSource.LASTFM), listOf(LabelSource.MUSICBRAINZ))) {
             val given = track(credits = credits)
             assertNull(modelless.key(given, "jazz", noModel))
-            assertFalse(modelless.withheld(given, "jazz", noModel))
+            assertEquals(ReasonPath.NoService, modelless.path(given, "jazz", noModel, lists, null))
             // Evidence in, but a source still to land.
             val pending = given.copy(sources = given.sources + (SourceId.LASTFM to SourceState.Pending))
             assertNotNull(pending.evidence)
             assertNull(reasons.key(pending, "jazz", settings))
-            assertFalse(reasons.withheld(pending, "jazz", settings))
+            assertEquals(ReasonPath.None, reasons.path(pending, "jazz", settings, lists, null))
         }
     }
 

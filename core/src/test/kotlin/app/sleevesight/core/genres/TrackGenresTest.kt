@@ -215,4 +215,50 @@ class TrackGenresTest {
             combineGenres(mapOf(LabelSource.LASTFM to track("rock") + artist("A", "rock") + album("rock")), listOf("A"))
         assertEquals(listOf(false, true, false), genres.rows.map { it.labels.single().opensCard })
     }
+
+    // The Black Oak (#762, after #799): one-vote MusicBrainz track tags, and Last.fm's Folk for the
+    // album and the artist.
+    private fun blackOak(): TrackGenres =
+        combineGenres(
+            mapOf(
+                LabelSource.MUSICBRAINZ to track("alternative rock", "rock"),
+                LabelSource.LASTFM to album("folk") + artist("Emily Jane White", "folk", "indie folk"),
+            ),
+            listOf("Emily Jane White"),
+        )
+
+    @Test
+    fun `the AI's genres join the track's row, those it has already unmarked, and applied twice the same (#762)`() {
+        val listed = track("rock", "indie folk", "blues")
+        val genres = blackOak().withAi(listed, "Claude Haiku 5.5")
+        val row = genres.rows.first()
+        assertEquals(GenreLevel.TRACK, row.level)
+        assertEquals(listOf("Alternative Rock", "Rock", "Indie Folk", "Blues"), row.labels.map { it.genre.label })
+        // Rock, which MusicBrainz gives, is credited to the model too, unmarked; the others are added.
+        assertEquals(listOf(false, false, true, true), row.labels.map { it.aiAdded })
+        assertEquals(
+            listOf(null, "Claude Haiku 5.5", "Claude Haiku 5.5", "Claude Haiku 5.5"),
+            row.labels.map { it.aiModel },
+        )
+        assertTrue(row.labels.filter { it.aiAdded }.all { it.credits.isEmpty() })
+        // The other rows as they were; twice, the same.
+        assertEquals(blackOak().rows.drop(1), genres.rows.drop(1))
+        assertEquals(genres, genres.withAi(listed, "Claude Haiku 5.5"))
+        assertEquals(blackOak(), blackOak().withAi(emptyList(), "Claude Haiku 5.5"))
+    }
+
+    @Test
+    fun `the AI's genres follow the folded chips, which stay as they were, each genre once (#762)`() {
+        val before = blackOak().folded.map { it.label.genre.label }
+        assertEquals(listOf("Folk"), before)
+        // Indie Folk is on the artist's row, but added by the AI it backs nothing: the album's Folk still leads.
+        val genres = blackOak().withAi(track("folk", "indie folk", "blues"), "Claude Haiku 5.5")
+        assertEquals(listOf("Folk", "Indie Folk", "Blues"), genres.folded.map { it.label.genre.label })
+        assertEquals(listOf(false, true, true), genres.folded.map { it.label.aiAdded })
+        // With no track row before: one made for the AI's genres alone.
+        val albumOnly = combineGenres(mapOf(LabelSource.LASTFM to album("folk")), emptyList())
+        val made = albumOnly.withAi(track("blues"), "Claude Haiku 5.5")
+        assertEquals(listOf(GenreLevel.TRACK, GenreLevel.ALBUM), made.levels)
+        assertEquals(listOf("Folk", "Blues"), made.folded.map { it.label.genre.label })
+    }
 }

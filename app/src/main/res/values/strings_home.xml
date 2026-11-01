@@ -149,6 +149,8 @@
     <string name="home_musicbrainz_off_see">See %1$s.</string>
     <!-- A link that opens Settings at Sources; its spaces never break, so it stays on one line. -->
     <string name="home_settings_sources_link">Settings\u00A0→\u00A0Sources</string>
+    <!-- A link that opens Settings at AI services (#762). -->
+    <string name="home_settings_ai_services_link">Settings\u00A0→\u00A0AI services</string>
     <!-- MusicBrainz could not be reached; Retry (home_retry) beside it asks it again. -->
     <string name="home_musicbrainz_unreachable">MusicBrainz could not be reached.</string>
     <!-- MusicBrainz accepted no recording of the track. -->

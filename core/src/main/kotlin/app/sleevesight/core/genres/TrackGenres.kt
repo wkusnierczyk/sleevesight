@@ -53,6 +53,10 @@ data class TrackGenres(
      * MusicBrainz's; Last.fm's weights are no votes), or when the album's or an artist's row has its
      * genre: one contributor's tag on the recording does not outweigh the album's and the artists'.
      * The rows themselves (the *Genre tags* table) keep every label.
+     *
+     * The labels the AI's genre list added to the track's row (#762, [TrackLabel.aiAdded]) follow,
+     * after the others and each genre once, those already among them left out: they neither lead nor
+     * back, so the chips shown before the list came stay as they were, in their order.
      */
     val folded: List<PlacedLabel>
         get() {
@@ -62,17 +66,54 @@ data class TrackGenres(
                     .flatMap { it.labels }
                     .map { it.genre.identity }
                     .toSet()
+            val tracks = placed(GenreLevel.TRACK).filter { !it.label.aiAdded }
             val backed =
-                placed(GenreLevel.TRACK).filter { (_, label) ->
+                tracks.filter { (_, label) ->
                     (label.votes ?: 0) >= MIN_VOTES || label.genre.identity in others
                 }
-            return backed
-                .ifEmpty { placed(GenreLevel.ALBUM) }
-                .ifEmpty { placed(GenreLevel.ARTIST) }
-                .ifEmpty { placed(GenreLevel.TRACK) }
-                .distinctBy { it.label.genre.identity }
-                .take(GenreVocabulary.MAX_LABELS)
+            val sources =
+                backed
+                    .ifEmpty { placed(GenreLevel.ALBUM) }
+                    .ifEmpty { placed(GenreLevel.ARTIST) }
+                    .ifEmpty { tracks }
+                    .distinctBy { it.label.genre.identity }
+                    .take(GenreVocabulary.MAX_LABELS)
+            val shown = sources.map { it.label.genre.identity }.toSet()
+            val added = placed(GenreLevel.TRACK).filter { it.label.aiAdded && it.label.genre.identity !in shown }
+            return sources + added
         }
+
+    /**
+     * These genres with the AI's genre list for the track (#762, `GenreLists`): [genres], listed by
+     * [model] (its name, as the AI settings show it). A genre the track's row has already is credited
+     * to the model too, unmarked and not shown twice ([TrackLabel.aiModel]); one it does not have
+     * joins the row, after its labels, with no source's credit ([TrackLabel.aiAdded]), a track row
+     * made for them where there was none. The other rows are as they were. Applied twice, the same.
+     */
+    fun withAi(
+        genres: List<GenreLabel>,
+        model: String,
+    ): TrackGenres {
+        if (genres.isEmpty()) return this
+        val listed = genres.map { it.identity }.toSet()
+        val track = rows.firstOrNull { it.level == GenreLevel.TRACK }
+        val kept =
+            track
+                ?.labels
+                .orEmpty()
+                .map { if (it.genre.identity in listed) it.copy(aiModel = model) else it }
+        val have = kept.map { it.genre.identity }.toSet()
+        val added =
+            genres
+                .filter { it.identity !in have }
+                .distinctBy { it.identity }
+                .map { genre ->
+                    val label = genre.copy(url = null, level = GenreLevel.TRACK, artist = null, votes = null)
+                    TrackLabel(label, emptyList(), votes = null, aiModel = model)
+                }
+        val row = GenreRow(GenreLevel.TRACK, null, kept + added)
+        return TrackGenres(if (track == null) listOf(row) + rows else rows.map { if (it === track) row else it })
+    }
 
     /** Every label of every row, each genre once, in row order: for counting, and the CLI's report. */
     val all: List<TrackLabel> get() = rows.flatMap { it.labels }.distinctBy { it.genre.identity }

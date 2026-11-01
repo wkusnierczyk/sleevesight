@@ -24,4 +24,11 @@ enum class CardKind(
      * the model's reply, kept to be read and checked again (`AiSearches`).
      */
     SEARCH("search"),
+
+    /**
+     * The AI's genre list for a track (#762), asked before *Why is this …?* for a genre only
+     * MusicBrainz's tags give, its mode's key (`GenreListMode.key`) as the card's subject: the
+     * model's reply, kept to be read and checked again (`GenreLists`), as long as a reason is.
+     */
+    GENRE_LIST("genre_list"),
 }

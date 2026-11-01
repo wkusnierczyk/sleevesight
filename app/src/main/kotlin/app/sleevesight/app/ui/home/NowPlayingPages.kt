@@ -82,6 +82,7 @@ private fun genreNotes(
     { id -> actions.openPage(HomePage.Sources(cite = id)) },
     shown.modelAllowed,
     actions.readAloud,
+    actions.openSettingsAt,
 )
 
 /**

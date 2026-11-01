@@ -27,6 +27,7 @@ import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withLink
+import androidx.compose.ui.text.withStyle
 import app.sleevesight.core.settings.LinkStyle
 
 // Links without the palette's accent colour (#442): the system's dynamic accent (on
@@ -66,6 +67,7 @@ internal fun LinkedText(
                 val start = length
                 when (part) {
                     is TextPart.Words -> append(part.text)
+                    is TextPart.Styled -> withStyle(part.style) { append(part.text) }
                     is TextPart.Link -> withLink(LinkAnnotation.Url(part.url, styles)) { append(part.text) }
                     is TextPart.Action -> withLink(annotation(part, styles, part.onClick)) { append(part.text) }
                 }

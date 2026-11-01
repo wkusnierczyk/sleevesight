@@ -16,6 +16,7 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
@@ -241,43 +242,16 @@ class GenreAboutScreenTest {
         }
 
     @Test
-    fun aFailedReasonSaysWhyAndOffersWhyAgain() {
+    fun aFailedReasonSaysWhyAndOffersRetry() {
         val notes = Notes(start = GenreReason.Shown(InsightState.Failed("offline")))
         showBox(notes) {
             compose.onNodeWithText(text(R.string.genre_why_failed, text(R.string.home_failure_offline))).assertExists()
-            compose.onNodeWithTag(GENRE_WHY_TAG).performScrollTo().performClick()
+            assertEquals(0, count(GENRE_WHY_TAG))
+            compose
+                .onNode(hasText(text(R.string.home_retry)) and hasAnyAncestor(hasTestTag(GENRE_WHY_FAILED_TAG)))
+                .performScrollTo()
+                .performClick()
             assertEquals(1, notes.taps)
-        }
-    }
-
-    @Test
-    fun aGenreOnlyMusicBrainzGivesShowsWhyDisabledWithWhyUnderIt() {
-        val notes = Notes(start = GenreReason.Withheld)
-        val only =
-            playing.copy(
-                genres =
-                    TrackGenres(
-                        listOf(GenreRow(GenreLevel.ARTIST, "Miles Davis", listOf(label(LabelSource.MUSICBRAINZ)))),
-                    ),
-            )
-        showBox(notes, track = only) {
-            val question = text(R.string.genre_why, "jazz")
-            // The same button, with its AI mark, disabled: TalkBack says so, and a tap does nothing.
-            compose.onNodeWithTag(GENRE_WHY_TAG).assertIsNotEnabled()
-            compose.onNodeWithTag(GENRE_WHY_TAG).assertContentDescriptionEquals("$question, uses AI")
-            val marks =
-                compose
-                    .onAllNodes(hasTestTag(AI_MARK_TAG) and hasAnyAncestor(hasTestTag(GENRE_WHY_TAG)), true)
-                    .fetchSemanticsNodes()
-            assertEquals(1, marks.size)
-            compose.onNodeWithTag(GENRE_WHY_TAG).assertHeightIsAtLeast(48.dp)
-            compose.onNodeWithTag(GENRE_WHY_WITHHELD_TAG).assertTextEquals(text(R.string.genre_why_withheld))
-            val tops = listOf(GENRE_WHY_TAG, GENRE_WHY_WITHHELD_TAG, GENRES_ROW_PREFIX + "0").map(::top)
-            assertEquals("Why, its note, table, in that order", tops.sorted(), tops)
-            compose.onNodeWithTag(GENRE_WHY_TAG).performScrollTo().performClick()
-            compose.waitForIdle()
-            assertEquals(0, notes.taps)
-            assertEquals(0, count(GENRE_REASON_TAG))
         }
     }
 
@@ -488,7 +462,7 @@ class GenreAboutScreenTest {
         showBox(Notes(lookedUp = { flowOf(null) }, start = GenreReason.None)) {
             assertEquals(0, count(GENRE_DEFINITION_TAG))
             assertEquals(0, count(GENRE_WHY_TAG))
-            assertEquals(0, count(GENRE_WHY_WITHHELD_TAG))
+            assertEquals(0, count(GENRE_WHY_UNAVAILABLE_TAG))
             assertEquals(0, count(GENRE_REASON_TAG))
             compose.onNodeWithTag(GENRES_ROW_PREFIX + "0").assertExists()
         }

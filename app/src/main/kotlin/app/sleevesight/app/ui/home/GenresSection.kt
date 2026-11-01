@@ -6,9 +6,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
@@ -27,6 +30,8 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
+import app.sleevesight.app.pipeline.GenreNotes
+import app.sleevesight.app.pipeline.withAi
 import app.sleevesight.app.ui.logo.Busy
 import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.app.ui.theme.ChipFrame
@@ -80,9 +85,10 @@ internal fun genresItem(
 }
 
 /**
- * What *Genres*' panel holds (#772), as [GenresShown] works it out from [track] and [settings]: the
+ * What *Genres*' panel holds (#772), as [GenresShown] works it out from [playing] and [settings]: the
  * chips of the folded labels ([TrackGenres.folded]: the track's backed by votes or by another level,
- * else the album's, else the artists', #799), each unfolding its genre under them and a
+ * else the album's, else the artists', #799; then those the AI's genre list added, #762, marked AI,
+ * [GenreNotes.aiGenres]), each unfolding its genre under them and a
  * rule (#786, [GenresBox], [GenreBody]); under the chips, or in their place with none, why
  * there are no more: "Looking on Last.fm and MusicBrainz…" while the genres are gathered (the
  * sources still asked), a source that could not be reached with *Retry* beside it ([retry] of its
@@ -99,7 +105,7 @@ internal fun genresItem(
 @Suppress("LongParameterList") // What the panel shows, and each of its ways out.
 @Composable
 internal fun GenresContent(
-    track: TrackState?,
+    playing: TrackState?,
     settings: Settings,
     notes: PanelNotes = PanelNotes(),
     retry: (SourceId) -> (() -> Unit)? = { null },
@@ -108,6 +114,9 @@ internal fun GenresContent(
     everyGenre: Boolean = false,
     search: PanelSearch = PanelSearch(),
 ) {
+    // The track's genres with the AI's genre list (#762), where one is known: its genres join the
+    // chips and the track's row, marked AI.
+    val track = playing?.withAi(aiGenres(playing, notes.notes))
     val shown = GenresShown.of(track, settings)
     val style = MaterialTheme.typography.bodyLarge
     // The genre open, kept above the chips and the lines in their place (#772): while a run asks
@@ -344,7 +353,8 @@ internal fun Chips(
  * A chip in *Genres*' panel (#439, #558, #772): a light fill in the text's colour; while [selected],
  * the text's colour, with the box's colour for the text. A button whose action a screen reader
  * names [action], and says is selected while its genre shows. [modifier] goes outside its
- * target (a focus requester).
+ * target (a focus requester). A genre the AI's genre list added (#762) carries the **AI** mark after
+ * its name ([AiLabel]), and a screen reader reads it with the model's name.
  */
 @Composable
 private fun GenreChip(
@@ -363,7 +373,18 @@ private fun GenreChip(
                 .clickable(role = Role.Button, onClickLabel = action, onClick = onClick)
                 .semantics { this.selected = selected },
     ) {
-        Text(placed.label.genre.label, style = MaterialTheme.typography.labelLarge, color = content)
+        val label = placed.label.genre.label
+        val model = placed.label.aiModel?.takeIf { placed.label.aiAdded }
+        CompositionLocalProvider(LocalContentColor provides content) {
+            if (model == null) {
+                Text(label, style = MaterialTheme.typography.labelLarge)
+            } else {
+                // Added by the AI's genre list (#762): marked AI, read "Blues, from Claude Haiku 5.5".
+                ProvideTextStyle(MaterialTheme.typography.labelLarge) {
+                    AiLabel(label, described = stringResource(R.string.genre_ai_added, label, model))
+                }
+            }
+        }
     }
 }
 
