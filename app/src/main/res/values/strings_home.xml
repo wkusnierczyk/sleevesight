@@ -254,21 +254,32 @@
     <!-- Sources' chip on Home, as a screen reader says its state (#623): its panel opens in its place,
          so the chip is only ever collapsed. -->
     <string name="home_fold_collapsed">collapsed</string>
-    <!-- A genre chip's action, as a screen reader names it ("Double-tap to show genre"): it opens the
-         genre's panel, or, while that panel shows, closes it. -->
+    <!-- A genre chip's action, as a screen reader names it ("Double-tap to show genre"): it unfolds the
+         genre under the chips (#786), or, while it shows (the chip read as selected), folds it
+         ("Double-tap to fold"). -->
     <string name="home_genre_show">show genre</string>
-    <string name="home_genre_close">close genre</string>
-    <!-- A row's name in the genre's panel where the player gave no track title, artist or album. -->
+    <string name="home_genre_fold">fold</string>
+    <!-- The genre's tags (#786): a bold heading, then a row per level, its name on the left, its tags
+         as chips on the right. -->
+    <string name="home_genre_tags">Genre tags</string>
+    <!-- How a screen reader reads the tag of the genre shown, in its row of tags (#786), as it reads the
+         chosen genre's chip: %1$s is the tag ("Rock, selected"). The row reads as one item: "Track,
+         Rock, selected, Pop". -->
+    <string name="home_genre_tag_selected">%1$s, selected</string>
+    <!-- The rows' names, on the left of the tags and of their sources: the track's tags, the artist's,
+         the album's. -->
     <string name="home_genres_track">Track</string>
     <string name="home_genres_artist_row">Artist</string>
     <string name="home_genres_album">Album</string>
-    <!-- Where the table's labels come from, a line per row, before each source that gave any of that row's labels. -->
-    <string name="home_genre_from_track">From the track’s tags:</string>
-    <string name="home_genre_from">From the artist’s tags:</string>
-    <!-- With several credited artists: %1$s the artist whose tags gave the row's labels. -->
-    <string name="home_genre_from_named">From %1$s’s tags:</string>
-    <string name="home_genre_from_album">From the album’s tags:</string>
-    <string name="home_genre_licence">licence</string>
+    <!-- An artist's row with several credited artists, numbered in the credit's order ("Artist 2"). -->
+    <string name="home_genre_artist_n">Artist %1$d</string>
+    <!-- Where the tags come from (#786): a bold heading, then the same rows, each source's name
+         (Last.fm, MusicBrainz) linking that track's or artist's page there. -->
+    <string name="home_genre_tag_sources">Tag sources</string>
+    <!-- Under the sources, once, when MusicBrainz gave any tag (D12), then on its own line
+         home_genre_tags_licence, linking the licence. -->
+    <string name="home_genre_tags_credit">MusicBrainz tags by contributors</string>
+    <string name="home_genre_tags_licence">CC BY-NC-SA 3.0</string>
 
     <!-- The insight. -->
     <string name="home_insight_title">Key insights</string>

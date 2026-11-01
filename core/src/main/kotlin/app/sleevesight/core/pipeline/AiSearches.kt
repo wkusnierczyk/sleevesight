@@ -5,6 +5,7 @@ import app.sleevesight.core.ai.CompletionRequest
 import app.sleevesight.core.ai.ReasoningEffort
 import app.sleevesight.core.ai.StopReason
 import app.sleevesight.core.evidence.Hasher
+import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.resolution.NameMatcher
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.synthesis.AiSearchAnswers
@@ -60,6 +61,11 @@ data class KeptSearch(
  * model or effort, or a new prompt, asks again. None with no AI service ready: none switched on, no
  * key, no model, or *Show insights* off, the switch that stops every AI call.
  *
+ * A genre's definition ([SearchKind.DEFINITION], #786) is about the genre, not the track: its key
+ * has no track ([GENRE_ENTITY], no length), and its subject is the kind and the genre's identity
+ * (`GenreLabel.identity`), so one answer serves every track that has the genre, with its own
+ * prompt's version ([AiSearchPrompt.version]); the AI service, model and effort as the others.
+ *
  * An answer is the panel's alone: it never enters the evidence, the insight, the track's genre
  * labels, *Sources* or what is read aloud. A cache that throws is a miss, and a keep that fails
  * keeps nothing. Each state comes with its time by [clock], in whole milliseconds, as the cache
@@ -72,28 +78,34 @@ class AiSearches(
     private val answers: AiSearchAnswers,
     private val clock: Clock = Clock.System,
 ) {
-    /** The key of [track]'s search of [kind] under [settings], or null when no AI service is ready. */
+    /**
+     * The key of [track]'s search of [kind] under [settings], or null when no AI service is ready;
+     * for [SearchKind.DEFINITION], of [genre]'s (its identity), whatever the track, null with none.
+     */
     fun key(
         track: TrackState,
         kind: SearchKind,
         settings: Settings,
+        genre: String? = null,
     ): CardKey? {
         val access = ai?.takeIf { settings.writeInsights }
         val model = access?.let { settings.model(it.provider.id) }
-        if (access == null || model == null) return null
+        val aboutGenre = kind == SearchKind.DEFINITION
+        val noGenre = aboutGenre && genre == null
+        if (access == null || model == null || noGenre) return null
         return CardKey(
             kind = CardKind.SEARCH,
-            track = track.normalized,
-            duration = track.nowPlaying.duration,
+            track = if (aboutGenre) GENRE_ENTITY else track.normalized,
+            duration = if (aboutGenre) null else track.nowPlaying.duration,
             evidenceFingerprint = NO_FINGERPRINT,
-            promptVersion = AiSearchPrompt.VERSION,
+            promptVersion = AiSearchPrompt.version(kind),
             styleHash = styleHash(hasher),
             provider = access.provider.id,
             model = model,
             // The model answers from its own knowledge, whatever *Model's own knowledge* says: fixed.
             modelKnowledge = true,
             effort = settings.effort(access.provider.id),
-            subject = subject(track, kind),
+            subject = subject(track, kind, genre),
         )
     }
 
@@ -101,13 +113,15 @@ class AiSearches(
      * What [track]'s search of [kind] is about besides the track, its key's `CardKey.subject`: the
      * kind's key, and for [SearchKind.DATES] the album as the player reports it, read as album names
      * are compared ([NameMatcher.albumKey]: "Vol. 2" is "Volume 2"), after a line break (empty for
-     * none), since the prompt asks when that album came out. The same whatever the AI service: what
-     * a stop is remembered by too (`AppAiSearches`).
+     * none), since the prompt asks when that album came out; for [SearchKind.DEFINITION], [genre]'s
+     * identity after a line break (#786). The same whatever the AI service: what a stop is
+     * remembered by too (`AppAiSearches`).
      */
     fun subject(
         track: TrackState,
         kind: SearchKind,
-    ): String = subject(track, kind, albums)
+        genre: String? = null,
+    ): String = subject(track, kind, albums, genre)
 
     // Album names compared as the panels compare them.
     private val albums = NameMatcher(answers.accentFolder)
@@ -196,11 +210,19 @@ class AiSearches(
             track: TrackState,
             kind: SearchKind,
             albums: NameMatcher,
+            genre: String? = null,
         ): String =
             when (kind) {
                 SearchKind.DATES -> kind.key + "\n" + albums.albumKey(track.nowPlaying.album.orEmpty())
                 SearchKind.GENRES, SearchKind.LYRICS -> kind.key
+                SearchKind.DEFINITION -> kind.key + "\n" + genre.orEmpty()
             }
+
+        /**
+         * The entity of a genre's definition's key (#786) in the track's place: no track, so the
+         * store's key is the subject alone (no track's lookup key is empty, so none can match it).
+         */
+        val GENRE_ENTITY: NormalizedTrack = NormalizedTrack("", emptyList(), "", null, null, emptyList(), "")
 
         /** Why a search failed when its reply was not the JSON object asked for. */
         const val MALFORMED: String = "malformed"

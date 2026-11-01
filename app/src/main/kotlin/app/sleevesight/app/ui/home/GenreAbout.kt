@@ -23,6 +23,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
+import app.sleevesight.app.pipeline.DefinitionState
 import app.sleevesight.app.pipeline.GenreNotes
 import app.sleevesight.app.pipeline.GenreReason
 import app.sleevesight.app.speech.Reading
@@ -30,22 +31,24 @@ import app.sleevesight.app.ui.logo.Busy
 import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.core.genres.GenreDefinition
+import app.sleevesight.core.genres.GenreLabel
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.TrackState
-import app.sleevesight.core.resolution.Lookup
+import app.sleevesight.core.synthesis.SearchAnswer
+import app.sleevesight.core.synthesis.SearchKind
 
 // A genre's panel, above its table (#523): what the genre is, and why this track has it.
 
 /**
  * What the genre [genre] is and why [track] has it, as [shown]'s notes give them (#523; `design/design.md`,
  * *Genre labels*), at the top of the genre's panel, in this order: the definition, from Wikipedia,
- * with its credit ("From Wikipedia", linking the article, and its licence); then *Why is this …?*,
- * a button carrying the **AI** mark ([AiLabel]), or, once asked for, the reason, under the question
- * as a heading, checked and cited as the insight is: its citations chips that go to their lines
- * ([PanelNotes.onCite]), its grounding note under it. A genre with no definition says so in the
- * definition's place, once the lookup has answered (#663). Neither shows when [PanelNotes.notes]
- * has none: no definition while it is looked up, after a failed lookup, or with Wikipedia off; no
- * button with *Show insights* off, no AI service ready, or before the evidence is in. For a genre
+ * in each of its states ([GenreDefinitionNote], #786: looking, found with its credit, failed with
+ * *Retry*, or none with *Search with AI* from [search]; nothing with Wikipedia off); then *Why is
+ * this …?*, a button carrying the **AI** mark ([AiLabel]), or, once asked for, the reason, under the
+ * question as a heading, checked and cited as the insight is: its citations chips that go to their
+ * lines ([PanelNotes.onCite]), its grounding note under it. No button with *Show insights* off, no
+ * AI service ready, or before the evidence is in. [afterRetry] takes the focus as a failed lookup's
+ * *Retry* gives way to the loading line. For a genre
  * only MusicBrainz gives (D12), it is disabled, with why under it, where it would otherwise show
  * (#721). A reason still being written reads its `[AI]` as the settings allow it
  * ([PanelNotes.modelAllowed]). A written reason has *Read aloud* (#325, [ReadAloudButton]) at the
@@ -56,6 +59,8 @@ internal fun GenreAbout(
     track: TrackState,
     genre: String,
     shown: PanelNotes,
+    search: PanelSearch = PanelSearch(),
+    afterRetry: () -> Unit = {},
 ) {
     val notes = shown.notes
     val onCite = shown.onCite
@@ -66,13 +71,12 @@ internal fun GenreAbout(
     val reason by remember(track.normalized, track.evidence?.fingerprint, track.genres, genre, notes) {
         notes.reason(track, genre)
     }.collectAsState(GenreReason.None)
-    val label =
+    val named =
         track.genres.all
             .firstOrNull { it.genre.identity == genre }
-            ?.genre
-            ?.label ?: return
-    val question = stringResource(R.string.genre_why, inSentence(label))
-    GenreDefinitionNote(genre, notes)
+            ?.genre ?: return
+    val question = stringResource(R.string.genre_why, inSentence(named.label))
+    GenreDefinitionNote(named, notes, search, afterRetry)
     when (val shown = reason) {
         GenreReason.None -> Unit
         GenreReason.Offered -> WhyButton(question) { notes.explain(track, genre) }
@@ -97,24 +101,62 @@ internal fun GenreAbout(
 }
 
 /**
- * What the genre [genre] is, as [notes] give it (#523): its definition from Wikipedia, with its
- * credit; that it has none, once the lookup has answered (#663); nothing while it is looked up,
- * after a failed lookup, or with Wikipedia off. At the top of a genre's panel ([GenreAbout]), and
- * alone in the box of a genre *Search with AI* named (#773), which no source's tags give.
+ * What the genre [genre] is, as [notes] give it (#523, #786; `design/design.md`, *Genre labels*), in
+ * the definition's place:
+ *
+ * - looking: the turning record, then "Looking on Wikipedia…" in the panel's quiet note style
+ *   ([Busy]: a screen reader reads the text, not the record);
+ * - found: the definition from Wikipedia, with its credit;
+ * - failed: "Wikipedia could not be reached." in the error colour, *Retry* (outlined) at the right of
+ *   the line ([RetryLine]), which asks Wikipedia again ([GenreNotes.retryDefinition]) and runs
+ *   [afterRetry], as the line gives way to the loading line;
+ * - none (#663): it says so, then *Search with AI* for a definition ([search], [SearchKind.DEFINITION],
+ *   #773's block), whose answer shows under a rule, credited to the model;
+ * - nothing with Wikipedia or *Show genres* off.
+ *
+ * At the top of a genre's body ([GenreAbout]), and alone under a genre *Search with AI* named (#773),
+ * which no source's tags give.
  */
 @Composable
 internal fun GenreDefinitionNote(
-    genre: String,
+    genre: GenreLabel,
     notes: GenreNotes,
+    search: PanelSearch = PanelSearch(),
+    afterRetry: () -> Unit = {},
 ) {
     // Its own state per genre: another genre's definition never shows while this one's is looked up.
-    key(genre, notes) {
-        val definition by remember { notes.definition(genre) }.collectAsState(null)
-        when (val found = definition) {
-            is Lookup.Found -> Definition(found.value)
-            // Said only once the lookup answered: not while it runs, after it failed, or with it off.
-            Lookup.NotFound -> NoDefinition()
-            is Lookup.Failed, null -> Unit
+    key(genre.identity, notes) {
+        val definition by remember { notes.definition(genre.identity) }.collectAsState(null)
+        when (val state = definition) {
+            DefinitionState.Looking ->
+                Busy(
+                    stringResource(R.string.genre_definition_looking),
+                    MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textModifier = Modifier.testTag(GENRE_DEFINITION_LOOKING_TAG),
+                )
+            is DefinitionState.Found -> Definition(state.definition)
+            DefinitionState.Failed ->
+                RetryLine(
+                    stringResource(R.string.genre_definition_failed),
+                    stringResource(R.string.genre_definition_source),
+                    onRetry = { notes.retryDefinition(genre.identity) },
+                    modifier = Modifier.testTag(GENRE_DEFINITION_FAILED_TAG),
+                    afterRetry = afterRetry,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    outlined = true,
+                )
+            DefinitionState.NotFound ->
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    NoDefinition()
+                    AiSearchBlock(search, SearchKind.DEFINITION, genre) { answer, _ ->
+                        if (answer is SearchAnswer.Definition) {
+                            Text(answer.text, style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                }
+            null -> Unit
         }
     }
 }
@@ -262,6 +304,10 @@ internal const val WIKIPEDIA_LICENCE: String = "https://creativecommons.org/lice
  */
 const val GENRE_DEFINITION_TAG: String = "genre-panel:definition"
 const val GENRE_NO_DEFINITION_TAG: String = "genre-panel:no-definition"
+
+/** The test tags of a genre's definition's line while it is looked up, and when the lookup failed (#786). */
+const val GENRE_DEFINITION_LOOKING_TAG: String = "genre-panel:definition-looking"
+const val GENRE_DEFINITION_FAILED_TAG: String = "genre-panel:definition-failed"
 const val GENRE_WHY_TAG: String = "genre-panel:why"
 const val GENRE_WHY_WITHHELD_TAG: String = "genre-panel:why-withheld"
 const val GENRE_REASON_TAG: String = "genre-panel:reason"

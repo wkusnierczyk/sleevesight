@@ -9,6 +9,15 @@
          its genre's Wikidata item has no English article (Wikipedia may still have one by the
          genre's name, which the app does not reach, so it does not say there is none). -->
     <string name="genre_definition_none">No definition from Wikipedia for this genre.</string>
+    <!-- In the definition's place while it is looked up (#786), after the small turning record, in the
+         panel's quiet note style. -->
+    <string name="genre_definition_looking">Looking on Wikipedia…</string>
+    <!-- In the definition's place when its lookup failed (#786), in the error colour, with Retry
+         (home_retry) at the right of the same line, which asks Wikipedia again. -->
+    <string name="genre_definition_failed">Wikipedia could not be reached.</string>
+    <!-- The source Retry asks again there, as a screen reader names its action (home_retry_action:
+         "Double-tap to ask Wikipedia again"). -->
+    <string name="genre_definition_source">Wikipedia</string>
     <!-- The button that writes the reason, and the reason's heading once written. %1$s is the genre,
          as a sentence names it ("jazz", "UK garage"). -->
     <string name="genre_why">Why is this %1$s?</string>

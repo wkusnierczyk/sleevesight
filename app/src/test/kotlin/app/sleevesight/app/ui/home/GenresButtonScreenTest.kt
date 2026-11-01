@@ -6,6 +6,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -17,11 +18,14 @@ import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performFirstLinkClick
+import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.test.core.app.ActivityScenario
@@ -269,26 +273,29 @@ class GenresButtonScreenTest {
     }
 
     @Test
-    fun aChipOpensItsGenreInABoxInsideAnotherSwitchesItAndTheSameChipOrItsCloseFoldsIt() =
+    fun aChipUnfoldsItsGenreInsideAnotherReplacesItAndTheSameChipFoldsIt() =
         show {
             tap(GENRES_CHIP_TAG)
             tap(FOLK)
-            assertEquals(1, count(GENRE_PANEL_TAG))
-            compose.onNodeWithTag(GENRE_PANEL_HEADING_TAG).assertTextEquals("Folk")
-            compose.onNodeWithTag(FOLK).assertIsSelected()
-            // Inside the panel, under the chips.
+            unfolded(FOLK)
+            // Inside the panel, under the chips, with no heading or *Close* of its own (#786): the
+            // panel's own *Close* alone.
             assertTrue(top(GENRE_PANEL_TAG) > top(FOLK))
+            assertEquals(0, count(GENRE_PANEL_HEADING_TAG))
+            assertEquals(1, compose.onAllNodesWithText(app.getString(R.string.page_close)).fetchSemanticsNodes().size)
             tap(BALLAD)
-            compose.onNodeWithTag(GENRE_PANEL_HEADING_TAG).assertTextEquals("Ballad")
+            unfolded(BALLAD)
             tap(BALLAD)
             assertEquals(0, count(GENRE_PANEL_TAG))
             assertEquals(1, count(BALLAD))
-            tap(FOLK)
-            tap(GENRE_PANEL_CLOSE_TAG)
-            assertEquals(0, count(GENRE_PANEL_TAG))
-            assertEquals(1, count(FOLK))
             assertEquals(1, count(GENRES_PANEL_TAG))
         }
+
+    // [chip]'s genre unfolded, alone, and its chip selected.
+    private fun unfolded(chip: String) {
+        assertEquals(1, count(GENRE_PANEL_TAG))
+        compose.onNodeWithTag(chip).assertIsSelected()
+    }
 
     @Test
     fun aGenreOpenInGenresStaysOpenAsDatesOpensAboveItOrClosesOverIt() {
@@ -298,11 +305,11 @@ class GenresButtonScreenTest {
             tap(FOLK)
             tap(DATES_CHIP_TAG)
             assertTrue(top(DATES_PANEL_TAG) < top(GENRES_PANEL_TAG))
-            compose.onNodeWithTag(GENRE_PANEL_HEADING_TAG).assertTextEquals("Folk")
+            unfolded(FOLK)
             compose.onNodeWithTag(FOLK).assertIsSelected()
             // And Dates closed again.
             tap(DATES_PANEL_CLOSE_TAG)
-            compose.onNodeWithTag(GENRE_PANEL_HEADING_TAG).assertTextEquals("Folk")
+            unfolded(FOLK)
         }
         // Dates first, then Genres above it with a genre open, then Dates closed under it.
         show {
@@ -310,9 +317,9 @@ class GenresButtonScreenTest {
             tap(GENRES_CHIP_TAG)
             tap(FOLK)
             tap(DATES_PANEL_CLOSE_TAG)
-            compose.onNodeWithTag(GENRE_PANEL_HEADING_TAG).assertTextEquals("Folk")
+            unfolded(FOLK)
             tap(DATES_CHIP_TAG)
-            compose.onNodeWithTag(GENRE_PANEL_HEADING_TAG).assertTextEquals("Folk")
+            unfolded(FOLK)
         }
     }
 
@@ -326,12 +333,12 @@ class GenresButtonScreenTest {
             current.value = state(labelled(sources = asking).copy(genresAssembled = false))
             compose.waitForIdle()
             assertEquals(1, count(FOLK))
-            compose.onNodeWithTag(GENRE_PANEL_HEADING_TAG).assertTextEquals("Folk")
+            unfolded(FOLK)
             compose.onNodeWithText("Looking on Last.fm…").assertExists()
             // Its genres assembled: the genre still open.
             current.value = state(labelled())
             compose.waitForIdle()
-            compose.onNodeWithTag(GENRE_PANEL_HEADING_TAG).assertTextEquals("Folk")
+            unfolded(FOLK)
         }
 
     @Test
@@ -348,7 +355,7 @@ class GenresButtonScreenTest {
             // The genres land: the genre the user opened is open again.
             current.value = state(labelled())
             compose.waitForIdle()
-            compose.onNodeWithTag(GENRE_PANEL_HEADING_TAG).assertTextEquals("Folk")
+            unfolded(FOLK)
             compose.onNodeWithTag(FOLK).assertIsSelected()
         }
 
@@ -642,21 +649,30 @@ class GenresButtonScreenTest {
         }
 
     @Test
-    fun aChipMovesTheFocusToItsGenresCloseAndThatCloseBackToTheChip() =
+    fun aChipKeepsTheFocusAsItUnfoldsAndFoldsItsGenre() =
         show {
             tap(GENRES_CHIP_TAG)
-            tap(FOLK)
-            compose.onNodeWithTag(GENRE_PANEL_CLOSE_TAG).assertIsFocused()
-            tap(GENRE_PANEL_CLOSE_TAG)
+            press(FOLK)
+            assertEquals(1, count(GENRE_PANEL_TAG))
+            compose.onNodeWithTag(FOLK).assertIsFocused()
+            press(FOLK)
+            assertEquals(0, count(GENRE_PANEL_TAG))
             compose.onNodeWithTag(FOLK).assertIsFocused()
         }
+
+    // Enter on [tag], focused, as a keyboard does.
+    private fun press(tag: String) {
+        compose.onNodeWithTag(tag).performScrollTo().requestFocus()
+        compose.onNodeWithTag(tag).performKeyInput { pressKey(Key.Enter) }
+        compose.waitForIdle()
+    }
 
     @Test
     fun aNewTrackClosingThePanelWithTheFocusInItHandsTheFocusToTheButton() =
         show {
             tap(GENRES_CHIP_TAG)
-            tap(FOLK)
-            compose.onNodeWithTag(GENRE_PANEL_CLOSE_TAG).assertIsFocused()
+            press(FOLK)
+            compose.onNodeWithTag(FOLK).assertIsFocused()
             current.value = state(labelled(playing = carefree))
             compose.waitForIdle()
             compose.onNodeWithTag(GENRES_CHIP_TAG).assertIsFocused()

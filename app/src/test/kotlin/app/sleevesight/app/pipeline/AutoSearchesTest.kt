@@ -5,7 +5,17 @@ import app.sleevesight.app.ui.home.HomeFixtures.done
 import app.sleevesight.app.ui.home.emptyPanels
 import app.sleevesight.app.ui.home.searchFacts
 import app.sleevesight.core.Secret
+import app.sleevesight.core.genres.GenreArticles
+import app.sleevesight.core.genres.GenreDefinition
+import app.sleevesight.core.genres.GenreDefinitions
+import app.sleevesight.core.genres.GenreLabel
+import app.sleevesight.core.genres.GenreLevel
+import app.sleevesight.core.genres.GenreRow
 import app.sleevesight.core.genres.GenreVocabulary
+import app.sleevesight.core.genres.LabelCredit
+import app.sleevesight.core.genres.LabelSource
+import app.sleevesight.core.genres.TrackGenres
+import app.sleevesight.core.genres.TrackLabel
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
@@ -22,15 +32,20 @@ import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.platform.JvmResourceReader
+import app.sleevesight.core.resolution.Lookup
 import app.sleevesight.core.resolution.NameMatcher
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.settings.SourceSwitch
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.SourceResult
 import app.sleevesight.core.sources.WorkLyrics
 import app.sleevesight.core.synthesis.AiSearchAnswers
+import app.sleevesight.core.synthesis.SearchAnswer
+import app.sleevesight.core.synthesis.SearchFacts
 import app.sleevesight.core.synthesis.SearchKind
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
@@ -40,6 +55,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Test
+import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
@@ -119,8 +135,8 @@ class AutoSearchesTest {
                 settings,
                 answers,
                 this,
-                automaticGate = { auto.open() },
-                deferred = { track, kind -> auto.release(track, kind) },
+                automaticGate = { _, _, _ -> auto.open() },
+                deferred = { track, kind, _ -> auto.release(track, kind) },
             )
         auto = auto(searches)
         return searches to auto
@@ -460,5 +476,255 @@ class AutoSearchesTest {
             auto(searches()).follow(empty(), settings.value)
             advanceUntilIdle()
             assertEquals(0, provider.requests)
+        }
+
+    @Test
+    fun `a genre Wikipedia has no definition for is searched by itself once, no panel open (#786)`() =
+        runTest {
+            provider.reply = { "{\"definition\": \"Punk rock is fast, raw rock music.\"}" }
+            val vocabulary = GenreVocabulary.load(JvmResourceReader)
+            val punk = vocabulary.musicBrainzGenre("punk")
+            val articles = GenreArticles { genre -> if (genre == punk) Lookup.NotFound else Lookup.Failed("offline") }
+            val notes =
+                AppGenreNotes(
+                    GenreDefinitions(articles, vocabulary),
+                    parts,
+                    settings,
+                    this,
+                )
+            val searches = AppAiSearches(parts, settings, answers, this)
+            // As `AppGraph` wires them.
+            val auto =
+                AutoSearches<String>(
+                    { track, _ -> genresWithNoDefinition(track, notes.lookups::settledNoDefinition) },
+                ) { track, g ->
+                    searches.ask(track, SearchKind.DEFINITION, SearchFacts.ofGenre("Punk"), automatic = true, genre = g)
+                }
+            val labels =
+                listOf("punk", "rock").map { tag ->
+                    TrackLabel(
+                        GenreLabel(
+                            tag,
+                            "rock",
+                            tag.replaceFirstChar(Char::uppercase),
+                            tag,
+                            null,
+                            GenreLevel.ARTIST,
+                            "A",
+                        ),
+                        listOf(LabelCredit(LabelSource.LASTFM, null)),
+                    )
+                }
+            val track =
+                HomeFixtures.track().copy(
+                    genres = TrackGenres(listOf(GenreRow(GenreLevel.ARTIST, "A", labels))),
+                )
+            notes.lookups.fetchAhead(track)
+            advanceUntilIdle()
+            // Punk has no article; rock's lookup failed, which is not a search's cue.
+            auto.follow(track, settings.value)
+            advanceUntilIdle()
+            assertEquals(1, provider.requests)
+            assertEquals(1, provider.requestsFor("Name: Punk"))
+            val answered = searches.search(track, SearchKind.DEFINITION, "punk").first()
+            assertEquals(
+                SearchAnswer.Definition("Punk rock is fast, raw rock music."),
+                (answered as AiSearch.Answered).answer,
+            )
+            // Once: the track followed again, or another with the genre, asks nothing more.
+            auto.follow(track, settings.value)
+            auto.follow(track.copy(normalized = track.normalized.copy(title = "another")), settings.value)
+            advanceUntilIdle()
+            assertEquals(1, provider.requests)
+        }
+
+    @Test
+    fun `no genre's definition is searched by itself with the setting off (#786)`() =
+        runTest {
+            settings.value = settings.value?.copy(searchWithAi = false)
+            val searches = AppAiSearches(parts, settings, answers, this)
+            val auto =
+                AutoSearches<String>({ _, _ -> setOf("punk") }) { track, g ->
+                    searches.ask(track, SearchKind.DEFINITION, SearchFacts.ofGenre("Punk"), automatic = true, genre = g)
+                }
+            auto.follow(HomeFixtures.track(), settings.value)
+            advanceUntilIdle()
+            assertEquals(0, provider.requests)
+        }
+
+    // Punk's definition as Wikipedia gives it now, each lookup waiting for [gate] while it is not done.
+    private class Punk(
+        var answer: Lookup<GenreDefinition> = Lookup.NotFound,
+    ) {
+        var gate: CompletableDeferred<Unit>? = null
+        var asked = 0
+        val articles =
+            GenreArticles {
+                asked++
+                gate?.await()
+                answer
+            }
+    }
+
+    // A track whose table has punk, and its next play.
+    private val punkTrack =
+        HomeFixtures.track().copy(
+            genres =
+                TrackGenres(
+                    listOf(
+                        GenreRow(
+                            GenreLevel.ARTIST,
+                            "A",
+                            listOf(
+                                TrackLabel(
+                                    GenreLabel("punk", "rock", "Punk", "punk", null, GenreLevel.ARTIST, "A"),
+                                    listOf(LabelCredit(LabelSource.LASTFM, null)),
+                                ),
+                            ),
+                        ),
+                    ),
+                ),
+        )
+
+    private fun TrackState.next() = copy(normalized = normalized.copy(title = normalized.title + " again"))
+
+    // The definitions, searches and trigger wired as `AppGraph` wires them, on [cache], definitions
+    // kept for a day by [clock].
+    private fun TestScope.definitionsWired(
+        punk: Punk,
+        cache: PipelineCache,
+        clock: MovedClock,
+    ): Triple<AppGenreNotes, AppAiSearches, AutoSearches<String>> {
+        parts.value =
+            PipelineParts(Normalizer(JvmAccentFolder), emptyList(), { _, _ -> Resolution.NONE }, JvmHasher, ai, cache)
+        val vocabulary = GenreVocabulary.load(JvmResourceReader)
+        val notes = AppGenreNotes(GenreDefinitions(punk.articles, vocabulary, clock, 1.days), parts, settings, this)
+        lateinit var auto: AutoSearches<String>
+        val searches =
+            AppAiSearches(
+                parts,
+                settings,
+                answers,
+                this,
+                automaticGate = { track, _, genre ->
+                    auto.open() && genre != null && notes.lookups.settledNoDefinition(track, genre)
+                },
+                deferred = { track, _, genre -> genre?.let { auto.release(track, it) } },
+            )
+        auto =
+            AutoSearches(
+                { track, _ -> genresWithNoDefinition(track, notes.lookups::settledNoDefinition) },
+            ) { track, g ->
+                searches.ask(track, SearchKind.DEFINITION, SearchFacts.ofGenre("Punk"), automatic = true, genre = g)
+            }
+        return Triple(notes, searches, auto)
+    }
+
+    @Test
+    fun `a genre shown as not found is not searched while the next play checks it again (#786)`() =
+        runTest {
+            val punk = Punk()
+            val clock = MovedClock()
+            val (notes, _, auto) = definitionsWired(punk, CardCache(), clock)
+            notes.lookups.fetchAhead(punkTrack)
+            advanceUntilIdle()
+            // Past Wikipedia's lifetime, the next play asks again, and the answer waits.
+            clock.at += 1.days
+            punk.gate = CompletableDeferred()
+            punk.answer = Lookup.Found(GenreDefinition("Punk is fast.", "Punk rock", "https://w/Punk"))
+            val next = punkTrack.next()
+            notes.lookups.fetchAhead(next)
+            runCurrent()
+            assertEquals(DefinitionState.NotFound, notes.lookups.lookedUp.value["punk"])
+            auto.follow(next, settings.value)
+            advanceUntilIdle()
+            assertEquals(0, provider.requests)
+            // It answers: found, no search.
+            checkNotNull(punk.gate).complete(Unit)
+            advanceUntilIdle()
+            auto.follow(next, settings.value)
+            advanceUntilIdle()
+            assertEquals(0, provider.requests)
+            assertEquals(2, punk.asked)
+        }
+
+    @Test
+    fun `a genre shown as not found is not searched when the next play's check fails (#786)`() =
+        runTest {
+            val punk = Punk()
+            val clock = MovedClock()
+            val (notes, _, auto) = definitionsWired(punk, CardCache(), clock)
+            notes.lookups.fetchAhead(punkTrack)
+            advanceUntilIdle()
+            // Past Wikipedia's lifetime, the next play's check fails: not found stays shown, but this
+            // play has not reached Wikipedia, so it is not settled.
+            clock.at += 1.days
+            punk.answer = Lookup.Failed("offline")
+            val next = punkTrack.next()
+            notes.lookups.fetchAhead(next)
+            advanceUntilIdle()
+            assertEquals(2, punk.asked)
+            assertEquals(DefinitionState.NotFound, notes.lookups.lookedUp.value["punk"])
+            auto.follow(next, settings.value)
+            advanceUntilIdle()
+            assertEquals(0, provider.requests)
+        }
+
+    @Test
+    fun `an automatic search makes no call once the genre is found, or Wikipedia off, during the cache read (#786)`() =
+        runTest {
+            val closes =
+                listOf<(AppGenreNotes, TrackState, Punk, MovedClock) -> TrackState>(
+                    // The next play's check finds it.
+                    { notes, track, punk, clock ->
+                        clock.at += 1.days
+                        punk.answer = Lookup.Found(GenreDefinition("Punk is fast.", "Punk rock", "https://w/Punk"))
+                        track.next().also(notes.lookups::fetchAhead)
+                    },
+                    // Wikipedia switched off.
+                    { _, track, _, _ ->
+                        settings.value =
+                            settings.value?.copy(
+                                enabledSources =
+                                    settings.value!!.enabledSources - SourceSwitch.WIKIPEDIA,
+                            )
+                        track
+                    },
+                )
+            for (close in closes) {
+                provider.requests = 0
+                settings.value = Settings(aiProvider = ProviderId.ANTHROPIC, searchWithAi = true)
+                val punk = Punk()
+                val clock = MovedClock()
+                val held = HeldCache(CardCache()).apply { holding = true }
+                val (notes, _, auto) = definitionsWired(punk, held, clock)
+                notes.lookups.fetchAhead(punkTrack)
+                advanceUntilIdle()
+                auto.follow(punkTrack, settings.value)
+                runCurrent()
+                // The search reads the cache, held; meanwhile the gate closes.
+                val now = close(notes, punkTrack, punk, clock)
+                advanceUntilIdle()
+                auto.follow(now, settings.value)
+                held.holding = false
+                held.open.complete(Unit)
+                advanceUntilIdle()
+                assertEquals(0, provider.requests)
+            }
+        }
+
+    @Test
+    fun `a search started by itself still calls with the genre's lack of a definition settled (#786)`() =
+        runTest {
+            val held = HeldCache(CardCache()).apply { holding = true }
+            val (notes, _, auto) = definitionsWired(Punk(), held, MovedClock())
+            notes.lookups.fetchAhead(punkTrack)
+            advanceUntilIdle()
+            auto.follow(punkTrack, settings.value)
+            runCurrent()
+            held.holding = false
+            held.open.complete(Unit)
+            advanceUntilIdle()
+            assertEquals(1, provider.requests)
         }
 }

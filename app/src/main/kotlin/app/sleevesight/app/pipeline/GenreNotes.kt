@@ -1,19 +1,15 @@
 package app.sleevesight.app.pipeline
 
-import app.sleevesight.core.genres.GenreDefinition
 import app.sleevesight.core.genres.GenreDefinitions
-import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.CardKey
 import app.sleevesight.core.pipeline.ClearEpoch
 import app.sleevesight.core.pipeline.GenreReasons
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.PipelineParts
 import app.sleevesight.core.pipeline.TrackState
-import app.sleevesight.core.resolution.Lookup
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.pastKeepHistory
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,12 +17,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
@@ -59,17 +52,11 @@ sealed interface GenreReason {
 }
 
 /**
- * What a genre's panel shows besides its table (#523): what the genre is ([definition]), and why
- * the track has it ([reason], written on a tap, [explain]).
+ * What a genre's panel shows besides its table (#523): what the genre is ([DefinitionFeed.definition],
+ * asked again after a failure by [DefinitionFeed.retryDefinition], #786), and why the track has it
+ * ([reason], written on a tap, [explain]).
  */
-interface GenreNotes {
-    /**
-     * The definition of the genre [genre] stands for (`GenreLabel.identity`), as it changes: found;
-     * not found when it has none, which the panel says (#663); failed when the lookup failed; null
-     * while it is looked up and while lookups are off; looked up again when they come on.
-     */
-    fun definition(genre: String): Flow<Lookup<GenreDefinition>?>
-
+interface GenreNotes : DefinitionFeed {
     /** [track]'s reason for [genre], as it changes. */
     fun reason(
         track: TrackState,
@@ -84,7 +71,7 @@ interface GenreNotes {
 
     /** Neither: the panel shows its table alone (previews, tests). */
     object None : GenreNotes {
-        override fun definition(genre: String): Flow<Lookup<GenreDefinition>?> = flowOf(null)
+        override fun definition(genre: String): Flow<DefinitionState?> = flowOf(null)
 
         override fun reason(
             track: TrackState,
@@ -99,10 +86,9 @@ interface GenreNotes {
 }
 
 /**
- * The app's [GenreNotes]: definitions from [definitions] while *Show genres* and Wikipedia under
- * *Sources* are on (its lookups behind the same switch), looked up again when they come on, off the
- * main thread ([io]); reasons written with the live pipeline's [parts] (its AI service, synthesis
- * cache and hasher, [GenreReasons]) under the [settings] as last read.
+ * The app's [GenreNotes]: definitions from [lookups] ([AppGenreDefinitions], #786: fetched ahead,
+ * one state per genre, shared by every panel); reasons written with the live pipeline's [parts] (its
+ * AI service, synthesis cache and hasher, [GenreReasons]) under the [settings] as last read.
  *
  * A reason is kept with the track, as its insight is: in memory, by its card's key, so it shows
  * again with no call when the panel is closed and opened, another genre is opened in between, or a
@@ -117,15 +103,31 @@ interface GenreNotes {
  * history* ([forget]) nothing it writes is shown or kept.
  */
 @Suppress("LongParameterList") // Where definitions and reasons come from, where they run, and the time.
-class AppGenreNotes(
-    private val definitions: GenreDefinitions,
+class AppGenreNotes private constructor(
+    /** The definitions (#786): fetched ahead ([AppGenreDefinitions.fetchAhead]), their states. */
+    val lookups: AppGenreDefinitions,
     private val parts: StateFlow<PipelineParts?>,
     private val settings: StateFlow<Settings?>,
     private val scope: CoroutineScope,
-    private val epoch: ClearEpoch = ClearEpoch(),
-    private val io: CoroutineContext = EmptyCoroutineContext,
-    private val clock: Clock = Clock.System,
-) : GenreNotes {
+    private val epoch: ClearEpoch,
+    private val clock: Clock,
+) : GenreNotes,
+    DefinitionFeed by lookups {
+    /**
+     * Definitions from [definitions] while *Show genres* and Wikipedia under *Sources* are on, off the
+     * main thread ([io]), in [scope], marked with [epoch] ([AppGenreDefinitions]); reasons as above.
+     */
+    @Suppress("LongParameterList") // As the class's.
+    constructor(
+        definitions: GenreDefinitions,
+        parts: StateFlow<PipelineParts?>,
+        settings: StateFlow<Settings?>,
+        scope: CoroutineScope,
+        epoch: ClearEpoch = ClearEpoch(),
+        io: CoroutineContext = EmptyCoroutineContext,
+        clock: Clock = Clock.System,
+    ) : this(AppGenreDefinitions(definitions, settings, scope, epoch, io), parts, settings, scope, epoch, clock)
+
     // A reason's key, null when none is offered, and whether it is withheld (D12).
     private data class Offer(
         val key: CardKey?,
@@ -144,13 +146,6 @@ class AppGenreNotes(
     // The keys whose cached reason was looked for, and those being written.
     private val looked: MutableSet<CardKey> = ConcurrentHashMap.newKeySet()
     private val writing: MutableSet<CardKey> = ConcurrentHashMap.newKeySet()
-
-    @OptIn(ExperimentalCoroutinesApi::class)
-    override fun definition(genre: String): Flow<Lookup<GenreDefinition>?> =
-        settings
-            .map { now -> now != null && now.showGenres && now.isEnabled(SourceId.WIKIPEDIA) }
-            .distinctUntilChanged()
-            .mapLatest { on -> if (on) withContext(io) { definitions.lookup(genre) } else null }
 
     override fun reason(
         track: TrackState,
@@ -237,10 +232,15 @@ class AppGenreNotes(
         }
     }
 
-    /** Forgets the reasons shown, for *Clear history* (#547); the cache's are deleted with it. */
+    /**
+     * Forgets the reasons shown, for *Clear history* (#547), and the definitions' states, their
+     * lookups under way cancelled (#786); the cache's are deleted with it. After the epoch's advance:
+     * a lookup that checked it before shows its state before this clears it, never after.
+     */
     fun forget() {
         shown.value = emptyMap()
         looked.clear()
+        lookups.forget()
     }
 
     // The reason kept in the synthesis cache for [key], read once, unless one is shown already.

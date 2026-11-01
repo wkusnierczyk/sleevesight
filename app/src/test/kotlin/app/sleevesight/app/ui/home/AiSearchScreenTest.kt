@@ -39,6 +39,7 @@ import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.pipeline.AiSearch
 import app.sleevesight.app.pipeline.AiSearchFeed
+import app.sleevesight.app.pipeline.DefinitionState
 import app.sleevesight.app.pipeline.GenreNotes
 import app.sleevesight.app.pipeline.GenreReason
 import app.sleevesight.app.pipeline.PipelineView
@@ -66,7 +67,6 @@ import app.sleevesight.core.pipeline.AiSearches
 import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.platform.JvmResourceReader
-import app.sleevesight.core.resolution.Lookup
 import app.sleevesight.core.settings.Layout
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.SourceSwitch
@@ -123,6 +123,7 @@ class AiSearchScreenTest {
             override fun search(
                 track: TrackState,
                 kind: SearchKind,
+                genre: String?,
             ): Flow<AiSearch> = states.getValue(kind)
 
             override fun ask(
@@ -130,6 +131,7 @@ class AiSearchScreenTest {
                 kind: SearchKind,
                 facts: SearchFacts,
                 automatic: Boolean,
+                genre: String?,
             ): Boolean {
                 asked += kind to facts
                 return true
@@ -138,6 +140,7 @@ class AiSearchScreenTest {
             override fun stop(
                 track: TrackState,
                 kind: SearchKind,
+                genre: String?,
             ) {
                 stopped += kind
             }
@@ -148,9 +151,9 @@ class AiSearchScreenTest {
     // Every genre's definition found, as Wikipedia's would be; no reason offered.
     private val notes =
         object : GenreNotes {
-            override fun definition(genre: String): Flow<Lookup<GenreDefinition>?> =
+            override fun definition(genre: String): Flow<DefinitionState?> =
                 flowOf(
-                    Lookup.Found(
+                    DefinitionState.Found(
                         GenreDefinition(folkRockDefinition, "Folk rock", "https://en.wikipedia.org/wiki/$genre"),
                     ),
                 )
@@ -520,7 +523,7 @@ class AiSearchScreenTest {
     private val vocabulary = GenreVocabulary.load(JvmResourceReader)
 
     @Test
-    fun genresNamedShowAsChipsAndOneOpensItsBoxWithItsDefinitionAlone() =
+    fun genresNamedShowAsChipsAndOneUnfoldsItsDefinitionAlone() =
         show {
             tap(GENRES_CHIP_TAG)
             val named = vocabulary.labelsFor(listOf("folk rock", "rock"), level = GenreLevel.TRACK)
@@ -531,18 +534,16 @@ class AiSearchScreenTest {
             assertTrue(bounds(chip).top >= bounds(AI_SEARCH_RULE_TAG).bottom)
             assertTrue(bounds(AI_SEARCH_BY_TAG).top >= bounds(chip).bottom)
             tap(chip)
-            compose.onNodeWithTag(GENRE_PANEL_HEADING_TAG).assertTextEquals("Folk Rock")
+            // Unfolded under the chips, with no heading or *Close* of its own (#786).
+            assertEquals(0, count(GENRE_PANEL_HEADING_TAG))
             compose.onNodeWithTag(GENRE_DEFINITION_TAG).assertExists()
             assertTrue(shows(folkRockDefinition))
             // Nothing else: no second credit, no *Why is this …?*, no table.
             assertEquals(1, compose.onAllNodesWithText("by Claude Haiku 5.5").fetchSemanticsNodes().size)
             assertEquals(0, count(GENRE_WHY_TAG))
             assertEquals(0, count(GENRES_ROW_PREFIX + "0"))
-            // The same chip folds it, as the others do; *Close* too.
+            // The same chip folds it, as the others do.
             tap(chip)
-            assertEquals(0, count(GENRE_PANEL_TAG))
-            tap(chip)
-            tap(GENRE_PANEL_CLOSE_TAG)
             assertEquals(0, count(GENRE_PANEL_TAG))
         }
 

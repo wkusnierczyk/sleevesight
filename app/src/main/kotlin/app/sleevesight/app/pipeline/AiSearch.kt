@@ -70,13 +70,16 @@ sealed interface AiSearch {
 
 /**
  * *Search with AI* under the empty state of Home's *Dates*, *Genres* or *Lyrics* (#773): each
- * panel's search, by its [SearchKind], for a track.
+ * panel's search, by its [SearchKind], for a track; and under a genre with no definition from
+ * Wikipedia (#786), [SearchKind.DEFINITION], of a genre (each method's `genre`, its identity), the
+ * same whatever the track.
  */
 interface AiSearchFeed {
-    /** [track]'s search of [kind], as it changes. */
+    /** [track]'s search of [kind] (for [SearchKind.DEFINITION], [genre]'s), as it changes. */
     fun search(
         track: TrackState,
         kind: SearchKind,
+        genre: String? = null,
     ): Flow<AiSearch>
 
     /**
@@ -84,19 +87,24 @@ interface AiSearchFeed {
      * with AI*, the setting, [AutoSearches]): [track]'s search of [kind] asks about [facts], unless it
      * is under way, answered or kept, or, [automatic], once stopped (*Stop* is the user's "no" to it).
      * Returns whether that is settled: the search asked, under way, answered, kept or declined; false
-     * with no AI service ready, or with *Show insights* off.
+     * with no AI service ready, or with *Show insights* off. For [SearchKind.DEFINITION], [genre]'s.
      */
     fun ask(
         track: TrackState,
         kind: SearchKind,
         facts: SearchFacts,
         automatic: Boolean = false,
+        genre: String? = null,
     ): Boolean
 
-    /** A tap on *Stop*: [track]'s search of [kind] is cancelled, and nothing from it shown or kept. */
+    /**
+     * A tap on *Stop*: [track]'s search of [kind] (for [SearchKind.DEFINITION], [genre]'s) is
+     * cancelled, and nothing from it shown or kept.
+     */
     fun stop(
         track: TrackState,
         kind: SearchKind,
+        genre: String? = null,
     )
 
     /** No search: the panels show their empty states alone (previews, tests). */
@@ -104,6 +112,7 @@ interface AiSearchFeed {
         override fun search(
             track: TrackState,
             kind: SearchKind,
+            genre: String?,
         ): Flow<AiSearch> = flowOf(AiSearch.None)
 
         override fun ask(
@@ -111,11 +120,13 @@ interface AiSearchFeed {
             kind: SearchKind,
             facts: SearchFacts,
             automatic: Boolean,
+            genre: String?,
         ) = false
 
         override fun stop(
             track: TrackState,
             kind: SearchKind,
+            genre: String?,
         ) = Unit
     }
 }
@@ -127,7 +138,8 @@ interface AiSearchFeed {
  * AI settings name it ([modelName]: as the service's listing named it, else `ModelNames`, else its id).
  *
  * A search is kept with the track: in memory, by its key (the track, the kind, the AI service, model
- * and effort, the prompts' version), so it shows again with no call when the panel is closed and
+ * and effort, the prompts' version; a genre's definition, #786, with the genre in the track's place,
+ * `AiSearches.key`), so it shows again with no call when the panel is closed and
  * opened or the page left; and in the synthesis cache, read the first time a panel asks for it
  * ([search]), and again before any call ([ask]), so it shows again when the track plays later, and a
  * search that starts by itself never pays for an answer kept. Each is kept with when it was written
@@ -142,12 +154,15 @@ interface AiSearchFeed {
  * a search stopped, asked by a tap or by itself, is not asked by itself again ([ask]'s `automatic`),
  * the track coming back included, for as long as the process lives; a tap asks it, and lifts the "no".
  * A search asked by itself ([ask]'s `automatic`) checks its gates again once the cache has missed,
- * just before the paid call: [automaticGate] (the app on screen, the setting on, as `AutoSearches`
- * last read them: the same reading that starts it, so the two cannot disagree), and its key under the
- * settings as last read (*Show insights* on, the AI service ready, the same model and effort). If one
- * no longer holds, it asks nothing and shows nothing, and is handed back to [deferred], once it is no
- * longer under way (so a start at once is not taken for it), to start later as if it had not been
- * tried (off screen, on return). A tap is gated by none of the app's visibility and the setting.
+ * just before the paid call: [automaticGate] of its track, kind and genre (the app on screen, the
+ * setting on, as the `AutoSearches` that started it last read them: the same reading that starts it,
+ * so the two cannot disagree; the panels' own, or the genres' definitions', #786, which also asks
+ * that the genre still has no definition, settled on this play, with *Show genres* and Wikipedia
+ * on), and its key under the settings as last read (*Show insights* on, the AI service ready, the
+ * same model and effort). If one no longer holds, it asks nothing and shows nothing, and is handed
+ * back to [deferred] with its kind and genre, once it is no longer under way (so a start at once is
+ * not taken for it), to start later as if it had not been tried (off screen, on return). A tap is
+ * gated by none of these: not the app's visibility, the setting, nor a genre's definition.
  * Each search is marked with [epoch], and after *Clear history* ([forget]) nothing it finds is shown
  * or kept: a state is shown only under the lock [forget] clears under ([ShownSearches.publish]), so
  * one that passed the check cannot land after the clear. *Clear history* forgets the stops too.
@@ -161,8 +176,8 @@ class AppAiSearches(
     private val epoch: ClearEpoch = ClearEpoch(),
     private val modelName: (String) -> String = { ModelNames.of(it) ?: it },
     private val clock: Clock = Clock.System,
-    private val automaticGate: () -> Boolean = { true },
-    private val deferred: (TrackState, SearchKind) -> Unit = { _, _ -> },
+    private val automaticGate: (TrackState, SearchKind, String?) -> Boolean = { _, _, _ -> true },
+    private val deferred: (TrackState, SearchKind, String?) -> Unit = { _, _, _ -> },
 ) : AiSearchFeed {
     // A search's key, null with no AI service ready; and whether it is offered at all (the pipeline
     // and settings in, *Show insights* on).
@@ -192,20 +207,23 @@ class AppAiSearches(
                 size > STOPS_KEPT
         }
 
-    // The searches as made now, and [track]'s search of [kind]'s key under the settings as last
-    // read; null with no AI service ready, or before the pipeline and the settings are in.
+    // The searches as made now, and [track]'s search of [kind]'s key (of [genre], a definition's)
+    // under the settings as last read; null with no AI service ready, or before the pipeline and
+    // the settings are in.
     private fun keyOf(
         track: TrackState,
         kind: SearchKind,
+        genre: String?,
     ): Pair<AiSearches, CardKey>? {
         val searches = parts.value?.searches(answers, clock)
-        val key = settings.value?.let { now -> searches?.key(track, kind, now) }
+        val key = settings.value?.let { now -> searches?.key(track, kind, now, genre) }
         return if (searches == null || key == null) null else searches to key
     }
 
     override fun search(
         track: TrackState,
         kind: SearchKind,
+        genre: String?,
     ): Flow<AiSearch> {
         val offers =
             combine(parts, settings) { made, now ->
@@ -213,7 +231,7 @@ class AppAiSearches(
                 if (now == null || searches == null || !now.writeInsights) {
                     Offer(null, known = false)
                 } else {
-                    Offer(searches.key(track, kind, now), known = true)
+                    Offer(searches.key(track, kind, now, genre), known = true)
                 }
             }
         return offers
@@ -239,10 +257,11 @@ class AppAiSearches(
         kind: SearchKind,
         facts: SearchFacts,
         automatic: Boolean,
+        genre: String?,
     ): Boolean {
         // Not ready: false. Declined (by itself), shown already, unless it failed or has expired, or
         // under way: nothing to ask. A tap lifts a "no".
-        val (searches, key) = keyOf(track, kind) ?: return false
+        val (searches, key) = keyOf(track, kind, genre) ?: return false
         val declines =
             synchronized(lock) {
                 if (automatic) Declined.of(key) in declined else declined.remove(Declined.of(key)).let { false }
@@ -252,7 +271,7 @@ class AppAiSearches(
                 scope.launch(
                     epoch.mark(),
                     start = CoroutineStart.LAZY,
-                ) { run(searches, key, kind, track, facts, automatic) }
+                ) { run(searches, key, Asked(kind, genre, track, facts, automatic)) }
             if (asking.putIfAbsent(key, job) == null) {
                 synchronized(lock) {
                     stopped.remove(key)
@@ -271,8 +290,9 @@ class AppAiSearches(
     override fun stop(
         track: TrackState,
         kind: SearchKind,
+        genre: String?,
     ) {
-        val key = keyOf(track, kind)?.second ?: return
+        val key = keyOf(track, kind, genre)?.second ?: return
         val job = asking[key] ?: return
         // Once settled, the answer stands: it is shown and kept alike. Else the user's "no" to it.
         val stops =
@@ -298,15 +318,13 @@ class AppAiSearches(
     // no *Clear history* came since it started and it was not stopped (nor cancelled: a job stopped
     // may outlive a tap that asks again). One [automatic] asks only if its gates still hold once the
     // cache missed, else it is handed back ([deferred]) once out of [asking].
-    @Suppress("LongParameterList") // The search, its key, kind and track, what it asks about, and who asked.
     private suspend fun run(
         searches: AiSearches,
         key: CardKey,
-        kind: SearchKind,
-        track: TrackState,
-        facts: SearchFacts,
-        automatic: Boolean,
+        asked: Asked,
     ) {
+        val kind = asked.kind
+        val track = asked.track
         val work = currentCoroutineContext()
         val show: (SearchState, Instant) -> Unit = { state, at ->
             shown.publish(key, Entry(state, at)) {
@@ -315,14 +333,16 @@ class AppAiSearches(
         }
         try {
             val kept = searches.kept(key, kind, track)?.takeIf { !expired(it.writtenAt) }
-            val gated = automatic && !(automaticGate() && keyOf(track, kind)?.second == key)
+            val gated =
+                asked.automatic &&
+                    !(automaticGate(track, kind, asked.genre) && keyOf(track, kind, asked.genre)?.second == key)
             if (kept != null) {
                 show(kept.state, kept.writtenAt ?: clock.now())
             } else if (gated) {
                 work[Job]?.let { asking.remove(key, it) }
-                deferred(track, kind)
+                deferred(track, kind, asked.genre)
             } else {
-                searches.search(key, kind, track, facts, show) {
+                searches.search(key, kind, track, asked.facts, show) {
                     synchronized(lock) {
                         key !in stopped &&
                             work.isActive &&
@@ -383,8 +403,19 @@ class AppAiSearches(
         looked.remove(key)
     }
 
+    // A search asked: its kind, its genre (a definition's, #786), the track, what it asks about, and
+    // whether it started by itself.
+    private data class Asked(
+        val kind: SearchKind,
+        val genre: String?,
+        val track: TrackState,
+        val facts: SearchFacts,
+        val automatic: Boolean,
+    )
+
     // What a stop is remembered by: the track, its length and the key's subject (the kind, and for
-    // *Dates* the album), whatever the AI service, model or effort.
+    // *Dates* the album), whatever the AI service, model or effort. For a genre's definition (#786),
+    // whose key has no track, the genre: a stop is its "no" whatever the track.
     private data class Declined(
         val track: NormalizedTrack,
         val duration: Duration?,

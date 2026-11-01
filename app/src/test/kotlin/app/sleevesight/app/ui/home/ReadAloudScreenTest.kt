@@ -20,6 +20,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ActivityScenario
 import app.sleevesight.app.MainActivity
+import app.sleevesight.app.pipeline.DefinitionState
 import app.sleevesight.app.pipeline.GenreNotes
 import app.sleevesight.app.pipeline.GenreReason
 import app.sleevesight.app.pipeline.PipelineView
@@ -34,7 +35,6 @@ import app.sleevesight.app.ui.home.HomeFixtures.sundown
 import app.sleevesight.app.ui.home.HomeFixtures.track
 import app.sleevesight.app.ui.home.HomeFixtures.written
 import app.sleevesight.app.ui.theme.SleevesightTheme
-import app.sleevesight.core.genres.GenreDefinition
 import app.sleevesight.core.genres.GenreLabel
 import app.sleevesight.core.genres.GenreLevel
 import app.sleevesight.core.genres.GenreRow
@@ -44,7 +44,6 @@ import app.sleevesight.core.genres.TrackGenres
 import app.sleevesight.core.genres.TrackLabel
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.TrackState
-import app.sleevesight.core.resolution.Lookup
 import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -225,7 +224,7 @@ class ReadAloudScreenTest {
     ) : GenreNotes {
         val shown = MutableStateFlow<GenreReason>(GenreReason.Shown(reason))
 
-        override fun definition(genre: String): Flow<Lookup<GenreDefinition>?> = flowOf(null)
+        override fun definition(genre: String): Flow<DefinitionState?> = flowOf(null)
 
         override fun reason(
             track: TrackState,
