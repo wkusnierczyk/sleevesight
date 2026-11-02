@@ -27,8 +27,8 @@ import org.robolectric.Shadows.shadowOf
  * Home's theme button as the app wires it (#636, #771): `MainActivity`'s Home, with the app's own
  * settings in memory, so the button is there only if the activity passes its feed, and a theme
  * picked in its menu is stored only if the feed saves it. Each theme picked is stored, the app's
- * theme follows it, and the button then names it; *Theme button* off hides the button, and on
- * shows it again.
+ * theme follows it, and the button then names it; the menu, open, stays open across a rotation;
+ * *Theme button* off hides the button, and on shows it again.
  */
 @RunWith(RobolectricTestRunner::class)
 class ThemeButtonWiringTest {
@@ -41,13 +41,16 @@ class ThemeButtonWiringTest {
 
     private fun stored() = app.graph.settings.now()
 
+    private fun menuShown() =
+        compose.onAllNodes(hasTestTag(themeMenuTag(ThemeChoice.LIGHT))).fetchSemanticsNodes().isNotEmpty()
+
     private fun count(label: Int) = compose.onAllNodesWithContentDescription(text(label)).fetchSemanticsNodes().size
 
     // Home, past the first-run screen with notification access on. Opened as another screen of the
     // app opens it, not from the launcher, so the logo's intro does not play first. The settings
     // in memory, as `ThemeSettingTest`'s night mode test has them, so no wait depends on
     // DataStore's own threads.
-    private fun home(block: () -> Unit) {
+    private fun home(block: (ActivityScenario<MainActivity>) -> Unit) {
         app.makeGraph = { AppGraph(it, settingsData = MemoryStore()) }
         val listener = ComponentName(app, SleevesightListenerService::class.java)
         Settings.Secure.putString(app.contentResolver, "enabled_notification_listeners", listener.flattenToString())
@@ -57,7 +60,7 @@ class ThemeButtonWiringTest {
         FirstRunAcknowledgement(app).acknowledge()
         ActivityScenario.launch<MainActivity>(Intent(app, MainActivity::class.java)).use {
             compose.waitUntil(WAIT_MS) { count(R.string.home_settings) == 1 }
-            block()
+            block(it)
         }
     }
 
@@ -82,6 +85,22 @@ class ThemeButtonWiringTest {
                 compose.waitUntil(WAIT_MS) { count(named) == 1 }
                 label = named
             }
+        }
+
+    @Test
+    fun theMenuOpenStaysOpenAcrossARotationAndAPickThenIsStored() =
+        home { scenario ->
+            compose.waitUntil(WAIT_MS) { count(R.string.home_theme_system) == 1 }
+            compose.onNodeWithContentDescription(text(R.string.home_theme_system)).performClick()
+            compose.waitUntil(WAIT_MS) { menuShown() }
+            scenario.recreate()
+            compose.waitUntil(WAIT_MS) { menuShown() }
+            assertEquals(ThemeChoice.SYSTEM, stored().theme)
+            compose.onNodeWithTag(themeMenuTag(ThemeChoice.LIGHT)).performClick()
+            idleUntil("LIGHT stored and applied") {
+                stored().theme == ThemeChoice.LIGHT && app.graph.theme.value == ThemeChoice.LIGHT
+            }
+            compose.waitUntil(WAIT_MS) { count(R.string.home_theme_light) == 1 }
         }
 
     @Test

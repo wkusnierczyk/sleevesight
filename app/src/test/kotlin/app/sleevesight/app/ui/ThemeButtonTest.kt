@@ -6,6 +6,7 @@ import android.view.MotionEvent
 import androidx.activity.compose.setContent
 import androidx.compose.material3.Text
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
@@ -22,6 +23,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ActivityScenario
@@ -50,9 +52,10 @@ import org.robolectric.annotation.GraphicsMode
  * sun, "Theme: light"; a moon, "Theme: dark"; automatic brightness, "Theme: system"), with that
  * name as its tooltip and a 48 dp target. A tap opens a menu of *Light*, *Dark* and *System*, in
  * that order, read as one choice with the current one selected, and "As your phone is" under
- * *System*; picking another theme chooses it and closes the menu, while picking the current one, a
- * tap outside the menu or Back closes it with no choice. With *Theme button* off, or before the
- * settings are read, there is no button.
+ * *System*; the button reads as collapsed or expanded, and its collapse closes the menu. Picking
+ * another theme chooses it and closes the menu, while picking the current one, a tap outside the
+ * menu or Back closes it with no choice. With *Theme button* off, or before the settings are read,
+ * there is no button.
  */
 @RunWith(RobolectricTestRunner::class)
 class ThemeButtonTest {
@@ -158,6 +161,26 @@ class ThemeButtonTest {
                 // Opening it chooses nothing.
                 assertEquals(theme.name, emptyList<ThemeChoice>(), chosen)
             }
+        }
+    }
+
+    @Test
+    fun theButtonReadsAsCollapsedThenExpandedAndCollapseClosesTheMenuWithNoChoice() {
+        val chosen = mutableListOf<ThemeChoice>()
+        showing(ThemeButtonState(ThemeChoice.DARK) { chosen += it }) {
+            val button = compose.onNodeWithContentDescription(text(R.string.home_theme_dark))
+            // Collapsed: it offers to expand, not to collapse.
+            button.assert(SemanticsMatcher.keyIsDefined(SemanticsActions.Expand))
+            button.assert(SemanticsMatcher.keyNotDefined(SemanticsActions.Collapse))
+            button.performClick()
+            compose.waitUntil(WAIT_MS) { menuShown() }
+            // Expanded: it offers to collapse, not to expand.
+            button.assert(SemanticsMatcher.keyIsDefined(SemanticsActions.Collapse))
+            button.assert(SemanticsMatcher.keyNotDefined(SemanticsActions.Expand))
+            button.performSemanticsAction(SemanticsActions.Collapse)
+            compose.waitUntil(WAIT_MS) { !menuShown() }
+            assertEquals(emptyList<ThemeChoice>(), chosen)
+            button.assert(SemanticsMatcher.keyIsDefined(SemanticsActions.Expand))
         }
     }
 
