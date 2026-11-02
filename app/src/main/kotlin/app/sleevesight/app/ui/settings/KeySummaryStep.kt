@@ -11,31 +11,88 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
+import app.sleevesight.app.secrets.SecretId
+import app.sleevesight.app.secrets.SecretState
 import app.sleevesight.app.ui.theme.appendCode
 import app.sleevesight.app.ui.theme.codeStyle
+import kotlinx.coroutines.launch
 
 // The summary after keys are saved (#763), on *Load keys* and after the key dialog, and how a
 // screen reader says the key tables' rows.
 
 /**
- * The summary (#763), on *Load keys* and after the key dialog: *Keys saved* (*Key saved* for one),
- * a table of the keys, *Key*, *Ending* and *Saved* (*New* or *Replaced*); then *Services
- * configured*, a table of [summary]'s services, *Service* and *State* (*Enabled* or *Disabled*);
- * each by name. *Done* calls [onDone].
+ * The summary (#763), on *Load keys* and after the key dialog, of the [keys] saved, with the keys
+ * stored before ([secrets]) and the choices written as [first] has them, or null when they could
+ * not be: *Keys saved* (*Key saved* for one), a table of the keys, *Key*, *Ending* and *Saved*
+ * (*New* or *Replaced*); then *Services configured*, a table of the services, *Service* and
+ * *State* (*Enabled* or *Disabled*), as written ([summaryOf]); each by name. When the choices
+ * could not be written, it says so in their place, with *Try again*, which writes them again
+ * ([retry]); [onBusy] hears while it runs. *Done* calls [onDone].
+ */
+@Suppress("LongParameterList") // What was saved and written, and what the buttons do.
+@Composable
+internal fun ColumnScope.SummaryStep(
+    keys: List<SavedKey>,
+    secrets: Map<SecretId, SecretState>,
+    first: Applied?,
+    retry: suspend () -> Applied?,
+    onBusy: (Boolean) -> Unit,
+    onDone: () -> Unit,
+) {
+    var applied by remember { mutableStateOf(first) }
+    var busy by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val written = applied
+    SummaryTables(keys, written?.let { summaryOf(keys, it.before, secrets, it.after).services })
+    KeyScreenActions(
+        cancel =
+            {
+                if (written == null) {
+                    TextButton(
+                        onClick = {
+                            if (busy) return@TextButton
+                            busy = true
+                            onBusy(true)
+                            scope.launch {
+                                try {
+                                    applied = retry()
+                                } finally {
+                                    busy = false
+                                    onBusy(false)
+                                }
+                            }
+                        },
+                        enabled = !busy,
+                    ) { Text(stringResource(R.string.load_keys_try_again)) }
+                }
+            },
+    ) {
+        TextButton(onClick = onDone, enabled = !busy) { Text(stringResource(R.string.key_screen_done)) }
+    }
+}
+
+/**
+ * The summary's tables: the [keys] saved, and the [services] configured, or, for null, that the
+ * choices could not be written, in the error colour.
  */
 @Suppress("LongMethod") // Its two tables.
 @Composable
-internal fun ColumnScope.SummaryStep(
-    summary: KeySummary,
-    onDone: () -> Unit,
+private fun ColumnScope.SummaryTables(
+    keys: List<SavedKey>,
+    services: Map<SecretId, Boolean>?,
 ) {
-    val title = if (summary.keys.size == 1) R.string.load_keys_saved_title_one else R.string.load_keys_saved_title
+    val title = if (keys.size == 1) R.string.load_keys_saved_title_one else R.string.load_keys_saved_title
     StepHeading(stringResource(title), announced = true)
     Column(
         modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
@@ -43,9 +100,9 @@ internal fun ColumnScope.SummaryStep(
     ) {
         val body = MaterialTheme.typography.bodyMedium
         val code = codeStyle()
-        val keys =
-            summary.keys
-                .map { it to stringResource(keyService(it.id)) }
+        val keyRows =
+            keys
+                .map { it to stringResource(serviceName(it.id)) }
                 .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.second })
                 .map { (key, name) ->
                     val saved =
@@ -68,13 +125,21 @@ internal fun ColumnScope.SummaryStep(
                     stringResource(R.string.key_table_saved),
                 ),
             aligns = listOf(CellAlign.START, CellAlign.END, CellAlign.START),
-            rows = keys,
+            rows = keyRows,
         )
         Column(modifier = Modifier.padding(top = 8.dp)) {
             StepHeading(stringResource(R.string.load_keys_services_configured))
         }
-        val services =
-            summary.services.entries
+        if (services == null) {
+            Text(
+                stringResource(R.string.load_keys_services_failed),
+                style = body,
+                color = MaterialTheme.colorScheme.error,
+            )
+            return@Column
+        }
+        val serviceRows =
+            services.entries
                 .map { it to stringResource(serviceName(it.key)) }
                 .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.second })
                 .map { (service, name) ->
@@ -94,11 +159,8 @@ internal fun ColumnScope.SummaryStep(
         ChoiceTable(
             headers = listOf(stringResource(R.string.key_table_service), stringResource(R.string.key_table_state)),
             aligns = listOf(CellAlign.START, CellAlign.START),
-            rows = services,
+            rows = serviceRows,
         )
-    }
-    KeyScreenActions {
-        TextButton(onClick = onDone) { Text(stringResource(R.string.key_screen_done)) }
     }
 }
 

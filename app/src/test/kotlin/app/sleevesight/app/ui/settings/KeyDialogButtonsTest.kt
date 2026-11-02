@@ -107,8 +107,8 @@ class KeyDialogButtonsTest {
                                 id = id,
                                 state = state,
                                 offer = EnableOffer.Enable,
-                                onSave = { SaveResult.SAVED },
-                                onSaved = { _, _ -> shown.dismissed++ },
+                                onSave = { _, _ -> SaveResult.SAVED },
+                                onSaved = { shown.dismissed++ },
                                 onRemove = {
                                     shown.removed++
                                     removes

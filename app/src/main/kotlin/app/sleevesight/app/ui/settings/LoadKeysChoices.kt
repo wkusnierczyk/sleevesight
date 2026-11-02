@@ -52,8 +52,9 @@ private class ReadKey(
  * keys that did not scan, in the error colour. An AI key's terms are told where their key dialog
  * says, and a code not [sealed] can be read by anyone who saw it (#590). *Next* saves the keys
  * ticked ([onSave], which returns those it could not save: the screen names them, and *Next* saves
- * only those not yet saved), dimmed while none is; once every one is saved, [onSaved] hears the
- * keys saved and the keys stored before. *Scan again* ([onScanAgain]) only when a key did not
+ * only those ticked and not yet saved), dimmed while none is ticked and none saved; once every
+ * key ticked is saved, [onSaved] hears the keys saved and the keys stored before: after a failure,
+ * unticking the keys that failed goes on with those saved. *Scan again* ([onScanAgain]) only when a key did not
  * scan; *Cancel* ([onCancel]) saves nothing. [onBusy] hears while a save runs.
  */
 @Suppress("LongParameterList", "LongMethod") // What the code holds, and what each button does.
@@ -104,10 +105,11 @@ internal fun ColumnScope.KeysStep(
                     busy = true
                     onBusy(true)
                     scope.launch {
-                        // After a failure, the keys saved on the first try are not saved again.
+                        // After a failure, the keys saved on the first try are not saved again; with
+                        // none left ticked to save, it goes on with those.
                         val left = keys.filter { it.id in ticked && it.id !in saved }
                         try {
-                            unsaved = onSave(left.associate { it.id to it.key })
+                            unsaved = if (left.isEmpty()) emptyList() else onSave(left.associate { it.id to it.key })
                             saved = saved + left.map { it.id }.filterNot { it in unsaved }
                         } finally {
                             busy = false
@@ -119,7 +121,7 @@ internal fun ColumnScope.KeysStep(
                         }
                     }
                 },
-                enabled = !busy && keys.any { it.id in ticked && it.id !in saved },
+                enabled = !busy && (saved.isNotEmpty() || keys.any { it.id in ticked }),
             ) { Text(stringResource(R.string.load_keys_next)) }
         }
     }
@@ -179,8 +181,8 @@ private fun KeysToSave(
     val quiet = MaterialTheme.colorScheme.onSurfaceVariant
     val code = codeStyle()
     val rows =
-        sortedByGroup(keys, { it.id }, { stringResource(keyService(it.id)) }).map { key ->
-            val name = stringResource(keyService(key.id))
+        sortedByGroup(keys, { it.id }, { stringResource(serviceName(it.id)) }).map { key ->
+            val name = stringResource(serviceName(key.id))
             val group = stringResource(groupOf(key.id).label)
             val note = stringResource(if (key.replaces) R.string.key_replace_existing else R.string.key_save_as_new)
             val ending = endingOf(key.key.reveal())
@@ -225,7 +227,7 @@ private fun NotScanned(setup: SetupRead.Setup) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(stringResource(R.string.load_keys_not_scanned), style = style, color = error)
         for (name in setup.refused.keys) {
-            val service = stringResource(keyService(SecretId.of(name)))
+            val service = stringResource(serviceName(SecretId.of(name)))
             val ending = setup.refusedEndings[name]
             val entry = if (ending == null) AnnotatedString(service) else keyLine(R.string.key_ending, service, ending)
             Text(bullet(entry), style = style, color = error, modifier = Modifier.padding(start = 8.dp))
@@ -255,17 +257,20 @@ private fun bullet(entry: AnnotatedString): AnnotatedString =
  * for an AI service where more than one can be chosen, its radio; under *Already configured*, the
  * AI services whose keys were saved before. Under it, the AI service on, if it is one of those;
  * that only one AI service can be on, with radios; and where the services are, each a link
- * ([onOpen], which leaves *Load keys*). *Next* applies the choices ([onNext]); *Cancel*
+ * ([onOpen], which leaves *Load keys*). *Next* writes the choices ([onNext]); *Cancel*
  * ([onCancel]) changes nothing, the keys staying saved.
  */
+@Suppress("LongMethod") // The table, the lines under it, and the buttons.
 @Composable
 internal fun ColumnScope.EnableStep(
     plan: EnablePlan,
     onOpen: (SettingsTarget) -> Unit,
-    onNext: (Map<SecretId, Boolean>) -> Unit,
+    onNext: suspend (Map<SecretId, Boolean>) -> Unit,
     onCancel: () -> Unit,
 ) {
     var choices by remember(plan) { mutableStateOf(plan.initial) }
+    var busy by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
     StepHeading(stringResource(R.string.load_keys_enable_question), announced = true)
     Column(
         modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
@@ -317,9 +322,23 @@ internal fun ColumnScope.EnableStep(
         )
     }
     KeyScreenActions(
-        cancel = { TextButton(onClick = onCancel) { Text(stringResource(R.string.settings_cancel)) } },
+        cancel = { TextButton(onClick = onCancel, enabled = !busy) { Text(stringResource(R.string.settings_cancel)) } },
     ) {
-        TextButton(onClick = { onNext(choices) }) { Text(stringResource(R.string.load_keys_next)) }
+        TextButton(
+            onClick = {
+                // A second tap in the same frame finds the button still enabled.
+                if (busy) return@TextButton
+                busy = true
+                scope.launch {
+                    try {
+                        onNext(choices)
+                    } finally {
+                        busy = false
+                    }
+                }
+            },
+            enabled = !busy,
+        ) { Text(stringResource(R.string.load_keys_next)) }
     }
 }
 

@@ -111,9 +111,15 @@ private sealed interface LoadStep {
         val plan: EnablePlan,
     ) : LoadStep
 
-    /** What was saved and switched on or off (#763). */
+    /**
+     * What was saved ([keys], with the keys stored [before]) and switched on or off: the [choices]
+     * as written ([applied]), or null when they could not be.
+     */
     class Saved(
-        val summary: KeySummary,
+        val keys: List<SavedKey>,
+        val before: Map<SecretId, SecretState>,
+        val choices: Map<SecretId, Boolean>,
+        val applied: Applied?,
     ) : LoadStep
 }
 
@@ -132,10 +138,11 @@ private sealed interface LoadStep {
  * ([secrets]), and a checkbox, ticked, and the keys that did not scan ([KeysStep]); *Next* saves the
  * keys ticked with [onSave], which returns those it could not save: the screen names them, and saves
  * only those on the next try. Then which services to switch on ([EnableStep], [enablePlan]), from
- * the [settings] as they are: *Next* applies the choices with [onApply], *Cancel* leaves every
- * switch as it was. Then the summary ([SummaryStep]), with *Done*. A link to a section of the
- * settings calls [onOpen] and leaves the screen. A code that is not a setup code, or one of a later
- * version, says so, with *Scan again* and *Cancel*.
+ * the [settings] as they are: *Next* writes the choices with [onApply], which returns the settings
+ * as written, or null when they could not be; *Cancel* leaves every switch as it was. Then the
+ * summary ([SummaryStep]), of what was written, or that it could not be, with *Try again*; *Done*.
+ * A link to a section of the settings calls [onOpen] and leaves the screen. A code that is not a
+ * setup code, or one of a later version, says so, with *Scan again* and *Cancel*.
  */
 @Suppress("LongMethod", "CyclomaticComplexMethod", "LongParameterList") // The steps, and what tests may give.
 @Composable
@@ -144,7 +151,7 @@ internal fun LoadKeysScreen(
     settings: Settings,
     scanner: QrScanner,
     onSave: suspend (Map<SecretId, Secret>) -> List<SecretId>,
-    onApply: (Map<SecretId, Boolean>) -> Unit,
+    onApply: suspend (Map<SecretId, Boolean>) -> Applied?,
     onOpen: (SettingsTarget) -> Unit,
     onDismiss: () -> Unit,
     list: KeyWords = remember { KeyWords.load(JvmResourceReader) },
@@ -274,16 +281,26 @@ internal fun LoadKeysScreen(
                         onOpen(target)
                     },
                     onNext = { choices ->
-                        val after = settings.applied(choices)
-                        onApply(choices)
-                        step = LoadStep.Saved(summaryOf(shown.keys, settings, shown.before, after))
+                        busy = true
+                        try {
+                            step = LoadStep.Saved(shown.keys, shown.before, choices, onApply(choices))
+                        } finally {
+                            busy = false
+                        }
                     },
                     onCancel = onDismiss,
                 )
             }
 
             is LoadStep.Saved -> {
-                SummaryStep(shown.summary, onDismiss)
+                SummaryStep(
+                    keys = shown.keys,
+                    secrets = shown.before,
+                    first = shown.applied,
+                    retry = { onApply(shown.choices) },
+                    onBusy = { busy = it },
+                    onDone = onDismiss,
+                )
             }
         }
     }

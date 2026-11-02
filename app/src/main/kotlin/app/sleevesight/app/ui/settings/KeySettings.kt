@@ -157,8 +157,10 @@ private fun LoadKeysMore() {
  * characters from [store].
  *
  * A key saved switches its service on only as the user chooses after the save (#763), in the key
- * dialog or on *Load keys*, from the [settings] as they are: [update] applies the choices to the
- * stored settings, and the summary says what was saved and switched on or off. A link on *Load
+ * dialog or on *Load keys*, from the [settings] as they are: [applyChoices] writes the choices to
+ * the stored settings, after the key dialog's key in the same work in [saves], and the summary
+ * says what was saved and switched on or off as written, or that the choices could not be, with
+ * *Try again*. A link on *Load
  * keys* to a section of the settings calls [onOpen].
  */
 @Suppress("LongParameterList", "LongMethod") // The dialog, the keys, where they are saved, and what the screen hears.
@@ -167,7 +169,7 @@ internal fun KeyDialogs(
     shown: SettingsDialog.Keys,
     secrets: Map<SecretId, SecretState>,
     settings: Settings,
-    update: Update,
+    applyChoices: suspend (Map<SecretId, Boolean>) -> Applied?,
     store: SecretStore,
     saves: CoroutineScope,
     scanner: QrScanner,
@@ -181,10 +183,23 @@ internal fun KeyDialogs(
         is SettingsDialog.Key -> {
             val id = shown.id
             val state = secrets[id] ?: SecretState.ABSENT
-            var summary by remember(shown) { mutableStateOf<KeySummary?>(null) }
+            // What the save wrote, once it has: the choices and the settings as written.
+            var written by remember(shown) { mutableStateOf<KeyWrite?>(null) }
+            var summary by remember(shown) { mutableStateOf<SavedKey?>(null) }
+            var busy by remember(shown) { mutableStateOf(false) }
             val done = summary
-            if (done != null) {
-                KeyScreen(keyName(id), busy = false, onDismiss = onDismiss) { SummaryStep(done, onDismiss) }
+            val write = written
+            if (done != null && write != null) {
+                KeyScreen(keyName(id), busy = busy, onDismiss = onDismiss) {
+                    SummaryStep(
+                        keys = listOf(done),
+                        secrets = write.secrets,
+                        first = write.applied,
+                        retry = { saves.async { applyChoices(write.choices) }.await() },
+                        onBusy = { busy = it },
+                        onDone = onDismiss,
+                    )
+                }
                 return
             }
             val offer = enableOffer(id, settings, secrets)
@@ -192,18 +207,31 @@ internal fun KeyDialogs(
                 id = id,
                 state = state,
                 offer = offer,
-                onSave = { value ->
+                onSave = { value, ticked ->
+                    val choices = offer.choices(id, ticked)
+                    val before = secrets
+                    val snapshot = settings
+                    // The key and then its choices, in one piece of work that outlives the dialog,
+                    // so a rotation during the save still switches the service on.
                     saves
                         .async {
-                            store.set(id, Secret(value)).also { onSealFailed(it == SaveResult.NOT_SEALED) }
+                            val result = store.set(id, Secret(value)).also { onSealFailed(it == SaveResult.NOT_SEALED) }
+                            if (result == SaveResult.SAVED) {
+                                val applied =
+                                    if (choices.isEmpty()) {
+                                        Applied(
+                                            snapshot,
+                                            snapshot,
+                                        )
+                                    } else {
+                                        applyChoices(choices)
+                                    }
+                                written = KeyWrite(choices, before, applied)
+                            }
+                            result
                         }.await()
                 },
-                onSaved = { ending, ticked ->
-                    val choices = offer.choices(id, ticked)
-                    if (choices.isNotEmpty()) update { it.applied(choices) }
-                    val key = SavedKey(id, ending, replaced = state != SecretState.ABSENT)
-                    summary = summaryOf(listOf(key), settings, secrets, settings.applied(choices))
-                },
+                onSaved = { ending -> summary = SavedKey(id, ending, replaced = state != SecretState.ABSENT) },
                 onRemove = { saves.async { store.clear(id) }.await() },
                 scanner = scanner,
                 keyboard = keyboard,
@@ -218,7 +246,7 @@ internal fun KeyDialogs(
                 settings = settings,
                 scanner = scanner,
                 onSave = { keys -> saves.async { saveAll(store, keys, onSealFailed) }.await() },
-                onApply = { choices -> update { it.applied(choices) } },
+                onApply = { choices -> saves.async { applyChoices(choices) }.await() },
                 onOpen = onOpen,
                 onDismiss = onDismiss,
             )
@@ -267,3 +295,13 @@ internal fun removeKeyConfirmation(id: SecretId): Confirmation =
         named = stringResource(R.string.settings_key_remove, stringResource(keyName(id))),
         failed = stringResource(R.string.settings_key_remove_failed),
     )
+
+/**
+ * What the key dialog's save wrote besides the key: its [choices], with the keys stored before
+ * ([secrets]), as written ([applied]), or null when they could not be.
+ */
+private class KeyWrite(
+    val choices: Map<SecretId, Boolean>,
+    val secrets: Map<SecretId, SecretState>,
+    val applied: Applied?,
+)

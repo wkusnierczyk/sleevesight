@@ -138,12 +138,12 @@ class KeyAutofillTest {
                             id = id,
                             state = state,
                             offer = EnableOffer.Enable,
-                            onSave = {
-                                shown.saved += it
+                            onSave = { key, _ ->
+                                shown.saved += key
                                 saving
                             },
                             // As a close: the summary that follows (#763) is not this dialog's.
-                            onSaved = { _, _ ->
+                            onSaved = {
                                 calls += RecordingAutofillManager.DISMISSED
                                 shown.open = false
                             },

@@ -4,11 +4,13 @@ import androidx.annotation.StringRes
 import app.sleevesight.app.R
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretState
+import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.core.genres.LabelSource
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.SourceSwitch
 import app.sleevesight.core.settings.WebEngine
+import java.io.IOException
 
 // What saving a key switches on (#763): only what the user chooses after the save, on *Load keys*'
 // services to enable or in the key dialog; and what the summary after it lists.
@@ -209,4 +211,24 @@ internal fun summaryOf(
         keys,
         saved.associateWith { after.serviceOn(it) } + changed.associateWith { wasOn(it, after, secrets) },
     )
+}
+
+/** The settings [before] a change was written to the store, and [after] it, as written. */
+internal class Applied(
+    val before: Settings,
+    val after: Settings,
+)
+
+/**
+ * Writes the [choices] to the stored settings ([applied]), and returns them as they were and as
+ * written; null when the phone's storage failed, and nothing was written.
+ */
+internal suspend fun SettingsStore.applyChoices(choices: Map<SecretId, Boolean>): Applied? {
+    var result: Applied? = null
+    return try {
+        update { before -> before.applied(choices).also { result = Applied(before, it) } }
+        result
+    } catch (_: IOException) {
+        null
+    }
 }

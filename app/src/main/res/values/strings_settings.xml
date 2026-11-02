@@ -226,6 +226,9 @@
     <string name="key_saved_new">New</string>
     <string name="key_saved_replaced">Replaced</string>
     <string name="load_keys_services_configured">Services configured</string>
+    <!-- In place of the services' table when the choices could not be written, with its button. -->
+    <string name="load_keys_services_failed">The services could not be switched: the phone’s storage failed. Try again.</string>
+    <string name="load_keys_try_again">Try again</string>
     <string name="key_service_enabled">Enabled</string>
     <string name="key_service_disabled">Disabled</string>
     <!-- The key dialog, under its field (#763); %1$s is the service, as Exa web search. -->

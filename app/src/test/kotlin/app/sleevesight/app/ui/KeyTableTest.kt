@@ -230,7 +230,7 @@ class KeyTableTest {
             val ai = text(R.string.key_group_ai)
             val search = text(R.string.key_group_search)
             val anthropic = text(R.string.settings_ai_provider_anthropic)
-            val exa = text(R.string.settings_key_recipient_exa)
+            val exa = text(R.string.settings_engine_exa)
             assertRow("$anthropic, $ai, ending Zq9x, ${text(R.string.key_save_as_new)}", "Zq9x")
             assertRow("$exa, $search, ending 3e4f, ${text(R.string.key_replace_existing)}", "3e4f")
             assertTrue(compose.onAllNodes(hasText("Zq9x")).fetchSemanticsNodes().isEmpty())

@@ -16,6 +16,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
+import app.sleevesight.app.FlakyDataStore
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
@@ -65,8 +66,12 @@ class KeyDialogEnableTest {
 
     private val app = ApplicationProvider.getApplicationContext<SleevesightApplication>()
     private val stores by lazy { TestStores(tmp.root) }
-    private val settings by lazy { SettingsStore(stores.open("settings")) }
-    private val secrets by lazy { SecretStore(stores.open("secrets"), testCipher()) }
+
+    // Over stores whose writes a test can fail or hold back.
+    private val settingsData by lazy { FlakyDataStore(stores.open("settings")) }
+    private val secretsData by lazy { FlakyDataStore(stores.open("secrets")) }
+    private val settings by lazy { SettingsStore(settingsData) }
+    private val secrets by lazy { SecretStore(secretsData, testCipher()) }
     private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     @Before
@@ -263,6 +268,51 @@ class KeyDialogEnableTest {
                 ).performScrollTo()
                 .assertIsDisplayed()
         }
+
+    @Test
+    fun aChoiceThatCannotBeWrittenSaysSoInTheSummaryWithTryAgain() =
+        open(R.string.settings_key_name_exa) {
+            settingsData.writeFailures.set(1)
+            compose.onNodeWithText(text(R.string.settings_save)).performClick()
+            waitForText(text(R.string.load_keys_services_failed))
+            assertTrue(!shown(state(R.string.settings_engine_exa, R.string.key_service_enabled)))
+            compose.onNodeWithText(text(R.string.load_keys_try_again)).performClick()
+            waitForText(state(R.string.settings_engine_exa, R.string.key_service_enabled))
+            settled { WebEngine.EXA in current().webEngines }
+        }
+
+    @Test
+    fun theChoiceIsWrittenThoughTheActivityIsRecreatedDuringTheSave() {
+        val gate = CompletableDeferred<Unit>()
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                activity.setContent {
+                    SettingsScreen(
+                        settings,
+                        secrets,
+                        emptyMap(),
+                        { CompletableDeferred(true) },
+                        saves,
+                    ) { it }
+                }
+            }
+            waitForText(text(R.string.settings_title))
+            compose.openSection(SettingsSection.SECRETS)
+            compose.onNodeWithText(text(R.string.settings_key_name_openai)).performScrollTo().performClick()
+            compose.onNode(keyField).performTextInput("typed-key-a1B2")
+            compose.onNodeWithText(with(R.string.key_enable, R.string.settings_ai_provider_openai)).assertIsOn()
+            val before = secretsData.writes.get()
+            secretsData.writeGate = gate
+            compose.onNodeWithText(text(R.string.settings_save)).performClick()
+            idleUntil("the key's write started") { secretsData.writes.get() == before + 1 }
+
+            // A rotation while the key's write waits: the dialog goes, the save goes on.
+            scenario.recreate()
+            gate.complete(Unit)
+            settled { current().aiProvider == ProviderId.OPENAI }
+            assertEquals("typed-key-a1B2", runBlocking { secrets.get(SecretId.OPENAI) }?.reveal())
+        }
+    }
 
     @Test
     fun aSourceKeyTickedSwitchesItsServiceOn() =

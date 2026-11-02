@@ -476,7 +476,7 @@ class PurgeKeysTest {
                             SettingsDialog.PurgeKeys,
                             emptyMap(),
                             Settings(),
-                            { },
+                            { null },
                             gatedSecrets,
                             saves,
                             scanner = { },

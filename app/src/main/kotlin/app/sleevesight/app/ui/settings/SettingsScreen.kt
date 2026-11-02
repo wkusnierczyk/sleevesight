@@ -185,7 +185,7 @@ fun SettingsScreen(
                 shown,
                 secrets,
                 settings.orDefaults(),
-                update,
+                { choices -> settingsStore.applyChoices(choices) },
                 secretStore,
                 saves,
                 scanner,

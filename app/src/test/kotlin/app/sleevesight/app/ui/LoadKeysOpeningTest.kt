@@ -82,7 +82,16 @@ class LoadKeysOpeningTest {
             try {
                 scenario.onActivity { activity ->
                     activity.setContent {
-                        LoadKeysScreen(emptyMap(), Settings(), scanner, { emptyList() }, {}, {}, {}, crypto = crypto)
+                        LoadKeysScreen(
+                            emptyMap(),
+                            Settings(),
+                            scanner,
+                            { emptyList() },
+                            { null },
+                            {},
+                            {},
+                            crypto = crypto,
+                        )
                     }
                 }
                 compose.onNodeWithText(app.getString(R.string.load_keys_next)).performClick()

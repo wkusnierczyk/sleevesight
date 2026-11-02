@@ -213,7 +213,7 @@ class LoadKeysTest {
             compose.onNodeWithText(anthropic).assertIsDisplayed()
             val exa =
                 row(
-                    R.string.settings_key_recipient_exa,
+                    R.string.settings_engine_exa,
                     R.string.key_group_search,
                     exaKey,
                     R.string.key_replace_existing,
@@ -239,7 +239,7 @@ class LoadKeysTest {
             waitForText(text(R.string.load_keys_saved_title))
             compose.onNodeWithText(saved(R.string.settings_ai_provider_anthropic, anthropicKey)).assertIsDisplayed()
             compose
-                .onNodeWithText(saved(R.string.settings_key_recipient_exa, exaKey, R.string.key_saved_replaced))
+                .onNodeWithText(saved(R.string.settings_engine_exa, exaKey, R.string.key_saved_replaced))
                 .assertIsDisplayed()
 
             compose.onNodeWithText(text(R.string.key_screen_done)).performClick()

@@ -4,6 +4,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsOff
@@ -19,6 +20,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
+import app.sleevesight.app.FlakyDataStore
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
@@ -70,8 +72,12 @@ class LoadKeysEnableTest {
 
     private val app = ApplicationProvider.getApplicationContext<SleevesightApplication>()
     private val stores by lazy { TestStores(tmp.root) }
-    private val settings by lazy { SettingsStore(stores.open("settings")) }
-    private val secrets by lazy { SecretStore(stores.open("secrets"), testCipher()) }
+
+    // Over stores whose writes a test can fail or hold back.
+    private val settingsData by lazy { FlakyDataStore(stores.open("settings")) }
+    private val secretsData by lazy { FlakyDataStore(stores.open("secrets")) }
+    private val settings by lazy { SettingsStore(settingsData) }
+    private val secrets by lazy { SecretStore(secretsData, testCipher()) }
     private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     private val anthropicKey = "sk-ant-api03-" + "a1B2_c3-D4".repeat(9)
@@ -319,6 +325,46 @@ class LoadKeysEnableTest {
             assertTrue(!shown(anthropicRow))
             next()
             waitForText(text(R.string.load_keys_saved_title_one))
+        }
+
+    @Test
+    fun choicesThatCannotBeWrittenSaySoInTheSummaryAndTryAgainWritesThem() =
+        show("sleevesight-keys:v1\nlastfm=$lastFmKey") {
+            toServices()
+            settingsData.writeFailures.set(1)
+            next()
+            // Not the services as asked for: that they could not be switched, with *Try again*.
+            waitForText(text(R.string.load_keys_services_failed))
+            val lastFmOn = state(R.string.settings_source_lastfm, R.string.key_service_enabled)
+            assertTrue(!shown(lastFmOn))
+            assertTrue(SourceSwitch.LASTFM !in current().enabledSources)
+
+            compose.onNodeWithText(text(R.string.load_keys_try_again)).performClick()
+            waitForText(lastFmOn)
+            assertTrue(SourceSwitch.LASTFM in current().enabledSources)
+            assertTrue(!shown(text(R.string.load_keys_try_again)))
+        }
+
+    @Test
+    fun afterAFailedSaveUntickingTheKeysLeftGoesOnWithThoseSaved() =
+        show("sleevesight-keys:v1\nanthropic=$anthropicKey\nlastfm=$lastFmKey") {
+            // Anthropic's write fails; Last.fm's is saved.
+            secretsData.writeFailures.set(1)
+            next()
+            waitForText(app.getString(R.string.setup_failed, text(R.string.settings_key_name_anthropic)))
+            assertEquals(lastFmKey, stored(SecretId.LASTFM))
+            val anthropicRow = "${text(R.string.settings_ai_provider_anthropic)}, ${text(R.string.key_group_ai)}"
+            compose
+                .onNodeWithText("$anthropicRow, ending ${anthropicKey.takeLast(4)}, ${text(R.string.key_save_as_new)}")
+                .performClick()
+            val writes = secretsData.writes.get()
+            compose.onNodeWithText(text(R.string.load_keys_next)).assertIsEnabled().performClick()
+            waitForText(text(R.string.load_keys_enable_question))
+            // Nothing written again: Last.fm's row alone.
+            assertEquals(writes, secretsData.writes.get())
+            assertNull(stored(SecretId.ANTHROPIC))
+            assertTrue(!shown(anthropicRow))
+            row(R.string.settings_source_lastfm, R.string.key_group_music).assertIsOn()
         }
 
     @Test

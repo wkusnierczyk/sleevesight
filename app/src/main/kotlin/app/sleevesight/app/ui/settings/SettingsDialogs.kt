@@ -92,9 +92,9 @@ internal fun <T> ChoiceDialog(
  * saved as new or replaces the one stored ([state]), and what saving it switches on ([offer],
  * #763): *Enable {service}*, ticked; for an AI key while another AI service is on, that service and
  * *Switch the AI service to {service}*, unticked; for the key of the AI service on, that it is
- * already enabled. [onSave] says whether it succeeded: only then does the dialog end, calling
- * [onSaved] with the key's last characters and whether the checkbox is ticked (the summary then
- * replaces the dialog); otherwise it says why and keeps what was typed; only a key the key
+ * already enabled. [onSave] saves the key with whether the checkbox is ticked, and says whether
+ * it succeeded: only then does the dialog end, calling [onSaved] with the key's last characters
+ * (the summary then replaces the dialog); otherwise it says why and keeps what was typed; only a key the key
  * store could not seal suggests *Purge keys*, which cannot cure a file that cannot be written.
  * While it runs, the dialog cannot be cancelled or dismissed: it ends as the result says. *Remove*
  * asks first, with the key row's own confirmation ([ConfirmDialog], #543), which runs [onRemove]
@@ -145,8 +145,8 @@ internal fun KeyDialog(
     id: SecretId,
     state: SecretState,
     offer: EnableOffer,
-    onSave: suspend (String) -> SaveResult,
-    onSaved: (String, Boolean) -> Unit,
+    onSave: suspend (String, Boolean) -> SaveResult,
+    onSaved: (String) -> Unit,
     onRemove: suspend () -> Boolean,
     scanner: QrScanner,
     keyboard: ComputerKeyboard,
@@ -181,12 +181,14 @@ internal fun KeyDialog(
         busy = true
         failed = null
         val saving = value
+        // The choice as it is at the tap, saved with the key, whatever happens to the dialog meanwhile.
+        val enable = ticked
         scope.launch {
-            val failure = saveFailure(onSave(saving))
+            val failure = saveFailure(onSave(saving, enable))
             busy = false
             if (failure == null) {
                 autofill?.cancel()
-                onSaved(endingOf(saving), ticked)
+                onSaved(endingOf(saving))
             } else {
                 failed = failure
             }
