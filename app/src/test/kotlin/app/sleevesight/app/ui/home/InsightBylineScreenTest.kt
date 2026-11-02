@@ -245,7 +245,9 @@ class InsightBylineScreenTest {
     }
 
     // A screen reader reads the heading, the byline, then *Read aloud*, then the text, in the order
-    // Compose gives it (each node names the one read after it), at the default font size and twice it.
+    // Compose gives it (each node names the one read after it), at the default font size and twice
+    // it: for an insight just written, one kept from before, and, with no *Read aloud* yet, one being
+    // written, whose byline is read right after the heading.
     @Test
     fun aScreenReaderReadsTheHeadingTheBylineThenReadAloudThenTheText() {
         val accessibility =
@@ -254,31 +256,44 @@ class InsightBylineScreenTest {
         shadowOf(accessibility).setTouchExplorationEnabled(true)
         // A screen reader running: Compose builds nodes only for an enabled service.
         shadowOf(accessibility).setEnabledAccessibilityServiceList(listOf(AccessibilityServiceInfo()))
+        val kept = writtenBy("claude-haiku-5-5").copy(cached = true)
+        val writing = InsightState.Writing("Sundown was recorded in 1973 and", model = "claude-haiku-5-5")
+        val parts = listOf(HEADING, BYLINE, READ_ALOUD, TEXT)
         for (scale in listOf(1f, 2f)) {
             RuntimeEnvironment.setFontScale(scale)
-            card(dark = false, writtenBy("claude-haiku-5-5")) { activity ->
-                val provider = checkNotNull(composeView(activity.window.decorView).accessibilityNodeProvider)
-                val ids =
-                    listOf(
-                        compose.onNodeWithText("Key insights", useUnmergedTree = true).fetchSemanticsNode().id,
-                        byline().fetchSemanticsNode().id,
-                        compose.onNodeWithTag(READ_ALOUD_TAG).fetchSemanticsNode().id,
-                        compose
-                            .onNodeWithText("Sundown was recorded", substring = true, useUnmergedTree = true)
-                            .fetchSemanticsNode()
-                            .id,
-                    )
-                // The order read from the heading on, as far as the text: *Read aloud*'s tooltip
-                // anchor may come between the byline and the button.
-                val read =
-                    generateSequence(ids.first()) { id ->
-                        checkNotNull(provider.createAccessibilityNodeInfo(id)).extras.getInt(AFTER).takeIf { it != 0 }
-                    }.take(MAX_STEPS).toList()
-                val order = ids.map { read.indexOf(it) }
-                assertTrue("at $scale: each read, in $read", order.none { it < 0 })
-                assertEquals("at $scale: heading, byline, Read aloud, text", order.sorted(), order)
+            for ((what, insight) in listOf("just written" to writtenBy("claude-haiku-5-5"), "kept" to kept)) {
+                val read = readFromHeading(insight)
+                assertEquals("$what at $scale: in $read", parts, read.filter { it in parts })
             }
+            val read = readFromHeading(writing)
+            assertEquals("writing at $scale: the byline right after the heading", listOf(HEADING, BYLINE), read.take(2))
+            assertTrue("writing at $scale: then the text, in $read", TEXT in read)
         }
+    }
+
+    // What a screen reader reads from the heading of the card showing [insight] on, as far as the text,
+    // each node named for what it is ([HEADING], [BYLINE], [READ_ALOUD], [TEXT]) or else [OTHER]:
+    // *Read aloud*'s tooltip anchor comes between the byline and the button.
+    private fun readFromHeading(insight: InsightState): List<String> {
+        var read = emptyList<String>()
+        card(dark = false, insight) { activity ->
+            val provider = checkNotNull(composeView(activity.window.decorView).accessibilityNodeProvider)
+            val named =
+                listOfNotNull(
+                    HEADING to compose.onNodeWithText("Key insights", useUnmergedTree = true),
+                    BYLINE to byline(),
+                    (READ_ALOUD to compose.onNodeWithTag(READ_ALOUD_TAG)).takeIf { insight is InsightState.Written },
+                    TEXT to compose.onNodeWithText("Sundown was recorded", substring = true, useUnmergedTree = true),
+                ).associate { (name, node) -> node.fetchSemanticsNode().id to name }
+            val first = named.entries.single { it.value == HEADING }.key
+            read =
+                generateSequence(first) { id ->
+                    checkNotNull(provider.createAccessibilityNodeInfo(id)).extras.getInt(AFTER).takeIf { it != 0 }
+                }.take(MAX_STEPS)
+                    .map { named[it] ?: OTHER }
+                    .toList()
+        }
+        return read
     }
 
     // The view Compose draws into, under [root].
@@ -316,5 +331,12 @@ class InsightBylineScreenTest {
 
         // How far the traversal is followed from the heading: past the text, a few nodes away.
         const val MAX_STEPS = 12
+
+        // What the nodes read from the heading on are.
+        const val HEADING = "heading"
+        const val BYLINE = "byline"
+        const val READ_ALOUD = "Read aloud"
+        const val TEXT = "text"
+        const val OTHER = "other"
     }
 }
