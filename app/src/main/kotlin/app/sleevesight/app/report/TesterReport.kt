@@ -436,6 +436,8 @@ internal val SETTING_LINES: List<Pair<String, (Settings) -> String>> =
         "reportButton" to { it.reportButton.name },
         "linkStyle" to { it.linkStyle.name },
         "markDeveloperItems" to { onOff(it.markDeveloperItems) },
+        "foldDescriptions" to { onOff(it.foldDescriptions) },
+        "startFolded" to { onOff(it.startFolded) },
         "theme" to { it.theme.name },
         "themeButton" to { onOff(it.themeButton) },
         "font" to { it.font.name },
