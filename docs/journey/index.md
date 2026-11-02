@@ -5,8 +5,8 @@
 # settings and their defaults, `strings.xml` and `strings_home.xml`), the privacy policy
 # (`privacy.md`) and the tester brief (`docs/tester/alpha/`). A change to the first-run flow, the
 # home screen's states, a setting's label or default, or how the app is installed changes it too.
-# Screenshots are placeholders in the source until real ones from the app are taken; each records
-# the app version it comes from.
+# Screenshots are real captures from the app (`_includes/screenshots.html`, `_data/screenshots.yml`),
+# each recording the app version it comes from.
 title: A typical journey
 permalink: /docs/journey/
 docs_version: 0.1.15
@@ -46,7 +46,7 @@ At the bottom, a link opens the privacy policy in your browser.
 
 **What you decide.** Nothing yet, apart from whether you are happy with this. The screen can be read again at any time from *What leaves the device?*, at the bottom of the home screen, or *What leaves the device* under *About* in the settings. Opened again, it has a back arrow at the top and *Close* at the bottom in place of *Continue*: both bring you back to where you opened it. Its introduction then leaves out "Before you start".
 
-<!-- screenshot: the first-run screen, top, under the app's name: the intro and "What it reads", from app version … -->
+{% include screenshots.html ids="first-run-top" %}
 
 ## 2. Notification access
 
@@ -58,9 +58,7 @@ At the bottom, a link opens the privacy policy in your browser.
 
 With nothing playing yet, the home screen lists your music players, A to Z, each a row *Play on …* that opens the player, where you start the music; a player switched off is dimmed, with *Enable in Settings*, and with no player seen yet the screen says *No music player seen yet. Play music in one, and it is listed here and in Settings → Players.* Under the players, a small picture of the home screen while a track plays, with hand-written notes on what each part does: the guide, until you dismiss it ([usage]({{ '/docs/tutorials/usage/' | relative_url }}#nothing-playing)). At the top, the logo scrolls the screen back to the top, the theme button beside the cogwheel shows the current theme and opens a menu of the light, dark and system themes, and the cogwheel opens *Settings*.
 
-<!-- screenshot: the first-run screen, bottom, with "Notification access is off." and "Open notification access", from app version … -->
-<!-- screenshot: the first-run screen, bottom, with "Notification access is on." and "Continue", from app version … -->
-<!-- screenshot: the home screen with nothing playing: the header with the logo and the cogwheel, the players, and the guide, from app version … -->
+{% include screenshots.html ids="first-run-access-off first-run-access-on home-nothing-playing" %}
 
 ## 3. Choosing an AI service and saving its key
 
@@ -82,9 +80,7 @@ To save several keys at once, *Load keys*, under *Secrets*, reads one QR code of
 
 **What it costs.** Each insight written is a paid call on your key (now and then two or three; the [usage page]({{ '/docs/tutorials/usage/' | relative_url }}) says when), billed by the service to your account; Sleevesight takes no payment of its own. Each service starts on its cheapest current text model and a low reasoning effort (*Anthropic model*, *Anthropic reasoning effort* and their like), which you can change. How many calls you make depends on when insights are written: see step 6.
 
-<!-- screenshot: Settings, the "AI services" section, with Anthropic's key not set, its switch off and greyed ("Needs your Anthropic key." and "Set your Anthropic API key here."), from app version … -->
-<!-- screenshot: the key dialog: the masked "Key" field with its QR code, keyboard and eye icons, from app version … -->
-<!-- screenshot: "Save these keys?" after "Load keys", listing keys by their last four characters, from app version … (with test keys only) -->
+{% include screenshots.html ids="settings-ai-services-no-key" %}
 
 ## 4. Choosing the sources
 
@@ -97,7 +93,7 @@ To save several keys at once, *Load keys*, under *Secrets*, reads one QR code of
 
 **What you decide.** Which sources to use, and whether to add keys for Last.fm and Exa. Each source you switch on receives the playing track's title and artists (Last.fm the artists, and for the genre labels also the title and the album, Wikidata only identifiers, and Exa also the film or show a title says it is from); a source switched off receives nothing. Under *Genres* you choose whose tags give the genre labels, or, with *Show genres* off, none at all. With *Proactive* on, as it is by default, under *Insights*, the next track in the player's queue is also looked up at MusicBrainz ahead of its play; off sends nothing about it. The [privacy policy]({{ '/privacy.html' | relative_url }}) lists what goes to each.
 
-<!-- screenshot: Settings, "Sources", with the defaults: MusicBrainz and Wikipedia on, Last.fm and Exa without keys, the AI service knowledge off, from app version … -->
+{% include screenshots.html ids="settings-sources-defaults settings-sources-ai-knowledge" %}
 
 ## 5. Playing music
 
@@ -115,9 +111,7 @@ To save several keys at once, *Load keys*, under *Secrets*, reads one QR code of
 
 **What you decide.** Nothing, as a rule: you listen. A wrong-looking sentence can be checked against its line under *Sources*. [Usage]({{ '/docs/tutorials/usage/' | relative_url }}) says what each state of *Key insights* means, offline or when a source fails.
 
-<!-- screenshot: the home screen with a track playing: player row, cover, title and artists, genre labels, from app version … -->
-<!-- screenshot: "Key insights" with an insight, its byline, its citation chips and the grounded line, from app version … -->
-<!-- screenshot: "Sources" unfolded, with each source's chip and evidence lines, from app version … -->
+{% include screenshots.html ids="home-playing key-insights sources-unfolded" %}
 
 ## 6. Write, automatic writing, and the history
 
@@ -137,9 +131,7 @@ To save several keys at once, *Load keys*, under *Secrets*, reads one QR code of
 
 **The history.** Sleevesight keeps, on the phone only, information about the tracks it has seen play (titles, artists, albums, and when they played), never the music, and the track changes it uses to tell your skips from natural ends. *Keep history for* (90 days by default), which the insights and genre explanations written follow too, with *Clear history* under it, and *New session idle trigger* (30 minutes) are under *History*. There is no screen that lists the history yet; the track changes recorded can be seen on the diagnostics screen (*Diagnostics*, under *Developer*, which seven taps on *Version*, under *About*, show).
 
-<!-- screenshot: Key insights waiting for the first tap: "Tap Write insight…" with the Write insight button, from app version … -->
-<!-- screenshot: an insight written earlier, shown after the evidence changed, with "As written previously.", from app version … -->
-<!-- screenshot: Settings, "Insights": Show insights, Reactive, Proactive, Saver, Look up in the background, from app version … -->
+{% include screenshots.html ids="write-insight-waiting as-written-previously settings-insights settings-insights-saver" %}
 
 ## 7. Changing settings later, and clearing what is kept
 
@@ -154,5 +146,4 @@ To save several keys at once, *Load keys*, under *Secrets*, reads one QR code of
 
 What a service keeps of the requests it received, such as the AI service for your account, is between you and that service; the [privacy policy]({{ '/privacy.html' | relative_url }}) says more.
 
-<!-- screenshot: Settings, "History": Keep history for, Clear history, New session idle trigger, from app version … -->
-<!-- screenshot: the "Clear history?" dialog, from app version … -->
+{% include screenshots.html ids="settings-history clear-history-dialog" %}
