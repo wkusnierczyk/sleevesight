@@ -1,0 +1,19 @@
+{%- comment -%}
+  A row of the app's screenshots in a docs page (#792): `{% include screenshots.html ids="a b" %}`,
+  each id a key of `_data/screenshots.yml`, which holds its caption, its alt text and the app version
+  it was taken from, and names its file, `assets/screenshots/<id>.webp`. Each opens full size on a
+  tap. Under the row, the versions they come from. The whole is one line of HTML, so the include
+  can stand indented in a list item. The row's style is in `_layouts/docs.html`.
+{%- endcomment -%}
+{%- assign ids = include.ids | split: " " -%}
+{%- assign versions = "" | split: "" -%}
+<div class="shots-block"><div class="shots">
+{%- for id in ids -%}
+{%- assign s = site.data.screenshots[id] -%}
+{%- assign src = "/assets/screenshots/" | append: id | append: ".webp" | relative_url -%}
+{%- assign versions = versions | push: s.version -%}
+<figure><a href="{{ src }}"><img src="{{ src }}" width="540" height="1122" loading="lazy" alt="{{ s.alt | escape }}"></a><figcaption>{{ s.caption }}</figcaption></figure>
+{%- endfor -%}
+</div>
+{%- assign versions = versions | uniq -%}
+<p class="shots-from">{% if ids.size > 1 %}Screenshots{% else %}Screenshot{% endif %} from Sleevesight {{ versions | join: ", " }}.</p></div>
