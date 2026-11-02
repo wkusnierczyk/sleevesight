@@ -11,7 +11,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -396,7 +398,9 @@ private fun Notices(
 /**
  * The settings' sections, all closed at first, and the links between them ([SettingsNavigator]);
  * opened at [landOn], if any, once per visit (a rotation does not land again), and at [jump], a
- * link's target from a key screen over them (#763), which [onJumped] then clears.
+ * link's target from a key screen over them (#763), which [onJumped] then clears. Their
+ * descriptions fold to one line ([DescriptionFolds], #847) while *Foldable descriptions* is on,
+ * showing on each return as *Descriptions on return* has them.
  */
 @Suppress("LongParameterList") // What the sections show and change.
 @Composable
@@ -412,6 +416,22 @@ private fun SettingsContent(
     open: (SettingsDialog) -> Unit,
 ) {
     val folds = rememberSectionFolds()
+    val descriptions = rememberDescriptionFolds()
+    val mode = settings.descriptionsOnReturn
+    val descriptionsShown =
+        remember(descriptions, settings.foldDescriptions, mode, settings.unfoldedDescriptions) {
+            FoldsShown(descriptions, mode, settings.unfoldedDescriptions.toSet()) { id, unfolded ->
+                update {
+                    it.copy(
+                        unfoldedDescriptions = unfoldedIds(it.unfoldedDescriptions, id, unfolded),
+                    )
+                }
+            }.takeIf { settings.foldDescriptions }
+        }
+    // A section opened again within the visit shows its descriptions as *Descriptions on return* has it.
+    SideEffect { folds.onOpen = { descriptions.reopen(it, mode) } }
+    // A search's own folds and unfolds go with it: cleared, it leaves each as before it (#847).
+    LaunchedEffect(folds.searching) { if (!folds.searching) descriptions.endSearch() }
     ProvideSettingsNavigator(folds) {
         val navigator = LocalSettingsNavigator.current
         LaunchedEffect(navigator, jump) {
@@ -445,7 +465,9 @@ private fun SettingsContent(
                 null
             }
         found?.let { SearchAnnouncement(folds.query, it.size) }
-        SettingsColumn(settings, keys, navigation, unavailable, Found(listed, found), folds, update, open)
+        CompositionLocalProvider(LocalDescriptionFolds provides descriptionsShown) {
+            SettingsColumn(settings, keys, navigation, unavailable, Found(listed, found), folds, update, open)
+        }
     }
 }
 

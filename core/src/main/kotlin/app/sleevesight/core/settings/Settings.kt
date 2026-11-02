@@ -156,6 +156,17 @@ import kotlin.time.Duration.Companion.seconds
  *   tester's screenshots show what other users will not see ([marksDeveloperItems]). On by
  *   default, and back on with developer mode off, as every developer option goes back to its
  *   default.
+ * @property foldDescriptions *Foldable descriptions* (#847), under *Appearance*: whether the
+ *   settings' descriptions show on one line, a tap showing the rest and another folding it. On by
+ *   default; off, every description shows in full and nothing folds, as before #847.
+ * @property descriptionsOnReturn *Descriptions on return* (#847), under *Appearance*, used only
+ *   while [foldDescriptions] is on: how the descriptions show when the settings, or one of their
+ *   sections, open again. See [DescriptionsOnReturn]; *As left* by default.
+ * @property unfoldedDescriptions the settings' descriptions left unfolded (#847), each by its
+ *   section's name and its row's name as shown (or its own string's name), oldest change first,
+ *   which [DescriptionsOnReturn.AS_LEFT] opens them by, across restarts too; at most
+ *   [UNFOLDED_DESCRIPTIONS_LIMIT], the oldest going first. None by default: the first visit starts
+ *   folded.
  * @property theme *Theme* (#444): light or dark as the system is, or always one of them.
  * @property themeButton *Theme button* (#636): whether Home's header shows, beside the cogwheel, a
  *   button that shows [theme] and opens a menu of the three themes (#771). On by default: two taps,
@@ -215,6 +226,9 @@ data class Settings(
     val reportButton: ReportButton = ReportButton.HIDE,
     val linkStyle: LinkStyle = LinkStyle.UNDERLINE,
     val markDeveloperItems: Boolean = true,
+    val foldDescriptions: Boolean = true,
+    val descriptionsOnReturn: DescriptionsOnReturn = DescriptionsOnReturn.AS_LEFT,
+    val unfoldedDescriptions: List<String> = emptyList(),
     val theme: ThemeChoice = ThemeChoice.SYSTEM,
     val themeButton: Boolean = true,
     val font: FontChoice = FontChoice.APP_FONT,
@@ -339,6 +353,9 @@ data class Settings(
 
     companion object {
         const val SPOTIFY: String = "com.spotify.music"
+
+        /** The most descriptions kept as left unfolded ([unfoldedDescriptions], #847). */
+        const val UNFOLDED_DESCRIPTIONS_LIMIT: Int = 200
 
         /**
          * The packages whose media sessions are phone calls (#435): Android's telecom service, the
@@ -622,6 +639,21 @@ enum class FontChoice {
 
     /** The font chosen in the phone's own settings, for someone who prefers it everywhere. */
     SYSTEM_FONT,
+}
+
+/**
+ * *Descriptions on return* (#847): how the settings' descriptions show when the settings open again,
+ * or one of their sections opens again within a visit.
+ */
+enum class DescriptionsOnReturn {
+    /** Every description folded again. */
+    FOLDED,
+
+    /** Every description in full; a tap still folds it. */
+    UNFOLDED,
+
+    /** Each as it was left, across restarts too (`Settings.unfoldedDescriptions`); the default. */
+    AS_LEFT,
 }
 
 /**

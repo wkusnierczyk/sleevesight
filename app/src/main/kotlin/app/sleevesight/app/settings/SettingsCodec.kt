@@ -88,6 +88,16 @@ internal object SettingsCodec {
     private val INTRO = booleanPreferencesKey("display.intro")
     private val SPIN_LOGO = booleanPreferencesKey("display.spin_logo")
     private val LOGO_SPEED = stringPreferencesKey("display.logo_speed")
+    private val FOLD_DESCRIPTIONS = booleanPreferencesKey("display.fold_descriptions")
+    private val DESCRIPTIONS_ON_RETURN = stringPreferencesKey("display.descriptions_on_return")
+
+    // In order, oldest change first: one text, the ids apart by [UNFOLDED_SEPARATOR]. A key of its
+    // own, not the first build's set under `display.unfolded_descriptions`, which reads as another
+    // type.
+    private val UNFOLDED_DESCRIPTIONS = stringPreferencesKey("display.descriptions_unfolded")
+
+    /** What parts the ids of [UNFOLDED_DESCRIPTIONS]: the unit separator, never in a row's name. */
+    private const val UNFOLDED_SEPARATOR = '\u001F'
     private val LYRICS_LINKS = booleanPreferencesKey("display.lyrics_links")
     private val LYRICS_SEARCH = booleanPreferencesKey("display.lyrics_search")
 
@@ -151,6 +161,11 @@ internal object SettingsCodec {
             introAtStart = prefs[INTRO] ?: defaults.introAtStart,
             spinLogo = prefs[SPIN_LOGO] ?: defaults.spinLogo,
             logoSpeed = enumOf(prefs[LOGO_SPEED]) ?: defaults.logoSpeed,
+            foldDescriptions = prefs[FOLD_DESCRIPTIONS] ?: defaults.foldDescriptions,
+            descriptionsOnReturn = enumOf(prefs[DESCRIPTIONS_ON_RETURN]) ?: defaults.descriptionsOnReturn,
+            unfoldedDescriptions =
+                prefs[UNFOLDED_DESCRIPTIONS]?.split(UNFOLDED_SEPARATOR)?.filter { it.isNotEmpty() }
+                    ?: defaults.unfoldedDescriptions,
             dismissed = dismissedOf(prefs),
         )
 
@@ -303,6 +318,19 @@ internal object SettingsCodec {
         if (moved { it.introAtStart }) prefs.put(INTRO, settings.introAtStart, defaults.introAtStart)
         if (moved { it.spinLogo }) prefs.put(SPIN_LOGO, settings.spinLogo, defaults.spinLogo)
         if (moved { it.logoSpeed }) prefs.put(LOGO_SPEED, settings.logoSpeed.name, defaults.logoSpeed.name)
+        if (moved { it.foldDescriptions }) {
+            prefs.put(FOLD_DESCRIPTIONS, settings.foldDescriptions, defaults.foldDescriptions)
+        }
+        if (moved { it.descriptionsOnReturn }) {
+            prefs.put(DESCRIPTIONS_ON_RETURN, settings.descriptionsOnReturn.name, defaults.descriptionsOnReturn.name)
+        }
+        if (moved { it.unfoldedDescriptions }) {
+            prefs.put(
+                UNFOLDED_DESCRIPTIONS,
+                settings.unfoldedDescriptions.joinToString(UNFOLDED_SEPARATOR.toString()),
+                defaults.unfoldedDescriptions.joinToString(UNFOLDED_SEPARATOR.toString()),
+            )
+        }
         // The names a later version stored stay, as with a set of switches, but for a set left
         // empty: nothing is dismissed then, a later version's items included, as after *Restore
         // dismissed messages*. The guide's old switch goes: left off, it would read as the guide

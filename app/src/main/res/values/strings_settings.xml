@@ -11,6 +11,22 @@
         <item quantity="other">%d sections match</item>
     </plurals>
     <string name="settings_section_expanded">expanded</string>
+    <!-- A setting's description folded to one line (#847): its state, and what a tap on it does, for a screen reader. -->
+    <string name="settings_description_collapsed">collapsed</string>
+    <string name="settings_description_expanded">expanded</string>
+    <string name="settings_description_expand">Expand</string>
+    <string name="settings_description_collapse">Collapse</string>
+    <!-- Appearance (#847): whether the settings' descriptions fold to one line, and how they show when Settings or a section opens again; each choice's line says what it does. -->
+    <string name="settings_fold_descriptions">Foldable descriptions</string>
+    <string name="settings_fold_descriptions_summary">Shows each setting’s description on one line; a tap shows the rest, another folds it.</string>
+    <string name="settings_descriptions_on_return">Descriptions on return</string>
+    <string name="settings_descriptions_on_return_summary">How the descriptions show when you come back to Settings.</string>
+    <string name="settings_descriptions_folded">Folded</string>
+    <string name="settings_descriptions_folded_detail">Every description is folded again.</string>
+    <string name="settings_descriptions_unfolded">Unfolded</string>
+    <string name="settings_descriptions_unfolded_detail">Every description shows in full; a tap folds it.</string>
+    <string name="settings_descriptions_as_left">As left</string>
+    <string name="settings_descriptions_as_left_detail">Each description stays folded or unfolded as you left it.</string>
     <string name="settings_players_short">Music apps Sleevesight follows</string>
     <string name="settings_players_long">Sleevesight reads what a player says it is playing (track, artist, album). It does not receive the audio or your other notifications. Android grants this with notification access. To find your music players, Sleevesight looks at apps that report what they play (playing or paused) and checks whether it is music (a track with a title and an artist); it stops checking an app for music once it has found some, until Sleevesight starts afresh (not each time you open it). A new player is added to this list switched off. Sleevesight does not follow a player that is off: it does not track what the player plays, and keeps or sends none of it.\n\nSwitch on the players you want Sleevesight to follow.</string>
     <string name="settings_players_none">No players yet. A music app appears here, switched off, once you play music in it.</string>

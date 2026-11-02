@@ -67,8 +67,10 @@ private fun ProviderRows(
     val name = stringResource(providerName(provider))
     SwitchRow(
         title = name,
-        // It says when its key is missing, why the switch cannot be moved, or cannot be read.
-        summary = keyId?.let { keyNote(it, secrets, linked = true) },
+        // It says when its key is missing, why the switch cannot be moved, or cannot be read: in
+        // full, not folded as a description is (#847).
+        summary = null,
+        note = keyId?.let { keyNote(it, secrets, linked = true) },
         checked = on,
         leading = { ServiceBadge(providerBadge(name)) },
         below = keyId?.let { { KeyLink(it, key) } },
@@ -90,7 +92,8 @@ private fun ProviderRows(
             // each row on its own.
             title = stringResource(R.string.settings_ai_model_of, name),
             value = modelValue(provider, settings, modelName),
-            summary = modelUnavailable(name, gone, modelName),
+            // A state, in full: not folded as a description is (#847).
+            note = modelUnavailable(name, gone, modelName),
             underBadge = true,
             onClick = { open(SettingsDialog.Model(provider)) },
         )

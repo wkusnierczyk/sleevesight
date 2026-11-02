@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.theme.LocalMessages
+import app.sleevesight.core.settings.DescriptionsOnReturn
 import app.sleevesight.core.settings.FontChoice
 import app.sleevesight.core.settings.Layout
 import app.sleevesight.core.settings.LogoSpeed
@@ -20,7 +21,8 @@ import kotlinx.coroutines.Deferred
  * (*Expandable boxes*, the default) or each on a page of its own (*Separate pages*). *Keep Sources
  * as you left them* (#269), off by default, so the *Sources* list under each new track's insight
  * starts folded; under *Expandable boxes* only, so it is shown, but not offered, under *Separate
- * pages*, where each page opens fresh. *Lyrics links* (#728), on by default: whether Home shows a
+ * pages*, where each page opens fresh. Then *Foldable descriptions* and *Descriptions on return*
+ * (#847, [DescriptionRows]). *Lyrics links* (#728), on by default: whether Home shows a
  * *Lyrics* button for the playing track, with links to its lyrics pages or a Genius search; under it,
  * indented, *Search Genius when there is no link*, on by default, which can be moved only while
  * *Lyrics links* is on, as *Keep Sources as you left them* only under *Expandable boxes*. *Logo intro
@@ -67,6 +69,7 @@ internal fun AppearanceSection(
         checked = settings.keepSourcesUnfolded,
         onChange = if (boxes) ({ on -> update { it.copy(keepSourcesUnfolded = on) } }) else null,
     )
+    DescriptionRows(settings, update)
     LyricsRows(settings, update)
     SwitchRow(
         title = stringResource(R.string.settings_intro),
@@ -90,6 +93,50 @@ internal fun AppearanceSection(
             },
     )
 }
+
+/**
+ * *Foldable descriptions* (#847), on by default: whether the settings' descriptions show on one line
+ * ([Description]); then *Descriptions on return*, *Folded*, *Unfolded* or *As left* (the default)
+ * as a button group, with a line on what the one chosen does ([DescriptionFolds]), dimmed and
+ * keeping its value while the switch is off.
+ */
+@Composable
+private fun DescriptionRows(
+    settings: Settings,
+    update: Update,
+) {
+    SwitchRow(
+        title = stringResource(R.string.settings_fold_descriptions),
+        summary = stringResource(R.string.settings_fold_descriptions_summary),
+        checked = settings.foldDescriptions,
+    ) { on -> update { it.copy(foldDescriptions = on) } }
+    ChoiceButtonsRow(
+        title = stringResource(R.string.settings_descriptions_on_return),
+        summary = stringResource(R.string.settings_descriptions_on_return_summary),
+        choices = descriptionsOnReturn(),
+        selected = settings.descriptionsOnReturn,
+        details = descriptionsOnReturnDetails(),
+        enabled = settings.foldDescriptions,
+    ) { choice -> update { it.copy(descriptionsOnReturn = choice) } }
+}
+
+/** *Descriptions on return*'s choices. */
+@Composable
+internal fun descriptionsOnReturn(): List<Pair<DescriptionsOnReturn, String>> =
+    listOf(
+        DescriptionsOnReturn.FOLDED to stringResource(R.string.settings_descriptions_folded),
+        DescriptionsOnReturn.UNFOLDED to stringResource(R.string.settings_descriptions_unfolded),
+        DescriptionsOnReturn.AS_LEFT to stringResource(R.string.settings_descriptions_as_left),
+    )
+
+/** What each of *Descriptions on return*'s choices does, as its row says under the buttons. */
+@Composable
+internal fun descriptionsOnReturnDetails(): Map<DescriptionsOnReturn, String> =
+    mapOf(
+        DescriptionsOnReturn.FOLDED to stringResource(R.string.settings_descriptions_folded_detail),
+        DescriptionsOnReturn.UNFOLDED to stringResource(R.string.settings_descriptions_unfolded_detail),
+        DescriptionsOnReturn.AS_LEFT to stringResource(R.string.settings_descriptions_as_left_detail),
+    )
 
 /**
  * *Lyrics links* (#728), and under it, indented, *Search Genius when there is no link*, which keeps

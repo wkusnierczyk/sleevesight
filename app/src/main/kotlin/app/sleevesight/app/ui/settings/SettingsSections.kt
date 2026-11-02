@@ -109,8 +109,15 @@ internal class SectionFolds(
     fun isUnfolded(section: SettingsSection): Boolean =
         if (searching) section !in closedInSearch else section in unfolded
 
+    /**
+     * Called with each section opened again within the visit (its chip, a link to it), not saved:
+     * its descriptions' folds go as *Descriptions on return* has them ([DescriptionFolds.reopen]).
+     */
+    var onOpen: (SettingsSection) -> Unit = {}
+
     /** Opens [section], if closed: its chip's tap. */
     fun open(section: SettingsSection) {
+        if (!isUnfolded(section)) onOpen(section)
         if (searching) closedInSearch = closedInSearch - section else unfolded = unfolded + section
     }
 
@@ -125,6 +132,7 @@ internal class SectionFolds(
      */
     fun unfold(section: SettingsSection) {
         search("")
+        if (section !in unfolded) onOpen(section)
         unfolded = unfolded + section
     }
 
@@ -218,8 +226,11 @@ private fun SectionBox(
             spacing = 4.dp,
             headingFrame = { heading -> LandingSpot(SettingsTarget(section)) { heading() } },
         ) {
-            Hint(section.details)
-            content()
+            // Its descriptions known as its own for their folds (#847).
+            CompositionLocalProvider(LocalDescriptionSection provides section) {
+                Hint(section.details)
+                content()
+            }
         }
     }
 }

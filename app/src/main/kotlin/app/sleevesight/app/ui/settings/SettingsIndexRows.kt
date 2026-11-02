@@ -208,6 +208,15 @@ internal fun appearanceRows(): List<IndexedRow> =
             stringResource(R.string.settings_keep_sources_summary),
         ),
         indexRow(
+            stringResource(R.string.settings_fold_descriptions),
+            stringResource(R.string.settings_fold_descriptions_summary),
+        ),
+        choices(
+            R.string.settings_descriptions_on_return,
+            R.string.settings_descriptions_on_return_summary,
+            descriptionsOnReturn().map { it.second } + descriptionsOnReturnDetails().values,
+        ),
+        indexRow(
             stringResource(R.string.settings_lyrics_links),
             stringResource(R.string.settings_lyrics_links_summary),
         ),
