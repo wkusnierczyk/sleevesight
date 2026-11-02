@@ -120,20 +120,19 @@ internal fun SourcesSection(
         val checked = row.on(settings) && (key == null || secrets[key] != SecretState.ABSENT)
         val name = stringResource(row.name)
         val aiServices = stringResource(R.string.settings_section_ai)
-        val summary =
+        val summary = if (model) stringResource(row.summary, aiServices) else stringResource(row.summary)
+        // What the switch needs, under the description, in full: not folded as it is (#847). With no
+        // AI service on, *AI service knowledge* says so: there is no model to ask (#538, #581).
+        val note =
             if (model) {
-                // With no AI service on, it says so: there is no model to ask (#538, #581).
-                lines(
-                    stringResource(row.summary, aiServices),
-                    stringResource(R.string.settings_source_model_no_service)
-                        .takeIf { noAiServiceOn(settings, secrets) },
-                )
+                stringResource(R.string.settings_source_model_no_service).takeIf { noAiServiceOn(settings, secrets) }
             } else {
-                lines(stringResource(row.summary), key?.let { keyNote(it, secrets, linked = true) })
+                key?.let { keyNote(it, secrets, linked = true) }
             }
         SwitchRow(
             title = name,
             summary = summary,
+            note = note,
             checked = checked,
             leading = { ServiceBadge(row.badge) },
             below = {
@@ -182,12 +181,6 @@ internal fun WebsiteLink(
         onClick = rememberOpenUrl(url),
     )
 }
-
-/** [first], and [second] on a line of its own when there is one. */
-internal fun lines(
-    first: String,
-    second: String?,
-): String = if (second == null) first else "$first\n$second"
 
 /**
  * What a row that needs the key [id] says of it, where the key is not saved and readable: that it
@@ -243,7 +236,9 @@ internal fun GenresSection(
         val name = stringResource(labelSourceName(source))
         SwitchRow(
             title = name,
-            summary = lines(stringResource(labelSourceSummary(source)), why),
+            summary = stringResource(labelSourceSummary(source)),
+            // Why the switch cannot be moved, in full: not folded as the description is (#847).
+            note = why,
             checked = offered && source in settings.labelSources,
             indent = true,
             leading = { ServiceBadge(source.source.tag) },

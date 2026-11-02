@@ -279,6 +279,14 @@ internal fun developerRows(settings: Settings): List<IndexedRow> {
             stringResource(R.string.settings_mark_developer_summary),
         ),
         indexRow(
+            stringResource(R.string.settings_fold_descriptions),
+            stringResource(R.string.settings_fold_descriptions_summary),
+        ),
+        indexRow(
+            stringResource(R.string.settings_start_folded),
+            stringResource(R.string.settings_start_folded_summary),
+        ),
+        indexRow(
             stringResource(R.string.settings_developer_mode),
             stringResource(R.string.settings_developer_mode_summary),
         ),

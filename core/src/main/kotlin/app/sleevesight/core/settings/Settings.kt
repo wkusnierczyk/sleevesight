@@ -156,6 +156,14 @@ import kotlin.time.Duration.Companion.seconds
  *   tester's screenshots show what other users will not see ([marksDeveloperItems]). On by
  *   default, and back on with developer mode off, as every developer option goes back to its
  *   default.
+ * @property foldDescriptions *Foldable descriptions* (#847), a developer setting and a trial, to be
+ *   removed or kept after it: whether the settings' descriptions fold to one line, a tap unfolding
+ *   them. On by default, and back on with developer mode off; off, every description shows in full,
+ *   as before #847.
+ * @property startFolded *Start folded* (#847), a developer setting and a trial with
+ *   [foldDescriptions], which it needs: whether the settings open with every description folded;
+ *   off, they open in full and still fold with a tap. On by default, and back on with developer
+ *   mode off.
  * @property theme *Theme* (#444): light or dark as the system is, or always one of them.
  * @property themeButton *Theme button* (#636): whether Home's header shows, beside the cogwheel, a
  *   button that shows [theme] and opens a menu of the three themes (#771). On by default: two taps,
@@ -215,6 +223,8 @@ data class Settings(
     val reportButton: ReportButton = ReportButton.HIDE,
     val linkStyle: LinkStyle = LinkStyle.UNDERLINE,
     val markDeveloperItems: Boolean = true,
+    val foldDescriptions: Boolean = true,
+    val startFolded: Boolean = true,
     val theme: ThemeChoice = ThemeChoice.SYSTEM,
     val themeButton: Boolean = true,
     val font: FontChoice = FontChoice.APP_FONT,
@@ -323,9 +333,9 @@ data class Settings(
 
     /**
      * These settings with developer mode off, and with it every developer option ([showDiagnostics],
-     * [showGroundingDetails], and [reportButton] at *Hide*) and [linkStyle] and [markDeveloperItems]
-     * back to their defaults, so nothing hidden keeps running or changes the look. A developer
-     * option joins here with its setting.
+     * [showGroundingDetails], and [reportButton] at *Hide*) and [linkStyle], [markDeveloperItems],
+     * [foldDescriptions] and [startFolded] back to their defaults, so nothing hidden keeps running or
+     * changes the look. A developer option joins here with its setting.
      */
     fun withoutDeveloperMode(): Settings =
         copy(
@@ -335,6 +345,8 @@ data class Settings(
             reportButton = ReportButton.HIDE,
             linkStyle = LinkStyle.UNDERLINE,
             markDeveloperItems = true,
+            foldDescriptions = true,
+            startFolded = true,
         )
 
     companion object {

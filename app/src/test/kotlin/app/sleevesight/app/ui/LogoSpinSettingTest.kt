@@ -10,6 +10,7 @@ import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.isToggleable
@@ -34,6 +35,7 @@ import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.SettingsCodec
 import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.testCipher
+import app.sleevesight.app.ui.settings.ROW_TITLE_TAG
 import app.sleevesight.app.ui.settings.SettingsScreen
 import app.sleevesight.app.ui.settings.SettingsSection
 import app.sleevesight.app.ui.theme.SleevesightTheme
@@ -107,6 +109,14 @@ class LogoSpinSettingTest {
 
     private fun spinSwitch() = compose.onNode(hasText(text(R.string.settings_spin_logo)) and isToggleable())
 
+    // A tap on the switch row's name, which toggles it: a tap on its description folds or unfolds
+    // that instead (#847), and the row's middle may be on it.
+    private fun tapSpinSwitch() =
+        compose
+            .onNode(hasText(text(R.string.settings_spin_logo)) and hasTestTag(ROW_TITLE_TAG), useUnmergedTree = true)
+            .performScrollTo()
+            .performClick()
+
     private fun speed(option: Int) = compose.onNode(hasText(text(option)) and isSelectable())
 
     @Test
@@ -145,10 +155,10 @@ class LogoSpinSettingTest {
             speed(R.string.settings_logo_speed_45).assertIsSelected()
             compose.onNodeWithText(text(R.string.settings_logo_speed_45_detail)).performScrollTo()
             keep("appearance-logo-45")
-            spinSwitch().performScrollTo().performClick()
+            tapSpinSwitch()
             compose.waitUntil(WAIT_MS) { !settings.now().spinLogo }
             spinSwitch().assertIsOff()
-            spinSwitch().performClick()
+            tapSpinSwitch()
             compose.waitUntil(WAIT_MS) { settings.now().spinLogo }
         }
 
@@ -163,7 +173,7 @@ class LogoSpinSettingTest {
             compose.waitForIdle()
             assertEquals(LogoSpeed.RPM_45, settings.now().logoSpeed)
             keep("appearance-logo-off")
-            spinSwitch().performClick()
+            tapSpinSwitch()
             compose.waitUntil(WAIT_MS) { settings.now().spinLogo }
             speed(R.string.settings_logo_speed_33).assertIsEnabled()
         }

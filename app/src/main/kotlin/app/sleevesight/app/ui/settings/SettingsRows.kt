@@ -4,7 +4,6 @@ package app.sleevesight.app.ui.settings
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -38,7 +37,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.ui.theme.ChoiceButtonGroup
-import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.app.ui.theme.plainSwitchColors
 import kotlin.math.roundToInt
@@ -76,7 +74,8 @@ private class FirstLine {
 }
 
 /**
- * A line of explanation in a section, [text]. As a sub-heading over rows, [over] names them by
+ * A line of explanation in a section, [text], folded to one line as a row's description is
+ * ([Description], #847). As a sub-heading over rows, [over] names them by
  * title: a search that shows only some rows shows it while any of them shows (#649); with none, it
  * is not a setting of its own, and such a search leaves it out. A blank line in [text] starts a
  * paragraph ([Paragraphs], #758).
@@ -88,7 +87,9 @@ internal fun Hint(
 ) {
     val search = LocalRowSearch.current
     if (search?.filtering == true && over.none { search.shows(it) }) return
-    Paragraphs(stringResource(text), modifier = Modifier.padding(vertical = 4.dp))
+    val words = stringResource(text)
+    // Folded to one line as a row's description is (#847).
+    Description("hint:$words", words, modifier = Modifier.padding(vertical = 4.dp))
 }
 
 /**
@@ -102,6 +103,10 @@ internal fun Hint(
  * The mark and the switch are centred on the first line of the title (#613), not on the whole row:
  * level with the name however long the summary under it, at any font scale. A row with a name only
  * looks as when they were centred on the row.
+ *
+ * The summary folds to one line, a tap on it unfolding it ([Description], #847); that tap is its
+ * own and does not toggle the switch. [note], under it, says why the switch cannot be moved, or
+ * what it needs (*Needs your Exa key.*), and always shows in full, read with the switch.
  */
 @Suppress("LongParameterList") // Each sets one aspect of the row; all but the first three have defaults.
 @Composable
@@ -114,6 +119,7 @@ internal fun SwitchRow(
     leading: (@Composable () -> Unit)? = null,
     below: (@Composable () -> Unit)? = null,
     summaryLink: TextPart.Linked? = null,
+    note: String? = null,
     onChange: ((Boolean) -> Unit)?,
 ) {
     if (!shownInSearch(title)) return
@@ -146,7 +152,8 @@ internal fun SwitchRow(
             )
         },
     ) {
-        summary?.let { Summary(it, summaryLink, color) }
+        summary?.let { Description("row:$title", it, color = color, link = summaryLink) }
+        note?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = color) }
         below?.invoke()
     }
 }
@@ -183,7 +190,7 @@ internal fun ButtonRow(
             ) { Text(label) }
         },
     ) {
-        Summary(summary, null, color)
+        Description("row:$title", summary, color = color)
     }
 }
 
@@ -227,33 +234,6 @@ private fun MarkedRow(
 }
 
 /**
- * A row's [summary], in [color], with [link] set in it where it has the link's text; without one, a
- * paragraph for each part a blank line starts ([Paragraphs]: *Search with AI*'s, #773).
- */
-@Composable
-private fun Summary(
-    summary: String,
-    link: TextPart.Linked?,
-    color: Color,
-) {
-    if (link == null) {
-        Paragraphs(summary, color = color)
-    } else {
-        // Paragraphs as [Paragraphs] sets them, the link in the one that has it (#802's two).
-        val style = MaterialTheme.typography.bodySmall
-        Column(verticalArrangement = Arrangement.spacedBy(PARAGRAPH_GAP)) {
-            for (paragraph in paragraphsOf(summary)) {
-                if (link.text in paragraph) {
-                    LinkedText(sentenceWith(paragraph, link), style = style, color = color)
-                } else {
-                    Text(paragraph, style = style, color = color)
-                }
-            }
-        }
-    }
-}
-
-/**
  * A setting with a value, which [onClick] opens a dialog to change; null [onClick] is disabled.
  * [indent] nests it under the row above; [underBadge] starts it at the name of the badged row above
  * ([UNDER_BADGE]) instead. [leading] goes at the row's start, before the title, [ROW_MARK] a side,
@@ -289,7 +269,7 @@ internal fun ValueRow(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.primary.copy(alpha = alpha),
         )
-        summary?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = color) }
+        summary?.let { Description("row:$title", it, color = color) }
     }
 }
 
@@ -300,7 +280,8 @@ internal fun ValueRow(
  * value in [details] is read with its button, and has a line under the group saying what it does
  * while it is the one chosen ([ChoiceDetails]). The buttons stay in one row at any font size
  * (#821). A setting whose choices are many or long, or described one by one, is a
- * [ValueRow] opening a dialog instead (`design/design.md`, *Settings screen*). Not [enabled], none
+ * [ValueRow] opening a dialog instead (`design/design.md`, *Settings screen*). The summary folds
+ * ([Description], #847); the line under the buttons does not. Not [enabled], none
  * can be chosen; a value in [disabled], that one; [below] comes under the line of what the value
  * does. A value in [spoken] is read by that in place of its label ([ChoiceButtonGroup]).
  */
@@ -327,7 +308,7 @@ internal fun <T> ChoiceButtonsRow(
             color = color,
             modifier = Modifier.testTag(ROW_TITLE_TAG),
         )
-        summary?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = color) }
+        summary?.let { Description("row:$title", it, color = color) }
         ChoiceButtonGroup(
             choices,
             selected,

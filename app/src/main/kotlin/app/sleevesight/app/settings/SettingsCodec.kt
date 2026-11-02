@@ -82,6 +82,8 @@ internal object SettingsCodec {
     private val GROUNDING_DETAILS = booleanPreferencesKey("developer.grounding_details")
     private val LINK_STYLE = stringPreferencesKey("developer.link_style")
     private val MARK_DEVELOPER_ITEMS = booleanPreferencesKey("developer.mark_items")
+    private val FOLD_DESCRIPTIONS = booleanPreferencesKey("developer.fold_descriptions")
+    private val START_FOLDED = booleanPreferencesKey("developer.start_folded")
     private val THEME = stringPreferencesKey("display.theme")
     private val THEME_BUTTON = booleanPreferencesKey("display.theme_button")
     private val FONT = stringPreferencesKey("display.font")
@@ -145,6 +147,8 @@ internal object SettingsCodec {
             reportButton = reportButtonOf(prefs, defaults),
             linkStyle = enumOf(prefs[LINK_STYLE]) ?: defaults.linkStyle,
             markDeveloperItems = prefs[MARK_DEVELOPER_ITEMS] ?: defaults.markDeveloperItems,
+            foldDescriptions = prefs[FOLD_DESCRIPTIONS] ?: defaults.foldDescriptions,
+            startFolded = prefs[START_FOLDED] ?: defaults.startFolded,
             theme = enumOf(prefs[THEME]) ?: defaults.theme,
             themeButton = prefs[THEME_BUTTON] ?: defaults.themeButton,
             font = enumOf(prefs[FONT]) ?: defaults.font,
@@ -297,6 +301,10 @@ internal object SettingsCodec {
         if (moved { it.markDeveloperItems }) {
             prefs.put(MARK_DEVELOPER_ITEMS, settings.markDeveloperItems, defaults.markDeveloperItems)
         }
+        if (moved { it.foldDescriptions }) {
+            prefs.put(FOLD_DESCRIPTIONS, settings.foldDescriptions, defaults.foldDescriptions)
+        }
+        if (moved { it.startFolded }) prefs.put(START_FOLDED, settings.startFolded, defaults.startFolded)
         if (moved { it.theme }) prefs.put(THEME, settings.theme.name, defaults.theme.name)
         if (moved { it.themeButton }) prefs.put(THEME_BUTTON, settings.themeButton, defaults.themeButton)
         if (moved { it.font }) prefs.put(FONT, settings.font.name, defaults.font.name)

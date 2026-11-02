@@ -11,6 +11,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -385,7 +386,9 @@ private fun Notices(
 
 /**
  * The settings' sections, all closed at first, and the links between them ([SettingsNavigator]);
- * opened at [landOn], if any, once per visit (a rotation does not land again).
+ * opened at [landOn], if any, once per visit (a rotation does not land again). Their descriptions
+ * fold to one line ([DescriptionFolds], #847), as the developer switches *Foldable descriptions* and
+ * *Start folded* have them.
  */
 @Suppress("LongParameterList") // What the sections show and change.
 @Composable
@@ -399,6 +402,13 @@ private fun SettingsContent(
     open: (SettingsDialog) -> Unit,
 ) {
     val folds = rememberSectionFolds()
+    val descriptions = rememberDescriptionFolds()
+    val descriptionsShown =
+        remember(descriptions, settings.foldDescriptions, settings.startFolded) {
+            FoldsShown(descriptions, settings.startFolded).takeIf { settings.foldDescriptions }
+        }
+    // A search's own folds and unfolds go with it: cleared, it leaves each as before it (#847).
+    LaunchedEffect(folds.searching) { if (!folds.searching) descriptions.endSearch() }
     ProvideSettingsNavigator(folds) {
         val navigator = LocalSettingsNavigator.current
         var opened by rememberSaveable { mutableStateOf(false) }
@@ -426,7 +436,9 @@ private fun SettingsContent(
                 null
             }
         found?.let { SearchAnnouncement(folds.query, it.size) }
-        SettingsColumn(settings, keys, navigation, unavailable, Found(listed, found), folds, update, open)
+        CompositionLocalProvider(LocalDescriptionFolds provides descriptionsShown) {
+            SettingsColumn(settings, keys, navigation, unavailable, Found(listed, found), folds, update, open)
+        }
     }
 }
 

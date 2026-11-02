@@ -29,6 +29,11 @@ import app.sleevesight.core.settings.Settings
  * - *Mark developer items* (#536), on by default: everything only developer mode shows, this
  *   section among it, outlined in teal with a small *Developer* tag ([Settings.markDeveloperItems],
  *   `DeveloperMark`).
+ * - *Foldable descriptions* and *Start folded* (#847), both on by default: a trial of the
+ *   settings' descriptions folded to one line ([Description]), to be removed or kept after it.
+ *   Off, *Foldable descriptions* shows every description in full, as before; *Start folded*, used
+ *   only while it is on, opens them unfolded, still folding with a tap
+ *   ([Settings.foldDescriptions], [Settings.startFolded]).
  * - *Developer mode*, which turns developer mode off, and with it every developer option, and
  *   hides the section again.
  */
@@ -75,6 +80,18 @@ internal fun DeveloperSection(
         summary = stringResource(R.string.settings_mark_developer_summary),
         checked = settings.markDeveloperItems,
     ) { on -> update { it.copy(markDeveloperItems = on) } }
+    // A trial for #847, to be removed or kept after it.
+    SwitchRow(
+        title = stringResource(R.string.settings_fold_descriptions),
+        summary = stringResource(R.string.settings_fold_descriptions_summary),
+        checked = settings.foldDescriptions,
+    ) { on -> update { it.copy(foldDescriptions = on) } }
+    SwitchRow(
+        title = stringResource(R.string.settings_start_folded),
+        summary = stringResource(R.string.settings_start_folded_summary),
+        checked = settings.startFolded,
+        onChange = { on: Boolean -> update { it.copy(startFolded = on) } }.takeIf { settings.foldDescriptions },
+    )
     SwitchRow(
         title = stringResource(R.string.settings_developer_mode),
         summary = stringResource(R.string.settings_developer_mode_summary),
