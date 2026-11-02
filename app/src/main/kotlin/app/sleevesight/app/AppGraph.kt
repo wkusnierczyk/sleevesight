@@ -536,6 +536,8 @@ class AppGraph internal constructor(
             modelName = ListedModelNames(appContext)::of,
             // Their web searches and AI calls (#801), counted with *Ask AI*'s for the tester report.
             paid = { aiSearches.counted(it) },
+            // Each reason or list asked, or served from the cache, in the diagnostics' events (#851).
+            events = { diagnostics.log.record(it) },
         )
 
     /**
@@ -569,6 +571,9 @@ class AppGraph internal constructor(
                     autoSearches.release(track, kind)
                 }
             },
+            // Each question asked, not asked once its gates closed, or served from what was kept, in
+            // the diagnostics' events (#851).
+            events = { diagnostics.log.record(it) },
         )
     }
 

@@ -2,9 +2,12 @@ package app.sleevesight.app.pipeline
 
 import app.sleevesight.core.ai.ModelNames
 import app.sleevesight.core.model.NormalizedTrack
+import app.sleevesight.core.pipeline.AiOutcome
+import app.sleevesight.core.pipeline.AiQuestion
 import app.sleevesight.core.pipeline.AiSearches
 import app.sleevesight.core.pipeline.CardKey
 import app.sleevesight.core.pipeline.ClearEpoch
+import app.sleevesight.core.pipeline.PipelineEvent
 import app.sleevesight.core.pipeline.PipelineParts
 import app.sleevesight.core.pipeline.QuestionCost
 import app.sleevesight.core.pipeline.SearchState
@@ -182,8 +185,21 @@ interface AiSearchFeed {
  * [forget] clears under ([ShownSearches.publish]), so one that passed the check cannot land after the
  * clear, and one read between the epoch's advance and [forget] is not shown after it.
  * *Clear history* forgets the stops too.
+ *
+ * Each question that goes to the AI service, and each answer served from what was kept, is told to
+ * [events], the diagnostics' log (#851): an [PipelineEvent.AiAsked] as its call starts, an
+ * [PipelineEvent.AiEnded] as it ends (answered, nothing found, failed, or stopped); an automatic one
+ * whose gates closed before its call, an [PipelineEvent.AiNotAsked]; and an [PipelineEvent.AiKept]
+ * when a kept answer is served: read from the cache before a call, or shown in a panel for a track
+ * other than the one its call was made for (a genre's definition, the same for every track), or read
+ * from the cache for it, once per track for as long as the process lives (the last few hundred). An
+ * answer shown again for the track its call was made for is not told again. None is told for work
+ * started before a *Clear history*, whose clear drops the log.
  */
-@Suppress("LongParameterList") // Where searches are made and checked, where they run, the names, and the time.
+@Suppress(
+    "LongParameterList", // Where searches are made and checked, where they run, the names, the time, the log.
+    "TooManyFunctions", // Each step of a search, its cache, and what the log is told (#851).
+)
 class AppAiSearches(
     private val parts: StateFlow<PipelineParts?>,
     private val settings: StateFlow<Settings?>,
@@ -194,6 +210,7 @@ class AppAiSearches(
     private val clock: Clock = Clock.System,
     private val automaticGate: (TrackState, SearchKind, String?) -> Boolean = { _, _, _ -> true },
     private val deferred: (TrackState, SearchKind, String?) -> Unit = { _, _, _ -> },
+    private val events: (PipelineEvent) -> Unit = {},
 ) : AiSearchFeed {
     // A search's key, null with no AI service ready; and whether it is offered at all (the pipeline
     // and settings in, *Show insights* on).
@@ -233,6 +250,13 @@ class AppAiSearches(
         object : LinkedHashMap<Declined, Unit>(STOPS_KEPT, LOAD, true) {
             override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Declined, Unit>?): Boolean =
                 size > STOPS_KEPT
+        }
+
+    // The answers settled for a track, or told to the log as served to it, the last [STOPS_KEPT],
+    // under [lock]: one shown for a track not here is a kept answer served (#851).
+    private val served =
+        object : LinkedHashMap<Served, Unit>(STOPS_KEPT, LOAD, true) {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Served, Unit>?): Boolean = size > STOPS_KEPT
         }
 
     // The searches as made now, and [track]'s search of [kind]'s key (of [genre], a definition's)
@@ -275,7 +299,7 @@ class AppAiSearches(
                     key == null -> AiSearch.Unready
                     entry == null -> AiSearch.Offered
                     expired(entry.writtenAt, lifetime) -> AiSearch.Offered.also { drop(key) }
-                    else -> shownAs(entry.state, modelName(key.model))
+                    else -> shownAs(entry.state, modelName(key.model)).also { serve(key, kind, genre, track, entry) }
                 }
             }
     }
@@ -346,7 +370,10 @@ class AppAiSearches(
     // no *Clear history* came since it started and it was not stopped (nor cancelled: a job stopped
     // may outlive a tap that asks again). One [automatic] asks only if its gates still hold once the
     // cache missed, else it is handed back ([deferred]) once out of [asking].
-    @Suppress("CyclomaticComplexMethod") // Its paths (kept, handed back, cleared since, asked), each state checked.
+    @Suppress(
+        "CyclomaticComplexMethod", // Its paths (kept, handed back, cleared since, asked), each state checked.
+        "LongMethod", // Each path told to the log as it is taken (#851).
+    )
     private suspend fun run(
         searches: AiSearches,
         key: CardKey,
@@ -355,9 +382,23 @@ class AppAiSearches(
         val kind = asked.kind
         val track = asked.track
         val work = currentCoroutineContext()
+        val question = AiQuestion.Search(kind, asked.genre)
+        val log: (PipelineEvent) -> Unit = { event ->
+            shown.whenCurrent({ shown.current(work, epoch) }) { events(event) }
+        }
         val show: (SearchState, Instant) -> Unit = { state, at ->
+            // Settled for this track before it shows, so its panel does not take it for one kept.
+            if (state.settled) synchronized(lock) { served[Served.of(key, track)] = Unit }
             shown.publish(key, Entry(state, at)) {
                 shown.current(work, epoch) && synchronized(lock) { key !in stopped && work.isActive }
+            }
+        }
+        // The question's call, once made: when it started, and what it cost so far.
+        var called: Instant? = null
+        var cost = QuestionCost()
+        val ended: (AiOutcome, String?) -> Unit = { outcome, failure ->
+            called?.let { at ->
+                log(PipelineEvent.AiEnded(track.lookupKey, question, outcome, cost, clock.now() - at, failure))
             }
         }
         try {
@@ -366,37 +407,67 @@ class AppAiSearches(
                 asked.automatic &&
                     !(automaticGate(track, kind, asked.genre) && keyOf(track, kind, asked.genre)?.second == key)
             if (kept != null) {
+                log(keptServed(key, question, track, kept.state, kept.writtenAt))
                 show(kept.state, kept.writtenAt ?: clock.now())
             } else if (gated) {
+                log(PipelineEvent.AiNotAsked(track.lookupKey, question))
                 work[Job]?.let { asking.remove(key, it) }
                 deferred(track, kind, asked.genre)
             } else if (shown.current(work, epoch)) {
                 // Not paid for once a *Clear history* came since it started, whose clear it may have
                 // missed (a tap during `forget`): it would show nothing, and stay under way meanwhile.
-                searches.search(
-                    key,
-                    kind,
-                    track,
-                    asked.facts,
-                    show,
-                    settle = {
-                        synchronized(lock) {
-                            key !in stopped &&
-                                work.isActive &&
-                                settled.add(key)
-                        }
-                    },
-                    asking = AiSearches.Asking.of(settings.value, asked.automatic),
-                    counted = { cost -> costs.update { it + cost } },
-                )
+                log(PipelineEvent.AiAsked(track.lookupKey, question, asked.automatic, key.provider, key.model))
+                called = clock.now()
+                val end =
+                    searches.search(
+                        key,
+                        kind,
+                        track,
+                        asked.facts,
+                        show,
+                        settle = {
+                            synchronized(lock) {
+                                key !in stopped &&
+                                    work.isActive &&
+                                    settled.add(key)
+                            }
+                        },
+                        asking = AiSearches.Asking.of(settings.value, asked.automatic),
+                        counted = { paid ->
+                            cost += paid
+                            costs.update { it + paid }
+                        },
+                    )
+                ended(outcomeOf(end), (end as? SearchState.Failed)?.reason)
             }
         } catch (e: CancellationException) {
+            ended(AiOutcome.STOPPED, null)
             throw e
         } catch (
             // A bug, not the network, which the search maps to a state: shown as failed, offered again.
             @Suppress("TooGenericExceptionCaught") e: Exception,
         ) {
-            show(SearchState.Failed(e::class.simpleName ?: FAILED), clock.now())
+            val reason = e::class.simpleName ?: FAILED
+            ended(AiOutcome.FAILED, reason)
+            show(SearchState.Failed(reason), clock.now())
+        }
+    }
+
+    // [entry], settled, shown for [track] by its panel (#851): a kept answer served, told to the log
+    // once per track, unless it was settled for this track (its own call, or a read before its call,
+    // told then) or is no longer shown.
+    private fun serve(
+        key: CardKey,
+        kind: SearchKind,
+        genre: String?,
+        track: TrackState,
+        entry: Entry,
+    ) {
+        if (!entry.state.settled) return
+        val first = synchronized(lock) { served.put(Served.of(key, track), Unit) == null }
+        if (first) {
+            val event = keptServed(key, AiQuestion.Search(kind, genre), track, entry.state, entry.writtenAt)
+            shown.whenCurrent({ shown.entries.value[key] === entry }) { events(event) }
         }
     }
 
@@ -410,7 +481,10 @@ class AppAiSearches(
         asking.values.forEach { it.cancel() }
         shown.clear()
         looked.clear()
-        synchronized(lock) { declined.clear() }
+        synchronized(lock) {
+            declined.clear()
+            served.clear()
+        }
     }
 
     // The search kept in the synthesis cache for [key], read once, unless one is shown already.
@@ -467,6 +541,20 @@ class AppAiSearches(
         }
     }
 
+    // What a kept answer is served to (#851): its key and the track, by its identity and length.
+    private data class Served(
+        val key: CardKey,
+        val track: NormalizedTrack,
+        val duration: Duration?,
+    ) {
+        companion object {
+            fun of(
+                key: CardKey,
+                track: TrackState,
+            ) = Served(key, track.normalized, track.nowPlaying.duration)
+        }
+    }
+
     private companion object {
         const val FAILED = "failed"
 
@@ -508,6 +596,15 @@ internal class ShownSearches {
             shown.update { if (!replace && key in it) it else it.with(key, entry) }
         }
     }
+
+    /**
+     * Runs [action] if [current] holds, checked under the lock [clear] holds: a diagnostics event
+     * (#851), so one of work from before *Clear history* is never told after its clear.
+     */
+    fun whenCurrent(
+        current: () -> Boolean,
+        action: () -> Unit,
+    ) = synchronized(lock) { if (current()) action() }
 
     /** Drops [key]'s search. */
     fun remove(key: CardKey) = synchronized(lock) { shown.update { it - key } }
@@ -557,6 +654,39 @@ private fun PipelineParts.searches(
     answers: AiSearchAnswers,
     clock: Clock,
 ): AiSearches = AiSearches(ai, cache, hasher, answers, clock, webSearch)
+
+// A kept answer of [key], in [state], written at [writtenAt], served for [track] (#851).
+private fun keptServed(
+    key: CardKey,
+    question: AiQuestion,
+    track: TrackState,
+    state: SearchState,
+    writtenAt: Instant?,
+) = PipelineEvent.AiKept(track.lookupKey, question, key.provider, key.model, writtenAt, state.way?.automatic)
+
+// The lookup key of the track, which the diagnostics' events carry.
+private val TrackState.lookupKey: String get() = normalized.lookupKey
+
+// Whether [this] is an answer, usable or not, and not a question under way or failed.
+private val SearchState.settled: Boolean get() = this is SearchState.Answered || this is SearchState.NothingFound
+
+// How [this] answer was asked; null for none.
+private val SearchState.way: SearchWay?
+    get() =
+        when (this) {
+            is SearchState.Answered -> way
+            is SearchState.NothingFound -> way
+            else -> null
+        }
+
+// How a question ended (#851), as its last state says: null, stopped before it settled.
+private fun outcomeOf(state: SearchState?): AiOutcome =
+    when (state) {
+        is SearchState.Answered -> AiOutcome.ANSWERED
+        is SearchState.NothingFound -> AiOutcome.NOTHING_FOUND
+        is SearchState.Failed -> AiOutcome.FAILED
+        is SearchState.Searching, null -> AiOutcome.STOPPED
+    }
 
 /** A search shown, and when it was written. */
 internal class Entry(
