@@ -310,14 +310,7 @@ With several players followed, the home screen shows the one playing; with none 
 
 **Not followed.** To find your music players, Sleevesight looks at apps that report what they play (playing or paused) and checks whether it is music, a track with a title and an artist: from an app not switched on, it reads what the app says it is playing only until the app reports music, and then nothing more of what it plays until Sleevesight starts afresh (not each time you open it), or the app is uninstalled and installed again. A new player is added under *Players* switched off. Sleevesight does not follow a player that is off: it does not track what the player plays, it keeps or sends none of it, and the home screen does not show it. While only such players play, the home screen shows what it shows with nothing playing ([Nothing playing](#nothing-playing)), the player dimmed, with *Enable in Settings*, or, with *Only enabled players on Home* on, without the player.
 
-**Not supported.**
-
-- A player that publishes no media session cannot be read at all.
-- A player whose session reports no artist, as most video apps do, is never listed.
-- Calls from the phone app, and sessions Android marks as voice calls, are never read, whatever the switch. A calling app that shows its call as an ordinary media session is not recognised as a call, and an app you follow that also makes calls may show leftover caller details as a track for a moment after a call.
-- A player that publishes no queue gets no looking ahead at its next track.
-
-Playing, pausing and skipping from inside Sleevesight are not built yet; use the player, or tap the player's name to open it.
+**Not supported.** A player that publishes no media session, or whose session reports no artist (most video apps), is never listed; calls are never read; a player that publishes no queue gets no looking ahead; and playing, pausing and skipping from inside Sleevesight are not built yet: use the player, or tap the player's name to open it. [Limitations]({{ '/docs/limitations/#players' | relative_url }}) says why, with the players' other limits.
 
 ## When something is missing or fails
 
