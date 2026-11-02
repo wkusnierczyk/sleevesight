@@ -148,6 +148,15 @@ class GenreDefinitionsTest {
         }
 
     @Test
+    fun `a failed lookup of an article the vocabulary names is not kept, and the next panel asks again`() =
+        runTest {
+            val articles = Articles { Lookup.Failed("offline") }
+            val definitions = GenreDefinitions(articles, vocabulary, kept = MemoryArtistResults())
+            repeat(2) { assertEquals(Lookup.Failed(GenreDefinitions.FAILED), definitions.lookup("acoustic")) }
+            assertEquals(listOf("Acoustic music", "Acoustic music"), articles.titles)
+        }
+
+    @Test
     fun `the articles the vocabulary names, each for a genre MusicBrainz cannot define`() {
         // #852, each article's lead checked on 2026-11-02 to say what the tag means. Each tag has no
         // MusicBrainz genre that fits, or, for *classic rock* and *singer-songwriter*, a genre whose

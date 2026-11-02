@@ -68,7 +68,8 @@ class GenreVocabulary(
     /**
      * The MusicBrainz genre (its MBID, CC0) of the genre [identity] stands for ([identity]), through
      * which its definition is found (#523: the genre's Wikidata item, then its English Wikipedia
-     * article); null for a genre that is not one of MusicBrainz's.
+     * article), unless the vocabulary names an article for it ([wikipediaArticle], #852); null for a
+     * genre that is not one of MusicBrainz's.
      */
     fun musicBrainzGenre(identity: String): String? = musicBrainzOf[identity]
 

@@ -101,6 +101,17 @@ class WikipediaGenresTest {
         }
 
     @Test
+    fun `an article the vocabulary names that does not exist is no definition`() =
+        runTest {
+            val missing = """{"query":{"pages":[{"title":"Acoustic music","missing":true}]}}"""
+            val wikipedia = WikipediaClient(ReplayNetClient.ok(missing))
+            assertEquals(
+                Lookup.NotFound,
+                WikipediaGenres(Wikidata(emptyMap(), emptyMap()), wikipedia).article("Acoustic music"),
+            )
+        }
+
+    @Test
     fun `a lead that opens on an empty line still gives its first sentences`() {
         assertEquals(
             "A singer-songwriter is a musician who writes their own material.",
