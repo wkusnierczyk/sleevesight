@@ -44,7 +44,13 @@ The app runs no server and has no accounts: nothing you play reaches its develop
 ## First run
 
 1. **The first-run screen** says what the app reads, what leaves the phone and to whom, and links the privacy policy.
+
+   {% include screenshots.html ids="first-run-top" %}
+
 2. **Notification access.** Android lets an app list what other apps are playing only with notification access. Under the text, tap *Open notification access*, turn on Sleevesight in the settings that open, and come back. A player tells Android what it is playing (the track, artists, album, cover and position) in a *media session*, and Android shows a media session only to apps with notification access. Sleevesight reads the players' media sessions, not the notifications: on Android 12 and newer, delivery of notifications to Sleevesight is disabled at system level and Sleevesight receives no notifications, and on older versions it ignores them, so it never reads your messages or other apps' alerts. It does not receive the audio. Right above the button, under *Why notification access*, the first-run screen explains this before Android's settings open. Once access is on, the screen offers *Continue*. Why it needs this access, and why it does not sign in to Spotify instead: the [frequently asked questions]({{ '/docs/faq/' | relative_url }}).
+
+   {% include screenshots.html ids="first-run-access-off first-run-access-on" %}
+
 3. **Players.** Spotify is followed by default. More players appear under *Players* in Settings, by name and switched off, once any of them has played music (a track with a title and an artist) while Sleevesight has notification access turned on; switch those players on to follow them as well. Most video apps, which report no artist, and calls from the phone app are not listed.
 4. **Sources.** MusicBrainz and Wikipedia need no key and are turned on by default. Last.fm and the Exa web search need your own keys; without them they are off and cannot be switched on, which is fine for the test. If you want to enable them, create API keys at their respective API consoles, and save each in its key row, under *Secrets* in Settings (each section of Settings is a chip with its name: a tap opens it, and *Close* closes it). To enter several keys at once, open [sleevesight.app/api-keys](https://sleevesight.app/api-keys) on a computer: it turns them into one QR code, which *Load keys*, under *Secrets*, reads. The page sends nothing anywhere. Saving a key does not switch its service on: switch it on under *Sources* once its key is saved. See [Setting up external services]({{ '/docs/services/' | relative_url }}) for the full steps.
 5. **The AI service.** Save the API key of one service (Anthropic, OpenAI or Google) in its key row under *Secrets*, then switch that service on under *AI services*: until its key is saved, a service's switch is off and cannot be switched on, and the app shows the sources but writes no insight. Services are exclusive: at most one can be enabled at a time. You can use your own key, or the key we give you (below).
@@ -67,7 +73,13 @@ So that you need not pay for testing, we can give you an Anthropic key of your o
 - **Read aloud.** The speaker beside the *Key insights* heading has your phone's text-to-speech voice read the insight, the music lowered meanwhile (or paused: *Music while reading aloud*, under *Insights*); music on a speaker through Spotify Connect, whose volume the phone cannot set, is paused instead. The voice is the phone's own built-in one, so it sounds only as good as the phone's voice: not a natural or studio voice. It makes no AI call. A sentence the sources do not back, or one from the AI model's own knowledge, is read after "Unverified:".
 - **Theme.** The button beside the cogwheel shows the current theme; a tap opens a menu of light, dark and the phone's theme.
 - **Citations.** Each sentence ends with chips for the sources it cites; a tap jumps to the evidence under *Sources*. A sentence that cites nothing is dimmed. A note under the insight says how many sentences the sources do not back, only when there are any; *Show grounding details*, in the *Developer* settings, shows the check's full counts instead, and under *Sources* every source's status and the rejected matches.
+
+  {% include screenshots.html ids="key-insights" %}
+
 - **Diagnostics.** The test build starts in developer mode, so Settings shows a *Developer* section, last. If it is not there (its *Developer mode* switch hides it), open *About* and tap *Version* seven times to bring it back. Under *Developer*, turn on *Diagnostics*, then *Open diagnostics*: what the app did since it started (each source's outcome and time, AI calls, the citation check), the track changes recorded, and what skip detection has learned. *Export* writes it to a file where you choose, which may be a cloud folder; nothing of it leaves the phone otherwise. *Report button*, *Auto* in the test build, shows the report button on the home screen (*What to tell us*, below).
+
+  {% include screenshots.html ids="diagnostics-events" %}
+
 
 ## What to tell us
 
