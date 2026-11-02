@@ -31,6 +31,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.coroutines.AbstractCoroutineContextElement
+import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Clock
 import kotlin.time.Duration
@@ -175,9 +177,11 @@ interface AiSearchFeed {
  * back to [deferred] with its kind and genre, once it is no longer under way (so a start at once is
  * not taken for it), to start later as if it had not been tried (off screen, on return). A tap is
  * gated by none of these: not the app's visibility, the setting, nor a genre's definition.
- * Each search is marked with [epoch], and after *Clear history* ([forget]) nothing it finds is shown
- * or kept: a state is shown only under the lock [forget] clears under ([ShownSearches.publish]), so
- * one that passed the check cannot land after the clear. *Clear history* forgets the stops too.
+ * Each search, and each read of the cache, is marked with [epoch] and the count of clears, and after
+ * *Clear history* ([forget]) nothing it finds is shown or kept: a state is shown only under the lock
+ * [forget] clears under ([ShownSearches.publish]), so one that passed the check cannot land after the
+ * clear, and one read between the epoch's advance and [forget] is not shown after it.
+ * *Clear history* forgets the stops too.
  */
 @Suppress("LongParameterList") // Where searches are made and checked, where they run, the names, and the time.
 class AppAiSearches(
@@ -293,7 +297,7 @@ class AppAiSearches(
         if (!declines && open(key) && !asking.containsKey(key)) {
             val job =
                 scope.launch(
-                    epoch.mark(),
+                    epoch.mark() + shown.mark(),
                     start = CoroutineStart.LAZY,
                 ) { run(searches, key, Asked(kind, genre, track, facts, automatic)) }
             if (asking.putIfAbsent(key, job) == null) {
@@ -342,6 +346,7 @@ class AppAiSearches(
     // no *Clear history* came since it started and it was not stopped (nor cancelled: a job stopped
     // may outlive a tap that asks again). One [automatic] asks only if its gates still hold once the
     // cache missed, else it is handed back ([deferred]) once out of [asking].
+    @Suppress("CyclomaticComplexMethod") // Its paths (kept, handed back, cleared since, asked), each state checked.
     private suspend fun run(
         searches: AiSearches,
         key: CardKey,
@@ -352,7 +357,7 @@ class AppAiSearches(
         val work = currentCoroutineContext()
         val show: (SearchState, Instant) -> Unit = { state, at ->
             shown.publish(key, Entry(state, at)) {
-                epoch.isCurrent(work) && synchronized(lock) { key !in stopped && work.isActive }
+                shown.current(work, epoch) && synchronized(lock) { key !in stopped && work.isActive }
             }
         }
         try {
@@ -365,7 +370,9 @@ class AppAiSearches(
             } else if (gated) {
                 work[Job]?.let { asking.remove(key, it) }
                 deferred(track, kind, asked.genre)
-            } else {
+            } else if (shown.current(work, epoch)) {
+                // Not paid for once a *Clear history* came since it started, whose clear it may have
+                // missed (a tap during `forget`): it would show nothing, and stay under way meanwhile.
                 searches.search(
                     key,
                     kind,
@@ -396,7 +403,8 @@ class AppAiSearches(
     /**
      * Forgets the searches shown and the stops, and stops those under way, for *Clear history* (#547);
      * the cache's are deleted with it. After the epoch's advance: a search that checked it before
-     * shows its state before this clears it, never after ([ShownSearches.publish]).
+     * shows its state before this clears it, never after ([ShownSearches.publish]); one started since
+     * the advance, before this, shows nothing after it ([ShownSearches.current]).
      */
     fun forget() {
         asking.values.forEach { it.cancel() }
@@ -413,12 +421,12 @@ class AppAiSearches(
     ) {
         if (key in shown.entries.value || !looked.add(key)) return
         val searches = parts.value?.searches(answers, clock) ?: return
-        scope.launch(epoch.mark()) {
+        scope.launch(epoch.mark() + shown.mark()) {
             val work = coroutineContext
             val kept = searches.kept(key, kind, track)?.takeIf { !expired(it.writtenAt) }
             if (kept != null) {
                 shown.publish(key, Entry(kept.state, kept.writtenAt ?: clock.now()), replace = false) {
-                    epoch.isCurrent(work)
+                    shown.current(work, epoch)
                 }
             }
         }
@@ -508,8 +516,39 @@ internal class ShownSearches {
     fun removeSearching(key: CardKey) =
         synchronized(lock) { shown.update { if (it[key]?.state is SearchState.Searching) it - key else it } }
 
-    /** Drops every search shown (*Clear history*). */
-    fun clear() = synchronized(lock) { shown.value = emptyMap() }
+    // How many times [clear] ran, counted under the lock [publish] checks under. *Clear history*
+    // advances the epoch before it clears the caches and only then calls `AppAiSearches.forget`, so
+    // work started in between (a panel asking meanwhile) carries the new epoch, and could read the
+    // cache before its clear and show what it read after it (#835): the count, which the clear moves,
+    // tells.
+    @Volatile
+    private var clears = 0L
+
+    // The count of clears work started after ([mark]); its children inherit it.
+    private class Clears(
+        val count: Long,
+    ) : AbstractCoroutineContextElement(Clears) {
+        companion object Key : CoroutineContext.Key<Clears>
+    }
+
+    /** Marks work with the count of clears, when it starts, as the epoch marks it. */
+    fun mark(): CoroutineContext = Clears(clears)
+
+    /**
+     * Whether [work] started after the last *Clear history*: in [epoch] now, and no clear since it
+     * started ([mark]). Work not marked with the count counts as current, as with the epoch.
+     */
+    fun current(
+        work: CoroutineContext,
+        epoch: ClearEpoch,
+    ): Boolean = epoch.isCurrent(work) && work[Clears]?.count.let { it == null || it == clears }
+
+    /** Drops every search shown (*Clear history*), and counts the clear ([clears]). */
+    fun clear() =
+        synchronized(lock) {
+            clears++
+            shown.value = emptyMap()
+        }
 }
 
 // The searches these parts make, their answers read by [answers], their times by [clock], searching
