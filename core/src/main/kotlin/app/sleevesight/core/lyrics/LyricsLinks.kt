@@ -189,17 +189,33 @@ fun lyricsLinks(
 
 /**
  * The lyrics pages among [track]'s web search results (#801, *Ask AI*'s first step, at no cost):
- * each result's address that is a page on a site of the whitelist that exists to host lyrics
- * ([LyricsSite.forLyrics], #824), chosen as MusicBrainz's are ([pages]). The results are those the
- * web search source kept as about the recording ([SourceId.WEB]'s evidence), so the page is this
- * song's, by the filter's check.
+ * each result's address that is a song's page ([webSongPage], #824), chosen as MusicBrainz's are
+ * ([pages]). The results are those the web search source kept as about the recording
+ * ([SourceId.WEB]'s evidence), so the page is this song's, by the filter's check.
  */
 fun webPages(
     track: TrackState,
     accentFolder: AccentFolder,
 ): List<LyricsLink> {
     val results = (track.sources[SourceId.WEB] as? SourceState.Done)?.result?.evidence.orEmpty()
-    return pages(results.mapNotNull { it.url }, track.normalized.artists, accentFolder).filter { it.site.forLyrics }
+    return pages(results.mapNotNull { it.url }.filter(::webSongPage), track.normalized.artists, accentFolder)
+}
+
+/**
+ * Whether [url], a web search result, is a song's lyrics page (#824): `https` on a site of the
+ * whitelist that exists to host lyrics ([LyricsSite.forLyrics]) and, where the address tells, a
+ * song's page rather than an artist's or an album's: on Genius one path segment ending in
+ * `-lyrics`; on Musixmatch none of its segments `artist` or `album`.
+ */
+internal fun webSongPage(url: String): Boolean {
+    val (host, path) = parse(url) ?: return false
+    val segments = path.split('/').filter { it.isNotEmpty() }
+    return when (val site = LyricsSite.of(host)) {
+        null -> false
+        LyricsSite.GENIUS -> segments.size == 1 && segments[0].endsWith("-lyrics", ignoreCase = true)
+        LyricsSite.MUSIXMATCH -> segments.isNotEmpty() && segments.none { it == "artist" || it == "album" }
+        else -> site.forLyrics
+    }
 }
 
 /**
