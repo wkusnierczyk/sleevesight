@@ -10,7 +10,9 @@ import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.synthesis.InsightPrompt
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.testTimeSource
 import kotlin.test.Test
@@ -18,7 +20,10 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
-/** A written insight names what it was written with, for a problem report (#390). */
+/**
+ * A written insight names what it was written with, for a problem report (#390) and its byline
+ * (#811); one being written names the model being called, for the byline while it streams.
+ */
 @OptIn(ExperimentalCoroutinesApi::class)
 class WrittenByTest {
     private val sundown = nowPlaying("Sundown", "Gordon Lightfoot", album = "Sundown")
@@ -64,5 +69,21 @@ class WrittenByTest {
 
             assertTrue(written.cached)
             assertEquals(expected, written.writtenBy)
+        }
+
+    @Test
+    fun `an insight being written names the model being called, from its first state`() =
+        runTest {
+            val pipeline = pipeline(PipelineCache.None)
+            val states = mutableListOf<InsightState?>()
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+                pipeline.state.collect { states += it?.insight }
+            }
+
+            pipeline.run(sundown, write = true)
+
+            val writing = states.filterIsInstance<InsightState.Writing>()
+            assertTrue(writing.isNotEmpty())
+            assertEquals(listOf("claude-opus-5-5"), writing.map { it.model }.distinct())
         }
 }
