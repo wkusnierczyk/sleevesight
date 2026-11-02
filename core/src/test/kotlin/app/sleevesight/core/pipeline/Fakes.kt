@@ -130,6 +130,9 @@ class MemoryCache : PipelineCache {
 
     /** When each card was written, where the writer said. */
     val keptAt = mutableMapOf<CardKey, Instant>()
+
+    /** What the rewrite that wrote each card changed, where it said (#854). */
+    val rewrittenParts = mutableMapOf<CardKey, Set<RewritePart>>()
     var failing = false
 
     override suspend fun result(
@@ -153,6 +156,10 @@ class MemoryCache : PipelineCache {
 
     override suspend fun card(key: CardKey): String? = cards[key]
 
+    // No time, as before #854: what a rewrite changed, where it said.
+    override suspend fun keptCard(key: CardKey): KeptCard? =
+        cards[key]?.let { KeptCard(it, null, rewrittenParts[key].orEmpty()) }
+
     override suspend fun keep(
         key: CardKey,
         text: String,
@@ -167,5 +174,15 @@ class MemoryCache : PipelineCache {
     ) {
         cards[key] = text
         keptAt[key] = writtenAt
+    }
+
+    override suspend fun keep(
+        key: CardKey,
+        text: String,
+        writtenAt: Instant,
+        rewritten: Set<RewritePart>,
+    ) {
+        keep(key, text, writtenAt)
+        if (rewritten.isEmpty()) rewrittenParts.remove(key) else rewrittenParts[key] = rewritten
     }
 }

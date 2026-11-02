@@ -53,7 +53,8 @@ class GroundingNoteTest {
         vararg args: Any,
     ) = app.resources.getQuantityString(id, count, *args)
 
-    private fun unbacked(count: Int) = plural(R.plurals.home_note_unbacked, count, count)
+    // One text for any number of dimmed sentences (#854).
+    private val unbacked get() = text(R.string.home_note_unbacked)
 
     private fun show(
         insight: InsightState.Written,
@@ -88,7 +89,7 @@ class GroundingNoteTest {
 
     // No note of any count, "0 sentences …" included.
     private fun assertNoUnbackedNote() {
-        assertTrue(unbacked(1).contains(NOT_BACKED) && unbacked(2).contains(NOT_BACKED))
+        assertTrue(unbacked.contains(NOT_BACKED))
         assertEquals(0, count(NOT_BACKED, substring = true))
     }
 
@@ -102,15 +103,15 @@ class GroundingNoteTest {
         }
 
     @Test
-    fun anUncitedSentenceGetsAPlainNoteInTheSingular() =
+    fun anUncitedSentenceGetsThePlainNote() =
         show(written("It was recorded in 1973 [MB1]. It is great.")) {
-            compose.onNodeWithText(unbacked(1)).assertExists()
-            assertEquals("The dimmed sentence is not backed by the sources.", unbacked(1))
+            compose.onNodeWithText(unbacked).assertExists()
+            assertEquals("Dimmed text is not backed by the sources.", unbacked)
             assertNoGroundedCount()
         }
 
     @Test
-    fun theNoteCountsTheDimmedSentencesUncitedAndMissingTogetherInThePlural() =
+    fun dimmedSentencesUncitedAndMissingTogetherGetOneNoteForAnyNumber() =
         show(
             written(
                 "It was recorded in 1973 [MB1]. It is great. It was a hit [MB9]. It is loved [AI].",
@@ -118,8 +119,8 @@ class GroundingNoteTest {
             ),
         ) {
             // The model's own sentence carries its chip and is not dimmed, so the note leaves it out.
-            compose.onNodeWithText(unbacked(2)).assertExists()
-            assertEquals("The 2 dimmed sentences are not backed by the sources.", unbacked(2))
+            compose.onNodeWithText(unbacked).assertExists()
+            assertEquals("Dimmed text is not backed by the sources.", unbacked)
             assertNoGroundedCount()
         }
 
@@ -140,7 +141,7 @@ class GroundingNoteTest {
         show(written("It was recorded in 1973 [MB1]. It is great.", cached = true)) {
             // Each on its own line: the note alone, under the line about the insight's history.
             val before = compose.onNodeWithText(text(R.string.home_written_before)).fetchSemanticsNode().boundsInRoot
-            val note = compose.onNodeWithText(unbacked(1)).fetchSemanticsNode().boundsInRoot
+            val note = compose.onNodeWithText(unbacked).fetchSemanticsNode().boundsInRoot
             assertTrue("the note under As written previously.", note.top >= before.bottom - 1f)
             assertEquals(0, count("Kept from before", substring = true))
         }
@@ -161,7 +162,7 @@ class GroundingNoteTest {
                 "1 of 3 sentences grounded · 1 uncited · 1 cites missing evidence",
                 "$grounded · $uncited · $unknown",
             )
-            assertEquals(0, count(unbacked(2)))
+            assertEquals(0, count(unbacked))
         }
         // Every sentence grounded: the count still shows, in the singular for one.
         show(written("It was recorded in 1973 [MB1]."), details) {

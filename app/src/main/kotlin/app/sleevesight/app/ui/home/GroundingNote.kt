@@ -36,7 +36,8 @@ internal fun GroundingLine(
 /**
  * The note under the insight (#437), shown only when there is something to say: the sentences the
  * sources do not back, which are dimmed (uncited, or citing missing evidence; #819), named by
- * that mark ("The dimmed sentence is not backed by the sources.", #664). A sentence from the
+ * that mark (#664), in one text for any number of them ("Dimmed text is not backed by the
+ * sources.", #854). A sentence from the
  * model's own knowledge is not counted: it is not dimmed, and its own chip says where it is from. A
  * sentence the sources back
  * needs no word: its citations show it. The full counts are [Meta]'s, behind *Show grounding details*.
@@ -49,9 +50,7 @@ private fun Note(
     modifier: Modifier,
 ) {
     val unbacked = remember(grounded) { unbacked(grounded) }
-    if (unbacked > 0) {
-        MetaLine(pluralStringResource(R.plurals.home_note_unbacked, unbacked, unbacked), modifier)
-    }
+    if (unbacked > 0) MetaLine(stringResource(R.string.home_note_unbacked), modifier)
 }
 
 // The sentences the sources do not back that show on the card, dimmed.

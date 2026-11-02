@@ -121,6 +121,15 @@ interface RunControl {
         evidence: EvidenceSet,
     ) = Unit
 
+    /**
+     * What the model call about to be made would replace (#854): the insight kept for the run's
+     * track, which the call rewrites (*Rewrite insight*), with what it was written with and whether
+     * the run looked again; null when the call writes the track's first insight. The insight written
+     * says what the rewrite changed ([InsightState.Written.rewritten]). By default null: the CLI and
+     * [Pipeline.follow] keep no insight to replace.
+     */
+    fun rewriting(): Rewriting? = null
+
     /** Grants every step at once and writes when [write]: [Pipeline.run] for the CLI. */
     class Unattended(
         private val write: Boolean,

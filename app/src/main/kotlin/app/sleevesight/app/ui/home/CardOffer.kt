@@ -85,18 +85,13 @@ internal fun offersLookAgain(context: InsightContext): Boolean =
 
 /**
  * What is said of *Look again* (#617) after *As written previously.* (#671), on the same line, once
- * it is done: once it found something new, that *Rewrite insight* uses it, a paid call, while that is
- * offered; once it found nothing new, that it did; else none. While it looks, none: what it is doing
- * goes on a line of its own ([lookingAgainLine], #785).
+ * it is done and found nothing new: that it did; else none. Once it found something new, the line
+ * offering *Rewrite insight* names it among what a rewrite would use (#854, `InsightOffers.rewriteWith`).
+ * While it looks, none: what it is doing goes on a line of its own ([lookingAgainLine], #785).
  */
 @StringRes
 internal fun lookAgainLine(context: InsightContext): Int? =
-    when {
-        context.offers.lookingAgain -> null
-        context.offers.somethingNew && offersRewrite(context) -> R.string.home_look_again_something_new
-        context.offers.nothingNew -> R.string.home_look_again_nothing_new
-        else -> null
-    }
+    R.string.home_look_again_nothing_new.takeIf { context.offers.nothingNew && !context.offers.lookingAgain }
 
 /**
  * What *Look again* (#617) is doing while it looks the sources up, and what that costs, the web

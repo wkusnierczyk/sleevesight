@@ -254,8 +254,8 @@ class SettingsScreenTest {
             compose.onNodeWithText(text(R.string.settings_save)).performClick()
 
             waitFor("the Last.fm key stored") { runBlocking { secrets.get(SecretId.LASTFM) }?.reveal() == "lastfm-key" }
-            waitForText(text(R.string.settings_key_saved))
-            compose.onNodeWithText(text(R.string.settings_key_saved)).performScrollTo().assertIsDisplayed()
+            // The summary follows the save (#763); `KeyDialogEnableTest` checks it, and the row after it.
+            waitForText(text(R.string.key_screen_done))
             assertEquals(0, compose.onAllNodesWithSubstring("lastfm-key").size)
         }
 

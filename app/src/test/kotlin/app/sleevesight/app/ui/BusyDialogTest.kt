@@ -199,14 +199,14 @@ class BusyDialogTest {
             compose.onNodeWithText(text(R.string.settings_scan_keys)).performScrollTo().performClick()
             // Past the words that seal a code (#590): these codes are clear ones.
             compose.onNodeWithText(text(R.string.load_keys_next)).performClick()
-            waitForText(text(R.string.setup_title))
+            waitForText(text(R.string.load_keys_save_question_one))
             val before = flaky.writes.get()
             flaky.writeGate = gate
 
-            tapTwiceInOneFrame(text(R.string.settings_save))
+            tapTwiceInOneFrame(text(R.string.load_keys_next))
             waitFor("the save's write started") { flaky.writes.get() == before + 1 }
 
-            assertEquals(1, release(hasText(text(R.string.setup_title)), before))
+            assertEquals(1, release(hasText(text(R.string.load_keys_save_question_one)), before))
             assertEquals(lastFmKey, runBlocking { secrets.get(SecretId.LASTFM) }?.reveal())
         }
     }

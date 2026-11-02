@@ -56,7 +56,10 @@ class WrittenByTest {
 
             val written = assertIs<InsightState.Written>(state.insight)
 
-            assertEquals(expected, written.writtenBy)
+            assertEquals(expected, written.writtenBy?.copy(modelKnowledge = null, evidenceFingerprint = null))
+            // And what a rewrite compares (#854): the model's own knowledge, and the evidence.
+            assertEquals(false, written.writtenBy?.modelKnowledge)
+            assertEquals(state.evidence?.fingerprint, written.writtenBy?.evidenceFingerprint)
         }
 
     @Test
@@ -65,10 +68,14 @@ class WrittenByTest {
             val pipeline = pipeline(MemoryCache())
             pipeline.run(sundown, write = true)
 
-            val written = assertIs<InsightState.Written>(pipeline.run(sundown, write = true).insight)
+            val state = pipeline.run(sundown, write = true)
+            val written = assertIs<InsightState.Written>(state.insight)
 
             assertTrue(written.cached)
-            assertEquals(expected, written.writtenBy)
+            assertEquals(expected, written.writtenBy?.copy(modelKnowledge = null, evidenceFingerprint = null))
+            // And what a rewrite compares (#854): the model's own knowledge, and the evidence.
+            assertEquals(false, written.writtenBy?.modelKnowledge)
+            assertEquals(state.evidence?.fingerprint, written.writtenBy?.evidenceFingerprint)
         }
 
     @Test

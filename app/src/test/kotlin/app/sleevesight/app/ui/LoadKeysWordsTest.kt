@@ -215,7 +215,7 @@ class LoadKeysWordsTest {
             next()
             this@LoadKeysWordsTest.code = code
             // Partly good, so *Scan again* is offered; the clear code's note is not.
-            waitForText(text(R.string.load_keys_save_these))
+            waitForText(text(R.string.load_keys_not_scanned))
             assertTrue(!shown(text(R.string.load_keys_clear_code)))
             assertNull(stored(SecretId.ANTHROPIC))
 
@@ -235,9 +235,9 @@ class LoadKeysWordsTest {
             val good = sealed("sleevesight-keys:v1\nlastfm=$lastFmKey", fresh)
             next()
             this@LoadKeysWordsTest.code = good
-            waitForText(text(R.string.setup_title))
-            compose.onNodeWithText(text(R.string.settings_save)).performClick()
-            waitForText(text(R.string.load_keys_saved_title))
+            waitForText(text(R.string.load_keys_save_question_one))
+            compose.onNodeWithText(text(R.string.load_keys_next)).performClick()
+            waitForText(text(R.string.load_keys_enable_question))
             assertEquals(lastFmKey, stored(SecretId.LASTFM))
         }
 
@@ -258,7 +258,7 @@ class LoadKeysWordsTest {
             assertEquals(words, shownWords())
             next()
             code = sealed("sleevesight-keys:v1\nlastfm=$lastFmKey", words)
-            waitForText(text(R.string.setup_title))
+            waitForText(text(R.string.load_keys_save_question_one))
         }
 
     @Test

@@ -5,6 +5,7 @@ import app.sleevesight.core.pipeline.CardKey
 import app.sleevesight.core.pipeline.ClearEpoch
 import app.sleevesight.core.pipeline.KeptCard
 import app.sleevesight.core.pipeline.PipelineCache
+import app.sleevesight.core.pipeline.RewritePart
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.SourceResult
 import kotlinx.coroutines.currentCoroutineContext
@@ -62,7 +63,7 @@ class StorePipelineCache(
     override suspend fun card(key: CardKey): String? = withContext(io) { caches.synthesis.get(key.toStore())?.text }
 
     override suspend fun keptCard(key: CardKey): KeptCard? =
-        withContext(io) { caches.synthesis.get(key.toStore())?.let { KeptCard(it.text, it.writtenAt) } }
+        withContext(io) { caches.synthesis.get(key.toStore())?.let { KeptCard(it.text, it.writtenAt, it.rewritten) } }
 
     override suspend fun keep(
         key: CardKey,
@@ -79,6 +80,16 @@ class StorePipelineCache(
     ) {
         val work = currentCoroutineContext()
         epoch.ifCurrent(work) { withContext(io) { caches.synthesis.put(key.toStore(), text, writtenAt) } }
+    }
+
+    override suspend fun keep(
+        key: CardKey,
+        text: String,
+        writtenAt: Instant,
+        rewritten: Set<RewritePart>,
+    ) {
+        val work = currentCoroutineContext()
+        epoch.ifCurrent(work) { withContext(io) { caches.synthesis.put(key.toStore(), text, writtenAt, rewritten) } }
     }
 
     private fun CardKey.toStore(): SynthesisKey =

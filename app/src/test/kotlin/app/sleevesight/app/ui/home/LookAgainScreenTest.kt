@@ -20,6 +20,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ActivityScenario
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.pipeline.PipelineView
+import app.sleevesight.app.pipeline.RewriteOffer
 import app.sleevesight.app.session.PlaybackInfo
 import app.sleevesight.app.session.PlaybackStatus
 import app.sleevesight.app.ui.home.HomeFixtures.done
@@ -29,10 +30,13 @@ import app.sleevesight.app.ui.home.HomeFixtures.track
 import app.sleevesight.app.ui.home.HomeFixtures.written
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.Outcome
+import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.InsightState
+import app.sleevesight.core.pipeline.RewritePart
 import app.sleevesight.core.pipeline.RunKey
 import app.sleevesight.core.pipeline.SourceState
+import app.sleevesight.core.pipeline.WrittenBy
 import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert.assertEquals
@@ -159,14 +163,22 @@ class LookAgainScreenTest {
                 lookAgainKey = key,
                 rewrite = true,
                 somethingNew = true,
+                rewriteWith =
+                    RewriteOffer(
+                        setOf(RewritePart.NEW_FINDINGS),
+                        WrittenBy(5, ProviderId.ANTHROPIC, "claude-haiku-5-5", null),
+                    ),
             )
         show {
             compose.onNodeWithTag(WRITE_TAG).assertTextEquals("Rewrite insight").assertIsEnabled()
             compose
                 .onNodeWithText(
-                    "As written previously. New findings from sources: tap Rewrite insight to use them, a paid call.",
+                    "As written previously. Tap Rewrite insight to have AI rewrite the insight with new findings " +
+                        "from sources.",
                 ).assertExists()
-            compose.onNodeWithText("updated source or model settings", substring = true).assertDoesNotExist()
+            compose.onNodeWithText("updated sources", substring = true).assertDoesNotExist()
+            // No cost said: the button carries the AI mark (#854).
+            compose.onNodeWithText("paid call", substring = true).assertDoesNotExist()
         }
     }
 
