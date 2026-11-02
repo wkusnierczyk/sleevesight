@@ -41,6 +41,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -326,6 +327,87 @@ class AppGenreNotesTest {
             epoch.advance()
             notes.forget()
             assertEquals(GenreReason.Offered, notes.reason(track(), "rock").first())
+        }
+
+    @Test
+    fun `Clear history during any showing of a reason being written leaves nothing of it (#791)`() =
+        runTest {
+            // How many states a reason's writing shows: looking, the text as it comes, written.
+            val counting = notes()
+            var shows = 0
+            counting.beforePublish = { shows++ }
+            counting.explain(track(), "rock")
+            advanceUntilIdle()
+            assertTrue("states shown: $shows", shows > 1)
+            for (at in 1..shows) {
+                cache.clearCards()
+                val epoch = ClearEpoch()
+                val notes = notes(epoch)
+                val clearing = clearDuringPublish(notes, epoch, at)
+                notes.explain(track(), "rock")
+                advanceUntilIdle()
+                val clear = clearing()
+                assertNotNull("cleared at state $at", clear)
+                clear?.join()
+                // The cache's cards go with the same *Clear history*.
+                cache.clearCards()
+                notes.beforePublish = {}
+                val reason = notes.reason(track(), "rock")
+                assertEquals("cleared at state $at", GenreReason.Offered, reason.first())
+                // Nor does the cache's read, which the panel's asking starts, bring it back.
+                advanceUntilIdle()
+                assertEquals("cleared at state $at, then read", GenreReason.Offered, reason.first())
+            }
+        }
+
+    @Test
+    fun `Clear history during a kept reason's showing leaves nothing of it (#791)`() =
+        runTest {
+            notes().explain(track(), "rock")
+            advanceUntilIdle()
+            // A process later, the reason read from the cache as the panel asks for it.
+            val epoch = ClearEpoch()
+            val later = notes(epoch)
+            val clearing = clearDuringPublish(later, epoch)
+            val reason = later.reason(track(), "rock")
+            reason.first()
+            advanceUntilIdle()
+            assertTrue("the kept reason was read", clearing() != null)
+            clearing()?.join()
+            // The cache's cards go with the same *Clear history*.
+            cache.clearCards()
+            later.beforePublish = {}
+            assertEquals(GenreReason.Offered, reason.first())
+            // Opened again: the cache's read, which the asking starts, brings nothing back.
+            val again = later.reason(track(), "rock")
+            again.first()
+            advanceUntilIdle()
+            assertEquals(GenreReason.Offered, again.first())
+        }
+
+    @Test
+    fun `a reason read from the cache during Clear history, after the epoch's advance, is not shown (#791)`() =
+        runTest {
+            notes().explain(track(), "rock")
+            advanceUntilIdle()
+            val epoch = ClearEpoch()
+            val later = notes(epoch)
+            // *Clear history*'s last advance, just before the caches' clear.
+            epoch.advance()
+            // A panel asks for the reason now: its read has the kept reason, and waits.
+            val held = CompletableDeferred<Unit>()
+            cache.readHeld = held
+            val reason = later.reason(track(), "rock")
+            reason.first()
+            runCurrent()
+            assertEquals("reads held", 1, cache.heldReads)
+            // The rest of the clear: the caches, then the reasons shown.
+            cache.clearCards()
+            later.forget()
+            cache.readHeld = null
+            held.complete(Unit)
+            advanceUntilIdle()
+            assertEquals(GenreReason.Offered, reason.first())
         }
 
     // A track whose table has [genres]: the artist's, then, with [album], the album's too.

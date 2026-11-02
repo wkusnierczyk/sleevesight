@@ -30,6 +30,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.coroutines.AbstractCoroutineContextElement
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.coroutines.cancellation.CancellationException
@@ -347,7 +348,7 @@ class AppGenreNotes private constructor(
             // Not shown, shown as failed, or past *Keep history for*; and not under way.
             is ReasonPath.Reason -> {
                 if (open(path.key) && writing.add(path.key)) {
-                    scope.launch(epoch.mark()) { write(reasonsOf(made), path.key, track, label(track, genre)) }
+                    scope.launch(mark()) { write(reasonsOf(made), path.key, track, label(track, genre)) }
                 }
             }
 
@@ -356,7 +357,7 @@ class AppGenreNotes private constructor(
                 val underWay = path.key in writing
                 if (underWay || openList(path.key)) {
                     synchronized(lock) { waiting.update { it + (path.key to (it[path.key].orEmpty() + genre)) } }
-                    if (writing.add(path.key)) scope.launch(epoch.mark()) { list(made, path.key, track) }
+                    if (writing.add(path.key)) scope.launch(mark()) { list(made, path.key, track) }
                 }
             }
 
@@ -497,7 +498,7 @@ class AppGenreNotes private constructor(
         }
         // Each genre asked for, on the list, written; none after a *Clear history* since the list
         // was asked, which drops their claims.
-        if (epoch.isCurrent(work)) {
+        if (current(work)) {
             coroutineScope {
                 for ((reason, genre) in next) launch { write(reasons, reason, track, label(track, genre)) }
             }
@@ -533,6 +534,7 @@ class AppGenreNotes private constructor(
      */
     fun forget() {
         synchronized(lock) {
+            forgets++
             shown.value = emptyMap()
             lists.value = emptyMap()
             waiting.value = emptyMap()
@@ -544,19 +546,42 @@ class AppGenreNotes private constructor(
     // Guards each reason or list shown against *Clear history* ([forget]).
     private val lock = Any()
 
+    // How many times [forget] ran, under [lock]. *Clear history* advances the epoch before it clears
+    // the caches and only then calls [forget], so work started in between (a panel asking for a
+    // reason meanwhile) carries the new epoch, and could read the cache before its clear and show
+    // what it read after [forget] (#791). Work is marked with this count too ([mark]), and shows
+    // nothing once it has changed.
+    @Volatile
+    private var forgets = 0L
+
+    // The count of [forget]s a piece of work started after; its children inherit it.
+    private class Forgets(
+        val count: Long,
+    ) : AbstractCoroutineContextElement(Forgets) {
+        companion object Key : CoroutineContext.Key<Forgets>
+    }
+
+    // Marks work with the epoch and the count of [forget]s, when it starts.
+    private fun mark(): CoroutineContext = epoch.mark() + Forgets(forgets)
+
+    // Whether [work] started after the last *Clear history*: in the epoch now, and after the last
+    // [forget]. Work this did not mark counts as current, as with the epoch.
+    private fun current(work: CoroutineContext): Boolean =
+        epoch.isCurrent(work) && work[Forgets]?.count.let { it == null || it == forgets }
+
     /** For tests: runs between a state's check and its showing ([publish]). */
     @Volatile
     internal var beforePublish: () -> Unit = {}
 
-    // Runs [show], a reason or a list shown, if no *Clear history* came since [work] started,
-    // checked under the lock [forget] clears under: so its clear, which comes after the epoch's
-    // advance, either comes after the state shown, and clears it, or before the check, which then
-    // fails. As `ShownSearches.publish`.
+    // Runs [show], a reason or a list shown, if no *Clear history* came since [work] started
+    // ([current]), checked under the lock [forget] clears under: so its clear, which comes after the
+    // epoch's advance, either comes after the state shown, and clears it, or before the check, which
+    // then fails. As `ShownSearches.publish`.
     private fun publish(
         work: CoroutineContext,
         show: () -> Unit,
     ) = synchronized(lock) {
-        if (epoch.isCurrent(work)) {
+        if (current(work)) {
             beforePublish()
             show()
         }
@@ -570,7 +595,7 @@ class AppGenreNotes private constructor(
     ) {
         if (key in shown.value || !looked.add(key)) return
         val made = parts.value ?: return
-        scope.launch(epoch.mark()) {
+        scope.launch(mark()) {
             val work = coroutineContext
             val kept = reasonsOf(made).found(key, track)?.takeIf { !expired(it.writtenAt) }
             if (kept != null) {
@@ -584,7 +609,7 @@ class AppGenreNotes private constructor(
     private fun lookList(key: CardKey) {
         if (key in lists.value || !looked.add(key)) return
         val made = parts.value ?: return
-        scope.launch(epoch.mark()) {
+        scope.launch(mark()) {
             val work = coroutineContext
             val kept = listsOf(made).kept(key)?.takeIf { !expired(it.writtenAt) }
             if (kept != null) {

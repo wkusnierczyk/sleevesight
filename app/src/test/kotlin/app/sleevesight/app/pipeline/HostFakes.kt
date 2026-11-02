@@ -27,6 +27,7 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import java.util.concurrent.CountDownLatch
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Instant
@@ -179,6 +180,9 @@ internal class CardCache(
     /** A read of a card waits for this once it has its answer, as a slow read would; null, none. */
     var readHeld: Deferred<Unit>? = null
 
+    /** How many reads waited for [readHeld]. */
+    var heldReads = 0
+
     /** When each card kept was written, as kept. */
     val keptTimes: Collection<Instant> get() = keptAt.values
 
@@ -191,7 +195,12 @@ internal class CardCache(
             keptAt.remove(key)
         }
         val kept = cards[key]?.let { KeptCard(it, at) }
-        if (kept != null) readHeld?.await()
+        if (kept != null) {
+            readHeld?.let {
+                heldReads++
+                it.await()
+            }
+        }
         return kept
     }
 
@@ -223,4 +232,33 @@ internal class MovedClock(
     var tick: Duration = Duration.ZERO,
 ) : Clock {
     override fun now(): Instant = at.also { at += tick }
+}
+
+// Between the [at]th state's check and its showing, *Clear history* runs on another thread: the
+// epoch's advance, then [AppGenreNotes.forget]. The showing goes on only once the epoch has
+// advanced and the clear is either blocked, waiting for the showing (as it must be), or done
+// (when it did not wait, and the showing then outlives it). No clock: the thread's own state.
+internal fun clearDuringPublish(
+    notes: AppGenreNotes,
+    epoch: ClearEpoch,
+    at: Int = 1,
+): () -> Thread? {
+    var clearing: Thread? = null
+    var published = 0
+    notes.beforePublish = {
+        if (clearing == null && ++published == at) {
+            val advanced = CountDownLatch(1)
+            val thread =
+                Thread {
+                    kotlinx.coroutines.runBlocking { epoch.advance() }
+                    advanced.countDown()
+                    notes.forget()
+                }
+            clearing = thread
+            thread.start()
+            advanced.await()
+            while (thread.isAlive && thread.state != Thread.State.BLOCKED) Thread.onSpinWait()
+        }
+    }
+    return { clearing }
 }
