@@ -19,6 +19,7 @@ nav:
     label: Fonts & icons
   - id: build-time-tools
     label: Build tools
+provenance: [ai-wrote, human-reviewed]
 ---
 
 # Dependencies

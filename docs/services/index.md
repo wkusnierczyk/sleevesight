@@ -17,6 +17,7 @@ nav:
     label: Enable
   - id: 5-how-to-check-that-they-work
     label: Check
+provenance: [ai-wrote, human-reviewed]
 ---
 
 # Setting up external services

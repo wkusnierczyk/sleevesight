@@ -3,7 +3,8 @@
   #501): the stacked logo with the menu beside it, large at the top and small scrolled down; the
   intro that plays before it; and the footer. Each page sets the colours these use: `--bg`, `--ink`,
   `--muted`, `--line`, `--sight`, `--f-ui`, and the logo's `--tile-bg`, `--tile-edge`, `--tile-ink`,
-  `--rim`, `--core` and `--groove`. The header's markup is `site-header.html`, its scripts
+  `--rim`, `--core` and `--groove`; a page with a dark mode also sets the footer's `--prov-human` and
+  `--prov-ai` in it. The header's markup is `site-header.html`, its scripts
   `site-intro-head.html` (in the head) and `site-header-script.html` (at the end of the body), and
   the footer `site-footer.html`.
 {% endcomment %}
@@ -64,6 +65,16 @@ nav.top a{color:var(--muted);text-decoration:none}
 nav.top a:hover{color:var(--ink);text-decoration:underline}
 footer{border-top:1px solid var(--line);padding:24px 0 40px;font-size:15px;color:var(--muted)}
 footer p{margin:0 0 4px}
+/* Who wrote the page, and who edited or reviewed it (#743), on its own line above the licence: small
+   caps at the footer's size, each label a link in its who's colour, underlined in that colour rather
+   than the footer's link colour. Human is brick and AI slate-teal; the light colours are the defaults
+   here, and a page's dark mode sets `--prov-human` (#e8836b) and `--prov-ai` (#7cc4d2). Each is at
+   least 4.5:1 on its footer's background. The full stop that ends a label is for screen readers. */
+footer .prov{font-variant-caps:all-small-caps}
+footer .prov a{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px}
+footer .prov-human{color:var(--prov-human,#b5462e)}
+footer .prov-ai{color:var(--prov-ai,#2f6f7e)}
+footer .prov-stop{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 
 /* The intro (`.sl-intro`): set by the scripts when motion is allowed, the address has no `#`, the
    page was neither reloaded nor reached by Back or Forward (the navigation's type), and it was not
