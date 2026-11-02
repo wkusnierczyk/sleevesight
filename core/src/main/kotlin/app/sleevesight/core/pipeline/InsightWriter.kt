@@ -184,7 +184,7 @@ internal class InsightWriter(
         val ran =
             control.unlessStopped {
                 emit(PipelineEvent.ModelCall(key, ai.provider.id, model, sent.leftOut))
-                show(InsightState.Writing("", sent.held))
+                show(InsightState.Writing("", sent.held, model))
                 started = time.timeSource.markNow()
                 ai.provider.stream(request, ai.key).collect { event ->
                     when (event) {
@@ -196,7 +196,7 @@ internal class InsightWriter(
                             // check decides.
                             frozen = frozen || SelfRevision.ofPartial(text.toString()).freezes()
                             if (!GroundingCheck.mayBeNoEvidence(text.toString()) && !frozen) {
-                                show(InsightState.Writing(text.toString(), sent.held))
+                                show(InsightState.Writing(text.toString(), sent.held, model))
                             }
                         }
 
