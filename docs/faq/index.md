@@ -26,7 +26,7 @@ nav:
 
 # Frequently asked questions
 
-Sleevesight's first aim is to collect and send as little about you as it can. It has no server and no accounts, and nothing reaches its developer unless you send it yourself. Several of the answers below follow from that.
+Sleevesight's first aim is to collect and send as little about you as it can. It has no server and no accounts, and nothing reaches its developer unless you send it yourself. Several of the answers below follow from that. What Sleevesight cannot do, and why, is on one page: [Limitations]({{ '/docs/limitations/' | relative_url }}).
 
 Notification access may sound alarming, but the app uses very little of it: what the players you follow say is playing. Sleevesight is open source, so anyone can check what it does with the access: the code is on [GitHub](https://github.com/wkusnierczyk/sleevesight), and the [privacy policy]({{ '/privacy.html' | relative_url }}) says in full what the app reads and what leaves the phone.
 

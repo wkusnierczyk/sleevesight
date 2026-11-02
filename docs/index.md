@@ -24,6 +24,7 @@ Sleevesight is an Android app that shows short, sourced insights about the song 
 - **[Usage]({{ '/docs/tutorials/usage/' | relative_url }})**: each part of the app in detail: the home screen, the insight and its citations, the sources, *Write insight* and *Stop writing*, reading aloud, the history, the players, and what happens offline, without a key or when a source fails.
 - **[Settings]({{ '/docs/tutorials/settings/' | relative_url }})**: every setting: what it does, its default and why, and what changing it sends or keeps.
 - **[Frequently asked questions]({{ '/docs/faq/' | relative_url }})**: why the app needs notification access and what it reads with it, why it does not sign in to Spotify instead, other music services, Spotify Connect, and why it does not listen through the microphone.
+- **[Limitations]({{ '/docs/limitations/' | relative_url }})**: what Sleevesight cannot do, and why: whether each limit is Android's, a service's rules or a choice, and where one is planned to change.
 - **[What it costs you]({{ '/docs/costs/' | relative_url }})**: Sleevesight charges nothing; what each service you switch on charges, its free tier, and what a track costs.
 - **[Privacy policy]({{ '/privacy.html' | relative_url }})**: what leaves the phone, to whom, and where Sleevesight stands under the GDPR and the EU AI Act.
 
