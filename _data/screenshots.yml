@@ -79,10 +79,6 @@ sources-page:
   version: 0.1.15
   caption: Sources as a page
   alt: "Sources on a page of its own, with a back arrow: the same table of sources and the cited lines."
-genres-why:
-  version: 0.1.15
-  caption: After Why is this folk?
-  alt: "Genres open on Folk, beside Singer-Songwriter and Soul, marked AI; what folk is, from Wikipedia; the answer to Why is this folk?, by Claude Haiku 5.5; and the genre tags with Claude Haiku 5.5 among their sources."
 genres-ai-genre:
   version: 0.1.15
   caption: A genre the AI service named
