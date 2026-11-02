@@ -30,10 +30,18 @@ import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -174,11 +182,18 @@ private fun HomeHeader(
     logoSpin: StateFlow<LogoSpin>?,
 ) {
     val spin = logoSpin?.collectAsState()?.value ?: LogoSpin.STILL
+    // The header's box, which a debug build's bug crawls out of and back into (#848).
+    var box by remember { mutableStateOf<Rect?>(null) }
     val toTop = stringResource(R.string.home_scroll_to_top, stringResource(R.string.app_name))
     val settings = stringResource(R.string.home_settings)
     Column {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(start = 8.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+            modifier =
+                Modifier
+                    .testTag(HOME_HEADER_TAG)
+                    .onGloballyPositioned { box = it.boundsInRoot() }
+                    .fillMaxWidth()
+                    .padding(start = 8.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -197,7 +212,7 @@ private fun HomeHeader(
                 contentAlignment = Alignment.CenterStart,
             ) {
                 // The one-line logo (#383), in place of the name, which the label still says.
-                HeaderLogo(spin = spin)
+                HeaderLogo(spin = spin, crawlSpace = { box })
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 // The current theme, named and drawn, which opens the theme menu (#771), first; the
@@ -244,6 +259,9 @@ private fun reportClearance(): Dp =
  * small button's 40 dp, its margin below and 16 dp above it, so the end of Home scrolls clear of it.
  */
 private val REPORT_CLEARANCE = 72.dp
+
+/** The test tag of Home's header row, the logo and the buttons. */
+const val HOME_HEADER_TAG: String = "home-header"
 
 /** The link tag of *What leaves the device?* on Home. */
 const val WHAT_LEAVES_TAG: String = "what-leaves"

@@ -6,9 +6,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -35,14 +40,18 @@ import androidx.compose.ui.unit.toSize
  *
  * Its record has the header's larger label ([HEADER_LABEL], #848), and turns while [spin] says so
  * (music playing, *Spin the logo while music plays* on), getting up to speed and coming to rest as a
- * turntable does ([recordMotion]); once the intro has ended, from where the intro landed it.
+ * turntable does ([recordMotion]); once the intro has ended, from where the intro landed it. In a
+ * debug build the bug in its place never turns: while the record would, it crawls ([bugCrawl]),
+ * every few seconds up out of [crawlSpace] (the header's box, in the root's pixels; the logo's own
+ * box without one), and back in from its bottom to its place, drawn only inside that box.
  */
 @Composable
 fun HeaderLogo(
     modifier: Modifier = Modifier,
     height: Dp = HEADER_LOGO_HEIGHT,
     spin: LogoSpin = LogoSpin.STILL,
-) = HeaderLogo(LOGO_BUG, modifier, height, spin)
+    crawlSpace: () -> Rect? = { null },
+) = HeaderLogo(LOGO_BUG, modifier, height, spin, crawlSpace)
 
 /**
  * [HeaderLogo] with the bug in the record's place or not, whatever the build ([LOGO_BUG]): for
@@ -55,29 +64,61 @@ internal fun HeaderLogo(
     modifier: Modifier = Modifier,
     height: Dp = HEADER_LOGO_HEIGHT,
     spin: LogoSpin = LogoSpin.STILL,
+    crawlSpace: () -> Rect? = { null },
 ) {
     val intro = LocalLogoIntro.current
     val colors = logoColors()
     val bugPath = logoBug(bug)
     val shown by remember(intro) { derivedStateOf { intro?.finished ?: true } }
-    val motion = recordMotion(spin, running = shown)
+    val motion = recordMotion(spin, running = shown && bugPath == null)
+    val crawl = bugCrawl(spin, running = shown && bugPath != null)
+    // Where the logo is in the root, for the crawl's box; read as it draws.
+    val origin = remember { mutableStateOf(Offset.Zero) }
     val place =
-        if (intro == null) {
-            modifier
-        } else {
-            modifier.onGloballyPositioned { intro.target = Rect(it.positionInRoot(), it.size.toSize()) }
+        modifier.onGloballyPositioned {
+            origin.value = it.positionInRoot()
+            intro?.target = Rect(it.positionInRoot(), it.size.toSize())
         }
     Canvas(place.size(height * (LineBox.width / LineBox.height), height)) {
         if (!shown) return@Canvas
         // As the intro's landing draws it ([headerPlace]), so the two meet exactly.
-        at(linePlace(size)) {
+        val line = linePlace(size)
+        at(line) {
             drawSleeve(colors)
             translate(LineShift.x, LineShift.y) {
                 drawSight(colors)
                 // Read as it draws, so the turning redraws the logo without recomposing it.
-                drawRecordPlace(colors, bugPath, RecordPose(RecordCentre, degrees = motion.value.degrees))
+                if (bugPath == null) {
+                    drawRecordPlace(colors, null, RecordPose(RecordCentre, degrees = motion.value.degrees))
+                }
             }
         }
+        if (bugPath != null) {
+            val box = crawlSpace()?.translate(-origin.value) ?: Rect(Offset.Zero, size)
+            drawCrawlingBug(colors, bugPath, line, box, crawl.value.trip)
+        }
+    }
+}
+
+/**
+ * Draws the bug in the record's place, [trip] of the way through a crawl (none: in its place), the
+ * logo drawn at [line], out of and back into [box] (in the canvas's pixels), and only inside it.
+ */
+private fun DrawScope.drawCrawlingBug(
+    colors: LogoColors,
+    bug: Path,
+    line: Place,
+    box: Rect,
+    trip: Float?,
+) {
+    val centre = RecordCentre + LineShift
+    val offset =
+        trip?.let {
+            val y = line.at.y + centre.y * line.scale
+            crawlOffset(it, (y - box.top) / line.scale, (box.bottom - y) / line.scale, LogoOutlines.RECORD_R)
+        } ?: Offset.Zero
+    clipRect(box.left, box.top, box.right, box.bottom) {
+        at(line) { drawRecordPlace(colors, bug, RecordPose(centre + offset)) }
     }
 }
 
