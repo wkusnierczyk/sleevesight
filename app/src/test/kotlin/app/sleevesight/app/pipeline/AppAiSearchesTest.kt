@@ -20,12 +20,14 @@ import app.sleevesight.core.synthesis.AiSearchAnswers
 import app.sleevesight.core.synthesis.SearchAnswer
 import app.sleevesight.core.synthesis.SearchFacts
 import app.sleevesight.core.synthesis.SearchKind
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -291,6 +293,55 @@ class AppAiSearchesTest {
                     .isEmpty(),
             )
             assertEquals(AiSearch.Offered, searches.now())
+        }
+
+    @Test
+    fun `a search read from the cache during Clear history, after the epoch's advance, is not shown (#835)`() =
+        runTest {
+            searches().ask(track, SearchKind.GENRES, facts)
+            advanceUntilIdle()
+            val epoch = ClearEpoch()
+            val later = searches(epoch)
+            // *Clear history*'s last advance, just before the caches' clear.
+            epoch.advance()
+            // A panel asks for the search now: its read has the kept answer, and waits.
+            val held = CompletableDeferred<Unit>()
+            cache.readHeld = held
+            val search = later.search(track, SearchKind.GENRES)
+            search.first()
+            runCurrent()
+            assertEquals("reads held", 1, cache.heldReads)
+            // The rest of the clear: the caches, then the searches shown.
+            cache.clearCards()
+            later.forget()
+            cache.readHeld = null
+            held.complete(Unit)
+            advanceUntilIdle()
+            assertEquals(AiSearch.Offered, search.first())
+        }
+
+    @Test
+    fun `a search asked during Clear history, after the epoch's advance, shows nothing of its read (#835)`() =
+        runTest {
+            searches().ask(track, SearchKind.GENRES, facts)
+            advanceUntilIdle()
+            val epoch = ClearEpoch()
+            val later = searches(epoch)
+            epoch.advance()
+            // A tap now: the search's read has the kept answer, and waits. [AppAiSearches.forget] stops
+            // it too, so this holds by the stop as well as by the count of clears.
+            val held = CompletableDeferred<Unit>()
+            cache.readHeld = held
+            later.ask(track, SearchKind.GENRES, facts)
+            runCurrent()
+            assertEquals("reads held", 1, cache.heldReads)
+            cache.clearCards()
+            later.forget()
+            cache.readHeld = null
+            held.complete(Unit)
+            advanceUntilIdle()
+            assertEquals(AiSearch.Offered, later.now())
+            assertEquals(1, provider.requests)
         }
 
     @Test
