@@ -215,9 +215,10 @@ class LogoIntroTest {
         // default) could land before the activity starts and turn the mirror back on.
         LastIntro(app).value = false
         runBlocking { app.graph.settings.update { it.copy(introAtStart = false) } }
-        // #831: a failure says what each of the three held then.
+        // #831: a failure says what the graph, its latest read, the store and the mirror held then.
         idleUntil("the setting read", seen = {
-            "introAtStart ${app.graph.introAtStart.value}, stored ${app.graph.settings.now().introAtStart}, " +
+            "introAtStart ${app.graph.introAtStart.value}, latest ${app.graph.latestSettings.value?.introAtStart}, " +
+                "stored ${app.graph.settings.now().introAtStart}, " +
                 "mirror ${LastIntro(app).value}"
         }) { !app.graph.introAtStart.value }
         ActivityScenario.launch<MainActivity>(fromLauncher()).use { assertFalse(playing()) }
