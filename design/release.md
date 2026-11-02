@@ -64,7 +64,7 @@ The two builds differ in the flag alone: the same code, signed with the same key
 
 ## Release notes
 
-Each release's notes are in `release-notes/<version>.txt`, for example `release-notes/0.1.1.txt`, committed with the change that ships, so they are reviewed with it. They are in the listing's language, `en-US`, plain text, at most 500 characters (Play's limit per language); trailing white space is dropped. CI checks each file in `release-notes/` for its name and length on every pull request (`.github/scripts/check-release-notes.sh`), so a misnamed, empty or overlong file fails the pull request that adds it. A tag that is no release version, or whose version has no notes file or an empty or longer one, stops the run before the build, so its version is spent: add the notes before tagging.
+Each release's notes are in `release-notes/<version>.txt`, for example `release-notes/0.1.1.txt`, written as the release's last pull request once its scope is final, their text picked in a simulation. They are in the listing's language, `en-US`, plain text, at most 500 characters (Play's limit per language); trailing white space is dropped. CI checks each file in `release-notes/` for its name and length on every pull request (`.github/scripts/check-release-notes.sh`), so a misnamed, empty or overlong file fails the pull request that adds it. A tag that is no release version, or whose version has no notes file or an empty or longer one, stops the run before the build, so its version is spent: add the notes before tagging.
 
 ## Documentation versions
 

@@ -66,7 +66,7 @@ jobs:
           git fetch --no-tags origin '+refs/tags/v*:refs/tags/v*'
           .github/scripts/release-track.sh "$TRACK" "$GITHUB_REF_NAME" "$GITHUB_SHA"
 
-      # Every release ships with its notes, reviewed with the change that ships: notes that are
+      # Every release ships with its notes, its branch's last pull request: notes that are
       # missing, or that `check-release-notes.sh` refuses, stop the run before the build. A tag that
       # is no release version is named as such, since the notes' name is checked first.
       - name: Release notes

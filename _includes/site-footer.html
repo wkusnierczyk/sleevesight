@@ -12,9 +12,9 @@
   human-reviewed]`. Writing comes first, so a page has one *wrote*, shown first whatever the order
   in the list; the first `-edited` or `-reviewed` in the list shows as the second label when it is
   the other side's, and otherwise there is none. That leaves six combinations. A page without the
-  key, or without a *wrote*, shows no labels. Each label links to the Process page's *Lessons
-  learned*, in its who's colour, and ends in a full stop hidden on screen, so a screen reader reads
-  "AI wrote." and "Human reviewed." apart.
+  key, or without a *wrote*, shows no labels. Each label links to the Process page's explanation of
+  the labels (`#footer-labels`, in *Lessons learned*), in its who's colour, and ends in a full stop
+  hidden on screen, so a screen reader reads "AI wrote." and "Human reviewed." apart.
 {% endcomment %}
 <footer>
   {%- if include.made_in %}
@@ -43,7 +43,7 @@
       {%- assign prov_who = prov_item | split: "-" | first -%}
       {%- assign prov_did = prov_item | split: "-" | last -%}
       {%- unless forloop.first %}{{ ' ' }}{% endunless -%}
-      <a class="prov-{{ prov_who }}" href="{{ '/docs/process/#lessons-learned' | relative_url }}">{% if prov_who == "ai" %}AI{% else %}Human{% endif %} {{ prov_did }}<span class="prov-stop">.</span></a>
+      <a class="prov-{{ prov_who }}" href="{{ '/docs/process/#footer-labels' | relative_url }}">{% if prov_who == "ai" %}AI{% else %}Human{% endif %} {{ prov_did }}<span class="prov-stop">.</span></a>
     {%- endfor -%}
   </p>
   {%- endif %}
