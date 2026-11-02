@@ -1,0 +1,5 @@
+What's new in 0.1.16:
+- Switching the AI model offers Rewrite insight at once.
+- AI service knowledge is dimmed while no AI service can be used.
+- An AI answer kept from before says so, and when it was written.
+- Diagnostics list each AI search.
