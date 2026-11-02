@@ -594,17 +594,17 @@ class AppAiSearches(
         }
     }
 
-    // What a kept answer is served to (#851): its key and the track, by its identity and length.
+    // What a kept answer is served to (#851): its key and the track, by its identity as the sources
+    // name it, whatever its length (a new length of the track is the same track playing on).
     private data class Served(
         val key: CardKey,
         val track: NormalizedTrack,
-        val duration: Duration?,
     ) {
         companion object {
             fun of(
                 key: CardKey,
                 track: TrackState,
-            ) = Served(key, track.normalized, track.nowPlaying.duration)
+            ) = Served(key, track.normalized)
         }
     }
 

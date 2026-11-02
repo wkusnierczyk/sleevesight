@@ -2,8 +2,6 @@ package app.sleevesight.app.pipeline
 
 import app.sleevesight.app.ui.home.HomeFixtures
 import app.sleevesight.app.ui.home.HomeFixtures.done
-import app.sleevesight.app.ui.home.emptyPanels
-import app.sleevesight.app.ui.home.searchFacts
 import app.sleevesight.core.Secret
 import app.sleevesight.core.genres.GenreArticles
 import app.sleevesight.core.genres.GenreDefinitions
@@ -19,7 +17,6 @@ import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.pipeline.AiAccess
-import app.sleevesight.core.pipeline.AiSearches
 import app.sleevesight.core.pipeline.CardKey
 import app.sleevesight.core.pipeline.KeptCard
 import app.sleevesight.core.pipeline.PipelineCache
@@ -31,11 +28,9 @@ import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.platform.JvmResourceReader
 import app.sleevesight.core.resolution.Lookup
-import app.sleevesight.core.resolution.NameMatcher
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.synthesis.AiSearchAnswers
-import app.sleevesight.core.synthesis.SearchFacts
 import app.sleevesight.core.synthesis.SearchKind
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -43,9 +38,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlin.time.Clock
 
 /**
- * *Ask AI* wired as `AppGraph` wires it (#851): the panels' searches and a genre's definition
- * ([searches]), the genres' notes ([notes]) with their definitions from [articles], and the two
- * triggers of *Ask AI automatically* ([panels], [definitions]) with their gates, on [cache], asking
+ * *Ask AI* wired as `AppGraph` wires it (#851, [AskAiWired]): the panels' searches and a genre's
+ * definition ([searches]), the genres' notes ([notes]) with their definitions from [articles], and the
+ * two triggers of *Ask AI automatically* ([panels], [definitions]) with their gates, on [cache], asking
  * [provider], in [scope]; the diagnostics' events kept in [events]; the plays of the track shown
  * followed by [plays], none by default. A second wiring on the same cache is the app after a
  * restart.
@@ -86,55 +81,22 @@ internal class AskAi(
             plays = plays?.current ?: MutableStateFlow(null),
         )
 
-    lateinit var panels: AutoSearches<SearchKind>
-    lateinit var definitions: AutoSearches<String>
-
-    val searches =
-        AppAiSearches(
-            parts,
-            settings,
-            AiSearchAnswers(VOCABULARY, JvmAccentFolder),
-            scope,
+    // As `AppGraph` wires them.
+    private val wired =
+        AskAiWired(
+            parts = parts,
+            settings = settings,
+            answers = AiSearchAnswers(VOCABULARY, JvmAccentFolder),
+            scope = scope,
+            settledNoDefinition = notes.lookups::settledNoDefinition,
             clock = clock,
-            automaticGate = { track, kind, genre ->
-                if (kind == SearchKind.DEFINITION) {
-                    definitions.open() && genre != null && notes.lookups.settledNoDefinition(track, genre)
-                } else {
-                    panels.open()
-                }
-            },
-            deferred = { track, kind, genre ->
-                if (kind == SearchKind.DEFINITION) {
-                    genre?.let { definitions.release(track, it) }
-                } else {
-                    panels.release(track, kind)
-                }
-            },
             events = { events += it },
             plays = plays?.current ?: MutableStateFlow(null),
         )
 
-    init {
-        val albums = NameMatcher(JvmAccentFolder)
-        panels =
-            AutoSearches(
-                ::emptyPanels,
-                { track, kind ->
-                    Triple(track.normalized, track.nowPlaying.duration, AiSearches.subject(track, kind, albums))
-                },
-            ) { track, kind -> searches.ask(track, kind, searchFacts(track, track.nowPlaying), automatic = true) }
-        definitions =
-            AutoSearches(
-                { track, _ -> genresWithNoDefinition(track, notes.lookups::settledNoDefinition) },
-            ) { track, genre ->
-                val label =
-                    track.genres.all
-                        .firstOrNull { it.genre.identity == genre }
-                        ?.genre
-                        ?.label ?: genre
-                searches.ask(track, SearchKind.DEFINITION, SearchFacts.ofGenre(label), automatic = true, genre = genre)
-            }
-    }
+    val searches: AppAiSearches = wired.searches
+    val panels: AutoSearches<SearchKind> = wired.panels
+    val definitions: AutoSearches<String> = wired.definitions
 
     companion object {
         val VOCABULARY: GenreVocabulary = GenreVocabulary.load(JvmResourceReader)

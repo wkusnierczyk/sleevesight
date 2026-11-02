@@ -563,7 +563,8 @@ class AppGenreNotes private constructor(
         automatic = false,
     )
 
-    // The kept reasons and lists told to the log as served, by key and track (#851), the last
+    // The kept reasons and lists told to the log as served, by key and track as the sources name it,
+    // whatever its length (#851), the last
     // [TOLD_KEPT], under [lock].
     private val told =
         object : LinkedHashMap<Pair<CardKey, Any>, Unit>(TOLD_KEPT, LOAD, true) {
@@ -579,7 +580,7 @@ class AppGenreNotes private constructor(
         key: CardKey,
         event: PipelineEvent,
     ) {
-        if (told.put(key to (track.normalized to track.nowPlaying.duration), Unit) == null) events(event)
+        if (told.put(key to track.normalized, Unit) == null) events(event)
     }
 
     // Tells [event] to the log if no *Clear history* came since [work] started, checked under the

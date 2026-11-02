@@ -40,13 +40,11 @@ class KeptLineTest {
     }
 
     @Test
-    fun `the time and date are in the language's own digits`() {
+    fun `on a phone in another language, the time and date are in English, as the line is`() {
         val arabic = Locale.forLanguageTag("ar-EG")
-        val today = at("2026-11-02T12:04:00Z", arabic) as Written.Today
-        assertTrue(today.time, "١٣" in today.time && "٠٤" in today.time && today.time.none { it in '0'..'9' })
-        val earlier = at("2025-10-31T12:04:00Z", arabic) as Written.OnDay
-        val date = earlier.date
-        assertTrue(date, "٣١" in date && "٢٠٢٥" in date && date.none { it in '0'..'9' })
+        assertEquals(Written.Today("13:04"), at("2026-11-02T12:04:00Z", arabic))
+        assertEquals(Written.OnDay("October 31, 2025"), at("2025-10-31T12:04:00Z", arabic))
+        assertEquals(Written.OnDay("October 31"), at("2026-10-31T12:04:00Z", Locale.GERMANY))
     }
 
     @Test

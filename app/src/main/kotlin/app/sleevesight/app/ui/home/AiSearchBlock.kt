@@ -62,8 +62,9 @@ import app.sleevesight.core.synthesis.SearchKind
  *   of the line, as *Retry* is beside its line ([LineButton]); the focus handed from the button to
  *   *Stop* and back, as each takes the other's place;
  * - answered: a rule, the answer as the panel shows its source's ([answer]: from the web, each value
- *   with its page, [FromSite]), from the model's knowledge "From the AI model's own knowledge, not
- *   verified", then "by {model}" on a line of its own, in italics, however it was asked;
+ *   with its page, [FromSite]), then "by {model}" on a line of its own, in italics, however it was
+ *   asked, then from the model's knowledge "From the AI model's own knowledge, not verified", and,
+ *   kept from before, when it was written ([KeptLine], #851);
  * - nothing usable: a rule, and "{model} found nothing on the web." or "{model} couldn't say from
  *   its own knowledge." in the answer's place, after "Asked automatically: " for one asked by itself;
  * - failed: "Asking AI failed: {reason}.", or "AI web search failed." ([askFailedText]), in the

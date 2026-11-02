@@ -94,8 +94,12 @@ class AskAiEventsTest {
                 ),
                 app.events,
             )
-            // Its own track's panel: the answer to its call, not one kept.
+            // Its own track's panel: the answer to its call, not one kept; with a new length of the
+            // track too, which plays on.
             app.searches.search(first, SearchKind.DEFINITION, "punk").first { it is AiSearch.Answered }
+            val length = first.nowPlaying.duration?.plus(2.seconds)
+            val longer = first.copy(nowPlaying = first.nowPlaying.copy(duration = length))
+            app.searches.search(longer, SearchKind.DEFINITION, "punk").first { it is AiSearch.Answered }
             assertEquals(2, app.events.size)
             // Off; a later track's panel, opened twice: served from what was kept, told once.
             settings.value = off
