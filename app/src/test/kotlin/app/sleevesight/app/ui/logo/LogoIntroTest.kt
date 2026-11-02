@@ -25,6 +25,7 @@ import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.idleUntil
+import app.sleevesight.app.now
 import app.sleevesight.app.settings.LastIntro
 import app.sleevesight.app.ui.theme.SleevesightTheme
 import kotlinx.coroutines.runBlocking
@@ -214,7 +215,11 @@ class LogoIntroTest {
         // default) could land before the activity starts and turn the mirror back on.
         LastIntro(app).value = false
         runBlocking { app.graph.settings.update { it.copy(introAtStart = false) } }
-        idleUntil("the setting read") { !app.graph.introAtStart.value }
+        // #831: a failure says what the graph, the store and the mirror held then.
+        idleUntil("the setting read", seen = {
+            "introAtStart ${app.graph.introAtStart.value}, stored ${app.graph.settings.now().introAtStart}, " +
+                "mirror ${LastIntro(app).value}"
+        }) { !app.graph.introAtStart.value }
         ActivityScenario.launch<MainActivity>(fromLauncher()).use { assertFalse(playing()) }
     }
 

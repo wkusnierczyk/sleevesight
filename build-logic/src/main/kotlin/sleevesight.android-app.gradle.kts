@@ -10,6 +10,7 @@ import com.android.build.api.dsl.ApplicationExtension
 import com.android.build.api.variant.HasAndroidTest
 import com.android.build.api.variant.HasUnitTest
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import sleevesight.checks.CheckApkClasses
 import sleevesight.checks.CheckApkNotices
 import sleevesight.checks.CheckDependencies
@@ -71,8 +72,11 @@ extensions.configure<ApplicationExtension> {
 // The unit tests in two JVMs, which share out the test classes (#746): most are Robolectric tests,
 // and in one JVM they ran one at a time. Each fork is a JVM of its own, so tests that write the same
 // file outside a temporary directory can collide.
+// A failure's message and stack trace in the log, not only its class (#814, #831): the flakes that
+// show only in CI leave nothing else behind once the runner ends.
 tasks.withType<Test>().configureEach {
     maxParallelForks = 2
+    testLogging.exceptionFormat = TestExceptionFormat.FULL
 }
 
 val graphRules = rootProject.layout.projectDirectory.file("config/module-graph.properties")

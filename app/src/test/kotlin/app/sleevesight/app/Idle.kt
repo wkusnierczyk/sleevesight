@@ -36,38 +36,48 @@ private fun step() {
     Thread.sleep(STEP_MS)
 }
 
-/** Runs the main looper until [condition] holds, or fails, naming [what], after [timeoutMs]. */
+/**
+ * Runs the main looper until [condition] holds, or fails, naming [what] and what [seen] reads then,
+ * after [timeoutMs].
+ */
 fun idleUntil(
     what: String,
     timeoutMs: Long = WAIT_MS,
+    seen: (() -> Any?)? = null,
     condition: () -> Boolean,
 ) {
     val end = System.currentTimeMillis() + timeoutMs
     while (true) {
         shadowOf(Looper.getMainLooper()).idle()
         if (condition()) return
-        if (System.currentTimeMillis() > end) fail("Not reached within $timeoutMs ms: $what")
+        if (System.currentTimeMillis() > end) fail("Not reached within $timeoutMs ms: $what${seenText(seen)}")
         step()
     }
 }
 
 /**
- * Runs the main looper for [ms], failing, naming [what], as soon as [invariant] does not hold: for
- * what must not happen, such as a session read before the first run is acknowledged.
+ * Runs the main looper for [ms], failing, naming [what] and what [seen] reads then, as soon as
+ * [invariant] does not hold: for what must not happen, such as a session read before the first run
+ * is acknowledged.
  */
 fun idleFor(
     what: String,
     ms: Long = 300,
+    seen: (() -> Any?)? = null,
     invariant: () -> Boolean,
 ) {
     val end = System.currentTimeMillis() + ms
     while (true) {
         shadowOf(Looper.getMainLooper()).idle()
-        if (!invariant()) fail("Broken: $what")
+        if (!invariant()) fail("Broken: $what${seenText(seen)}")
         if (System.currentTimeMillis() > end) return
         step()
     }
 }
+
+/** What [seen] reads, for a failure message; a read that fails says so rather than hiding the failure. */
+private fun seenText(seen: (() -> Any?)?) =
+    seen?.let { "; seen: " + runCatching(it).getOrElse { e -> "read failed: $e" } } ?: ""
 
 /**
  * This flow's first value, failing after [WAIT_MS] rather than waiting on one that never

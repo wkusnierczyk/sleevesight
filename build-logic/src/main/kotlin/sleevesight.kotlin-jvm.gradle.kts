@@ -27,10 +27,11 @@ dependencies {
     "testImplementation"(kotlin("test"))
 }
 
-// Two test JVMs, as in the app (`sleevesight.android-app`).
+// Two test JVMs and failures logged in full, as in the app (`sleevesight.android-app`).
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
     maxParallelForks = 2
+    testLogging.exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
 }
 
 val runtimeRoot = configurations.named("runtimeClasspath").flatMap { it.incoming.resolutionResult.rootComponent }

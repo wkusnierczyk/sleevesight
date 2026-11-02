@@ -61,6 +61,17 @@ class UninstalledPlayersTest {
 
     private fun stored() = graph.settings.now().followedPlayers
 
+    /** The players the last check read, before [seen] reads them again. */
+    private var lastRead: Map<String, Boolean>? = null
+
+    private fun read() = stored().also { lastRead = it }
+
+    /**
+     * For a failure message (#814): the players the failing check read, as stored now, and as the
+     * graph last read them.
+     */
+    private fun seen() = "read $lastRead, stored ${stored()}, latest ${graph.latestSettings.value?.followedPlayers}"
+
     /**
      * Android's broadcast about [player], addressed to the receiver itself: Robolectric does not
      * match an implicit broadcast to a manifest filter with a data scheme (it finds no receiver),
@@ -84,8 +95,8 @@ class UninstalledPlayersTest {
         assertNull(graph.playerIcon(NOT_SHOWN))
 
         // Started and acknowledged, with the settings read: nothing is deleted for not being shown.
-        idleUntil("the settings read") { graph.latestSettings.value != null }
-        idleFor("every entry kept") { stored().keys == setOf(Settings.SPOTIFY, SHOWN, NOT_SHOWN) }
+        idleUntil("the settings read", seen = ::seen) { graph.latestSettings.value != null }
+        idleFor("every entry kept", seen = ::seen) { read().keys == setOf(Settings.SPOTIFY, SHOWN, NOT_SHOWN) }
     }
 
     @Test
@@ -93,14 +104,14 @@ class UninstalledPlayersTest {
         // An update, or a removal before its data is gone, deletes nothing.
         broadcast(Intent.ACTION_PACKAGE_REMOVED, NOT_SHOWN, replacing = true)
         broadcast(Intent.ACTION_PACKAGE_REPLACED, NOT_SHOWN)
-        idleFor("kept through an update") { NOT_SHOWN in stored() }
+        idleFor("kept through an update", seen = ::seen) { NOT_SHOWN in read() }
 
         broadcast(Intent.ACTION_PACKAGE_FULLY_REMOVED, NOT_SHOWN)
-        idleUntil("the removed player dropped") { NOT_SHOWN !in stored() }
+        idleUntil("the removed player dropped", seen = ::seen) { NOT_SHOWN !in read() }
 
         // Spotify, listed by default, keeps its entry, so switched off it stays off.
         broadcast(Intent.ACTION_PACKAGE_FULLY_REMOVED, Settings.SPOTIFY)
-        idleFor("Spotify kept") { stored() == mapOf(Settings.SPOTIFY to false, SHOWN to true) }
+        idleFor("Spotify kept", seen = ::seen) { read() == mapOf(Settings.SPOTIFY to false, SHOWN to true) }
     }
 
     /** A session of [player], playing music, so the session layer sees the player (#435). */
