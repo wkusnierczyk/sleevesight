@@ -18,6 +18,7 @@ nav:
     label: Per track
   - id: how-to-spend-less
     label: Spend less
+provenance: [ai-wrote, human-reviewed]
 ---
 
 # What it costs you

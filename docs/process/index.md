@@ -19,6 +19,7 @@ nav:
     label: How it is built
   - id: how-it-is-tested-and-released
     label: Tested and released
+provenance: [ai-wrote, human-reviewed]
 ---
 
 # Process

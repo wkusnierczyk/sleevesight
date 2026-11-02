@@ -11,6 +11,7 @@ nav:
     label: How it works
   - id: how-it-is-made
     label: How it is made
+provenance: [ai-wrote]
 ---
 
 # Documentation
