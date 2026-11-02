@@ -68,21 +68,25 @@ data class LyricsLink(
  * (https://musicbrainz.org/doc/Style/Relationships/URLs/Lyrics_whitelist), each by the name it
  * goes by and its [domain]: a link's host is the domain or a subdomain of it
  * (`artist.bandcamp.com`, `en.wikisource.org`). In the *Lyrics* panel's order: Genius, then
- * Musixmatch, then the others as the whitelist lists them (#728).
+ * Musixmatch, then the others as the whitelist lists them (#728). [forLyrics] is whether the site
+ * exists to host lyrics, so that a song's page on it found by a web search is its lyrics page
+ * ([webPages], #824); a store page (Bandcamp) or a library of texts (Wikisource) is not, though a
+ * page MusicBrainz's editors link there carries them.
  */
 enum class LyricsSite(
     val siteName: String,
     val domain: String,
+    val forLyrics: Boolean = true,
 ) {
     GENIUS("Genius", "genius.com"),
     MUSIXMATCH("Musixmatch", "musixmatch.com"),
-    BANDCAMP("Bandcamp", "bandcamp.com"),
+    BANDCAMP("Bandcamp", "bandcamp.com", forLyrics = false),
     LIEDERNET("LiederNet", "lieder.net"),
     MUZIKUM("Muzikum", "muzikum.eu"),
-    WIKISOURCE("Wikisource", "wikisource.org"),
-    PROJECT_GUTENBERG("Project Gutenberg", "gutenberg.org"),
-    PROJECT_RUNEBERG("Project Runeberg", "runeberg.org"),
-    ONLINE_BIJBEL("Online-Bijbel.nl", "online-bijbel.nl"),
+    WIKISOURCE("Wikisource", "wikisource.org", forLyrics = false),
+    PROJECT_GUTENBERG("Project Gutenberg", "gutenberg.org", forLyrics = false),
+    PROJECT_RUNEBERG("Project Runeberg", "runeberg.org", forLyrics = false),
+    ONLINE_BIJBEL("Online-Bijbel.nl", "online-bijbel.nl", forLyrics = false),
     UTA_NET("Uta-Net", "uta-net.com"),
     J_LYRIC("J-Lyric.net", "j-lyric.net"),
     UTATEN("Utaten", "utaten.com"),
@@ -185,16 +189,33 @@ fun lyricsLinks(
 
 /**
  * The lyrics pages among [track]'s web search results (#801, *Ask AI*'s first step, at no cost):
- * each result's address that is a page on the whitelist, chosen as MusicBrainz's are ([pages]). The
- * results are those the web search source kept as about the recording ([SourceId.WEB]'s evidence),
- * so the page is this song's, by the filter's check.
+ * each result's address that is a song's page ([webSongPage], #824), chosen as MusicBrainz's are
+ * ([pages]). The results are those the web search source kept as about the recording
+ * ([SourceId.WEB]'s evidence), so the page is this song's, by the filter's check.
  */
 fun webPages(
     track: TrackState,
     accentFolder: AccentFolder,
 ): List<LyricsLink> {
     val results = (track.sources[SourceId.WEB] as? SourceState.Done)?.result?.evidence.orEmpty()
-    return pages(results.mapNotNull { it.url }, track.normalized.artists, accentFolder)
+    return pages(results.mapNotNull { it.url }.filter(::webSongPage), track.normalized.artists, accentFolder)
+}
+
+/**
+ * Whether [url], a web search result, is a song's lyrics page (#824): `https` on a site of the
+ * whitelist that exists to host lyrics ([LyricsSite.forLyrics]) and, where the address tells, a
+ * song's page rather than an artist's or an album's: on Genius one path segment ending in
+ * `-lyrics`; on Musixmatch none of its segments `artist` or `album`.
+ */
+internal fun webSongPage(url: String): Boolean {
+    val (host, path) = parse(url) ?: return false
+    val segments = path.split('/').filter { it.isNotEmpty() }
+    return when (val site = LyricsSite.of(host)) {
+        null -> false
+        LyricsSite.GENIUS -> segments.size == 1 && segments[0].endsWith("-lyrics", ignoreCase = true)
+        LyricsSite.MUSIXMATCH -> segments.isNotEmpty() && segments.none { it == "artist" || it == "album" }
+        else -> site.forLyrics
+    }
 }
 
 /**
