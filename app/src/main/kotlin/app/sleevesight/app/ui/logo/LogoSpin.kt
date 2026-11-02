@@ -2,14 +2,17 @@ package app.sleevesight.app.ui.logo
 
 import androidx.compose.animation.core.withInfiniteAnimationFrameNanos
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import app.sleevesight.app.session.PlaybackInfo
@@ -38,14 +41,14 @@ data class LogoSpin(
         /**
          * The spin for what Home shows: [turning] while the player line says *Playing* ([playing],
          * the same test the line's state goes by) and [Settings.spinLogo] is on; at
-         * [Settings.logoSpeed]. Before the settings' first read, as their defaults.
+         * [Settings.logoSpeed]. Before the settings' first read, still: the setting may be off.
          */
         fun of(
             nowPlaying: NowPlaying?,
             playback: PlaybackInfo,
             settings: Settings?,
         ): LogoSpin {
-            val chosen = settings ?: Settings()
+            val chosen = settings ?: return STILL
             return LogoSpin(chosen.spinLogo && playing(nowPlaying, playback), chosen.logoSpeed)
         }
     }
@@ -102,23 +105,37 @@ internal data class RecordMotion(
  * resting where it stops and starting again from there. It moves only while [running] (the intro
  * over, so the record the intro landed, upright, is where it starts), while the app is on screen
  * ([whileOnScreen]: back on screen, it goes on from where it was, the time away not counted), and while
- * Home is composed. Under *Remove animations* ([animatorDurationScale] 0) it stands still where it
- * is, and starts again from there once animations are back.
+ * Home is composed. Back after an absence (off screen, or Home shown again) with nothing to turn it,
+ * it stands still at once where it is; a stop while it shows coasts to rest. Under *Remove
+ * animations* ([animatorDurationScale] 0) it stands still where it is, and starts again from there
+ * once animations are back.
  */
 @Composable
 internal fun recordMotion(
     spin: LogoSpin,
     running: Boolean,
 ): State<RecordMotion> {
-    val motion = rememberSaveable(saver = RecordMotion.Saver) { mutableStateOf(RecordMotion()) }
+    var made = false
+    val motion = rememberSaveable(saver = RecordMotion.Saver) { mutableStateOf(RecordMotion().also { made = true }) }
+    // Back after an absence: off screen, or restored (Home shown again, or the app's state restored).
+    val away = remember { Away(back = !made) }
     val still = animatorDurationScale() == 0f
     val lifecycle = LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(lifecycle) {
+        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_STOP) away.back = true }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer) }
+    }
     val top = spin.speed.rpm * DEGREES_PER_RPM
     val target = if (spin.turning) top else 0f
     LaunchedEffect(running, still, lifecycle, target, top) {
         if (still) motion.value = motion.value.copy(speed = 0f)
         if (still || !running) return@LaunchedEffect
         whileOnScreen(lifecycle) {
+            // Back after an absence with nothing to turn it, it stands where it is at once, rather
+            // than coasting beside a line that already says it has stopped.
+            if (away.back && target == 0f) motion.value = motion.value.copy(speed = 0f)
+            away.back = false
             if (target > 0f || motion.value.speed > 0f) {
                 eachFrame { seconds ->
                     motion.value = motion.value.after(seconds, target, top)
@@ -129,6 +146,11 @@ internal fun recordMotion(
     }
     return motion
 }
+
+/** Whether the record is back after an absence since it last moved ([recordMotion]). */
+private class Away(
+    var back: Boolean,
+)
 
 /**
  * Runs [block] while the app is on screen ([lifecycle] at least started), afresh each time it comes

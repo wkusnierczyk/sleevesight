@@ -9,7 +9,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.geometry.Offset
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import app.sleevesight.core.settings.LogoSpeed
+import kotlinx.coroutines.delay
 import kotlin.math.PI
+import kotlin.math.roundToLong
 import kotlin.math.sin
 
 // A debug build's bug in the record's place (#652) crawling while music plays, where a release
@@ -93,18 +95,29 @@ internal fun bugCrawl(
     running: Boolean,
 ): State<BugCrawl> {
     val crawl = remember { mutableStateOf(BugCrawl()) }
+    // The rest so far, kept out of the drawn state, so resting draws nothing, and kept across the
+    // effect's restarts, so the rest is as long after one.
+    val rest = remember { Rest() }
     val still = animatorDurationScale() == 0f
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val trip = tripSeconds(spin.speed)
     val active = spin.turning
     LaunchedEffect(running, still, lifecycle, active, trip) {
-        if (still || !(active || crawl.value.moving)) crawl.value = BugCrawl()
+        if (still || !(active || crawl.value.moving)) {
+            crawl.value = BugCrawl()
+            rest.seconds = 0f
+        }
         if (still || !running) return@LaunchedEffect
         whileOnScreen(lifecycle) {
-            if (active || crawl.value.moving) {
+            while (active || crawl.value.moving) {
+                if (!crawl.value.moving) {
+                    rest.wait()
+                    crawl.value = BugCrawl(trip = 0f)
+                }
+                // Frames only for the trip, to its end, even if the music stops on the way.
                 eachFrame { seconds ->
-                    crawl.value = crawl.value.after(seconds, active, trip)
-                    active || crawl.value.moving
+                    crawl.value = crawl.value.after(seconds, active = false, trip)
+                    crawl.value.moving
                 }
             }
         }
@@ -112,11 +125,33 @@ internal fun bugCrawl(
     return crawl
 }
 
+/**
+ * The bug's rest between trips, counted with no frames, by waits of at most [REST_STEP_SECONDS]
+ * ([seconds], the rest so far): a wait cut short, by the effect starting again or the app leaving
+ * the screen, loses only part of a step.
+ */
+private class Rest {
+    var seconds = 0f
+
+    /** Waits out the rest still to go, and starts the next one from nothing. */
+    suspend fun wait() {
+        while (seconds < CRAWL_REST_SECONDS) {
+            val step = minOf(REST_STEP_SECONDS, CRAWL_REST_SECONDS - seconds)
+            delay((step * MILLIS_PER_SECOND).roundToLong())
+            seconds += step
+        }
+        seconds = 0f
+    }
+}
+
 /** The rest between trips, the same at either speed. */
 internal const val CRAWL_REST_SECONDS: Float = 4f
 
 /** A trip's seconds at 33⅓ rpm ([tripSeconds]). */
 internal const val CRAWL_SECONDS: Float = 1.5f
+
+private const val REST_STEP_SECONDS = .25f
+private const val MILLIS_PER_SECOND = 1000f
 
 // One sway to each side for each 0.8 of the bug's half height crawled, by 6% of it.
 private const val STRIDE = .8f

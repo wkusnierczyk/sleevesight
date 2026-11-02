@@ -170,6 +170,27 @@ class HeaderSpinTest {
             assertEquals(LP, now.speed, .001f)
         }
 
+    @Test
+    fun backOnScreenWithTheMusicStoppedMeanwhileItStandsWhereItLeftOff() =
+        show {
+            compose.mainClock.advanceTimeBy(2 * HALF_SECOND + SLACK)
+            checkNotNull(scenario).moveToState(Lifecycle.State.CREATED)
+            compose.mainClock.advanceTimeBy(FIRST_FRAMES)
+            val left = now.degrees
+            change { spin = LogoSpin.STILL }
+            compose.mainClock.advanceTimeBy(FIRST_FRAMES)
+            checkNotNull(scenario).moveToState(Lifecycle.State.RESUMED)
+            compose.mainClock.advanceTimeBy(FIRST_FRAMES)
+            // No coast beside a line that says it has stopped: at rest where it was.
+            assertEquals(RecordMotion(left, 0f), now)
+            // Stopped while it shows, it still coasts.
+            change { spin = LogoSpin(turning = true) }
+            compose.mainClock.advanceTimeBy(2 * HALF_SECOND + SLACK)
+            change { spin = LogoSpin.STILL }
+            compose.mainClock.advanceTimeBy(FIRST_FRAMES)
+            assertTrue("coasting: ${now.speed}", now.speed > 0f)
+        }
+
     /** The record's square in [logo], the header logo as drawn. */
     private fun recordOf(logo: Bitmap): Bitmap {
         val k = logo.height / LineBox.height

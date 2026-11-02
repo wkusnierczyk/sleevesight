@@ -2,7 +2,9 @@ package app.sleevesight.app.ui.logo
 
 import android.graphics.Bitmap
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.State
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.toArgb
@@ -24,6 +26,7 @@ import app.sleevesight.core.settings.LogoSpeed
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Rule
@@ -55,6 +58,8 @@ class BugCrawlPicturesTest {
 
     private fun show(
         dark: Boolean = false,
+        access: Boolean = true,
+        content: (@Composable () -> Unit)? = null,
         check: () -> Unit,
     ) {
         // The unit tests run on the debug build, whose header draws the bug.
@@ -66,8 +71,8 @@ class BugCrawlPicturesTest {
                     SleevesightTheme(darkTheme = dark) {
                         CompositionLocalProvider(LocalAnimatorDurationScale provides 1f) {
                             // Nothing under the header, so the logo's ink found there is the header's.
-                            HomeScreen(
-                                accessGranted = true,
+                            content?.invoke() ?: HomeScreen(
+                                accessGranted = access,
                                 onOpenFirstRun = {},
                                 onOpenSettings = {},
                                 logoSpin = spin,
@@ -144,6 +149,35 @@ class BugCrawlPicturesTest {
         }
 
     @Test
+    fun restingItWritesNothingTheLogoDraws() {
+        // What the logo draws is read from the crawl's state, so with no write while it rests, a rest
+        // draws nothing.
+        var crawl: State<BugCrawl>? = null
+        val turning = LogoSpin(turning = true)
+        show(content = { crawl = bugCrawl(turning, running = true) }) {
+            at(4 * FRAME_MS)
+            val resting = checkNotNull(crawl).value
+            for (step in 1..REST_SAMPLES) {
+                at((REST_MS - 10 * FRAME_MS) / REST_SAMPLES)
+                assertSame("the same state, at step $step", resting, checkNotNull(crawl).value)
+            }
+            at(10 * FRAME_MS + TRIP_MS / 2)
+            assertTrue("on its trip", checkNotNull(crawl).value.moving)
+        }
+    }
+
+    @Test
+    fun homeTurnsItOnlyWithNotificationAccess() {
+        for (access in listOf(false, true)) {
+            show(access = access) {
+                val still = recordSquare()
+                at(REST_MS + TRIP_MS / 5)
+                assertEquals("access $access", !access, still.sameAs(recordSquare()))
+            }
+        }
+    }
+
+    @Test
     fun at45RpmTheTripIsFaster() {
         var at33: List<Int>? = null
         show {
@@ -217,5 +251,6 @@ class BugCrawlPicturesTest {
         val TRIP_MS = (CRAWL_SECONDS * 1000).toLong()
         const val FRAME_MS = 16L
         const val SLACK_MS = 100L
+        const val REST_SAMPLES = 20
     }
 }

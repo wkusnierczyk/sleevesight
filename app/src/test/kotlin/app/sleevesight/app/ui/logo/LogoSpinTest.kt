@@ -94,8 +94,8 @@ class LogoSpinTest {
             LogoSpin(true, LogoSpeed.RPM_45),
             LogoSpin.of(track, playing, Settings(logoSpeed = LogoSpeed.RPM_45)),
         )
-        // Before the settings' first read, as their defaults.
-        assertEquals(LogoSpin(true, LogoSpeed.RPM_33), LogoSpin.of(track, playing, null))
+        // Before the settings' first read, still: the setting may be off.
+        assertEquals(LogoSpin.STILL, LogoSpin.of(track, playing, null))
     }
 
     @Test
