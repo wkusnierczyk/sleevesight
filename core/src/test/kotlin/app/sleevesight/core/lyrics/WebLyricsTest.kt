@@ -17,7 +17,8 @@ import kotlin.time.Instant
 
 /**
  * *Lyrics*' first step of *Ask AI* (#801): a lyrics page among the track's web search results is
- * shown with no AI call, in the search's place, chosen as MusicBrainz's are; none without one.
+ * shown with no AI call, in the search's place, chosen as MusicBrainz's are; none without one, nor
+ * from a site of the whitelist that does not exist to host lyrics (#824).
  */
 class WebLyricsTest {
     private val at = Instant.parse("2026-11-01T10:00:00Z")
@@ -57,5 +58,30 @@ class WebLyricsTest {
     fun withNoneThereIsNoWebPage() {
         val links = lyricsLinks(track("https://example.org/review"), search = false, accentFolder = JvmAccentFolder)
         assertEquals(LyricsLinks.NoLink(NoLinkReason.NotFound, null), links)
+    }
+
+    @Test
+    fun aStorePageIsNotALyricsPage() {
+        val bandcamp = "https://emilyjanewhite.bandcamp.com/track/the-black-oak"
+        val wikisource = "https://en.wikisource.org/wiki/The_Black_Oak"
+        val links = lyricsLinks(track(bandcamp, wikisource), search = true, accentFolder = JvmAccentFolder)
+        assertEquals(
+            LyricsLinks.NoLink(
+                NoLinkReason.NotFound,
+                LyricsLink(LyricsSite.GENIUS, searchUrl(Normalizer(JvmAccentFolder).normalize(playing))),
+            ),
+            links,
+        )
+    }
+
+    @Test
+    fun besideAStorePageALyricsSiteIsKept() {
+        val genius = "https://genius.com/Emily-jane-white-the-black-oak-lyrics"
+        val bandcamp = "https://emilyjanewhite.bandcamp.com/track/the-black-oak"
+        val links = lyricsLinks(track(bandcamp, genius), search = false, accentFolder = JvmAccentFolder)
+        assertEquals(
+            LyricsLinks.NoLink(NoLinkReason.NotFound, null, web = listOf(LyricsLink(LyricsSite.GENIUS, genius))),
+            links,
+        )
     }
 }
