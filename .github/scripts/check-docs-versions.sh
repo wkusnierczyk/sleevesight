@@ -52,7 +52,7 @@ while IFS= read -r -d '' page; do
   pages=$((pages + 1))
   version=$(docs_version "$page")
   if [ -z "$version" ]; then
-    error "$page" "$page names no release: add \`docs_version: <version>\` to its front matter, the release it was last brought up to (design/release.md, Documentation versions)"
+    error "$page" "$page names no release: its front matter, closed by \`---\`, needs exactly one \`docs_version: <version>\`, the release it was last brought up to (design/release.md, Documentation versions)"
     status=1
   elif [[ ! $version =~ ^(0|[1-9][0-9]{0,3})\.(0|[1-9][0-9]{0,2})\.(0|[1-9][0-9]{0,2})$ ]]; then
     error "$page" "$page: docs_version $version is not a release version, <major>.<minor>.<patch> without leading zeros"
