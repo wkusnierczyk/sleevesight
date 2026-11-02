@@ -5,7 +5,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -54,7 +53,7 @@ import app.sleevesight.app.R
 /** A button's least height as drawn, as tall as Home's chips and the insight card's split button. */
 internal val GROUP_HEIGHT = 32.dp
 
-/** The least height of the group's row, and of each button stacked: Android's 48 dp touch target. */
+/** The least height of the group's row: Android's 48 dp touch target. */
 internal val GROUP_TARGET = 48.dp
 
 /** The gap between the buttons, as Material's connected group has it. */
@@ -80,20 +79,17 @@ private const val DISABLED_CONTAINER_ALPHA = 0.12f
 /**
  * One of a few values to choose, as a connected button group (#637): [choices], each a value and
  * its label, in one row, the [selected] one filled in the text's colour, with a check before its
- * label and every corner round; a tap on another calls [onSelect] with its value. The group follows
- * [selected], so whatever changes the value elsewhere shows here at once. Not [enabled], none can
- * be chosen and all are dimmed.
+ * label (none where the row has no room for it, [ConnectedButtons]) and every corner round; a tap
+ * on another calls [onSelect] with its value. The group follows [selected], so whatever changes
+ * the value elsewhere shows here at once. Not [enabled], none can be chosen and all are dimmed.
  *
  * A screen reader reads the group as one group of radio buttons, the chosen one selected, each by
  * its label, after the name of what is chosen ([name], a setting's, so a button reached straight
  * away says what it sets: "Theme: Light"), and then what the value does, where [details] has it
- * (as the dialogs read a choice with its description, #550). Where the labels do not fit the row
- * side by side, as at a large font size, each takes a line of its own, full width, so nothing is
- * cut ([GroupArrangement]); unless every choice has a label in [short] (#803): the group then shows
- * those, in one row, never a stack, a label wrapping in its button if even they do not fit. A
- * screen reader reads the full label either way. With [oneRow] (#801), never a stack either, with
- * the full labels: the buttons share the row by their labels' widths, and a label too long for its
- * button wraps in it. A value in [disabled] cannot be chosen, and is dimmed, while the others can.
+ * (as the dialogs read a choice with its description, #550). The buttons stay in one row at any
+ * font size (#821, [groupShares]): where the labels do not fit it on one line, as at a large font
+ * size, each wraps in its button, between its words. A value in [disabled] cannot be chosen, and
+ * is dimmed, while the others can.
  */
 @Suppress("LongParameterList") // What the group shows and says, each a value of its own, and what a tap does.
 @Composable
@@ -106,8 +102,6 @@ internal fun <T> ChoiceButtonGroup(
     details: Map<T, String> = emptyMap(),
     enabled: Boolean = true,
     disabled: Set<T> = emptySet(),
-    oneRow: Boolean = false,
-    short: Map<T, String> = emptyMap(),
 ) {
     val buttons =
         choices.map { (value, label) ->
@@ -119,8 +113,7 @@ internal fun <T> ChoiceButtonGroup(
                 read = read,
             ) { onSelect(value) }
         }
-    val shorts = choices.mapNotNull { short[it.first] }.takeIf { it.isNotEmpty() && it.size == choices.size }
-    ConnectedButtons(buttons, modifier.selectableGroup(), checks = true, shorts = shorts, oneRow = oneRow)
+    ConnectedButtons(buttons, modifier.selectableGroup(), checks = true)
 }
 
 /**
@@ -178,156 +171,172 @@ private class GroupButton(
 )
 
 /**
- * How a group's buttons are laid out in the width it has: side by side, all as wide as the widest
- * needs ([EQUAL], as Material's connected groups are), or, where that does not fit, each as wide as
- * its label needs and the room left shared out in proportion to that ([PROPORTIONAL]); where even
- * that does not fit, one under another, each full width ([STACKED]), its label wrapping in it if it
- * must; or, for a group kept to one row, still side by side in proportion, each label wrapping in
- * its button.
+ * How a group's buttons share the row, always one row (#821): all as wide as the widest needs
+ * ([EQUAL], as Material's connected groups are), or, where that does not fit, by their labels'
+ * widths ([PROPORTIONAL], [groupShares]).
  */
-internal enum class GroupArrangement { EQUAL, PROPORTIONAL, STACKED }
+internal enum class GroupArrangement { EQUAL, PROPORTIONAL }
 
-/**
- * How buttons [needing] these widths, [gap] apart, are laid out in [room] (all in pixels); with
- * [oneRow], never [GroupArrangement.STACKED].
- */
+/** How buttons [needing] these widths, [gap] apart, share [room] (all in pixels). */
 internal fun groupArrangement(
     needing: List<Int>,
     gap: Int,
     room: Int,
-    oneRow: Boolean = false,
-): GroupArrangement {
-    val free = room - gap * (needing.size - 1)
-    return when {
-        needing.isEmpty() -> GroupArrangement.EQUAL
-        needing.max() * needing.size <= free -> GroupArrangement.EQUAL
-        needing.sum() <= free || oneRow -> GroupArrangement.PROPORTIONAL
-        else -> GroupArrangement.STACKED
+): GroupArrangement =
+    if (needing.isEmpty() || needing.max() * needing.size <= room - gap * (needing.size - 1)) {
+        GroupArrangement.EQUAL
+    } else {
+        GroupArrangement.PROPORTIONAL
     }
-}
 
-/**
- * How buttons whose labels need [full] widths are laid out, [gap] apart, in [room] (null when the
- * width is not bounded: side by side), and whether their [short] labels show in place of the full
- * ones (#803): they do, where there are short labels, when the full ones would stack, and then in a
- * row whether or not they fit, a label wrapping in its button if it must.
- */
-internal fun groupLayout(
-    full: List<Int>,
-    short: List<Int>?,
+/** Whether labels [needing] these widths on one line, [gap] apart, fit [room] side by side. */
+private fun fits(
+    needing: List<Int>,
     gap: Int,
-    room: Int?,
-    oneRow: Boolean = false,
-): Pair<GroupArrangement, Boolean> {
-    // Kept to one row (#801), the full labels never stack, so the short ones are not needed.
-    val arrangement = room?.let { groupArrangement(full, gap, it, oneRow) } ?: GroupArrangement.EQUAL
+    room: Int,
+): Boolean = needing.sum() <= room - gap * (needing.size - 1)
+
+/**
+ * Each button's share of [room], [gap] apart (all in pixels), for labels needing [needing] widths on
+ * one line and their longest words [words] (#821): equal shares where they fit so; where not, each
+ * as wide as its label needs on one line, the room left shared in proportion to that; where the row
+ * is too narrow even for that, each its longest word's width, and the room left shared in
+ * proportion to what each still needs to take its label on one line, so a label wraps between its
+ * words, never inside one; where even the longest words do not fit, in proportion to them.
+ */
+internal fun groupShares(
+    needing: List<Int>,
+    words: List<Int>,
+    gap: Int,
+    room: Int,
+): List<Float> {
+    val free = room - gap * (needing.size - 1)
+    val still = needing.zip(words) { label, word -> label - word }
     return when {
-        room == null || short == null || arrangement != GroupArrangement.STACKED -> arrangement to false
-        groupArrangement(short, gap, room) == GroupArrangement.EQUAL -> GroupArrangement.EQUAL to true
-        else -> GroupArrangement.PROPORTIONAL to true
+        groupArrangement(needing, gap, room) == GroupArrangement.EQUAL -> needing.map { 1f }
+        fits(needing, gap, room) -> needing.map(Int::toFloat)
+        // The labels need more than `free` and their words no more, so `still` sums to more than 0.
+        fits(words, gap, room) ->
+            words.zip(still) { word, more -> word + (free - words.sum()) * more.toFloat() / still.sum() }
+        else -> words.map(Int::toFloat)
     }
 }
 
 /**
- * [buttons] laid out by [groupArrangement], from the widths their labels need on one line in the
- * buttons' style (in the app's language, font and font size), their padding, and, in a choice
- * ([checks]), room for the check in every one, so the buttons keep their widths whichever is
- * chosen. In a row, the buttons are of one height, at least [GROUP_HEIGHT], in a row at least
- * [GROUP_TARGET] high, each answering a tap across 48 dp (Compose widens a smaller target into the
- * room around it); stacked, each is at least [GROUP_TARGET] high. With [compact], buttons that fit
- * as wide as the widest needs ([GroupArrangement.EQUAL]) are that wide, and the row is placed at
- * that side; otherwise they share the width as without it. Where they would stack and there are
- * [shorts], a label for every button, those are measured and shown instead, in a row in any case
- * ([groupLayout]).
+ * [buttons] in one row, sharing it by [groupShares], from the widths their labels, and their
+ * longest words, need on one line in the buttons' style (in the app's language, font and font
+ * size), their padding, and, in a choice ([checks]), room for the check in every one, so the
+ * buttons keep their widths whichever is chosen; where the longest words do not fit the row with
+ * that room, as at a large font size on a narrow phone, the choice shows no check, its fill alone
+ * marking the chosen one, so no word breaks. The buttons are of one height, at least
+ * [GROUP_HEIGHT], in a row at least [GROUP_TARGET] high, each answering a tap across 48 dp (Compose
+ * widens a smaller target into the room around it). With [compact], buttons that fit as wide as the
+ * widest needs ([GroupArrangement.EQUAL]) are that wide, and the row is placed at that side;
+ * otherwise they share the width as without it.
  */
-@Suppress("LongParameterList") // The buttons, and each way a group may lay them out.
 @Composable
 private fun ConnectedButtons(
     buttons: List<GroupButton>,
     modifier: Modifier,
     checks: Boolean,
     compact: Alignment.Horizontal? = null,
-    oneRow: Boolean = false,
-    shorts: List<String>? = null,
 ) {
     val style = MaterialTheme.typography.labelLarge
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
     val labels = buttons.map { it.label }
-    val needingFull =
-        remember(labels, style, density, measurer, checks) { labelWidths(labels, measurer, style, density, checks) }
-    val needingShort =
-        remember(shorts, style, density, measurer, checks) {
-            shorts?.let { labelWidths(it, measurer, style, density, checks) }
+    // Each measured with room for the check and without it (#821).
+    val withCheck =
+        remember(labels, style, density, measurer) {
+            Widths.measured(labels, measurer, style, density, checks = true)
+        }
+    val noCheck =
+        remember(labels, style, density, measurer) {
+            Widths.measured(labels, measurer, style, density, checks = false)
         }
     BoxWithConstraints(modifier.fillMaxWidth()) {
         val gap = with(density) { GROUP_GAP.roundToPx() }
         val bounded = constraints.hasBoundedWidth
-        val (arrangement, useShort) =
-            groupLayout(needingFull, needingShort, gap, constraints.maxWidth.takeIf { bounded }, oneRow)
-        val needing = if (useShort) needingShort.orEmpty() else needingFull
-        val shown = if (useShort) shorts.orEmpty() else labels
-        if (arrangement == GroupArrangement.STACKED) {
-            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(GROUP_GAP)) {
+        val room = constraints.maxWidth
+        // A choice leaves its check out where the words do not fit the row with room for it.
+        val check = checks && (!bounded || fits(withCheck.words, gap, room))
+        val (needing, words) = if (check) withCheck else noCheck
+        val shares = if (bounded) groupShares(needing, words, gap, room) else null
+        // Compact only where every button fits as wide as the widest label needs.
+        val equal = bounded && groupArrangement(needing, gap, room) == GroupArrangement.EQUAL
+        val side = compact.takeIf { equal && needing.isNotEmpty() }
+        val widest = with(density) { (needing.maxOrNull() ?: 0).toDp() }
+        Box(Modifier.fillMaxWidth().heightIn(min = GROUP_TARGET), contentAlignment = rowPlace(side)) {
+            Row(
+                (if (side == null) Modifier.fillMaxWidth() else Modifier).height(IntrinsicSize.Min),
+                horizontalArrangement = Arrangement.spacedBy(GROUP_GAP),
+            ) {
                 buttons.forEachIndexed { index, button ->
+                    val width = buttonWidth(if (side != null) widest else null, shares?.get(index))
                     GroupButtonView(
                         button,
-                        groupShape(index, buttons.size, button.selected == true, stacked = true),
-                        Modifier.fillMaxWidth().heightIn(min = GROUP_TARGET),
+                        groupShape(index, buttons.size, button.selected == true),
+                        width.fillMaxHeight(),
+                        check,
                     )
-                }
-            }
-        } else {
-            // Compact only where every button fits as wide as the widest label needs.
-            val side = compact.takeIf { bounded && arrangement == GroupArrangement.EQUAL && needing.isNotEmpty() }
-            val widest = with(density) { (needing.maxOrNull() ?: 0).toDp() }
-            Box(Modifier.fillMaxWidth().heightIn(min = GROUP_TARGET), contentAlignment = rowPlace(side)) {
-                Row(
-                    (if (side == null) Modifier.fillMaxWidth() else Modifier).height(IntrinsicSize.Min),
-                    horizontalArrangement = Arrangement.spacedBy(GROUP_GAP),
-                ) {
-                    buttons.forEachIndexed { index, button ->
-                        val share = if (arrangement == GroupArrangement.EQUAL) 1f else needing[index].toFloat()
-                        val width = buttonWidth(if (side != null) widest else null, bounded, share)
-                        GroupButtonView(
-                            button,
-                            groupShape(index, buttons.size, button.selected == true, stacked = false),
-                            width.fillMaxHeight(),
-                            label = shown[index],
-                        )
-                    }
                 }
             }
         }
     }
 }
 
-/**
- * The widths [labels] need on one line in [style], with the buttons' padding and, with [checks],
- * room for the check in every one; a pixel over, so that a label measured to fit is not wrapped by
- * rounding.
- */
-private fun labelWidths(
-    labels: List<String>,
-    measurer: TextMeasurer,
-    style: TextStyle,
-    density: Density,
-    checks: Boolean,
-): List<Int> =
-    with(density) {
-        val extra = 2 * GROUP_PADDING.roundToPx() + if (checks) (CHECK_SIZE + CHECK_GAP).roundToPx() else 0
-        labels.map { measurer.measure(it, style, softWrap = false, maxLines = 1).size.width + extra + 1 }
-    }
+/** The widths buttons need for their labels on one line, [labels], and for their longest [words]. */
+private data class Widths(
+    val labels: List<Int>,
+    val words: List<Int>,
+) {
+    companion object {
+        /** [labels]' widths, each label's and its longest word's, measured by [oneLine]. */
+        fun measured(
+            labels: List<String>,
+            measurer: TextMeasurer,
+            style: TextStyle,
+            density: Density,
+            checks: Boolean,
+        ): Widths {
+            val extra =
+                with(density) {
+                    2 * GROUP_PADDING.roundToPx() + if (checks) (CHECK_SIZE + CHECK_GAP).roundToPx() else 0
+                }
+            return Widths(
+                oneLine(labels, measurer, style, extra),
+                labels.map { label ->
+                    val words = label.split(WORD_BREAK).filter(String::isNotEmpty)
+                    oneLine(words, measurer, style, extra).maxOrNull() ?: 0
+                },
+            )
+        }
 
-/** A row's button's width: [fixed] in a compact row, else its [share] of a [bounded] row, or its own. */
+        /**
+         * The widths [texts] need on one line in [style], with [extra] for the buttons' padding and,
+         * in a choice, room for the check; a pixel over, so that a label measured to fit is not
+         * wrapped by rounding.
+         */
+        private fun oneLine(
+            texts: List<String>,
+            measurer: TextMeasurer,
+            style: TextStyle,
+            extra: Int,
+        ): List<Int> = texts.map { measurer.measure(it, style, softWrap = false, maxLines = 1).size.width + extra + 1 }
+    }
+}
+
+/** Where a label may wrap: at a space, as Android's line breaker breaks a button's label. */
+private val WORD_BREAK = Regex("\\s+")
+
+/** A row's button's width: [fixed] in a compact row, else its [share] of a bounded row, or its own. */
 private fun RowScope.buttonWidth(
     fixed: Dp?,
-    bounded: Boolean,
-    share: Float,
+    share: Float?,
 ): Modifier =
     when {
         fixed != null -> Modifier.width(fixed)
-        bounded -> Modifier.weight(share)
+        share != null -> Modifier.weight(share)
         else -> Modifier
     }
 
@@ -340,40 +349,35 @@ private fun rowPlace(side: Alignment.Horizontal?): Alignment =
     }
 
 /**
- * The shape of the button at [index] of [count]: round at the group's ends, its outer corners, and
+ * The shape of the button at [index] of [count]: round at the row's ends, its start and end, and
  * small where it meets its neighbours; round all round when it is the one chosen ([selected]), as
- * Material's connected group shows the button checked. A row's ends are its start and end, a
- * stack's its top and bottom.
+ * Material's connected group shows the button checked.
  */
 internal fun groupShape(
     index: Int,
     count: Int,
     selected: Boolean,
-    stacked: Boolean,
 ): Shape {
     val outer = GROUP_OUTER_CORNER
     val inner = GROUP_INNER_CORNER
     if (selected || count == 1) return RoundedCornerShape(outer)
     val first = if (index == 0) outer else inner
     val last = if (index == count - 1) outer else inner
-    return if (stacked) {
-        RoundedCornerShape(topStart = first, topEnd = first, bottomEnd = last, bottomStart = last)
-    } else {
-        RoundedCornerShape(topStart = first, topEnd = last, bottomEnd = last, bottomStart = first)
-    }
+    return RoundedCornerShape(topStart = first, topEnd = last, bottomEnd = last, bottomStart = first)
 }
 
 /**
  * One button: its label on a fill as the chips' ([chipColours]), the text's colour when chosen, a
- * light fill of it otherwise; dimmed when it cannot be used. One node for a screen reader: a radio
- * button in a choice, a button in a row of actions.
+ * light fill of it otherwise, the chosen one's label after a check where the group has room for
+ * it ([check]); dimmed when it cannot be used. One node for a screen reader: a radio button in a
+ * choice, a button in a row of actions.
  */
 @Composable
 private fun GroupButtonView(
     button: GroupButton,
     shape: Shape,
     modifier: Modifier,
-    label: String = button.label,
+    check: Boolean,
 ) {
     val chosen = button.selected == true
     val colours = MaterialTheme.colorScheme
@@ -404,7 +408,7 @@ private fun GroupButtonView(
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (chosen) {
+        if (chosen && check) {
             Icon(
                 painterResource(R.drawable.ic_check),
                 contentDescription = null,
@@ -414,7 +418,7 @@ private fun GroupButtonView(
             Spacer(Modifier.width(CHECK_GAP))
         }
         Text(
-            label,
+            button.label,
             style = MaterialTheme.typography.labelLarge,
             color = content,
             textAlign = TextAlign.Center,

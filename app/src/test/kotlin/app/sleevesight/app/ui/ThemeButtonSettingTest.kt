@@ -4,6 +4,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
@@ -141,7 +142,11 @@ class ThemeButtonSettingTest {
                 cycle()
                 compose.waitUntil(WAIT_MS) { settings.now().theme == theme }
                 compose.waitForIdle()
-                compose.onNode(hasText(text(label)) and isSelectable()).performScrollTo().assertIsSelected()
+                val read = "${text(R.string.settings_theme)}: ${text(label)}"
+                compose
+                    .onNode(hasText(text(label)) and isSelectable() and hasContentDescription(read, substring = true))
+                    .performScrollTo()
+                    .assertIsSelected()
             }
         }
 }

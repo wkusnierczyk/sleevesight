@@ -6,6 +6,7 @@ import android.app.UiModeManager
 import android.os.Bundle
 import android.util.TypedValue
 import androidx.activity.compose.setContent
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
@@ -83,7 +84,11 @@ class ThemeSettingTest {
 
     // One tap on the choice's button in *Theme*'s row (#637).
     private fun choose(option: Int) {
-        compose.onNode(hasText(text(option)) and isSelectable()).performScrollTo().performClick()
+        val read = "${text(R.string.settings_theme)}: ${text(option)}"
+        compose
+            .onNode(hasText(text(option)) and isSelectable() and hasContentDescription(read, substring = true))
+            .performScrollTo()
+            .performClick()
     }
 
     @Test

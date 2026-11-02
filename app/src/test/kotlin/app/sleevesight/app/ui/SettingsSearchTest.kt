@@ -189,9 +189,10 @@ class SettingsSearchTest {
     @Test
     fun aChoiceFindsTheSettingThatOffersIt() =
         show {
-            // *Separate pages* is only a choice of *Layout*, not its value: the default is the other.
+            // *Pages* is only a choice of *Layout*, not its value: the default is the other. (It finds
+            // *AI web search* too, whose *Once* gives the AI "the pages it finds".)
             search(text(R.string.settings_layout_pages))
-            assertEquals(listOf(SettingsSection.APPEARANCE), shownSections())
+            assertTrue(SettingsSection.APPEARANCE in shownSections())
             assertEquals(listOf(text(R.string.settings_layout)), rowsOf(SettingsSection.APPEARANCE))
             // *dark* finds *Theme*.
             search("dark")
@@ -242,7 +243,7 @@ class SettingsSearchTest {
     @Test
     fun closeClosesASectionWhileSearchingAndItsChipOpensItAgain() =
         show {
-            search(text(R.string.settings_layout_pages))
+            search(text(R.string.settings_layout_boxes))
             tap(SettingsSection.APPEARANCE.panelTag + ":close")
             assertTrue(!isOpen(SettingsSection.APPEARANCE))
             assertEquals(1, count(SettingsSection.APPEARANCE.tag))
@@ -254,7 +255,7 @@ class SettingsSearchTest {
     fun clearingTheSearchOpensTheSectionsAsBeforeIt() =
         show {
             tap(SettingsSection.HISTORY.tag)
-            search(text(R.string.settings_layout_pages))
+            search(text(R.string.settings_layout_boxes))
             assertEquals(listOf(SettingsSection.APPEARANCE), shownSections())
             compose.onNodeWithTag(SEARCH_CLEAR_TAG).performClick()
             compose.waitForIdle()
@@ -268,7 +269,7 @@ class SettingsSearchTest {
     @Test
     fun theSearchStaysThroughARecreation() =
         show {
-            search(text(R.string.settings_layout_pages))
+            search(text(R.string.settings_layout_boxes))
             restore()
             compose.waitUntil(WAIT_MS) { count(SettingsSection.APPEARANCE.panelTag) == 1 }
             assertEquals(listOf(SettingsSection.APPEARANCE), shownSections())
@@ -297,7 +298,7 @@ class SettingsSearchTest {
                 .onNodeWithTag(SEARCH_FIELD_TAG)
                 .assert(hasText(text(R.string.settings_search_hint)))
                 .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.ContentDescription))
-            search(text(R.string.settings_layout_pages))
+            search(text(R.string.settings_layout_boxes))
             compose.mainClock.advanceTimeBy(ANNOUNCED)
             compose.waitForIdle()
             val one = app.resources.getQuantityString(R.plurals.settings_search_matches, 1, 1)
@@ -313,11 +314,11 @@ class SettingsSearchTest {
             compose.mainClock.autoAdvance = false
             try {
                 // From the first keystroke the live region is there, saying nothing yet.
-                typeWithoutWaiting("Separate p")
+                typeWithoutWaiting("expandable b")
                 assertEquals("", announced())
                 compose.mainClock.advanceTimeBy(PAUSE_SHORT)
                 // Typing on, the count unchanged: the wait starts again, nothing is said.
-                typeWithoutWaiting("Separate pa")
+                typeWithoutWaiting("expandable bo")
                 assertEquals(listOf(SettingsSection.APPEARANCE), shownSections())
                 compose.mainClock.advanceTimeBy(PAUSE_SHORT)
                 assertEquals("", announced())

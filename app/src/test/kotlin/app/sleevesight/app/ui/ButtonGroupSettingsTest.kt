@@ -5,6 +5,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.isSelectable
@@ -152,12 +153,28 @@ class ButtonGroupSettingsTest {
         block()
     }
 
-    private fun button(label: Int) = compose.onNode(hasText(text(label)) and isSelectable())
+    // By what a screen reader reads, "Font: System", as *Theme* and *Font* both have a *System* (#821).
+    private fun choice(
+        title: Int,
+        label: Int,
+    ) = hasText(text(label)) and
+        isSelectable() and
+        hasContentDescription("${text(title)}: ${text(label)}", substring = true)
 
-    private fun buttonNode(label: Int): SemanticsNode = button(label).performScrollTo().fetchSemanticsNode()
+    private fun button(
+        title: Int,
+        label: Int,
+    ) = compose.onNode(choice(title, label))
 
-    private fun selectedIs(label: Int) =
-        compose.onAllNodes(hasText(text(label)) and isSelectable() and isSelected()).fetchSemanticsNodes().isNotEmpty()
+    private fun buttonNode(
+        title: Int,
+        label: Int,
+    ): SemanticsNode = button(title, label).performScrollTo().fetchSemanticsNode()
+
+    private fun selectedIs(
+        title: Int,
+        label: Int,
+    ) = compose.onAllNodes(choice(title, label) and isSelected()).fetchSemanticsNodes().isNotEmpty()
 
     /**
      * [spec]'s row: radio buttons of one group; a tap on each stores it at once and selects it, with
@@ -166,7 +183,7 @@ class ButtonGroupSettingsTest {
     private fun <T> assertChosenByButtons(spec: Spec<T>) {
         val parents = mutableSetOf<Int>()
         for ((label, _) in spec.choices) {
-            val node = buttonNode(label)
+            val node = buttonNode(spec.title, label)
             assertEquals(text(label), Role.RadioButton, node.config.getOrNull(SemanticsProperties.Role))
             // Read with the setting's name, so a button reached straight away says what it sets.
             val read =
@@ -181,15 +198,17 @@ class ButtonGroupSettingsTest {
         }
         assertEquals("one group", 1, parents.size)
         for ((label, value) in spec.choices.reversed() + spec.choices) {
-            button(label).performScrollTo().performClick()
-            compose.waitUntil(WAIT_MS) { spec.stored(settings.now()) == value && selectedIs(label) }
+            button(spec.title, label).performScrollTo().performClick()
+            compose.waitUntil(WAIT_MS) { spec.stored(settings.now()) == value && selectedIs(spec.title, label) }
             assertEquals("${text(label)}: no dialog", 0, compose.onAllNodes(isDialog()).fetchSemanticsNodes().size)
-            for ((other, _) in spec.choices.filter { it.first != label }) assertFalse(text(other), selectedIs(other))
+            for ((other, _) in spec.choices.filter { it.first != label }) {
+                assertFalse(text(other), selectedIs(spec.title, other))
+            }
         }
         // Stored elsewhere, as Home's theme button will store *Theme* (#636): the row follows.
         val (label, value) = spec.choices.first()
         runBlocking { settings.update { spec.store(it, value) } }
-        compose.waitUntil(WAIT_MS) { selectedIs(label) }
+        compose.waitUntil(WAIT_MS) { selectedIs(spec.title, label) }
     }
 
     @Test

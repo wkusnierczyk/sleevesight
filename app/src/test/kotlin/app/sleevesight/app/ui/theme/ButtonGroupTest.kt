@@ -53,8 +53,9 @@ import kotlin.math.ceil
  * The connected button group (#637), [ChoiceButtonGroup] and [ActionButtonGroup]: one group of
  * radio buttons, the chosen one selected, or plain buttons each enabled or not; short labels side
  * by side, each as wide as the others, in a row with a 48 dp target; labels that do not fit side by
- * side, as at twice the font size, one under another, full width, none of their text cut. Native
- * graphics, for the labels' real widths on a phone's width and density.
+ * side, as at twice the font size, still in one row (#821), each wrapping in its button between its
+ * words, none of their text cut. Native graphics, for the labels' real widths on a phone's width and
+ * density.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w411dp-h891dp-420dpi")
@@ -103,6 +104,28 @@ class ButtonGroupTest {
     private fun bounds(label: String): Rect = button(label).fetchSemanticsNode().boundsInRoot
 
     private fun groupBounds(): Rect = compose.onNodeWithTag(GROUP).fetchSemanticsNode().boundsInRoot
+
+    /**
+     * [label] is laid out on [lines] lines within its button, each of its words on one line: it
+     * wraps between its words, never inside one.
+     */
+    private fun assertBetweenWords(
+        label: String,
+        lines: Int,
+    ) {
+        val node = compose.onNodeWithText(label, useUnmergedTree = true).fetchSemanticsNode()
+        val layouts = mutableListOf<TextLayoutResult>()
+        node.config[SemanticsActions.GetTextLayoutResult].action?.invoke(layouts)
+        val layout = layouts.single()
+        assertEquals("$label on $lines lines", lines, layout.lineCount)
+        for (word in Regex("\\S+").findAll(label)) {
+            val first = layout.getLineForOffset(word.range.first)
+            assertEquals("${word.value} on one line", first, layout.getLineForOffset(word.range.last))
+        }
+        val text = node.boundsInRoot
+        val button = bounds(label)
+        assertTrue("$label within its button: $text in $button", button.inflate(1f).let { text.intersect(it) == text })
+    }
 
     /**
      * [label] is shown whole, on one line: its text node as wide as the label needs, and within its
@@ -186,19 +209,20 @@ class ButtonGroupTest {
 
     @Test
     @Config(fontScale = 2f)
-    fun atTwiceTheFontSizeLabelsThatDoNotFitStackFullWidthAndNothingIsCut() =
+    fun atTwiceTheFontSizeLabelsThatDoNotFitStayInOneRowWrappingBetweenTheirWords() =
         showChoice(choices = LONG_AND_SHORT) {
             val (long, short) = LONG_AND_SHORT.map { bounds(it.second) }
-            assertTrue("one under the other", long.bottom <= short.top)
-            assertEquals("aligned", long.left, short.left, 1f)
-            for (b in listOf(long, short)) {
-                assertEquals("full width", GROUP_WIDTH.toFloat(), b.width / density, 1f)
-                assertTrue("48 dp or more high", b.height / density >= 48f - 0.5f)
-            }
-            for ((_, label) in LONG_AND_SHORT) assertWhole(label)
-            button(LONG_AND_SHORT.last().second).performClick()
+            assertEquals("one row", long.top, short.top, 1f)
+            assertTrue("side by side", long.right <= short.left)
+            assertEquals("across the width", GROUP_WIDTH.toFloat(), (short.right - long.left) / density, 1f)
+            assertTrue("48 dp or more high", long.height / density >= 48f - 0.5f)
+            val (longLabel, shortLabel) = LONG_AND_SHORT.map { it.second }
+            assertBetweenWords(longLabel, lines = 2)
+            assertWhole(shortLabel)
+            button(shortLabel).performClick()
             compose.waitForIdle()
-            button(LONG_AND_SHORT.last().second).assertIsSelected()
+            button(shortLabel).assertIsSelected()
+            assertEquals("the widths kept", listOf(long, short), LONG_AND_SHORT.map { bounds(it.second) })
         }
 
     @Test
@@ -301,7 +325,7 @@ class ButtonGroupTest {
     // The first button's round corners are at its start: the right, right to left.
     @Test
     fun rightToLeftTheCornersAreMirrored() {
-        val first = groupShape(0, 3, selected = false, stacked = false)
+        val first = groupShape(0, 3, selected = false)
         val size = Size(100f, 32f)
         val unit = Density(1f)
         val rtl = (first.createOutline(size, LayoutDirection.Rtl, unit) as Outline.Rounded).roundRect
@@ -314,26 +338,40 @@ class ButtonGroupTest {
     }
 
     @Test
-    fun theArrangementIsEqualThenProportionalThenStacked() {
+    fun theArrangementIsEqualThenProportionalNeverStacked() {
         assertEquals(GroupArrangement.EQUAL, groupArrangement(listOf(100, 80, 90), gap = 2, room = 304))
         assertEquals(GroupArrangement.PROPORTIONAL, groupArrangement(listOf(200, 80), gap = 2, room = 300))
-        assertEquals(GroupArrangement.STACKED, groupArrangement(listOf(200, 120), gap = 2, room = 300))
+        assertEquals(GroupArrangement.PROPORTIONAL, groupArrangement(listOf(200, 120), gap = 2, room = 300))
         assertEquals(GroupArrangement.EQUAL, groupArrangement(listOf(149, 149), gap = 2, room = 300))
         assertEquals(GroupArrangement.PROPORTIONAL, groupArrangement(listOf(150, 140), gap = 2, room = 300))
-        assertEquals(GroupArrangement.STACKED, groupArrangement(listOf(150, 149), gap = 2, room = 300))
+    }
+
+    @Test
+    fun theButtonsShareTheRowByTheirLabelsThenByTheirWords() {
+        // 298 px free between two buttons 2 px apart.
+        assertEquals("equal", listOf(1f, 1f), groupShares(listOf(140, 100), listOf(80, 60), gap = 2, room = 300))
+        assertEquals("by the labels", listOf(200f, 80f), groupShares(listOf(200, 80), listOf(120, 80), 2, 300))
+        // The labels need 340, their longest words 250: each gets its word, the 48 px left go to the
+        // first, the only one whose label needs more than its longest word.
+        assertEquals("by the words", listOf(218f, 80f), groupShares(listOf(260, 80), listOf(170, 80), 2, 300))
+        assertEquals(
+            "the room left in proportion to what each still needs",
+            listOf(140f, 158f),
+            groupShares(listOf(200, 242), listOf(120, 130), 2, 300),
+        )
+        val tooWide = groupShares(listOf(260, 150), listOf(200, 150), 2, 300)
+        assertEquals("even the words too wide", listOf(200f, 150f), tooWide)
     }
 
     @Test
     fun theOuterCornersAreRoundTheInnerSmallAndTheChosenRoundAllRound() {
         val o = GROUP_OUTER_CORNER
         val i = GROUP_INNER_CORNER
-        assertEquals(RoundedCornerShape(o, i, i, o), groupShape(0, 3, selected = false, stacked = false))
-        assertEquals(RoundedCornerShape(i), groupShape(1, 3, selected = false, stacked = false))
-        assertEquals(RoundedCornerShape(i, o, o, i), groupShape(2, 3, selected = false, stacked = false))
-        assertEquals(RoundedCornerShape(o), groupShape(1, 3, selected = true, stacked = false))
-        assertEquals(RoundedCornerShape(o, o, i, i), groupShape(0, 2, selected = false, stacked = true))
-        assertEquals(RoundedCornerShape(i, i, o, o), groupShape(1, 2, selected = false, stacked = true))
-        assertEquals(RoundedCornerShape(o), groupShape(0, 1, selected = false, stacked = false))
+        assertEquals(RoundedCornerShape(o, i, i, o), groupShape(0, 3, selected = false))
+        assertEquals(RoundedCornerShape(i), groupShape(1, 3, selected = false))
+        assertEquals(RoundedCornerShape(i, o, o, i), groupShape(2, 3, selected = false))
+        assertEquals(RoundedCornerShape(o), groupShape(1, 3, selected = true))
+        assertEquals(RoundedCornerShape(o), groupShape(0, 1, selected = false))
     }
 
     private companion object {
@@ -342,7 +380,7 @@ class ButtonGroupTest {
         /** About a settings row's width on a phone. */
         const val GROUP_WIDTH = 340
 
-        /** *Layout*'s choices: at twice the font size, too long to share the row. */
+        /** At twice the font size, too long to share the row on one line, the first's words short enough. */
         val LONG_AND_SHORT = listOf(Theme.SYSTEM to "Expandable boxes", Theme.DARK to "Pages")
     }
 }
