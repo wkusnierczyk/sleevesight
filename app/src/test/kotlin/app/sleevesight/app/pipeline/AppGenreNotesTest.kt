@@ -328,6 +328,49 @@ class AppGenreNotesTest {
             assertEquals(GenreReason.Offered, notes.reason(track(), "rock").first())
         }
 
+    @Test
+    fun `Clear history during any showing of a reason being written leaves nothing of it (#791)`() =
+        runTest {
+            // How many states a reason's writing shows: looking, the text as it comes, written.
+            val counting = notes()
+            var shows = 0
+            counting.beforePublish = { shows++ }
+            counting.explain(track(), "rock")
+            advanceUntilIdle()
+            assertTrue("states shown: $shows", shows > 1)
+            for (at in 1..shows) {
+                cache.clearCards()
+                val epoch = ClearEpoch()
+                val notes = notes(epoch)
+                val clearing = clearDuringPublish(notes, epoch, at)
+                notes.explain(track(), "rock")
+                advanceUntilIdle()
+                clearing()?.join()
+                // The cache's cards go with the same *Clear history*.
+                cache.clearCards()
+                notes.beforePublish = {}
+                assertEquals("cleared at state $at", GenreReason.Offered, notes.reason(track(), "rock").first())
+            }
+        }
+
+    @Test
+    fun `Clear history during a kept reason's showing leaves nothing of it (#791)`() =
+        runTest {
+            notes().explain(track(), "rock")
+            advanceUntilIdle()
+            // A process later, the reason read from the cache as the panel asks for it.
+            val epoch = ClearEpoch()
+            val later = notes(epoch)
+            val clearing = clearDuringPublish(later, epoch)
+            val reason = later.reason(track(), "rock")
+            reason.first()
+            advanceUntilIdle()
+            assertTrue("the kept reason was read", clearing() != null)
+            clearing()?.join()
+            later.beforePublish = {}
+            assertEquals(GenreReason.Offered, reason.first())
+        }
+
     // A track whose table has [genres]: the artist's, then, with [album], the album's too.
     private fun playing(
         vararg genres: String,

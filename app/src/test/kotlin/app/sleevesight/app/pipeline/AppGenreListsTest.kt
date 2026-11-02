@@ -45,7 +45,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.util.concurrent.CountDownLatch
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
@@ -292,35 +291,6 @@ class AppGenreListsTest {
             assertTrue(((reason.first() as GenreReason.Shown).state as InsightState.Written).cached)
             assertEquals(calls, provider.requests)
         }
-
-    // Between the [at]th state's check and its showing, *Clear history* runs on another thread: the
-    // epoch's advance, then [AppGenreNotes.forget]. The showing goes on only once the epoch has
-    // advanced and the clear is either blocked, waiting for the showing (as it must be), or done
-    // (when it did not wait, and the showing then outlives it). No clock: the thread's own state.
-    private fun clearDuringPublish(
-        notes: AppGenreNotes,
-        epoch: ClearEpoch,
-        at: Int = 1,
-    ): () -> Thread? {
-        var clearing: Thread? = null
-        var published = 0
-        notes.beforePublish = {
-            if (clearing == null && ++published == at) {
-                val advanced = CountDownLatch(1)
-                val thread =
-                    Thread {
-                        kotlinx.coroutines.runBlocking { epoch.advance() }
-                        advanced.countDown()
-                        notes.forget()
-                    }
-                clearing = thread
-                thread.start()
-                advanced.await()
-                while (thread.isAlive && thread.state != Thread.State.BLOCKED) Thread.onSpinWait()
-            }
-        }
-        return { clearing }
-    }
 
     @Test
     fun `Clear history during a genre list's showing leaves nothing of it, and no reason is asked (#762)`() =
