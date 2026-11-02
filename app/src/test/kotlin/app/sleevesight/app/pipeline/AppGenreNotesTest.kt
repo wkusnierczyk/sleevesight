@@ -41,6 +41,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -345,7 +346,9 @@ class AppGenreNotesTest {
                 val clearing = clearDuringPublish(notes, epoch, at)
                 notes.explain(track(), "rock")
                 advanceUntilIdle()
-                clearing()?.join()
+                val clear = clearing()
+                assertNotNull("cleared at state $at", clear)
+                clear?.join()
                 // The cache's cards go with the same *Clear history*.
                 cache.clearCards()
                 notes.beforePublish = {}
@@ -380,6 +383,30 @@ class AppGenreNotesTest {
             again.first()
             advanceUntilIdle()
             assertEquals(GenreReason.Offered, again.first())
+        }
+
+    @Test
+    fun `a reason read from the cache during Clear history, after the epoch's advance, is not shown (#791)`() =
+        runTest {
+            notes().explain(track(), "rock")
+            advanceUntilIdle()
+            val epoch = ClearEpoch()
+            val later = notes(epoch)
+            // *Clear history*'s last advance, just before the caches' clear.
+            epoch.advance()
+            // A panel asks for the reason now: its read has the kept reason, and waits.
+            val held = CompletableDeferred<Unit>()
+            cache.readHeld = held
+            val reason = later.reason(track(), "rock")
+            reason.first()
+            runCurrent()
+            // The rest of the clear: the caches, then the reasons shown.
+            cache.clearCards()
+            later.forget()
+            cache.readHeld = null
+            held.complete(Unit)
+            advanceUntilIdle()
+            assertEquals(GenreReason.Offered, reason.first())
         }
 
     // A track whose table has [genres]: the artist's, then, with [album], the album's too.
