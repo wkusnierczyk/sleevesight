@@ -13,7 +13,8 @@ import app.sleevesight.sources.lastfm.LastFmBio
  * first [SENTENCES] sentences, from its lead's plain text, tidied and split as the Wikipedia adapter splits it
  * ([WikipediaSource.split], else, for a paragraph it gives none of, [LastFmBio.split]). Three
  * requests at most, all to Wikimedia, which needs no key; the text is CC BY-SA 4.0, credited with a
- * link to the article ([articleUrl]).
+ * link to the article ([articleUrl]). A genre the vocabulary names an article for (#852) is quoted
+ * from that article ([article]), in one request.
  */
 class WikipediaGenres(
     private val wikidata: WikidataLookup,
@@ -23,23 +24,22 @@ class WikipediaGenres(
         wikidata.itemsWithStatement(MUSICBRAINZ_GENRE, musicBrainzGenre).then { found ->
             // The lowest-numbered item first, so several holding one id always give the same article.
             val items = found.sortedBy { it.removePrefix("Q").toLongOrNull() ?: Long.MAX_VALUE }
-            if (items.isEmpty()) Lookup.NotFound else article(items)
+            if (items.isEmpty()) Lookup.NotFound else firstArticle(items)
+        }
+
+    override suspend fun article(title: String): Lookup<GenreDefinition> =
+        wikipedia.lead(title).then { lead ->
+            lead
+                ?.let(::opening)
+                ?.let { Lookup.Found(GenreDefinition(it, title, articleUrl(title))) }
+                ?: Lookup.NotFound
         }
 
     // The first of [items] with an English article, and its opening sentences.
-    private suspend fun article(items: List<String>): Lookup<GenreDefinition> =
+    private suspend fun firstArticle(items: List<String>): Lookup<GenreDefinition> =
         wikidata.entities(items).then { entities ->
             val title = items.firstNotNullOfOrNull { entities[it]?.enwiki }
-            if (title == null) {
-                Lookup.NotFound
-            } else {
-                wikipedia.lead(title).then { lead ->
-                    lead
-                        ?.let(::opening)
-                        ?.let { Lookup.Found(GenreDefinition(it, title, articleUrl(title))) }
-                        ?: Lookup.NotFound
-                }
-            }
+            if (title == null) Lookup.NotFound else article(title)
         }
 
     // [next] of what was found; not found and failed as they are.

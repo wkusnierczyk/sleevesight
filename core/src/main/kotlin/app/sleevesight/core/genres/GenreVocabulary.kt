@@ -19,6 +19,7 @@ class GenreVocabulary(
     private val labelOverrides: Map<String, String> = emptyMap(),
     synonyms: List<List<String>> = emptyList(),
     musicBrainz: Map<String, String> = emptyMap(),
+    wikipedia: Map<String, String> = emptyMap(),
 ) {
     private val familyOf: Map<String, GenreFamily> =
         buildMap {
@@ -55,12 +56,30 @@ class GenreVocabulary(
             }
         }
 
+    // Each genre's English Wikipedia article, by identity, for a genre MusicBrainz cannot define (#852).
+    private val articleOf: Map<String, String> =
+        buildMap {
+            for ((tag, title) in wikipedia) {
+                val genre = requireNotNull(identity(tag)) { "a Wikipedia article for '$tag', not in the vocabulary" }
+                require(put(genre, title) == null) { "two Wikipedia articles for '$genre'" }
+            }
+        }
+
     /**
      * The MusicBrainz genre (its MBID, CC0) of the genre [identity] stands for ([identity]), through
      * which its definition is found (#523: the genre's Wikidata item, then its English Wikipedia
-     * article); null for a genre that is not one of MusicBrainz's.
+     * article), unless the vocabulary names an article for it ([wikipediaArticle], #852); null for a
+     * genre that is not one of MusicBrainz's.
      */
     fun musicBrainzGenre(identity: String): String? = musicBrainzOf[identity]
+
+    /**
+     * The English Wikipedia article, by title, that defines the genre [identity] stands for, named
+     * in the vocabulary for a genre with no MusicBrainz genre that fits or whose genre has no
+     * English article (#852: *acoustic* is *Acoustic music*); null for the rest, defined through
+     * [musicBrainzGenre]. A genre with one is defined by it alone.
+     */
+    fun wikipediaArticle(identity: String): String? = articleOf[identity]
 
     /**
      * What a vocabulary tag stands for, so spelling variants count as one genre: its letters and
@@ -125,6 +144,7 @@ class GenreVocabulary(
                 file.labels,
                 file.synonyms,
                 file.musicbrainz,
+                file.wikipedia,
             )
         }
 
@@ -183,6 +203,7 @@ private class VocabularyFile(
     val labels: Map<String, String> = emptyMap(),
     val synonyms: List<List<String>> = emptyList(),
     val musicbrainz: Map<String, String> = emptyMap(),
+    val wikipedia: Map<String, String> = emptyMap(),
 )
 
 @Serializable

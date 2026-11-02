@@ -141,8 +141,8 @@ class AppGenreNotesTest {
     @Test
     fun `a genre with no article is not found, so its panel can say so`() =
         runTest {
-            // *British invasion* is not one of MusicBrainz's genres (#663).
-            assertEquals(DefinitionState.NotFound, notes().definition("britishinvasion").first { it.answered() })
+            // *Pop vocal group* has no MusicBrainz genre and no article named in the vocabulary (#663, #852).
+            assertEquals(DefinitionState.NotFound, notes().definition("popvocalgroup").first { it.answered() })
             assertEquals(0, articles.asked.size)
         }
 
