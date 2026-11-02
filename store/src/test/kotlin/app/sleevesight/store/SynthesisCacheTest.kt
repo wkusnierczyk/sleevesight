@@ -2,6 +2,7 @@ package app.sleevesight.store
 
 import app.sleevesight.core.ai.ReasoningEffort
 import app.sleevesight.core.model.ProviderId
+import app.sleevesight.core.pipeline.RewritePart
 import app.sleevesight.core.synthesis.CardKind
 import kotlin.test.AfterTest
 import kotlin.test.Test
@@ -151,6 +152,27 @@ class SynthesisCacheTest {
         fixture.clock.advance(3650.days)
         fixture.caches.purgeExpired()
         assertNotNull(synthesis.get(reason))
+    }
+
+    @Test
+    fun `what a rewrite changed comes back with its card, and a card written the first time has none`() {
+        val writtenAt = Instant.parse("2026-10-14T11:00:00Z")
+        val parts = setOf(RewritePart.MODEL, RewritePart.NEW_FINDINGS)
+        synthesis.put(key, "rewritten", writtenAt, parts)
+        val first = key.copy(model = "claude-opus-5-5")
+        synthesis.put(first, "first", writtenAt)
+
+        assertEquals(CachedSynthesis("rewritten", writtenAt, parts), synthesis.get(key))
+        assertEquals(emptySet(), synthesis.get(first)?.rewritten)
+        assertEquals(fixture.caches.countedStats(), fixture.caches.stats(), "the parts count in the row's size")
+    }
+
+    @Test
+    fun `a card rewritten again under the same key keeps only the latest change`() {
+        synthesis.put(key, "first", rewritten = setOf(RewritePart.SOURCE_SETTINGS))
+        synthesis.put(key, "second", rewritten = setOf(RewritePart.KNOWLEDGE_ON))
+
+        assertEquals(setOf(RewritePart.KNOWLEDGE_ON), synthesis.get(key)?.rewritten)
     }
 
     @Test

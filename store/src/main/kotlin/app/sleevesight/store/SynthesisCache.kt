@@ -2,6 +2,7 @@ package app.sleevesight.store
 
 import app.sleevesight.core.ai.ReasoningEffort
 import app.sleevesight.core.model.ProviderId
+import app.sleevesight.core.pipeline.RewritePart
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.pastKeepHistory
 import app.sleevesight.core.synthesis.CardKind
@@ -42,18 +43,21 @@ class SynthesisCache internal constructor(
         } else {
             context.queries.synthesisTouch(now.toEpochMilliseconds(), row.id)
         }
-        return if (expired) null else CachedSynthesis(row.text, writtenAt)
+        return if (expired) null else CachedSynthesis(row.text, writtenAt, RewritePart.decode(row.rewritten))
     }
 
     /**
-     * Keeps [text], written for [key] at [writtenAt], replacing what was kept, and evicts down to
-     * the size limit. Returns whether it was kept: not when it alone is larger than the limit.
+     * Keeps [text], written for [key] at [writtenAt] by a rewrite that changed [rewritten] (#854,
+     * none for one written the first time), replacing what was kept, and evicts down to the size
+     * limit. Returns whether it was kept: not when it alone is larger than the limit.
      */
     fun put(
         key: SynthesisKey,
         text: String,
         writtenAt: Instant = context.clock.now(),
+        rewritten: Set<RewritePart> = emptySet(),
     ): Boolean {
+        val parts = RewritePart.encode(rewritten)
         val keyBytes =
             listOf(
                 key.kind.key,
@@ -64,7 +68,7 @@ class SynthesisCache internal constructor(
                 key.model,
                 key.effortKey,
             ).sumOf { it.utf8Size() }
-        val size = keyBytes + text.utf8Size()
+        val size = keyBytes + text.utf8Size() + (parts?.utf8Size() ?: 0)
         if (!context.fits(size)) return false
         val now = context.clock.now().toEpochMilliseconds()
         context.queries.transaction {
@@ -93,6 +97,7 @@ class SynthesisCache internal constructor(
                 written_at = writtenAt.toEpochMilliseconds(),
                 used_at = now,
                 size_bytes = size,
+                rewritten = parts,
             )
             context.afterWrite()
         }
@@ -145,8 +150,9 @@ data class SynthesisKey(
     internal val effortKey: String get() = effort?.name?.lowercase() ?: "default"
 }
 
-/** A kept card: its [text], and when it was written. */
+/** A kept card: its [text], when it was written, and what the rewrite that wrote it changed (#854). */
 data class CachedSynthesis(
     val text: String,
     val writtenAt: Instant,
+    val rewritten: Set<RewritePart> = emptySet(),
 )
