@@ -53,7 +53,7 @@ A message saying that something is under way, such as *Looking…* beside a sour
 
 ## The home screen
 
-<!-- screenshot: the home screen with a track playing, header to genre labels, its accents in the cover's colours, from the app version it is taken from -->
+{% include screenshots.html ids="home-playing" %}
 
 ### The header
 
@@ -62,7 +62,7 @@ The header stays at the top while the rest of the screen scrolls under it; a thi
 - **The logo**, at the left: a tap scrolls the home screen back to the top. A screen reader calls it "Sleevesight, scroll to top".
 - **The theme button**, before the cogwheel, shows the current theme, kept as [*Theme*]({{ '/docs/tutorials/settings/' | relative_url }}#appearance) in the settings: a sun while it is *Light*, a moon while it is *Dark*, and the automatic brightness symbol while it is *System* (as the phone is). Its tooltip and what a screen reader says name it too: "Theme: light", "Theme: dark", "Theme: system". A tap opens a menu under it: *Light*, *Dark* and *System*, each with its symbol, *As your phone is* under *System*, and the current theme highlighted. Picking one closes the menu and sets *Theme*, and the app changes at once; picking the current one, a tap outside the menu, or Back closes it with nothing changed. A screen reader hears the button as collapsed or expanded, and the three as one choice, the current one selected. *Theme button*, under *Appearance* in the settings, hides it.
 
-<!-- screenshot: the header's theme menu open under the theme button: Light, Dark and System ("As your phone is"), the current one highlighted, from the app version it is taken from -->
+{% include screenshots.html ids="theme-menu" %}
 - **The cogwheel**, at the right, opens the settings.
 
 At the bottom of the home screen, under a thin line, *What leaves the device?* opens the first-run screen again, to reread it. *What leaves the device*, under *About* in the settings, opens it too. Opened again, it has a back arrow at the top and *Close* at the bottom, which bring you back, as Android's back does.
@@ -71,7 +71,7 @@ At the bottom of the home screen, under a thin line, *What leaves the device?* o
 
 While no player you follow has a track, the home screen shows the way to your music, and what it will show once a track plays.
 
-<!-- screenshot: the home screen with nothing playing: the players and the guide, from the app version it is taken from -->
+{% include screenshots.html ids="home-nothing-playing" %}
 
 - **The players**, the same ones [*Players*]({{ '/docs/tutorials/settings/' | relative_url }}#players) lists, A to Z by name, each a row with the app's icon, *Play on …* and the open-in-new symbol. A tap opens the player as its launcher icon does; you start the music there, and the home screen fills in once it plays. A player that is switched off is dimmed and cannot be tapped; its row is as tall as the others, with *Enable in Settings*, which opens the settings at *Players*, at its end where the others have the open-in-new symbol (at a large font, under the name). A screen reader reads it as "Play on Poweramp, not followed", then the link. With [*Only enabled players on Home*]({{ '/docs/tutorials/settings/' | relative_url }}#players) on, only the players switched on are listed; with none switched on, the screen says *No player is switched on. Switch on the players you want Sleevesight to follow in Settings → Players.*, the last words a link to *Players*.
 - **No player listed.** While *Players* lists no player (Spotify, there by default, is not installed, and no other player has reported music), the screen says *No music player seen yet. Play music in one, and it is listed here and in Settings → Players.*, the last words a link to *Players*.
@@ -107,7 +107,7 @@ The labels sit behind **Genres**, a button under the album, after *Dates*, for e
 
 **A genre only MusicBrainz gives.** MusicBrainz's tags are never sent to an AI service, because of their licence. So for a genre that only MusicBrainz's tags give, *Why is this …?* first asks your AI service which genres the track is, naming no genre at all: from web pages while *AI web search* is on (one Exa search and one paid call with *Once*, up to three searches and four calls with *Up to 3 times*), which comes first when both are on, or else from the model's own knowledge while [*AI service knowledge*]({{ '/docs/tutorials/settings/' | relative_url }}#sources) is on, one paid call. When its list has the genre, the explanation is asked for as above, with its own calls; when it does not, nothing more is asked, and the button stays greyed out, with *AI could not find an explanation.* under it. When neither can be used, the button is greyed out from the start, with *No AI service enabled.* under it and *Enable AI service knowledge or AI web search.* under that, each name a link to its setting. The genres on the list that are not among the chips join the chips, after the others, each with the small *AI* mark, and the *Track* row of *Genre tags*, while that row has room (five labels at most): a genre left out of the row gets no chip either; the model joins that row's *Tag sources* (*Last.fm · MusicBrainz · Claude Haiku 5.5 AI*), and with *AI web search* the pages the genres were found on show under the chips, each as *From discogs.com*, a link to the page. A screen reader reads such a genre as "Blues, from Claude Haiku 5.5". It opens as any other genre, and a tap on its *Why is this …?* asks for the explanation straight away. The list is kept with the track as an answer is, so another genre's tap, or a later play, asks for no list again.
 
-<!-- screenshot: Genres open on a track only MusicBrainz labels, after Why is this …?: the chips with one marked AI, the Track row with the model among its tag sources, and the explanation with "by Claude Haiku 5.5", from the app version it is taken from -->
+{% include screenshots.html ids="genres-ai-genre" %}
 
 With a keyboard or a screen reader, the focus moves to the panel's *Close* when *Genres* opens it and back to the button when it closes, and a chip keeps the focus when it unfolds or folds its genre. A screen reader reads *Genres* as a button, "Double-tap to show genres"; each chip as a button, saying whether its genre is open (selected), and naming what a double tap does ("show genre", "fold"); it reads the panel's name, *Genre tags* and *Tag sources* as headings, and each row of the tables as one item: its name, then its labels or its sources. It skips the turning record and reads *Looking on Wikipedia…*. Which sources give labels is set under [*Genres*]({{ '/docs/tutorials/settings/' | relative_url }}), and *Show genres* there turns them off altogether.
 
@@ -132,7 +132,7 @@ The answer shows under a rule, apart from what the sources gave, with the model'
 
 When nothing in the answer is usable, the panel says *Claude Haiku 5.5 found nothing on the web.*, or *Claude Haiku 5.5 couldn't say from its own knowledge.*, after *Asked automatically:* when the question was asked by itself. When the call fails, it says *Asking AI failed:* and why, with *Retry*, which asks again, another paid call.
 
-<!-- screenshot: Dates with an Ask AI answer from the web: the date's sentence, "From …" linking its page, and "by Claude Haiku 5.5", from the app version it is taken from -->
+{% include screenshots.html ids="genres-ask-ai genre-no-definition dates-ask-ai-web genres-ask-ai-nothing" %}
 
 An answer is kept with the track (a genre's definition with the genre, for every track that has it), as a genre's *Why is this …?* answer is: closing the panel or playing the track again later shows it with no new call, until you choose another AI service, model or effort, or turn the web search on or off. It is kept, with the addresses of the pages it came from, for as long as *Keep history for* says, and *Clear history* deletes it. It never goes into the insight, the genre labels or *Sources*. With no AI service set up, the button is greyed out, and a screen reader adds *No AI service is enabled.* It is not offered with *Show insights* off, for an instrumental's lyrics, for lyrics the track's web search already found, or while the panel is still looking.
 
@@ -142,7 +142,9 @@ With [*Ask AI automatically*]({{ '/docs/tutorials/settings/' | relative_url }}#i
 
 *Key insights* holds the insight: a few sentences written by the AI service you chose, from what the sources found. Under the heading, *by Claude Haiku 5.5* names the model that wrote it, as *AI services* lists it: from its first words while it is written, and kept with it, so an insight kept from before names the model that wrote it then, not the one chosen now. No model is named while the sources are gathered, after a failure or a stop, or when the sources give nothing to write from. The insight is plain text with citation chips in it. The AI service is asked not to format it; when it does anyway, a title it marks is set in italics, bold shows as bold, and its other formatting marks are left out.
 
-<!-- screenshot: the insight with its byline ("by Claude Haiku 5.5"), its citation chips, a dimmed sentence and the note naming it, from the app version it is taken from -->
+{% include screenshots.html ids="key-insights" %}
+
+<!-- screenshot still to take: the insight with a dimmed sentence and the note naming it -->
 
 - **Citation chips.** Each sentence cites the evidence lines it rests on, by their ids, such as `MB1` or `W3`. A tap on a chip opens the *Sources* panel, unfolds its list as far as that line, scrolls to it and flashes it. A screen reader reads each chip by what it points at ("Source W3"), and offers the lines as actions of the paragraph.
 - **The model's own knowledge.** When [*AI service knowledge*]({{ '/docs/tutorials/settings/' | relative_url }}) is on, a claim from it is cited `AI`, in a colour of its own, and a screen reader calls it "From the AI model's own knowledge, not verified". It is off by default.
@@ -165,7 +167,7 @@ When little is documented about a track, the insight is short rather than filled
 
 *Sources*, at the bottom of the screen, shows what the insight was written from.
 
-<!-- screenshot: Sources unfolded, with the table of the sources, a note and evidence lines, from the app version it is taken from -->
+{% include screenshots.html ids="sources-unfolded" %}
 
 **Folded and unfolded.** *Sources* starts folded: only its chip shows, **Sources**, which looks like the *Dates* and *Genres* buttons. A tap on it opens the *Sources* panel in its place, which looks like theirs: *Sources* at the top, and **Close** at the top right, which folds it back to the chip. With a keyboard or a screen reader, the focus moves to *Close* when the panel opens and back to the chip when it closes. A screen reader reads the chip as a heading and a button, *Sources*, collapsed.
 
@@ -208,7 +210,7 @@ With *Layout* set to *Pages*, a tap on the **Sources** chip opens *Sources* on a
 
 [*Layout*]({{ '/docs/tutorials/settings/' | relative_url }}#appearance), under *Appearance* in the settings, sets how the parts of the home screen open. *Boxes*, the default, is the home screen as described above: everything a track has is on one screen, and each part unfolds in place, as an expandable box.
 
-<!-- screenshot: Sources as a page, with its back arrow, from the app version it is taken from -->
+{% include screenshots.html ids="sources-page" %}
 
 With *Pages*, the home screen is shorter, and each part opens a page of its own, on the app's background like the home screen, its accents in the album art's colours, with a back arrow and the part's name at the top:
 
@@ -285,7 +287,7 @@ Automatic writing starts with your first action:
 - **After the app starts afresh**, nothing is written automatically until you act in it, in every mode: choose a mode (in the menu or under *Reactive*, the current one included), or tap *Write insight* or *Rewrite insight*. A track that played before that offers *Write insight*. That first action lasts as long as the app's process, which the notification listener usually keeps alive after you leave the app, often for days: coming back to the app, from the player, the launcher or the screen turned on again, keeps it, and writing goes on. A restart of the phone, an update of the app, or the system ending the process (on some phones, a swipe from Recents) starts afresh.
 - **The pause.** So that one action does not keep paying for days, automatic writing pauses once the app has not been on screen for more track changes than [*Saver*]({{ '/docs/tutorials/settings/' | relative_url }}) names (5 by default). Opening the app resumes it, and the count starts again. A track that played while it was paused is not written on its own, the one playing when you come back included: it offers *Write insight*, with the line above.
 
-<!-- screenshot: Key insights with the automatic-writing-resumed line and Write insight, from the app version it is taken from -->
+<!-- screenshot still to take: Key insights with the automatic-writing-resumed line and Write insight -->
 
 ### While the app is not on screen
 

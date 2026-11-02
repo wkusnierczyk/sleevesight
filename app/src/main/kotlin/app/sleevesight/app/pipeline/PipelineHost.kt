@@ -1,6 +1,7 @@
 package app.sleevesight.app.pipeline
 
 import app.sleevesight.core.Secret
+import app.sleevesight.core.ai.ReasoningEffort
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.ProviderId
@@ -21,6 +22,7 @@ import app.sleevesight.core.pipeline.TrackChange
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.settings.PrepareNextTrack
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.settings.WebEngine
 import app.sleevesight.core.settings.WriteAutomatically
 import app.sleevesight.core.settings.pastKeepHistory
 import app.sleevesight.wiring.SourceKeys
@@ -75,10 +77,11 @@ import kotlin.time.Instant
  * @property aiReady whether an insight can be written: an AI service is chosen, it has a client,
  *   and its key is saved and readable.
  * @property rewrite whether Write is offered beside the written insight shown, to write it again: a
- *   rebuild changed its card's key (new evidence, another service), so its run found no card. The
- *   card paid for (the ledger's, with the evidence it cites) is shown whenever the track's run has
- *   no insight of its own, offered or not ([cardShown]); this says only whether Write is offered
- *   beside it. The card shows beside the run's own source states, with the evidence it cites.
+ *   rebuild changed its card's key (new evidence, another service, model or effort), so its run
+ *   found no card. The card paid for (the ledger's, with the evidence it cites) is shown whenever
+ *   the track's run has no insight of its own, offered or not ([cardShown]); this says only whether
+ *   Write is offered beside it. The card shows beside the run's own source states, with the
+ *   evidence it cites.
  * @property cardShown whether the insight shown is the card paid for, from the coordinator's ledger,
  *   in place of an insight the track's run lacks: then [track]'s evidence is the evidence that card
  *   cites, found when it was written, not what the sources found now. Worked out with the card
@@ -167,10 +170,11 @@ class PipelineKeys(
  *
  * Nothing is read, built or sent before [acknowledged]: the session layer's reports ([changes]: each
  * track with why it came to play, D5), the settings and the keys are collected only after it. A
- * rebuild follows a key saved, replaced or removed ([keyChanges]), a web engine switched or another
- * AI service chosen; no pipeline is built until the keys' first read succeeds. A pipeline that
- * cannot be built is reported to [onFailure] and none runs until the next rebuild; a run that fails
- * (a bug: the stages map their failures to outcomes) is reported and ends, and the next track runs.
+ * rebuild follows a key saved, replaced or removed ([keyChanges]), a web engine switched, another
+ * AI service chosen, or another model or reasoning effort for the one switched on (#849); no
+ * pipeline is built until the keys' first read succeeds. A pipeline that cannot be built is reported
+ * to [onFailure] and none runs until the next rebuild; a run that fails (a bug: the stages map their
+ * failures to outcomes) is reported and ends, and the next track runs.
  *
  * [next] is the next item in the shown player's queue (`NextInQueue`), which is prepared ahead
  * while *Proactive* is on (D13): the coordinator starts and grants the preparation
@@ -431,9 +435,9 @@ class PipelineHost(
                 }
             }
             launch {
-                // What the parts are built with: the keys, the web engines, the AI service, and *Show
-                // genres* (#444), whose adapters ask for tags or not.
-                val inputs = latest.map { Triple(it.webEngines, it.aiProvider, it.showGenres) }.distinctUntilChanged()
+                // What the parts are built with, and what of the AI service the card's key holds
+                // besides (#849), so that the track under way runs again and finds its card or not.
+                val inputs = latest.map(::BuildInputs).distinctUntilChanged()
                 combine(keyChanges, inputs) { _, _ -> }.collect { queue.send(CoordinatorEvent.RebuildRequested) }
             }
             launch {
@@ -935,6 +939,27 @@ class PipelineHost(
             (track.insight as? InsightState.Idle)?.canWrite == true &&
                 !owner.offersWrite(RunKey.of(track.normalized, track.nowPlaying))
         return if (withdrawn) track.copy(insight = InsightState.Idle(canWrite = false)) else track
+    }
+
+    // The settings a change of which rebuilds the pipeline: what the parts are built with (the web
+    // engines, the AI service, and *Show genres*, #444, whose adapters ask for tags or not), and the
+    // switched-on service's model and reasoning effort (#849), which a card's key holds as it holds
+    // the service: a run of the track under way then finds its card under the key it was written
+    // with, or offers *Rewrite insight* beside it.
+    private data class BuildInputs(
+        val webEngines: Set<WebEngine>,
+        val aiProvider: ProviderId?,
+        val showGenres: Boolean,
+        val model: String?,
+        val effort: ReasoningEffort?,
+    ) {
+        constructor(settings: Settings) : this(
+            settings.webEngines,
+            settings.aiProvider,
+            settings.showGenres,
+            settings.model,
+            settings.effort,
+        )
     }
 
     companion object {
