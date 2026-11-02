@@ -55,7 +55,7 @@ class RewriteTest {
     }
 
     @Test
-    fun `evidence a look again found new in is new findings, though another run writes from it`() {
+    fun `what a look again found new is new findings, though another run writes from it`() {
         val with = before.copy(evidenceFingerprint = "fp2", model = "claude-opus-5-5")
 
         assertEquals(
@@ -63,9 +63,19 @@ class RewriteTest {
             rewriteParts(before, with, foundIn = "fp2"),
         )
         assertEquals(
-            setOf(RewritePart.UPDATED_SOURCES, RewritePart.MODEL),
-            rewriteParts(before, with, foundIn = "fp3"),
-            "evidence other than what it found new in: updated sources",
+            setOf(RewritePart.NEW_FINDINGS),
+            rewriteParts(before, before.copy(evidenceFingerprint = "fp2"), foundNew = false, foundIn = "fp2"),
+            "a later look again finding nothing more keeps what the first found",
+        )
+    }
+
+    @Test
+    fun `evidence changed since what a look again found new is new findings and updated sources`() {
+        val with = before.copy(evidenceFingerprint = "fp3")
+
+        assertEquals(
+            setOf(RewritePart.NEW_FINDINGS, RewritePart.UPDATED_SOURCES),
+            rewriteParts(before, with, foundIn = "fp2"),
         )
     }
 

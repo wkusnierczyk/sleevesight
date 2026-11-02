@@ -492,9 +492,10 @@ data class CoordinatorState(
      * run of the key asking again keeps it under the same settings; any other decision drops it.
      * [foundNew] (#854) is the fingerprint of the evidence a look again (#617) found something new
      * in, compared with [card]: set when that run's evidence is assembled, dropped with the card it
-     * was compared with (a card written or shown in its place) and with the entry. A rewrite from
-     * that evidence used new findings, whichever run makes it: one that replaced the look again's
-     * for a settings change too (`Rewriting.foundIn`).
+     * was compared with (a card written or shown in its place) and with the entry. While it is set, a
+     * rewrite used new findings, whichever run makes it (one that replaced the look again's for a
+     * settings change too), and updated sources besides when it writes from other evidence
+     * (`Rewriting.foundIn`, `rewriteParts`).
      */
     data class Ledger(
         val track: NowPlaying,

@@ -1,9 +1,11 @@
 package app.sleevesight.app.pipeline
 
+import app.sleevesight.core.Secret
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.RewritePart
 import app.sleevesight.core.settings.WriteAutomatically
+import app.sleevesight.wiring.SourceKeys
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
@@ -102,6 +104,34 @@ internal class PipelineHostRewrittenNoteTest : PipelineHostFixture() {
                 host.state.value.rewriteWith
                     ?.parts,
             )
+        }
+
+    // Look again finds a new MusicBrainz fact, then Last.fm's key is removed: the evidence written
+    // from is no longer the evidence the look again found it in, so both are named.
+    @Test
+    fun `what Look again found new is still named after another source changed, with updated sources`() =
+        runTest {
+            keys = PipelineKeys(ai = Secret("ai"), sources = SourceKeys(lastFm = Secret("lastfm")))
+            cache.keepsResults = true
+            written("Sundown")
+            musicBrainz.text = "Sundown was a number one single."
+            host.lookAgain(checkNotNull(host.state.value.lookAgainKey), checkNotNull(changes.value?.nowPlaying))
+            settle()
+            assertTrue(host.state.value.somethingNew)
+
+            keys = PipelineKeys(ai = Secret("ai"))
+            keyChanges.value++
+            settle()
+            val both = setOf(RewritePart.NEW_FINDINGS, RewritePart.UPDATED_SOURCES)
+            assertEquals(
+                both,
+                host.state.value.rewriteWith
+                    ?.parts,
+            )
+
+            tap()
+            settle()
+            assertEquals(both, shown().rewritten)
         }
 
     // [title] written on a tap under *On demand*, with nothing offered beside it.

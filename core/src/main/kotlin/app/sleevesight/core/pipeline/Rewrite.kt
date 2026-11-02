@@ -61,13 +61,15 @@ data class Rewriting(
 
 /**
  * What an insight written with [with] uses that one written with [replaced] did not (#854), in
- * [RewritePart]'s order. The evidence: what *Look again* found new when it did ([foundNew] true), or
- * when [with]'s evidence is what a look again found new in ([foundIn], whatever run looked); nothing
- * when it looked and found nothing new (false), for the app counts no change then, though lines may
+ * [RewritePart]'s order. The evidence: new findings whenever a look again since [replaced] found
+ * something new ([foundIn] set, whatever run looked, or [foundNew] true for this run), and updated
+ * sources besides when [with]'s evidence is not the evidence it found them in (another source
+ * changed since: a key removed, a source switched off); nothing when the run looked and found nothing
+ * new (false) and no look again found anything, for the app counts no change then, though lines may
  * come in another order or spacing; else another evidence fingerprint, where both say one, is
- * updated sources. The AI service, its model or effort; the model's own knowledge
- * switched on or off, where both say; and the prompt's version. Nothing that neither names (the style,
- * D14, not built).
+ * updated sources. Not per line: what the look again found may since have gone with a source. The
+ * AI service, its model or effort; the model's own knowledge switched on or off, where both say; and
+ * the prompt's version. Nothing that neither names (the style, D14, not built).
  */
 fun rewriteParts(
     replaced: WrittenBy,
@@ -76,7 +78,7 @@ fun rewriteParts(
     foundIn: String? = null,
 ): Set<RewritePart> =
     buildSet {
-        evidencePart(replaced.evidenceFingerprint, with.evidenceFingerprint, foundNew, foundIn)?.let { add(it) }
+        addAll(evidenceParts(replaced.evidenceFingerprint, with.evidenceFingerprint, foundNew, foundIn))
         if (replaced.provider != with.provider || replaced.model != with.model || replaced.effort != with.effort) {
             add(RewritePart.MODEL)
         }
@@ -88,17 +90,18 @@ fun rewriteParts(
         if (replaced.promptVersion != with.promptVersion) add(RewritePart.INSTRUCTIONS)
     }
 
-// The evidence's part of [rewriteParts], from the fingerprints [before] and [now].
-private fun evidencePart(
+// The evidence's parts of [rewriteParts], from the fingerprints [before] and [now].
+private fun evidenceParts(
     before: String?,
     now: String?,
     foundNew: Boolean?,
     foundIn: String?,
-): RewritePart? =
+): Set<RewritePart> =
     when {
-        foundNew == true || (foundIn != null && foundIn == now) -> RewritePart.NEW_FINDINGS
-        foundNew == null && before != null && now != null && before != now -> RewritePart.UPDATED_SOURCES
-        else -> null
+        foundIn != null && now != null && foundIn != now -> setOf(RewritePart.NEW_FINDINGS, RewritePart.UPDATED_SOURCES)
+        foundIn != null || foundNew == true -> setOf(RewritePart.NEW_FINDINGS)
+        foundNew == null && before != null && now != null && before != now -> setOf(RewritePart.UPDATED_SOURCES)
+        else -> emptySet()
     }
 
 /** What a card written under this key is written with ([InsightState.Written.writtenBy]). */
