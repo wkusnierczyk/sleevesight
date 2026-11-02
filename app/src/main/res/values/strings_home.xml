@@ -212,7 +212,8 @@
     <!-- Stop's action, as a screen reader names it ("Double-tap to stop the call"). -->
     <string name="home_ai_stop_action">stop the call</string>
     <!-- Under what the question found, on its own line, in italics; %1$s is the model ("by Claude Haiku
-         5.5"), whether it was asked by a tap or automatically (#801's revised pick). -->
+         5.5"), whether it was asked by a tap or automatically (#801's revised pick). Also the byline
+         under the Key insights heading, naming the model that wrote the insight (#811). -->
     <string name="home_ai_by">by %1$s</string>
     <!-- Under a value found on the web (#801), on its own line: %1$s is the page's site ("discogs.com"),
          a link to the page. -->

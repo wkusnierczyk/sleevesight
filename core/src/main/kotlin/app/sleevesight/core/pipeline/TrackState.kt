@@ -160,10 +160,13 @@ sealed interface InsightState {
      * The model is writing; [partial] is the text so far, not yet checked. [held] are the ids of the
      * lines its prompt held when it left some of the track's out (#239, `PromptEvidence`), null when
      * it held them all: a citation outside them shows as one of no line, as the check will read it.
+     * [model] is the id of the model being called, which the card names while it writes (#811);
+     * null where no call names it (a genre's reason, a test's fixture).
      */
     data class Writing(
         val partial: String,
         val held: Set<String>? = null,
+        val model: String? = null,
     ) : InsightState
 
     /**

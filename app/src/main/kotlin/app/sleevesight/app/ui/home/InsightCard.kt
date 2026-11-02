@@ -13,6 +13,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.isTraversalGroup
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
@@ -44,6 +46,11 @@ import app.sleevesight.core.pipeline.InsightState
  * the insight does not move down when it is written. Its width is kept first: at a large font size the
  * heading wraps in what is left. While it reads with the music paused though *Reduce volume* is
  * chosen, on a speaker whose volume the phone cannot set (#803), a quiet note under the heading says so.
+ *
+ * Under the heading, in its row, a byline (#811): "by {model}" in the panels' credit style
+ * ([InsightByline], [SearchCredit]), naming the model that wrote the text ([insightModel]) as *AI services*
+ * lists it, or its id once no longer listed. *Read aloud* does not say it; a screen reader
+ * reads it in its place, after the heading.
  */
 @Suppress("LongParameterList") // The insight, what it is shown with, and its actions, each on its own.
 @Composable
@@ -61,12 +68,12 @@ internal fun InsightCard(
             modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag(INSIGHT_HEADING_TAG),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Measured after the button, in the width it leaves.
-            Text(
-                stringResource(R.string.home_insight_title),
-                Modifier.weight(1f),
-                style = MaterialTheme.typography.titleMedium,
-            )
+            // Measured after the button, in the width it leaves. One traversal group, so a screen
+            // reader reads the heading and the byline before *Read aloud*, each on its own (#811).
+            Column(Modifier.weight(1f).semantics { isTraversalGroup = true }) {
+                Text(stringResource(R.string.home_insight_title), style = MaterialTheme.typography.titleMedium)
+                insightModel(insight)?.let { InsightByline(it) }
+            }
             read?.let { ReadAloudButton(it, READ_ALOUD_TAG) }
         }
         if (read?.pausedInstead == true) Quiet(stringResource(R.string.home_read_aloud_paused_instead))
