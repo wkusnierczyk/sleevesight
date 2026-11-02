@@ -94,7 +94,12 @@ class ClosingPagesTest {
         compose.waitForIdle()
     }
 
+    /**
+     * Back on the settings: drawn afresh, they show nothing until their first read of the stored
+     * settings, on DataStore's own threads, which `waitForIdle` does not wait for.
+     */
     private fun onSettings() {
+        compose.waitUntil(WAIT_MS) { countText(R.string.settings_what_leaves) > 0 }
         compose.onNodeWithText(text(R.string.settings_what_leaves)).performScrollTo().assertIsDisplayed()
         assertEquals(0, count(PAGE_BACK_TAG))
     }
@@ -164,7 +169,12 @@ class ClosingPagesTest {
         assertEquals(0, count(PAGE_CLOSE_TAG))
     }
 
-    /** The app on its own navigation controller, with a stand-in for the settings. */
+    /**
+     * The app on its own navigation controller, with a stand-in for the settings, once its Home is
+     * drawn: a fresh Home lists the players on `Dispatchers.IO`, which `waitForIdle` does not wait
+     * for; drawn after the scroll to *What leaves the device*, the players and the guide push it
+     * off the screen, and the tap on it misses.
+     */
     private fun ActivityScenario<MainActivity>.withController(): NavHostController {
         lateinit var nav: NavHostController
         onActivity { activity ->
@@ -179,7 +189,7 @@ class ClosingPagesTest {
                 )
             }
         }
-        compose.waitForIdle()
+        compose.awaitIdleHome()
         return nav
     }
 
@@ -359,7 +369,8 @@ class ClosingPagesTest {
             compose.waitForIdle()
             assertBar(R.string.diagnostics_title)
             doubleTap(PAGE_BACK_TAG)
-            // The settings, not Home under them.
+            // The settings, not Home under them, once read again ([onSettings]).
+            compose.waitUntil(WAIT_MS) { compose.onAllNodesWithText(open).fetchSemanticsNodes().isNotEmpty() }
             compose.onNodeWithText(open).performScrollTo().assertIsDisplayed()
             assertEquals(0, count(PAGE_BACK_TAG))
         }
