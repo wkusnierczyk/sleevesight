@@ -204,7 +204,8 @@ interface AiSearchFeed {
  * started before a *Clear history*, whose clear drops the log.
  *
  * An answer is shown as kept from before (#851, `AiSearch.Answered.keptAt`) when it was written
- * before the play of the track it is shown for began ([playBegan], `Plays`); for a track not playing
+ * before the play of the track it is shown for began ([plays], `Plays`: observed, so it is worked out
+ * again when the play changes); for a track not playing
  * (no time), when it was read from the cache or written for another track.
  */
 @Suppress(
@@ -222,7 +223,7 @@ class AppAiSearches(
     private val automaticGate: (TrackState, SearchKind, String?) -> Boolean = { _, _, _ -> true },
     private val deferred: (TrackState, SearchKind, String?) -> Unit = { _, _, _ -> },
     private val events: (PipelineEvent) -> Unit = {},
-    private val playBegan: (TrackState) -> Instant? = { null },
+    private val plays: StateFlow<Play?> = MutableStateFlow(null),
 ) : AiSearchFeed {
     // A search's key, null with no AI service ready; and whether it is offered at all (the pipeline
     // and settings in, *Show insights* on).
@@ -302,8 +303,10 @@ class AppAiSearches(
             .distinctUntilChanged()
             .onEach { offer -> offer.key?.let { look(it, kind, track) } }
             .combine(
-                combine(shown.entries, settings) { entries, now -> entries to now?.historyLifetime },
-            ) { offer, (entries, lifetime) ->
+                combine(shown.entries, settings, plays) { entries, now, play ->
+                    Triple(entries, now?.historyLifetime, play)
+                },
+            ) { offer, (entries, lifetime, play) ->
                 val key = offer.key
                 val entry = key?.let { entries[it] }
                 when {
@@ -312,7 +315,7 @@ class AppAiSearches(
                     entry == null -> AiSearch.Offered
                     expired(entry.writtenAt, lifetime) -> AiSearch.Offered.also { drop(key) }
                     else ->
-                        shownAs(entry.state, modelName(key.model), keptAt(entry, track))
+                        shownAs(entry.state, modelName(key.model), keptAt(entry, track, play))
                             .also { serve(key, kind, genre, track, entry) }
                 }
             }
@@ -404,7 +407,7 @@ class AppAiSearches(
         val publish: (SearchState, Instant, Boolean) -> Unit = { state, at, fresh ->
             // Settled for this track before it shows, so its panel does not take it for one kept.
             if (state.settled) synchronized(lock) { served[Served.of(key, track)] = Unit }
-            shown.publish(key, Entry(state, at, identityOf(track).takeIf { fresh })) {
+            shown.publish(key, Entry(state, at, playIdentity(track).takeIf { fresh })) {
                 shown.current(work, epoch) && synchronized(lock) { key !in stopped && work.isActive }
             }
         }
@@ -423,7 +426,9 @@ class AppAiSearches(
                 asked.automatic &&
                     !(automaticGate(track, kind, asked.genre) && keyOf(track, kind, asked.genre)?.second == key)
             if (kept != null) {
-                log(keptServed(key, question, track, kept.state, kept.writtenAt))
+                tellKept(key, track, keptServed(key, question, track, kept.state, kept.writtenAt)) {
+                    shown.current(work, epoch)
+                }
                 publish(kept.state, kept.writtenAt ?: clock.now(), false)
             } else if (gated) {
                 log(PipelineEvent.AiNotAsked(track.lookupKey, question))
@@ -475,15 +480,16 @@ class AppAiSearches(
     private fun keptAt(
         entry: Entry,
         track: TrackState,
+        play: Play?,
     ): Instant? {
         if (!entry.state.settled) return null
-        val began = playBegan(track)
-        val kept = if (began != null) entry.writtenAt < began else entry.writtenFor != identityOf(track)
+        val began = play?.beganFor(track)
+        val kept = if (began != null) entry.writtenAt < began else entry.writtenFor != playIdentity(track)
         return entry.writtenAt.takeIf { kept }
     }
 
     // [entry], settled, shown for [track] by its panel (#851): a kept answer served, told to the log
-    // once per track, unless it was settled for this track (its own call, or a read before its call,
+    // ([tellKept]), unless it was settled for this track (its own call, or a read before its call,
     // told then) or is no longer shown.
     private fun serve(
         key: CardKey,
@@ -493,11 +499,20 @@ class AppAiSearches(
         entry: Entry,
     ) {
         if (!entry.state.settled) return
-        val first = synchronized(lock) { served.put(Served.of(key, track), Unit) == null }
-        if (first) {
-            val event = keptServed(key, AiQuestion.Search(kind, genre), track, entry.state, entry.writtenAt)
-            shown.whenCurrent({ shown.entries.value[key] === entry }) { events(event) }
-        }
+        val event = keptServed(key, AiQuestion.Search(kind, genre), track, entry.state, entry.writtenAt)
+        tellKept(key, track, event) { shown.entries.value[key] === entry }
+    }
+
+    // Tells [event], [key]'s kept answer served for [track], to the log once per track (#851),
+    // whichever of its producers comes first (a read before a call, a panel showing it): if [current]
+    // holds, checked under the lock *Clear history*'s clear takes, with the mark that it was told.
+    private fun tellKept(
+        key: CardKey,
+        track: TrackState,
+        event: PipelineEvent,
+        current: () -> Boolean,
+    ) = shown.whenCurrent(current) {
+        if (synchronized(lock) { served.put(Served.of(key, track), Unit) == null }) events(event)
     }
 
     /**
@@ -720,16 +735,13 @@ private fun outcomeOf(state: SearchState?): AiOutcome =
 
 /**
  * A search shown, when it was written, and the track whose call wrote it ([writtenFor], its
- * identity, [identityOf]; null when read from the cache), which tells one kept from before (#851).
+ * identity, [playIdentity]; null when read from the cache), which tells one kept from before (#851).
  */
 internal class Entry(
     val state: SearchState,
     val writtenAt: Instant,
     val writtenFor: Any? = null,
 )
-
-// [track]'s identity, as the sources name it, and its length.
-private fun identityOf(track: TrackState): Any = track.normalized to track.nowPlaying.duration
 
 // [state] as the panel shows it, by the model named [model], kept from before when [keptAt] says when.
 private fun shownAs(

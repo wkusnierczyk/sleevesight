@@ -176,7 +176,8 @@ interface GenreNotes : DefinitionFeed {
  * started before a *Clear history*. A reason shown again from memory is not told again.
  *
  * A reason is shown as kept from before (#851, `GenreReason.Shown.keptAt`) when it was written
- * before the play of its track began ([playBegan], `Plays`); for a track not playing (no time), when
+ * before the play of its track began ([plays], `Plays`: observed, so it is worked out again when the
+ * play changes); for a track not playing (no time), when
  * it was read from the cache.
  */
 @Suppress(
@@ -195,7 +196,7 @@ class AppGenreNotes private constructor(
     private val modelName: (String) -> String,
     private val paid: (QuestionCost) -> Unit,
     private val events: (PipelineEvent) -> Unit,
-    private val playBegan: (TrackState) -> Instant?,
+    private val plays: StateFlow<Play?>,
 ) : GenreNotes,
     DefinitionFeed by lookups {
     /**
@@ -215,7 +216,7 @@ class AppGenreNotes private constructor(
         modelName: (String) -> String = { ModelNames.of(it) ?: it },
         paid: (QuestionCost) -> Unit = {},
         events: (PipelineEvent) -> Unit = {},
-        playBegan: (TrackState) -> Instant? = { null },
+        plays: StateFlow<Play?> = MutableStateFlow(null),
     ) : this(
         AppGenreDefinitions(definitions, settings, scope, epoch, io),
         definitions.vocabulary,
@@ -227,7 +228,7 @@ class AppGenreNotes private constructor(
         modelName,
         paid,
         events,
-        playBegan,
+        plays,
     )
 
     // A reason shown, or a list, and when it was written.
@@ -292,19 +293,20 @@ class AppGenreNotes private constructor(
                     else -> Unit
                 }
             }.combine(
-                combine(shown, lists, waiting, settings) { reasons, known, asked, now ->
-                    Shown(reasons, known, asked, now?.historyLifetime)
+                combine(shown, lists, waiting, settings, plays) { reasons, known, asked, now, play ->
+                    Shown(reasons, known, asked, now?.historyLifetime, play)
                 },
             ) { path, now -> shownFor(path, track, genre, now) }
     }
 
-    // What the panel's states are made of: the reasons, the lists, the genres waiting on each, and
-    // *Keep history for*.
+    // What the panel's states are made of: the reasons, the lists, the genres waiting on each,
+    // *Keep history for*, and the play now (#851).
     private class Shown(
         val reasons: Map<CardKey, Entry<InsightState>>,
         val known: Map<CardKey, Entry<GenreListState>>,
         val waiting: Map<CardKey, Set<String>>,
         val lifetime: Duration?,
+        val play: Play?,
     )
 
     // What the panel shows for [track]'s [genre]'s [path], as [now] has it.
@@ -341,19 +343,20 @@ class AppGenreNotes private constructor(
                 when {
                     entry == null -> GenreReason.Offered
                     expired(entry.writtenAt, now.lifetime) -> GenreReason.Offered.also { drop(path.key) }
-                    else -> GenreReason.Shown(entry.state, modelName(path.key.model), keptAt(entry, track))
+                    else -> GenreReason.Shown(entry.state, modelName(path.key.model), keptAt(entry, track, now.play))
                 }
             }
         }
 
     // When [entry] was written, if it is a reason kept from before for [track] (#851): written, and
-    // before [track]'s play began, or, with no time for it, read from the cache.
+    // before [track]'s [play] began, or, with no time for it, read from the cache.
     private fun keptAt(
         entry: Entry<InsightState>,
         track: TrackState,
+        play: Play?,
     ): Instant? {
         val state = entry.state as? InsightState.Written ?: return null
-        val began = playBegan(track)
+        val began = play?.beganFor(track)
         val kept = if (began != null) entry.writtenAt < began else state.cached
         return entry.writtenAt.takeIf { kept }
     }
@@ -477,7 +480,9 @@ class AppGenreNotes private constructor(
         try {
             val kept = reasons.found(key, track)?.takeIf { !expired(it.writtenAt) }
             if (kept != null) {
-                note(work, kept(track, key, question, kept.writtenAt))
+                synchronized(lock) {
+                    if (current(work)) tellKept(track, key, kept(track, key, question, kept.writtenAt))
+                }
                 show(kept.state, kept.writtenAt ?: clock.now())
             } else {
                 asked.start()
@@ -558,6 +563,25 @@ class AppGenreNotes private constructor(
         automatic = false,
     )
 
+    // The kept reasons and lists told to the log as served, by key and track (#851), the last
+    // [TOLD_KEPT], under [lock].
+    private val told =
+        object : LinkedHashMap<Pair<CardKey, Any>, Unit>(TOLD_KEPT, LOAD, true) {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Pair<CardKey, Any>, Unit>?): Boolean =
+                size > TOLD_KEPT
+        }
+
+    // Tells [event], [key]'s kept reason or list served for [track], to the log once per track
+    // (#851), whichever of its producers comes first (a tap's read, a panel's); under [lock], which
+    // the caller holds, having checked that no *Clear history* came since its work started.
+    private fun tellKept(
+        track: TrackState,
+        key: CardKey,
+        event: PipelineEvent,
+    ) {
+        if (told.put(key to playIdentity(track), Unit) == null) events(event)
+    }
+
     // Tells [event] to the log if no *Clear history* came since [work] started, checked under the
     // lock [forget] clears under, as [publish] shows (#851).
     private fun note(
@@ -592,7 +616,9 @@ class AppGenreNotes private constructor(
         try {
             val kept = asker.kept(key)?.takeIf { !expired(it.writtenAt) }
             if (kept != null) {
-                note(work, kept(track, key, AiQuestion.GenreList, kept.writtenAt))
+                synchronized(lock) {
+                    if (current(work)) tellKept(track, key, kept(track, key, AiQuestion.GenreList, kept.writtenAt))
+                }
                 show(kept.state, kept.writtenAt ?: clock.now())
             } else {
                 asked.start()
@@ -658,6 +684,7 @@ class AppGenreNotes private constructor(
             lists.value = emptyMap()
             waiting.value = emptyMap()
             looked.clear()
+            told.clear()
         }
         lookups.forget()
     }
@@ -723,7 +750,8 @@ class AppGenreNotes private constructor(
                 publish(work) {
                     var added = false
                     shown.update { (if (key in it) it else it.with(key, entry)).also { next -> added = next !== it } }
-                    if (added) events(kept(track, key, AiQuestion.Reason(label(track, genre)), kept.writtenAt))
+                    val question = AiQuestion.Reason(label(track, genre))
+                    if (added) tellKept(track, key, kept(track, key, question, kept.writtenAt))
                 }
             }
         }
@@ -744,7 +772,7 @@ class AppGenreNotes private constructor(
                 publish(work) {
                     var added = false
                     lists.update { (if (key in it) it else it.with(key, entry)).also { next -> added = next !== it } }
-                    if (added) events(kept(track, key, AiQuestion.GenreList, kept.writtenAt))
+                    if (added) tellKept(track, key, kept(track, key, AiQuestion.GenreList, kept.writtenAt))
                 }
             }
         }
@@ -791,5 +819,10 @@ class AppGenreNotes private constructor(
         const val KEPT = 64
 
         const val FAILED = "failed"
+
+        /** The kept answers told to the log as served, remembered: those of the last tracks played. */
+        const val TOLD_KEPT = 256
+
+        const val LOAD = .75f
     }
 }

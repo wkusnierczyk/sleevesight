@@ -83,7 +83,7 @@ internal class AskAi(
             scope,
             clock = clock,
             events = { events += it },
-            playBegan = { plays?.began(it) },
+            plays = plays?.current ?: MutableStateFlow(null),
         )
 
     lateinit var panels: AutoSearches<SearchKind>
@@ -111,7 +111,7 @@ internal class AskAi(
                 }
             },
             events = { events += it },
-            playBegan = { plays?.began(it) },
+            plays = plays?.current ?: MutableStateFlow(null),
         )
 
     init {

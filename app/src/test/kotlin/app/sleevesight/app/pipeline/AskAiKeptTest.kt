@@ -16,6 +16,7 @@ import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.synthesis.SearchKind
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -50,6 +51,26 @@ class AskAiKeptTest {
             }
         }
     }
+
+    // A track whose table has rock, from Last.fm, with the fixtures' evidence.
+    private val rock =
+        HomeFixtures.track().copy(
+            genres =
+                TrackGenres(
+                    listOf(
+                        GenreRow(
+                            GenreLevel.ARTIST,
+                            "A",
+                            listOf(
+                                TrackLabel(
+                                    GenreLabel("rock", "rock", "Rock", "rock", null, GenreLevel.ARTIST, "A"),
+                                    listOf(LabelCredit(LabelSource.LASTFM, null)),
+                                ),
+                            ),
+                        ),
+                    ),
+                ),
+        )
 
     // The test's virtual time, as the app's clock.
     private val TestScope.clock: Clock
@@ -116,24 +137,6 @@ class AskAiKeptTest {
         runTest {
             val plays = Plays(clock)
             val app = AskAi(this, settings, cache, provider, clock = clock, plays = plays)
-            val rock =
-                HomeFixtures.track().copy(
-                    genres =
-                        TrackGenres(
-                            listOf(
-                                GenreRow(
-                                    GenreLevel.ARTIST,
-                                    "A",
-                                    listOf(
-                                        TrackLabel(
-                                            GenreLabel("rock", "rock", "Rock", "rock", null, GenreLevel.ARTIST, "A"),
-                                            listOf(LabelCredit(LabelSource.LASTFM, null)),
-                                        ),
-                                    ),
-                                ),
-                            ),
-                        ),
-                )
             plays.follow(rock)
             app.notes.explain(rock, "rock")
             advanceUntilIdle()
@@ -143,5 +146,46 @@ class AskAiKeptTest {
             plays.follow(rock)
             val kept = app.notes.reason(rock, "rock").first { it is GenreReason.Shown } as GenreReason.Shown
             assertEquals(Instant.fromEpochMilliseconds(0), kept.keptAt)
+        }
+
+    @Test
+    fun `a panel watching before the play changes shows the answer kept once the play does`() =
+        runTest {
+            val plays = Plays(clock)
+            val app = AskAi(this, settings, cache, provider, clock = clock, plays = plays)
+            plays.follow(empty())
+            app.searches.ask(empty(), SearchKind.DATES, searchFacts(empty(), HomeFixtures.sundown))
+            advanceUntilIdle()
+            advanceTimeBy(1.minutes)
+            plays.follow(empty(HomeFixtures.carefree))
+            // The panel for this track watches before the play of it is followed (A, B, then A).
+            val shown = mutableListOf<AiSearch>()
+            val panel = launch { app.searches.search(empty(), SearchKind.DATES).collect { shown += it } }
+            advanceUntilIdle()
+            assertNull((shown.last() as AiSearch.NothingFound).keptAt)
+            plays.follow(empty())
+            advanceUntilIdle()
+            assertEquals(Instant.fromEpochMilliseconds(0), (shown.last() as AiSearch.NothingFound).keptAt)
+            panel.cancel()
+        }
+
+    @Test
+    fun `a reason's panel watching before the play changes shows it kept once the play does`() =
+        runTest {
+            val plays = Plays(clock)
+            val app = AskAi(this, settings, cache, provider, clock = clock, plays = plays)
+            plays.follow(rock)
+            app.notes.explain(rock, "rock")
+            advanceUntilIdle()
+            advanceTimeBy(1.minutes)
+            plays.follow(empty(HomeFixtures.carefree))
+            val shown = mutableListOf<GenreReason>()
+            val panel = launch { app.notes.reason(rock, "rock").collect { shown += it } }
+            advanceUntilIdle()
+            assertNull((shown.last() as GenreReason.Shown).keptAt)
+            plays.follow(rock)
+            advanceUntilIdle()
+            assertEquals(Instant.fromEpochMilliseconds(0), (shown.last() as GenreReason.Shown).keptAt)
+            panel.cancel()
         }
 }

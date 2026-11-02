@@ -15,13 +15,18 @@ import app.sleevesight.core.genres.TrackLabel
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.pipeline.AiOutcome
 import app.sleevesight.core.pipeline.AiQuestion
+import app.sleevesight.core.pipeline.CardKey
+import app.sleevesight.core.pipeline.KeptCard
+import app.sleevesight.core.pipeline.PipelineCache
 import app.sleevesight.core.pipeline.PipelineEvent
 import app.sleevesight.core.pipeline.QuestionCost
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.synthesis.SearchKind
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -251,6 +256,69 @@ class AskAiEventsTest {
                 ),
                 restarted.events,
             )
+            assertEquals(1, provider.requests)
+        }
+
+    // A cache whose reads, while [holding], each wait for a gate of their own ([gates], in the order
+    // the reads came): reads under way at once, ended in an order a test chooses.
+    private class GatedCache(
+        private val cache: PipelineCache,
+    ) : PipelineCache by cache {
+        var holding = false
+        val gates = mutableListOf<CompletableDeferred<Unit>>()
+
+        override suspend fun keptCard(key: CardKey): KeptCard? {
+            if (holding) CompletableDeferred<Unit>().also { gates += it }.await()
+            return cache.keptCard(key)
+        }
+    }
+
+    @Test
+    fun `a kept answer read by a panel and by a tap at once is told once, whichever read ends first`() =
+        runTest {
+            settings.value = off
+            app().searches.ask(empty(), SearchKind.DATES, searchFacts(empty(), HomeFixtures.sundown))
+            advanceUntilIdle()
+            for (first in listOf(0, 1)) {
+                val gated = GatedCache(cache).apply { holding = true }
+                val restarted = AskAi(this, settings, gated, provider, clock = clock)
+                // The panel's read, then the tap's, both under way.
+                val panel = launch { restarted.searches.search(empty(), SearchKind.DATES).collect {} }
+                runCurrent()
+                restarted.searches.ask(empty(), SearchKind.DATES, searchFacts(empty(), HomeFixtures.sundown))
+                runCurrent()
+                assertEquals(2, gated.gates.size)
+                gated.gates[first].complete(Unit)
+                runCurrent()
+                gated.gates[1 - first].complete(Unit)
+                advanceUntilIdle()
+                panel.cancel()
+                assertEquals("read $first ended first", 1, restarted.events.count { it is PipelineEvent.AiKept })
+            }
+            assertEquals(1, provider.requests)
+        }
+
+    @Test
+    fun `a kept reason read by its panel and by a tap at once is told once, whichever read ends first`() =
+        runTest {
+            settings.value = off
+            app().notes.explain(rockTrack, "rock")
+            advanceUntilIdle()
+            for (first in listOf(0, 1)) {
+                val gated = GatedCache(cache).apply { holding = true }
+                val restarted = AskAi(this, settings, gated, provider, clock = clock)
+                val panel = launch { restarted.notes.reason(rockTrack, "rock").collect {} }
+                runCurrent()
+                restarted.notes.explain(rockTrack, "rock")
+                runCurrent()
+                assertEquals(2, gated.gates.size)
+                gated.gates[first].complete(Unit)
+                runCurrent()
+                gated.gates[1 - first].complete(Unit)
+                advanceUntilIdle()
+                panel.cancel()
+                assertEquals("read $first ended first", 1, restarted.events.count { it is PipelineEvent.AiKept })
+            }
             assertEquals(1, provider.requests)
         }
 

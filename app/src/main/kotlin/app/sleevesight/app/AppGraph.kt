@@ -546,7 +546,7 @@ class AppGraph internal constructor(
             // Each reason or list asked, or served from the cache, in the diagnostics' events (#851).
             events = { diagnostics.log.record(it) },
             // A reason written before this play of the track is kept from before (#851).
-            playBegan = { plays.began(it) },
+            plays = plays.current,
         )
 
     /**
@@ -584,7 +584,7 @@ class AppGraph internal constructor(
             // the diagnostics' events (#851).
             events = { diagnostics.log.record(it) },
             // An answer written before this play of the track is kept from before (#851).
-            playBegan = { plays.began(it) },
+            plays = plays.current,
         )
     }
 
