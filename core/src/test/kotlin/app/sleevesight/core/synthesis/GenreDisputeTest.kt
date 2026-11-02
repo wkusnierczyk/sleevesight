@@ -32,6 +32,7 @@ class GenreDisputeTest {
             // #864's second review: the genre's name ends at a mark or a word that makes no longer genre.
             "It is not folk because its sound is rooted in soul [W1].",
             "It is Americana rather than folk, with a soul groove [W1].",
+            "The evidence does not mention folk [W1].",
         ).forEach { assertTrue(GenreDispute.disputes(it, folk), it) }
     }
 
@@ -65,7 +66,22 @@ class GenreDisputeTest {
             "Folk is not the whole story: its acoustic storytelling blends with soul [W1].",
             "The folk label does not describe every aspect of the track, but its acoustic storytelling fits [W1].",
             "The folk tag does not fit every song she wrote [W1].",
+            // The Claude review of #864: the genre qualifying a noun, or hedged, is no dispute.
+            "Ford is no folk purist: she blends folk storytelling with soul [W1].",
+            "While it isn't folk in the traditional sense, its fingerpicked guitar carries folk's hallmarks [W1].",
+            "It's not as folk as her debut, but its banjo is [W1].",
+            "It is not folk alone: soul runs through it [W1].",
+            "Folk is not the right label on its own: soul fits too [W1].",
         ).forEach { assertFalse(GenreDispute.disputes(it, folk), it) }
+        assertFalse(GenreDispute.disputes("Though never a pop hit, its chorus is pop [W1].", setOf("pop")))
+        assertFalse(GenreDispute.disputes("It isn't a jazz standard, but its harmony is jazz [W1].", setOf("jazz")))
+    }
+
+    @Test
+    fun `the track's names are left out`() {
+        val reply = "It closes her album No Pop [MB1]."
+        assertTrue(GenreDispute.disputes(reply, setOf("pop")))
+        assertFalse(GenreDispute.disputes(reply, setOf("pop"), names = listOf("no pop")))
     }
 
     @Test

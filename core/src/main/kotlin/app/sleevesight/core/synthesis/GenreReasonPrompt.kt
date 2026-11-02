@@ -81,7 +81,7 @@ object GenreReasonPrompt {
      */
     const val LABEL_RULE: String =
         "- Never say or suggest that the track is not of this genre, or that it belongs under another genre " +
-            "instead. If the evidence cannot explain the label, reply with exactly: ${GroundingCheck.NO_EVIDENCE}"
+            "instead. If nothing you can cite explains the label, reply with exactly: ${GroundingCheck.NO_EVIDENCE}"
 
     /**
      * The prompt for why [nowPlaying], normalized as [normalized], carries the genre label [genre],
@@ -142,7 +142,9 @@ object GenreReasonPrompt {
      * [prompt] ([build]'s) for a reason that may search the web (#801, *AI web search*'s *Up to 3
      * times*): before its last line, that the model may search with the search tool, at most
      * [limit] times, and that each search's pages come back as evidence lines, from [firstId] on,
-     * which it cites as the others and which hold facts only as the other lines do.
+     * which it cites as the others and which hold facts only as the other lines do; and that it replies
+     * `NO_EVIDENCE` only if the searches do not explain the label either, since [LABEL_RULE]'s
+     * `NO_EVIDENCE` would otherwise end the reply before any search (#853).
      */
     fun withSearch(
         prompt: String,
@@ -153,7 +155,8 @@ object GenreReasonPrompt {
             "If the evidence is not enough to explain the label, search the web with the " +
             "${WebPrompt.TOOL_NAME} tool, at most $limit times. Each search's pages come back as more " +
             "evidence lines, in the same format, numbered from [$firstId] on: cite them as the other lines, " +
-            "and use only what they say.\n\n" + REPLY
+            "and use only what they say. Reply ${GroundingCheck.NO_EVIDENCE} only if what the searches find does " +
+            "not explain it either.\n\n" + REPLY
 
     /** The insight's rules ([InsightPrompt.contract]), with the label's own first. */
     fun contract(allowModel: Boolean): String =

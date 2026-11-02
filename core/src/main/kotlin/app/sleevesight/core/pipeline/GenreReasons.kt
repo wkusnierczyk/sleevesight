@@ -429,7 +429,7 @@ class GenreReasons(
             // A reply that says the track is not the genre explains nothing (#853), kept or new; read
             // as shown, without a draft the model withdrew.
             is InsightReply.Written -> {
-                if (GenreDispute.disputes(reply.grounded.text, forms(key, track))) {
+                if (GenreDispute.disputes(reply.grounded.text, forms(key, track), names(track))) {
                     InsightState.NoEvidence
                 } else {
                     val by = WrittenBy(key.promptVersion, key.provider, key.model, key.effort)
@@ -453,6 +453,17 @@ class GenreReasons(
                 ?.label
         return setOfNotNull(genre, label?.let(GenreDispute::fold))
     }
+
+    // [track]'s names as a reply may quote them, left out of the dispute check: a title such as "No
+    // Pop" holds a negation before a genre.
+    private fun names(track: TrackState): List<String> =
+        listOfNotNull(
+            track.nowPlaying.title,
+            track.nowPlaying.album,
+            track.nowPlaying.artists,
+            track.normalized.title,
+            track.normalized.primary,
+        ) + track.normalized.artists
 
     // [call], or null when it throws anything but cancellation: a cache that fails is a miss.
     private suspend fun <T> attempt(call: suspend () -> T): T? =
