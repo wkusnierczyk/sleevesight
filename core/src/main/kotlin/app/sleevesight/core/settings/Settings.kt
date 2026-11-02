@@ -166,6 +166,11 @@ import kotlin.time.Duration.Companion.seconds
  *   while it is not open (not a return to it), plays one of the logo's intros before showing its
  *   screen. On by default: it is a few seconds, and a tap, Back or any key ends it; it never plays
  *   while the phone's *Remove animations* is on. Off, for someone who would rather not wait.
+ * @property spinLogo *Spin the logo while music plays* (#848): whether the record in Home's header
+ *   logo turns while the player line says *Playing*, speeding up and coming to rest as a turntable
+ *   does. On by default; it stands still while the phone's *Remove animations* is on either way.
+ * @property logoSpeed *Logo speed* (#848): how fast the logo's record turns while [spinLogo] has it
+ *   turn, an LP's 33⅓ rpm (the default) or a single's 45 rpm. See [LogoSpeed].
  * @property dismissed what the user dismissed for good (#759): each message or panel whose
  *   *Dismiss* was tapped ([Dismissable]), not shown again until *Restore dismissed messages*, under
  *   *Appearance*, brings them all back. None by default: the guide to Home (#627) shows for someone
@@ -214,6 +219,8 @@ data class Settings(
     val themeButton: Boolean = true,
     val font: FontChoice = FontChoice.APP_FONT,
     val introAtStart: Boolean = true,
+    val spinLogo: Boolean = true,
+    val logoSpeed: LogoSpeed = LogoSpeed.RPM_33,
     val dismissed: Set<Dismissable> = emptySet(),
 ) {
     init {
@@ -616,6 +623,23 @@ enum class FontChoice {
     /** The font chosen in the phone's own settings, for someone who prefers it everywhere. */
     SYSTEM_FONT,
 }
+
+/**
+ * *Logo speed* (#848): how fast the record in Home's header logo turns while music plays, in
+ * revolutions a minute ([rpm]), as a record player's two speeds.
+ */
+enum class LogoSpeed(
+    val rpm: Float,
+) {
+    /** A long-playing record's (12 inch), 33⅓ rpm, one turn in 1.8 s, the default. */
+    RPM_33(LP_RPM),
+
+    /** A single's (7 inch), 45 rpm, one turn in 1⅓ s. */
+    RPM_45(SINGLE_RPM),
+}
+
+private const val LP_RPM = 100f / 3
+private const val SINGLE_RPM = 45f
 
 /** *Theme* (#444): whether the app is light or dark. */
 enum class ThemeChoice {

@@ -184,6 +184,16 @@
     <string name="settings_font_summary">The app’s own font, Roboto, looks the same on every phone. The system font is the one chosen in your phone’s settings.</string>
     <string name="settings_intro">Logo intro at start</string>
     <string name="settings_intro_summary">When you open Sleevesight while it is not already open, its logo plays a few seconds of animation first; a tap, Back or any key skips it. It never plays while your phone’s Remove animations or TalkBack is on.</string>
+    <string name="settings_spin_logo">Spin the logo while music plays</string>
+    <string name="settings_spin_logo_summary">The record in the logo at the top of Home turns while your player is playing, and comes to rest when it pauses or stops. It stands still while your phone’s Remove animations is on.</string>
+    <string name="settings_logo_speed">Logo speed</string>
+    <string name="settings_logo_speed_summary">How fast the logo’s record turns while music plays.</string>
+    <string name="settings_logo_speed_33">33⅓ rpm</string>
+    <!-- How a screen reader says settings_logo_speed_33 (#848): the fraction in words. -->
+    <string name="settings_logo_speed_33_spoken">33 and a third rpm</string>
+    <string name="settings_logo_speed_45">45 rpm</string>
+    <string name="settings_logo_speed_33_detail">As a long-playing record (12 inch).</string>
+    <string name="settings_logo_speed_45_detail">As a single (7 inch).</string>
     <!-- Last under Appearance (#759): a row with a button that brings back everything dismissed for good. -->
     <string name="settings_restore_dismissed">Restore dismissed messages</string>
     <string name="settings_restore_dismissed_summary">Shows again the guides and notes you dismissed.</string>
