@@ -37,10 +37,8 @@ import app.sleevesight.app.report.MailHandoff
  * report goes through (the tester's report to come, #452, too): [inputs] for what the user adds,
  * then the whole [mail] as it will be sent, so nothing leaves the phone unseen. [mail] is null
  * while the inputs are not enough to send (no reason chosen), and *Open in mail app* and *Copy
- * report* wait for it. *Open in mail app* hands the mail to [handoff]; a mail app taking it whole
- * closes the dialog, and the user sends it from there. A body too long for the mail's address
- * reaches some mail apps without its text ([Handed.BODY_IN_EXTRAS]): the dialog copies it too, stays
- * open and says to paste it if the message is empty. With no mail app, the dialog says so. *Copy report*
+ * report* wait for it. *Open in mail app* hands the mail to [handoff]; a mail app taking it closes
+ * the dialog, and the user sends it from there. With no mail app, the dialog says so. *Copy report*
  * is offered either way, for a mail app the hand-off does not reach; where the system confirms
  * the copy itself ([MailHandoff.confirmsCopy]), the dialog says only where to paste it.
  * [previewHint] says what the report holds, above it: by default that it holds no key, history or
@@ -88,11 +86,7 @@ internal fun ReportDialog(
             Action(R.string.report_send, ready, REPORT_SEND_TAG) {
                 handed = handoff.send(it)
                 when (handed) {
-                    Handed.WHOLE -> onDismiss()
-                    Handed.BODY_IN_EXTRAS -> {
-                        handoff.copy(it)
-                        copied = true
-                    }
+                    Handed.OPENED -> onDismiss()
                     else -> Unit
                 }
             }
@@ -111,8 +105,8 @@ internal fun ReportDialog(
     )
 }
 
-// What became of the hand-off: the mail app may show it without its text, no mail app took it, or
-// it was copied. Said as it appears, without moving the focus from the button tapped.
+// What became of the hand-off: no mail app took it, or it was copied. Said as it appears, without
+// moving the focus from the button tapped.
 @Composable
 private fun Status(
     handed: Handed?,
@@ -121,7 +115,6 @@ private fun Status(
 ) {
     val said =
         when {
-            handed == Handed.BODY_IN_EXTRAS -> R.string.report_long
             copied -> if (systemConfirmsCopy) R.string.report_paste else R.string.report_copied
             handed == Handed.NO_MAIL_APP -> R.string.report_no_mail_app
             else -> return

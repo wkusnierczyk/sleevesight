@@ -69,9 +69,9 @@ class ReportProblemScreenTest {
         vararg args: Any,
     ) = app.getString(id, *args)
 
-    // A mail app that takes the report as [handed] says: whole, its body in the extras only, or none.
+    // A mail app that takes the report as [handed] says: opened, or none.
     private class FakeMail(
-        var handed: Handed = Handed.WHOLE,
+        var handed: Handed = Handed.OPENED,
         override val confirmsCopy: Boolean = true,
     ) : MailHandoff {
         val sent = mutableListOf<Mail>()
@@ -206,21 +206,6 @@ class ReportProblemScreenTest {
             // The system confirms the copy itself, as Android 13 and later do: only where to paste it.
             compose.onNodeWithText(text(R.string.report_paste, Mail.SUPPORT)).assertExists()
             compose.onNodeWithTag(REPORT_DIALOG_TAG).assertExists()
-        }
-
-    @Test
-    fun aReportTooLongForTheAddressIsCopiedTooAndTheDialogStaysOpenToSaySo() =
-        show(state(PipelineView(track(insight = written(reply)), aiReady = true))) {
-            mail.handed = Handed.BODY_IN_EXTRAS
-            openReport()
-            compose.onNodeWithText(text(R.string.report_reason_wrong)).performClick()
-            compose.onNodeWithTag(REPORT_NOTE_TAG).performTextInput("It charted in 1974.")
-            compose.onNodeWithTag(REPORT_SEND_TAG).performClick()
-
-            // Handed to the mail app, which may open it empty: copied too, and the dialog says to paste it.
-            assertEquals(mail.sent.single(), mail.copied.single())
-            compose.onNodeWithText(text(R.string.report_long, Mail.SUPPORT)).assertExists()
-            assertEquals(1, dialogs())
         }
 
     @Test

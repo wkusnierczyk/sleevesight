@@ -88,7 +88,7 @@ class TesterReportScreenTest {
 
         override fun send(mail: Mail): Handed {
             sent += mail
-            return Handed.WHOLE
+            return Handed.OPENED
         }
 
         override fun copy(mail: Mail) = Unit
