@@ -1,6 +1,8 @@
 {% comment %}
-  The footer of the product page and the documentation pages (#501): first, on a page that says so,
-  who wrote it and who edited or reviewed it (#743); then the licence, the page's source
+  The footer of the product page and the documentation pages (#501): first, on the page that asks
+  for it (`include.made_in`, the product page; the others show it under their title), the line on
+  where Sleevesight is made and how to support it (`made-in.html`, #839); then, on a page that says
+  so, who wrote it and who edited or reviewed it (#743); then the licence, the page's source
   (`include.source`, its file in the repository) and the brand sheet's *Fonts*; then what the site
   does not do: on a page with a diagram (`include.diagrams`), that the diagram script comes from
   jsDelivr, as the privacy policy says. Its style is in `site-header-style.html`.
@@ -15,6 +17,9 @@
   "AI wrote." and "Human reviewed." apart.
 {% endcomment %}
 <footer>
+  {%- if include.made_in %}
+  {% include made-in.html %}
+  {%- endif %}
   {%- assign prov_wrote = "" -%}
   {%- assign prov_then = "" -%}
   {%- for prov_item in page.provenance -%}
