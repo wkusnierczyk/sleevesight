@@ -94,12 +94,11 @@ class PhoneMail(
  * [mail] as an `ACTION_SEND` intent, the address, subject and body in the extras Android documents
  * for it, with an `ACTION_SENDTO` of a `mailto:` address as its selector, so only mail apps answer
  * it (#732). Not an `ACTION_SENDTO` itself: Android documents no extras for that, and Gmail ignores
- * its `EXTRA_TEXT`, so a body too long to go in the `mailto:` address opened empty. Typed as plain
- * text, so the intent itself matches the `ACTION_SEND` filter of the mail app chosen, too.
+ * its `EXTRA_TEXT`, so a body too long to go in the `mailto:` address opened empty. Untyped: Android
+ * resolves the selector with the intent's own type, and a `mailto:` filter declares none.
  */
 fun mailIntent(mail: Mail): Intent =
     Intent(Intent.ACTION_SEND)
-        .setType("text/plain")
         .putExtra(Intent.EXTRA_EMAIL, arrayOf(mail.to))
         .putExtra(Intent.EXTRA_SUBJECT, mail.subject)
         .putExtra(Intent.EXTRA_TEXT, mail.body)

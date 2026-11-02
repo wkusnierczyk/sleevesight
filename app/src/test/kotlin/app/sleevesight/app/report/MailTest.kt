@@ -30,7 +30,8 @@ class MailTest {
     // Longer than the `mailto:` address took, when it held the body (#732): a tester's report.
     private val long = Mail(Mail.SUPPORT, "Long", "Zażółć gęślą jaźń 🎵\n".repeat(4_000))
 
-    // An app on the phone answering [filters], and only them; with the check on, nothing else is.
+    // An app on the phone answering [filters]. Robolectric resolves an intent, not its selector, so
+    // launches are not checked against them: only what the selector finds ([onlyMailAppsAnswerIt]).
     private fun installed(
         name: String,
         vararg filters: IntentFilter,
@@ -41,7 +42,6 @@ class MailTest {
         for (filter in filters) {
             pm.addIntentFilterForActivity(component, filter.apply { addCategory(Intent.CATEGORY_DEFAULT) })
         }
-        shadowOf(app).checkActivities(true)
     }
 
     private fun mailto() = IntentFilter(Intent.ACTION_SENDTO).apply { addDataScheme("mailto") }
@@ -60,11 +60,13 @@ class MailTest {
     }
 
     @Test
-    fun theIntentIsAPlainTextSendWithAMailtoSelector() {
+    fun theIntentIsAnUntypedSendWithAMailtoSelector() {
         val intent = mailIntent(mail)
 
         assertCarries(mail, intent)
-        assertEquals("text/plain", intent.type)
+        // Android resolves the selector with this intent's type: a type would miss every `mailto:`
+        // filter, which declares none. Robolectric resolves the intent itself, so it cannot show this.
+        assertEquals(null, intent.type)
         val selector = intent.selector!!
         assertEquals(Intent.ACTION_SENDTO, selector.action)
         assertEquals(Uri.parse("mailto:"), selector.data)
@@ -85,7 +87,6 @@ class MailTest {
 
     @Test
     fun sendFromAnActivityHandsAMailAppTheWholeMail() {
-        installed("mail", mailto(), share())
         val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
 
         assertEquals(Handed.OPENED, PhoneMail(activity).send(long))
@@ -97,8 +98,6 @@ class MailTest {
 
     @Test
     fun sendFromOutsideAnActivityStartsTheMailAppInATaskOfItsOwn() {
-        installed("mail", mailto(), share())
-
         assertEquals(Handed.OPENED, PhoneMail(app).send(long))
 
         val started = shadowOf(app).nextStartedActivity
