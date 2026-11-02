@@ -37,7 +37,7 @@ In numbers, on 2 November 2026, twenty-one days after the first commit:
   CI builds: the Actions API, `actions/workflows/ci.yml/runs` `total_count` (1,509); release runs:
   `actions/workflows/release.yml/runs` (16).
   Reviews: the private review records, `reviews.jsonl`, runs with `status` `done` (1,553: Codex 794,
-  Claude 759, of them 310 run in the cloud); findings: `findings.jsonl`, records with `n` not 0
+  Claude 759, of them 310 recorded as `claude-remote`); findings: `findings.jsonl`, records with `n` not 0
   (2,978), of them `outcome` `fixed` (2,570).
   Releases: the tags `v0.1.0` to `v0.1.15` (16); commits: `git rev-list --count origin/main` (304).
   Tests: `@Test` annotations in the tracked `.kt` files of `dev-0.1.16` under a test source set
@@ -243,6 +243,7 @@ The records cannot show these savings yet. After 28 October, review rounds and C
 **Example.** The *Developer* section of Settings had no short description; its two texts, and the punctuation of every section's description, were picked in a simulation and written on the issue before any code ([#812](https://github.com/wkusnierczyk/sleevesight/issues/812)). This section was drafted by an agent and read, edited and picked by a person the same way.
 
 **The labels in the footer.** Each documentation page says at its foot whose hand is in it ([#743](https://github.com/wkusnierczyk/sleevesight/issues/743)). The first label says who wrote it: *Human wrote* or *AI wrote*. A second label, where there is one, says what the other side did: *edited*, when it changed the text, or *reviewed*, when it read and checked it without rewriting it. So a page labelled *AI wrote* and *Human reviewed* was drafted by an agent and checked by a person before it was published; one labelled *Human wrote* and *AI edited* was written by a person and revised by an agent. The labels are chosen by hand for each page, and each links to this section.
+{: #footer-labels}
 
 ### Split CI into parallel jobs early
 
