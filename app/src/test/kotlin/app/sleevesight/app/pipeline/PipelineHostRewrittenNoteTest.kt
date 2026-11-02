@@ -1,6 +1,7 @@
 package app.sleevesight.app.pipeline
 
 import app.sleevesight.core.Secret
+import app.sleevesight.core.ai.AiErrorKind
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.RewritePart
@@ -10,6 +11,8 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -132,6 +135,96 @@ internal class PipelineHostRewrittenNoteTest : PipelineHostFixture() {
             tap()
             settle()
             assertEquals(both, shown().rewritten)
+        }
+
+    // A source removed, then Look again finds nothing new (missing lines never count as new): the
+    // evidence still is not the card's, so the offer and the rewrite name updated sources.
+    @Test
+    fun `a Look again that finds nothing new after a source was removed still names updated sources`() =
+        runTest {
+            keys = PipelineKeys(ai = Secret("ai"), sources = SourceKeys(lastFm = Secret("lastfm")))
+            cache.keepsResults = true
+            written("Sundown")
+            keys = PipelineKeys(ai = Secret("ai"))
+            keyChanges.value++
+            settle()
+            assertEquals(
+                setOf(RewritePart.UPDATED_SOURCES),
+                host.state.value.rewriteWith
+                    ?.parts,
+            )
+
+            host.lookAgain(checkNotNull(host.state.value.lookAgainKey), checkNotNull(changes.value?.nowPlaying))
+            settle()
+            assertTrue(host.state.value.nothingNew)
+            assertTrue(host.state.value.rewrite)
+            assertEquals(
+                setOf(RewritePart.UPDATED_SOURCES),
+                host.state.value.rewriteWith
+                    ?.parts,
+            )
+
+            tap()
+            settle()
+            assertEquals(setOf(RewritePart.UPDATED_SOURCES), shown().rewritten)
+        }
+
+    // Look again with nothing new and nothing else changed: nothing is offered, so nothing named.
+    @Test
+    fun `a Look again that finds nothing new with nothing else changed names nothing`() =
+        runTest {
+            cache.keepsResults = true
+            written("Sundown")
+            host.lookAgain(checkNotNull(host.state.value.lookAgainKey), checkNotNull(changes.value?.nowPlaying))
+            settle()
+            assertTrue(host.state.value.nothingNew)
+            assertFalse(host.state.value.rewrite)
+            assertNull(host.state.value.rewriteWith)
+        }
+
+    // The card paid for, shown in place of the rebuilt run's own insight (#606), while Rewrite is
+    // offered beside it: it was written the first time, and the offer names what changed.
+    @Test
+    fun `the card paid for shown in place says nothing of a rewrite, and the offer names the model`() =
+        runTest {
+            written("Alpha")
+            settings.value = settings.value.withModel(ProviderId.ANTHROPIC, OTHER_MODEL)
+            settle()
+
+            assertTrue(host.state.value.cardShown)
+            assertTrue(host.state.value.rewrite)
+            assertEquals(emptySet<RewritePart>(), shown().rewritten)
+            assertEquals(
+                setOf(RewritePart.MODEL),
+                host.state.value.rewriteWith
+                    ?.parts,
+            )
+        }
+
+    // A rewrite whose call fails shows the card paid for again, still offering what a rewrite would
+    // use; the retry's insight says it.
+    @Test
+    fun `a failed rewrite still names the model, and the retry's insight says it`() =
+        runTest {
+            written("Alpha")
+            settings.value = settings.value.withModel(ProviderId.ANTHROPIC, OTHER_MODEL)
+            settle()
+            provider.error = AiErrorKind.OVERLOADED
+            tap()
+            settle()
+            assertNotNull(host.state.value.rewriteFailed)
+            assertTrue(host.state.value.cardShown)
+            assertEquals(
+                setOf(RewritePart.MODEL),
+                host.state.value.rewriteWith
+                    ?.parts,
+            )
+
+            provider.error = null
+            tap()
+            settle()
+            assertEquals(setOf(RewritePart.MODEL), shown().rewritten)
+            assertEquals(OTHER_MODEL, shown().writtenBy?.model)
         }
 
     // [title] written on a tap under *On demand*, with nothing offered beside it.

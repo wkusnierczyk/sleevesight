@@ -571,6 +571,7 @@ data class CoordinatorState(
      * (*On track skip (auto)*, #625), the first action made. [lookAgain] on a run started by a tap
      * on *Look again* (#617) ([LookingAgain]). [retried] on a run started by a tap on *Retry*
      * (#724), and on every run replacing it: free, so it never writes unasked, only on a tap.
+     * [evidence] the fingerprint of its evidence, once assembled (#854).
      */
     data class Run(
         val id: RunId,
@@ -593,7 +594,17 @@ data class CoordinatorState(
         val followed: Boolean = false,
         val lookAgain: LookingAgain? = null,
         val retried: Boolean = false,
-    )
+        val evidence: String? = null,
+    ) {
+        /**
+         * What its look again (#617) found, as what a rewrite of it changed counts it (#854,
+         * `rewriteParts`): something new (true), nothing new (false), or no look again (null); and
+         * null too when it found nothing new but the evidence had changed against the card before it
+         * looked ([LookingAgain.changed]), so that change is still named, "updated sources".
+         */
+        val lookedAgain: Boolean?
+            get() = lookAgain?.let { if (it.foundNew == false && it.changed) null else it.foundNew }
+    }
 
     /**
      * What a run started by a tap on *Look again* (#617) compares: [shown], the evidence the card
@@ -601,7 +612,9 @@ data class CoordinatorState(
      * a line that says what none of [shown]'s says (`EvidenceSet.bringsNewSince`: order, spacing,
      * case, typography and lines missing never count); null before. [rewriting] whether the run it
      * replaced offered *Rewrite insight* for a settings change since the card was written (not for
-     * what an earlier look again found). A look
+     * what an earlier look again found). [changed] whether the evidence of the run it replaced was
+     * already not the card's (a source switched off, a key removed; #854): a look again that finds
+     * nothing new does not undo that, as missing lines never count as new. A look
      * again never writes: when it found something new, its question is answered by offering
      * *Rewrite insight*, the paid call made only on a tap of its own (`WriteTapped`); when not, it
      * offers it only if [rewriting].
@@ -610,6 +623,7 @@ data class CoordinatorState(
         val shown: EvidenceSet,
         val foundNew: Boolean? = null,
         val rewriting: Boolean = false,
+        val changed: Boolean = false,
     )
 
     /**
@@ -1020,6 +1034,7 @@ class PipelineCoordinator(
                 ofRun(event.run) { run ->
                     run.copy(
                         lookAgain = run.lookAgain?.let { it.copy(foundNew = event.evidence.bringsNewSince(it.shown)) },
+                        evidence = event.evidence.fingerprint,
                     )
                 }
                 foundNew(event.run, event.evidence.fingerprint)
@@ -1341,6 +1356,7 @@ class PipelineCoordinator(
                         shown,
                         rewriting =
                             run.lookAgain?.rewriting ?: state.rewrites(),
+                        changed = run.lookAgain?.changed ?: (run.evidence != null && run.evidence != shown.fingerprint),
                     ),
             )
         state = state.copy(runs = id.value, run = looking)
