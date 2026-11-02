@@ -78,6 +78,29 @@ class WikipediaGenresTest {
         }
 
     @Test
+    fun `an article the vocabulary names is quoted from its lead, with no Wikidata request`() =
+        runTest {
+            // #852: *acoustic* is defined by *Acoustic music*.
+            val wikidata = Wikidata(emptyMap(), emptyMap())
+            val text =
+                "Acoustic music is music that solely or primarily uses instruments that produce sound through " +
+                    "acoustic means. Electric instruments are not used. A third sentence."
+            val wikipedia = WikipediaClient(ReplayNetClient.ok(lead(text)))
+            assertEquals(
+                Lookup.Found(
+                    GenreDefinition(
+                        "Acoustic music is music that solely or primarily uses instruments that produce sound " +
+                            "through acoustic means. Electric instruments are not used.",
+                        "Acoustic music",
+                        "https://en.wikipedia.org/wiki/Acoustic_music",
+                    ),
+                ),
+                WikipediaGenres(wikidata, wikipedia).article("Acoustic music"),
+            )
+            assertEquals(emptyList(), wikidata.asked)
+        }
+
+    @Test
     fun `a lead that opens on an empty line still gives its first sentences`() {
         assertEquals(
             "A singer-songwriter is a musician who writes their own material.",

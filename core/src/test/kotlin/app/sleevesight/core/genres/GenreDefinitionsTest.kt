@@ -6,9 +6,13 @@ import app.sleevesight.core.testing.MemoryArtistResults
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertNull
 
-/** What a genre is (#523): found through its MusicBrainz genre, once per genre, whatever the track. */
+/**
+ * What a genre is (#523): found through its MusicBrainz genre, or the article the vocabulary names
+ * for it (#852), once per genre, whatever the track.
+ */
 class GenreDefinitionsTest {
     private val vocabulary = GenreVocabulary.load(JvmResourceReader)
 
@@ -19,15 +23,21 @@ class GenreDefinitionsTest {
             "https://en.wikipedia.org/wiki/Jazz",
         )
 
-    // Answers [answer] for every genre, counting the genres asked for.
+    // Answers [answer] for every genre and every article, counting the genres asked for and the articles.
     private class Articles(
         var answer: (String) -> Lookup<GenreDefinition>,
     ) : GenreArticles {
         val asked = mutableListOf<String>()
+        val titles = mutableListOf<String>()
 
         override suspend fun definition(musicBrainzGenre: String): Lookup<GenreDefinition> {
             asked += musicBrainzGenre
             return answer(musicBrainzGenre)
+        }
+
+        override suspend fun article(title: String): Lookup<GenreDefinition> {
+            titles += title
+            return answer(title)
         }
     }
 
@@ -90,13 +100,74 @@ class GenreDefinitionsTest {
         }
 
     @Test
-    fun `a genre that is not one of MusicBrainz's has none, and asks nothing`() =
+    fun `a genre with neither a MusicBrainz genre nor an article named has none, and asks nothing`() =
         runTest {
             val articles = Articles { Lookup.Found(jazz) }
             val definitions = GenreDefinitions(articles, vocabulary)
-            assertEquals(Lookup.NotFound, definitions.lookup(checkNotNull(vocabulary.identity("british invasion"))))
+            assertEquals(Lookup.NotFound, definitions.lookup(checkNotNull(vocabulary.identity("pop vocal group"))))
             assertEquals(emptyList(), articles.asked)
+            assertEquals(emptyList(), articles.titles)
         }
+
+    @Test
+    fun `"Scattershot"'s genres each have a definition, Acoustic's from the article the vocabulary names`() =
+        runTest {
+            // #852: Caitlin Canty's "Scattershot" has Last.fm's *folk*, *singer-songwriter* and
+            // *acoustic*. *Acoustic* is not one of MusicBrainz's genres, and *singer-songwriter*'s
+            // has no English article; both are defined by the article the vocabulary names.
+            val acoustic =
+                GenreDefinition(
+                    "Acoustic music is music that solely or primarily uses instruments that produce sound " +
+                        "through acoustic means, as opposed to electric or electronic means.",
+                    "Acoustic music",
+                    "https://en.wikipedia.org/wiki/Acoustic_music",
+                )
+            val articles = Articles { if (it == "Acoustic music") Lookup.Found(acoustic) else Lookup.Found(jazz) }
+            val kept = MemoryArtistResults()
+            val definitions = GenreDefinitions(articles, vocabulary, kept = kept)
+            val labels = vocabulary.labelsFor(listOf("Folk", "Singer-Songwriter", "Acoustic"))
+            assertEquals(listOf("Folk", "Singer-Songwriter", "Acoustic"), labels.map { it.label })
+            for (label in labels) assertIs<Lookup.Found<GenreDefinition>>(definitions.lookup(label.identity))
+            assertEquals(Lookup.Found(acoustic), definitions.lookup(labels.last().identity))
+            assertEquals(listOf(vocabulary.musicBrainzGenre("folk")), articles.asked)
+            assertEquals(listOf("Singer-songwriter", "Acoustic music"), articles.titles)
+            // Kept by the article, so it is not asked again, and never taken for a MusicBrainz genre.
+            assertEquals(
+                setOf(vocabulary.musicBrainzGenre("folk"), "enwiki:Singer-songwriter", "enwiki:Acoustic music"),
+                kept.keys(GenreDefinitions.PART),
+            )
+        }
+
+    @Test
+    fun `an article the vocabulary names that is not found is no definition, and is not asked for again`() =
+        runTest {
+            val articles = Articles { Lookup.NotFound }
+            val definitions = GenreDefinitions(articles, vocabulary, kept = MemoryArtistResults())
+            repeat(2) { assertEquals(Lookup.NotFound, definitions.lookup("acoustic")) }
+            assertEquals(listOf("Acoustic music"), articles.titles)
+        }
+
+    @Test
+    fun `the articles the vocabulary names, each for a genre MusicBrainz cannot define`() {
+        // #852, each article's lead checked on 2026-11-02 to say what the tag means. Each tag has no
+        // MusicBrainz genre that fits, or, for *classic rock* and *singer-songwriter*, a genre whose
+        // Wikidata item has no English article (2026-10-27).
+        val named =
+            mapOf(
+                "acoustic" to "Acoustic music",
+                "british invasion" to "British Invasion",
+                "rock francais" to "Rock music in France",
+                "classic rock" to "Classic rock",
+                "singer-songwriter" to "Singer-songwriter",
+                "score" to "Film score",
+                "soundtrack" to "Soundtrack",
+                "choral" to "Choir",
+            )
+
+        fun articleOf(tag: String) = vocabulary.wikipediaArticle(checkNotNull(vocabulary.identity(tag)))
+        assertEquals(named.keys, vocabulary.tags.filter { articleOf(it) != null }.toSet())
+        for ((tag, title) in named) assertEquals(title, articleOf(tag), tag)
+    }
 
     @Test
     fun `a bare tag has the genre it stands for, as listeners use it`() {
@@ -124,11 +195,9 @@ class GenreDefinitionsTest {
 
     @Test
     fun `the tags with no MusicBrainz genre are left so on purpose`() {
-        // Each has no definition, and its panel says there is no definition from Wikipedia for it (#663). Why
-        // each is left without one: MusicBrainz has no such genre (genre list, 2026-10-27), and the
-        // nearest would describe something else. Two more show no definition though they have a
-        // genre: *classic rock* and *singer-songwriter*, whose genres' Wikidata items have no English
-        // article (2026-10-27), and whose nearest (rock, folk) would describe something else.
+        // Why each has none: MusicBrainz has no such genre (genre list, 2026-10-27), and the nearest
+        // would describe something else (#663). All but two are defined by the article the vocabulary
+        // names (#852, the test above).
         val onPurpose =
             mapOf(
                 "acoustic" to "a way of playing, not a genre; acoustic rock would misdescribe acoustic folk",
@@ -146,6 +215,20 @@ class GenreDefinitionsTest {
                     null
             }
         assertEquals(onPurpose.keys, without.toSet())
+    }
+
+    @Test
+    fun `the tags with no definition at all are left so on purpose`() {
+        // Each has no MusicBrainz genre and no article the vocabulary names, and its panel says there
+        // is no definition from Wikipedia for it (#663). English Wikipedia has no article of its own
+        // for either, only a section of another (2026-11-02): *Vocal group* is a section of *Musical
+        // ensemble*, *SoundCloud rap* of *SoundCloud*.
+        val without =
+            vocabulary.tags.filter {
+                val identity = checkNotNull(vocabulary.identity(it))
+                vocabulary.musicBrainzGenre(identity) == null && vocabulary.wikipediaArticle(identity) == null
+            }
+        assertEquals(setOf("pop vocal group", "soundcloud rap"), without.toSet())
     }
 
     private companion object {
