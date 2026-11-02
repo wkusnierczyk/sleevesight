@@ -10,6 +10,8 @@ import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isEnabled
 import androidx.compose.ui.test.isNotEnabled
+import androidx.compose.ui.test.isOff
+import androidx.compose.ui.test.isOn
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -184,10 +186,11 @@ class AiKnowledgeSourceTest {
             assertTrue(compose.onAllNodes(noService).fetchSemanticsNodes().isEmpty())
             row.performClick()
             waitFor("AI service knowledge stored on") { SourceSwitch.MODEL in current().enabledSources }
-            row.assertIsOn()
-            row.performClick()
+            // The screen shows the store a frame later: tap again only once it shows on.
+            waitForNode(knowledge and isOn())
+            compose.onNode(knowledge).performScrollTo().performClick()
             waitFor("AI service knowledge stored off") { SourceSwitch.MODEL !in current().enabledSources }
-            row.assertIsOff()
+            waitForNode(knowledge and isOff())
         }
     }
 }

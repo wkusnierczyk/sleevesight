@@ -62,10 +62,8 @@ private fun ProviderRows(
 ) {
     val keyId = SecretId.forProvider(provider)
     val key = keyId?.let { secrets[it] }
-    // With no key saved, the switch is off and cannot be moved (#667); stored on with none, as
-    // before the keys' gate ([app.sleevesight.app.secrets.KeyGate]) writes it off, it shows off.
-    val usable = keyId == null || keySaved(key)
-    val on = settings.aiProvider == provider && (keyId == null || key != SecretState.ABSENT)
+    val usable = providerSwitchUsable(provider, secrets)
+    val on = providerShownOn(provider, settings, secrets)
     val name = stringResource(providerName(provider))
     SwitchRow(
         title = name,
@@ -172,10 +170,7 @@ private fun EffortRow(
 internal fun noAiServiceOn(
     settings: Settings,
     secrets: Map<SecretId, SecretState>,
-): Boolean {
-    val provider = settings.aiProvider ?: return true
-    return SecretId.forProvider(provider)?.let { secrets[it] } == SecretState.ABSENT
-}
+): Boolean = settings.aiProvider?.let { !providerShownOn(it, settings, secrets) } ?: true
 
 /**
  * Whether an AI service can be used, as its switch here can be (#846): one is chosen and its key is
@@ -187,7 +182,4 @@ internal fun noAiServiceOn(
 internal fun aiServiceUsable(
     settings: Settings,
     secrets: Map<SecretId, SecretState>,
-): Boolean {
-    val provider = settings.aiProvider ?: return false
-    return SecretId.forProvider(provider)?.let { keySaved(secrets[it]) } ?: true
-}
+): Boolean = settings.aiProvider?.let { providerSwitchUsable(it, secrets) } ?: false
