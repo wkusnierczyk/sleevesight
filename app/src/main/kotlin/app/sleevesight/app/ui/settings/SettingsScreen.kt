@@ -115,6 +115,8 @@ fun SettingsScreen(
     val secrets by secretStore.states.collectAsState(initial = emptyMap())
     val scope = rememberCoroutineScope()
     var dialog by remember { mutableStateOf<SettingsDialog?>(null) }
+    // Where a link on *Load keys* leads (#763), once it has closed: landed on as any link's target.
+    var jump by remember { mutableStateOf<SettingsTarget?>(null) }
     // Whether the key store could not seal the last key saved: as with an unreadable key, *Purge
     // keys* says why to use it. Not a file that could not be written, which a purge would not cure.
     var sealFailed by remember { mutableStateOf(false) }
@@ -162,7 +164,9 @@ fun SettingsScreen(
                             dismissals,
                             restoreDismissed,
                         )
-                    SettingsContent(current, keys, navigation, unavailable, landOn, update) { dialog = it }
+                    SettingsContent(current, keys, navigation, unavailable, landOn, jump, { jump = null }, update) {
+                        dialog = it
+                    }
                 }
             }
         }
@@ -180,12 +184,15 @@ fun SettingsScreen(
             KeyDialogs(
                 shown,
                 secrets,
+                settings.orDefaults(),
+                update,
                 secretStore,
                 saves,
                 scanner,
                 keyboard,
                 showPhoneName = settings?.showPhoneName ?: false,
                 onSealFailed = { sealFailed = it },
+                onOpen = { jump = it },
                 onDismiss = close,
             )
         }
@@ -226,6 +233,9 @@ private val NONE_UNAVAILABLE: StateFlow<Map<ProviderId, UnavailableMark>> = Muta
 
 /** Saves a change to the settings. */
 internal typealias Update = ((Settings) -> Settings) -> Unit
+
+/** These settings, or the defaults before they are read. */
+private fun Settings?.orDefaults(): Settings = this ?: Settings()
 
 /**
  * Saves each change to the store in [saves], which outlives the screen ([saving]: only an I/O error
@@ -385,7 +395,8 @@ private fun Notices(
 
 /**
  * The settings' sections, all closed at first, and the links between them ([SettingsNavigator]);
- * opened at [landOn], if any, once per visit (a rotation does not land again).
+ * opened at [landOn], if any, once per visit (a rotation does not land again), and at [jump], a
+ * link's target from a key screen over them (#763), which [onJumped] then clears.
  */
 @Suppress("LongParameterList") // What the sections show and change.
 @Composable
@@ -395,12 +406,20 @@ private fun SettingsContent(
     navigation: Navigation,
     unavailable: Map<ProviderId, String>,
     landOn: SettingsTarget?,
+    jump: SettingsTarget?,
+    onJumped: () -> Unit,
     update: Update,
     open: (SettingsDialog) -> Unit,
 ) {
     val folds = rememberSectionFolds()
     ProvideSettingsNavigator(folds) {
         val navigator = LocalSettingsNavigator.current
+        LaunchedEffect(navigator, jump) {
+            jump?.let {
+                navigator?.go(it)
+                onJumped()
+            }
+        }
         var opened by rememberSaveable { mutableStateOf(false) }
         LaunchedEffect(navigator) {
             if (!opened) {

@@ -137,9 +137,15 @@ class KeyAutofillTest {
                         KeyDialog(
                             id = id,
                             state = state,
+                            offer = EnableOffer.Enable,
                             onSave = {
                                 shown.saved += it
                                 saving
+                            },
+                            // As a close: the summary that follows (#763) is not this dialog's.
+                            onSaved = { _, _ ->
+                                calls += RecordingAutofillManager.DISMISSED
+                                shown.open = false
                             },
                             onRemove = {
                                 shown.removed++

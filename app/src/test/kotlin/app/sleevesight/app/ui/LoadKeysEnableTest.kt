@@ -1,0 +1,336 @@
+package app.sleevesight.app.ui
+
+import androidx.activity.compose.setContent
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performFirstLinkClick
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.test.core.app.ActivityScenario
+import androidx.test.core.app.ApplicationProvider
+import app.sleevesight.app.MainActivity
+import app.sleevesight.app.R
+import app.sleevesight.app.SleevesightApplication
+import app.sleevesight.app.TestStores
+import app.sleevesight.app.idleUntil
+import app.sleevesight.app.secrets.SecretId
+import app.sleevesight.app.secrets.SecretStore
+import app.sleevesight.app.settings.SettingsStore
+import app.sleevesight.app.testCipher
+import app.sleevesight.app.ui.scan.QrScanner
+import app.sleevesight.app.ui.settings.SettingsScreen
+import app.sleevesight.app.ui.settings.SettingsSection
+import app.sleevesight.app.ui.settings.SettingsTarget
+import app.sleevesight.core.Secret
+import app.sleevesight.core.genres.LabelSource
+import app.sleevesight.core.model.ProviderId
+import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.settings.SourceSwitch
+import app.sleevesight.core.settings.WebEngine
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
+import org.junit.rules.TemporaryFolder
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+
+/**
+ * *Load keys* after a code is read (#763): which keys to save, which services to switch on, and
+ * the summary; a key saved switches its service on only as chosen there.
+ */
+@RunWith(RobolectricTestRunner::class)
+class LoadKeysEnableTest {
+    @get:Rule
+    val compose = createEmptyComposeRule()
+
+    @get:Rule
+    val tmp = TemporaryFolder()
+
+    private val app = ApplicationProvider.getApplicationContext<SleevesightApplication>()
+    private val stores by lazy { TestStores(tmp.root) }
+    private val settings by lazy { SettingsStore(stores.open("settings")) }
+    private val secrets by lazy { SecretStore(stores.open("secrets"), testCipher()) }
+    private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    private val anthropicKey = "sk-ant-api03-" + "a1B2_c3-D4".repeat(9)
+    private val openAiKey = "sk-proj-" + "a1B2c3D4e5".repeat(5)
+    private val googleKey = "AQ.Ab8RN6" + "Lq0_x-Yz.9".repeat(5)
+    private val exaKey = "0c6d1e2f-3a4b-5c6d-7e8f-9a0b1c2d3e4f"
+    private val lastFmKey = "0123456789abcdef0123456789abcdef"
+
+    @Before
+    fun nothingKeyedOn() {
+        // As the keys' gate leaves a phone with no keys: every service that needs one off.
+        runBlocking {
+            settings.update {
+                it.copy(
+                    aiProvider = null,
+                    enabledSources = it.enabledSources - SourceSwitch.LASTFM - SourceSwitch.WEB,
+                    webEngines = emptySet(),
+                    labelSources = it.labelSources - LabelSource.LASTFM,
+                )
+            }
+        }
+    }
+
+    @After
+    fun close() {
+        saves.cancel()
+        stores.close()
+    }
+
+    private fun text(id: Int) = app.getString(id)
+
+    private fun current(): Settings = runBlocking { settings.settings.first() }
+
+    private fun stored(id: SecretId): String? = runBlocking { secrets.get(id) }?.reveal()
+
+    /** Opens *Load keys*, past its words, reading [code] at once, and waits for the keys to save. */
+    private fun show(
+        code: String,
+        block: ActivityScenario<MainActivity>.() -> Unit,
+    ) {
+        val left = ArrayDeque(listOf(code))
+        val scanner: QrScanner = { onScanned -> LaunchedEffect(Unit) { left.removeFirstOrNull()?.let(onScanned) } }
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                activity.setContent {
+                    SettingsScreen(
+                        settings,
+                        secrets,
+                        emptyMap(),
+                        { CompletableDeferred(true) },
+                        saves,
+                        scanner = scanner,
+                    ) {
+                        it
+                    }
+                }
+            }
+            waitForText(text(R.string.settings_title))
+            compose.openSection(SettingsSection.SECRETS)
+            compose.onNodeWithText(text(R.string.settings_scan_keys)).performScrollTo().performClick()
+            waitForText(text(R.string.load_keys_next))
+            compose.onNodeWithText(text(R.string.load_keys_next)).performClick()
+            waitFor("the keys to save") { shown(text(R.string.load_keys_only_selected)) }
+            scenario.block()
+        }
+    }
+
+    private fun waitFor(
+        what: String,
+        condition: () -> Boolean,
+    ) = idleUntil(what) { condition() }
+
+    private fun waitForNode(matcher: SemanticsMatcher) =
+        waitFor("a node: ${matcher.description}") { compose.onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty() }
+
+    private fun waitForText(text: String) = waitForNode(hasText(text))
+
+    /** Waits for the settings the choices apply, written in the background, to satisfy [condition]. */
+    private fun settled(condition: () -> Boolean) = idleUntil("the settings written") { condition() }
+
+    private fun shown(text: String) = compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty()
+
+    /** The start of the line under the services' table, before its links. */
+    private val where by lazy { text(R.string.load_keys_where).substringBefore("%1") }
+
+    private fun next() = compose.onNodeWithText(text(R.string.load_keys_next)).performClick()
+
+    /** The services' row of [service] in [group], as a screen reader reads it. */
+    private fun row(
+        service: Int,
+        group: Int,
+    ) = compose.onNodeWithText("${text(service)}, ${text(group)}")
+
+    /** The summary's row of [service], [state]. */
+    private fun state(
+        service: Int,
+        state: Int,
+    ) = "${text(service)}, ${text(state)}"
+
+    private fun toServices() {
+        next()
+        waitForText(text(R.string.load_keys_enable_question))
+    }
+
+    @Test
+    fun oneAiKeyAndTheSourcesStartTickedAndNextSwitchesThemOn() =
+        show("sleevesight-keys:v1\nanthropic=$anthropicKey\nlastfm=$lastFmKey\nexa=$exaKey") {
+            toServices()
+            row(R.string.settings_ai_provider_anthropic, R.string.key_group_ai).assertIsOn()
+            row(R.string.settings_source_lastfm, R.string.key_group_music).assertIsOn()
+            row(R.string.settings_engine_exa, R.string.key_group_search).assertIsOn()
+            // A checkbox, not radios: nothing to say of one AI service at a time, or of others saved.
+            for (absent in listOf(
+                R.string.load_keys_one_ai,
+                R.string.load_keys_configured,
+            )) {
+                assertTrue(!shown(text(absent)))
+            }
+            compose.onNodeWithText(where, substring = true).performScrollTo().assertIsDisplayed()
+            // Saved, but nothing switched on yet.
+            assertNull(current().aiProvider)
+
+            next()
+            waitForText(text(R.string.load_keys_saved_title))
+            settled { current().aiProvider == ProviderId.ANTHROPIC }
+            val now = current()
+            assertTrue(SourceSwitch.LASTFM in now.enabledSources && LabelSource.LASTFM in now.labelSources)
+            assertTrue(SourceSwitch.WEB in now.enabledSources && WebEngine.EXA in now.webEngines)
+            compose.onNodeWithText(text(R.string.load_keys_services_configured)).performScrollTo().assertIsDisplayed()
+            for (service in listOf(
+                R.string.settings_ai_provider_anthropic,
+                R.string.settings_source_lastfm,
+                R.string.settings_engine_exa,
+            )) {
+                compose
+                    .onNodeWithText(
+                        state(service, R.string.key_service_enabled),
+                    ).performScrollTo()
+                    .assertIsDisplayed()
+            }
+        }
+
+    @Test
+    fun severalAiKeysAreRadiosOfWhichOneOrNoneIsChosen() =
+        show("sleevesight-keys:v1\nanthropic=$anthropicKey\nopenai=$openAiKey") {
+            toServices()
+            val anthropic = row(R.string.settings_ai_provider_anthropic, R.string.key_group_ai)
+            val openAi = row(R.string.settings_ai_provider_openai, R.string.key_group_ai)
+            anthropic.assertIsNotSelected()
+            openAi.assertIsNotSelected()
+            compose.onNodeWithText(text(R.string.load_keys_one_ai)).performScrollTo().assertIsDisplayed()
+
+            openAi.performClick()
+            openAi.assertIsSelected()
+            anthropic.performClick()
+            anthropic.assertIsSelected()
+            openAi.assertIsNotSelected()
+            // A selected radio can be unselected: no AI service then.
+            anthropic.performClick()
+            anthropic.assertIsNotSelected()
+
+            next()
+            waitForText(text(R.string.load_keys_saved_title))
+            settled { current().aiProvider == null }
+            compose
+                .onNodeWithText(state(R.string.settings_ai_provider_anthropic, R.string.key_service_disabled))
+                .performScrollTo()
+                .assertIsDisplayed()
+        }
+
+    @Test
+    fun anAiServiceSavedBeforeIsAlreadyConfiguredAndReplacedWhenAnotherIsChosen() {
+        runBlocking {
+            secrets.set(SecretId.GOOGLE, Secret(googleKey))
+            settings.update { it.copy(aiProvider = ProviderId.GOOGLE) }
+        }
+        show("sleevesight-keys:v1\nanthropic=$anthropicKey\nexa=$exaKey") {
+            toServices()
+            compose.onNodeWithText(text(R.string.load_keys_configured)).performScrollTo().assertIsDisplayed()
+            val google = row(R.string.settings_ai_provider_google, R.string.key_group_ai)
+            google.assertIsSelected()
+            compose
+                .onNodeWithText(
+                    app.getString(R.string.key_current_ai, text(R.string.settings_ai_provider_google)),
+                ).performScrollTo()
+                .assertIsDisplayed()
+            compose.onNodeWithText(text(R.string.load_keys_one_ai)).performScrollTo().assertIsDisplayed()
+            val anthropic = row(R.string.settings_ai_provider_anthropic, R.string.key_group_ai)
+            anthropic.assertIsNotSelected()
+
+            anthropic.performClick()
+            google.assertIsNotSelected()
+            next()
+            waitForText(text(R.string.load_keys_saved_title))
+            settled { current().aiProvider == ProviderId.ANTHROPIC }
+            // The AI service replaced is listed too, though its key was not loaded.
+            compose
+                .onNodeWithText(
+                    state(R.string.settings_ai_provider_google, R.string.key_service_disabled),
+                ).performScrollTo()
+                .assertIsDisplayed()
+            compose
+                .onNodeWithText(
+                    state(R.string.settings_ai_provider_anthropic, R.string.key_service_enabled),
+                ).performScrollTo()
+                .assertIsDisplayed()
+            compose
+                .onNodeWithText(
+                    state(R.string.settings_engine_exa, R.string.key_service_enabled),
+                ).performScrollTo()
+                .assertIsDisplayed()
+        }
+    }
+
+    @Test
+    fun cancelOnTheServicesKeepsTheKeysAndSwitchesNothing() =
+        show("sleevesight-keys:v1\nanthropic=$anthropicKey\nlastfm=$lastFmKey") {
+            val before = current()
+            toServices()
+            compose.onNodeWithText(text(R.string.settings_cancel)).performClick()
+            waitFor("the screen closed") { !shown(text(R.string.load_keys_enable_question)) }
+            assertEquals(anthropicKey, stored(SecretId.ANTHROPIC))
+            assertEquals(lastFmKey, stored(SecretId.LASTFM))
+            assertEquals(before, current())
+        }
+
+    @Test
+    fun onlyTheKeysTickedAreSavedAndNextIsDimmedWhileNoneIs() =
+        show("sleevesight-keys:v1\nanthropic=$anthropicKey\nlastfm=$lastFmKey") {
+            val new = text(R.string.key_save_as_new)
+            val anthropicRow = "${text(R.string.settings_ai_provider_anthropic)}, ${text(R.string.key_group_ai)}"
+            val anthropic = compose.onNodeWithText("$anthropicRow, ending ${anthropicKey.takeLast(4)}, $new")
+            val lastFmRow = "${text(R.string.settings_source_lastfm)}, ${text(R.string.key_group_music)}"
+            val lastFm = compose.onNodeWithText("$lastFmRow, ending ${lastFmKey.takeLast(4)}, $new")
+            anthropic.assertIsOn().performClick()
+            anthropic.assertIsOff()
+            lastFm.performClick()
+            compose.onNodeWithText(text(R.string.load_keys_next)).assertIsNotEnabled()
+
+            lastFm.performClick()
+            toServices()
+            assertNull(stored(SecretId.ANTHROPIC))
+            assertEquals(lastFmKey, stored(SecretId.LASTFM))
+            // Only the key saved has a row.
+            assertTrue(!shown(anthropicRow))
+            next()
+            waitForText(text(R.string.load_keys_saved_title_one))
+        }
+
+    @Test
+    fun aLinkOpensItsSectionAndLeavesLoadKeys() =
+        show("sleevesight-keys:v1\nlastfm=$lastFmKey") {
+            toServices()
+            compose
+                .onNode(hasText(where, substring = true), useUnmergedTree = true)
+                .performScrollTo()
+                .performFirstLinkClick { (it.item as? LinkAnnotation.Clickable)?.tag == SettingsTarget.genres.linkTag }
+            waitFor("the screen closed") { !shown(text(R.string.load_keys_enable_question)) }
+            // *Genres* is open: its first switch shows.
+            waitForText(text(R.string.settings_show_genres))
+        }
+}

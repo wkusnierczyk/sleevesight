@@ -6,13 +6,17 @@ import android.text.style.StyleSpan
 import androidx.annotation.StringRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -28,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
@@ -170,5 +175,69 @@ internal fun RemoveKeyButton(
         )
         Spacer(Modifier.size(ButtonDefaults.IconSpacing))
         Text(label)
+    }
+}
+
+/**
+ * Under the key dialog's field (#763): whether the key [id] is saved as new or [replaces] the one
+ * stored, small; then what saving it switches on, as [offer] has it: *Enable {service}*, or, while
+ * another AI service is on, that service and *Switch the AI service to {service}*, each a checkbox
+ * [ticked] or not, which [onTick] hears and only while [enabled]; or, for the AI service on, that
+ * it is already enabled.
+ */
+@Suppress("LongParameterList") // The key, its offer, and the checkbox.
+@Composable
+internal fun EnableChoice(
+    id: SecretId,
+    replaces: Boolean,
+    offer: EnableOffer,
+    ticked: Boolean,
+    enabled: Boolean,
+    onTick: (Boolean) -> Unit,
+) {
+    val quiet = MaterialTheme.colorScheme.onSurfaceVariant
+    val body = MaterialTheme.typography.bodyMedium
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            stringResource(if (replaces) R.string.key_replace_existing else R.string.key_save_as_new),
+            style = MaterialTheme.typography.bodySmall,
+            color = quiet,
+        )
+        val service = stringResource(serviceName(id))
+        when (offer) {
+            EnableOffer.AlreadyOn -> {
+                Text(stringResource(R.string.key_already_enabled, service), style = body)
+            }
+
+            is EnableOffer.Switch -> {
+                Text(stringResource(R.string.key_current_ai, stringResource(providerName(offer.current))), style = body)
+                CheckRow(stringResource(R.string.key_switch_ai, service), ticked, enabled, onTick)
+            }
+
+            EnableOffer.Enable -> {
+                CheckRow(stringResource(R.string.key_enable, service), ticked, enabled, onTick)
+            }
+        }
+    }
+}
+
+/** A checkbox and its [label], one target: [checked] or not, [onChange] hearing a tap while [enabled]. */
+@Composable
+private fun CheckRow(
+    label: String,
+    checked: Boolean,
+    enabled: Boolean,
+    onChange: (Boolean) -> Unit,
+) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .toggleable(value = checked, enabled = enabled, role = Role.Checkbox, onValueChange = onChange),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Checkbox(checked = checked, onCheckedChange = null, enabled = enabled)
+        Spacer(Modifier.size(8.dp))
+        Text(label, style = MaterialTheme.typography.bodyMedium)
     }
 }

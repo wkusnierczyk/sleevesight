@@ -177,7 +177,7 @@ class ServiceTermsTest {
             compose.onNodeWithText(text(R.string.settings_scan_keys)).performScrollTo().performClick()
             // Past the words that seal a code (#590): these codes are clear ones.
             compose.onNodeWithText(text(R.string.load_keys_next)).performClick()
-            waitForText(text(R.string.setup_title))
+            waitForText(text(R.string.load_keys_save_question_one))
             compose.onNodeWithText(text(R.string.setup_terms)).assertIsDisplayed()
         }
 
@@ -187,7 +187,7 @@ class ServiceTermsTest {
             compose.onNodeWithText(text(R.string.settings_scan_keys)).performScrollTo().performClick()
             // Past the words that seal a code (#590): these codes are clear ones.
             compose.onNodeWithText(text(R.string.load_keys_next)).performClick()
-            waitForText(text(R.string.setup_title))
+            waitForText(text(R.string.load_keys_save_question_one))
             assertEquals(false, shown(text(R.string.setup_terms)))
         }
 

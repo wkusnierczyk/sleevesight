@@ -146,13 +146,25 @@ class LoadKeysTest {
 
     private fun ending(key: String) = key.takeLast(4)
 
-    /** What the confirmation says of the saved key [id] whose value is [key]. */
+    /** What a screen reader says of the row of the key [name] in [group] on the keys to save, its [note]. */
+    private fun row(
+        name: Int,
+        group: Int,
+        key: String,
+        note: Int,
+    ) = "${text(name)}, ${text(group)}, ending ${ending(key)}, ${text(note)}"
+
+    /** What the summary says of the saved key [id] whose value is [key]: [saved], new or replaced. */
     private fun saved(
         id: Int,
         key: String,
-    ) = app.getString(R.string.key_ending, text(id), ending(key))
+        saved: Int = R.string.key_saved_new,
+    ) = "${text(id)}, ending ${ending(key)}, ${text(saved)}"
 
-    private fun closed() = !shown(text(R.string.load_keys_read_code)) && !shown(text(R.string.setup_title))
+    private val questions =
+        listOf(R.string.load_keys_save_question, R.string.load_keys_save_question_one, R.string.load_keys_save_none)
+
+    private fun closed() = !shown(text(R.string.load_keys_read_code)) && questions.none { shown(text(it)) }
 
     @Test
     fun theScreenSaysHowToMakeTheCodeAndOpensTheInstructions() =
@@ -187,23 +199,31 @@ class LoadKeysTest {
         }
 
     @Test
-    fun aGoodCodeShowsWhatItHoldsSavesNothingBeforeSaveAndThenSaysWhatWasSaved() {
+    fun aGoodCodeShowsWhatItHoldsSavesNothingBeforeNextAndThenSaysWhatWasSaved() {
         runBlocking { secrets.set(SecretId.EXA, Secret("0c6d1e2f-0000-0000-0000-9a0b1c2d3e4f")) }
         show(scanner = scanning("sleevesight-keys:v1\nanthropic=$anthropicKey\nexa=$exaKey")) {
-            val anthropic = text(R.string.settings_ai_provider_anthropic)
-            val exa = text(R.string.settings_key_recipient_exa)
-            waitForText(app.getString(R.string.setup_new, anthropic, ending(anthropicKey)))
-            compose.onNodeWithText(app.getString(R.string.setup_replaces, exa, ending(exaKey))).assertIsDisplayed()
+            waitForText(text(R.string.load_keys_save_question))
+            val anthropic =
+                row(
+                    R.string.settings_ai_provider_anthropic,
+                    R.string.key_group_ai,
+                    anthropicKey,
+                    R.string.key_save_as_new,
+                )
+            compose.onNodeWithText(anthropic).assertIsDisplayed()
+            val exa =
+                row(
+                    R.string.settings_key_recipient_exa,
+                    R.string.key_group_search,
+                    exaKey,
+                    R.string.key_replace_existing,
+                )
+            compose.onNodeWithText(exa).assertIsDisplayed()
+            compose.onNodeWithText(text(R.string.load_keys_only_selected)).assertIsDisplayed()
             // A clear code, not sealed with the words: the screen says anyone who saw it can read the keys.
             compose.onNodeWithText(text(R.string.load_keys_clear_code)).performScrollTo().assertIsDisplayed()
-            // All good: *Save* or *Cancel*, nothing else.
-            for (absent in listOf(
-                R.string.setup_scan_again,
-                R.string.load_keys_save_these,
-                R.string.load_keys_problems,
-            )) {
-                assertTrue(!shown(text(absent)))
-            }
+            // All good: *Next* or *Cancel*, nothing else.
+            assertTrue(!shown(text(R.string.setup_scan_again)) && !shown(text(R.string.load_keys_not_scanned)))
             // No key is shown whole, and nothing is saved yet.
             assertEquals(0, compose.onAllNodesWithSubstring(anthropicKey).size)
             assertEquals(0, compose.onAllNodesWithSubstring(exaKey).size)
@@ -211,12 +231,16 @@ class LoadKeysTest {
             assertNull(stored(SecretId.ANTHROPIC))
             assertEquals("0c6d1e2f-0000-0000-0000-9a0b1c2d3e4f", stored(SecretId.EXA))
 
-            compose.onNodeWithText(text(R.string.settings_save)).performClick()
-            waitForText(text(R.string.load_keys_saved_title))
+            compose.onNodeWithText(text(R.string.load_keys_next)).performClick()
+            waitForText(text(R.string.load_keys_enable_question))
             assertEquals(anthropicKey, stored(SecretId.ANTHROPIC))
             assertEquals(exaKey, stored(SecretId.EXA))
+            compose.onNodeWithText(text(R.string.load_keys_next)).performClick()
+            waitForText(text(R.string.load_keys_saved_title))
             compose.onNodeWithText(saved(R.string.settings_ai_provider_anthropic, anthropicKey)).assertIsDisplayed()
-            compose.onNodeWithText(saved(R.string.settings_key_recipient_exa, exaKey)).assertIsDisplayed()
+            compose
+                .onNodeWithText(saved(R.string.settings_key_recipient_exa, exaKey, R.string.key_saved_replaced))
+                .assertIsDisplayed()
 
             compose.onNodeWithText(text(R.string.key_screen_done)).performClick()
             waitFor("the screen closed") { !shown(text(R.string.load_keys_saved_title)) }
@@ -224,30 +248,25 @@ class LoadKeysTest {
     }
 
     @Test
-    fun aPartlyGoodCodeNamesEveryProblemAndSavesTheGoodKeysOnly() =
+    fun aPartlyGoodCodeListsTheKeysThatDidNotScanAndSavesTheGoodKeysOnly() =
         show(
             scanner = scanning("sleevesight-keys:v1\nanthropic=$anthropicKey\nlastfm=not-a-key\nmistral=x\nno equals"),
         ) {
-            val lastFm = text(R.string.settings_key_name_lastfm)
-            waitForText(text(R.string.load_keys_problems))
-            compose
-                .onNodeWithText(app.getString(R.string.setup_refused, lastFm, text(R.string.setup_refused_shape)))
-                .performScrollTo()
-                .assertIsDisplayed()
+            waitForText(text(R.string.load_keys_not_scanned))
+            // Last.fm's by its name and ending; the unknown name and the unreadable line as unknown keys.
             compose
                 .onNodeWithText(
-                    app.getString(R.string.setup_unknown, "mistral"),
-                ).performScrollTo()
-                .assertIsDisplayed()
-            val unreadable = app.resources.getQuantityString(R.plurals.setup_unreadable, 1, 1)
-            compose.onNodeWithText(unreadable).performScrollTo().assertIsDisplayed()
-            // Partial: *Save these*, *Scan again* or *Cancel*.
+                    "\u2022\u00A0${text(R.string.settings_source_lastfm)}, ending -key",
+                ).assertIsDisplayed()
+            val unknown = app.resources.getQuantityString(R.plurals.load_keys_unknown_keys, 2, 2)
+            compose.onNodeWithText("\u2022\u00A0$unknown").performScrollTo().assertIsDisplayed()
+            // One key read: the heading asks of it alone; *Scan again* as a key did not scan.
+            compose.onNodeWithText(text(R.string.load_keys_save_question_one)).assertIsDisplayed()
             compose.onNodeWithText(text(R.string.setup_scan_again)).assertIsDisplayed()
             compose.onNodeWithText(text(R.string.settings_cancel)).assertIsDisplayed()
-            assertTrue(!shown(text(R.string.settings_save)))
 
-            compose.onNodeWithText(text(R.string.load_keys_save_these)).performClick()
-            waitForText(text(R.string.load_keys_saved_title))
+            compose.onNodeWithText(text(R.string.load_keys_next)).performClick()
+            waitForText(text(R.string.load_keys_enable_question))
             assertEquals(anthropicKey, stored(SecretId.ANTHROPIC))
             assertNull(stored(SecretId.LASTFM))
         }
@@ -255,14 +274,16 @@ class LoadKeysTest {
     @Test
     fun scanAgainReturnsToTheCameraAndReadsTheNextCode() =
         show(scanner = scanning("sleevesight-keys:v1\nlastfm=not-a-key", "sleevesight-keys:v1\nlastfm=$lastFmKey")) {
-            // Nothing usable: *Scan again* or *Cancel*, no save.
-            waitForText(text(R.string.load_keys_nothing_title))
-            compose.onNodeWithText(text(R.string.setup_nothing)).assertIsDisplayed()
-            assertTrue(!shown(text(R.string.settings_save)) && !shown(text(R.string.load_keys_save_these)))
+            // Nothing usable: no table and no *Next*, only *Scan again* or *Cancel*.
+            waitForText(text(R.string.load_keys_save_none))
+            compose.onNodeWithText(text(R.string.load_keys_not_scanned)).assertIsDisplayed()
+            assertTrue(!shown(text(R.string.load_keys_next)) && !shown(text(R.string.key_table_save)))
 
             compose.onNodeWithText(text(R.string.setup_scan_again)).performClick()
-            waitForText(app.getString(R.string.setup_new, text(R.string.settings_source_lastfm), ending(lastFmKey)))
-            compose.onNodeWithText(text(R.string.settings_save)).performClick()
+            waitForText(
+                row(R.string.settings_source_lastfm, R.string.key_group_music, lastFmKey, R.string.key_save_as_new),
+            )
+            compose.onNodeWithText(text(R.string.load_keys_next)).performClick()
             waitFor("the Last.fm key stored") { stored(SecretId.LASTFM) == lastFmKey }
         }
 
@@ -272,7 +293,7 @@ class LoadKeysTest {
             waitForText(text(R.string.setup_not_a_setup_title))
             compose.onNodeWithText(text(R.string.setup_not_a_setup)).assertIsDisplayed()
             compose.onNodeWithText(text(R.string.setup_scan_again)).assertIsDisplayed()
-            assertTrue(!shown(text(R.string.settings_save)))
+            assertTrue(!shown(text(R.string.load_keys_next)))
         }
 
     @Test
@@ -281,14 +302,14 @@ class LoadKeysTest {
             waitForText(text(R.string.setup_unsupported_title))
             compose.onNodeWithText(app.getString(R.string.setup_unsupported, "v3")).assertIsDisplayed()
             compose.onNodeWithText(text(R.string.setup_scan_again)).assertIsDisplayed()
-            assertTrue(!shown(text(R.string.settings_save)))
+            assertTrue(!shown(text(R.string.load_keys_next)))
             assertNull(stored(SecretId.LASTFM))
         }
 
     @Test
     fun cancelOnWhatTheCodeHoldsSavesNothing() =
         show(scanner = scanning("sleevesight-keys:v1\nlastfm=$lastFmKey")) {
-            waitForText(text(R.string.setup_title))
+            waitForText(text(R.string.load_keys_save_question_one))
             compose.onNodeWithText(text(R.string.settings_cancel)).performClick()
             waitFor("the screen closed") { closed() }
             assertNull(stored(SecretId.LASTFM))
@@ -302,9 +323,9 @@ class LoadKeysTest {
             scanner = scanning("sleevesight-keys:v1\nanthropic=$anthropicKey\nlastfm=$lastFmKey"),
             secretStore = store,
         ) {
-            waitForText(text(R.string.setup_title))
+            waitForText(text(R.string.load_keys_save_question))
             flaky.writeFailures.set(1)
-            compose.onNodeWithText(text(R.string.settings_save)).performClick()
+            compose.onNodeWithText(text(R.string.load_keys_next)).performClick()
 
             // The first key failed; the second was saved; the screen stays, naming the one left.
             waitForText(app.getString(R.string.setup_failed, text(R.string.settings_key_name_anthropic)))
@@ -314,15 +335,18 @@ class LoadKeysTest {
             // The save has reached the screen first: *Secrets*, under it, offers to remove the key.
             val lastFm = text(R.string.settings_key_name_lastfm)
             waitForNode(hasContentDescription(app.getString(R.string.settings_key_remove, lastFm)))
-            val lastFmRow = app.getString(R.string.setup_new, text(R.string.settings_source_lastfm), ending(lastFmKey))
+            val lastFmRow =
+                row(R.string.settings_source_lastfm, R.string.key_group_music, lastFmKey, R.string.key_save_as_new)
             compose.onNodeWithText(lastFmRow).assertIsDisplayed()
 
             val writes = flaky.writes.get()
-            compose.onNodeWithText(text(R.string.settings_save)).performClick()
-            waitForText(text(R.string.load_keys_saved_title))
+            compose.onNodeWithText(text(R.string.load_keys_next)).performClick()
+            waitForText(text(R.string.load_keys_enable_question))
             assertEquals(anthropicKey, runBlocking { store.get(SecretId.ANTHROPIC) }?.reveal())
-            // Only the key left was saved again, and the confirmation names both.
+            // Only the key left was saved again, and the summary names both.
             assertEquals(writes + 1, flaky.writes.get())
+            compose.onNodeWithText(text(R.string.load_keys_next)).performClick()
+            waitForText(text(R.string.load_keys_saved_title))
             compose.onNodeWithText(saved(R.string.settings_ai_provider_anthropic, anthropicKey)).assertIsDisplayed()
             compose.onNodeWithText(saved(R.string.settings_source_lastfm, lastFmKey)).assertIsDisplayed()
         }

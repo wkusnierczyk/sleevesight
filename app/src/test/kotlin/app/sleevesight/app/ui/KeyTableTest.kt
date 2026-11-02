@@ -225,18 +225,23 @@ class KeyTableTest {
             compose.onNodeWithText(text(R.string.settings_scan_keys)).performScrollTo().performClick()
             // Past the words that seal a code (#590): these codes are clear ones.
             compose.onNodeWithText(text(R.string.load_keys_next)).performClick()
-            // Read: a new key and one that replaces a saved key.
-            assertRow(row(R.string.setup_new, R.string.settings_ai_provider_anthropic, "Zq9x"), "Zq9x")
-            assertRow(row(R.string.setup_replaces, R.string.settings_key_recipient_exa, "3e4f"), "3e4f")
-            assertCodeCell("Zq9x")
-            assertCodeCell("3e4f")
+            // Read (#763): a new key and one that replaces a saved key, each row one item, its
+            // ending read verbatim; the ending's own cell is left to its row.
+            val ai = text(R.string.key_group_ai)
+            val search = text(R.string.key_group_search)
+            val anthropic = text(R.string.settings_ai_provider_anthropic)
+            val exa = text(R.string.settings_key_recipient_exa)
+            assertRow("$anthropic, $ai, ending Zq9x, ${text(R.string.key_save_as_new)}", "Zq9x")
+            assertRow("$exa, $search, ending 3e4f, ${text(R.string.key_replace_existing)}", "3e4f")
+            assertTrue(compose.onAllNodes(hasText("Zq9x")).fetchSemanticsNodes().isEmpty())
 
-            compose.onNodeWithText(text(R.string.settings_save)).performClick()
+            compose.onNodeWithText(text(R.string.load_keys_next)).performClick()
+            waitForText(text(R.string.load_keys_enable_question))
+            compose.onNodeWithText(text(R.string.load_keys_next)).performClick()
             waitForText(text(R.string.load_keys_saved_title))
-            assertRow(row(R.string.key_ending, R.string.settings_ai_provider_anthropic, "Zq9x"), "Zq9x")
-            assertRow(row(R.string.key_ending, R.string.settings_key_recipient_exa, "3e4f"), "3e4f")
-            assertCodeCell("Zq9x")
-            assertCodeCell("3e4f")
+            assertRow("$anthropic, ending Zq9x, ${text(R.string.key_saved_new)}", "Zq9x")
+            assertRow("$exa, ending 3e4f, ${text(R.string.key_saved_replaced)}", "3e4f")
+            assertTrue(compose.onAllNodes(hasText("3e4f")).fetchSemanticsNodes().isEmpty())
         }
     }
 

@@ -26,6 +26,7 @@ import app.sleevesight.app.ui.settings.LoadKeysScreen
 import app.sleevesight.core.keys.KeyCrypto
 import app.sleevesight.core.keys.SealedSetup
 import app.sleevesight.core.platform.JvmKeyCrypto
+import app.sleevesight.core.settings.Settings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -81,7 +82,7 @@ class LoadKeysOpeningTest {
             try {
                 scenario.onActivity { activity ->
                     activity.setContent {
-                        LoadKeysScreen(emptyMap(), scanner, { emptyList() }, {}, crypto = crypto)
+                        LoadKeysScreen(emptyMap(), Settings(), scanner, { emptyList() }, {}, {}, {}, crypto = crypto)
                     }
                 }
                 compose.onNodeWithText(app.getString(R.string.load_keys_next)).performClick()

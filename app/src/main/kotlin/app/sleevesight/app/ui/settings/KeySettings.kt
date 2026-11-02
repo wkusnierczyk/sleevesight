@@ -7,6 +7,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -151,32 +155,56 @@ private fun LoadKeysMore() {
  * with [showPhoneName] (#433). *Load keys* shows what a setup code holds, and saves nothing until
  * the user confirms it there; *Purge keys* lists the keys it deletes, reading each one's last
  * characters from [store].
+ *
+ * A key saved switches its service on only as the user chooses after the save (#763), in the key
+ * dialog or on *Load keys*, from the [settings] as they are: [update] applies the choices to the
+ * stored settings, and the summary says what was saved and switched on or off. A link on *Load
+ * keys* to a section of the settings calls [onOpen].
  */
-@Suppress("LongParameterList") // The dialog, the keys, where they are saved, and what the screen hears.
+@Suppress("LongParameterList", "LongMethod") // The dialog, the keys, where they are saved, and what the screen hears.
 @Composable
 internal fun KeyDialogs(
     shown: SettingsDialog.Keys,
     secrets: Map<SecretId, SecretState>,
+    settings: Settings,
+    update: Update,
     store: SecretStore,
     saves: CoroutineScope,
     scanner: QrScanner,
     keyboard: ComputerKeyboard,
     showPhoneName: Boolean,
     onSealFailed: (Boolean) -> Unit,
+    onOpen: (SettingsTarget) -> Unit,
     onDismiss: () -> Unit,
 ) {
     when (shown) {
         is SettingsDialog.Key -> {
+            val id = shown.id
+            val state = secrets[id] ?: SecretState.ABSENT
+            var summary by remember(shown) { mutableStateOf<KeySummary?>(null) }
+            val done = summary
+            if (done != null) {
+                KeyScreen(keyName(id), busy = false, onDismiss = onDismiss) { SummaryStep(done, onDismiss) }
+                return
+            }
+            val offer = enableOffer(id, settings, secrets)
             KeyDialog(
-                id = shown.id,
-                state = secrets[shown.id] ?: SecretState.ABSENT,
+                id = id,
+                state = state,
+                offer = offer,
                 onSave = { value ->
                     saves
                         .async {
-                            store.set(shown.id, Secret(value)).also { onSealFailed(it == SaveResult.NOT_SEALED) }
+                            store.set(id, Secret(value)).also { onSealFailed(it == SaveResult.NOT_SEALED) }
                         }.await()
                 },
-                onRemove = { saves.async { store.clear(shown.id) }.await() },
+                onSaved = { ending, ticked ->
+                    val choices = offer.choices(id, ticked)
+                    if (choices.isNotEmpty()) update { it.applied(choices) }
+                    val key = SavedKey(id, ending, replaced = state != SecretState.ABSENT)
+                    summary = summaryOf(listOf(key), settings, secrets, settings.applied(choices))
+                },
+                onRemove = { saves.async { store.clear(id) }.await() },
                 scanner = scanner,
                 keyboard = keyboard,
                 showPhoneName = showPhoneName,
@@ -187,8 +215,11 @@ internal fun KeyDialogs(
         SettingsDialog.LoadKeys -> {
             LoadKeysScreen(
                 secrets = secrets,
+                settings = settings,
                 scanner = scanner,
                 onSave = { keys -> saves.async { saveAll(store, keys, onSealFailed) }.await() },
+                onApply = { choices -> update { it.applied(choices) } },
+                onOpen = onOpen,
                 onDismiss = onDismiss,
             )
         }

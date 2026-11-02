@@ -1,7 +1,6 @@
 package app.sleevesight.app.ui.settings
 
 import android.os.SystemClock
-import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -17,7 +16,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -37,7 +35,6 @@ import app.sleevesight.app.ui.scan.QrScanner
 import app.sleevesight.app.ui.shownAddress
 import app.sleevesight.core.Secret
 import app.sleevesight.core.keys.KeyCrypto
-import app.sleevesight.core.keys.KeyProblem
 import app.sleevesight.core.keys.KeySetup
 import app.sleevesight.core.keys.KeyWords
 import app.sleevesight.core.keys.Opened
@@ -45,34 +42,19 @@ import app.sleevesight.core.keys.SealedSetup
 import app.sleevesight.core.keys.SetupRead
 import app.sleevesight.core.platform.JvmKeyCrypto
 import app.sleevesight.core.platform.JvmResourceReader
+import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 
 // *Load keys* (#268, #446, #590): five words to type on the computer, which seal the setup code to
 // this phone; how to make the code, the camera to read it, what it holds before anything is saved,
-// and then what was saved.
+// which services to switch on, and then what was saved and switched (#763).
 
 /** The page that makes a setup code (`api-keys.html`, #436), which *Load keys* points to. */
 internal const val API_KEYS_URL = "https://sleevesight.app/api-keys"
-
-/** What a setup code read offers to save: all it holds, only its good keys, or nothing. */
-internal enum class SetupOffer { ALL, SOME, NONE }
-
-/**
- * What [read] offers: [SetupOffer.ALL] when every line is a key that can be saved,
- * [SetupOffer.SOME] when some are and others are refused, unknown or unreadable, and
- * [SetupOffer.NONE] when none is, or the code is not a setup code, or one of a later version.
- */
-internal fun offerOf(read: SetupRead): SetupOffer =
-    when {
-        read !is SetupRead.Setup || read.keys.isEmpty() -> SetupOffer.NONE
-        read.refused.isEmpty() && read.unknown.isEmpty() && read.unreadable == 0 -> SetupOffer.ALL
-        else -> SetupOffer.SOME
-    }
 
 /** How long the words *Load keys* shows can open a code, from when they are drawn. */
 internal val WORDS_LIFETIME: Duration = 5.minutes
@@ -100,7 +82,7 @@ internal enum class Refusal {
 
 /**
  * Where *Load keys* is: the words, the camera, a sealed code being opened or refused, what the code
- * read holds, or what was saved.
+ * read holds, the services to enable, or what was saved.
  */
 private sealed interface LoadStep {
     data object Words : LoadStep
@@ -122,8 +104,16 @@ private sealed interface LoadStep {
         val sealed: Boolean,
     ) : LoadStep
 
+    /** The services to enable once the [keys] are saved, as [plan] has them (#763). */
+    class Enable(
+        val keys: List<SavedKey>,
+        val before: Map<SecretId, SecretState>,
+        val plan: EnablePlan,
+    ) : LoadStep
+
+    /** What was saved and switched on or off (#763). */
     class Saved(
-        val keys: List<ShownKey>,
+        val summary: KeySummary,
     ) : LoadStep
 }
 
@@ -137,21 +127,25 @@ private sealed interface LoadStep {
  * *Cancel* ([GuidedScan], as the key field's scans, #541). A sealed code is opened with the words
  * (about a second, while the screen says so), or refused: the words do not match it, have expired
  * or were used, or it is damaged. A clear code (version 1) is read as before, and the screen says
- * it was not sealed. Once a code is read, what it holds shows, before anything is saved: each key in
- * its service's shape, by its last four characters, and whether it is new or replaces a key stored
- * ([secrets]); then every problem: a key refused and why, a name this version does not know, a line
- * that could not be read, a code that is not a setup code or is of a later version. All good offers
- * *Save*; some keys good, *Save these* (those only) and *Scan again*; nothing usable, *Scan again*;
- * each with *Cancel*. [onSave] saves the keys and returns those it could not: the screen then names
- * them and saves only those on the next try, and once none is left, it says which keys were saved,
- * with *Done*.
+ * it was not sealed. Once a code is read (#763), the keys it holds, before anything is saved: each
+ * by its group, name and last four characters, whether it is new or replaces a key stored
+ * ([secrets]), and a checkbox, ticked, and the keys that did not scan ([KeysStep]); *Next* saves the
+ * keys ticked with [onSave], which returns those it could not save: the screen names them, and saves
+ * only those on the next try. Then which services to switch on ([EnableStep], [enablePlan]), from
+ * the [settings] as they are: *Next* applies the choices with [onApply], *Cancel* leaves every
+ * switch as it was. Then the summary ([SummaryStep]), with *Done*. A link to a section of the
+ * settings calls [onOpen] and leaves the screen. A code that is not a setup code, or one of a later
+ * version, says so, with *Scan again* and *Cancel*.
  */
 @Suppress("LongMethod", "CyclomaticComplexMethod", "LongParameterList") // The steps, and what tests may give.
 @Composable
 internal fun LoadKeysScreen(
     secrets: Map<SecretId, SecretState>,
+    settings: Settings,
     scanner: QrScanner,
     onSave: suspend (Map<SecretId, Secret>) -> List<SecretId>,
+    onApply: (Map<SecretId, Boolean>) -> Unit,
+    onOpen: (SettingsTarget) -> Unit,
     onDismiss: () -> Unit,
     list: KeyWords = remember { KeyWords.load(JvmResourceReader) },
     crypto: KeyCrypto = JvmKeyCrypto,
@@ -253,100 +247,72 @@ internal fun LoadKeysScreen(
             }
 
             is LoadStep.Found -> {
-                FoundStep(
-                    read = shown.read,
-                    sealed = shown.sealed,
-                    secrets = secrets,
-                    onSave = onSave,
-                    onBusy = { busy = it },
-                    onSaved = { step = LoadStep.Saved(it) },
-                    onScanAgain = { step = LoadStep.Scanning },
+                val read = shown.read
+                if (read is SetupRead.Setup) {
+                    KeysStep(
+                        setup = read,
+                        sealed = shown.sealed,
+                        secrets = secrets,
+                        onSave = onSave,
+                        onBusy = { busy = it },
+                        onSaved = { keys, before ->
+                            step = LoadStep.Enable(keys, before, enablePlan(keys.map { it.id }, before, settings))
+                        },
+                        onScanAgain = { step = LoadStep.Scanning },
+                        onCancel = onDismiss,
+                    )
+                } else {
+                    UnreadStep(read, onScanAgain = { step = LoadStep.Scanning }, onCancel = onDismiss)
+                }
+            }
+
+            is LoadStep.Enable -> {
+                EnableStep(
+                    plan = shown.plan,
+                    onOpen = { target ->
+                        onDismiss()
+                        onOpen(target)
+                    },
+                    onNext = { choices ->
+                        val after = settings.applied(choices)
+                        onApply(choices)
+                        step = LoadStep.Saved(summaryOf(shown.keys, settings, shown.before, after))
+                    },
                     onCancel = onDismiss,
                 )
             }
 
             is LoadStep.Saved -> {
-                SavedStep(shown.keys, onDismiss)
+                SummaryStep(shown.summary, onDismiss)
             }
         }
     }
 }
 
 /**
- * What the code [read] holds, and what can be done with it ([offerOf]), and, for a setup code that
- * was not [sealed], that anyone who saw it can read its keys. [onSave] saves the keys given and
- * returns those it could not; [onBusy] hears while it runs, when nothing else can be done, and
- * [onSaved] the keys saved once none is left.
+ * A code read that holds no keys to offer: one that is not a setup code ([read] is
+ * [SetupRead.NotASetup]), or one of a later version; with *Scan again* ([onScanAgain]) and *Cancel*
+ * ([onCancel]). A sealed code never shows here: it is opened, or refused, first.
  */
-@Suppress("LongParameterList") // What the code holds, and what each button does.
 @Composable
-private fun ColumnScope.FoundStep(
+private fun ColumnScope.UnreadStep(
     read: SetupRead,
-    sealed: Boolean,
-    secrets: Map<SecretId, SecretState>,
-    onSave: suspend (Map<SecretId, Secret>) -> List<SecretId>,
-    onBusy: (Boolean) -> Unit,
-    onSaved: (List<ShownKey>) -> Unit,
     onScanAgain: () -> Unit,
     onCancel: () -> Unit,
 ) {
-    val keys = remember(read) { (read as? SetupRead.Setup)?.keys?.mapKeys { SecretId.of(it.key) }.orEmpty() }
-    var unsaved by remember(read) { mutableStateOf<List<SecretId>>(emptyList()) }
-    // The keys stored when the code was read: a key it holds stays *new* once a first try saved it.
-    val before = remember(read) { secrets }
-    var busy by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
-    val offer = offerOf(read)
-    StepHeading(stringResource(foundTitle(read)), announced = true)
-    Column(
-        modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        val style = MaterialTheme.typography.bodyMedium
-        when (read) {
-            // A sealed code never shows here: it is opened, or refused, first.
-            SetupRead.NotASetup, SetupRead.Sealed -> {
-                Text(stringResource(R.string.setup_not_a_setup), style = style)
-            }
-
-            is SetupRead.Unsupported -> {
-                Text(stringResource(R.string.setup_unsupported, read.version), style = style)
-            }
-
-            is SetupRead.Setup -> {
-                SetupContents(read, keys, before, unsaved, sealed)
-            }
-        }
+    val unsupported = read as? SetupRead.Unsupported
+    val title = if (unsupported != null) R.string.setup_unsupported_title else R.string.setup_not_a_setup_title
+    StepHeading(stringResource(title), announced = true)
+    Column(modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())) {
+        val text =
+            unsupported?.let { stringResource(R.string.setup_unsupported, it.version) }
+                ?: stringResource(R.string.setup_not_a_setup)
+        Text(text, style = MaterialTheme.typography.bodyMedium)
     }
     KeyScreenActions(
-        cancel = { TextButton(onClick = onCancel, enabled = !busy) { Text(stringResource(R.string.settings_cancel)) } },
+        cancel = { TextButton(onClick = onCancel) { Text(stringResource(R.string.settings_cancel)) } },
     ) {
-        if (offer != SetupOffer.ALL) {
-            TextButton(onClick = onScanAgain, enabled = !busy) { Text(stringResource(R.string.setup_scan_again)) }
-        }
-        if (offer != SetupOffer.NONE) {
-            val save = if (offer == SetupOffer.ALL) R.string.settings_save else R.string.load_keys_save_these
-            TextButton(
-                onClick = {
-                    // A second tap in the same frame finds the button still enabled.
-                    if (busy) return@TextButton
-                    busy = true
-                    onBusy(true)
-                    scope.launch {
-                        // After a failure, only the keys not yet saved are saved again.
-                        val left = if (unsaved.isEmpty()) keys else keys.filterKeys { it in unsaved }
-                        try {
-                            unsaved = onSave(left)
-                        } finally {
-                            busy = false
-                            onBusy(false)
-                        }
-                        if (unsaved.isEmpty()) onSaved(keys.map { (id, key) -> ShownKey(id, endingOf(key.reveal())) })
-                    }
-                },
-                enabled = !busy,
-            ) { Text(stringResource(save)) }
-        }
+        TextButton(onClick = onScanAgain) { Text(stringResource(R.string.setup_scan_again)) }
     }
 }
 
@@ -457,91 +423,3 @@ private fun ColumnScope.RefusedStep(
         }
     }
 }
-
-/** The heading over what the code [read] holds. */
-@StringRes
-private fun foundTitle(read: SetupRead): Int =
-    when {
-        read is SetupRead.NotASetup -> R.string.setup_not_a_setup_title
-        read is SetupRead.Unsupported -> R.string.setup_unsupported_title
-        offerOf(read) == SetupOffer.NONE -> R.string.load_keys_nothing_title
-        else -> R.string.setup_title
-    }
-
-/**
- * What the setup code [setup] holds: its [keys] in their services' shape, each by its last four
- * characters and whether it replaces a key stored ([secrets]), with, for an AI service's key, where
- * its terms are told (#409); unless the code was [sealed], that anyone who saw it can read them;
- * then the problems: the keys refused, the names unknown, the lines unreadable; and the keys that
- * could not be saved ([unsaved]).
- */
-@Composable
-private fun SetupContents(
-    setup: SetupRead.Setup,
-    keys: Map<SecretId, Secret>,
-    secrets: Map<SecretId, SecretState>,
-    unsaved: List<SecretId>,
-    sealed: Boolean,
-) {
-    val style = MaterialTheme.typography.bodyMedium
-    if (keys.isNotEmpty()) {
-        Text(stringResource(R.string.setup_explained), style = style)
-        if (keys.keys.any { serviceTerms(it) != null }) Text(stringResource(R.string.setup_terms), style = style)
-        StepHeading(stringResource(R.string.load_keys_found))
-        KeyTable(
-            keys.map { (id, key) ->
-                val stored = (secrets[id] ?: SecretState.ABSENT) != SecretState.ABSENT
-                KeyRow(ShownKey(id, endingOf(key.reveal())), replaces = stored)
-            },
-        )
-        if (!sealed) Text(stringResource(R.string.load_keys_clear_code), style = style)
-    }
-    if (setup.refused.isNotEmpty() || setup.unknown.isNotEmpty() || setup.unreadable > 0) {
-        StepHeading(stringResource(R.string.load_keys_problems))
-    }
-    for ((name, problem) in setup.refused) {
-        val service = stringResource(keyName(SecretId.of(name)))
-        Text(stringResource(R.string.setup_refused, service, stringResource(refusal(problem))), style = style)
-    }
-    if (setup.unknown.isNotEmpty()) {
-        Text(stringResource(R.string.setup_unknown, setup.unknown.joinToString()), style = style)
-    }
-    if (setup.unreadable > 0) {
-        Text(pluralStringResource(R.plurals.setup_unreadable, setup.unreadable, setup.unreadable), style = style)
-    }
-    if (keys.isEmpty()) Text(stringResource(R.string.setup_nothing), style = style)
-    if (unsaved.isNotEmpty()) {
-        val names = unsaved.map { stringResource(keyName(it)) }.joinToString()
-        Text(stringResource(R.string.setup_failed, names), style = style, color = MaterialTheme.colorScheme.error)
-    }
-}
-
-/** The confirmation: which [keys] were saved. */
-@Composable
-private fun ColumnScope.SavedStep(
-    keys: List<ShownKey>,
-    onDone: () -> Unit,
-) {
-    StepHeading(stringResource(R.string.load_keys_saved_title), announced = true)
-    Column(
-        modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        val style = MaterialTheme.typography.bodyMedium
-        KeyTable(keys.map(::KeyRow))
-        Text(stringResource(R.string.setup_explained), style = style)
-    }
-    KeyScreenActions {
-        TextButton(onClick = onDone) { Text(stringResource(R.string.key_screen_done)) }
-    }
-}
-
-/** Why a key in a setup code is not saved. */
-@StringRes
-private fun refusal(problem: KeyProblem): Int =
-    when (problem) {
-        KeyProblem.EMPTY -> R.string.setup_refused_empty
-        KeyProblem.BAD_CHARACTERS -> R.string.setup_refused_characters
-        KeyProblem.WRONG_SHAPE -> R.string.setup_refused_shape
-        KeyProblem.DUPLICATE -> R.string.setup_refused_duplicate
-    }

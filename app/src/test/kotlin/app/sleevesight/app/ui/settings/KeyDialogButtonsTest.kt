@@ -106,7 +106,9 @@ class KeyDialogButtonsTest {
                             KeyDialog(
                                 id = id,
                                 state = state,
+                                offer = EnableOffer.Enable,
                                 onSave = { SaveResult.SAVED },
+                                onSaved = { _, _ -> shown.dismissed++ },
                                 onRemove = {
                                     shown.removed++
                                     removes
