@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.Measured
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -87,9 +88,9 @@ internal fun Hint(
 ) {
     val search = LocalRowSearch.current
     if (search?.filtering == true && over.none { search.shows(it) }) return
-    val words = stringResource(text)
-    // Folded to one line as a row's description is (#847).
-    Description("hint:$words", words, modifier = Modifier.padding(vertical = 4.dp))
+    // Folded to one line as a row's description is (#847), known by its string's name.
+    val key = LocalResources.current.getResourceEntryName(text)
+    Description(key, stringResource(text), Modifier.padding(vertical = 4.dp))
 }
 
 /**
@@ -152,7 +153,7 @@ internal fun SwitchRow(
             )
         },
     ) {
-        summary?.let { Description("row:$title", it, color = color, link = summaryLink) }
+        summary?.let { Description(rowKey(title), it, color = color, link = summaryLink) }
         note?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = color) }
         below?.invoke()
     }
@@ -190,7 +191,7 @@ internal fun ButtonRow(
             ) { Text(label) }
         },
     ) {
-        Description("row:$title", summary, color = color)
+        Description(rowKey(title), summary, color = color)
     }
 }
 
@@ -269,7 +270,7 @@ internal fun ValueRow(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.primary.copy(alpha = alpha),
         )
-        summary?.let { Description("row:$title", it, color = color) }
+        summary?.let { Description(rowKey(title), it, color = color) }
     }
 }
 
@@ -308,7 +309,7 @@ internal fun <T> ChoiceButtonsRow(
             color = color,
             modifier = Modifier.testTag(ROW_TITLE_TAG),
         )
-        summary?.let { Description("row:$title", it, color = color) }
+        summary?.let { Description(rowKey(title), it, color = color) }
         ChoiceButtonGroup(
             choices,
             selected,

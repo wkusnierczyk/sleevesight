@@ -436,14 +436,20 @@ internal val SETTING_LINES: List<Pair<String, (Settings) -> String>> =
         "reportButton" to { it.reportButton.name },
         "linkStyle" to { it.linkStyle.name },
         "markDeveloperItems" to { onOff(it.markDeveloperItems) },
-        "foldDescriptions" to { onOff(it.foldDescriptions) },
-        "startFolded" to { onOff(it.startFolded) },
         "theme" to { it.theme.name },
         "themeButton" to { onOff(it.themeButton) },
         "font" to { it.font.name },
         "introAtStart" to { onOff(it.introAtStart) },
         "spinLogo" to { onOff(it.spinLogo) },
         "logoSpeed" to { it.logoSpeed.name },
+        "foldDescriptions" to { onOff(it.foldDescriptions) },
+        "descriptionsOnReturn" to { it.descriptionsOnReturn.name },
+        "unfoldedDescriptions" to { s ->
+            s.unfoldedDescriptions
+                .sorted()
+                .joinToString()
+                .ifEmpty { NONE }
+        },
         "lyricsLinks" to { onOff(it.lyricsLinks) },
         "lyricsSearch" to { onOff(it.lyricsSearch) },
         "dismissed" to { s ->

@@ -16,6 +16,17 @@
     <string name="settings_description_expanded">expanded</string>
     <string name="settings_description_expand">Expand</string>
     <string name="settings_description_collapse">Collapse</string>
+    <!-- Appearance (#847): whether the settings' descriptions fold to one line, and how they show when Settings or a section opens again; each choice's line says what it does. -->
+    <string name="settings_fold_descriptions">Foldable descriptions</string>
+    <string name="settings_fold_descriptions_summary">Shows each setting’s description on one line; a tap shows the rest, another folds it.</string>
+    <string name="settings_descriptions_on_return">Descriptions on return</string>
+    <string name="settings_descriptions_on_return_summary">How the descriptions show when you come back to Settings.</string>
+    <string name="settings_descriptions_folded">Folded</string>
+    <string name="settings_descriptions_folded_detail">Every description is folded again.</string>
+    <string name="settings_descriptions_unfolded">Unfolded</string>
+    <string name="settings_descriptions_unfolded_detail">Every description shows in full; a tap folds it.</string>
+    <string name="settings_descriptions_as_left">As left</string>
+    <string name="settings_descriptions_as_left_detail">Each description stays folded or unfolded as you left it.</string>
     <string name="settings_players_short">Music apps Sleevesight follows</string>
     <string name="settings_players_long">Sleevesight reads what a player says it is playing (track, artist, album). It does not receive the audio or your other notifications. Android grants this with notification access. To find your music players, Sleevesight looks at apps that report what they play (playing or paused) and checks whether it is music (a track with a title and an artist); it stops checking an app for music once it has found some, until Sleevesight starts afresh (not each time you open it). A new player is added to this list switched off. Sleevesight does not follow a player that is off: it does not track what the player plays, and keeps or sends none of it.\n\nSwitch on the players you want Sleevesight to follow.</string>
     <string name="settings_players_none">No players yet. A music app appears here, switched off, once you play music in it.</string>
@@ -137,11 +148,6 @@
     <string name="settings_mark_developer_summary">Outlines in teal, with a Developer tag, everything only developer mode shows, so your screenshots show what other users will not see.</string>
     <!-- The tag on the mark's top edge: drawn only, never read by a screen reader. -->
     <string name="developer_mark_tag">Developer</string>
-    <!-- Developer (#847): a trial of the settings' descriptions folded to one line, to be removed or kept after it. -->
-    <string name="settings_fold_descriptions">Foldable descriptions</string>
-    <string name="settings_fold_descriptions_summary">Folds each setting’s description to one line; a tap shows the rest.</string>
-    <string name="settings_start_folded">Start folded</string>
-    <string name="settings_start_folded_summary">Opens Settings with every description folded; off, they open in full and still fold with a tap.</string>
     <string name="settings_developer_mode">Developer mode</string>
     <string name="settings_developer_mode_summary">Developer mode is on. Turn it off here to hide this section and turn off everything in it.</string>
     <!-- Appearance → Layout (#447): how an item of the home screen opens. -->

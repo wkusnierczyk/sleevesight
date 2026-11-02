@@ -45,6 +45,7 @@ import app.sleevesight.app.ui.settings.SettingsSection
 import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.app.ui.settings.oneLine
 import app.sleevesight.app.ui.settings.paragraphsOf
+import app.sleevesight.core.settings.DescriptionsOnReturn
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -65,8 +66,8 @@ import org.robolectric.annotation.GraphicsMode
 /**
  * The settings' descriptions folded to one line (#847): a tap unfolds one and another folds it, a
  * switch row's description has its own tap, one that fits on one line does not fold, a search shows
- * the descriptions it finds open, a screen reader hears the whole text and its fold, and leaving
- * the settings folds them all again.
+ * the descriptions it finds open, a screen reader hears the whole text and its fold, and a rotation
+ * keeps the folds.
  *
  * Drawn as on a phone (native graphics): Robolectric's own graphics measure text too narrow for
  * anything to fold.
@@ -92,7 +93,7 @@ class DescriptionFoldTest {
 
     private fun text(id: Int) = app.getString(id)
 
-    // The screen's saved state, as an activity keeps it ([restore]), or dropped as on leaving ([leave]).
+    // The screen's saved state, as an activity keeps it ([restore]).
     private var emitted by mutableStateOf(true)
     private var registry by mutableStateOf(SaveableStateRegistry(null) { true })
 
@@ -100,8 +101,6 @@ class DescriptionFoldTest {
         val saved = registry.performSave()
         recompose(SaveableStateRegistry(saved) { true })
     }
-
-    private fun leaveAndComeBack() = recompose(SaveableStateRegistry(null) { true })
 
     private fun recompose(next: SaveableStateRegistry) {
         emitted = false
@@ -316,15 +315,15 @@ class DescriptionFoldTest {
         }
 
     @Test
-    fun aRotationKeepsTheFoldsAndLeavingTheSettingsAndComingBackFoldsThemAllAgain() =
+    fun aRotationKeepsTheFoldsWhateverDescriptionsOnReturnIs() {
+        // *Folded* forgets the taps on a return, but a rotation is not one.
+        runBlocking { settings.update { it.copy(descriptionsOnReturn = DescriptionsOnReturn.FOLDED) } }
         show {
             tap(description(spin))
             restore()
             assertEquals(text(R.string.settings_description_expanded), description(spin).state())
-            leaveAndComeBack()
-            compose.openSection(SettingsSection.APPEARANCE)
-            assertEquals(text(R.string.settings_description_collapsed), description(spin).state())
         }
+    }
 
     private fun hasLinks() =
         SemanticsMatcher("has a link") { node ->
