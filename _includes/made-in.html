@@ -1,0 +1,14 @@
+{% comment %}
+  Where Sleevesight is made and how to support it (#839): the one source of the line, which every
+  page of the site that shows it includes. The documentation pages (`_layouts/docs.html`) and the
+  pages with the default layout (`_layouts/default.html`: the privacy policy and the design notes)
+  show it under the page's title, the README page (`readme-page.html`) under the README's tagline,
+  and the product page in its footer (`site-footer.html` with `made_in=true`). Its look is each
+  layout's, as a byline: smaller and muted. The flag is drawn rather than an emoji, which some
+  systems show as the letters "CH": the Swiss flag in its official proportions (a square of 32, the
+  cross's arms 6 wide and 7 long), as high as a capital letter of the site's fonts (0.71 em), on the
+  baseline; hidden from screen readers, since the text names the country. The donate link is the
+  platform in `.github/FUNDING.yml`.
+{% endcomment -%}
+<p class="made-in">Made in Switzerland&nbsp;<svg class="made-in-flag" viewBox="0 0 32 32" width="0.71em" height="0.71em" aria-hidden="true" focusable="false"><path fill="#da291c" d="M0 0h32v32H0z"/><path fill="#fff" d="M13 6h6v7h7v6h-7v7h-6v-7H6v-6h7z"/></svg>, in personal time, at private expense.<br>
+<a href="https://buymeacoffee.com/wkusnierczyk">Donate</a> to help cover development costs.</p>

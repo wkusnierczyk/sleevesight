@@ -10,8 +10,7 @@
 # and `Release` workflows), reviews (completed runs) and findings from the private review records,
 # releases from the tags, commits from `main`, tests from `@Test` annotations and lines from the
 # tracked `.kt` files (files under test source sets counted as tests), and mock-ups by hand from `design/`, the
-# published mock-ups and the unpublished ones kept privately. The donate link is the platform in
-# `.github/FUNDING.yml`.
+# published mock-ups and the unpublished ones kept privately.
 title: Process
 permalink: /docs/process/
 docs_version: 0.1.13
@@ -36,8 +35,6 @@ In numbers, on 28 October 2026, sixteen days after the first commit:
 - **9 releases**, 0.1.0 to 0.1.8, and 253 commits on `main`.
 - **2,620 tests**, in about 71,000 lines of test code, for about 54,000 lines of the project's own Kotlin.
 - **About 50 design mock-ups**: screens, logos, icons and pages tried as HTML before they were built, most never published.
-
-Made in Switzerland, in personal time, at private expense. Donate to help cover development costs: [Buy Me a Coffee](https://buymeacoffee.com/wkusnierczyk).
 
 This page goes through that process in order, from an idea to a release on Google Play. Each step says what is done, why, and links an example.
 

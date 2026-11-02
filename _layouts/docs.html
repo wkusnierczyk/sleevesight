@@ -11,8 +11,10 @@
   ASCII, Latin-1 and the common punctuation, so a page's text needs no rebuild while it stays within
   them. A page with a diagram loads the diagram script from jsDelivr (`_includes/head-custom.html`),
   and its footer says so. Under the line back to the index, the release the page describes, or a
-  banner when it is behind the released one (`_includes/docs-version.html`, #828). Keep its head and
-  the AnchorJS lines in step with `_layouts/default.html`.
+  banner when it is behind the released one (`_includes/docs-version.html`, #828). Under the page's
+  title, the line on where Sleevesight is made and how to support it (`_includes/made-in.html`, #839),
+  put after the first `</h1>` of the page's text, which is its title. Keep its head, the AnchorJS lines
+  and the line under the title in step with `_layouts/default.html`.
 {% endcomment %}
 <!DOCTYPE html>
 <html lang="{{ site.lang | default: "en-US" }}">
@@ -53,6 +55,7 @@ main.markdown-body{padding-top:8px}
 .markdown-body .docs-nav.foot{margin:40px 0 0}
 .markdown-body .docs-nav:has(+ .docs-version),.markdown-body .docs-nav:has(+ .docs-wip){margin-bottom:4px}
 .markdown-body .docs-version{font-family:var(--f-ui);font-size:14px;color:var(--muted);margin:0 0 24px}
+.markdown-body .made-in{font-family:var(--f-ui);font-size:14px;line-height:1.45;color:var(--muted);margin:0 0 24px}
 .markdown-body .docs-wip{font-family:var(--f-ui);font-size:16px;line-height:1.45;margin:8px 0 24px;padding:10px 14px;
   background:#fff8c5;border:1px solid #d4a72c66;border-radius:6px}
 .markdown-body img{border:1px solid #d0d7de;border-radius:6px}
@@ -71,7 +74,9 @@ footer{margin-top:40px}
 {% endunless %}
 {% include docs-version.html %}
 
-{{ content }}
+{% capture made_in %}{% include made-in.html %}{% endcapture %}
+{% assign title_end = '</h1>' | append: made_in %}
+{{ content | replace_first: '</h1>', title_end }}
 
 {% unless page.docs_index %}
 <p class="docs-nav foot"><a href="{{ '/docs/' | relative_url }}">« Documentation</a></p>
