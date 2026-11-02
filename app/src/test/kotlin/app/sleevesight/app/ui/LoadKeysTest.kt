@@ -220,6 +220,7 @@ class LoadKeysTest {
                 )
             compose.onNodeWithText(exa).assertIsDisplayed()
             compose.onNodeWithText(text(R.string.load_keys_only_selected)).assertIsDisplayed()
+            compose.onNodeWithText(text(R.string.setup_explained)).assertIsDisplayed()
             // A clear code, not sealed with the words: the screen says anyone who saw it can read the keys.
             compose.onNodeWithText(text(R.string.load_keys_clear_code)).performScrollTo().assertIsDisplayed()
             // All good: *Next* or *Cancel*, nothing else.

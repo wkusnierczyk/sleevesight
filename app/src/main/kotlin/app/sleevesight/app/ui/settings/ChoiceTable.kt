@@ -16,6 +16,7 @@ import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
@@ -34,10 +35,14 @@ import androidx.compose.ui.unit.sp
 /** Where a column's cells sit in it; its header always at the start. */
 internal enum class CellAlign { START, END, CENTER }
 
-/** A row's checkbox or radio: whether it is [on], drawn as a radio when [radio], and what a tap sets. */
+/**
+ * A row's checkbox or radio: whether it is [on], drawn as a radio when [radio], and what a tap
+ * sets; only while [enabled] (not while the page's *Next* runs).
+ */
 internal class RowChoice(
     val on: Boolean,
     val radio: Boolean,
+    val enabled: Boolean = true,
     val onChange: (Boolean) -> Unit,
 )
 
@@ -111,15 +116,19 @@ private fun FirstCell(
                     role = Role.Checkbox
                     toggleableState = ToggleableState(choice.on)
                 }
-                onClick {
-                    choice.onChange(!choice.on)
-                    true
+                if (choice.enabled) {
+                    onClick {
+                        choice.onChange(!choice.on)
+                        true
+                    }
+                } else {
+                    disabled()
                 }
             }
         }
     // A tap, with no semantics of its own: the row's are set above.
     val tap =
-        if (choice == null) {
+        if (choice == null || !choice.enabled) {
             Modifier
         } else {
             Modifier.pointerInput(choice) { detectTapGestures { choice.onChange(!choice.on) } }
@@ -131,9 +140,9 @@ private fun FirstCell(
 @Composable
 internal fun ChoiceCell(choice: RowChoice) {
     if (choice.radio) {
-        RadioButton(selected = choice.on, onClick = { choice.onChange(!choice.on) })
+        RadioButton(selected = choice.on, onClick = { choice.onChange(!choice.on) }, enabled = choice.enabled)
     } else {
-        Checkbox(checked = choice.on, onCheckedChange = choice.onChange)
+        Checkbox(checked = choice.on, onCheckedChange = choice.onChange, enabled = choice.enabled)
     }
 }
 

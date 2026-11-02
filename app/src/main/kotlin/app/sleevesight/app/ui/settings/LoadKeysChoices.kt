@@ -89,7 +89,9 @@ internal fun ColumnScope.KeysStep(
         modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        KeysRead(setup, keys, ticked, unsaved, sealed) { id, on -> ticked = if (on) ticked + id else ticked - id }
+        KeysRead(setup, keys, ticked, unsaved, sealed, enabled = !busy) { id, on ->
+            ticked = if (on) ticked + id else ticked - id
+        }
     }
     KeyScreenActions(
         cancel = { TextButton(onClick = onCancel, enabled = !busy) { Text(stringResource(R.string.settings_cancel)) } },
@@ -138,8 +140,9 @@ private fun saveQuestion(count: Int): Int =
 
 /**
  * What the code [setup] holds, under the heading: its [keys] to save ([ticked], [onTick] hearing a
- * tap), the keys that did not scan, those that could not be saved ([unsaved]), an AI key's terms
- * note, and, for a code not [sealed], that anyone who saw it can read them.
+ * tap, only while [enabled]: not while a save runs), the keys that did not scan, those that could
+ * not be saved ([unsaved]), how the keys are stored, an AI key's terms note, and, for a code not
+ * [sealed], that anyone who saw it can read them.
  */
 @Suppress("LongParameterList") // What the step shows, and what a tap does.
 @Composable
@@ -149,12 +152,14 @@ private fun KeysRead(
     ticked: Set<SecretId>,
     unsaved: List<SecretId>,
     sealed: Boolean,
+    enabled: Boolean,
     onTick: (SecretId, Boolean) -> Unit,
 ) {
     val style = MaterialTheme.typography.bodyMedium
     if (keys.isNotEmpty()) {
-        KeysToSave(keys, ticked, onTick)
+        KeysToSave(keys, ticked, enabled, onTick)
         Text(stringResource(R.string.load_keys_only_selected), style = style)
+        Text(stringResource(R.string.setup_explained), style = style)
     }
     if (setup.refused.isNotEmpty() || setup.unknown.isNotEmpty() || setup.unreadable > 0) NotScanned(setup)
     if (unsaved.isNotEmpty()) {
@@ -168,12 +173,13 @@ private fun KeysRead(
 /**
  * The table of the [keys] to save, by group, then name: *Key* (the key's service, with *Save as
  * new* or *Replace existing* under it), *Group*, *Ending* and *Save*, its checkbox, [ticked] or
- * not; [onTick] hears a tap.
+ * not; [onTick] hears a tap while [enabled].
  */
 @Composable
 private fun KeysToSave(
     keys: List<ReadKey>,
     ticked: Set<SecretId>,
+    enabled: Boolean,
     onTick: (SecretId, Boolean) -> Unit,
 ) {
     val body = MaterialTheme.typography.bodyMedium
@@ -186,7 +192,7 @@ private fun KeysToSave(
             val group = stringResource(groupOf(key.id).label)
             val note = stringResource(if (key.replaces) R.string.key_replace_existing else R.string.key_save_as_new)
             val ending = endingOf(key.key.reveal())
-            val choice = RowChoice(key.id in ticked, radio = false) { onTick(key.id, it) }
+            val choice = RowChoice(key.id in ticked, radio = false, enabled = enabled) { onTick(key.id, it) }
             TableRow.Cells(
                 spoken = spokenParts(keyLine(R.string.key_ending, parts(name, group), ending), note),
                 cells =
@@ -279,7 +285,7 @@ internal fun ColumnScope.EnableStep(
         val style = MaterialTheme.typography.bodySmall
         val quiet = MaterialTheme.colorScheme.onSurfaceVariant
         val row = @Composable { id: SecretId ->
-            enableRow(id, plan, choices) { on -> choices = choices.chosen(id, on) }
+            enableRow(id, plan, choices, enabled = !busy) { on -> choices = choices.chosen(id, on) }
         }
         val rows =
             sortedByGroup(plan.saved, { it }, { stringResource(serviceName(it)) }).map { row(it) } +
@@ -299,9 +305,9 @@ internal fun ColumnScope.EnableStep(
             aligns = listOf(CellAlign.START, CellAlign.START, CellAlign.CENTER),
             rows = rows,
         )
-        plan.currentConfigured()?.let { current ->
+        plan.current?.let { current ->
             Text(
-                stringResource(R.string.key_current_ai, stringResource(serviceName(current))),
+                stringResource(R.string.key_current_ai, stringResource(aiServiceName(current))),
                 style = style,
                 color = quiet,
             )
@@ -342,17 +348,22 @@ internal fun ColumnScope.EnableStep(
     }
 }
 
-/** The services' table's row for the key [id]'s service, as [choices] has it; [onChange] hears a tap. */
+/**
+ * The services' table's row for the key [id]'s service, as [choices] has it; [onChange] hears a
+ * tap while [enabled].
+ */
 @Composable
 private fun enableRow(
     id: SecretId,
     plan: EnablePlan,
     choices: Map<SecretId, Boolean>,
+    enabled: Boolean,
     onChange: (Boolean) -> Unit,
 ): TableRow.Cells {
     val name = stringResource(serviceName(id))
     val group = stringResource(groupOf(id).label)
-    val choice = RowChoice(choices[id] == true, radio = plan.radios && groupOf(id) == KeyGroup.AI, onChange = onChange)
+    val radio = plan.radios && groupOf(id) == KeyGroup.AI
+    val choice = RowChoice(choices[id] == true, radio = radio, enabled = enabled, onChange = onChange)
     return TableRow.Cells(
         spoken = AnnotatedString(parts(name, group)),
         cells =

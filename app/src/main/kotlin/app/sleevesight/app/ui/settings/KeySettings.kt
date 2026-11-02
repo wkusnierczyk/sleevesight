@@ -207,8 +207,7 @@ internal fun KeyDialogs(
                 id = id,
                 state = state,
                 offer = offer,
-                onSave = { value, ticked ->
-                    val choices = offer.choices(id, ticked)
+                onSave = { value, choices ->
                     val before = secrets
                     val snapshot = settings
                     // The key and then its choices, in one piece of work that outlives the dialog,

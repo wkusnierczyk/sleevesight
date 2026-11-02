@@ -368,6 +368,68 @@ class LoadKeysEnableTest {
         }
 
     @Test
+    fun aLoadOfSourcesOnlyShowsNoAiServices() {
+        runBlocking {
+            secrets.set(SecretId.GOOGLE, Secret(googleKey))
+            settings.update { it.copy(aiProvider = ProviderId.GOOGLE) }
+        }
+        show("sleevesight-keys:v1\nlastfm=$lastFmKey") {
+            toServices()
+            for (absent in listOf(
+                R.string.load_keys_configured,
+                R.string.load_keys_one_ai,
+            )) {
+                assertTrue(!shown(text(absent)))
+            }
+            assertTrue(!shown("${text(R.string.settings_ai_provider_google)}, ${text(R.string.key_group_ai)}"))
+            next()
+            waitForText(text(R.string.load_keys_saved_title_one))
+            assertEquals(ProviderId.GOOGLE, current().aiProvider)
+        }
+    }
+
+    @Test
+    fun anAiServiceOnWithNoKeyIsNamedAndANewAiKeyStartsUnselected() {
+        runBlocking { settings.update { it.copy(aiProvider = ProviderId.OLLAMA) } }
+        show("sleevesight-keys:v1\nanthropic=$anthropicKey") {
+            toServices()
+            compose
+                .onNodeWithText(app.getString(R.string.key_current_ai, text(R.string.settings_ai_provider_ollama)))
+                .performScrollTo()
+                .assertIsDisplayed()
+            row(R.string.settings_ai_provider_anthropic, R.string.key_group_ai).assertIsNotSelected()
+            next()
+            waitForText(text(R.string.load_keys_saved_title_one))
+            assertEquals(ProviderId.OLLAMA, current().aiProvider)
+        }
+    }
+
+    @Test
+    fun theRowsAreLockedWhileNextRuns() =
+        show("sleevesight-keys:v1\nlastfm=$lastFmKey") {
+            val keyRow =
+                "${text(R.string.settings_source_lastfm)}, ${text(R.string.key_group_music)}, " +
+                    "ending ${lastFmKey.takeLast(4)}, ${text(R.string.key_save_as_new)}"
+            val keys = CompletableDeferred<Unit>()
+            val keyWrites = secretsData.writes.get()
+            secretsData.writeGate = keys
+            next()
+            waitFor("the key's write held") { secretsData.writes.get() > keyWrites }
+            compose.onNodeWithText(keyRow).assertIsNotEnabled()
+            keys.complete(Unit)
+            waitForText(text(R.string.load_keys_enable_question))
+
+            val choices = CompletableDeferred<Unit>()
+            val settingsWrites = settingsData.writes.get()
+            settingsData.writeGate = choices
+            next()
+            waitFor("the choices' write held") { settingsData.writes.get() > settingsWrites }
+            row(R.string.settings_source_lastfm, R.string.key_group_music).assertIsNotEnabled()
+            choices.complete(Unit)
+            waitForText(text(R.string.load_keys_saved_title_one))
+        }
+
+    @Test
     fun aLinkOpensItsSectionAndLeavesLoadKeys() =
         show("sleevesight-keys:v1\nlastfm=$lastFmKey") {
             toServices()

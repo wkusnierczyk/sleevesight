@@ -4,10 +4,13 @@ import androidx.annotation.StringRes
 import app.sleevesight.app.R
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretState
+import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.settings.Settings
+import java.io.IOException
 
-// What the key dialog offers to switch on for the key it saves (#763), and the services' names.
+// What the key dialog offers to switch on for the key it saves (#763), the services' names, and
+// how the choices are written.
 
 /**
  * The name of the key [id]'s service, as the services' tables and the key dialog name it: the AI
@@ -20,6 +23,14 @@ internal fun serviceName(id: SecretId): Int =
         SecretId.LASTFM -> R.string.settings_source_lastfm
         SecretId.EXA -> R.string.settings_engine_exa
     }
+
+/**
+ * The name of the AI service [provider], as *AI services* names it, and Ollama, which needs no key
+ * and is not offered there yet, by its own name.
+ */
+@StringRes
+internal fun aiServiceName(provider: ProviderId): Int =
+    if (provider == ProviderId.OLLAMA) R.string.settings_ai_provider_ollama else providerName(provider)
 
 /** What the key dialog offers for the key it saves (#763), as [enableOffer] finds it. */
 internal sealed interface EnableOffer {
@@ -63,3 +74,23 @@ internal fun EnableOffer.choices(
         is EnableOffer.Switch -> if (ticked) mapOf(id to true) else emptyMap()
         EnableOffer.AlreadyOn -> emptyMap()
     }
+
+/** The settings [before] a change was written to the store, and [after] it, as written. */
+internal class Applied(
+    val before: Settings,
+    val after: Settings,
+)
+
+/**
+ * Writes the [choices] to the stored settings ([applied]), and returns them as they were and as
+ * written; null when the phone's storage failed, and nothing was written.
+ */
+internal suspend fun SettingsStore.applyChoices(choices: Map<SecretId, Boolean>): Applied? {
+    var result: Applied? = null
+    return try {
+        update { before -> before.applied(choices).also { result = Applied(before, it) } }
+        result
+    } catch (_: IOException) {
+        null
+    }
+}

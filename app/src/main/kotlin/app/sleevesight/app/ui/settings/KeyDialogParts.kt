@@ -210,7 +210,10 @@ internal fun EnableChoice(
             }
 
             is EnableOffer.Switch -> {
-                Text(stringResource(R.string.key_current_ai, stringResource(providerName(offer.current))), style = body)
+                Text(
+                    stringResource(R.string.key_current_ai, stringResource(aiServiceName(offer.current))),
+                    style = body,
+                )
                 CheckRow(stringResource(R.string.key_switch_ai, service), ticked, enabled, onTick)
             }
 

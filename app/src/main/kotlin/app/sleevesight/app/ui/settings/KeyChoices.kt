@@ -4,13 +4,11 @@ import androidx.annotation.StringRes
 import app.sleevesight.app.R
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretState
-import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.core.genres.LabelSource
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.SourceSwitch
 import app.sleevesight.core.settings.WebEngine
-import java.io.IOException
 
 // What saving a key switches on (#763): only what the user chooses after the save, on *Load keys*'
 // services to enable or in the key dialog; and what the summary after it lists.
@@ -112,26 +110,27 @@ internal fun wasOn(
 
 /**
  * *Load keys*' services to enable (#763), once the keys [saved] are: a row for each of them, and,
- * under *Already configured*, the AI services whose keys were saved before ([configured]) and not
- * in this load. The AI services are shown as radios when more than one of them can be chosen
- * ([radios]), else as a checkbox; [initial] is what each row starts as.
+ * when the load holds an AI key, under *Already configured*, the AI services whose keys were saved
+ * before ([configured]) and not in this load. The AI services are shown as radios when more than
+ * one of them can be chosen ([radios]), counting an AI service on that needs no key (Ollama),
+ * which has no row; else as a checkbox. [initial] is what each row starts as, and [current] the AI
+ * service on before, which *Your current AI service is …* names, when it is not in this load.
  */
 internal class EnablePlan(
     val saved: List<SecretId>,
     val configured: List<SecretId>,
     val radios: Boolean,
     val initial: Map<SecretId, Boolean>,
-) {
-    /** The AI service on when the keys were saved, if it is one listed under *Already configured*. */
-    fun currentConfigured(): SecretId? = configured.firstOrNull { initial[it] == true }
-}
+    val current: ProviderId?,
+)
 
 /**
  * The services to enable once the keys [saved] are, with the keys stored before the load as
- * [before] and the settings as [settings]. A source starts ticked. One new AI key, with no AI
- * key saved before, starts ticked too; otherwise a new AI key starts off, unless it replaces the
- * key of the AI service on, which stays on. Each AI service under *Already configured* starts as
- * it is.
+ * [before] and the settings as [settings]. A source starts ticked. With no AI key in the load,
+ * there are no AI rows. One new AI key, with no AI service set up before (no key saved, and none
+ * on that needs no key), starts ticked; otherwise a new AI key starts off, unless it replaces the
+ * key of the AI service on, which stays on. Each AI service under *Already configured* starts as it
+ * is.
  */
 internal fun enablePlan(
     saved: List<SecretId>,
@@ -140,8 +139,10 @@ internal fun enablePlan(
 ): EnablePlan {
     val ai = SecretId.entries.filter { groupOf(it) == KeyGroup.AI }
     val newAi = saved.filter { it in ai }
-    val anyBefore = ai.any { keySaved(before[it]) }
-    val configured = ai.filter { it !in saved && keySaved(before[it]) }
+    // An AI service on that needs no key (Ollama): set up before, though it has no key or row.
+    val keyless = settings.aiProvider?.takeIf { SecretId.forProvider(it) == null }
+    val anyBefore = keyless != null || ai.any { keySaved(before[it]) }
+    val configured = if (newAi.isEmpty()) emptyList() else ai.filter { it !in saved && keySaved(before[it]) }
     val initial =
         buildMap {
             for (id in saved) {
@@ -156,8 +157,22 @@ internal fun enablePlan(
             }
             for (id in configured) put(id, wasOn(id, settings, before))
         }
-    return EnablePlan(saved, configured, radios = newAi.size + configured.size > 1, initial = initial)
+    val current = if (newAi.isEmpty()) null else currentAi(settings, configured)
+    val choosable = newAi.size + configured.size + (if (keyless != null) 1 else 0)
+    return EnablePlan(saved, configured, radios = newAi.isNotEmpty() && choosable > 1, initial, current)
 }
+
+/**
+ * The AI service on in [settings] that *Your current AI service is …* names: one listed under
+ * *Already configured* ([configured]), or one that needs no key; null for none, or for one loaded now.
+ */
+private fun currentAi(
+    settings: Settings,
+    configured: List<SecretId>,
+): ProviderId? =
+    settings.aiProvider?.takeIf { provider ->
+        SecretId.forProvider(provider).let { it == null || it in configured }
+    }
 
 /**
  * [choices] with the key [id]'s row set [on]: an AI service chosen unchooses any other, as only
@@ -184,11 +199,13 @@ internal data class SavedKey(
 
 /**
  * The summary after a save (#763): the [keys] saved, and the [services] configured, each with
- * whether it is now on: those whose key was saved, and any AI service whose state changed.
+ * whether it is now on: those whose key was saved, and any AI service whose state changed; and
+ * the AI service that needs no key (Ollama), on before and now not ([keylessOff]).
  */
 internal class KeySummary(
     val keys: List<SavedKey>,
     val services: Map<SecretId, Boolean>,
+    val keylessOff: ProviderId? = null,
 )
 
 /**
@@ -207,28 +224,10 @@ internal fun summaryOf(
         SecretId.entries
             .filter { id -> id !in saved && groupOf(id) == KeyGroup.AI }
             .filter { id -> wasOn(id, before, secrets) != wasOn(id, after, secrets) }
+    val keyless = before.aiProvider?.takeIf { SecretId.forProvider(it) == null && it != after.aiProvider }
     return KeySummary(
         keys,
         saved.associateWith { after.serviceOn(it) } + changed.associateWith { wasOn(it, after, secrets) },
+        keyless,
     )
-}
-
-/** The settings [before] a change was written to the store, and [after] it, as written. */
-internal class Applied(
-    val before: Settings,
-    val after: Settings,
-)
-
-/**
- * Writes the [choices] to the stored settings ([applied]), and returns them as they were and as
- * written; null when the phone's storage failed, and nothing was written.
- */
-internal suspend fun SettingsStore.applyChoices(choices: Map<SecretId, Boolean>): Applied? {
-    var result: Applied? = null
-    return try {
-        update { before -> before.applied(choices).also { result = Applied(before, it) } }
-        result
-    } catch (_: IOException) {
-        null
-    }
 }

@@ -16,6 +16,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -92,10 +93,12 @@ internal fun <T> ChoiceDialog(
  * saved as new or replaces the one stored ([state]), and what saving it switches on ([offer],
  * #763): *Enable {service}*, ticked; for an AI key while another AI service is on, that service and
  * *Switch the AI service to {service}*, unticked; for the key of the AI service on, that it is
- * already enabled. [onSave] saves the key with whether the checkbox is ticked, and says whether
- * it succeeded: only then does the dialog end, calling [onSaved] with the key's last characters
- * (the summary then replaces the dialog); otherwise it says why and keeps what was typed; only a key the key
- * store could not seal suggests *Purge keys*, which cannot cure a file that cannot be written.
+ * already enabled; the offer shown holds while a save runs, as the settings it is read from change
+ * under it. [onSave] saves the key with the choices the checkbox makes ([EnableOffer.choices]), and
+ * says whether it succeeded: only then does the dialog end, calling [onSaved] with the key's last
+ * characters (the summary then replaces the dialog); otherwise it says why and keeps what was
+ * typed; only a key the key store could not seal suggests *Purge keys*, which cannot cure a file
+ * that cannot be written.
  * While it runs, the dialog cannot be cancelled or dismissed: it ends as the result says. *Remove*
  * asks first, with the key row's own confirmation ([ConfirmDialog], #543), which runs [onRemove]
  * and says there if it failed; once the key is removed, both close.
@@ -145,7 +148,7 @@ internal fun KeyDialog(
     id: SecretId,
     state: SecretState,
     offer: EnableOffer,
-    onSave: suspend (String, Boolean) -> SaveResult,
+    onSave: suspend (String, Map<SecretId, Boolean>) -> SaveResult,
     onSaved: (String) -> Unit,
     onRemove: suspend () -> Boolean,
     scanner: QrScanner,
@@ -158,8 +161,12 @@ internal fun KeyDialog(
     var busy by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf<Int?>(null) }
     var scanning by remember { mutableStateOf<ScanFor?>(null) }
-    // Its default follows the offer, which changes once the keys' states are read.
-    var ticked by remember(offer) { mutableStateOf(offer == EnableOffer.Enable) }
+    // The offer shown: it follows [offer], which changes once the keys' states are read, but not
+    // while a save runs, which writes the settings it is read from.
+    var offered by remember { mutableStateOf(offer) }
+    LaunchedEffect(offer, busy) { if (!busy) offered = offer }
+    // Its default follows the offer shown.
+    var ticked by remember(offered) { mutableStateOf(offered == EnableOffer.Enable) }
     var session by remember { mutableStateOf<KeyboardSession?>(null) }
     val ledger = SessionLedger.of(LocalContext.current)
     val scope = rememberCoroutineScope()
@@ -182,9 +189,9 @@ internal fun KeyDialog(
         failed = null
         val saving = value
         // The choice as it is at the tap, saved with the key, whatever happens to the dialog meanwhile.
-        val enable = ticked
+        val choices = offered.choices(id, ticked)
         scope.launch {
-            val failure = saveFailure(onSave(saving, enable))
+            val failure = saveFailure(onSave(saving, choices))
             busy = false
             if (failure == null) {
                 autofill?.cancel()
@@ -224,7 +231,7 @@ internal fun KeyDialog(
                 failed = null
                 scanning = it
             }) {
-                EnableChoice(id, state != SecretState.ABSENT, offer, ticked, enabled = !busy) { ticked = it }
+                EnableChoice(id, state != SecretState.ABSENT, offered, ticked, enabled = !busy) { ticked = it }
             }
         },
         // All three in the one slot: Material's dialog puts its dismissal next to its confirmation,

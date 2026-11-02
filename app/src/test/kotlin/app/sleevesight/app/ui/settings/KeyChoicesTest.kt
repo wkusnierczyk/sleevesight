@@ -54,12 +54,12 @@ class KeyChoicesTest {
         assertTrue(plan.radios)
         assertEquals(listOf(SecretId.GOOGLE), plan.configured)
         assertEquals(mapOf(SecretId.ANTHROPIC to false, SecretId.EXA to true, SecretId.GOOGLE to true), plan.initial)
-        assertEquals(SecretId.GOOGLE, plan.currentConfigured())
+        assertEquals(ProviderId.GOOGLE, plan.current)
 
         val off = enablePlan(listOf(SecretId.OPENAI), mapOf(SecretId.GOOGLE to saved), none)
         assertTrue(off.radios)
         assertEquals(mapOf(SecretId.OPENAI to false, SecretId.GOOGLE to false), off.initial)
-        assertNull(off.currentConfigured())
+        assertNull(off.current)
     }
 
     @Test
@@ -70,9 +70,46 @@ class KeyChoicesTest {
         assertFalse(plan.radios)
         assertEquals(mapOf(SecretId.ANTHROPIC to true, SecretId.LASTFM to true), plan.initial)
 
+        // Among radios too: replacing the key of the AI service on keeps it selected.
+        val radios = enablePlan(listOf(SecretId.ANTHROPIC, SecretId.OPENAI), before, settings)
+        assertTrue(radios.radios)
+        assertEquals(mapOf(SecretId.ANTHROPIC to true, SecretId.OPENAI to false), radios.initial)
+
         // Replaced while off: it stays off unless chosen.
         val offPlan = enablePlan(listOf(SecretId.ANTHROPIC), mapOf(SecretId.ANTHROPIC to saved), none)
         assertEquals(mapOf(SecretId.ANTHROPIC to false), offPlan.initial)
+    }
+
+    @Test
+    fun `a load of sources only has no AI rows, and changes no AI setting`() {
+        val settings = none.copy(aiProvider = ProviderId.ANTHROPIC)
+        val before = mapOf(SecretId.ANTHROPIC to saved, SecretId.OPENAI to saved)
+        val plan = enablePlan(listOf(SecretId.LASTFM, SecretId.EXA), before, settings)
+        assertTrue(plan.configured.isEmpty())
+        assertFalse(plan.radios)
+        assertNull(plan.current)
+        assertEquals(mapOf(SecretId.LASTFM to true, SecretId.EXA to true), plan.initial)
+        assertEquals(ProviderId.ANTHROPIC, settings.applied(plan.initial).aiProvider)
+    }
+
+    @Test
+    fun `an AI service on that needs no key counts as one set up before`() {
+        // Ollama on: one new AI key is a radio, unselected, and Next as it is keeps Ollama.
+        val ollama = none.copy(aiProvider = ProviderId.OLLAMA)
+        val plan = enablePlan(listOf(SecretId.ANTHROPIC, SecretId.LASTFM), emptyMap(), ollama)
+        assertTrue(plan.radios)
+        assertTrue(plan.configured.isEmpty())
+        assertEquals(ProviderId.OLLAMA, plan.current)
+        assertEquals(mapOf(SecretId.ANTHROPIC to false, SecretId.LASTFM to true), plan.initial)
+        assertEquals(ProviderId.OLLAMA, ollama.applied(plan.initial).aiProvider)
+
+        // Chosen instead, the summary lists Ollama, now off; kept, it does not.
+        val keys = listOf(SavedKey(SecretId.ANTHROPIC, "q7Rk", replaced = false))
+        val switched = ollama.applied(plan.initial.chosen(SecretId.ANTHROPIC, true))
+        val summary = summaryOf(keys, ollama, emptyMap(), switched)
+        assertEquals(ProviderId.OLLAMA, summary.keylessOff)
+        assertEquals(mapOf(SecretId.ANTHROPIC to true), summary.services)
+        assertNull(summaryOf(keys, ollama, emptyMap(), ollama.applied(plan.initial)).keylessOff)
     }
 
     @Test

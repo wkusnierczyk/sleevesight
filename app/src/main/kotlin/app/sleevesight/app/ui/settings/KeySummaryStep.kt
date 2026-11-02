@@ -54,7 +54,7 @@ internal fun ColumnScope.SummaryStep(
     var busy by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val written = applied
-    SummaryTables(keys, written?.let { summaryOf(keys, it.before, secrets, it.after).services })
+    SummaryTables(keys, written?.let { summaryOf(keys, it.before, secrets, it.after) })
     KeyScreenActions(
         cancel =
             {
@@ -83,14 +83,14 @@ internal fun ColumnScope.SummaryStep(
 }
 
 /**
- * The summary's tables: the [keys] saved, and the [services] configured, or, for null, that the
- * choices could not be written, in the error colour.
+ * The summary's tables: the [keys] saved, and the services configured ([summary]), or, for null,
+ * that the choices could not be written, in the error colour.
  */
 @Suppress("LongMethod") // Its two tables.
 @Composable
 private fun ColumnScope.SummaryTables(
     keys: List<SavedKey>,
-    services: Map<SecretId, Boolean>?,
+    summary: KeySummary?,
 ) {
     val title = if (keys.size == 1) R.string.load_keys_saved_title_one else R.string.load_keys_saved_title
     StepHeading(stringResource(title), announced = true)
@@ -130,7 +130,7 @@ private fun ColumnScope.SummaryTables(
         Column(modifier = Modifier.padding(top = 8.dp)) {
             StepHeading(stringResource(R.string.load_keys_services_configured))
         }
-        if (services == null) {
+        if (summary == null) {
             Text(
                 stringResource(R.string.load_keys_services_failed),
                 style = body,
@@ -138,15 +138,16 @@ private fun ColumnScope.SummaryTables(
             )
             return@Column
         }
+        // Each service by its name, and whether it is on; an AI service that needs no key by its own.
+        val named =
+            summary.services.map { (id, on) -> stringResource(serviceName(id)) to on } +
+                listOfNotNull(summary.keylessOff?.let { stringResource(aiServiceName(it)) to false })
         val serviceRows =
-            services.entries
-                .map { it to stringResource(serviceName(it.key)) }
-                .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.second })
-                .map { (service, name) ->
+            named
+                .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.first })
+                .map { (name, on) ->
                     val state =
-                        stringResource(
-                            if (service.value) R.string.key_service_enabled else R.string.key_service_disabled,
-                        )
+                        stringResource(if (on) R.string.key_service_enabled else R.string.key_service_disabled)
                     TableRow.Cells(
                         spoken = AnnotatedString(parts(name, state)),
                         cells =

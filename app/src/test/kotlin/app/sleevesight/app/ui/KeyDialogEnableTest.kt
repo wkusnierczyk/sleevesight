@@ -315,6 +315,25 @@ class KeyDialogEnableTest {
     }
 
     @Test
+    fun theOfferHoldsWhileASaveRuns() =
+        open(R.string.settings_key_name_openai) {
+            val enable = with(R.string.key_enable, R.string.settings_ai_provider_openai)
+            compose.onNodeWithText(enable).assertIsOn()
+            val gate = CompletableDeferred<Unit>()
+            val writes = secretsData.writes.get()
+            secretsData.writeGate = gate
+            compose.onNodeWithText(text(R.string.settings_save)).performClick()
+            idleUntil("the key's write held") { secretsData.writes.get() > writes }
+            // The settings change under the dialog while it saves: what it shows does not.
+            runBlocking { settings.update { it.copy(aiProvider = ProviderId.OPENAI) } }
+            compose.waitForIdle()
+            compose.onNodeWithText(enable).assertIsOn()
+            assertTrue(!shown(with(R.string.key_already_enabled, R.string.settings_ai_provider_openai)))
+            gate.complete(Unit)
+            waitForText(text(R.string.load_keys_saved_title_one))
+        }
+
+    @Test
     fun aSourceKeyTickedSwitchesItsServiceOn() =
         open(R.string.settings_key_name_exa) {
             save()
