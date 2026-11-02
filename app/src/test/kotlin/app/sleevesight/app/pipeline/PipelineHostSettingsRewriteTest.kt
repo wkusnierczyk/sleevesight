@@ -6,10 +6,12 @@ import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.settings.WriteAutomatically
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * *Rewrite insight* beside the insight kept, on the track under way, when a change to the AI
@@ -46,6 +48,28 @@ internal class PipelineHostSettingsRewriteTest : PipelineHostFixture() {
 
             assertEquals(2, provider.requestsFor("Alpha"))
             assertEquals(OTHER_MODEL, provider.models.last())
+        }
+
+    @Test
+    fun `another model chosen while the insight is written offers Rewrite once its call ends`() =
+        runTest {
+            provider.streaming = 10.seconds
+            settings.value = settings.value.copy(writeAutomatically = WriteAutomatically.NEVER)
+            val first = settings.value.model
+            started()
+            play("Alpha")
+            settle()
+            tap()
+            advanceTimeBy(2.seconds)
+
+            // The call under way is not cut off: it ends, and its card is kept, written with the
+            // first model; the rebuild waits for it.
+            settings.value = settings.value.withModel(ProviderId.ANTHROPIC, OTHER_MODEL)
+            advanceTimeBy(15.seconds)
+            settle()
+
+            assertEquals(listOf(first), provider.models)
+            assertKeptWithRewrite(true)
         }
 
     @Test
@@ -100,14 +124,14 @@ internal class PipelineHostSettingsRewriteTest : PipelineHostFixture() {
     }
 
     // The insight written stays on screen, with *Rewrite insight* offered beside it or not; no call
-    // made since the first.
+    // made since the first, through any service.
     private fun assertKeptWithRewrite(rewrite: Boolean) {
         assertTrue(
             host.state.value.track
                 ?.insight is InsightState.Written,
         )
         assertEquals(rewrite, host.state.value.rewrite)
-        assertEquals(1, provider.requestsFor("Alpha"))
+        assertEquals(1, (providers.values + provider).sumOf { it.requestsFor("Alpha") })
     }
 
     private companion object {

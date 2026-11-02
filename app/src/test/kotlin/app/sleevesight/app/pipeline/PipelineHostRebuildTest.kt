@@ -2,6 +2,8 @@ package app.sleevesight.app.pipeline
 
 import app.sleevesight.core.ai.ReasoningEffort
 import app.sleevesight.core.model.ProviderId
+import app.sleevesight.core.settings.Settings.Companion.DEFAULT_MODELS
+import app.sleevesight.core.settings.Settings.Companion.EFFORT_SCALES
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -55,6 +57,17 @@ internal class PipelineHostRebuildTest : PipelineHostFixture() {
             assertEquals(1, builds)
 
             settings.value = settings.value.withModel(ProviderId.OPENAI, "gpt-other")
+            settle()
+            assertEquals(1, builds)
+
+            // The model and effort already in use, now set explicitly: no rebuild.
+            val model = DEFAULT_MODELS.getValue(ProviderId.ANTHROPIC)
+            val effort = EFFORT_SCALES.getValue(ProviderId.ANTHROPIC).default
+            settings.value =
+                settings.value.copy(
+                    aiModels = settings.value.aiModels + (ProviderId.ANTHROPIC to model),
+                    aiEfforts = mapOf(ProviderId.ANTHROPIC to effort),
+                )
             settle()
             assertEquals(1, builds)
 
