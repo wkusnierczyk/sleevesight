@@ -52,7 +52,20 @@ class GenreReasonPromptTest {
         val text = prompt()
         assertTrue("never about the evidence or the sources" in text)
         assertFalse("say so plainly in your first sentence" in text)
-        assertEquals(3, GenreReasonPrompt.VERSION)
+        assertEquals(4, GenreReasonPrompt.VERSION)
+    }
+
+    @Test
+    fun `a label the evidence cannot explain is answered NO_EVIDENCE, never disputed`() {
+        // #853: version 3 asked the model to write what the evidence did say, and it wrote that the
+        // track was Americana, "not Folk".
+        val text = prompt()
+        assertTrue(GenreReasonPrompt.LABEL_RULE in text)
+        assertTrue("Never say or suggest that the track is not of this genre" in GenreReasonPrompt.LABEL_RULE)
+        assertTrue(GenreReasonPrompt.LABEL_RULE.endsWith("reply with exactly: ${GroundingCheck.NO_EVIDENCE}"))
+        assertFalse("write only what the evidence does say" in text)
+        val insightRules = text.indexOf(InsightPrompt.contract(allowModel = false))
+        assertTrue(text.indexOf(GenreReasonPrompt.LABEL_RULE) < insightRules)
     }
 
     @Test
@@ -64,6 +77,16 @@ class GenreReasonPromptTest {
         assertTrue("except to attribute to its page a genre only a web line names" in rule)
         assertTrue("what they say, do not say or leave out" in rule, "the ban stands")
         assertTrue(text.indexOf(GenreReasonPrompt.ABOUT_THE_MUSIC_RULE) < text.indexOf(InsightPrompt.WEB_GENRE_RULE))
+    }
+
+    @Test
+    fun `with web search, NO_EVIDENCE waits for the searches`() {
+        // The Claude review of #864: the label's rule alone would end the reply before any search.
+        val text = GenreReasonPrompt.withSearch(prompt(), limit = 3, firstId = "S1")
+        assertTrue("If nothing you can cite explains the label" in text)
+        val wait = "Reply ${GroundingCheck.NO_EVIDENCE} only if what the searches find does not explain it either"
+        assertTrue(wait in text)
+        assertTrue(text.endsWith(GenreReasonPrompt.REPLY))
     }
 
     @Test
