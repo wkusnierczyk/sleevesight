@@ -53,10 +53,11 @@ private fun Path.addPaths(group: VectorGroup) {
 }
 
 /**
- * Draws the record's place in the one-line logo: the record ([drawRecord]) at [pose], or, with a
- * [bug] ([logoBug]), the bug in the record's box, as tall as the record (its ink from the top of
- * its feelers to its foot) and centred on the record's centre, in the words' ink. The pose's
- * radius, turn and opacity act on either as on the record, so the intro turns either in.
+ * Draws the record's place in the one-line logo: the record ([drawRecord]) at [pose], with the
+ * header's larger label ([HEADER_LABEL], #848), or, with a [bug] ([logoBug]), the bug in the
+ * record's box, as tall as the record (its ink from the top of its feelers to its foot) and centred
+ * on the record's centre, in the words' ink. The pose's radius, turn and opacity act on either as on
+ * the record, so the intro turns either in, and the header turns either while music plays.
  */
 internal fun DrawScope.drawRecordPlace(
     colors: LogoColors,
@@ -64,7 +65,7 @@ internal fun DrawScope.drawRecordPlace(
     pose: RecordPose = RecordPose(RecordCentre),
 ) {
     if (bug == null) {
-        drawRecord(colors, pose.centre, pose.radius, pose.degrees, pose.alpha)
+        drawRecord(colors, pose.centre, pose.radius, pose.degrees, pose.alpha, HEADER_LABEL)
         return
     }
     if (pose.alpha <= 0f || pose.radius <= 0f) return

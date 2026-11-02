@@ -69,6 +69,7 @@ import app.sleevesight.app.speech.SystemSpeech
 import app.sleevesight.app.speech.screenReaderOn
 import app.sleevesight.app.ui.home.GuideHiding
 import app.sleevesight.app.ui.home.SpokenWords
+import app.sleevesight.app.ui.logo.LogoSpin
 import app.sleevesight.core.ai.AiProvider
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.normalizer.Normalizer
@@ -413,6 +414,15 @@ class AppGraph internal constructor(
             followed = settings.followedPlayers,
             classify = skipDetector::classify,
         )
+
+    /**
+     * What turns the record in Home's header logo (#848): whether the player line says *Playing*
+     * and *Spin the logo while music plays* is on, and *Logo speed*.
+     */
+    val logoSpin: StateFlow<LogoSpin> =
+        combine(sessions.nowPlaying, sessions.playback, latestSettings, LogoSpin::of)
+            .distinctUntilChanged()
+            .stateIn(mainScope, SharingStarted.Eagerly, LogoSpin.STILL)
 
     /**
      * The session history and the record of track changes (D15), in a database of their own under

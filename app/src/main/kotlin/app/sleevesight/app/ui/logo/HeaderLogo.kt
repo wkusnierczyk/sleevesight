@@ -32,12 +32,17 @@ import androidx.compose.ui.unit.toSize
  * its box is narrower than the logo, the logo shrinks to fit. While the intro plays
  * ([LocalLogoIntro]), it tells the intro where it is, and draws nothing: the intro draws the
  * logo flying onto it and landed, and this one takes over when the intro ends.
+ *
+ * Its record has the header's larger label ([HEADER_LABEL], #848), and turns while [spin] says so
+ * (music playing, *Spin the logo while music plays* on), getting up to speed and coming to rest as a
+ * turntable does ([recordMotion]); once the intro has ended, from where the intro landed it.
  */
 @Composable
 fun HeaderLogo(
     modifier: Modifier = Modifier,
     height: Dp = HEADER_LOGO_HEIGHT,
-) = HeaderLogo(LOGO_BUG, modifier, height)
+    spin: LogoSpin = LogoSpin.STILL,
+) = HeaderLogo(LOGO_BUG, modifier, height, spin)
 
 /**
  * [HeaderLogo] with the bug in the record's place or not, whatever the build ([LOGO_BUG]): for
@@ -49,11 +54,13 @@ internal fun HeaderLogo(
     bug: Boolean,
     modifier: Modifier = Modifier,
     height: Dp = HEADER_LOGO_HEIGHT,
+    spin: LogoSpin = LogoSpin.STILL,
 ) {
     val intro = LocalLogoIntro.current
     val colors = logoColors()
     val bugPath = logoBug(bug)
     val shown by remember(intro) { derivedStateOf { intro?.finished ?: true } }
+    val motion = recordMotion(spin, running = shown)
     val place =
         if (intro == null) {
             modifier
@@ -67,7 +74,8 @@ internal fun HeaderLogo(
             drawSleeve(colors)
             translate(LineShift.x, LineShift.y) {
                 drawSight(colors)
-                drawRecordPlace(colors, bugPath)
+                // Read as it draws, so the turning redraws the logo without recomposing it.
+                drawRecordPlace(colors, bugPath, RecordPose(RecordCentre, degrees = motion.value.degrees))
             }
         }
     }
