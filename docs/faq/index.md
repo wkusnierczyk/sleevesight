@@ -9,6 +9,7 @@
 # named here (#709) changes this page too; so does the first-run statement on notification access (#708).
 title: Frequently asked questions
 permalink: /docs/faq/
+docs_version: 0.1.15
 nav:
   - id: why-does-sleevesight-need-notification-access-does-it-read-my-notifications
     label: Notifications

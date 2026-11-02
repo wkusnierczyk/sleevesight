@@ -9,6 +9,7 @@
 # again.
 title: What it costs you
 permalink: /docs/costs/
+docs_version: 0.1.15
 nav:
   - id: sleevesight-charges-nothing
     label: Free app
@@ -35,7 +36,7 @@ Prices as checked on 26 October 2026, on each service's own pricing page, linked
 
 ### AI services
 
-One service at a time writes the insights ([settings]({{ '/docs/tutorials/settings/#ai-services' | relative_url }})). Each insight written is one call, now and then two (the [usage page]({{ '/docs/tutorials/usage/#writing-an-insight' | relative_url }}) says when). The services bill by the token, in and out, the output including the model's reasoning. The default model is each service's cheapest current one; a model the service still lists for your key may be cheaper, and is named where it is.
+One service at a time writes the insights ([settings]({{ '/docs/tutorials/settings/#ai-services' | relative_url }})). Each insight written is one call, now and then two or three (the [usage page]({{ '/docs/tutorials/usage/#writing-an-insight' | relative_url }}) says when). The services bill by the token, in and out, the output including the model's reasoning. The default model is each service's cheapest current one; a model the service still lists for your key may be cheaper, and is named where it is.
 
 | Service | Key | Default model: in / out, per 1M tokens | Cheaper model listed | Free tier | Pricing page |
 |---|---|---|---|---|---|
@@ -49,7 +50,7 @@ Anthropic's prices are for prompts of up to 100,000 tokens; an insight's prompt 
 
 | Source | Key | What is billed | Free tier | Requests Sleevesight makes | Pricing or terms |
 |---|---|---|---|---|---|
-| **Exa web search** | Yours | $4 per 1,000 searches, of up to 10 results, for the search type Sleevesight uses; the highlights it asks for cost nothing extra: Exa's pricing page lists no charge for them, and [Exa 3.0's announcement](https://exa.ai/blog/exa-3) says they are "included at no additional charge". The usage page of the [Exa dashboard](https://dashboard.exa.ai) shows what each search actually cost. | $10 of credit a month, enough for up to 2,500 searches: given at sign-up and reset to $10 on the first of each month; no card needed. | One search for each new track looked up, kept on the phone for a day (*Web search*'s lifetime, under [History]({{ '/docs/tutorials/settings/#history' | relative_url }})), so a track looked up again that day costs no search. | [Exa's pricing](https://exa.ai/pricing), [Exa 3.0](https://exa.ai/blog/exa-3) |
+| **Exa web search** | Yours | $4 per 1,000 searches, of up to 10 results, for the search type Sleevesight uses; the highlights it asks for cost nothing extra: Exa's pricing page lists no charge for them, and [Exa 3.0's announcement](https://exa.ai/blog/exa-3) says they are "included at no additional charge". The usage page of the [Exa dashboard](https://dashboard.exa.ai) shows what each search actually cost. | $10 of credit a month, enough for up to 2,500 searches: given at sign-up and reset to $10 on the first of each month; no card needed. | One search for each new track looked up, kept on the phone for a day (*Web search*'s lifetime, under [History]({{ '/docs/tutorials/settings/#history' | relative_url }})), so a track looked up again that day costs no search. With *AI web search*, also one for each *Ask AI* question (*Once*) or up to 3 (*Up to 3 times*), and for a *Why is this …?* the evidence cannot support. | [Exa's pricing](https://exa.ai/pricing), [Exa 3.0](https://exa.ai/blog/exa-3) |
 | **Last.fm** | Yours | Nothing. | Its API is licensed without charge, for non-commercial use. | For each track and artist looked up; rate-limited, not billed. | [Last.fm's API terms](https://www.last.fm/api/tos) |
 | **MusicBrainz** | None | Nothing. | Free. | One request a second at most, as its rules ask. | [MusicBrainz API](https://musicbrainz.org/doc/MusicBrainz_API) |
 | **Wikipedia and Wikidata** | None | Nothing. | Free. | For each track and artist looked up. | [Wikimedia's terms of use](https://foundation.wikimedia.org/wiki/Policy:Terms_of_Use) |
@@ -75,9 +76,9 @@ Web search, once Exa's key is saved and you switch it on, adds what it found to 
 
 **Look again**, on an insight already written ([usage]({{ '/docs/tutorials/usage/#look-again' | relative_url }})), looks every source up afresh and writes nothing: with web search on, it costs one Exa search, $0.004, whatever it finds. When the sources found something new, it offers *Rewrite insight*: that is the paid call, about $0.0002 on Claude Haiku 5.5, made only if you tap it.
 
-**Why is this …?**, in a genre's panel ([usage]({{ '/docs/tutorials/usage/#genre-labels' | relative_url }})), asks your AI service why the track has that genre, from the same evidence as the insight: one call, of about the insight's cost, made only when you tap it, and kept with the track, so opening the genre again costs nothing.
+**Why is this …?**, in a genre's panel ([usage]({{ '/docs/tutorials/usage/#genre-labels' | relative_url }})), asks your AI service why the track has that genre, from the same evidence as the insight: one call, of about the insight's cost, made only when you tap it, and kept with the track, so opening the genre again costs nothing. When the evidence cannot support the genre, it is asked again with a web search, with *AI web search* on: with *Once*, two calls and one Exa search in all; with *Up to 3 times*, up to 5 calls and 3 searches. For a genre only MusicBrainz's tags give, a question for the track's genres comes first, another call (and with web search a search, or up to 3), so about twice that.
 
-**Search with AI**, under an empty *Dates*, *Genres* or *Lyrics* panel ([usage]({{ '/docs/tutorials/usage/#search-with-ai' | relative_url }})), asks your AI service for what the sources did not give: one short call, made only when you tap it, or by itself for each such panel with the *Search with AI* setting on. The answer is kept with the track, so it shows again at no cost.
+**Ask AI**, under an empty *Dates*, *Genres* or *Lyrics* panel ([usage]({{ '/docs/tutorials/usage/#ask-ai' | relative_url }})), asks your AI service for what the sources did not give, made only when you tap it, or by itself for each such panel with *Ask AI automatically* on. What it costs depends on [*AI web search*]({{ '/docs/tutorials/settings/#insights' | relative_url }}): with *Once*, the default, one Exa search, $0.004, and one call; with *Up to 3 times*, up to 3 searches and 4 calls; with *Off*, one short call. The answer is kept with the track, so it shows again at no cost.
 
 **Read aloud** costs nothing: the phone's own text-to-speech engine reads what is already written, with no call to your AI service.
 
@@ -95,4 +96,4 @@ Tracks played before cost less: a track looked up again within the day costs no 
 - **Write fewer insights.** *Reactive*'s *On track skip (auto)* writes only the tracks you skip to, and *On demand* only those you tap *Write insight* for ([Insights]({{ '/docs/tutorials/settings/#insights' | relative_url }})). Even under *On track change (auto)*, nothing is written automatically until your first action after the app starts (a tap on *Write insight*, or a mode chosen), and *Saver* pauses automatic writing after a few track changes away; opening the app resumes it, but the track playing then is written only on a tap ([*Automatic writing*]({{ '/docs/tutorials/usage/#automatic-writing' | relative_url }})). *Stop writing* ends the call at once; if the request has reached your AI service, it still charges for what it has read and written so far.
 - **Play tracks again.** A track played again costs less, often nothing, as above.
 - **A cheaper model, or less reasoning.** The model and the reasoning effort are under [AI services]({{ '/docs/tutorials/settings/#ai-services' | relative_url }}); the defaults are each service's cheapest current model and a low effort, and an older model the service still lists may cost less, as the table shows.
-- **Web search off.** Exa's searches are made for every track looked up, whatever *Reactive* says, so turning *Exa web search* off under [Sources]({{ '/docs/tutorials/settings/#sources' | relative_url }}) saves the most; the other sources still find what they can.
+- **Web search off.** Exa's searches are made for every track looked up, whatever *Reactive* says, so turning *Exa web search* off under [Sources]({{ '/docs/tutorials/settings/#sources' | relative_url }}) saves the most; the other sources still find what they can. To keep it for the tracks but not for *Ask AI*, set *AI web search* to *Off*, under [Insights]({{ '/docs/tutorials/settings/#insights' | relative_url }}).
