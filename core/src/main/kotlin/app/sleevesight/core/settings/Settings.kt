@@ -158,8 +158,8 @@ import kotlin.time.Duration.Companion.seconds
  *   default.
  * @property theme *Theme* (#444): light or dark as the system is, or always one of them.
  * @property themeButton *Theme button* (#636): whether Home's header shows, beside the cogwheel, a
- *   button that moves [theme] one step on ([ThemeChoice.next]) with each tap. On by default: one
- *   tap, where *Theme* in the settings takes several.
+ *   button that shows [theme] and opens a menu of the three themes (#771). On by default: two taps,
+ *   where *Theme* in the settings takes several.
  * @property font *Font* (#377): the app's own font, Roboto, bundled with it, or the phone's system
  *   font. See [FontChoice].
  * @property introAtStart *Logo intro at start* (#383): whether the app, opened from the launcher
@@ -623,19 +623,6 @@ enum class ThemeChoice {
     SYSTEM,
     LIGHT,
     DARK,
-    ;
-
-    /**
-     * The theme Home's theme button (#636) gives from this one: *Light*, then *Dark*, then
-     * *System*, then *Light* again.
-     */
-    val next: ThemeChoice
-        get() =
-            when (this) {
-                LIGHT -> DARK
-                DARK -> SYSTEM
-                SYSTEM -> LIGHT
-            }
 }
 
 /**

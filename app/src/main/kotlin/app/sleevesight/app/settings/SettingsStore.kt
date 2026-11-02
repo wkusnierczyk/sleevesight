@@ -175,16 +175,15 @@ class SettingsStore(
     }
 
     /**
-     * Home's theme button (#636): each call moves *Theme* one step on ([ThemeChoice.next]) from the
-     * stored choice, in one atomic update, so two quick taps move it two steps, whatever Home showed
-     * between them. Saved in [saves], which outlives the screen: from Android 12 the change restarts
-     * the activity in the new theme. A save that fails leaves *Theme*, and so the button, as it was.
+     * Home's theme menu (#771): each call stores the theme given as *Theme*. Saved in [saves], which
+     * outlives the screen: from Android 12 the change restarts the activity in the new theme. A save
+     * that fails leaves *Theme*, and so the button, as it was.
      */
-    fun themeCycler(saves: CoroutineScope): () -> Unit =
-        {
+    fun themeChooser(saves: CoroutineScope): (ThemeChoice) -> Unit =
+        { theme ->
             saves.launch {
                 try {
-                    update { it.copy(theme = it.theme.next) }
+                    update { it.copy(theme = theme) }
                 } catch (_: IOException) {
                     // Only an I/O error: the theme stays, as the setting does.
                 }

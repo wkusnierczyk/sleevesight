@@ -48,8 +48,8 @@ import org.robolectric.RobolectricTestRunner
 
 /**
  * *Theme button* (#636): on by default, also for a settings file from before it, stored under its
- * own key when off, a switch under *Appearance*; the theme button's save moves the stored *Theme*
- * one step per tap from what is stored, and *Theme*'s row shows what it chose.
+ * own key when off, a switch under *Appearance*; the theme menu's save (#771) stores the theme
+ * picked, and *Theme*'s row shows what it chose.
  */
 @RunWith(RobolectricTestRunner::class)
 class ThemeButtonSettingTest {
@@ -104,16 +104,12 @@ class ThemeButtonSettingTest {
     }
 
     @Test
-    fun eachSaveMovesTheStoredThemeOneStepFromWhatIsStored() {
-        val cycle = settings.themeCycler(saves)
-        for (expected in listOf(ThemeChoice.LIGHT, ThemeChoice.DARK, ThemeChoice.SYSTEM)) {
-            cycle()
+    fun eachSaveStoresTheThemePicked() {
+        val choose = settings.themeChooser(saves)
+        for (expected in listOf(ThemeChoice.DARK, ThemeChoice.LIGHT, ThemeChoice.SYSTEM, ThemeChoice.DARK)) {
+            choose(expected)
             compose.waitUntil(WAIT_MS) { settings.now().theme == expected }
         }
-        // Two taps before either is saved still move it two steps: each reads what is stored.
-        cycle()
-        cycle()
-        compose.waitUntil(WAIT_MS) { settings.now().theme == ThemeChoice.DARK }
     }
 
     @Test
@@ -133,13 +129,13 @@ class ThemeButtonSettingTest {
     @Test
     fun theThemeRowShowsWhatTheButtonChose() =
         showSettings {
-            val cycle = settings.themeCycler(saves)
+            val choose = settings.themeChooser(saves)
             for ((theme, label) in listOf(
                 ThemeChoice.LIGHT to R.string.settings_theme_light,
                 ThemeChoice.DARK to R.string.settings_theme_dark,
                 ThemeChoice.SYSTEM to R.string.settings_theme_system,
             )) {
-                cycle()
+                choose(theme)
                 compose.waitUntil(WAIT_MS) { settings.now().theme == theme }
                 compose.waitForIdle()
                 val read = "${text(R.string.settings_theme)}: ${text(label)}"
