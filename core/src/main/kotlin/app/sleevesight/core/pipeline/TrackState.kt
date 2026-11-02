@@ -40,6 +40,9 @@ import kotlin.time.Instant
  * @property genresAssembled whether [genres] and [laterLabels] are in (#772): set with them, in one
  *   update, as the evidence is assembled. Until then, no genre may still mean genres to come, even
  *   once every source has landed ([gathered]), while the last one's result is being kept.
+ * @property writesWith what a model call of the run would write the insight with, from the card's
+ *   key it looks up (#854): set once the run looks its card up, null before and for a run that
+ *   writes none. Beside an insight kept from before, it is what *Rewrite insight* would use.
  */
 data class TrackState(
     val nowPlaying: NowPlaying,
@@ -53,6 +56,7 @@ data class TrackState(
     val laterFound: Map<LabelSource, List<GenreLabel>> = emptyMap(),
     val laterAnswered: Set<LabelSource> = emptySet(),
     val genresAssembled: Boolean = false,
+    val writesWith: WrittenBy? = null,
 ) {
     /** Whether every source has landed. */
     val gathered: Boolean get() = sources.values.none { it is SourceState.Pending }
@@ -183,7 +187,10 @@ sealed interface InsightState {
      * say. It is shown no longer than *Keep history for* after it (#643, `pastKeepHistory`), as
      * the cache serves it. [searched] is what a genre's reason asked again with web search was
      * checked against (#801): the track's evidence and the pages it found, numbered after its lines,
-     * which its citations name; null for one written from the track's evidence alone.
+     * which its citations name; null for one written from the track's evidence alone. [rewritten] is
+     * what the call that wrote it as a rewrite (*Rewrite insight*, #854) used that the insight it
+     * replaced did not, which its footer says ("Rewritten with …"), kept with the card so a later
+     * play says it too; empty for an insight written the first time, and for one no rewrite wrote.
      */
     data class Written(
         val grounded: GroundedText,
@@ -194,6 +201,7 @@ sealed interface InsightState {
         val writtenBy: WrittenBy? = null,
         val writtenAt: Instant? = null,
         val searched: EvidenceSet? = null,
+        val rewritten: Set<RewritePart> = emptySet(),
     ) : InsightState
 
     /**
@@ -215,11 +223,16 @@ sealed interface InsightState {
 /**
  * What a written insight was written with, from its card's key ([CardKey]): the insight prompt's
  * [promptVersion], the AI service ([provider]) and its [model], and the reasoning [effort] asked
- * for, null for the service's default.
+ * for, null for the service's default; and, which a rewrite compares (#854, [rewriteParts]),
+ * whether the model's own knowledge was allowed ([modelKnowledge]) and the fingerprint of the
+ * evidence it was written from ([evidenceFingerprint]), null where no card's key says (a genre's
+ * reason, a test's fixture).
  */
 data class WrittenBy(
     val promptVersion: Int,
     val provider: ProviderId,
     val model: String,
     val effort: ReasoningEffort?,
+    val modelKnowledge: Boolean? = null,
+    val evidenceFingerprint: String? = null,
 )

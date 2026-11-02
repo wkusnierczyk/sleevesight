@@ -15,11 +15,15 @@ import app.sleevesight.core.pipeline.Pipeline
 import app.sleevesight.core.pipeline.PipelineEvent
 import app.sleevesight.core.pipeline.PipelineParts
 import app.sleevesight.core.pipeline.PipelineTime
+import app.sleevesight.core.pipeline.RewritePart
+import app.sleevesight.core.pipeline.Rewriting
 import app.sleevesight.core.pipeline.RunControl
 import app.sleevesight.core.pipeline.RunKey
 import app.sleevesight.core.pipeline.RunStep
 import app.sleevesight.core.pipeline.TrackChange
 import app.sleevesight.core.pipeline.TrackState
+import app.sleevesight.core.pipeline.WrittenBy
+import app.sleevesight.core.pipeline.rewriteParts
 import app.sleevesight.core.settings.PrepareNextTrack
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WebEngine
@@ -121,6 +125,10 @@ import kotlin.time.Instant
  * @property lookingAgain whether a look again is looking the sources up ([CoordinatorState.lookingAgain]).
  * @property somethingNew whether the last look again found something new, and *Rewrite insight* is
  *   offered for it ([CoordinatorState.foundSomethingNew]): a tap writes it, a paid call.
+ * @property rewriteWith what *Rewrite insight* would change, while it is offered ([rewrite], #854):
+ *   what a call of the track's run would write with (`TrackState.writesWith`) against what the
+ *   insight shown was written with, and what the last look again found new; null while it is not
+ *   offered, and when nothing a footer names would change.
  * @property nothingNew whether the last look again found nothing new, so nothing is offered for it
  *   ([CoordinatorState.foundNothingNew]).
  * @property askAgainKey the key of the run whose unreachable sources [askable] a tap on *Retry*
@@ -146,8 +154,18 @@ data class PipelineView(
     val lookingAgain: Boolean = false,
     val nothingNew: Boolean = false,
     val somethingNew: Boolean = false,
+    val rewriteWith: RewriteOffer? = null,
     val askAgainKey: RunKey? = null,
     val askable: Set<SourceId> = emptySet(),
+)
+
+/**
+ * What *Rewrite insight* would change (#854): the [parts] a rewrite would use that the insight shown
+ * did not, and what it would write with ([with]), whose model and effort name [RewritePart.MODEL].
+ */
+data class RewriteOffer(
+    val parts: Set<RewritePart>,
+    val with: WrittenBy,
 )
 
 /**
@@ -716,6 +734,17 @@ class PipelineHost(
             queue.trySend(CoordinatorEvent.SourcesGathered(id, gathered))
         }
 
+        // The card the coordinator's ledger keeps for this run's track, which a call granted now
+        // replaces (#854), with what the run's look again found; read once the call is granted, so
+        // the state seen holds the grant.
+        override fun rewriting(): Rewriting? {
+            val state = snapshot.value
+            val run = state.run?.takeIf { it.id == id }
+            val ledger = run?.let { state.written(it.nowPlaying) }
+            val replaced = ledger?.card?.insight?.writtenBy
+            return replaced?.let { Rewriting(it, run.lookedAgain, ledger.foundNew) }
+        }
+
         override fun labelsFailed(sources: Set<SourceId>) {
             queue.trySend(CoordinatorEvent.LabelsFailed(id, sources))
         }
@@ -766,9 +795,10 @@ class PipelineHost(
             val insight = shown.track?.insight
             // The card paid for past *Keep history for* (#643) is not shown, so nothing is offered for it.
             val cardPast = cardPast(shown, owner, lifetime)
+            val rewrite = owner.rewrites() && insight is InsightState.Written
             PipelineView(
                 track = shown.track,
-                rewrite = owner.rewrites() && insight is InsightState.Written,
+                rewrite = rewrite,
                 cardShown = shown.cardShown,
                 needsKey = needsKey(current?.parts, now),
                 aiReady = current?.parts?.let { it.ai != null } ?: view.value.aiReady,
@@ -784,6 +814,7 @@ class PipelineHost(
                 lookingAgain = owner.lookingAgain,
                 nothingNew = owner.foundNothingNew && !cardPast,
                 somethingNew = owner.foundSomethingNew,
+                rewriteWith = if (rewrite) rewriteOffer(shown.track, owner) else null,
                 askAgainKey = owner.askAgainKey,
                 askable = owner.askable,
             )
@@ -828,6 +859,21 @@ class PipelineHost(
                 else -> null
             }?.takeIf { card != null }
         return Shown(header(if (card != null) withCard(own, card) else own, owner), failure, cardShown = card != null)
+    }
+
+    // What *Rewrite insight* beside the insight [track] shows would change (#854): what its run would
+    // write with against what that insight was written with, and what the current run's look again
+    // found; null when nothing would.
+    private fun rewriteOffer(
+        track: TrackState?,
+        owner: CoordinatorState,
+    ): RewriteOffer? {
+        val replaced = (track?.insight as? Written)?.writtenBy
+        val with = track?.writesWith
+        if (replaced == null || with == null) return null
+        val found = owner.written(track.nowPlaying)?.foundNew
+        val parts = rewriteParts(replaced, with, owner.current?.lookedAgain, found)
+        return if (parts.isEmpty()) null else RewriteOffer(parts, with)
     }
 
     private fun needsKey(

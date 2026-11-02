@@ -52,6 +52,10 @@ internal class InsightWriter(
     // left lines out: every later call of the run, a tapped Retry too, goes straight to it.
     private var whole = false
 
+    // What the call under way replaces, as the run's control said when it was granted (#854): the
+    // insight kept for the track, which the call rewrites; null when it writes the first.
+    private var rewriting: Rewriting? = null
+
     /**
      * Writes at once when [control] decides so; else, when it waits for a tap, once the user taps
      * Write; else leaves it offered. A model call reports its end to [control], however it ends;
@@ -85,6 +89,8 @@ internal class InsightWriter(
         control: RunControl,
     ) {
         val wanted = cardKey(ai, model)
+        // What a call would write with, which *Rewrite insight* beside an insight kept compares (#854).
+        sink.update { it.copy(writesWith = wanted.writtenBy()) }
         // With when it was written, which the app checks what it shows against (#643). Against the
         // whole evidence: a card is kept only when it cites no line its prompt left out (`finish`), so
         // it reads as it read when it was written. One kept before the check that revises itself
@@ -105,6 +111,7 @@ internal class InsightWriter(
                         usage = null,
                         complete = true,
                         writtenAt = kept.writtenAt,
+                        rewritten = kept.rewritten,
                     )
                 // Its artist facts, for the next tracks of the listening session (#239).
                 (shown as? InsightState.Written)?.let {
@@ -138,6 +145,7 @@ internal class InsightWriter(
         control: RunControl,
     ) {
         do {
+            rewriting = control.rewriting()
             val shown =
                 try {
                     stream(ai, model, card, control)
@@ -299,6 +307,8 @@ internal class InsightWriter(
                 // One time, in whole milliseconds as the cache keeps it, for the card shown and the
                 // card kept, so the screen and the cache count *Keep history for* alike (#643).
                 val at = Instant.fromEpochMilliseconds(time.clock.now().toEpochMilliseconds())
+                // What a rewrite changed, kept with the card so a later play says it too (#854).
+                val rewritten = rewriting.changedFor(card)
                 val written =
                     checked(
                         reply,
@@ -308,6 +318,7 @@ internal class InsightWriter(
                         usage = asked.paid,
                         complete = complete,
                         writtenAt = at,
+                        rewritten = rewritten,
                     )
                 val keepable =
                     sent.leftOut.isEmpty() ||
@@ -316,7 +327,7 @@ internal class InsightWriter(
                             ?.paragraphs
                             ?.flatten()
                             ?.none { sentence -> sentence.cites.any { it in sent.leftOut } } == true
-                if (complete && keepable) guard.attempt("write insight") { keep(card, text, at) }
+                if (complete && keepable) guard.attempt("write insight") { keep(card, text, at, rewritten) }
                 if (written is InsightState.Written) {
                     parts.sessionFacts.cite(key, ArtistFact.citedIn(written.grounded, sent.evidence.lines))
                     control.cardWritten(written, evidence)
@@ -328,7 +339,7 @@ internal class InsightWriter(
 
     // [reply], checked against what was [sent] (a card from the cache against the whole evidence),
     // as a state. Written, it carries what its [card]'s key says it was written with, and when
-    // ([writtenAt]).
+    // ([writtenAt]), and what its rewrite changed ([rewritten], #854).
     @Suppress("LongParameterList") // The reply, what its prompt held, its card, and how it came.
     private fun checked(
         reply: InsightReply,
@@ -338,6 +349,7 @@ internal class InsightWriter(
         usage: Usage?,
         complete: Boolean,
         writtenAt: Instant?,
+        rewritten: Set<RewritePart> = emptySet(),
     ): InsightState =
         when (reply) {
             InsightReply.NoEvidence -> {
@@ -347,8 +359,16 @@ internal class InsightWriter(
 
             is InsightReply.Written -> {
                 emit(PipelineEvent.Grounded(key, reply.grounded.counts, reply.grounded.withdrawn != null))
-                val by = WrittenBy(card.promptVersion, card.provider, card.model, card.effort)
-                InsightState.Written(reply.grounded, cached, usage, complete, sent.held, by, writtenAt)
+                InsightState.Written(
+                    reply.grounded,
+                    cached,
+                    usage,
+                    complete,
+                    sent.held,
+                    card.writtenBy(),
+                    writtenAt,
+                    rewritten = rewritten,
+                )
             }
         }
 
@@ -411,6 +431,11 @@ internal class InsightWriter(
         const val WAITS_FOR_TAP = "waits for a tap on Write (Reactive)"
     }
 }
+
+// What a card written under [card] uses that the insight a call replaces did not (#854); none for
+// the track's first insight (no [Rewriting]).
+private fun Rewriting?.changedFor(card: CardKey): Set<RewritePart> =
+    this?.let { rewriteParts(it.replaced, card.writtenBy(), it.foundNew, it.foundIn) }.orEmpty()
 
 // What a reply's call came to before it ([InsightWriter]'s `finish`): whether a reply before it
 // revised itself ([revisedOnce], #798), and the tokens of every reply of the call, its own too ([paid]).

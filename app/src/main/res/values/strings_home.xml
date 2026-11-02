@@ -354,23 +354,47 @@
     <string name="home_insight_incomplete">The reply stopped early, so this is incomplete, and it was not kept.</string>
     <!-- The first line of a written insight's footer (#671), for an insight not written in this run but
          earlier: on an earlier play of the track, or before a Look again, a settings change or a
-         rewrite that failed. What follows from it goes on the same line, after it: what Look again
-         found, a rewrite that failed or was stopped, and Rewrite insight offered. Nothing for an
-         insight just written. -->
+         rewrite that failed. What follows from it goes on the same line, after it: a rewrite that
+         failed or was stopped, what Look again found, and Rewrite insight offered
+         (home_rewrite_offer). Nothing for an insight just written. For an insight written by Rewrite
+         insight, home_rewritten_with in its place (#854), never both. -->
     <string name="home_written_before">As written previously.</string>
-    <!-- After "As written previously.", with Rewrite insight offered (#615, #625, #671). -->
-    <string name="home_rewrite_offered">Tap Rewrite insight to write it with the updated source or model settings.</string>
+    <!-- In place of "As written previously." (#854), for an insight written by Rewrite insight, on
+         the play it was rewritten and every later one while it is the one kept; what follows goes
+         after it as after "As written previously.". %1$s: what the rewrite used that the insight it
+         replaced did not, its parts (home_rewrite_part_*, home_rewrite_model_effort) joined with
+         ", " and a last home_rewrite_and. -->
+    <string name="home_rewritten_with">Rewritten with %1$s.</string>
+    <!-- After "As written previously." or home_rewritten_with, with Rewrite insight offered (#615,
+         #625, #671, #854). %1$s: what a rewrite would use now that the insight shown did not, built as
+         in home_rewritten_with. No cost is said: the button carries the AI mark. -->
+    <string name="home_rewrite_offer">Tap Rewrite insight to have AI rewrite the insight with %1$s.</string>
+    <!-- The parts of home_rewritten_with and home_rewrite_offer (#854), in this order: what Look
+         again found new; the evidence changed otherwise (a source's key, a source or the web search
+         switched on or off, or a source answering otherwise); the AI service, model or effort (home_rewrite_model_effort: %1$s the
+         model as AI services lists it, %2$s the effort level as Settings names it, in lower case; the
+         model alone with the service's default effort); AI service knowledge; the prompt's version,
+         after an app update. -->
+    <string name="home_rewrite_part_new_findings">new findings from sources</string>
+    <string name="home_rewrite_part_updated_sources">updated sources</string>
+    <string name="home_rewrite_model_effort">%1$s %2$s effort</string>
+    <string name="home_rewrite_part_knowledge_on">AI service knowledge switched on</string>
+    <string name="home_rewrite_part_knowledge_off">AI service knowledge switched off</string>
+    <string name="home_rewrite_part_instructions">the updated app’s instructions</string>
+    <!-- The last two parts of home_rewritten_with and home_rewrite_offer: %1$s the parts before the
+         last, joined with ", ", %2$s the last. -->
+    <string name="home_rewrite_and">%1$s and %2$s</string>
     <!-- After "As written previously.", which says the insight shown is the one written earlier (#671). -->
     <string name="home_rewrite_failed">Rewriting failed: %1$s.</string>
     <string name="home_rewrite_stopped">Rewriting stopped.</string>
     <!-- Look again (#617): the first item of the menu beside Write insight, on a written insight; it
-         makes no AI call, so it has no AI mark. Then what is said after "As written previously."
-         (#671) while it looks the sources up (with Exa web search on, or not), once it found
-         something new (with Rewrite insight offered), and once it found nothing new. -->
+         makes no AI call, so it has no AI mark. Then what is said while it looks the sources up (with
+         Exa web search on, or not), on a line of its own (#785), and after "As written previously."
+         (#671) once it found nothing new. Once it found something new, home_rewrite_offer says so
+         (#854). -->
     <string name="home_look_again">Look again</string>
     <string name="home_look_again_looking_web">Looking every source up again, the web search included: a paid search on your Exa key.</string>
     <string name="home_look_again_looking">Looking every source up again.</string>
-    <string name="home_look_again_something_new">New findings from sources: tap Rewrite insight to use them, a paid call.</string>
     <string name="home_look_again_nothing_new">No update from sources.</string>
     <string name="home_stop">Stop writing</string>
     <string name="home_insight_stopped">Stopped before the reply ended, so nothing was kept.</string>
@@ -378,12 +402,10 @@
     <string name="home_insight_retry">Tap Write insight to try again, as a new call.</string>
     <!-- The note under an insight and under a genre's reason (#437): only for sentences the sources do
          not back, which are dimmed (uncited, or citing missing evidence; #819), naming the mark
-         (#664). A genre's reason kept from before says so in a line of its own (home_ai_kept_today,
-         #851), an insight in its footer ("As written previously.", #671). -->
-    <plurals name="home_note_unbacked">
-        <item quantity="one">The dimmed sentence is not backed by the sources.</item>
-        <item quantity="other">The %d dimmed sentences are not backed by the sources.</item>
-    </plurals>
+         (#664); one text for any number of them (#854). A genre's reason kept from before says so in
+         a line of its own (home_ai_kept_today, #851), an insight in its footer ("As written
+         previously.", #671). -->
+    <string name="home_note_unbacked">Dimmed text is not backed by the sources.</string>
     <!-- The grounding check's counts in full, under Show grounding details (a developer setting). -->
     <plurals name="home_meta_grounded">
         <item quantity="one">%1$d of %2$d sentence grounded</item>

@@ -7,6 +7,7 @@ import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Normalizer
+import app.sleevesight.core.pipeline.RewritePart
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.sources.ArtistPart
@@ -22,10 +23,11 @@ import kotlin.time.Instant
 
 /**
  * A cache kept at version 1 of its schema, with rows, upgrades with them intact and gains the
- * artist-level table (#238). The database is built from the committed `databases/1.db`, by the
- * statements that made it, filled as version 1's queries wrote it, and migrated from version 1 by
- * the schema, as `AndroidSqliteDriver` does when it opens a database of an older version (and the
- * CLI's JDBC driver, given the schema). `verifyMainCacheDatabaseMigration` checks the migrated
+ * artist-level table (#238); one kept at version 2 gains what a card's rewrite changed (#854). The
+ * database is built from the committed `databases/1.db` (or `2.db`), by the statements that made
+ * it, filled as version 1's queries wrote it, and migrated from that version by the schema, as
+ * `AndroidSqliteDriver` does when it opens a database of an older version (and the CLI's JDBC
+ * driver, given the schema). `verifyMainCacheDatabaseMigration` checks the migrated
  * schema is the current one; this checks the rows and the running totals. In memory, as
  * `HistoryMigrationTest` is.
  */
@@ -37,8 +39,8 @@ class CacheMigrationTest {
     fun close() = driver.close()
 
     @Test
-    fun `the schema is at version 2`() {
-        assertEquals(2L, CacheDatabase.Schema.version)
+    fun `the schema is at version 3`() {
+        assertEquals(3L, CacheDatabase.Schema.version)
     }
 
     @Test
@@ -59,7 +61,7 @@ class CacheMigrationTest {
 
             val opened = JdbcSqliteDriver(url, schema = CacheDatabase.Schema)
             try {
-                assertEquals(2L, opened.userVersion())
+                assertEquals(3L, opened.userVersion())
                 assertUpgraded(opened)
             } finally {
                 opened.close()
@@ -67,6 +69,22 @@ class CacheMigrationTest {
         } finally {
             kept.close()
         }
+    }
+
+    @Test
+    fun `a version 2 cache upgrades with its cards, none of them rewritten, and keeps what a rewrite changed`() {
+        schema(driver, version = 2, statements = 17)
+        rows(driver)
+        CacheDatabase.Schema.migrate(driver, 2, CacheDatabase.Schema.version)
+        val caches = Caches(driver, { Settings() }, Normalizer(JvmAccentFolder), clock)
+
+        val kept = caches.synthesis.get(SYNTHESIS_KEY)
+        assertEquals("v1 text", kept?.text)
+        assertEquals(emptySet(), kept?.rewritten)
+        val parts = setOf(RewritePart.MODEL, RewritePart.INSTRUCTIONS)
+        caches.synthesis.put(SYNTHESIS_KEY, "v3 text", clock.now, parts)
+        assertEquals(parts, caches.synthesis.get(SYNTHESIS_KEY)?.rewritten)
+        assertEquals(caches.countedStats(), caches.stats(), "the totals kept from version 2 are exact")
     }
 
     // The rows of [versionOne] are there, the totals are exact, and the artist-level table works.
@@ -91,9 +109,21 @@ class CacheMigrationTest {
      * its running totals' rows, and a row in each table as version 1's queries wrote it.
      */
     private fun versionOne(driver: SqlDriver) {
+        // Four tables, three indexes and six triggers.
+        schema(driver, version = 1, statements = 13)
+        rows(driver)
+    }
+
+    // The tables, indexes and triggers of the committed [version], made by its own [statements]
+    // (counted), and its running totals' rows.
+    private fun schema(
+        driver: SqlDriver,
+        version: Int,
+        statements: Int,
+    ) {
         // Read-only, so a missing file fails rather than being created.
-        driver.run("ATTACH DATABASE 'file:$SCHEMAS/1.db?mode=ro' AS v1")
-        val statements =
+        driver.run("ATTACH DATABASE 'file:$SCHEMAS/$version.db?mode=ro' AS v1")
+        val made =
             driver
                 .executeQuery(
                     identifier = null,
@@ -107,13 +137,15 @@ class CacheMigrationTest {
                     },
                     parameters = 0,
                 ).value
-        // Four tables, three indexes and six triggers.
-        assertEquals(13, statements.size, "the tables, indexes and triggers of version 1: $statements")
-        statements.forEach { driver.run(it) }
-        // Version 1's running totals, as its schema made them.
+        assertEquals(statements, made.size, "the tables, indexes and triggers of version $version: $made")
+        made.forEach { driver.run(it) }
+        // Its running totals, as its schema made them.
         driver.run("INSERT INTO cache_size (name, entries, bytes) SELECT name, entries, bytes FROM v1.cache_size")
         driver.run("DETACH DATABASE v1")
+    }
 
+    // A row in each of version 1's tables, as its queries wrote them, which version 2's wrote alike.
+    private fun rows(driver: SqlDriver) {
         // As version 1's queries wrote them: a retrieval entry, an artist resolution and a card.
         val ms = clock.now.toEpochMilliseconds()
         driver.run(

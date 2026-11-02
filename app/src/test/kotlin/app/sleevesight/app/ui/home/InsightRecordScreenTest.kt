@@ -22,6 +22,7 @@ import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.pipeline.CallId
 import app.sleevesight.app.pipeline.PipelineView
+import app.sleevesight.app.pipeline.RewriteOffer
 import app.sleevesight.app.pipeline.RunId
 import app.sleevesight.app.session.PlaybackInfo
 import app.sleevesight.app.session.PlaybackStatus
@@ -30,7 +31,10 @@ import app.sleevesight.app.ui.home.HomeFixtures.sundown
 import app.sleevesight.app.ui.home.HomeFixtures.track
 import app.sleevesight.app.ui.home.HomeFixtures.written
 import app.sleevesight.app.ui.logo.SPINNING_RECORD_TAG
+import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.pipeline.InsightState
+import app.sleevesight.core.pipeline.RewritePart
+import app.sleevesight.core.pipeline.WrittenBy
 import app.sleevesight.core.settings.Settings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -55,7 +59,10 @@ class InsightRecordScreenTest {
 
     private val app = ApplicationProvider.getApplicationContext<SleevesightApplication>()
 
-    private fun text(id: Int) = app.getString(id)
+    private fun text(
+        id: Int,
+        vararg args: Any,
+    ) = app.getString(id, *args)
 
     private val kept = track(insight = written("It is a song [MB1]."))
 
@@ -149,9 +156,23 @@ class InsightRecordScreenTest {
 
     @Test
     fun whileItLooksAgainTheRestOfTheFooterLineStaysJoinedAboveIt() {
-        val view = PipelineView(kept, aiReady = true, cardShown = true, lookingAgain = true, rewrite = true)
+        val with =
+            RewriteOffer(
+                setOf(RewritePart.UPDATED_SOURCES),
+                WrittenBy(5, ProviderId.ANTHROPIC, "claude-haiku-5-5", null),
+            )
+        val view =
+            PipelineView(
+                kept,
+                aiReady = true,
+                cardShown = true,
+                lookingAgain = true,
+                rewrite = true,
+                rewriteWith = with,
+            )
         show(view) {
-            val joined = text(R.string.home_written_before) + " " + text(R.string.home_rewrite_offered)
+            val offer = text(R.string.home_rewrite_offer, text(R.string.home_rewrite_part_updated_sources))
+            val joined = text(R.string.home_written_before) + " " + offer
             val line = bounds(joined)
             val looking = bounds(text(R.string.home_look_again_looking))
             assertTrue(looking.top >= line.bottom)

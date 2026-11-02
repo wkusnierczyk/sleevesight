@@ -64,7 +64,9 @@ CREATE TABLE artist_result (
 CREATE INDEX artist_result_used_at ON artist_result (used_at, size_bytes);
 
 -- A written insight or card, by the full synthesis key (R2, D14), the reasoning effort included
--- (`low`, `medium`, `high` or `default`).
+-- (`low`, `medium`, `high` or `default`). `rewritten` (version 3, #854): what the rewrite that wrote
+-- it changed (`RewritePart.encode`: its parts' keys, a space between), null for one written the
+-- first time.
 CREATE TABLE synthesis (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     kind TEXT NOT NULL,
@@ -80,6 +82,7 @@ CREATE TABLE synthesis (
     written_at INTEGER NOT NULL,
     used_at INTEGER NOT NULL,
     size_bytes INTEGER NOT NULL,
+    rewritten TEXT,
     UNIQUE (kind, entity_key, evidence_fingerprint, prompt_version, style_hash, provider, model, model_knowledge, effort)
 );
 
@@ -240,7 +243,7 @@ DELETE FROM artist_result;
 -- Synthesis
 
 synthesisGet:
-SELECT id, text, written_at
+SELECT id, text, written_at, rewritten
 FROM synthesis
 WHERE kind = :kind
   AND entity_key = :entityKey
@@ -267,9 +270,9 @@ WHERE kind = :kind
 synthesisInsert:
 INSERT INTO synthesis (
     kind, entity_key, evidence_fingerprint, prompt_version, style_hash, provider, model, model_knowledge, effort,
-    text, written_at, used_at, size_bytes
+    text, written_at, used_at, size_bytes, rewritten
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 synthesisTouch:
 UPDATE synthesis SET used_at = :usedAt WHERE id = :id;

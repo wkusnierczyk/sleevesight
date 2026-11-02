@@ -45,8 +45,8 @@ interface PipelineCache {
 
     /**
      * The card written for [key], if kept, with when it was written, where the cache knows it (a
-     * genre's reason, #523, is shown no longer than *Keep history for* after it); by default [card]'s,
-     * with no time.
+     * genre's reason, #523, is shown no longer than *Keep history for* after it), and what its rewrite
+     * changed (#854); by default [card]'s, with no time and no rewrite.
      */
     suspend fun keptCard(key: CardKey): KeptCard? = card(key)?.let { KeptCard(it, null) }
 
@@ -66,6 +66,18 @@ interface PipelineCache {
         text: String,
         writtenAt: Instant,
     ) = keep(key, text)
+
+    /**
+     * Keeps the card [text], written for [key] at [writtenAt] by a rewrite that changed [rewritten]
+     * (#854), so a later play says what it changed; by default as [keep] without them, where the
+     * cache keeps none.
+     */
+    suspend fun keep(
+        key: CardKey,
+        text: String,
+        writtenAt: Instant,
+        rewritten: Set<RewritePart>,
+    ) = keep(key, text, writtenAt)
 
     /** A cache that keeps nothing. */
     object None : PipelineCache {
@@ -91,10 +103,14 @@ interface PipelineCache {
     }
 }
 
-/** A card kept: its [text], and when it was written ([writtenAt]), null where the cache does not say. */
+/**
+ * A card kept: its [text], when it was written ([writtenAt]), null where the cache does not say, and
+ * what the rewrite that wrote it changed ([rewritten], #854), none for one written the first time.
+ */
 data class KeptCard(
     val text: String,
     val writtenAt: Instant?,
+    val rewritten: Set<RewritePart> = emptySet(),
 )
 
 /**
