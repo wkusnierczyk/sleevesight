@@ -400,6 +400,7 @@ class AppGenreNotesTest {
             val reason = later.reason(track(), "rock")
             reason.first()
             runCurrent()
+            assertEquals("reads held", 1, cache.heldReads)
             // The rest of the clear: the caches, then the reasons shown.
             cache.clearCards()
             later.forget()

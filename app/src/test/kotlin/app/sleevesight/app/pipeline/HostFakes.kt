@@ -180,6 +180,9 @@ internal class CardCache(
     /** A read of a card waits for this once it has its answer, as a slow read would; null, none. */
     var readHeld: Deferred<Unit>? = null
 
+    /** How many reads waited for [readHeld]. */
+    var heldReads = 0
+
     /** When each card kept was written, as kept. */
     val keptTimes: Collection<Instant> get() = keptAt.values
 
@@ -192,7 +195,12 @@ internal class CardCache(
             keptAt.remove(key)
         }
         val kept = cards[key]?.let { KeptCard(it, at) }
-        if (kept != null) readHeld?.await()
+        if (kept != null) {
+            readHeld?.let {
+                heldReads++
+                it.await()
+            }
+        }
         return kept
     }
 
