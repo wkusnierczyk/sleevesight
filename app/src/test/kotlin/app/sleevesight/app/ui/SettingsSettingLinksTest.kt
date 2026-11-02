@@ -37,6 +37,7 @@ import app.sleevesight.app.MemoryStore
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.WAIT_MS
+import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.session.SleevesightListenerService
 import app.sleevesight.app.settings.SettingsStore
@@ -44,6 +45,7 @@ import app.sleevesight.app.testCipher
 import app.sleevesight.app.ui.settings.SettingsScreen
 import app.sleevesight.app.ui.settings.SettingsSection
 import app.sleevesight.app.ui.settings.SettingsTarget
+import app.sleevesight.core.Secret
 import app.sleevesight.core.model.ProviderId
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -203,8 +205,12 @@ class SettingsSettingLinksTest {
         show(SettingsSection.SOURCES) {
             waitForNode(hasText(modelSummary, substring = true))
             assertEquals(1, count(hasText(none, substring = true)))
-            // Switched on, there is a model to ask, and the row says nothing of it.
-            runBlocking { settings.update { it.copy(aiProvider = ProviderId.ANTHROPIC) } }
+            // Switched on, with its key, there is a model to ask, and the row says nothing of it;
+            // without the key it is not on (#846).
+            runBlocking {
+                secrets.set(SecretId.ANTHROPIC, Secret("anthropic-key"))
+                settings.update { it.copy(aiProvider = ProviderId.ANTHROPIC) }
+            }
             compose.waitUntil(timeoutMillis = WAIT_MS) { count(hasText(none, substring = true)) == 0 }
             waitForNode(hasText(modelSummary, substring = true))
         }
