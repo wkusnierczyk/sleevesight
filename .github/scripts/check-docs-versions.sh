@@ -28,20 +28,21 @@ error() {
 }
 
 # The value of `docs_version` in a page's front matter (between a first line `---` and the next
-# `---`), quotes and trailing white space removed; nothing when the page has no front matter or no
-# such key.
+# `---`), quotes and trailing white space removed. Prints nothing when the page has no front matter,
+# no such key, a front matter that is never closed, or the key more than once: YAML takes the last
+# of repeated keys, so a second, empty `docs_version:` would hide the first from the site.
 docs_version() {
   awk '
-    NR == 1 { if ($0 !~ /^---[[:space:]]*$/) exit; next }
-    /^---[[:space:]]*$/ { exit }
+    NR == 1 { if ($0 !~ /^---[[:space:]]*$/) exit; open = 1; next }
+    /^---[[:space:]]*$/ { closed = 1; exit }
     /^docs_version:/ {
+      count++
       v = $0
       sub(/^docs_version:[[:space:]]*/, "", v)
       sub(/[[:space:]]*(#.*)?$/, "", v)
       gsub(/^["\047]|["\047]$/, "", v)
-      print v
-      exit
     }
+    END { if (open && closed && count == 1) print v }
   ' "$1"
 }
 

@@ -224,7 +224,7 @@ The back arrow, or Android's back, returns to where the page was opened from: th
 
 ## Writing an insight
 
-Each insight written is a call to your AI service (now and then two, below), on your own API key, and the service bills you for it. A call that failed or was stopped is never made again without a tap from you, and the buttons below say when a tap is a new call. Two cases make a second call on their own. To keep the prompt short, the first call may leave out lines about the artist, and if the service then answers that it has nothing to write from, the app asks once more at once, with every line, so that you get an insight rather than none. And when the reply corrects itself in its text and leaves nothing usable ([The insight](#the-insight)), the app asks once more. Each of the two calls is billed. [What it costs you]({{ '/docs/costs/' | relative_url }}) says what a call costs.
+Each insight written is a call to your AI service (now and then two or three, below), on your own API key, and the service bills you for it. A call that failed or was stopped is never made again without a tap from you, and the buttons below say when a tap is a new call. Two cases each make one more call on their own. To keep the prompt short, the first call may leave out lines about the artist, and if the service then answers that it has nothing to write from, the app asks once more at once, with every line, so that you get an insight rather than none. And when the reply corrects itself in its text and leaves nothing usable ([The insight](#the-insight)), the app asks once more. Every call is billed, so a track where both happen takes three. [What it costs you]({{ '/docs/costs/' | relative_url }}) says what a call costs.
 
 ```mermaid
 flowchart TD
