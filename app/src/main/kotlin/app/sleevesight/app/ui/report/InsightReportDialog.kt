@@ -100,7 +100,7 @@ private fun reasonLabel(reason: ReportReason): Int =
         ReportReason.OTHER -> R.string.report_reason_other
     }
 
-// A note longer than this is cut: a report is a few lines, and the mail app takes it in its address.
+// A note longer than this is cut: a report is a few lines.
 private const val NOTE_LIMIT = 2000
 
 /**

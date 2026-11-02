@@ -58,7 +58,7 @@ class DeveloperMarkReportTest {
     val compose = createEmptyComposeRule()
 
     private object NoMail : MailHandoff {
-        override fun send(mail: Mail): Handed = Handed.WHOLE
+        override fun send(mail: Mail): Handed = Handed.OPENED
 
         override fun copy(mail: Mail) = Unit
 

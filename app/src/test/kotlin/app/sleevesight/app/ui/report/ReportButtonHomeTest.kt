@@ -115,7 +115,7 @@ class ReportButtonHomeTest {
 
     private val mail =
         object : MailHandoff {
-            override fun send(mail: Mail) = Handed.WHOLE
+            override fun send(mail: Mail) = Handed.OPENED
 
             override fun copy(mail: Mail) = Unit
 

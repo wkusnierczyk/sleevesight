@@ -1,17 +1,22 @@
 package app.sleevesight.app.report
 
+import android.app.Activity
 import android.content.ClipDescription
 import android.content.ClipboardManager
+import android.content.ComponentName
 import android.content.Intent
+import android.content.IntentFilter
 import android.net.Uri
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.SleevesightApplication
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
@@ -21,81 +26,93 @@ import org.robolectric.annotation.Config
 class MailTest {
     private val app = ApplicationProvider.getApplicationContext<SleevesightApplication>()
 
-    // A `mailto:` URI is opaque, with no query Android parses: its body, decoded.
-    private fun body(uri: Uri): String = Uri.decode(uri.toString().substringAfter("&body="))
-
     private val mail = Mail(Mail.SUPPORT, "Sleevesight report: Wrong: A & B", "Line one\nLine two: 50% off?")
 
+    // Longer than the `mailto:` address took, when it held the body (#732): a tester's report.
+    private val long = Mail(Mail.SUPPORT, "Long", "Zażółć gęślą jaźń 🎵\n".repeat(4_000))
+
+    // An app on the phone answering [filters]. Robolectric resolves an intent, not its selector, so
+    // launches are not checked against them: only what the selector finds ([onlyMailAppsAnswerIt]).
+    private fun installed(
+        name: String,
+        vararg filters: IntentFilter,
+    ) {
+        val pm = shadowOf(app.packageManager)
+        val component = ComponentName("com.example.$name", "com.example.$name.Compose")
+        pm.addActivityIfNotPresent(component)
+        for (filter in filters) {
+            pm.addIntentFilterForActivity(component, filter.apply { addCategory(Intent.CATEGORY_DEFAULT) })
+        }
+    }
+
+    private fun mailto() = IntentFilter(Intent.ACTION_SENDTO).apply { addDataScheme("mailto") }
+
+    private fun share() = IntentFilter(Intent.ACTION_SEND, "text/plain")
+
+    // The mail as the app that took it reads it.
+    private fun assertCarries(
+        mail: Mail,
+        started: Intent,
+    ) {
+        assertEquals(Intent.ACTION_SEND, started.action)
+        assertArrayEquals(arrayOf(mail.to), started.getStringArrayExtra(Intent.EXTRA_EMAIL))
+        assertEquals(mail.subject, started.getStringExtra(Intent.EXTRA_SUBJECT))
+        assertEquals(mail.body, started.getStringExtra(Intent.EXTRA_TEXT))
+    }
+
     @Test
-    fun theIntentIsASendtoOfAMailtoAddressWithTheSubjectAndBodyInTheUriAndTheExtras() {
+    fun theIntentIsAnUntypedSendWithAMailtoSelector() {
         val intent = mailIntent(mail)
 
-        assertEquals(Intent.ACTION_SENDTO, intent.action)
-        val uri = intent.data!!
-        assertEquals("mailto", uri.scheme)
-        assertEquals(
-            "mailto:support@sleevesight.app?subject=Sleevesight%20report%3A%20Wrong%3A%20A%20%26%20B" +
-                "&body=Line%20one%0D%0ALine%20two%3A%2050%25%20off%3F",
-            uri.toString(),
-        )
-        assertArrayEquals(arrayOf(Mail.SUPPORT), intent.getStringArrayExtra(Intent.EXTRA_EMAIL))
-        assertEquals(mail.subject, intent.getStringExtra(Intent.EXTRA_SUBJECT))
-        assertEquals(mail.body, intent.getStringExtra(Intent.EXTRA_TEXT))
+        assertCarries(mail, intent)
+        // Android resolves the selector with this intent's type: a type would miss every `mailto:`
+        // filter, which declares none. Robolectric resolves the intent itself, so it cannot show this.
+        assertNull(intent.type)
+        val selector = intent.selector!!
+        assertEquals(Intent.ACTION_SENDTO, selector.action)
+        assertEquals(Uri.parse("mailto:"), selector.data)
     }
 
     @Test
-    fun aMultibyteBodyIsEncodedAsUtf8InTheUri() {
-        val uri = mailtoUri(Mail(Mail.SUPPORT, "Zażółć", "Björk – Jóga 🎵"))
+    fun onlyMailAppsAnswerIt() {
+        installed("mail", mailto(), share())
+        installed("chat", share())
 
-        assertEquals(
-            "mailto:support@sleevesight.app?subject=Za%C5%BC%C3%B3%C5%82%C4%87" +
-                "&body=Bj%C3%B6rk%20%E2%80%93%20J%C3%B3ga%20%F0%9F%8E%B5",
-            uri.toString(),
-        )
-        assertEquals("Björk – Jóga 🎵", body(uri))
+        // Android finds the app for an intent with a selector by the selector alone
+        // (`Intent.setSelector`); Robolectric's resolution reads the intent itself, so it is asked
+        // for the selector's here.
+        val answering = app.packageManager.queryIntentActivities(mailIntent(mail).selector!!, 0)
+
+        assertEquals(listOf("com.example.mail"), answering.map { it.activityInfo.packageName })
     }
 
     @Test
-    fun aBodyTooLongForTheUriGoesWholeInTheExtrasOnly() {
-        // Multibyte text grows most when encoded: each of these is 2 to 4 bytes, each byte 3 characters.
-        val long = Mail(Mail.SUPPORT, "Long", "Zażółć gęślą jaźń 🎵\n".repeat(400))
-        assertTrue(mailtoUri(long).toString().length > MAX_URI_LENGTH)
+    fun sendFromAnActivityHandsAMailAppTheWholeMail() {
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
 
-        val intent = mailIntent(long)
+        assertEquals(Handed.OPENED, PhoneMail(activity).send(long))
 
-        assertEquals("mailto:support@sleevesight.app?subject=Long", intent.data.toString())
-        assertEquals(long.body, intent.getStringExtra(Intent.EXTRA_TEXT))
+        val started = shadowOf(activity).nextStartedActivity
+        assertCarries(long, started)
+        assertEquals(0, started.flags and Intent.FLAG_ACTIVITY_NEW_TASK)
     }
 
     @Test
-    fun aBodyThatFitsGoesInTheUriWhole() {
-        val fits = Mail(Mail.SUPPORT, "Fits", "Zażółć gęślą jaźń 🎵\n".repeat(40))
-
-        assertEquals(fits.body.replace("\n", "\r\n"), body(mailIntent(fits).data!!))
-    }
-
-    @Test
-    fun sendStartsTheMailAppWhenOneTakesIt() {
-        assertEquals(Handed.WHOLE, PhoneMail(app).send(mail))
+    fun sendFromOutsideAnActivityStartsTheMailAppInATaskOfItsOwn() {
+        assertEquals(Handed.OPENED, PhoneMail(app).send(long))
 
         val started = shadowOf(app).nextStartedActivity
-        assertEquals(Intent.ACTION_SENDTO, started.action)
+        assertCarries(long, started)
+        assertEquals(Intent.FLAG_ACTIVITY_NEW_TASK, started.flags and Intent.FLAG_ACTIVITY_NEW_TASK)
     }
 
     @Test
-    fun sendSaysSoWhenNoMailAppTakesIt() {
-        // Robolectric resolves nothing: with the check on, an intent no app answers is refused.
+    fun anIntentNoAppAnswersIsReportedAsNoMailApp() {
+        // Robolectric resolves nothing: with the check on, an intent no app answers is refused. This
+        // pins the catch; which apps answer is [onlyMailAppsAnswerIt]'s.
         shadowOf(app).checkActivities(true)
 
         assertEquals(Handed.NO_MAIL_APP, PhoneMail(app).send(mail))
-    }
-
-    @Test
-    fun sendSaysWhenTheBodyWentInTheExtrasOnly() {
-        val long = Mail(Mail.SUPPORT, "Long", "Zażółć gęślą jaźń 🎵\n".repeat(400))
-
-        assertEquals(Handed.BODY_IN_EXTRAS, PhoneMail(app).send(long))
-        assertEquals("mailto:support@sleevesight.app?subject=Long", shadowOf(app).nextStartedActivity.data.toString())
     }
 
     @Test

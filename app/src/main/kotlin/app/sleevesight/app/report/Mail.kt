@@ -47,23 +47,17 @@ interface MailHandoff {
 
 /** How a [Mail] was handed to a mail app ([MailHandoff.send]). */
 enum class Handed {
-    /** Whole: the body in the `mailto:` address and in the extras, so any mail app shows it. */
-    WHOLE,
-
-    /**
-     * Its body too long for the address ([MAX_URI_LENGTH]), so only in the extras, which some mail
-     * apps do not read: they open the message without its text.
-     */
-    BODY_IN_EXTRAS,
+    /** A mail app took it, address, subject and body filled in. */
+    OPENED,
 
     /** No mail app took it. */
     NO_MAIL_APP,
 }
 
 /**
- * The phone's own mail apps, through [context], an activity's: an `ACTION_SENDTO` of a `mailto:`
- * address ([mailIntent]), which only mail apps answer, so a message app or a share target is never
- * offered; no app is chosen for the user. No app answering is caught as such, so no `<queries>`
+ * The phone's own mail apps, through [context], an activity's: an `ACTION_SEND` that only mail
+ * apps answer ([mailIntent]), so a message app or a share target is never offered; no app is
+ * chosen for the user. No app answering is caught as such, so no `<queries>`
  * entry is needed to ask first.
  */
 class PhoneMail(
@@ -75,7 +69,7 @@ class PhoneMail(
             val intent = mailIntent(mail)
             if (context !is Activity) intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             context.startActivity(intent)
-            if (bodyInUri(mail)) Handed.WHOLE else Handed.BODY_IN_EXTRAS
+            Handed.OPENED
         } catch (_: ActivityNotFoundException) {
             Handed.NO_MAIL_APP
         }
@@ -97,37 +91,15 @@ class PhoneMail(
 }
 
 /**
- * [mail] as an `ACTION_SENDTO` intent: the address, subject and body in the `mailto:` URI
- * (RFC 6068), which mail apps read, and again as the extras Android documents for it, which some
- * read instead. A body whose URI would pass [MAX_URI_LENGTH] goes in the extras only, whole, so no
- * app that cuts a long URI short is given part of it.
+ * [mail] as an `ACTION_SEND` intent, the address, subject and body in the extras Android documents
+ * for it, with an `ACTION_SENDTO` of `mailto:` as its selector, so only mail apps answer it
+ * (#732). Not an `ACTION_SENDTO` itself: Android documents no extras for that, and Gmail ignores
+ * its `EXTRA_TEXT`, so a body too long to go in the `mailto:` address opened empty. Untyped: Android
+ * resolves the selector with the intent's own type, and a `mailto:` filter declares none.
  */
-fun mailIntent(mail: Mail): Intent {
-    val uri = mailtoUri(mail, body = bodyInUri(mail))
-    return Intent(Intent.ACTION_SENDTO, uri)
+fun mailIntent(mail: Mail): Intent =
+    Intent(Intent.ACTION_SEND)
         .putExtra(Intent.EXTRA_EMAIL, arrayOf(mail.to))
         .putExtra(Intent.EXTRA_SUBJECT, mail.subject)
         .putExtra(Intent.EXTRA_TEXT, mail.body)
-}
-
-/** Whether [mail]'s body goes in its `mailto:` URI: whether the URI with it stays within [MAX_URI_LENGTH]. */
-fun bodyInUri(mail: Mail): Boolean = mailtoUri(mail).toString().length <= MAX_URI_LENGTH
-
-/**
- * [mail] as a `mailto:` URI, each part percent-encoded as UTF-8 (a space as `%20`), and each line
- * break of the body as `%0D%0A`, as RFC 6068 asks; without the body unless [body].
- */
-fun mailtoUri(
-    mail: Mail,
-    body: Boolean = true,
-): Uri {
-    val head = "mailto:${Uri.encode(mail.to, "@")}?subject=${Uri.encode(mail.subject)}"
-    val text = mail.body.replace("\r\n", "\n").replace("\n", "\r\n")
-    return Uri.parse(if (body) "$head&body=${Uri.encode(text)}" else head)
-}
-
-/**
- * The longest `mailto:` URI the body goes in, in characters, encoded. Mail apps set no documented
- * limit; a report is a few kilobytes, and a very long note or evidence list could pass this.
- */
-const val MAX_URI_LENGTH: Int = 16_000
+        .apply { selector = Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:")) }
