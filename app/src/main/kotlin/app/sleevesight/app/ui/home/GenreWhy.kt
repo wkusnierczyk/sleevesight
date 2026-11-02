@@ -122,7 +122,8 @@ internal class ReasonActions(
 
 // The reason asked for ([shown]), under the [question] (#523, #762): while the AI service is asked
 // and nothing is written yet, "Looking for an explanation…" in the button's place; written, its text,
-// then "by {model}", with *Read aloud* at the end of that row; the AI could not explain it, the
+// then "by {model}", the grounding note and, kept from before, when it was written (#851), with
+// *Read aloud* at the end of those rows; the AI could not explain it, the
 // button disabled with why under it; a failed call, why, in the error colour, with *Retry*.
 @Composable
 internal fun ReasonShown(
@@ -154,10 +155,7 @@ internal fun ReasonShown(
                     CheckedProse(paragraph, state.grounded, state.searched ?: context.track?.evidence, actions.onCite)
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        shown.model?.let { SearchCredit(stringResource(R.string.genre_why_by, it)) }
-                        GroundingLine(state.grounded, state.cached, details = false)
-                    }
+                    ReasonCredits(shown, state, Modifier.weight(1f))
                     actions.readAloud?.let { ReadAloudButton(it, GENRE_READ_ALOUD_TAG) }
                 }
                 if (!state.complete) QuietNote(stringResource(R.string.genre_why_incomplete))
@@ -186,6 +184,21 @@ internal fun ReasonShown(
 
         // Neither comes from a reason: not offered, and not stopped.
         is InsightState.Idle, InsightState.Stopped -> Unit
+    }
+}
+
+// Under a written reason ([state]): "by {model}", the grounding note, and, kept from before, when it
+// was written (#851).
+@Composable
+private fun ReasonCredits(
+    shown: GenreReason.Shown,
+    state: InsightState.Written,
+    modifier: Modifier,
+) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        shown.model?.let { SearchCredit(stringResource(R.string.genre_why_by, it)) }
+        GroundingLine(state.grounded, details = false)
+        shown.keptAt?.let { KeptLine(it) }
     }
 }
 

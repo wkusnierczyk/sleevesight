@@ -93,10 +93,11 @@ private val SOURCE_ROWS: List<SourceRow> =
  * *Sources*: a switch per source, each with its badge ([ServiceBadge]), what it is, its site,
  * and, for one that needs a key, a link to it under *Secrets*, where the keys are ([KeyLink]), and,
  * while it lacks the key, that it needs it ([keyNote]), its switch off and not to be moved (#667);
- * *AI service knowledge* links to *AI
- * services*, and says when none of them is switched on (#581). A web search engine's row is on
- * while web search is on with that engine ([Settings.isEnabled] needs both): switching it on turns
- * both on, and off turns the engine off.
+ * *AI service knowledge* links to *AI services*, and says when none of them is switched on (#581);
+ * while no AI service can be used ([aiServiceUsable]), its switch shows the value stored, dimmed,
+ * and cannot be moved (#846). A web search engine's row is on while web search is on with that
+ * engine ([Settings.isEnabled] needs both): switching it on turns both on, and off turns the engine
+ * off.
  */
 @Composable
 internal fun SourcesSection(
@@ -110,19 +111,22 @@ internal fun SourcesSection(
                 is SourceRow.Source -> SecretId.forSource(row.switch)
                 is SourceRow.Engine -> SecretId.forEngine(row.engine)
             }
+        val model = row is SourceRow.Source && row.switch == SourceSwitch.MODEL
         // With no key saved, the switch is off and cannot be moved (#667); stored on with none, as
         // before the keys' gate ([app.sleevesight.app.secrets.KeyGate]) writes it off, it shows off.
-        val usable = key == null || keySaved(secrets[key])
+        // With no AI service to use, *AI service knowledge* cannot be moved either (#846); unlike a
+        // keyed source's, its switch shows the value stored, which nothing here writes.
+        val usable = if (model) aiServiceUsable(settings, secrets) else key == null || keySaved(secrets[key])
         val checked = row.on(settings) && (key == null || secrets[key] != SecretState.ABSENT)
         val name = stringResource(row.name)
-        val model = row is SourceRow.Source && row.switch == SourceSwitch.MODEL
         val aiServices = stringResource(R.string.settings_section_ai)
         val summary =
             if (model) {
                 // With no AI service on, it says so: there is no model to ask (#538, #581).
                 lines(
                     stringResource(row.summary, aiServices),
-                    stringResource(R.string.settings_source_model_no_service).takeIf { settings.aiProvider == null },
+                    stringResource(R.string.settings_source_model_no_service)
+                        .takeIf { noAiServiceOn(settings, secrets) },
                 )
             } else {
                 lines(stringResource(row.summary), key?.let { keyNote(it, secrets, linked = true) })

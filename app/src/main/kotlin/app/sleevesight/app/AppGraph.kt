@@ -25,12 +25,13 @@ import app.sleevesight.app.history.HistoryRetention
 import app.sleevesight.app.pipeline.AppAiSearches
 import app.sleevesight.app.pipeline.AppGenreNotes
 import app.sleevesight.app.pipeline.AppPipelineParts
+import app.sleevesight.app.pipeline.AskAiWired
 import app.sleevesight.app.pipeline.AutoSearches
 import app.sleevesight.app.pipeline.ModelCheck
 import app.sleevesight.app.pipeline.PipelineHost
+import app.sleevesight.app.pipeline.Plays
 import app.sleevesight.app.pipeline.UnavailableModel
 import app.sleevesight.app.pipeline.afterAcknowledged
-import app.sleevesight.app.pipeline.genresWithNoDefinition
 import app.sleevesight.app.pipeline.online
 import app.sleevesight.app.pipeline.pipelineKeys
 import app.sleevesight.app.pipeline.rebuilds
@@ -68,18 +69,14 @@ import app.sleevesight.app.speech.SystemSpeech
 import app.sleevesight.app.speech.screenReaderOn
 import app.sleevesight.app.ui.home.GuideHiding
 import app.sleevesight.app.ui.home.SpokenWords
-import app.sleevesight.app.ui.home.emptyPanels
-import app.sleevesight.app.ui.home.searchFacts
 import app.sleevesight.core.ai.AiProvider
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.normalizer.Normalizer
-import app.sleevesight.core.pipeline.AiSearches
 import app.sleevesight.core.pipeline.ClearEpoch
 import app.sleevesight.core.pipeline.ListeningSessionFacts
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmResourceReader
 import app.sleevesight.core.resolution.MusicBrainzLookup
-import app.sleevesight.core.resolution.NameMatcher
 import app.sleevesight.core.settings.Crossfade
 import app.sleevesight.core.settings.FontChoice
 import app.sleevesight.core.settings.LinkStyle
@@ -87,7 +84,6 @@ import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.ThemeChoice
 import app.sleevesight.core.settings.WriteAutomatically
 import app.sleevesight.core.synthesis.AiSearchAnswers
-import app.sleevesight.core.synthesis.SearchFacts
 import app.sleevesight.core.synthesis.SearchKind
 import app.sleevesight.store.ArtistKeeping
 import app.sleevesight.store.Caches
@@ -514,6 +510,12 @@ class AppGraph internal constructor(
         )
 
     /**
+     * When the play of the track shown began, as the session layer reports the tracks (#851): an AI
+     * answer written before it is shown as kept from before.
+     */
+    private val plays = Plays()
+
+    /**
      * What a genre's panel shows besides its table (#523): each genre's definition, kept in the
      * caches' artist-level table whatever *Keep what sources said about each artist* says, since it
      * says nothing about what was played, and fetched ahead for the playing track (#786, `init`);
@@ -536,6 +538,10 @@ class AppGraph internal constructor(
             modelName = ListedModelNames(appContext)::of,
             // Their web searches and AI calls (#801), counted with *Ask AI*'s for the tester report.
             paid = { aiSearches.counted(it) },
+            // Each reason or list asked, or served from the cache, in the diagnostics' events (#851).
+            events = { diagnostics.log.record(it) },
+            // A reason written before this play of the track is kept from before (#851).
+            plays = plays.current,
         )
 
     /**
@@ -544,71 +550,34 @@ class AppGraph internal constructor(
      * pipeline's scope, marked with [clearEpoch]; its answers checked against the app's genre list and
      * the lyrics whitelist; the model named as the AI settings name it ([ListedModelNames]).
      */
-    val aiSearches: AppAiSearches by lazy {
-        AppAiSearches(
+    val aiSearches: AppAiSearches get() = askAi.searches
+
+    /**
+     * *Ask AI* wired together ([AskAiWired]): the searches above, and *Ask AI automatically* for the
+     * panels ([autoSearches]: each empty panel's search started as soon as its source has nothing,
+     * open or not, while the app is on screen) and for a genre's definition ([autoDefinitions], #786:
+     * each genre of the playing track's table whose Wikipedia lookup, fetched ahead, ended with none on
+     * this play, checked again just before its call). Each question and kept answer goes to the
+     * diagnostics' events (#851), and an answer written before this play of the track is kept from
+     * before ([plays]).
+     */
+    private val askAi: AskAiWired by lazy {
+        AskAiWired(
             parts = pipeline.liveParts,
             settings = latestSettings,
             answers = AiSearchAnswers(wiring.genreVocabulary, JvmAccentFolder),
             scope = pipelineScope,
+            settledNoDefinition = genreNotes.lookups::settledNoDefinition,
             epoch = clearEpoch,
             modelName = ListedModelNames(appContext)::of,
-            // An automatic search's gates, checked again just before its call, and where it goes back:
-            // the panels' own, or a genre's definition's (#786).
-            automaticGate = { track, kind, genre ->
-                if (kind == SearchKind.DEFINITION) {
-                    // Still no definition, settled on this play, Wikipedia and *Show genres* on (#786).
-                    autoDefinitions.open() && genre != null && genreNotes.lookups.settledNoDefinition(track, genre)
-                } else {
-                    autoSearches.open()
-                }
-            },
-            deferred = { track, kind, genre ->
-                if (kind == SearchKind.DEFINITION) {
-                    genre?.let { autoDefinitions.release(track, it) }
-                } else {
-                    autoSearches.release(track, kind)
-                }
-            },
+            events = { diagnostics.log.record(it) },
+            plays = plays.current,
         )
     }
 
-    /**
-     * *Search with AI*, the setting (#773): a panel's search started as soon as its source has
-     * nothing, open or not, while the app is on screen ([AutoSearches]), each attempt by its panel's
-     * subject (for *Dates* with the album, `AiSearches.subject`).
-     */
-    private val autoSearches: AutoSearches<SearchKind> by lazy {
-        val albums = NameMatcher(JvmAccentFolder)
-        AutoSearches(
-            ::emptyPanels,
-            {
-                track,
-                kind,
-                ->
-                Triple(track.normalized, track.nowPlaying.duration, AiSearches.subject(track, kind, albums))
-            },
-        ) { track, kind -> aiSearches.ask(track, kind, searchFacts(track, track.nowPlaying), automatic = true) }
-    }
+    private val autoSearches: AutoSearches<SearchKind> get() = askAi.panels
 
-    /**
-     * *Search with AI*, the setting, for a genre's definition (#786): each genre of the playing
-     * track's table whose Wikipedia lookup, fetched ahead, ended with none on this play
-     * ([genresWithNoDefinition]: not one still checked again), searched by itself, whether its panel
-     * is open or not, while the app is on screen ([AutoSearches]), each attempt by the genre; just
-     * before its call, the genre is checked to have none still (`automaticGate` above).
-     */
-    private val autoDefinitions: AutoSearches<String> by lazy {
-        AutoSearches(
-            { track, _ -> genresWithNoDefinition(track, genreNotes.lookups::settledNoDefinition) },
-        ) { track, genre ->
-            val label =
-                track.genres.all
-                    .firstOrNull { it.genre.identity == genre }
-                    ?.genre
-                    ?.label ?: genre
-            aiSearches.ask(track, SearchKind.DEFINITION, SearchFacts.ofGenre(label), automatic = true, genre = genre)
-        }
-    }
+    private val autoDefinitions: AutoSearches<String> get() = askAi.definitions
 
     /**
      * *Reactive*'s mode chosen, in the insight card's menu or in the settings (#615, #625): saved in
@@ -686,6 +655,9 @@ class AppGraph internal constructor(
             skipLearning.restore()
         }
         pipeline.start(pipelineScope)
+        // Each play of the track shown, from the session layer's reports as they come (not the
+        // pipeline's debounced runs), so an AI answer written before it shows as kept (#851).
+        mainScope.launch { plays.run(sessions.nowPlaying) }
         // *Search with AI*, the setting (#773): a panel's search starts as soon as its source has
         // nothing, open or not, for the playing track, while the app is on screen; again once an AI
         // service is ready.

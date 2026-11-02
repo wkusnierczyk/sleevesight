@@ -62,8 +62,9 @@ import app.sleevesight.core.synthesis.SearchKind
  *   of the line, as *Retry* is beside its line ([LineButton]); the focus handed from the button to
  *   *Stop* and back, as each takes the other's place;
  * - answered: a rule, the answer as the panel shows its source's ([answer]: from the web, each value
- *   with its page, [FromSite]), from the model's knowledge "From the AI model's own knowledge, not
- *   verified", then "by {model}" on a line of its own, in italics, however it was asked;
+ *   with its page, [FromSite]), then "by {model}" on a line of its own, in italics, however it was
+ *   asked, then from the model's knowledge "From the AI model's own knowledge, not verified", and,
+ *   kept from before, when it was written ([KeptLine], #851);
  * - nothing usable: a rule, and "{model} found nothing on the web." or "{model} couldn't say from
  *   its own knowledge." in the answer's place, after "Asked automatically: " for one asked by itself;
  * - failed: "Asking AI failed: {reason}.", or "AI web search failed." ([askFailedText]), in the
@@ -129,9 +130,9 @@ internal fun AiSearchBlock(
     }
 }
 
-// What [shown] found, under a rule, as the panel shows it ([answer]); from the model's knowledge
-// marked so, as an insight's claim from it is (#801); then its credit, which says when it was asked
-// automatically (#802).
+// What [shown] found, under a rule, as the panel shows it ([answer]); then its credit, asked by a tap
+// or automatically (#801's revised pick); from the model's knowledge marked so, as an insight's claim
+// from it is (#801); and, kept from before, when it was written (#851).
 @Composable
 private fun Answered(
     shown: AiSearch.Answered,
@@ -139,15 +140,16 @@ private fun Answered(
 ) {
     PanelRule(Modifier.testTag(AI_SEARCH_RULE_TAG))
     answer(shown.answer, shown.model)
+    SearchCredit(stringResource(R.string.home_ai_by, shown.model), Modifier.testTag(AI_SEARCH_BY_TAG))
     if (!shown.way.web) {
         SearchCredit(stringResource(R.string.home_cite_model), Modifier.testTag(AI_SEARCH_KNOWLEDGE_TAG))
     }
-    // The plain credit, asked by a tap or automatically (#801's revised pick).
-    SearchCredit(stringResource(R.string.home_ai_by, shown.model), Modifier.testTag(AI_SEARCH_BY_TAG))
+    shown.keptAt?.let { KeptLine(it) }
 }
 
 // Nothing found, under a rule: on the web or from the model's knowledge, after "Asked
-// automatically: " for a question asked by itself (#801, #802).
+// automatically: " for a question asked by itself (#801, #802); kept from before, when it was
+// written (#851).
 @Composable
 private fun NothingFound(shown: AiSearch.NothingFound) {
     PanelRule(Modifier.testTag(AI_SEARCH_RULE_TAG))
@@ -157,10 +159,11 @@ private fun NothingFound(shown: AiSearch.NothingFound) {
         if (shown.way.automatic) stringResource(R.string.home_ai_nothing_auto, nothing) else nothing,
         Modifier.testTag(AI_SEARCH_NOTHING_TAG),
     )
+    shown.keptAt?.let { KeptLine(it) }
 }
 
 /**
- * "by {model}" under what *Ask AI* found ([text]), on a line of its own, in italics (#773); and above
+ * "by {model}" under what *Ask AI* found ([text]), on a line of its own, in italics (#773); and under
  * it, for an answer from the model's knowledge, that it is (#801).
  */
 @Composable

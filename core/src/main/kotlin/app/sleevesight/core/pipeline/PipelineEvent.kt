@@ -10,8 +10,10 @@ import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.synthesis.GroundingCounts
+import app.sleevesight.core.synthesis.SearchKind
 import app.sleevesight.core.synthesis.SelfRevision
 import kotlin.time.Duration
+import kotlin.time.Instant
 
 /**
  * What the pipeline did, for the diagnostics log (`design/architecture.md`, *Diagnostics*): session
@@ -209,4 +211,89 @@ sealed interface PipelineEvent {
     data class NoEvidence(
         override val key: String,
     ) : PipelineEvent
+
+    /**
+     * An *Ask AI* question goes to the AI service (#851), past what was kept: [question], started by
+     * itself ([automatic], *Ask AI automatically*) or by a tap, with [provider]'s [model]. [key] is
+     * the lookup key of the track it was asked from (a genre's definition's too, which serves every
+     * track with the genre). Its end is an [AiEnded].
+     */
+    data class AiAsked(
+        override val key: String,
+        val question: AiQuestion,
+        val automatic: Boolean,
+        val provider: ProviderId,
+        val model: String,
+    ) : PipelineEvent
+
+    /**
+     * An [AiAsked] question ended, as [outcome] says ([failure], the reason a failure names), after
+     * the web searches and AI calls of [cost] (none when what was kept answered it after all), in
+     * [latency].
+     */
+    data class AiEnded(
+        override val key: String,
+        val question: AiQuestion,
+        val outcome: AiOutcome,
+        val cost: QuestionCost,
+        val latency: Duration,
+        val failure: String? = null,
+    ) : PipelineEvent
+
+    /**
+     * An *Ask AI* answer served from what was kept (#851), with no call: read from the synthesis
+     * cache, or shown for another track than the one it was asked from (a genre's definition). It
+     * was written by [provider]'s [model] at [writtenAt] (null where the cache does not say), asked
+     * by itself or by a tap as [automatic] says (null where what was kept does not say).
+     */
+    data class AiKept(
+        override val key: String,
+        val question: AiQuestion,
+        val provider: ProviderId,
+        val model: String,
+        val writtenAt: Instant?,
+        val automatic: Boolean? = null,
+    ) : PipelineEvent
+
+    /**
+     * An *Ask AI* question started by itself was not asked (#851): its gates (*Ask AI automatically*,
+     * the app on screen, the panel or the genre still with nothing, the same AI service) closed
+     * between its start and its call. It starts again once they open.
+     */
+    data class AiNotAsked(
+        override val key: String,
+        val question: AiQuestion,
+    ) : PipelineEvent
+}
+
+/** What an *Ask AI* question asks, for the diagnostics (#851). */
+sealed interface AiQuestion {
+    /** *Dates*, *Genres* or *Lyrics* on Home ([kind]), or, [SearchKind.DEFINITION], [genre]'s definition. */
+    data class Search(
+        val kind: SearchKind,
+        val genre: String? = null,
+    ) : AiQuestion
+
+    /** *Why is this …?*: why the track has [genre]. */
+    data class Reason(
+        val genre: String,
+    ) : AiQuestion
+
+    /** The AI's genre list for the track, asked before *Why is this …?* for a genre only MusicBrainz gives (#762). */
+    data object GenreList : AiQuestion
+}
+
+/** How an *Ask AI* question ended (#851). */
+enum class AiOutcome {
+    /** An answer, as checked: shown and kept. */
+    ANSWERED,
+
+    /** Nothing usable in the reply (for a reason, `NO_EVIDENCE`); kept, as an answer is. */
+    NOTHING_FOUND,
+
+    /** The call, or its web search, failed; not kept. */
+    FAILED,
+
+    /** Stopped before its answer settled; nothing shown or kept. */
+    STOPPED,
 }
