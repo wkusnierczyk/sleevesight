@@ -115,10 +115,10 @@ class MainActivity : ComponentActivity() {
         )
     }
 
-    // What Home's theme button reads (#636): *Theme button* and *Theme*, and the tap's save, in the
+    // What Home's theme button reads (#636): *Theme button* and *Theme*, and the menu's save, in the
     // process's scope, which outlives the activity the new theme restarts from Android 12.
     private val themeButton: ThemeButtonFeed by lazy {
-        ThemeButtonFeed(graph.latestSettings, graph.settings.themeCycler(graph.settingsSaves))
+        ThemeButtonFeed(graph.latestSettings, graph.settings.themeChooser(graph.settingsSaves))
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

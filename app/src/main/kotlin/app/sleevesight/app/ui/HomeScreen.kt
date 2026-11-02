@@ -155,7 +155,8 @@ private fun HomeBody(
 /**
  * Home's header (#445), pinned above what scrolls: the one-line logo ([HeaderLogo], #383), which
  * scrolls Home back to the top, and at the end the cogwheel, which opens the settings, with the
- * theme button ([themeButton], #636) before it while *Theme button* is on. A divider under it
+ * theme button ([themeButton], #636), which opens the theme menu (#771), before it while *Theme
+ * button* is on. A divider under it
  * shows once Home has scrolled. A menu icon, if one comes, goes beside the cogwheel.
  */
 @Composable
@@ -191,10 +192,9 @@ private fun HomeHeader(
                 HeaderLogo()
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // The theme a tap gives, named and drawn (#636), first; the cogwheel stays at the end.
-                themeButton?.let {
-                    HeaderButton(stringResource(it.label), it.icon, it.onCycle)
-                }
+                // The current theme, named and drawn, which opens the theme menu (#771), first; the
+                // cogwheel stays at the end.
+                themeButton?.let { ThemeMenuButton(it) }
                 HeaderButton(settings, R.drawable.ic_settings, onOpenSettings)
             }
         }
@@ -206,17 +206,18 @@ private fun HomeHeader(
 /** A button of Home's header: [icon], 48 dp, with [label] as its content description and its tooltip. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun HeaderButton(
+internal fun HeaderButton(
     label: String,
     @DrawableRes icon: Int,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     TooltipBox(
         positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Below),
         tooltip = { PlainTooltip { Text(label) } },
         state = rememberTooltipState(),
     ) {
-        IconButton(onClick = onClick) {
+        IconButton(onClick = onClick, modifier = modifier) {
             Icon(painterResource(icon), contentDescription = label)
         }
     }
