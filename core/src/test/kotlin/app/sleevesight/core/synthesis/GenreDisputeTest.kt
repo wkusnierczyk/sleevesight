@@ -29,15 +29,19 @@ class GenreDisputeTest {
             "It is not a folk song [W1].",
             "It is not classified as folk [W1].",
             "It does not belong to folk [W1].",
+            // #864's second review: the genre's name ends at a mark or a word that makes no longer genre.
+            "It is not folk because its sound is rooted in soul [W1].",
+            "It is Americana rather than folk, with a soul groove [W1].",
         ).forEach { assertTrue(GenreDispute.disputes(it, folk), it) }
     }
 
     @Test
-    fun `the genre, then a verb and a negation on the label, disputes it`() {
+    fun `the genre denied as the label in so many words disputes it`() {
         listOf(
             "Folk is not the right label for it [W1].",
-            "The folk tag doesn't fit her plain soul [W1].",
-            "Folk isn't really what this is [W1].",
+            "Folk isn't an accurate genre for her [W1].",
+            "The folk tag doesn't fit here [W1].",
+            "Folk does not apply [W1].",
         ).forEach { assertTrue(GenreDispute.disputes(it, folk), it) }
     }
 
@@ -57,6 +61,10 @@ class GenreDisputeTest {
             "Folk is not loud here [W1].",
             "Folk is not the only thread in it [W1].",
             "Folk is no stranger to her [W1].",
+            // #864's second review: a qualification of the label, not a denial of it.
+            "Folk is not the whole story: its acoustic storytelling blends with soul [W1].",
+            "The folk label does not describe every aspect of the track, but its acoustic storytelling fits [W1].",
+            "The folk tag does not fit every song she wrote [W1].",
         ).forEach { assertFalse(GenreDispute.disputes(it, folk), it) }
     }
 
