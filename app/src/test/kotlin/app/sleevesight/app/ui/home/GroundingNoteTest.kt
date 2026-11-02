@@ -98,7 +98,7 @@ class GroundingNoteTest {
             compose.onNodeWithText("It was recorded in 1973", substring = true).assertExists()
             assertNoGroundedCount()
             assertNoUnbackedNote()
-            assertEquals(0, count(text(R.string.home_note_kept), substring = true))
+            assertEquals(0, count("Kept from before", substring = true))
         }
 
     @Test
@@ -133,7 +133,7 @@ class GroundingNoteTest {
     fun aKeptInsightSaysSoInItsOwnLineNotInTheNote() {
         show(written("It was recorded in 1973 [MB1].", cached = true)) {
             compose.onNodeWithText(text(R.string.home_written_before)).assertExists()
-            assertEquals(0, count(text(R.string.home_note_kept), substring = true))
+            assertEquals(0, count("Kept from before", substring = true))
             assertNoGroundedCount()
             assertNoUnbackedNote()
         }
@@ -142,7 +142,7 @@ class GroundingNoteTest {
             val before = compose.onNodeWithText(text(R.string.home_written_before)).fetchSemanticsNode().boundsInRoot
             val note = compose.onNodeWithText(unbacked(1)).fetchSemanticsNode().boundsInRoot
             assertTrue("the note under As written previously.", note.top >= before.bottom - 1f)
-            assertEquals(0, count(text(R.string.home_note_kept), substring = true))
+            assertEquals(0, count("Kept from before", substring = true))
         }
     }
 

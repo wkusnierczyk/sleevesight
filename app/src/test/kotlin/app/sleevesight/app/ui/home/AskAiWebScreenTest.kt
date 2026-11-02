@@ -1,10 +1,14 @@
 package app.sleevesight.app.ui.home
 
+import android.content.Intent
+import android.os.Looper
+import android.text.format.DateFormat
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
@@ -34,6 +38,7 @@ import app.sleevesight.app.pipeline.AiSearchFeed
 import app.sleevesight.app.pipeline.DefinitionState
 import app.sleevesight.app.pipeline.GenreNotes
 import app.sleevesight.app.pipeline.GenreReason
+import app.sleevesight.app.pipeline.MovedClock
 import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.app.session.PlaybackInfo
 import app.sleevesight.app.session.PlaybackStatus
@@ -68,7 +73,10 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import java.time.ZoneId
+import java.util.Locale
 import kotlin.time.Duration
 import kotlin.time.Instant
 
@@ -170,7 +178,11 @@ class AskAiWebScreenTest {
             scenario.onActivity {
                 it.setContent {
                     ArtTheme(null) { errorColour = MaterialTheme.colorScheme.error }
-                    Column(Modifier.verticalScroll(rememberScrollState())) { NowPlayingContent(current.value, actions) }
+                    CompositionLocalProvider(LocalWallClock provides wall) {
+                        Column(Modifier.verticalScroll(rememberScrollState())) {
+                            NowPlayingContent(current.value, actions)
+                        }
+                    }
                 }
             }
             compose.waitForIdle()
@@ -249,14 +261,74 @@ class AskAiWebScreenTest {
         }
 
     @Test
-    fun anAnswerFromKnowledgeIsMarkedSoAboveTheCredit() =
+    fun anAnswerFromKnowledgeIsMarkedSoUnderTheCredit() =
         show {
             tap(DATES_CHIP_TAG)
             set(SearchKind.DATES, AiSearch.Answered(SearchAnswer.Dates(album = "1974-01"), model))
             compose.onNodeWithTag(AI_SEARCH_KNOWLEDGE_TAG).assertTextEquals(text(R.string.home_cite_model))
-            assertTrue(bounds(AI_SEARCH_BY_TAG).top >= bounds(AI_SEARCH_KNOWLEDGE_TAG).bottom)
+            assertTrue(bounds(AI_SEARCH_KNOWLEDGE_TAG).top >= bounds(AI_SEARCH_BY_TAG).bottom)
             assertEquals(0, count(AI_SEARCH_FROM_TAG))
+            // Written on this play: nothing says it was kept.
+            assertEquals(0, count(AI_KEPT_TAG))
         }
+
+    // The kept line's clock, fixed: 15:30 on 2 November 2026 in Oslo, moved by the tests.
+    private val clock = MovedClock(Instant.parse("2026-11-02T14:30:00Z"))
+    private val wall = WallClock(clock) { ZoneId.of("Europe/Oslo") }
+
+    // What the kept line says for one written at [at], as the phone writes times and dates, at the
+    // clock's time.
+    private fun keptLine(at: Instant): String =
+        when (val written = writtenWhen(at, clock.at, wall.zone(), Locale.getDefault(), is24())) {
+            is Written.Today -> app.getString(R.string.home_ai_kept_today, written.time)
+            is Written.OnDay -> app.getString(R.string.home_ai_kept_on, written.date)
+        }
+
+    private fun is24() = DateFormat.is24HourFormat(app)
+
+    @Test
+    fun aKeptAnswerSaysWhenItWasWrittenUnderItsCreditLines() {
+        val today = Instant.parse("2026-11-02T12:04:00Z")
+        val earlier = Instant.parse("2026-10-31T12:04:00Z")
+        show {
+            tap(DATES_CHIP_TAG)
+            set(SearchKind.DATES, AiSearch.Answered(SearchAnswer.Dates(album = "1974-01"), model, keptAt = today))
+            compose.onNodeWithTag(AI_KEPT_TAG).assertTextEquals(keptLine(today))
+            assertTrue(keptLine(today).startsWith("Kept from before: written today at "))
+            // The answer, by its model, from its knowledge, then kept from before.
+            assertTrue(bounds(AI_SEARCH_BY_TAG).top >= boundsOf("This album was released in January 1974.").bottom)
+            assertTrue(bounds(AI_SEARCH_KNOWLEDGE_TAG).top >= bounds(AI_SEARCH_BY_TAG).bottom)
+            assertTrue(bounds(AI_KEPT_TAG).top >= bounds(AI_SEARCH_KNOWLEDGE_TAG).bottom)
+            assertEquals(null, fontStyle(AI_KEPT_TAG))
+            // Written on an earlier day: its date.
+            set(SearchKind.DATES, AiSearch.Answered(SearchAnswer.Dates(album = "1974-01"), model, keptAt = earlier))
+            compose.onNodeWithTag(AI_KEPT_TAG).assertTextEquals(keptLine(earlier))
+            assertTrue(keptLine(earlier).startsWith("Kept from before: written on "))
+            // Nothing found, kept: said under its line.
+            set(SearchKind.DATES, AiSearch.NothingFound(model, keptAt = earlier))
+            assertTrue(bounds(AI_KEPT_TAG).top >= bounds(AI_SEARCH_NOTHING_TAG).bottom)
+            set(SearchKind.DATES, AiSearch.NothingFound(model))
+            assertEquals(0, count(AI_KEPT_TAG))
+        }
+    }
+
+    @Test
+    fun aKeptLineLeftOnScreenPastMidnightNoLongerSaysToday() {
+        val today = Instant.parse("2026-11-02T12:04:00Z")
+        show {
+            tap(DATES_CHIP_TAG)
+            set(SearchKind.DATES, AiSearch.Answered(SearchAnswer.Dates(album = "1974-01"), model, keptAt = today))
+            assertTrue(keptLine(today).startsWith("Kept from before: written today at "))
+            compose.onNodeWithTag(AI_KEPT_TAG).assertTextEquals(keptLine(today))
+            // The next day: the minute's tick reads the clock again.
+            clock.at = Instant.parse("2026-11-03T00:01:00Z")
+            app.sendBroadcast(Intent(Intent.ACTION_TIME_TICK))
+            shadowOf(Looper.getMainLooper()).idle()
+            compose.waitForIdle()
+            assertTrue(keptLine(today).startsWith("Kept from before: written on "))
+            compose.onNodeWithTag(AI_KEPT_TAG).assertTextEquals(keptLine(today))
+        }
+    }
 
     @Test
     fun aQuestionAskedAutomaticallySaysSoInItsNothingLineOnly() =

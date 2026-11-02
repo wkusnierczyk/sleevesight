@@ -215,6 +215,10 @@
          5.5"), whether it was asked by a tap or automatically (#801's revised pick). Also the byline
          under the Key insights heading, naming the model that wrote the insight (#811). -->
     <string name="home_ai_by">by %1$s</string>
+    <!-- Under an AI answer kept from before (#851), after its credit lines: the time it was written, today. -->
+    <string name="home_ai_kept_today">Kept from before: written today at %1$s.</string>
+    <!-- The same, written on an earlier day: its date ("31 October", with the year when not this year). -->
+    <string name="home_ai_kept_on">Kept from before: written on %1$s.</string>
     <!-- Under a value found on the web (#801), on its own line: %1$s is the page's site ("discogs.com"),
          a link to the page. -->
     <string name="home_ai_from">From %1$s</string>
@@ -374,13 +378,12 @@
     <string name="home_insight_retry">Tap Write insight to try again, as a new call.</string>
     <!-- The note under an insight and under a genre's reason (#437): only for sentences the sources do
          not back, which are dimmed (uncited, or citing missing evidence; #819), naming the mark
-         (#664); and for a genre's reason kept from before (an insight says so in its own line,
-         "As written previously.", #671). -->
+         (#664). A genre's reason kept from before says so in a line of its own (home_ai_kept_today,
+         #851), an insight in its footer ("As written previously.", #671). -->
     <plurals name="home_note_unbacked">
         <item quantity="one">The dimmed sentence is not backed by the sources.</item>
         <item quantity="other">The %d dimmed sentences are not backed by the sources.</item>
     </plurals>
-    <string name="home_note_kept">Kept from before.</string>
     <!-- The grounding check's counts in full, under Show grounding details (a developer setting). -->
     <plurals name="home_meta_grounded">
         <item quantity="one">%1$d of %2$d sentence grounded</item>

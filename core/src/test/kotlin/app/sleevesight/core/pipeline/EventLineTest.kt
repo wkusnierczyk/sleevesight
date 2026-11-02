@@ -5,18 +5,120 @@ import app.sleevesight.core.ai.Breakoff
 import app.sleevesight.core.ai.BreakoffCause
 import app.sleevesight.core.ai.Usage
 import app.sleevesight.core.model.Outcome
+import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.synthesis.GroundingCounts
+import app.sleevesight.core.synthesis.SearchKind
 import app.sleevesight.core.synthesis.SelfRevision
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Instant
 
 /**
  * The diagnostics lines of MusicBrainz's resolution name why it could not be asked (#191); the
  * grounding line, whether a self-correction was taken out (#597); a failed call's, how its reply broke
- * off (#665); a reply that revised itself, its sign (#798).
+ * off (#665); a reply that revised itself, its sign (#798); an *Ask AI* question, what it asked, how,
+ * and how it ended, and a kept answer served, when it was written (#851).
  */
 class EventLineTest {
+    @Test
+    fun `an Ask AI question's lines say what it asked, how, by which model, and how it ended (#851)`() {
+        val definition = AiQuestion.Search(SearchKind.DEFINITION, "singer-songwriter")
+        assertEquals(
+            "ask ai     a|song: definition of \"singer-songwriter\", asked automatically, anthropic claude-haiku-5-5",
+            EventLine.of(PipelineEvent.AiAsked("a|song", definition, true, ProviderId.ANTHROPIC, "claude-haiku-5-5")),
+        )
+        assertEquals(
+            "ask ai     a|song: dates, asked by a tap, anthropic claude-haiku-5-5",
+            EventLine.of(
+                PipelineEvent.AiAsked(
+                    "a|song",
+                    AiQuestion.Search(SearchKind.DATES),
+                    false,
+                    ProviderId.ANTHROPIC,
+                    "claude-haiku-5-5",
+                ),
+            ),
+        )
+    }
+
+    @Test
+    fun `an Ask AI question's end says how, its calls and web searches, and how long it took (#851)`() {
+        assertEquals(
+            "ask ai     a|song: lyrics, answered, 1 call, 2 web searches, 2345 ms",
+            EventLine.of(
+                PipelineEvent.AiEnded(
+                    "a|song",
+                    AiQuestion.Search(SearchKind.LYRICS),
+                    AiOutcome.ANSWERED,
+                    QuestionCost(searches = 2, calls = 1),
+                    2345.milliseconds,
+                ),
+            ),
+        )
+        assertEquals(
+            "ask ai     a|song: reason for \"punk\", failed (timeout), 0 calls, 1 web search, 12 ms",
+            EventLine.of(
+                PipelineEvent.AiEnded(
+                    "a|song",
+                    AiQuestion.Reason("punk"),
+                    AiOutcome.FAILED,
+                    QuestionCost(searches = 1),
+                    12.milliseconds,
+                    "timeout",
+                ),
+            ),
+        )
+        assertEquals(
+            "ask ai     a|song: genre list, stopped, 1 call, 0 web searches, 800 ms",
+            EventLine.of(
+                PipelineEvent.AiEnded(
+                    "a|song",
+                    AiQuestion.GenreList,
+                    AiOutcome.STOPPED,
+                    QuestionCost(calls = 1),
+                    800.milliseconds,
+                ),
+            ),
+        )
+        assertEquals(
+            "ask ai     a|song: genres, not asked: closed before its call",
+            EventLine.of(PipelineEvent.AiNotAsked("a|song", AiQuestion.Search(SearchKind.GENRES))),
+        )
+    }
+
+    @Test
+    fun `a kept Ask AI answer's line says it was served with no call, when it was written, and how (#851)`() {
+        val at = Instant.parse("2026-11-02T13:04:12.345Z")
+        assertEquals(
+            "ask ai     a|song: definition of \"singer-songwriter\", kept answer served, no call, " +
+                "written 2026-11-02T13:04:12.345Z, asked automatically, anthropic claude-haiku-5-5",
+            EventLine.of(
+                PipelineEvent.AiKept(
+                    "a|song",
+                    AiQuestion.Search(SearchKind.DEFINITION, "singer-songwriter"),
+                    ProviderId.ANTHROPIC,
+                    "claude-haiku-5-5",
+                    at,
+                    automatic = true,
+                ),
+            ),
+        )
+        assertEquals(
+            "ask ai     a|song: reason for \"punk\", kept answer served, no call, written at a time not kept, " +
+                "anthropic claude-haiku-5-5",
+            EventLine.of(
+                PipelineEvent.AiKept(
+                    "a|song",
+                    AiQuestion.Reason("punk"),
+                    ProviderId.ANTHROPIC,
+                    "claude-haiku-5-5",
+                    null,
+                ),
+            ),
+        )
+    }
+
     @Test
     fun `an unreachable resolution names its failure, others nothing more`() {
         assertEquals(

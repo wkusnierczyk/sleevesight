@@ -2,6 +2,7 @@ package app.sleevesight.core.pipeline
 
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.outcomeKey
+import app.sleevesight.core.synthesis.SearchKind
 import kotlin.time.Duration
 
 /**
@@ -38,6 +39,10 @@ object EventLine {
             is PipelineEvent.LookedAgain -> "fresh      ${e.key}: ${e.sources.joinToString(
                 ", ",
             ) { it.tag }} asked afresh"
+            is PipelineEvent.AiAsked -> AskAiLines.asked(e)
+            is PipelineEvent.AiEnded -> AskAiLines.ended(e, ms(e.latency))
+            is PipelineEvent.AiKept -> AskAiLines.kept(e)
+            is PipelineEvent.AiNotAsked -> AskAiLines.notAsked(e)
         }
 
     private fun prepared(e: PipelineEvent.Prepared): String =
@@ -89,4 +94,50 @@ object EventLine {
     private fun notes(notes: List<String>): String = if (notes.isEmpty()) "" else "  [${notes.joinToString("; ")}]"
 
     private fun ms(duration: Duration): String = "${duration.inWholeMilliseconds} ms"
+}
+
+// The lines of *Ask AI*'s questions (#851): what each asked, how, by which model, and how it ended.
+private object AskAiLines {
+    fun asked(e: PipelineEvent.AiAsked): String =
+        "ask ai     ${e.key}: ${question(e.question)}, ${asked(e.automatic)}, ${e.provider.name.lowercase()} ${e.model}"
+
+    fun notAsked(e: PipelineEvent.AiNotAsked): String =
+        "ask ai     ${e.key}: ${question(e.question)}, not asked: closed before its call"
+
+    // What an *Ask AI* question asks.
+    private fun question(q: AiQuestion): String =
+        when (q) {
+            is AiQuestion.Search ->
+                if (q.kind == SearchKind.DEFINITION) "definition of \"${q.genre.orEmpty()}\"" else q.kind.key
+            is AiQuestion.Reason -> "reason for \"${q.genre}\""
+            AiQuestion.GenreList -> "genre list"
+        }
+
+    private fun asked(automatic: Boolean): String = if (automatic) "asked automatically" else "asked by a tap"
+
+    fun ended(
+        e: PipelineEvent.AiEnded,
+        latency: String,
+    ): String =
+        "ask ai     ${e.key}: ${question(e.question)}, " +
+            when (e.outcome) {
+                AiOutcome.ANSWERED -> "answered"
+                AiOutcome.NOTHING_FOUND -> "nothing found"
+                AiOutcome.FAILED -> "failed" + (e.failure?.let { " ($it)" } ?: "")
+                AiOutcome.STOPPED -> "stopped"
+            } +
+            ", ${count(e.cost.calls, "call", "calls")}, ${count(e.cost.searches, "web search", "web searches")}, " +
+            latency
+
+    fun kept(e: PipelineEvent.AiKept): String =
+        "ask ai     ${e.key}: ${question(e.question)}, kept answer served, no call, " +
+            (e.writtenAt?.let { "written $it" } ?: "written at a time not kept") +
+            (e.automatic?.let { ", ${asked(it)}" } ?: "") +
+            ", ${e.provider.name.lowercase()} ${e.model}"
+
+    private fun count(
+        n: Int,
+        one: String,
+        many: String,
+    ): String = "$n ${if (n == 1) one else many}"
 }
