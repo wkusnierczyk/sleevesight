@@ -122,7 +122,8 @@ class GenreReasonNoteScreenTest {
         }
     }
 
-    private fun note(count: Int) = app.resources.getQuantityString(R.plurals.home_note_unbacked, count, count)
+    // One text for any number of dimmed sentences (#854).
+    private val note get() = app.getString(R.string.home_note_unbacked)
 
     @Test
     fun theCaseOfTheIssueWithEverySentenceCitedHasNoNote() {
@@ -147,15 +148,15 @@ class GenreReasonNoteScreenTest {
                     "this track's instruments or sound.",
             ),
         ) {
-            assertEquals("The dimmed sentence is not backed by the sources.", note(1))
-            compose.onNodeWithText(note(1)).assertExists()
+            assertEquals("Dimmed text is not backed by the sources.", note)
+            compose.onNodeWithText(note).assertExists()
         }
 
     @Test
-    fun twoDimmedSentencesAreCountedInThePlural() =
+    fun twoDimmedSentencesGetTheSameNote() =
         show(written("$REPLY It feels alternative. It is loud.")) {
-            assertEquals("The 2 dimmed sentences are not backed by the sources.", note(2))
-            compose.onNodeWithText(note(2)).assertExists()
+            assertEquals("Dimmed text is not backed by the sources.", note)
+            compose.onNodeWithText(note).assertExists()
         }
 
     private companion object {

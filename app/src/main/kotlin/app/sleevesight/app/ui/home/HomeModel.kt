@@ -1,6 +1,7 @@
 package app.sleevesight.app.ui.home
 
 import app.sleevesight.app.pipeline.PipelineView
+import app.sleevesight.app.pipeline.RewriteOffer
 import app.sleevesight.app.pipeline.UnavailableModel
 import app.sleevesight.app.session.TrackIdentity
 import app.sleevesight.core.evidence.EvidenceDraft
@@ -64,7 +65,8 @@ internal class InsightContext(
  * followed the last one by itself under *On track skip (auto)* ([followed], #625). *Look again*
  * (#617): offered beside the card paid for ([lookAgain]), looking the sources up ([lookingAgain]),
  * finding something new, with *Rewrite insight* offered for it ([somethingNew]), or nothing new
- * ([nothingNew]).
+ * ([nothingNew]). What *Rewrite insight* would change, while offered ([rewriteWith], #854), which
+ * the line offering it names.
  */
 @Suppress("LongParameterList") // Each what one line or action of the card says.
 internal class InsightOffers(
@@ -77,6 +79,7 @@ internal class InsightOffers(
     val lookingAgain: Boolean = false,
     val nothingNew: Boolean = false,
     val somethingNew: Boolean = false,
+    val rewriteWith: RewriteOffer? = null,
 )
 
 /**

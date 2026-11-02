@@ -38,6 +38,7 @@ import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.pipeline.CallId
 import app.sleevesight.app.pipeline.PipelineView
+import app.sleevesight.app.pipeline.RewriteOffer
 import app.sleevesight.app.pipeline.RunId
 import app.sleevesight.app.session.PlaybackInfo
 import app.sleevesight.app.session.PlaybackStatus
@@ -50,10 +51,13 @@ import app.sleevesight.app.ui.home.HomeFixtures.written
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.Outcome
+import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.InsightState
+import app.sleevesight.core.pipeline.RewritePart
 import app.sleevesight.core.pipeline.RunKey
 import app.sleevesight.core.pipeline.SourceState
+import app.sleevesight.core.pipeline.WrittenBy
 import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.synthesis.GroundingCheck
@@ -551,8 +555,26 @@ class NowPlayingScreenTest {
         // Offered once a settings change changed the card's key (#615): a tap is the coordinator's Write.
         writes = 0
         val kept = track(insight = written("It was recorded in 1973 [MB1].", cached = true))
-        show(state(PipelineView(kept, aiReady = true, rewrite = true, cardShown = true, writeKey = sundownKey))) {
-            compose.onNodeWithText(text(R.string.home_rewrite_offered), substring = true).assertExists()
+        // What a rewrite would use, as the line offering it names it (#854).
+        val with =
+            RewriteOffer(
+                setOf(RewritePart.SOURCE_SETTINGS),
+                WrittenBy(5, ProviderId.ANTHROPIC, "claude-haiku-5-5", null),
+            )
+        show(
+            state(
+                PipelineView(
+                    kept,
+                    aiReady = true,
+                    rewrite = true,
+                    cardShown = true,
+                    writeKey = sundownKey,
+                    rewriteWith = with,
+                ),
+            ),
+        ) {
+            val offer = text(R.string.home_rewrite_offer, text(R.string.home_rewrite_part_source_settings))
+            compose.onNodeWithText(offer, substring = true).assertExists()
             unfold()
             compose.onNodeWithText(text(R.string.home_evidence_cited)).assertExists()
             compose.onNodeWithTag(WRITE_TAG).performScrollTo().performClick()

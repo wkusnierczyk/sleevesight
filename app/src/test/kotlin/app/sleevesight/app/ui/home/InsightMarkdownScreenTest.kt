@@ -186,7 +186,7 @@ class InsightMarkdownScreenTest {
     fun aRuleOnItsOwnShowsAsNothingAndIsNotCountedAsUnbacked() =
         show(written("It charted [W1].\n\n---\n\nIt sold [MB1].")) {
             // The check reads the rule as a paragraph and an uncited sentence; the card shows none of it.
-            val unbacked = app.resources.getQuantityString(R.plurals.home_note_unbacked, 1, 1)
+            val unbacked = app.getString(R.string.home_note_unbacked)
             assertEquals(0, compose.onAllNodesWithText(unbacked).fetchSemanticsNodes().size)
             assertEquals(0, compose.onAllNodesWithText("---", substring = true).fetchSemanticsNodes().size)
             textOf("It charted")

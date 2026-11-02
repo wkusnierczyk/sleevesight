@@ -373,6 +373,7 @@ private fun insightContext(
             lookingAgain = view.lookingAgain && track != null,
             nothingNew = view.nothingNew && track != null,
             somethingNew = view.somethingNew && track != null,
+            rewriteWith = view.rewriteWith.takeIf { track != null },
         ),
     unavailable = unavailable.takeIf { settings?.writeInsights != false },
     mode = settings?.writeAutomatically,

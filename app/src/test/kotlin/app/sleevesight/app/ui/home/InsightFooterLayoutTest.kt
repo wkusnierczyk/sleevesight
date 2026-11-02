@@ -25,8 +25,13 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.pipeline.PipelineHost
+import app.sleevesight.app.pipeline.RewriteOffer
 import app.sleevesight.app.ui.report.REPORT_TAG
 import app.sleevesight.app.ui.theme.SleevesightTheme
+import app.sleevesight.core.ai.ReasoningEffort
+import app.sleevesight.core.model.ProviderId
+import app.sleevesight.core.pipeline.RewritePart
+import app.sleevesight.core.pipeline.WrittenBy
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -70,7 +75,7 @@ class InsightFooterLayoutTest {
                 aiReady = true,
                 insightsOn = true,
                 modelAllowed = false,
-                offers = InsightOffers(rewrite = true),
+                offers = InsightOffers(rewrite = true, rewriteWith = OFFER),
                 // The card's rewrite stopped, and *Rewrite insight* offered again: the longest line 1.
                 rewriteFailed = PipelineHost.STOPPED,
             )
@@ -196,10 +201,17 @@ class InsightFooterLayoutTest {
     private companion object {
         const val CARD = "card"
         const val BEFORE = "As written previously. Rewriting stopped. Tap Rewrite insight"
-        const val NOTE = "The dimmed sentence is not backed by the sources."
+        const val NOTE = "Dimmed text is not backed by the sources."
         const val COUNTS = "1 of 2 sentences grounded · 1 uncited"
         const val REPORT = "Report a problem"
         const val TOLERANCE = 0.02f
+
+        // A rewrite with another model and source settings, as the offer names them (#854).
+        val OFFER =
+            RewriteOffer(
+                setOf(RewritePart.SOURCE_SETTINGS, RewritePart.MODEL),
+                WrittenBy(5, ProviderId.ANTHROPIC, "claude-haiku-5-5", ReasoningEffort.HIGH),
+            )
 
         // Where Compose puts, for tests, the node a screen reader reads after a node.
         const val AFTER = "android.view.accessibility.extra.EXTRA_DATA_TEST_TRAVERSALBEFORE_VAL"

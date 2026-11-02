@@ -29,7 +29,8 @@ import app.sleevesight.core.pipeline.InsightState
  * from the evidence ids the app assigned, each scrolling to its line. Write, Rewrite and Stop go
  * to the pipeline as taps; whether a tap writes or stops is the pipeline's to say. Under a written
  * insight, its footer ([Footer], #671), each part on its own line: *As written previously.* with what
- * follows from it, for an insight written earlier; [GroundingLine], a note, or with
+ * follows from it, for an insight written earlier, or *Rewritten with …* for one *Rewrite insight*
+ * wrote (#854); [GroundingLine], a note, or with
  * [groundingDetails] (*Show grounding details*, #437) the grounding check's counts in full; and
  * *Report a problem* (#390), which hands the insight and its track to [InsightActions.onReport].
  *
@@ -196,7 +197,8 @@ private fun Written(
 /**
  * The footer under a written insight (#671): each part on its own line, at the start, top to
  * bottom, so each wraps on its own at a large font size and a screen reader reads them in order:
- * - *As written previously.* ([writtenBefore]), with what follows from it on the same line;
+ * - *As written previously.*, or for an insight *Rewrite insight* wrote, *Rewritten with …* (#854)
+ *   ([writtenBefore]), with what follows from it on the same line;
  * - while *Look again* looks the sources up, what it is doing ([lookingAgainLine]), with the turning
  *   record before it (#785);
  * - the grounding line ([GroundingLine]): the note on the dimmed sentences, or, with
@@ -234,12 +236,15 @@ private fun Footer(
  * The footer's first line (#671): *As written previously.* for an insight not written in this run
  * but earlier, on an earlier play of the track (from the cache, or the card paid for shown in place
  * of an insight the run lacks, #606), or before a *Look again*, a settings change or a rewrite that
- * failed; then, on the same line, what follows from it, in the order it happened: that a rewrite
- * failed or was stopped, what *Look again* found (#617, [lookAgainLine]), and that *Rewrite insight*
- * writes it with the updated settings, while offered (#615, #625; not for what a look again found,
- * whose own words say what *Rewrite insight* uses). What *Look again* is looking up is not on this
- * line but on its own under it (#785, [lookingAgainLine]); while it looks ([lookingAgain]), the line
- * shows all the same. Null for an insight just written, with nothing to follow.
+ * failed. For an insight *Rewrite insight* wrote, *Rewritten with …* in its place, never both
+ * ([rewrittenLine], #854): on the play it was rewritten, though just written, and on every later
+ * one while it is the one kept. Then, on the same line, what follows from it, in the order it
+ * happened: that a rewrite failed or was stopped, that *Look again* found nothing new (#617,
+ * [lookAgainLine]), and, while *Rewrite insight* is offered (#615, #625), what it would rewrite the
+ * insight with ([rewriteOfferLine], #854), what a look again found new included. What *Look again*
+ * is looking up is not on this line but on its own under it (#785, [lookingAgainLine]); while it
+ * looks ([lookingAgain]), the line shows all the same. Null for an insight written the first time
+ * just now, with nothing to follow.
  */
 @Composable
 private fun writtenBefore(
@@ -252,13 +257,13 @@ private fun writtenBefore(
             // In the order things happened: a rewrite that failed, then what a later look again found.
             context.rewriteFailed?.let { add(rewriteFailure(it)) }
             lookAgainLine(context)?.let { add(stringResource(it)) }
-            if (offersRewrite(context) && !context.offers.somethingNew) {
-                add(stringResource(R.string.home_rewrite_offered))
-            }
+            rewriteOfferLine(context)?.let { add(it) }
         }
-    val kept = insight.cached || context.cardShown
-    if (!kept && after.isEmpty() && !lookingAgain) return null
-    return (listOf(stringResource(R.string.home_written_before)) + after).joinToString(" ")
+    val rewritten = rewrittenLine(insight)
+    // Kept from before, or rewritten: said on its own; else only with something to follow.
+    val said = insight.cached || context.cardShown || rewritten != null
+    if (!said && after.isEmpty() && !lookingAgain) return null
+    return (listOf(rewritten ?: stringResource(R.string.home_written_before)) + after).joinToString(" ")
 }
 
 // Why the card's rewrite ended without an insight: stopped, or failed and why.
