@@ -120,14 +120,16 @@ sealed interface SetupRead {
     /**
      * A setup code: the [keys] that have their service's shape, in the code's order, the ones
      * [refused] and why, the [unknown] names (a later version's services), and how many lines could
-     * not be read as `name=value` ([unreadable]). Only [keys] are ever saved; no value of the others
-     * is kept, so none can be shown.
+     * not be read as `name=value` ([unreadable]). Only [keys] are ever saved; of the others only a
+     * refused key's last characters are kept ([refusedEndings], #763), as a saved key's are shown,
+     * for one longer than they are and not named twice: nothing else of them can be shown.
      */
     class Setup(
         val keys: Map<KeyName, Secret>,
         val refused: Map<KeyName, KeyProblem>,
         val unknown: List<String>,
         val unreadable: Int,
+        val refusedEndings: Map<KeyName, String> = emptyMap(),
     ) : SetupRead
 }
 
@@ -145,6 +147,9 @@ object KeySetup {
 
     /** The sealed setup code's version ([SealedSetup]). */
     private const val SEALED = "v2"
+
+    /** How many of a refused key's last characters are kept ([SetupRead.Setup.refusedEndings]). */
+    const val SHOWN_ENDING = 4
 
     /** The longest unknown name reported as given; a longer one is cut, in case it is a key itself. */
     private const val SHOWN_NAME = 24
@@ -183,10 +188,20 @@ object KeySetup {
         val counts = known.groupingBy { it.first }.eachCount()
         val keys = linkedMapOf<KeyName, Secret>()
         val refused = linkedMapOf<KeyName, KeyProblem>()
+        val endings = linkedMapOf<KeyName, String>()
         for ((name, value) in known.distinctBy { it.first }) {
             when (val problem = if (counts.getValue(name) > 1) KeyProblem.DUPLICATE else KeyShape.check(name, value)) {
-                null -> keys[name] = Secret(value)
-                else -> refused[name] = problem
+                null -> {
+                    keys[name] = Secret(value)
+                }
+
+                else -> {
+                    refused[name] = problem
+                    // A key named twice has no one ending; a short one would be shown whole.
+                    if (problem != KeyProblem.DUPLICATE && value.length > SHOWN_ENDING) {
+                        endings[name] = value.takeLast(SHOWN_ENDING)
+                    }
+                }
             }
         }
         return SetupRead.Setup(
@@ -194,6 +209,7 @@ object KeySetup {
             refused = refused,
             unknown = named.filter { KeyName.of(it.first) == null }.map { it.first.take(SHOWN_NAME) },
             unreadable = entries.size - named.size,
+            refusedEndings = endings,
         )
     }
 

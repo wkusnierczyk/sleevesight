@@ -45,13 +45,9 @@ internal data class ShownKey(
     val ending: String?,
 )
 
-/**
- * A key in a [KeyTable]: [key], and, on *Load keys*' list of the keys read, whether it [replaces] a
- * saved key (true) or is new (false); null elsewhere.
- */
+/** A key in a [KeyTable]: [key]. */
 internal data class KeyRow(
     val key: ShownKey,
-    val replaces: Boolean? = null,
 )
 
 /** [key]'s last characters, as the key screens show them: "a1B2". */

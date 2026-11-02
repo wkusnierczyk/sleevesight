@@ -40,6 +40,7 @@ import app.sleevesight.app.ui.settings.SettingsDialog
 import app.sleevesight.app.ui.settings.SettingsScreen
 import app.sleevesight.app.ui.settings.SettingsSection
 import app.sleevesight.core.Secret
+import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -474,12 +475,15 @@ class PurgeKeysTest {
                         KeyDialogs(
                             SettingsDialog.PurgeKeys,
                             emptyMap(),
+                            Settings(),
+                            { null },
                             gatedSecrets,
                             saves,
                             scanner = { },
                             keyboard = { _, _, _, _ -> },
                             showPhoneName = false,
                             onSealFailed = { sealFailed = it },
+                            onOpen = {},
                             onDismiss = {},
                         )
                     }

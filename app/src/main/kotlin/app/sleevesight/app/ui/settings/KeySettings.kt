@@ -7,6 +7,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -151,32 +155,83 @@ private fun LoadKeysMore() {
  * with [showPhoneName] (#433). *Load keys* shows what a setup code holds, and saves nothing until
  * the user confirms it there; *Purge keys* lists the keys it deletes, reading each one's last
  * characters from [store].
+ *
+ * A key saved switches its service on only as the user chooses after the save (#763), in the key
+ * dialog or on *Load keys*, from the [settings] as they are: [applyChoices] writes the choices to
+ * the stored settings, after the key dialog's key in the same work in [saves], and the summary
+ * says what was saved and switched on or off as written, or that the choices could not be, with
+ * *Try again*. A link on *Load
+ * keys* to a section of the settings calls [onOpen].
  */
-@Suppress("LongParameterList") // The dialog, the keys, where they are saved, and what the screen hears.
+@Suppress("LongParameterList", "LongMethod") // The dialog, the keys, where they are saved, and what the screen hears.
 @Composable
 internal fun KeyDialogs(
     shown: SettingsDialog.Keys,
     secrets: Map<SecretId, SecretState>,
+    settings: Settings,
+    applyChoices: suspend (Map<SecretId, Boolean>) -> Applied?,
     store: SecretStore,
     saves: CoroutineScope,
     scanner: QrScanner,
     keyboard: ComputerKeyboard,
     showPhoneName: Boolean,
     onSealFailed: (Boolean) -> Unit,
+    onOpen: (SettingsTarget) -> Unit,
     onDismiss: () -> Unit,
 ) {
     when (shown) {
         is SettingsDialog.Key -> {
+            val id = shown.id
+            val state = secrets[id] ?: SecretState.ABSENT
+            // What the save wrote, once it has: the choices and the settings as written.
+            var written by remember(shown) { mutableStateOf<KeyWrite?>(null) }
+            var summary by remember(shown) { mutableStateOf<SavedKey?>(null) }
+            var busy by remember(shown) { mutableStateOf(false) }
+            val done = summary
+            val write = written
+            if (done != null && write != null) {
+                KeyScreen(keyName(id), busy = busy, onDismiss = onDismiss) {
+                    SummaryStep(
+                        keys = listOf(done),
+                        secrets = write.secrets,
+                        first = write.applied,
+                        retry = { saves.async { applyChoices(write.choices) }.await() },
+                        onBusy = { busy = it },
+                        onDone = onDismiss,
+                    )
+                }
+                return
+            }
+            val offer = enableOffer(id, settings, secrets)
             KeyDialog(
-                id = shown.id,
-                state = secrets[shown.id] ?: SecretState.ABSENT,
-                onSave = { value ->
+                id = id,
+                state = state,
+                offer = offer,
+                onSave = { value, choices ->
+                    val before = secrets
+                    val snapshot = settings
+                    // The key and then its choices, in one piece of work that outlives the dialog,
+                    // so a rotation during the save still switches the service on.
                     saves
                         .async {
-                            store.set(shown.id, Secret(value)).also { onSealFailed(it == SaveResult.NOT_SEALED) }
+                            val result = store.set(id, Secret(value)).also { onSealFailed(it == SaveResult.NOT_SEALED) }
+                            if (result == SaveResult.SAVED) {
+                                val applied =
+                                    if (choices.isEmpty()) {
+                                        Applied(
+                                            snapshot,
+                                            snapshot,
+                                        )
+                                    } else {
+                                        applyChoices(choices)
+                                    }
+                                written = KeyWrite(choices, before, applied)
+                            }
+                            result
                         }.await()
                 },
-                onRemove = { saves.async { store.clear(shown.id) }.await() },
+                onSaved = { ending -> summary = SavedKey(id, ending, replaced = state != SecretState.ABSENT) },
+                onRemove = { saves.async { store.clear(id) }.await() },
                 scanner = scanner,
                 keyboard = keyboard,
                 showPhoneName = showPhoneName,
@@ -187,8 +242,11 @@ internal fun KeyDialogs(
         SettingsDialog.LoadKeys -> {
             LoadKeysScreen(
                 secrets = secrets,
+                settings = settings,
                 scanner = scanner,
                 onSave = { keys -> saves.async { saveAll(store, keys, onSealFailed) }.await() },
+                onApply = { choices -> saves.async { applyChoices(choices) }.await() },
+                onOpen = onOpen,
                 onDismiss = onDismiss,
             )
         }
@@ -236,3 +294,13 @@ internal fun removeKeyConfirmation(id: SecretId): Confirmation =
         named = stringResource(R.string.settings_key_remove, stringResource(keyName(id))),
         failed = stringResource(R.string.settings_key_remove_failed),
     )
+
+/**
+ * What the key dialog's save wrote besides the key: its [choices], with the keys stored before
+ * ([secrets]), as written ([applied]), or null when they could not be.
+ */
+private class KeyWrite(
+    val choices: Map<SecretId, Boolean>,
+    val secrets: Map<SecretId, SecretState>,
+    val applied: Applied?,
+)
