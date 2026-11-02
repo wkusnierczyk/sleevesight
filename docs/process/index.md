@@ -6,8 +6,7 @@
 # reviewed, merged or released changes it too; so does the closed test (#58), after which the
 # testing half says what happened rather than the plan.
 # The numbers after the intro (#700) are a snapshot, dated in the text and not kept current; a
-# comment before the list says how each was counted. The donate link is the platform in
-# `.github/FUNDING.yml`.
+# comment before the list says how each was counted.
 # *Lessons learned* (#742) is history too, dated in the text: each figure in it has a comment beside
 # it, in the source and not shown on the page, saying how it was measured. Its anchor,
 # `#lessons-learned`, is linked from elsewhere (#743), so keep the heading's text.

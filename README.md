@@ -70,6 +70,7 @@ Using the app:
 - [Usage](https://sleevesight.app/docs/tutorials/usage/): each part of the app in detail.
 - [Settings](https://sleevesight.app/docs/tutorials/settings/): every setting, its default and why.
 - [Frequently asked questions](https://sleevesight.app/docs/faq/): notification access, Spotify, other players.
+- [Limitations](https://sleevesight.app/docs/limitations/): what it cannot do, and why.
 - [What it costs you](https://sleevesight.app/docs/costs/): what each service charges, and what a track costs.
 - [Privacy policy](https://sleevesight.app/privacy.html).
 

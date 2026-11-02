@@ -71,7 +71,7 @@ So that you need not pay for testing, we can give you an Anthropic key of your o
 
 ## What to tell us
 
-Anything that surprises you. In particular:
+Anything that surprises you. [Limitations]({{ '/docs/limitations/' | relative_url }}) lists what Sleevesight cannot do, and why, so you can tell a limit from a bug; a limit that gets in your way is worth telling us about too. In particular:
 
 - **Insights:** a sentence that is wrong, one that its source does not support, an uncited sentence, or an insight that misses the point of the song.
 - **Track changes:** a track change the app missed, or noticed late; the wrong track shown.
