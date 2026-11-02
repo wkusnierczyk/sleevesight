@@ -3,6 +3,7 @@
 # covers. A page added under `docs/` is listed here too.
 title: Documentation
 permalink: /docs/
+docs_version: 0.1.15
 docs_index: true
 nav:
   - id: using-the-app
@@ -11,6 +12,7 @@ nav:
     label: How it works
   - id: how-it-is-made
     label: How it is made
+provenance: [ai-wrote]
 ---
 
 # Documentation

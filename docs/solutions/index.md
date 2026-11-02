@@ -8,6 +8,7 @@
 # them, or a solution added or removed, changes this page.
 title: Solutions
 permalink: /docs/solutions/
+docs_version: 0.1.15
 nav:
   - id: insights-that-cite-their-sources-checked-in-code
     label: Citations
@@ -21,6 +22,7 @@ nav:
     label: Bluetooth
   - id: promises-the-build-enforces
     label: Build checks
+provenance: [ai-wrote]
 ---
 
 # Solutions

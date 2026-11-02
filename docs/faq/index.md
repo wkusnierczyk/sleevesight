@@ -9,6 +9,7 @@
 # named here (#709) changes this page too; so does the first-run statement on notification access (#708).
 title: Frequently asked questions
 permalink: /docs/faq/
+docs_version: 0.1.15
 nav:
   - id: why-does-sleevesight-need-notification-access-does-it-read-my-notifications
     label: Notifications
@@ -22,6 +23,7 @@ nav:
     label: Spotify Connect
   - id: why-not-recognise-the-music-through-the-microphone
     label: Microphone
+provenance: [ai-wrote, human-reviewed]
 ---
 
 # Frequently asked questions

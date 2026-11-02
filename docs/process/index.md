@@ -14,11 +14,13 @@
 # `.github/FUNDING.yml`.
 title: Process
 permalink: /docs/process/
+docs_version: 0.1.13
 nav:
   - id: how-it-is-built
     label: How it is built
   - id: how-it-is-tested-and-released
     label: Tested and released
+provenance: [ai-wrote, human-reviewed]
 ---
 
 # Process

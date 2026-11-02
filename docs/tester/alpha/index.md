@@ -6,6 +6,7 @@
 # `assets/flyer/make_flyer.mjs` to the PDF and PNG the site serves; #566).
 title: Testing Sleevesight
 permalink: /docs/tester/alpha/
+docs_version: 0.1.15
 nav:
   - id: joining-and-installing
     label: Installing
@@ -19,6 +20,7 @@ nav:
     label: Reporting
   - id: what-leaves-your-phone
     label: Privacy
+provenance: [ai-wrote, human-reviewed]
 ---
 
 # Testing Sleevesight
@@ -53,7 +55,7 @@ So that you need not pay for testing, we can give you an Anthropic key of your o
 
 - **Saving it.** In Settings, under *Secrets*, tap *Load keys*: it shows five words, which seal a code made with them to your phone. If we make your code with you, read them to us; otherwise tap *Next*. Then point the camera at the code. The app lists what it found, by the key's last four characters; *Save* saves it. Then switch on *Anthropic* under *AI services*. The app asks for the camera only while you scan, and no frame is stored on the device.
 - **What it means for privacy.** With our key, your track's title, artists and album, and what the sources found, go to Anthropic under the project's account rather than your own. The developer still receives none of it: Anthropic's console shows how much each key is used, not what was sent. If you would rather keep it under your own account, use your own key instead.
-- **Cost.** Each insight is a paid call (now and then two). *Reactive*, *On track change (auto)* by default, writes one on every track change, and that is where the cost is. The keys share a spending limit. If it is reached before the test ends, insights stop: *Key insights* says *Writing failed*, with a short reason such as *the AI service account needs credit, or has reached its spending limit*. If every insight fails like that, tell us at [support@sleevesight.app](mailto:support@sleevesight.app), and keep the app installed and opted in. With your own keys, [What it costs you]({{ '/docs/costs/' | relative_url }}) says what each service charges.
+- **Cost.** Each insight is a paid call (now and then two or three). *Reactive*, *On track change (auto)* by default, writes one on every track change, and that is where the cost is. The keys share a spending limit. If it is reached before the test ends, insights stop: *Key insights* says *Writing failed*, with a short reason such as *the AI service account needs credit, or has reached its spending limit*. If every insight fails like that, tell us at [support@sleevesight.app](mailto:support@sleevesight.app), and keep the app installed and opted in. With your own keys, [What it costs you]({{ '/docs/costs/' | relative_url }}) says what each service charges.
 - **The key we give you is yours only.** Please do not share it. We can see each key's use, and can turn one off without touching the others.
 
 ## Using Sleevesight
@@ -62,9 +64,9 @@ So that you need not pay for testing, we can give you an Anthropic key of your o
 - **Write insight.** Nothing is written automatically until your first action in the app: a tap on *Write insight*, or a mode chosen with the arrow beside it (the current one included). After that, under the default *Reactive: On track change (auto)*, a new insight is written for each new track as it starts, until Android closes the app in the background, often days later; after that, the next track waits for a tap on *Write insight*, or a mode chosen, again. *On track skip (auto)* writes only the tracks you skip to; *On demand* writes only when you tap *Write insight*. The arrow beside *Write insight* switches between them.
 - **Skip detection.** Under *On track skip (auto)*, the app tells a skip from a track that ended on its own by the time left and, for Spotify, the player's states just before the change. It uses your crossfade setting, detected by default.
 - **While you are away.** Lookups and writing happen only while the app is on screen, unless you turn on *Look up in the background*. Automatic writing pauses after 5 track changes away (*Saver*); *Key insights* then asks for a tap.
-- **Read aloud.** The speaker beside the *Key insights* heading has your phone's text-to-speech voice read the insight, the music lowered meanwhile (or paused: *While reading aloud*, under *Insights*). The voice is the phone's own built-in one, so it sounds only as good as the phone's voice: not a natural or studio voice. It makes no AI call. A sentence the sources do not back, or one from the AI model's own knowledge, is read after "Unverified:".
-- **Theme.** The button beside the cogwheel switches between light, dark and the phone's theme.
-- **Citations.** Each sentence ends with chips for the sources it cites; a tap jumps to the evidence under *Sources*. A sentence that cites nothing is underlined. A note under the insight says how many sentences the sources do not back, only when there are any; *Show grounding details*, in the *Developer* settings, shows the check's full counts instead, and under *Sources* every source's status and the rejected matches.
+- **Read aloud.** The speaker beside the *Key insights* heading has your phone's text-to-speech voice read the insight, the music lowered meanwhile (or paused: *Music while reading aloud*, under *Insights*); music on a speaker through Spotify Connect, whose volume the phone cannot set, is paused instead. The voice is the phone's own built-in one, so it sounds only as good as the phone's voice: not a natural or studio voice. It makes no AI call. A sentence the sources do not back, or one from the AI model's own knowledge, is read after "Unverified:".
+- **Theme.** The button beside the cogwheel shows the current theme; a tap opens a menu of light, dark and the phone's theme.
+- **Citations.** Each sentence ends with chips for the sources it cites; a tap jumps to the evidence under *Sources*. A sentence that cites nothing is dimmed. A note under the insight says how many sentences the sources do not back, only when there are any; *Show grounding details*, in the *Developer* settings, shows the check's full counts instead, and under *Sources* every source's status and the rejected matches.
 - **Diagnostics.** The test build starts in developer mode, so Settings shows a *Developer* section, last. If it is not there (its *Developer mode* switch hides it), open *About* and tap *Version* seven times to bring it back. Under *Developer*, turn on *Diagnostics*, then *Open diagnostics*: what the app did since it started (each source's outcome and time, AI calls, the citation check), the track changes recorded, and what skip detection has learned. *Export* writes it to a file where you choose, which may be a cloud folder; nothing of it leaves the phone otherwise. *Report button*, *Auto* in the test build, shows the report button on the home screen (*What to tell us*, below).
 
 ## What to tell us

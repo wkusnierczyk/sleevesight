@@ -1,11 +1,48 @@
 {% comment %}
-  The footer of the product page and the documentation pages (#501): the licence, the page's source
-  (`include.source`, its file in the repository) and the brand sheet's *Fonts*, then what the site
+  The footer of the product page and the documentation pages (#501): first, on a page that says so,
+  who wrote it and who edited or reviewed it (#743); then the licence, the page's source
+  (`include.source`, its file in the repository) and the brand sheet's *Fonts*; then what the site
   does not do: on a page with a diagram (`include.diagrams`), that the diagram script comes from
   jsDelivr, as the privacy policy says. Its style is in `site-header-style.html`.
+
+  Who made a page is set by hand in its front matter, `provenance`: `human-wrote` or `ai-wrote`,
+  and optionally the other side's `-edited` or `-reviewed`, e.g. `provenance: [ai-wrote,
+  human-reviewed]`. Writing comes first, so a page has one *wrote*, shown first whatever the order
+  in the list; the first `-edited` or `-reviewed` in the list shows as the second label when it is
+  the other side's, and otherwise there is none. That leaves six combinations. A page without the
+  key, or without a *wrote*, shows no labels. Each label links to the Process page's *Lessons
+  learned*, in its who's colour, and ends in a full stop hidden on screen, so a screen reader reads
+  "AI wrote." and "Human reviewed." apart.
 {% endcomment %}
 <footer>
-  <p><a href="https://github.com/wkusnierczyk/sleevesight/blob/main/LICENSE">Open source (GPL-3.0)</a> · <a href="https://github.com/wkusnierczyk/sleevesight/blob/main/{{ include.source }}">This page's source</a> · <a href="{{ '/design/brand.html#fonts' | relative_url }}">Fonts</a></p>
+  {%- assign prov_wrote = "" -%}
+  {%- assign prov_then = "" -%}
+  {%- for prov_item in page.provenance -%}
+    {%- case prov_item -%}
+      {%- when "human-wrote", "ai-wrote" -%}
+        {%- if prov_wrote == "" -%}{%- assign prov_wrote = prov_item -%}{%- endif -%}
+      {%- when "human-edited", "human-reviewed", "ai-edited", "ai-reviewed" -%}
+        {%- if prov_then == "" -%}{%- assign prov_then = prov_item -%}{%- endif -%}
+    {%- endcase -%}
+  {%- endfor -%}
+  {%- if prov_wrote != "" -%}
+    {%- assign prov_show = prov_wrote -%}
+    {%- assign prov_wrote_who = prov_wrote | split: "-" | first -%}
+    {%- assign prov_then_who = prov_then | split: "-" | first -%}
+    {%- if prov_then != "" and prov_then_who != prov_wrote_who -%}
+      {%- assign prov_show = prov_wrote | append: " " | append: prov_then -%}
+    {%- endif -%}
+    {%- assign prov_show = prov_show | split: " " %}
+  <p class="prov">
+    {%- for prov_item in prov_show -%}
+      {%- assign prov_who = prov_item | split: "-" | first -%}
+      {%- assign prov_did = prov_item | split: "-" | last -%}
+      {%- unless forloop.first %}{{ ' ' }}{% endunless -%}
+      <a class="prov-{{ prov_who }}" href="{{ '/docs/process/#lessons-learned' | relative_url }}">{% if prov_who == "ai" %}AI{% else %}Human{% endif %} {{ prov_did }}<span class="prov-stop">.</span></a>
+    {%- endfor -%}
+  </p>
+  {%- endif %}
+  <p><a href="https://github.com/wkusnierczyk/sleevesight/blob/main/LICENSE">GPL-3.0</a> · <a href="https://github.com/wkusnierczyk/sleevesight/blob/main/{{ include.source }}">Source</a> · <a href="{{ '/design/brand.html#fonts' | relative_url }}">Fonts</a></p>
   {%- if include.diagrams %}
   <p>This site sets no cookies. This page draws its diagrams with a script from jsDelivr (<a href="{{ '/privacy.html' | relative_url }}">privacy policy</a>); everything else comes from the site itself.</p>
   {%- else %}
