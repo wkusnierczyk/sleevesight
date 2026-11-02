@@ -36,7 +36,7 @@ Prices as checked on 26 October 2026, on each service's own pricing page, linked
 
 ### AI services
 
-One service at a time writes the insights ([settings]({{ '/docs/tutorials/settings/#ai-services' | relative_url }})). Each insight written is one call, now and then two (the [usage page]({{ '/docs/tutorials/usage/#writing-an-insight' | relative_url }}) says when). The services bill by the token, in and out, the output including the model's reasoning. The default model is each service's cheapest current one; a model the service still lists for your key may be cheaper, and is named where it is.
+One service at a time writes the insights ([settings]({{ '/docs/tutorials/settings/#ai-services' | relative_url }})). Each insight written is one call, now and then two or three (the [usage page]({{ '/docs/tutorials/usage/#writing-an-insight' | relative_url }}) says when). The services bill by the token, in and out, the output including the model's reasoning. The default model is each service's cheapest current one; a model the service still lists for your key may be cheaper, and is named where it is.
 
 | Service | Key | Default model: in / out, per 1M tokens | Cheaper model listed | Free tier | Pricing page |
 |---|---|---|---|---|---|

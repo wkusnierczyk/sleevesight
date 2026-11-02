@@ -99,7 +99,7 @@ Opening the row lists the service's models as the service itself reports them fo
 
 ### What it costs
 
-Each insight written is a paid call on your key, now and then two. [What it costs you]({{ '/docs/costs/' | relative_url }}) gives each service's prices and free tier, and what an insight costs with the defaults. How many calls are made is up to the [Insights](#insights) settings: by default one for every track you play while the app is on screen, and none while it is not.
+Each insight written is a paid call on your key, now and then two or three. [What it costs you]({{ '/docs/costs/' | relative_url }}) gives each service's prices and free tier, and what an insight costs with the defaults. How many calls are made is up to the [Insights](#insights) settings: by default one for every track you play while the app is on screen, and none while it is not.
 
 ## Secrets
 
