@@ -40,6 +40,16 @@ class KeptLineTest {
     }
 
     @Test
+    fun `the time and date are in the language's own digits`() {
+        val arabic = Locale.forLanguageTag("ar-EG")
+        val today = at("2026-11-02T12:04:00Z", arabic) as Written.Today
+        assertTrue(today.time, "١٣" in today.time && "٠٤" in today.time && today.time.none { it in '0'..'9' })
+        val earlier = at("2025-10-31T12:04:00Z", arabic) as Written.OnDay
+        val date = earlier.date
+        assertTrue(date, "٣١" in date && "٢٠٢٥" in date && date.none { it in '0'..'9' })
+    }
+
+    @Test
     fun `today is the phone's day, in its time zone`() {
         // 22:30 UTC on the 1st is 23:30 on the 1st in Oslo: an earlier day.
         assertEquals(Written.OnDay("1 November"), at("2026-11-01T22:30:00Z"))

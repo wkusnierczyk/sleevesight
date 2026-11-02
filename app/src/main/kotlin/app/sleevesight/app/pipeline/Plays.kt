@@ -1,5 +1,7 @@
 package app.sleevesight.app.pipeline
 
+import app.sleevesight.app.session.TrackIdentity
+import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.pipeline.TrackState
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -8,24 +10,26 @@ import kotlin.time.Clock
 import kotlin.time.Instant
 
 /**
- * The play of the track the pipeline shows (#851): the track, by its identity ([playIdentity]), and
- * when its play [began], published together, so an AI answer's panel can tell whether the answer
- * was written before it, kept from before.
+ * A play of a track (#851): its [track] as last reported, and when the play [began], published
+ * together, so an AI answer's panel can tell whether the answer was written before it, kept from
+ * before.
  */
 data class Play(
-    val track: Any,
+    val track: NowPlaying,
     val began: Instant,
 ) {
-    /** When [track]'s play began, if this is its play; else null. */
-    fun beganFor(track: TrackState): Instant? = began.takeIf { this.track == playIdentity(track) }
+    /** When [track]'s play began, if it is this play's track playing on ([TrackIdentity.playsOn]); else null. */
+    fun beganFor(track: TrackState): Instant? = began.takeIf { TrackIdentity.playsOn(this.track, track.nowPlaying) }
 }
 
 /**
- * Follows the plays of the track the pipeline shows (#851), by [clock], in whole milliseconds as the
- * caches keep times: a track is played anew when another one came between, by its identity as the
- * sources name it and its length (as `AutoSearches` tells plays apart). [current] publishes each
- * play, which the answers' feeds observe, so what they say is kept is worked out again when the
- * play changes.
+ * Follows the plays of the track the session layer shows (#851), by [clock], in whole milliseconds
+ * as the caches keep times, from its reports as they come (`SessionRepository.nowPlaying`), not the
+ * pipeline's debounced runs: a track skipped within the debounce still ends the play before it. A
+ * report that plays on the one before ([TrackIdentity.playsOn], the session history's and the
+ * insight's rule: a new length, album or artists of the same track) continues the play; any other
+ * begins one; no track changes nothing. [current] publishes each play, which the answers' feeds
+ * observe, so what they say is kept is worked out again when the play changes.
  */
 class Plays(
     private val clock: Clock = Clock.System,
@@ -35,18 +39,18 @@ class Plays(
     /** The play now, null before the first track. */
     val current: StateFlow<Play?> = play
 
-    /** [track] as the pipeline publishes it: a play begins when it is another track. Null changes nothing. */
-    fun follow(track: TrackState?) {
-        if (track == null) return
-        val identity = playIdentity(track)
-        if (play.value?.track != identity) {
-            play.value = Play(identity, Instant.fromEpochMilliseconds(clock.now().toEpochMilliseconds()))
-        }
+    /** The session layer's [report] of the track shown. */
+    fun follow(report: NowPlaying?) {
+        if (report == null) return
+        val now = play.value
+        play.value =
+            if (now != null && TrackIdentity.playsOn(now.track, report)) {
+                now.copy(track = report)
+            } else {
+                Play(report, Instant.fromEpochMilliseconds(clock.now().toEpochMilliseconds()))
+            }
     }
 
-    /** Follows [tracks], the pipeline's track, until cancelled. */
-    suspend fun run(tracks: Flow<TrackState?>) = tracks.collect(::follow)
+    /** Follows [reports], the session layer's track shown, until cancelled. */
+    suspend fun run(reports: Flow<NowPlaying?>) = reports.collect(::follow)
 }
-
-/** [track]'s identity for its plays: as the sources name it, and its length. */
-internal fun playIdentity(track: TrackState): Any = track.normalized to track.nowPlaying.duration

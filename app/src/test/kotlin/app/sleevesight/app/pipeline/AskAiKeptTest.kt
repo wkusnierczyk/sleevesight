@@ -86,7 +86,7 @@ class AskAiKeptTest {
             val plays = Plays(clock)
             val app = AskAi(this, settings, cache, provider, clock = clock, plays = plays)
             val first = punk()
-            plays.follow(first)
+            plays.follow(first.nowPlaying)
             app.notes.lookups.fetchAhead(first)
             advanceUntilIdle()
             app.definitions.follow(first, settings.value)
@@ -95,7 +95,7 @@ class AskAiKeptTest {
             assertNull((fresh as AiSearch.Answered).keptAt)
             advanceTimeBy(1.minutes)
             val later = punk(HomeFixtures.track(HomeFixtures.carefree))
-            plays.follow(later)
+            plays.follow(later.nowPlaying)
             val kept = app.searches.search(later, SearchKind.DEFINITION, "punk").first { it is AiSearch.Answered }
             assertEquals(Instant.fromEpochMilliseconds(2000), (kept as AiSearch.Answered).keptAt)
         }
@@ -105,15 +105,15 @@ class AskAiKeptTest {
         runTest {
             val plays = Plays(clock)
             val app = AskAi(this, settings, cache, provider, clock = clock, plays = plays)
-            plays.follow(empty())
+            plays.follow(empty().nowPlaying)
             app.searches.ask(empty(), SearchKind.DATES, searchFacts(empty(), HomeFixtures.sundown))
             advanceUntilIdle()
             val fresh = app.searches.search(empty(), SearchKind.DATES).first { it is AiSearch.NothingFound }
             assertNull((fresh as AiSearch.NothingFound).keptAt)
             // Another track, then this one again: a new play.
             advanceTimeBy(1.minutes)
-            plays.follow(empty(HomeFixtures.carefree))
-            plays.follow(empty())
+            plays.follow(empty(HomeFixtures.carefree).nowPlaying)
+            plays.follow(empty().nowPlaying)
             val kept = app.searches.search(empty(), SearchKind.DATES).first { it is AiSearch.NothingFound }
             assertEquals(Instant.fromEpochMilliseconds(0), (kept as AiSearch.NothingFound).keptAt)
         }
@@ -137,13 +137,13 @@ class AskAiKeptTest {
         runTest {
             val plays = Plays(clock)
             val app = AskAi(this, settings, cache, provider, clock = clock, plays = plays)
-            plays.follow(rock)
+            plays.follow(rock.nowPlaying)
             app.notes.explain(rock, "rock")
             advanceUntilIdle()
             assertNull((app.notes.reason(rock, "rock").first { it is GenreReason.Shown } as GenreReason.Shown).keptAt)
             advanceTimeBy(1.minutes)
-            plays.follow(empty(HomeFixtures.carefree))
-            plays.follow(rock)
+            plays.follow(empty(HomeFixtures.carefree).nowPlaying)
+            plays.follow(rock.nowPlaying)
             val kept = app.notes.reason(rock, "rock").first { it is GenreReason.Shown } as GenreReason.Shown
             assertEquals(Instant.fromEpochMilliseconds(0), kept.keptAt)
         }
@@ -153,17 +153,17 @@ class AskAiKeptTest {
         runTest {
             val plays = Plays(clock)
             val app = AskAi(this, settings, cache, provider, clock = clock, plays = plays)
-            plays.follow(empty())
+            plays.follow(empty().nowPlaying)
             app.searches.ask(empty(), SearchKind.DATES, searchFacts(empty(), HomeFixtures.sundown))
             advanceUntilIdle()
             advanceTimeBy(1.minutes)
-            plays.follow(empty(HomeFixtures.carefree))
+            plays.follow(empty(HomeFixtures.carefree).nowPlaying)
             // The panel for this track watches before the play of it is followed (A, B, then A).
             val shown = mutableListOf<AiSearch>()
             val panel = launch { app.searches.search(empty(), SearchKind.DATES).collect { shown += it } }
             advanceUntilIdle()
             assertNull((shown.last() as AiSearch.NothingFound).keptAt)
-            plays.follow(empty())
+            plays.follow(empty().nowPlaying)
             advanceUntilIdle()
             assertEquals(Instant.fromEpochMilliseconds(0), (shown.last() as AiSearch.NothingFound).keptAt)
             panel.cancel()
@@ -174,18 +174,49 @@ class AskAiKeptTest {
         runTest {
             val plays = Plays(clock)
             val app = AskAi(this, settings, cache, provider, clock = clock, plays = plays)
-            plays.follow(rock)
+            plays.follow(rock.nowPlaying)
             app.notes.explain(rock, "rock")
             advanceUntilIdle()
             advanceTimeBy(1.minutes)
-            plays.follow(empty(HomeFixtures.carefree))
+            plays.follow(empty(HomeFixtures.carefree).nowPlaying)
             val shown = mutableListOf<GenreReason>()
             val panel = launch { app.notes.reason(rock, "rock").collect { shown += it } }
             advanceUntilIdle()
             assertNull((shown.last() as GenreReason.Shown).keptAt)
-            plays.follow(rock)
+            plays.follow(rock.nowPlaying)
             advanceUntilIdle()
             assertEquals(Instant.fromEpochMilliseconds(0), (shown.last() as GenreReason.Shown).keptAt)
             panel.cancel()
+        }
+
+    @Test
+    fun `a track skipped before the pipeline saw it still ends the play, so the answer is kept`() =
+        runTest {
+            val plays = Plays(clock)
+            val app = AskAi(this, settings, cache, provider, clock = clock, plays = plays)
+            plays.follow(empty().nowPlaying)
+            app.searches.ask(empty(), SearchKind.DATES, searchFacts(empty(), HomeFixtures.sundown))
+            advanceUntilIdle()
+            advanceTimeBy(1.minutes)
+            // Another track, reported by the session layer alone, skipped within the debounce.
+            plays.follow(HomeFixtures.carefree)
+            plays.follow(empty().nowPlaying)
+            val kept = app.searches.search(empty(), SearchKind.DATES).first { it is AiSearch.NothingFound }
+            assertEquals(Instant.fromEpochMilliseconds(0), (kept as AiSearch.NothingFound).keptAt)
+        }
+
+    @Test
+    fun `a new length reported for the track playing keeps its answer new`() =
+        runTest {
+            val plays = Plays(clock)
+            val app = AskAi(this, settings, cache, provider, clock = clock, plays = plays)
+            plays.follow(empty().nowPlaying)
+            app.searches.ask(empty(), SearchKind.DATES, searchFacts(empty(), HomeFixtures.sundown))
+            advanceUntilIdle()
+            advanceTimeBy(1.minutes)
+            val duration = checkNotNull(empty().nowPlaying.duration)
+            plays.follow(empty().nowPlaying.copy(duration = duration + 2.seconds))
+            val fresh = app.searches.search(empty(), SearchKind.DATES).first { it is AiSearch.NothingFound }
+            assertNull((fresh as AiSearch.NothingFound).keptAt)
         }
 }

@@ -23,6 +23,7 @@ import androidx.core.content.ContextCompat
 import app.sleevesight.app.R
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.time.format.DecimalStyle
 import java.util.Locale
 import kotlin.time.Clock
 import kotlin.time.Instant
@@ -110,7 +111,7 @@ internal sealed interface Written {
 
 /**
  * When [writtenAt] was, seen at [now] in [zone]: today, its time in [locale]'s way, 24-hour or not
- * ([hours24]); else its day and month, and its year when it is not [now]'s.
+ * ([hours24]); else its day and month, and its year when it is not [now]'s; in [locale]'s digits.
  */
 internal fun writtenWhen(
     writtenAt: Instant,
@@ -123,7 +124,10 @@ internal fun writtenWhen(
     val today = now.toJavaInstant().atZone(zone)
 
     fun format(skeleton: String) =
-        DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale, skeleton), locale).format(written)
+        DateTimeFormatter
+            .ofPattern(DateFormat.getBestDateTimePattern(locale, skeleton), locale)
+            .withDecimalStyle(DecimalStyle.of(locale))
+            .format(written)
     return when {
         written.toLocalDate() == today.toLocalDate() -> Written.Today(format(if (hours24) "Hm" else "hm"))
         written.year == today.year -> Written.OnDay(format("dMMMM"))

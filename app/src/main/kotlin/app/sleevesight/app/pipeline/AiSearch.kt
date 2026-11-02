@@ -1,7 +1,9 @@
 package app.sleevesight.app.pipeline
 
+import app.sleevesight.app.session.TrackIdentity
 import app.sleevesight.core.ai.ModelNames
 import app.sleevesight.core.model.NormalizedTrack
+import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.pipeline.AiOutcome
 import app.sleevesight.core.pipeline.AiQuestion
 import app.sleevesight.core.pipeline.AiSearches
@@ -407,7 +409,7 @@ class AppAiSearches(
         val publish: (SearchState, Instant, Boolean) -> Unit = { state, at, fresh ->
             // Settled for this track before it shows, so its panel does not take it for one kept.
             if (state.settled) synchronized(lock) { served[Served.of(key, track)] = Unit }
-            shown.publish(key, Entry(state, at, playIdentity(track).takeIf { fresh })) {
+            shown.publish(key, Entry(state, at, track.nowPlaying.takeIf { fresh })) {
                 shown.current(work, epoch) && synchronized(lock) { key !in stopped && work.isActive }
             }
         }
@@ -484,7 +486,13 @@ class AppAiSearches(
     ): Instant? {
         if (!entry.state.settled) return null
         val began = play?.beganFor(track)
-        val kept = if (began != null) entry.writtenAt < began else entry.writtenFor != playIdentity(track)
+        val writtenFor = entry.writtenFor
+        val kept =
+            when {
+                began != null -> entry.writtenAt < began
+                writtenFor == null -> true
+                else -> !TrackIdentity.playsOn(writtenFor, track.nowPlaying)
+            }
         return entry.writtenAt.takeIf { kept }
     }
 
@@ -734,13 +742,13 @@ private fun outcomeOf(state: SearchState?): AiOutcome =
     }
 
 /**
- * A search shown, when it was written, and the track whose call wrote it ([writtenFor], its
- * identity, [playIdentity]; null when read from the cache), which tells one kept from before (#851).
+ * A search shown, when it was written, and the track whose call wrote it ([writtenFor], as reported
+ * then; null when read from the cache), which tells one kept from before (#851).
  */
 internal class Entry(
     val state: SearchState,
     val writtenAt: Instant,
-    val writtenFor: Any? = null,
+    val writtenFor: NowPlaying? = null,
 )
 
 // [state] as the panel shows it, by the model named [model], kept from before when [keptAt] says when.

@@ -515,8 +515,8 @@ class AppGraph internal constructor(
         )
 
     /**
-     * When the play of the track Home shows began (#851): an AI answer written before it is shown as
-     * kept from before.
+     * When the play of the track shown began, as the session layer reports the tracks (#851): an AI
+     * answer written before it is shown as kept from before.
      */
     private val plays = Plays()
 
@@ -702,8 +702,9 @@ class AppGraph internal constructor(
             skipLearning.restore()
         }
         pipeline.start(pipelineScope)
-        // Each play of the track Home shows, so an AI answer written before it shows as kept (#851).
-        pipelineScope.launch { plays.run(pipeline.state.map { it.track }) }
+        // Each play of the track shown, from the session layer's reports as they come (not the
+        // pipeline's debounced runs), so an AI answer written before it shows as kept (#851).
+        mainScope.launch { plays.run(sessions.nowPlaying) }
         // *Search with AI*, the setting (#773): a panel's search starts as soon as its source has
         // nothing, open or not, for the playing track, while the app is on screen; again once an AI
         // service is ready.

@@ -579,7 +579,7 @@ class AppGenreNotes private constructor(
         key: CardKey,
         event: PipelineEvent,
     ) {
-        if (told.put(key to playIdentity(track), Unit) == null) events(event)
+        if (told.put(key to (track.normalized to track.nowPlaying.duration), Unit) == null) events(event)
     }
 
     // Tells [event] to the log if no *Clear history* came since [work] started, checked under the
