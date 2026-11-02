@@ -136,9 +136,9 @@
     <string name="settings_developer_mode_summary">Developer mode is on. Turn it off here to hide this section and turn off everything in it.</string>
     <!-- Appearance → Layout (#447): how an item of the home screen opens. -->
     <string name="settings_layout">Layout</string>
-    <string name="settings_layout_boxes">Expandable boxes</string>
-    <string name="settings_layout_pages">Separate pages</string>
-    <string name="settings_layout_summary">How Sources and the genres open: in place on the home screen, or each on a page of its own, with a back arrow.</string>
+    <string name="settings_layout_boxes">Boxes</string>
+    <string name="settings_layout_pages">Pages</string>
+    <string name="settings_layout_summary">How Sources and the genres open: in place on the home screen, as expandable boxes, or each on a page of its own, with a back arrow.</string>
 
     <!-- Load keys and Purge keys (#446): the screens that replace their dialogs. Load keys starts
          with five words, which seal the setup code (#590). -->
@@ -217,12 +217,10 @@
     <!-- Read aloud (#325), at the end of Insights: what reads, then its three settings. -->
     <string name="settings_read_aloud_hint">Read aloud, the speaker button beside Key insights, has your phone’s text-to-speech engine read the insight to you. The engine is the one chosen in Android’s settings; some, such as Google’s network voices, send the text to their server to be spoken.</string>
     <string name="settings_read_aloud_music">Music while reading aloud</string>
-    <string name="settings_read_aloud_music_summary">When an insight is read aloud while music is playing, the app can temporarily pause the playback or lower the volume.</string>
-    <string name="settings_read_aloud_lower">Reduce volume</string>
-    <string name="settings_read_aloud_pause">Pause playback</string>
+    <string name="settings_read_aloud_music_summary">When an insight is read aloud while music is playing, the app can temporarily lower the volume or pause the playback.</string>
+    <string name="settings_read_aloud_lower">Lower</string>
+    <string name="settings_read_aloud_pause">Pause</string>
     <!-- The labels where the full ones do not fit side by side, as at a large font size. -->
-    <string name="settings_read_aloud_lower_short">Lower</string>
-    <string name="settings_read_aloud_pause_short">Pause</string>
     <string name="settings_read_aloud_lower_detail">The music plays on, quieter, while the insight is read.</string>
     <string name="settings_read_aloud_pause_detail">The music pauses while the insight is read, and plays on after it. A player that does not resume by itself stays paused.</string>
     <string name="settings_read_track_line">Read the track line first</string>

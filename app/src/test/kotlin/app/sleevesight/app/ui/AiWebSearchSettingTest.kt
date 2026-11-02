@@ -25,8 +25,6 @@ import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.testCipher
 import app.sleevesight.app.ui.settings.SettingsScreen
 import app.sleevesight.app.ui.settings.SettingsSection
-import app.sleevesight.app.ui.theme.GroupArrangement
-import app.sleevesight.app.ui.theme.groupArrangement
 import app.sleevesight.core.settings.AiWebSearch
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.SourceSwitch
@@ -46,7 +44,7 @@ import org.robolectric.RobolectricTestRunner
 
 /**
  * *AI web search* (#801): *Once* by default, stored under its own key; under *Insights* before *Ask
- * AI automatically*, a group of three kept to one row, *Up to 3 times* with its limit fixed, no
+ * AI automatically*, a group of three, *Up to 3 times* with its limit fixed, no
  * setting for it; with Exa web search off, *Off* chosen, the others disabled, the choice kept, and
  * the two lines with the link to *Sources*.
  */
@@ -114,12 +112,6 @@ class AiWebSearchSettingTest {
             app.resources.getQuantityString(R.plurals.settings_ai_web_search_up_to_detail, 3, 3, 4),
         )
         assertEquals("Exa web search is disabled.", text(R.string.settings_ai_web_search_exa_off))
-    }
-
-    @Test
-    fun aGroupKeptToOneRowNeverStacks() {
-        assertEquals(GroupArrangement.STACKED, groupArrangement(listOf(300, 300, 300), 2, 500))
-        assertEquals(GroupArrangement.PROPORTIONAL, groupArrangement(listOf(300, 300, 300), 2, 500, oneRow = true))
     }
 
     @Test
