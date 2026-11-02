@@ -8,6 +8,7 @@
 # use or licence, the credits or the build tools changes this page by hand.
 title: Dependencies
 permalink: /docs/dependencies/
+docs_version: 0.1.15
 nav:
   - id: licences-and-gpl-30
     label: Licences
@@ -159,7 +160,7 @@ The AI services that write the insights (Anthropic, OpenAI or Google, on the use
 
 | Asset | What it is | Licence |
 |---|---|---|
-| Roboto | The app's font, from [googlefonts/roboto-3-classic](https://github.com/googlefonts/roboto-3-classic), bundled with the app; *Font* in Settings switches between *App font (Roboto)* and *System font* | [SIL Open Font License 1.1](https://openfontlicense.org), copyright 2011 The Roboto Project Authors |
+| Roboto | The app's font, from [googlefonts/roboto-3-classic](https://github.com/googlefonts/roboto-3-classic), bundled with the app; *Font* in Settings switches between *App* (Roboto) and *System* | [SIL Open Font License 1.1](https://openfontlicense.org), copyright 2011 The Roboto Project Authors |
 | Shantell Sans | The hand-drawn font of the notes in the home screen's guide, from [arrowtype/shantell-sans](https://github.com/arrowtype/shantell-sans), bundled with the app | [SIL Open Font License 1.1](https://openfontlicense.org), copyright 2022 The Shantell Sans Project Authors |
 | Material Symbols | The icons in the app, such as the cogwheel, by Google | [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0) |
 

@@ -3,6 +3,7 @@
 # covers. A page added under `docs/` is listed here too.
 title: Documentation
 permalink: /docs/
+docs_version: 0.1.15
 docs_index: true
 nav:
   - id: using-the-app

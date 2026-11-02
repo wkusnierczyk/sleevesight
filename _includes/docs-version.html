@@ -1,0 +1,39 @@
+{% comment %}
+  Which release a documentation page describes (#828; `design/release.md`, *Documentation
+  versions*). Each page under `docs/` names, as `docs_version` in its front matter, the release it was
+  last brought up to; `.github/scripts/check-docs-versions.sh` fails CI for a page without one, or
+  with one no release notes are for. The released version is that of the newest release notes,
+  `release-notes/<version>.txt`, as for the build on `main` (`design/release.md`, *Versioning*): the
+  site is built from `main`, which a release's notes reach as it is released, so no step per release
+  is needed. The versions are compared as numbers, part by part (each part below 1000, so 0.1.9 comes
+  before 0.1.10). A page up to date says so under the line back to the index; a page behind says
+  what it was written for, in a banner in that line's place, until the docs are brought up to date.
+{% endcomment %}
+{%- assign released = "" -%}
+{%- assign released_n = -1 -%}
+{%- for file in site.static_files -%}
+  {%- if file.path contains "/release-notes/" and file.extname == ".txt" -%}
+    {%- assign version = file.name | remove: ".txt" -%}
+    {%- assign parts = version | split: "." -%}
+    {%- if parts.size == 3 -%}
+      {%- assign n = parts[0] | times: 1000000 -%}
+      {%- assign n = parts[1] | times: 1000 | plus: n -%}
+      {%- assign n = parts[2] | plus: n -%}
+      {%- if n > released_n -%}
+        {%- assign released_n = n -%}
+        {%- assign released = version -%}
+      {%- endif -%}
+    {%- endif -%}
+  {%- endif -%}
+{%- endfor -%}
+{%- if page.docs_version -%}
+  {%- assign parts = page.docs_version | append: "" | split: "." -%}
+  {%- assign page_n = parts[0] | times: 1000000 -%}
+  {%- assign page_n = parts[1] | times: 1000 | plus: page_n -%}
+  {%- assign page_n = parts[2] | plus: page_n -%}
+  {%- if page_n < released_n %}
+<p class="docs-wip" role="note">Written for {{ page.docs_version }}; the app is now {{ released }}, so some details may differ.</p>
+  {%- else %}
+<p class="docs-version">Up to date for {{ page.docs_version }}</p>
+  {%- endif -%}
+{%- endif -%}

@@ -10,7 +10,9 @@
   fonts are the page's own cut-down copies (`assets/fonts/make_page_font.py`), which hold printable
   ASCII, Latin-1 and the common punctuation, so a page's text needs no rebuild while it stays within
   them. A page with a diagram loads the diagram script from jsDelivr (`_includes/head-custom.html`),
-  and its footer says so. Keep its head and the AnchorJS lines in step with `_layouts/default.html`.
+  and its footer says so. Under the line back to the index, the release the page describes, or a
+  banner when it is behind the released one (`_includes/docs-version.html`, #828). Keep its head and
+  the AnchorJS lines in step with `_layouts/default.html`.
 {% endcomment %}
 <!DOCTYPE html>
 <html lang="{{ site.lang | default: "en-US" }}">
@@ -49,6 +51,10 @@ main.markdown-body{padding-top:8px}
 .markdown-body code{font-family:"Sleevesight Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;font-weight:500}
 .markdown-body .docs-nav{font-family:var(--f-ui);font-size:16px;margin:0 0 24px}
 .markdown-body .docs-nav.foot{margin:40px 0 0}
+.markdown-body .docs-nav:has(+ .docs-version),.markdown-body .docs-nav:has(+ .docs-wip){margin-bottom:4px}
+.markdown-body .docs-version{font-family:var(--f-ui);font-size:14px;color:var(--muted);margin:0 0 24px}
+.markdown-body .docs-wip{font-family:var(--f-ui);font-size:16px;line-height:1.45;margin:8px 0 24px;padding:10px 14px;
+  background:#fff8c5;border:1px solid #d4a72c66;border-radius:6px}
 .markdown-body img{border:1px solid #d0d7de;border-radius:6px}
 footer{margin-top:40px}
 </style>
@@ -63,6 +69,7 @@ footer{margin-top:40px}
 {% unless page.docs_index %}
 <p class="docs-nav"><a href="{{ '/docs/' | relative_url }}">« Documentation</a></p>
 {% endunless %}
+{% include docs-version.html %}
 
 {{ content }}
 

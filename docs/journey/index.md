@@ -9,6 +9,7 @@
 # the app version it comes from.
 title: A typical journey
 permalink: /docs/journey/
+docs_version: 0.1.15
 nav:
   - id: 1-installing-and-the-first-run-screen
     label: First run
@@ -54,7 +55,7 @@ At the bottom, a link opens the privacy policy in your browser.
 
 **What follows.** *Continue* takes you to the home screen, where the app opens from then on. If you turn notification access off later, the home screen says *Sleevesight needs notification access to see what is playing.*, with a short note under it: *Sleevesight uses notification access only to see what is playing. It receives no notifications on Android 12 and newer, and ignores them on older versions.*, and offers *Turn on notification access*, which brings back the first-run screen, with its back arrow and *Close* to return to the home screen.
 
-With nothing playing yet, the home screen lists your music players, A to Z, each a row *Play on …* that opens the player, where you start the music; a player switched off is dimmed, with *Enable in Settings*, and with no player seen yet the screen says *No music player seen yet. Play music in one, and it is listed here and in Settings → Players.* Under the players, a small picture of the home screen while a track plays, with hand-written notes on what each part does: the guide, until you dismiss it ([usage]({{ '/docs/tutorials/usage/' | relative_url }}#nothing-playing)). At the top, the logo scrolls the screen back to the top, the theme button beside the cogwheel switches between the light, dark and system themes, and the cogwheel opens *Settings*.
+With nothing playing yet, the home screen lists your music players, A to Z, each a row *Play on …* that opens the player, where you start the music; a player switched off is dimmed, with *Enable in Settings*, and with no player seen yet the screen says *No music player seen yet. Play music in one, and it is listed here and in Settings → Players.* Under the players, a small picture of the home screen while a track plays, with hand-written notes on what each part does: the guide, until you dismiss it ([usage]({{ '/docs/tutorials/usage/' | relative_url }}#nothing-playing)). At the top, the logo scrolls the screen back to the top, the theme button beside the cogwheel shows the current theme and opens a menu of the light, dark and system themes, and the cogwheel opens *Settings*.
 
 <!-- screenshot: the first-run screen, bottom, with "Notification access is off." and "Open notification access", from app version … -->
 <!-- screenshot: the first-run screen, bottom, with "Notification access is on." and "Continue", from app version … -->
@@ -103,9 +104,9 @@ To save several keys at once, *Load keys*, under *Secrets*, reads one QR code of
 
 **The track appears.** Play music in a player you follow and open Sleevesight. The home screen follows the track, top to bottom: the player and its state (a tap opens the player), the cover with the playback position, the title, artists, album and year, the *Dates*, *Genres* and *Lyrics* buttons (*Genres* opens the genre labels), *Key insights*, and *Sources*. Lookups and writing run while the app is on screen.
 
-**An insight is written.** While the sources are asked, *Key insights* says *Gathering evidence…*; while the AI service writes, *Writing…*, with *Stop writing*. The insight is a few sentences on why the track is interesting. On the very first track, and after the app starts afresh, it waits for a tap on *Write insight*, or for a writing mode chosen (step 6).
+**An insight is written.** While the sources are asked, *Key insights* says *Gathering evidence…*; while the AI service writes, *Writing…*, with *Stop writing*. The insight is a few sentences on why the track is interesting, with the model that wrote it named under the heading (*by Claude Haiku 5.5*). On the very first track, and after the app starts afresh, it waits for a tap on *Write insight*, or for a writing mode chosen (step 6).
 
-**Its citations.** Each sentence ends with chips for the sources it cites. A tap on a chip opens the *Sources* panel and jumps to the line it cites. A sentence the sources do not back (it cites nothing, or a line that does not exist) is underlined in red, and a note under the insight points to it, such as *The sentence underlined in red is not backed by the sources.*; otherwise there is none.
+**Its citations.** Each sentence ends with chips for the sources it cites. A tap on a chip opens the *Sources* panel and jumps to the line it cites. A sentence the sources do not back (it cites nothing, or a line that does not exist) is dimmed, and a note under the insight points to it, such as *The dimmed sentence is not backed by the sources.*; otherwise there is none.
 
 **The *Sources* list.** Under the insight, *Sources* starts folded, a chip alone, like the *Dates* and *Genres* buttons; a tap on it opens its panel. In the panel, a table of the sources that are on: each with the letter its citations use, as a chip that shows or hides its lines (dimmed when it gave none), its name and what it found; a note says when a source needs your key, could not be reached or failed; then come the evidence lines, and below them what was found but not verified, so not cited.
 
@@ -114,7 +115,7 @@ To save several keys at once, *Load keys*, under *Secrets*, reads one QR code of
 **What you decide.** Nothing, as a rule: you listen. A wrong-looking sentence can be checked against its line under *Sources*. [Usage]({{ '/docs/tutorials/usage/' | relative_url }}) says what each state of *Key insights* means, offline or when a source fails.
 
 <!-- screenshot: the home screen with a track playing: player row, cover, title and artists, genre labels, from app version … -->
-<!-- screenshot: "Key insights" with an insight, its citation chips and the grounded line, from app version … -->
+<!-- screenshot: "Key insights" with an insight, its byline, its citation chips and the grounded line, from app version … -->
 <!-- screenshot: "Sources" unfolded, with each source's chip and evidence lines, from app version … -->
 
 ## 6. Write, automatic writing, and the history
@@ -141,7 +142,7 @@ To save several keys at once, *Load keys*, under *Secrets*, reads one QR code of
 
 ## 7. Changing settings later, and clearing what is kept
 
-**Settings.** Every choice above can be changed later, and each change is saved at once. [Settings]({{ '/docs/tutorials/settings/' | relative_url }}) describes each one, with its default and what changing it sends or keeps; among those not met above are *Theme* (light, dark or as the phone is, which the theme button on the home screen sets too) and *Theme button*, *Layout* (the sources and the genres in place on the home screen, or each on a page of its own), *Keep Sources as you left them*, *Font*, *Logo intro at start* and *Restore dismissed messages*, under *Appearance*; how long each source's findings are kept, under *History*; the reading-aloud rows, under *Insights*; and *Only enabled players on Home*, under *Players*.
+**Settings.** Every choice above can be changed later, and each change is saved at once. [Settings]({{ '/docs/tutorials/settings/' | relative_url }}) describes each one, with its default and what changing it sends or keeps; among those not met above are *Theme* (light, dark or as the phone is, which the theme button on the home screen sets too) and *Theme button*, *Layout* (the sources and the genres in place on the home screen, or each on a page of its own), *Keep Sources as you left them*, *Font*, *Logo intro at start* and *Restore dismissed messages*, under *Appearance*; how long each source's findings are kept, under *History*; *AI web search*, *Ask AI automatically* and the reading-aloud rows, under *Insights*; and *Only enabled players on Home*, under *Players*.
 
 **Clearing what is kept.** Everything Sleevesight keeps stays on the phone and is left out of Android's backup. To remove it:
 

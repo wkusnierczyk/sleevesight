@@ -11,6 +11,7 @@ How a release is built, signed and uploaded to Google Play, and the one-time set
 - [The release workflow](#the-release-workflow)
 - [Test and production builds](#test-and-production-builds)
 - [Release notes](#release-notes)
+- [Documentation versions](#documentation-versions)
 - [Store listing](#store-listing)
 - [Versioning](#versioning)
 - [R8](#r8)
@@ -64,6 +65,14 @@ The two builds differ in the flag alone: the same code, signed with the same key
 ## Release notes
 
 Each release's notes are in `release-notes/<version>.txt`, for example `release-notes/0.1.1.txt`, committed with the change that ships, so they are reviewed with it. They are in the listing's language, `en-US`, plain text, at most 500 characters (Play's limit per language); trailing white space is dropped. CI checks each file in `release-notes/` for its name and length on every pull request (`.github/scripts/check-release-notes.sh`), so a misnamed, empty or overlong file fails the pull request that adds it. A tag that is no release version, or whose version has no notes file or an empty or longer one, stops the run before the build, so its version is spent: add the notes before tagging.
+
+## Documentation versions
+
+The user documentation (the pages under `docs/`) is not changed with each release: from 0.1.14 it is brought up to a release after that release is out, in one pull request into `main`, so a page can lag the app ([#828](https://github.com/wkusnierczyk/sleevesight/issues/828)). So that a page is never behind without saying so, each records in its front matter the release it was last brought up to, `docs_version: 0.1.15`, and the site compares it with the released version as it builds (`_includes/docs-version.html`, in the documentation layout, `_layouts/docs.html`). A page up to date shows *Up to date for 0.1.15* under the line back to the index; a page behind shows a banner there instead: *Written for 0.1.13; the app is now 0.1.15, so some details may differ.*
+
+The released version is the newest release notes' (`release-notes/<version>.txt`, the files the site serves as they are), the same rule that gives a build on `main` its version ([Versioning](#versioning)). The site is built from `main`, and a release's notes reach `main` as the release does, so the banner appears by itself, with no step per release to forget. The versions are compared as numbers, part by part, each part below 1000, as the release notes' check holds them; a page whose version is ahead of the notes, as on a branch before its release, counts as up to date. CI fails for a page with no `docs_version`, or with one that has no release notes, so is no release (`.github/scripts/check-docs-versions.sh`, in the *Pages, release track and notes* job of `ci.yml`).
+
+A page brought up to a release takes its version: reviewed against the release and found to need no change counts as brought up to it, since the version says which release the page describes. A docs catch-up, one pull request into `main` like #828, is due once the oldest page has lagged the released version for a week; it is proposed then, not left until asked.
 
 ## Store listing
 

@@ -131,6 +131,13 @@ jobs:
             .github/scripts/check-release-notes.sh "${files[@]}"
           fi
 
+      # Every documentation page names the release it was last brought up to, which the site shows,
+      # with a banner by itself on a page behind the released version (#828;
+      # `_includes/docs-version.html`). After a failed step as well, as the notes above.
+      - name: Docs page versions
+        if: ${{ !cancelled() }}
+        run: .github/scripts/check-docs-versions.sh
+
   # Every module's unit tests, and the debug APK, which phones install.
   tests:
     name: Tests and debug APK
