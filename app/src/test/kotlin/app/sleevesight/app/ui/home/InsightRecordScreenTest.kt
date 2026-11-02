@@ -158,7 +158,7 @@ class InsightRecordScreenTest {
     fun whileItLooksAgainTheRestOfTheFooterLineStaysJoinedAboveIt() {
         val with =
             RewriteOffer(
-                setOf(RewritePart.SOURCE_SETTINGS),
+                setOf(RewritePart.UPDATED_SOURCES),
                 WrittenBy(5, ProviderId.ANTHROPIC, "claude-haiku-5-5", null),
             )
         val view =
@@ -171,7 +171,7 @@ class InsightRecordScreenTest {
                 rewriteWith = with,
             )
         show(view) {
-            val offer = text(R.string.home_rewrite_offer, text(R.string.home_rewrite_part_source_settings))
+            val offer = text(R.string.home_rewrite_offer, text(R.string.home_rewrite_part_updated_sources))
             val joined = text(R.string.home_written_before) + " " + offer
             val line = bounds(joined)
             val looking = bounds(text(R.string.home_look_again_looking))

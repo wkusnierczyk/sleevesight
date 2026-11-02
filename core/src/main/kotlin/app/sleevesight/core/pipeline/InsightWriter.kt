@@ -435,7 +435,7 @@ internal class InsightWriter(
 // What a card written under [card] uses that the insight a call replaces did not (#854); none for
 // the track's first insight (no [Rewriting]).
 private fun Rewriting?.changedFor(card: CardKey): Set<RewritePart> =
-    this?.let { rewriteParts(it.replaced, card.writtenBy(), it.foundNew) }.orEmpty()
+    this?.let { rewriteParts(it.replaced, card.writtenBy(), it.foundNew, it.foundIn) }.orEmpty()
 
 // What a reply's call came to before it ([InsightWriter]'s `finish`): whether a reply before it
 // revised itself ([revisedOnce], #798), and the tokens of every reply of the call, its own too ([paid]).

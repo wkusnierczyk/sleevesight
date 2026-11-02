@@ -176,7 +176,7 @@ class LookAgainScreenTest {
                     "As written previously. Tap Rewrite insight to have AI rewrite the insight with new findings " +
                         "from sources.",
                 ).assertExists()
-            compose.onNodeWithText("updated source settings", substring = true).assertDoesNotExist()
+            compose.onNodeWithText("updated sources", substring = true).assertDoesNotExist()
             // No cost said: the button carries the AI mark (#854).
             compose.onNodeWithText("paid call", substring = true).assertDoesNotExist()
         }

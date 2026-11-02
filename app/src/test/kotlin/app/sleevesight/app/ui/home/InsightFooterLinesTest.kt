@@ -117,10 +117,10 @@ class InsightFooterLinesTest {
         )
 
     @Test
-    fun withSourceSettingsChanged() =
+    fun withTheSourcesUpdated() =
         assertFirstLine(
-            "As written previously. Tap Rewrite insight to have AI rewrite the insight with updated source settings.",
-            Shown(offering(RewritePart.SOURCE_SETTINGS)),
+            "As written previously. Tap Rewrite insight to have AI rewrite the insight with updated sources.",
+            Shown(offering(RewritePart.UPDATED_SOURCES)),
         )
 
     @Test
@@ -173,10 +173,10 @@ class InsightFooterLinesTest {
     @Test
     fun severalPartsWithTheDefaultEffort() =
         assertFirstLine(
-            "Rewritten with updated source settings, Claude Haiku 5.5 and AI service knowledge switched on.",
+            "Rewritten with updated sources, Claude Haiku 5.5 and AI service knowledge switched on.",
             Shown(
                 InsightOffers(),
-                rewritten = setOf(RewritePart.KNOWLEDGE_ON, RewritePart.MODEL, RewritePart.SOURCE_SETTINGS),
+                rewritten = setOf(RewritePart.KNOWLEDGE_ON, RewritePart.MODEL, RewritePart.UPDATED_SOURCES),
                 by = HAIKU_HIGH.copy(effort = null),
             ),
         )
@@ -203,12 +203,12 @@ class InsightFooterLinesTest {
     @Test
     fun aRewriteThatFailedAfterARewrite() =
         assertFirstLine(
-            "Rewritten with updated source settings. Rewriting failed: no connection.",
+            "Rewritten with updated sources. Rewriting failed: no connection.",
             Shown(
                 InsightOffers(),
                 cardShown = true,
                 rewriteFailed = "offline",
-                rewritten = setOf(RewritePart.SOURCE_SETTINGS),
+                rewritten = setOf(RewritePart.UPDATED_SOURCES),
             ),
         )
 

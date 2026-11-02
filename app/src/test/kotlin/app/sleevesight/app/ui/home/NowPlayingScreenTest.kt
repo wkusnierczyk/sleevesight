@@ -558,7 +558,7 @@ class NowPlayingScreenTest {
         // What a rewrite would use, as the line offering it names it (#854).
         val with =
             RewriteOffer(
-                setOf(RewritePart.SOURCE_SETTINGS),
+                setOf(RewritePart.UPDATED_SOURCES),
                 WrittenBy(5, ProviderId.ANTHROPIC, "claude-haiku-5-5", null),
             )
         show(
@@ -573,7 +573,7 @@ class NowPlayingScreenTest {
                 ),
             ),
         ) {
-            val offer = text(R.string.home_rewrite_offer, text(R.string.home_rewrite_part_source_settings))
+            val offer = text(R.string.home_rewrite_offer, text(R.string.home_rewrite_part_updated_sources))
             compose.onNodeWithText(offer, substring = true).assertExists()
             unfold()
             compose.onNodeWithText(text(R.string.home_evidence_cited)).assertExists()

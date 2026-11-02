@@ -68,6 +68,42 @@ internal class PipelineHostRewrittenNoteTest : PipelineHostFixture() {
             assertEquals(setOf(RewritePart.NEW_FINDINGS), shown().rewritten)
         }
 
+    // Look again finds something new, then another model is chosen: the rebuild replaces the run
+    // that looked, and its evidence is what the look again found, so a rewrite still names it.
+    @Test
+    fun `what Look again found new is still named after a settings change replaced its run`() =
+        runTest {
+            cache.keepsResults = true
+            written("Sundown")
+            musicBrainz.text = "Sundown was a number one single."
+            host.lookAgain(checkNotNull(host.state.value.lookAgainKey), checkNotNull(changes.value?.nowPlaying))
+            settle()
+            assertTrue(host.state.value.somethingNew)
+
+            settings.value = settings.value.withModel(ProviderId.ANTHROPIC, OTHER_MODEL)
+            settle()
+            val both = setOf(RewritePart.NEW_FINDINGS, RewritePart.MODEL)
+            assertEquals(
+                both,
+                host.state.value.rewriteWith
+                    ?.parts,
+            )
+
+            tap()
+            settle()
+            assertEquals(both, shown().rewritten)
+            assertEquals(OTHER_MODEL, shown().writtenBy?.model)
+
+            // The card written from it was compared with nothing new: another model is all a rewrite changes.
+            settings.value = settings.value.withModel(ProviderId.ANTHROPIC, THIRD_MODEL)
+            settle()
+            assertEquals(
+                setOf(RewritePart.MODEL),
+                host.state.value.rewriteWith
+                    ?.parts,
+            )
+        }
+
     // [title] written on a tap under *On demand*, with nothing offered beside it.
     private fun TestScope.written(title: String) {
         settings.value = settings.value.copy(writeAutomatically = WriteAutomatically.NEVER)
@@ -85,5 +121,6 @@ internal class PipelineHostRewrittenNoteTest : PipelineHostFixture() {
 
     private companion object {
         const val OTHER_MODEL = "claude-other"
+        const val THIRD_MODEL = "claude-third"
     }
 }

@@ -371,12 +371,12 @@
     <string name="home_rewrite_offer">Tap Rewrite insight to have AI rewrite the insight with %1$s.</string>
     <!-- The parts of home_rewritten_with and home_rewrite_offer (#854), in this order: what Look
          again found new; the evidence changed otherwise (a source's key, a source or the web search
-         switched on or off); the AI service, model or effort (home_rewrite_model_effort: %1$s the
+         switched on or off, or a source answering otherwise); the AI service, model or effort (home_rewrite_model_effort: %1$s the
          model as AI services lists it, %2$s the effort level as Settings names it, in lower case; the
          model alone with the service's default effort); AI service knowledge; the prompt's version,
          after an app update. -->
     <string name="home_rewrite_part_new_findings">new findings from sources</string>
-    <string name="home_rewrite_part_source_settings">updated source settings</string>
+    <string name="home_rewrite_part_updated_sources">updated sources</string>
     <string name="home_rewrite_model_effort">%1$s %2$s effort</string>
     <string name="home_rewrite_part_knowledge_on">AI service knowledge switched on</string>
     <string name="home_rewrite_part_knowledge_off">AI service knowledge switched off</string>

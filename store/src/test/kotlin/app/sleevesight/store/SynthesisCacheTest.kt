@@ -169,7 +169,7 @@ class SynthesisCacheTest {
 
     @Test
     fun `a card rewritten again under the same key keeps only the latest change`() {
-        synthesis.put(key, "first", rewritten = setOf(RewritePart.SOURCE_SETTINGS))
+        synthesis.put(key, "first", rewritten = setOf(RewritePart.UPDATED_SOURCES))
         synthesis.put(key, "second", rewritten = setOf(RewritePart.KNOWLEDGE_ON))
 
         assertEquals(setOf(RewritePart.KNOWLEDGE_ON), synthesis.get(key)?.rewritten)

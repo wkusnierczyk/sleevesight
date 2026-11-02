@@ -209,7 +209,7 @@ class InsightFooterLayoutTest {
         // A rewrite with another model and source settings, as the offer names them (#854).
         val OFFER =
             RewriteOffer(
-                setOf(RewritePart.SOURCE_SETTINGS, RewritePart.MODEL),
+                setOf(RewritePart.UPDATED_SOURCES, RewritePart.MODEL),
                 WrittenBy(5, ProviderId.ANTHROPIC, "claude-haiku-5-5", ReasoningEffort.HIGH),
             )
 

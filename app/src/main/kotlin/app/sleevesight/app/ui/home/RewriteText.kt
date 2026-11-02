@@ -64,7 +64,7 @@ private fun partText(
 ): String? =
     when (part) {
         RewritePart.NEW_FINDINGS -> stringResource(R.string.home_rewrite_part_new_findings)
-        RewritePart.SOURCE_SETTINGS -> stringResource(R.string.home_rewrite_part_source_settings)
+        RewritePart.UPDATED_SOURCES -> stringResource(R.string.home_rewrite_part_updated_sources)
         RewritePart.MODEL -> with?.let { modelText(it, names) }
         RewritePart.KNOWLEDGE_ON -> stringResource(R.string.home_rewrite_part_knowledge_on)
         RewritePart.KNOWLEDGE_OFF -> stringResource(R.string.home_rewrite_part_knowledge_off)

@@ -740,13 +740,9 @@ class PipelineHost(
         override fun rewriting(): Rewriting? {
             val state = snapshot.value
             val run = state.run?.takeIf { it.id == id }
-            val replaced =
-                run
-                    ?.let { state.written(it.nowPlaying) }
-                    ?.card
-                    ?.insight
-                    ?.writtenBy
-            return replaced?.let { Rewriting(it, run.lookAgain?.foundNew) }
+            val ledger = run?.let { state.written(it.nowPlaying) }
+            val replaced = ledger?.card?.insight?.writtenBy
+            return replaced?.let { Rewriting(it, run.lookAgain?.foundNew, ledger.foundNew) }
         }
 
         override fun labelsFailed(sources: Set<SourceId>) {
@@ -875,7 +871,8 @@ class PipelineHost(
         val replaced = (track?.insight as? Written)?.writtenBy
         val with = track?.writesWith
         if (replaced == null || with == null) return null
-        val parts = rewriteParts(replaced, with, owner.current?.lookAgain?.foundNew)
+        val found = owner.written(track.nowPlaying)?.foundNew
+        val parts = rewriteParts(replaced, with, owner.current?.lookAgain?.foundNew, found)
         return if (parts.isEmpty()) null else RewriteOffer(parts, with)
     }
 

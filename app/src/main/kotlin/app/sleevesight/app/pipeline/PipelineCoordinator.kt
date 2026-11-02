@@ -490,6 +490,11 @@ data class CoordinatorState(
      * ([Run.lapsed]). It never decides a write. A lapsed Decide sets it; a decision for nothing to
      * narrate sets it as [wouldWrite] is set, with the first action expired in place of made, and a
      * run of the key asking again keeps it under the same settings; any other decision drops it.
+     * [foundNew] (#854) is the fingerprint of the evidence a look again (#617) found something new
+     * in, compared with [card]: set when that run's evidence is assembled, dropped with the card it
+     * was compared with (a card written or shown in its place) and with the entry. A rewrite from
+     * that evidence used new findings, whichever run makes it: one that replaced the look again's
+     * for a settings change too (`Rewriting.foundIn`).
      */
     data class Ledger(
         val track: NowPlaying,
@@ -499,6 +504,7 @@ data class CoordinatorState(
         val card: Card? = null,
         val wouldWrite: WouldWrite? = null,
         val paused: WriteSettings? = null,
+        val foundNew: String? = null,
     )
 
     /**
@@ -1015,6 +1021,7 @@ class PipelineCoordinator(
                         lookAgain = run.lookAgain?.let { it.copy(foundNew = event.evidence.bringsNewSince(it.shown)) },
                     )
                 }
+                foundNew(event.run, event.evidence.fingerprint)
             }
             else -> Unit
         }
@@ -1472,14 +1479,27 @@ class PipelineCoordinator(
         val before = state.ledger?.takeIf { sameInsightTrack(it.track, run.nowPlaying) }
         val recorded = entry(run, written)
         val kept = if (card != null && (replaces || recorded.card == null)) card else recorded.card
+        // What a look again found new was compared with the card replaced, not with this one (#854).
+        val found = recorded.foundNew.takeIf { kept === recorded.card }
         val would = nothingToNarrate?.let { wouldWrite(run, before, recorded, it) }
         val paused = nothingToNarrate?.let { pausedFor(run, before, recorded, it) }
         // The run has decided: a tap kept for it has nothing left to answer.
         state =
             state.copy(
-                ledger = recorded.copy(card = kept, wouldWrite = would, paused = paused),
+                ledger = recorded.copy(card = kept, wouldWrite = would, paused = paused, foundNew = found),
                 run = run.copy(keepsTap = false, tapped = false),
             )
+    }
+
+    // A look again of [id] that found something new (#617): the ledger keeps the fingerprint of the
+    // evidence it found it in (#854), so a rewrite from that evidence names it, made by whatever run.
+    private fun foundNew(
+        id: RunId,
+        fingerprint: String,
+    ) {
+        val run = state.run?.takeIf { it.id == id && !it.orphaned && it.lookAgain?.foundNew == true } ?: return
+        val ledger = state.written(run.nowPlaying) ?: return
+        state = state.copy(ledger = ledger.copy(foundNew = fingerprint))
     }
 
     // What a decision with no call for nothing to narrate, under [settings], leaves in the ledger
