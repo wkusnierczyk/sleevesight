@@ -224,7 +224,7 @@ private fun Footer(
             )
         }
         // Not *Kept from before.*: the line above says so.
-        GroundingLine(insight.grounded, cached = false, details = groundingDetails)
+        GroundingLine(insight.grounded, details = groundingDetails)
         if (!insight.complete) Quiet(stringResource(R.string.home_insight_incomplete))
         context.track?.let { track -> ReportAction { actions.onReport(track, insight) } }
     }

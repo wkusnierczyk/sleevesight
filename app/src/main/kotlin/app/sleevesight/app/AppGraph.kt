@@ -28,6 +28,7 @@ import app.sleevesight.app.pipeline.AppPipelineParts
 import app.sleevesight.app.pipeline.AutoSearches
 import app.sleevesight.app.pipeline.ModelCheck
 import app.sleevesight.app.pipeline.PipelineHost
+import app.sleevesight.app.pipeline.Plays
 import app.sleevesight.app.pipeline.UnavailableModel
 import app.sleevesight.app.pipeline.afterAcknowledged
 import app.sleevesight.app.pipeline.genresWithNoDefinition
@@ -514,6 +515,12 @@ class AppGraph internal constructor(
         )
 
     /**
+     * When the play of the track Home shows began (#851): an AI answer written before it is shown as
+     * kept from before.
+     */
+    private val plays = Plays()
+
+    /**
      * What a genre's panel shows besides its table (#523): each genre's definition, kept in the
      * caches' artist-level table whatever *Keep what sources said about each artist* says, since it
      * says nothing about what was played, and fetched ahead for the playing track (#786, `init`);
@@ -538,6 +545,8 @@ class AppGraph internal constructor(
             paid = { aiSearches.counted(it) },
             // Each reason or list asked, or served from the cache, in the diagnostics' events (#851).
             events = { diagnostics.log.record(it) },
+            // A reason written before this play of the track is kept from before (#851).
+            playBegan = { plays.began(it) },
         )
 
     /**
@@ -574,6 +583,8 @@ class AppGraph internal constructor(
             // Each question asked, not asked once its gates closed, or served from what was kept, in
             // the diagnostics' events (#851).
             events = { diagnostics.log.record(it) },
+            // An answer written before this play of the track is kept from before (#851).
+            playBegan = { plays.began(it) },
         )
     }
 
@@ -691,6 +702,8 @@ class AppGraph internal constructor(
             skipLearning.restore()
         }
         pipeline.start(pipelineScope)
+        // Each play of the track Home shows, so an AI answer written before it shows as kept (#851).
+        pipelineScope.launch { plays.run(pipeline.state.map { it.track }) }
         // *Search with AI*, the setting (#773): a panel's search starts as soon as its source has
         // nothing, open or not, for the playing track, while the app is on screen; again once an AI
         // service is ready.

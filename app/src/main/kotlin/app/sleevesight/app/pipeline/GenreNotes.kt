@@ -61,11 +61,14 @@ sealed interface GenreReason {
      * Asked for, or kept from before: [state] is [InsightState.Writing] (with no text yet, while the
      * AI's genre list or the reason is looked for), [InsightState.Written], [InsightState.NoEvidence],
      * or [InsightState.Failed] (the list's call, or the reason's), beside which it is offered again.
-     * [model] is the name of the model that writes it, for the credit under it.
+     * [model] is the name of the model that writes it, for the credit under it. A reason written
+     * before this play of the track, served from what was kept, has [keptAt], when it was written
+     * (#851); null for one written on this play.
      */
     data class Shown(
         val state: InsightState,
         val model: String? = null,
+        val keptAt: Instant? = null,
     ) : GenreReason
 }
 
@@ -171,6 +174,10 @@ interface GenreNotes : DefinitionFeed {
  * an [PipelineEvent.AiEnded] around the asking (whose calls may be none, when what was kept answered
  * it after all), an [PipelineEvent.AiKept] for one read from the cache and shown; none for work
  * started before a *Clear history*. A reason shown again from memory is not told again.
+ *
+ * A reason is shown as kept from before (#851, `GenreReason.Shown.keptAt`) when it was written
+ * before the play of its track began ([playBegan], `Plays`); for a track not playing (no time), when
+ * it was read from the cache.
  */
 @Suppress(
     "LongParameterList", // Where definitions, reasons and lists come from, where they run, and the time.
@@ -188,6 +195,7 @@ class AppGenreNotes private constructor(
     private val modelName: (String) -> String,
     private val paid: (QuestionCost) -> Unit,
     private val events: (PipelineEvent) -> Unit,
+    private val playBegan: (TrackState) -> Instant?,
 ) : GenreNotes,
     DefinitionFeed by lookups {
     /**
@@ -207,6 +215,7 @@ class AppGenreNotes private constructor(
         modelName: (String) -> String = { ModelNames.of(it) ?: it },
         paid: (QuestionCost) -> Unit = {},
         events: (PipelineEvent) -> Unit = {},
+        playBegan: (TrackState) -> Instant? = { null },
     ) : this(
         AppGenreDefinitions(definitions, settings, scope, epoch, io),
         definitions.vocabulary,
@@ -218,6 +227,7 @@ class AppGenreNotes private constructor(
         modelName,
         paid,
         events,
+        playBegan,
     )
 
     // A reason shown, or a list, and when it was written.
@@ -285,7 +295,7 @@ class AppGenreNotes private constructor(
                 combine(shown, lists, waiting, settings) { reasons, known, asked, now ->
                     Shown(reasons, known, asked, now?.historyLifetime)
                 },
-            ) { path, now -> shownFor(path, genre, now) }
+            ) { path, now -> shownFor(path, track, genre, now) }
     }
 
     // What the panel's states are made of: the reasons, the lists, the genres waiting on each, and
@@ -297,9 +307,10 @@ class AppGenreNotes private constructor(
         val lifetime: Duration?,
     )
 
-    // What the panel shows for [genre]'s [path], as [now] has it.
+    // What the panel shows for [track]'s [genre]'s [path], as [now] has it.
     private fun shownFor(
         path: ReasonPath,
+        track: TrackState,
         genre: String,
         now: Shown,
     ): GenreReason =
@@ -330,10 +341,22 @@ class AppGenreNotes private constructor(
                 when {
                     entry == null -> GenreReason.Offered
                     expired(entry.writtenAt, now.lifetime) -> GenreReason.Offered.also { drop(path.key) }
-                    else -> GenreReason.Shown(entry.state, modelName(path.key.model))
+                    else -> GenreReason.Shown(entry.state, modelName(path.key.model), keptAt(entry, track))
                 }
             }
         }
+
+    // When [entry] was written, if it is a reason kept from before for [track] (#851): written, and
+    // before [track]'s play began, or, with no time for it, read from the cache.
+    private fun keptAt(
+        entry: Entry<InsightState>,
+        track: TrackState,
+    ): Instant? {
+        val state = entry.state as? InsightState.Written ?: return null
+        val began = playBegan(track)
+        val kept = if (began != null) entry.writtenAt < began else state.cached
+        return entry.writtenAt.takeIf { kept }
+    }
 
     // [key]'s list ([entry]), while the path still asks for it: offered, none known, not asked for
     // this genre, or past *Keep history for* ([lifetime]); looking; or failed, offered again.

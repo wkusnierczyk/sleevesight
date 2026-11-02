@@ -63,20 +63,27 @@ sealed interface AiSearch {
         val web: Boolean = false,
     ) : AiSearch
 
-    /** Answered by [model], as checked, asked as [way] says (#801, #802). */
+    /**
+     * Answered by [model], as checked, asked as [way] says (#801, #802); kept from before when
+     * [keptAt] says when it was written (#851): before this play of the track, served from what was
+     * kept; null for one written on this play.
+     */
     data class Answered(
         val answer: SearchAnswer,
         val model: String,
         val way: SearchWay = SearchWay(),
+        val keptAt: Instant? = null,
     ) : AiSearch
 
     /**
      * Answered by [model] with nothing usable: "{model} found nothing on the web.", or from its
-     * knowledge "{model} couldn't say from its own knowledge.", asked as [way] says.
+     * knowledge "{model} couldn't say from its own knowledge.", asked as [way] says; kept from
+     * before as [Answered.keptAt] says.
      */
     data class NothingFound(
         val model: String,
         val way: SearchWay = SearchWay(),
+        val keptAt: Instant? = null,
     ) : AiSearch
 
     /** The call failed, for [reason]; offered again. */
@@ -195,6 +202,10 @@ interface AiSearchFeed {
  * from the cache for it, once per track for as long as the process lives (the last few hundred). An
  * answer shown again for the track its call was made for is not told again. None is told for work
  * started before a *Clear history*, whose clear drops the log.
+ *
+ * An answer is shown as kept from before (#851, `AiSearch.Answered.keptAt`) when it was written
+ * before the play of the track it is shown for began ([playBegan], `Plays`); for a track not playing
+ * (no time), when it was read from the cache or written for another track.
  */
 @Suppress(
     "LongParameterList", // Where searches are made and checked, where they run, the names, the time, the log.
@@ -211,6 +222,7 @@ class AppAiSearches(
     private val automaticGate: (TrackState, SearchKind, String?) -> Boolean = { _, _, _ -> true },
     private val deferred: (TrackState, SearchKind, String?) -> Unit = { _, _, _ -> },
     private val events: (PipelineEvent) -> Unit = {},
+    private val playBegan: (TrackState) -> Instant? = { null },
 ) : AiSearchFeed {
     // A search's key, null with no AI service ready; and whether it is offered at all (the pipeline
     // and settings in, *Show insights* on).
@@ -299,7 +311,9 @@ class AppAiSearches(
                     key == null -> AiSearch.Unready
                     entry == null -> AiSearch.Offered
                     expired(entry.writtenAt, lifetime) -> AiSearch.Offered.also { drop(key) }
-                    else -> shownAs(entry.state, modelName(key.model)).also { serve(key, kind, genre, track, entry) }
+                    else ->
+                        shownAs(entry.state, modelName(key.model), keptAt(entry, track))
+                            .also { serve(key, kind, genre, track, entry) }
                 }
             }
     }
@@ -386,13 +400,15 @@ class AppAiSearches(
         val log: (PipelineEvent) -> Unit = { event ->
             shown.whenCurrent({ shown.current(work, epoch) }) { events(event) }
         }
-        val show: (SearchState, Instant) -> Unit = { state, at ->
+        // Each state shown, written for [track] by its call ([fresh]), or read from the cache.
+        val publish: (SearchState, Instant, Boolean) -> Unit = { state, at, fresh ->
             // Settled for this track before it shows, so its panel does not take it for one kept.
             if (state.settled) synchronized(lock) { served[Served.of(key, track)] = Unit }
-            shown.publish(key, Entry(state, at)) {
+            shown.publish(key, Entry(state, at, identityOf(track).takeIf { fresh })) {
                 shown.current(work, epoch) && synchronized(lock) { key !in stopped && work.isActive }
             }
         }
+        val show: (SearchState, Instant) -> Unit = { state, at -> publish(state, at, true) }
         // The question's call, once made: when it started, and what it cost so far.
         var called: Instant? = null
         var cost = QuestionCost()
@@ -408,7 +424,7 @@ class AppAiSearches(
                     !(automaticGate(track, kind, asked.genre) && keyOf(track, kind, asked.genre)?.second == key)
             if (kept != null) {
                 log(keptServed(key, question, track, kept.state, kept.writtenAt))
-                show(kept.state, kept.writtenAt ?: clock.now())
+                publish(kept.state, kept.writtenAt ?: clock.now(), false)
             } else if (gated) {
                 log(PipelineEvent.AiNotAsked(track.lookupKey, question))
                 work[Job]?.let { asking.remove(key, it) }
@@ -451,6 +467,19 @@ class AppAiSearches(
             ended(AiOutcome.FAILED, reason)
             show(SearchState.Failed(reason), clock.now())
         }
+    }
+
+    // When [entry] was written, if it is kept from before for [track] (#851): settled, and written
+    // before [track]'s play began, or, with no time for it, read from the cache or written for
+    // another track.
+    private fun keptAt(
+        entry: Entry,
+        track: TrackState,
+    ): Instant? {
+        if (!entry.state.settled) return null
+        val began = playBegan(track)
+        val kept = if (began != null) entry.writtenAt < began else entry.writtenFor != identityOf(track)
+        return entry.writtenAt.takeIf { kept }
     }
 
     // [entry], settled, shown for [track] by its panel (#851): a kept answer served, told to the log
@@ -499,7 +528,8 @@ class AppAiSearches(
             val work = coroutineContext
             val kept = searches.kept(key, kind, track)?.takeIf { !expired(it.writtenAt) }
             if (kept != null) {
-                shown.publish(key, Entry(kept.state, kept.writtenAt ?: clock.now()), replace = false) {
+                val entry = Entry(kept.state, kept.writtenAt ?: clock.now(), writtenFor = null)
+                shown.publish(key, entry, replace = false) {
                     shown.current(work, epoch)
                 }
             }
@@ -688,21 +718,29 @@ private fun outcomeOf(state: SearchState?): AiOutcome =
         is SearchState.Searching, null -> AiOutcome.STOPPED
     }
 
-/** A search shown, and when it was written. */
+/**
+ * A search shown, when it was written, and the track whose call wrote it ([writtenFor], its
+ * identity, [identityOf]; null when read from the cache), which tells one kept from before (#851).
+ */
 internal class Entry(
     val state: SearchState,
     val writtenAt: Instant,
+    val writtenFor: Any? = null,
 )
 
-// [state] as the panel shows it, by the model named [model].
+// [track]'s identity, as the sources name it, and its length.
+private fun identityOf(track: TrackState): Any = track.normalized to track.nowPlaying.duration
+
+// [state] as the panel shows it, by the model named [model], kept from before when [keptAt] says when.
 private fun shownAs(
     state: SearchState,
     model: String,
+    keptAt: Instant?,
 ): AiSearch =
     when (state) {
         is SearchState.Searching -> AiSearch.Searching(state.web)
-        is SearchState.Answered -> AiSearch.Answered(state.answer, model, state.way)
-        is SearchState.NothingFound -> AiSearch.NothingFound(model, state.way)
+        is SearchState.Answered -> AiSearch.Answered(state.answer, model, state.way, keptAt)
+        is SearchState.NothingFound -> AiSearch.NothingFound(model, state.way, keptAt)
         is SearchState.Failed -> AiSearch.Failed(state.reason)
     }
 

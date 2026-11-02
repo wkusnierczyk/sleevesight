@@ -19,6 +19,7 @@ import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -65,6 +66,8 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import kotlin.time.Clock
+import kotlin.time.Duration.Companion.days
 
 /**
  * A genre's panel above its table (#523), in both layouts: the definition with its credit, then
@@ -235,10 +238,26 @@ class GenreAboutScreenTest {
     }
 
     @Test
-    fun aReasonKeptFromBeforeShowsWithNoButton() =
-        showBox(Notes(start = GenreReason.Shown(written.copy(cached = true)))) {
+    fun aReasonKeptFromBeforeShowsWithNoButtonSayingWhenItWasWrittenUnderItsCredit() {
+        val earlier = Clock.System.now() - 3.days
+        showBox(Notes(start = GenreReason.Shown(written.copy(cached = true), "Claude Haiku 5.5", keptAt = earlier))) {
             assertEquals(0, count(GENRE_WHY_TAG))
-            compose.onNodeWithText(text(R.string.home_note_kept), substring = true).assertExists()
+            compose.onNodeWithTag(AI_KEPT_TAG).performScrollTo()
+            val line = compose.onNodeWithTag(AI_KEPT_TAG).fetchSemanticsNode().config[SemanticsProperties.Text]
+            assertTrue(line.single().text.startsWith("Kept from before: written on "))
+            assertTrue(top(AI_KEPT_TAG) > top(GENRE_REASON_TAG))
+            val credit = compose.onNodeWithText("by Claude Haiku 5.5").fetchSemanticsNode().boundsInRoot
+            assertTrue(top(AI_KEPT_TAG) >= credit.bottom)
+        }
+    }
+
+    @Test
+    fun aReasonWrittenOnThisPlaySaysNothingOfBeingKept() =
+        // From the cache, but on this play (no time given): nothing said.
+        showBox(Notes(start = GenreReason.Shown(written.copy(cached = true), "Claude Haiku 5.5"))) {
+            compose.onNodeWithTag(GENRE_REASON_TAG).performScrollTo()
+            assertEquals(0, count(AI_KEPT_TAG))
+            assertEquals(0, compose.onAllNodesWithText("Kept from before", substring = true).fetchSemanticsNodes().size)
         }
 
     @Test

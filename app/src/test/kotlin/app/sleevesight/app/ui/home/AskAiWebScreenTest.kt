@@ -1,5 +1,6 @@
 package app.sleevesight.app.ui.home
 
+import android.text.format.DateFormat
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
@@ -69,7 +70,11 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.time.ZoneId
+import java.util.Locale
+import kotlin.time.Clock
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.days
 import kotlin.time.Instant
 
 /**
@@ -249,14 +254,51 @@ class AskAiWebScreenTest {
         }
 
     @Test
-    fun anAnswerFromKnowledgeIsMarkedSoAboveTheCredit() =
+    fun anAnswerFromKnowledgeIsMarkedSoUnderTheCredit() =
         show {
             tap(DATES_CHIP_TAG)
             set(SearchKind.DATES, AiSearch.Answered(SearchAnswer.Dates(album = "1974-01"), model))
             compose.onNodeWithTag(AI_SEARCH_KNOWLEDGE_TAG).assertTextEquals(text(R.string.home_cite_model))
-            assertTrue(bounds(AI_SEARCH_BY_TAG).top >= bounds(AI_SEARCH_KNOWLEDGE_TAG).bottom)
+            assertTrue(bounds(AI_SEARCH_KNOWLEDGE_TAG).top >= bounds(AI_SEARCH_BY_TAG).bottom)
             assertEquals(0, count(AI_SEARCH_FROM_TAG))
+            // Written on this play: nothing says it was kept.
+            assertEquals(0, count(AI_KEPT_TAG))
         }
+
+    // What the kept line says for one written at [at], as the phone writes times and dates now.
+    private fun keptLine(at: Instant): String =
+        when (val written = writtenWhen(at, Clock.System.now(), ZoneId.systemDefault(), Locale.getDefault(), is24())) {
+            is Written.Today -> app.getString(R.string.home_ai_kept_today, written.time)
+            is Written.OnDay -> app.getString(R.string.home_ai_kept_on, written.date)
+        }
+
+    private fun is24() = DateFormat.is24HourFormat(app)
+
+    @Test
+    fun aKeptAnswerSaysWhenItWasWrittenUnderItsCreditLines() {
+        val today = Clock.System.now()
+        val earlier = today - 3.days
+        show {
+            tap(DATES_CHIP_TAG)
+            set(SearchKind.DATES, AiSearch.Answered(SearchAnswer.Dates(album = "1974-01"), model, keptAt = today))
+            compose.onNodeWithTag(AI_KEPT_TAG).assertTextEquals(keptLine(today))
+            assertTrue(keptLine(today).startsWith("Kept from before: written today at "))
+            // The answer, by its model, from its knowledge, then kept from before.
+            assertTrue(bounds(AI_SEARCH_BY_TAG).top >= boundsOf("This album was released in January 1974.").bottom)
+            assertTrue(bounds(AI_SEARCH_KNOWLEDGE_TAG).top >= bounds(AI_SEARCH_BY_TAG).bottom)
+            assertTrue(bounds(AI_KEPT_TAG).top >= bounds(AI_SEARCH_KNOWLEDGE_TAG).bottom)
+            assertEquals(null, fontStyle(AI_KEPT_TAG))
+            // Written on an earlier day: its date.
+            set(SearchKind.DATES, AiSearch.Answered(SearchAnswer.Dates(album = "1974-01"), model, keptAt = earlier))
+            compose.onNodeWithTag(AI_KEPT_TAG).assertTextEquals(keptLine(earlier))
+            assertTrue(keptLine(earlier).startsWith("Kept from before: written on "))
+            // Nothing found, kept: said under its line.
+            set(SearchKind.DATES, AiSearch.NothingFound(model, keptAt = earlier))
+            assertTrue(bounds(AI_KEPT_TAG).top >= bounds(AI_SEARCH_NOTHING_TAG).bottom)
+            set(SearchKind.DATES, AiSearch.NothingFound(model))
+            assertEquals(0, count(AI_KEPT_TAG))
+        }
+    }
 
     @Test
     fun aQuestionAskedAutomaticallySaysSoInItsNothingLineOnly() =

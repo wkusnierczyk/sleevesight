@@ -46,9 +46,11 @@ import kotlin.time.Clock
  * *Ask AI* wired as `AppGraph` wires it (#851): the panels' searches and a genre's definition
  * ([searches]), the genres' notes ([notes]) with their definitions from [articles], and the two
  * triggers of *Ask AI automatically* ([panels], [definitions]) with their gates, on [cache], asking
- * [provider], in [scope]; the diagnostics' events kept in [events]. A second wiring on the same
- * cache is the app after a restart.
+ * [provider], in [scope]; the diagnostics' events kept in [events]; the plays of the track shown
+ * followed by [plays], none by default. A second wiring on the same cache is the app after a
+ * restart.
  */
+@Suppress("LongParameterList") // What the app's wiring is given, each a test's to choose.
 internal class AskAi(
     scope: CoroutineScope,
     val settings: MutableStateFlow<Settings?>,
@@ -56,6 +58,7 @@ internal class AskAi(
     val provider: CountingProvider,
     articles: GenreArticles = GenreArticles { Lookup.NotFound },
     clock: Clock = Clock.System,
+    plays: Plays? = null,
 ) {
     /** The diagnostics' events told, in order. */
     val events = mutableListOf<PipelineEvent>()
@@ -80,6 +83,7 @@ internal class AskAi(
             scope,
             clock = clock,
             events = { events += it },
+            playBegan = { plays?.began(it) },
         )
 
     lateinit var panels: AutoSearches<SearchKind>
@@ -107,6 +111,7 @@ internal class AskAi(
                 }
             },
             events = { events += it },
+            playBegan = { plays?.began(it) },
         )
 
     init {
