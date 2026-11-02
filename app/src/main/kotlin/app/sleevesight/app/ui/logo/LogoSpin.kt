@@ -9,6 +9,9 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import app.sleevesight.app.session.PlaybackInfo
 import app.sleevesight.app.ui.home.playing
 import app.sleevesight.core.model.NowPlaying
@@ -97,9 +100,10 @@ internal data class RecordMotion(
  * The header logo's record's motion (#848), read as it draws: turning at [spin]'s speed while [spin]
  * says it turns, getting up to speed in [START_SECONDS] and coming to rest in [STOP_SECONDS],
  * resting where it stops and starting again from there. It moves only while [running] (the intro
- * over, so the record the intro landed, upright, is where it starts) and while frames come: not
- * while the app is off screen, nor while Home is not composed. Under *Remove animations*
- * ([animatorDurationScale] 0) it stands still, upright, as the in-progress record does (#785).
+ * over, so the record the intro landed, upright, is where it starts), while the app is on screen
+ * ([whileOnScreen]: back on screen, it goes on from where it was, the time away not counted), and while
+ * Home is composed. Under *Remove animations* ([animatorDurationScale] 0) it stands still where it
+ * is, and starts again from there once animations are back.
  */
 @Composable
 internal fun recordMotion(
@@ -108,22 +112,46 @@ internal fun recordMotion(
 ): State<RecordMotion> {
     val motion = rememberSaveable(saver = RecordMotion.Saver) { mutableStateOf(RecordMotion()) }
     val still = animatorDurationScale() == 0f
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
     val top = spin.speed.rpm * DEGREES_PER_RPM
     val target = if (spin.turning) top else 0f
-    LaunchedEffect(running, still, target, top) {
-        if (still) motion.value = RecordMotion()
+    LaunchedEffect(running, still, lifecycle, target, top) {
+        if (still) motion.value = motion.value.copy(speed = 0f)
         if (still || !running) return@LaunchedEffect
-        // Frames as an infinite animation's, which a test's clock holds back while it waits for idle.
-        var last = withInfiniteAnimationFrameNanos { it }
-        while (target > 0f || motion.value.speed > 0f) {
-            val now = withInfiniteAnimationFrameNanos { it }
-            // A frame long in coming (the app back on screen) moves the record only a frame's worth.
-            val seconds = ((now - last) / NANOS_PER_SECOND).coerceAtMost(MAX_STEP_SECONDS)
-            last = now
-            motion.value = motion.value.after(seconds, target, top)
+        whileOnScreen(lifecycle) {
+            if (target > 0f || motion.value.speed > 0f) {
+                eachFrame { seconds ->
+                    motion.value = motion.value.after(seconds, target, top)
+                    target > 0f || motion.value.speed > 0f
+                }
+            }
         }
     }
     return motion
+}
+
+/**
+ * Runs [block] while the app is on screen ([lifecycle] at least started), afresh each time it comes
+ * back: off screen, [block] ends at once, so it asks for no frames, and back, it starts with a new
+ * first frame, so the time away is not counted.
+ */
+internal suspend fun whileOnScreen(
+    lifecycle: Lifecycle,
+    block: suspend () -> Unit,
+) = lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { block() }
+
+/**
+ * Calls [step] with the seconds since the frame before, frame after frame, from the frame after the
+ * first, for as long as it returns true. Frames as an infinite animation's, which a test's clock
+ * holds back while it waits for idle; a frame long in coming moves things only [MAX_STEP_SECONDS].
+ */
+internal suspend fun eachFrame(step: (Float) -> Boolean) {
+    var last = withInfiniteAnimationFrameNanos { it }
+    do {
+        val now = withInfiniteAnimationFrameNanos { it }
+        val seconds = ((now - last) / NANOS_PER_SECOND).coerceAtMost(MAX_STEP_SECONDS)
+        last = now
+    } while (step(seconds))
 }
 
 private fun wrap(degrees: Float): Float = degrees % FULL_TURN
