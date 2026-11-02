@@ -48,6 +48,7 @@ import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.app.ui.theme.moveAccessibilityFocusToFocused
 import app.sleevesight.core.model.ProviderId
+import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -463,3 +464,25 @@ internal fun KeyLink(
  * be read. Not before the keys' states are read (null), nor with no key.
  */
 internal fun keySaved(state: SecretState?): Boolean = state == SecretState.SAVED || state == SecretState.UNREADABLE
+
+/**
+ * Whether [provider]'s switch under *AI services* can be moved: its key is saved ([keySaved]), or it
+ * needs none. With no key saved, the switch is off and cannot be moved (#667).
+ */
+internal fun providerSwitchUsable(
+    provider: ProviderId,
+    secrets: Map<SecretId, SecretState>,
+): Boolean = SecretId.forProvider(provider)?.let { keySaved(secrets[it]) } ?: true
+
+/**
+ * Whether [provider]'s switch under *AI services* shows on: it is the one chosen, and its key is not
+ * missing. Stored on with no key, as before the keys' gate ([app.sleevesight.app.secrets.KeyGate])
+ * writes it off, it shows off (#667).
+ */
+internal fun providerShownOn(
+    provider: ProviderId,
+    settings: Settings,
+    secrets: Map<SecretId, SecretState>,
+): Boolean =
+    settings.aiProvider == provider &&
+        SecretId.forProvider(provider)?.let { secrets[it] != SecretState.ABSENT } ?: true

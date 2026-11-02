@@ -62,10 +62,8 @@ private fun ProviderRows(
 ) {
     val keyId = SecretId.forProvider(provider)
     val key = keyId?.let { secrets[it] }
-    // With no key saved, the switch is off and cannot be moved (#667); stored on with none, as
-    // before the keys' gate ([app.sleevesight.app.secrets.KeyGate]) writes it off, it shows off.
-    val usable = keyId == null || keySaved(key)
-    val on = settings.aiProvider == provider && (keyId == null || key != SecretState.ABSENT)
+    val usable = providerSwitchUsable(provider, secrets)
+    val on = providerShownOn(provider, settings, secrets)
     val name = stringResource(providerName(provider))
     SwitchRow(
         title = name,
@@ -163,3 +161,25 @@ private fun EffortRow(
         )
     }
 }
+
+/**
+ * Whether no AI service is switched on, as *AI services* shows it: none chosen, or the one chosen
+ * with no key saved, whose switch there shows off (#667) until the keys' gate writes it off
+ * ([app.sleevesight.app.secrets.KeyGate]).
+ */
+internal fun noAiServiceOn(
+    settings: Settings,
+    secrets: Map<SecretId, SecretState>,
+): Boolean = settings.aiProvider?.let { !providerShownOn(it, settings, secrets) } ?: true
+
+/**
+ * Whether an AI service can be used, as its switch here can be (#846): one is chosen and its key is
+ * saved ([keySaved]; a key saved but no longer readable is saved, and its row says so), or it needs
+ * none. Not before the keys' states are read. *Sources → AI service knowledge* can be switched only
+ * then. Where it is not, [noAiServiceOn] holds, but for that moment before the keys' states are
+ * read, when nothing says why, as for a keyed source's row.
+ */
+internal fun aiServiceUsable(
+    settings: Settings,
+    secrets: Map<SecretId, SecretState>,
+): Boolean = settings.aiProvider?.let { providerSwitchUsable(it, secrets) } ?: false
