@@ -349,7 +349,11 @@ class AppGenreNotesTest {
                 // The cache's cards go with the same *Clear history*.
                 cache.clearCards()
                 notes.beforePublish = {}
-                assertEquals("cleared at state $at", GenreReason.Offered, notes.reason(track(), "rock").first())
+                val reason = notes.reason(track(), "rock")
+                assertEquals("cleared at state $at", GenreReason.Offered, reason.first())
+                // Nor does the cache's read, which the panel's asking starts, bring it back.
+                advanceUntilIdle()
+                assertEquals("cleared at state $at, then read", GenreReason.Offered, reason.first())
             }
         }
 
@@ -367,8 +371,15 @@ class AppGenreNotesTest {
             advanceUntilIdle()
             assertTrue("the kept reason was read", clearing() != null)
             clearing()?.join()
+            // The cache's cards go with the same *Clear history*.
+            cache.clearCards()
             later.beforePublish = {}
             assertEquals(GenreReason.Offered, reason.first())
+            // Opened again: the cache's read, which the asking starts, brings nothing back.
+            val again = later.reason(track(), "rock")
+            again.first()
+            advanceUntilIdle()
+            assertEquals(GenreReason.Offered, again.first())
         }
 
     // A track whose table has [genres]: the artist's, then, with [album], the album's too.
