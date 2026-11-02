@@ -1,0 +1,7 @@
+What's new in 0.1.15:
+- A sentence the sources don't back is dimmed, no longer red and underlined.
+- Key insights: names the AI model that wrote it.
+- Lyrics: a store page from the web search is no longer taken for the lyrics page.
+- Button groups stay in one row at any font size; shorter labels in Settings.
+- Theme button: shows the current theme; a tap opens Light / Dark / System.
+- Report: Open in mail app fills in the message, however long.
