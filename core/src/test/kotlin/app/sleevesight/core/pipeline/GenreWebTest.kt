@@ -221,7 +221,7 @@ class GenreWebTest {
                     if ("[S2]" in request.prompt) {
                         FakeProvider.done("It is filed under folk for its slow ballads [S2].")
                     } else {
-                        FakeProvider.done("Emily Jane White is a singer-songwriter, not a folk artist [W1].")
+                        FakeProvider.done("She is a singer-songwriter [W1]. Folk is not the right label [W1].")
                     }
                 }
             val reasons = GenreReasons(AiAccess(provider, Secret("k")), cache, JvmHasher, web = web)

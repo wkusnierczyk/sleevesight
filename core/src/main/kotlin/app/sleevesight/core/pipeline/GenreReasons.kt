@@ -274,7 +274,7 @@ class GenreReasons(
         val (text, end) = stream(access, request, show)
         val at = now()
         val first = outcome(end, text, key, track, evidence)
-        if (first.kept) attempt { cache.keep(key, text, at) }
+        if (first.kept) attempt { cache.keep(key, keptText(text, first.state), at) }
         if (first.state != InsightState.NoEvidence || !searches) show(first.state, at)
         return first
     }
@@ -313,7 +313,7 @@ class GenreReasons(
                     )
             }
         if (result.kept) {
-            val text = if (reply.end == null) GroundingCheck.NO_EVIDENCE else reply.text
+            val text = if (reply.end == null) GroundingCheck.NO_EVIDENCE else keptText(reply.text, result.state)
             attempt { cache.keep(key, KeptReasonText(text, pages).text(), at) }
         }
         return result.state.also { show(it, at) }
@@ -377,6 +377,14 @@ class GenreReasons(
             else -> ReplyOutcome(InsightState.Failed(INCOMPLETE), kept = false)
         }
 
+    // What is kept of a complete reply [text] read as [state]: `NO_EVIDENCE` for one read as none, a
+    // reply that disputes the label included (#853), so a later read does not depend on how the
+    // genre is spelled then.
+    private fun keptText(
+        text: String,
+        state: InsightState,
+    ): String = if (state == InsightState.NoEvidence) GroundingCheck.NO_EVIDENCE else text
+
     // A reply's [state], and whether its text is [kept].
     private data class ReplyOutcome(
         val state: InsightState,
@@ -418,9 +426,10 @@ class GenreReasons(
                 InsightState.NoEvidence
             }
 
-            // A reply that says the track is not the genre explains nothing (#853), kept or new.
+            // A reply that says the track is not the genre explains nothing (#853), kept or new; read
+            // as shown, without a draft the model withdrew.
             is InsightReply.Written -> {
-                if (GenreDispute.disputes(text, forms(key, track))) {
+                if (GenreDispute.disputes(reply.grounded.text, forms(key, track))) {
                     InsightState.NoEvidence
                 } else {
                     val by = WrittenBy(key.promptVersion, key.provider, key.model, key.effort)

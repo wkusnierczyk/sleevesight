@@ -30,6 +30,7 @@ import app.sleevesight.core.settings.SourceSwitch
 import app.sleevesight.core.sources.SourceResult
 import app.sleevesight.core.synthesis.CardKind
 import app.sleevesight.core.synthesis.GenreReasonPrompt
+import app.sleevesight.core.synthesis.GroundingCheck
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -234,8 +235,25 @@ class GenreReasonsTest {
             assertEquals(InsightState.NoEvidence, write(shown = shown))
             assertEquals(InsightState.NoEvidence, shown.last())
             val key = checkNotNull(reasons.key(track, "jazz", settings))
+            // Kept as none, so a later read does not depend on how the genre is spelled then.
+            assertEquals(GroundingCheck.NO_EVIDENCE, cache.cards.values.single())
             assertEquals(InsightState.NoEvidence, reasons.kept(key, track)?.state)
             assertEquals(1, provider.requests.size)
+        }
+
+    @Test
+    fun `a dispute the model withdrew in the open is no dispute (#853)`() =
+        runTest {
+            provider.reply = {
+                FakeProvider.done(
+                    "So What is a modal composition, not jazz [W1].\n" +
+                        "Wait, that sentence is not supported by the evidence, so I'll drop it. " +
+                        "Here is the corrected insight:\n" +
+                        "So What is a modal jazz composition [W1].",
+                )
+            }
+            val written = assertIs<InsightState.Written>(write())
+            assertEquals("So What is a modal jazz composition [W1].", written.grounded.text)
         }
 
     @Test

@@ -27,6 +27,17 @@ class GenreDisputeTest {
             "Her songs are neither rock nor folk [W1].",
             "It is Americana rather than folk [W1].",
             "It is not a folk song [W1].",
+            "It is not classified as folk [W1].",
+            "It does not belong to folk [W1].",
+        ).forEach { assertTrue(GenreDispute.disputes(it, folk), it) }
+    }
+
+    @Test
+    fun `the genre, then a verb and a negation on the label, disputes it`() {
+        listOf(
+            "Folk is not the right label for it [W1].",
+            "The folk tag doesn't fit her plain soul [W1].",
+            "Folk isn't really what this is [W1].",
         ).forEach { assertTrue(GenreDispute.disputes(it, folk), it) }
     }
 
@@ -40,6 +51,12 @@ class GenreDisputeTest {
             "It is folk, not rock [W1].",
             "Its sound is not loud. Folk singers play it softly [W1].",
             "It is folklore-inspired [W1].",
+            // #864's review: a qualified genre, and another genre negated, are no dispute.
+            "It is not purely folk: its acoustic storytelling blends with soul [W1].",
+            "It is folk, not folk rock [W1].",
+            "Folk is not loud here [W1].",
+            "Folk is not the only thread in it [W1].",
+            "Folk is no stranger to her [W1].",
         ).forEach { assertFalse(GenreDispute.disputes(it, folk), it) }
     }
 
