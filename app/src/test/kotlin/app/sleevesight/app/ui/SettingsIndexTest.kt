@@ -131,7 +131,9 @@ class SettingsIndexTest {
             val drawn =
                 SettingsSection.entries.associateWith { section ->
                     compose.onNodeWithTag(section.tag).performScrollTo().performClick()
-                    compose.waitForIdle()
+                    // *Players* draws nothing until `listedPlayers` has listed the players on
+                    // `Dispatchers.IO`, which `waitForIdle` does not wait for.
+                    compose.waitUntil(WAIT_MS) { rowsOf(section).isNotEmpty() }
                     rowsOf(section)
                 }
             assertTrue("rows drawn: $drawn", drawn.values.all { it.isNotEmpty() })
