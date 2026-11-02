@@ -8,8 +8,8 @@
 # The numbers after the intro (#700) are a snapshot, dated in the text and not kept current; a
 # comment before the list says how each was counted.
 # *Lessons learned* (#742) is history too, dated in the text: each figure in it has a comment beside
-# it, in the source and not shown on the page, saying how it was measured. Its anchor,
-# `#lessons-learned`, is linked from elsewhere (#743), so keep the heading's text.
+# it, in the source and not shown on the page, saying how it was measured. Every page's footer
+# links its paragraph on the labels by its id, `#footer-labels` (#743), so keep the id.
 title: Process
 permalink: /docs/process/
 docs_version: 0.1.15
