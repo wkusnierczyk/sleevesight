@@ -50,6 +50,12 @@ internal abstract class PipelineHostFixture {
     protected val lastFm = CountingAdapter(SourceId.LASTFM)
     protected val provider = CountingProvider()
 
+    /**
+     * The AI services a pipeline is built with, by the service switched on; [provider] for one not
+     * in it, whichever is switched on.
+     */
+    protected val providers = mutableMapOf<ProviderId, CountingProvider>()
+
     /** The time the host, its pipelines and the cache go by (#643: *Keep history for*). */
     protected val clock = MovedClock()
 
@@ -86,7 +92,7 @@ internal abstract class PipelineHostFixture {
             epoch = epoch,
             clock = clock,
             normalizer = Normalizer(JvmAccentFolder),
-            parts = { keys, _ ->
+            parts = { keys, built ->
                 builds++
                 buildFailure?.let { throw it }
                 PipelineParts(
@@ -98,7 +104,7 @@ internal abstract class PipelineHostFixture {
                             resolutions.removeFirstOrNull() ?: Resolution(Outcome.SongArticle, recordingMbid = "rec")
                         },
                     hasher = JvmHasher,
-                    ai = keys.ai?.let { AiAccess(provider, it) },
+                    ai = keys.ai?.let { AiAccess(providers[built.aiProvider] ?: provider, it) },
                     cache = cache,
                 )
             },

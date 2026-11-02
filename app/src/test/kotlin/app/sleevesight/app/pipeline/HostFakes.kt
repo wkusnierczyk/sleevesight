@@ -89,13 +89,17 @@ internal class CountingAdapter(
 }
 
 /** A provider that replies with one cited sentence, counting its requests. */
-internal class CountingProvider : AiProvider {
-    override val id: ProviderId = ProviderId.ANTHROPIC
+internal class CountingProvider(
+    override val id: ProviderId = ProviderId.ANTHROPIC,
+) : AiProvider {
     var requests = 0
     var completed = 0
 
     /** The prompt of each request, in order. */
     val prompts = mutableListOf<String>()
+
+    /** The model each request asked for, in order. */
+    val models = mutableListOf<String>()
 
     /** The requests whose prompt names [title]. */
     fun requestsFor(title: String): Int = prompts.count { title in it }
@@ -118,6 +122,7 @@ internal class CountingProvider : AiProvider {
         flow {
             requests++
             prompts += request.prompt
+            models += request.model
             failure?.let { throw it }
             error?.let {
                 emit(CompletionEvent.Error(it))
