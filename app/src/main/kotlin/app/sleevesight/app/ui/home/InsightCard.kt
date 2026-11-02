@@ -13,6 +13,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.isTraversalGroup
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
@@ -66,8 +68,9 @@ internal fun InsightCard(
             modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag(INSIGHT_HEADING_TAG),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Measured after the button, in the width it leaves.
-            Column(Modifier.weight(1f)) {
+            // Measured after the button, in the width it leaves. One traversal group, so a screen
+            // reader reads the heading and the byline before *Read aloud*, each on its own (#811).
+            Column(Modifier.weight(1f).semantics { isTraversalGroup = true }) {
                 Text(stringResource(R.string.home_insight_title), style = MaterialTheme.typography.titleMedium)
                 insightModel(insight)?.let { InsightByline(it) }
             }

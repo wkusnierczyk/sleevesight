@@ -1,6 +1,11 @@
 package app.sleevesight.app.ui.home
 
+import android.accessibilityservice.AccessibilityServiceInfo
+import android.content.Context
 import android.graphics.Bitmap
+import android.view.View
+import android.view.ViewGroup
+import android.view.accessibility.AccessibilityManager
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,6 +27,7 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.dp
+import androidx.core.view.children
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
@@ -53,6 +59,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import java.io.File
@@ -62,7 +69,8 @@ import java.util.Locale
  * The byline under the *Key insights* heading (#811): "by {model}", naming the model that wrote the
  * insight (its `WrittenBy`), not the one selected now, as *AI services* lists it, or by its id once it
  * is no longer listed; from the first words streamed, naming the model being called; none with no
- * insight. In the heading's row, under the heading and before *Read aloud*, which does not say it.
+ * insight. In the heading's row, under the heading and before *Read aloud*, which does not say it; a
+ * screen reader reads it there too.
  * With `SLEEVESIGHT_PICTURES` set, the card is kept there as pictures, light and dark, at the
  * default font size and twice it.
  */
@@ -73,7 +81,7 @@ class InsightBylineScreenTest {
     @get:Rule
     val compose = createEmptyComposeRule()
 
-    private val app = ApplicationProvider.getApplicationContext<android.app.Application>()
+    private val app = ApplicationProvider.getApplicationContext<Context>()
 
     private val speech = FakeSpeech()
     private val readAloud =
@@ -195,10 +203,10 @@ class InsightBylineScreenTest {
     private val out = System.getenv("SLEEVESIGHT_PICTURES")?.let { File(it).apply { mkdirs() } }
 
     // The card alone, 16 dp in, on the theme's background and in its text colour, as on Home.
-    private fun picture(
-        name: String,
+    private fun card(
         dark: Boolean,
         insight: InsightState,
+        block: (MainActivity) -> Unit,
     ) {
         val context =
             InsightContext(track(insight = insight), aiReady = true, insightsOn = true, false, InsightOffers())
@@ -221,12 +229,65 @@ class InsightBylineScreenTest {
                 }
             }
             compose.waitForIdle()
-            byline().assertExists()
-            val dir = out ?: return
-            val bitmap = compose.onRoot().captureToImage().asAndroidBitmap()
-            File(dir, "$name.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+            scenario.onActivity(block)
         }
     }
+
+    private fun picture(
+        name: String,
+        dark: Boolean,
+        insight: InsightState,
+    ) = card(dark, insight) {
+        byline().assertExists()
+        val dir = out ?: return@card
+        val bitmap = compose.onRoot().captureToImage().asAndroidBitmap()
+        File(dir, "$name.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+    }
+
+    // A screen reader reads the heading, the byline, then *Read aloud*, then the text, in the order
+    // Compose gives it (each node names the one read after it), at the default font size and twice it.
+    @Test
+    fun aScreenReaderReadsTheHeadingTheBylineThenReadAloudThenTheText() {
+        val accessibility =
+            ApplicationProvider.getApplicationContext<Context>().getSystemService(AccessibilityManager::class.java)
+        shadowOf(accessibility).setEnabled(true)
+        shadowOf(accessibility).setTouchExplorationEnabled(true)
+        // A screen reader running: Compose builds nodes only for an enabled service.
+        shadowOf(accessibility).setEnabledAccessibilityServiceList(listOf(AccessibilityServiceInfo()))
+        for (scale in listOf(1f, 2f)) {
+            RuntimeEnvironment.setFontScale(scale)
+            card(dark = false, writtenBy("claude-haiku-5-5")) { activity ->
+                val provider = checkNotNull(composeView(activity.window.decorView).accessibilityNodeProvider)
+                val ids =
+                    listOf(
+                        compose.onNodeWithText("Key insights", useUnmergedTree = true).fetchSemanticsNode().id,
+                        byline().fetchSemanticsNode().id,
+                        compose.onNodeWithTag(READ_ALOUD_TAG).fetchSemanticsNode().id,
+                        compose
+                            .onNodeWithText("Sundown was recorded", substring = true, useUnmergedTree = true)
+                            .fetchSemanticsNode()
+                            .id,
+                    )
+                // The order read from the heading on, as far as the text: *Read aloud*'s tooltip
+                // anchor may come between the byline and the button.
+                val read =
+                    generateSequence(ids.first()) { id ->
+                        checkNotNull(provider.createAccessibilityNodeInfo(id)).extras.getInt(AFTER).takeIf { it != 0 }
+                    }.take(MAX_STEPS).toList()
+                val order = ids.map { read.indexOf(it) }
+                assertTrue("at $scale: each read, in $read", order.none { it < 0 })
+                assertEquals("at $scale: heading, byline, Read aloud, text", order.sorted(), order)
+            }
+        }
+    }
+
+    // The view Compose draws into, under [root].
+    private fun composeView(root: View): View =
+        if (root.javaClass.simpleName == "AndroidComposeView") {
+            root
+        } else {
+            (root as ViewGroup).children.firstNotNullOf { child -> runCatching { composeView(child) }.getOrNull() }
+        }
 
     @Test
     fun pictures() {
@@ -249,5 +310,11 @@ class InsightBylineScreenTest {
         const val SONNET = "claude-sonnet-5-5"
         const val OPUS = "claude-opus-5-5"
         const val RETIRED = "claude-retired-0"
+
+        // Where Compose puts, for tests, the node a screen reader reads after a node.
+        const val AFTER = "android.view.accessibility.extra.EXTRA_DATA_TEST_TRAVERSALBEFORE_VAL"
+
+        // How far the traversal is followed from the heading: past the text, a few nodes away.
+        const val MAX_STEPS = 12
     }
 }
