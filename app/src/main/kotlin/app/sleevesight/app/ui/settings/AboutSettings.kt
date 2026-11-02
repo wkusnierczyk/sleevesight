@@ -146,7 +146,7 @@ private fun LinkRow(
     Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
         Text(searchMarked(name), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.testTag(ROW_TITLE_TAG))
         // Folded as any setting's description (#847); the address and the link stay in full.
-        Description(rowKey(name), stringResource(summary))
+        Description(name, stringResource(summary))
         Text(
             shownAddress(url),
             style = MaterialTheme.typography.bodySmall,

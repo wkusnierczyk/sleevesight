@@ -1,6 +1,5 @@
 package app.sleevesight.app.ui.settings
 
-import android.content.res.Resources
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -37,6 +36,7 @@ import app.sleevesight.app.R
 import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.core.settings.DescriptionsOnReturn
+import app.sleevesight.core.settings.Settings
 
 // Settings' descriptions folded to one line, a tap unfolding them (#847).
 
@@ -112,40 +112,56 @@ internal fun rememberDescriptionFolds(): DescriptionFolds =
 
 /**
  * The descriptions' [folds] as the settings show them, while *Foldable descriptions* is on: [mode],
- * *Descriptions on return*; [unfolded], the keys of those left unfolded, as stored; [names], each
- * string of the app's by its text, to a key that does not change with the app's language
- * ([stringNames]); [save] stores a description's key as unfolded or not.
+ * *Descriptions on return*; [unfolded], the ids of those left unfolded, as stored; [save] stores a
+ * description's id as unfolded or not.
  */
 internal class FoldsShown(
     val folds: DescriptionFolds,
     val mode: DescriptionsOnReturn,
     val unfolded: Set<String>,
-    val names: StringNames,
-    val save: (key: String, unfolded: Boolean) -> Unit,
+    val save: (id: String, unfolded: Boolean) -> Unit,
 ) {
     /** Whether the description [key] in [section] shows folded; [found] by the search, open until tapped. */
     fun isFolded(
         section: SettingsSection?,
         key: String,
         found: Boolean,
-    ): Boolean =
-        folds.tapped(DescriptionFolds.idPrefix(section) + key, found) ?: when (mode) {
+    ): Boolean {
+        val id = descriptionId(section, key)
+        return folds.tapped(id, found) ?: when (mode) {
             DescriptionsOnReturn.FOLDED -> true
             DescriptionsOnReturn.UNFOLDED -> false
-            DescriptionsOnReturn.AS_LEFT -> key !in unfolded
+            DescriptionsOnReturn.AS_LEFT -> id !in unfolded
         }
+    }
 
-    /** A tap on the description [key] in [section]: folds it if open, else opens it, and stores which. */
+    /**
+     * A tap on the description [key] in [section]: folds it if open, else opens it, and stores which.
+     * One the search under way found ([found]) folds and opens for that search alone: nothing of it
+     * is stored, and clearing the search shows it as the person left it.
+     */
     fun toggle(
         section: SettingsSection?,
         key: String,
         found: Boolean,
     ) {
+        val id = descriptionId(section, key)
         val shut = !isFolded(section, key, found)
-        folds.set(DescriptionFolds.idPrefix(section) + key, found, shut)
-        save(key, !shut)
+        folds.set(id, found, shut)
+        if (!found) save(id, !shut)
     }
 }
+
+/**
+ * The id a description is folded and stored by (#847): its section's name and [key], the row's
+ * name as shown (a provider's name in it keeps each provider's rows apart), or a section's or note's
+ * own string's name. Shown in the app's language, a row's name changes with it: after a change of
+ * language its description shows folded again, as on a first visit, which is all that is lost.
+ */
+internal fun descriptionId(
+    section: SettingsSection?,
+    key: String,
+): String = DescriptionFolds.idPrefix(section) + key
 
 /**
  * The descriptions' folds of the settings shown; null, none folds: outside the settings screen, and
@@ -157,54 +173,18 @@ internal val LocalDescriptionFolds = compositionLocalOf<FoldsShown?> { null }
 internal val LocalDescriptionSection = compositionLocalOf<SettingsSection?> { null }
 
 /**
- * The app's strings' resource names, which do not change with the app's language: [byText], each
- * string's name by its text, where two have the same text the first by name, a row's key for its
- * description's fold ([rowKey]); and [all] of them, the keys a stored fold may have.
+ * [stored], the ids of the descriptions left unfolded, oldest change first, with [id] unfolded
+ * (moved to the end, as the latest change) or not (taken out); at most [limit] kept, the oldest
+ * going first, so ids no longer used (a row gone, a language changed) do not pile up.
  */
-internal class StringNames(
-    val byText: Map<String, String>,
-    val all: Set<String>,
-)
-
-/** The app's strings' names ([StringNames]), in [resources]' language, from the generated `R.string`. */
-internal fun stringNames(resources: Resources): StringNames {
-    val fields = R.string::class.java.fields.sortedBy { it.name }
-    val byText =
-        buildMap {
-            for (field in fields) {
-                val text = runCatching { resources.getString(field.getInt(null)) }.getOrNull() ?: continue
-                putIfAbsent(text, field.name)
-            }
-        }
-    return StringNames(byText, fields.mapTo(mutableSetOf()) { it.name })
-}
-
-/**
- * The key of the description of the row titled [title], for its fold (#847): the name of the
- * title's string resource, the same in every language; a title that is not one of the app's strings
- * (a player's name) is its own key.
- */
-@Composable
-internal fun rowKey(title: String): String =
-    LocalDescriptionFolds.current
-        ?.names
-        ?.byText
-        ?.get(title) ?: title
-
-/**
- * Keeps [stored], the keys of the descriptions left unfolded, to those of the app's strings
- * ([known]), so a key no longer used goes when the next one is stored; then adds [key] if
- * [unfolded], or takes it out.
- */
-internal fun unfoldedKeys(
-    stored: Set<String>,
-    known: Collection<String>,
-    key: String,
+internal fun unfoldedIds(
+    stored: List<String>,
+    id: String,
     unfolded: Boolean,
-): Set<String> {
-    val kept = stored.filterTo(mutableSetOf()) { it in known }
-    if (unfolded) kept += key else kept -= key
-    return kept
+    limit: Int = Settings.UNFOLDED_DESCRIPTIONS_LIMIT,
+): List<String> {
+    val kept = stored - id
+    return (if (unfolded) kept + id else kept).takeLast(limit)
 }
 
 /** The test tag of a description that folds (#847). */
@@ -219,7 +199,8 @@ internal const val DESCRIPTION_TAG = "settings_description"
  * reader reads it as a node of its own, the whole text folded or not, *collapsed* or *expanded*, a
  * tap to *Expand* or *Collapse* it. One that fits on one line, or with descriptions not foldable,
  * shows in full as before, with no tap of its own. [key] tells the description from the others for
- * its fold ([rowKey], or a string resource's name), within its section ([LocalDescriptionSection]).
+ * its fold, within its section ([LocalDescriptionSection], [descriptionId]): its row's name, or a
+ * section's or note's own string's name.
  * A search that finds [text] shows it open, the query marked in it ([RowSearch]).
  */
 @Composable
@@ -312,7 +293,9 @@ private fun DescriptionParagraphs(
     Column(modifier, verticalArrangement = Arrangement.spacedBy(PARAGRAPH_GAP)) {
         for (paragraph in paragraphsOf(text)) {
             if (link != null && link.text in paragraph) {
-                LinkedText(sentenceWith(paragraph, link), style = style, color = color)
+                // The search's marks laid over the link's sentence, the link kept.
+                val marks = if (mark) searchMarked(paragraph).spanStyles else emptyList()
+                LinkedText(sentenceWith(paragraph, link), style = style, color = color, marks = marks)
             } else {
                 Text(if (mark) searchMarked(paragraph) else AnnotatedString(paragraph), style = style, color = color)
             }

@@ -23,7 +23,6 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.mutablePreferencesOf
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
@@ -40,7 +39,6 @@ import app.sleevesight.app.ui.settings.DESCRIPTION_TAG
 import app.sleevesight.app.ui.settings.ROW_TITLE_TAG
 import app.sleevesight.app.ui.settings.SettingsScreen
 import app.sleevesight.app.ui.settings.SettingsSection
-import app.sleevesight.app.ui.settings.unfoldedKeys
 import app.sleevesight.core.settings.DescriptionsOnReturn
 import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.CompletableDeferred
@@ -188,14 +186,14 @@ class DescriptionReturnTest {
     @Test
     fun asLeftIsTheDefaultStartsFoldedAndKeepsEachAsLeftOnReopeningAndAcrossARestart() {
         assertEquals(DescriptionsOnReturn.AS_LEFT, Settings().descriptionsOnReturn)
-        // A key no string has, as an earlier version might have left: it goes with the next tap.
-        runBlocking { settings.update { it.copy(unfoldedDescriptions = setOf("no_such_string")) } }
         show {
             assertFalse("the first visit starts folded", isOpen(spin))
             tap(spin)
             assertTrue(isOpen(spin))
-            // Kept by the name of the row's title's string, which no language changes.
-            compose.waitUntil(WAIT_MS) { settings.now().unfoldedDescriptions == setOf("settings_spin_logo") }
+            // Kept by its section and its row's name.
+            compose.waitUntil(WAIT_MS) {
+                settings.now().unfoldedDescriptions == listOf("APPEARANCE/${text(R.string.settings_spin_logo)}")
+            }
             reopenSection()
             assertTrue(isOpen(spin))
             assertFalse(isOpen(intro))
@@ -254,12 +252,12 @@ class DescriptionReturnTest {
     fun theSettingsAreStoredUnderTheirKeysAndDeveloperModeLeavesThem() {
         val defaults = Settings()
         assertTrue(defaults.foldDescriptions)
-        assertEquals(emptySet<String>(), defaults.unfoldedDescriptions)
+        assertEquals(emptyList<String>(), defaults.unfoldedDescriptions)
         val set =
             Settings(
                 foldDescriptions = false,
                 descriptionsOnReturn = DescriptionsOnReturn.UNFOLDED,
-                unfoldedDescriptions = setOf("settings_spin_logo"),
+                unfoldedDescriptions = listOf("APPEARANCE/Spin the logo while music plays", "SOURCES/MusicBrainz"),
             )
         val prefs = mutablePreferencesOf()
         SettingsCodec.write(set, prefs)
@@ -267,7 +265,8 @@ class DescriptionReturnTest {
             mutablePreferencesOf(
                 booleanPreferencesKey("display.fold_descriptions") to false,
                 stringPreferencesKey("display.descriptions_on_return") to "UNFOLDED",
-                stringSetPreferencesKey("display.unfolded_descriptions") to setOf("settings_spin_logo"),
+                stringPreferencesKey("display.descriptions_unfolded") to
+                    "APPEARANCE/Spin the logo while music plays\u001FSOURCES/MusicBrainz",
             ),
             prefs,
         )
@@ -278,19 +277,6 @@ class DescriptionReturnTest {
         val before = SettingsCodec.read(mutablePreferencesOf(booleanPreferencesKey("display.intro") to false))
         assertTrue(before.foldDescriptions)
         assertEquals(DescriptionsOnReturn.AS_LEFT, before.descriptionsOnReturn)
-        assertEquals(emptySet<String>(), before.unfoldedDescriptions)
-    }
-
-    @Test
-    fun aStoredKeyNoStringHasGoesWhenTheNextIsStored() {
-        val known = setOf("settings_spin_logo", "settings_intro")
-        assertEquals(
-            setOf("settings_intro", "settings_spin_logo"),
-            unfoldedKeys(setOf("gone", "settings_intro"), known, "settings_spin_logo", unfolded = true),
-        )
-        assertEquals(
-            emptySet<String>(),
-            unfoldedKeys(setOf("gone", "settings_intro"), known, "settings_intro", unfolded = false),
-        )
+        assertEquals(emptyList<String>(), before.unfoldedDescriptions)
     }
 }

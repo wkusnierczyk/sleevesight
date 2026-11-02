@@ -446,7 +446,6 @@ internal val SETTING_LINES: List<Pair<String, (Settings) -> String>> =
         "descriptionsOnReturn" to { it.descriptionsOnReturn.name },
         "unfoldedDescriptions" to { s ->
             s.unfoldedDescriptions
-                .sorted()
                 .joinToString()
                 .ifEmpty { NONE }
         },

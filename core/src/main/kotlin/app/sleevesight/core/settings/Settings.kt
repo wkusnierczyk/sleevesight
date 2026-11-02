@@ -162,10 +162,11 @@ import kotlin.time.Duration.Companion.seconds
  * @property descriptionsOnReturn *Descriptions on return* (#847), under *Appearance*, used only
  *   while [foldDescriptions] is on: how the descriptions show when the settings, or one of their
  *   sections, open again. See [DescriptionsOnReturn]; *As left* by default.
- * @property unfoldedDescriptions the settings' descriptions left unfolded (#847), each by a key that
- *   does not change with the app's language (its row's name's string resource), which
- *   [DescriptionsOnReturn.AS_LEFT] opens them by, across restarts too. None by default: the first
- *   visit starts folded.
+ * @property unfoldedDescriptions the settings' descriptions left unfolded (#847), each by its
+ *   section's name and its row's name as shown (or its own string's name), oldest change first,
+ *   which [DescriptionsOnReturn.AS_LEFT] opens them by, across restarts too; at most
+ *   [UNFOLDED_DESCRIPTIONS_LIMIT], the oldest going first. None by default: the first visit starts
+ *   folded.
  * @property theme *Theme* (#444): light or dark as the system is, or always one of them.
  * @property themeButton *Theme button* (#636): whether Home's header shows, beside the cogwheel, a
  *   button that shows [theme] and opens a menu of the three themes (#771). On by default: two taps,
@@ -227,7 +228,7 @@ data class Settings(
     val markDeveloperItems: Boolean = true,
     val foldDescriptions: Boolean = true,
     val descriptionsOnReturn: DescriptionsOnReturn = DescriptionsOnReturn.AS_LEFT,
-    val unfoldedDescriptions: Set<String> = emptySet(),
+    val unfoldedDescriptions: List<String> = emptyList(),
     val theme: ThemeChoice = ThemeChoice.SYSTEM,
     val themeButton: Boolean = true,
     val font: FontChoice = FontChoice.APP_FONT,
@@ -352,6 +353,9 @@ data class Settings(
 
     companion object {
         const val SPOTIFY: String = "com.spotify.music"
+
+        /** The most descriptions kept as left unfolded ([unfoldedDescriptions], #847). */
+        const val UNFOLDED_DESCRIPTIONS_LIMIT: Int = 200
 
         /**
          * The packages whose media sessions are phone calls (#435): Android's telecom service, the

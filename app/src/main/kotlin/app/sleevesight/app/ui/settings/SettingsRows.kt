@@ -153,7 +153,7 @@ internal fun SwitchRow(
             )
         },
     ) {
-        summary?.let { Description(rowKey(title), it, color = color, link = summaryLink) }
+        summary?.let { Description(title, it, color = color, link = summaryLink) }
         note?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = color) }
         below?.invoke()
     }
@@ -191,7 +191,7 @@ internal fun ButtonRow(
             ) { Text(label) }
         },
     ) {
-        Description(rowKey(title), summary, color = color)
+        Description(title, summary, color = color)
     }
 }
 
@@ -238,7 +238,9 @@ private fun MarkedRow(
  * A setting with a value, which [onClick] opens a dialog to change; null [onClick] is disabled.
  * [indent] nests it under the row above; [underBadge] starts it at the name of the badged row above
  * ([UNDER_BADGE]) instead. [leading] goes at the row's start, before the title, [ROW_MARK] a side,
- * centred on the title's first line as a [SwitchRow]'s is: a source's badge (#670).
+ * centred on the title's first line as a [SwitchRow]'s is: a source's badge (#670). The summary
+ * folds ([Description], #847); [note], under it, says the setting's state (a model found
+ * unavailable) and always shows in full.
  */
 @Suppress("LongParameterList") // Each sets one aspect of the row; all but the title, value and action have defaults.
 @Composable
@@ -246,6 +248,7 @@ internal fun ValueRow(
     title: String,
     value: String,
     summary: String? = null,
+    note: String? = null,
     indent: Boolean = false,
     underBadge: Boolean = false,
     leading: (@Composable () -> Unit)? = null,
@@ -270,9 +273,20 @@ internal fun ValueRow(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.primary.copy(alpha = alpha),
         )
-        summary?.let { Description(rowKey(title), it, color = color) }
+        summary?.let { Description(title, it, color = color) }
+        note?.let {
+            Text(
+                it,
+                style = MaterialTheme.typography.bodySmall,
+                color = color,
+                modifier = Modifier.testTag(ROW_NOTE_TAG),
+            )
+        }
     }
 }
+
+/** The test tag of a [ValueRow]'s [note][ValueRow] (#847). */
+internal const val ROW_NOTE_TAG = "settings_row_note"
 
 /**
  * A setting with a few short choices (#637): [title], then [summary], then its [choices] as a
@@ -309,7 +323,7 @@ internal fun <T> ChoiceButtonsRow(
             color = color,
             modifier = Modifier.testTag(ROW_TITLE_TAG),
         )
-        summary?.let { Description(rowKey(title), it, color = color) }
+        summary?.let { Description(title, it, color = color) }
         ChoiceButtonGroup(
             choices,
             selected,

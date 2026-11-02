@@ -25,7 +25,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
@@ -418,15 +417,13 @@ private fun SettingsContent(
 ) {
     val folds = rememberSectionFolds()
     val descriptions = rememberDescriptionFolds()
-    val resources = LocalResources.current
-    val names = remember(resources) { stringNames(resources) }
     val mode = settings.descriptionsOnReturn
     val descriptionsShown =
-        remember(descriptions, settings.foldDescriptions, mode, settings.unfoldedDescriptions, names) {
-            FoldsShown(descriptions, mode, settings.unfoldedDescriptions, names) { key, unfolded ->
+        remember(descriptions, settings.foldDescriptions, mode, settings.unfoldedDescriptions) {
+            FoldsShown(descriptions, mode, settings.unfoldedDescriptions.toSet()) { id, unfolded ->
                 update {
                     it.copy(
-                        unfoldedDescriptions = unfoldedKeys(it.unfoldedDescriptions, names.all, key, unfolded),
+                        unfoldedDescriptions = unfoldedIds(it.unfoldedDescriptions, id, unfolded),
                     )
                 }
             }.takeIf { settings.foldDescriptions }

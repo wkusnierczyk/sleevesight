@@ -90,7 +90,14 @@ internal object SettingsCodec {
     private val LOGO_SPEED = stringPreferencesKey("display.logo_speed")
     private val FOLD_DESCRIPTIONS = booleanPreferencesKey("display.fold_descriptions")
     private val DESCRIPTIONS_ON_RETURN = stringPreferencesKey("display.descriptions_on_return")
-    private val UNFOLDED_DESCRIPTIONS = stringSetPreferencesKey("display.unfolded_descriptions")
+
+    // In order, oldest change first: one text, the ids apart by [UNFOLDED_SEPARATOR]. A key of its
+    // own, not the first build's set under `display.unfolded_descriptions`, which reads as another
+    // type.
+    private val UNFOLDED_DESCRIPTIONS = stringPreferencesKey("display.descriptions_unfolded")
+
+    /** What parts the ids of [UNFOLDED_DESCRIPTIONS]: the unit separator, never in a row's name. */
+    private const val UNFOLDED_SEPARATOR = '\u001F'
     private val LYRICS_LINKS = booleanPreferencesKey("display.lyrics_links")
     private val LYRICS_SEARCH = booleanPreferencesKey("display.lyrics_search")
 
@@ -156,7 +163,9 @@ internal object SettingsCodec {
             logoSpeed = enumOf(prefs[LOGO_SPEED]) ?: defaults.logoSpeed,
             foldDescriptions = prefs[FOLD_DESCRIPTIONS] ?: defaults.foldDescriptions,
             descriptionsOnReturn = enumOf(prefs[DESCRIPTIONS_ON_RETURN]) ?: defaults.descriptionsOnReturn,
-            unfoldedDescriptions = prefs[UNFOLDED_DESCRIPTIONS] ?: defaults.unfoldedDescriptions,
+            unfoldedDescriptions =
+                prefs[UNFOLDED_DESCRIPTIONS]?.split(UNFOLDED_SEPARATOR)?.filter { it.isNotEmpty() }
+                    ?: defaults.unfoldedDescriptions,
             dismissed = dismissedOf(prefs),
         )
 
@@ -316,7 +325,11 @@ internal object SettingsCodec {
             prefs.put(DESCRIPTIONS_ON_RETURN, settings.descriptionsOnReturn.name, defaults.descriptionsOnReturn.name)
         }
         if (moved { it.unfoldedDescriptions }) {
-            prefs.put(UNFOLDED_DESCRIPTIONS, settings.unfoldedDescriptions, defaults.unfoldedDescriptions)
+            prefs.put(
+                UNFOLDED_DESCRIPTIONS,
+                settings.unfoldedDescriptions.joinToString(UNFOLDED_SEPARATOR.toString()),
+                defaults.unfoldedDescriptions.joinToString(UNFOLDED_SEPARATOR.toString()),
+            )
         }
         // The names a later version stored stay, as with a set of switches, but for a set left
         // empty: nothing is dismissed then, a later version's items included, as after *Restore

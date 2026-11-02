@@ -92,7 +92,8 @@ private fun ProviderRows(
             // each row on its own.
             title = stringResource(R.string.settings_ai_model_of, name),
             value = modelValue(provider, settings, modelName),
-            summary = modelUnavailable(name, gone, modelName),
+            // A state, in full: not folded as a description is (#847).
+            note = modelUnavailable(name, gone, modelName),
             underBadge = true,
             onClick = { open(SettingsDialog.Model(provider)) },
         )
