@@ -14,8 +14,9 @@ import app.sleevesight.core.model.NowPlaying
  * the player reports it and the evidence, each line flattened, [InsightPrompt.oneLine]), the same
  * order (data, style, then the contract under [InsightPrompt.CONTRACT_HEADING]), and the insight's
  * rules ([InsightPrompt.contract]: citations, evidence only, the scope rules, model knowledge, plain
- * text, `NO_EVIDENCE`), with two of its own: the label is a listener's tag, not a fact, and the reply
- * is about the music, never about the evidence or what it leaves out ([ABOUT_THE_MUSIC_RULE]). The genre
+ * text, `NO_EVIDENCE`), with three of its own: the label is a listener's tag, not a fact; the reply
+ * is about the music, never about the evidence or what it leaves out ([ABOUT_THE_MUSIC_RULE]); and a
+ * label the evidence cannot explain is answered `NO_EVIDENCE`, never disputed ([LABEL_RULE]). The genre
  * is a vocabulary label (`GenreVocabulary`) that a source other than MusicBrainz gives: MusicBrainz's
  * tags never reach a prompt (D12). The reply goes through the same grounding check
  * ([GroundingCheck]).
@@ -35,8 +36,10 @@ object GenreReasonPrompt {
      * `[G1]` reads as one citing `[S1]` ([citationId]).
      * Version 3 (#800): the insight's rules gained [InsightPrompt.WEB_GENRE_RULE], a genre named only
      * by a web page kept to that page.
+     * Version 4 (#853): a label the evidence cannot explain is answered `NO_EVIDENCE`, never disputed
+     * ([LABEL_RULE]).
      */
-    const val VERSION: Int = 3
+    const val VERSION: Int = 4
 
     /** The built-in style: shorter than the insight's, since it answers one question. */
     const val BUILT_IN_STYLE: String =
@@ -58,12 +61,27 @@ object GenreReasonPrompt {
      * genre is part of why it carries the label, and without the rule a reason could state the page's
      * genre as the track's tag, the slip the insight had. The ban on commentary about the evidence and
      * its gaps stands.
+     *
+     * Version 4 (#853) moves what to do with a label the evidence does not support to [LABEL_RULE].
      */
     const val ABOUT_THE_MUSIC_RULE: String =
         "- Write about the music and the artists, never about the evidence or the sources: no sentence on " +
             "what they say, do not say or leave out, except to attribute to its page a genre only a web line " +
-            "names, as a rule below says. If the evidence does not support the label, do not argue for it: " +
-            "write only what the evidence does say about the music, cited."
+            "names, as a rule below says."
+
+    /**
+     * The rule on a label the evidence does not support (version 4, #853): never dispute it; reply
+     * `NO_EVIDENCE`, which the panel shows as *AI could not find an explanation.* (and which, with
+     * *AI web search* on, asks again with the web first). Version 2 and 3 asked the model not to argue
+     * for such a label and to write only what the evidence did say, and on the phone it wrote that
+     * Frazey Ford's "Runnin'" is Americana, "not Folk", against the label it was asked to explain:
+     * a label only MusicBrainz gives (D12: its tags never reach the prompt), so the evidence named
+     * another genre and not this one. The reply is also checked for such a sentence ([GenreDispute]),
+     * since the model may still write one.
+     */
+    const val LABEL_RULE: String =
+        "- Never say or suggest that the track is not of this genre, or that it belongs under another genre " +
+            "instead. If the evidence cannot explain the label, reply with exactly: ${GroundingCheck.NO_EVIDENCE}"
 
     /**
      * The prompt for why [nowPlaying], normalized as [normalized], carries the genre label [genre],
@@ -142,6 +160,7 @@ object GenreReasonPrompt {
         listOf(
             "- The genre is a label, not a fact: explain it only from the evidence.",
             ABOUT_THE_MUSIC_RULE,
+            LABEL_RULE,
             InsightPrompt.contract(allowModel),
         ).joinToString("\n")
 }

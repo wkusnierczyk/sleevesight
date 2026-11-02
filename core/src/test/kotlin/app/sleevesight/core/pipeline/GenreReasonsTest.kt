@@ -224,6 +224,21 @@ class GenreReasonsTest {
         }
 
     @Test
+    fun `a reply that says the track is not the genre is shown as none, and kept as none (#853)`() =
+        runTest {
+            // As on the phone: what the evidence says, then that the track is another genre, not this one.
+            provider.reply = {
+                FakeProvider.done("So What is a modal composition [W1]. The evidence gives modal, not Jazz [W1].")
+            }
+            val shown = mutableListOf<InsightState>()
+            assertEquals(InsightState.NoEvidence, write(shown = shown))
+            assertEquals(InsightState.NoEvidence, shown.last())
+            val key = checkNotNull(reasons.key(track, "jazz", settings))
+            assertEquals(InsightState.NoEvidence, reasons.kept(key, track)?.state)
+            assertEquals(1, provider.requests.size)
+        }
+
+    @Test
     fun `a failed or declined call is shown as failed, and nothing is kept`() =
         runTest {
             provider.reply = { listOf(CompletionEvent.Error(AiErrorKind.entries.first())) }

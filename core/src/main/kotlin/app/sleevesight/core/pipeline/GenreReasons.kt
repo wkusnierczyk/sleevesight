@@ -12,6 +12,7 @@ import app.sleevesight.core.settings.AiWebSearch
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.sources.WebSearcher
 import app.sleevesight.core.synthesis.CardKind
+import app.sleevesight.core.synthesis.GenreDispute
 import app.sleevesight.core.synthesis.GenreReasonPrompt
 import app.sleevesight.core.synthesis.GroundingCheck
 import app.sleevesight.core.synthesis.InsightReply
@@ -62,11 +63,12 @@ sealed interface ReasonPath {
  *
  * Its states are the insight's ([InsightState]): [InsightState.Writing] while the reply comes,
  * [InsightState.Written] once checked, [InsightState.NoEvidence] when the evidence has nothing to
- * narrate (no call) or the model replies `NO_EVIDENCE`, [InsightState.Failed] when the call fails or
- * is declined. Not written ([key] null) with *Show insights* off, with no AI service ready, before
- * the evidence is in, or for a genre only MusicBrainz's tags give (D12: they never reach a prompt)
- * and the AI's genre list does not have: for such a genre the list is asked first, naming no genre
- * ([GenreLists], #762), and a genre on it is written as any other. What a tap does, and what the
+ * narrate (no call), the model replies `NO_EVIDENCE`, or its reply disputes the label ([GenreDispute],
+ * #853), [InsightState.Failed] when the call fails or is declined. Not written ([key] null) with
+ * *Show insights* off, with no AI service ready, before the evidence is in, or for a genre only
+ * MusicBrainz's tags give (D12: they never reach a prompt) and the AI's genre list does not have:
+ * for such a genre the list is asked first, naming no genre ([GenreLists], #762), and a genre on it
+ * is written as any other. What a tap does, and what the
  * panel says where it does nothing, is [path].
  *
  * A cache that throws is a miss, and a write that fails keeps nothing; neither stops the reason.
@@ -416,11 +418,31 @@ class GenreReasons(
                 InsightState.NoEvidence
             }
 
+            // A reply that says the track is not the genre explains nothing (#853), kept or new.
             is InsightReply.Written -> {
-                val by = WrittenBy(key.promptVersion, key.provider, key.model, key.effort)
-                InsightState.Written(reply.grounded, cached, usage, complete, writtenBy = by, searched = searched)
+                if (GenreDispute.disputes(text, forms(key, track))) {
+                    InsightState.NoEvidence
+                } else {
+                    val by = WrittenBy(key.promptVersion, key.provider, key.model, key.effort)
+                    InsightState.Written(reply.grounded, cached, usage, complete, writtenBy = by, searched = searched)
+                }
             }
         }
+    }
+
+    // The forms the genre of [key] is written in, folded (`GenreDispute.fold`): its identity, and its
+    // label where [track]'s genres have it.
+    private fun forms(
+        key: CardKey,
+        track: TrackState,
+    ): Set<String> {
+        val genre = alone(key).subject ?: return emptySet()
+        val label =
+            track.genres.all
+                .firstOrNull { it.genre.identity == genre }
+                ?.genre
+                ?.label
+        return setOfNotNull(genre, label?.let(GenreDispute::fold))
     }
 
     // [call], or null when it throws anything but cancellation: a cache that fails is a miss.

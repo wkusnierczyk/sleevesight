@@ -214,6 +214,29 @@ class GenreWebTest {
         }
 
     @Test
+    fun `path A asks again with web search when the evidence's reply disputes the genre (#853)`() =
+        runTest {
+            val provider =
+                FakeProvider { request ->
+                    if ("[S2]" in request.prompt) {
+                        FakeProvider.done("It is filed under folk for its slow ballads [S2].")
+                    } else {
+                        FakeProvider.done("Emily Jane White is a singer-songwriter, not a folk artist [W1].")
+                    }
+                }
+            val reasons = GenreReasons(AiAccess(provider, Secret("k")), cache, JvmHasher, web = web)
+            val key = checkNotNull(reasons.key(track, "folk", settings))
+            val shown = mutableListOf<InsightState>()
+            val state =
+                reasons.write(key, track, "Folk", AiSearches.Asking(AiWebSearch.ONCE), { counted += it }) { state, _ ->
+                    shown += state
+                }
+            assertIs<InsightState.Written>(state)
+            assertEquals(2, provider.requests.size)
+            assertFalse(InsightState.NoEvidence in shown, "the dispute is never shown as the answer")
+        }
+
+    @Test
     fun `path A's loop numbers the pages of each search as evidence lines`() =
         runTest {
             val provider =
