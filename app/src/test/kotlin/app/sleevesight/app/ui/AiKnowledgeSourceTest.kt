@@ -36,6 +36,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.job
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -117,16 +118,14 @@ class AiKnowledgeSourceTest {
     }
 
     /**
-     * Taps the row, then switches *Wikipedia* off and waits for that to be stored: a save the tap
-     * started, launched before it, would have landed by then.
+     * Taps the row, and waits for every save to end: a toggle would start its save in [saves] during
+     * the tap, so by then the setting would have changed.
      */
     private fun tapAndSettle(row: SemanticsNodeInteraction) {
         row.performClick()
-        compose
-            .onNode(hasText(text(R.string.settings_source_wikipedia_summary), substring = true))
-            .performScrollTo()
-            .performClick()
-        waitFor("Wikipedia stored off") { SourceSwitch.WIKIPEDIA !in current().enabledSources }
+        compose.waitForIdle()
+        val pending = saves.coroutineContext.job
+        waitFor("every save ended") { pending.children.none { it.isActive } }
     }
 
     @Test
@@ -162,6 +161,9 @@ class AiKnowledgeSourceTest {
             }
         }
         show {
+            // Dimmed, with no line, too, for the moment before the keys' states are read: wait for
+            // them, read once the line shows.
+            waitForNode(noService)
             val row = row(enabled = false)
             row.assertIsOn().assertIsNotEnabled()
             assertEquals(1, compose.onAllNodes(noService).fetchSemanticsNodes().size)
