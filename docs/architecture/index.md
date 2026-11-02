@@ -19,6 +19,7 @@ nav:
     label: Enforced
   - id: the-modules
     label: Modules
+provenance: [ai-wrote, human-reviewed]
 ---
 
 # Architecture

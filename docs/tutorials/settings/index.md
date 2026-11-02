@@ -21,6 +21,7 @@ nav:
     label: Insights
   - id: history
     label: History
+provenance: [ai-wrote, human-reviewed]
 ---
 
 # Settings

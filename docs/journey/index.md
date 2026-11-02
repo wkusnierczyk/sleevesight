@@ -23,6 +23,7 @@ nav:
     label: Playing
   - id: 6-write-automatic-writing-and-the-history
     label: Writing
+provenance: [ai-wrote, human-reviewed]
 ---
 
 # A typical journey

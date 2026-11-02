@@ -22,6 +22,7 @@ nav:
     label: Bluetooth
   - id: promises-the-build-enforces
     label: Build checks
+provenance: [ai-wrote]
 ---
 
 # Solutions

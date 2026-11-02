@@ -20,6 +20,7 @@ nav:
     label: Reporting
   - id: what-leaves-your-phone
     label: Privacy
+provenance: [ai-wrote, human-reviewed]
 ---
 
 # Testing Sleevesight

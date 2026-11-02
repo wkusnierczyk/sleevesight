@@ -20,6 +20,7 @@ nav:
     label: Players
   - id: when-something-is-missing-or-fails
     label: Troubleshooting
+provenance: [ai-wrote, human-reviewed]
 ---
 
 # Using Sleevesight

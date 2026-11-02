@@ -23,6 +23,7 @@ nav:
     label: Spotify Connect
   - id: why-not-recognise-the-music-through-the-microphone
     label: Microphone
+provenance: [ai-wrote, human-reviewed]
 ---
 
 # Frequently asked questions
