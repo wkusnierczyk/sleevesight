@@ -346,6 +346,7 @@ class AppAiSearches(
     // no *Clear history* came since it started and it was not stopped (nor cancelled: a job stopped
     // may outlive a tap that asks again). One [automatic] asks only if its gates still hold once the
     // cache missed, else it is handed back ([deferred]) once out of [asking].
+    @Suppress("CyclomaticComplexMethod") // Its paths (kept, handed back, cleared since, asked), each state checked.
     private suspend fun run(
         searches: AiSearches,
         key: CardKey,
@@ -369,7 +370,9 @@ class AppAiSearches(
             } else if (gated) {
                 work[Job]?.let { asking.remove(key, it) }
                 deferred(track, kind, asked.genre)
-            } else {
+            } else if (shown.current(work, epoch)) {
+                // Not paid for once a *Clear history* came since it started, whose clear it may have
+                // missed (a tap during `forget`): it would show nothing, and stay under way meanwhile.
                 searches.search(
                     key,
                     kind,
