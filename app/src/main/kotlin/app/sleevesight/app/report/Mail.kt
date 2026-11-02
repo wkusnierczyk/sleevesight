@@ -92,8 +92,8 @@ class PhoneMail(
 
 /**
  * [mail] as an `ACTION_SEND` intent, the address, subject and body in the extras Android documents
- * for it, with an `ACTION_SENDTO` of a `mailto:` address as its selector, so only mail apps answer
- * it (#732). Not an `ACTION_SENDTO` itself: Android documents no extras for that, and Gmail ignores
+ * for it, with an `ACTION_SENDTO` of `mailto:` as its selector, so only mail apps answer it
+ * (#732). Not an `ACTION_SENDTO` itself: Android documents no extras for that, and Gmail ignores
  * its `EXTRA_TEXT`, so a body too long to go in the `mailto:` address opened empty. Untyped: Android
  * resolves the selector with the intent's own type, and a `mailto:` filter declares none.
  */

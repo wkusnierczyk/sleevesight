@@ -85,10 +85,7 @@ internal fun ReportDialog(
         confirmButton = {
             Action(R.string.report_send, ready, REPORT_SEND_TAG) {
                 handed = handoff.send(it)
-                when (handed) {
-                    Handed.OPENED -> onDismiss()
-                    else -> Unit
-                }
+                if (handed == Handed.OPENED) onDismiss()
             }
         },
         dismissButton = {

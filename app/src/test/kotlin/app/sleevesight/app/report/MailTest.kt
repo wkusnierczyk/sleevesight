@@ -12,6 +12,7 @@ import app.sleevesight.app.SleevesightApplication
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -66,7 +67,7 @@ class MailTest {
         assertCarries(mail, intent)
         // Android resolves the selector with this intent's type: a type would miss every `mailto:`
         // filter, which declares none. Robolectric resolves the intent itself, so it cannot show this.
-        assertEquals(null, intent.type)
+        assertNull(intent.type)
         val selector = intent.selector!!
         assertEquals(Intent.ACTION_SENDTO, selector.action)
         assertEquals(Uri.parse("mailto:"), selector.data)
@@ -106,8 +107,9 @@ class MailTest {
     }
 
     @Test
-    fun sendSaysSoWhenNoMailAppTakesIt() {
-        // Robolectric resolves nothing: with the check on, an intent no app answers is refused.
+    fun anIntentNoAppAnswersIsReportedAsNoMailApp() {
+        // Robolectric resolves nothing: with the check on, an intent no app answers is refused. This
+        // pins the catch; which apps answer is [onlyMailAppsAnswerIt]'s.
         shadowOf(app).checkActivities(true)
 
         assertEquals(Handed.NO_MAIL_APP, PhoneMail(app).send(mail))
