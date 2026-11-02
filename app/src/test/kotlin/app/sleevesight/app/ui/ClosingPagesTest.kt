@@ -84,9 +84,7 @@ class ClosingPagesTest {
     private fun openSettings() {
         compose.onNodeWithContentDescription(text(R.string.home_settings)).performClick()
         compose.openSection(SettingsSection.ABOUT)
-        compose.waitUntil(WAIT_MS) {
-            compose.onAllNodesWithText(text(R.string.settings_what_leaves)).fetchSemanticsNodes().isNotEmpty()
-        }
+        awaitText(text(R.string.settings_what_leaves))
     }
 
     private fun openFromSettings(row: Int) {
@@ -99,7 +97,7 @@ class ClosingPagesTest {
      * settings, on DataStore's own threads, which `waitForIdle` does not wait for.
      */
     private fun onSettings() {
-        compose.waitUntil(WAIT_MS) { countText(R.string.settings_what_leaves) > 0 }
+        awaitText(text(R.string.settings_what_leaves))
         compose.onNodeWithText(text(R.string.settings_what_leaves)).performScrollTo().assertIsDisplayed()
         assertEquals(0, count(PAGE_BACK_TAG))
     }
@@ -107,6 +105,11 @@ class ClosingPagesTest {
     private fun count(tag: String) = compose.onAllNodesWithTag(tag).fetchSemanticsNodes().size
 
     private fun countText(id: Int) = compose.onAllNodesWithText(text(id)).fetchSemanticsNodes().size
+
+    private fun awaitText(text: String) =
+        compose.waitUntil(conditionDescription = text, timeoutMillis = WAIT_MS) {
+            compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty()
+        }
 
     private val isButton = SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button)
 
@@ -364,13 +367,13 @@ class ClosingPagesTest {
             compose.onNodeWithContentDescription(text(R.string.home_settings)).performClick()
             compose.openSection(SettingsSection.DEVELOPER)
             val open = text(R.string.settings_diagnostics_open)
-            compose.waitUntil(WAIT_MS) { compose.onAllNodesWithText(open).fetchSemanticsNodes().isNotEmpty() }
+            awaitText(open)
             compose.onNodeWithText(open).performScrollTo().performClick()
             compose.waitForIdle()
             assertBar(R.string.diagnostics_title)
             doubleTap(PAGE_BACK_TAG)
             // The settings, not Home under them, once read again ([onSettings]).
-            compose.waitUntil(WAIT_MS) { compose.onAllNodesWithText(open).fetchSemanticsNodes().isNotEmpty() }
+            awaitText(open)
             compose.onNodeWithText(open).performScrollTo().assertIsDisplayed()
             assertEquals(0, count(PAGE_BACK_TAG))
         }
