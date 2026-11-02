@@ -1,0 +1,109 @@
+# The docs' screenshots (#792, #775, #450), shown by `_includes/screenshots.html`. Each is a real
+# capture from the phone (Galaxy S25 Ultra, light theme), the status bar cut off, scaled to 540 px
+# wide, in `assets/screenshots/<id>.webp`; `version` is the app version it was taken from. A retake
+# replaces the file and its `version`, and the texts here when what it shows has changed.
+
+first-run-top:
+  version: 0.1.15
+  caption: The first-run screen
+  alt: "The first-run screen: Sleevesight's intro, then What it reads, and the start of What leaves the phone, and to whom."
+first-run-access-off:
+  version: 0.1.15
+  caption: Notification access off
+  alt: "The foot of the first-run screen: Notification access is off, why the app needs it, and the Open notification access button."
+first-run-access-on:
+  version: 0.1.15
+  caption: Notification access on
+  alt: "The foot of the first-run screen once access is granted: Notification access is on, and the Continue button."
+home-nothing-playing:
+  version: 0.1.15
+  caption: Nothing playing
+  alt: "The home screen with nothing playing: Play on Spotify and Play on TIDAL, then the guide, a small picture of the home screen with notes on what each part does, and Hide once and Dismiss."
+theme-menu:
+  version: 0.1.15
+  caption: The theme menu
+  alt: "The theme menu open under the header's theme button: Light, Dark, and System, As your phone is, highlighted."
+diagnostics-events:
+  version: 0.1.15
+  caption: Diagnostics
+  alt: "The diagnostics screen on its Events tab, beside Track changes and Skip detection: the caches' sizes, then the app's recent steps with their times."
+settings-ai-services-no-key:
+  version: 0.1.15
+  caption: AI services, no key yet
+  alt: "Settings, AI services: Anthropic and OpenAI switched off and greyed, each with Needs your key and a link to set it, and each service's model and reasoning effort."
+settings-chips:
+  version: 0.1.15
+  caption: Settings
+  alt: "The settings screen with every section closed: a search field, then Players, Sources, AI services, Secrets, Genres, Insights, History, Appearance and About, each with a line on what it holds."
+settings-sources-defaults:
+  version: 0.1.15
+  caption: Sources at their defaults
+  alt: "Settings, Sources at their defaults: MusicBrainz and Wikipedia and Wikidata switched on, Last.fm off and greyed, needing a Last.fm key."
+settings-sources-ai-knowledge:
+  version: 0.1.15
+  caption: Sources, further down
+  alt: "Settings, Sources further down: Last.fm and Exa web search off and greyed, each needing a key, and AI service knowledge switched off."
+settings-insights:
+  version: 0.1.15
+  caption: Insights settings
+  alt: "Settings, Insights: Show insights on, Reactive set to On demand, and the start of Proactive."
+settings-insights-saver:
+  version: 0.1.15
+  caption: Insights, further down
+  alt: "Settings, Insights further down: Proactive on, Saver greyed out with Stop after 5 track changes away, and Look up in the background on."
+settings-ai-web-search:
+  version: 0.1.15
+  caption: AI web search
+  alt: "Settings, Insights: AI web search set to Once, with its line under the buttons, then Ask AI automatically switched on."
+settings-history:
+  version: 0.1.15
+  caption: History settings
+  alt: "Settings, History: Keep history for 90 days, Clear history, and New session idle trigger 30 minutes."
+clear-history-dialog:
+  version: 0.1.15
+  caption: Clear history?
+  alt: "The Clear history? dialog: what is deleted, what stays, This cannot be undone, and Cancel and Clear."
+home-playing:
+  version: 0.1.15
+  caption: A track playing
+  alt: "The home screen while Spotify plays Already Forgiven by Basia Bulat, from Are You in Love?, 2020: the cover, the progress bar, the title, artist and album, and the Dates, Genres and Lyrics buttons."
+key-insights:
+  version: 0.1.15
+  caption: An insight
+  alt: "Key insights by Claude Haiku 5.5, with the Read aloud button beside the heading: three sentences, each ending in a citation chip, P1, MB1 and S2; then Report a problem, Write insight and Sources."
+sources-unfolded:
+  version: 0.1.15
+  caption: Sources unfolded
+  alt: "Sources unfolded: each source with its chip and what it found, the legend Shown, Hidden and No results, and the lines the insight cites, each with its chip, text and link."
+sources-page:
+  version: 0.1.15
+  caption: Sources as a page
+  alt: "Sources on a page of its own, with a back arrow: the same table of sources and the cited lines."
+genres-ai-genre:
+  version: 0.1.15
+  caption: A genre the AI service named
+  alt: "Genres open on Soul, marked AI: what soul is, from Wikipedia, the Why is this soul? button, and the genre tags with Claude Haiku 5.5 among their sources."
+genres-ask-ai:
+  version: 0.1.15
+  caption: Ask AI offered
+  alt: "Genres for I Will Die Alone by Jessie Payo: The sources give no genres, and the Ask AI button."
+genre-no-definition:
+  version: 0.1.15
+  caption: No definition from Wikipedia
+  alt: "Genres open on Acoustic: No definition from Wikipedia for this genre, Ask AI, and Why is this acoustic?"
+dates-ask-ai-web:
+  version: 0.1.15
+  caption: Dates answered from the web
+  alt: "Dates: MusicBrainz didn't find this song; then the AI's answer, This album was released on 6 October 2017 and This track was first released on this album, each From qobuz.com, by Claude Haiku 5.5."
+genres-ask-ai-nothing:
+  version: 0.1.15
+  caption: Nothing from the AI service
+  alt: "Genres: The sources give no genres, and under it Claude Haiku 5.5 couldn't say from its own knowledge."
+write-insight-waiting:
+  version: 0.1.15
+  caption: Waiting for Write insight
+  alt: "Key insights waiting for the first tap: Tap Write insight to have it written from the sources below, and the Write insight button with its arrow."
+as-written-previously:
+  version: 0.1.15
+  caption: As written previously
+  alt: "An insight written earlier, with the line As written previously. New findings from sources: tap Rewrite insight to use them, a paid call; and the Rewrite insight button."
