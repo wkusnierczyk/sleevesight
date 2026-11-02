@@ -48,7 +48,7 @@ class KeySetupTest {
     }
 
     @Test
-    fun `a key of the wrong shape is refused with the reason, and its value is not kept`() {
+    fun `a key of the wrong shape is refused with the reason, and only its ending is kept`() {
         val read =
             setup(
                 "sleevesight-keys:v1\nanthropic=sk-proj-$lastFm$lastFm\nexa=\nlastfm=$lastFm extra\n",
@@ -62,6 +62,18 @@ class KeySetupTest {
             ),
             read.refused,
         )
+        // Only the last four characters of a refused key, to name it by (#763); none of an empty one.
+        assertEquals(
+            mapOf(KeyName.ANTHROPIC to lastFm.takeLast(4), KeyName.LASTFM to "xtra"),
+            read.refusedEndings,
+        )
+    }
+
+    @Test
+    fun `a refused key no longer than its ending, or named twice, keeps no ending`() {
+        val read = setup("sleevesight-keys:v1\nanthropic=a b\nlastfm=$lastFm\nlastfm=${lastFm.lowercase()}")
+        assertEquals(setOf(KeyName.ANTHROPIC, KeyName.LASTFM), read.refused.keys)
+        assertTrue(read.refusedEndings.isEmpty())
     }
 
     @Test

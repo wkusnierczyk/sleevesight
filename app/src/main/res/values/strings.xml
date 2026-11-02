@@ -58,6 +58,9 @@
     <string name="settings_ai_provider_anthropic">Anthropic</string>
     <string name="settings_ai_provider_openai">OpenAI</string>
     <string name="settings_ai_provider_google">Google</string>
+    <!-- The AI service that needs no key, not offered under AI services yet: named on Load keys and
+         in the key dialog when it is the AI service on (#763). -->
+    <string name="settings_ai_provider_ollama">Ollama</string>
     <string name="settings_ai_model_of">%1$s model</string>
     <string name="settings_ai_model_default">%1$s (default)</string>
     <string name="settings_ai_effort_of">%1$s reasoning effort</string>
@@ -221,22 +224,7 @@
     <string name="settings_key_scan_setup_newer">This QR code is of a later version than this app reads. Update Sleevesight, then scan it again.</string>
     <string name="settings_key_scan_duplicate">The QR code holds this key on two lines, so which one to use cannot be told.</string>
     <string name="settings_key_scan_setup_empty">This setup code holds no keys.</string>
-    <string name="setup_title">Save these keys?</string>
     <string name="setup_explained">Each is stored encrypted on this phone, and sent only to its own service.</string>
-    <!-- What a screen reader says of a row of the table of the keys read (#542). -->
-    <string name="setup_new">%1$s, ending %2$s: new</string>
-    <string name="setup_replaces">%1$s, ending %2$s: replaces the saved key</string>
-    <string name="setup_refused">%1$s: not saved. %2$s</string>
-    <string name="setup_refused_empty">It is empty.</string>
-    <string name="setup_refused_characters">It holds a space or a character no such key has.</string>
-    <string name="setup_refused_shape">It is not a key of this service’s form.</string>
-    <string name="setup_refused_duplicate">The code names it twice.</string>
-    <string name="setup_unknown">Not known to this version, not saved: %1$s</string>
-    <plurals name="setup_unreadable">
-        <item quantity="one">%d line could not be read.</item>
-        <item quantity="other">%d lines could not be read.</item>
-    </plurals>
-    <string name="setup_nothing">Nothing in this code can be saved.</string>
     <string name="setup_failed">Not saved: %1$s. The phone’s key store or storage failed. Try again.</string>
     <string name="setup_not_a_setup_title">Not a setup code</string>
     <string name="setup_not_a_setup">This QR code is not a Sleevesight setup code. One is made on a computer at sleevesight.app/api-keys: never with an online QR generator, which would receive the keys.</string>

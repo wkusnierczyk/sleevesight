@@ -30,7 +30,7 @@ import app.sleevesight.app.ui.theme.codeStyle
 /**
  * The keys [rows] as a table of two columns, *API Key* and *Ending*, each as wide as its widest
  * cell and aligned to the start: a row names the key's service ([keyService]), with, under it, a
- * note where there is one (new, replacing a saved key, or no longer readable), and its last
+ * note where there is one (no longer readable), and its last
  * characters as code ([codeStyle]). A screen reader reads each row as one item ([spokenRow]):
  * "Anthropic, ending a 1 B 2"; the headers once. With no [rows], nothing.
  */
@@ -69,13 +69,7 @@ private fun spokenRow(
     name: String,
 ): AnnotatedString {
     val ending = row.key.ending ?: return AnnotatedString(stringResource(R.string.key_unreadable, name))
-    val line =
-        when (row.replaces) {
-            null -> R.string.key_ending
-            true -> R.string.setup_replaces
-            false -> R.string.setup_new
-        }
-    return keyLine(line, name, ending)
+    return keyLine(R.string.key_ending, name, ending)
 }
 
 /** The note under [row]'s service, if any. */
@@ -83,8 +77,6 @@ private fun spokenRow(
 private fun noteOf(row: KeyRow): Int? =
     when {
         row.key.ending == null -> R.string.key_table_unreadable
-        row.replaces == true -> R.string.load_keys_replaces
-        row.replaces == false -> R.string.load_keys_new
         else -> null
     }
 
