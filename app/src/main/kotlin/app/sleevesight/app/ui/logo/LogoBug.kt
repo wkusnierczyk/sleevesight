@@ -5,7 +5,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -53,10 +52,12 @@ private fun Path.addPaths(group: VectorGroup) {
 }
 
 /**
- * Draws the record's place in the one-line logo: the record ([drawRecord]) at [pose], or, with a
- * [bug] ([logoBug]), the bug in the record's box, as tall as the record (its ink from the top of
- * its feelers to its foot) and centred on the record's centre, in the words' ink. The pose's
- * radius, turn and opacity act on either as on the record, so the intro turns either in.
+ * Draws the record's place in the one-line logo: the record ([drawRecord]) at [pose], with the
+ * header's larger label ([HEADER_LABEL], #848), or, with a [bug] ([logoBug]), the bug in the
+ * record's box, as tall as the record (its ink from the top of its feelers to its foot) and centred
+ * on the record's centre, in the words' ink. The pose's radius and opacity act on either as on the
+ * record; its turn on the record only: the bug never turns (#848), not as intro D brings it in, nor
+ * while music plays, where it crawls instead ([bugCrawl]).
  */
 internal fun DrawScope.drawRecordPlace(
     colors: LogoColors,
@@ -64,16 +65,14 @@ internal fun DrawScope.drawRecordPlace(
     pose: RecordPose = RecordPose(RecordCentre),
 ) {
     if (bug == null) {
-        drawRecord(colors, pose.centre, pose.radius, pose.degrees, pose.alpha)
+        drawRecord(colors, pose.centre, pose.radius, pose.degrees, pose.alpha, HEADER_LABEL)
         return
     }
     if (pose.alpha <= 0f || pose.radius <= 0f) return
     val k = 2 * pose.radius / BUG_INK_HEIGHT
     translate(pose.centre.x, pose.centre.y) {
-        rotate(pose.degrees, pivot = Offset.Zero) {
-            scale(k, k, pivot = Offset.Zero) {
-                translate(-BUG_INK_CENTRE, -BUG_INK_CENTRE) { drawPath(bug, colors.ink, pose.alpha) }
-            }
+        scale(k, k, pivot = Offset.Zero) {
+            translate(-BUG_INK_CENTRE, -BUG_INK_CENTRE) { drawPath(bug, colors.ink, pose.alpha) }
         }
     }
 }

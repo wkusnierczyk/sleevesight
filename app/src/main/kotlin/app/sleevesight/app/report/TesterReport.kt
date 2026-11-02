@@ -440,6 +440,8 @@ internal val SETTING_LINES: List<Pair<String, (Settings) -> String>> =
         "themeButton" to { onOff(it.themeButton) },
         "font" to { it.font.name },
         "introAtStart" to { onOff(it.introAtStart) },
+        "spinLogo" to { onOff(it.spinLogo) },
+        "logoSpeed" to { it.logoSpeed.name },
         "lyricsLinks" to { onOff(it.lyricsLinks) },
         "lyricsSearch" to { onOff(it.lyricsSearch) },
         "dismissed" to { s ->

@@ -6,6 +6,7 @@ import app.sleevesight.app.R
 import app.sleevesight.app.ui.theme.LocalMessages
 import app.sleevesight.core.settings.FontChoice
 import app.sleevesight.core.settings.Layout
+import app.sleevesight.core.settings.LogoSpeed
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.ThemeChoice
 import kotlinx.coroutines.Deferred
@@ -23,7 +24,8 @@ import kotlinx.coroutines.Deferred
  * *Lyrics* button for the playing track, with links to its lyrics pages or a Genius search; under it,
  * indented, *Search Genius when there is no link*, on by default, which can be moved only while
  * *Lyrics links* is on, as *Keep Sources as you left them* only under *Expandable boxes*. *Logo intro
- * at start* (#383), from the next time the app is opened. *Theme*, *Font* and *Layout* show their
+ * at start* (#383), from the next time the app is opened; then *Spin the logo while music plays* and
+ * *Logo speed* (#848, [LogoSpinRows]). *Theme*, *Font* and *Layout* show their
  * choices as button groups (#637), one tap to choose. Last, *Restore dismissed messages* (#759): its
  * button brings back everything dismissed for good ([restore]: the guide to Home, *Players*' note),
  * then a message says so; disabled while nothing is dismissed.
@@ -71,6 +73,7 @@ internal fun AppearanceSection(
         summary = stringResource(R.string.settings_intro_summary),
         checked = settings.introAtStart,
     ) { on -> update { it.copy(introAtStart = on) } }
+    LogoSpinRows(settings, update)
     // Last (#759), where *Home guide* was: disabled while nothing is dismissed.
     val messages = LocalMessages.current
     val restored = stringResource(R.string.settings_restore_dismissed_done)
@@ -114,6 +117,36 @@ private fun LyricsRows(
     }
 }
 
+/**
+ * *Spin the logo while music plays* (#848), on by default, and under it *Logo speed*, 33⅓ rpm or
+ * 45 rpm as a button group, with a line on the record each speed is; the speed keeps its value but
+ * is dimmed and cannot be changed while the switch is off. A screen reader says "33⅓ rpm" in words.
+ */
+@Composable
+private fun LogoSpinRows(
+    settings: Settings,
+    update: Update,
+) {
+    SwitchRow(
+        title = stringResource(R.string.settings_spin_logo),
+        summary = stringResource(R.string.settings_spin_logo_summary),
+        checked = settings.spinLogo,
+    ) { on -> update { it.copy(spinLogo = on) } }
+    ChoiceButtonsRow(
+        title = stringResource(R.string.settings_logo_speed),
+        summary = stringResource(R.string.settings_logo_speed_summary),
+        choices = logoSpeeds(),
+        selected = settings.logoSpeed,
+        details =
+            mapOf(
+                LogoSpeed.RPM_33 to stringResource(R.string.settings_logo_speed_33_detail),
+                LogoSpeed.RPM_45 to stringResource(R.string.settings_logo_speed_45_detail),
+            ),
+        enabled = settings.spinLogo,
+        spoken = mapOf(LogoSpeed.RPM_33 to stringResource(R.string.settings_logo_speed_33_spoken)),
+    ) { speed -> if (settings.spinLogo) update { it.copy(logoSpeed = speed) } }
+}
+
 /** The test tag of *Restore dismissed messages*' button (#759). */
 internal const val RESTORE_DISMISSED_TAG = "settings:restoreDismissed"
 
@@ -132,6 +165,14 @@ internal fun fonts(): List<Pair<FontChoice, String>> =
     listOf(
         FontChoice.APP_FONT to stringResource(R.string.settings_font_app),
         FontChoice.SYSTEM_FONT to stringResource(R.string.settings_font_system),
+    )
+
+/** *Logo speed*'s choices (#848). */
+@Composable
+internal fun logoSpeeds(): List<Pair<LogoSpeed, String>> =
+    listOf(
+        LogoSpeed.RPM_33 to stringResource(R.string.settings_logo_speed_33),
+        LogoSpeed.RPM_45 to stringResource(R.string.settings_logo_speed_45),
     )
 
 /** *Layout*'s choices. */

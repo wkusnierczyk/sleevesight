@@ -4,8 +4,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.PipelineHost
+import app.sleevesight.app.session.PlaybackInfo
 import app.sleevesight.app.session.PlaybackStatus
 import app.sleevesight.core.evidence.Scope
+import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.ReplyFailures
 import kotlin.time.Duration
@@ -23,6 +25,21 @@ internal fun stateText(status: PlaybackStatus): String? =
         PlaybackStatus.ERROR -> stringResource(R.string.home_state_error)
         PlaybackStatus.NONE, PlaybackStatus.OTHER -> null
     }
+
+/**
+ * Whether the player line under Home's header says *Playing* ([PlayerRow]): a track is showing
+ * ([nowPlaying]), and [playback] is its player's and says it plays.
+ */
+internal fun playing(
+    nowPlaying: NowPlaying?,
+    playback: PlaybackInfo,
+): Boolean = nowPlaying != null && playbackStatus(nowPlaying.player, playback) == PlaybackStatus.PLAYING
+
+/** [playback]'s state if it is [player]'s, else none: what the player line says of [player]. */
+internal fun playbackStatus(
+    player: String,
+    playback: PlaybackInfo,
+): PlaybackStatus = playback.status.takeIf { playback.player == player } ?: PlaybackStatus.NONE
 
 /** What an evidence line is about. */
 @Composable

@@ -76,7 +76,8 @@ internal fun PlayerRow(
 ) {
     val context = LocalContext.current
     val name = remember(player) { actions.playerLabel(player) }
-    val state = stateText(playback.status.takeIf { playback.player == player } ?: PlaybackStatus.NONE)
+    // As the header logo's record goes by it, so it turns while this says *Playing* (#848).
+    val state = stateText(playbackStatus(player, playback))
     val open = stringResource(R.string.home_open_player, name)
     val none = stringResource(R.string.home_player_no_screen, name)
     Row(

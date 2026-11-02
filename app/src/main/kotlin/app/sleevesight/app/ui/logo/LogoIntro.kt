@@ -267,8 +267,11 @@ internal fun DrawScope.drawIntro(
                 at(sight) {
                     drawSight(colors)
                     if (pose.record != null) {
-                        // The record fades into the bug as it flies, in a debug build (#652).
-                        drawRecord(colors, RecordCentre, alpha = if (bug == null) 1f else 1 - e)
+                        // The record fades into the bug as it flies, in a debug build (#652). Its
+                        // label grows from the mark's to the header's as it flies (#848), so it
+                        // lands as the header draws it.
+                        val label = MARK_LABEL + (HEADER_LABEL - MARK_LABEL) * e
+                        drawRecord(colors, RecordCentre, alpha = if (bug == null) 1f else 1 - e, label = label)
                         if (bug != null) drawRecordPlace(colors, bug, RecordPose(RecordCentre, alpha = e))
                     }
                 }

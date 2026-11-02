@@ -86,6 +86,8 @@ internal object SettingsCodec {
     private val THEME_BUTTON = booleanPreferencesKey("display.theme_button")
     private val FONT = stringPreferencesKey("display.font")
     private val INTRO = booleanPreferencesKey("display.intro")
+    private val SPIN_LOGO = booleanPreferencesKey("display.spin_logo")
+    private val LOGO_SPEED = stringPreferencesKey("display.logo_speed")
     private val LYRICS_LINKS = booleanPreferencesKey("display.lyrics_links")
     private val LYRICS_SEARCH = booleanPreferencesKey("display.lyrics_search")
 
@@ -147,6 +149,8 @@ internal object SettingsCodec {
             themeButton = prefs[THEME_BUTTON] ?: defaults.themeButton,
             font = enumOf(prefs[FONT]) ?: defaults.font,
             introAtStart = prefs[INTRO] ?: defaults.introAtStart,
+            spinLogo = prefs[SPIN_LOGO] ?: defaults.spinLogo,
+            logoSpeed = enumOf(prefs[LOGO_SPEED]) ?: defaults.logoSpeed,
             dismissed = dismissedOf(prefs),
         )
 
@@ -297,6 +301,8 @@ internal object SettingsCodec {
         if (moved { it.themeButton }) prefs.put(THEME_BUTTON, settings.themeButton, defaults.themeButton)
         if (moved { it.font }) prefs.put(FONT, settings.font.name, defaults.font.name)
         if (moved { it.introAtStart }) prefs.put(INTRO, settings.introAtStart, defaults.introAtStart)
+        if (moved { it.spinLogo }) prefs.put(SPIN_LOGO, settings.spinLogo, defaults.spinLogo)
+        if (moved { it.logoSpeed }) prefs.put(LOGO_SPEED, settings.logoSpeed.name, defaults.logoSpeed.name)
         // The names a later version stored stay, as with a set of switches, but for a set left
         // empty: nothing is dismissed then, a later version's items included, as after *Restore
         // dismissed messages*. The guide's old switch goes: left off, it would read as the guide

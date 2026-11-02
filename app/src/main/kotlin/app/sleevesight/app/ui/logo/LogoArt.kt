@@ -99,18 +99,23 @@ internal fun DrawScope.drawSight(
 /**
  * Draws the record (the page's `#lp`) centred at [centre], [radius] units to its rim, turned by
  * [degrees] about its centre: the rim, the groove (on light) or the black core (on dark), the red
- * label, and its white face, an arc and a line about the centre hole, which show it turning.
+ * label, of radius [label] in the symbol's units ([MARK_LABEL], the mark's, 40% of the rim's;
+ * [HEADER_LABEL], the header's, 56%, #848), and its white face, an arc and a line about the centre
+ * hole, scaled with the label, which show it turning.
  */
+@Suppress("LongParameterList") // Where, how large, how turned, how opaque, and its label's size.
 internal fun DrawScope.drawRecord(
     colors: LogoColors,
     centre: Offset,
     radius: Float = LogoOutlines.RECORD_R,
     degrees: Float = 0f,
     alpha: Float = 1f,
+    label: Float = MARK_LABEL,
 ) {
     if (alpha <= 0f || radius <= 0f) return
     // The symbol's own units: 16 across, the rim at 7.5 from its centre (16, 16).
     val k = radius / RIM
+    val grown = label / MARK_LABEL
     translate(centre.x, centre.y) {
         rotate(degrees, pivot = Offset.Zero) {
             scale(k, k, pivot = Offset.Zero) {
@@ -120,8 +125,8 @@ internal fun DrawScope.drawRecord(
                 } else {
                     drawCircle(GROOVE_COLOR, GROOVE, Offset.Zero, alpha, Stroke(GROOVE_WIDTH))
                 }
-                drawCircle(LABEL_COLOR, LABEL, Offset.Zero, alpha)
-                drawFace(alpha)
+                drawCircle(LABEL_COLOR, label, Offset.Zero, alpha)
+                scale(grown, grown, pivot = Offset.Zero) { drawFace(alpha) }
             }
         }
     }
@@ -168,7 +173,7 @@ internal fun DrawScope.drawSpinnerRecord(
     degrees: Float = 0f,
 ) {
     val k = size.minDimension / SYMBOL
-    val grown = SPINNER_LABEL / LABEL
+    val grown = SPINNER_LABEL / MARK_LABEL
     translate(center.x, center.y) {
         rotate(degrees, pivot = Offset.Zero) {
             scale(k, k, pivot = Offset.Zero) {
@@ -201,7 +206,14 @@ private const val RIM = 7.5f
 private const val CORE = 5.7f
 private const val GROOVE = 5.4f
 private const val GROOVE_WIDTH = .8f
-private const val LABEL = 3f
+
+/**
+ * The record's label's radius in its 16-unit symbol: the mark's (the product page's, the app icon's,
+ * the intro's splash), 40% of the rim's; and the header's (and the logo the intro lands, #848), 56%,
+ * larger so its turning shows. The spinner's ([SPINNER_LABEL], #785) is larger still.
+ */
+internal const val MARK_LABEL: Float = 3f
+internal const val HEADER_LABEL: Float = 4.2f
 private const val HOLE = .9f
 private const val FACE_WIDTH = .42f
 private const val ARC_R = 2f

@@ -29,10 +29,19 @@ import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -44,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.home.NothingPlaying
 import app.sleevesight.app.ui.logo.HeaderLogo
+import app.sleevesight.app.ui.logo.LogoSpin
 import app.sleevesight.app.ui.report.ReportButtonState
 import app.sleevesight.app.ui.report.TesterReportButton
 import app.sleevesight.app.ui.theme.LinkLabel
@@ -52,6 +62,7 @@ import app.sleevesight.app.ui.theme.MessageHost
 import app.sleevesight.app.ui.theme.SleevesightTheme
 import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.app.ui.theme.developerMarkHeight
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 /**
@@ -68,7 +79,8 @@ import kotlinx.coroutines.launch
  * scrolls, and back once the scrolling stops ([TesterReportButton]).
  *
  * With [themeButton] (#636: *Theme button* on, the default), the header shows the theme button
- * before the cogwheel.
+ * before the cogwheel. With [logoSpin] (#848), the header logo's record turns while it says so and
+ * notification access is on, as the player line under the header then says *Playing*.
  */
 @Suppress("LongParameterList") // The header's and the body's seams, each one of Home's parts.
 @Composable
@@ -78,6 +90,7 @@ fun HomeScreen(
     onOpenSettings: () -> Unit,
     report: ReportButtonState? = null,
     themeButton: ThemeButtonState? = null,
+    logoSpin: StateFlow<LogoSpin>? = null,
     pipeline: @Composable () -> Unit = {},
 ) {
     val scroll = rememberScrollState()
@@ -95,6 +108,7 @@ fun HomeScreen(
                     onScrollToTop = { scope.launch { scroll.animateScrollTo(0) } },
                     onOpenSettings,
                     themeButton,
+                    if (accessGranted) logoSpin else null,
                 )
                 HomeBody(scroll, accessGranted, onOpenFirstRun, reportShown = report != null, pipeline)
             }
@@ -156,7 +170,7 @@ private fun HomeBody(
  * Home's header (#445), pinned above what scrolls: the one-line logo ([HeaderLogo], #383), which
  * scrolls Home back to the top, and at the end the cogwheel, which opens the settings, with the
  * theme button ([themeButton], #636), which opens the theme menu (#771), before it while *Theme
- * button* is on. A divider under it
+ * button* is on. The logo's record turns as [logoSpin] says (#848). A divider under it
  * shows once Home has scrolled. A menu icon, if one comes, goes beside the cogwheel.
  */
 @Composable
@@ -165,12 +179,21 @@ private fun HomeHeader(
     onScrollToTop: () -> Unit,
     onOpenSettings: () -> Unit,
     themeButton: ThemeButtonState?,
+    logoSpin: StateFlow<LogoSpin>?,
 ) {
+    val spin = logoSpin?.collectAsState()?.value ?: LogoSpin.STILL
+    // The header's box, which a debug build's bug crawls out of and back into (#848).
+    var box by remember { mutableStateOf<Rect?>(null) }
     val toTop = stringResource(R.string.home_scroll_to_top, stringResource(R.string.app_name))
     val settings = stringResource(R.string.home_settings)
     Column {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(start = 8.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+            modifier =
+                Modifier
+                    .testTag(HOME_HEADER_TAG)
+                    .onGloballyPositioned { box = it.boundsInRoot() }
+                    .fillMaxWidth()
+                    .padding(start = 8.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -189,7 +212,7 @@ private fun HomeHeader(
                 contentAlignment = Alignment.CenterStart,
             ) {
                 // The one-line logo (#383), in place of the name, which the label still says.
-                HeaderLogo()
+                HeaderLogo(spin = spin, crawlSpace = { box })
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 // The current theme, named and drawn, which opens the theme menu (#771), first; the
@@ -236,6 +259,9 @@ private fun reportClearance(): Dp =
  * small button's 40 dp, its margin below and 16 dp above it, so the end of Home scrolls clear of it.
  */
 private val REPORT_CLEARANCE = 72.dp
+
+/** The test tag of Home's header row, the logo and the buttons. */
+const val HOME_HEADER_TAG: String = "home-header"
 
 /** The link tag of *What leaves the device?* on Home. */
 const val WHAT_LEAVES_TAG: String = "what-leaves"

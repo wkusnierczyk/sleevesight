@@ -302,7 +302,7 @@ internal fun ValueRow(
  * (#821). A setting whose choices are many or long, or described one by one, is a
  * [ValueRow] opening a dialog instead (`design/design.md`, *Settings screen*). Not [enabled], none
  * can be chosen; a value in [disabled], that one; [below] comes under the line of what the value
- * does.
+ * does. A value in [spoken] is read by that in place of its label ([ChoiceButtonGroup]).
  */
 @Suppress("LongParameterList") // What the row shows, each a value of its own, and what a tap does.
 @Composable
@@ -315,6 +315,7 @@ internal fun <T> ChoiceButtonsRow(
     enabled: Boolean = true,
     disabled: Set<T> = emptySet(),
     below: (@Composable () -> Unit)? = null,
+    spoken: Map<T, String> = emptyMap(),
     onSelect: (T) -> Unit,
 ) {
     if (!shownInSearch(title)) return
@@ -336,6 +337,7 @@ internal fun <T> ChoiceButtonsRow(
             details = details,
             enabled = enabled,
             disabled = disabled,
+            spoken = spoken,
         )
         ChoiceDetails(choices, selected, details)
         below?.invoke()

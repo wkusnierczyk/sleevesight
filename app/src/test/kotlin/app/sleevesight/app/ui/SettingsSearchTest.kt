@@ -151,6 +151,8 @@ class SettingsSearchTest {
                     R.string.settings_lyrics_links,
                     R.string.settings_lyrics_search,
                     R.string.settings_intro,
+                    R.string.settings_spin_logo,
+                    R.string.settings_logo_speed,
                     R.string.settings_restore_dismissed,
                 ).map(::text),
                 rowsOf(SettingsSection.APPEARANCE),

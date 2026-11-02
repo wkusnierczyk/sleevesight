@@ -179,6 +179,8 @@ class MainActivity : ComponentActivity() {
                                 },
                                 testerReport = testerReport,
                                 themeButton = themeButton,
+                                // The header logo's record turning while music plays (#848).
+                                logoSpin = graph.logoSpin,
                             )
                         }
                         intro?.let { LogoIntroOverlay(it) }
