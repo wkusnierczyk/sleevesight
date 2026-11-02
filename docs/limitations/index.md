@@ -62,7 +62,7 @@ A limit listed here is not a bug. Something that does not work as this page and 
 
 - **Two sources need your own key.** MusicBrainz, and Wikipedia with Wikidata, need no key. Last.fm and the Exa web search need your own API key, and stay disabled until the key is saved. For what each source covers, and what is missing without it, see [Setting up external services]({{ '/docs/services/#1-which-services-need-a-key-and-why' | relative_url }}).
 - **A source that fails means less evidence.** A source that cannot be reached, fails, or refuses a request for its limits gives nothing for that track; the insight is written from the others' lines, and *Sources* says which failed. MusicBrainz is asked at one request a second, as its rules ask; Last.fm limits its rate; Exa's free credit is monthly.
-- **A match the identity check cannot confirm is not used.** Each source's match is checked against the track before it is used, and one that fails is left out, so a track can get less than the sources hold. With MusicBrainz disabled, the other sources match by name alone, without its identifiers to check against.
+- **A match the identity check cannot confirm is not used.** Each source's match is checked against the track before it is used, and one that fails is left out, so a track can get less than the sources hold. With MusicBrainz disabled, there is nothing to check the other sources against: Last.fm's matches are shown but not given to the insight, and Wikipedia's articles about the artists are not used.
 - **English Wikipedia only.** Articles, and the genres' definitions, come from the English Wikipedia; a song or artist written up only in another language's Wikipedia is not found there.
 
 ## Cost and connection
