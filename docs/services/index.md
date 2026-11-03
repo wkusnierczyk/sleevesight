@@ -61,11 +61,13 @@ Open **Settings** (the cogwheel at the top right of the home screen) and tap the
 
 ### Entering one key (`Anthropic API key`, `Last.fm API key`, …)
 
-Tap the service's row under *Secrets* (or tap *Set your … API key here.* directly under the service in *AI services* or *Sources*). The dialog offers three ways to fill the *Key* field. Under the field, a box offers to switch the service on as the key is saved ([section 4](#4-how-to-enable-the-services)); then tap **Save**, and a summary says what was saved and switched on, with *Done*:
+Tap the service's row under *Secrets* (or tap *Set your … API key here.* directly under the service in *AI services* or *Sources*). The dialog offers three ways to fill the *Key* field:
 
 - **Manual (paste, type, or password manager):** paste or type the key into the *Key* field, or pick it from your password manager's autofill prompt. While typing or pasting, the eye icon (*Show key*) lets you check it before saving.
 - **Type on a computer (keyboard icon in the field):** if the key is on your computer, open [sleevesight.app/keyboard.html]({{ '/keyboard.html' | relative_url }}) in Chrome or Edge on the computer (with Bluetooth on). Tap the keyboard icon in the phone's *Key* field, scan the QR code on the computer screen, then click *Connect* on the computer and pick the phone. What you type or paste on the computer is sent encrypted over Bluetooth straight into the field.
 - **QR code of a single key (QR icon in the field):** open [sleevesight.app/api-keys]({{ '/api-keys.html' | relative_url }}) on a computer, uncheck *Seal the code with the phone's words*, and paste that single key into its field. Tap the QR icon in the phone's *Key* field and scan the code. (A key read from a QR code is kept hidden and cannot be revealed with the eye icon.)
+
+Under the field, a box offers to switch the service on as the key is saved ([section 4](#4-how-to-enable-the-services)); tap **Save**, and a summary says what was saved and switched on, with *Done*.
 
 ### Entering several keys at once (*Load keys*)
 
