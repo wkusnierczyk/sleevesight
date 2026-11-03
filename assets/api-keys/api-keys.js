@@ -426,6 +426,8 @@ function wireBoxes() {
           box.value = words[0];
           if (i < COUNT - 1) boxes[i + 1].focus();
         } else {
+          // Nothing but separators and dropped characters leaves the box empty.
+          box.value = '';
           let j = i;
           for (const word of words.filter((w) => w !== '')) {
             if (j >= COUNT) break;
