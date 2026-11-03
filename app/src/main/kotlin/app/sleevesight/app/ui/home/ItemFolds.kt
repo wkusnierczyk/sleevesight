@@ -55,11 +55,19 @@ internal fun itemKind(item: InsightItem): String =
         },
     )
 
+/** The action of [item]'s button as a screen reader names it under *Expandable boxes* (#894). */
+internal fun itemShowAction(item: InsightItem): Int =
+    when (item) {
+        InsightItem.SONG -> R.string.home_item_show_song
+        InsightItem.ARTIST -> R.string.home_item_show_artist
+        InsightItem.ALBUM -> R.string.home_item_show_album
+    }
+
 /**
  * Which rows are unfolded, kept across recompositions and a recreated screen, as *Sources*' fold is
  * ([FoldMemory]): the items [open] on the track last shown, [track], and those a tap opened on it
  * ([tapped], not saved), which write at once under an automatic mode whatever held the track's own
- * writing back.
+ * writing back; and the rows whose name a tap showed whole ([whole], #894, not saved).
  */
 @Stable
 internal class ItemFoldMemory(
@@ -69,6 +77,7 @@ internal class ItemFoldMemory(
     var open: Set<InsightItem> by mutableStateOf(open)
     var track: NowPlaying? by mutableStateOf(track)
     var tapped: Set<InsightItem> by mutableStateOf(emptySet())
+    var whole: Set<InsightItem> by mutableStateOf(emptySet())
 
     companion object {
         /** Saved as plain values: the items open, by name, and the track as [savedTrack] keeps it. */
@@ -117,6 +126,18 @@ internal class ItemFolds(
                 else -> emptySet()
             }
 
+    /** Whether [item]'s name is shown whole in its row, on the track playing (#894); a new track's are clipped. */
+    fun whole(item: InsightItem): Boolean = same && item in memory.whole
+
+    /** A tap on [item]'s name in its row (#894): shown whole, or clipped again. */
+    fun toggleWhole(item: InsightItem) {
+        val now = if (same) memory.whole else emptySet()
+        memory.open = open
+        memory.tapped = if (same) memory.tapped else emptySet()
+        memory.whole = if (item in now) now - item else now + item
+        memory.track = playing
+    }
+
     /** Whether [item] was opened by a tap on the track playing. */
     fun tapped(item: InsightItem): Boolean = same && item in memory.tapped
 
@@ -127,6 +148,7 @@ internal class ItemFolds(
         val tapped = if (same) memory.tapped else emptySet()
         memory.open = if (opening) now + item else now - item
         memory.tapped = if (opening) tapped + item else tapped - item
+        if (!same) memory.whole = emptySet()
         memory.track = playing
     }
 
@@ -135,6 +157,7 @@ internal class ItemFolds(
         if (start == null || same) return
         memory.open = open
         memory.tapped = emptySet()
+        memory.whole = emptySet()
         memory.track = playing
     }
 }

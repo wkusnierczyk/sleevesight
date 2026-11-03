@@ -14,6 +14,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.pipeline.AiSearchFeed
 import app.sleevesight.app.pipeline.CallId
@@ -30,6 +32,7 @@ import app.sleevesight.app.speech.Reading
 import app.sleevesight.app.ui.report.InsightReportDialog
 import app.sleevesight.app.ui.settings.InstalledPlayers
 import app.sleevesight.app.ui.settings.SettingsTarget
+import app.sleevesight.app.ui.theme.PanelRule
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.SourceId
@@ -331,7 +334,12 @@ internal fun NowPlayingContent(
                 insightReading(actions.readAloud, track),
             )
             HomeItems(state, shown, header, itemMemory, cite, actions) { t, w, i -> reporting = Reported(t, w, i) }
-            if (settings != null) SourcesItem(pages, shown.sources(lines), focus, fold, actions)
+            if (settings != null) {
+                // A dim line between the song's, the artist's and the album's rows and *Sources* (#894),
+                // under either layout; nothing a screen reader stops on.
+                PanelRule(Modifier.testTag(SOURCES_LINE_TAG).clearAndSetSemantics {})
+                SourcesItem(pages, shown.sources(lines), focus, fold, actions)
+            }
         }
     }
 }
@@ -437,3 +445,6 @@ internal fun ReportOpen(
 
 // A track the pipeline has not reached yet.
 private val NOT_YET = InsightState.Idle(canWrite = false)
+
+/** The test tag of the dim line between the song's, the artist's and the album's rows and *Sources* (#894). */
+const val SOURCES_LINE_TAG: String = "sources-line"

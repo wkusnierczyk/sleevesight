@@ -26,6 +26,7 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -71,9 +72,11 @@ internal fun SourcesChip(
 /**
  * A chip on Home that opens a panel in its place, or a page, drawn as a genre chip is
  * ([ChipFrame]): *Sources*' ([SourcesChip], #623) and *Dates*' (#724). Named [name], tagged [tag]; a
- * screen reader reads it as a button, named [name], a [heading] when it is one, collapsed while
- * [collapsed] (its panel opens in its place, so it is only ever collapsed), its action named
- * [action] when given. [modifier] goes on the chip's outside: a focus requester.
+ * screen reader reads it as a button, named [description] ([name] unless given: the song's row's
+ * "Song, Paper Boats", #894), a [heading] when it is one, collapsed while [collapsed] (its panel
+ * opens in its place, so it is only ever collapsed), its action named [action] when given. With
+ * [width], it is that wide, its name centred in it (the rows of the song, the artist and the album,
+ * #894). [modifier] goes on the chip's outside: a focus requester.
  */
 @Suppress("LongParameterList") // What the chip says and is, each its own.
 @Composable
@@ -84,23 +87,37 @@ internal fun PanelChip(
     action: String? = null,
     collapsed: Boolean = true,
     heading: Boolean = false,
+    description: String = name,
+    width: Dp? = null,
     onClick: () -> Unit,
 ) {
     val folded = stringResource(R.string.home_fold_collapsed)
     val (fill, content) = chipColours(marked = false)
     ChipFrame(
         fill,
-        modifier = modifier.testTag(tag),
+        modifier = modifier.testTag(tag).then(width?.let { Modifier.width(it) } ?: Modifier),
         action =
             Modifier
                 .clickable(role = Role.Button, onClickLabel = action, onClick = onClick)
                 .clearAndSetSemantics {
                     if (heading) heading()
-                    contentDescription = name
+                    contentDescription = description
                     if (collapsed) stateDescription = folded
                 },
     ) {
-        Text(name, style = MaterialTheme.typography.labelLarge, color = content)
+        if (width == null) {
+            Text(name, style = MaterialTheme.typography.labelLarge, color = content)
+        } else {
+            Text(
+                name,
+                style = MaterialTheme.typography.labelLarge,
+                color = content,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                softWrap = false,
+                modifier = Modifier.weight(1f),
+            )
+        }
     }
 }
 
@@ -188,7 +205,7 @@ private fun Table(
     focus: LineFocus,
     fold: SourcesFold,
 ) {
-    val width = letterColumnWidth(rows.map { it.source.tag })
+    val width = chipColumnWidth(rows.map { it.source.tag })
     Column(
         modifier = Modifier.testTag(SOURCES_TABLE_TAG),
         verticalArrangement = Arrangement.spacedBy(ROW_GAP),
@@ -312,16 +329,18 @@ private fun LetterChip(
 }
 
 /**
- * The letters' column: as wide as the widest of [tags] as [LetterChip] draws them, its text and
- * [CHIP_PADDING] at each side, each side rounded as it is laid out.
+ * A column of chips as wide as the widest of [labels] as a chip draws them ([LetterChip], [PanelChip]):
+ * its text, on one line, and [CHIP_PADDING] at each side, each side rounded as it is laid out. The
+ * letters' column of *Sources*' table (#662); the buttons of the song's, the artist's and the album's
+ * rows (#894).
  */
 @Composable
-private fun letterColumnWidth(tags: List<String>): Dp {
+internal fun chipColumnWidth(labels: List<String>): Dp {
     val measurer = rememberTextMeasurer()
     val style = MaterialTheme.typography.labelLarge
     val density = LocalDensity.current
-    return remember(tags, style, density) {
-        val widest = tags.maxOfOrNull { measurer.measure(it, style).size.width } ?: 0
+    return remember(labels, style, density) {
+        val widest = labels.maxOfOrNull { measurer.measure(it, style, softWrap = false, maxLines = 1).size.width } ?: 0
         with(density) { (widest + 2 * CHIP_PADDING.roundToPx()).toDp() }
     }
 }

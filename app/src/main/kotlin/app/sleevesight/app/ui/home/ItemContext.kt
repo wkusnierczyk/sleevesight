@@ -1,5 +1,6 @@
 package app.sleevesight.app.ui.home
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -75,20 +76,38 @@ internal class ItemContext(
  * problem*. Before it is written: under *On demand*, "Tap Write
  * insight…" and *Write insight* with the **AI** mark; under an automatic mode, written at once
  * ([ItemContext.automatic], [tapped]), *Writing…* with the turning record meanwhile.
+ *
+ * [shown] is what [item] shows, when its caller follows it already ([itemShown]): Home's panel, which
+ * draws *Read aloud* in its heading ([ItemReadAloud], #894) and so passes [readAloud] false, leaving
+ * it out of the byline's row.
  */
 @Composable
 internal fun ItemContent(
     item: InsightItem,
     context: ItemContext,
     tapped: Boolean,
+    shown: ItemShown? = null,
+    readAloud: Boolean = true,
 ) {
     val track = context.track
     if (track == null) {
         Gathering()
         return
     }
-    // Followed again only when what the item depends on changes, not at each update of the track (a
-    // streamed word of the key insight, its genres): the gathering is not asked again for those.
+    ItemShownContent(item, track, context, tapped, shown ?: itemShown(item, context), readAloud)
+}
+
+/**
+ * What [item] shows beside [context]'s track, as its notes give it: gathering while there is no
+ * track. Followed again only when what the item depends on changes, not at each update of the track
+ * (a streamed word of the key insight, its genres): the gathering is not asked again for those.
+ */
+@Composable
+internal fun itemShown(
+    item: InsightItem,
+    context: ItemContext,
+): ItemShown {
+    val track = context.track ?: return ItemShown.Gathering
     val shown by remember(
         item,
         context.notes,
@@ -99,6 +118,39 @@ internal fun ItemContent(
         track.gathered,
         track.evidence,
     ) { context.notes.item(track, item) }.collectAsState(ItemShown.Gathering)
+    return shown
+}
+
+/**
+ * *Read aloud* of [item]'s insight, once written ([shown]), under [modifier]: in the heading of its
+ * panel on Home (#894), the panel's content leaving its own out; nothing before.
+ */
+@Composable
+internal fun ItemReadAloud(
+    item: InsightItem,
+    context: ItemContext,
+    shown: ItemShown,
+    modifier: Modifier = Modifier,
+) {
+    val track = context.track ?: return
+    val written = (shown as? ItemShown.Shown)?.state as? InsightState.Written ?: return
+    itemReading(context.readAloud, item, track, written, context.notes)?.let {
+        // In a box of its own, so [modifier] (the heading's alignment) reaches the row it sits in.
+        Box(modifier) { ReadAloudButton(it, itemReadAloudTag(item)) }
+    }
+}
+
+// [ItemContent] of [track], [shown] as followed.
+@Suppress("LongParameterList") // What the item shows, and where.
+@Composable
+private fun ItemShownContent(
+    item: InsightItem,
+    track: TrackState,
+    context: ItemContext,
+    tapped: Boolean,
+    shown: ItemShown,
+    readAloud: Boolean,
+) {
     WritesAtOnce(item, track, context, tapped)
     val unavailable = context.unavailable
     val state = (shown as? ItemShown.Shown)?.state
@@ -121,7 +173,7 @@ internal fun ItemContent(
 
         // Nothing to write about on this track (no album it names): said as for no evidence.
         ItemShown.NoSubject -> ItemQuiet(stringResource(noEvidence(item)))
-        is ItemShown.Shown -> Shown(item, now, track, context)
+        is ItemShown.Shown -> Shown(item, now, track, context, readAloud)
     }
 }
 
@@ -166,6 +218,7 @@ private fun Shown(
     shown: ItemShown.Shown,
     track: TrackState,
     context: ItemContext,
+    readAloud: Boolean,
 ) {
     val own = track.copy(evidence = shown.evidence.evidence)
     // Where a citation goes, and how it shows and is read: by the id *Sources* shows its line under.
@@ -188,8 +241,10 @@ private fun Shown(
         is InsightState.Written -> {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) { shown.model?.let { InsightByline(it) } }
-                itemReading(context.readAloud, item, track, state, context.notes)?.let {
-                    ReadAloudButton(it, itemReadAloudTag(item))
+                if (readAloud) {
+                    itemReading(context.readAloud, item, track, state, context.notes)?.let {
+                        ReadAloudButton(it, itemReadAloudTag(item))
+                    }
                 }
             }
             for (paragraph in state.grounded.paragraphs) {

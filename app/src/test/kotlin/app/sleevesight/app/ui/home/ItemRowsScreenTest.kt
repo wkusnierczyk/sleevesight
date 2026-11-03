@@ -71,8 +71,8 @@ import org.robolectric.RobolectricTestRunner
 
 /**
  * The song's, the artist's and the album's rows under *Key insights* (#522): folded by default, each
- * unfolding in place under *Expandable boxes*, several at once, or opening its page under *Separate
- * pages*; written on a tap under *On demand*, at once under an automatic mode.
+ * button opening its panel in place under *Expandable boxes* (#894), several at once, or its page
+ * under *Separate pages*; written on a tap under *On demand*, at once under an automatic mode.
  */
 @RunWith(RobolectricTestRunner::class)
 class ItemRowsScreenTest {
@@ -187,8 +187,8 @@ class ItemRowsScreenTest {
             compose.onAllNodesWithTag(ITEM_ROWS_TAG).assertCountEquals(1)
             val artist = row(InsightItem.ARTIST).performScrollTo().fetchSemanticsNode()
             assertEquals("Artist, Gordon Lightfoot", artist.config[SemanticsProperties.ContentDescription].single())
-            assertEquals(text(R.string.home_fold_collapsed), artist.config[SemanticsProperties.StateDescription])
-            assertEquals(text(R.string.home_item_expand), artist.config[SemanticsActions.OnClick].label)
+            assertTrue(SemanticsProperties.StateDescription !in artist.config)
+            assertEquals(text(R.string.home_item_show_artist), artist.config[SemanticsActions.OnClick].label)
             row(InsightItem.SONG).assertExistsWith("Song, Sundown")
             row(InsightItem.ALBUM).assertExistsWith("Album, Sundown")
             compose.onAllNodesWithText(text(R.string.home_item_tap_write)).assertCountEquals(0)
@@ -207,8 +207,9 @@ class ItemRowsScreenTest {
             assertTrue(notes.writes.isEmpty())
             compose.onNodeWithTag(itemWriteTag(InsightItem.ARTIST)).performScrollTo().performClick()
             assertEquals(listOf(InsightItem.ARTIST), notes.writes)
-            val unfolded = row(InsightItem.ARTIST).fetchSemanticsNode()
-            assertEquals(text(R.string.home_fold_expanded), unfolded.config[SemanticsProperties.StateDescription])
+            // Open in its row's place: the row and its button hidden meanwhile.
+            row(InsightItem.ARTIST).assertDoesNotExist()
+            compose.onNodeWithTag(itemPanelTag(InsightItem.ARTIST)).assertExists()
         }
 
     @Test
@@ -260,6 +261,8 @@ class ItemRowsScreenTest {
             row(InsightItem.ARTIST).performClick()
             assertEquals(listOf<HomePage>(HomePage.Item(InsightItem.ARTIST.name)), opened)
             compose.onAllNodesWithText(text(R.string.home_item_tap_write)).assertCountEquals(0)
+            // The button stays, as *Genres*' does under *Separate pages*.
+            row(InsightItem.ARTIST).assertExists()
         }
 
     @Test
@@ -276,10 +279,8 @@ class ItemRowsScreenTest {
             current.value = state(onDemand.copy(itemsOnNewTrack = NewTrackFold.AS_LEFT), track(carefree))
             compose.waitForIdle()
             compose.onAllNodesWithText(text(R.string.home_item_tap_write)).assertCountEquals(1)
-            assertEquals(
-                text(R.string.home_fold_expanded),
-                row(InsightItem.SONG).fetchSemanticsNode().config[SemanticsProperties.StateDescription],
-            )
+            compose.onNodeWithTag(itemPanelTag(InsightItem.SONG)).assertExists()
+            row(InsightItem.SONG).assertDoesNotExist()
         }
     }
 

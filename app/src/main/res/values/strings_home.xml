@@ -303,19 +303,18 @@
     <string name="home_genre_tags_credit">MusicBrainz tags by contributors</string>
     <string name="home_genre_tags_licence">CC BY-NC-SA 3.0</string>
 
-    <!-- The song's, the artist's and the album's insights under Key insights (#522): each row's kind,
-         its name beside it, the playing track's title, its primary artist, the player's album name;
-         and each one's page title. -->
+    <!-- The song's, the artist's and the album's insights under Key insights (#522): each row's
+         button and its panel's title (#894), the name beside it the playing track's title, its
+         primary artist, the player's album name; and each one's page title. -->
     <string name="home_item_song">Song</string>
     <string name="home_item_artist">Artist</string>
     <string name="home_item_album">Album</string>
-    <!-- A row's action and state under Expandable boxes, as a screen reader says them ("Artist, Ellen
-         Hart, button, collapsed, double-tap to expand"). -->
-    <string name="home_item_expand">expand</string>
-    <string name="home_item_collapse">collapse</string>
-    <string name="home_fold_expanded">expanded</string>
-    <!-- A row's arrow under Separate pages: a tap opens its page. -->
-    <string name="home_item_page_arrow">›</string>
+    <!-- A row's button's action under Expandable boxes, as a screen reader names it (#894): "Song,
+         Paper Boats. Button. Double-tap to show the song's insight"; under Separate pages,
+         home_page_open. -->
+    <string name="home_item_show_song">show the song’s insight</string>
+    <string name="home_item_show_artist">show the artist’s insight</string>
+    <string name="home_item_show_album">show the album’s insight</string>
     <!-- An item with nothing written under On demand, above its Write insight. -->
     <string name="home_item_tap_write">Tap Write insight to have it written from the sources.</string>
     <!-- An item the sources give nothing to write from: no call is made. -->
