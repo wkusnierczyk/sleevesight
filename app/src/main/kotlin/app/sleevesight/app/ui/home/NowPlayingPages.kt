@@ -183,15 +183,16 @@ private fun SourcesPage(
     val lines = sourcesLines(actions.itemNotes, shown.track)
     val focus = rememberLineFocus(lines.evidence)
     val fold = sourcesFold(rememberFoldMemory(), playing, onNewTrack = NewTrackFold.FOLDED, start = Fold.Pages(1))
-    // Once, not again as the evidence grows or after a rotation.
-    var cited by rememberSaveable { mutableStateOf(false) }
-    // Taken once its line is there: an album's line (#522) comes once the album's lines are read,
-    // after the track's.
+    // The citation's line, flashed once, not again after a rotation, but followed as the lines change
+    // while the page is open: an album's lines (#522) come once they are read, after the track's,
+    // and may be the line cited, or move it further down. Each change unfolds to it again.
+    var flashed by rememberSaveable { mutableStateOf(false) }
     val evidence = lines.evidence
     LaunchedEffect(focus) {
-        if (cited || cite == null || evidence?.get(cite) == null) return@LaunchedEffect
-        cited = true
-        focus.cite(cite)?.let(fold::reach)
+        if (cite == null || evidence?.get(cite) == null) return@LaunchedEffect
+        val at = if (flashed) focus.follow(cite) else focus.cite(cite)
+        flashed = true
+        at?.let(fold::reach)
     }
     SourcesBody(shown.sources(lines), focus, fold, actions.openSettings)
 }

@@ -69,6 +69,18 @@ internal class LineFocus(
         return indexOf(id)
     }
 
+    /**
+     * Shows the line [id] again where it now is, scrolled to with no new flash (a citation followed as
+     * the lines change under it, #522); returns its place in the list as it now shows, or null for a
+     * line [evidence] does not have.
+     */
+    fun follow(id: String): Int? {
+        val line = evidence?.get(id) ?: return null
+        hidden = hidden - line.source
+        flash = Flash(id, ++taps, flashes = false)
+        return indexOf(id)
+    }
+
     /** Where the line [id] is among the lines shown, or null if it is not one of them. */
     private fun indexOf(id: String): Int? =
         evidence

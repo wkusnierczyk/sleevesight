@@ -11,6 +11,7 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
@@ -504,6 +505,45 @@ class ItemRowsScreenTest {
             notes.album.value = album
             compose.waitForIdle()
             compose.onNodeWithTag(LINE_PREFIX + "MB11").performScrollTo().assertExists()
+        }
+    }
+
+    @Test
+    fun aCitationOfTheTracksLineOnSourcesPageFollowsItWhenTheAlbumsLinesMoveItDown() {
+        val mb = (1..15).map { draft(SourceId.MUSICBRAINZ, "Fact $it.") }
+        val w = listOf(draft(SourceId.WIKIPEDIA, "Sundown is a song."))
+        val long =
+            track(
+                sources =
+                    mapOf(
+                        SourceId.MUSICBRAINZ to HomeFixtures.done(evidence = mb),
+                        SourceId.WIKIPEDIA to HomeFixtures.done(evidence = w),
+                    ),
+                evidence = EvidenceSet.of(mb + w, JvmHasher),
+            )
+        val album =
+            EvidenceSet.of(
+                listOf(draft(SourceId.MUSICBRAINZ, "“Sundown” is an album.", scope = Scope.RELEASE)),
+                JvmHasher,
+            )
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity {
+                it.setContent {
+                    NowPlayingPageContent(
+                        // The track's own W1, the 16th entry: two screenfuls.
+                        HomePage.Sources(cite = "W1"),
+                        state(onDemand, long),
+                        NowPlayingActions(normalizer::normalize, itemNotes = notes),
+                    ) {}
+                }
+            }
+            compose.waitForIdle()
+            compose.onNodeWithTag(LINE_PREFIX + "W1").assertIsDisplayed()
+            // The album's MusicBrainz line comes in before it: W1 is now the 17th, past two screenfuls.
+            notes.album.value = album
+            compose.waitForIdle()
+            compose.onNodeWithTag(LINE_PREFIX + "MB16").assertExists()
+            compose.onNodeWithTag(LINE_PREFIX + "W1").assertIsDisplayed()
         }
     }
 
