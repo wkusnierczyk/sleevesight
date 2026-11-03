@@ -161,6 +161,12 @@ class RetrievalCache internal constructor(
                 listOf(track.from?.let(normalizer::foldForKey), duration?.let { "${it.inWholeSeconds}s" })
         return parts.joinToString("") { part -> part?.let { "${it.length}:$it" } ?: "-" }
     }
+
+    /**
+     * [name] folded as [keyOf] folds a track's artists ([Normalizer.foldForKey]): for the synthesis
+     * cache's key of an artist or album without a MusicBrainz id (#240).
+     */
+    fun foldName(name: String): String = normalizer.foldForKey(name)
 }
 
 /** A kept [result], and when it was stored. */

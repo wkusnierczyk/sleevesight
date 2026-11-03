@@ -100,10 +100,14 @@ class GenreReasons(
         val model = access?.let { settings.model(it.provider.id) }
         val evidence = track.evidence
         if (access == null || model == null || evidence == null) return null
+        // With *AI web search* used (#801), a key of its own: a reason from the web is kept apart
+        // from one from the evidence alone, which stays under the key without the web part
+        // ([found]); the keys from before stay as they were.
+        val fromWeb = WebQuestions(access, web).used(settings.aiWebSearchUsed) != AiWebSearch.OFF
+        val subject = if (fromWeb) genre + WEB else genre
         return CardKey(
             kind = CardKind.GENRE,
-            track = track.normalized,
-            duration = track.nowPlaying.duration,
+            entity = CardEntity.Track(track.normalized, track.nowPlaying.duration, subject),
             evidenceFingerprint = evidence.fingerprint,
             promptVersion = GenreReasonPrompt.VERSION,
             styleHash = styleHash(hasher),
@@ -111,17 +115,6 @@ class GenreReasons(
             model = model,
             modelKnowledge = settings.isEnabled(SourceId.MODEL),
             effort = settings.effort(access.provider.id),
-            // With *AI web search* used (#801), a key of its own: a reason from the web is kept apart
-            // from one from the evidence alone, which stays under the key without the web part
-            // ([found]); the keys from before stay as they were.
-            subject =
-                if (WebQuestions(access, web).used(settings.aiWebSearchUsed) ==
-                    AiWebSearch.OFF
-                ) {
-                    genre
-                } else {
-                    genre + WEB
-                },
         )
     }
 
@@ -405,7 +398,7 @@ class GenreReasons(
         }
 
     // [key] without its web part (#801): the key of a reason from the evidence alone.
-    private fun alone(key: CardKey): CardKey = key.copy(subject = key.subject?.removeSuffix(WEB))
+    private fun alone(key: CardKey): CardKey = key.about(key.subject?.removeSuffix(WEB))
 
     // The clock's time, in whole milliseconds, as the cache keeps it.
     private fun now(): Instant = Instant.fromEpochMilliseconds(clock.now().toEpochMilliseconds())
