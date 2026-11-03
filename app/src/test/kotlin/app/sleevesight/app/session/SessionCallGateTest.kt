@@ -93,7 +93,7 @@ internal class SessionCallGateTest(
 
         val case = "$entry, $timing"
         assertEquals(case, readsAtCall, app.reads)
-        assertEquals(case, sundown, repository.nowPlaying.value)
+        assertEquals(case, sundown, repository.nowPlaying.value.untagged())
         assertEquals(case, SPOTIFY, repository.playback.value.player)
         assertEquals(case, null, repository.queue.value)
         if (timing != Timing.AFTER) assertTrue(case, tracks.none { it?.title == CALLER })

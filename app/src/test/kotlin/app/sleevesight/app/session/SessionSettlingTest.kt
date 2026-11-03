@@ -58,7 +58,7 @@ internal class SessionSettlingTest : SessionRepositoryFixture() {
                 sundown.copy(player = YOUTUBE_MUSIC, queueItemId = 4),
                 sundown.copy(title = "Carefree Highway", player = YOUTUBE_MUSIC, queueItemId = 5),
             ),
-            tracks,
+            tracks.untagged(),
         )
     }
 
@@ -90,19 +90,20 @@ internal class SessionSettlingTest : SessionRepositoryFixture() {
     }
 
     @Test
-    fun aSongQueuedTwiceIsOneChange() {
+    fun aSongQueuedTwiceInARowIsOnePlayItsSlotCarried() {
+        // The queue slot is carried, not identity (#297): the same track again right after itself is one play.
         val youtube = youtubeMusic()
         val tracks = recordTracks()
 
         youtube.settled(state(queueItem = 5))
         youtube.settled(metadata())
 
-        assertEquals(1, changes(tracks))
+        assertEquals(0, changes(tracks))
         assertEquals(listOf(4L, 5L), tracks.map { it?.queueItemId })
     }
 
     @Test
-    fun decoratedQueueTitlesStillTellCopiesApart() {
+    fun decoratedQueueTitlesStillCarryEachCopysSlot() {
         // The queue names the copies "Sundown (Remastered)"; the metadata says "Sundown".
         val youtube = youtubeMusic(metadata = carefree, item = 3)
         youtube.queue =
@@ -118,7 +119,7 @@ internal class SessionSettlingTest : SessionRepositoryFixture() {
         youtube.send(state(queueItem = 5))
         youtube.settled(metadata())
 
-        assertEquals(2, changes(tracks))
+        assertEquals(1, changes(tracks))
         assertEquals(listOf(3L, 4L, 5L), tracks.map { it?.queueItemId })
     }
 
@@ -310,7 +311,7 @@ internal class SessionSettlingTest : SessionRepositoryFixture() {
                 sundown.copy(player = YOUTUBE_MUSIC, queueItemId = 4),
                 sundown.copy(title = "Carefree Highway", player = YOUTUBE_MUSIC, queueItemId = 5),
             ),
-            tracks,
+            tracks.untagged(),
         )
         val change = checkNotNull(repository.lastChange.value)
         assertEquals(990L, change.changedAt)
@@ -632,5 +633,59 @@ internal class SessionSettlingTest : SessionRepositoryFixture() {
         val youtube = youtubeMusic()
         youtube.settled(metadata(durationMs = 279_000))
         assertNull(repository.lastChange.value)
+    }
+
+    @Test
+    fun artistsLearnedInABurstAreNotSetAsideForThePlaySettledWithoutThem() {
+        // The play settled with no artists; one burst brings X, leaves them out, then brings Y (#297).
+        val youtube = youtubeMusic(metadata = metadata(artist = null))
+        val tracks = recordTracks()
+
+        scheduler.advanceTimeBy(2_000.milliseconds)
+        youtube.send(metadata(artist = "X"))
+        scheduler.advanceTimeBy(100.milliseconds)
+        youtube.send(metadata(artist = null))
+        scheduler.advanceTimeBy(100.milliseconds)
+        youtube.settled(metadata(artist = "Y"))
+
+        assertEquals(1, changes(tracks))
+        assertEquals("Y", repository.nowPlaying.value?.artists)
+    }
+
+    @Test
+    fun anAlbumLearnedInABurstIsNotSetAsideForThePlaySettledWithoutIt() {
+        // Past the play's first second: album A, then none, then B in one burst is another track.
+        val youtube = youtubeMusic()
+        val tracks = recordTracks()
+
+        scheduler.advanceTimeBy(2_000.milliseconds)
+        youtube.send(metadata(album = "A"))
+        scheduler.advanceTimeBy(100.milliseconds)
+        youtube.send(metadata())
+        scheduler.advanceTimeBy(100.milliseconds)
+        youtube.settled(metadata(album = "B"))
+
+        assertEquals(1, changes(tracks))
+        assertEquals("B", repository.nowPlaying.value?.album)
+    }
+
+    @Test
+    fun aPlayerWithMediaIdsKeepsItsChangeTimedAtTheMetadataNotTheSlot() {
+        // The slot times a change only for players without media ids (#297): Spotify's stay as they were.
+        val spotify =
+            FakeSession(
+                SPOTIFY,
+                metadata = metadata(mediaId = "spotify:track:1"),
+                playbackState = state(positionMs = 200_000, queueItem = 4),
+            )
+        system.active = listOf(spotify)
+        repository.start()
+
+        scheduler.advanceTimeBy(1_000.milliseconds)
+        spotify.send(state(positionMs = 0, updatedAt = 1_000, queueItem = 5))
+        scheduler.advanceTimeBy(600.milliseconds)
+        spotify.settled(metadata(title = "Carefree Highway", mediaId = "spotify:track:2"))
+
+        assertEquals(1_600L, repository.lastChange.value?.changedAt)
     }
 }

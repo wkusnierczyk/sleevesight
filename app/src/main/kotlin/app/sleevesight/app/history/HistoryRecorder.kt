@@ -128,7 +128,7 @@ class HistoryRecorder(
                         writes.trySend(Write.record("a track stopping") { history.stopped(at) })
                     }
                     if (track != null) {
-                        val write = { given: Duration -> playback.write(track, at, given, continues, same) }
+                        val write = { given: Duration -> playback.write(track, at, given, continues) }
                         writes.trySend(Write.record("a track played", write))
                     }
                     before = track
@@ -229,34 +229,119 @@ class HistoryRecorder(
      * The playback now recorded: when it started, and whether its start was written. Until it is
      * (the write failed), each update of it is a start again, at that time, so the history never
      * takes an update for a row of an earlier playback that happens to hold the same track.
+     *
+     * Also the play ([NowPlaying.play]) whose track the last row written holds: a row read back
+     * carries no play, so a row written for the track's own play is matched by the play, as the
+     * session layer judged it (an album filled in during the play is no new row); any other row
+     * (another play, or one from before the process started or a [forget]) by its fields, so the
+     * same track found again after a restart resumes its row. A row the play took over by its
+     * fields keeps, as a witness ([witness]), those the report that took it over left out (the
+     * play never learned them): a later report of the play that conflicts with them is another
+     * row, judged as the session layer judges a play from when the row was taken over, so an album
+     * filled in within the first second (`TrackIdentity.FILL_IN`) is the same row and fills in the
+     * witness too. Fields the report carried are the session layer's to judge.
      */
     private inner class Playback {
         private var startedAt: Instant? = null
         private var written = false
+        private var rowPlay: Long? = null
+        private var witness: NowPlaying? = null
+        private var witnessAt: Instant? = null
+
+        /** When the write in progress was seen. */
+        private var writeAt: Instant? = null
 
         fun write(
             track: NowPlaying,
             at: Instant,
             gap: Duration,
             continues: Boolean,
-            same: (NowPlaying) -> Boolean,
         ) {
+            byPlay = false
+            byFields = null
+            writeAt = at
+            val same = { row: NowPlaying -> matches(row, track) }
+            // The play reports what its row's witness rules out: that row stopped, and another starts.
+            val ruledOut = continues && witness?.let { witnessHolds(it, track) } == false
+            if (ruledOut) history.stopped(at)
+            val goesOn = continues && !ruledOut
             val start = startedAt
-            if (continues && written && start != null) {
+            if (goesOn && written && start != null) {
                 history.continued(track, start, gap, same)
+                wrote(track)
                 return
             }
-            val from = if (continues && start != null) start else at
+            val from = if (goesOn && start != null) start else at
             startedAt = from
             written = false
             history.started(track, from, gap, same)
             written = true
+            wrote(track)
+        }
+
+        // How the last row was last matched, as the history asked: by the play, by its fields, or not.
+        private var byPlay = false
+        private var byFields: NowPlaying? = null
+
+        /** Whether [row], the last, holds [track]: by the play, unless its witness rules it out; else by the fields. */
+        private fun matches(
+            row: NowPlaying,
+            track: NowPlaying,
+        ): Boolean {
+            val ownPlay = rowPlay != null && rowPlay == track.play
+            byPlay = ownPlay && witness?.let { witnessHolds(it, track) } != false
+            byFields = null
+            return when {
+                byPlay -> sameAsLast(row.copy(play = track.play), track)
+                ownPlay -> false
+                else ->
+                    sameAsLast(row, track).also { same ->
+                        // Of the row, what the report left out: what the play never learned.
+                        if (same) {
+                            byFields =
+                                row.copy(
+                                    artists = row.artists.takeIf { track.artists.isEmpty() }.orEmpty(),
+                                    album = row.album?.takeIf { track.album == null },
+                                    mediaId = row.mediaId?.takeIf { track.mediaId == null },
+                                )
+                        }
+                    }
+            }
+        }
+
+        /**
+         * Whether [track] agrees with the [held] witness, as the session layer judges a play, from
+         * when the row was taken over.
+         */
+        private fun witnessHolds(
+            held: NowPlaying,
+            track: NowPlaying,
+        ): Boolean {
+            val since = writeAt?.let { now -> witnessAt?.let { now - it } } ?: Duration.INFINITE
+            return TrackIdentity.continues(held, track, since)
+        }
+
+        /**
+         * [track] written: a row matched by the play keeps its witness, filled in by [track] as
+         * the play is; any other is the play's from now on, with a witness if taken over by fields.
+         */
+        private fun wrote(track: NowPlaying) {
+            val held = witness
+            if (byPlay) {
+                witness = held?.let { TrackIdentity.merged(it, track.copy(play = null)) }
+            } else {
+                witness = byFields
+                witnessAt = writeAt
+            }
+            rowPlay = track.play
         }
 
         /** The history was cleared: the playback's next value starts it again, at that value's time. */
         fun forget() {
             startedAt = null
             written = false
+            rowPlay = null
+            witness = null
         }
     }
 
@@ -288,9 +373,8 @@ class HistoryRecorder(
 
         /**
          * Whether [last], the track added last, is [track] again: the same track as the session
-         * layer decides ([TrackIdentity]), with the same title. Stricter by the title, since after a
-         * restart a queue item id may name another track, and a duplicate entry costs less than a
-         * lost one; a title changing under one queue item (a stream) is a new track anyway.
+         * layer decides ([TrackIdentity]), with the same title ([TrackIdentity.playsOn]): a title
+         * changing under one media id (a stream) is a new track.
          */
         fun sameAsLast(
             last: NowPlaying,

@@ -96,8 +96,8 @@ internal class FoldMemory(
 
     companion object {
         /**
-         * Saved as plain values: the fold, and of its track what [TrackIdentity.playsOn] reads (the
-         * player, the media id, the queue item, the title and the artists).
+         * Saved as plain values: the fold, and of its track what [TrackIdentity.playsOn] reads by
+         * its fields (the player, the media id, the title, the artists and the album).
          */
         val Saver: Saver<FoldMemory, Any> =
             listSaver(
@@ -128,21 +128,29 @@ internal class FoldMemory(
 }
 
 /**
- * Of [track], what [TrackIdentity.playsOn] reads (the player, the media id, the queue item, the title
- * and the artists), as plain values a saver keeps; [restoredTrack] reads them back.
+ * Of [track], what [TrackIdentity.playsOn] reads by its fields (the player, the media id, the
+ * title, the artists and the album), as plain values a saver keeps; [restoredTrack] reads them
+ * back. Not its play ([NowPlaying.play]): the session layer counts plays afresh in each process, so
+ * a number saved before the process died could name another play; restored untagged, the track is
+ * matched by its fields.
  */
 internal fun savedTrack(track: NowPlaying?): List<Any?> =
-    listOf(track?.player, track?.mediaId, track?.queueItemId, track?.title, track?.artists)
+    listOf(track?.player, track?.mediaId, track?.title, track?.artists, track?.album)
 
-/** The track [savedTrack] kept in [saved], or null when it kept none. */
+/**
+ * The track [savedTrack] kept in [saved], or null when it kept none. A state saved by an earlier
+ * version (`[player, media id, queue item, title, artists]`, its third value a queue item, not a
+ * title) is read too, with no album.
+ */
 internal fun restoredTrack(saved: List<Any?>): NowPlaying? =
     (saved[0] as String?)?.let { player ->
+        val current = saved[2] is String
         NowPlaying(
-            title = saved[3] as String,
-            artists = saved[4] as String,
+            title = (if (current) saved[2] else saved[3]) as String,
+            artists = (if (current) saved[3] else saved[4]) as String,
             player = player,
+            album = if (current) saved[4] as String? else null,
             mediaId = saved[1] as String?,
-            queueItemId = saved[2] as Long?,
         )
     }
 
