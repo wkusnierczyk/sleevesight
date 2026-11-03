@@ -17,18 +17,21 @@ import kotlinx.coroutines.Deferred
  * *Font* (#377), the app's own font, Roboto, or the phone's system font; both showing at once, in
  * the whole app. *Theme button* (#636), on by default: whether Home's header shows a button beside
  * the cogwheel that moves *Theme* one step on with each tap, which *Theme*'s row then shows.
- * *Layout* (#447): whether *Sources* and a genre's panel open in place on Home
- * (*Expandable boxes*, the default) or each on a page of its own (*Separate pages*). *Keep Sources
- * as you left them* (#269), off by default, so the *Sources* list under each new track's insight
- * starts folded; under *Expandable boxes* only, so it is shown, but not offered, under *Separate
- * pages*, where each page opens fresh. Then *Foldable descriptions* and *Descriptions on return*
+ * *Layout* (#447): whether *Sources*, a genre's panel and the song's, the artist's and the album's
+ * insights (#522) open in place on Home (*Expandable boxes*, the default) or each on a page of its
+ * own (*Separate pages*). *Sources on a new track* (#269; a choice since #522, the switch *Keep
+ * Sources as you left them* before) and *Song, Artist and Album on a new track* (#522): *Folded*
+ * (the default), *Unfolded* or *As you left them*, as button groups; under *Expandable boxes* only,
+ * so they are shown, but not offered, under *Separate pages*, where each page opens fresh. Then
+ * *Foldable descriptions* and *Descriptions on return*
  * (#847, [DescriptionRows]). *Lyrics links* (#728), on by default: whether Home shows a
  * *Lyrics* button for the playing track, with links to its lyrics pages or a Genius search; under it,
  * indented, *Search Genius when there is no link*, on by default, which can be moved only while
- * *Lyrics links* is on, as *Keep Sources as you left them* only under *Expandable boxes*. *Logo intro
+ * *Lyrics links* is on, as *Sources on a new track* only under *Expandable boxes*. *Logo intro
  * at start* (#383), from the next time the app is opened; then *Spin the logo while music plays* and
- * *Logo speed* (#848, [LogoSpinRows]). *Theme*, *Font* and *Layout* show their
- * choices as button groups (#637), one tap to choose. Last, *Restore dismissed messages* (#759): its
+ * *Logo speed* (#848, [LogoSpinRows]). *Theme*, *Font* and *Layout* show their choices as button
+ * groups (#637), one tap to choose, as do the two on a new track ([NewTrackRows]). Last, *Restore
+ * dismissed messages* (#759): its
  * button brings back everything dismissed for good ([restore]: the guide to Home, *Players*' note),
  * then a message says so; disabled while nothing is dismissed.
  */
@@ -62,13 +65,7 @@ internal fun AppearanceSection(
         choices = layouts(),
         selected = settings.layout,
     ) { layout -> update { it.copy(layout = layout) } }
-    val boxes = settings.layout == Layout.EXPANDABLE_BOXES
-    SwitchRow(
-        title = stringResource(R.string.settings_keep_sources),
-        summary = stringResource(R.string.settings_keep_sources_summary),
-        checked = settings.keepSourcesUnfolded,
-        onChange = if (boxes) ({ on -> update { it.copy(keepSourcesUnfolded = on) } }) else null,
-    )
+    NewTrackRows(settings, update)
     DescriptionRows(settings, update)
     LyricsRows(settings, update)
     SwitchRow(

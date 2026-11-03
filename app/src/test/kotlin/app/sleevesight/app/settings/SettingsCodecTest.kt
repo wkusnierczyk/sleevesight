@@ -90,7 +90,6 @@ class SettingsCodecTest {
                 cacheSizeLimit = 10_000_000,
                 historyLifetime = 7.days,
                 sessionGap = 10.minutes,
-                keepSourcesUnfolded = true,
                 showPhoneName = true,
                 showDiagnostics = true,
                 showGroundingDetails = true,

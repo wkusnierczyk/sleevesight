@@ -20,6 +20,7 @@ import app.sleevesight.app.ui.theme.rememberFocusHandoff
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.TrackState
+import app.sleevesight.core.settings.NewTrackFold
 
 // Home's pages (#447), and what Home and its pages read alike of the state.
 
@@ -27,7 +28,7 @@ import app.sleevesight.core.pipeline.TrackState
  * A page of Home's, [page], under *Layout*'s *Separate pages*: the item's component on a page of
  * its own ([PageFrame]), in the album art's colours, from the same [state] as Home, for the track
  * playing, with Home's [actions]; [onBack] goes back. Each page opens fresh: *Sources* at its
- * first screenful with every source's lines shown, whatever *Keep Sources as you left them* says.
+ * first screenful with every source's lines shown, whatever *Sources on a new track* says.
  * With nothing playing, a line says so ([PageNothingPlaying]).
  */
 @Composable
@@ -123,7 +124,7 @@ private fun SourcesPage(
     openSettings: () -> Unit,
 ) {
     val focus = rememberLineFocus(shown.track?.evidence)
-    val fold = sourcesFold(rememberFoldMemory(), playing, keep = false, start = Fold.Pages(1))
+    val fold = sourcesFold(rememberFoldMemory(), playing, onNewTrack = NewTrackFold.FOLDED, start = Fold.Pages(1))
     // Once, not again as the evidence grows or after a rotation.
     var cited by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(focus) {

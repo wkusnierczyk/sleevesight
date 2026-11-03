@@ -154,8 +154,14 @@
     <string name="settings_prepare_next">Proactive</string>
     <string name="settings_prepare_next_summary">Looks up the next track in the player’s queue ahead, so its sources come sooner when it plays. No insight is written ahead, and nothing is paid for.</string>
 
-    <string name="settings_keep_sources">Keep Sources as you left them</string>
-    <string name="settings_keep_sources_summary">Keeps the sources under each track’s insight folded or unfolded as you left them on the track before. When disabled, each new track’s sources start folded. Applies with Expandable boxes.</string>
+    <string name="settings_sources_on_new_track">Sources on a new track</string>
+    <string name="settings_sources_on_new_track_summary">How the sources under each track’s insight start on each new track. Applies with Expandable boxes.</string>
+    <string name="settings_items_on_new_track">Song, Artist and Album on a new track</string>
+    <string name="settings_items_on_new_track_summary">How the song’s, the artist’s and the album’s insights under Key insights start on each new track. With Reactive set to an automatic mode, an insight that starts unfolded is written unless its artist or album has one already. Applies with Expandable boxes.</string>
+    <!-- The choices of both (#522). -->
+    <string name="settings_new_track_folded">Folded</string>
+    <string name="settings_new_track_unfolded">Unfolded</string>
+    <string name="settings_new_track_as_left">As you left them</string>
     <string name="settings_background">Look up in the background</string>
     <string name="settings_background_summary">Allows Sleevesight to look up information from sources while it is in the background, for every track played. With Reactive set to On track change (auto) or On track skip (auto), insights are then written, and paid for, whether you read them or not, up to the Stop after limit when Saver is on.</string>
     <string name="settings_artist_facts_once">Don’t repeat artist facts</string>

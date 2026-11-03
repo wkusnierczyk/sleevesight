@@ -110,14 +110,20 @@ import kotlin.time.Duration.Companion.seconds
  *   keeps them for ever. See [DEFAULT_HISTORY_LIFETIME].
  * @property sessionGap *New session idle trigger*: how long a break in listening, from
  *   when the last track was last heard, ends a listening session. See [DEFAULT_SESSION_GAP].
- * @property keepSourcesUnfolded *Keep Sources as you left them* (#269): whether the *Sources* list
- *   under an insight keeps, for the next track, how it was left: folded, a screenful, or all its
- *   lines. Off by default: each new track's list starts folded, as the first one did, since a
- *   long list makes the screen hard to scan, and unfolding it to check one insight's sources says
- *   nothing about the next. On, a list shown past its first screenful but not in full comes back
- *   at its first screenful. The fold is kept through a rotation and when Android restores the
+ * @property sourcesOnNewTrack *Sources on a new track* (#269; a choice since #522, which was the
+ *   switch *Keep Sources as you left them*): how the *Sources* list under an insight starts on each
+ *   new track: folded, unfolded at its first screenful, or as it was left on the track before
+ *   (folded, a screenful, or all its lines; one shown past its first screenful but not in full
+ *   comes back at its first screenful). Folded by default, as the first track's list starts, since
+ *   a long list makes the screen hard to scan, and unfolding it to check one insight's sources says
+ *   nothing about the next. The fold is kept through a rotation and when Android restores the
  *   screen it closed, not when the app is started afresh. Only under *Expandable boxes* ([layout]):
  *   under *Separate pages* each page opens fresh.
+ * @property itemsOnNewTrack *Song, Artist and Album on a new track* (#522): how the song's, the
+ *   artist's and the album's insights under *Key insights* start on each new track: folded,
+ *   unfolded, or as they were left on the track before. Folded by default, so Home stays short and
+ *   the key insight comes first. With *Reactive* set to an automatic mode, an insight that starts
+ *   unfolded is written, unless its artist or album has one already. Only under *Expandable boxes*.
  * @property lyricsLinks *Lyrics links* (#728): whether Home shows a *Lyrics* button for the playing
  *   track, opening into links to its lyrics on the lyrics sites its MusicBrainz work links to, or,
  *   when it links to none, a search on Genius ([lyricsSearch]). On by default: a link sends nothing
@@ -216,7 +222,8 @@ data class Settings(
     val cacheSizeLimit: Long = DEFAULT_CACHE_SIZE_LIMIT,
     val historyLifetime: Duration? = DEFAULT_HISTORY_LIFETIME,
     val sessionGap: Duration = DEFAULT_SESSION_GAP,
-    val keepSourcesUnfolded: Boolean = false,
+    val sourcesOnNewTrack: NewTrackFold = NewTrackFold.FOLDED,
+    val itemsOnNewTrack: NewTrackFold = NewTrackFold.FOLDED,
     val lyricsLinks: Boolean = true,
     val lyricsSearch: Boolean = true,
     val showPhoneName: Boolean = false,
@@ -744,6 +751,33 @@ enum class Layout {
      * setting, and everything a track has on one screen.
      */
     EXPANDABLE_BOXES,
+}
+
+/**
+ * How a box of Home's starts on each new track, under *Expandable boxes* (#522): *Sources on a new
+ * track* ([Settings.sourcesOnNewTrack]) and *Song, Artist and Album on a new track*
+ * ([Settings.itemsOnNewTrack]). Shown as *Folded*, *Unfolded* and *As you left them*.
+ *
+ * @property key the choice as the settings store it. It is fixed, not the constant's name, so
+ *   renaming a constant does not lose what was chosen.
+ */
+enum class NewTrackFold(
+    val key: String,
+) {
+    /** Folded on each new track. */
+    FOLDED("folded"),
+
+    /** Unfolded on each new track. */
+    UNFOLDED("unfolded"),
+
+    /** As it was left on the track before. */
+    AS_LEFT("as_left"),
+    ;
+
+    companion object {
+        /** The choice stored as [key], or null for none of them. */
+        fun of(key: String?): NewTrackFold? = entries.firstOrNull { it.key == key }
+    }
 }
 
 /**

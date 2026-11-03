@@ -4,12 +4,10 @@ import androidx.activity.compose.setContent
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotSelected
-import androidx.compose.ui.test.assertIsOff
-import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isSelectable
-import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -27,6 +25,7 @@ import app.sleevesight.app.testCipher
 import app.sleevesight.app.ui.settings.SettingsScreen
 import app.sleevesight.app.ui.settings.SettingsSection
 import app.sleevesight.core.settings.Layout
+import app.sleevesight.core.settings.NewTrackFold
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -34,7 +33,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -43,8 +41,8 @@ import org.robolectric.RobolectricTestRunner
 
 /**
  * *Layout* (#447) under *Appearance*: *Expandable boxes* by default, or *Separate pages*, stored as
- * chosen; *Keep Sources as you left them*, which applies to the boxes only, is not offered under
- * *Separate pages*.
+ * chosen; *Sources on a new track* and *Song, Artist and Album on a new track* (#522), which apply to
+ * the boxes only, are shown but not offered under *Separate pages*.
  */
 @RunWith(RobolectricTestRunner::class)
 class LayoutSettingTest {
@@ -86,8 +84,11 @@ class LayoutSettingTest {
         button(option).performScrollTo().performClick()
     }
 
-    // The *Keep Sources as you left them* switch.
-    private fun keepSources() = compose.onNode(hasText(text(R.string.settings_keep_sources)) and isToggleable())
+    // [option]'s button in the row titled [row] (#522: *Folded* is in several rows).
+    private fun choice(
+        row: Int,
+        option: Int,
+    ) = compose.onNode(hasContentDescription("${text(row)}: ${text(option)}") and isSelectable())
 
     @Test
     fun theLayoutIsExpandableBoxesUntilSeparatePagesIsChosenAndBack() =
@@ -106,24 +107,30 @@ class LayoutSettingTest {
         }
 
     @Test
-    fun keepSourcesIsOfferedUnderExpandableBoxesOnlyAndKeptUnderSeparatePages() =
+    fun theChoicesOnANewTrackAreOfferedUnderExpandableBoxesOnlyAndKeptUnderSeparatePages() =
         show {
-            keepSources()
-                .performScrollTo()
-                .assertIsEnabled()
-                .assertIsOff()
-                .performClick()
-            compose.waitUntil(WAIT_MS) { settings.now().keepSourcesUnfolded }
+            val sources = R.string.settings_sources_on_new_track
+            val items = R.string.settings_items_on_new_track
+            choice(sources, R.string.settings_new_track_folded).performScrollTo().assertIsSelected()
+            choice(items, R.string.settings_new_track_folded).performScrollTo().assertIsSelected()
+            choice(sources, R.string.settings_new_track_as_left).performScrollTo().assertIsEnabled().performClick()
+            compose.waitUntil(WAIT_MS) { settings.now().sourcesOnNewTrack == NewTrackFold.AS_LEFT }
+            choice(items, R.string.settings_new_track_unfolded).performScrollTo().performClick()
+            compose.waitUntil(WAIT_MS) { settings.now().itemsOnNewTrack == NewTrackFold.UNFOLDED }
 
             choose(R.string.settings_layout_pages)
             compose.waitUntil(WAIT_MS) { settings.now().layout == Layout.SEPARATE_PAGES }
-            // Not offered, but kept as it was.
-            keepSources().performScrollTo().assertIsNotEnabled().assertIsOn()
-            assertTrue(settings.now().keepSourcesUnfolded)
+            // Shown, not offered, and kept as they were.
+            choice(
+                sources,
+                R.string.settings_new_track_as_left,
+            ).performScrollTo().assertIsNotEnabled().assertIsSelected()
+            choice(items, R.string.settings_new_track_folded).performScrollTo().assertIsNotEnabled().performClick()
+            assertEquals(NewTrackFold.UNFOLDED, settings.now().itemsOnNewTrack)
 
             choose(R.string.settings_layout_boxes)
             compose.waitUntil(WAIT_MS) { settings.now().layout == Layout.EXPANDABLE_BOXES }
-            keepSources().performScrollTo().assertIsEnabled().assertIsOn()
-            assertTrue(settings.now().keepSourcesUnfolded)
+            choice(items, R.string.settings_new_track_unfolded).performScrollTo().assertIsEnabled().assertIsSelected()
+            assertEquals(NewTrackFold.AS_LEFT, settings.now().sourcesOnNewTrack)
         }
 }

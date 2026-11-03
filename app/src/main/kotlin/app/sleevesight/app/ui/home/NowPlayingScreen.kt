@@ -280,7 +280,7 @@ internal fun NowPlayingContent(
     val settings = state.settings
     val pages = settings?.layout == Layout.SEPARATE_PAGES
     val focus = rememberLineFocus(track?.evidence)
-    val fold = sourcesFold(foldMemory, playing, keep = settings?.keepSourcesUnfolded)
+    val fold = sourcesFold(foldMemory, playing, onNewTrack = settings?.sourcesOnNewTrack)
     // A citation tapped unfolds the list far enough to show its line, or opens it there on its page.
     val cite: (String) -> Unit =
         if (pages) {
