@@ -6,6 +6,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
@@ -15,6 +16,7 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertTouchHeightIsEqualTo
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
@@ -23,6 +25,7 @@ import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ActivityScenario
@@ -30,6 +33,9 @@ import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
+import app.sleevesight.app.pipeline.ItemAsk
+import app.sleevesight.app.pipeline.ItemNotes
+import app.sleevesight.app.pipeline.ItemShown
 import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.app.session.PlaybackInfo
 import app.sleevesight.app.session.PlaybackStatus
@@ -39,10 +45,13 @@ import app.sleevesight.app.ui.home.HomeFixtures.sundown
 import app.sleevesight.app.ui.home.HomeFixtures.track
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.pipeline.InsightItem
+import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.settings.Layout
 import app.sleevesight.core.settings.NewTrackFold
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WriteAutomatically
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -264,7 +273,7 @@ class ItemButtonsScreenTest {
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
     @Config(qualifiers = PHONE)
     fun aTapOnALongNameShowsItWholeAnotherClipsItAndANewTrackStartsClipped() {
-        val long = sundown.copy(title = "Sundown (Live at Massey Hall, Toronto, 1974, Remastered Deluxe Edition)")
+        val long = sundown.copy(title = LONG_TITLE)
         show(state(onDemand, long)) {
             val clipped = bounds(name(InsightItem.SONG), unmerged = true).height
             tap(name(InsightItem.SONG))
@@ -285,12 +294,43 @@ class ItemButtonsScreenTest {
     @Test
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
     @Config(qualifiers = PHONE)
-    fun aTapOnANameThatFitsDoesNothing() =
-        show(state(onDemand)) {
-            val before = bounds(name(InsightItem.ALBUM), unmerged = true).height
-            tap(name(InsightItem.ALBUM))
-            assertEquals(before, bounds(name(InsightItem.ALBUM), unmerged = true).height)
+    fun aTapOnANameThatFitsDoesNothing() {
+        // The rows alone, over a memory the test reads: a tap on a name that fits keeps it clipped.
+        val memory = ItemFoldMemory()
+        val long = sundown.copy(title = LONG_TITLE)
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity {
+                it.setContent {
+                    val context =
+                        ItemContext(null, onDemand, Notes, false, {}, { _, _, _ -> }, readAloud = null)
+                    val folds = itemFolds(memory, long, NewTrackFold.FOLDED)
+                    ItemRows(itemRows(long, "Gordon Lightfoot"), false, folds, context) {}
+                }
+            }
+            compose.waitForIdle()
+            compose.onNodeWithTag(name(InsightItem.ALBUM)).performClick()
+            compose.waitForIdle()
+            assertEquals(emptySet<InsightItem>(), memory.whole)
             assertEquals(0, count(itemPanelTag(InsightItem.ALBUM)))
+            // A tap reaches a name that does not fit.
+            compose.onNodeWithTag(name(InsightItem.SONG)).performClick()
+            compose.waitForIdle()
+            assertEquals(setOf(InsightItem.SONG), memory.whole)
+        }
+    }
+
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    @Config(qualifiers = PHONE)
+    fun aTapAnywhereInTheNamesCellAsTallAsItsButtonShowsItWhole() =
+        show(state(onDemand, sundown.copy(title = LONG_TITLE))) {
+            val clipped = bounds(name(InsightItem.SONG), unmerged = true).height
+            val cell = compose.onNodeWithTag(name(InsightItem.SONG) + ":cell").performScrollTo()
+            assertTrue(cell.getUnclippedBoundsInRoot().toRect().height >= 48f)
+            // Near the cell's top, above the text's line.
+            cell.performTouchInput { click(Offset(centerX, 2f)) }
+            compose.waitForIdle()
+            assertTrue(bounds(name(InsightItem.SONG), unmerged = true).height > clipped * 1.5f)
         }
 
     @Test
@@ -322,3 +362,20 @@ class ItemButtonsScreenTest {
 
 // A phone's screen, for the tests that measure text with real fonts.
 private const val PHONE = "w411dp-h891dp-420dpi"
+
+// A title too long for a row's line on [PHONE].
+private const val LONG_TITLE = "Sundown (Live at Massey Hall, Toronto, 1974, Remastered Deluxe Edition)"
+
+// Items that are offered, never written.
+private object Notes : ItemNotes {
+    override fun item(
+        track: TrackState,
+        item: InsightItem,
+    ): Flow<ItemShown> = flowOf(ItemShown.Offered)
+
+    override fun write(
+        track: TrackState,
+        item: InsightItem,
+        ask: ItemAsk,
+    ) = Unit
+}

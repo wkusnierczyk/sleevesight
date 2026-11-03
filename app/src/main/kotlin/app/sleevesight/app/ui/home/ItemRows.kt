@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
@@ -183,34 +184,44 @@ private fun ItemRowLine(
             onClick = onClick,
         )
         Spacer(Modifier.width(COLUMN_GAP))
-        NameText(row.name, whole, onName, Modifier.weight(1f).testTag(itemNameTag(row.item)))
+        NameText(row.name, whole, onName, Modifier.weight(1f), itemNameTag(row.item))
     }
 }
 
-// A row's [name]: on one line clipped with an ellipsis, or [whole], wrapped; a tap ([onTap]) on one
-// clipped shows it whole, on one whole clips it again, on one that fits does nothing. For touch only:
-// its button reads the whole name, so a screen reader and a keyboard pass it by.
+// A row's [name], tagged [tag] (its cell `<tag>:cell`): on one line clipped with an ellipsis, or [whole], wrapped; a
+// tap ([onTap]) on one clipped shows it whole, on one whole clips it again, on one that fits does
+// nothing. The tap is taken across the name's whole cell, at least 48 dp tall as its button's target
+// is, not on the text's line alone. For touch only: its button reads the whole name, so a screen
+// reader and a keyboard pass it by.
 @Composable
 private fun NameText(
     name: String,
     whole: Boolean,
     onTap: () -> Unit,
     modifier: Modifier,
+    tag: String,
 ) {
     // Whether the name, clipped, did not fit, as last laid out.
     var clipped by remember(name) { mutableStateOf(false) }
     val tap by rememberUpdatedState { if (whole || clipped) onTap() }
-    Text(
-        name,
+    // No semantics on the cell, and none read from the name: no stop of its own.
+    Box(
         modifier
-            .clearAndSetSemantics {}
+            .testTag("$tag:cell")
+            .heightIn(min = NAME_CELL)
             .pointerInput(Unit) { detectTapGestures { tap() } },
-        style = MaterialTheme.typography.bodyLarge,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        maxLines = if (whole) Int.MAX_VALUE else 1,
-        overflow = if (whole) TextOverflow.Clip else TextOverflow.Ellipsis,
-        onTextLayout = { if (!whole) clipped = it.hasVisualOverflow },
-    )
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        Text(
+            name,
+            Modifier.testTag(tag).clearAndSetSemantics {},
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = if (whole) Int.MAX_VALUE else 1,
+            overflow = if (whole) TextOverflow.Clip else TextOverflow.Ellipsis,
+            onTextLayout = { if (!whole) clipped = it.hasVisualOverflow },
+        )
+    }
 }
 
 // The space between a row's button and its name; between two rows, so buttons taller than their
@@ -218,6 +229,9 @@ private fun NameText(
 private val COLUMN_GAP = 14.dp
 private val ROW_GAP = 6.dp
 private val PANEL_GAP = 2.dp
+
+// A name's cell's least height: a tap target's, as its button's.
+private val NAME_CELL = 48.dp
 
 /**
  * The rows on Home (#522), of [header], the track shown: under *Expandable boxes* opening in place,
