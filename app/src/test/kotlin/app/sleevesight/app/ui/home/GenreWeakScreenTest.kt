@@ -30,6 +30,8 @@ import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
+import app.sleevesight.app.pipeline.AiSearch
+import app.sleevesight.app.pipeline.AiSearchFeed
 import app.sleevesight.app.pipeline.DefinitionState
 import app.sleevesight.app.pipeline.GenreNotes
 import app.sleevesight.app.pipeline.GenreReason
@@ -44,6 +46,8 @@ import app.sleevesight.core.genres.TrackGenres
 import app.sleevesight.core.genres.TrackLabel
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.synthesis.SearchFacts
+import app.sleevesight.core.synthesis.SearchKind
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
@@ -100,20 +104,49 @@ class GenreWeakScreenTest {
     private val reported =
         TrackGenres(listOf(trackRow(oneVote("country")), artist("A", "acoustic", "folk", "indie folk")))
 
-    // A genre's notes with its definition found and *Why is this …?* offered.
-    private val notes =
-        object : GenreNotes {
-            override fun definition(genre: String): Flow<DefinitionState?> =
-                flowOf(DefinitionState.Found(GenreDefinition("What $genre is.", genre, "https://example.org/$genre")))
+    // A genre's notes with its definition as [definition] gives it (found, by default) and *Why is
+    // this …?* offered.
+    private fun notesWith(
+        definition: (String) -> DefinitionState? = { genre ->
+            DefinitionState.Found(GenreDefinition("What $genre is.", genre, "https://example.org/$genre"))
+        },
+    ) = object : GenreNotes {
+        override fun definition(genre: String): Flow<DefinitionState?> = flowOf(definition(genre))
 
-            override fun reason(
-                track: TrackState,
-                genre: String,
-            ): Flow<GenreReason> = flowOf(GenreReason.Offered)
+        override fun reason(
+            track: TrackState,
+            genre: String,
+        ): Flow<GenreReason> = flowOf(GenreReason.Offered)
 
-            override fun explain(
+        override fun explain(
+            track: TrackState,
+            genre: String,
+        ) = Unit
+    }
+
+    private val notes = notesWith()
+
+    // *Search with AI* offered for a definition, asking nothing.
+    private val feed =
+        object : AiSearchFeed {
+            override fun search(
                 track: TrackState,
-                genre: String,
+                kind: SearchKind,
+                genre: String?,
+            ): Flow<AiSearch> = flowOf(if (kind == SearchKind.DEFINITION) AiSearch.Offered else AiSearch.None)
+
+            override fun ask(
+                track: TrackState,
+                kind: SearchKind,
+                facts: SearchFacts,
+                automatic: Boolean,
+                genre: String?,
+            ) = false
+
+            override fun stop(
+                track: TrackState,
+                kind: SearchKind,
+                genre: String?,
             ) = Unit
         }
 
@@ -235,6 +268,30 @@ class GenreWeakScreenTest {
             assertTrue(bounds(GENRE_WEAK_TAG).top >= bounds(GENRE_DEFINITION_TAG).bottom)
             assertTrue(bounds(GENRE_WEAK_TAG).bottom <= bounds(GENRE_WHY_TAG).top)
         }
+
+    @Test
+    fun theLineIsUnderWhateverStandsInTheDefinitionsPlaceAndAboveWhy() {
+        // Each state of the definition, with the element it ends with; with Wikipedia off, none.
+        val states =
+            listOf(
+                DefinitionState.Looking to listOf(GENRE_DEFINITION_LOOKING_TAG),
+                DefinitionState.Failed to listOf(GENRE_DEFINITION_FAILED_TAG),
+                DefinitionState.NotFound to listOf(GENRE_NO_DEFINITION_TAG, AI_SEARCH_TAG),
+                null to emptyList(),
+            )
+        for ((state, above) in states) {
+            val shown = PanelNotes(notesWith { state })
+            show(
+                reported,
+                content = { GenresContent(it, Settings(), shown, search = PanelSearch(feed, it, it.nowPlaying)) },
+            ) {
+                tap(COUNTRY)
+                val line = bounds(GENRE_WEAK_TAG)
+                for (tag in above) assertTrue("$state: under $tag", line.top >= bounds(tag).bottom)
+                assertTrue("$state: above Why", line.bottom <= bounds(GENRE_WHY_TAG).top)
+            }
+        }
+    }
 
     @Test
     fun theLineNamesItsSourceAndTheLevelsWithoutTheGenre() {

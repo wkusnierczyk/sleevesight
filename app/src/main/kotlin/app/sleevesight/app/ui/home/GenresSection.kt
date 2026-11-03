@@ -264,10 +264,11 @@ internal class Choice(
  * reads that chip as selected, its action "fold"); the chips stay. A tap leaves the focus on its
  * chip; the automatic choice moves no focus. A genre that goes or is replaced for another reason (a
  * new track, labels that no longer have it, or the automatic choice moving on) while the focus is in
- * it hands the focus to the chip tapped ([FocusHandoff], #629), or, with none tapped or when it is
- * gone with the old track, to the first chip, as does *Retry* under its failed definition as it
- * gives way to the loading line; while a new track's genres are still being gathered there is no
- * chip, and nothing to hand the focus to. Its definition's *Search with AI* comes from [search].
+ * it hands the focus to the chip of the genre tapped, wherever its chip now is ([FocusHandoff],
+ * #629); with none tapped, or when it is gone, to the open genre's chip, else to the first chip.
+ * *Retry* under a failed definition hands the focus to its genre's chip as it gives way to the
+ * loading line. While a new track's genres are still being gathered there is no chip, and nothing to
+ * hand the focus to. Its definition's *Search with AI* comes from [search].
  */
 @Composable
 private fun GenresBox(
@@ -292,15 +293,17 @@ private fun GenresBox(
                 ?.identity
         }
     val handoff = rememberFocusHandoff()
-    // A requester per chip shown, by its tag, and the tag of the chip last tapped: plain, read only
-    // by the moves.
+    // A requester per chip shown, by its genre's identity, and the genre of the chip last tapped:
+    // plain, read only by the moves. By genre, not by the chip's tag, which names its row: a genre
+    // tapped on an artist's row keeps its chip when the track's own tag of it lands (#875).
     val chips = remember(track.normalized.lookupKey) { mutableMapOf<String, FocusRequester>() }
     val tapped = remember { arrayOfNulls<String>(1) }
-    val chipOf = { tag: String -> chips.getOrPut(tag) { FocusRequester() } }
-    // The chip tapped, or the first, when the one tapped went with the old track.
+    val chipOf = { genre: String -> chips.getOrPut(genre) { FocusRequester() } }
+    // The chip tapped, if still shown; else the open genre's (the one the panel opened on, #875);
+    // else the first, when both went with the old track or the labels.
     val back = {
-        val tags = labels.map { tagOf(GENRE_PREFIX, it) }
-        (tapped[0]?.takeIf { it in tags } ?: tags.firstOrNull())?.let(chipOf)
+        val genres = labels.map { it.label.genre.identity }
+        (tapped[0]?.takeIf { it in genres } ?: open?.takeIf { it in genres } ?: genres.firstOrNull())?.let(chipOf)
     }
     // Whether the input focus is in the panel, as last told: plain, read as the panel goes.
     val inside = remember { BooleanArray(1) }
@@ -315,10 +318,10 @@ private fun GenresBox(
         if (handBack) back()?.let(handoff::moveTo)
     }
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        val target = { label: PlacedLabel -> Modifier.handoffTarget(handoff, chipOf(tagOf(GENRE_PREFIX, label))) }
+        val target = { label: PlacedLabel -> Modifier.handoffTarget(handoff, chipOf(label.label.genre.identity)) }
         Chips(labels, open, chipModifier = target) { label ->
             val genre = label.label.genre.identity
-            tapped[0] = tagOf(GENRE_PREFIX, label)
+            tapped[0] = genre
             // Unfolded, replaced or folded; the focus stays on the chip.
             chosen = if (genre == open) null else genre
             touched = true
@@ -333,7 +336,8 @@ private fun GenresBox(
                     it,
                     notes,
                     search,
-                    afterRetry = { back()?.let(handoff::moveTo) },
+                    // To the genre's own chip, the one open, tapped or not.
+                    afterRetry = { handoff.moveTo(chipOf(it)) },
                     modifier = Modifier.testTag(GENRE_PANEL_TAG),
                 )
             }

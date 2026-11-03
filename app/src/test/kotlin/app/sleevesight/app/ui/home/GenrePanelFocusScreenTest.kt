@@ -26,6 +26,7 @@ import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.isFocused
+import androidx.compose.ui.test.isSelected
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
@@ -92,22 +93,23 @@ class GenrePanelFocusScreenTest {
         manager.setEnabled(false)
     }
 
-    private fun genres(vararg tags: String) =
-        TrackGenres(
-            listOf(
-                GenreRow(
-                    GenreLevel.TRACK,
-                    null,
-                    tags.map { tag ->
-                        val shown = tag.replaceFirstChar(Char::uppercase)
-                        TrackLabel(
-                            GenreLabel(tag, "family", shown, tag, level = GenreLevel.TRACK, artist = null),
-                            listOf(LabelCredit(LabelSource.LASTFM, "https://example.org/$tag")),
-                        )
-                    },
-                ),
-            ),
+    // [tag] as a label of [level] (an artist's of [artist]), with [votes] on it.
+    private fun label(
+        tag: String,
+        level: GenreLevel = GenreLevel.TRACK,
+        artist: String? = null,
+        votes: Int? = null,
+    ): TrackLabel {
+        val shown = tag.replaceFirstChar(Char::uppercase)
+        return TrackLabel(
+            GenreLabel(tag, "family", shown, tag, level = level, artist = artist),
+            listOf(LabelCredit(LabelSource.LASTFM, "https://example.org/$tag")),
+            votes,
         )
+    }
+
+    private fun genres(vararg tags: String) =
+        TrackGenres(listOf(GenreRow(GenreLevel.TRACK, null, tags.map { label(it) })))
 
     // What Home shows: [show] starts it, and a test changes it as the pipeline would (a new track).
     private val current = mutableStateOf(track().copy(genres = genres("folk", "ballad")))
@@ -388,10 +390,87 @@ class GenrePanelFocusScreenTest {
         }
     }
 
+    @Test
+    fun retryUnderTheOpeningGenresFailedDefinitionHandsTheFocusToItsChipNotTheFirst() {
+        definition.value = DefinitionState.Failed
+        // Ambient, weak (only Last.fm gives it), sorts before Soul, backed by its votes: the panel
+        // opens on Soul (#875), with no chip tapped.
+        val soul = label("soul", votes = TrackGenres.MIN_VOTES)
+        show(
+            track().copy(
+                genres = TrackGenres(listOf(GenreRow(GenreLevel.TRACK, null, listOf(label("ambient"), soul)))),
+            ),
+        ) {
+            compose.onNodeWithTag(SOUL).assertIsSelected()
+            val retry =
+                compose.onNode(
+                    hasTestTag(RETRY_TAG) and hasAnyAncestor(hasTestTag(GENRE_DEFINITION_FAILED_TAG)),
+                )
+            retry.performScrollTo().requestFocus()
+            retry.performKeyInput { pressKey(Key.Enter) }
+            compose.waitForIdle()
+            assertEquals(0, count(GENRE_DEFINITION_FAILED_TAG))
+            compose.onNodeWithTag(SOUL).assertIsFocused()
+        }
+    }
+
+    @Test
+    fun aGenreTappedOnAnArtistsRowKeepsTheFocusWhenItsChipMovesToTheTracksRow() {
+        val artist = { tag: String -> label(tag, GenreLevel.ARTIST, "A") }
+        // Ballad opens; Folk, the artist's, tapped.
+        show(
+            track().copy(
+                genres =
+                    TrackGenres(
+                        listOf(GenreRow(GenreLevel.ARTIST, "A", listOf(artist("folk"), artist("ballad")))),
+                    ),
+            ),
+        ) {
+            tap(GENRE_PREFIX + "artist:A:folk")
+            focusInGenre()
+            // A new track opening on Blues: its Folk, the track's own tag, is placed on the track's row,
+            // a chip with another tag, the genre tapped all the same.
+            current.value =
+                track(carefree).copy(
+                    genres =
+                        TrackGenres(
+                            listOf(
+                                GenreRow(GenreLevel.TRACK, null, listOf(label("folk"))),
+                                GenreRow(GenreLevel.ARTIST, "A", listOf(artist("blues"))),
+                            ),
+                        ),
+                )
+            compose.waitForIdle()
+            compose.onNodeWithTag(GENRE_PREFIX + "artist:A:blues").assertIsSelected()
+            compose.onNodeWithTag(FOLK).assertIsFocused()
+        }
+    }
+
+    @Test
+    fun afterAFoldNoGenreOpensOfItselfAsLabelsLand() =
+        show {
+            // The genre the panel opened on, folded.
+            tap(BALLAD)
+            assertEquals(0, count(GENRE_PANEL_TAG))
+            // A backed genre lands, first in the order: nothing opens.
+            val ankle = label("ankle", votes = TrackGenres.MIN_VOTES)
+            current.value =
+                current.value.copy(
+                    genres =
+                        TrackGenres(
+                            listOf(GenreRow(GenreLevel.TRACK, null, listOf(label("folk"), label("ballad"), ankle))),
+                        ),
+                )
+            compose.waitForIdle()
+            assertEquals(0, count(GENRE_PANEL_TAG))
+            assertEquals(0, compose.onAllNodes(isSelected()).fetchSemanticsNodes().size)
+        }
+
     private companion object {
         const val ELSEWHERE_TAG = "elsewhere"
         const val FOLK = GENRE_PREFIX + "track:folk"
         const val BALLAD = GENRE_PREFIX + "track:ballad"
+        const val SOUL = GENRE_PREFIX + "track:soul"
 
         /** Where a virtual view's id sits in an accessibility node id (`AccessibilityNodeInfo`'s hidden layout). */
         const val VIRTUAL_ID_SHIFT = 32
