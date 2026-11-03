@@ -22,10 +22,12 @@ import app.sleevesight.core.resolution.RecordingResolver
 import app.sleevesight.core.resolution.RememberedMusicBrainz
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WebEngine
+import app.sleevesight.core.sources.AlbumLookup
 import app.sleevesight.core.sources.ArtistResults
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.WebSearcher
 import app.sleevesight.net.NetClient
+import app.sleevesight.sources.album.AlbumSource
 import app.sleevesight.sources.art.ArtFetcher
 import app.sleevesight.sources.art.ArtResult
 import app.sleevesight.sources.lastfm.LastFmAdapter
@@ -136,6 +138,15 @@ class PipelineWiring internal constructor(
      */
     fun genreDefinitions(kept: ArtistResults = artists): GenreDefinitions =
         GenreDefinitions(WikipediaGenres(WikidataClient(net), WikipediaClient(net)), vocabulary, kept = kept)
+
+    /**
+     * The evidence for an album's insight under *Key insights* (#522, `PipelineParts.albums`): the
+     * album's MusicBrainz release group, its Wikidata item and its English Wikipedia article
+     * ([AlbumSource]), kept per album in the artist cache.
+     */
+    val albums: AlbumLookup by lazy {
+        AlbumSource(MusicBrainzClient(net), WikidataClient(net), WikipediaClient(net), names, kept = artists)
+    }
 
     /**
      * Forgets MusicBrainz's answers kept in memory ([RememberedMusicBrainz]), for *Clear history*

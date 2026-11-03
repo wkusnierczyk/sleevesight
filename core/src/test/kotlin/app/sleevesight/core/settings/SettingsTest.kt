@@ -5,6 +5,7 @@ import app.sleevesight.core.ai.ReasoningEffort
 import app.sleevesight.core.genres.LabelSource
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.settings.NewTrackFold
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -30,7 +31,8 @@ class SettingsTest {
         assertEquals(Crossfade.Autodetect, defaults.crossfade)
         assertEquals(PrepareNextTrack.EVIDENCE, defaults.prepareNextTrack)
         assertFalse(defaults.lookUpInBackground)
-        assertFalse(defaults.keepSourcesUnfolded)
+        assertEquals(NewTrackFold.FOLDED, defaults.sourcesOnNewTrack)
+        assertEquals(NewTrackFold.FOLDED, defaults.itemsOnNewTrack)
     }
 
     @Test

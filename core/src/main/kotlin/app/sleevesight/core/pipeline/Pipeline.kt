@@ -10,6 +10,7 @@ import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.sources.AlbumLookup
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.WebSearcher
@@ -59,9 +60,11 @@ class AiAccess(
  * [sessionFacts] holds the artist facts the listening session's insights cited (#239), which a
  * later track's prompt leaves out (`PromptEvidence`); it outlives a rebuild of the parts, so the
  * app passes the same one to each. [webSearch] is the web search engine *AI web search* asks with
- * (#801, [AiSearches]), on the user's key, or none: no engine switched on with its key.
+ * (#801, [AiSearches]), on the user's key, or none: no engine switched on with its key. [albums]
+ * gathers the evidence for an album's insight under *Key insights* (#522, [ItemInsights]), or none
+ * (the CLI), when the album's insight has nothing to be written from.
  */
-@Suppress("LongParameterList") // Ten independent stages; the last six are optional.
+@Suppress("LongParameterList") // Eleven independent stages; the last seven are optional.
 class PipelineParts(
     val normalizer: Normalizer,
     val adapters: List<SourceAdapter>,
@@ -73,6 +76,7 @@ class PipelineParts(
     val lastFmLabels: LastFmLabels? = null,
     val sessionFacts: SessionFacts = SessionFacts.None,
     val webSearch: WebSearcher? = null,
+    val albums: AlbumLookup? = null,
 ) {
     init {
         require(adapters.map { it.id }.distinct().size == adapters.size) { "One adapter per source" }

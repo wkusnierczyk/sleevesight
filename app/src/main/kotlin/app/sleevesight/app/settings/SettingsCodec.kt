@@ -10,6 +10,7 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.settings.Crossfade
 import app.sleevesight.core.settings.Dismissable
+import app.sleevesight.core.settings.NewTrackFold
 import app.sleevesight.core.settings.ReportButton
 import app.sleevesight.core.settings.Settings
 import kotlin.time.Duration
@@ -75,7 +76,12 @@ internal object SettingsCodec {
     private val CACHE_SIZE_LIMIT = longPreferencesKey("cache.size_limit")
     private val HISTORY_LIFETIME_MS = longPreferencesKey("history.lifetime_ms")
     private val SESSION_GAP_MS = longPreferencesKey("history.session_gap_ms")
+
+    // *Keep Sources as you left them*, the switch *Sources on a new track* was before #522: read only
+    // while the choice is not stored, on as *As you left them*, off as *Folded*; removed once it is.
     private val KEEP_SOURCES_UNFOLDED = booleanPreferencesKey("home.keep_sources_unfolded")
+    private val SOURCES_ON_NEW_TRACK = stringPreferencesKey("home.sources_on_new_track")
+    private val ITEMS_ON_NEW_TRACK = stringPreferencesKey("home.items_on_new_track")
     private val SHOW_PHONE_NAME = booleanPreferencesKey("keyboard.show_phone_name")
     private val DIAGNOSTICS = booleanPreferencesKey("developer.diagnostics")
     private val DEVELOPER_MODE = booleanPreferencesKey("developer.mode")
@@ -145,7 +151,8 @@ internal object SettingsCodec {
                     else -> stored?.takeIf { it > 0 }?.milliseconds ?: defaults.historyLifetime
                 },
             sessionGap = prefs[SESSION_GAP_MS]?.takeIf { it > 0 }?.milliseconds ?: defaults.sessionGap,
-            keepSourcesUnfolded = prefs[KEEP_SOURCES_UNFOLDED] ?: defaults.keepSourcesUnfolded,
+            sourcesOnNewTrack = newTrackFoldOf(prefs[SOURCES_ON_NEW_TRACK], prefs[KEEP_SOURCES_UNFOLDED], defaults),
+            itemsOnNewTrack = NewTrackFold.of(prefs[ITEMS_ON_NEW_TRACK]) ?: defaults.itemsOnNewTrack,
             lyricsLinks = prefs[LYRICS_LINKS] ?: defaults.lyricsLinks,
             lyricsSearch = prefs[LYRICS_SEARCH] ?: defaults.lyricsSearch,
             showPhoneName = prefs[SHOW_PHONE_NAME] ?: defaults.showPhoneName,
@@ -281,8 +288,13 @@ internal object SettingsCodec {
         if (moved { it.sessionGap }) {
             prefs.put(SESSION_GAP_MS, settings.sessionGap.inWholeMilliseconds, defaults.sessionGap.inWholeMilliseconds)
         }
-        if (moved { it.keepSourcesUnfolded }) {
-            prefs.put(KEEP_SOURCES_UNFOLDED, settings.keepSourcesUnfolded, defaults.keepSourcesUnfolded)
+        if (moved { it.sourcesOnNewTrack }) {
+            prefs.put(SOURCES_ON_NEW_TRACK, settings.sourcesOnNewTrack.key, defaults.sourcesOnNewTrack.key)
+            // The switch it was, now read as this: never again once this is stored.
+            prefs.remove(KEEP_SOURCES_UNFOLDED)
+        }
+        if (moved { it.itemsOnNewTrack }) {
+            prefs.put(ITEMS_ON_NEW_TRACK, settings.itemsOnNewTrack.key, defaults.itemsOnNewTrack.key)
         }
         if (moved { it.lyricsLinks }) prefs.put(LYRICS_LINKS, settings.lyricsLinks, defaults.lyricsLinks)
         if (moved { it.lyricsSearch }) prefs.put(LYRICS_SEARCH, settings.lyricsSearch, defaults.lyricsSearch)
@@ -511,3 +523,16 @@ internal fun <T : Any> MutablePreferences.put(
 ) {
     if (value == null || value == default) remove(key) else set(key, value)
 }
+
+/**
+ * *Sources on a new track* as [stored], else as the switch it was ([switch], *Keep Sources as you
+ * left them*, #522: on, *As you left them*; off, *Folded*), else as [defaults] have it.
+ */
+private fun newTrackFoldOf(
+    stored: String?,
+    switch: Boolean?,
+    defaults: Settings,
+): NewTrackFold =
+    NewTrackFold.of(stored)
+        ?: switch?.let { on -> if (on) NewTrackFold.AS_LEFT else NewTrackFold.FOLDED }
+        ?: defaults.sourcesOnNewTrack

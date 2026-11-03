@@ -17,7 +17,8 @@ import kotlin.time.Duration
  * length) and the MusicBrainz ids resolved for it; the insight's text, and the evidence lines its
  * prompt held (every line of the track for an insight served from the cache, which keeps no record
  * of them), each with its source, scope and address; and the prompt version, AI service, model
- * and effort it was written with. Nothing else: never a key, the history, the settings, the player
+ * and effort it was written with; for the song's, the artist's or the album's insight (#522), which
+ * one ([about], its card's kind). Nothing else: never a key, the history, the settings, the player
  * or anything about the phone. In English, as the developer reads it, whatever the phone's
  * language; addressed to [Mail.SUPPORT].
  */
@@ -26,11 +27,13 @@ fun insightReport(
     insight: InsightState.Written,
     reason: ReportReason,
     note: String,
+    about: String? = null,
 ): Mail {
     val playing = track.nowPlaying
     val body =
         buildString {
             appendLine("A problem with an insight, reported from Sleevesight.")
+            about?.let { appendLine("Insight: the $it's") }
             appendLine()
             appendLine("Reason: ${reason.label}")
             appendLine("Note: ${note.trim().ifEmpty { NONE }}")

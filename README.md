@@ -24,10 +24,11 @@ Sleevesight is an open-source Android app that reads what your music player is p
 - Notices the track change in Spotify, or any other player you follow that publishes an Android media session.
 - Shows the cover, title, artists and album, with *Dates*, *Genres* and *Lyrics* buttons: when the album and the track came out, the track's genres with what each one is and, on a tap, why the track has it, from your AI service (which may add genres of its own, marked AI), and links to the lyrics; when the sources have nothing, *Ask AI* asks your AI service, which can search the web with Exa first (*AI web search*: off, once, or up to a few times of its own), and each value it finds from the web names the page it came from. A lyrics page already among the track's web search results is shown with no AI call.
 - Writes a few sentences on why the track is interesting, each factual one linked to the source it came from.
+- Under them, the song's, the artist's and the album's own insights, folded by default, each written from what the sources say about it; the artist's and the album's are written once and shown again on every track of theirs.
 - Shows the sources behind the insight: what each one found, and where.
 - Reads the insight aloud, in the phone's own voice, for listening without looking at the phone.
 
-[Usage](https://sleevesight.app/docs/tutorials/usage/) goes through each part of the app. Planned ([Roadmap](#roadmap)): deeper insight on the song, each artist, the album, a genre or a similar artist; follow-up questions; playing, pausing and skipping from the app.
+[Usage](https://sleevesight.app/docs/tutorials/usage/) goes through each part of the app. Planned ([Roadmap](#roadmap)): the tracks by an artist or from an album, cards for a genre or a similar artist; follow-up questions; playing, pausing and skipping from the app.
 
 ## How it works
 
@@ -47,6 +48,7 @@ Every choice is a setting, with a reasoned default:
 - **Sources:** each one a switch; MusicBrainz and Wikipedia need no key, Last.fm and Exa your own.
 - **AI service:** Anthropic, OpenAI or Google, with your own key, model and reasoning effort.
 - **When it writes:** on every track change, only on a skip, or only when you tap *Write insight*.
+- **Layout:** what opens from Home (*Sources*, the genres, the song's, the artist's and the album's insights) in place or each on a page of its own; in place, whether *Sources* and the three insights start folded on each new track, unfolded, or as you left them.
 - **Ask AI:** whether a panel with nothing from its sources asks your AI service by itself (*Ask AI automatically*, off by default), and how it searches the web with Exa (*AI web search*: *Off*, *Once*, the default, or *Up to 3 times*).
 - **History:** what is kept on the phone, for how long, and *Clear history*.
 - **Keys:** typed, scanned from a QR code, or typed on a computer; kept encrypted on the phone. Saving them asks which of their services to switch on.

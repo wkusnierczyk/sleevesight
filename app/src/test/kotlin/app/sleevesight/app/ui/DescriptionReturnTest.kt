@@ -11,6 +11,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isSelectable
@@ -214,7 +215,9 @@ class DescriptionReturnTest {
         runBlocking { settings.update { it.copy(foldDescriptions = false) } }
         show {
             val folded = text(R.string.settings_descriptions_folded)
-            compose.onNode(hasText(folded) and isSelectable()).performScrollTo().assertIsNotEnabled()
+            // *Folded* of *Descriptions on return*, not of the two on a new track (#522).
+            val returning = hasContentDescription(text(R.string.settings_descriptions_on_return), substring = true)
+            compose.onNode(hasText(folded) and isSelectable() and returning).performScrollTo().assertIsNotEnabled()
             compose
                 .onNode(
                     hasText(text(R.string.settings_descriptions_as_left)) and isSelectable(),
@@ -232,7 +235,7 @@ class DescriptionReturnTest {
     }
 
     @Test
-    fun theRowsComeRightAfterKeepSourcesAndRestoreDismissedMessagesComesLast() =
+    fun theRowsComeRightAfterTheItemsOnANewTrackAndRestoreDismissedMessagesComesLast() =
         show {
             val titles =
                 compose
@@ -241,7 +244,7 @@ class DescriptionReturnTest {
                         useUnmergedTree = true,
                     ).fetchSemanticsNodes()
                     .map { node -> node.config[SemanticsProperties.Text].joinToString { it.text } }
-            val keep = titles.indexOf(text(R.string.settings_keep_sources))
+            val keep = titles.indexOf(text(R.string.settings_items_on_new_track))
             assertTrue(keep >= 0)
             assertEquals(text(R.string.settings_fold_descriptions), titles[keep + 1])
             assertEquals(text(R.string.settings_descriptions_on_return), titles[keep + 2])

@@ -203,9 +203,15 @@ internal fun appearanceRows(): List<IndexedRow> =
         ),
         choices(R.string.settings_font, R.string.settings_font_summary, fonts().map { it.second }),
         choices(R.string.settings_layout, R.string.settings_layout_summary, layouts().map { it.second }),
-        indexRow(
-            stringResource(R.string.settings_keep_sources),
-            stringResource(R.string.settings_keep_sources_summary),
+        choices(
+            R.string.settings_sources_on_new_track,
+            R.string.settings_sources_on_new_track_summary,
+            newTrackFolds().map { it.second },
+        ),
+        choices(
+            R.string.settings_items_on_new_track,
+            R.string.settings_items_on_new_track_summary,
+            newTrackFolds().map { it.second },
         ),
         indexRow(
             stringResource(R.string.settings_fold_descriptions),

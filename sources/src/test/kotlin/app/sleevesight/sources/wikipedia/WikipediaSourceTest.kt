@@ -92,6 +92,8 @@ class WikipediaSourceTest {
             assertEquals(asked.evidence, result.evidence)
             val artistLines = first.evidence.filter { it.scope == Scope.ARTIST }
             assertTrue(artistLines.isNotEmpty())
+            // Each says which artist it is about, kept or not, for the artist's insight (#522).
+            assertTrue(result.evidence.all { it.about == "Gordon Lightfoot" })
             assertEquals(artistLines, result.evidence)
             // Kept until a week after `at`, so the retrieval cache keeps the result no longer.
             assertEquals(at + 7.days, result.freshUntil)

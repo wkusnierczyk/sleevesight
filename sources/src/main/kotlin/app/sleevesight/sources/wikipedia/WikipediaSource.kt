@@ -102,7 +102,12 @@ class WikipediaSource(
             if (part.unreachable) findings.unreachable = true
         }
         findings.artistFound = parts.any { it.accepted }
-        val evidence = songLines?.drafts.orEmpty() + parts.flatMap { it.lines }
+        // Each artist's lines say which artist they are about (#522), as the track credits it.
+        val artistLines =
+            credits.zip(parts).flatMap { (artist, part) ->
+                part.lines.map { it.copy(about = artist.name) }
+            }
+        val evidence = songLines?.drafts.orEmpty() + artistLines
         return SourceResult(
             findings.outcome(),
             evidence,
@@ -318,7 +323,7 @@ class WikipediaSource(
             }
         val subjects =
             listOfNotNull(accepted.item.label, track.title.takeIf { accepted.scope != Scope.ARTIST })
-        val sentences = lead?.let { sentences(it, subjects) }.orEmpty()
+        val sentences = lead?.let { sentences(it, subjects, names) }.orEmpty()
         val quoted =
             sentences.map {
                 EvidenceDraft(SourceId.WIKIPEDIA, accepted.scope, it, title?.let(::articleUrl), retrievedAt)
@@ -326,26 +331,31 @@ class WikipediaSource(
         return Lines(quoted + WikidataEvidence.lines(accepted, retrievedAt), unreachable)
     }
 
-    // The lead's sentences that name one of [subjects], short enough to quote, at most MAX_SENTENCES.
-    private fun sentences(
-        lead: String,
-        subjects: List<String>,
-    ): List<String> {
-        val keys = subjects.map { " ${names.key(it)} " }.filter { it.isNotBlank() }
-        // The lead's first sentence defines the subject, often under a fuller name ("Gordon Meredith
-        // Lightfoot Jr."), so it is taken whether or not it names the subject as the label does.
-        // Only the first piece of the first paragraph is exempt: if the splitter drops it, no other
-        // sentence takes its place unchecked.
-        val paragraphs = lead.split('\n').map { tidy(it) }.filter { it.isNotEmpty() }
-        val first = paragraphs.firstOrNull()?.let { LastFmBio.split(it).firstOrNull() }
-        return paragraphs
-            .flatMap { split(it) }
-            .filter { sentence -> sentence == first || keys.any { it in " ${names.key(sentence)} " } }
-            .filter { it.length <= MAX_SENTENCE_LENGTH }
-            .take(MAX_SENTENCES)
-    }
-
     companion object {
+        /**
+         * The lead's sentences that name one of [subjects], as [names] reads names, short enough to
+         * quote, at most [MAX_SENTENCES]; the first sentence whether or not it names one. For an
+         * album's article too (#522, `AlbumSource`).
+         */
+        internal fun sentences(
+            lead: String,
+            subjects: List<String>,
+            names: NameMatcher,
+        ): List<String> {
+            val keys = subjects.map { " ${names.key(it)} " }.filter { it.isNotBlank() }
+            // The lead's first sentence defines the subject, often under a fuller name ("Gordon Meredith
+            // Lightfoot Jr."), so it is taken whether or not it names the subject as the label does.
+            // Only the first piece of the first paragraph is exempt: if the splitter drops it, no other
+            // sentence takes its place unchecked.
+            val paragraphs = lead.split('\n').map { tidy(it) }.filter { it.isNotEmpty() }
+            val first = paragraphs.firstOrNull()?.let { LastFmBio.split(it).firstOrNull() }
+            return paragraphs
+                .flatMap { split(it) }
+                .filter { sentence -> sentence == first || keys.any { it in " ${names.key(sentence)} " } }
+                .filter { it.length <= MAX_SENTENCE_LENGTH }
+                .take(MAX_SENTENCES)
+        }
+
         /**
          * A resolved artist's article in the artist cache (#238), by its MusicBrainz id and the name
          * as credited, a space between ([StoredArtist]): its Wikipedia sentences and Wikidata lines,

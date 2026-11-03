@@ -46,12 +46,13 @@ internal fun InsightReportDialog(
     track: TrackState,
     insight: InsightState.Written,
     handoff: MailHandoff,
+    about: String? = null,
     onDismiss: () -> Unit,
 ) {
     // Held only while the dialog is open, not saved: reopened, on this track or another, it starts afresh.
     var reason by remember { mutableStateOf<ReportReason?>(null) }
     var note by remember { mutableStateOf("") }
-    val mail = reason?.let { insightReport(track, insight, it, note) }
+    val mail = reason?.let { insightReport(track, insight, it, note, about) }
     ReportDialog(stringResource(R.string.report_title), mail, handoff, onDismiss) {
         Text(stringResource(R.string.report_intro, Mail.SUPPORT), style = MaterialTheme.typography.bodyMedium)
         Text(stringResource(R.string.report_reason), style = MaterialTheme.typography.titleSmall)

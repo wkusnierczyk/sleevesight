@@ -154,7 +154,7 @@
     <string name="settings_layout">Layout</string>
     <string name="settings_layout_boxes">Boxes</string>
     <string name="settings_layout_pages">Pages</string>
-    <string name="settings_layout_summary">How Sources and the genres open: in place on the home screen, as expandable boxes, or each on a page of its own, with a back arrow.</string>
+    <string name="settings_layout_summary">How Sources, the genres, and the song’s, the artist’s and the album’s insights open: in place on the home screen, as expandable boxes, or each on a page of its own, with a back arrow.</string>
 
     <!-- Load keys and Purge keys (#446): the screens that replace their dialogs. Load keys starts
          with five words, which seal the setup code (#590). -->

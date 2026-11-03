@@ -83,6 +83,24 @@ class RetrievalCacheTest {
     }
 
     @Test
+    fun `an artist line keeps the artist it is about`() {
+        val at = Instant.parse("2026-10-27T12:00:00Z")
+        val line = EvidenceDraft(SourceId.LASTFM, Scope.ARTIST, "X is a band.", null, at, about = "X")
+        assertTrue(
+            retrieval.put(SourceId.LASTFM, key, 1, SourceResult(Outcome.ArtistArticle, listOf(line), 10.milliseconds)),
+        )
+
+        assertEquals(
+            listOf("X"),
+            retrieval
+                .get(SourceId.LASTFM, key, 1)
+                ?.result
+                ?.evidence
+                ?.map { it.about },
+        )
+    }
+
+    @Test
     fun `every outcome a source can give round-trips`() {
         val outcomes =
             listOf(

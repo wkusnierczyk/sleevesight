@@ -71,6 +71,7 @@ import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.settings.Layout
+import app.sleevesight.core.settings.NewTrackFold
 import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert.assertEquals
@@ -651,7 +652,7 @@ class LayoutPagesTest {
 
     @Test
     fun eachPageOpensFreshWhateverKeepSourcesSays() =
-        show(state(long(), pages.copy(keepSourcesUnfolded = true))) {
+        show(state(long(), pages.copy(sourcesOnNewTrack = NewTrackFold.AS_LEFT))) {
             compose.onNodeWithTag(SOURCES_PAGE_LINK_TAG).performScrollTo().performClick()
             compose.waitForIdle()
             compose.onNodeWithTag(FOLD_ALL_TAG).performScrollTo().performClick()

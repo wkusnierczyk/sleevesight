@@ -19,7 +19,7 @@
     <string name="first_run_no_audio">Sleevesight receives no audio.</string>
 
     <string name="first_run_leaves_title">What leaves the phone, and to whom</string>
-    <string name="first_run_to_sources">To the sources you switch on, such as MusicBrainz and Wikipedia: the title and artists of the playing track, cleaned of tags such as “2006 Remaster”. For genre labels, Last.fm gets the album name. While the “Proactive” setting is on, as it is by default, the title and artists of the next track in the player’s queue also go to MusicBrainz if the service is enabled.</string>
+    <string name="first_run_to_sources">To the sources you switch on, such as MusicBrainz and Wikipedia: the title and artists of the playing track, cleaned of tags such as “2006 Remaster”. For genre labels, Last.fm gets the album name. While the album’s insight is unfolded or open on its page, Wikipedia gets the album’s name too, and MusicBrainz and Wikidata its identifiers. While the “Proactive” setting is on, as it is by default, the title and artists of the next track in the player’s queue also go to MusicBrainz if the service is enabled.</string>
     <string name="first_run_to_ai">To the AI service you choose: the title, artists and album, and what the sources found. This is for the playing track only: the next one in the queue is looked up ahead in the sources, but no AI insight is written for it until it plays.</string>
     <string name="first_run_api_keys">Your API keys: each only to the service it belongs to, with each request to it. Always encrypted.</string>
     <string name="first_run_to_art_host">To the server a cover’s web address names, when a player gives the cover only as a web address: a request for the cover image. The address itself may identify the album or episode.</string>
@@ -154,8 +154,14 @@
     <string name="settings_prepare_next">Proactive</string>
     <string name="settings_prepare_next_summary">Looks up the next track in the player’s queue ahead, so its sources come sooner when it plays. No insight is written ahead, and nothing is paid for.</string>
 
-    <string name="settings_keep_sources">Keep Sources as you left them</string>
-    <string name="settings_keep_sources_summary">Keeps the sources under each track’s insight folded or unfolded as you left them on the track before. When disabled, each new track’s sources start folded. Applies with Expandable boxes.</string>
+    <string name="settings_sources_on_new_track">Sources on a new track</string>
+    <string name="settings_sources_on_new_track_summary">How the sources under each track’s insight start on each new track. Applies with Expandable boxes.</string>
+    <string name="settings_items_on_new_track">Song, Artist and Album on a new track</string>
+    <string name="settings_items_on_new_track_summary">How the song’s, the artist’s and the album’s insights under Key insights start on each new track. With Reactive set to an automatic mode, an insight that starts unfolded is written unless its artist or album has one already. Applies with Expandable boxes.</string>
+    <!-- The choices of both (#522). -->
+    <string name="settings_new_track_folded">Folded</string>
+    <string name="settings_new_track_unfolded">Unfolded</string>
+    <string name="settings_new_track_as_left">As you left them</string>
     <string name="settings_background">Look up in the background</string>
     <string name="settings_background_summary">Allows Sleevesight to look up information from sources while it is in the background, for every track played. With Reactive set to On track change (auto) or On track skip (auto), insights are then written, and paid for, whether you read them or not, up to the Stop after limit when Saver is on.</string>
     <string name="settings_artist_facts_once">Don’t repeat artist facts</string>

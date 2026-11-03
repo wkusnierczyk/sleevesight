@@ -41,6 +41,7 @@ private class ProseText(
     val text: AnnotatedString,
     val spoken: String,
     val lines: List<String>,
+    val label: (String) -> String = { it },
 )
 
 /** The paragraphs of text not checked yet, split as the grounding check splits them: on a blank line. */
@@ -54,7 +55,11 @@ internal fun paragraphsOf(text: String): List<String> =
  * card was written ([GroundedText.allowModel]), not as the settings now allow it: a card kept stays
  * as it was checked.
  * A line outside [held], the ids its prompt held when it left some out (#239), reads as no line.
+ * A citation shows, and is read, by [label] of its id: the id *Sources* shows its line under, where
+ * that differs (the song's, the artist's and the album's insights, #522, cite their own evidence's
+ * ids); its own id by default.
  */
+@Suppress("LongParameterList") // The paragraph, what it is read against, and how its citations show.
 @Composable
 internal fun CheckedProse(
     paragraph: List<CheckedSentence>,
@@ -62,11 +67,12 @@ internal fun CheckedProse(
     evidence: EvidenceSet?,
     onCite: (String) -> Unit,
     held: Set<String>? = null,
+    label: (String) -> String = { it },
 ) {
     val styles = citeStyles()
     val resources = LocalResources.current
     val flagged = SpanStyle(fontStyle = FontStyle.Italic, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    val policy = CitePolicy(evidence, grounded.allowModel, held)
+    val policy = CitePolicy(evidence, grounded.allowModel, held, label)
     val sentences = paragraph.map { it.text }
     // A sentence of Markdown alone (a rule, a heading's `#`) shows as nothing, and is not read out;
     // a line break before it passes to the sentence shown next (#574). Each shown sentence with its
@@ -102,12 +108,13 @@ internal fun CheckedProse(
                 appendSentence(runs, policy, styles, onCite, if (doubtful) flagged else null)
             }
         }
-    Prose(ProseText(text, said, lines(sentences, policy)), onCite)
+    Prose(ProseText(text, said, lines(sentences, policy), label), onCite)
 }
 
 /**
  * A paragraph still being written: its citations show, read as the settings allow them now, under
- * which it is written, and against the ids its prompt [held]; the dimming waits for the check.
+ * which it is written, and against the ids its prompt [held]; the dimming waits for the check. A
+ * citation shows, and is read, by [label] of its id, as in [CheckedProse].
  */
 @Composable
 internal fun UncheckedProse(
@@ -115,13 +122,17 @@ internal fun UncheckedProse(
     context: InsightContext,
     onCite: (String) -> Unit,
     held: Set<String>? = null,
+    label: (String) -> String = { it },
 ) {
     val styles = citeStyles()
-    val policy = CitePolicy(context.track?.evidence, context.modelAllowed, held)
+    val policy = CitePolicy(context.track?.evidence, context.modelAllowed, held, label)
     val shown = remember(paragraph) { shown(listOf(paragraph)).single() }
     if (shown.isBlank()) return
     val text = buildAnnotatedString { appendSentence(shown, policy, styles, onCite, null) }
-    Prose(ProseText(text, spoken(shown, policy, LocalResources.current), lines(listOf(paragraph), policy)), onCite)
+    Prose(
+        ProseText(text, spoken(shown, policy, LocalResources.current), lines(listOf(paragraph), policy), label),
+        onCite,
+    )
 }
 
 // A paragraph with citation chips, read by a screen reader with each chip said in words, and each
@@ -142,7 +153,7 @@ private fun Prose(
                 if (prose.lines.isNotEmpty()) {
                     customActions =
                         prose.lines.map { id ->
-                            CustomAccessibilityAction(resources.getString(R.string.home_cite, id)) {
+                            CustomAccessibilityAction(resources.getString(R.string.home_cite, prose.label(id))) {
                                 onCite(id)
                                 true
                             }
@@ -166,7 +177,7 @@ private fun spoken(
                 is ShownRun.Cite -> {
                     val said =
                         when (citeKind(segment.id, policy.evidence, policy.modelAllowed, policy.held)) {
-                            CiteKind.LINE -> resources.getString(R.string.home_cite, segment.id)
+                            CiteKind.LINE -> resources.getString(R.string.home_cite, policy.label(segment.id))
                             CiteKind.MODEL -> resources.getString(R.string.home_cite_model)
                             CiteKind.UNKNOWN -> resources.getString(R.string.home_cite_unknown, segment.id)
                         }
@@ -192,11 +203,12 @@ private fun lines(
         .take(MAX_LINE_ACTIONS)
 
 // What a citation is read against: the evidence, whether the model's own knowledge may be cited, and
-// the ids the prompt held when it left some out (#239).
+// the ids the prompt held when it left some out (#239); and how a line's citation is labelled (#522).
 private class CitePolicy(
     val evidence: EvidenceSet?,
     val modelAllowed: Boolean,
     val held: Set<String>? = null,
+    val label: (String) -> String = { it },
 )
 
 private class CiteStyles(
@@ -233,7 +245,8 @@ private fun AnnotatedString.Builder.appendSentence(
             is ShownRun.Text -> appendText(segment, flagged)
             is ShownRun.Cite -> {
                 val kind = citeKind(segment.id, policy.evidence, policy.modelAllowed, policy.held)
-                appendCite(segment.id, kind, styles, onCite)
+                val shownAs = if (kind == CiteKind.LINE) policy.label(segment.id) else segment.id
+                appendCite(segment.id, shownAs, kind, styles, onCite)
             }
         }
     }
@@ -257,11 +270,12 @@ private fun AnnotatedString.Builder.appendText(
 // A citation as a chip: a line's scrolls to it; the model's and a missing line's only say what they are.
 private fun AnnotatedString.Builder.appendCite(
     id: String,
+    shownAs: String,
     kind: CiteKind,
     styles: CiteStyles,
     onCite: (String) -> Unit,
 ) {
-    val label = " $id "
+    val label = " $shownAs "
     when (kind) {
         CiteKind.LINE -> {
             val link = LinkAnnotation.Clickable(CITE_PREFIX + id, TextLinkStyles(styles.line)) { onCite(id) }
