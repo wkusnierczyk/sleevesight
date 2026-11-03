@@ -55,7 +55,8 @@ import app.sleevesight.core.settings.Layout
  * Paper Boats. Button. Double-tap to show the song's insight", the whole name, clipped or not.
  *
  * Under *Expandable boxes* ([pages] false) a button opens its item in a panel in its row's place
- * ([Panel]: the kind as its title, the name under it, *Close*), the row hidden while it is open;
+ * ([Panel]: the kind as its title, the name under it, *Read aloud* once written and *Close* on the
+ * kind's line), the row hidden while it is open;
  * several may be open, in the rows' order; *Close* folds it back into its row. Which are open is
  * [folds]', so *Song, Artist and Album on a new track* applies. Under *Separate pages* a button opens
  * its page ([openPage]) and stays, "double-tap to open page".
@@ -101,6 +102,8 @@ internal fun ItemRows(
             // Keyed by the item, not its place: a row opened keeps the others' state where they are.
             key(item) {
                 if (item in open) {
+                    // Followed once, for *Read aloud* in the heading and the content under it.
+                    val shown = itemShown(item, context)
                     ItemPanel(
                         kinds[index],
                         row,
@@ -110,7 +113,8 @@ internal fun ItemRows(
                             folds.toggle(item)
                             handoff.moveTo(buttonOf(item))
                         },
-                    ) { ItemContent(item, context, tapped = folds.tapped(item)) }
+                        actions = { centred -> ItemReadAloud(item, context, shown, centred) },
+                    ) { ItemContent(item, context, tapped = folds.tapped(item), shown = shown, readAloud = false) }
                 } else {
                     ItemRowLine(
                         kinds[index],
@@ -134,8 +138,9 @@ internal fun ItemRows(
     }
 }
 
-// [row]'s panel, open in its place: [kind] as its title, the name under it; told whether the input
-// focus is in it ([focused]); its *Close*, under [closeModifier] (a focus requester), [close]s it.
+// [row]'s panel, open in its place: [kind] as its title, the name under it, [actions] (*Read aloud*)
+// beside *Close*; told whether the input focus is in it ([focused]); its *Close*, under
+// [closeModifier] (a focus requester), [close]s it.
 @Suppress("LongParameterList") // What the panel shows, and its focus and close.
 @Composable
 private fun ItemPanel(
@@ -144,6 +149,7 @@ private fun ItemPanel(
     closeModifier: Modifier,
     focused: (Boolean) -> Unit,
     close: () -> Unit,
+    actions: @Composable (Modifier) -> Unit,
     content: @Composable () -> Unit,
 ) {
     Box(Modifier.padding(vertical = PANEL_GAP).onFocusChanged { focused(it.hasFocus) }) {
@@ -153,6 +159,7 @@ private fun ItemPanel(
             onClose = close,
             closeModifier = closeModifier,
             subtitle = row.name,
+            actions = actions,
         ) { content() }
     }
 }
