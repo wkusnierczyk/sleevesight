@@ -22,10 +22,28 @@ data class GenreRow(
     val labels: List<TrackLabel>,
 )
 
-/** A label as a row shows it, with its [row], whose level its credit names. */
+/**
+ * A label as a row shows it, with its [row], whose level its credit names. As a chip
+ * ([TrackGenres.chips]), [weak] when its evidence is weak (#875): a track's tag that no artist's or
+ * album's row has, with fewer than [TrackGenres.MIN_VOTES] net votes; its chip is marked, and its
+ * genre says why ([TrackGenres.weakEvidence]).
+ */
 data class PlacedLabel(
     val row: GenreRow,
     val label: TrackLabel,
+    val weak: Boolean = false,
+)
+
+/**
+ * Why a weak genre's evidence is weak (#875, [TrackGenres.weakEvidence]): whether MusicBrainz
+ * contributors tagged the track with it ([musicBrainz]; else only Last.fm's tags give it), and the
+ * other levels whose tags do not include it: the [artists] with a row of their own (none, one or
+ * more), and the album, when it has a row ([album]).
+ */
+data class WeakEvidence(
+    val musicBrainz: Boolean,
+    val artists: Int,
+    val album: Boolean,
 )
 
 /**
@@ -46,61 +64,71 @@ data class TrackGenres(
     /** The levels that have labels, in [GenreLevel] order. */
     val levels: List<GenreLevel> get() = rows.map { it.level }.distinct()
 
-    /** Whether the labels are of one level only, so they show as chips with no fold. */
+    /** Whether the labels are of one level only. */
     val oneLevel: Boolean get() = levels.size == 1
 
     /**
-     * The labels shown folded, or with [oneLevel] (#799): the track's that are backed, else the
-     * album's, else the artists' together, else, with no other level to give any, the track's all
-     * the same; each genre once (the first row giving it), at most [GenreVocabulary.MAX_LABELS]. A
-     * track's label is backed with at least [MIN_VOTES] net votes on its tag ([TrackLabel.votes]:
-     * MusicBrainz's; Last.fm's weights are no votes), or when the album's or an artist's row has its
-     * genre: one contributor's tag on the recording does not outweigh the album's and the artists'.
-     * The rows themselves (the *Genre tags* table) keep every label.
+     * The genres as *Genres*' chips show them (#875, replacing #799's fold): every genre of every row
+     * (the *Genre tags* table), each once, placed on the first row that has it. First the sources'
+     * genres, then those the AI's genre list added ([TrackLabel.aiAdded], #762: the track row's
+     * labels with no source's credit), each group in alphabetical order of the names shown, by
+     * [names] (the app gives the language's collation; by default, case aside), whatever their
+     * levels. A genre on the AI's list that a row has from a source is a source's chip, unmarked
+     * (credited to the model in the rows, [withAi]).
      *
-     * The genres of the AI's genre list (#762, [aiListed]) not among them follow, in the list's
-     * order, each marked as the AI's ([TrackLabel.aiAdded]): the track row's label the list added,
-     * or, for a genre another row has, one of its own, so a chip shows it, credited to the model
-     * alone. They neither lead nor back, so the chips shown before the list came stay as they were.
+     * A source's chip is [PlacedLabel.weak] when it is a track's label whose genre no artist's or
+     * album's row has, and its tag has fewer than [MIN_VOTES] net votes ([TrackLabel.votes]:
+     * MusicBrainz's; Last.fm's weights are no votes, so a tag only Last.fm gives the track is weak):
+     * one contributor's tag on the recording is not backed by the album's and the artists'. With no
+     * other level, the same rule: only a tag with [MIN_VOTES] is backed. The rows keep their cap,
+     * [GenreVocabulary.MAX_LABELS]; the chips have none of their own.
      */
-    val folded: List<PlacedLabel>
-        get() {
-            val others =
-                rows
-                    .filter { it.level != GenreLevel.TRACK }
-                    .flatMap { it.labels }
-                    .map { it.genre.identity }
-                    .toSet()
-            val tracks = placed(GenreLevel.TRACK).filter { !it.label.aiAdded }
-            val backed =
-                tracks.filter { (_, label) ->
-                    (label.votes ?: 0) >= MIN_VOTES || label.genre.identity in others
-                }
-            val sources =
-                backed
-                    .ifEmpty { placed(GenreLevel.ALBUM) }
-                    .ifEmpty { placed(GenreLevel.ARTIST) }
-                    .ifEmpty { tracks }
-                    .distinctBy { it.label.genre.identity }
-                    .take(GenreVocabulary.MAX_LABELS)
-            val shown = sources.map { it.label.genre.identity }.toSet()
-            val tracked = placed(GenreLevel.TRACK).filter { it.label.aiAdded }
-            // A listed genre the cap left out of every row shows nowhere, a chip included.
-            val have = all.map { it.genre.identity }.toSet()
-            val added =
-                aiListed
-                    .filter { it.identity !in shown && it.identity in have }
-                    .distinctBy { it.identity }
-                    .map { genre ->
-                        tracked.firstOrNull { it.label.genre.identity == genre.identity } ?: aiChip(genre)
-                    }
-            return sources + added
-        }
+    fun chips(names: Comparator<String> = CASE_FOLDED): List<PlacedLabel> {
+        val others =
+            rows
+                .filter { it.level != GenreLevel.TRACK }
+                .flatMap { it.labels }
+                .map { it.genre.identity }
+                .toSet()
+        val (added, sources) =
+            rows
+                .flatMap { row -> row.labels.map { PlacedLabel(row, it) } }
+                .distinctBy { it.label.genre.identity }
+                .partition { it.label.aiAdded }
+        val marked =
+            sources.map { placed ->
+                val label = placed.label
+                val weak =
+                    placed.row.level == GenreLevel.TRACK &&
+                        label.genre.identity !in others &&
+                        (label.votes ?: 0) < MIN_VOTES
+                placed.copy(weak = weak)
+            }
+        val byName = compareBy<PlacedLabel, String>(names) { it.label.genre.label }
+        val order = byName.thenBy { it.label.genre.identity }
+        return marked.sortedWith(order) + added.sortedWith(order)
+    }
 
-    // A chip of its own for [genre], on the AI's list, whose label another row has.
-    private fun aiChip(genre: GenreLabel): PlacedLabel {
-        val label = aiLabel(genre, aiModel.orEmpty())
-        return PlacedLabel(GenreRow(GenreLevel.TRACK, null, listOf(label)), label)
+    /**
+     * The genre *Genres*' panel opens on (#875): the first of the [chips], in [names]' order, that is
+     * backed, else the first weak one; never one the AI's genre list added; null with no chips.
+     */
+    fun opening(names: Comparator<String> = CASE_FOLDED): PlacedLabel? {
+        val sources = chips(names).filter { !it.label.aiAdded }
+        return sources.firstOrNull { !it.weak } ?: sources.firstOrNull()
+    }
+
+    /**
+     * Why the genre [identity] is weak (#875), when its chip is ([PlacedLabel.weak]); null when it is
+     * not, or no chip has it.
+     */
+    fun weakEvidence(identity: String): WeakEvidence? {
+        val chip = chips().firstOrNull { it.label.genre.identity == identity && it.weak } ?: return null
+        return WeakEvidence(
+            musicBrainz = chip.label.credits.any { it.source == LabelSource.MUSICBRAINZ },
+            artists = rows.count { it.level == GenreLevel.ARTIST },
+            album = rows.any { it.level == GenreLevel.ALBUM },
+        )
     }
 
     /**
@@ -110,7 +138,7 @@ data class TrackGenres(
      * a prompt; one no row has joins the track's row, after its labels, with no source's credit
      * ([TrackLabel.aiAdded]), as many as leave the row at most [GenreVocabulary.MAX_LABELS], a
      * track row made for them where there was none. The list is kept
-     * ([aiListed]), for the chips ([folded]), with the pages it came from when it is from the web
+     * ([aiListed]), with the pages it came from when it is from the web
      * ([sources], #801: shown "From {site}" under the chips). Applied twice, the same.
      */
     fun withAi(
@@ -148,10 +176,6 @@ data class TrackGenres(
     /** Every label of every row, each genre once, in row order: for counting, and the CLI's report. */
     val all: List<TrackLabel> get() = rows.flatMap { it.labels }.distinctBy { it.genre.identity }
 
-    // [level]'s labels, each with its row, in row order.
-    private fun placed(level: GenreLevel): List<PlacedLabel> =
-        rows.filter { it.level == level }.flatMap { row -> row.labels.map { PlacedLabel(row, it) } }
-
     companion object {
         // [genre] as a track's label the AI's genre list by [model] gives, and no source (#762).
         private fun aiLabel(
@@ -166,10 +190,17 @@ data class TrackGenres(
             )
 
         /**
-         * The net votes a track's tag needs to lead the folded labels with no other level agreeing
-         * ([folded], #799): two, so that one contributor's tags alone do not.
+         * The net votes a track's tag needs for its chip to be backed with no other level agreeing
+         * ([chips], #799, #875): two, so that one contributor's tags alone do not.
          */
         const val MIN_VOTES: Int = 2
+
+        /**
+         * The chips' order of names where no other is given ([chips], #875): alphabetical, case
+         * aside. The app gives the language's collation instead, which also places accented letters
+         * with their base letters; ties are then broken by the genres' identities.
+         */
+        val CASE_FOLDED: Comparator<String> = compareBy { it.lowercase() }
     }
 }
 

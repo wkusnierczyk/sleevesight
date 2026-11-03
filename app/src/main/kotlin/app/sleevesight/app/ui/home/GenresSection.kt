@@ -86,8 +86,8 @@ internal fun genresItem(
 
 /**
  * What *Genres*' panel holds (#772), as [GenresShown] works it out from [playing] and [settings]: the
- * chips of the folded labels ([TrackGenres.folded]: the track's backed by votes or by another level,
- * else the album's, else the artists', #799; then those the AI's genre list added, #762, marked AI,
+ * chips of every genre of the rows ([TrackGenres.chips], #875: the sources', in alphabetical order,
+ * those of weak evidence marked; then those the AI's genre list added, #762, marked AI,
  * [GenreNotes.aiGenres]), each unfolding its genre under them and a
  * rule (#786, [GenresBox], [GenreBody]); under the chips, or in their place with none, why
  * there are no more: "Looking on Last.fm and MusicBrainz…" while the genres are gathered (the
@@ -119,11 +119,13 @@ internal fun GenresContent(
     val track = playing?.withAi(aiGenres(playing, notes.notes))
     val shown = GenresShown.of(track, settings)
     val style = MaterialTheme.typography.bodyLarge
-    // The genre open, kept above the chips and the lines in their place (#772): while a run asks
-    // again, the chips may go and come back, and the genre with them. Closed on each new track; kept
-    // by the genre's identity, so it outlasts labels that land later; dropped once the genres are in
-    // and no row has it any more.
+    // The genre a tap opened, kept above the chips and the lines in their place (#772): while a run
+    // asks again, the chips may go and come back, and the genre with them. Cleared on each new track;
+    // kept by the genre's identity, so it outlasts labels that land later; dropped once the genres
+    // are in and no row has it any more. Until a chip is tapped on the track ([tapped]), the panel
+    // shows the genre it opens on (#875, [GenresBox]).
     val chosen = rememberSaveable(track?.normalized?.lookupKey) { mutableStateOf<String?>(null) }
+    val tapped = rememberSaveable(track?.normalized?.lookupKey) { mutableStateOf(false) }
     val gone =
         track != null &&
             track.gathered &&
@@ -131,7 +133,11 @@ internal fun GenresContent(
             chosen.value?.let { !track.genres.has(it) } == true
     SideEffect { if (gone) chosen.value = null }
     if (track != null && !track.genres.isEmpty) {
-        if (everyGenre) EveryGenre(track, notes, search, toClose) else GenresBox(track, notes, chosen, search)
+        if (everyGenre) {
+            EveryGenre(track, notes, search, toClose)
+        } else {
+            GenresBox(track, notes, Choice(chosen, tapped), search)
+        }
     }
     shown.off?.let { target ->
         Text(stringResource(R.string.home_genres_off), style = style)
@@ -237,27 +243,53 @@ internal fun labelsOff(settings: Settings?): Boolean =
     settings != null && LabelSource.entries.none { settings.givesLabels(it) }
 
 /**
- * In *Genres*' panel (#772): the chips, and under them the genre chosen ([choice]), if any, unfolded
- * under a rule, with no heading or *Close* of its own (#786, [GenreBody]): another chip replaces it,
- * and a second tap on the same chip folds it (a screen reader reads that chip as selected, its action
- * "fold"); the chips stay. A tap leaves the focus on its chip. A genre that goes for another reason
- * (a new track, or labels that no longer have it) while the focus is in it hands the focus to the
- * chip tapped ([FocusHandoff], #629), or, when it is gone with the old track, to the first chip, as
- * does *Retry* under its failed definition as it gives way to the loading line; while a new track's
- * genres are still being gathered there is no chip, and nothing to hand the focus to. Its definition's
- * *Search with AI* comes from [search].
+ * The genre a tap on a chip chose in *Genres*' panel ([chosen], null when the tap folded it), and
+ * whether a chip was tapped on the track ([tapped]): until one is, the panel shows the genre it
+ * opens on (#875).
+ */
+internal class Choice(
+    val chosen: MutableState<String?>,
+    val tapped: MutableState<Boolean>,
+)
+
+/**
+ * In *Genres*' panel (#772): the chips ([TrackGenres.chips], #875), and under them the genre open,
+ * if any, unfolded under a rule, with no heading or *Close* of its own (#786, [GenreBody]). Until a
+ * chip is tapped on the track ([choice]), the genre open is the one the panel opens on
+ * ([TrackGenres.opening]: the first backed, else the first weak, never the AI's), its chip
+ * selected, as after a tap: when the panel opens, when a new track's genres come while it is open,
+ * and, until a tap, as the track's labels land, following the first backed genre. Then the chip
+ * tapped: another chip replaces it, and a second tap on the same chip folds it (a screen reader
+ * reads that chip as selected, its action "fold"); the chips stay. A tap leaves the focus on its
+ * chip; the automatic choice moves no focus. A genre that goes or is replaced for another reason (a
+ * new track, labels that no longer have it, or the automatic choice moving on) while the focus is in
+ * it hands the focus to the chip tapped ([FocusHandoff], #629), or, with none tapped or when it is
+ * gone with the old track, to the first chip, as does *Retry* under its failed definition as it
+ * gives way to the loading line; while a new track's genres are still being gathered there is no
+ * chip, and nothing to hand the focus to. Its definition's *Search with AI* comes from [search].
  */
 @Composable
 private fun GenresBox(
     track: TrackState,
     notes: PanelNotes,
-    choice: MutableState<String?>,
+    choice: Choice,
     search: PanelSearch,
 ) {
+    var chosen by choice.chosen
+    var touched by choice.tapped
+    val order = rememberGenreOrder()
+    val labels = track.genres.chips(order)
     // [GenresContent]'s: a genre no row has (yet, or any more) shows no panel.
-    var chosen by choice
-    val open = chosen?.takeIf { track.genres.has(it) }
-    val labels = track.genres.folded
+    val open =
+        if (touched) {
+            chosen?.takeIf { track.genres.has(it) }
+        } else {
+            track.genres
+                .opening(order)
+                ?.label
+                ?.genre
+                ?.identity
+        }
     val handoff = rememberFocusHandoff()
     // A requester per chip shown, by its tag, and the tag of the chip last tapped: plain, read only
     // by the moves.
@@ -271,12 +303,12 @@ private fun GenresBox(
     }
     // Whether the input focus is in the panel, as last told: plain, read as the panel goes.
     val inside = remember { BooleanArray(1) }
-    val before = remember { BooleanArray(1).also { it[0] = open != null } }
-    // Gone by other than a tap on its chip while the focus was in it: back to the chip, or a
-    // keyboard's focus would fall to the top of the screen. Read before the genre goes.
-    val handBack = open == null && before[0] && inside[0]
+    val before = remember { arrayOfNulls<String>(1).also { it[0] = open } }
+    // Gone or replaced by other than a tap on a chip while the focus was in it: back to the chip, or
+    // a keyboard's focus would fall to the top of the screen. Read before the genre goes.
+    val handBack = open != before[0] && before[0] != null && inside[0]
     SideEffect {
-        before[0] = open != null
+        before[0] = open
         // No panel, no focus in it: a panel that goes may not be told it lost the focus.
         if (open == null) inside[0] = false
         if (handBack) back()?.let(handoff::moveTo)
@@ -288,6 +320,7 @@ private fun GenresBox(
             tapped[0] = tagOf(GENRE_PREFIX, label)
             // Unfolded, replaced or folded; the focus stays on the chip.
             chosen = if (genre == open) null else genre
+            touched = true
         }
         // The pages the AI's genres came from, when from the web (#801), under the chips they marked.
         if (labels.any { it.label.aiAdded }) for (source in track.genres.aiSources) FromSite(source)
@@ -317,8 +350,9 @@ private fun EveryGenre(
     search: PanelSearch,
     afterRetry: () -> Unit,
 ) {
+    val order = rememberGenreOrder()
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        for (label in track.genres.folded.distinctBy { it.label.genre.identity }) {
+        for (label in track.genres.chips(order)) {
             GenrePanel(track, label.label.genre.identity, notes, search, afterRetry)
         }
     }
@@ -378,7 +412,9 @@ private fun GenreChip(
         val label = placed.label.genre.label
         val model = placed.label.aiModel?.takeIf { placed.label.aiAdded }
         CompositionLocalProvider(LocalContentColor provides content) {
-            if (model == null) {
+            if (placed.weak) {
+                WeakName(label, selected)
+            } else if (model == null) {
                 Text(label, style = MaterialTheme.typography.labelLarge)
             } else {
                 // Added by the AI's genre list (#762): marked AI, read "Blues, from Claude Haiku 5.5".

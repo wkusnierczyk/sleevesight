@@ -160,9 +160,9 @@ class MusicBrainzTagsTest {
         }
 
     @Test
-    fun `one-vote recording tags that agree with nothing give way to the album's in the folded genres`() =
+    fun `one-vote recording tags that agree with nothing are weak chips, beside the artist's and the album's`() =
         runTest {
-            // The case of #799, as the recording lookup answers it, through to the folded genres: a
+            // The case of #799, as the recording lookup answers it, through to the chips (#875): a
             // recording with four one-vote tags that agree with neither the artist nor the album.
             val detail =
                 assertIs<Lookup.Found<MbRecordingDetail>>(
@@ -189,13 +189,12 @@ class MusicBrainzTagsTest {
                     ),
                     listOf("Gordon Lightfoot"),
                 )
-            assertEquals(listOf("Folk"), genres.folded.map { it.label.genre.label })
             assertEquals(
-                GenreLevel.ALBUM,
-                genres.folded
-                    .single()
-                    .row.level,
+                listOf("Blues" to false, "Folk" to false, "Jazz" to true, "Metal" to true, "Reggae" to true) +
+                    listOf("Techno" to true),
+                genres.chips().map { it.label.genre.label to it.weak },
             )
+            assertEquals(GenreLevel.ARTIST, genres.opening()?.row?.level)
         }
 
     private companion object {

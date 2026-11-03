@@ -97,9 +97,9 @@ class MusicBrainzLabels(
  * left out: CC BY-NC-SA 3.0, for genre labels only and never in a prompt. The resolution's
  * recording lookup brings them (`inc=tags`), and MusicBrainz's result carries them
  * (`SourceResult.recordingTags`), kept with it in the retrieval cache. [votes] are each tag's net
- * votes, by tag (#799): a track's label leads the folded genres with at least two
- * ([TrackGenres.folded]); a tag missing from [votes] has no votes known (null), so it leads only
- * when another level has its genre.
+ * votes, by tag (#799): a track's label is backed among the chips with at least two
+ * ([TrackGenres.chips], #875); a tag missing from [votes] has no votes known (null), so it is backed
+ * only when another level has its genre.
  */
 data class RecordingTags(
     val mbid: String,

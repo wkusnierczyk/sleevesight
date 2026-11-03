@@ -70,7 +70,9 @@ import org.robolectric.Shadows.shadowOf
  * leaves the focus on it, from a keyboard or for a screen reader, unfolding, replacing or folding; a
  * genre that goes with a new track, or labels without it, while the focus is in it hands the focus
  * to a chip (#629); so does *Retry* under its failed definition as it gives way to the loading line;
- * nothing moves while merely touched.
+ * nothing moves while merely touched. The genre the panel opens on (#875) moves no focus of itself,
+ * but hands it to a chip when it moves on while the focus is in it. The chips here are track tags
+ * only Last.fm gives, all weak: the panel opens on the first, *Ballad*.
  */
 @RunWith(RobolectricTestRunner::class)
 class GenrePanelFocusScreenTest {
@@ -233,14 +235,14 @@ class GenrePanelFocusScreenTest {
     fun fromAKeyboardTheFocusStaysOnTheChipUnfoldingReplacingAndFolding() =
         show {
             // The second chip, so the focus is not merely back at the first.
-            press(BALLAD)
+            press(FOLK)
             assertEquals(1, count(GENRE_PANEL_TAG))
-            compose.onNodeWithTag(BALLAD).assertIsFocused()
-            press(FOLK)
             compose.onNodeWithTag(FOLK).assertIsSelected().assertIsFocused()
-            press(FOLK)
+            press(BALLAD)
+            compose.onNodeWithTag(BALLAD).assertIsSelected().assertIsFocused()
+            press(BALLAD)
             assertEquals(0, count(GENRE_PANEL_TAG))
-            compose.onNodeWithTag(FOLK).assertIsFocused()
+            compose.onNodeWithTag(BALLAD).assertIsFocused()
         }
 
     @Test
@@ -268,64 +270,94 @@ class GenrePanelFocusScreenTest {
         startScreenReader()
         show(touch = true) {
             val before = sentSoFar()
-            tap(BALLAD)
-            tap(BALLAD)
-            val chip = idOf(BALLAD)
+            tap(FOLK)
+            tap(FOLK)
+            val chip = idOf(FOLK)
             assertTrue("screen reader focus moved to ${movedTo(before)}", movedTo(before).all { it == chip })
         }
     }
 
     @Test
-    fun aNewTrackFoldingTheGenreWithTheFocusInItHandsTheFocusToTheChipTappedIfStillShown() =
+    fun aNewTrackReplacingTheGenreWithTheFocusInItHandsTheFocusToTheChipTappedIfStillShown() =
         show {
-            tap(BALLAD)
+            tap(FOLK)
             focusInGenre()
-            nextTrack("rock", "ballad")
+            // The new track opens on its first genre, *Ballad*.
+            nextTrack("folk", "ballad")
             compose.waitForIdle()
-            assertEquals(0, count(GENRE_PANEL_TAG))
-            compose.onNodeWithTag(BALLAD).assertIsFocused()
+            compose.onNodeWithTag(BALLAD).assertIsSelected()
+            compose.onNodeWithTag(FOLK).assertIsFocused()
         }
 
     @Test
-    fun aNewTrackFoldingTheGenreWithTheFocusInItHandsTheFocusToTheFirstChipWhenTheOneTappedIsGone() =
+    fun aNewTrackReplacingTheGenreWithTheFocusInItHandsTheFocusToTheFirstChipWhenTheOneTappedIsGone() =
         show {
-            tap(BALLAD)
+            tap(FOLK)
             focusInGenre()
             nextTrack("rock", "pop")
             compose.waitForIdle()
-            assertEquals(0, count(GENRE_PANEL_TAG))
-            compose.onNodeWithTag(GENRE_PREFIX + "track:rock").assertIsFocused()
+            assertEquals(1, count(GENRE_PANEL_TAG))
+            compose.onNodeWithTag(GENRE_PREFIX + "track:pop").assertIsSelected().assertIsFocused()
         }
 
     @Test
     fun labelsThatNoLongerHaveTheOpenGenreHandTheFocusToTheFirstChip() =
         show {
-            tap(BALLAD)
+            tap(FOLK)
             focusInGenre()
-            // The same track, its labels replaced (a source landing later) without *Ballad*.
+            // The same track, its labels replaced (a source landing later) without *Folk*: after a
+            // tap, no genre opens of itself.
             current.value = current.value.copy(genres = genres("rock", "pop"))
             compose.waitForIdle()
             assertEquals(0, count(GENRE_PANEL_TAG))
-            compose.onNodeWithTag(GENRE_PREFIX + "track:rock").assertIsFocused()
+            compose.onNodeWithTag(GENRE_PREFIX + "track:pop").assertIsFocused()
         }
 
     @Test
-    fun aNewTrackFoldingTheGenreWithTheFocusElsewhereMovesNothing() =
+    fun aNewTrackOpeningItsGenreWithTheFocusElsewhereMovesNothing() =
         show {
             tap(FOLK)
             compose.runOnIdle { elsewhere.requestFocus() }
             compose.onNodeWithTag(ELSEWHERE_TAG).assertIsFocused()
-            nextTrack("folk", "pop")
+            nextTrack("rock", "pop")
             compose.waitForIdle()
-            assertEquals(0, count(GENRE_PANEL_TAG))
+            assertEquals(1, count(GENRE_PANEL_TAG))
             compose.onNodeWithTag(ELSEWHERE_TAG).assertIsFocused()
+        }
+
+    @Test
+    fun theGenreThePanelOpensOnMovesNoFocusAndNoScreenReader() {
+        startScreenReader()
+        show(touch = true) {
+            compose.onNodeWithTag(BALLAD).assertIsSelected()
+            assertEquals(0, focused())
+            val before = sentSoFar()
+            // A new track, and labels landing on it: each opens a genre of itself.
+            nextTrack("rock", "pop")
+            compose.waitForIdle()
+            current.value = current.value.copy(genres = genres("rock", "pop", "blues"))
+            compose.waitForIdle()
+            compose.onNodeWithTag(GENRE_PREFIX + "track:blues").assertIsSelected()
+            assertEquals(0, focused())
+            assertEquals(emptyList<Int>(), movedTo(before))
+        }
+    }
+
+    @Test
+    fun theOpeningGenreMovingOnAsLabelsLandHandsTheFocusInItToTheFirstChip() =
+        show {
+            focusInGenre()
+            // *Ankle* (written for the test) lands and sorts first: the panel moves on to it.
+            current.value = current.value.copy(genres = genres("folk", "ballad", "ankle"))
+            compose.waitForIdle()
+            compose.onNodeWithTag(GENRE_PREFIX + "track:ankle").assertIsSelected().assertIsFocused()
         }
 
     @Test
     fun retryUnderAFailedDefinitionHandsTheFocusToTheChipAsItGoes() {
         definition.value = DefinitionState.Failed
         show {
-            tap(BALLAD)
+            tap(FOLK)
             val retry =
                 compose.onNode(
                     hasTestTag(RETRY_TAG) and hasAnyAncestor(hasTestTag(GENRE_DEFINITION_FAILED_TAG)),
@@ -335,7 +367,7 @@ class GenrePanelFocusScreenTest {
             retry.performKeyInput { pressKey(Key.Enter) }
             compose.waitForIdle()
             assertEquals(0, count(GENRE_DEFINITION_FAILED_TAG))
-            compose.onNodeWithTag(BALLAD).assertIsFocused()
+            compose.onNodeWithTag(FOLK).assertIsFocused()
         }
     }
 
