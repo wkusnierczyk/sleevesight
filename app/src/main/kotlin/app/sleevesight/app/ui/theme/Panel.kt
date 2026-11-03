@@ -36,6 +36,11 @@ import app.sleevesight.app.R
  * a rule, [content], its items [spacing] apart. [headingFrame] wraps the heading's row, the title
  * and *Close*: in the settings, where a link to the section lands. [modifier] goes on the outside.
  * Tagged [tag] for tests, its heading `<tag>:heading` and its *Close* `<tag>:close`.
+ *
+ * With [subtitle] (the name of the song, the artist or the album, under its kind, #894), it is drawn
+ * under the title, quieter, whole on as many lines as it needs, and read with the title as one
+ * heading; *Close* stays centred on the title's line, not on the two, on the title's baseline.
+ * Without it, the heading is as it always was.
  */
 @Suppress("LongParameterList") // What the panel shows, and where its users hook into it.
 @Composable
@@ -46,6 +51,7 @@ internal fun Panel(
     modifier: Modifier = Modifier,
     closeModifier: Modifier = Modifier,
     spacing: Dp = 10.dp,
+    subtitle: String? = null,
     headingFrame: @Composable (@Composable () -> Unit) -> Unit = { it() },
     content: @Composable ColumnScope.() -> Unit,
 ) {
@@ -62,22 +68,40 @@ internal fun Panel(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         headingFrame {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier =
+            if (subtitle == null) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        modifier =
+                            Modifier
+                                .weight(1f)
+                                .padding(vertical = 10.dp)
+                                .testTag("$tag:heading")
+                                .semantics { heading() },
+                    )
+                    onClose?.let { PanelClose(tag, closeModifier, it) }
+                }
+            } else {
+                Row {
+                    Column(
                         Modifier
                             .weight(1f)
+                            .alignByBaseline()
                             .padding(vertical = 10.dp)
                             .testTag("$tag:heading")
-                            .semantics { heading() },
-                )
-                onClose?.let {
-                    TextButton(onClick = it, modifier = closeModifier.testTag("$tag:close")) {
-                        Text(stringResource(R.string.page_close), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            .semantics(mergeDescendants = true) { heading() },
+                    ) {
+                        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(
+                            subtitle,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.testTag("$tag:subtitle"),
+                        )
                     }
+                    onClose?.let { PanelClose(tag, closeModifier.alignByBaseline(), it) }
                 }
             }
         }
@@ -85,6 +109,18 @@ internal fun Panel(
             PanelRule()
             content()
         }
+    }
+}
+
+// A panel's *Close*, tagged `<tag>:close`, under [modifier] (a focus requester, an alignment).
+@Composable
+private fun PanelClose(
+    tag: String,
+    modifier: Modifier,
+    onClose: () -> Unit,
+) {
+    TextButton(onClick = onClose, modifier = modifier.testTag("$tag:close")) {
+        Text(stringResource(R.string.page_close), color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

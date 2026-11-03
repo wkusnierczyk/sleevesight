@@ -660,7 +660,7 @@ class LayoutPagesTest {
                 app.resources.getQuantityString(R.plurals.home_sources_showing_all, 20, 20),
             )
             back()
-            compose.onNodeWithTag(SOURCES_PAGE_LINK_TAG).performClick()
+            compose.onNodeWithTag(SOURCES_PAGE_LINK_TAG).performScrollTo().performClick()
             compose.waitForIdle()
             compose.onNodeWithTag(FOLD_STATUS_TAG).assertTextEquals(text(R.string.home_sources_showing, Fold.PAGE, 20))
         }
