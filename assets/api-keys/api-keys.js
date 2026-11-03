@@ -385,11 +385,39 @@ function clear() {
 }
 
 // The word boxes: three letters each, lower case, nothing but letters. A space or a comma moves to
-// the next box, as Tab does; Backspace in an empty box goes back. Several words pasted, or typed
-// with a separator on a keyboard that sends no key events (Android's), fill this box and the ones
-// after it.
+// the next box, as Tab does; Backspace in an empty box goes back. Several words pasted fill this box
+// and the ones after it, as do words typed with a separator on a keyboard that sends no key events
+// (Android's).
 function wireBoxes() {
+  const back = (i) => {
+    const previous = boxes[i - 1];
+    previous.focus();
+    previous.setSelectionRange(previous.value.length, previous.value.length);
+  };
   boxes.forEach((box, i) => {
+    // Several words pasted replace the boxes from this one on, rather than joining what the box
+    // already holds.
+    box.addEventListener('paste', (event) => {
+      const words = (event.clipboardData?.getData('text') ?? '').split(/[\s,]+/).map(keep).filter((w) => w !== '');
+      if (words.length < 2) return;
+      event.preventDefault();
+      let j = i;
+      for (const word of words) {
+        if (j >= COUNT) break;
+        boxes[j].value = word;
+        j++;
+      }
+      boxes[Math.min(j, COUNT - 1)].focus();
+      update();
+    });
+    // A keyboard that deletes through input events alone: Backspace in an empty box still goes back.
+    // (A Backspace key event already went back and cancelled this one.)
+    box.addEventListener('beforeinput', (event) => {
+      if (event.inputType === 'deleteContentBackward' && box.value === '' && i > 0) {
+        event.preventDefault();
+        back(i);
+      }
+    });
     box.addEventListener('input', () => {
       const parts = box.value.split(/[\s,]+/);
       if (parts.length > 1) {
@@ -420,9 +448,7 @@ function wireBoxes() {
       if (event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
       if (event.key === 'Backspace' && box.value === '' && i > 0) {
         event.preventDefault();
-        const previous = boxes[i - 1];
-        previous.focus();
-        previous.setSelectionRange(previous.value.length, previous.value.length);
+        back(i);
       } else if (event.key === ' ' || event.key === ',') {
         event.preventDefault();
         if (i < COUNT - 1) boxes[i + 1].focus();
