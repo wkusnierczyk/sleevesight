@@ -60,7 +60,18 @@ internal object SessionDump {
     }
 
     /** [text] in parts short enough for one logcat record each. */
-    fun parts(text: String): List<String> = text.chunked(PART_LENGTH).ifEmpty { listOf("") }
+    fun parts(text: String): List<String> {
+        val parts = mutableListOf<String>()
+        var start = 0
+        while (start < text.length) {
+            var end = minOf(start + PART_LENGTH, text.length)
+            // Never between the two halves of a character outside the BMP (an emoji in a title).
+            if (end < text.length && text[end - 1].isHighSurrogate()) end--
+            parts += text.substring(start, end)
+            start = end
+        }
+        return parts.ifEmpty { listOf("") }
+    }
 
     /**
      * Every key with its value, sorted: a known key read by its type, so no getter of another type
@@ -75,7 +86,7 @@ internal object SessionDump {
                         in LONG_KEYS -> metadata.getLong(key).toString()
                         in BITMAP_KEYS -> metadata.getBitmap(key)?.let { "bitmap ${it.width}x${it.height}" }
                         in RATING_KEYS -> metadata.getRating(key)?.toString()
-                        in TEXT_KEYS -> metadata.getText(key)?.let(::bounded)
+                        in TEXT_KEYS -> metadata.getText(key)?.let(::bounded) ?: unknown(metadata, key)
                         else -> unknown(metadata, key)
                     }
                 }.getOrElse { "not readable: ${it.javaClass.simpleName}" }
@@ -93,7 +104,8 @@ internal object SessionDump {
         queue?.let { items ->
             "size=${items.size} " +
                 items.take(QUEUE_ITEMS).joinToString(prefix = "[", postfix = "]") {
-                    "${it.queueId}:${it.description.mediaId}:${it.description.title?.let(::bounded)}"
+                    "${it.queueId}:${it.description.mediaId}:${it.description.title?.let(::bounded)}" +
+                        ":extras=${describe(it.description.extras)}"
                 }
         } ?: "null"
 
@@ -218,4 +230,4 @@ private fun unknown(
     metadata.getText(key)?.let { "text:${bounded(it)}" }
         ?: metadata.getBitmap(key)?.let { "bitmap ${it.width}x${it.height}" }
         ?: metadata.getRating(key)?.let { "rating:$it" }
-        ?: "long:${metadata.getLong(key)}"
+        ?: metadata.getLong(key).let { if (it == 0L) "long:0 (or not a long)" else "long:$it" }

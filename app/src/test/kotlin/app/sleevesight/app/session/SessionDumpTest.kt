@@ -52,6 +52,8 @@ class SessionDumpTest {
             )
         assertTrue(dump, "com.spotify.ad=long:1" in dump)
         assertTrue(dump, "com.spotify.kind=text:ad" in dump)
+        val zero = SessionDump.describe(MediaMetadata.Builder(metadata()).putLong("com.spotify.zero", 0).build())
+        assertTrue(zero, "com.spotify.zero=long:0 (or not a long)" in zero)
     }
 
     @Test
@@ -81,7 +83,7 @@ class SessionDumpTest {
     @Test
     fun queueShowsItsItemsMediaIds() {
         assertEquals(
-            "size=1 [3:spotify:track:x:Sundown]",
+            "size=1 [3:spotify:track:x:Sundown:extras=null]",
             SessionDump.describe(listOf(queueItem(3, "Sundown", mediaId = "spotify:track:x"))),
         )
         assertEquals("null", SessionDump.describe(null as MediaMetadata?))
@@ -104,6 +106,7 @@ class SessionDumpTest {
         val parts = SessionDump.parts("y".repeat(2500))
         assertEquals(listOf(1000, 1000, 500), parts.map { it.length })
         assertEquals(listOf(""), SessionDump.parts(""))
+        assertEquals(listOf(999, 2), SessionDump.parts("y".repeat(999) + "\uD83C\uDFB5").map { it.length })
     }
 
     // `MediaMetadataCompat.METADATA_KEY_ADVERTISEMENT`: the framework's `MediaMetadata` names no such
