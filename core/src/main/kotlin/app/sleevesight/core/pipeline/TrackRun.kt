@@ -23,6 +23,7 @@ import kotlinx.coroutines.withContext
 import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Duration
+import kotlin.time.Instant
 
 /**
  * What one run is about: the track as the player reports it and normalized, and its settings;
@@ -360,16 +361,7 @@ internal class TrackRun(
     }
 
     // The release the player reports, as the simulator words it (`P` evidence).
-    private fun playerLines(): List<EvidenceDraft> =
-        listOfNotNull(nowPlaying.album?.trim()?.takeIf { it.isNotEmpty() }).map { album ->
-            EvidenceDraft(
-                source = SourceId.PLAYER,
-                scope = Scope.RELEASE,
-                text = "This recording is on the release \"$album\".",
-                url = null,
-                retrievedAt = time.clock.now(),
-            )
-        }
+    private fun playerLines(): List<EvidenceDraft> = playerLines(nowPlaying, time.clock.now())
 
     internal companion object {
         val SOURCE_OFF: SourceState =
@@ -414,3 +406,22 @@ internal class CacheGuard(
             null
         }
 }
+
+/**
+ * The release [nowPlaying]'s player reports, as the simulator words it (`P` evidence), retrieved
+ * [at]: what a run assembles first (`TrackRun`), and what the song's, the artist's and the album's
+ * insights rebuild the run's evidence with (`ItemInsights.ownEvidence`, #522).
+ */
+internal fun playerLines(
+    nowPlaying: NowPlaying,
+    at: Instant,
+): List<EvidenceDraft> =
+    listOfNotNull(nowPlaying.album?.trim()?.takeIf { it.isNotEmpty() }).map { album ->
+        EvidenceDraft(
+            source = SourceId.PLAYER,
+            scope = Scope.RELEASE,
+            text = "This recording is on the release \"$album\".",
+            url = null,
+            retrievedAt = at,
+        )
+    }

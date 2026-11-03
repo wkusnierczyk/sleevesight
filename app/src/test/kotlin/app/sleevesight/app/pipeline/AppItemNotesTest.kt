@@ -96,7 +96,9 @@ class AppItemNotesTest {
                 HomeFixtures.draft(SourceId.WIKIPEDIA, "${playing.title} is a song.").takeIf { songArticle },
                 HomeFixtures.draft(SourceId.WIKIPEDIA, "Gordon Lightfoot was a Canadian singer.", scope = Scope.ARTIST),
             )
-        return HomeFixtures.track(playing, evidence = EvidenceSet.of(drafts, JvmHasher)).copy(
+        // As the run gathered them: each source's lines in its result, and the evidence assembled from them.
+        val sources = drafts.groupBy { it.source }.mapValues { (_, lines) -> HomeFixtures.done(evidence = lines) }
+        return HomeFixtures.track(playing, sources = sources, evidence = EvidenceSet.of(drafts, JvmHasher)).copy(
             resolution =
                 Resolution(
                     recordingMbid = "rec-${playing.title}",
@@ -186,6 +188,67 @@ class AppItemNotesTest {
             gate.complete(Unit)
             advanceUntilIdle()
             assertEquals(0, provider.requests)
+        }
+
+    @Test
+    fun `another AI service selected while the album is gathered makes no call`() =
+        runTest {
+            val notes = notes()
+            val gate = CompletableDeferred<Unit>()
+            gathering = gate
+            notes.write(track(HomeFixtures.sundown), InsightItem.ALBUM)
+            advanceUntilIdle()
+            // Selected before the parts are rebuilt for it: they still carry the service before.
+            settings.value = settings.value?.copy(aiProvider = ProviderId.OPENAI)
+            gate.complete(Unit)
+            advanceUntilIdle()
+            assertEquals(0, provider.requests)
+        }
+
+    @Test
+    fun `clear history while the album is gathered keeps nothing and makes no call`() =
+        runTest {
+            val notes = notes()
+            val gate = CompletableDeferred<Unit>()
+            gathering = gate
+            val first = track(HomeFixtures.sundown)
+            notes.write(first, InsightItem.ALBUM)
+            advanceUntilIdle()
+            notes.forget()
+            gate.complete(Unit)
+            advanceUntilIdle()
+            assertEquals(0, provider.requests)
+            // Nothing it gathered was kept: the album is gathered again when next asked.
+            var lookups = 0
+            gathering = null
+            parts.value =
+                parts.value?.let { made ->
+                    PipelineParts(
+                        made.normalizer,
+                        made.adapters,
+                        made.resolver,
+                        made.hasher,
+                        made.ai,
+                        made.cache,
+                        albums = {
+                            lookups++
+                            AlbumFound(emptyList())
+                        },
+                    )
+                }
+            notes.item(first, InsightItem.ALBUM).first { it !is ItemShown.Gathering }
+            assertEquals(1, lookups)
+        }
+
+    @Test
+    fun `an item the gates refuse goes back to offered, not asking`() =
+        runTest {
+            val notes = notes()
+            open = false
+            val first = track(HomeFixtures.sundown)
+            notes.write(first, InsightItem.SONG, ItemAsk.OPENED)
+            advanceUntilIdle()
+            assertEquals(ItemShown.Offered, notes.item(first, InsightItem.SONG).first())
         }
 
     @Test

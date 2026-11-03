@@ -156,31 +156,52 @@ class ItemInsights(
         (track.sources[SourceId.MUSICBRAINZ] as? SourceState.Done)?.result
 
     /**
+     * The evidence of [track]'s own run under [settings], as the run assembles it: the player's
+     * release line and each source's result, of the sources [settings] switch on now; null before
+     * every source answered. Not [TrackState.evidence], which Home may show from an earlier card, kept
+     * from before, in place of the run's, and which a source switched off since still holds.
+     */
+    fun ownEvidence(
+        track: TrackState,
+        settings: Settings,
+    ): EvidenceSet? {
+        if (!track.gathered || track.evidence == null) return null
+        val results = track.sources.values.mapNotNull { (it as? SourceState.Done)?.result }
+        val drafts = playerLines(track.nowPlaying, clock.now()) + results.flatMap { it.evidence }
+        return EvidenceSet.of(drafts.filter { settings.isEnabled(it.source) }, hasher)
+    }
+
+    /**
      * The evidence [item]'s insight on [track] is written from, under [settings] (its sources'
-     * switches): null while the track's evidence is not in, every source answered, or with no name
-     * for it ([name]). The album's is asked of [albums] (free lookups, kept per album); with none, it
-     * is empty.
+     * switches), from the run's own evidence ([ownEvidence]), each id mapped to the line Home shows
+     * ([TrackState.evidence]) where it is one: null while the track's evidence is not in, every
+     * source answered, or with no name for it ([name]). The album's is asked of [albums] (free
+     * lookups, kept per album); with none, it is empty.
      */
     suspend fun evidence(
         item: InsightItem,
         track: TrackState,
         settings: Settings,
     ): ItemEvidence? {
-        val own = track.evidence?.takeIf { track.gathered && name(item, track) != null }
+        val own = ownEvidence(track, settings)?.takeIf { name(item, track) != null }
+        val shown = track.evidence
         val album = entity(item, track) as? CardEntity.Album
         return when {
-            own == null -> null
-            item == InsightItem.SONG -> songEvidence(own)
-            item == InsightItem.ARTIST -> numbered(artistLines(own, track), own)
+            own == null || shown == null -> null
+            item == InsightItem.SONG -> songEvidence(own, shown)
+            item == InsightItem.ARTIST -> numbered(artistLines(own, track), shown)
             album == null -> null
-            else -> albumEvidence(album, own, settings)
+            else -> albumEvidence(album, shown, settings)
         }
     }
 
-    // The track's [own] evidence less its artist-level lines, each keeping its id.
-    private fun songEvidence(own: EvidenceSet): ItemEvidence {
+    // The run's [own] evidence less its artist-level lines, each keeping its id, mapped to the lines [shown].
+    private fun songEvidence(
+        own: EvidenceSet,
+        shown: EvidenceSet,
+    ): ItemEvidence {
         val song = own.without(hasher) { it.scope == Scope.ARTIST }
-        return ItemEvidence(song, song.ids.associateWith { it })
+        return ItemEvidence(song, matching(song.lines, shown))
     }
 
     // The evidence gathered for [album], by [albums], from the sources [settings] switch on.
@@ -263,7 +284,9 @@ class ItemInsights(
         evidence: ItemEvidence,
         settings: Settings,
     ): CardKey? {
-        val access = ai?.takeIf { settings.writeInsights }
+        // The service the parts were built with, while it is the one selected: a switch to another
+        // waits for the rebuild that brings it.
+        val access = ai?.takeIf { settings.writeInsights && settings.aiProvider == it.provider.id }
         val model = access?.let { settings.model(it.provider.id) }
         val entity = entity(item, track)
         return if (access == null || model == null || entity == null) {

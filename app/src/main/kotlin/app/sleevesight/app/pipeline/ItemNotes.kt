@@ -20,6 +20,7 @@ import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WriteAutomatically
 import app.sleevesight.core.settings.pastKeepHistory
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
@@ -56,8 +57,14 @@ sealed interface ItemShown {
     /** No AI service ready (none switched on, no key, or no model). */
     data object NoService : ItemShown
 
-    /** Nothing written yet: *Write insight* offered under *On demand*, else written once opened. */
+    /** Nothing written, and nothing asked: *Write insight* offered. */
     data object Offered : ItemShown
+
+    /**
+     * Asked for, its call not started yet: its evidence or the cache being read, then the gates; it
+     * goes back to [Offered] when they refuse the call.
+     */
+    data object Asking : ItemShown
 
     /**
      * Asked for, or kept from before: [state] is [InsightState.Writing], [InsightState.Written],
@@ -173,15 +180,14 @@ class AppItemNotes(
         val evidence: ItemEvidence,
     )
 
-    // What an item's evidence is gathered for: the item, the track's evidence, its entity, and the
-    // album's sources as switched.
+    // What an item's evidence is gathered for: the item, the run's own evidence under the switches
+    // now (`ItemInsights.ownEvidence`), its entity, and the sources switched on.
     private data class Gathered(
         val item: InsightItem,
         val lookupKey: String,
         val fingerprint: String,
         val entity: CardEntity?,
-        val musicBrainz: Boolean,
-        val wikipedia: Boolean,
+        val sources: Set<SourceId>,
     )
 
     // The insights shown, by key, oldest first, at most [KEPT].
@@ -195,7 +201,10 @@ class AppItemNotes(
 
     // The keys whose cached insight was looked for, and those being written.
     private val looked: MutableSet<CardKey> = ConcurrentHashMap.newKeySet()
-    private val writing: MutableSet<CardKey> = ConcurrentHashMap.newKeySet()
+    private val writing = MutableStateFlow<Set<CardKey>>(emptySet())
+
+    // The work under way (gathering, reading the cache, writing), cancelled by *Clear history*.
+    private val pending: MutableSet<Job> = ConcurrentHashMap.newKeySet()
 
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun item(
@@ -223,7 +232,7 @@ class AppItemNotes(
         flow {
             val known = gathered[gatheredFor(insights, track, item, now)]
             if (known == null) emit(ItemShown.Gathering)
-            val evidence = known ?: evidenceOf(insights, track, item, now)
+            val evidence = known ?: evidenceOf(insights, track, item, now, forgets)
             if (evidence == null) {
                 emit(ItemShown.Gathering)
                 return@flow
@@ -235,8 +244,8 @@ class AppItemNotes(
             }
             look(insights, key, track, item, evidence)
             emitAll(
-                combine(shown, settings) { entries, latest ->
-                    shownFor(key, evidence, entries[key], latest?.historyLifetime)
+                combine(shown, writing, settings) { entries, asked, latest ->
+                    shownFor(key, evidence, entries[key], latest?.historyLifetime, key in asked)
                 },
             )
         }
@@ -246,8 +255,10 @@ class AppItemNotes(
         evidence: ItemEvidence,
         entry: Entry?,
         lifetime: Duration?,
+        asked: Boolean,
     ): ItemShown =
         when {
+            entry == null && asked -> ItemShown.Asking
             entry == null -> ItemShown.Offered
             expired(entry.writtenAt, lifetime) -> ItemShown.Offered.also { drop(key) }
             // The insight's evidence numbered as when it was written, but mapped to this track's lines:
@@ -263,20 +274,31 @@ class AppItemNotes(
         val made = parts.value
         val now = settings.value?.takeIf { it.writeInsights && ItemInsights.offered(track) }
         if (made == null || now == null) return
-        scope.launch(mark()) {
+        tracked {
+            val work = coroutineContext
             val insights = insightsOf(made)
-            val evidence = evidenceOf(insights, track, item, now)
-            val key = evidence?.let { insights.key(item, track, it, now) }
+            val evidence = evidenceOf(insights, track, item, now, work[Forgets]?.count ?: forgets)
+            // Not after a *Clear history* that came while the evidence was gathered.
+            val key = evidence?.let { insights.key(item, track, it, now) }?.takeIf { current(work) }
             if (evidence != null && key != null && claim(key, ask)) {
                 val job = coroutineContext[Job]
                 job?.let { jobs[key] = it }
                 try {
-                    write(insights, key, Asked(item, track, evidence, ask))
+                    write(insights, key, Asked(item, track, evidence, ask, work))
                 } finally {
                     jobs.remove(key, job)
                 }
             }
         }
+    }
+
+    // [block] in [scope], marked with the epoch and the count of *Clear history*, held in [pending]
+    // until it ends, so a clear cancels it.
+    private fun tracked(block: suspend CoroutineScope.() -> Unit) {
+        val job = scope.launch(mark(), start = CoroutineStart.LAZY, block = block)
+        pending += job
+        job.invokeOnCompletion { pending -= job }
+        job.start()
     }
 
     override fun stop(
@@ -303,7 +325,10 @@ class AppItemNotes(
         val same =
             now != null && made != null && insightsOf(made).key(asked.item, asked.track, asked.evidence, now) == key
         val mode = asked.ask == ItemAsk.TAP || now?.writeAutomatically != WriteAutomatically.NEVER
-        return same && mode && gate(asked.ask)
+        // The service selected now, the one the parts carry and the card's (`ItemInsights.key` asks
+        // the first two): a switch waits for the rebuild that brings the new service.
+        val service = now?.aiProvider == key.provider && made?.ai?.provider?.id == key.provider
+        return same && mode && service && current(asked.work) && gate(asked.ask)
     }
 
     // An item asked for: what it is, of which track, from what evidence, and how it was asked.
@@ -312,25 +337,31 @@ class AppItemNotes(
         val track: TrackState,
         val evidence: ItemEvidence,
         val ask: ItemAsk,
+        val work: CoroutineContext,
     )
 
     // What a Stop cancels an item's call with, told apart from the scope's own cancellation.
     private class StopAsked : CancellationException("stopped")
 
-    // The evidence for [item] on [track] under [now]: kept in memory, or gathered (off the main thread).
+    // The evidence for [item] on [track] under [now]: kept in memory, or gathered (off the main
+    // thread), and kept only when no *Clear history* came since [since], the count of them when the
+    // work began.
     private suspend fun evidenceOf(
         insights: ItemInsights,
         track: TrackState,
         item: InsightItem,
         now: Settings,
+        since: Long,
     ): ItemEvidence? {
         val at = gatheredFor(insights, track, item, now)
         return gathered[at] ?: withContext(io) { insights.evidence(item, track, now) }?.also { evidence ->
             // A source that could not be asked is asked again the next time the item is opened.
             if (!evidence.unreachable) {
-                synchronized(gathered) {
-                    if (gathered.size >= KEPT) gathered.keys.firstOrNull()?.let(gathered::remove)
-                    gathered[at] = evidence
+                synchronized(lock) {
+                    if (since == forgets) {
+                        if (gathered.size >= KEPT) gathered.keys.firstOrNull()?.let(gathered::remove)
+                        gathered[at] = evidence
+                    }
                 }
             }
         }
@@ -344,10 +375,9 @@ class AppItemNotes(
     ) = Gathered(
         item,
         track.normalized.lookupKey,
-        track.evidence?.fingerprint.orEmpty(),
+        insights.ownEvidence(track, now)?.fingerprint.orEmpty(),
         insights.entity(item, track),
-        now.isEnabled(SourceId.MUSICBRAINZ),
-        now.isEnabled(SourceId.WIKIPEDIA),
+        SourceId.entries.filter(now::isEnabled).toSet(),
     )
 
     // [key]'s insight, kept meanwhile (another track of the artist or album wrote it), with no call,
@@ -421,7 +451,7 @@ class AppItemNotes(
             end(AiOutcome.FAILED, reason)
             show(InsightState.Failed(reason), clock.now())
         } finally {
-            writing.remove(key)
+            writing.update { it - key }
         }
     }
 
@@ -443,9 +473,9 @@ class AppItemNotes(
         evidence: ItemEvidence,
     ) {
         if (key in shown.value || !looked.add(key)) return
-        scope.launch(mark()) {
+        tracked {
             val work = coroutineContext
-            val kept = insights.kept(key, evidence)?.takeIf { !expired(it.writtenAt) } ?: return@launch
+            val kept = insights.kept(key, evidence)?.takeIf { !expired(it.writtenAt) } ?: return@tracked
             val entry = Entry(kept.state, kept.writtenAt ?: clock.now(), evidence)
             publish(work) {
                 var added = false
@@ -474,7 +504,16 @@ class AppItemNotes(
     private fun claim(
         key: CardKey,
         ask: ItemAsk,
-    ): Boolean = open(key, ask) && writing.add(key)
+    ): Boolean {
+        var added = false
+        if (open(key, ask)) {
+            writing.update { asked ->
+                added = key !in asked
+                asked + key
+            }
+        }
+        return added
+    }
 
     // Whether [key]'s insight may be asked for: not shown, or past *Keep history for*; on a tap, also
     // one that failed or was stopped, which nothing asks again by itself.
@@ -499,6 +538,9 @@ class AppItemNotes(
             gathered.clear()
             looked.clear()
         }
+        // What was gathering, reading or writing goes: nothing it found is kept or shown, and no call
+        // it would have made is made.
+        pending.toList().forEach { it.cancel() }
     }
 
     // Guards each insight shown against *Clear history* ([forget]).

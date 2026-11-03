@@ -85,6 +85,9 @@ class ItemRowsScreenTest {
         val asks = mutableListOf<ItemAsk>()
         val stops = mutableListOf<InsightItem>()
 
+        // Whether a write is taken up (asking, until its call), or refused by the gates (offered again).
+        var takenUp = true
+
         override fun write(
             track: TrackState,
             item: InsightItem,
@@ -92,6 +95,7 @@ class ItemRowsScreenTest {
         ) {
             writes += item
             asks += ask
+            if (takenUp) shown.value = shown.value + (item to ItemShown.Asking)
         }
 
         override fun stop(
@@ -260,6 +264,20 @@ class ItemRowsScreenTest {
             compose.waitForIdle()
             assertEquals(InsightItem.entries.toSet(), notes.writes.toSet())
             assertEquals(setOf(ItemAsk.BY_ITSELF), notes.asks.toSet())
+        }
+    }
+
+    @Test
+    fun anAutomaticWriteTheGatesRefuseOffersWriteInsightRatherThanWriting() {
+        notes.takenUp = false
+        show(state(automatic)) {
+            row(InsightItem.ARTIST).performScrollTo().performClick()
+            compose.waitForIdle()
+            assertEquals(listOf(InsightItem.ARTIST), notes.writes)
+            compose.onAllNodesWithTag(ITEM_WRITING_TAG, useUnmergedTree = true).assertCountEquals(0)
+            compose.onNodeWithText(text(R.string.home_item_tap_write)).assertExists()
+            compose.onNodeWithTag(itemWriteTag(InsightItem.ARTIST)).performScrollTo().performClick()
+            assertEquals(listOf(ItemAsk.OPENED, ItemAsk.TAP), notes.asks)
         }
     }
 

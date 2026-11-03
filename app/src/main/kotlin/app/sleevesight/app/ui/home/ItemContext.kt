@@ -15,6 +15,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.ItemAsk
 import app.sleevesight.app.pipeline.ItemNotes
@@ -90,11 +92,7 @@ internal fun ItemContent(
     }
     val shown by remember(track, item, context.notes) { context.notes.item(track, item) }
         .collectAsState(ItemShown.Gathering)
-    val atOnce = context.writesAtOnce(tapped)
-    val offered = ItemInsights.offered(track)
-    LaunchedEffect(track.normalized.lookupKey, track.evidence?.fingerprint, item, atOnce, offered) {
-        if (atOnce && offered) context.notes.write(track, item, if (tapped) ItemAsk.OPENED else ItemAsk.BY_ITSELF)
-    }
+    WritesAtOnce(item, track, context, tapped)
     val unavailable = context.unavailable
     val state = (shown as? ItemShown.Shown)?.state
     if (unavailable != null && state !is InsightState.Written && state !is InsightState.Writing) {
@@ -105,14 +103,40 @@ internal fun ItemContent(
         ItemShown.Gathering -> Gathering()
         ItemShown.Off -> ItemQuiet(stringResource(R.string.home_insight_off))
         ItemShown.NoService -> ItemQuiet(stringResource(R.string.home_insight_unavailable))
-        ItemShown.Offered ->
-            if (atOnce) {
-                Writing()
-            } else {
-                ItemQuiet(stringResource(R.string.home_item_tap_write))
-                WriteButton(item) { context.notes.write(track, item, ItemAsk.TAP) }
-            }
+        // Nothing written and nothing under way: *Write insight*, whatever the mode, so an automatic
+        // write the gates refused never shows as writing.
+        ItemShown.Offered -> {
+            ItemQuiet(stringResource(R.string.home_item_tap_write))
+            WriteButton(item) { context.notes.write(track, item, ItemAsk.TAP) }
+        }
+
+        ItemShown.Asking -> WritingItem(item) { context.notes.stop(track, item) }
         is ItemShown.Shown -> Shown(item, now, track, context)
+    }
+}
+
+/**
+ * Under an automatic mode, [item]'s insight on [track] asked for at once ([ItemContext.writesAtOnce]):
+ * as an opening when [tapped], else by itself; and asked again each time the app comes back on
+ * screen, so a call the gates refused while it was away (no lookups in the background) is made once
+ * they open.
+ */
+@Composable
+private fun WritesAtOnce(
+    item: InsightItem,
+    track: TrackState,
+    context: ItemContext,
+    tapped: Boolean,
+) {
+    val atOnce = context.writesAtOnce(tapped)
+    val offered = ItemInsights.offered(track)
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val resumed by lifecycle.currentStateFlow.collectAsState()
+    val onScreen = resumed.isAtLeast(Lifecycle.State.RESUMED)
+    LaunchedEffect(track.normalized.lookupKey, track.evidence?.fingerprint, item, atOnce, offered, onScreen) {
+        if (atOnce && offered && onScreen) {
+            context.notes.write(track, item, if (tapped) ItemAsk.OPENED else ItemAsk.BY_ITSELF)
+        }
     }
 }
 

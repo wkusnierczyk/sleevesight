@@ -13,6 +13,7 @@ import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.resolution.NameMatcher
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.settings.SourceSwitch
 import app.sleevesight.core.sources.AlbumFound
 import app.sleevesight.core.sources.AlbumLookup
 import app.sleevesight.core.sources.AlbumQuery
@@ -85,7 +86,8 @@ class ItemInsightsTest {
                     SourceId.WIKIPEDIA to SourceState.Done(SourceResult(Outcome.SongArticle, drafts, ZERO), false),
                 ),
             resolution = resolution,
-            evidence = EvidenceSet.of(drafts, JvmHasher),
+            // As the run assembles it: the player's release line, then the sources'.
+            evidence = EvidenceSet.of(playerLines(playing, RETRIEVED) + drafts, JvmHasher),
         )
     }
 
@@ -182,8 +184,8 @@ class ItemInsightsTest {
         runTest {
             val track = track("Sundown", listOf(line(SourceId.MUSICBRAINZ, "Sundown was produced by Lenny Waronker.")))
             val evidence = checkNotNull(items.evidence(InsightItem.SONG, track, settings))
-            assertEquals(listOf("MB1"), evidence.evidence.ids)
-            assertEquals(mapOf("MB1" to "MB1"), evidence.trackIds)
+            assertEquals(listOf("MB1", "P1"), evidence.evidence.ids)
+            assertEquals(mapOf("MB1" to "MB1", "P1" to "P1"), evidence.trackIds)
             val key = checkNotNull(items.key(InsightItem.SONG, track, evidence, settings))
             assertEquals(CardEntity.Track(track.normalized, 200.seconds), key.entity)
             assertEquals(ItemPrompt.VERSION, key.promptVersion)
@@ -269,6 +271,42 @@ class ItemInsightsTest {
             )
             assertEquals(3, revising.requests.size)
             assertTrue(cache.cards.isEmpty())
+        }
+
+    @Test
+    fun `an item is written from the run's own evidence under the switches now, not an earlier card's`() =
+        runTest {
+            val run = track("Sundown", listOf(line(SourceId.MUSICBRAINZ, "Sundown was produced by Lenny Waronker.")))
+            // As Home shows the track beside an earlier card (`PipelineHost.withCard`): its evidence,
+            // with a line the run does not have.
+            val card =
+                EvidenceSet.of(
+                    listOf(line(SourceId.WIKIPEDIA, "An old line about Sundown.")) + ARTIST_LINES,
+                    JvmHasher,
+                )
+            val shown = run.copy(evidence = card)
+            // Wikipedia, which the card cited, switched off since.
+            val off = settings.copy(enabledSources = settings.enabledSources - SourceSwitch.WIKIPEDIA)
+
+            val song = checkNotNull(items.evidence(InsightItem.SONG, shown, off))
+            assertEquals(
+                listOf("Sundown was produced by Lenny Waronker.", "This recording is on the release \"Sundown\"."),
+                song.evidence.lines.map { it.text },
+            )
+            val artist = checkNotNull(items.evidence(InsightItem.ARTIST, shown, off))
+            assertTrue(artist.evidence.lines.none { it.source == SourceId.WIKIPEDIA })
+            val key = checkNotNull(items.key(InsightItem.SONG, shown, song, off))
+            items.write(key, InsightItem.SONG, shown, song) { _, _ -> }
+            assertTrue("An old line" !in provider.requests.single().prompt)
+            assertTrue("Gordon Lightfoot was a Canadian" !in provider.requests.single().prompt)
+        }
+
+    @Test
+    fun `no key while the selected AI service is not the one the parts were built with`() =
+        runTest {
+            val track = track("Sundown", listOf(line(SourceId.MUSICBRAINZ, "Sundown is a song.")))
+            val evidence = checkNotNull(items.evidence(InsightItem.SONG, track, settings))
+            assertNull(items.key(InsightItem.SONG, track, evidence, settings.copy(aiProvider = ProviderId.OPENAI)))
         }
 
     @Test
