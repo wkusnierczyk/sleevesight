@@ -49,19 +49,14 @@ internal sealed interface Finding {
 
     /** Web search's pages. */
     data object Pages : Finding
-
-    /**
-     * Only the album's own lines (#522), its track's lookup having found nothing: said as the
-     * player's release line is (*Gave the release*), rather than *Nothing found* above lines it lists.
-     */
-    data object Release : Finding
 }
 
 /**
- * The order of a finding's list (#768), the track first: the track, the original song, the artist.
- * *The album* goes between the original song and the artist once a scope for it exists (#522).
+ * The order of a finding's list (#768), the track first: the track, the original song, the album
+ * (#522: the album's own lines, of [Scope.RELEASE], which a source gives only for the album's insight;
+ * the player's release line is no source's finding), the artist.
  */
-internal val FINDING_ORDER: List<Scope> = listOf(Scope.SONG, Scope.ORIGINAL_SONG, Scope.ARTIST)
+internal val FINDING_ORDER: List<Scope> = listOf(Scope.SONG, Scope.ORIGINAL_SONG, Scope.RELEASE, Scope.ARTIST)
 
 /**
  * What [chip]'s source found (#768), from the scopes of its own lines in [lines] (those of the
@@ -69,9 +64,8 @@ internal val FINDING_ORDER: List<Scope> = listOf(Scope.SONG, Scope.ORIGINAL_SONG
  * outcome (the song's article, the artist's, the original song's), the scopes of [FINDING_ORDER]
  * its lines have, in that order; web search's, [Finding.Pages], with its lines shown or not; with no
  * line of those scopes (its lines not in the evidence shown), the outcome's own scope alone. A lookup
- * that found nothing, of a source that lists the album's own lines (#522: of scope [Scope.RELEASE],
- * which only the player's line has otherwise), [Finding.Release]. Null for any other status, which
- * says what it says ([statusText]).
+ * that found nothing, of a source that lists the album's own lines (#522), found the album. Null for
+ * any other status, which says what it says ([statusText]).
  */
 internal fun finding(
     chip: SourceChip,
@@ -83,7 +77,7 @@ internal fun finding(
     val album = chip.source != SourceId.PLAYER && own.any { it.scope == Scope.RELEASE }
     val alone = outcome?.let(FOUND_ALONE::get)
     return when {
-        nothing && album -> Finding.Release
+        nothing && album -> Finding.Of(listOf(Scope.RELEASE))
         alone == null -> null
         chip.source == SourceId.WEB -> Finding.Pages
         else -> {

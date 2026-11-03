@@ -56,18 +56,24 @@ class SourceFindingTest {
         said(chip(), lines(*scopes.map { line(SourceId.MUSICBRAINZ, it) }.toTypedArray()))
 
     @Test
-    fun aSourceThatListsOnlyTheAlbumsLinesGaveTheReleaseRatherThanNothingFound() {
-        // The track's Wikipedia lookup found nothing; the album's insight found its article (#522).
-        val album = lines(line(SourceId.WIKIPEDIA, Scope.RELEASE))
-        assertEquals(app.getString(R.string.home_source_release), said(chip(SourceId.WIKIPEDIA, Outcome.None), album))
-        // A found track keeps saying what the track's lines found, the album's lines beside them.
-        val both = lines(line(SourceId.WIKIPEDIA, Scope.SONG), line(SourceId.WIKIPEDIA, Scope.RELEASE))
-        assertEquals("Found the track", said(chip(SourceId.WIKIPEDIA, Outcome.SongArticle), both))
-        // Nothing found with no album line stays so.
-        assertEquals(
-            app.getString(R.string.home_source_none),
-            said(chip(SourceId.WIKIPEDIA, Outcome.None), emptyList()),
-        )
+    fun theAlbumsOwnLinesAreFoundAsTheAlbumBetweenTheOriginalSongAndTheArtist() {
+        // The album's insight opened (#522): its lines, of the release, among each source's own.
+        val mb = lines(line(SourceId.MUSICBRAINZ, Scope.SONG), line(SourceId.MUSICBRAINZ, Scope.RELEASE))
+        assertEquals("Found the track and the album", said(chip(SourceId.MUSICBRAINZ), mb))
+        val w =
+            lines(
+                line(SourceId.WIKIPEDIA, Scope.SONG),
+                line(SourceId.WIKIPEDIA, Scope.ARTIST),
+                line(SourceId.WIKIPEDIA, Scope.RELEASE),
+            )
+        assertEquals("Found the track, the album and the artist", said(chip(SourceId.WIKIPEDIA), w))
+        // The track's own lookup found nothing; the album's lines alone.
+        val wd = lines(line(SourceId.WIKIDATA, Scope.RELEASE))
+        assertEquals("Found the album", said(chip(SourceId.WIKIDATA, Outcome.None), wd))
+        // With no album lines (its insight not opened), the rows stay as they were.
+        val lastFm = lines(line(SourceId.LASTFM, Scope.ARTIST))
+        assertEquals("Found the artist", said(chip(SourceId.LASTFM, Outcome.ArtistArticle), lastFm))
+        assertEquals(app.getString(R.string.home_source_none), said(chip(SourceId.WIKIDATA, Outcome.None), emptyList()))
     }
 
     @Test
@@ -97,7 +103,7 @@ class SourceFindingTest {
             "Found the track, the original song and the artist",
             found(Scope.ARTIST, Scope.ORIGINAL_SONG, Scope.ARTIST, Scope.SONG, Scope.SONG),
         )
-        assertEquals(listOf(Scope.SONG, Scope.ORIGINAL_SONG, Scope.ARTIST), FINDING_ORDER)
+        assertEquals(listOf(Scope.SONG, Scope.ORIGINAL_SONG, Scope.RELEASE, Scope.ARTIST), FINDING_ORDER)
     }
 
     @Test
@@ -134,8 +140,8 @@ class SourceFindingTest {
         assertEquals("Found the track", said(chip(outcome = Outcome.SongArticle), none))
         assertEquals("Found the artist", said(chip(outcome = Outcome.ArtistArticle), none))
         assertEquals("Found the original song", said(chip(outcome = Outcome.OriginalSong), none))
-        // Lines of other sources, or of scopes not in the list (the release, the web), are none.
-        val others = lines(line(SourceId.WIKIPEDIA, Scope.ARTIST), line(SourceId.MUSICBRAINZ, Scope.RELEASE))
+        // Lines of other sources, or of a scope not in the list (the web), are none.
+        val others = lines(line(SourceId.WIKIPEDIA, Scope.ARTIST), line(SourceId.MUSICBRAINZ, Scope.WEB))
         assertEquals("Found the track", said(chip(), others))
         // Web search with none of its lines shown: still its pages, as it finds nothing else.
         assertEquals("Found pages about the track", said(chip(SourceId.WEB), others))

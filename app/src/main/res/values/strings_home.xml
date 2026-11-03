@@ -483,10 +483,12 @@
     <string name="home_sources_title">Sources</string>
     <!-- What a source found, under its name in the Sources table; "(kept)" and "Match rejected" only under Show grounding details. -->
     <string name="home_source_pending">Looking…</string>
-    <!-- What a source found (#768): "Found" and the list of what its own lines are about, in this order: the track, the original song, the artist; e.g. "Found the track, the original song and the artist". -->
+    <!-- What a source found (#768): "Found" and the list of what its own lines are about, in this order: the track, the original song, the album, the artist; e.g. "Found the track, the original song and the artist". -->
     <string name="home_source_found">Found %1$s</string>
     <string name="home_source_finding_track">the track</string>
     <string name="home_source_finding_original_song">the original song</string>
+    <!-- The album's own lines, found for the album's insight (#522): "Found the track, the album and the artist". -->
+    <string name="home_source_finding_album">the album</string>
     <string name="home_source_finding_artist">the artist</string>
     <!-- The list's joins: the last item after the others ("the track and the artist"), and the others before it, one after another ("the track, the original song"). -->
     <string name="home_source_finding_and">%1$s and %2$s</string>
