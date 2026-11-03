@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import app.sleevesight.app.pipeline.AiSearchFeed
 import app.sleevesight.app.pipeline.CallId
 import app.sleevesight.app.pipeline.GenreNotes
+import app.sleevesight.app.pipeline.ItemNotes
 import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.app.pipeline.UnavailableModel
 import app.sleevesight.app.report.MailHandoff
@@ -33,6 +34,7 @@ import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Normalizer
+import app.sleevesight.core.pipeline.InsightItem
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.RunKey
 import app.sleevesight.core.pipeline.TrackState
@@ -78,6 +80,7 @@ import kotlinx.coroutines.flow.StateFlow
  *   again (`PipelineHost.askAgain`), free.
  * @property aiSearches *Search with AI* under the empty state of *Dates*, *Genres* and *Lyrics*
  *   (#773): each panel's search, a paid call, and its *Stop*.
+ * @property itemNotes the song's, the artist's and the album's insights under *Key insights* (#522).
  */
 @Suppress("LongParameterList") // What one screen reads, each published on its own.
 class HomeFeed(
@@ -104,6 +107,7 @@ class HomeFeed(
     val readAloud: ReadAloud? = null,
     val askAgain: (RunKey, SourceId, NowPlaying) -> Unit = { _, _, _ -> },
     val aiSearches: AiSearchFeed = AiSearchFeed.None,
+    val itemNotes: ItemNotes = ItemNotes.None,
 )
 
 /**
@@ -178,6 +182,7 @@ private fun HomeFeed.actions(
     readAloud = readAloud,
     askAgain = askAgain,
     aiSearches = aiSearches,
+    itemNotes = itemNotes,
 )
 
 /**
@@ -210,7 +215,8 @@ internal class NowPlayingState(
  * to [dismissals] (*Dismiss*, and its *Undo*; #759). [readAloud] reads the insight, or a genre's
  * reason, aloud (#325); null shows no *Read aloud*. [askAgain] takes a tap on *Retry* beside a
  * source that could not be reached (#724), as [write] takes one on Write. [aiSearches] gives *Search
- * with AI* under the empty *Dates*, *Genres* and *Lyrics* (#773).
+ * with AI* under the empty *Dates*, *Genres* and *Lyrics* (#773). [itemNotes] gives the song's, the
+ * artist's and the album's insights under *Key insights* (#522).
  */
 @Suppress("LongParameterList") // Each of the screen's ways out, on its own.
 internal class NowPlayingActions(
@@ -233,19 +239,20 @@ internal class NowPlayingActions(
     val readAloud: ReadAloud? = null,
     val askAgain: (RunKey, SourceId, NowPlaying) -> Unit = { _, _, _ -> },
     val aiSearches: AiSearchFeed = AiSearchFeed.None,
+    val itemNotes: ItemNotes = ItemNotes.None,
 )
 
 /**
  * The home screen's content, top to bottom (design, *Home screen*): the player row, the art with
  * the playback position, the key data, the *Dates*, *Genres* and *Lyrics* buttons or panels (#724,
- * #772, #728), *Key insights* and *Sources*,
- * straight on Home's background, their accents in the art's colours (#609). Nothing playing in a
+ * #772, #728), *Key insights*, the song's, the artist's and the album's insights (#522, [ItemRows]) and
+ * *Sources*, straight on Home's background, their accents in the art's colours (#609). Nothing playing in a
  * followed player shows the players to start and the guide to Home ([IdleHome], #627). A track the
  * pipeline has not reached yet shows at once, its evidence and insight to come.
  *
  * *Sounds like* waits for its card (Phase 2: `TrackState` has no similar artists yet), and so do
- * the song, artist and album insights (#522, Phase 1.5), and the rest of the detail content, the
- * transport controls and the handoff to the player (design, *Phase 2*).
+ * the rest of the detail content, the transport controls and the handoff to the player (design,
+ * *Phase 2*).
  *
  * *Layout* (#447): under *Expandable boxes*, the default, *Sources*' chip opens its panel in place
  * (#623), and a citation unfolds *Sources* to its line. Under *Separate pages* each opens on a page
@@ -253,7 +260,9 @@ internal class NowPlayingActions(
  * at its line; *Genres*, the genres' page, every genre in a panel of its own (#772). The line under
  * the album ([InPlaceLine]) opens *Dates* and *Lyrics* in place under either (#724, #728), and
  * under *Expandable boxes* *Genres* too, a genre opening in its box inside *Genres*' panel.
- * The insight shows in full on Home either way.
+ * The song's, the artist's and the album's rows unfold in place under *Expandable boxes*, several at
+ * once, starting as *Song, Artist and Album on a new track* says, and open a page each under
+ * *Separate pages*. The insight shows in full on Home either way.
  */
 @Composable
 internal fun NowPlayingContent(
@@ -267,6 +276,7 @@ internal fun NowPlayingContent(
     reporting?.let { ReportOpen(it, actions.mail) { reporting = null } }
     // Above the return, so the fold and the panels open under the album outlive a while with nothing playing.
     val foldMemory = rememberFoldMemory()
+    val itemMemory = rememberItemFoldMemory()
     val inPlace = rememberInPlaceMemory()
     if (playing == null) {
         IdleHome(state.settings, state.guideHidden, actions)
@@ -318,6 +328,7 @@ internal fun NowPlayingContent(
                 settings?.let { writingChoice(it, actions) },
                 insightReading(actions.readAloud, track),
             )
+            HomeItems(state, shown, header, itemMemory, cite, actions) { t, w, i -> reporting = Reported(t, w, i) }
             if (settings != null) SourcesItem(pages, shown, focus, fold, actions)
         }
     }
@@ -394,22 +405,32 @@ private fun writingChoice(
     onDetails = { actions.openSettingsAt(SettingsTarget.reactive) },
 )
 
-// What a report is of: the insight, and the track it was written for.
-private class Reported(
+/**
+ * What a report is of: the insight, and the track it was written for; for the song's, the artist's
+ * or the album's insight (#522), the [item], and the track with the evidence it was written from.
+ */
+internal class Reported(
     val track: TrackState,
     val insight: InsightState.Written,
+    val item: InsightItem? = null,
 )
 
-// The report's dialog, handed to [mail], or to the phone's own mail apps when null.
+/** The report's dialog, handed to [mail], or to the phone's own mail apps when null. */
 @Composable
-private fun ReportOpen(
+internal fun ReportOpen(
     reported: Reported,
     mail: MailHandoff?,
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
     val handoff = mail ?: remember(context) { PhoneMail(context) }
-    InsightReportDialog(reported.track, reported.insight, handoff, onDismiss)
+    InsightReportDialog(
+        reported.track,
+        reported.insight,
+        handoff,
+        about = reported.item?.kind?.key,
+        onDismiss = onDismiss,
+    )
 }
 
 // A track the pipeline has not reached yet.

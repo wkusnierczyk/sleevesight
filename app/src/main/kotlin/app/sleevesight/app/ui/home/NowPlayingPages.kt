@@ -19,6 +19,7 @@ import app.sleevesight.app.ui.theme.handoffTarget
 import app.sleevesight.app.ui.theme.rememberFocusHandoff
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.pipeline.InsightItem
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.settings.NewTrackFold
 
@@ -69,6 +70,8 @@ internal fun NowPlayingPageContent(
                         PanelSearch(actions.aiSearches, shown.track, shown.track?.nowPlaying ?: playing),
                     )
                 }
+
+                is HomePage.Item -> ItemPageOf(page, state, shown, playing, actions)
             }
         }
     }
@@ -109,7 +112,39 @@ private fun pageTitle(page: HomePage): String =
     when (page) {
         is HomePage.Sources -> stringResource(R.string.home_sources_title)
         HomePage.Genres, is HomePage.GenresAt -> stringResource(R.string.home_genres)
+        is HomePage.Item -> itemKind(itemOf(page))
     }
+
+// The item [page] shows; the song's for a name no item has (a back stack another version saved).
+private fun itemOf(page: HomePage.Item): InsightItem =
+    InsightItem.entries.firstOrNull { it.name == page.item } ?: InsightItem.SONG
+
+/**
+ * The song's, the artist's or the album's page (#522): its name, then its insight, for the track
+ * playing; a citation opens *Sources*' page at its line; *Report a problem* opens its report here.
+ * Nothing until the settings are read.
+ */
+@Composable
+private fun ItemPageOf(
+    page: HomePage.Item,
+    state: NowPlayingState,
+    shown: Showing,
+    playing: NowPlaying,
+    actions: NowPlayingActions,
+) {
+    val settings = state.settings ?: return
+    var reporting by remember { mutableStateOf<Reported?>(null) }
+    reporting?.let { ReportOpen(it, actions.mail) { reporting = null } }
+    val item = itemOf(page)
+    val header = shown.track?.nowPlaying ?: playing
+    val cite: (String) -> Unit = { id -> actions.openPage(HomePage.Sources(cite = id)) }
+    val context =
+        itemContext(state, shown, settings, actions, cite) { track, written, of ->
+            reporting =
+                Reported(track, written, of)
+        }
+    ItemPage(item, itemName(item, header, actions.normalize(header).primary), context)
+}
 
 /**
  * *Sources*' page: [SourcesBody], the component the box unfolds, with a fold and chips of its own,

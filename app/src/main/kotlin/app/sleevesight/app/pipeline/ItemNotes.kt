@@ -1,0 +1,466 @@
+package app.sleevesight.app.pipeline
+
+import app.sleevesight.core.ai.ModelNames
+import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.pipeline.AiOutcome
+import app.sleevesight.core.pipeline.AiQuestion
+import app.sleevesight.core.pipeline.CardEntity
+import app.sleevesight.core.pipeline.CardKey
+import app.sleevesight.core.pipeline.ClearEpoch
+import app.sleevesight.core.pipeline.InsightItem
+import app.sleevesight.core.pipeline.InsightState
+import app.sleevesight.core.pipeline.ItemEvidence
+import app.sleevesight.core.pipeline.ItemInsights
+import app.sleevesight.core.pipeline.PipelineEvent
+import app.sleevesight.core.pipeline.PipelineParts
+import app.sleevesight.core.pipeline.QuestionCost
+import app.sleevesight.core.pipeline.TrackState
+import app.sleevesight.core.resolution.NameMatcher
+import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.settings.pastKeepHistory
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.util.Collections
+import java.util.concurrent.ConcurrentHashMap
+import kotlin.coroutines.AbstractCoroutineContextElement
+import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.EmptyCoroutineContext
+import kotlin.coroutines.cancellation.CancellationException
+import kotlin.time.Clock
+import kotlin.time.Duration
+import kotlin.time.Instant
+
+/** What the song's, the artist's or the album's row shows unfolded, or its page (#522). */
+sealed interface ItemShown {
+    /** The track's evidence, or the album's, not in yet. */
+    data object Gathering : ItemShown
+
+    /** *Show insights* off: nothing is written. */
+    data object Off : ItemShown
+
+    /** No AI service ready (none switched on, no key, or no model). */
+    data object NoService : ItemShown
+
+    /** Nothing written yet: *Write insight* offered under *On demand*, else written once opened. */
+    data object Offered : ItemShown
+
+    /**
+     * Asked for, or kept from before: [state] is [InsightState.Writing], [InsightState.Written],
+     * [InsightState.NoEvidence] (the sources give nothing to write it from, with no call, or the
+     * model found nothing), or [InsightState.Failed], beside which it is offered again. [model] is
+     * the name of the model that writes it, for "by {model}"; [evidence] what it was written from, which
+     * its citations read, each mapped to the track's line where it is one ([ItemEvidence.trackIds]).
+     */
+    data class Shown(
+        val state: InsightState,
+        val evidence: ItemEvidence,
+        val model: String? = null,
+    ) : ItemShown
+}
+
+/** The song's, the artist's and the album's insights under *Key insights* (#522), as Home and their pages show them. */
+interface ItemNotes {
+    /** [item]'s insight on [track], as it changes. */
+    fun item(
+        track: TrackState,
+        item: InsightItem,
+    ): Flow<ItemShown>
+
+    /**
+     * A tap on *Write insight* or a failure's *Retry*, or the row unfolded or the page opened with
+     * *Reactive* set to an automatic mode: [item]'s insight on [track] is written, a paid call,
+     * unless it is shown, kept (no call), or under way.
+     */
+    fun write(
+        track: TrackState,
+        item: InsightItem,
+    )
+
+    /** None: the rows say nothing is written (previews, tests). */
+    object None : ItemNotes {
+        override fun item(
+            track: TrackState,
+            item: InsightItem,
+        ): Flow<ItemShown> = flowOf(ItemShown.NoService)
+
+        override fun write(
+            track: TrackState,
+            item: InsightItem,
+        ) = Unit
+    }
+}
+
+/**
+ * The app's [ItemNotes]: each insight written with the live pipeline's [parts] (its AI service,
+ * synthesis cache, hasher and album lookup, [ItemInsights]) under the [settings] as last read, its
+ * names read by [names], the models named as the AI settings name them ([modelName]).
+ *
+ * The evidence for each item of a track is gathered once (the album's off the main thread, [io]),
+ * and kept in memory by the track's evidence and the item's entity. An insight is kept in memory by
+ * its card's key, so it shows again with no call when its row is folded and unfolded, or its page
+ * left and opened again; and in the synthesis cache, read the first time its row asks, so it shows
+ * again, with no call, when the track plays again later, and on every track of its artist or album
+ * for the artist's and the album's (#240). A settings change that changes its key (another AI
+ * service, model or effort, new evidence) offers it again. Each is shown no longer than *Keep
+ * history for* after it was written ([clock]), as the cache serves it. The writing runs in [scope],
+ * the process's, so leaving Home does not stop a call paid for; it is marked with [epoch], and after
+ * *Clear history* ([forget]) nothing it writes is shown or kept. Each call is counted to [paid], and
+ * told to [events] with what was served from the cache, as a genre's reason is (#851).
+ */
+@Suppress("LongParameterList", "TooManyFunctions") // Where items come from, where they run, and the time; each step.
+class AppItemNotes(
+    private val parts: StateFlow<PipelineParts?>,
+    private val settings: StateFlow<Settings?>,
+    private val scope: CoroutineScope,
+    private val names: NameMatcher,
+    private val epoch: ClearEpoch = ClearEpoch(),
+    private val io: CoroutineContext = EmptyCoroutineContext,
+    private val clock: Clock = Clock.System,
+    private val modelName: (String) -> String = { ModelNames.of(it) ?: it },
+    private val paid: (QuestionCost) -> Unit = {},
+    private val events: (PipelineEvent) -> Unit = {},
+) : ItemNotes {
+    // An insight shown, and when it was written.
+    private class Entry(
+        val state: InsightState,
+        val writtenAt: Instant,
+        val evidence: ItemEvidence,
+    )
+
+    // What an item's evidence is gathered for: the item, the track's evidence, its entity, and the
+    // album's sources as switched.
+    private data class Gathered(
+        val item: InsightItem,
+        val lookupKey: String,
+        val fingerprint: String,
+        val entity: CardEntity?,
+        val musicBrainz: Boolean,
+        val wikipedia: Boolean,
+    )
+
+    // The insights shown, by key, oldest first, at most [KEPT].
+    private val shown = MutableStateFlow<Map<CardKey, Entry>>(emptyMap())
+
+    // The evidence gathered, by what it was gathered for, oldest first, at most [KEPT].
+    private val gathered: MutableMap<Gathered, ItemEvidence> = Collections.synchronizedMap(LinkedHashMap())
+
+    // The keys whose cached insight was looked for, and those being written.
+    private val looked: MutableSet<CardKey> = ConcurrentHashMap.newKeySet()
+    private val writing: MutableSet<CardKey> = ConcurrentHashMap.newKeySet()
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    override fun item(
+        track: TrackState,
+        item: InsightItem,
+    ): Flow<ItemShown> =
+        combine(parts, settings) { made, now -> made to now }
+            .distinctUntilChanged()
+            .flatMapLatest { (made, now) ->
+                when {
+                    made == null || now == null -> flowOf(ItemShown.Gathering)
+                    !now.writeInsights -> flowOf(ItemShown.Off)
+                    !ItemInsights.offered(track) -> flowOf(ItemShown.Gathering)
+                    else -> shownFlow(insightsOf(made), track, item, now)
+                }
+            }.distinctUntilChanged()
+
+    // [item]'s insight on [track] under [now], once its evidence is gathered.
+    private fun shownFlow(
+        insights: ItemInsights,
+        track: TrackState,
+        item: InsightItem,
+        now: Settings,
+    ): Flow<ItemShown> =
+        flow {
+            val known = gathered[gatheredFor(insights, track, item, now)]
+            if (known == null) emit(ItemShown.Gathering)
+            val evidence = known ?: evidenceOf(insights, track, item, now)
+            if (evidence == null) {
+                emit(ItemShown.Gathering)
+                return@flow
+            }
+            val key = insights.key(item, track, evidence, now)
+            if (key == null) {
+                emit(ItemShown.NoService)
+                return@flow
+            }
+            look(insights, key, track, item, evidence)
+            emitAll(
+                combine(shown, settings) { entries, latest ->
+                    shownFor(key, evidence, entries[key], latest?.historyLifetime)
+                },
+            )
+        }
+
+    private fun shownFor(
+        key: CardKey,
+        evidence: ItemEvidence,
+        entry: Entry?,
+        lifetime: Duration?,
+    ): ItemShown =
+        when {
+            entry == null -> ItemShown.Offered
+            expired(entry.writtenAt, lifetime) -> ItemShown.Offered.also { drop(key) }
+            else -> ItemShown.Shown(entry.state, entry.evidence, modelName(key.model))
+        }
+
+    override fun write(
+        track: TrackState,
+        item: InsightItem,
+    ) {
+        val made = parts.value
+        val now = settings.value?.takeIf { it.writeInsights && ItemInsights.offered(track) }
+        if (made == null || now == null) return
+        scope.launch(mark()) {
+            val insights = insightsOf(made)
+            val evidence = evidenceOf(insights, track, item, now)
+            val key = evidence?.let { insights.key(item, track, it, now) }
+            if (evidence != null && key != null && claim(key)) write(insights, key, item, track, evidence)
+        }
+    }
+
+    // The evidence for [item] on [track] under [now]: kept in memory, or gathered (off the main thread).
+    private suspend fun evidenceOf(
+        insights: ItemInsights,
+        track: TrackState,
+        item: InsightItem,
+        now: Settings,
+    ): ItemEvidence? {
+        val at = gatheredFor(insights, track, item, now)
+        return gathered[at] ?: withContext(io) { insights.evidence(item, track, now) }?.also { evidence ->
+            // A source that could not be asked is asked again the next time the item is opened.
+            if (!evidence.unreachable) {
+                synchronized(gathered) {
+                    if (gathered.size >= KEPT) gathered.keys.firstOrNull()?.let(gathered::remove)
+                    gathered[at] = evidence
+                }
+            }
+        }
+    }
+
+    private fun gatheredFor(
+        insights: ItemInsights,
+        track: TrackState,
+        item: InsightItem,
+        now: Settings,
+    ) = Gathered(
+        item,
+        track.normalized.lookupKey,
+        track.evidence?.fingerprint.orEmpty(),
+        insights.entity(item, track),
+        now.isEnabled(SourceId.MUSICBRAINZ),
+        now.isEnabled(SourceId.WIKIPEDIA),
+    )
+
+    // [key]'s insight, kept meanwhile (another track of the artist or album wrote it), with no call,
+    // or written; each state shown while no *Clear history* came since it started.
+    private suspend fun write(
+        insights: ItemInsights,
+        key: CardKey,
+        item: InsightItem,
+        track: TrackState,
+        evidence: ItemEvidence,
+    ) {
+        val work = currentCoroutineContext()
+        val show: (InsightState, Instant) -> Unit = { state, at ->
+            publish(work) { shown.update { it.with(key, Entry(state, at, evidence)) } }
+        }
+        val question = AiQuestion.Item(item)
+        var started: Instant? = null
+        var cost = QuestionCost()
+
+        fun end(
+            outcome: AiOutcome,
+            failure: String? = null,
+        ) {
+            val at = started ?: return
+            started = null
+            note(
+                work,
+                PipelineEvent.AiEnded(track.normalized.lookupKey, question, outcome, cost, clock.now() - at, failure),
+            )
+        }
+        try {
+            val kept =
+                insights
+                    .kept(
+                        key,
+                        evidence,
+                    )?.takeIf { !expired(it.writtenAt) && it.state !is InsightState.Failed }
+            if (kept != null) {
+                note(work, kept(track, key, question, kept.writtenAt))
+                show(kept.state, kept.writtenAt ?: clock.now())
+                return
+            }
+            note(work, PipelineEvent.AiAsked(track.normalized.lookupKey, question, false, key.provider, key.model))
+            started = clock.now()
+            val counted: (QuestionCost) -> Unit = { more ->
+                cost += more
+                paid(more)
+            }
+            val last = insights.write(key, item, track, evidence, counted, show)
+            end(
+                when (last) {
+                    is InsightState.Written -> AiOutcome.ANSWERED
+                    InsightState.NoEvidence -> AiOutcome.NOTHING_FOUND
+                    is InsightState.Failed -> AiOutcome.FAILED
+                    else -> AiOutcome.STOPPED
+                },
+                (last as? InsightState.Failed)?.reason,
+            )
+        } catch (e: CancellationException) {
+            end(AiOutcome.STOPPED)
+            throw e
+        } catch (
+            // A bug, not the network, which the writer maps to a state: shown as failed, offered again.
+            @Suppress("TooGenericExceptionCaught") e: Exception,
+        ) {
+            val reason = e::class.simpleName ?: FAILED
+            end(AiOutcome.FAILED, reason)
+            show(InsightState.Failed(reason), clock.now())
+        } finally {
+            writing.remove(key)
+        }
+    }
+
+    // [key]'s insight kept in the synthesis cache, read once, unless one is shown already.
+    private fun look(
+        insights: ItemInsights,
+        key: CardKey,
+        track: TrackState,
+        item: InsightItem,
+        evidence: ItemEvidence,
+    ) {
+        if (key in shown.value || !looked.add(key)) return
+        scope.launch(mark()) {
+            val work = coroutineContext
+            val kept = insights.kept(key, evidence)?.takeIf { !expired(it.writtenAt) } ?: return@launch
+            val entry = Entry(kept.state, kept.writtenAt ?: clock.now(), evidence)
+            publish(work) {
+                var added = false
+                shown.update { (if (key in it) it else it.with(key, entry)).also { next -> added = next !== it } }
+                if (added) events(kept(track, key, AiQuestion.Item(item), kept.writtenAt))
+            }
+        }
+    }
+
+    // [key]'s answer to [question], kept, written at [writtenAt], served for [track] (#851).
+    private fun kept(
+        track: TrackState,
+        key: CardKey,
+        question: AiQuestion,
+        writtenAt: Instant?,
+    ) = PipelineEvent.AiKept(
+        track.normalized.lookupKey,
+        question,
+        key.provider,
+        key.model,
+        writtenAt,
+        automatic = false,
+    )
+
+    // Whether [key]'s insight may be asked for ([open]), and if so, marked as being written, unless it is already.
+    private fun claim(key: CardKey): Boolean = open(key) && writing.add(key)
+
+    // Whether [key]'s insight may be asked for: not shown, shown as failed, or past *Keep history for*.
+    private fun open(key: CardKey): Boolean {
+        val entry = shown.value[key]
+        return entry == null || entry.state is InsightState.Failed || expired(entry.writtenAt)
+    }
+
+    /**
+     * Forgets the insights shown and the evidence gathered, for *Clear history* (#547); the cache's
+     * are deleted with it. After the epoch's advance: work that checked it before shows its state
+     * before this clears it, never after.
+     */
+    fun forget() {
+        synchronized(lock) {
+            forgets++
+            shown.value = emptyMap()
+            gathered.clear()
+            looked.clear()
+        }
+    }
+
+    // Guards each insight shown against *Clear history* ([forget]).
+    private val lock = Any()
+
+    // How many times [forget] ran, under [lock], as `AppGenreNotes` counts them (#791).
+    @Volatile
+    private var forgets = 0L
+
+    // The count of [forget]s a piece of work started after; its children inherit it.
+    private class Forgets(
+        val count: Long,
+    ) : AbstractCoroutineContextElement(Forgets) {
+        companion object Key : CoroutineContext.Key<Forgets>
+    }
+
+    private fun mark(): CoroutineContext = epoch.mark() + Forgets(forgets)
+
+    private fun current(work: CoroutineContext): Boolean =
+        epoch.isCurrent(work) && work[Forgets]?.count.let { it == null || it == forgets }
+
+    // Runs [show] if no *Clear history* came since [work] started, under the lock [forget] clears under.
+    private fun publish(
+        work: CoroutineContext,
+        show: () -> Unit,
+    ) = synchronized(lock) { if (current(work)) show() }
+
+    // Tells [event] to the log if no *Clear history* came since [work] started.
+    private fun note(
+        work: CoroutineContext,
+        event: PipelineEvent,
+    ) = synchronized(lock) { if (current(work)) events(event) }
+
+    private fun insightsOf(made: PipelineParts) =
+        ItemInsights(made.ai, made.cache, made.hasher, names, clock, made.albums)
+
+    // Whether an insight written at [writtenAt] is past *Keep history for* ([lifetime]; null, for ever).
+    private fun expired(
+        writtenAt: Instant?,
+        lifetime: Duration? = settings.value?.historyLifetime,
+    ): Boolean = pastKeepHistory(writtenAt, lifetime, clock.now())
+
+    // Drops [key]'s insight, past *Keep history for*, so the cache is read again (and misses).
+    private fun drop(key: CardKey) {
+        shown.update { it - key }
+        looked.remove(key)
+    }
+
+    // [this] with [entry] for [key], last, the oldest dropped past [KEPT], and no longer counted as looked for.
+    private fun Map<CardKey, Entry>.with(
+        key: CardKey,
+        entry: Entry,
+    ): Map<CardKey, Entry> {
+        val next = LinkedHashMap(this)
+        next.remove(key)
+        next[key] = entry
+        while (next.size > KEPT) {
+            val oldest = next.keys.first()
+            next.remove(oldest)
+            looked.remove(oldest)
+        }
+        return next
+    }
+
+    private companion object {
+        /** Enough for the items of the last tracks played; the cache keeps the rest. */
+        const val KEPT = 64
+
+        const val FAILED = "failed"
+    }
+}

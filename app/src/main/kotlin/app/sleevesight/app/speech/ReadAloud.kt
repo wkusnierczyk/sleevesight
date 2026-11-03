@@ -3,6 +3,7 @@ package app.sleevesight.app.speech
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.view.accessibility.AccessibilityManager
 import app.sleevesight.app.pipeline.GenreReason
+import app.sleevesight.app.pipeline.ItemShown
 import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.app.session.TrackIdentity
 import app.sleevesight.app.ui.home.SpokenWords
@@ -41,6 +42,9 @@ class Reading(
 
         /** The id of the reading of [genre]'s reason, in its panel. */
         fun genreReason(genre: String): String = "genre:$genre"
+
+        /** The id of the reading of the song's, the artist's or the album's insight (#522), by its card's [kind]. */
+        fun item(kind: String): String = "item:$kind"
     }
 }
 
@@ -145,6 +149,27 @@ class ReadAloud(
         watch =
             scope.launch {
                 reasons.collect { now -> shown(id, ((now as? GenreReason.Shown)?.state as? InsightState.Written)) }
+            }
+    }
+
+    /**
+     * Reads [written], [track]'s song's, artist's or album's insight (#522, by its card's [kind]), in
+     * its row or on its page. For as long as it is read, [items] (the notes' insight for it,
+     * `ItemNotes.item`) is followed in this object's [scope]: once it holds another insight, or none,
+     * the reading stops ([shown]).
+     */
+    fun readItem(
+        track: TrackState,
+        kind: String,
+        written: InsightState.Written,
+        items: Flow<ItemShown>,
+    ) {
+        val id = Reading.item(kind)
+        read(Reading(id, track.nowPlaying, written, script(track, null, written), locale()))
+        if (readingState.value?.of !== written) return
+        watch =
+            scope.launch {
+                items.collect { now -> shown(id, ((now as? ItemShown.Shown)?.state as? InsightState.Written)) }
             }
     }
 
