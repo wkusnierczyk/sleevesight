@@ -41,7 +41,8 @@ object TrackIdentity {
     val FILL_IN: Duration = 1.seconds
 
     /**
-     * Whether [a] and [b] are the same track: the same play when the session layer tagged both
+     * Whether [a] and [b] are the same track: of one player, the media id when both send one, as
+     * the player's own word; else the same play when the session layer tagged both
      * ([NowPlaying.play]); else, by their fields, as [continues] judges a report long into a play.
      */
     fun same(
@@ -50,6 +51,7 @@ object TrackIdentity {
     ): Boolean =
         when {
             a.player != b.player -> false
+            a.mediaId != null && b.mediaId != null -> a.mediaId == b.mediaId
             a.play != null && b.play != null -> a.play == b.play
             else -> continues(a, b, Duration.INFINITE)
         }

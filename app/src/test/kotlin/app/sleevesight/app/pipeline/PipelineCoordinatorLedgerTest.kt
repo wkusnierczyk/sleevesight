@@ -258,6 +258,24 @@ class PipelineCoordinatorLedgerTest {
                 settle()
             },
             Case(
+                "the same media id under a new play tag (the session layer restarted): the run kept",
+                mapOf("Zero" to 1, "A" to 1),
+                listOf("Zero", "A"),
+            ) {
+                // A media id on both reports decides before the session layer's play tags (#297).
+                acted()
+                streamMs = 10_000
+                report(nowPlaying("A", mediaId = "m1").copy(play = 1))
+                advance(DEBOUNCE_MS + 100)
+                val first = checkNotNull(coordinator.state.run)
+                assertTrue(first.calling)
+                report(nowPlaying("A", mediaId = "m1").copy(play = 2))
+                advance(DEBOUNCE_MS + 100)
+                assertEquals(emptyList<String>(), cut)
+                assertEquals(first.id, coordinator.state.run?.id)
+                settle()
+            },
+            Case(
                 "the run's key, another queue slot under the same track: the same insight track, the run kept",
                 mapOf("Zero" to 1, "A" to 1),
                 listOf("Zero", "A"),

@@ -133,8 +133,8 @@ class TrackIdentityTest {
             ),
             // Edge 7: a queue entry naming the playing track is the playing track (by its fields).
             Row(
-                "edge 7: a queue entry with the playing track's title and artists",
-                ytm.copy(album = "Sundown", play = 3),
+                "edge 7: a queue entry with the playing track's title and artists, in another slot",
+                ytm.copy(album = "Sundown", queueItemId = 4, play = 3),
                 ytm.copy(queueItemId = 5),
                 late,
                 true,
@@ -170,6 +170,12 @@ class TrackIdentityTest {
         // Untagged on one side: by the fields, an album long into the play.
         assertEquals(false, TrackIdentity.same(ytm.copy(album = "Sundown", play = 1), ytm.copy(album = "Live")))
         assertEquals(true, TrackIdentity.same(ytm.copy(play = 1), ytm.copy(queueItemId = 5)))
+        // Edge 7: the playing track, slot 4, is its queue entry in slot 5, never the next track.
+        assertEquals(true, TrackIdentity.same(ytm.copy(queueItemId = 4, play = 1), ytm.copy(queueItemId = 5)))
+        // A media id on both decides before the tags: the same track across a restart of the layer.
+        assertEquals(true, TrackIdentity.same(spotify.copy(play = 1), spotify.copy(play = 2)))
+        val other = spotify.copy(mediaId = "spotify:track:2", play = 1)
+        assertEquals(false, TrackIdentity.same(spotify.copy(play = 1), other))
         // A stream's next song under one media id is the same track, but does not play on.
         val stream = spotify.copy(play = 1)
         assertEquals(true, TrackIdentity.same(stream, stream.copy(title = "Carefree Highway")))

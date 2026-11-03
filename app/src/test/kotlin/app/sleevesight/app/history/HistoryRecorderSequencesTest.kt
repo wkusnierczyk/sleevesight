@@ -184,6 +184,16 @@ internal class HistoryRecorderSequencesTest(
                     at(31_000)
                     startLayer()
                 },
+                sequence(
+                    "a stored row's artists, a restart without artists, then other artists: two rows (#297)",
+                    Row(SUNDOWN, 1, -60_000, 1_000 + S),
+                    Row(SUNDOWN, 1, 1_000 + S, null, artists = "Someone Else"),
+                ) {
+                    stored(NowPlaying(SUNDOWN, "Gordon Lightfoot", player = SPOTIFY), base - 60.seconds)
+                    val spotify = spotify(metadata = metadata(artist = null))
+                    at(1_000)
+                    spotify.report(metadata(artist = "Someone Else"))
+                },
                 sequence("artists sent after the title", Row(SUNDOWN, 1, 0, null)) {
                     val spotify = spotify(metadata = metadata(artist = null))
                     at(1_000)

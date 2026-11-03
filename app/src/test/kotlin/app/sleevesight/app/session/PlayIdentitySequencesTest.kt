@@ -24,13 +24,15 @@ internal class PlayIdentitySequencesTest(
         val changes: Int,
         val lastChangedAt: Long?,
         val steps: PlayIdentitySequencesTest.() -> Unit,
-        val attachedOn: Long = 4,
+        /** The queue item and title the session is attached on. */
+        val attached: Pair<Long, String> = 4L to "Sundown",
     )
 
     @Test
     fun publishesTheChanges() {
-        val youtube = youtubeMusic(item = case.attachedOn)
-        youtube.send(state(positionMs = 200_000, updatedAt = 0, queueItem = case.attachedOn))
+        val (item, title) = case.attached
+        val youtube = youtubeMusic(metadata = metadata(title = title), item = item)
+        youtube.send(state(positionMs = 200_000, updatedAt = 0, queueItem = item))
         settle()
         session = youtube
         val tracks = recordTracks()
@@ -42,6 +44,13 @@ internal class PlayIdentitySequencesTest(
     }
 
     private lateinit var session: FakeSession
+
+    /** Stops the session layer and starts it again (the listener service unbound and bound again). */
+    fun restart(ms: Long) {
+        at(ms)
+        repository.stop()
+        repository.start()
+    }
 
     fun at(ms: Long) = scheduler.advanceTimeBy((ms - scheduler.currentTime).milliseconds)
 
@@ -72,16 +81,22 @@ internal class PlayIdentitySequencesTest(
             name: String,
             changes: Int,
             lastChangedAt: Long?,
-            attachedOn: Long = 4,
+            attached: Pair<Long, String> = 4L to "Sundown",
             steps: PlayIdentitySequencesTest.() -> Unit,
-        ): Array<Any> = arrayOf(name, Case(changes, lastChangedAt, steps, attachedOn))
+        ): Array<Any> = arrayOf(name, Case(changes, lastChangedAt, steps, attached))
 
         @JvmStatic
         @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
-        fun cases(): List<Array<Any>> =
+        fun cases(): List<Array<Any>> = TIMING + FIELDS
+
+        /** How the queue slot times a change, and never decides one. */
+        private val TIMING =
             listOf(
-                case("edge 1: attached between the new slot and its title", 1, 1_000, attachedOn = 5) {
+                case("attached between the new slot and its title", 1, 1_000, attached = 5L to "Sundown") {
                     title(1_000, NEXT)
+                },
+                case("edge 1: attached on the new title, old slot, then its own", 0, null, attached = 4L to NEXT) {
+                    slot(1_000, 5)
                 },
                 case("the slot leads the title within a settle: timed from the slot", 1, 1_000) {
                     slot(1_000, 5)
@@ -100,6 +115,11 @@ internal class PlayIdentitySequencesTest(
                     slot(1_400, 5)
                     title(1_800, "Rainy Day People")
                 },
+                case("edge 5: nor when the next title comes before the lagging slot settles", 2, 1_600) {
+                    title(1_000, NEXT)
+                    slot(1_400, 5)
+                    title(1_600, "Rainy Day People")
+                },
                 case("a slot moving under the same title is one play (repeat from another slot)", 0, null) {
                     slot(1_000, 5)
                 },
@@ -107,6 +127,11 @@ internal class PlayIdentitySequencesTest(
                     slot(1_000, 4, positionMs = 200_000, status = PlaybackState.STATE_PAUSED)
                     slot(1_050, 4)
                 },
+            )
+
+        /** How what the reports say of a play is gathered and compared. */
+        private val FIELDS =
+            listOf(
                 case("a placeholder album, then the real one within the first second: one change", 1, 1_000) {
                     title(1_000, NEXT, album = "Gordon Lightfoot")
                     title(1_400, NEXT, album = "Real Album")
@@ -126,6 +151,20 @@ internal class PlayIdentitySequencesTest(
                     slot(1_000, -1, status = PlaybackState.STATE_STOPPED)
                     title(1_100)
                     slot(1_140, 62)
+                },
+                case("artists in a report, left out by the next before the settle, then others: a change", 2, 3_000) {
+                    title(1_000, NEXT, artist = "X")
+                    title(1_100, NEXT, artist = null)
+                    title(3_000, NEXT, artist = "Y")
+                },
+                case("an album judged when it first came, not by a repeat of it: one change", 1, 1_000) {
+                    title(1_000, NEXT, album = "Gordon Lightfoot")
+                    title(1_900, NEXT, album = "Real Album")
+                    title(2_100, NEXT, album = "Real Album")
+                },
+                case("the session layer restarted: the same track goes on as the same play", 0, null) {
+                    restart(1_000)
+                    title(2_000, album = "Sundown")
                 },
                 case("edge 4: X, then the title without artists, then Y: a change", 1, 3_000) {
                     title(1_000, artist = null)

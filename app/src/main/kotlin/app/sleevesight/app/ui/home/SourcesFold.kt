@@ -96,8 +96,8 @@ internal class FoldMemory(
 
     companion object {
         /**
-         * Saved as plain values: the fold, and of its track what [TrackIdentity.playsOn] reads (the
-         * player, the media id, the play, the title, the artists and the album).
+         * Saved as plain values: the fold, and of its track what [TrackIdentity.playsOn] reads by
+         * its fields (the player, the media id, the title, the artists and the album).
          */
         val Saver: Saver<FoldMemory, Any> =
             listSaver(
@@ -128,22 +128,24 @@ internal class FoldMemory(
 }
 
 /**
- * Of [track], what [TrackIdentity.playsOn] reads (the player, the media id, the play, the title, the
- * artists and the album), as plain values a saver keeps; [restoredTrack] reads them back.
+ * Of [track], what [TrackIdentity.playsOn] reads by its fields (the player, the media id, the
+ * title, the artists and the album), as plain values a saver keeps; [restoredTrack] reads them
+ * back. Not its play ([NowPlaying.play]): the session layer counts plays afresh in each process, so
+ * a number saved before the process died could name another play; restored untagged, the track is
+ * matched by its fields.
  */
 internal fun savedTrack(track: NowPlaying?): List<Any?> =
-    listOf(track?.player, track?.mediaId, track?.play, track?.title, track?.artists, track?.album)
+    listOf(track?.player, track?.mediaId, track?.title, track?.artists, track?.album)
 
 /** The track [savedTrack] kept in [saved], or null when it kept none. */
 internal fun restoredTrack(saved: List<Any?>): NowPlaying? =
     (saved[0] as String?)?.let { player ->
         NowPlaying(
-            title = saved[3] as String,
-            artists = saved[4] as String,
+            title = saved[2] as String,
+            artists = saved[3] as String,
             player = player,
-            album = saved[5] as String?,
+            album = saved[4] as String?,
             mediaId = saved[1] as String?,
-            play = saved[2] as Long?,
         )
     }
 

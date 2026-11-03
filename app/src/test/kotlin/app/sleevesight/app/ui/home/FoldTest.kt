@@ -83,9 +83,11 @@ class FoldTest {
                 val saved = with(FoldMemory.Saver) { scope.save(FoldMemory(fold, track)) }
                 val restored = checkNotNull(FoldMemory.Saver.restore(checkNotNull(saved)))
                 assertEquals(fold, restored.fold)
-                // What `TrackIdentity.playsOn` reads, so the track restored plays on as it did.
-                val identity = { t: NowPlaying -> listOf(t.player, t.mediaId, t.play, t.title, t.artists, t.album) }
+                // What `TrackIdentity.playsOn` reads by the fields, so the track restored plays on as
+                // it did; restored untagged, since a play's number is the process's own.
+                val identity = { t: NowPlaying -> listOf(t.player, t.mediaId, t.title, t.artists, t.album) }
                 assertEquals(track?.let(identity), restored.track?.let(identity))
+                assertEquals(null, restored.track?.play)
             }
         }
     }
