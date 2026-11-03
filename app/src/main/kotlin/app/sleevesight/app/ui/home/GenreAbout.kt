@@ -38,7 +38,8 @@ import app.sleevesight.core.synthesis.SearchKind
  * What the genre [genre] is and why [track] has it, as [shown]'s notes give them (#523; `design/design.md`,
  * *Genre labels*), at the top of the genre's panel, in this order: the definition, from Wikipedia,
  * in each of its states ([GenreDefinitionNote], #786: looking, found with its credit, failed with
- * *Retry*, or none with *Search with AI* from [search]; nothing with Wikipedia off); then *Why is
+ * *Retry*, or none with *Search with AI* from [search]; nothing with Wikipedia off); for a genre of
+ * weak evidence, why it is weak ([WeakEvidenceNote], #875); then *Why is
  * this …?*, a button carrying the **AI** mark ([AiLabel]), or, once asked for, the reason, under the
  * question as a heading, checked and cited as the insight is: its citations chips that go to their
  * lines ([PanelNotes.onCite]), its grounding note under it. No button with *Show insights* off, no
@@ -77,6 +78,8 @@ internal fun GenreAbout(
             ?.genre ?: return
     val question = stringResource(R.string.genre_why, inSentence(named.label))
     GenreDefinitionNote(named, notes, search, afterRetry)
+    // Why its evidence is weak, for a weak genre (#875), under the definition.
+    WeakEvidenceNote(track, named)
     val explain = { notes.explain(track, genre) }
     when (val shown = reason) {
         GenreReason.None -> Unit
