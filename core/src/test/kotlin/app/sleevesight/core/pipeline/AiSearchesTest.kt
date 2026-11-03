@@ -59,8 +59,7 @@ class AiSearchesTest {
     fun theKeyIsTheTrackTheKindTheServiceModelAndEffortAndThePromptsVersion() {
         val key = checkNotNull(searches.key(track, SearchKind.DATES, settings))
         assertEquals(CardKind.SEARCH, key.kind)
-        assertEquals(track.normalized, key.track)
-        assertEquals("dates\ngrace", key.subject)
+        assertEquals(CardEntity.Track(track.normalized, track.nowPlaying.duration, "dates\ngrace"), key.entity)
         assertEquals(ProviderId.ANTHROPIC, key.provider)
         assertEquals(settings.model(ProviderId.ANTHROPIC), key.model)
         assertEquals(AiSearchPrompt.VERSION, key.promptVersion)
@@ -217,9 +216,7 @@ class AiSearchesTest {
     fun aDefinitionsKeyIsTheGenreNotTheTrack() {
         val key = checkNotNull(searches.key(track, SearchKind.DEFINITION, settings, genre = "rock"))
         assertEquals(CardKind.SEARCH, key.kind)
-        assertEquals(AiSearches.GENRE_ENTITY, key.track)
-        assertNull(key.duration)
-        assertEquals("definition\nrock", key.subject)
+        assertEquals(CardEntity.Track(AiSearches.GENRE_ENTITY, null, "definition\nrock"), key.entity)
         assertEquals(AiSearchPrompt.DEFINITION_VERSION, key.promptVersion)
         // Another track, the same key; another genre, another.
         val other =

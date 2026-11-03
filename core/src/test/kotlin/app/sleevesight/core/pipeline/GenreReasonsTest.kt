@@ -113,7 +113,7 @@ class GenreReasonsTest {
     @Test
     fun `each genre of a track keeps its own reason, apart from the insight`() {
         val jazz = checkNotNull(reasons.key(track, "jazz", settings))
-        val other = jazz.copy(subject = "modaljazz")
+        val other = jazz.about("modaljazz")
         assertNotEquals(jazz, other)
         assertNotEquals(CardKind.INSIGHT, jazz.kind)
     }

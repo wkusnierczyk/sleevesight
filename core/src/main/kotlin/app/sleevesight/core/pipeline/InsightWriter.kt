@@ -396,8 +396,7 @@ internal class InsightWriter(
     ): CardKey =
         CardKey(
             kind = CardKind.INSIGHT,
-            track = track,
-            duration = nowPlaying.duration,
+            entity = CardEntity.Track(track, nowPlaying.duration),
             evidenceFingerprint = evidence.fingerprint,
             promptVersion = InsightPrompt.VERSION,
             styleHash = styleHash(parts.hasher),

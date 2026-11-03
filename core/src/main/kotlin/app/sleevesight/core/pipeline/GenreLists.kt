@@ -104,8 +104,7 @@ class GenreLists(
         if (access == null || model == null || evidence == null) return null
         return CardKey(
             kind = CardKind.GENRE_LIST,
-            track = track.normalized,
-            duration = track.nowPlaying.duration,
+            entity = CardEntity.Track(track.normalized, track.nowPlaying.duration, subject = mode?.key),
             evidenceFingerprint = evidence.fingerprint,
             promptVersion = GenreListPrompt.VERSION,
             styleHash = styleHash(hasher),
@@ -113,7 +112,6 @@ class GenreLists(
             model = model,
             modelKnowledge = settings.isEnabled(SourceId.MODEL),
             effort = settings.effort(access.provider.id),
-            subject = mode?.key,
         )
     }
 

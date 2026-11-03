@@ -7,6 +7,7 @@ import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.pipeline.AiOutcome
 import app.sleevesight.core.pipeline.AiQuestion
 import app.sleevesight.core.pipeline.AiSearches
+import app.sleevesight.core.pipeline.CardEntity
 import app.sleevesight.core.pipeline.CardKey
 import app.sleevesight.core.pipeline.ClearEpoch
 import app.sleevesight.core.pipeline.PipelineEvent
@@ -585,12 +586,10 @@ class AppAiSearches(
     // *Dates* the album), whatever the AI service, model or effort. For a genre's definition (#786),
     // whose key has no track, the genre: a stop is its "no" whatever the track.
     private data class Declined(
-        val track: NormalizedTrack,
-        val duration: Duration?,
-        val subject: String?,
+        val entity: CardEntity,
     ) {
         companion object {
-            fun of(key: CardKey) = Declined(key.track, key.duration, key.subject)
+            fun of(key: CardKey) = Declined(key.entity)
         }
     }
 

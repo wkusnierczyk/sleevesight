@@ -134,8 +134,12 @@ class AiSearches(
         val fromWeb = used(kind, settings) != AiWebSearch.OFF
         return CardKey(
             kind = CardKind.SEARCH,
-            track = if (aboutGenre) GENRE_ENTITY else track.normalized,
-            duration = if (aboutGenre) null else track.nowPlaying.duration,
+            entity =
+                CardEntity.Track(
+                    track = if (aboutGenre) GENRE_ENTITY else track.normalized,
+                    duration = if (aboutGenre) null else track.nowPlaying.duration,
+                    subject = subject(track, kind, genre),
+                ),
             evidenceFingerprint = NO_FINGERPRINT,
             promptVersion = AiSearchPrompt.version(kind, fromWeb),
             styleHash = styleHash(hasher),
@@ -144,7 +148,6 @@ class AiSearches(
             // From the model's own knowledge, whatever *Model's own knowledge* says, unless from the web.
             modelKnowledge = !fromWeb,
             effort = settings.effort(access.provider.id),
-            subject = subject(track, kind, genre),
         )
     }
 

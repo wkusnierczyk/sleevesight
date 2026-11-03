@@ -7,6 +7,7 @@ import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.pipeline.CardEntity
 import app.sleevesight.core.pipeline.CardKey
 import app.sleevesight.core.pipeline.ClearEpoch
 import app.sleevesight.core.sources.ArtistPart
@@ -53,8 +54,7 @@ class StoreClearEpochTest {
     private val key =
         CardKey(
             kind = CardKind.INSIGHT,
-            track = sundown,
-            duration = 213.seconds,
+            entity = CardEntity.Track(sundown, 213.seconds),
             evidenceFingerprint = "9f2c",
             promptVersion = 1,
             styleHash = "e3b0",
