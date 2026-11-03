@@ -52,8 +52,10 @@ internal fun sourcesLines(
     notes: ItemNotes,
     track: TrackState?,
 ): SourcesLines {
-    val album by remember(notes, track?.normalized) { track?.let(notes::albumEvidence) ?: flowOf(null) }
-        .collectAsState(null)
+    // Followed afresh for another track, or another album of it (the same song on a compilation).
+    val album by remember(notes, track?.normalized, track?.nowPlaying?.album, track?.resolution, track?.sources) {
+        track?.let(notes::albumEvidence) ?: flowOf(null)
+    }.collectAsState(null)
     val evidence = track?.evidence
     return remember(evidence, album) { withAlbum(evidence, album) }
 }

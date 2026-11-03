@@ -60,7 +60,6 @@ import app.sleevesight.core.synthesis.GroundingCheck
 import app.sleevesight.core.synthesis.InsightReply
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -106,9 +105,9 @@ class ItemRowsScreenTest {
         var takenUp = true
 
         // The album's own lines, once gathered (#522).
-        var album: EvidenceSet? = null
+        val album = MutableStateFlow<EvidenceSet?>(null)
 
-        override fun albumEvidence(track: TrackState): Flow<EvidenceSet?> = flowOf(album)
+        override fun albumEvidence(track: TrackState): Flow<EvidenceSet?> = album
 
         override fun write(
             track: TrackState,
@@ -441,7 +440,7 @@ class ItemRowsScreenTest {
                 ),
                 JvmHasher,
             )
-        notes.album = album
+        notes.album.value = album
         val reply =
             GroundingCheck.check(
                 "It is his tenth album [W1].",
@@ -458,6 +457,12 @@ class ItemRowsScreenTest {
             )
         show(state(onDemand)) {
             row(InsightItem.ALBUM).performScrollTo().performClick()
+            // Shown, and read, by the id Sources shows the line under: W2, not the insight's own W1.
+            val prose = compose.onNodeWithText("tenth album", substring = true).performScrollTo().fetchSemanticsNode()
+            val text = prose.config[SemanticsProperties.Text].joinToString { it.text }
+            assertTrue(text, "\u2009W2\u2009" in text && "W1" !in text)
+            val spoken = prose.config[SemanticsProperties.ContentDescription].single()
+            assertTrue(spoken, app.getString(R.string.home_cite, "W2") in spoken)
             compose.onNodeWithText("tenth album", substring = true).performScrollTo().performFirstLinkClick {
                 (it.item as? LinkAnnotation.Clickable)?.tag == CITE_PREFIX + "W1"
             }
@@ -466,6 +471,39 @@ class ItemRowsScreenTest {
             compose.onNodeWithTag(LINE_PREFIX + "W2").performScrollTo().assertExists()
             compose.onNodeWithText("album · en.wikipedia.org", substring = true, useUnmergedTree = true).assertExists()
             compose.onNodeWithTag(LINE_PREFIX + "W1").assertExists()
+        }
+    }
+
+    @Test
+    fun anAlbumCitationOnSourcesPageWaitsForTheAlbumsLinesAndReachesItBeyondTheFirstScreenful() {
+        val mb = (1..10).map { draft(SourceId.MUSICBRAINZ, "Fact $it.") }
+        val long =
+            track(
+                sources = mapOf(SourceId.MUSICBRAINZ to HomeFixtures.done(evidence = mb)),
+                evidence = EvidenceSet.of(mb, JvmHasher),
+            )
+        val album =
+            EvidenceSet.of(
+                listOf(draft(SourceId.MUSICBRAINZ, "“Sundown” is an album.", scope = Scope.RELEASE)),
+                JvmHasher,
+            )
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity {
+                it.setContent {
+                    NowPlayingPageContent(
+                        // The album's line, shown as MB11 after the track's ten.
+                        HomePage.Sources(cite = "MB11"),
+                        state(onDemand, long),
+                        NowPlayingActions(normalizer::normalize, itemNotes = notes),
+                    ) {}
+                }
+            }
+            compose.waitForIdle()
+            compose.onNodeWithTag(LINE_PREFIX + "MB11").assertDoesNotExist()
+            // The album's lines read after the page opened.
+            notes.album.value = album
+            compose.waitForIdle()
+            compose.onNodeWithTag(LINE_PREFIX + "MB11").performScrollTo().assertExists()
         }
     }
 

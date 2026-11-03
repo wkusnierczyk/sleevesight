@@ -328,16 +328,21 @@ class AppItemNotes(
         job.start()
     }
 
+    // The album's lines gathered for [track] and its album as it names it now (its entity: the
+    // player's album name, its release group): the same song from another album has none of them.
     override fun albumEvidence(track: TrackState): Flow<EvidenceSet?> =
-        gathered
-            .map { kept ->
-                kept.entries
-                    .lastOrNull { (at, _) ->
-                        at.item == InsightItem.ALBUM && at.lookupKey == track.normalized.lookupKey
-                    }?.value
-                    ?.evidence
-                    ?.evidence
-            }.distinctUntilChanged()
+        combine(gathered, parts) { kept, made ->
+            val album = made?.let { insightsOf(it).entity(InsightItem.ALBUM, track) }
+            kept.entries
+                .lastOrNull { (at, _) ->
+                    album != null &&
+                        at.item == InsightItem.ALBUM &&
+                        at.lookupKey == track.normalized.lookupKey &&
+                        at.entity == album
+                }?.value
+                ?.evidence
+                ?.evidence
+        }.distinctUntilChanged()
 
     // The write under way for [key], by its own job, whatever the evidence kept meanwhile.
     override fun stop(key: CardKey) {

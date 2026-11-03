@@ -185,8 +185,11 @@ private fun SourcesPage(
     val fold = sourcesFold(rememberFoldMemory(), playing, onNewTrack = NewTrackFold.FOLDED, start = Fold.Pages(1))
     // Once, not again as the evidence grows or after a rotation.
     var cited by rememberSaveable { mutableStateOf(false) }
+    // Taken once its line is there: an album's line (#522) comes once the album's lines are read,
+    // after the track's.
+    val evidence = lines.evidence
     LaunchedEffect(focus) {
-        if (cited || cite == null) return@LaunchedEffect
+        if (cited || cite == null || evidence?.get(cite) == null) return@LaunchedEffect
         cited = true
         focus.cite(cite)?.let(fold::reach)
     }

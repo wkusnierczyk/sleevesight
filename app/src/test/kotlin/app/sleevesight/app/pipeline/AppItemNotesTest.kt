@@ -338,6 +338,19 @@ class AppItemNotesTest {
         }
 
     @Test
+    fun `the same song from another album shows none of the first album's lines`() =
+        runTest {
+            val notes = notes()
+            val original = track(HomeFixtures.sundown)
+            notes.item(original, InsightItem.ALBUM).first { it !is ItemShown.Gathering }
+            assertTrue(notes.albumEvidence(original).first() != null)
+            // The same song, the same lookup key, played from a compilation.
+            val compilation = original.copy(nowPlaying = original.nowPlaying.copy(album = "Gord's Gold"))
+            assertEquals(original.normalized.lookupKey, compilation.normalized.lookupKey)
+            assertEquals(null, notes.albumEvidence(compilation).first())
+        }
+
+    @Test
     fun `an album a source could not be asked for is kept for a while, not asked again at each update`() =
         runTest {
             albumUnreachable = true

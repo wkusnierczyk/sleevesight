@@ -168,7 +168,9 @@ private fun Shown(
     context: ItemContext,
 ) {
     val own = track.copy(evidence = shown.evidence.evidence)
-    val onCite = citeOf(shown.evidence, context.sources, context.cite)
+    // Where a citation goes, and how it shows and is read: by the id *Sources* shows its line under.
+    val onCite: (String) -> Unit = { id -> shownAs(id, shown.evidence, context.sources)?.let(context.cite) }
+    val label: (String) -> String = { id -> shownAs(id, shown.evidence, context.sources) ?: id }
     when (val state = shown.state) {
         is InsightState.Writing -> {
             val prose =
@@ -179,7 +181,7 @@ private fun Shown(
                     modelAllowed = context.settings.isEnabled(SourceId.MODEL),
                     offers = InsightOffers(),
                 )
-            for (paragraph in paragraphsOf(state.partial)) UncheckedProse(paragraph, prose, onCite)
+            for (paragraph in paragraphsOf(state.partial)) UncheckedProse(paragraph, prose, onCite, label = label)
             WritingItem(item) { shown.key?.let(context.notes::stop) }
         }
 
@@ -191,7 +193,7 @@ private fun Shown(
                 }
             }
             for (paragraph in state.grounded.paragraphs) {
-                CheckedProse(paragraph, state.grounded, shown.evidence.evidence, onCite)
+                CheckedProse(paragraph, state.grounded, shown.evidence.evidence, onCite, label = label)
             }
             GroundingLine(state.grounded, details = false)
             if (!state.complete) ItemQuiet(stringResource(R.string.home_insight_incomplete))
@@ -220,13 +222,13 @@ private fun Shown(
     }
 }
 
-// Where a citation of an item's line goes: *Sources* at that line, by the id it shows it under: the
-// track's, or for the album's own line, the one *Sources* numbers it with among the track's (#522).
-private fun citeOf(
+// The id *Sources* shows an item's line [id] under: the track's, or for the album's own line, the one
+// *Sources* numbers it with among the track's (#522); null for none.
+private fun shownAs(
+    id: String,
     evidence: ItemEvidence,
     sources: EvidenceSet?,
-    cite: (String) -> Unit,
-): (String) -> Unit = { id -> (evidence.trackIds[id] ?: shownId(id, evidence.evidence, sources))?.let(cite) }
+): String? = evidence.trackIds[id] ?: shownId(id, evidence.evidence, sources)
 
 // *Read aloud* of [item]'s insight [written], for [track].
 @Composable
