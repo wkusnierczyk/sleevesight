@@ -49,4 +49,22 @@
          Track row of Genre tags, where it shows marked AI: %1$s is the genre, %2$s the model's name
          ("Blues, from Claude Haiku 5.5"). -->
     <string name="genre_ai_added">%1$s, from %2$s</string>
+    <!-- How a screen reader reads a genre chip whose evidence is weak (#875), shown dimmed and in
+         italics: a track's tag no artist's or album's tags include, with few MusicBrainz votes or
+         from Last.fm alone. %1$s is the genre ("Country, weak evidence"). -->
+    <string name="genre_weak">%1$s, weak evidence</string>
+    <!-- Under a weak genre's definition (#875), before Why is this …?, in the panel's quiet note
+         style: why its evidence is weak. %1$s is the genre, in italics, as its chip names it; %2$s
+         is one of the genre_weak_* clauses below, or nothing when the track has no other level of
+         tags. When MusicBrainz contributors tagged the track with it: -->
+    <string name="genre_weak_musicbrainz">Few MusicBrainz contributors tagged this track %1$s%2$s.</string>
+    <!-- When only Last.fm's tags for the track give it. -->
+    <string name="genre_weak_lastfm">Only Last.fm’s tags for this track give %1$s%2$s.</string>
+    <!-- The clause, after the genre, when the artist's tags are there (one artist, or several) and
+         the album's are not; the album's and not the artist's; both. -->
+    <string name="genre_weak_artist">, and the artist’s tags don’t include it</string>
+    <string name="genre_weak_artists">, and the artists’ tags don’t include it</string>
+    <string name="genre_weak_album">, and the album’s tags don’t include it</string>
+    <string name="genre_weak_both">, and neither the artist’s nor the album’s tags include it</string>
+    <string name="genre_weak_both_artists">, and neither the artists’ nor the album’s tags include it</string>
 </resources>

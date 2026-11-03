@@ -181,8 +181,8 @@ data class GenreFamily(
  * @property artist for an artist's label, the credited artist, as the track names it, whose tags
  *   gave it; null for the track's and the album's.
  * @property votes the net votes on the tag that gave it, where the source counts votes: MusicBrainz's
- *   recording tags (#799), by which a track's label may lead the folded genres
- *   ([TrackGenres.folded]). Null where it does not: Last.fm's counts are weights out of 100, not
+ *   recording tags (#799), by which a track's label is backed among the chips rather than weak
+ *   ([TrackGenres.chips], #875). Null where it does not: Last.fm's counts are weights out of 100, not
  *   votes, and an artist's MusicBrainz tags are kept without theirs.
  */
 data class GenreLabel(
