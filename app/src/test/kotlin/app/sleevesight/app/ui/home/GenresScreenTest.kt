@@ -50,7 +50,8 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * The genres under *Expandable boxes* (#439, #558, #786): the chips alone; a chip unfolds its genre
+ * The genres under *Expandable boxes* (#439, #558, #786, #875): every genre a chip, alphabetical, the
+ * first backed open; a chip unfolds its genre
  * under them and a rule, with no heading or *Close*, another replaces it, the same chip folds it; its
  * tags and their sources in one grid of two columns, its rows named *Track*, *Artist* (*Artist 1*,
  * *Artist 2* with several artists, by their place in the credit) and *Album* (with album tags), each
@@ -79,7 +80,7 @@ class GenresScreenTest {
     ): TrackLabel {
         val shown = tag.split(' ').joinToString(" ") { it.replaceFirstChar(Char::uppercase) }
         val genre = GenreLabel(tag, "family", shown, tag.replace(" ", ""), level = level, artist = artist)
-        // A track's label with the votes to lead the folded chips (#799), as the tests' chips are the track's.
+        // A track's label with the votes to be backed (#799, #875): no chip here is weak.
         val votes = TrackGenres.MIN_VOTES.takeIf { level == GenreLevel.TRACK }
         return TrackLabel(genre, listOf(LabelCredit(source, "https://example.org/$tag")), votes)
     }
@@ -172,14 +173,25 @@ class GenresScreenTest {
     }
 
     @Test
-    fun atRestTheMostSpecificLevelsChipsShowAloneWithNoTitleAndNoGenre() {
+    fun everyGenreIsAChipOnceAlphabeticalWithNoTitleAndTheFirstBackedOpen() {
         show(three) {
-            assertEquals(listOf("Baroque Pop", "Ballad"), chips(GenreLevel.TRACK))
-            assertEquals(emptyList<String>(), chips(GenreLevel.ARTIST))
+            // Every row's genres (#875), each once, on the first row that has it, in alphabetical order.
+            assertEquals(listOf("Ballad", "Baroque Pop"), chips(GenreLevel.TRACK))
+            assertEquals(listOf("Pop", "Rock"), chips(GenreLevel.ARTIST))
+            assertEquals(listOf("Folk Rock"), chips(GenreLevel.ALBUM))
+            assertEquals(
+                listOf("Ballad", "Baroque Pop", "Folk Rock", "Pop", "Rock"),
+                tagged(GENRE_PREFIX),
+            )
             val titles = compose.onAllNodesWithText(text(R.string.home_genres), substring = true)
             assertEquals(0, titles.fetchSemanticsNodes().size)
-            assertEquals(0, panels())
-            assertEquals(emptyList<String>(), rows())
+            // The first backed genre open, as after a tap.
+            assertEquals(1, panels())
+            compose.onNodeWithTag(GENRE_PREFIX + "track:ballad").assertIsSelected()
+            assertEquals(
+                "Track, Baroque Pop, Ballad, selected",
+                compose.onNodeWithTag(GENRES_ROW_PREFIX + "0").reading(),
+            )
         }
     }
 
@@ -361,7 +373,7 @@ class GenresScreenTest {
     @Test
     fun aRowOfSourcesIsOneItemWhoseLinksStayLinksAScreenReaderReachesAndOpens() =
         show(twoSources()) {
-            tap(GENRE_PREFIX + "track:folk")
+            // Folk, the first backed genre, open as the panel opens (#875).
             // Each row of sources one item, its links still links of their own: in the merged tree,
             // one node per source under the row, each a screen reader can focus and open.
             val linked =
@@ -384,7 +396,7 @@ class GenresScreenTest {
     @Test
     fun eachSourceLinksTheRowsPageAndMusicBrainzsCreditAndLicenceShowOnceUnderThem() =
         show(twoSources()) {
-            tap(GENRE_PREFIX + "track:folk")
+            // Folk, the first backed genre, open as the panel opens (#875).
             assertEquals(listOf("Track, Last.fm", "Artist, Last.fm · MusicBrainz"), sources())
             assertEquals(listOf("https://example.org/folk"), links("Last.fm"))
             assertEquals(
@@ -469,8 +481,8 @@ class GenresScreenTest {
     fun withOneLevelEachChipUnfoldsTheGenreWithARowPerArtist() {
         val second = row(GenreLevel.ARTIST, "rock", "jazz", artist = "Miles Davis")
         show(TrackGenres(listOf(beatles, second))) {
-            // The artists' together, each genre once.
-            assertEquals(listOf("Rock", "Pop", "Jazz"), chips(GenreLevel.ARTIST))
+            // The artists' together, each genre once, in alphabetical order.
+            assertEquals(listOf("Jazz", "Pop", "Rock"), chips(GenreLevel.ARTIST))
             tap(GENRE_PREFIX + "artist:The Beatles:rock")
             assertEquals(listOf("Artist, Rock, Pop", "Artist, Rock, Jazz"), rows())
             assertEquals("Artist, Rock, selected, Jazz", compose.onNodeWithTag(GENRES_ROW_PREFIX + "1").reading())
@@ -489,7 +501,7 @@ class GenresScreenTest {
     }
 
     @Test
-    fun anOpenGenreOutlastsLabelsThatLandLaterAndANewTrackStartsFolded() {
+    fun aTappedGenreOutlastsLabelsThatLandLaterAndANewTrackOpensOnItsFirstBackedGenre() {
         val genres = mutableStateOf(TrackGenres(listOf(beatles)))
         val playing = mutableStateOf(track())
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
@@ -498,16 +510,19 @@ class GenresScreenTest {
             }
             scenario.onActivity {
                 tap(GENRE_PREFIX + "artist:The Beatles:rock")
-                // The album's labels land: the chips are now the album's, and the genre stays.
+                // The album's labels land: its Folk Rock joins the chips, first, and the genre tapped stays.
                 genres.value = TrackGenres(listOf(beatles, album))
                 compose.waitForIdle()
-                assertEquals(listOf("Folk Rock", "Pop"), chips(GenreLevel.ALBUM))
+                assertEquals(listOf("Folk Rock"), chips(GenreLevel.ALBUM))
                 assertEquals("Artist, Rock, selected, Pop", compose.onNodeWithTag(GENRES_ROW_PREFIX + "0").reading())
                 assertEquals(listOf("Artist, Rock, Pop", "Album, Folk Rock, Pop"), rows())
 
+                // A new track: its first backed genre open, no longer the one tapped (#875).
                 playing.value = track(HomeFixtures.carefree)
                 compose.waitForIdle()
-                assertEquals(0, panels())
+                assertEquals(1, panels())
+                compose.onNodeWithTag(GENRE_PREFIX + "album:folkrock").assertIsSelected()
+                compose.onNodeWithTag(GENRE_PREFIX + "artist:The Beatles:rock").assertIsNotSelected()
             }
         }
     }
