@@ -26,6 +26,7 @@ import app.sleevesight.core.pipeline.WrittenBy
 import app.sleevesight.core.pipeline.rewriteParts
 import app.sleevesight.core.settings.PrepareNextTrack
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.settings.SourceSwitch
 import app.sleevesight.core.settings.WebEngine
 import app.sleevesight.core.settings.WriteAutomatically
 import app.sleevesight.core.settings.pastKeepHistory
@@ -81,7 +82,8 @@ import kotlin.time.Instant
  * @property aiReady whether an insight can be written: an AI service is chosen, it has a client,
  *   and its key is saved and readable.
  * @property rewrite whether Write is offered beside the written insight shown, to write it again: a
- *   rebuild changed its card's key (new evidence, another service, model or effort), so its run
+ *   rebuild changed its card's key (new evidence, another service, model or effort, *AI service
+ *   knowledge* switched), so its run
  *   found no card. The card paid for (the ledger's, with the evidence it cites) is shown whenever
  *   the track's run has no insight of its own, offered or not ([cardShown]); this says only whether
  *   Write is offered beside it. The card shows beside the run's own source states, with the
@@ -189,7 +191,8 @@ class PipelineKeys(
  * Nothing is read, built or sent before [acknowledged]: the session layer's reports ([changes]: each
  * track with why it came to play, D5), the settings and the keys are collected only after it. A
  * rebuild follows a key saved, replaced or removed ([keyChanges]), a web engine switched, another
- * AI service chosen, or another model or reasoning effort for the one switched on (#849); no
+ * AI service chosen, another model or reasoning effort for the one switched on (#849), or a source
+ * switched on or off under *Sources*, *AI service knowledge* among them (#857); no
  * pipeline is built until the keys' first read succeeds. A pipeline that cannot be built is reported
  * to [onFailure] and none runs until the next rebuild; a run that fails (a bug: the stages map their
  * failures to outcomes) is reported and ends, and the next track runs.
@@ -467,8 +470,9 @@ class PipelineHost(
                 }
             }
             launch {
-                // What the parts are built with, and what of the AI service the card's key holds
-                // besides (#849), so that the track under way runs again and finds its card or not.
+                // What the parts are built with, and what of the AI service and the sources the
+                // card's key holds besides (#849, #857), so that the track under way runs again and
+                // finds its card or not.
                 val inputs = latest.map(::BuildInputs).distinctUntilChanged()
                 combine(keyChanges, inputs) { _, _ -> }.collect { queue.send(CoordinatorEvent.RebuildRequested) }
             }
@@ -1002,16 +1006,19 @@ class PipelineHost(
     }
 
     // The settings a change of which rebuilds the pipeline: what the parts are built with (the web
-    // engines, the AI service, and *Show genres*, #444, whose adapters ask for tags or not), and the
+    // engines, the AI service, and *Show genres*, #444, whose adapters ask for tags or not), the
     // switched-on service's model and reasoning effort (#849), which a card's key holds as it holds
-    // the service: a run of the track under way then finds its card under the key it was written
-    // with, or offers *Rewrite insight* beside it.
+    // the service, and the *Sources* switches, *AI service knowledge* among them (#857), which the
+    // key holds as the evidence it fingerprints and as `modelKnowledge`: a run of the track under
+    // way then looks up a source switched on, drops the lines of one switched off, and finds its
+    // card under the key it was written with, or offers *Rewrite insight* beside it.
     private data class BuildInputs(
         val webEngines: Set<WebEngine>,
         val aiProvider: ProviderId?,
         val showGenres: Boolean,
         val model: String?,
         val effort: ReasoningEffort?,
+        val enabledSources: Set<SourceSwitch>,
     ) {
         constructor(settings: Settings) : this(
             settings.webEngines,
@@ -1019,6 +1026,7 @@ class PipelineHost(
             settings.showGenres,
             settings.model,
             settings.effort,
+            settings.enabledSources,
         )
     }
 
