@@ -163,9 +163,12 @@ internal class PipelineHostSettingsRewriteTest : PipelineHostFixture() {
     fun `a source with nothing to add changes nothing beside the insight kept`() =
         runTest {
             written()
+            val before = builds
 
-            // No adapter for Discogs here: it finds nothing, so the evidence stays as it was.
+            // No adapter for Discogs here: it finds nothing, so the evidence stays as it was, and the
+            // rebuild's run finds the card under its key.
             switchSource(SourceSwitch.DISCOGS, on = false)
+            assertEquals(before + 1, builds)
             assertKeptWithRewrite(false)
         }
 
@@ -180,13 +183,9 @@ internal class PipelineHostSettingsRewriteTest : PipelineHostFixture() {
             settle()
 
             assertEquals(2, provider.requestsFor("Alpha"))
-            assertTrue(
-                host.state.value.track
-                    ?.evidence
-                    ?.lines
-                    .orEmpty()
-                    .none { it.source == SourceId.LASTFM },
-            )
+            val line = "A line from ${SourceId.LASTFM.tag}."
+            assertTrue(line in provider.prompts.first())
+            assertTrue(line !in provider.prompts.last())
         }
 
     private fun TestScope.switchSource(

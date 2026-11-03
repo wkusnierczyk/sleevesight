@@ -57,12 +57,11 @@ internal class PipelineHostRebuildTest : PipelineHostFixture() {
             settle()
             assertEquals(1, builds)
 
-            val sources = settings.value.enabledSources
-            settings.value = settings.value.copy(enabledSources = sources - SourceSwitch.DISCOGS)
+            settings.value = settings.value.copy(enabledSources = settings.value.enabledSources - SourceSwitch.DISCOGS)
             settle()
             assertEquals(2, builds)
 
-            settings.value = settings.value.copy(enabledSources = sources + SourceSwitch.MODEL)
+            settings.value = settings.value.copy(enabledSources = settings.value.enabledSources + SourceSwitch.MODEL)
             settle()
             assertEquals(3, builds)
         }
