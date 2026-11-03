@@ -20,6 +20,7 @@ import app.sleevesight.core.pipeline.ReasonPath
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.pastKeepHistory
+import app.sleevesight.core.synthesis.GenreListMode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
@@ -63,12 +64,16 @@ sealed interface GenreReason {
      * or [InsightState.Failed] (the list's call, or the reason's), beside which it is offered again.
      * [model] is the name of the model that writes it, for the credit under it. A reason written
      * before this play of the track, served from what was kept, has [keptAt], when it was written
-     * (#851); null for one written on this play.
+     * (#851); null for one written on this play. [couldHelp] is what was off when it was asked and
+     * could have explained it (#695: *AI service knowledge*, *AI web search*), in the order the panel
+     * names them, which the panel offers to switch on under "AI could not find an explanation."
+     * ([InsightState.NoEvidence]); empty with both on, and for every other state.
      */
     data class Shown(
         val state: InsightState,
         val model: String? = null,
         val keptAt: Instant? = null,
+        val couldHelp: List<GenreListMode> = emptyList(),
     ) : GenreReason
 }
 
@@ -343,8 +348,24 @@ class AppGenreNotes private constructor(
                 when {
                     entry == null -> GenreReason.Offered
                     expired(entry.writtenAt, now.lifetime) -> GenreReason.Offered.also { drop(path.key) }
-                    else -> GenreReason.Shown(entry.state, modelName(path.key.model), keptAt(entry, track, now.play))
+                    else ->
+                        GenreReason.Shown(
+                            entry.state,
+                            modelName(path.key.model),
+                            keptAt(entry, track, now.play),
+                            couldHelp(path.key).takeIf { entry.state == InsightState.NoEvidence }.orEmpty(),
+                        )
                 }
+            }
+        }
+
+    // What was off when [key]'s reason was asked, of what could explain it (#695), as its key says:
+    // the model's own knowledge, and the web, which a key that may search has after the genre.
+    private fun couldHelp(key: CardKey): List<GenreListMode> =
+        GenreLists.MODES.filter { mode ->
+            when (mode) {
+                GenreListMode.KNOWLEDGE -> !key.modelKnowledge
+                GenreListMode.WEB -> key.subject?.endsWith(GenreReasons.WEB) != true
             }
         }
 
