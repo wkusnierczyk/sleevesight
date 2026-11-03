@@ -232,7 +232,8 @@ class PipelineCoordinatorLedgerTest {
                 listOf("Zero", "A", "A"),
             ) {
                 // Another media id with the same title, artists, album and length: the same
-                // `RunKey`, but another track as `TrackIdentity` judges it. Once it settles, the
+                // `RunKey`, but another track as `TrackIdentity` judges it (a media id on both
+                // reports decides; the queue slot would not, #297). Once it settles, the
                 // run holds nothing, its call is cut off, and the new track decides afresh.
                 acted()
                 streamMs = 10_000
@@ -254,6 +255,43 @@ class PipelineCoordinatorLedgerTest {
                         ?.nowPlaying
                         ?.mediaId,
                 )
+                settle()
+            },
+            Case(
+                "the same media id under a new play tag (the session layer restarted): the run kept",
+                mapOf("Zero" to 1, "A" to 1),
+                listOf("Zero", "A"),
+            ) {
+                // A media id on both reports decides before the session layer's play tags (#297).
+                acted()
+                streamMs = 10_000
+                report(nowPlaying("A", mediaId = "m1").copy(play = 1))
+                advance(DEBOUNCE_MS + 100)
+                val first = checkNotNull(coordinator.state.run)
+                assertTrue(first.calling)
+                report(nowPlaying("A", mediaId = "m1").copy(play = 2))
+                advance(DEBOUNCE_MS + 100)
+                assertEquals(emptyList<String>(), cut)
+                assertEquals(first.id, coordinator.state.run?.id)
+                settle()
+            },
+            Case(
+                "the run's key, another queue slot under the same track: the same insight track, the run kept",
+                mapOf("Zero" to 1, "A" to 1),
+                listOf("Zero", "A"),
+            ) {
+                // YouTube Music's half (#297): the queue slot decides nothing about identity, so a
+                // report of the same track from another slot holds the run, and its call goes on.
+                acted()
+                streamMs = 10_000
+                report(nowPlaying("A").copy(queueItemId = 1))
+                advance(DEBOUNCE_MS + 100)
+                val first = checkNotNull(coordinator.state.run)
+                assertTrue(first.calling)
+                report(nowPlaying("A").copy(queueItemId = 2))
+                advance(DEBOUNCE_MS + 100)
+                assertEquals(emptyList<String>(), cut)
+                assertEquals(first.id, coordinator.state.run?.id)
                 settle()
             },
             Case(

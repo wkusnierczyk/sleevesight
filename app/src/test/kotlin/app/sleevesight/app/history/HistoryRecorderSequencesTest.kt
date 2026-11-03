@@ -156,6 +156,58 @@ internal class HistoryRecorderSequencesTest(
                     at(30_000 + GAP + 1)
                     startLayer()
                 },
+                sequence(
+                    "a placeholder album, then the real one within the first second: one row (#297)",
+                    Row(SUNDOWN, 1, 0, null, album = "Sundown"),
+                ) {
+                    val spotify = spotify(metadata = metadata(album = "Gordon Lightfoot"))
+                    at(400)
+                    spotify.report(metadata(album = "Sundown"))
+                },
+                sequence(
+                    "a studio, then a live take of one title: two rows (#297)",
+                    Row(SUNDOWN, 1, 0, 60_000 + S, album = "Studio"),
+                    Row(SUNDOWN, 1, 60_000 + S, null, album = "Live"),
+                ) {
+                    val spotify = spotify(metadata = metadata(album = "Studio"))
+                    at(60_000)
+                    spotify.report(metadata(album = "Live"))
+                },
+                sequence(
+                    "the session layer restarted, then a report without the album: the row keeps it (#297)",
+                    Row(SUNDOWN, 1, 0, null, album = "Sundown"),
+                ) {
+                    val spotify = spotify(metadata = metadata(album = "Sundown"))
+                    at(30_000)
+                    stopLayer()
+                    spotify.metadata = metadata()
+                    at(31_000)
+                    startLayer()
+                },
+                sequence(
+                    "a stored row's artists, a restart without artists, then other artists: two rows (#297)",
+                    Row(SUNDOWN, 1, -60_000, 1_000 + S),
+                    Row(SUNDOWN, 1, 1_000 + S, null, artists = "Someone Else"),
+                ) {
+                    stored(NowPlaying(SUNDOWN, "Gordon Lightfoot", player = SPOTIFY), base - 60.seconds)
+                    val spotify = spotify(metadata = metadata(artist = null))
+                    at(1_000)
+                    spotify.report(metadata(artist = "Someone Else"))
+                },
+                sequence(
+                    "a stored row's album, a restart without it, a placeholder, then the album: one row (#297)",
+                    Row(SUNDOWN, 1, -60_000, null, album = "Sundown"),
+                ) {
+                    stored(
+                        NowPlaying(SUNDOWN, "Gordon Lightfoot", album = "Sundown", player = SPOTIFY),
+                        base - 60.seconds,
+                    )
+                    val spotify = spotify(metadata = metadata())
+                    at(200)
+                    spotify.report(metadata(album = "Gordon Lightfoot"))
+                    at(700)
+                    spotify.report(metadata(album = "Sundown"))
+                },
                 sequence("artists sent after the title", Row(SUNDOWN, 1, 0, null)) {
                     val spotify = spotify(metadata = metadata(artist = null))
                     at(1_000)

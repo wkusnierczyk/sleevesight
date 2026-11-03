@@ -17,6 +17,10 @@ import kotlin.time.Duration
  *   ("no item") is null here.
  * @property year the year of the release, when the player sends one (`YEAR`, else `DATE`): the
  *   header's year after the album when MusicBrainz has none for it (#556). Few players send it.
+ * @property play which play of a track this report belongs to, as the app's session layer counts
+ *   them (`design/architecture.md`, *Identity*): equal across every report of one play, so a track
+ *   filled in as it plays (its artists, its album) stays one; null where nothing counted it (the
+ *   CLI, a queue entry, a row read back from the history).
  */
 data class NowPlaying(
     val title: String,
@@ -28,4 +32,5 @@ data class NowPlaying(
     val queueItemId: Long? = null,
     val artUri: String? = null,
     val year: Int? = null,
+    val play: Long? = null,
 )
