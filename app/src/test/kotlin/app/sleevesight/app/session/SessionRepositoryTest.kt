@@ -51,7 +51,7 @@ internal class SessionRepositoryTest : SessionRepositoryFixture() {
 
         assertEquals(1, system.reads)
         assertEquals(1, spotify.callbacks.size)
-        assertEquals(sundown, repository.nowPlaying.value)
+        assertEquals(sundown, repository.nowPlaying.value.untagged())
     }
 
     @Test
@@ -72,7 +72,7 @@ internal class SessionRepositoryTest : SessionRepositoryFixture() {
 
         assertEquals(
             sundown.copy(mediaId = "spotify:track:1", duration = 223.seconds, queueItemId = 9),
-            repository.nowPlaying.value,
+            repository.nowPlaying.value.untagged(),
         )
         assertEquals(PlaybackInfo(SPOTIFY, PlaybackStatus.PLAYING, 61.seconds, 500, 1f), repository.playback.value)
         assertEquals(
@@ -91,7 +91,7 @@ internal class SessionRepositoryTest : SessionRepositoryFixture() {
         system.change(listOf(youtube, spotify))
         youtube.settled(state(PlaybackState.STATE_PLAYING))
 
-        assertEquals(sundown, repository.nowPlaying.value)
+        assertEquals(sundown, repository.nowPlaying.value.untagged())
         assertTrue(youtube.callbacks.isEmpty())
         assertEquals(1, ignoredLines().size)
         assertTrue(ignoredLines().single().msg.contains(YOUTUBE_MUSIC))
@@ -226,7 +226,7 @@ internal class SessionRepositoryTest : SessionRepositoryFixture() {
         app.marksCall = true
         app.send(state(PlaybackState.STATE_PLAYING, positionMs = 5_000))
 
-        assertEquals(sundown, repository.nowPlaying.value)
+        assertEquals(sundown, repository.nowPlaying.value.untagged())
         assertEquals(SPOTIFY, repository.playback.value.player)
     }
 
@@ -259,13 +259,13 @@ internal class SessionRepositoryTest : SessionRepositoryFixture() {
         system.active = listOf(app, spotify)
         repository.start()
         app.call(true)
-        assertEquals(sundown, repository.nowPlaying.value)
+        assertEquals(sundown, repository.nowPlaying.value.untagged())
 
         app.call(false)
         app.send(state(PlaybackState.STATE_PLAYING, positionMs = 2_000))
         app.send(metadata(title = "After"))
         scheduler.runCurrent()
-        assertEquals(sundown, repository.nowPlaying.value)
+        assertEquals(sundown, repository.nowPlaying.value.untagged())
 
         // No report after the wait: the session is read afresh, its state with it.
         waitOutTheCall()
@@ -587,7 +587,7 @@ internal class SessionRepositoryTest : SessionRepositoryFixture() {
         assertNull(repository.nowPlaying.value)
 
         repository.start()
-        assertEquals(sundown, repository.nowPlaying.value)
+        assertEquals(sundown, repository.nowPlaying.value.untagged())
     }
 
     @Test

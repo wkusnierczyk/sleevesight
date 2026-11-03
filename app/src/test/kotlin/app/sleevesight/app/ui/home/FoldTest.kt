@@ -85,14 +85,33 @@ class FoldTest {
     fun theFoldAndItsTrackOutliveARecreatedActivity() {
         val scope = SaverScope { true }
         for (fold in listOf(Fold.Folded, Fold.Pages(3), Fold.All)) {
-            for (track in listOf(null, sundown, sundown.copy(mediaId = null, queueItemId = 7))) {
+            for (track in listOf(null, sundown, sundown.copy(mediaId = null, play = 7, album = "Sundown"))) {
                 val saved = with(FoldMemory.Saver) { scope.save(FoldMemory(fold, track)) }
                 val restored = checkNotNull(FoldMemory.Saver.restore(checkNotNull(saved)))
                 assertEquals(fold, restored.fold)
-                // What `TrackIdentity.playsOn` reads, so the track restored plays on as it did.
-                val identity = { t: NowPlaying -> listOf(t.player, t.mediaId, t.queueItemId, t.title, t.artists) }
+                // What `TrackIdentity.playsOn` reads by the fields, so the track restored plays on as
+                // it did; restored untagged, since a play's number is the process's own.
+                val identity = { t: NowPlaying -> listOf(t.player, t.mediaId, t.title, t.artists, t.album) }
                 assertEquals(track?.let(identity), restored.track?.let(identity))
+                assertEquals(null, restored.track?.play)
             }
+        }
+    }
+
+    @Test
+    fun aStateSavedByAnEarlierVersionIsRestoredUntaggedWithNoAlbum() {
+        // Saved before #297: player, media id, queue item, title, artists.
+        val legacy = listOf<Any?>(sundown.player, null, 7L, "Sundown", "Gordon Lightfoot")
+        val fold = checkNotNull(FoldMemory.Saver.restore(listOf<Any?>(-1) + legacy))
+        assertEquals(Fold.All, fold.fold)
+        val panels = checkNotNull(InPlaceMemory.Saver.restore(listOf<Any?>("") + legacy))
+        for (track in listOf(fold.track, panels.track)) {
+            val restored = checkNotNull(track)
+            assertEquals(
+                listOf("Sundown", "Gordon Lightfoot", sundown.player),
+                listOf(restored.title, restored.artists, restored.player),
+            )
+            assertEquals(listOf(null, null, null), listOf(restored.album, restored.play, restored.queueItemId))
         }
     }
 }

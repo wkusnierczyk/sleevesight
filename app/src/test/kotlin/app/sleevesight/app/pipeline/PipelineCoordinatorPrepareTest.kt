@@ -219,6 +219,20 @@ class PipelineCoordinatorPrepareTest {
     }
 
     @Test
+    fun `the playing track in another queue slot is not prepared as the next (edge 7, #297)`() {
+        // A metadata-first player still on the previous slot: its queue's next entry is the
+        // playing track itself, under another slot. The slot decides nothing, so it is not prepared.
+        val world = started()
+        with(world) {
+            report(nowPlaying("A").copy(queueItemId = 4, play = 1))
+            send(CoordinatorEvent.NextChanged(nowPlaying("A").copy(queueItemId = 5)))
+            advance(0)
+            settle()
+            assertEquals(emptyList<String>(), preparations)
+        }
+    }
+
+    @Test
     fun `a track prepared is not prepared again, nor is the track playing`() {
         val world = started()
         with(world) {
