@@ -1,5 +1,5 @@
 What's new in 0.1.18:
-- Song, Artist and Album insights under the key insight, each with its own insight.
+- Song, Artist and Album: each with its own insight, under the key insight.
 - An artist's and an album's insights are written once for all their tracks.
 - Every genre is a chip; a weakly supported one is marked.
 - Switching a source or AI service knowledge offers Rewrite insight.
