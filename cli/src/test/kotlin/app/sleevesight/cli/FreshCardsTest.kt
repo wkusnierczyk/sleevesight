@@ -2,6 +2,7 @@ package app.sleevesight.cli
 
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.normalizer.Normalizer
+import app.sleevesight.core.pipeline.CardEntity
 import app.sleevesight.core.pipeline.CardKey
 import app.sleevesight.core.pipeline.PipelineCache
 import app.sleevesight.core.platform.JvmAccentFolder
@@ -15,8 +16,7 @@ class FreshCardsTest {
     private val key =
         CardKey(
             kind = CardKind.INSIGHT,
-            track = Normalizer(JvmAccentFolder).normalize(Cli.nowPlaying(1)),
-            duration = null,
+            entity = CardEntity.Track(Normalizer(JvmAccentFolder).normalize(Cli.nowPlaying(1)), null),
             evidenceFingerprint = "f",
             promptVersion = 5,
             styleHash = "s",

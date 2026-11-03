@@ -1,6 +1,7 @@
 package app.sleevesight.store
 
 import app.sleevesight.core.model.NormalizedTrack
+import app.sleevesight.core.pipeline.CardEntity
 import app.sleevesight.core.pipeline.CardKey
 import app.sleevesight.core.pipeline.ClearEpoch
 import app.sleevesight.core.pipeline.KeptCard
@@ -95,9 +96,7 @@ class StorePipelineCache(
     private fun CardKey.toStore(): SynthesisKey =
         SynthesisKey(
             kind = kind,
-            // A card about more than the track (a genre's reason, #523) keeps its subject after it,
-            // past a line break: the retrieval key's parts are length-prefixed, so the two never blur.
-            entityKey = caches.retrieval.keyOf(track, duration) + subject?.let { "\n$it" }.orEmpty(),
+            entityKey = entityKey(entity),
             evidenceFingerprint = evidenceFingerprint,
             promptVersion = promptVersion,
             styleHash = styleHash,
@@ -106,4 +105,26 @@ class StorePipelineCache(
             modelKnowledge = modelKnowledge,
             effort = effort,
         )
+
+    // The entity key (architecture, *Cache and history*; #240): an artist or album by its MusicBrainz
+    // id, else by its name, folded as the retrieval key folds names (an album's with the artist's
+    // before it). Each part is length-prefixed, as the retrieval key's are, so no two blur. The kind
+    // is part of the key too, so an artist's or album's never meets a track's.
+    private fun entityKey(entity: CardEntity): String =
+        when (entity) {
+            // A card about more than the track (a genre's reason, #523) keeps its subject after it,
+            // past a line break: the retrieval key's parts are length-prefixed, so the two never blur.
+            is CardEntity.Track ->
+                caches.retrieval.keyOf(entity.track, entity.duration) + entity.subject?.let { "\n$it" }.orEmpty()
+            is CardEntity.Artist -> entity.mbid?.let { BY_ID + it } ?: byName(entity.name)
+            is CardEntity.Album -> entity.group?.let { BY_ID + it } ?: byName(entity.artist, entity.title)
+        }
+
+    private fun byName(vararg names: String): String =
+        BY_NAME + names.joinToString("") { name -> caches.retrieval.foldName(name).let { "${it.length}:$it" } }
+
+    private companion object {
+        const val BY_ID = "mb:"
+        const val BY_NAME = "name:"
+    }
 }

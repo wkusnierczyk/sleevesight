@@ -114,24 +114,24 @@ data class KeptCard(
 )
 
 /**
- * What a written card depends on (R2, D14): the synthesis cache key, with the track itself as the
- * entity, which the store turns into its own key (the retrieval key, which tells apart tracks the
- * lookup key alone does not).
+ * What a written card depends on (R2, D14): the synthesis cache key, with what the card is about,
+ * its [entity], which the store turns into its own key (for a track, the retrieval key, which tells
+ * apart tracks the lookup key alone does not; for an artist or album, its MusicBrainz id or its
+ * folded name, #240).
  *
- * @property evidenceFingerprint the fingerprint of the evidence the card was written from.
+ * @property entity what the card is about: an [CardEntity.Artist] for [CardKind.ARTIST], an
+ *   [CardEntity.Album] for [CardKind.ALBUM], and a [CardEntity.Track] for every other kind.
+ * @property evidenceFingerprint the fingerprint of the evidence the card was written from: for an
+ *   artist or album card, of the evidence gathered for the artist or album, not the track, so it is
+ *   the same whichever of its tracks is playing.
  * @property promptVersion the card's prompt template version.
  * @property styleHash a hash of the user's style the card used (D14), SHA-256 in hex.
- * @property duration the player's length for the track, part of its entity key.
  * @property modelKnowledge whether the model's own knowledge was allowed.
  * @property effort the reasoning effort asked for, null for the provider's default.
- * @property subject what the card is about besides the track, null for none: for a genre's reason
- *   ([CardKind.GENRE], #523), the genre's identity (`GenreLabel.identity`), so each genre of a
- *   track keeps its own.
  */
 data class CardKey(
     val kind: CardKind,
-    val track: NormalizedTrack,
-    val duration: Duration?,
+    val entity: CardEntity,
     val evidenceFingerprint: String,
     val promptVersion: Int,
     val styleHash: String,
@@ -139,8 +139,27 @@ data class CardKey(
     val model: String,
     val modelKnowledge: Boolean,
     val effort: ReasoningEffort?,
-    val subject: String? = null,
-)
+) {
+    init {
+        val expected =
+            when (kind) {
+                CardKind.ARTIST -> entity is CardEntity.Artist
+                CardKind.ALBUM -> entity is CardEntity.Album
+                else -> entity is CardEntity.Track
+            }
+        require(expected) { "A ${kind.key} card is not about ${entity::class.simpleName}" }
+    }
+
+    /** What a track's card is about besides the track ([CardEntity.Track.subject]); null for any other. */
+    val subject: String? get() = (entity as? CardEntity.Track)?.subject
+
+    /** This track's card's key about [subject] instead ([CardEntity.Track.subject]). */
+    fun about(subject: String?): CardKey {
+        val track = entity as? CardEntity.Track
+        requireNotNull(track) { "A ${kind.key} card has no subject" }
+        return copy(entity = track.copy(subject = subject))
+    }
+}
 
 /**
  * The hash of a card's user style (D14), SHA-256 in hex, as [CardKey.styleHash] keeps it. D14's style

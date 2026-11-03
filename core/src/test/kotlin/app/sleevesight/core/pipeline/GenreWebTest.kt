@@ -281,7 +281,7 @@ class GenreWebTest {
             assertEquals(InsightState.Failed(AiSearches.WEB_SEARCH_FAILED), state)
             // Nothing under the reason's key; the evidence alone's "no" under the key without the web part.
             assertNull(cache.cards[key])
-            assertEquals(setOf(key.copy(subject = "folk")), cache.cards.keys)
+            assertEquals(setOf(key.about("folk")), cache.cards.keys)
         }
 
     @Test
@@ -312,7 +312,7 @@ class GenreWebTest {
             assertIs<InsightState.Written>(reasons.write(key, track, "Folk") { _, _ -> })
             assertEquals(1, queries.size)
             // The evidence alone's "no" under the key without the web part, the reason under its own.
-            assertEquals(InsightState.NoEvidence, reasons.kept(key.copy(subject = "folk"), track)?.state)
+            assertEquals(InsightState.NoEvidence, reasons.kept(key.about("folk"), track)?.state)
             assertIs<InsightState.Written>(reasons.kept(key, track)?.state)
         }
 
