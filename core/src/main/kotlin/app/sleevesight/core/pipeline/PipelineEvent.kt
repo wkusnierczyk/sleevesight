@@ -281,6 +281,11 @@ sealed interface AiQuestion {
 
     /** The AI's genre list for the track, asked before *Why is this …?* for a genre only MusicBrainz gives (#762). */
     data object GenreList : AiQuestion
+
+    /** The song's, the artist's or the album's insight under *Key insights* (#522), as [item] says. */
+    data class Item(
+        val item: InsightItem,
+    ) : AiQuestion
 }
 
 /** How an *Ask AI* question ended (#851). */

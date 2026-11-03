@@ -4,6 +4,7 @@ import androidx.compose.runtime.saveable.SaverScope
 import app.sleevesight.app.ui.home.HomeFixtures.carefree
 import app.sleevesight.app.ui.home.HomeFixtures.sundown
 import app.sleevesight.core.model.NowPlaying
+import app.sleevesight.core.settings.NewTrackFold
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -48,29 +49,34 @@ class FoldTest {
     @Test
     fun theFoldIsTheTracksOwnUnlessKept() {
         val memory = FoldMemory()
-        SourcesFold(memory, sundown, keep = false).set(Fold.Pages(2))
-        assertEquals(Fold.Pages(2), SourcesFold(memory, sundown.copy(album = "Other"), keep = false).fold)
-        assertEquals(Fold.Folded, SourcesFold(memory, carefree, keep = false).fold)
-        assertEquals(Fold.Pages(1), SourcesFold(memory, carefree, keep = true).fold)
+        SourcesFold(memory, sundown, onNewTrack = NewTrackFold.FOLDED).set(Fold.Pages(2))
+        assertEquals(
+            Fold.Pages(2),
+            SourcesFold(memory, sundown.copy(album = "Other"), onNewTrack = NewTrackFold.FOLDED).fold,
+        )
+        assertEquals(Fold.Folded, SourcesFold(memory, carefree, onNewTrack = NewTrackFold.FOLDED).fold)
+        assertEquals(Fold.Pages(1), SourcesFold(memory, carefree, onNewTrack = NewTrackFold.AS_LEFT).fold)
+        // Unfolded (#522): at its first screenful, whatever was left.
+        assertEquals(Fold.Pages(1), SourcesFold(memory, carefree, onNewTrack = NewTrackFold.UNFOLDED).fold)
     }
 
     @Test
     fun aNewTrackKeepsTheFoldItShowsAsItsOwnUntouched() {
         val memory = FoldMemory()
-        SourcesFold(memory, sundown, keep = false).set(Fold.Pages(2))
-        SourcesFold(memory, carefree, keep = false).follow()
+        SourcesFold(memory, sundown, onNewTrack = NewTrackFold.FOLDED).set(Fold.Pages(2))
+        SourcesFold(memory, carefree, onNewTrack = NewTrackFold.FOLDED).follow()
         assertEquals(Fold.Folded, memory.fold)
         assertEquals(carefree, memory.track)
         assertEquals(false, memory.touched)
         // Back to the first track, with no fold changed on the second: folded, as any new track.
-        assertEquals(Fold.Folded, SourcesFold(memory, sundown, keep = false).fold)
+        assertEquals(Fold.Folded, SourcesFold(memory, sundown, onNewTrack = NewTrackFold.FOLDED).fold)
 
-        SourcesFold(memory, carefree, keep = true).set(Fold.Pages(3))
-        SourcesFold(memory, sundown, keep = true).follow()
+        SourcesFold(memory, carefree, onNewTrack = NewTrackFold.AS_LEFT).set(Fold.Pages(3))
+        SourcesFold(memory, sundown, onNewTrack = NewTrackFold.AS_LEFT).follow()
         assertEquals(Fold.Pages(1), memory.fold)
         // The same track playing on leaves it as set.
-        SourcesFold(memory, sundown, keep = true).set(Fold.Pages(2))
-        SourcesFold(memory, sundown.copy(album = "Other"), keep = true).follow()
+        SourcesFold(memory, sundown, onNewTrack = NewTrackFold.AS_LEFT).set(Fold.Pages(2))
+        SourcesFold(memory, sundown.copy(album = "Other"), onNewTrack = NewTrackFold.AS_LEFT).follow()
         assertEquals(Fold.Pages(2), memory.fold)
         assertEquals(true, memory.touched)
     }

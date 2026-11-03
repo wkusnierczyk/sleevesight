@@ -47,7 +47,8 @@ class MusicBrainzClient(
     private val net: NetClient,
     private val tags: () -> Boolean = { true },
 ) : MusicBrainzLookup,
-    ArtistTags {
+    ArtistTags,
+    ReleaseGroups {
     override suspend fun searchRecordings(
         title: String,
         artist: String,
@@ -99,6 +100,22 @@ class MusicBrainzClient(
                 wikidataIds = wikidataIds(relations),
                 tags = tags.map { it.first },
                 tagVotes = tags.toMap(),
+            )
+        }
+    }
+
+    override suspend fun releaseGroup(mbid: String): Lookup<MbAlbum> {
+        val request = NetRequest("$BASE/release-group/$mbid", query = mapOf("inc" to ALBUM_INC, "fmt" to "json"))
+        return net.lookup(request) { response ->
+            val json = parseObject(response.body)
+            MbAlbum(
+                mbid = json.required("id"),
+                title = json.required("title"),
+                primaryType = json.string("primary-type")?.ifEmpty { null },
+                secondaryTypes = json.array("secondary-types").mapNotNull { (it as? JsonPrimitive)?.content },
+                firstReleaseDate = json.string("first-release-date")?.ifEmpty { null },
+                credit = credits(json).joinToString("") { it.name + it.joinPhrase },
+                wikidataIds = wikidataIds(json.array("relations")),
             )
         }
     }
@@ -191,6 +208,9 @@ class MusicBrainzClient(
         const val RECORDING_INC_WITHOUT_TAGS: String = "artist-credits+work-rels+artist-rels+url-rels"
 
         const val WORK_INC: String = "artist-rels+url-rels+recording-rels+artist-credits"
+
+        /** An album's release group (#522): its credit, and its Wikidata item among its URL relationships. */
+        const val ALBUM_INC: String = "artist-credits+url-rels"
 
         /**
          * A cover's original's releases, each with its release group (#724). MusicBrainz lists at
@@ -297,3 +317,28 @@ class MusicBrainzClient(
 internal class MissingField(
     field: String,
 ) : IllegalStateException("missing field $field")
+
+/**
+ * MusicBrainz's release groups, looked up by id (#522): what an album's insight is written from
+ * first (`AlbumSource`). Apart from `MusicBrainzLookup`, which resolution uses.
+ */
+fun interface ReleaseGroups {
+    /** The release group [mbid], with its artist credit and its Wikidata item; not found for a release's own id. */
+    suspend fun releaseGroup(mbid: String): Lookup<MbAlbum>
+}
+
+/**
+ * A release group as an album's insight reads it (#522): its [title], its primary type (`Album`,
+ * `EP`, `Single`) and secondary types (`Live`, `Compilation`), the date its first release came out,
+ * its artist credit as written ([credit]), and the Wikidata items it links ([wikidataIds]). Core data,
+ * CC0.
+ */
+data class MbAlbum(
+    val mbid: String,
+    val title: String,
+    val primaryType: String?,
+    val secondaryTypes: List<String>,
+    val firstReleaseDate: String?,
+    val credit: String,
+    val wikidataIds: List<String>,
+)

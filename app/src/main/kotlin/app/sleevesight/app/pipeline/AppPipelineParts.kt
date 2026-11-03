@@ -31,7 +31,8 @@ import kotlinx.coroutines.flow.flow
  * found unavailable (#540), which no other model replaces until the user chooses one; and each call
  * through the client is watched for a model the service does not know or refuses
  * ([ModelCheck.watching]). [sessionFacts], the artist facts the listening session's insights cited
- * (#239), is one for the process, passed to every build.
+ * (#239), is one for the process, passed to every build. The album's evidence for its insight
+ * under *Key insights* (#522) is gathered by [PipelineWiring.albums].
  */
 class AppPipelineParts(
     private val wiring: PipelineWiring,
@@ -59,6 +60,7 @@ class AppPipelineParts(
             lastFmLabels = keys.sources.lastFm?.let(wiring::lastFmLabels),
             sessionFacts = sessionFacts,
             webSearch = wiring.webSearcher(keys.sources.web.filterKeys { it in settings.webEngines }),
+            albums = wiring.albums,
         )
 }
 

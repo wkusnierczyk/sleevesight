@@ -381,14 +381,10 @@ internal class InsightWriter(
         evidence: EvidenceSet,
         allowModel: Boolean,
         cached: Boolean,
-    ): InsightReply? {
-        val reply = GroundingCheck.check(text, evidence, allowModel)
-        val grounded = (reply as? InsightReply.Written)?.grounded
-        val found = grounded?.let { SelfRevision.find(it.text) } ?: return reply
-        val salvaged = SelfRevision.salvage(checkNotNull(grounded), found, evidence.ids.toSet())
-        emit(PipelineEvent.SelfRevised(key, found.sign, cached = cached, salvaged = salvaged != null))
-        return salvaged?.let { InsightReply.Written(it) }
-    }
+    ): InsightReply? =
+        readReply(text, evidence, allowModel) { found, salvaged ->
+            emit(PipelineEvent.SelfRevised(key, found.sign, cached = cached, salvaged = salvaged))
+        }
 
     private fun cardKey(
         ai: AiAccess,
@@ -442,10 +438,6 @@ private class Asked(
     val revisedOnce: Boolean,
     val paid: Usage,
 )
-
-// Whether a sign read while the reply streams stops what the card shows (#798): an aside, the first
-// person or talk of the evidence; not a repeated opening, whose second occurrence is what is kept.
-private fun SelfRevision?.freezes(): Boolean = this != null && this != SelfRevision.REPEATED_OPENING
 
 // These tokens and [other]'s; these alone when there are none before them.
 private fun Usage.and(other: Usage?): Usage =

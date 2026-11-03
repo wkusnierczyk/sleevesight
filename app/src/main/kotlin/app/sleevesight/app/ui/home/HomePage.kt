@@ -32,4 +32,13 @@ sealed interface HomePage {
     data class GenresAt(
         val genre: String,
     ) : HomePage
+
+    /**
+     * The song's, the artist's or the album's insight (#522), [item] the item's name
+     * (`InsightItem.name`), titled with its kind, for the track playing.
+     */
+    @Serializable
+    data class Item(
+        val item: String,
+    ) : HomePage
 }

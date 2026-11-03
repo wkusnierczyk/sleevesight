@@ -97,6 +97,8 @@ class LastFmAdapterTest {
             assertTrue(lookup.result.evidence.all { it.retrievedAt == now })
             // The counts and lists are marked, for Look again's comparison (#617); the bio is not.
             assertEquals(listOf(false, false, false, true, true, true), lookup.result.evidence.map { it.aggregate })
+            // Each says which artist it is about, as credited, for the artist's insight (#522).
+            assertTrue(lookup.result.evidence.all { it.about == "Gordon Lightfoot" })
         }
 
     @Test

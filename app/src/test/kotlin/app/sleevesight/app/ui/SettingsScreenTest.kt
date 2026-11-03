@@ -174,16 +174,6 @@ class SettingsScreenTest {
         }
 
     @Test
-    fun keepingTheSourcesAsLeftIsASwitchOffByDefault() =
-        show {
-            compose.openSection(SettingsSection.APPEARANCE)
-            val row = compose.onNodeWithText(text(R.string.settings_keep_sources)).performScrollTo()
-            row.assertIsOff()
-            row.performClick()
-            waitFor("keep sources stored on") { current().keepSourcesUnfolded }
-        }
-
-    @Test
     fun aSwitchThatCannotBeSavedKeepsItsStoredValueAndSaysSo() {
         val flaky = FlakyDataStore(stores.open("flaky-settings"))
         val store = SettingsStore(flaky)

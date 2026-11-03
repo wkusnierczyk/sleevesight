@@ -187,6 +187,7 @@ internal object RetrievalCodec {
             url = draft.url,
             retrievedAt = draft.retrievedAt.toString(),
             aggregate = draft.aggregate,
+            about = draft.about,
         )
 
     private fun draft(stored: DraftJson): EvidenceDraft =
@@ -197,6 +198,7 @@ internal object RetrievalCodec {
             url = stored.url,
             retrievedAt = Instant.parse(stored.retrievedAt),
             aggregate = stored.aggregate,
+            about = stored.about,
         )
 
     @Serializable
@@ -290,6 +292,9 @@ internal object RetrievalCodec {
         val retrievedAt: String,
         // A line of counts and lists (#617, `EvidenceDraft.aggregate`); left out when false.
         val aggregate: Boolean = false,
+        // The artist an artist-level line is about (#522, `EvidenceDraft.about`); left out when none,
+        // and none in an entry kept before it.
+        val about: String? = null,
     )
 
     @Serializable

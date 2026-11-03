@@ -111,6 +111,7 @@ private object AskAiLines {
                 if (q.kind == SearchKind.DEFINITION) "definition of \"${q.genre.orEmpty()}\"" else q.kind.key
             is AiQuestion.Reason -> "reason for \"${q.genre}\""
             AiQuestion.GenreList -> "genre list"
+            is AiQuestion.Item -> "${q.item.kind.key} insight"
         }
 
     private fun asked(automatic: Boolean): String = if (automatic) "asked automatically" else "asked by a tap"

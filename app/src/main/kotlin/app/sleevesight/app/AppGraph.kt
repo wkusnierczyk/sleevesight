@@ -24,6 +24,7 @@ import app.sleevesight.app.history.HistoryRecorder
 import app.sleevesight.app.history.HistoryRetention
 import app.sleevesight.app.pipeline.AppAiSearches
 import app.sleevesight.app.pipeline.AppGenreNotes
+import app.sleevesight.app.pipeline.AppItemNotes
 import app.sleevesight.app.pipeline.AppPipelineParts
 import app.sleevesight.app.pipeline.AskAiWired
 import app.sleevesight.app.pipeline.AutoSearches
@@ -78,6 +79,7 @@ import app.sleevesight.core.pipeline.ListeningSessionFacts
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmResourceReader
 import app.sleevesight.core.resolution.MusicBrainzLookup
+import app.sleevesight.core.resolution.NameMatcher
 import app.sleevesight.core.settings.Crossfade
 import app.sleevesight.core.settings.FontChoice
 import app.sleevesight.core.settings.LinkStyle
@@ -555,6 +557,27 @@ class AppGraph internal constructor(
         )
 
     /**
+     * The song's, the artist's and the album's insights under *Key insights* (#522): written with the
+     * live pipeline's AI service, from the evidence for each (the album's gathered by its wiring),
+     * kept in its synthesis cache, in the pipeline's scope, marked with [clearEpoch].
+     */
+    val itemNotes: AppItemNotes =
+        AppItemNotes(
+            parts = pipeline.liveParts,
+            settings = latestSettings,
+            scope = pipelineScope,
+            names = NameMatcher(JvmAccentFolder),
+            epoch = clearEpoch,
+            io = Dispatchers.IO,
+            modelName = ListedModelNames(appContext)::of,
+            // Counted with *Ask AI*'s for the tester report, as the genres' reasons are.
+            paid = { aiSearches.counted(it) },
+            events = { diagnostics.log.record(it) },
+            // The coordinator's gates, asked right before each call.
+            gate = pipeline::itemCallAllowed,
+        )
+
+    /**
      * *Search with AI* under an empty *Dates*, *Genres* or *Lyrics* on Home (#773): asked with the
      * live pipeline's AI service and kept in its synthesis cache, as a genre's reason is, in the
      * pipeline's scope, marked with [clearEpoch]; its answers checked against the app's genre list and
@@ -750,6 +773,7 @@ class AppGraph internal constructor(
         if (!cleared) Log.w(TAG, "The caches could not be cleared")
         wiring.forgetRemembered()
         genreNotes.forget()
+        itemNotes.forget()
         aiSearches.forget()
         sessionFacts.forget()
         sessions.forgetLastChange()

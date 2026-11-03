@@ -76,8 +76,10 @@ private fun findingWord(
         when (scope) {
             Scope.ORIGINAL_SONG -> R.string.home_source_finding_original_song
             Scope.ARTIST -> R.string.home_source_finding_artist
+            // The album's own lines (#522).
+            Scope.RELEASE -> R.string.home_source_finding_album
             // The finding's list has none of the others (#768); the track for any.
-            Scope.SONG, Scope.RELEASE, Scope.WEB -> R.string.home_source_finding_track
+            Scope.SONG, Scope.WEB -> R.string.home_source_finding_track
         },
     )
 

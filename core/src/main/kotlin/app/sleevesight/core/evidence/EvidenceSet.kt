@@ -84,7 +84,7 @@ class EvidenceSet private constructor(
     ): EvidenceSet {
         if (more.isEmpty()) return this
         val drafts =
-            lines.map { EvidenceDraft(it.source, it.scope, it.text, it.url, it.retrievedAt, it.aggregate) }
+            lines.map { EvidenceDraft(it.source, it.scope, it.text, it.url, it.retrievedAt, it.aggregate, it.about) }
         return of(drafts + more, hasher)
     }
 
@@ -114,6 +114,7 @@ class EvidenceSet private constructor(
                                 url = draft.url,
                                 retrievedAt = draft.retrievedAt,
                                 aggregate = draft.aggregate,
+                                about = draft.about,
                             )
                         }
                     }
