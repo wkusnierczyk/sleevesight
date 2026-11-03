@@ -4,9 +4,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -144,11 +148,17 @@ private fun ItemPageOf(
             reporting =
                 Reported(track, written, of)
         }
-    // The track the page was opened on: its opening is a tap for that track only (#522).
-    val openedOn = remember { playing }
-    val tapped = TrackIdentity.playsOn(openedOn, playing)
+    // The track the page was opened on: its opening is a tap for that track only (#522), kept through
+    // a rotation and a page opened on top, and forgotten once another plays, so it never comes back.
+    val openedOn = rememberSaveable(saver = OPENED_ON) { mutableStateOf<NowPlaying?>(playing) }
+    val tapped = openedOn.value?.let { TrackIdentity.playsOn(it, playing) } == true
+    SideEffect { if (!tapped) openedOn.value = null }
     ItemPage(item, itemName(item, header, actions.normalize(header).primary), context, tapped)
 }
+
+// The track an item page was opened on, saved as plain values ([savedTrack]).
+private val OPENED_ON: Saver<MutableState<NowPlaying?>, Any> =
+    listSaver(save = { savedTrack(it.value) }, restore = { mutableStateOf(restoredTrack(it)) })
 
 /**
  * *Sources*' page: [SourcesBody], the component the box unfolds, with a fold and chips of its own,

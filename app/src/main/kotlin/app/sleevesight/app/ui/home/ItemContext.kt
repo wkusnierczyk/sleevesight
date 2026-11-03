@@ -41,6 +41,7 @@ import app.sleevesight.core.settings.WriteAutomatically
 
 /**
  * What an item shown needs besides its state: the [track] it is of, the [settings] (*Reactive*),
+ * whether the track would be written by itself now ([writesItself], `PipelineView.writesItself`),
  * the [notes] it is written by, where
  * a citation goes on the track's evidence ([cite]), where a report goes ([onReport]), *Read aloud*,
  * and the note of a model found unavailable ([unavailable], [onModelSettings]).
@@ -50,6 +51,7 @@ internal class ItemContext(
     val track: TrackState?,
     val settings: Settings,
     val notes: ItemNotes,
+    val writesItself: Boolean,
     val cite: (String) -> Unit,
     val onReport: (TrackState, InsightState.Written, InsightItem) -> Unit,
     val readAloud: ReadAloud?,
@@ -140,7 +142,17 @@ private fun WritesAtOnce(
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val resumed by lifecycle.currentStateFlow.collectAsState()
     val onScreen = resumed.isAtLeast(Lifecycle.State.RESUMED)
-    LaunchedEffect(track.normalized.lookupKey, track.evidence?.fingerprint, item, atOnce, offered, onScreen) {
+    // The hold-back lifting (a tap on *Write* after *Saver*, a first action) asks again too.
+    val holdBackLifted = context.writesItself
+    LaunchedEffect(
+        track.normalized.lookupKey,
+        track.evidence?.fingerprint,
+        item,
+        atOnce,
+        offered,
+        onScreen,
+        holdBackLifted,
+    ) {
         if (atOnce && offered && onScreen) {
             context.notes.write(track, item, if (tapped) ItemAsk.OPENED else ItemAsk.BY_ITSELF)
         }
@@ -255,6 +267,7 @@ internal fun itemContext(
     track = shown.track,
     settings = settings,
     notes = actions.itemNotes,
+    writesItself = shown.view.writesItself,
     cite = cite,
     onReport = onReport,
     readAloud = actions.readAloud,

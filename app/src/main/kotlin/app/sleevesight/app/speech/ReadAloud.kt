@@ -21,7 +21,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.dropWhile
 import kotlinx.coroutines.launch
 import java.util.Locale
 
@@ -170,8 +170,9 @@ class ReadAloud(
         if (readingState.value?.of !== written) return
         watch =
             scope.launch {
-                // Gathering for a moment (a flow followed afresh) is no other insight.
-                items.filter { it !is ItemShown.Gathering }.collect { now ->
+                // Gathering at the start of a flow followed afresh is no other insight; a later one (the
+                // evidence dropped by *Clear history*) is none, and stops the reading.
+                items.dropWhile { it is ItemShown.Gathering }.collect { now ->
                     shown(id, ((now as? ItemShown.Shown)?.state as? InsightState.Written))
                 }
             }

@@ -121,6 +121,10 @@ import kotlin.time.Instant
  *   written only on a tap: it came to play before the first action or while it was paused, or a
  *   mode was chosen while it played ([CoordinatorState.waitsForTap], `Report.tapOnly`, #625). The
  *   insight card then does not say that it writes automatically.
+ * @property writesItself whether the track playing would be written by itself now, by the
+ *   coordinator's rules alone ([CoordinatorState.writesItself]): the song's, the artist's and the
+ *   album's rows and pages (#522) ask again by themselves when it turns true (a tap on *Write* after
+ *   *Saver*, a first action), the gate (`itemCallAllowed`) staying the authority.
  * @property lookAgainKey the key of the run *Look again* is offered for (#617), which a tap carries
  *   back ([PipelineHost.lookAgain]): the card paid for is shown, citing evidence, its run's sources
  *   have landed and no call is under way ([CoordinatorState.lookAgainKey]); null otherwise.
@@ -152,6 +156,7 @@ data class PipelineView(
     val lapsed: Boolean = false,
     val followed: Boolean = false,
     val waiting: Boolean = false,
+    val writesItself: Boolean = false,
     val lookAgainKey: RunKey? = null,
     val lookingAgain: Boolean = false,
     val nothingNew: Boolean = false,
@@ -828,6 +833,7 @@ class PipelineHost(
                 lapsed = owner.lapsed,
                 followed = owner.followed,
                 waiting = owner.waitsForTap,
+                writesItself = owner.writesItself,
                 lookAgainKey = owner.lookAgainKey.takeUnless { cardPast },
                 lookingAgain = owner.lookingAgain,
                 nothingNew = owner.foundNothingNew && !cardPast,

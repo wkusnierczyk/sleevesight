@@ -289,6 +289,27 @@ class ItemRowsScreenTest {
     }
 
     @Test
+    fun rowsLeftUnfoldedAskAgainWhenTheHoldBackLifts() {
+        val unfolded = automatic.copy(itemsOnNewTrack = NewTrackFold.UNFOLDED)
+        // Held back (*Saver*, the first action): the asks are refused, and the rows offer Write insight.
+        notes.takenUp = false
+        show(state(unfolded)) { current ->
+            compose.waitForIdle()
+            assertEquals(List(3) { ItemAsk.BY_ITSELF }, notes.asks)
+            compose.onAllNodesWithText(text(R.string.home_item_tap_write)).assertCountEquals(3)
+            // A tap on the key insight's Write lifts it: the coordinator would write the track by itself.
+            notes.takenUp = true
+            current.value =
+                state(unfolded).let {
+                    NowPlayingState(it.view.copy(writesItself = true), it.playing, it.playback, settings = unfolded)
+                }
+            compose.waitForIdle()
+            assertEquals(List(6) { ItemAsk.BY_ITSELF }, notes.asks)
+            compose.onAllNodesWithTag(ITEM_WRITING_TAG, useUnmergedTree = true).assertCountEquals(3)
+        }
+    }
+
+    @Test
     fun anAutomaticWriteTheGatesRefuseOffersWriteInsightRatherThanWriting() {
         notes.takenUp = false
         show(state(automatic)) {
