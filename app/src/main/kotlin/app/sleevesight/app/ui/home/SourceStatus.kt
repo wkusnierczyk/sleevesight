@@ -60,6 +60,7 @@ internal fun findingText(
 ): String =
     when (finding) {
         Finding.Pages -> words.get(R.string.home_source_found_pages)
+        Finding.Release -> words.get(R.string.home_source_release)
         is Finding.Of ->
             words.get(
                 R.string.home_source_found,

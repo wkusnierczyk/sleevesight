@@ -1,6 +1,7 @@
 package app.sleevesight.app.ui.home
 
 import androidx.test.core.app.ApplicationProvider
+import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.ui.home.HomeFixtures.draft
 import app.sleevesight.core.evidence.EvidenceDraft
@@ -53,6 +54,21 @@ class SourceFindingTest {
     /** MusicBrainz's row, with a line of each of [scopes]. */
     private fun found(vararg scopes: Scope) =
         said(chip(), lines(*scopes.map { line(SourceId.MUSICBRAINZ, it) }.toTypedArray()))
+
+    @Test
+    fun aSourceThatListsOnlyTheAlbumsLinesGaveTheReleaseRatherThanNothingFound() {
+        // The track's Wikipedia lookup found nothing; the album's insight found its article (#522).
+        val album = lines(line(SourceId.WIKIPEDIA, Scope.RELEASE))
+        assertEquals(app.getString(R.string.home_source_release), said(chip(SourceId.WIKIPEDIA, Outcome.None), album))
+        // A found track keeps saying what the track's lines found, the album's lines beside them.
+        val both = lines(line(SourceId.WIKIPEDIA, Scope.SONG), line(SourceId.WIKIPEDIA, Scope.RELEASE))
+        assertEquals("Found the track", said(chip(SourceId.WIKIPEDIA, Outcome.SongArticle), both))
+        // Nothing found with no album line stays so.
+        assertEquals(
+            app.getString(R.string.home_source_none),
+            said(chip(SourceId.WIKIPEDIA, Outcome.None), emptyList()),
+        )
+    }
 
     @Test
     fun eachScopeAloneIsFoundAlone() {

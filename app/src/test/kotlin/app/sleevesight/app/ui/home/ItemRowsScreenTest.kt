@@ -547,6 +547,64 @@ class ItemRowsScreenTest {
         }
     }
 
+    @Test
+    fun aCitationOnSourcesPageIsNotFollowedOntoTheNextTracksLineOfTheSameId() {
+        val first = state(onDemand)
+        // The next track: sixteen MusicBrainz lines, then its own W1, past the first screenful.
+        val mb = (1..16).map { draft(SourceId.MUSICBRAINZ, "Fact $it.") }
+        val w = listOf(draft(SourceId.WIKIPEDIA, "Carefree Highway is a song."))
+        val next =
+            track(
+                carefree,
+                sources =
+                    mapOf(
+                        SourceId.MUSICBRAINZ to HomeFixtures.done(evidence = mb),
+                        SourceId.WIKIPEDIA to HomeFixtures.done(evidence = w),
+                    ),
+                evidence = EvidenceSet.of(mb + w, JvmHasher),
+            )
+        val current = mutableStateOf(first)
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity {
+                it.setContent {
+                    NowPlayingPageContent(
+                        HomePage.Sources(cite = "W1"),
+                        current.value,
+                        NowPlayingActions(normalizer::normalize, itemNotes = notes),
+                    ) {}
+                }
+            }
+            compose.waitForIdle()
+            compose.onNodeWithTag(LINE_PREFIX + "W1").assertIsDisplayed()
+            current.value = state(onDemand, next)
+            compose.waitForIdle()
+            // At its first screenful: the next track's W1, the 17th line, is not unfolded to.
+            compose.onNodeWithTag(LINE_PREFIX + "MB8").assertExists()
+            compose.onNodeWithTag(LINE_PREFIX + "MB9").assertDoesNotExist()
+            compose.onNodeWithTag(LINE_PREFIX + "W1").assertDoesNotExist()
+        }
+    }
+
+    @Test
+    fun theAlbumsLinesComingInKeepTheSourcesHiddenWithTheChips() {
+        show(state(onDemand)) {
+            compose.onNodeWithTag(SOURCES_CHIP_TAG).performScrollTo().performClick()
+            compose.onNodeWithTag(CHIP_PREFIX + SourceId.WIKIPEDIA.tag).performScrollTo().performClick()
+            compose.waitForIdle()
+            compose.onNodeWithTag(LINE_PREFIX + "W1").assertDoesNotExist()
+            // The album's insight gathers its lines: Wikipedia's, the album's among them, stay hidden.
+            notes.album.value =
+                EvidenceSet.of(
+                    listOf(draft(SourceId.WIKIPEDIA, "Sundown is his tenth album.", scope = Scope.RELEASE)),
+                    JvmHasher,
+                )
+            compose.waitForIdle()
+            compose.onNodeWithTag(LINE_PREFIX + "W1").assertDoesNotExist()
+            compose.onNodeWithTag(LINE_PREFIX + "W2").assertDoesNotExist()
+            compose.onNodeWithTag(LINE_PREFIX + "MB1").assertExists()
+        }
+    }
+
     private fun SemanticsNodeInteraction.assertExistsWith(description: String) {
         assertEquals(
             description,

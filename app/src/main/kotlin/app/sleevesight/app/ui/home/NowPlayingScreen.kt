@@ -291,7 +291,7 @@ internal fun NowPlayingContent(
     val pages = settings?.layout == Layout.SEPARATE_PAGES
     // Its own evidence, with its album's lines once its insight gathered them (#522).
     val lines = sourcesLines(actions.itemNotes, track)
-    val focus = rememberLineFocus(lines.evidence)
+    val focus = rememberLineFocus(lines.evidence, track?.normalized)
     val fold = sourcesFold(foldMemory, playing, onNewTrack = settings?.sourcesOnNewTrack)
     // A citation tapped unfolds the list far enough to show its line, or opens it there on its page.
     val cite: (String) -> Unit =

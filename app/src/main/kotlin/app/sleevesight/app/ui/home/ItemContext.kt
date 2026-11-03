@@ -228,7 +228,7 @@ private fun shownAs(
     id: String,
     evidence: ItemEvidence,
     sources: EvidenceSet?,
-): String? = evidence.trackIds[id] ?: shownId(id, evidence.evidence, sources)
+): String? = shownId(id, evidence.evidence, sources) ?: evidence.trackIds[id]
 
 // *Read aloud* of [item]'s insight [written], for [track].
 @Composable

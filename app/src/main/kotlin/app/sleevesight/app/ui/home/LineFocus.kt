@@ -3,6 +3,7 @@ package app.sleevesight.app.ui.home
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -24,9 +25,13 @@ import kotlin.time.Duration.Companion.milliseconds
 @Stable
 internal class LineFocus(
     private val evidence: EvidenceSet?,
+    hiddenState: MutableState<Set<SourceId>> = mutableStateOf(emptySet()),
 ) {
-    /** The evidence sources whose lines are hidden. */
-    var hidden: Set<SourceId> by mutableStateOf(emptySet())
+    /**
+     * The evidence sources whose lines are hidden: held by [hiddenState], which outlives a focus
+     * rebuilt for the same track's lines as they change (the album's coming in, #522).
+     */
+    var hidden: Set<SourceId> by hiddenState
         private set
 
     /** The line scrolled to last, until it has flashed (or, not flashed, been scrolled to). */
@@ -82,6 +87,9 @@ internal class LineFocus(
     }
 
     /** Where the line [id] is among the lines shown, or null if it is not one of them. */
+    fun position(id: String): Int? = indexOf(id)
+
+    /** Where the line [id] is among the lines shown, or null if it is not one of them. */
     private fun indexOf(id: String): Int? =
         evidence
             ?.lines
@@ -106,12 +114,16 @@ internal data class Flash(
 )
 
 /**
- * The [LineFocus] of [evidence], kept while the track's evidence is the same; a flash scrolls to
- * its line, then fades.
+ * The [LineFocus] of [evidence], kept while the evidence is the same, the sources hidden kept while
+ * [owner] (the track's identity) is; a flash scrolls to its line, then fades.
  */
 @Composable
-internal fun rememberLineFocus(evidence: EvidenceSet?): LineFocus {
-    val focus = remember(evidence) { LineFocus(evidence) }
+internal fun rememberLineFocus(
+    evidence: EvidenceSet?,
+    owner: Any?,
+): LineFocus {
+    val hidden = remember(owner) { mutableStateOf(emptySet<SourceId>()) }
+    val focus = remember(evidence, hidden) { LineFocus(evidence, hidden) }
     val flash = focus.flash
     LaunchedEffect(focus, flash) {
         if (flash == null) return@LaunchedEffect

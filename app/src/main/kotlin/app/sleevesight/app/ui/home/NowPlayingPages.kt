@@ -22,6 +22,7 @@ import app.sleevesight.app.pipeline.PipelineHost
 import app.sleevesight.app.session.TrackIdentity
 import app.sleevesight.app.ui.theme.handoffTarget
 import app.sleevesight.app.ui.theme.rememberFocusHandoff
+import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.InsightItem
@@ -181,20 +182,57 @@ private fun SourcesPage(
 ) {
     // Its own evidence, with its album's lines once its insight gathered them (#522).
     val lines = sourcesLines(actions.itemNotes, shown.track)
-    val focus = rememberLineFocus(lines.evidence)
+    val focus = rememberLineFocus(lines.evidence, shown.track?.normalized)
     val fold = sourcesFold(rememberFoldMemory(), playing, onNewTrack = NewTrackFold.FOLDED, start = Fold.Pages(1))
-    // The citation's line, flashed once, not again after a rotation, but followed as the lines change
-    // while the page is open: an album's lines (#522) come once they are read, after the track's,
-    // and may be the line cited, or move it further down. Each change unfolds to it again.
-    var flashed by rememberSaveable { mutableStateOf(false) }
-    val evidence = lines.evidence
-    LaunchedEffect(focus) {
-        if (cite == null || evidence?.get(cite) == null) return@LaunchedEffect
-        val at = if (flashed) focus.follow(cite) else focus.cite(cite)
-        flashed = true
-        at?.let(fold::reach)
-    }
+    // The track the citation was opened on: it is that track's line, never another's of the same id.
+    val citedOn = rememberSaveable(saver = OPENED_ON) { mutableStateOf<NowPlaying?>(playing) }
+    val current = citedOn.value?.let { TrackIdentity.playsOn(it, playing) } == true
+    SideEffect { if (!current) citedOn.value = null }
+    CitedLine(cite?.takeIf { current }, lines.evidence, focus, fold)
     SourcesBody(shown.sources(lines), focus, fold, actions.openSettings)
+}
+
+/**
+ * The line [cite] on *Sources*' page, flashed once its line is there (not again after a rotation),
+ * and followed while its place changes under it as the lines change (an album's lines, #522, come
+ * once they are read, after the track's, and may be the line cited, or move it further down): each
+ * change of its place unfolds to it again, not as the listener's action. Following ends once the
+ * listener has acted on the list: the fold changed, or its source hidden with its chip.
+ */
+@Composable
+private fun CitedLine(
+    cite: String?,
+    evidence: EvidenceSet?,
+    focus: LineFocus,
+    fold: SourcesFold,
+) {
+    var flashed by rememberSaveable { mutableStateOf(false) }
+    var released by rememberSaveable { mutableStateOf(false) }
+    // Where the line was last followed to, and the fold then (as text, to be saved): kept through a
+    // rotation, so one does not follow it again.
+    var followedAt by rememberSaveable { mutableStateOf<Int?>(null) }
+    var followedFold by rememberSaveable { mutableStateOf<String?>(null) }
+    LaunchedEffect(focus, cite) {
+        val line = cite?.let { evidence?.get(it) }
+        val moved = followedFold != null && fold.fold.toString() != followedFold
+        if (line != null && (line.source in focus.hidden || moved)) released = true
+        val at = line?.let { focus.position(it.id) }
+        when {
+            cite == null || line == null || released -> Unit
+            !flashed -> {
+                flashed = true
+                focus.cite(cite)?.let { fold.reach(it) }
+                followedAt = focus.position(cite)
+                followedFold = fold.fold.toString()
+            }
+            at != null && at != followedAt -> {
+                focus.follow(cite)
+                fold.follow(at)
+                followedAt = at
+                followedFold = fold.fold.toString()
+            }
+        }
+    }
 }
 
 /**

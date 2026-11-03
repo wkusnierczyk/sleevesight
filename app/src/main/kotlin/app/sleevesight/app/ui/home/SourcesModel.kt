@@ -49,6 +49,12 @@ internal sealed interface Finding {
 
     /** Web search's pages. */
     data object Pages : Finding
+
+    /**
+     * Only the album's own lines (#522), its track's lookup having found nothing: said as the
+     * player's release line is (*Gave the release*), rather than *Nothing found* above lines it lists.
+     */
+    data object Release : Finding
 }
 
 /**
@@ -62,20 +68,28 @@ internal val FINDING_ORDER: List<Scope> = listOf(Scope.SONG, Scope.ORIGINAL_SONG
  * sources it [SourceChip.filters]), not from its single outcome: for a lookup done with a found
  * outcome (the song's article, the artist's, the original song's), the scopes of [FINDING_ORDER]
  * its lines have, in that order; web search's, [Finding.Pages], with its lines shown or not; with no
- * line of those scopes (its lines not in the evidence shown), the outcome's own scope alone. Null for any other
- * status, which says what it says ([statusText]).
+ * line of those scopes (its lines not in the evidence shown), the outcome's own scope alone. A lookup
+ * that found nothing, of a source that lists the album's own lines (#522: of scope [Scope.RELEASE],
+ * which only the player's line has otherwise), [Finding.Release]. Null for any other status, which
+ * says what it says ([statusText]).
  */
 internal fun finding(
     chip: SourceChip,
     lines: List<EvidenceLine>,
 ): Finding? {
-    val alone = (chip.status as? ChipStatus.Done)?.outcome?.let(FOUND_ALONE::get) ?: return null
     val own = lines.filter { it.source in chip.filters }
-    return if (chip.source == SourceId.WEB) {
-        Finding.Pages
-    } else {
-        val scopes = own.mapTo(mutableSetOf()) { it.scope }
-        Finding.Of(FINDING_ORDER.filter { it in scopes }.ifEmpty { listOf(alone) })
+    val outcome = (chip.status as? ChipStatus.Done)?.outcome
+    val nothing = outcome == Outcome.None || outcome is Outcome.Rejected
+    val album = chip.source != SourceId.PLAYER && own.any { it.scope == Scope.RELEASE }
+    val alone = outcome?.let(FOUND_ALONE::get)
+    return when {
+        nothing && album -> Finding.Release
+        alone == null -> null
+        chip.source == SourceId.WEB -> Finding.Pages
+        else -> {
+            val scopes = own.mapTo(mutableSetOf()) { it.scope }
+            Finding.Of(FINDING_ORDER.filter { it in scopes }.ifEmpty { listOf(alone) })
+        }
     }
 }
 

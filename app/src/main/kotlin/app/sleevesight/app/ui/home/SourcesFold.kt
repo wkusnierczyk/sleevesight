@@ -198,6 +198,15 @@ internal class SourcesFold(
     fun reach(index: Int) = set(fold.reaching(index))
 
     /**
+     * Unfolds far enough to show the line at [index], not by the listener's own action: a citation
+     * followed as its line moves (#522), which changes nothing that is announced.
+     */
+    fun follow(index: Int) {
+        memory.fold = fold.reaching(index)
+        memory.track = playing
+    }
+
+    /**
      * On a new track, keeps the fold it shows as its own, untouched; not until the settings are
      * read ([onNewTrack] null), so a fold kept for the next track is not lost to the folded default.
      */
