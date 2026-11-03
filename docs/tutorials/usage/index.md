@@ -133,6 +133,7 @@ The answer shows under a rule, apart from what the sources gave, with the model'
 
 When nothing in the answer is usable, the panel says *Claude Haiku 5.5 found nothing on the web.*, or *Claude Haiku 5.5 couldn't say from its own knowledge.*, after *Asked automatically:* when the question was asked by itself. When the call fails, it says *Asking AI failed:* and why, with *Retry*, which asks again, another paid call.
 
+<!-- screenshot (0.1.18) to retake: genre-no-definition, on a genre with no definition other than Acoustic, which has one since 0.1.17 (#852) -->
 {% include screenshots.html ids="genres-ask-ai genre-no-definition dates-ask-ai-web genres-ask-ai-nothing" %}
 
 An answer is kept with the track (a genre's definition with the genre, for every track that has it), as a genre's *Why is this …?* answer is: closing the panel or playing the track again later shows it with no new call, with *Ask AI automatically* off too, until you choose another AI service, model or effort, or turn the web search on or off. It is kept, with the addresses of the pages it came from, for as long as *Keep history for* says, and *Clear history* deletes it. It never goes into the insight, the genre labels or *Sources*. With no AI service set up, the button is greyed out, and a screen reader adds *No AI service is enabled.* It is not offered with *Show insights* off, for an instrumental's lyrics, for lyrics the track's web search already found, or while the panel is still looking.
