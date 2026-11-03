@@ -57,8 +57,10 @@ sealed interface CardEntity {
              * The album [title], the player's name for it, of a track whose primary artist is
              * [artist]: its release group is the one group of the recording's releases [dates] that
              * [title] names, as [key] reads names ([ReleaseDate.named], the releases the year after
-             * the album comes from), or none when it names none or several (two compilations of one
-             * name), where nothing tells which is playing.
+             * the album comes from). Of several, the one album among them ([ReleaseDate.type]
+             * `Album`): a title track is on its single too, of the album's name, in a group of its
+             * own, and its album card is the album's. None when it names none, or several and not
+             * one album (two compilations of one name), where nothing tells which is playing.
              */
             fun of(
                 title: String,
@@ -66,9 +68,14 @@ sealed interface CardEntity {
                 dates: List<ReleaseDate>,
                 key: (String) -> String,
             ): Album {
-                val groups = ReleaseDate.named(title, dates, key).map { it.group }.distinct()
-                return Album(title, artist, groups.singleOrNull())
+                val named = ReleaseDate.named(title, dates, key)
+                val groups = named.map { it.group }.distinct()
+                val albums = named.filter { it.type == ALBUM_TYPE }.map { it.group }.distinct()
+                return Album(title, artist, groups.singleOrNull() ?: albums.singleOrNull())
             }
+
+            // MusicBrainz's primary type of an album's release group.
+            private const val ALBUM_TYPE = "Album"
         }
     }
 }

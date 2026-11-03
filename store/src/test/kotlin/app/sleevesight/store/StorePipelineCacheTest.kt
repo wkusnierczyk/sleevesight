@@ -196,8 +196,14 @@ class StorePipelineCacheTest {
                         // Each track's own evidence, so its own fingerprint; the artist's and album's are the same.
                         trackEvidence = "track-$title",
                         artist = ResolvedArtist("Gordon Lightfoot", "mb-gordon"),
-                        // A track's recording is on other releases too, which the album's name does not name.
-                        dates = listOf(group, ReleaseDate("Gord's Gold", "1975", "rg-gold-$title", "Album")),
+                        // A track's recording is on other releases too: a compilation, and the title track
+                        // its single, of the album's name.
+                        dates =
+                            listOf(group, ReleaseDate("Gord's Gold", "1975", "rg-gold-$title", "Album")) +
+                                listOfNotNull(
+                                    ReleaseDate("Sundown", "1974-04", "rg-sundown-single", "Single")
+                                        .takeIf { title == "Sundown" },
+                                ),
                     )
                 }
             val writes = mutableListOf<CardKind>()
