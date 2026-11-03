@@ -1,30 +1,82 @@
-/* The API keys page (#436), on the keyboard page's style sheet (`keyboard.css`). */
-code { font: 0.9em ui-monospace, "SFMono-Regular", Menlo, monospace; overflow-wrap: anywhere; }
-.drop {
-  margin-top: 12px; padding: 16px; border: 2px dashed var(--line); border-radius: 12px;
-  display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center;
+/* The API keys page (#764): its controls, in the documentation pages' type and light colours
+   (`assets/site/chrome.css`), as picked in the page's mock-up. Light only, as the documentation
+   pages. */
+/* Hidden is hidden, whatever display a class gives (the placeholder's grid, say). */
+.ak [hidden]{display:none!important}
+:root{--accent:#3346c9;--on-accent:#fff;--ok:#2c7a4b;--error:#c0362c;--error-bg:#fdf0ee;--sunken:#f0f2f5;--field-line:#7d8693}
+.ak .lead{max-width:44em}
+.ak .cols{display:grid;gap:0 40px}
+@media (min-width:1000px){
+  .ak .cols{grid-template-columns:minmax(0,1fr) minmax(0,430px);align-items:start}
+  .ak aside{position:sticky;top:76px}
 }
-.drop.over { border-color: var(--accent); }
-.hint, .report { color: var(--muted); }
-/* The report's errors in the error colour, which `.report`'s muted colour overrides otherwise
-   (`keyboard.css`'s `.error` is as specific, and comes earlier). */
-.report.error { color: var(--error); }
-/* Kept in the accessibility tree while empty (no `display: none`), so that its first report is
-   announced. */
-.report:empty { margin: 0; }
-.fields { margin-top: 12px; display: grid; gap: 12px; }
-.field label { display: block; font-weight: 600; }
-.field input {
-  font: 16px/1.4 ui-monospace, "SFMono-Regular", Menlo, monospace; width: 100%; box-sizing: border-box;
-  padding: 10px 12px; border: 1px solid var(--field-line); border-radius: 8px; background: var(--sunken); color: var(--ink);
-}
-/* Masked without a password field, which a browser would offer to save. */
-.field input.masked { -webkit-text-security: disc; }
-.field input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
-.field p { margin: 4px 0 0; font-size: 15px; }
-/* Large enough to scan from a laptop's screen: 5 pixels a module, the width set by the script, up
-   to the page's width (`keyboard.css`), which holds a code of five keys of ordinary length (version
-   16, 445 pixels with the quiet zone); from about version 22, a module is smaller. */
-.code { width: auto; }
-#holds ul { margin: 4px 0 0; padding-left: 1.2em; }
-#holds li { margin: 0; }
+.ak .stack{min-width:0}
+.ak .step h2{display:flex;align-items:center;gap:.5em}
+.ak .num{flex:none;width:1.45em;height:1.45em;border-radius:50%;display:inline-grid;place-items:center;font-size:.72em;border:2px solid var(--field-line);color:var(--muted);font-stretch:100%;font-variant-numeric:tabular-nums}
+.ak .step.done .num{background:var(--ok);border-color:var(--ok);color:#fff}
+.ak .step.off{opacity:.55}
+.ak .ok{color:var(--ok)} .ak .error{color:var(--error)} .ak .muted{color:var(--muted)}
+.ak input[type=text],.ak input[type=password]{font:500 16px/1.4 "Sleevesight Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--field-line);border-radius:8px;background:var(--sunken);color:var(--ink)}
+.ak input.masked{-webkit-text-security:disc}
+.ak input[aria-invalid="true"]{border-color:var(--error)}
+.ak input:focus-visible,.ak button:focus-visible,.ak summary:focus-visible,.ak label.file:focus-within{outline:3px solid var(--accent);outline-offset:2px}
+.ak input:disabled{opacity:.5}
+.ak .line,.ak .check,.ak .fmsg,.ak .report,.ak .holds,.ak .ph,.ak .warn,.ak .wbox small,.ak .field label{font-family:var(--f-ui);font-weight:400}
+.ak .words{display:grid;grid-template-columns:repeat(5,minmax(0,6.5em)) auto;gap:8px;margin-top:8px;align-items:start}
+.ak .wbox{display:grid;gap:3px;min-width:0}
+.ak .wbox small{font-size:13px;line-height:1.3;color:var(--muted);text-align:center;overflow-wrap:anywhere}
+.ak .wbox.okw small{color:var(--ok)}
+.ak .wbox.bad small{color:var(--error)}
+.ak .wbox input{text-align:center;padding-inline:4px;letter-spacing:.04em}
+/* Show and hide: an eye, pressed while shown. */
+.ak button.eye{flex:none;width:40px;height:40px;display:grid;place-items:center;border:0;border-radius:8px;background:transparent;color:var(--muted);cursor:pointer;padding:0}
+.ak button.eye:hover{background:var(--sunken);color:var(--ink)}
+.ak button.eye svg{width:22px;height:22px}
+/* The eye shows its action: open while hidden (show), slashed while shown (hide). */
+.ak button.eye .off{display:none}
+.ak button.eye[aria-pressed="true"] .on{display:none}
+.ak button.eye[aria-pressed="true"] .off{display:block}
+.ak .kwrap{position:relative;min-width:0}
+.ak .kwrap input{padding-right:46px}
+.ak .kwrap button.eye{position:absolute;right:2px;top:50%;transform:translateY(-50%);height:36px}
+.ak button.ghostpill{font:500 16px var(--f-ui);padding:5px 18px;border:1px solid var(--accent);border-radius:999px;background:transparent;color:var(--accent);cursor:pointer;margin-top:10px}
+.ak .wbox.okw input{border-color:var(--ok)}
+.ak .wbox.bad input{border-color:var(--error)}
+.ak .line{margin:6px 0 0;font-size:16px;min-height:1.45em}
+.ak .check{display:flex;gap:8px;align-items:center;margin:8px 0 0;font-size:16px;cursor:pointer}
+.ak .drop{margin-top:10px;padding:14px;border:2px dashed var(--line);border-radius:12px;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;font:16px var(--f-ui)}
+.ak .drop.over{border-color:var(--accent)}
+.ak label.file{padding:6px 18px;border-radius:999px;background:var(--accent);color:var(--on-accent);cursor:pointer;position:relative;font-weight:500}
+.ak label.file input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
+.ak .report{color:var(--muted);font-size:15px}
+.ak .report.error{color:var(--error)}
+.ak .report:empty{margin:0}
+.ak .fields{margin-top:12px;display:grid;gap:10px}
+.ak .field{display:grid;gap:3px;min-width:0}
+@media (min-width:560px){.ak .field{grid-template-columns:6.5em minmax(0,1fr);column-gap:12px;align-items:center}.ak .field .fmsg{grid-column:2}}
+.ak .field label{font-weight:600;font-size:16px}
+.ak .fmsg{margin:0;font-size:15px}
+.ak .fmsg:empty{display:none}
+.ak details.help{margin-top:12px}
+.ak details summary{cursor:pointer;font-family:var(--f-ui);font-weight:600}
+.ak .codebox{margin-top:12px;display:grid;gap:10px;justify-items:start}
+.ak .code{max-width:100%}
+.ak .code svg{display:block;width:100%;height:auto;border-radius:8px;border:1px solid var(--line)}
+.ak .ph{width:min(100%,300px);aspect-ratio:1;max-width:100%;border:2px dashed var(--line);border-radius:12px;display:grid;place-content:center;padding:16px;box-sizing:border-box;color:var(--muted);font-size:16px}
+.ak .ph ul{list-style:none;padding:0;margin:6px 0 0}
+.ak .ph li{display:flex;gap:8px;align-items:baseline;margin:3px 0}
+.ak .ph li.got{color:var(--ok)}
+.ak .ph .tick{width:1em;flex:none}
+.ak .holds{font-size:16px}
+.ak .holds ul{margin:4px 0 0;padding-left:1.2em}
+.ak .holds li{margin:0;font-variant-numeric:tabular-nums}
+.ak .warn{border:2px solid var(--error);background:var(--error-bg);color:var(--ink);border-radius:10px;padding:8px 12px;font-size:16px;margin:0}
+.ak .spin{display:inline-block;width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:sp 1s linear infinite;vertical-align:-2px;margin-right:8px}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.ak .spin{animation:none}}
+.ak button.pill{font:500 16px var(--f-ui);padding:6px 20px;border:0;border-radius:999px;background:var(--accent);color:var(--on-accent);cursor:pointer}
+.ak details.side{margin-top:24px;border-top:1px solid var(--line);padding-top:16px}
+.ak .safety ul{max-width:44em}
+/* On a phone, a line at the top: open the page on another device. */
+.ak .onphone{display:none;font-family:var(--f-ui);font-size:16px;line-height:1.45;margin:0 0 20px;padding:10px 14px;background:#fff8c5;border:1px solid #d4a72c66;border-radius:6px}
+@media (max-width:700px) and (pointer:coarse){.ak .onphone{display:block}}

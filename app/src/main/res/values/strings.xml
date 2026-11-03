@@ -226,7 +226,7 @@
     <!-- A setup code scanned into one key's field (#541) that cannot fill it. -->
     <string name="settings_key_scan_setup_more">This QR code holds more than this key, and Sleevesight cannot read the rest. “Load keys”, in Settings under Secrets, shows what it holds.</string>
     <string name="settings_key_scan_setup_none">This QR code holds no key this version of Sleevesight can read. “Load keys”, in Settings under Secrets, shows what it holds.</string>
-    <string name="settings_key_scan_setup_sealed">This QR code is sealed with words: read it with “Load keys”, in Settings under Secrets, which shows them. For this field, make a code without them: on the page, turn off “Seal the code with the phone’s words”.</string>
+    <string name="settings_key_scan_setup_sealed">This QR code is sealed with words: read it with “Load keys”, in Settings under Secrets, which shows them. For this field, make a code without them: on the page, open “A code without the words, for a single key” and tick “Make the code without the words”.</string>
     <string name="settings_key_scan_setup_newer">This QR code is of a later version than this app reads. Update Sleevesight, then scan it again.</string>
     <string name="settings_key_scan_duplicate">The QR code holds this key on two lines, so which one to use cannot be told.</string>
     <string name="settings_key_scan_setup_empty">This setup code holds no keys.</string>

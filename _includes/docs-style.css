@@ -1,0 +1,40 @@
+@font-face{font-family:"Sleevesight Flex";src:url({{ '/assets/fonts/RobotoFlex-page.woff2' | relative_url }}) format("woff2");
+  font-weight:400 700;font-stretch:88% 100%;font-display:swap}
+@font-face{font-family:"Sleevesight Slab";src:url({{ '/assets/fonts/RobotoSlab-page.woff2' | relative_url }}) format("woff2");
+  font-weight:350 700;font-display:swap}
+@font-face{font-family:"Sleevesight Mono";src:url({{ '/assets/fonts/RobotoMono-page.woff2' | relative_url }}) format("woff2");
+  font-weight:500;font-display:swap}
+:root{
+  --bg:#fff; --ink:#141a22; --muted:#596473; --line:#d2d8e0; --sight:#cf222e;
+  --f-ui:"Sleevesight Flex",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-text:"Sleevesight Slab",ui-serif,Georgia,serif;
+  --tile-bg:#fff; --tile-edge:#00000026; --tile-ink:#141a22; --rim:#1f2328; --core:none; --groove:inline;
+}
+body{background:var(--bg);font-family:var(--f-text)}
+.skip{position:absolute;left:16px;top:-48px;background:#fafbfc;padding:8px 12px;border-radius:8px;z-index:20;font-family:var(--f-ui)}
+.skip:focus{top:12px}
+main.markdown-body{padding-top:8px}
+.markdown-body{font-family:var(--f-text);font-weight:350;font-size:18px;line-height:1.55}
+.markdown-body strong,.markdown-body b{font-weight:700}
+.markdown-body h1,.markdown-body h2,.markdown-body h3{font-family:var(--f-ui);font-weight:700;letter-spacing:-.01em}
+.markdown-body h1{font-stretch:90%}
+.markdown-body h2,.markdown-body h3{font-stretch:92%}
+.markdown-body code{font-family:"Sleevesight Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;font-weight:500}
+.markdown-body .docs-nav{font-family:var(--f-ui);font-size:16px;margin:0 0 24px}
+.markdown-body .docs-nav.foot{margin:40px 0 0}
+.markdown-body .docs-nav:has(+ .docs-version),.markdown-body .docs-nav:has(+ .docs-wip){margin-bottom:4px}
+.markdown-body .docs-version{font-family:var(--f-ui);font-size:14px;color:var(--muted);margin:0 0 24px}
+.markdown-body .made-in{font-family:var(--f-ui);font-size:14px;line-height:1.45;color:var(--muted);margin:0 0 24px}
+.markdown-body .docs-wip{font-family:var(--f-ui);font-size:16px;line-height:1.45;margin:8px 0 24px;padding:10px 14px;
+  background:#fff8c5;border:1px solid #d4a72c66;border-radius:6px}
+.markdown-body img{border:1px solid #d0d7de;border-radius:6px}
+/* The app's screenshots (`_includes/screenshots.html`): a row of phone screens at about the size
+   of a phone in the hand, two to a row on a phone. */
+.markdown-body .shots{display:flex;flex-wrap:wrap;gap:16px;margin:0 0 6px}
+.markdown-body .shots figure{margin:0;flex:0 1 240px;min-width:0}
+.markdown-body .shots a{display:block}
+.markdown-body .shots img{display:block;width:100%;height:auto;box-sizing:border-box;background:#f8f8fa}
+.markdown-body .shots figcaption{font-family:var(--f-ui);font-size:14px;line-height:1.4;color:var(--muted);margin-top:6px}
+.markdown-body .shots-from{font-family:var(--f-ui);font-size:14px;color:var(--muted);margin:0 0 16px}
+@media (max-width:600px){.markdown-body .shots figure{flex-basis:calc(50% - 8px)}}
+footer{margin-top:40px}
