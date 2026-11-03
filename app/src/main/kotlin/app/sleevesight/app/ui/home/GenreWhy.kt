@@ -214,8 +214,8 @@ private fun ReasonCredits(
 }
 
 // *Why is this …?* disabled once the AI could not explain it (#762), "AI could not find an
-// explanation." under it, then "Enable {what}." naming what was off and could have ([couldHelp],
-// #695), each linked to where it is set ([openSettingsAt]); no such line with both on.
+// explanation." under it, then "Enable {what}." naming what is off and could explain it
+// ([couldHelp], #695), each linked to where it is set ([openSettingsAt]); no such line with both on.
 @Composable
 private fun NotFound(
     question: String,

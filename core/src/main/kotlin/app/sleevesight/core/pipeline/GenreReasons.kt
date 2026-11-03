@@ -194,9 +194,11 @@ class GenreReasons(
         val own = kept(key, track)
         val alone = alone(key).takeIf { it != key } ?: return own
         val first = kept(alone, track)?.takeIf { it.state is InsightState.Written }
+        val shown = own?.let { settled(it.state, first?.state) }
         return when {
             own == null -> first?.takeIf { stands(it.state) }
-            else -> settled(own.state, first?.state).let { if (it === own.state) own else first }
+            first != null && shown === first.state -> first
+            else -> KeptReason(checkNotNull(shown), own.writtenAt)
         }
     }
 
@@ -328,7 +330,9 @@ class GenreReasons(
                 reply.searchFailed -> ReplyOutcome(InsightState.Failed(AiSearches.WEB_SEARCH_FAILED), kept = false)
                 // No page found, so no call: the evidence still cannot support it.
                 reply.end == null -> ReplyOutcome(InsightState.NoEvidence, kept = true)
-                // The pages as kept: retrieved when the reason is written, as a read has them.
+                // The pages as kept: retrieved when the reason is written, as a read has them. An
+                // answer citing no source or page explains nothing the web found (#695): `NO_EVIDENCE`,
+                // shown and kept as one.
                 else ->
                     outcome(
                         reply.end,
@@ -336,7 +340,7 @@ class GenreReasons(
                         key,
                         track,
                         ReasonQuestion.withPages(evidence, question.pages, hasher, at),
-                    )
+                    ).fromWeb()
             }
         if (result.kept) {
             val text = if (reply.end == null) GroundingCheck.NO_EVIDENCE else keptText(reply.text, result.state)
@@ -425,6 +429,11 @@ class GenreReasons(
         text: String,
         state: InsightState,
     ): String = if (state == InsightState.NoEvidence) GroundingCheck.NO_EVIDENCE else text
+
+    // [this], a reply asked again with web search, as the cascade reads it (#695): one that cites no
+    // source or page, only the model's knowledge, or nothing, is `NO_EVIDENCE`, kept as one.
+    private fun ReplyOutcome.fromWeb(): ReplyOutcome =
+        if (state is InsightState.Written && !stands(state)) copy(state = InsightState.NoEvidence) else this
 
     // A reply's [state], and whether its text is [kept].
     private data class ReplyOutcome(
@@ -530,7 +539,8 @@ class GenreReasons(
          * What the cascade shows (#695) of the web's answer [web] (the reason asked again with web
          * search, a failure included) and the first call's [first], from the evidence and the model's
          * knowledge: the web's where it stands or failed; else the first's from the model's
-         * knowledge, if there was one; else the web's (`NO_EVIDENCE`, or its own from the knowledge).
+         * knowledge, if there was one; else `NO_EVIDENCE`: an answer from the web that cites no
+         * source or page (one kept from before this was read so too) explains nothing.
          */
         fun settled(
             web: InsightState,
@@ -539,7 +549,7 @@ class GenreReasons(
             when {
                 stands(web) || web is InsightState.Failed -> web
                 first is InsightState.Written && first.grounded.fromModelAlone -> first
-                else -> web
+                else -> InsightState.NoEvidence
             }
 
         /** What a reason's key that may search the web (#801) has after the genre, in its subject. */

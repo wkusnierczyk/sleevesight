@@ -238,11 +238,34 @@ class GenreCascadeTest {
         }
 
     @Test
-    fun `knowledge and web on - NO_EVIDENCE then the web's answer from the model alone shows it`() =
+    fun `knowledge and web on - NO_EVIDENCE then the web's answer citing no page is the could-not state`() =
         runTest {
-            val run = reasons(provider(GroundingCheck.NO_EVIDENCE) { FakeProvider.done(MODEL_AGAIN) }).run(knowledge)
-            val written = assertIs<InsightState.Written>(run.state)
-            assertTrue(written.grounded.fromModelAlone)
+            val reasons = reasons(provider(GroundingCheck.NO_EVIDENCE) { FakeProvider.done(MODEL_AGAIN) })
+            val run = reasons.run(knowledge)
+            assertEquals(InsightState.NoEvidence, run.state)
+            assertTrue(run.shown.none { it is InsightState.Written })
+            // Kept as one, and found so.
+            val key = checkNotNull(reasons.key(track, "folk", knowledge))
+            assertEquals(InsightState.NoEvidence, reasons.kept(key, track)?.state)
+            assertEquals(InsightState.NoEvidence, reasons.found(key, track)?.state)
+        }
+
+    @Test
+    fun `knowledge off, web on - the web's uncited answer is the could-not state`() =
+        runTest {
+            val run = reasons(provider(GroundingCheck.NO_EVIDENCE) { FakeProvider.done("It is folk.") }).run(base)
+            assertEquals(InsightState.NoEvidence, run.state)
+        }
+
+    @Test
+    fun `a web answer citing no page kept from before is found as the could-not state`() =
+        runTest {
+            val reasons = reasons(provider(GroundingCheck.NO_EVIDENCE))
+            val key = checkNotNull(reasons.key(track, "folk", knowledge))
+            cache.cards[key.about("folk")] = GroundingCheck.NO_EVIDENCE
+            cache.cards[key] = KeptReasonText(MODEL_AGAIN, emptyList()).text()
+            assertIs<InsightState.Written>(reasons.kept(key, track)?.state)
+            assertEquals(InsightState.NoEvidence, reasons.found(key, track)?.state)
         }
 
     @Test
