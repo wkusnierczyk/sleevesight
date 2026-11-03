@@ -91,4 +91,21 @@ class FoldTest {
             }
         }
     }
+
+    @Test
+    fun aStateSavedByAnEarlierVersionIsRestoredUntaggedWithNoAlbum() {
+        // Saved before #297: player, media id, queue item, title, artists.
+        val legacy = listOf<Any?>(sundown.player, null, 7L, "Sundown", "Gordon Lightfoot")
+        val fold = checkNotNull(FoldMemory.Saver.restore(listOf<Any?>(-1) + legacy))
+        assertEquals(Fold.All, fold.fold)
+        val panels = checkNotNull(InPlaceMemory.Saver.restore(listOf<Any?>("") + legacy))
+        for (track in listOf(fold.track, panels.track)) {
+            val restored = checkNotNull(track)
+            assertEquals(
+                listOf("Sundown", "Gordon Lightfoot", sundown.player),
+                listOf(restored.title, restored.artists, restored.player),
+            )
+            assertEquals(listOf(null, null, null), listOf(restored.album, restored.play, restored.queueItemId))
+        }
+    }
 }

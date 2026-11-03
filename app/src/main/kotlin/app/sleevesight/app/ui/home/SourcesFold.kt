@@ -137,14 +137,19 @@ internal class FoldMemory(
 internal fun savedTrack(track: NowPlaying?): List<Any?> =
     listOf(track?.player, track?.mediaId, track?.title, track?.artists, track?.album)
 
-/** The track [savedTrack] kept in [saved], or null when it kept none. */
+/**
+ * The track [savedTrack] kept in [saved], or null when it kept none. A state saved by an earlier
+ * version (`[player, media id, queue item, title, artists]`, its third value a queue item, not a
+ * title) is read too, with no album.
+ */
 internal fun restoredTrack(saved: List<Any?>): NowPlaying? =
     (saved[0] as String?)?.let { player ->
+        val current = saved[2] is String
         NowPlaying(
-            title = saved[2] as String,
-            artists = saved[3] as String,
+            title = (if (current) saved[2] else saved[3]) as String,
+            artists = (if (current) saved[3] else saved[4]) as String,
             player = player,
-            album = saved[4] as String?,
+            album = if (current) saved[4] as String? else null,
             mediaId = saved[1] as String?,
         )
     }

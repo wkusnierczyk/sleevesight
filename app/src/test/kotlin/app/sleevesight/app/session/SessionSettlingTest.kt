@@ -634,4 +634,38 @@ internal class SessionSettlingTest : SessionRepositoryFixture() {
         youtube.settled(metadata(durationMs = 279_000))
         assertNull(repository.lastChange.value)
     }
+
+    @Test
+    fun artistsLearnedInABurstAreNotSetAsideForThePlaySettledWithoutThem() {
+        // The play settled with no artists; one burst brings X, leaves them out, then brings Y (#297).
+        val youtube = youtubeMusic(metadata = metadata(artist = null))
+        val tracks = recordTracks()
+
+        scheduler.advanceTimeBy(2_000.milliseconds)
+        youtube.send(metadata(artist = "X"))
+        scheduler.advanceTimeBy(100.milliseconds)
+        youtube.send(metadata(artist = null))
+        scheduler.advanceTimeBy(100.milliseconds)
+        youtube.settled(metadata(artist = "Y"))
+
+        assertEquals(1, changes(tracks))
+        assertEquals("Y", repository.nowPlaying.value?.artists)
+    }
+
+    @Test
+    fun anAlbumLearnedInABurstIsNotSetAsideForThePlaySettledWithoutIt() {
+        // Past the play's first second: album A, then none, then B in one burst is another track.
+        val youtube = youtubeMusic()
+        val tracks = recordTracks()
+
+        scheduler.advanceTimeBy(2_000.milliseconds)
+        youtube.send(metadata(album = "A"))
+        scheduler.advanceTimeBy(100.milliseconds)
+        youtube.send(metadata())
+        scheduler.advanceTimeBy(100.milliseconds)
+        youtube.settled(metadata(album = "B"))
+
+        assertEquals(1, changes(tracks))
+        assertEquals("B", repository.nowPlaying.value?.album)
+    }
 }

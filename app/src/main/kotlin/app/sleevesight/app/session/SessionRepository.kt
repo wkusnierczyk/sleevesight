@@ -898,8 +898,9 @@ class SessionRepository(
         /**
          * Judges [report], a metadata report just arrived, against the play as known so far: the
          * reports since the last settle ([next]), else the play settled. It fills that play in, or
-         * is the first report of another, which begins now ([Provisional.fresh]); a report of the
-         * settled play again (a title that changed and came back within the burst) is that play.
+         * is the first report of another, which begins now ([Provisional.fresh]). Only while the
+         * burst holds another play is the settled one tried too (a title that changed and came back
+         * within the burst): what the burst learned of the settled play is never set aside for it.
          */
         private fun accumulate(report: NowPlaying?) {
             report ?: return
@@ -910,7 +911,7 @@ class SessionRepository(
                 when {
                     base != null && base.continues(report, now) ->
                         base.copy(known = TrackIdentity.merged(base.known, report))
-                    settled != null && settled.continues(report, now) ->
+                    next?.fresh == true && settled != null && settled.continues(report, now) ->
                         settled.copy(known = TrackIdentity.merged(settled.known, report))
                     else -> Provisional(report, now, fresh = true)
                 }

@@ -235,14 +235,21 @@ class HistoryRecorder(
      * session layer judged it (an album filled in during the play is no new row); any other row
      * (another play, or one from before the process started or a [forget]) by its fields, so the
      * same track found again after a restart resumes its row. A row the play took over by its
-     * fields keeps them as a witness ([witness]): the play never learned them, so a later report
-     * of the play that conflicts with them (other artists, another album) is another row.
+     * fields keeps, as a witness ([witness]), those the report that took it over left out (the
+     * play never learned them): a later report of the play that conflicts with them is another
+     * row, judged as the session layer judges a play from when the row was taken over, so an album
+     * filled in within the first second (`TrackIdentity.FILL_IN`) is the same row and fills in the
+     * witness too. Fields the report carried are the session layer's to judge.
      */
     private inner class Playback {
         private var startedAt: Instant? = null
         private var written = false
         private var rowPlay: Long? = null
         private var witness: NowPlaying? = null
+        private var witnessAt: Instant? = null
+
+        /** When the write in progress was seen. */
+        private var writeAt: Instant? = null
 
         fun write(
             track: NowPlaying,
@@ -252,9 +259,10 @@ class HistoryRecorder(
         ) {
             byPlay = false
             byFields = null
+            writeAt = at
             val same = { row: NowPlaying -> matches(row, track) }
             // The play reports what its row's witness rules out: that row stopped, and another starts.
-            val ruledOut = continues && witness?.let { TrackIdentity.continues(it, track, Duration.INFINITE) } == false
+            val ruledOut = continues && witness?.let { witnessHolds(it, track) } == false
             if (ruledOut) history.stopped(at)
             val goesOn = continues && !ruledOut
             val start = startedAt
@@ -281,19 +289,50 @@ class HistoryRecorder(
             track: NowPlaying,
         ): Boolean {
             val ownPlay = rowPlay != null && rowPlay == track.play
-            val held = witness
-            byPlay = ownPlay && (held == null || TrackIdentity.continues(held, track, Duration.INFINITE))
+            byPlay = ownPlay && witness?.let { witnessHolds(it, track) } != false
             byFields = null
             return when {
                 byPlay -> sameAsLast(row.copy(play = track.play), track)
                 ownPlay -> false
-                else -> sameAsLast(row, track).also { if (it) byFields = row }
+                else ->
+                    sameAsLast(row, track).also { same ->
+                        // Of the row, what the report left out: what the play never learned.
+                        if (same) {
+                            byFields =
+                                row.copy(
+                                    artists = row.artists.takeIf { track.artists.isEmpty() }.orEmpty(),
+                                    album = row.album?.takeIf { track.album == null },
+                                    mediaId = row.mediaId?.takeIf { track.mediaId == null },
+                                )
+                        }
+                    }
             }
         }
 
-        /** [track] written: a row matched by the play keeps its witness; any other is the play's from now on. */
+        /**
+         * Whether [track] agrees with the [held] witness, as the session layer judges a play, from
+         * when the row was taken over.
+         */
+        private fun witnessHolds(
+            held: NowPlaying,
+            track: NowPlaying,
+        ): Boolean {
+            val since = writeAt?.let { now -> witnessAt?.let { now - it } } ?: Duration.INFINITE
+            return TrackIdentity.continues(held, track, since)
+        }
+
+        /**
+         * [track] written: a row matched by the play keeps its witness, filled in by [track] as
+         * the play is; any other is the play's from now on, with a witness if taken over by fields.
+         */
         private fun wrote(track: NowPlaying) {
-            if (!byPlay) witness = byFields
+            val held = witness
+            if (byPlay) {
+                witness = held?.let { TrackIdentity.merged(it, track.copy(play = null)) }
+            } else {
+                witness = byFields
+                witnessAt = writeAt
+            }
             rowPlay = track.play
         }
 
