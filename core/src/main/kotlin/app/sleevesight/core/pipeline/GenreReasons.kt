@@ -53,13 +53,14 @@ sealed interface ReasonPath {
 
 /**
  * *Why is this …?* in a genre's panel (#523; `design/design.md`, *Genre labels*): why the track
- * carries a genre label, written on a tap from its evidence by the AI service ([ai]), one call,
- * through the insight's grounding check, and kept in the synthesis cache ([cache]) as a card of
- * [CardKind.GENRE], keyed like the insight ([key]: the track, the evidence's fingerprint, the prompt
- * version, the AI service, its model and effort, the model-knowledge switch) and the genre
- * ([CardKey.subject]). A reason once written is found again with no call ([found]) for as long as its
- * key holds: a settings change that would offer the insight's *Rewrite insight* (another service,
- * model or effort, new evidence) misses it, and *Why is this …?* is offered again.
+ * carries a genre label, written on a tap from its evidence by the AI service ([ai]), one call, or
+ * a cascade of two with *AI web search* (#801, #695: [write]), through the insight's grounding
+ * check, and kept in the synthesis cache ([cache]) as a card of [CardKind.GENRE], keyed like the
+ * insight ([key]: the track, the evidence's fingerprint, the prompt version, the AI service, its
+ * model and effort, the model-knowledge switch) and the genre ([CardKey.subject]). A reason once
+ * written is found again with no call ([found]) for as long as its key holds: a settings change
+ * that would offer the insight's *Rewrite insight* (another service, model or effort, new
+ * evidence) misses it, and *Why is this …?* is offered again.
  *
  * Its states are the insight's ([InsightState]): [InsightState.Writing] while the reply comes,
  * [InsightState.Written] once checked, [InsightState.NoEvidence] when the evidence has nothing to
@@ -179,23 +180,28 @@ class GenreReasons(
     }
 
     /**
-     * The reason to show for [key] with no call: the one kept for it ([kept]), or, for a key that may
+     * The reason to show for [key] with no call: the one kept for it ([kept]); or, for a key that may
      * search the web (#801), the one written from the evidence alone, kept under the key without its
-     * web part ([alone]), so a change to *AI web search* does not pay for the same question again;
-     * null when neither is kept.
+     * web part ([alone]), so a change to *AI web search* does not pay for the same question again,
+     * where it stands: it cites a source (#695, [stands]). One from the model's own knowledge alone
+     * is not shown before the web is asked; once it was, and the web explained nothing, it is shown
+     * in place of what the web gave ([settled]), as [write] shows it. Null when nothing is kept.
      */
     suspend fun found(
         key: CardKey,
         track: TrackState,
-    ): KeptReason? =
-        kept(key, track)
-            ?: alone(key)
-                .takeIf { it != key }
-                ?.let { kept(it, track) }
-                ?.takeIf { it.state is InsightState.Written }
+    ): KeptReason? {
+        val own = kept(key, track)
+        val alone = alone(key).takeIf { it != key } ?: return own
+        val first = kept(alone, track)?.takeIf { it.state is InsightState.Written }
+        return when {
+            own == null -> first?.takeIf { stands(it.state) }
+            else -> settled(own.state, first?.state).let { if (it === own.state) own else first }
+        }
+    }
 
     /**
-     * Writes [key]'s reason for [track], one call, each state as it comes to [show] with when it
+     * Writes [key]'s reason for [track], one call or two, each state as it comes to [show] with when it
      * came (by the clock, in whole milliseconds as the cache keeps it); returns the last. The genre's
      * label is [label] (`GenreLabel.label`, as the chip shows it). A complete reply is kept in the
      * cache, `NO_EVIDENCE` too, so a tap on the same reason asks nothing again, with the one time it
@@ -205,11 +211,16 @@ class GenreReasons(
      * A key that may search the web (#801, made with *AI web search* on: *Once* or *Up to 3 times*,
      * with a web search engine, [web]) searches as [asking] says, *Once* when it says *Off* since the
      * key was made. For such a key, a reason from the evidence alone kept and still [fresh] (not past
-     * *Keep history for*) is shown with no call. When the evidence cannot support the genre (nothing
-     * to narrate, or the model replies `NO_EVIDENCE`, now or kept), the same question is asked again
-     * with web search ([ReasonQuestion], path A of #762's pick): what it finds is checked against the
-     * track's evidence with its pages, and kept with them; a question whose searches all failed is a
-     * failure, not kept. Each search and call is counted to [counted].
+     * *Keep history for*) is shown with no call where it [stands]. The cascade (#695): when the
+     * evidence cannot support the genre (nothing to narrate, or the model replies `NO_EVIDENCE`, now
+     * or kept), or the reason cites no source, only the model's own knowledge, the same question is
+     * asked again with web search ([ReasonQuestion], path A of #762's pick): what it finds is checked
+     * against the track's evidence with its pages, and kept with them; a question whose searches all
+     * failed is a failure, not kept. Where the web explains nothing (no page found, `NO_EVIDENCE`, or
+     * a reason from the knowledge alone again), the first call's reason from the knowledge is shown,
+     * if there was one ([settled]). While the web may follow, the first call's text is not shown as
+     * it comes until it cites a source, so "Looking for an explanation…" covers every step. Each
+     * search and call is counted to [counted].
      */
     @Suppress("LongParameterList") // The reason, its track and label, where its states go, and how it searches.
     suspend fun write(
@@ -231,24 +242,38 @@ class GenreReasons(
                 key.modelKnowledge,
                 artistsKnown = track.normalized.artists.isNotEmpty(),
             )
-        // The evidence alone, under the key with no web part: a reason written from it is shown, with
-        // no call; once it could not support the genre, a tap that searches goes straight to the
-        // search, and a failed search repays no call.
+        // The evidence alone, under the key with no web part: a reason written from it that stands
+        // is shown, with no call; once it could not support the genre, or was from the model's
+        // knowledge alone, a tap that searches goes straight to the search, and a failed search
+        // repays no call.
         val before = if (searches) kept(alone, track)?.takeIf { fresh(it.writtenAt) } else null
-        if (before?.state is InsightState.Written) return before.state.also { show(it, before.writtenAt ?: now()) }
-        val known = before?.state == InsightState.NoEvidence
+        if (before != null && stands(before.state)) return before.state.also { show(it, before.writtenAt ?: now()) }
         val first =
-            if (narrate && !known) firstCall(access, alone, track, label, evidence, searches, counted, show) else null
+            if (narrate && before == null) {
+                firstCall(access, alone, track, label, evidence, searches, counted, show)
+            } else {
+                null
+            }
         return when {
-            first != null && (first.state != InsightState.NoEvidence || !searches) -> first.state
+            first != null && !goesOn(first.state, searches) -> first.state
             !searches -> InsightState.NoEvidence.also { show(it, now()) }
-            else -> searchAgain(key, track, label, evidence, asking.copy(search = search), counted, show)
+            else -> {
+                val fallback = (first?.state ?: before?.state) as? InsightState.Written
+                searchAgain(key, track, label, evidence, asking.copy(search = search), counted, fallback, show)
+            }
         }
     }
 
+    // Whether the cascade goes on to the web after the first call's [state] (#695): with web search
+    // ([searches]), for `NO_EVIDENCE`, and for a reason that does not [stand][stands]; not for a failure.
+    private fun goesOn(
+        state: InsightState,
+        searches: Boolean,
+    ): Boolean = searches && (state == InsightState.NoEvidence || (state is InsightState.Written && !stands(state)))
+
     // The reason's one call from the track's [evidence], under [key], the key without its web part:
-    // kept whatever it says, and shown, unless the evidence cannot support it and the web is searched
-    // next ([searches]).
+    // kept whatever it says, and shown, unless the web is searched next ([searches], [goesOn]); while
+    // it may be, its text is shown as it comes only once it cites a source.
     @Suppress("LongParameterList") // As [write]'s, with the service and the evidence.
     private suspend fun firstCall(
         access: AiAccess,
@@ -264,16 +289,23 @@ class GenreReasons(
         show(InsightState.Writing(""), now())
         val request = CompletionRequest(key.model, prompt, CompletionRequest.maxTokensFor(key.effort), key.effort)
         counted(QuestionCost.CALL)
-        val (text, end) = stream(access, request, show)
+        val shows: (String) -> Boolean =
+            if (searches) {
+                { partial -> citesSource(partial, evidence, key.modelKnowledge) }
+            } else {
+                { true }
+            }
+        val (text, end) = stream(access, request, shows, show)
         val at = now()
         val first = outcome(end, text, key, track, evidence)
         if (first.kept) attempt { cache.keep(key, keptText(text, first.state), at) }
-        if (first.state != InsightState.NoEvidence || !searches) show(first.state, at)
+        if (!goesOn(first.state, searches)) show(first.state, at)
         return first
     }
 
-    // [key]'s reason asked again with web search (#801), from [evidence] and the pages found.
-    @Suppress("LongParameterList") // As [write]'s, with the track's evidence.
+    // [key]'s reason asked again with web search (#801), from [evidence] and the pages found; where
+    // the web explains nothing, the first call's reason from the model's knowledge ([fallback], #695).
+    @Suppress("LongParameterList") // As [write]'s, with the track's evidence and the first call's reason.
     private suspend fun searchAgain(
         key: CardKey,
         track: TrackState,
@@ -281,6 +313,7 @@ class GenreReasons(
         evidence: EvidenceSet,
         asking: AiSearches.Asking,
         counted: (QuestionCost) -> Unit,
+        fallback: InsightState.Written?,
         show: (InsightState, Instant) -> Unit,
     ): InsightState {
         val access = checkNotNull(ai)
@@ -309,24 +342,28 @@ class GenreReasons(
             val text = if (reply.end == null) GroundingCheck.NO_EVIDENCE else keptText(reply.text, result.state)
             attempt { cache.keep(key, KeptReasonText(text, pages).text(), at) }
         }
-        return result.state.also { show(it, at) }
+        return settled(result.state, fallback).also { show(it, at) }
     }
 
     // One call of [request]: its text, each piece shown as it comes while it may not be
-    // `NO_EVIDENCE`, and its end.
+    // `NO_EVIDENCE` and [shows] it (once it does, from then on), and its end.
     private suspend fun stream(
         access: AiAccess,
         request: CompletionRequest,
+        shows: (String) -> Boolean,
         show: (InsightState, Instant) -> Unit,
     ): Pair<String, CompletionEvent?> {
         val text = StringBuilder()
         var end: CompletionEvent? = null
+        var showing = false
         access.provider.stream(request, access.key).collect { event ->
             when (event) {
                 is CompletionEvent.Delta -> {
                     text.append(event.text)
-                    if (!GroundingCheck.mayBeNoEvidence(text.toString())) {
-                        show(InsightState.Writing(text.toString()), now())
+                    val partial = text.toString()
+                    showing = showing || shows(partial)
+                    if (showing && !GroundingCheck.mayBeNoEvidence(partial)) {
+                        show(InsightState.Writing(partial), now())
                     }
                 }
 
@@ -369,6 +406,17 @@ class GenreReasons(
             is CompletionEvent.Error -> ReplyOutcome(InsightState.Failed(ReplyFailures.of(end)), kept = false)
             else -> ReplyOutcome(InsightState.Failed(INCOMPLETE), kept = false)
         }
+
+    // [partial], a reply still coming, as far as it has come: whether a sentence of it cites one of
+    // [evidence]'s lines, so the reply will stand (#695, [stands]) whatever follows.
+    private fun citesSource(
+        partial: String,
+        evidence: EvidenceSet,
+        allowModel: Boolean,
+    ): Boolean {
+        val reply = GroundingCheck.check(partial, evidence, allowModel)
+        return reply is InsightReply.Written && reply.grounded.citesSource
+    }
 
     // What is kept of a complete reply [text] read as [state]: `NO_EVIDENCE` for one read as none, a
     // reply that disputes the label included (#853), so a later read does not depend on how the
@@ -471,6 +519,29 @@ class GenreReasons(
         }
 
     companion object {
+        /**
+         * Whether a reason [state] stands, and goes no further down the cascade (#695): written, and
+         * citing a source or a web page (`GroundedText.citesSource`), read from its citations, not
+         * its words. One from the model's own knowledge alone, or `NO_EVIDENCE`, does not.
+         */
+        fun stands(state: InsightState): Boolean = state is InsightState.Written && state.grounded.citesSource
+
+        /**
+         * What the cascade shows (#695) of the web's answer [web] (the reason asked again with web
+         * search, a failure included) and the first call's [first], from the evidence and the model's
+         * knowledge: the web's where it stands or failed; else the first's from the model's
+         * knowledge, if there was one; else the web's (`NO_EVIDENCE`, or its own from the knowledge).
+         */
+        fun settled(
+            web: InsightState,
+            first: InsightState?,
+        ): InsightState =
+            when {
+                stands(web) || web is InsightState.Failed -> web
+                first is InsightState.Written && first.grounded.fromModelAlone -> first
+                else -> web
+            }
+
         /** What a reason's key that may search the web (#801) has after the genre, in its subject. */
         const val WEB: String = "\nweb"
 

@@ -51,7 +51,12 @@ internal class ReasonQuestion(
     }
 
     override fun agent(limit: Int): String =
-        GenreReasonPrompt.withSearch(knowledge, limit, firstId = "${SourceId.WEB.tag}${webLines(base) + 1}")
+        GenreReasonPrompt.withSearch(
+            knowledge,
+            limit,
+            firstId = "${SourceId.WEB.tag}${webLines(base) + 1}",
+            allowModel = allowModel,
+        )
 
     override fun toolResult(pages: List<WebPage>): String {
         val before = numbered.size

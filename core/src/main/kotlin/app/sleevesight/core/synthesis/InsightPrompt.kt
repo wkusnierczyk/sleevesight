@@ -142,9 +142,32 @@ object InsightPrompt {
      * (version 5), and the rule on a gap ([GAP_RULE]).
      */
     fun contract(allowModel: Boolean): String =
-        listOf(
+        contract(
+            EVIDENCE_RULE,
+            if (allowModel) {
+                "- You may add at most one sentence of your own general knowledge if it adds real value, " +
+                    "ending with [${GroundingCheck.MODEL_ID}]. Never contradict the evidence."
+            } else {
+                NO_MODEL_RULE
+            },
+            NO_EVIDENCE_RULE,
+        )
+
+    /**
+     * The fixed rules with [evidence], [model] and [noEvidence] in place of the insight's rules on
+     * the evidence ([EVIDENCE_RULE]), on the model's own knowledge, and on a reply with nothing to
+     * write ([NO_EVIDENCE_RULE]; left out when null): the genre reason's own (#695,
+     * `GenreReasonPrompt.contract`), which, with the model's own knowledge on, may be written from it
+     * alone. The others are the insight's, word for word.
+     */
+    fun contract(
+        evidence: String,
+        model: String,
+        noEvidence: String?,
+    ): String =
+        listOfNotNull(
             "- End every factual sentence with the id(s) that support it, like [W1] or [W2][${SourceId.WEB.tag}1].",
-            "- Use only the evidence: no names, dates, places or numbers that are not in it.",
+            evidence,
             LENGTH_RULE,
             "- An \"original song\" line is about the song as first recorded by someone else. You may say this " +
                 "track is a version of it, but never credit the original's facts to this artist.",
@@ -152,15 +175,19 @@ object InsightPrompt {
             "- A web line may be about another song or artist of the same name; ignore what does not fit.",
             WEB_GENRE_RULE,
             GAP_RULE,
-            if (allowModel) {
-                "- You may add at most one sentence of your own general knowledge if it adds real value, " +
-                    "ending with [${GroundingCheck.MODEL_ID}]. Never contradict the evidence."
-            } else {
-                "- Do not use your own knowledge."
-            },
+            model,
             "- Plain text only: no headings, lists or markdown.",
-            "- If no evidence is usable, reply with exactly: ${GroundingCheck.NO_EVIDENCE}",
+            noEvidence,
         ).joinToString("\n")
+
+    /** The rule on the evidence: the only facts the insight may use. */
+    const val EVIDENCE_RULE: String = "- Use only the evidence: no names, dates, places or numbers that are not in it."
+
+    /** The rule with the model's own knowledge off. */
+    const val NO_MODEL_RULE: String = "- Do not use your own knowledge."
+
+    /** The rule on a reply with nothing to write. */
+    const val NO_EVIDENCE_RULE: String = "- If no evidence is usable, reply with exactly: ${GroundingCheck.NO_EVIDENCE}"
 
     /**
      * The rule on the track's length (#722): the player already shows it, so a sentence on it, from

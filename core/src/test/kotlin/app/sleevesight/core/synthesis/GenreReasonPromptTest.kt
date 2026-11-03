@@ -26,8 +26,10 @@ class GenreReasonPromptTest {
             JvmHasher,
         )
 
-    private fun prompt(genre: String = "Modal Jazz") =
-        GenreReasonPrompt.build(playing, Normalizer(JvmAccentFolder).normalize(playing), evidence, genre, false)
+    private fun prompt(
+        genre: String = "Modal Jazz",
+        allowModel: Boolean = false,
+    ) = GenreReasonPrompt.build(playing, Normalizer(JvmAccentFolder).normalize(playing), evidence, genre, allowModel)
 
     @Test
     fun `it names the genre, fences the data, and gives every line, artist lines included`() {
@@ -52,7 +54,7 @@ class GenreReasonPromptTest {
         val text = prompt()
         assertTrue("never about the evidence or the sources" in text)
         assertFalse("say so plainly in your first sentence" in text)
-        assertEquals(4, GenreReasonPrompt.VERSION)
+        assertEquals(5, GenreReasonPrompt.VERSION)
     }
 
     @Test
@@ -87,6 +89,65 @@ class GenreReasonPromptTest {
         val wait = "Reply ${GroundingCheck.NO_EVIDENCE} only if what the searches find does not explain it either"
         assertTrue(wait in text)
         assertTrue(text.endsWith(GenreReasonPrompt.REPLY))
+    }
+
+    @Test
+    fun `with the model's knowledge on, the reason may be written from it, with no one-sentence cap (#695)`() {
+        val text = prompt(allowModel = true)
+        assertTrue(GenreReasonPrompt.MODEL_RULE in text)
+        assertTrue(GenreReasonPrompt.MODEL_EVIDENCE_RULE in text)
+        assertTrue("as many as the explanation needs: end each with [${GroundingCheck.MODEL_ID}]" in text)
+        // The insight's rules that cap it, or keep it to the evidence alone, are not there.
+        assertFalse("at most one sentence of your own general knowledge" in text)
+        assertFalse(InsightPrompt.EVIDENCE_RULE in text)
+        assertFalse(InsightPrompt.NO_EVIDENCE_RULE in text)
+        assertFalse("explain it only from the evidence" in text)
+        assertFalse("the only facts you may use" in text)
+        assertTrue("explain it from the evidence and, where the evidence does not, from your own knowledge" in text)
+        // NO_EVIDENCE only when neither the evidence nor the knowledge explains it, never disputed.
+        assertTrue(GenreReasonPrompt.MODEL_LABEL_RULE in text)
+        assertTrue("If neither the evidence nor your own knowledge explains the label" in text)
+        assertTrue("Never say or suggest that the track is not of this genre" in text)
+        assertFalse(GenreReasonPrompt.LABEL_RULE in text)
+        // The insight's other rules stand, word for word.
+        assertTrue(InsightPrompt.WEB_GENRE_RULE in text)
+        assertTrue(InsightPrompt.GAP_RULE in text)
+        assertTrue(InsightPrompt.LENGTH_RULE in text)
+        assertTrue(GenreReasonPrompt.ABOUT_THE_MUSIC_RULE in text)
+    }
+
+    @Test
+    fun `with the model's knowledge off, the rules are version 4's`() {
+        val text = prompt()
+        assertTrue("explain it only from the evidence" in text)
+        assertTrue("the only facts you may use" in text)
+        assertTrue(InsightPrompt.contract(allowModel = false) in text)
+        assertFalse(GenreReasonPrompt.MODEL_RULE in text)
+        assertFalse(GenreReasonPrompt.MODEL_LABEL_RULE in text)
+    }
+
+    @Test
+    fun `the insight's own rules are unchanged by the reason's (#695)`() {
+        assertEquals(
+            InsightPrompt.contract(
+                InsightPrompt.EVIDENCE_RULE,
+                InsightPrompt.NO_MODEL_RULE,
+                InsightPrompt.NO_EVIDENCE_RULE,
+            ),
+            InsightPrompt.contract(allowModel = false),
+        )
+        val on = InsightPrompt.contract(allowModel = true)
+        assertTrue("at most one sentence of your own general knowledge" in on)
+        assertTrue(InsightPrompt.EVIDENCE_RULE in on)
+        assertTrue(InsightPrompt.NO_EVIDENCE_RULE in on)
+    }
+
+    @Test
+    fun `with web search and the knowledge on, it searches before it writes from the knowledge`() {
+        val on = GenreReasonPrompt.withSearch(prompt(allowModel = true), limit = 3, firstId = "S1", allowModel = true)
+        assertTrue("at most 3 times, before you use your own knowledge." in on)
+        val off = GenreReasonPrompt.withSearch(prompt(), limit = 3, firstId = "S1")
+        assertTrue("at most 3 times. Each search" in off)
     }
 
     @Test
