@@ -12,7 +12,7 @@
 # links its paragraph on the labels by its id, `#footer-labels` (#743), so keep the id.
 title: Process
 permalink: /docs/process/
-docs_version: 0.1.15
+docs_version: 0.1.18
 nav:
   - id: how-it-is-built
     label: How it is built
