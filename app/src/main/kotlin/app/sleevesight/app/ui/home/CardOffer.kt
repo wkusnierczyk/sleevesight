@@ -43,8 +43,9 @@ internal class CardOffer(
  * - *Write insight*, disabled, while automatic writing will write the track, before and while it
  *   writes, and once an insight is shown that nothing calls to rewrite;
  * - *Rewrite insight*, enabled, in every mode, beside an insight the coordinator offers to write
- *   again ([InsightOffers.rewrite]): a settings change (the AI service, its model, a source's key,
- *   the web engine) changed the card's key, so the card kept was written with earlier settings;
+ *   again ([InsightOffers.rewrite]): a settings change (the AI service, its model or effort, a
+ *   source's key, a source switched on or off, *AI service knowledge*, the web engine) changed the
+ *   card's key, so the card kept was written with earlier settings;
  *   and again after such a rewrite failed or was stopped. Nothing rewrites it unasked;
  * - *Stop writing* while the insight is written, enabled while the call can be stopped.
  * Disabled whenever a tap would do nothing: the pipeline offers no Write, or the model is found
