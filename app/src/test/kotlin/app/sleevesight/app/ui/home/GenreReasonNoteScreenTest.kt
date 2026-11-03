@@ -10,7 +10,6 @@ import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
@@ -116,7 +115,7 @@ class GenreReasonNoteScreenTest {
                     }
                 }
             }
-            compose.onNodeWithTag(GENRE_PREFIX + "artist:$ARTIST:alternative").performClick()
+            compose.onNodeWithTag(GENRE_PREFIX + "artist:$ARTIST:alternative").unfold()
             compose.waitForIdle()
             block()
         }

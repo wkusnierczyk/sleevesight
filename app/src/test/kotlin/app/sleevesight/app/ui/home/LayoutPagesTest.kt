@@ -121,7 +121,7 @@ class LayoutPagesTest {
     ): TrackLabel {
         val shown = tag.split(' ').joinToString(" ") { it.replaceFirstChar(Char::uppercase) }
         val genre = GenreLabel(tag, "family", shown, tag.replace(" ", ""), level = level, artist = artist)
-        // A track's label with the votes to lead the folded chips (#799), as the tests' chips are the track's.
+        // A track's label with the votes to be backed (#799, #875): no chip here is weak.
         val votes = TrackGenres.MIN_VOTES.takeIf { level == GenreLevel.TRACK }
         return TrackLabel(genre, listOf(LabelCredit(LabelSource.LASTFM, "https://example.org/$tag")), votes)
     }
@@ -290,7 +290,7 @@ class LayoutPagesTest {
             // *Genres* opens its panel in place (#772), and a chip in it its genre (#558), with the table
             // and where its labels come from.
             compose.onNodeWithTag(GENRES_CHIP_TAG).performScrollTo().performClick()
-            compose.onNodeWithTag(GENRE_PREFIX + "track:folkpop").performScrollTo().performClick()
+            compose.onNodeWithTag(GENRE_PREFIX + "track:folkpop").performScrollTo().unfold()
             compose.onNodeWithTag(GENRE_PREFIX + "track:folkpop").assertIsSelected()
             compose
                 .onNodeWithTag(
@@ -435,12 +435,12 @@ class LayoutPagesTest {
             compose.onNodeWithTag(GENRES_PAGE_LINK_TAG).performScrollTo().performClick()
             compose.waitForIdle()
             title(text(R.string.home_genres))
-            // No chips: the chips' genres, in their order, each in a panel titled with its name, a
-            // heading, with no *Close*: the back arrow closes the page.
+            // No chips: the chips' genres (#875: every genre), in their order, each in a panel titled
+            // with its name, a heading, with no *Close*: the back arrow closes the page.
             assertEquals(0, count(GENRE_PREFIX + "track:folkpop"))
             val headings = compose.onAllNodesWithTag(GENRE_PANEL_HEADING_TAG).fetchSemanticsNodes()
             assertEquals(
-                listOf("Folk Pop"),
+                listOf("Folk Pop", "Rock"),
                 headings.map {
                     it.config[SemanticsProperties.Text].joinToString { t ->
                         t.text
@@ -449,15 +449,19 @@ class LayoutPagesTest {
             )
             assertTrue(headings.all { SemanticsProperties.Heading in it.config })
             assertEquals(0, compose.onAllNodesWithText(text(R.string.page_close)).fetchSemanticsNodes().size)
-            // Each holds what the genre's box in place does: the table, the genre marked, and where it comes from.
-            compose.onNodeWithTag(GENRES_ROW_PREFIX + "1").assert(hasText(text(R.string.home_genres_artist_row)))
+            // Each holds what the genre's box in place does: the table, the genre marked, and where it
+            // comes from. The first panel's, Folk Pop's.
+            compose.onAllNodesWithTag(GENRES_ROW_PREFIX + "1")[0].assert(hasText(text(R.string.home_genres_artist_row)))
             assertTrue(
-                compose.onNodeWithTag(GENRES_ROW_PREFIX + "0").reading()!!.startsWith("Track, Folk Pop, selected"),
+                compose
+                    .onAllNodesWithTag(GENRES_ROW_PREFIX + "0")[0]
+                    .reading()!!
+                    .startsWith("Track, Folk Pop, selected"),
             )
-            compose.onNodeWithTag(GENRE_SOURCES_ROW_PREFIX + "0").assertExists()
+            compose.onAllNodesWithTag(GENRE_SOURCES_ROW_PREFIX + "0")[0].assertExists()
             // The table's labels are plain: nothing opens from them.
             compose
-                .onNodeWithTag(GENRE_CELL_PREFIX + "artist:Gordon Lightfoot:rock", useUnmergedTree = true)
+                .onAllNodesWithTag(GENRE_CELL_PREFIX + "artist:Gordon Lightfoot:rock", useUnmergedTree = true)[0]
                 .assert(SemanticsMatcher.keyNotDefined(SemanticsActions.OnClick))
 
             back()
@@ -483,8 +487,9 @@ class LayoutPagesTest {
             compose.onNodeWithTag(GENRES_PAGE_LINK_TAG).performScrollTo().performClick()
             compose.waitForIdle()
             val headings = compose.onAllNodesWithTag(GENRE_PANEL_HEADING_TAG).fetchSemanticsNodes()
+            // Every genre, in alphabetical order (#875).
             assertEquals(
-                listOf("Folk Pop", "Ballad"),
+                listOf("Ballad", "Folk Pop", "Rock"),
                 headings.map { it.config[SemanticsProperties.Text].joinToString { t -> t.text } },
             )
             assertTrue(headings[0].boundsInRoot.top < headings[1].boundsInRoot.top)
@@ -608,11 +613,8 @@ class LayoutPagesTest {
         show(state(long(), pages)) { current ->
             compose.onNodeWithTag(GENRES_PAGE_LINK_TAG).performScrollTo().performClick()
             compose.waitForIdle()
-            compose
-                .onNodeWithTag(
-                    GENRE_CELL_PREFIX + "artist:Gordon Lightfoot:rock",
-                    useUnmergedTree = true,
-                ).assertExists()
+            // In each genre's panel, Folk Pop's and Rock's.
+            assertEquals(2, count(GENRE_CELL_PREFIX + "artist:Gordon Lightfoot:rock"))
 
             // Another track, with genres of its own.
             val jazz =
@@ -626,9 +628,10 @@ class LayoutPagesTest {
             current.value = state(next.copy(genres = jazz), pages)
             compose.waitForIdle()
             title(text(R.string.home_genres))
-            // The new track's genres, each in its panel.
-            compose.onNodeWithTag(GENRE_PANEL_HEADING_TAG).assertTextEquals("Jazz")
-            compose.onNodeWithTag(GENRE_CELL_PREFIX + "album:bebop", useUnmergedTree = true).assertExists()
+            // The new track's genres, each in its panel, in alphabetical order (#875).
+            compose.onAllNodesWithTag(GENRE_PANEL_HEADING_TAG)[0].assertTextEquals("Bebop")
+            compose.onAllNodesWithTag(GENRE_PANEL_HEADING_TAG)[1].assertTextEquals("Jazz")
+            assertEquals(2, count(GENRE_CELL_PREFIX + "album:bebop"))
             assertEquals(0, count(GENRE_CELL_PREFIX + "artist:Gordon Lightfoot:rock"))
 
             // One level: the table's one row, its labels plain.
