@@ -214,7 +214,8 @@ class GenreReasons(
      * with a web search engine, [web]) searches as [asking] says, *Once* when it says *Off* since the
      * key was made. For such a key, a reason from the evidence alone kept and still [fresh] (not past
      * *Keep history for*) is shown with no call where it [stands]. The cascade (#695): when the
-     * evidence cannot support the genre (nothing to narrate, or the model replies `NO_EVIDENCE`, now
+     * evidence cannot support the genre (nothing to narrate, which with the model's knowledge on and
+     * the artists known is never so, or the model replies `NO_EVIDENCE`, now
      * or kept), or the reason cites no source, only the model's own knowledge, the same question is
      * asked again with web search ([ReasonQuestion], path A of #762's pick): what it finds is checked
      * against the track's evidence with its pages, and kept with them; a question whose searches all
@@ -239,11 +240,7 @@ class GenreReasons(
         val alone = alone(key)
         val search = searchOf(access, key, asking.search)
         val searches = search != AiWebSearch.OFF
-        val narrate =
-            !evidence.nothingToNarrate(
-                key.modelKnowledge,
-                artistsKnown = track.normalized.artists.isNotEmpty(),
-            )
+        val narrate = narrates(evidence, key.modelKnowledge, artistsKnown = track.normalized.artists.isNotEmpty())
         // The evidence alone, under the key with no web part: a reason written from it that stands
         // is shown, with no call; once it could not support the genre, or was from the model's
         // knowledge alone, a tap that searches goes straight to the search, and a failed search
@@ -265,6 +262,15 @@ class GenreReasons(
             }
         }
     }
+
+    // Whether the first call is made from [evidence]: as for the insight (`EvidenceSet.nothingToNarrate`),
+    // but with the model's own knowledge on ([allowModel]) and the artists known, a set with no line
+    // is asked too (#695): the reason may be written from the knowledge alone, which costs no more.
+    private fun narrates(
+        evidence: EvidenceSet,
+        allowModel: Boolean,
+        artistsKnown: Boolean,
+    ): Boolean = (allowModel && artistsKnown) || !evidence.nothingToNarrate(allowModel, artistsKnown)
 
     // Whether the cascade goes on to the web after the first call's [state] (#695): with web search
     // ([searches]), for `NO_EVIDENCE`, and for a reason that does not [stand][stands]; not for a failure.

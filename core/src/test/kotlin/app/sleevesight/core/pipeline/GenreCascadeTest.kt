@@ -337,6 +337,56 @@ class GenreCascadeTest {
             assertEquals(1, queries.size)
         }
 
+    // A track no source said anything of: no evidence line at all, the artists known.
+    private val bare: TrackState = track.copy(evidence = EvidenceSet.of(emptyList(), JvmHasher))
+
+    // A provider for [bare]: [first] for the first call, [second] for the one with the page, its only line.
+    private fun bareProvider(
+        first: String,
+        second: String = "A review files her slow ballads under folk [S1].",
+    ) = FakeProvider { request: CompletionRequest ->
+        FakeProvider.done(if (page.text in request.prompt) second else first)
+    }
+
+    private suspend fun GenreReasons.bare(settings: Settings): InsightState {
+        val key = checkNotNull(key(bare, "folk", settings))
+        return write(key, bare, "Folk", AiSearches.Asking(AiWebSearch.ONCE)) { _, _ -> }
+    }
+
+    @Test
+    fun `knowledge on, no evidence line - the first call is made, and its answer from the model stands`() =
+        runTest {
+            val provider = bareProvider(MODEL)
+            val state = reasons(provider).bare(knowledge.copy(aiWebSearch = AiWebSearch.OFF))
+            assertTrue(assertIs<InsightState.Written>(state).grounded.fromModelAlone)
+            assertEquals(1, provider.requests.size)
+            assertTrue("<evidence>\n(none)\n</evidence>" in provider.requests.single().prompt)
+        }
+
+    @Test
+    fun `knowledge on, no evidence line, web on finding nothing - the first call's answer from the model`() =
+        runTest {
+            outcome = WebSearchOutcome.Found(emptyList())
+            val provider = bareProvider(MODEL)
+            val state = reasons(provider).bare(knowledge)
+            assertEquals(MODEL_TEXT, assertIs<InsightState.Written>(state).grounded.text)
+            assertEquals(1, provider.requests.size)
+            assertEquals(1, queries.size)
+        }
+
+    @Test
+    fun `knowledge off, no evidence line - no first call`() =
+        runTest {
+            val provider = bareProvider(MODEL)
+            assertEquals(InsightState.NoEvidence, reasons(provider).bare(base.copy(aiWebSearch = AiWebSearch.OFF)))
+            assertTrue(provider.requests.isEmpty())
+            // With web search on: straight to the search, and one call with its page.
+            val searched = GenreReasons(AiAccess(provider, Secret("k")), MemoryCache(), JvmHasher, web = web).bare(base)
+            assertTrue(assertIs<InsightState.Written>(searched).grounded.citesSource)
+            assertEquals(1, provider.requests.size)
+            assertTrue(page.text in provider.requests.single().prompt)
+        }
+
     @Test
     fun `whether an answer cites a source is read from its citations, not its words`() {
         val ids = setOf("W1", "S1")
