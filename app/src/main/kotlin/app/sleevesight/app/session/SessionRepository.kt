@@ -608,10 +608,14 @@ class SessionRepository(
                     ifAttached {
                         val item = SessionMapping.activeItem(state)
                         val namesAnother = item != null && item != stateItem
+                        // A player that sends media ids keeps its change times as they were: the
+                        // slot times nothing for it.
+                        val byMediaId = play?.mediaId != null
+                        val moved = noteSlot(item, times = !byMediaId)
                         beginReport(
                             // Only a move of the play's own slot: one the play adopts (it lagged a
                             // title that came first) times nothing, nor does its fall to the start.
-                            newItem = noteSlot(item),
+                            newItem = if (byMediaId) namesAnother else moved,
                             movesBack = SessionMapping.movedBack(this@Attached.state, state) && !namesAnother,
                         )
                         if (item != null) stateItem = item
@@ -882,11 +886,14 @@ class SessionRepository(
          * Notes the queue [item] a state names (null for none, −1): the slot the play holds, if it
          * holds none yet; else, if another, a move of the slot under the play ([slotMove]), with when
          * it came and the state before it, which times a new title that follows within [SLOT_LEAD].
-         * Returns whether it was such a move.
+         * Returns whether it was such a move. Only one that [times] a change is noted as such.
          */
-        private fun noteSlot(item: Long?): Boolean {
+        private fun noteSlot(
+            item: Long?,
+            times: Boolean,
+        ): Boolean {
             if (item == null || item == ownSlot) return false
-            val moves = ownSlot != null
+            val moves = ownSlot != null && times
             ownSlot = item
             if (moves) {
                 val now = clock()
@@ -905,15 +912,18 @@ class SessionRepository(
         private fun accumulate(report: NowPlaying?) {
             report ?: return
             val now = clock()
-            val settled = play?.let { Provisional(it, playStart, fresh = false) }
-            val base = next ?: settled
+            // The settled play, as the burst knows it.
+            val pending = next
+            val settledKnown = if (pending == null || pending.fresh) pending?.left ?: play else pending.known
+            val settled = settledKnown?.let { Provisional(it, playStart, fresh = false) }
+            val base = pending ?: settled
             next =
                 when {
                     base != null && base.continues(report, now) ->
                         base.copy(known = TrackIdentity.merged(base.known, report))
-                    next?.fresh == true && settled != null && settled.continues(report, now) ->
+                    pending?.fresh == true && settled != null && settled.continues(report, now) ->
                         settled.copy(known = TrackIdentity.merged(settled.known, report))
-                    else -> Provisional(report, now, fresh = true)
+                    else -> Provisional(report, now, fresh = true, left = settledKnown)
                 }
         }
 
@@ -1033,6 +1043,8 @@ class SessionRepository(
             val now =
                 when {
                     report == null -> null
+                    reported?.fresh == true && reported.foldsBack() ->
+                        TrackIdentity.merged(checkNotNull(reported.left), TrackIdentity.merged(reported.known, report))
                     reported?.fresh == true ->
                         begin(TrackIdentity.merged(reported.known, report), reported.start, first = known == null)
                     reported != null -> TrackIdentity.merged(reported.known, report)
@@ -1170,7 +1182,16 @@ private data class Provisional(
     val known: NowPlaying,
     val start: Long,
     val fresh: Boolean,
-)
+    /** For a [fresh] play, the play settled before it as the burst knew it; null for none. */
+    val left: NowPlaying? = null,
+) {
+    /**
+     * Whether this [fresh] play, as the burst ends, agrees again by its fields with the play it
+     * [left]: a repeat sent with YouTube Music's placeholder album, then the real one, is the play
+     * it repeats (a studio, then a live take, never agrees again).
+     */
+    fun foldsBack(): Boolean = left?.let { TrackIdentity.continues(it, known, Duration.INFINITE) } == true
+}
 
 /** A move of the queue slot under a play: when it came, the state before it, and the states before that. */
 private class SlotMove(

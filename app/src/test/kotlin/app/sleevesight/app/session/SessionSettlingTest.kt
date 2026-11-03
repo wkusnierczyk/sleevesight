@@ -668,4 +668,24 @@ internal class SessionSettlingTest : SessionRepositoryFixture() {
         assertEquals(1, changes(tracks))
         assertEquals("B", repository.nowPlaying.value?.album)
     }
+
+    @Test
+    fun aPlayerWithMediaIdsKeepsItsChangeTimedAtTheMetadataNotTheSlot() {
+        // The slot times a change only for players without media ids (#297): Spotify's stay as they were.
+        val spotify =
+            FakeSession(
+                SPOTIFY,
+                metadata = metadata(mediaId = "spotify:track:1"),
+                playbackState = state(positionMs = 200_000, queueItem = 4),
+            )
+        system.active = listOf(spotify)
+        repository.start()
+
+        scheduler.advanceTimeBy(1_000.milliseconds)
+        spotify.send(state(positionMs = 0, updatedAt = 1_000, queueItem = 5))
+        scheduler.advanceTimeBy(600.milliseconds)
+        spotify.settled(metadata(title = "Carefree Highway", mediaId = "spotify:track:2"))
+
+        assertEquals(1_600L, repository.lastChange.value?.changedAt)
+    }
 }

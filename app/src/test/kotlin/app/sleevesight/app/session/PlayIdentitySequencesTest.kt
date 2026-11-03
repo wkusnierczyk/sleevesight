@@ -148,9 +148,25 @@ internal class PlayIdentitySequencesTest(
                     slot(1_190, 31)
                 },
                 case("the same track again from search, right after itself: one play", 0, null) {
+                    // As captured: the title alone, then the artists, then a fresh slot.
                     slot(1_000, -1, status = PlaybackState.STATE_STOPPED)
-                    title(1_100)
-                    slot(1_140, 62)
+                    title(1_100, artist = null)
+                    title(1_250)
+                    slot(1_290, 62)
+                },
+                case("a search repeat with the placeholder album, then the real one: one play", 0, null) {
+                    title(1_000, album = "Sundown")
+                    slot(3_000, -1, status = PlaybackState.STATE_STOPPED)
+                    title(3_100, artist = null)
+                    title(3_250, album = "Gordon Lightfoot")
+                    title(3_500, album = "Sundown")
+                    slot(3_540, 62)
+                },
+                case("a repeat from another slot with the placeholder album, then the real one: one play", 0, null) {
+                    title(1_000, album = "Sundown")
+                    slot(3_000, 5)
+                    title(3_100, album = "Gordon Lightfoot")
+                    title(3_350, album = "Sundown")
                 },
                 case("artists in a report, left out by the next before the settle, then others: a change", 2, 3_000) {
                     title(1_000, NEXT, artist = "X")
