@@ -543,6 +543,8 @@
     <string name="home_scope_artist">artist</string>
     <string name="home_scope_original_song">original song</string>
     <string name="home_scope_release">release</string>
+    <!-- An album's own line in Sources, found for the album's insight (#522): "album · en.wikipedia.org". -->
+    <string name="home_scope_album">album</string>
     <string name="home_scope_web">web</string>
     <string name="home_source_name_wikidata">Wikidata</string>
     <string name="home_source_name_discogs">Discogs</string>

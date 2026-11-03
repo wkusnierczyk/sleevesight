@@ -12,7 +12,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
@@ -26,6 +25,7 @@ import app.sleevesight.app.speech.ReadAloud
 import app.sleevesight.app.speech.Reading
 import app.sleevesight.app.ui.report.ReportAction
 import app.sleevesight.app.ui.settings.SettingsTarget
+import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.InsightItem
 import app.sleevesight.core.pipeline.InsightState
@@ -57,6 +57,7 @@ internal class ItemContext(
     val readAloud: ReadAloud?,
     val unavailable: UnavailableModel? = null,
     val onModelSettings: () -> Unit = {},
+    val sources: EvidenceSet? = null,
 ) {
     /**
      * Whether *Reactive* is set to an automatic mode, with *Show insights* on: an item unfolded or on
@@ -70,8 +71,8 @@ internal class ItemContext(
 
 /**
  * What [item] shows unfolded, or on its page: "by {model}" and *Read aloud* once written; the insight,
- * cited (a citation opens *Sources* at its line, or a line of the album's own sources, which *Sources*
- * does not list, at its page); *Report a problem*. Before it is written: under *On demand*, "Tap Write
+ * cited (a citation opens *Sources* at its line, the album's own lines among them, #522); *Report a
+ * problem*. Before it is written: under *On demand*, "Tap Write
  * insight…" and *Write insight* with the **AI** mark; under an automatic mode, written at once
  * ([ItemContext.automatic], [tapped]), *Writing…* with the turning record meanwhile.
  */
@@ -167,7 +168,7 @@ private fun Shown(
     context: ItemContext,
 ) {
     val own = track.copy(evidence = shown.evidence.evidence)
-    val onCite = citeOf(shown.evidence, context.cite)
+    val onCite = citeOf(shown.evidence, context.sources, context.cite)
     when (val state = shown.state) {
         is InsightState.Writing -> {
             val prose =
@@ -219,23 +220,13 @@ private fun Shown(
     }
 }
 
-// Where a citation of an item's line goes: the track's line in *Sources*, where it is one; else its
-// page, for a line of the album's own sources, which *Sources* does not list.
-@Composable
+// Where a citation of an item's line goes: *Sources* at that line, by the id it shows it under: the
+// track's, or for the album's own line, the one *Sources* numbers it with among the track's (#522).
 private fun citeOf(
     evidence: ItemEvidence,
+    sources: EvidenceSet?,
     cite: (String) -> Unit,
-): (String) -> Unit {
-    val uris = LocalUriHandler.current
-    return { id ->
-        val own = evidence.trackIds[id]
-        val url = evidence.evidence[id]?.url
-        when {
-            own != null -> cite(own)
-            url != null -> runCatching { uris.openUri(url) }
-        }
-    }
-}
+): (String) -> Unit = { id -> (evidence.trackIds[id] ?: shownId(id, evidence.evidence, sources))?.let(cite) }
 
 // *Read aloud* of [item]'s insight [written], for [track].
 @Composable
@@ -252,8 +243,8 @@ private fun itemReading(
 
 /**
  * What the song's, the artist's and the album's insights (#522) read and where their taps go, on
- * Home and on their pages: a citation to [cite], as the key insight's; a report to [onReport], with
- * the item it is of.
+ * Home and on their pages: a citation to [cite], as the key insight's, by the id *Sources* shows its
+ * line under in [sources]; a report to [onReport], with the item it is of.
  */
 @Suppress("LongParameterList") // What the items read, and where their taps go.
 internal fun itemContext(
@@ -262,9 +253,11 @@ internal fun itemContext(
     settings: Settings,
     actions: NowPlayingActions,
     cite: (String) -> Unit,
+    sources: EvidenceSet?,
     onReport: (TrackState, InsightState.Written, InsightItem) -> Unit,
 ) = ItemContext(
     track = shown.track,
+    sources = sources,
     settings = settings,
     notes = actions.itemNotes,
     writesItself = shown.view.writesItself,

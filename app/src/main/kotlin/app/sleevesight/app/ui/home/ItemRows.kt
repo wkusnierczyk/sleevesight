@@ -163,7 +163,16 @@ internal fun HomeItems(
     val settings = state.settings ?: return
     val pages = settings.layout == Layout.SEPARATE_PAGES
     val folds = itemFolds(memory, shown.playing, settings.itemsOnNewTrack)
-    val context = itemContext(state, shown, settings, actions, cite, onReport)
+    val context =
+        itemContext(
+            state,
+            shown,
+            settings,
+            actions,
+            cite,
+            sourcesLines(actions.itemNotes, shown.track).evidence,
+            onReport,
+        )
     val rows = itemRows(header, actions.normalize(header).primary)
     ItemRows(rows, pages, folds, context) { item -> actions.openPage(HomePage.Item(item.name)) }
 }

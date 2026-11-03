@@ -319,6 +319,25 @@ class AppItemNotesTest {
         }
 
     @Test
+    fun `the album's own lines are there for Sources only once its insight has gathered them on the track`() =
+        runTest {
+            val notes = notes()
+            val first = track(HomeFixtures.sundown)
+            assertEquals(null, notes.albumEvidence(first).first())
+            notes.item(first, InsightItem.ALBUM).first { it !is ItemShown.Gathering }
+            assertEquals(
+                listOf("Sundown is his tenth album."),
+                notes
+                    .albumEvidence(first)
+                    .first()
+                    ?.lines
+                    ?.map { it.text },
+            )
+            // Another track of the album has not gathered them yet.
+            assertEquals(null, notes.albumEvidence(track(HomeFixtures.carefree)).first())
+        }
+
+    @Test
     fun `an album a source could not be asked for is kept for a while, not asked again at each update`() =
         runTest {
             albumUnreachable = true

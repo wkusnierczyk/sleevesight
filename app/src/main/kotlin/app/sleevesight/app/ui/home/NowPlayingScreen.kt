@@ -289,7 +289,9 @@ internal fun NowPlayingContent(
     val header = track?.nowPlaying ?: playing
     val settings = state.settings
     val pages = settings?.layout == Layout.SEPARATE_PAGES
-    val focus = rememberLineFocus(track?.evidence)
+    // Its own evidence, with its album's lines once its insight gathered them (#522).
+    val lines = sourcesLines(actions.itemNotes, track)
+    val focus = rememberLineFocus(lines.evidence)
     val fold = sourcesFold(foldMemory, playing, onNewTrack = settings?.sourcesOnNewTrack)
     // A citation tapped unfolds the list far enough to show its line, or opens it there on its page.
     val cite: (String) -> Unit =
@@ -329,7 +331,7 @@ internal fun NowPlayingContent(
                 insightReading(actions.readAloud, track),
             )
             HomeItems(state, shown, header, itemMemory, cite, actions) { t, w, i -> reporting = Reported(t, w, i) }
-            if (settings != null) SourcesItem(pages, shown, focus, fold, actions)
+            if (settings != null) SourcesItem(pages, shown.sources(lines), focus, fold, actions)
         }
     }
 }
@@ -349,7 +351,7 @@ private fun insightReading(
 @Composable
 private fun SourcesItem(
     pages: Boolean,
-    shown: Showing,
+    shown: SourcesShown,
     focus: LineFocus,
     fold: SourcesFold,
     actions: NowPlayingActions,
@@ -357,7 +359,7 @@ private fun SourcesItem(
     if (pages) {
         SourcesChip(opensPage = true) { actions.openPage(HomePage.Sources()) }
     } else {
-        SourcesSection(shown.sources(), focus, fold, actions.openSettings)
+        SourcesSection(shown, focus, fold, actions.openSettings)
     }
 }
 

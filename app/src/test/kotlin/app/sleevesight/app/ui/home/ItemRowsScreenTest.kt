@@ -19,7 +19,9 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performFirstLinkClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.text.LinkAnnotation
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
@@ -32,25 +34,33 @@ import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.app.session.PlaybackInfo
 import app.sleevesight.app.session.PlaybackStatus
 import app.sleevesight.app.ui.home.HomeFixtures.carefree
+import app.sleevesight.app.ui.home.HomeFixtures.draft
 import app.sleevesight.app.ui.home.HomeFixtures.evidence
 import app.sleevesight.app.ui.home.HomeFixtures.normalizer
 import app.sleevesight.app.ui.home.HomeFixtures.track
 import app.sleevesight.app.ui.home.HomeFixtures.written
 import app.sleevesight.app.ui.report.REPORT_TAG
+import app.sleevesight.core.evidence.EvidenceSet
+import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.model.ProviderId
+import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.CardEntity
 import app.sleevesight.core.pipeline.CardKey
 import app.sleevesight.core.pipeline.InsightItem
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.ItemEvidence
 import app.sleevesight.core.pipeline.TrackState
+import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.settings.Layout
 import app.sleevesight.core.settings.NewTrackFold
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WriteAutomatically
 import app.sleevesight.core.synthesis.CardKind
+import app.sleevesight.core.synthesis.GroundingCheck
+import app.sleevesight.core.synthesis.InsightReply
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -94,6 +104,11 @@ class ItemRowsScreenTest {
 
         // Whether a write is taken up (asking, until its call), or refused by the gates (offered again).
         var takenUp = true
+
+        // The album's own lines, once gathered (#522).
+        var album: EvidenceSet? = null
+
+        override fun albumEvidence(track: TrackState): Flow<EvidenceSet?> = flowOf(album)
 
         override fun write(
             track: TrackState,
@@ -409,6 +424,48 @@ class ItemRowsScreenTest {
             current.value = state(automatic, track(carefree))
             compose.waitForIdle()
             assertEquals(listOf(ItemAsk.OPENED, ItemAsk.BY_ITSELF), notes.asks)
+        }
+    }
+
+    @Test
+    fun anAlbumCitationOpensSourcesAtTheAlbumsLineAmongTheTracks() {
+        val album =
+            EvidenceSet.of(
+                listOf(
+                    draft(
+                        SourceId.WIKIPEDIA,
+                        "Sundown is his tenth album.",
+                        "https://en.wikipedia.org/wiki/S",
+                        Scope.RELEASE,
+                    ),
+                ),
+                JvmHasher,
+            )
+        notes.album = album
+        val reply =
+            GroundingCheck.check(
+                "It is his tenth album [W1].",
+                album,
+                allowModel = false,
+            ) as InsightReply.Written
+        notes.shown.value =
+            mapOf(
+                InsightItem.ALBUM to
+                    ItemShown.Shown(
+                        InsightState.Written(reply.grounded, cached = false),
+                        ItemEvidence(album, emptyMap()),
+                    ),
+            )
+        show(state(onDemand)) {
+            row(InsightItem.ALBUM).performScrollTo().performClick()
+            compose.onNodeWithText("tenth album", substring = true).performScrollTo().performFirstLinkClick {
+                (it.item as? LinkAnnotation.Clickable)?.tag == CITE_PREFIX + "W1"
+            }
+            compose.waitForIdle()
+            // The track has W1 from Wikipedia: the album's line is shown as W2, about the album.
+            compose.onNodeWithTag(LINE_PREFIX + "W2").performScrollTo().assertExists()
+            compose.onNodeWithText("album · en.wikipedia.org", substring = true, useUnmergedTree = true).assertExists()
+            compose.onNodeWithTag(LINE_PREFIX + "W1").assertExists()
         }
     }
 

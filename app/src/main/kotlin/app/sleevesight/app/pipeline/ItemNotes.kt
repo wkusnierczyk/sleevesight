@@ -1,6 +1,7 @@
 package app.sleevesight.app.pipeline
 
 import app.sleevesight.core.ai.ModelNames
+import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.AiOutcome
 import app.sleevesight.core.pipeline.AiQuestion
@@ -120,6 +121,12 @@ interface ItemNotes {
         item: InsightItem,
         ask: ItemAsk = ItemAsk.TAP,
     )
+
+    /**
+     * The album's own lines (#522) gathered for [track]'s album's insight on this track, as they come;
+     * null until it is gathered (unfolded or opened): what *Sources* lists beside the track's.
+     */
+    fun albumEvidence(track: TrackState): Flow<EvidenceSet?> = flowOf(null)
 
     /**
      * *Stop writing* under the insight of card [key] (as [ItemShown.Asking] or [ItemShown.Shown] carry
@@ -320,6 +327,17 @@ class AppItemNotes(
         job.invokeOnCompletion { pending -= job }
         job.start()
     }
+
+    override fun albumEvidence(track: TrackState): Flow<EvidenceSet?> =
+        gathered
+            .map { kept ->
+                kept.entries
+                    .lastOrNull { (at, _) ->
+                        at.item == InsightItem.ALBUM && at.lookupKey == track.normalized.lookupKey
+                    }?.value
+                    ?.evidence
+                    ?.evidence
+            }.distinctUntilChanged()
 
     // The write under way for [key], by its own job, whatever the evidence kept meanwhile.
     override fun stop(key: CardKey) {

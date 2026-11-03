@@ -63,7 +63,7 @@ internal fun NowPlayingPageContent(
                 return@PageFrame
             }
             when (page) {
-                is HomePage.Sources -> SourcesPage(shown, playing, page.cite, actions.openSettings)
+                is HomePage.Sources -> SourcesPage(shown, playing, page.cite, actions)
                 HomePage.Genres, is HomePage.GenresAt -> {
                     val retries = Retries(shown.view, playing, actions.askAgain)
                     GenresPage(
@@ -144,7 +144,14 @@ private fun ItemPageOf(
     val header = shown.track?.nowPlaying ?: playing
     val cite: (String) -> Unit = { id -> actions.openPage(HomePage.Sources(cite = id)) }
     val context =
-        itemContext(state, shown, settings, actions, cite) { track, written, of ->
+        itemContext(
+            state,
+            shown,
+            settings,
+            actions,
+            cite,
+            sourcesLines(actions.itemNotes, shown.track).evidence,
+        ) { track, written, of ->
             reporting =
                 Reported(track, written, of)
         }
@@ -170,9 +177,11 @@ private fun SourcesPage(
     shown: Showing,
     playing: NowPlaying,
     cite: String?,
-    openSettings: () -> Unit,
+    actions: NowPlayingActions,
 ) {
-    val focus = rememberLineFocus(shown.track?.evidence)
+    // Its own evidence, with its album's lines once its insight gathered them (#522).
+    val lines = sourcesLines(actions.itemNotes, shown.track)
+    val focus = rememberLineFocus(lines.evidence)
     val fold = sourcesFold(rememberFoldMemory(), playing, onNewTrack = NewTrackFold.FOLDED, start = Fold.Pages(1))
     // Once, not again as the evidence grows or after a rotation.
     var cited by rememberSaveable { mutableStateOf(false) }
@@ -181,7 +190,7 @@ private fun SourcesPage(
         cited = true
         focus.cite(cite)?.let(fold::reach)
     }
-    SourcesBody(shown.sources(), focus, fold, openSettings)
+    SourcesBody(shown.sources(lines), focus, fold, actions.openSettings)
 }
 
 /**
@@ -218,13 +227,14 @@ internal class Showing(
     /** *Search Genius when there is no link* (#728), on until the settings are read, as by default. */
     val lyricsSearch: Boolean = settings?.lyricsSearch ?: true
 
-    /** What *Sources* shows of [track]. */
-    fun sources() =
+    /** What *Sources* shows of [track], its lines [lines] (its evidence, with its album's, #522). */
+    fun sources(lines: SourcesLines = SourcesLines(track?.evidence)) =
         SourcesShown(
             track = track,
             chips = track?.let { sourceChips(it, view.needsKey, modelAllowed, keyedOff) }.orEmpty(),
             cardKept = view.cardShown && track != null,
             offline = offlineShown(view, track),
             details = details,
+            lines = lines,
         )
 }
