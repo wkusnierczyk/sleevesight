@@ -79,12 +79,12 @@ class FoldTest {
     fun theFoldAndItsTrackOutliveARecreatedActivity() {
         val scope = SaverScope { true }
         for (fold in listOf(Fold.Folded, Fold.Pages(3), Fold.All)) {
-            for (track in listOf(null, sundown, sundown.copy(mediaId = null, queueItemId = 7))) {
+            for (track in listOf(null, sundown, sundown.copy(mediaId = null, play = 7, album = "Sundown"))) {
                 val saved = with(FoldMemory.Saver) { scope.save(FoldMemory(fold, track)) }
                 val restored = checkNotNull(FoldMemory.Saver.restore(checkNotNull(saved)))
                 assertEquals(fold, restored.fold)
                 // What `TrackIdentity.playsOn` reads, so the track restored plays on as it did.
-                val identity = { t: NowPlaying -> listOf(t.player, t.mediaId, t.queueItemId, t.title, t.artists) }
+                val identity = { t: NowPlaying -> listOf(t.player, t.mediaId, t.play, t.title, t.artists, t.album) }
                 assertEquals(track?.let(identity), restored.track?.let(identity))
             }
         }

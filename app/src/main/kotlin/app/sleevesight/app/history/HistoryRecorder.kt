@@ -128,7 +128,7 @@ class HistoryRecorder(
                         writes.trySend(Write.record("a track stopping") { history.stopped(at) })
                     }
                     if (track != null) {
-                        val write = { given: Duration -> playback.write(track, at, given, continues, same) }
+                        val write = { given: Duration -> playback.write(track, at, given, continues) }
                         writes.trySend(Write.record("a track played", write))
                     }
                     before = track
@@ -229,21 +229,29 @@ class HistoryRecorder(
      * The playback now recorded: when it started, and whether its start was written. Until it is
      * (the write failed), each update of it is a start again, at that time, so the history never
      * takes an update for a row of an earlier playback that happens to hold the same track.
+     *
+     * Also the play ([NowPlaying.play]) whose track the last row written holds: a row read back
+     * carries no play, so a row written for the track's own play is matched by the play, as the
+     * session layer judged it (an album filled in during the play is no new row); any other row
+     * (another play, or one from before the process started or a [forget]) by its fields, so the
+     * same track found again after the session layer restarted resumes its row.
      */
     private inner class Playback {
         private var startedAt: Instant? = null
         private var written = false
+        private var rowPlay: Long? = null
 
         fun write(
             track: NowPlaying,
             at: Instant,
             gap: Duration,
             continues: Boolean,
-            same: (NowPlaying) -> Boolean,
         ) {
+            val same = { row: NowPlaying -> sameAsLast(row.copy(play = rowPlay?.takeIf { it == track.play }), track) }
             val start = startedAt
             if (continues && written && start != null) {
                 history.continued(track, start, gap, same)
+                rowPlay = track.play
                 return
             }
             val from = if (continues && start != null) start else at
@@ -251,12 +259,14 @@ class HistoryRecorder(
             written = false
             history.started(track, from, gap, same)
             written = true
+            rowPlay = track.play
         }
 
         /** The history was cleared: the playback's next value starts it again, at that value's time. */
         fun forget() {
             startedAt = null
             written = false
+            rowPlay = null
         }
     }
 
@@ -288,9 +298,8 @@ class HistoryRecorder(
 
         /**
          * Whether [last], the track added last, is [track] again: the same track as the session
-         * layer decides ([TrackIdentity]), with the same title. Stricter by the title, since after a
-         * restart a queue item id may name another track, and a duplicate entry costs less than a
-         * lost one; a title changing under one queue item (a stream) is a new track anyway.
+         * layer decides ([TrackIdentity]), with the same title ([TrackIdentity.playsOn]): a title
+         * changing under one media id (a stream) is a new track.
          */
         fun sameAsLast(
             last: NowPlaying,

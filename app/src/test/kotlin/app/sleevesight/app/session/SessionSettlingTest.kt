@@ -58,7 +58,7 @@ internal class SessionSettlingTest : SessionRepositoryFixture() {
                 sundown.copy(player = YOUTUBE_MUSIC, queueItemId = 4),
                 sundown.copy(title = "Carefree Highway", player = YOUTUBE_MUSIC, queueItemId = 5),
             ),
-            tracks,
+            tracks.untagged(),
         )
     }
 
@@ -90,19 +90,20 @@ internal class SessionSettlingTest : SessionRepositoryFixture() {
     }
 
     @Test
-    fun aSongQueuedTwiceIsOneChange() {
+    fun aSongQueuedTwiceInARowIsOnePlayItsSlotCarried() {
+        // The queue slot is carried, not identity (#297): the same track again right after itself is one play.
         val youtube = youtubeMusic()
         val tracks = recordTracks()
 
         youtube.settled(state(queueItem = 5))
         youtube.settled(metadata())
 
-        assertEquals(1, changes(tracks))
+        assertEquals(0, changes(tracks))
         assertEquals(listOf(4L, 5L), tracks.map { it?.queueItemId })
     }
 
     @Test
-    fun decoratedQueueTitlesStillTellCopiesApart() {
+    fun decoratedQueueTitlesStillCarryEachCopysSlot() {
         // The queue names the copies "Sundown (Remastered)"; the metadata says "Sundown".
         val youtube = youtubeMusic(metadata = carefree, item = 3)
         youtube.queue =
@@ -118,7 +119,7 @@ internal class SessionSettlingTest : SessionRepositoryFixture() {
         youtube.send(state(queueItem = 5))
         youtube.settled(metadata())
 
-        assertEquals(2, changes(tracks))
+        assertEquals(1, changes(tracks))
         assertEquals(listOf(3L, 4L, 5L), tracks.map { it?.queueItemId })
     }
 
@@ -310,7 +311,7 @@ internal class SessionSettlingTest : SessionRepositoryFixture() {
                 sundown.copy(player = YOUTUBE_MUSIC, queueItemId = 4),
                 sundown.copy(title = "Carefree Highway", player = YOUTUBE_MUSIC, queueItemId = 5),
             ),
-            tracks,
+            tracks.untagged(),
         )
         val change = checkNotNull(repository.lastChange.value)
         assertEquals(990L, change.changedAt)

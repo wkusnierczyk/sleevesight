@@ -65,7 +65,8 @@ class SessionHistory(
         at: Instant,
         sessionGap: Duration,
         sameTrack: (NowPlaying) -> Boolean,
-    ): PlayedTrack = queries.transactionWithResult { start(track.copy(artUri = null), at, sessionGap, sameTrack) }
+    ): PlayedTrack =
+        queries.transactionWithResult { start(track.copy(artUri = null, play = null), at, sessionGap, sameTrack) }
 
     /**
      * [track], the last row's, plays on without a break, updated (rule 2); [sameTrack] says
@@ -79,10 +80,10 @@ class SessionHistory(
         sameTrack: (NowPlaying) -> Boolean,
     ): PlayedTrack =
         queries.transactionWithResult {
-            val kept = track.copy(artUri = null)
+            val kept = track.copy(artUri = null, play = null)
             val last = queries.last()
             if (last != null && sameTrack(last.track)) {
-                queries.playing(last, kept)
+                queries.playing(last, kept.filledFrom(last.track))
             } else {
                 start(kept, at, sessionGap, sameTrack)
             }
@@ -97,7 +98,7 @@ class SessionHistory(
         val last = queries.last() ?: return queries.insert(kept, at, session = 1)
         val withinGap = at - last.heardUntil <= sessionGap
         return when {
-            withinGap && sameTrack(last.track) -> queries.resumed(last, kept, at)
+            withinGap && sameTrack(last.track) -> queries.resumed(last, kept.filledFrom(last.track), at)
             withinGap -> queries.insert(kept, at, last.session)
             else -> queries.insert(kept, at, last.session + 1)
         }
@@ -229,6 +230,14 @@ class SessionHistory(
         queries.clear()
     }
 }
+
+/**
+ * This report of the track [row] holds, with the artists and album it leaves out kept from [row]:
+ * a later report (after a pause, or a restart, which forgets the play) never takes from a row what
+ * it learned.
+ */
+private fun NowPlaying.filledFrom(row: NowPlaying): NowPlaying =
+    copy(artists = artists.ifEmpty { row.artists }, album = album ?: row.album)
 
 private fun HistoryQueries.last(): PlayedTrack? = lastPlayed().executeAsOneOrNull()?.let(::playedTrack)
 

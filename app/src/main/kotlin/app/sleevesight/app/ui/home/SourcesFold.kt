@@ -97,7 +97,7 @@ internal class FoldMemory(
     companion object {
         /**
          * Saved as plain values: the fold, and of its track what [TrackIdentity.playsOn] reads (the
-         * player, the media id, the queue item, the title and the artists).
+         * player, the media id, the play, the title, the artists and the album).
          */
         val Saver: Saver<FoldMemory, Any> =
             listSaver(
@@ -128,11 +128,11 @@ internal class FoldMemory(
 }
 
 /**
- * Of [track], what [TrackIdentity.playsOn] reads (the player, the media id, the queue item, the title
- * and the artists), as plain values a saver keeps; [restoredTrack] reads them back.
+ * Of [track], what [TrackIdentity.playsOn] reads (the player, the media id, the play, the title, the
+ * artists and the album), as plain values a saver keeps; [restoredTrack] reads them back.
  */
 internal fun savedTrack(track: NowPlaying?): List<Any?> =
-    listOf(track?.player, track?.mediaId, track?.queueItemId, track?.title, track?.artists)
+    listOf(track?.player, track?.mediaId, track?.play, track?.title, track?.artists, track?.album)
 
 /** The track [savedTrack] kept in [saved], or null when it kept none. */
 internal fun restoredTrack(saved: List<Any?>): NowPlaying? =
@@ -141,8 +141,9 @@ internal fun restoredTrack(saved: List<Any?>): NowPlaying? =
             title = saved[3] as String,
             artists = saved[4] as String,
             player = player,
+            album = saved[5] as String?,
             mediaId = saved[1] as String?,
-            queueItemId = saved[2] as Long?,
+            play = saved[2] as Long?,
         )
     }
 

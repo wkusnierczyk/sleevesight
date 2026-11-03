@@ -156,6 +156,34 @@ internal class HistoryRecorderSequencesTest(
                     at(30_000 + GAP + 1)
                     startLayer()
                 },
+                sequence(
+                    "a placeholder album, then the real one within the first second: one row (#297)",
+                    Row(SUNDOWN, 1, 0, null, album = "Sundown"),
+                ) {
+                    val spotify = spotify(metadata = metadata(album = "Gordon Lightfoot"))
+                    at(400)
+                    spotify.report(metadata(album = "Sundown"))
+                },
+                sequence(
+                    "a studio, then a live take of one title: two rows (#297)",
+                    Row(SUNDOWN, 1, 0, 60_000 + S, album = "Studio"),
+                    Row(SUNDOWN, 1, 60_000 + S, null, album = "Live"),
+                ) {
+                    val spotify = spotify(metadata = metadata(album = "Studio"))
+                    at(60_000)
+                    spotify.report(metadata(album = "Live"))
+                },
+                sequence(
+                    "the session layer restarted, then a report without the album: the row keeps it (#297)",
+                    Row(SUNDOWN, 1, 0, null, album = "Sundown"),
+                ) {
+                    val spotify = spotify(metadata = metadata(album = "Sundown"))
+                    at(30_000)
+                    stopLayer()
+                    spotify.metadata = metadata()
+                    at(31_000)
+                    startLayer()
+                },
                 sequence("artists sent after the title", Row(SUNDOWN, 1, 0, null)) {
                     val spotify = spotify(metadata = metadata(artist = null))
                     at(1_000)
