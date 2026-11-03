@@ -15,6 +15,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -353,7 +354,10 @@ private fun EveryGenre(
     val order = rememberGenreOrder()
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         for (label in track.genres.chips(order)) {
-            GenrePanel(track, label.label.genre.identity, notes, search, afterRetry)
+            // Keyed by genre: a genre landing earlier in the order moves the panels, not their content.
+            key(label.label.genre.identity) {
+                GenrePanel(track, label.label.genre.identity, notes, search, afterRetry)
+            }
         }
     }
 }
@@ -379,8 +383,12 @@ internal fun Chips(
         itemVerticalAlignment = Alignment.CenterVertically,
     ) {
         for (label in labels) {
-            val selected = label.label.genre.identity == open
-            GenreChip(label, selected, if (selected) foldAction else showAction, chipModifier(label)) { tap(label) }
+            // Keyed by genre (#875): a genre landing earlier in the alphabetical order moves the chips,
+            // and a keyboard's or a screen reader's focus stays with its genre's chip, not its place.
+            key(label.label.genre.identity) {
+                val selected = label.label.genre.identity == open
+                GenreChip(label, selected, if (selected) foldAction else showAction, chipModifier(label)) { tap(label) }
+            }
         }
     }
 }

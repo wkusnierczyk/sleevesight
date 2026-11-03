@@ -354,6 +354,23 @@ class GenrePanelFocusScreenTest {
         }
 
     @Test
+    fun aGenreLandingBeforeTheFocusedChipLeavesTheFocusAndTheNodeWithItsGenre() =
+        show {
+            compose.onNodeWithTag(FOLK).requestFocus()
+            compose.onNodeWithTag(FOLK).assertIsFocused()
+            val folk = idOf(FOLK)
+            // *Ankle* (written for the test) lands and sorts first, moving every chip along (#875).
+            current.value = current.value.copy(genres = genres("folk", "ballad", "ankle"))
+            compose.waitForIdle()
+            compose.onNodeWithTag(FOLK).assertIsFocused()
+            assertEquals(folk, idOf(FOLK))
+            // Enter acts on the chip focused, Folk's.
+            compose.onNodeWithTag(FOLK).performKeyInput { pressKey(Key.Enter) }
+            compose.waitForIdle()
+            compose.onNodeWithTag(FOLK).assertIsSelected()
+        }
+
+    @Test
     fun retryUnderAFailedDefinitionHandsTheFocusToTheChipAsItGoes() {
         definition.value = DefinitionState.Failed
         show {
