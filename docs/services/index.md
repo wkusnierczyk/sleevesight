@@ -6,7 +6,7 @@
 # (`app/.../ui/settings/`), `strings.xml`, `strings_settings.xml` and `strings_home.xml`.
 title: Setting up external services
 permalink: /docs/services/
-docs_version: 0.1.15
+docs_version: 0.1.18
 nav:
   - id: 1-which-services-need-a-key-and-why
     label: Need a key
@@ -61,11 +61,13 @@ Open **Settings** (the cogwheel at the top right of the home screen) and tap the
 
 ### Entering one key (`Anthropic API key`, `Last.fm API key`, …)
 
-Tap the service's row under *Secrets* (or tap *Set your … API key here.* directly under the service in *AI services* or *Sources*). The dialog offers three ways to fill the *Key* field, then tap **Save**:
+Tap the service's row under *Secrets* (or tap *Set your … API key here.* directly under the service in *AI services* or *Sources*). The dialog offers three ways to fill the *Key* field:
 
 - **Manual (paste, type, or password manager):** paste or type the key into the *Key* field, or pick it from your password manager's autofill prompt. While typing or pasting, the eye icon (*Show key*) lets you check it before saving.
 - **Type on a computer (keyboard icon in the field):** if the key is on your computer, open [sleevesight.app/keyboard.html]({{ '/keyboard.html' | relative_url }}) in Chrome or Edge on the computer (with Bluetooth on). Tap the keyboard icon in the phone's *Key* field, scan the QR code on the computer screen, then click *Connect* on the computer and pick the phone. What you type or paste on the computer is sent encrypted over Bluetooth straight into the field.
 - **QR code of a single key (QR icon in the field):** open [sleevesight.app/api-keys]({{ '/api-keys.html' | relative_url }}) on a computer, uncheck *Seal the code with the phone's words*, and paste that single key into its field. Tap the QR icon in the phone's *Key* field and scan the code. (A key read from a QR code is kept hidden and cannot be revealed with the eye icon.)
+
+Under the field, a box offers to switch the service on as the key is saved ([section 4](#4-how-to-enable-the-services)); tap **Save**, and a summary says what was saved and switched on, with *Done*.
 
 ### Entering several keys at once (*Load keys*)
 
@@ -73,15 +75,16 @@ To load any combination of AI, Last.fm and Exa keys in one scan:
 
 1. On the phone, under *Secrets*, tap **Load keys**. The screen shows five random words.
 2. On a computer, open [sleevesight.app/api-keys]({{ '/api-keys.html' | relative_url }}) (the page makes no network requests and sends your keys nowhere). Type the five words into the first box (the first three letters of each word are enough), then paste your keys into their fields or drop a `NAME=value` keys file onto the page. The page draws one QR code sealed with those words.
-3. On the phone, tap **Next** and scan the QR code. The phone unseals it, lists the keys it found by their last four characters, and saves them when you tap **Save**.
+3. On the phone, tap **Next** and scan the QR code. The phone unseals it and lists the keys it found by their last four characters, each ticked to be saved, and names any that did not scan. Tap **Next** to save the ticked keys.
+4. The phone then asks *Which services do you want to enable?*: the sources are ticked, and an AI service is ticked when its key is the only AI key and no AI service was set up before; otherwise it starts as it was, so a key saved again for a service switched off leaves it off. With several AI services to choose from, choose one, or none. Tap **Next**, and a summary says which keys were saved and which services were switched on or off; **Done** closes it. *Cancel* on the services keeps the keys saved and switches nothing.
 
 ## 4. How to enable the services
 
-**Saving a key does not switch its service on.** After saving your keys, open the service sections in *Settings* and flip their switches on:
+**Saving a key switches its service on, as you choose while saving.** A key's dialog has *Enable …* under its field, ticked for a source, and for an AI service while none is on; while another AI service is on, it offers *Switch the AI service to …*, unticked, so the service that writes changes only if you tick it. *Load keys* asks which services to switch on after it saves the keys. To switch a service on or off later, open its section in *Settings*:
 
 - **AI service:** open **AI services** and switch on **Anthropic**, **OpenAI** or **Google**. At most one AI service can be on at a time; switching one on switches another off. (Here you can also change the service's *model* and *reasoning effort*; each defaults to its cheapest current model and *Low* effort.)
 - **Sources:** open **Sources** and switch on **Last.fm** and/or **Exa web search**.
-- **Genre labels from Last.fm:** under **Genres**, *Last.fm* is on by default, and starts providing genre tags as soon as *Last.fm* is switched on under *Sources*.
+- **Genre labels from Last.fm:** under **Genres**, *Last.fm* is on by default, and starts providing genre tags as soon as *Last.fm* is switched on under *Sources*; switching Last.fm on while saving its key switches on its genre labels too.
 
 ## 5. How to check that they work
 

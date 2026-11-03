@@ -6,7 +6,7 @@
 # `assets/flyer/make_flyer.mjs` to the PDF and PNG the site serves; #566).
 title: Testing Sleevesight
 permalink: /docs/tester/alpha/
-docs_version: 0.1.15
+docs_version: 0.1.18
 nav:
   - id: joining-and-installing
     label: Installing
@@ -53,22 +53,22 @@ The app runs no server and has no accounts: nothing you play reaches its develop
 
 3. **Players.** Spotify is followed by default. More players appear under *Players* in Settings, by name and switched off, once any of them has played music (a track with a title and an artist) while Sleevesight has notification access turned on; switch those players on to follow them as well. Most video apps, which report no artist, and calls from the phone app are not listed.
 
-4. **Sources.** MusicBrainz and Wikipedia need no key and are turned on by default. Last.fm and the Exa web search need your own keys; without them they are off and cannot be switched on, which is fine for the test. If you want to enable them, create API keys at their respective API consoles, and save each in its key row, under *Secrets* in Settings (each section of Settings is a chip with its name: a tap opens it, and *Close* closes it). To enter several keys at once, open [sleevesight.app/api-keys](https://sleevesight.app/api-keys) on a computer: it turns them into one QR code, which *Load keys*, under *Secrets*, reads. The page sends nothing anywhere. Saving a key does not switch its service on: switch it on under *Sources* once its key is saved. See [Setting up external services]({{ '/docs/services/' | relative_url }}) for the full steps.
+4. **Sources.** MusicBrainz and Wikipedia need no key and are turned on by default. Last.fm and the Exa web search need your own keys; without them they are off and cannot be switched on, which is fine for the test. If you want to enable them, create API keys at their respective API consoles, and save each in its key row, under *Secrets* in Settings (each section of Settings is a chip with its name: a tap opens it, and *Close* closes it). To enter several keys at once, open [sleevesight.app/api-keys](https://sleevesight.app/api-keys) on a computer: it turns them into one QR code, which *Load keys*, under *Secrets*, reads. The page sends nothing anywhere. Saving a key switches its service on too, unless you untick *Enable …* in its dialog; *Load keys* asks which services to switch on. See [Setting up external services]({{ '/docs/services/' | relative_url }}) for the full steps.
 
-5. **The AI service.** Save the API key of one service (Anthropic, OpenAI or Google) in its key row under *Secrets*, then switch that service on under *AI services*: until its key is saved, a service's switch is off and cannot be switched on, and the app shows the sources but writes no insight. Services are exclusive: at most one can be enabled at a time. You can use your own key, or the key we give you (below).
+5. **The AI service.** Save the API key of one service (Anthropic, OpenAI or Google) in its key row under *Secrets*; with *Enable …* ticked in its dialog, as it is while no AI service is on, saving switches the service on (you can also switch it under *AI services*). Until its key is saved, a service's switch is off and cannot be switched on, and the app shows the sources but writes no insight. Services are exclusive: at most one can be enabled at a time. You can use your own key, or the key we give you (below).
 
 ## The key we give you
 
 So that you need not pay for testing, we can give you an Anthropic key of your own, on the project's account. It comes as a QR code, in person or in a private message, never on this page or anywhere public.
 
-- **Saving it.** In Settings, under *Secrets*, tap *Load keys*: it shows five words, which seal a code made with them to your phone. If we make your code with you, read them to us; otherwise tap *Next*. Then point the camera at the code. The app lists what it found, by the key's last four characters; *Save* saves it. Then switch on *Anthropic* under *AI services*. The app asks for the camera only while you scan, and no frame is stored on the device.
+- **Saving it.** In Settings, under *Secrets*, tap *Load keys*: it shows five words, which seal a code made with them to your phone. If we make your code with you, read them to us; otherwise tap *Next*. Then point the camera at the code. The app lists what it found, by the key's last four characters; *Next* saves it. Then it asks which services to enable: with *Anthropic* ticked, *Next* switches it on, and a summary says so. The app asks for the camera only while you scan, and no frame is stored on the device.
 - **What it means for privacy.** With our key, your track's title, artists and album, and what the sources found, go to Anthropic under the project's account rather than your own. The developer still receives none of it: Anthropic's console shows how much each key is used, not what was sent. If you would rather keep it under your own account, use your own key instead.
 - **Cost.** Each insight is a paid call (now and then two or three). *Reactive*, *On track change (auto)* by default, writes one on every track change, and that is where the cost is. The keys share a spending limit. If it is reached before the test ends, insights stop: *Key insights* says *Writing failed*, with a short reason such as *the AI service account needs credit, or has reached its spending limit*. If every insight fails like that, tell us at [support@sleevesight.app](mailto:support@sleevesight.app), and keep the app installed and opted in. With your own keys, [What it costs you]({{ '/docs/costs/' | relative_url }}) says what each service charges.
 - **The key we give you is yours only.** Please do not share it. We can see each key's use, and can turn one off without touching the others.
 
 ## Using Sleevesight
 
-- **Play music in Spotify** (or another player you follow), then open Sleevesight. With nothing playing, the home screen lists your players, each a tap away, and a small picture of the home screen with notes on what each part does; a tap on a note tells more. Once a track plays, the home screen follows it: the cover, the title and artists, the *Dates*, *Genres* and *Lyrics* buttons (a tap on *Genres* shows the genre labels), and under *Key insights* the insight.
+- **Play music in Spotify** (or another player you follow), then open Sleevesight. With nothing playing, the home screen lists your players, each a tap away, and a small picture of the home screen with notes on what each part does; a tap on a note tells more. Once a track plays, the home screen follows it, and the record in the logo at the top turns while it plays: the cover, the title and artists, the *Dates*, *Genres* and *Lyrics* buttons (a tap on *Genres* shows the genre labels), under *Key insights* the insight, and under it a row each for the song, the artist and the album: a tap on one unfolds an insight of its own, another paid call.
 
 - **Write insight.** Nothing is written automatically until your first action in the app: a tap on *Write insight*, or a mode chosen with the arrow beside it (the current one included). After that, under the default *Reactive: On track change (auto)*, a new insight is written for each new track as it starts, until Android closes the app in the background, often days later; after that, the next track waits for a tap on *Write insight*, or a mode chosen, again. *On track skip (auto)* writes only the tracks you skip to; *On demand* writes only when you tap *Write insight*. The arrow beside *Write insight* switches between them.
 
@@ -80,9 +80,11 @@ So that you need not pay for testing, we can give you an Anthropic key of your o
 
 - **Theme.** The button beside the cogwheel shows the current theme; a tap opens a menu of light, dark and the phone's theme.
 
-- **Citations.** Each sentence ends with chips for the sources it cites; a tap jumps to the evidence under *Sources*. A sentence that cites nothing is dimmed. A note under the insight says how many sentences the sources do not back, only when there are any; *Show grounding details*, in the *Developer* settings, shows the check's full counts instead, and under *Sources* every source's status and the rejected matches.
+- **Citations.** Each sentence ends with chips for the sources it cites; a tap jumps to the evidence under *Sources*. A sentence that cites nothing is dimmed. A note under the insight, *Dimmed text is not backed by the sources.*, shows only when there is any; *Show grounding details*, in the *Developer* settings, shows the check's full counts instead, and under *Sources* every source's status and the rejected matches.
 
   {% include screenshots.html ids="key-insights" %}
+
+  <!-- screenshot (0.1.18) to retake: key-insights, with the Song, Artist and Album rows under the insight -->
 
 - **Diagnostics.** The test build starts in developer mode, so Settings shows a *Developer* section, last. If it is not there (its *Developer mode* switch hides it), open *About* and tap *Version* seven times to bring it back. Under *Developer*, turn on *Diagnostics*, then *Open diagnostics*: what the app did since it started (each source's outcome and time, AI calls, the citation check), the track changes recorded, and what skip detection has learned. *Export* writes it to a file where you choose, which may be a cloud folder; nothing of it leaves the phone otherwise. *Report button*, *Auto* in the test build, shows the report button on the home screen (*What to tell us*, below).
 
@@ -93,7 +95,7 @@ So that you need not pay for testing, we can give you an Anthropic key of your o
 
 Anything that surprises you. [Limitations]({{ '/docs/limitations/' | relative_url }}) lists what Sleevesight cannot do, and why, so you can tell a limit from a bug; a limit that gets in your way is worth telling us about too. In particular:
 
-- **Insights:** a sentence that is wrong, one that its source does not support, an uncited sentence, or an insight that misses the point of the song.
+- **Insights:** a sentence that is wrong, one that its source does not support, an uncited sentence, or an insight that misses the point of the song; the song's, the artist's and the album's insights included.
 - **Track changes:** a track change the app missed, or noticed late; the wrong track shown.
 - **Skips:** under *On track skip (auto)*, an insight is automatically written only for a track you skip to, not for one that follows a track that played to its end. Tell us when the app took a track that ended on its own for a skip (and wrote an insight you did not ask for), or missed a skip (and wrote none).
 - **Crashes**, freezes, or a screen that does not make sense.
@@ -118,7 +120,7 @@ For an insight that is wrong or offensive, *Report a problem*, under the insight
 
 In brief: requests go from your phone straight to each service, none through a server of ours.
 
-- **To the sources you switch on:** the title and artists of the playing track (Wikidata is asked only by catalogue numbers (MusicBrainz and Wikidata identifiers), never by a name; for genre labels, Last.fm gets the album name). When a title names a film or show, as in "Main Theme (from *Some Film*)", Exa also gets that name. By default, the next track in the player's queue also goes to MusicBrainz, ahead of its play.
+- **To the sources you switch on:** the title and artists of the playing track (Wikidata is asked only by catalogue numbers (MusicBrainz and Wikidata identifiers), never by a name; for genre labels, Last.fm gets the album name). While the album's insight is unfolded or open on its page, Wikipedia gets the album's name too, and MusicBrainz and Wikidata its identifiers. When a title names a film or show, as in "Main Theme (from *Some Film*)", Exa also gets that name. By default, the next track in the player's queue also goes to MusicBrainz, ahead of its play.
 - **To the AI service:** the title, artists and album, and what the sources found, for the playing track only, with the key you saved.
 - **To the server a cover's web address names,** when a player gives the cover only as an address.
 - **To a lyrics site,** only if you tap a lyrics link: your browser opens it, and a search link sends Genius the title and artist.

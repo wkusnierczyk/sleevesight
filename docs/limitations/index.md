@@ -1,7 +1,7 @@
 ---
 # The limitations page (#712), at `/docs/limitations/`: what Sleevesight cannot do, and why, each limit
 # in a sentence or two: whether it is Android's, a service's rules or a choice, and the issue where it
-# is planned to change, or a change is being looked at. Written from the app's code as of 0.1.15 (the
+# is planned to change, or a change is being looked at. Written from the app's code as of 0.1.18 (the
 # build's `minSdk`, in `build-logic/.../sleevesight.android-app.gradle.kts`; the string resources, in
 # `res/values/` only; the prompts, `core/.../synthesis/`; the Wikipedia and Wikidata clients; the
 # session layer and skip detection, `app/.../session/`), `design/design.md` (*Track changes*, D5),
@@ -11,7 +11,7 @@
 # supported* points here. A limit lifted or found, or a linked issue closed, changes this page too.
 title: Limitations
 permalink: /docs/limitations/
-docs_version: 0.1.15
+docs_version: 0.1.18
 provenance: [ai-wrote, human-edited]
 nav:
   - id: platform
@@ -54,7 +54,7 @@ A limit listed here is not a bug. Something that does not work as this page and 
 ## Insights
 
 - **The citation check vouches for citations, not for truth.** Before an insight is kept, the app checks every citation in code: a sentence that cites nothing, or cites a line that does not exist, is marked as unverified. The check verifies that a sentence cites sources; it does not validate the truthfulness of the sources, so a false sentence with a proper citation passes. For details, see [how the check works]({{ '/docs/solutions/#insights-that-cite-their-sources-checked-in-code' | relative_url }}).
-- **A thinly documented track gets a short insight, or none.** The insight is written only from what the sources found. When they found little, it is short. When they found nothing to write from, none is written and no call is made: *Key insights* says *The sources give nothing to write an insight from.* Showing what the sources are missing, and where to add it, is planned ([#246](https://github.com/wkusnierczyk/sleevesight/issues/246)).
+- **A thinly documented track gets a short insight, or none.** The insight is written only from what the sources found. When they found little, it is short. When they found nothing to write from, none is written and no call is made: *Key insights* says *The sources give nothing to write an insight from.* The song's, the artist's and the album's insights are written the same way, each from its own evidence, so one can be missing where the others are not. Showing what the sources are missing, and where to add it, is planned ([#246](https://github.com/wkusnierczyk/sleevesight/issues/246)).
 - **The model's own knowledge is not checked.** With [*AI service knowledge*]({{ '/docs/tutorials/settings/#sources' | relative_url }}) on, the AI service may add one sentence from what its model learned in training, marked *AI* and read as unverified. Nothing checks it, which is why it is off by default: a choice.
 - **Skip detection is a judgement.** Under *On track skip (auto)*, an insight is written only for a track you skip to. A player's media session does not say whether a track was skipped, so the app judges it from the time the track had left and, for Spotify, the playback states just before the change. For other players it goes by the time alone: under *Crossfade*'s *Autodetect*, a change with up to 15 seconds left counts as a natural end, so a skip in a track's last 15 seconds is not told apart. Over Spotify Connect there are no such states to go by, so a track that crossfades into the next in a car may be taken for a skip, and written. In doubt, it judges a natural end: a missed skip costs a tap on *Write insight*, a false one a paid call. Learning skip detection per player, on the phone, is planned ([#22](https://github.com/wkusnierczyk/sleevesight/issues/22)).
 
@@ -67,7 +67,7 @@ A limit listed here is not a bug. Something that does not work as this page and 
 
 ## Cost and connection
 
-- **Each insight is a call on your own AI key.** Sleevesight charges nothing and has no key of its own: each insight written is a call to the AI service you chose, billed to your account with it, now and then two or three calls; so is each AI answer in a genre's panel or for a source that has nothing. Under the default *On track change (auto)*, insights are written without a tap, so a track you play can be a call ([when automatic writing runs]({{ '/docs/tutorials/settings/#insights' | relative_url }})). The Exa web search, when on, is a search on your key, paid beyond its monthly free credit. A choice, since the app runs no server. What each service charges: [What it costs you]({{ '/docs/costs/' | relative_url }}). A cost estimate before a paid call is planned ([#331](https://github.com/wkusnierczyk/sleevesight/issues/331)), and a model on the phone, for insights with no key, is being looked at ([#272](https://github.com/wkusnierczyk/sleevesight/issues/272)).
+- **Each insight is a call on your own AI key.** Sleevesight charges nothing and has no key of its own: each insight written is a call to the AI service you chose, billed to your account with it, now and then two or three calls; so is each of the song's, the artist's and the album's insights you open, and each AI answer in a genre's panel or for a source that has nothing. Under the default *On track change (auto)*, insights are written without a tap, so a track you play can be a call ([when automatic writing runs]({{ '/docs/tutorials/settings/#insights' | relative_url }})). The Exa web search, when on, is a search on your key, paid beyond its monthly free credit. A choice, since the app runs no server. What each service charges: [What it costs you]({{ '/docs/costs/' | relative_url }}). A cost estimate before a paid call is planned ([#331](https://github.com/wkusnierczyk/sleevesight/issues/331)), and a model on the phone, for insights with no key, is being looked at ([#272](https://github.com/wkusnierczyk/sleevesight/issues/272)).
 - **It needs a connection.** Every lookup and every insight goes over the network, straight to each service. Offline, nothing new is looked up or written: what earlier lookups kept on the phone still shows, and the sources that could not be reached are asked again once the phone is back online.
 - **Nothing is looked up in the background unless you ask.** While Sleevesight is not on screen, it starts no lookup and writes nothing new, unless [*Look up in the background*]({{ '/docs/tutorials/settings/#insights' | relative_url }}) is on; a lookup or call already under way when it leaves the screen still finishes. A choice: it is off by default, so no new paid or network work starts that nobody is looking at.
 
