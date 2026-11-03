@@ -37,6 +37,9 @@ import app.sleevesight.app.ui.home.HomeFixtures.normalizer
 import app.sleevesight.app.ui.home.HomeFixtures.track
 import app.sleevesight.app.ui.home.HomeFixtures.written
 import app.sleevesight.app.ui.report.REPORT_TAG
+import app.sleevesight.core.model.ProviderId
+import app.sleevesight.core.pipeline.CardEntity
+import app.sleevesight.core.pipeline.CardKey
 import app.sleevesight.core.pipeline.InsightItem
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.ItemEvidence
@@ -45,6 +48,7 @@ import app.sleevesight.core.settings.Layout
 import app.sleevesight.core.settings.NewTrackFold
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WriteAutomatically
+import app.sleevesight.core.synthesis.CardKind
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
@@ -80,10 +84,13 @@ class ItemRowsScreenTest {
         override fun item(
             track: TrackState,
             item: InsightItem,
-        ): Flow<ItemShown> = shown.map { it[item] ?: ItemShown.Offered }
+        ): Flow<ItemShown> = shown.map { it[item] ?: ItemShown.Offered }.also { followed += item }
 
         val asks = mutableListOf<ItemAsk>()
-        val stops = mutableListOf<InsightItem>()
+        val stops = mutableListOf<CardKey>()
+
+        // The items followed, each time a flow of one is asked for.
+        val followed = mutableListOf<InsightItem>()
 
         // Whether a write is taken up (asking, until its call), or refused by the gates (offered again).
         var takenUp = true
@@ -95,18 +102,32 @@ class ItemRowsScreenTest {
         ) {
             writes += item
             asks += ask
-            if (takenUp) shown.value = shown.value + (item to ItemShown.Asking)
+            if (takenUp) shown.value = shown.value + (item to ItemShown.Asking(KEY))
         }
 
-        override fun stop(
-            track: TrackState,
-            item: InsightItem,
-        ) {
-            stops += item
+        override fun stop(key: CardKey) {
+            stops += key
         }
     }
 
     private val notes = Notes()
+
+    private companion object {
+        // A card's key, as the notes would carry it.
+        val KEY =
+            CardKey(
+                CardKind.SONG,
+                CardEntity.Track(normalizer.normalize(HomeFixtures.sundown), null),
+                "f",
+                1,
+                "s",
+                ProviderId.ANTHROPIC,
+                "m",
+                false,
+                null,
+            )
+    }
+
     private val opened = mutableListOf<HomePage>()
 
     private fun state(
@@ -248,18 +269,18 @@ class ItemRowsScreenTest {
     }
 
     @Test
-    fun anItemStartingUnfoldedIsWrittenByItselfOnlyWhenNothingHoldsTheTracksWritingBack() {
+    fun anItemStartingUnfoldedIsAskedForByItselfAndOffersWriteInsightWhenTheGatesRefuse() {
         val unfolded = automatic.copy(itemsOnNewTrack = NewTrackFold.UNFOLDED)
-        // No first action since the app started (D5): the track's own writing waits, and so do its items.
-        val waiting =
-            state(unfolded).let {
-                NowPlayingState(it.view.copy(waiting = true), it.playing, it.playback, settings = unfolded)
-            }
-        show(waiting) {
+        // The gates (the first action, *Saver*, *On track skip (auto)*) refuse: offered again.
+        notes.takenUp = false
+        show(state(unfolded)) {
             compose.waitForIdle()
-            assertTrue(notes.writes.isEmpty())
+            assertEquals(setOf(ItemAsk.BY_ITSELF), notes.asks.toSet())
             compose.onAllNodesWithText(text(R.string.home_item_tap_write)).assertCountEquals(3)
         }
+        notes.takenUp = true
+        notes.writes.clear()
+        notes.asks.clear()
         show(state(unfolded)) {
             compose.waitForIdle()
             assertEquals(InsightItem.entries.toSet(), notes.writes.toSet())
@@ -311,14 +332,18 @@ class ItemRowsScreenTest {
         notes.shown.value =
             mapOf(
                 InsightItem.SONG to
-                    ItemShown.Shown(InsightState.Writing("", model = "m"), ItemEvidence(evidence, emptyMap())),
+                    ItemShown.Shown(
+                        InsightState.Writing("", model = "m"),
+                        ItemEvidence(evidence, emptyMap()),
+                        key = KEY,
+                    ),
                 InsightItem.ARTIST to ItemShown.Shown(InsightState.Stopped, ItemEvidence(evidence, emptyMap())),
             )
         show(state(onDemand)) {
             row(InsightItem.SONG).performScrollTo().performClick()
             compose.onNodeWithText(text(R.string.home_insight_writing_stop)).assertExists()
             compose.onNodeWithTag(itemStopTag(InsightItem.SONG)).performScrollTo().performClick()
-            assertEquals(listOf(InsightItem.SONG), notes.stops)
+            assertEquals(listOf(KEY), notes.stops)
 
             row(InsightItem.ARTIST).performScrollTo().performClick()
             compose.onNodeWithText(text(R.string.home_insight_stopped)).assertExists()
@@ -326,6 +351,43 @@ class ItemRowsScreenTest {
             compose.onNodeWithTag(itemWriteTag(InsightItem.ARTIST)).performScrollTo().performClick()
             assertEquals(listOf(InsightItem.ARTIST), notes.writes)
             assertEquals(listOf(ItemAsk.TAP), notes.asks)
+        }
+    }
+
+    @Test
+    fun anItemIsFollowedOnceWhateverElseOfTheTrackChanges() {
+        show(state(onDemand)) { current ->
+            row(InsightItem.ALBUM).performScrollTo().performClick()
+            compose.waitForIdle()
+            // The key insight streaming: the track updated word by word.
+            for (words in listOf("It", "It was", "It was recorded")) {
+                current.value = state(onDemand, track(insight = InsightState.Writing(words, model = "m")))
+                compose.waitForIdle()
+            }
+            assertEquals(listOf(InsightItem.ALBUM), notes.followed)
+        }
+    }
+
+    @Test
+    fun aPageLeftOpenCountsItsOpeningAsATapForItsTrackOnly() {
+        val current = mutableStateOf(state(automatic))
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity {
+                it.setContent {
+                    NowPlayingPageContent(
+                        HomePage.Item(InsightItem.ARTIST.name),
+                        current.value,
+                        NowPlayingActions(normalizer::normalize, itemNotes = notes),
+                    ) {}
+                }
+            }
+            compose.waitForIdle()
+            assertEquals(listOf(ItemAsk.OPENED), notes.asks)
+            // The next track, the page still open: asked as one unfolded at its start, by itself.
+            notes.shown.value = emptyMap()
+            current.value = state(automatic, track(carefree))
+            compose.waitForIdle()
+            assertEquals(listOf(ItemAsk.OPENED, ItemAsk.BY_ITSELF), notes.asks)
         }
     }
 

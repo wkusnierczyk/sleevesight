@@ -15,6 +15,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.PipelineHost
+import app.sleevesight.app.session.TrackIdentity
 import app.sleevesight.app.ui.theme.handoffTarget
 import app.sleevesight.app.ui.theme.rememberFocusHandoff
 import app.sleevesight.core.model.NowPlaying
@@ -143,7 +144,10 @@ private fun ItemPageOf(
             reporting =
                 Reported(track, written, of)
         }
-    ItemPage(item, itemName(item, header, actions.normalize(header).primary), context)
+    // The track the page was opened on: its opening is a tap for that track only (#522).
+    val openedOn = remember { playing }
+    val tapped = TrackIdentity.playsOn(openedOn, playing)
+    ItemPage(item, itemName(item, header, actions.normalize(header).primary), context, tapped)
 }
 
 /**

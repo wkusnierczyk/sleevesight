@@ -232,7 +232,10 @@ class ItemInsights(
         own: EvidenceSet,
         track: TrackState,
     ): List<EvidenceLine> {
-        val lines = own.lines.filter { it.scope == Scope.ARTIST }
+        // Not the counts and lists of what many listeners did (Last.fm's listeners, tags, similar
+        // artists: `EvidenceLine.aggregate`), whose numbers and order change from one lookup to the
+        // next: in the artist's fingerprint, they would key the same artist anew on each.
+        val lines = own.lines.filter { it.scope == Scope.ARTIST && !it.aggregate }
         val primary = track.normalized.primary
         if (track.normalized.artists.size <= 1) return lines
         val key = " ${names.key(primary)} "

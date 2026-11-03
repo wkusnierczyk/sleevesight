@@ -785,6 +785,21 @@ data class CoordinatorState(
      * only on a tap ([Report.tapOnly], #625).
      */
     val waitsForTap: Boolean get() = !acted || expired || latest?.tapOnly == true
+
+    /**
+     * Whether the track playing would be written by itself now, by the rules alone, whatever its
+     * key insight came to (written, served from the cache, nothing to narrate, not decided yet): an
+     * automatic mode ([automatic]), the first action made and not expired by *Saver* ([waitsForTap]),
+     * the track not one that came to play while *Saver* had paused writing ([Report.whilePaused]), and
+     * the latest report's cause one the mode writes on (*On track skip (auto)* not on a natural end,
+     * [modeWrites]). What the song's, the artist's and the album's insights (#522) ask before a call
+     * they make by themselves (`PipelineHost.itemCallAllowed`).
+     */
+    val writesItself: Boolean
+        get() {
+            val report = latest
+            return automatic && !waitsForTap && report != null && !report.whilePaused && modeWrites(report.cause)
+        }
 }
 
 /** The same insight track: [TrackIdentity.playsOn], the session history's rule for a track that plays on. */

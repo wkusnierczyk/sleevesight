@@ -302,6 +302,34 @@ class ItemInsightsTest {
         }
 
     @Test
+    fun `the artist keys the same whatever Last fm's counts are on each lookup`() =
+        runTest {
+            fun counted(listeners: Int) =
+                line(SourceId.LASTFM, "Last.fm counts $listeners listeners for Gordon Lightfoot.", Scope.ARTIST)
+                    .copy(aggregate = true, about = "Gordon Lightfoot")
+            val first =
+                track("Sundown", listOf(line(SourceId.MUSICBRAINZ, "One.")), extraArtistLines = listOf(counted(683942)))
+            val next =
+                track(
+                    "Carefree Highway",
+                    listOf(line(SourceId.MUSICBRAINZ, "Two.")),
+                    extraArtistLines = listOf(counted(684001)),
+                )
+            val keys =
+                listOf(first, next).map { t ->
+                    checkNotNull(
+                        items.key(
+                            InsightItem.ARTIST,
+                            t,
+                            checkNotNull(items.evidence(InsightItem.ARTIST, t, settings)),
+                            settings,
+                        ),
+                    )
+                }
+            assertEquals(keys.first(), keys.last())
+        }
+
+    @Test
     fun `no key while the selected AI service is not the one the parts were built with`() =
         runTest {
             val track = track("Sundown", listOf(line(SourceId.MUSICBRAINZ, "Sundown is a song.")))

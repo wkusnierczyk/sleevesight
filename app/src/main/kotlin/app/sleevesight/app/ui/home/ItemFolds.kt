@@ -28,15 +28,15 @@ internal class ItemRow(
 
 /**
  * The rows of [header], the track shown: the song by its title, the artist by the primary artist
- * ([primary], as the normalizer reads the artists), the album by the player's album name; none for
- * an album the player does not name.
+ * ([primary], as the normalizer reads the artists), the album by the player's album name; no row for
+ * one with no name (an album the player does not name, a blank title).
  */
 internal fun itemRows(
     header: NowPlaying,
     primary: String,
 ): List<ItemRow> =
     listOfNotNull(
-        ItemRow(InsightItem.SONG, header.title),
+        header.title.takeIf { it.isNotBlank() }?.let { ItemRow(InsightItem.SONG, it) },
         primary.takeIf { it.isNotBlank() }?.let { ItemRow(InsightItem.ARTIST, it) },
         header.album
             ?.trim()

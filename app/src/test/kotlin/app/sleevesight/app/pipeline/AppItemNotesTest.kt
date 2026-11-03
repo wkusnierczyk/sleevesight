@@ -9,6 +9,7 @@ import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.pipeline.AiAccess
+import app.sleevesight.core.pipeline.CardKey
 import app.sleevesight.core.pipeline.ClearEpoch
 import app.sleevesight.core.pipeline.InsightItem
 import app.sleevesight.core.pipeline.InsightState
@@ -28,6 +29,7 @@ import app.sleevesight.core.sources.ResolvedArtist
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -48,11 +50,17 @@ class AppItemNotesTest {
 
     // While set, an album's lookup waits for it: its gathering under way.
     private var gathering: CompletableDeferred<Unit>? = null
+
+    // The album's lookups made, and whether a source of theirs could not be asked.
+    private var albumLookups = 0
+    private var albumUnreachable = false
     private val albums =
         AlbumLookup {
+            albumLookups++
             gathering?.await()
             AlbumFound(
                 listOf(HomeFixtures.draft(SourceId.WIKIPEDIA, "Sundown is his tenth album.", scope = Scope.RELEASE)),
+                unreachable = albumUnreachable,
             )
         }
     private val parts =
@@ -251,6 +259,75 @@ class AppItemNotesTest {
             assertEquals(ItemShown.Offered, notes.item(first, InsightItem.SONG).first())
         }
 
+    // The key of [item]'s write under way on [track], as the row has it.
+    private suspend fun writingKey(
+        notes: AppItemNotes,
+        track: TrackState,
+        item: InsightItem,
+    ): CardKey =
+        when (
+            val shown =
+                notes.item(track, item).first {
+                    it is ItemShown.Asking ||
+                        (it as? ItemShown.Shown)?.state is InsightState.Writing
+                }
+        ) {
+            is ItemShown.Asking -> shown.key
+            else -> checkNotNull((shown as ItemShown.Shown).key)
+        }
+
+    @Test
+    fun `stop cuts off an album's write whose lookup could not ask every source`() =
+        runTest {
+            provider.streaming = 10.seconds
+            albumUnreachable = true
+            val notes = notes()
+            val first = track(HomeFixtures.sundown)
+            notes.write(first, InsightItem.ALBUM, ItemAsk.TAP)
+            advanceTimeBy(1.seconds)
+            notes.stop(writingKey(notes, first, InsightItem.ALBUM))
+            advanceUntilIdle()
+            assertEquals(0, provider.completed)
+            assertEquals(0, cache.held)
+        }
+
+    @Test
+    fun `the track updated while the album is gathered gathers it once, under one key`() =
+        runTest {
+            val notes = notes()
+            val gate = CompletableDeferred<Unit>()
+            gathering = gate
+            val first = track(HomeFixtures.sundown)
+            // The row followed afresh at each update of the track (the key insight streaming), and a write.
+            val updates =
+                listOf("It", "It was", "It was recorded").map { words ->
+                    first.copy(insight = InsightState.Writing(words, model = "m"))
+                }
+            for (update in updates) {
+                val watching = launch { notes.item(update, InsightItem.ALBUM).collect {} }
+                advanceUntilIdle()
+                watching.cancel()
+            }
+            notes.write(updates.last(), InsightItem.ALBUM, ItemAsk.OPENED)
+            advanceUntilIdle()
+            gate.complete(Unit)
+            advanceUntilIdle()
+            assertEquals(1, albumLookups)
+            assertEquals(1, provider.requests)
+            // The row shows what the write wrote: one key.
+            assertTrue(notes.settled(first, InsightItem.ALBUM) is ItemShown.Shown)
+        }
+
+    @Test
+    fun `an album a source could not be asked for is kept for a while, not asked again at each update`() =
+        runTest {
+            albumUnreachable = true
+            val notes = notes()
+            val first = track(HomeFixtures.sundown)
+            repeat(3) { notes.item(first, InsightItem.ALBUM).first { it !is ItemShown.Gathering } }
+            assertEquals(1, albumLookups)
+        }
+
     @Test
     fun `stop cuts the call off, keeps nothing, and only a tap writes it again`() =
         runTest {
@@ -259,7 +336,7 @@ class AppItemNotesTest {
             val first = track(HomeFixtures.sundown)
             notes.write(first, InsightItem.SONG, ItemAsk.OPENED)
             advanceTimeBy(1.seconds)
-            notes.stop(first, InsightItem.SONG)
+            notes.stop(writingKey(notes, first, InsightItem.SONG))
             advanceUntilIdle()
             assertEquals(
                 InsightState.Stopped,
