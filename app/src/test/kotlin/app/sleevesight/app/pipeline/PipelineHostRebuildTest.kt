@@ -4,6 +4,7 @@ import app.sleevesight.core.ai.ReasoningEffort
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.settings.Settings.Companion.DEFAULT_MODELS
 import app.sleevesight.core.settings.Settings.Companion.EFFORT_SCALES
+import app.sleevesight.core.settings.SourceSwitch
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -11,8 +12,8 @@ import org.junit.Test
 
 /**
  * What rebuilds the pipeline in the app (#51): a key, a web search engine, the AI service, its model
- * and reasoning effort (#849), which the card's key holds, and *Show genres* (#444), whose adapters
- * ask for tags or not as they are built; no other setting.
+ * and reasoning effort (#849), and the *Sources* switches (#857), which the card's key holds, and
+ * *Show genres* (#444), whose adapters ask for tags or not as they are built; no other setting.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class PipelineHostRebuildTest : PipelineHostFixture() {
@@ -46,6 +47,24 @@ internal class PipelineHostRebuildTest : PipelineHostFixture() {
             assertEquals(5, builds)
             // Each rebuild ran the track again; the same pipeline never does.
             assertEquals(5, musicBrainz.asked.size)
+        }
+
+    @Test
+    fun `the pipeline is rebuilt for a source switched on or off, AI service knowledge included`() =
+        runTest {
+            started()
+            play("One")
+            settle()
+            assertEquals(1, builds)
+
+            val sources = settings.value.enabledSources
+            settings.value = settings.value.copy(enabledSources = sources - SourceSwitch.DISCOGS)
+            settle()
+            assertEquals(2, builds)
+
+            settings.value = settings.value.copy(enabledSources = sources + SourceSwitch.MODEL)
+            settle()
+            assertEquals(3, builds)
         }
 
     @Test
