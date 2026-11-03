@@ -1,59 +1,133 @@
-<!doctype html>
-<html lang="en">
+---
+layout: null
+nav:
+  - id: st1
+    label: Words
+  - id: st2
+    label: Keys
+  - id: st3
+    label: Scan
+  - id: safety
+    label: Safety
+provenance: [ai-wrote, human-reviewed]
+---
+<!DOCTYPE html>
+<html lang="en-US">
 <head>
-<meta charset="utf-8">
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- API keys to a setup code (#436), for the app's Load keys, sealed with the five words the phone
-     shows (#590). The page connects to nothing: it fetches only its own scripts and style sheets,
-     and the policy below forbids any other request, so the browser's network panel shows that
-     nothing is sent. The keys and the words stay in the page's memory, never in storage, and go only
-     into the QR code drawn here. No front matter, so the site copies it as it is. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'none'; base-uri 'none'; form-action 'none'">
+     shows (#590), in the documentation pages' type, header and footer (#764), without their intro.
+     The page connects to nothing: it fetches only its own scripts, style sheets and fonts, and the
+     policy below forbids any other request, so the browser's network panel shows that nothing is
+     sent. The policy admits no inline script or style, so the header's script and the pages' style
+     come as files (`assets/site/`), built from the same includes as the documentation pages'. The
+     keys and the words stay in the page's memory, never in storage, and go only into the QR code
+     drawn here. Light only, as the documentation pages. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self'; connect-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="robots" content="noindex">
-<meta name="color-scheme" content="light dark">
-<title>Sleevesight API keys</title>
-<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
-<link rel="stylesheet" href="assets/keyboard/keyboard.css">
-<link rel="stylesheet" href="assets/api-keys/api-keys.css">
-<script type="module" src="assets/api-keys/api-keys.js"></script>
+<title>API keys to a QR code | Sleevesight</title>
+<link rel="icon" type="image/svg+xml" href="{{ '/assets/favicon.svg' | relative_url }}">
+<link rel="stylesheet" href="{{ "/assets/css/style.css?v=" | append: site.github.build_revision | relative_url }}">
+<link rel="preload" href="{{ '/assets/fonts/RobotoFlex-page.woff2' | relative_url }}" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="{{ '/assets/fonts/RobotoSlab-page.woff2' | relative_url }}" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="{{ '/assets/site/chrome.css' | relative_url }}">
+<link rel="stylesheet" href="{{ '/assets/api-keys/api-keys.css' | relative_url }}">
+<script src="{{ '/assets/site/head.js' | relative_url }}"></script>
+<script type="module" src="{{ '/assets/api-keys/api-keys.js' | relative_url }}"></script>
 </head>
 <body>
-<main>
-  <h1>API keys to a QR code</h1>
-  <p>Put your API keys in one QR code, and save them all in Sleevesight at once: on the phone, <b>Settings</b>, <b>Secrets</b>, <b>Load keys</b>. The code is sealed with five words the phone shows: it opens only with them, so a photo or a screenshot of the code alone gives nothing away.</p>
+<a class="skip" href="#main">Skip to content</a>
+{% include site-header.html home=true no_intro=true linear=true %}
+<div class="wrap">
+<main id="main" class="markdown-body">
+<div class="ak">
+<p class="onphone" role="note">This page makes a QR code for your phone to scan and import your API keys. Open it on a computer or another suitable device that already has those keys available. On the phone you are importing those keys into, scan the QR code with <b>Load keys</b>, or type each key in its own field: <b>Settings</b>, <b>Secrets</b>.</p>
+<h1 id="api-keys-to-a-qr-code">API keys to a QR code</h1>
+<p class="lead">Embed all your API keys in one QR code. Sleevesight scans the code and reads all keys at once. Check <b>Settings</b>, <b>Secrets</b>, <b>Load keys</b> on your phone.</p>
+<p class="lead">This page runs <b>exclusively in your browser</b>: nothing you type here is sent anywhere. See <a href="#safety">How your keys stay safe</a></p>
 
-  <ol>
-    <li>On the phone, open <b>Load keys</b>: it shows five words. Type them here, in their order, with spaces between; the first three letters of each are enough.
-      <div class="field">
-        <label for="words">The phone’s words</label>
-        <input id="words" type="text" aria-describedby="words-report">
-        <p id="words-report" role="status" aria-live="polite"></p>
-      </div>
-      <p><label class="show"><input id="show-words" type="checkbox"> Show the words</label></p>
-      <p><label class="show"><input id="seal" type="checkbox" checked> Seal the code with the phone’s words</label></p>
-      <p id="unsealed" class="error" hidden>Not sealed: the code is the keys themselves, and anyone who sees it, or a photo of it, has them. Only for a key’s own <b>Scan QR code</b>, which reads no words; <b>Load keys</b> reads a sealed code.</p>
-    </li>
-    <li>Choose your keys file, drop it here, or paste each key in its field. The file has one <code>NAME=value</code> line a key, such as <code>SLEEVESIGHT_ANTHROPIC_API_KEY=sk-ant-…</code>, named as Sleevesight names it or as its provider usually does: <code>SLEEVESIGHT_ANTHROPIC_API_KEY</code> or <code>ANTHROPIC_API_KEY</code>, <code>SLEEVESIGHT_OPENAI_API_KEY</code> or <code>OPENAI_API_KEY</code>, <code>SLEEVESIGHT_GOOGLE_API_KEY</code>, <code>GEMINI_API_KEY</code> or <code>GOOGLE_API_KEY</code>, <code>SLEEVESIGHT_EXA_API_KEY</code> or <code>EXA_API_KEY</code>, and <code>SLEEVESIGHT_LASTFM_API_KEY</code> or <code>LASTFM_API_KEY</code>. Of the names a file gives one key under, the first listed wins; lines naming nothing Sleevesight uses are left out. A file replaces what is in the fields.
-      <div id="drop" class="drop">
-        <label class="file">Keys file <input id="file" type="file" aria-describedby="file-report"></label>
-        <span class="hint">or drop it here</span>
-      </div>
-      <p id="file-report" class="report" role="status" aria-live="polite"></p>
-      <div id="fields" class="fields"></div>
-      <p><label class="show"><input id="show" type="checkbox"> Show the keys</label></p>
-    </li>
-    <li>On the phone, choose <b>Next</b>, and scan the code. The phone opens it with its words, and lists what it found, each key by its last four characters, before it saves anything.
-      <div id="code" class="code" hidden></div>
-      <p id="holds" role="status" aria-live="polite">No key yet.</p>
-    </li>
-    <li>Once the phone has saved them, choose <b>Clear</b>, or close this tab. After saving the keys, the phone asks which of the respective services to switch on; they can be switched on or off later under <b>Sources</b>, <b>Genres</b> and <b>AI services</b>.
-      <p><button id="clear" type="button">Clear</button></p>
-    </li>
-  </ol>
+<div class="cols">
+<div class="stack">
+  <section class="step" id="st1" aria-labelledby="st1-h">
+    <h2 id="st1-h"><span class="num" id="n1">1</span>Type the words</h2>
+    <p>On the phone, open <b>Settings</b>, <b>Secrets</b>, <b>Load keys</b>. It will show you five words. Type the words in the boxes below, in the same order, one a box. The first three letters of each are enough.</p>
+    <div class="words" role="group" aria-label="The phone’s words">
+      <div class="wbox" id="wb0"><input type="text" class="masked" id="w0" autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="text" aria-label="Word 1"><small id="wm0">Word 1</small></div>
+      <div class="wbox" id="wb1"><input type="text" class="masked" id="w1" autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="text" aria-label="Word 2"><small id="wm1">Word 2</small></div>
+      <div class="wbox" id="wb2"><input type="text" class="masked" id="w2" autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="text" aria-label="Word 3"><small id="wm2">Word 3</small></div>
+      <div class="wbox" id="wb3"><input type="text" class="masked" id="w3" autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="text" aria-label="Word 4"><small id="wm3">Word 4</small></div>
+      <div class="wbox" id="wb4"><input type="text" class="masked" id="w4" autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="text" aria-label="Word 5"><small id="wm4">Word 5</small></div>
+      <!-- The eye shows its action: open while the words are hidden (press to show), slashed while
+           they are shown (press to hide); pressed while they are shown. The key fields' eyes are
+           copies of it (`api-keys.js`). -->
+      <button type="button" class="eye" id="showwords" aria-pressed="false" aria-label="Show the words" title="Show the words"><svg class="on" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg><svg class="off" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/></svg></button>
+    </div>
+    <p class="line" id="wr" role="status" aria-live="polite"></p>
+  </section>
 
-  <p class="note">Nothing leaves your computer. The page is allowed no network request, uses no code from elsewhere and stores nothing: the keys and the words are kept only while the tab is open, and the code is drawn here. Never make such a code with an online QR generator: it would receive your keys. The words seal the code in the browser (a key derived from them with PBKDF2, 600,000 rounds, then AES-GCM): it opens only with them. The phone takes it once, within 5 minutes of showing the words, but anyone who has both the code and the words can open it, anywhere, at any time; with the code alone, they must search for the words, some thousands of GPU-years of work. The words are masked here, since a screenshot of both would open the code; if a code and its words get out together, replace the keys at their services. A code made without the words is the keys: do not leave it on screen, or take a photo or screenshot of it.</p>
+  <section class="step" id="st2" aria-labelledby="st2-h">
+    <h2 id="st2-h"><span class="num" id="n2">2</span>Add your keys</h2>
+    <p>Choose your keys file, or drop it here, or paste each key in its field. Enter only the keys of the services you use.</p>
+    <div class="drop" id="drop"><label class="file">Choose a keys file<input id="file" type="file" aria-describedby="fr"></label><span class="muted">or drop it here</span></div>
+    <p id="fr" class="report" role="status" aria-live="polite"></p>
+    <details class="help">
+      <summary>What a keys file looks like</summary>
+      <p>One <code>NAME=value</code> line a key, such as:</p>
+      <pre>SLEEVESIGHT_ANTHROPIC_API_KEY=sk-ant-…
+LASTFM_API_KEY=0123…</pre>
+      <p>Sleevesight reads these names. Where a file gives one key under several of them, the first listed wins:</p>
+      <div class="tbl"><table><thead><tr><th>Key</th><th>Names, in order</th></tr></thead><tbody id="names"></tbody></table></div>
+      <p>Lines naming nothing Sleevesight uses are left out. A file replaces what is in the fields.</p>
+    </details>
+    <div class="fields" id="fields"></div>
+    <button type="button" class="ghostpill" id="showkeys">Show all keys</button>
+  </section>
+</div>
+
+<aside class="stack" aria-label="The code">
+  <section class="step" id="st3" aria-labelledby="st3-h">
+    <h2 id="st3-h"><span class="num" id="n3">3</span>Scan the code</h2>
+    <p>On the phone, choose <b>Next</b>, and point the camera at the code. The code provides API keys encrypted with the five words from the preceding screen, and only your phone can decode them.</p>
+    <div class="codebox">
+      <p class="warn" id="warn" hidden>Not sealed: this code is the keys themselves. Anyone who sees it, or a photo of it, has them.</p>
+      <div class="ph" id="ph" role="status" aria-live="polite"></div>
+      <div class="code" id="code" hidden></div>
+      <div class="holds" id="holds" role="status" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <section class="step" id="st4" aria-labelledby="st4-h">
+    <h2 id="st4-h"><span class="num" id="n4">4</span>Finish on the phone</h2>
+    <p>The phone lists the keys it found, each by its last four characters, and asks which to save and which services to switch on.<br>Once the keys are on your phone, choose <b>Clear</b>, or close this tab.</p>
+    <p><button class="pill" id="clear" type="button">Clear</button></p>
+  </section>
+</aside>
+</div>
+
+<details class="side" id="side">
+  <summary>A code without the words, for a single key</summary>
+  <p>A key’s own <b>Scan QR code</b>, in its key dialog, reads a code made without the words. Such a code is the keys themselves: anyone who sees it, or a photo of it, has them. <b>Load keys</b> reads only a sealed code.</p>
+  <label class="check"><input type="checkbox" id="nosealbox"> Make the code without the words</label>
+</details>
+
+<section class="safety" id="safety" aria-labelledby="safety-h">
+  <h2 id="safety-h">How your keys stay safe</h2>
+  <ul>
+    <li><b>Nothing leaves this computer.</b> The page may make no network request, uses no code from elsewhere, and stores nothing. The keys and the words are kept only while this tab is open, and the code is drawn here.</li>
+    <li><b>Never use an online QR generator</b> for such a code: it would receive your keys.</li>
+    <li><b>The words seal the code</b> in this browser, with a key derived from them (PBKDF2, 600,000 rounds, then AES-GCM). The code opens only with them.</li>
+    <li><b>The phone takes the code once</b>, within 5 minutes of showing the words. But anyone who has both the code and the words can open it, anywhere, at any time. With the code alone, they must search for the words: some thousands of GPU-years of work.</li>
+    <li><b>The words are masked here</b>, since a screenshot of both would open the code. If a code and its words get out together, replace the keys at their services.</li>
+    <li><b>A code without the words is the keys.</b> Do not leave it on screen, or take a photo or screenshot of it.</li>
+  </ul>
+</section>
+</div>
 </main>
-<footer><a href="https://github.com/wkusnierczyk/sleevesight/blob/main/LICENSE">GPL-3.0</a> · <a href="https://github.com/wkusnierczyk/sleevesight/blob/main/api-keys.html">Source</a> · <a href="design/brand.html#fonts">Fonts</a> · Words from the <a href="https://www.eff.org/dice">EFF’s short wordlist 2</a>, under <a href="https://creativecommons.org/licenses/by/3.0/us/">CC BY 3.0 US</a></footer>
+{% capture credit %}Words from the <a href="https://www.eff.org/dice">EFF’s short wordlist 2</a>, under <a href="https://creativecommons.org/licenses/by/3.0/us/">CC BY 3.0 US</a>{% endcapture %}
+{% include site-footer.html source="api-keys.html" credit=credit %}
+</div>
+<script src="{{ '/assets/site/header.js' | relative_url }}"></script>
 </body>
 </html>
