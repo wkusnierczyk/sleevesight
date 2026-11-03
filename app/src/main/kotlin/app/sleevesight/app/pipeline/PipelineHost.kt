@@ -329,6 +329,22 @@ class PipelineHost(
      */
     val onScreen: Flow<Boolean> = snapshot.map { it.visible }.distinctUntilChanged()
 
+    /**
+     * Whether the song's, the artist's or the album's insight (#522) may make its call now, asked
+     * right before it, as [ask] came: requests allowed (D6: the first run acknowledged, and the app on
+     * screen or *Look up in the background* on); for one asked by itself ([ItemAsk.BY_ITSELF], a row
+     * unfolded at a new track's start), the app on screen too, and nothing holding the track's own
+     * automatic writing back (no first action yet, *Saver*'s expiry, a track written only on a tap, one
+     * that followed the last one by itself: [PipelineView.waiting], [PipelineView.lapsed],
+     * [PipelineView.followed]).
+     */
+    fun itemCallAllowed(ask: ItemAsk): Boolean {
+        val now = snapshot.value
+        val view = state.value
+        return now.allowed &&
+            (ask != ItemAsk.BY_ITSELF || (now.visible && !view.waiting && !view.lapsed && !view.followed))
+    }
+
     /** An activity started (`MainActivity.onStart`). */
     fun activityStarted() {
         queue.trySend(CoordinatorEvent.ActivityStarted)

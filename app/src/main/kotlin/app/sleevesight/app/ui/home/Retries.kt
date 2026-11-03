@@ -8,10 +8,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -59,7 +62,8 @@ internal class Retries(
  * [action] names *Retry*'s action otherwise, and [color] colours the message: *Search with AI*'s
  * failure (#773), "ask your AI service again, a paid call", in the error colour. [style] sets the
  * message otherwise, and [outlined] draws *Retry* outlined: a genre's definition that Wikipedia did
- * not give (#786), in the panel's quiet note style.
+ * not give (#786), in the panel's quiet note style. [ai] gives *Retry* the **AI** mark, where it
+ * calls the AI service ([LineButton]).
  *
  * A tap then runs [afterRetry]: the source asked again, the line gives way to the panel's "Looking
  * on …", and *Retry*, holding the focus, goes, so the caller hands the focus on (to its panel's
@@ -77,6 +81,7 @@ internal fun RetryLine(
     color: Color = Color.Unspecified,
     style: TextStyle = MaterialTheme.typography.bodyLarge,
     outlined: Boolean = false,
+    ai: Boolean = false,
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
@@ -90,6 +95,7 @@ internal fun RetryLine(
                 action,
                 Modifier.testTag(RETRY_TAG),
                 outlined,
+                ai,
             ) {
                 onRetry()
                 afterRetry()
@@ -103,14 +109,18 @@ internal fun RetryLine(
  * a text button's look, [text] in the primary colour, with the action named for a screen reader
  * ([action]: "Double-tap to …"), which a Material `TextButton` cannot be given; at least 48 dp to
  * touch. [modifier] goes on the outside (a test tag, a focus requester). [outlined], with an
- * outline, as *Search with AI* is (#786: *Retry* under a genre's failed definition).
+ * outline, as *Search with AI* is (#786: *Retry* under a genre's failed definition). [ai], with the
+ * **AI** mark ([AiLabel]), for a tap that calls the AI service (#624: *Retry* under a song's, an
+ * artist's or an album's insight that failed, #522).
  */
+@Suppress("LongParameterList") // The label, its action, how it looks, and its tap.
 @Composable
 internal fun LineButton(
     text: String,
     action: String,
     modifier: Modifier = Modifier,
     outlined: Boolean = false,
+    ai: Boolean = false,
     onClick: () -> Unit,
 ) {
     val edge = MaterialTheme.colorScheme.outline
@@ -124,7 +134,15 @@ internal fun LineButton(
                 .clickable(role = Role.Button, onClickLabel = action, onClick = onClick)
                 .padding(horizontal = 12.dp, vertical = if (outlined) 6.dp else 8.dp),
     ) {
-        Text(text, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+        if (ai) {
+            // A tap that calls the AI service (#624): the mark after the label, read "Retry, uses AI".
+            CompositionLocalProvider(
+                LocalContentColor provides MaterialTheme.colorScheme.primary,
+                LocalTextStyle provides MaterialTheme.typography.labelLarge,
+            ) { AiLabel(text) }
+        } else {
+            Text(text, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+        }
     }
 }
 

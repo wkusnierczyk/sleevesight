@@ -17,9 +17,11 @@ import app.sleevesight.core.pipeline.QuestionCost
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.resolution.NameMatcher
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.settings.WriteAutomatically
 import app.sleevesight.core.settings.pastKeepHistory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -60,7 +62,8 @@ sealed interface ItemShown {
     /**
      * Asked for, or kept from before: [state] is [InsightState.Writing], [InsightState.Written],
      * [InsightState.NoEvidence] (the sources give nothing to write it from, with no call, or the
-     * model found nothing), or [InsightState.Failed], beside which it is offered again. [model] is
+     * model found nothing), [InsightState.Failed] or [InsightState.Stopped], beside which it is
+     * offered again, on a tap only. [model] is
      * the name of the model that writes it, for "by {model}"; [evidence] what it was written from, which
      * its citations read, each mapped to the track's line where it is one ([ItemEvidence.trackIds]).
      */
@@ -69,6 +72,18 @@ sealed interface ItemShown {
         val evidence: ItemEvidence,
         val model: String? = null,
     ) : ItemShown
+}
+
+/** How an item's insight came to be asked for (#522), which says what may start its call. */
+enum class ItemAsk {
+    /** A tap on *Write insight*, or on *Retry* after a failure: written again after a failure or a Stop. */
+    TAP,
+
+    /** Its row unfolded, or its page opened, by a tap, under an automatic mode. */
+    OPENED,
+
+    /** Its row unfolded at a new track's start, under an automatic mode: as the track's own writing is. */
+    BY_ITSELF,
 }
 
 /** The song's, the artist's and the album's insights under *Key insights* (#522), as Home and their pages show them. */
@@ -80,14 +95,23 @@ interface ItemNotes {
     ): Flow<ItemShown>
 
     /**
-     * A tap on *Write insight* or a failure's *Retry*, or the row unfolded or the page opened with
-     * *Reactive* set to an automatic mode: [item]'s insight on [track] is written, a paid call,
-     * unless it is shown, kept (no call), or under way.
+     * [item]'s insight on [track] asked for, as [ask] says: written, a paid call, unless it is shown,
+     * kept (no call), or under way; one that failed or was stopped only on a tap ([ItemAsk.TAP]).
      */
     fun write(
         track: TrackState,
         item: InsightItem,
+        ask: ItemAsk = ItemAsk.TAP,
     )
+
+    /**
+     * *Stop writing* under [item]'s insight on [track]: its call is cut off, nothing is kept, and it
+     * shows as stopped.
+     */
+    fun stop(
+        track: TrackState,
+        item: InsightItem,
+    ) = Unit
 
     /** None: the rows say nothing is written (previews, tests). */
     object None : ItemNotes {
@@ -99,6 +123,7 @@ interface ItemNotes {
         override fun write(
             track: TrackState,
             item: InsightItem,
+            ask: ItemAsk,
         ) = Unit
     }
 }
@@ -119,6 +144,13 @@ interface ItemNotes {
  * the process's, so leaving Home does not stop a call paid for; it is marked with [epoch], and after
  * *Clear history* ([forget]) nothing it writes is shown or kept. Each call is counted to [paid], and
  * told to [events] with what was served from the cache, as a genre's reason is (#851).
+ *
+ * A call starts only through the coordinator's gates ([gate], `PipelineHost.itemCallAllowed`: the
+ * app on screen or *Look up in the background* on, and for one asked by itself what holds the
+ * track's own automatic writing back), asked right before it, after any wait for the evidence or
+ * the cache, with the settings read again then (insights on, the same AI service, model and effort,
+ * an automatic mode for one not tapped); closed, it is not made, and the item stays offered. *Stop
+ * writing* ([stop]) cancels it: nothing is kept, and it shows as stopped, written again only on a tap.
  */
 @Suppress("LongParameterList", "TooManyFunctions") // Where items come from, where they run, and the time; each step.
 class AppItemNotes(
@@ -132,6 +164,7 @@ class AppItemNotes(
     private val modelName: (String) -> String = { ModelNames.of(it) ?: it },
     private val paid: (QuestionCost) -> Unit = {},
     private val events: (PipelineEvent) -> Unit = {},
+    private val gate: (ItemAsk) -> Boolean = { true },
 ) : ItemNotes {
     // An insight shown, and when it was written.
     private class Entry(
@@ -156,6 +189,9 @@ class AppItemNotes(
 
     // The evidence gathered, by what it was gathered for, oldest first, at most [KEPT].
     private val gathered: MutableMap<Gathered, ItemEvidence> = Collections.synchronizedMap(LinkedHashMap())
+
+    // The calls under way, by key, for *Stop writing*.
+    private val jobs = ConcurrentHashMap<CardKey, Job>()
 
     // The keys whose cached insight was looked for, and those being written.
     private val looked: MutableSet<CardKey> = ConcurrentHashMap.newKeySet()
@@ -214,12 +250,15 @@ class AppItemNotes(
         when {
             entry == null -> ItemShown.Offered
             expired(entry.writtenAt, lifetime) -> ItemShown.Offered.also { drop(key) }
-            else -> ItemShown.Shown(entry.state, entry.evidence, modelName(key.model))
+            // The insight's evidence numbered as when it was written, but mapped to this track's lines:
+            // an artist's or album's insight kept from another track cites the same ids (#522).
+            else -> ItemShown.Shown(entry.state, evidence, modelName(key.model))
         }
 
     override fun write(
         track: TrackState,
         item: InsightItem,
+        ask: ItemAsk,
     ) {
         val made = parts.value
         val now = settings.value?.takeIf { it.writeInsights && ItemInsights.offered(track) }
@@ -228,9 +267,55 @@ class AppItemNotes(
             val insights = insightsOf(made)
             val evidence = evidenceOf(insights, track, item, now)
             val key = evidence?.let { insights.key(item, track, it, now) }
-            if (evidence != null && key != null && claim(key)) write(insights, key, item, track, evidence)
+            if (evidence != null && key != null && claim(key, ask)) {
+                val job = coroutineContext[Job]
+                job?.let { jobs[key] = it }
+                try {
+                    write(insights, key, Asked(item, track, evidence, ask))
+                } finally {
+                    jobs.remove(key, job)
+                }
+            }
         }
     }
+
+    override fun stop(
+        track: TrackState,
+        item: InsightItem,
+    ) {
+        val made = parts.value
+        val now = settings.value
+        if (made == null || now == null) return
+        val insights = insightsOf(made)
+        val key = gathered[gatheredFor(insights, track, item, now)]?.let { insights.key(item, track, it, now) }
+        key?.let { jobs[it]?.cancel(StopAsked()) }
+    }
+
+    // Whether [ask]'s call may start now (#522): the coordinator's [gate] open for it, and under the
+    // settings now (after any wait for the evidence or the cache), insights on, the same AI service,
+    // model and effort as [key] was made with, and, for one not tapped, an automatic mode still.
+    private fun mayCall(
+        key: CardKey,
+        asked: Asked,
+    ): Boolean {
+        val now = settings.value
+        val made = parts.value
+        val same =
+            now != null && made != null && insightsOf(made).key(asked.item, asked.track, asked.evidence, now) == key
+        val mode = asked.ask == ItemAsk.TAP || now?.writeAutomatically != WriteAutomatically.NEVER
+        return same && mode && gate(asked.ask)
+    }
+
+    // An item asked for: what it is, of which track, from what evidence, and how it was asked.
+    private class Asked(
+        val item: InsightItem,
+        val track: TrackState,
+        val evidence: ItemEvidence,
+        val ask: ItemAsk,
+    )
+
+    // What a Stop cancels an item's call with, told apart from the scope's own cancellation.
+    private class StopAsked : CancellationException("stopped")
 
     // The evidence for [item] on [track] under [now]: kept in memory, or gathered (off the main thread).
     private suspend fun evidenceOf(
@@ -270,10 +355,11 @@ class AppItemNotes(
     private suspend fun write(
         insights: ItemInsights,
         key: CardKey,
-        item: InsightItem,
-        track: TrackState,
-        evidence: ItemEvidence,
+        asked: Asked,
     ) {
+        val item = asked.item
+        val track = asked.track
+        val evidence = asked.evidence
         val work = currentCoroutineContext()
         val show: (InsightState, Instant) -> Unit = { state, at ->
             publish(work) { shown.update { it.with(key, Entry(state, at, evidence)) } }
@@ -311,16 +397,19 @@ class AppItemNotes(
                 cost += more
                 paid(more)
             }
-            val last = insights.write(key, item, track, evidence, counted, show)
-            end(
-                when (last) {
-                    is InsightState.Written -> AiOutcome.ANSWERED
-                    InsightState.NoEvidence -> AiOutcome.NOTHING_FOUND
-                    is InsightState.Failed -> AiOutcome.FAILED
-                    else -> AiOutcome.STOPPED
-                },
-                (last as? InsightState.Failed)?.reason,
-            )
+            val last = insights.write(key, item, track, evidence, { mayCall(key, asked) }, counted, show)
+            if (last == null) {
+                // Its gates closed while the evidence or the cache was read: not asked, offered again.
+                started = null
+                note(work, PipelineEvent.AiNotAsked(track.normalized.lookupKey, question))
+                return
+            }
+            end(outcomeOf(last), (last as? InsightState.Failed)?.reason)
+        } catch (e: StopAsked) {
+            // Stopped by the user (*Stop writing*): said so, offered again on a tap; nothing was kept.
+            end(AiOutcome.STOPPED)
+            show(InsightState.Stopped, clock.now())
+            throw e
         } catch (e: CancellationException) {
             end(AiOutcome.STOPPED)
             throw e
@@ -335,6 +424,15 @@ class AppItemNotes(
             writing.remove(key)
         }
     }
+
+    // How an item's question ended, as the diagnostics name it, from its last state.
+    private fun outcomeOf(last: InsightState): AiOutcome =
+        when (last) {
+            is InsightState.Written -> AiOutcome.ANSWERED
+            InsightState.NoEvidence -> AiOutcome.NOTHING_FOUND
+            is InsightState.Failed -> AiOutcome.FAILED
+            else -> AiOutcome.STOPPED
+        }
 
     // [key]'s insight kept in the synthesis cache, read once, unless one is shown already.
     private fun look(
@@ -373,12 +471,20 @@ class AppItemNotes(
     )
 
     // Whether [key]'s insight may be asked for ([open]), and if so, marked as being written, unless it is already.
-    private fun claim(key: CardKey): Boolean = open(key) && writing.add(key)
+    private fun claim(
+        key: CardKey,
+        ask: ItemAsk,
+    ): Boolean = open(key, ask) && writing.add(key)
 
-    // Whether [key]'s insight may be asked for: not shown, shown as failed, or past *Keep history for*.
-    private fun open(key: CardKey): Boolean {
+    // Whether [key]'s insight may be asked for: not shown, or past *Keep history for*; on a tap, also
+    // one that failed or was stopped, which nothing asks again by itself.
+    private fun open(
+        key: CardKey,
+        ask: ItemAsk,
+    ): Boolean {
         val entry = shown.value[key]
-        return entry == null || entry.state is InsightState.Failed || expired(entry.writtenAt)
+        val again = ask == ItemAsk.TAP && (entry?.state is InsightState.Failed || entry?.state == InsightState.Stopped)
+        return entry == null || again || expired(entry.writtenAt)
     }
 
     /**

@@ -275,6 +275,8 @@ class LastFmAdapter(
                     "The Last.fm biography of $name says: \"$sentence\"",
                     artist.bioUrl ?: artist.url,
                     retrievedAt,
+                    // The artist it is about, as credited (#522).
+                    about = name,
                 )
             }
         val texts = mutableListOf<Pair<String, String?>>()
@@ -291,7 +293,7 @@ class LastFmAdapter(
         // Counts and lists of what many listeners did, which change from one lookup to the next (#617).
         val aggregates =
             texts.map { (text, url) ->
-                EvidenceDraft(id, Scope.ARTIST, text, url, retrievedAt, aggregate = true)
+                EvidenceDraft(id, Scope.ARTIST, text, url, retrievedAt, aggregate = true, about = name)
             }
         return ArtistLines(bio, aggregates)
     }

@@ -15,10 +15,14 @@ import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.sources.AlbumFound
 import app.sleevesight.core.sources.AlbumLookup
 import app.sleevesight.core.sources.AlbumQuery
+import app.sleevesight.core.sources.ReleaseDate
+import app.sleevesight.core.sources.ResolvedArtist
+import app.sleevesight.core.sources.SourceResult
 import app.sleevesight.core.synthesis.CardKind
 import app.sleevesight.core.synthesis.GroundingCheck
 import app.sleevesight.core.synthesis.InsightReply
 import app.sleevesight.core.synthesis.ItemPrompt
+import app.sleevesight.core.synthesis.SelfRevision
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Clock
 import kotlin.time.Instant
@@ -126,18 +130,30 @@ class ItemInsights(
 
             InsightItem.ARTIST -> {
                 val primary = track.normalized.primary
-                val resolved = track.resolution?.artists.orEmpty()
+                val resolved = resolvedArtists(track)
                 val artist = resolved.firstOrNull { names.sameName(it.name, primary) } ?: resolved.firstOrNull()
                 artist?.let(CardEntity.Artist::of) ?: CardEntity.Artist(primary, null)
             }
 
             InsightItem.ALBUM -> {
                 album(track)?.let { title ->
-                    val dates = track.resolution?.releaseDates.orEmpty()
-                    CardEntity.Album.of(title, track.normalized.primary, dates, names::albumKey)
+                    CardEntity.Album.of(title, track.normalized.primary, releaseDates(track), names::albumKey)
                 }
             }
         }
+
+    // [track]'s artists with their MusicBrainz ids: the resolution's, made on this play; else, for a
+    // track served whole from the retrieval cache, which makes none, those MusicBrainz's kept result
+    // holds (`SourceResult.labelArtists`), so a replay keys the artist as its first play did.
+    private fun resolvedArtists(track: TrackState): List<ResolvedArtist> =
+        track.resolution?.artists?.ifEmpty { null } ?: musicBrainz(track)?.labelArtists.orEmpty()
+
+    // [track]'s releases, by title and release group: the resolution's, else MusicBrainz's kept result's.
+    private fun releaseDates(track: TrackState): List<ReleaseDate> =
+        track.resolution?.releaseDates?.ifEmpty { null } ?: musicBrainz(track)?.releaseDates.orEmpty()
+
+    private fun musicBrainz(track: TrackState): SourceResult? =
+        (track.sources[SourceId.MUSICBRAINZ] as? SourceState.Done)?.result
 
     /**
      * The evidence [item]'s insight on [track] is written from, under [settings] (its sources'
@@ -187,16 +203,21 @@ class ItemInsights(
         return ItemEvidence(lines, matching(lines.lines, own), unreachable = found?.unreachable == true)
     }
 
-    // The artist-level lines of the track's [own] evidence: those naming the primary artist, when
-    // [track] credits several; all of them when it credits one.
+    // The artist-level lines of the track's [own] evidence about the primary artist: all of them when
+    // [track] credits one; when it credits several, those its adapter says are about the primary
+    // artist ([EvidenceLine.about]), so a collaboration gives the lines a solo track does, whatever
+    // their text names. A line that does not say (kept before #522) is taken when it names the artist.
     private fun artistLines(
         own: EvidenceSet,
         track: TrackState,
     ): List<EvidenceLine> {
         val lines = own.lines.filter { it.scope == Scope.ARTIST }
+        val primary = track.normalized.primary
         if (track.normalized.artists.size <= 1) return lines
-        val primary = " ${names.key(track.normalized.primary)} "
-        return lines.filter { primary.isNotBlank() && primary in " ${names.key(it.text)} " }
+        val key = " ${names.key(primary)} "
+        return lines.filter { line ->
+            line.about?.let { names.sameName(it, primary) } ?: (key.isNotBlank() && key in " ${names.key(line.text)} ")
+        }
     }
 
     // [lines], numbered on their own, with each id mapped to its line's id in the track's [own] evidence.
@@ -204,7 +225,18 @@ class ItemInsights(
         lines: List<EvidenceLine>,
         own: EvidenceSet,
     ): ItemEvidence {
-        val drafts = lines.map { EvidenceDraft(it.source, it.scope, it.text, it.url, it.retrievedAt, it.aggregate) }
+        val drafts =
+            lines.map {
+                EvidenceDraft(
+                    it.source,
+                    it.scope,
+                    it.text,
+                    it.url,
+                    it.retrievedAt,
+                    it.aggregate,
+                    it.about,
+                )
+            }
         val set = EvidenceSet.of(drafts, hasher)
         return ItemEvidence(set, matching(set.lines, own))
     }
@@ -253,35 +285,40 @@ class ItemInsights(
 
     /**
      * The insight kept for [key], checked against [evidence], with when it was written where the
-     * cache says; null when none is kept.
+     * cache says; null when none is kept, or the one kept revises itself with nothing usable left
+     * (#798, read as the key insight's is: [readReply]).
      */
     suspend fun kept(
         key: CardKey,
         evidence: ItemEvidence,
     ): KeptItem? {
         val card = attempt { cache.keptCard(key) } ?: return null
-        return KeptItem(
-            checked(card.text, key, evidence.evidence, cached = true, usage = null, complete = true),
-            card.writtenAt,
-        )
+        val reply = readReply(card.text, evidence.evidence, key.modelKnowledge)
+        return reply?.let { KeptItem(stateOf(it, key, cached = true, usage = null, complete = true), card.writtenAt) }
     }
 
     /**
-     * Writes [key]'s insight about [item] on [track] from [evidence], one call, each state as it
-     * comes to [show] with when it came (by the clock, in whole milliseconds as the cache keeps it);
-     * returns the last. With nothing to narrate, no call, and [InsightState.NoEvidence]. A complete
-     * reply is kept in the cache, `NO_EVIDENCE` too, so the same item asks nothing again, with the
-     * one time it is shown with. [counted] is told of the call.
+     * Writes [key]'s insight about [item] on [track] from [evidence], each state as it comes to
+     * [show] with when it came (by the clock, in whole milliseconds as the cache keeps it); returns
+     * the last, or null when [mayCall] closed before the call, which then is not made. [mayCall] is
+     * asked right before each call, with no suspension between. With nothing to narrate, no call, and
+     * [InsightState.NoEvidence]. A complete reply is kept in the cache, `NO_EVIDENCE` too, so the same
+     * item asks nothing again, with the one time it is shown with; a reply cut off (a Stop cancels
+     * the call) is neither shown nor kept. A reply that revises itself where it would show (#798) is
+     * cut to what follows the revision when that is usable; else asked for once more, a second call,
+     * and with nothing usable then either, it fails, as the key insight's does. While it streams, the
+     * text shown stops at such a revision. [counted] is told of each call.
      */
-    @Suppress("LongParameterList") // The insight, what it is about and from, and where its states go.
+    @Suppress("LongParameterList") // The insight, what it is about and from, its gate, and where its states go.
     suspend fun write(
         key: CardKey,
         item: InsightItem,
         track: TrackState,
         evidence: ItemEvidence,
+        mayCall: () -> Boolean = { true },
         counted: (QuestionCost) -> Unit = {},
         show: (InsightState, Instant) -> Unit,
-    ): InsightState {
+    ): InsightState? {
         val access = checkNotNull(ai) { "no AI service" }
         val lines = evidence.evidence
         if (lines.nothingToNarrate(key.modelKnowledge, artistsKnown = track.normalized.artists.isNotEmpty())) {
@@ -289,17 +326,58 @@ class ItemInsights(
         }
         val subject = ItemPrompt.Subject(item.kind, checkNotNull(name(item, track)))
         val prompt = ItemPrompt.build(subject, track.nowPlaying, track.normalized, lines, key.modelKnowledge)
-        show(InsightState.Writing("", model = key.model), now())
         val request = CompletionRequest(key.model, prompt, CompletionRequest.maxTokensFor(key.effort), key.effort)
-        counted(QuestionCost.CALL)
+        var billed: Usage? = null
+        var calls = 0
+        var last: InsightState? = null
+        var asking = true
+        while (asking) {
+            asking = false
+            // A second call, after a reply that revised itself, is not made once the gate has closed.
+            if (!mayCall()) {
+                last = if (calls == 0) null else revisedAway(show)
+                continue
+            }
+            calls++
+            show(InsightState.Writing("", model = key.model), now())
+            counted(QuestionCost.CALL)
+            val (text, end) = stream(access, request, key, show)
+            val at = now()
+            when (val reply = outcome(end, text, key, lines, billed)) {
+                is Reply.RevisedAway -> {
+                    if (calls >= CALLS) last = revisedAway(show) else asking = true
+                    billed = reply.usage
+                }
+
+                is Reply.Read -> {
+                    if (reply.kept) attempt { cache.keep(key, keptText(text, reply.state), at) }
+                    val shown = (reply.state as? InsightState.Written)?.copy(writtenAt = at) ?: reply.state
+                    last = shown.also { show(it, at) }
+                }
+            }
+        }
+        return last
+    }
+
+    // One call of [request]: its text, each piece shown as it comes while it may not be `NO_EVIDENCE`
+    // and has not revised itself (#798), and its end.
+    private suspend fun stream(
+        access: AiAccess,
+        request: CompletionRequest,
+        key: CardKey,
+        show: (InsightState, Instant) -> Unit,
+    ): Pair<String, CompletionEvent?> {
         val text = StringBuilder()
         var end: CompletionEvent? = null
+        var frozen = false
         access.provider.stream(request, access.key).collect { event ->
             when (event) {
                 is CompletionEvent.Delta -> {
                     text.append(event.text)
-                    if (!GroundingCheck.mayBeNoEvidence(text.toString())) {
-                        show(InsightState.Writing(text.toString(), model = key.model), now())
+                    val now = text.toString()
+                    frozen = frozen || SelfRevision.ofPartial(now).freezes()
+                    if (!GroundingCheck.mayBeNoEvidence(now) && !frozen) {
+                        show(InsightState.Writing(now, model = key.model), now())
                     }
                 }
 
@@ -309,36 +387,75 @@ class ItemInsights(
                 }
             }
         }
-        val at = now()
-        val (state, kept) = outcome(end, text.toString(), key, lines)
-        if (kept) attempt { cache.keep(key, keptText(text.toString(), state), at) }
-        val shown = (state as? InsightState.Written)?.copy(writtenAt = at) ?: state
-        return shown.also { show(it, at) }
+        return text.toString() to end
     }
 
-    // A reply's state, and whether it is kept: [end] and [text] read as [key]'s insight, checked against [evidence].
+    // A reply that revised itself twice with nothing usable left: failed, as the key insight's (#798).
+    private fun revisedAway(show: (InsightState, Instant) -> Unit): InsightState =
+        InsightState.Failed(ReplyFailures.SELF_REVISED).also { show(it, now()) }
+
+    // What a reply came to: read, as a state and whether it is kept; or revised with nothing usable
+    // left, with the tokens paid so far.
+    private sealed interface Reply {
+        class Read(
+            val state: InsightState,
+            val kept: Boolean,
+        ) : Reply
+
+        class RevisedAway(
+            val usage: Usage,
+        ) : Reply
+    }
+
+    // [end] and [text] read as [key]'s insight, checked against [evidence], counting the tokens of
+    // the replies before it in this write ([billed]).
+    @Suppress("LongParameterList") // The reply, its key and evidence, and what came before it.
     private fun outcome(
         end: CompletionEvent?,
         text: String,
         key: CardKey,
         evidence: EvidenceSet,
-    ): Pair<InsightState, Boolean> =
+        billed: Usage?,
+    ): Reply =
         when (end) {
             is CompletionEvent.Done -> {
                 val blank = ReplyFailures.ofBlank(end, text)
-                when {
-                    end.stopReason == StopReason.REFUSAL -> InsightState.Failed(ReplyFailures.DECLINED) to false
-                    // No text is no insight to show, nor to keep (#665).
-                    blank != null -> InsightState.Failed(blank) to false
-                    else -> {
-                        val complete = end.stopReason == StopReason.END
-                        checked(text, key, evidence, cached = false, usage = end.usage, complete = complete) to complete
+                val usage =
+                    billed?.let {
+                        Usage(
+                            end.usage.inputTokens + it.inputTokens,
+                            end.usage.outputTokens + it.outputTokens,
+                        )
                     }
+                        ?: end.usage
+                val reply =
+                    if (blank == null &&
+                        end.stopReason != StopReason.REFUSAL
+                    ) {
+                        readReply(text, evidence, key.modelKnowledge)
+                    } else {
+                        null
+                    }
+                val complete = end.stopReason == StopReason.END
+                when {
+                    end.stopReason == StopReason.REFUSAL ->
+                        Reply.Read(
+                            InsightState.Failed(ReplyFailures.DECLINED),
+                            kept = false,
+                        )
+                    // No text is no insight to show, nor to keep (#665).
+                    blank != null -> Reply.Read(InsightState.Failed(blank), kept = false)
+                    reply == null -> Reply.RevisedAway(usage)
+                    else ->
+                        Reply.Read(
+                            stateOf(reply, key, cached = false, usage = usage, complete = complete),
+                            complete,
+                        )
                 }
             }
 
-            is CompletionEvent.Error -> InsightState.Failed(ReplyFailures.of(end)) to false
-            else -> InsightState.Failed(ReplyFailures.INCOMPLETE) to false
+            is CompletionEvent.Error -> Reply.Read(InsightState.Failed(ReplyFailures.of(end)), kept = false)
+            else -> Reply.Read(InsightState.Failed(ReplyFailures.INCOMPLETE), kept = false)
         }
 
     // What is kept of a complete reply [text] read as [state]: `NO_EVIDENCE` for one read as none.
@@ -347,16 +464,15 @@ class ItemInsights(
         state: InsightState,
     ): String = if (state == InsightState.NoEvidence) GroundingCheck.NO_EVIDENCE else text
 
-    @Suppress("LongParameterList") // The reply, its key and evidence, and how it came.
-    private fun checked(
-        text: String,
+    // [reply] as [key]'s state.
+    private fun stateOf(
+        reply: InsightReply,
         key: CardKey,
-        evidence: EvidenceSet,
         cached: Boolean,
         usage: Usage?,
         complete: Boolean,
     ): InsightState =
-        when (val reply = GroundingCheck.check(text, evidence, key.modelKnowledge)) {
+        when (reply) {
             InsightReply.NoEvidence -> InsightState.NoEvidence
             is InsightReply.Written ->
                 InsightState.Written(
@@ -390,6 +506,9 @@ class ItemInsights(
         }
 
     companion object {
+        // A reply that revises itself is asked for once more, no further (#798).
+        private const val CALLS = 2
+
         /** Whether [item]'s insight may be offered on [track]: its evidence in, every source answered. */
         fun offered(track: TrackState): Boolean = track.gathered && track.evidence != null
     }

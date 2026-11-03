@@ -12,6 +12,7 @@ import app.sleevesight.core.pipeline.AiAccess
 import app.sleevesight.core.pipeline.ClearEpoch
 import app.sleevesight.core.pipeline.InsightItem
 import app.sleevesight.core.pipeline.InsightState
+import app.sleevesight.core.pipeline.PipelineEvent
 import app.sleevesight.core.pipeline.PipelineParts
 import app.sleevesight.core.pipeline.TrackResolver
 import app.sleevesight.core.pipeline.TrackState
@@ -24,14 +25,17 @@ import app.sleevesight.core.sources.AlbumLookup
 import app.sleevesight.core.sources.ReleaseDate
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.ResolvedArtist
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * The song's, the artist's and the album's insights in the app (#522): each written on its own, a
@@ -41,8 +45,12 @@ import org.junit.Test
 class AppItemNotesTest {
     private val provider = CountingProvider().apply { reply = { "Gordon Lightfoot wrote it [W1]." } }
     private val cache = CardCache()
+
+    // While set, an album's lookup waits for it: its gathering under way.
+    private var gathering: CompletableDeferred<Unit>? = null
     private val albums =
         AlbumLookup {
+            gathering?.await()
             AlbumFound(
                 listOf(HomeFixtures.draft(SourceId.WIKIPEDIA, "Sundown is his tenth album.", scope = Scope.RELEASE)),
             )
@@ -61,14 +69,31 @@ class AppItemNotesTest {
         )
     private val settings = MutableStateFlow<Settings?>(Settings(aiProvider = ProviderId.ANTHROPIC))
 
-    private fun TestScope.notes(epoch: ClearEpoch = ClearEpoch()) =
-        AppItemNotes(parts, settings, this, NameMatcher(JvmAccentFolder), epoch)
+    // The coordinator's gate, as the test sets it.
+    private var open = true
+    private val events = mutableListOf<PipelineEvent>()
 
-    // A track of Sundown, with a song line of its own and the artist's line.
-    private fun track(playing: NowPlaying): TrackState {
+    private fun TestScope.notes(epoch: ClearEpoch = ClearEpoch()) =
+        AppItemNotes(
+            parts,
+            settings,
+            this,
+            NameMatcher(JvmAccentFolder),
+            epoch,
+            events = { events += it },
+            gate = { open },
+        )
+
+    // A track of Sundown, with a song line of its own and the artist's line; with [songArticle], a
+    // Wikipedia line about the song before it, so the artist's line is the track's `W2`.
+    private fun track(
+        playing: NowPlaying,
+        songArticle: Boolean = false,
+    ): TrackState {
         val drafts =
-            listOf(
+            listOfNotNull(
                 HomeFixtures.draft(SourceId.MUSICBRAINZ, "${playing.title} was recorded in Toronto."),
+                HomeFixtures.draft(SourceId.WIKIPEDIA, "${playing.title} is a song.").takeIf { songArticle },
                 HomeFixtures.draft(SourceId.WIKIPEDIA, "Gordon Lightfoot was a Canadian singer.", scope = Scope.ARTIST),
             )
         return HomeFixtures.track(playing, evidence = EvidenceSet.of(drafts, JvmHasher)).copy(
@@ -121,6 +146,77 @@ class AppItemNotesTest {
             assertEquals(1, provider.requests)
             // The song's was never opened: no call for it.
             assertEquals(0, provider.requestsFor("the song's own story"))
+        }
+
+    @Test
+    fun `an artist's insight kept from another track cites this track's lines`() =
+        runTest {
+            val notes = notes()
+            val title = track(HomeFixtures.sundown, songArticle = true)
+            notes.write(title, InsightItem.ARTIST)
+            advanceUntilIdle()
+            assertEquals("W2", (notes.settled(title, InsightItem.ARTIST) as ItemShown.Shown).evidence.trackIds["W1"])
+
+            val next = track(HomeFixtures.carefree)
+            assertEquals("W1", (notes.settled(next, InsightItem.ARTIST) as ItemShown.Shown).evidence.trackIds["W1"])
+            assertEquals(1, provider.requests)
+        }
+
+    @Test
+    fun `no call is made while the coordinator's gate is closed`() =
+        runTest {
+            val notes = notes()
+            open = false
+            notes.write(track(HomeFixtures.sundown), InsightItem.SONG, ItemAsk.BY_ITSELF)
+            advanceUntilIdle()
+            assertEquals(0, provider.requests)
+            assertTrue(events.any { it is PipelineEvent.AiNotAsked })
+            assertEquals(ItemShown.Offered, notes.settled(track(HomeFixtures.sundown), InsightItem.SONG))
+        }
+
+    @Test
+    fun `insights switched off while the album is gathered make no call`() =
+        runTest {
+            val notes = notes()
+            val gate = CompletableDeferred<Unit>()
+            gathering = gate
+            notes.write(track(HomeFixtures.sundown), InsightItem.ALBUM)
+            advanceUntilIdle()
+            settings.value = settings.value?.copy(writeInsights = false)
+            gate.complete(Unit)
+            advanceUntilIdle()
+            assertEquals(0, provider.requests)
+        }
+
+    @Test
+    fun `stop cuts the call off, keeps nothing, and only a tap writes it again`() =
+        runTest {
+            provider.streaming = 10.seconds
+            val notes = notes()
+            val first = track(HomeFixtures.sundown)
+            notes.write(first, InsightItem.SONG, ItemAsk.OPENED)
+            advanceTimeBy(1.seconds)
+            notes.stop(first, InsightItem.SONG)
+            advanceUntilIdle()
+            assertEquals(
+                InsightState.Stopped,
+                (
+                    notes.item(first, InsightItem.SONG).first {
+                        it is ItemShown.Shown
+                    } as ItemShown.Shown
+                ).state,
+            )
+            assertEquals(0, provider.completed)
+            assertEquals(0, cache.held)
+
+            // Opening it again does not; a tap on Write insight does, a new call.
+            notes.write(first, InsightItem.SONG, ItemAsk.OPENED)
+            advanceUntilIdle()
+            assertEquals(1, provider.requests)
+            notes.write(first, InsightItem.SONG, ItemAsk.TAP)
+            advanceUntilIdle()
+            assertEquals(2, provider.requests)
+            assertTrue(notes.settled(first, InsightItem.SONG) is ItemShown.Shown)
         }
 
     @Test

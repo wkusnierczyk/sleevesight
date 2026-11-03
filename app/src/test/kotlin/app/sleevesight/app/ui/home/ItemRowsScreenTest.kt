@@ -11,6 +11,8 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
@@ -23,6 +25,7 @@ import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
+import app.sleevesight.app.pipeline.ItemAsk
 import app.sleevesight.app.pipeline.ItemNotes
 import app.sleevesight.app.pipeline.ItemShown
 import app.sleevesight.app.pipeline.PipelineView
@@ -79,11 +82,23 @@ class ItemRowsScreenTest {
             item: InsightItem,
         ): Flow<ItemShown> = shown.map { it[item] ?: ItemShown.Offered }
 
+        val asks = mutableListOf<ItemAsk>()
+        val stops = mutableListOf<InsightItem>()
+
         override fun write(
             track: TrackState,
             item: InsightItem,
+            ask: ItemAsk,
         ) {
             writes += item
+            asks += ask
+        }
+
+        override fun stop(
+            track: TrackState,
+            item: InsightItem,
+        ) {
+            stops += item
         }
     }
 
@@ -163,6 +178,8 @@ class ItemRowsScreenTest {
             row(InsightItem.ALBUM).performScrollTo().performClick()
             compose.waitForIdle()
             assertEquals(listOf(InsightItem.SONG, InsightItem.ALBUM), notes.writes)
+            // Opened by a tap: through the coordinator's gates, as a tap.
+            assertEquals(listOf(ItemAsk.OPENED, ItemAsk.OPENED), notes.asks)
             compose.onAllNodesWithTag(ITEM_WRITING_TAG, useUnmergedTree = true).assertCountEquals(2)
             compose.onAllNodesWithText(text(R.string.home_item_tap_write)).assertCountEquals(0)
         }
@@ -242,6 +259,55 @@ class ItemRowsScreenTest {
         show(state(unfolded)) {
             compose.waitForIdle()
             assertEquals(InsightItem.entries.toSet(), notes.writes.toSet())
+            assertEquals(setOf(ItemAsk.BY_ITSELF), notes.asks.toSet())
+        }
+    }
+
+    @Test
+    fun aFailedItemSaysWhyAndItsRetryCarriesTheAiMark() {
+        notes.shown.value =
+            mapOf(
+                InsightItem.SONG to
+                    ItemShown.Shown(InsightState.Failed("timed_out"), ItemEvidence(evidence, emptyMap())),
+            )
+        show(state(onDemand)) {
+            row(InsightItem.SONG).performScrollTo().performClick()
+            compose.onNodeWithTag(ITEM_FAILED_TAG).performScrollTo().assertExists()
+            val retry = compose.onNodeWithTag(RETRY_TAG).fetchSemanticsNode()
+            assertEquals(
+                app.getString(R.string.home_uses_ai, text(R.string.home_retry)),
+                retry.config[SemanticsProperties.ContentDescription].single(),
+            )
+            compose
+                .onNode(
+                    hasTestTag(AI_MARK_TAG) and hasAnyAncestor(hasTestTag(RETRY_TAG)),
+                    useUnmergedTree = true,
+                ).assertExists()
+            compose.onNodeWithTag(RETRY_TAG).performClick()
+            assertEquals(listOf(ItemAsk.TAP), notes.asks)
+        }
+    }
+
+    @Test
+    fun aWritingItemOffersStopAndAStoppedOneWritesAgainOnATap() {
+        notes.shown.value =
+            mapOf(
+                InsightItem.SONG to
+                    ItemShown.Shown(InsightState.Writing("", model = "m"), ItemEvidence(evidence, emptyMap())),
+                InsightItem.ARTIST to ItemShown.Shown(InsightState.Stopped, ItemEvidence(evidence, emptyMap())),
+            )
+        show(state(onDemand)) {
+            row(InsightItem.SONG).performScrollTo().performClick()
+            compose.onNodeWithText(text(R.string.home_insight_writing_stop)).assertExists()
+            compose.onNodeWithTag(itemStopTag(InsightItem.SONG)).performScrollTo().performClick()
+            assertEquals(listOf(InsightItem.SONG), notes.stops)
+
+            row(InsightItem.ARTIST).performScrollTo().performClick()
+            compose.onNodeWithText(text(R.string.home_insight_stopped)).assertExists()
+            compose.onNodeWithText(text(R.string.home_insight_retry)).assertExists()
+            compose.onNodeWithTag(itemWriteTag(InsightItem.ARTIST)).performScrollTo().performClick()
+            assertEquals(listOf(InsightItem.ARTIST), notes.writes)
+            assertEquals(listOf(ItemAsk.TAP), notes.asks)
         }
     }
 

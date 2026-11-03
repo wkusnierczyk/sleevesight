@@ -102,7 +102,12 @@ class WikipediaSource(
             if (part.unreachable) findings.unreachable = true
         }
         findings.artistFound = parts.any { it.accepted }
-        val evidence = songLines?.drafts.orEmpty() + parts.flatMap { it.lines }
+        // Each artist's lines say which artist they are about (#522), as the track credits it.
+        val artistLines =
+            credits.zip(parts).flatMap { (artist, part) ->
+                part.lines.map { it.copy(about = artist.name) }
+            }
+        val evidence = songLines?.drafts.orEmpty() + artistLines
         return SourceResult(
             findings.outcome(),
             evidence,

@@ -172,9 +172,9 @@ class ItemInsightsTest {
         runTest {
             val title = track("Sundown", listOf(line(SourceId.WIKIPEDIA, "Sundown is a song.")))
             val evidence = checkNotNull(items.evidence(InsightItem.ARTIST, title, settings))
-            assertEquals(listOf("W1", "L1"), evidence.evidence.ids)
-            // On the track, Wikipedia's song line comes first: the artist's line is W2 there.
-            assertEquals(mapOf("W1" to "W2", "L1" to "L1"), evidence.trackIds)
+            assertEquals(listOf("W1", "W2", "L1"), evidence.evidence.ids)
+            // On the track, Wikipedia's song line comes first: the artist's lines are W2 and W3 there.
+            assertEquals(mapOf("W1" to "W2", "W2" to "W3", "L1" to "L1"), evidence.trackIds)
         }
 
     @Test
@@ -193,9 +193,13 @@ class ItemInsightsTest {
         }
 
     @Test
-    fun `the artist's insight leaves out another credited artist's lines`() =
+    fun `the artist's insight takes the lines about its artist, the same on a solo track and a collaboration`() =
         runTest {
-            val other = line(SourceId.LASTFM, "Last.fm counts 900 listeners for Anne Murray.", Scope.ARTIST)
+            val other =
+                about(
+                    line(SourceId.LASTFM, "Last.fm counts 900 listeners for Anne Murray.", Scope.ARTIST),
+                    "Anne Murray",
+                )
             val duet =
                 track(
                     "Sundown",
@@ -203,8 +207,85 @@ class ItemInsightsTest {
                     artists = "Gordon Lightfoot, Anne Murray",
                     extraArtistLines = listOf(other),
                 )
-            val evidence = checkNotNull(items.evidence(InsightItem.ARTIST, duet, settings))
-            assertEquals(ARTIST_LINES.map { it.text }, evidence.evidence.lines.map { it.text })
+            val solo = track("Carefree Highway", listOf(line(SourceId.MUSICBRAINZ, "A solo.")))
+            val together = checkNotNull(items.evidence(InsightItem.ARTIST, duet, settings))
+            val alone = checkNotNull(items.evidence(InsightItem.ARTIST, solo, settings))
+            // The lead's fuller name, "Gordon Meredith Lightfoot Jr.", is his all the same.
+            assertEquals(ARTIST_LINES.map { it.text }, together.evidence.lines.map { it.text })
+            assertEquals(alone.evidence.fingerprint, together.evidence.fingerprint)
+            assertEquals(
+                items.key(InsightItem.ARTIST, solo, alone, settings),
+                items.key(InsightItem.ARTIST, duet, together, settings),
+            )
+        }
+
+    @Test
+    fun `a replay served whole from the cache keys the artist and album as the first play did`() =
+        runTest {
+            val first = track("Sundown", listOf(line(SourceId.MUSICBRAINZ, "Sundown was produced by Lenny Waronker.")))
+            assertEquals(3, play(first).size)
+            // Every source from the retrieval cache: no resolution, MusicBrainz's kept result holds the ids.
+            val kept =
+                SourceResult(
+                    Outcome.SongArticle,
+                    emptyList(),
+                    ZERO,
+                    labelArtists = listOf(ResolvedArtist("Gordon Lightfoot", "mb-gordon")),
+                    releaseDates = listOf(ReleaseDate("Sundown", "1974-01", "rg-sundown", "Album")),
+                )
+            val replay =
+                first.copy(
+                    resolution = null,
+                    sources = first.sources + (SourceId.MUSICBRAINZ to SourceState.Done(kept, cached = true)),
+                )
+            // The song's is kept for the track; the artist's and the album's under the same keys.
+            assertEquals(emptyList<CardKind>(), play(replay))
+            assertEquals(3, provider.requests.size)
+        }
+
+    @Test
+    fun `a reply that revises itself is cut to what follows, and one with nothing left is asked once more`() =
+        runTest {
+            val revising = FakeProvider { FakeProvider.done(REVISED) }
+            val writer = ItemInsights(AiAccess(revising, Secret("k")), cache, JvmHasher, names)
+            val track = track("Sundown", listOf(line(SourceId.MUSICBRAINZ, "Sundown is a song.")))
+            val evidence = checkNotNull(writer.evidence(InsightItem.SONG, track, settings))
+            val key = checkNotNull(writer.key(InsightItem.SONG, track, evidence, settings))
+            val written =
+                assertIs<InsightState.Written>(writer.write(key, InsightItem.SONG, track, evidence) { _, _ -> })
+            assertEquals("It is a song [MB1].", written.grounded.text)
+            assertEquals(1, revising.requests.size)
+            // Kept as written, and cut again when served.
+            assertEquals(
+                "It is a song [MB1].",
+                assertIs<InsightState.Written>(writer.kept(key, evidence)?.state).grounded.text,
+            )
+
+            revising.reply = { FakeProvider.done(ENDS) }
+            cache.cards.clear()
+            assertEquals(
+                InsightState.Failed(ReplyFailures.SELF_REVISED),
+                writer.write(key, InsightItem.SONG, track, evidence) { _, _ -> },
+            )
+            assertEquals(3, revising.requests.size)
+            assertTrue(cache.cards.isEmpty())
+        }
+
+    @Test
+    fun `no call is made once the gate has closed`() =
+        runTest {
+            val track = track("Sundown", listOf(line(SourceId.MUSICBRAINZ, "Sundown is a song.")))
+            val evidence = checkNotNull(items.evidence(InsightItem.SONG, track, settings))
+            val key = checkNotNull(items.key(InsightItem.SONG, track, evidence, settings))
+            val shown = mutableListOf<InsightState>()
+            assertNull(
+                items.write(key, InsightItem.SONG, track, evidence, mayCall = { false }) { state, _ ->
+                    shown +=
+                        state
+                },
+            )
+            assertTrue(provider.requests.isEmpty())
+            assertTrue(shown.isEmpty())
         }
 
     @Test
@@ -270,10 +351,40 @@ class ItemInsightsTest {
         }
 
     private companion object {
+        fun about(
+            draft: EvidenceDraft,
+            artist: String,
+        ) = draft.copy(about = artist)
+
         val ARTIST_LINES =
             listOf(
-                line(SourceId.WIKIPEDIA, "Gordon Lightfoot was a Canadian singer-songwriter.", Scope.ARTIST),
-                line(SourceId.LASTFM, "The Last.fm biography of Gordon Lightfoot says: \"A folk icon.\"", Scope.ARTIST),
+                about(
+                    line(SourceId.WIKIPEDIA, "Gordon Lightfoot was a Canadian singer-songwriter.", Scope.ARTIST),
+                    "Gordon Lightfoot",
+                ),
+                about(
+                    line(SourceId.WIKIPEDIA, "Gordon Meredith Lightfoot Jr. was a folk singer.", Scope.ARTIST),
+                    "Gordon Lightfoot",
+                ),
+                about(
+                    line(
+                        SourceId.LASTFM,
+                        "The Last.fm biography of Gordon Lightfoot says: \"A folk icon.\"",
+                        Scope.ARTIST,
+                    ),
+                    "Gordon Lightfoot",
+                ),
             )
+
+        // A draft, a comment that cites a line, and the insight again (as `PipelineSelfRevisionTest`'s).
+        const val REVISED =
+            "It is a song from nothing in particular [MB1].\n\n" +
+                "Wait, I need to correct that: the line says it is a song [MB1], so I'll keep only that.\n\n" +
+                "It is a song [MB1]."
+
+        // A draft, then a correction that ends the reply: nothing usable after it.
+        const val ENDS =
+            "It is a song from nothing in particular [MB1].\n\n" +
+                "Wait, I need to correct that, so I'll keep only what the line says [MB1]."
     }
 }

@@ -573,6 +573,8 @@ class AppGraph internal constructor(
             // Counted with *Ask AI*'s for the tester report, as the genres' reasons are.
             paid = { aiSearches.counted(it) },
             events = { diagnostics.log.record(it) },
+            // The coordinator's gates, asked right before each call.
+            gate = pipeline::itemCallAllowed,
         )
 
     /**

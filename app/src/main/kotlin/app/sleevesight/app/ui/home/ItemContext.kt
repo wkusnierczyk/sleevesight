@@ -3,9 +3,7 @@ package app.sleevesight.app.ui.home
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -18,13 +16,13 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import app.sleevesight.app.R
+import app.sleevesight.app.pipeline.ItemAsk
 import app.sleevesight.app.pipeline.ItemNotes
 import app.sleevesight.app.pipeline.ItemShown
 import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.app.pipeline.UnavailableModel
 import app.sleevesight.app.speech.ReadAloud
 import app.sleevesight.app.speech.Reading
-import app.sleevesight.app.ui.logo.Busy
 import app.sleevesight.app.ui.report.ReportAction
 import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.core.model.SourceId
@@ -95,7 +93,7 @@ internal fun ItemContent(
     val atOnce = context.writesAtOnce(tapped)
     val offered = ItemInsights.offered(track)
     LaunchedEffect(track.normalized.lookupKey, track.evidence?.fingerprint, item, atOnce, offered) {
-        if (atOnce && offered) context.notes.write(track, item)
+        if (atOnce && offered) context.notes.write(track, item, if (tapped) ItemAsk.OPENED else ItemAsk.BY_ITSELF)
     }
     val unavailable = context.unavailable
     val state = (shown as? ItemShown.Shown)?.state
@@ -105,14 +103,14 @@ internal fun ItemContent(
     }
     when (val now = shown) {
         ItemShown.Gathering -> Gathering()
-        ItemShown.Off -> Quiet(stringResource(R.string.home_insight_off))
-        ItemShown.NoService -> Quiet(stringResource(R.string.home_insight_unavailable))
+        ItemShown.Off -> ItemQuiet(stringResource(R.string.home_insight_off))
+        ItemShown.NoService -> ItemQuiet(stringResource(R.string.home_insight_unavailable))
         ItemShown.Offered ->
             if (atOnce) {
                 Writing()
             } else {
-                Quiet(stringResource(R.string.home_item_tap_write))
-                WriteButton(item) { context.notes.write(track, item) }
+                ItemQuiet(stringResource(R.string.home_item_tap_write))
+                WriteButton(item) { context.notes.write(track, item, ItemAsk.TAP) }
             }
         is ItemShown.Shown -> Shown(item, now, track, context)
     }
@@ -138,7 +136,7 @@ private fun Shown(
                     offers = InsightOffers(),
                 )
             for (paragraph in paragraphsOf(state.partial)) UncheckedProse(paragraph, prose, onCite)
-            Writing()
+            WritingItem(item) { context.notes.stop(track, item) }
         }
 
         is InsightState.Written -> {
@@ -152,25 +150,29 @@ private fun Shown(
                 CheckedProse(paragraph, state.grounded, shown.evidence.evidence, onCite)
             }
             GroundingLine(state.grounded, details = false)
-            if (!state.complete) Quiet(stringResource(R.string.home_insight_incomplete))
+            if (!state.complete) ItemQuiet(stringResource(R.string.home_insight_incomplete))
             ReportAction { context.onReport(own, state, item) }
         }
 
-        InsightState.NoEvidence -> Quiet(stringResource(noEvidence(item)))
+        InsightState.NoEvidence -> ItemQuiet(stringResource(noEvidence(item)))
 
         is InsightState.Failed ->
             RetryLine(
                 stringResource(R.string.home_item_failed, failureText(state.reason)),
                 source = "",
-                onRetry = { context.notes.write(track, item) },
+                onRetry = { context.notes.write(track, item, ItemAsk.TAP) },
                 modifier = Modifier.testTag(ITEM_FAILED_TAG),
                 action = stringResource(R.string.home_ai_retry_action),
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodyMedium,
                 outlined = true,
+                // It starts another call: the AI mark, read as "Retry, uses AI" (#624).
+                ai = true,
             )
 
-        is InsightState.Idle, InsightState.Stopped -> Unit
+        InsightState.Stopped -> StoppedItem(item) { context.notes.write(track, item, ItemAsk.TAP) }
+
+        is InsightState.Idle -> Unit
     }
 }
 
@@ -203,46 +205,6 @@ private fun itemReading(
 ): ReadAloudControl? =
     readAloudControl(readAloud, Reading.item(item.kind.key)) {
         readAloud?.readItem(track, item.kind.key, written, notes.item(track, item))
-    }
-
-// *Write insight*, with the **AI** mark: a paid call.
-@Composable
-private fun WriteButton(
-    item: InsightItem,
-    onClick: () -> Unit,
-) {
-    Button(onClick = onClick, modifier = Modifier.testTag(itemWriteTag(item))) {
-        AiLabel(stringResource(R.string.home_write))
-    }
-}
-
-@Composable
-private fun Gathering() =
-    Busy(
-        stringResource(R.string.home_insight_gathering),
-        MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
-
-@Composable
-private fun Writing() =
-    Busy(
-        stringResource(R.string.home_insight_writing),
-        MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        textModifier = Modifier.testTag(ITEM_WRITING_TAG),
-    )
-
-@Composable
-private fun Quiet(text: String) {
-    Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-}
-
-private fun noEvidence(item: InsightItem): Int =
-    when (item) {
-        InsightItem.SONG -> R.string.home_item_no_evidence_song
-        InsightItem.ARTIST -> R.string.home_item_no_evidence_artist
-        InsightItem.ALBUM -> R.string.home_item_no_evidence_album
     }
 
 /**

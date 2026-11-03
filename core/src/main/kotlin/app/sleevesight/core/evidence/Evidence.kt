@@ -32,7 +32,14 @@ enum class Scope(
  * tags they gave, the artists they find similar), whose numbers and order change from one lookup to
  * the next: *Look again* (#617) compares it with its digits masked and its list as a set
  * ([LineContent]). Neither its text nor the evidence's fingerprint reads it.
+ *
+ * [about] names the artist an artist-level line ([Scope.ARTIST]) is about, as the track credits it
+ * (#522): the adapter that looked the artist up says, so the artist's insight takes that artist's
+ * lines whatever their text names (a Wikipedia lead's "Gordon Meredith Lightfoot Jr."), and the same
+ * lines on a solo track and on a collaboration. Null for any other line, and for one an adapter or a
+ * kept result does not say. The fingerprint does not read it.
  */
+@Suppress("LongParameterList") // One for each of the draft's own fields.
 class EvidenceDraft(
     val source: SourceId,
     val scope: Scope,
@@ -40,6 +47,7 @@ class EvidenceDraft(
     val url: String?,
     val retrievedAt: Instant,
     val aggregate: Boolean = false,
+    val about: String? = null,
 ) {
     val text: String = text.withoutLoneSurrogates()
 
@@ -51,7 +59,8 @@ class EvidenceDraft(
         url: String? = this.url,
         retrievedAt: Instant = this.retrievedAt,
         aggregate: Boolean = this.aggregate,
-    ): EvidenceDraft = EvidenceDraft(source, scope, text, url, retrievedAt, aggregate)
+        about: String? = this.about,
+    ): EvidenceDraft = EvidenceDraft(source, scope, text, url, retrievedAt, aggregate, about)
 
     override fun equals(other: Any?): Boolean =
         other is EvidenceDraft &&
@@ -60,13 +69,14 @@ class EvidenceDraft(
             text == other.text &&
             url == other.url &&
             retrievedAt == other.retrievedAt &&
-            aggregate == other.aggregate
+            aggregate == other.aggregate &&
+            about == other.about
 
-    override fun hashCode(): Int = listOf(source, scope, text, url, retrievedAt, aggregate).hashCode()
+    override fun hashCode(): Int = listOf(source, scope, text, url, retrievedAt, aggregate, about).hashCode()
 
     override fun toString(): String =
         "EvidenceDraft(source=$source, scope=$scope, text=$text, url=$url, retrievedAt=$retrievedAt" +
-            (if (aggregate) ", aggregate=true)" else ")")
+            (if (aggregate) ", aggregate=true" else "") + (about?.let { ", about=$it)" } ?: ")")
 }
 
 /**
@@ -82,6 +92,7 @@ data class EvidenceLine(
     val url: String?,
     val retrievedAt: Instant,
     val aggregate: Boolean = false,
+    val about: String? = null,
 )
 
 /** [this] with every unpaired UTF-16 surrogate replaced by U+FFFD. */
