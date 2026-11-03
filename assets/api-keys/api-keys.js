@@ -194,9 +194,13 @@ function setMasked(input, visible) {
 function mask() {
   for (const box of boxes) setMasked(box, wordsShown);
   $('showwords').setAttribute('aria-pressed', String(wordsShown));
+  // The label stays the toggle's name; the tooltip names what a press does now, as the eye does.
+  $('showwords').title = wordsShown ? 'Hide the words' : 'Show the words';
   for (const [code, input] of inputs) {
     setMasked(input, shown.has(code));
-    eyes.get(code).setAttribute('aria-pressed', String(shown.has(code)));
+    const eye = eyes.get(code);
+    eye.setAttribute('aria-pressed', String(shown.has(code)));
+    eye.title = (shown.has(code) ? 'Hide' : 'Show') + eye.title.slice(4);
   }
   $('showkeys').textContent = shown.size > 0 ? 'Hide all keys' : 'Show all keys';
   markBoxes(wordsTyped().states);
@@ -389,17 +393,34 @@ function clear() {
 // and the ones after it, as do words typed with a separator on a keyboard that sends no key events
 // (Android's).
 function wireBoxes() {
+  // Going back keeps the caret at the end, so Backspace goes on deleting.
+  let backing = false;
   const back = (i) => {
     const previous = boxes[i - 1];
+    backing = true;
     previous.focus();
+    backing = false;
     previous.setSelectionRange(previous.value.length, previous.value.length);
   };
   boxes.forEach((box, i) => {
-    // Several words pasted replace the boxes from this one on, rather than joining what the box
-    // already holds.
+    // Coming into a box selects its letters, so typing replaces them (a box holds only three, and
+    // the phone's words change with *New words*). The click that focused it keeps the selection.
+    let clicked = false;
+    box.addEventListener('mousedown', () => {
+      clicked = document.activeElement !== box;
+    });
+    box.addEventListener('focus', () => {
+      if (!backing) box.select();
+    });
+    box.addEventListener('mouseup', (event) => {
+      if (clicked) event.preventDefault();
+      clicked = false;
+    });
+    // Words pasted replace the boxes from this one on, rather than joining what the box already
+    // holds.
     box.addEventListener('paste', (event) => {
       const words = (event.clipboardData?.getData('text') ?? '').split(/[\s,]+/).map(keep).filter((w) => w !== '');
-      if (words.length < 2) return;
+      if (words.length === 0) return;
       event.preventDefault();
       let j = i;
       for (const word of words) {
