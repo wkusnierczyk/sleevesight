@@ -74,7 +74,7 @@ To load any combination of AI, Last.fm and Exa keys in one scan:
 1. On the phone, under *Secrets*, tap **Load keys**. The screen shows five random words.
 2. On a computer, open [sleevesight.app/api-keys]({{ '/api-keys.html' | relative_url }}) (the page makes no network requests and sends your keys nowhere). Type the five words into the first box (the first three letters of each word are enough), then paste your keys into their fields or drop a `NAME=value` keys file onto the page. The page draws one QR code sealed with those words.
 3. On the phone, tap **Next** and scan the QR code. The phone unseals it and lists the keys it found by their last four characters, each ticked to be saved, and names any that did not scan. Tap **Next** to save the ticked keys.
-4. The phone then asks *Which services do you want to enable?*: the sources are ticked, and an AI service is ticked when it is the only one to choose; with several, choose one, or none. Tap **Next**, and a summary says which keys were saved and which services were switched on or off; **Done** closes it. *Cancel* on the services keeps the keys saved and switches nothing.
+4. The phone then asks *Which services do you want to enable?*: the sources are ticked, and an AI service is ticked when its key is the only AI key and no AI service was set up before; otherwise it starts as it was, so a key saved again for a service switched off leaves it off. With several AI services to choose from, choose one, or none. Tap **Next**, and a summary says which keys were saved and which services were switched on or off; **Done** closes it. *Cancel* on the services keeps the keys saved and switches nothing.
 
 ## 4. How to enable the services
 
