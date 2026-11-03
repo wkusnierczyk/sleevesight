@@ -41,6 +41,20 @@ class SessionDumpTest {
     }
 
     @Test
+    fun aKeyAndroidDoesNotNameIsShownWithItsType() {
+        val dump =
+            SessionDump.describe(
+                MediaMetadata
+                    .Builder(metadata())
+                    .putLong("com.spotify.ad", 1)
+                    .putString("com.spotify.kind", "ad")
+                    .build(),
+            )
+        assertTrue(dump, "com.spotify.ad=long:1" in dump)
+        assertTrue(dump, "com.spotify.kind=text:ad" in dump)
+    }
+
+    @Test
     fun ratingsAndLongTextsAreShownAsThemselves() {
         val dump =
             SessionDump.describe(

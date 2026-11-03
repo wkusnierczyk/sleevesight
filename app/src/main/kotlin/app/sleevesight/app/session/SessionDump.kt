@@ -6,6 +6,7 @@ import android.media.session.PlaybackState
 import android.os.Bundle
 import android.util.Log
 import app.sleevesight.app.BuildConfig
+import java.util.concurrent.Executors
 
 /**
  * Debug builds only: logs everything a followed player reports, each key of its metadata with its
@@ -14,13 +15,17 @@ import app.sleevesight.app.BuildConfig
  * a metadata's description, not its keys (`METADATA_KEY_ADVERTISEMENT`) or the media id. Read it
  * with `adb logcat -s SleevesightDump`. A release build logs nothing of this.
  *
- * It never throws into the session's callbacks: a report it cannot describe is logged as such. A
- * long report is logged in numbered parts, as logcat cuts a record of about 4 kB.
+ * Reports are described and logged on a thread of its own, in order, so the session's callbacks wait
+ * on none of it (an extra's value is decoded only when printed); a report it cannot describe is
+ * logged as such. A long report is logged in numbered parts, as logcat cuts a record of about 4 kB.
  */
 internal object SessionDump {
     const val TAG = "SleevesightDump"
 
     private val enabled: Boolean = BuildConfig.DEBUG
+    private val worker by lazy { Executors.newSingleThreadExecutor { Thread(it, TAG).apply { isDaemon = true } } }
+
+    // Only on [worker].
     private var reports = 0
 
     fun metadata(
@@ -44,11 +49,13 @@ internal object SessionDump {
         describe: () -> String,
     ) {
         if (!enabled) return
-        val text = runCatching(describe).getOrElse { "not readable: $it" }
-        val parts = parts(text)
-        val report = ++reports
-        parts.forEachIndexed { index, part ->
-            Log.d(TAG, "$player $kind #$report ${index + 1}/${parts.size} $part")
+        worker.execute {
+            val text = runCatching(describe).getOrElse { "not readable: $it" }
+            val parts = parts(text)
+            val report = ++reports
+            parts.forEachIndexed { index, part ->
+                Log.d(TAG, "$player $kind #$report ${index + 1}/${parts.size} $part")
+            }
         }
     }
 
@@ -56,8 +63,9 @@ internal object SessionDump {
     fun parts(text: String): List<String> = text.chunked(PART_LENGTH).ifEmpty { listOf("") }
 
     /**
-     * Every key with its value, sorted: each read by its type, so no getter of another type logs a
-     * warning; a bitmap as its size, a rating as itself, a long text cut.
+     * Every key with its value, sorted: a known key read by its type, so no getter of another type
+     * logs a warning; a key Android does not name tried as text, bitmap, rating, then long, as the
+     * framework does not tell a value's type. A bitmap as its size, a rating as itself, a long text cut.
      */
     fun describe(metadata: MediaMetadata?): String =
         metadata?.keySet()?.sorted()?.joinToString(prefix = "{", postfix = "}") { key ->
@@ -67,7 +75,8 @@ internal object SessionDump {
                         in LONG_KEYS -> metadata.getLong(key).toString()
                         in BITMAP_KEYS -> metadata.getBitmap(key)?.let { "bitmap ${it.width}x${it.height}" }
                         in RATING_KEYS -> metadata.getRating(key)?.toString()
-                        else -> metadata.getText(key)?.let(::bounded)
+                        in TEXT_KEYS -> metadata.getText(key)?.let(::bounded)
+                        else -> unknown(metadata, key)
                     }
                 }.getOrElse { "not readable: ${it.javaClass.simpleName}" }
             "$key=$value"
@@ -142,6 +151,27 @@ internal object SessionDump {
             MediaMetadata.METADATA_KEY_DISPLAY_ICON,
         )
     private val RATING_KEYS = setOf(MediaMetadata.METADATA_KEY_USER_RATING, MediaMetadata.METADATA_KEY_RATING)
+    private val TEXT_KEYS =
+        setOf(
+            MediaMetadata.METADATA_KEY_TITLE,
+            MediaMetadata.METADATA_KEY_ARTIST,
+            MediaMetadata.METADATA_KEY_ALBUM,
+            MediaMetadata.METADATA_KEY_AUTHOR,
+            MediaMetadata.METADATA_KEY_WRITER,
+            MediaMetadata.METADATA_KEY_COMPOSER,
+            MediaMetadata.METADATA_KEY_COMPILATION,
+            MediaMetadata.METADATA_KEY_DATE,
+            MediaMetadata.METADATA_KEY_GENRE,
+            MediaMetadata.METADATA_KEY_ALBUM_ARTIST,
+            MediaMetadata.METADATA_KEY_ART_URI,
+            MediaMetadata.METADATA_KEY_ALBUM_ART_URI,
+            MediaMetadata.METADATA_KEY_DISPLAY_TITLE,
+            MediaMetadata.METADATA_KEY_DISPLAY_SUBTITLE,
+            MediaMetadata.METADATA_KEY_DISPLAY_DESCRIPTION,
+            MediaMetadata.METADATA_KEY_DISPLAY_ICON_URI,
+            MediaMetadata.METADATA_KEY_MEDIA_ID,
+            "android.media.metadata.MEDIA_URI",
+        )
 
     // `PlaybackState.ACTION_SET_PLAYBACK_SPEED`, API 29's, written out for API 26.
     private const val ACTION_SET_PLAYBACK_SPEED = 0x400000L
@@ -179,3 +209,13 @@ private fun bounded(text: CharSequence): String {
     val kept = (if (cut) text.subSequence(0, DUMP_TEXT_LENGTH) else text).toString().replace('\n', ' ')
     return if (cut) "$kept…" else kept
 }
+
+/** A key of a type not known here, with the type it was read as. */
+private fun unknown(
+    metadata: MediaMetadata,
+    key: String,
+): String =
+    metadata.getText(key)?.let { "text:${bounded(it)}" }
+        ?: metadata.getBitmap(key)?.let { "bitmap ${it.width}x${it.height}" }
+        ?: metadata.getRating(key)?.let { "rating:$it" }
+        ?: "long:${metadata.getLong(key)}"
