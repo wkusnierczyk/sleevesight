@@ -2,7 +2,9 @@ package app.sleevesight.app.session
 
 import android.graphics.Color
 import android.media.MediaMetadata
+import android.media.Rating
 import android.media.session.PlaybackState
+import android.os.Bundle
 import app.sleevesight.app.session.Sessions.bitmap
 import app.sleevesight.app.session.Sessions.metadata
 import app.sleevesight.app.session.Sessions.queueItem
@@ -39,9 +41,26 @@ class SessionDumpTest {
     }
 
     @Test
-    fun stateNamesItsActions() {
+    fun ratingsAndLongTextsAreShownAsThemselves() {
+        val dump =
+            SessionDump.describe(
+                MediaMetadata
+                    .Builder(metadata(title = "x".repeat(500)))
+                    .putRating(MediaMetadata.METADATA_KEY_USER_RATING, Rating.newHeartRating(true))
+                    .build(),
+            )
+        assertTrue(dump, "android.media.metadata.USER_RATING=Rating:style=1 rating=1.0" in dump)
+        assertTrue(dump, "android.media.metadata.TITLE=${"x".repeat(120)}…," in dump)
+    }
+
+    @Test
+    fun stateNamesItsActionsAndKeepsUnknownBits() {
         val actions = PlaybackState.ACTION_PLAY or PlaybackState.ACTION_PAUSE or PlaybackState.ACTION_SKIP_TO_NEXT
         assertEquals(listOf("pause", "play", "next"), SessionDump.actionNames(actions))
+        assertEquals(
+            listOf("prepare", "setPlaybackSpeed", "0x40000"),
+            SessionDump.actionNames(PlaybackState.ACTION_PREPARE or (1L shl 22) or (1L shl 18)),
+        )
         assertTrue(SessionDump.describe(state(queueItem = 7)).contains("activeItem=7"))
     }
 
@@ -52,6 +71,25 @@ class SessionDumpTest {
             SessionDump.describe(listOf(queueItem(3, "Sundown", mediaId = "spotify:track:x"))),
         )
         assertEquals("null", SessionDump.describe(null as MediaMetadata?))
+    }
+
+    @Test
+    fun extrasThatAreNotPlainAreShownByTheirType() {
+        val extras =
+            Bundle().apply {
+                putString("text", "a\nb")
+                putInt("number", 3)
+                putParcelable("art", bitmap(Color.RED))
+            }
+        val dump = SessionDump.describe(PlaybackState.Builder(state()).setExtras(extras).build())
+        assertTrue(dump, "extras={art=android.graphics.Bitmap, number=3, text=a b}" in dump)
+    }
+
+    @Test
+    fun aLongReportIsLoggedInParts() {
+        val parts = SessionDump.parts("y".repeat(2500))
+        assertEquals(listOf(1000, 1000, 500), parts.map { it.length })
+        assertEquals(listOf(""), SessionDump.parts(""))
     }
 
     // `MediaMetadataCompat.METADATA_KEY_ADVERTISEMENT`: the framework's `MediaMetadata` names no such
