@@ -594,6 +594,7 @@ class SessionRepository(
             object : MediaController.Callback() {
                 override fun onMetadataChanged(metadata: MediaMetadata?) {
                     ifAttached {
+                        SessionDump.metadata(gate.player, metadata)
                         if (SessionMapping.reportsMusic(metadata)) markSeen(gate.player)
                         val title = SessionMapping.title(metadata)
                         val previousTitle = SessionMapping.title(this@Attached.metadata)
@@ -606,6 +607,7 @@ class SessionRepository(
 
                 override fun onPlaybackStateChanged(state: PlaybackState?) {
                     ifAttached {
+                        SessionDump.state(gate.player, state)
                         val item = SessionMapping.activeItem(state)
                         val namesAnother = item != null && item != stateItem
                         // A player that sends media ids keeps its change times as they were: the
@@ -629,7 +631,10 @@ class SessionRepository(
                 }
 
                 override fun onQueueChanged(queue: List<MediaSession.QueueItem>?) {
-                    ifAttached { this@Attached.queue = queue }
+                    ifAttached {
+                        SessionDump.queue(gate.player, queue)
+                        this@Attached.queue = queue
+                    }
                 }
 
                 override fun onQueueTitleChanged(title: CharSequence?) {
@@ -793,6 +798,9 @@ class SessionRepository(
                 reported = read.next() as PlaybackState?
                 queue = read.next() as List<MediaSession.QueueItem>?
                 queueTitle = read.next() as CharSequence?
+                SessionDump.metadata(gate.player, metadata)
+                SessionDump.state(gate.player, reported)
+                SessionDump.queue(gate.player, queue)
                 remote = gate.remote
                 state = SessionMapping.effectiveState(gate.player, reported, remote)
             }
