@@ -50,7 +50,9 @@ class MusicBrainzSource(
      * so a track kept before is asked again rather than shown as having no lyrics page, and the first
      * release's title and type and the original's release, for *Dates* (#724). 8: and the votes on
      * the recording's tags, by which a track's label leads its folded genres only with two (#799), so
-     * a track kept before is asked again rather than shown under the album's labels. Without
+     * a track kept before is asked again rather than shown under the album's labels. 9: a title
+     * recorded more than 100 times is chosen from up to three pages of the search (#906), so a track
+     * kept under a later recording of it (a live take) is asked again. Without
      * [genres] (*Show genres* off, #444), it keeps no tags, and its results are kept apart ([WITHOUT_GENRES_VERSION]).
      */
     override val extractionVersion: Int = EXTRACTION_VERSION + if (genres) 0 else WITHOUT_GENRES_VERSION
@@ -88,4 +90,4 @@ class MusicBrainzSource(
     }
 }
 
-private const val EXTRACTION_VERSION = 8
+private const val EXTRACTION_VERSION = 9

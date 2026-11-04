@@ -188,6 +188,7 @@ Rules:
 
 - **Resolve each credited artist separately.** The prototype only resolved the primary artist, so secondary artists' boxes were nearly empty.
 - **Keep recording and release apart.** A release date belongs to the release the player filed the recording under, which is often a compilation or remaster. The prototype showed "Released 2002" for a 1978 song for this reason. MusicBrainz models recordings, releases and release groups separately; use it to find the first release date of the recording.
+- **Look past the search's first page for a much-recorded title** (#906). A search gives at most 100 recordings, and a song an artist has recorded more often than that, mostly live, may come without the studio one: *Dream On* by Aerosmith (169 recordings), with the player reporting the 1973 debut *Aerosmith*, resolved to the 1978 live recording on *Live! Bootleg*, with its date and producers. When MusicBrainz counts more recordings than the first page holds, the next pages are asked for too, up to three in all (300 recordings, two more requests), and the usual rules choose among them, the earliest released first, so the studio original wins over later live takes and remixes. Only the title and artist are sent, as for the first page; the album the player reports is not used, since a compilation it names often carries a later recording of the song.
 - Entity matching is deterministic code (name similarity, duration tolerance, MusicBrainz relationships), never the language model.
 
 ### Source adapters
