@@ -96,6 +96,7 @@ import app.sleevesight.store.StoreArtistResults
 import app.sleevesight.store.StorePipelineCache
 import app.sleevesight.store.db.CacheDatabase
 import app.sleevesight.store.history.HistoryDatabase
+import app.sleevesight.wiring.PipelineWiring
 import app.sleevesight.wiring.appPipelineWiring
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -267,10 +268,13 @@ class AppGraph internal constructor(
 
     /**
      * *Keep what sources said about each artist* (#420), as last read (off until the first read),
-     * for the artist-level cache and the retrieval cache alike.
+     * for the artist-level cache and the retrieval cache alike. Its clear spares the parts of the
+     * artist-level table kept whatever it says ([PipelineWiring.TRACK_ONLY_PARTS], #885).
      */
     private val artistKeeping =
-        ArtistKeeping.over({ caches }, Dispatchers.IO) { latestSettings.value?.keepArtistResults == true }
+        ArtistKeeping.over({ caches }, Dispatchers.IO, PipelineWiring.TRACK_ONLY_PARTS) {
+            latestSettings.value?.keepArtistResults == true
+        }
 
     /**
      * *Clear history*'s boundary (#547): each run and preparation is marked with it as it starts,
@@ -300,6 +304,9 @@ class AppGraph internal constructor(
             JvmAccentFolder,
             JvmResourceReader,
             artistResults,
+            // An album's web search's lines (#885), kept whatever *Keep what sources said about each
+            // artist* says, as a track's own web findings are.
+            trackOnly = StoreArtistResults({ caches }, Dispatchers.IO, ArtistKeeping.ALWAYS, clearEpoch),
             // *Show genres* (#444) as last read: on until the first read, which comes before any lookup.
             genres = { latestSettings.value?.showGenres != false },
             epoch = clearEpoch,

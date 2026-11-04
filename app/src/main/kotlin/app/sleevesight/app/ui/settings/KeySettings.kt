@@ -3,6 +3,7 @@ package app.sleevesight.app.ui.settings
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -124,26 +125,29 @@ internal fun SecretsSection(
 }
 
 /**
- * Under *Load keys* (#541): where its QR code is made, [API_KEYS_URL], and the documentation's guide
- * to loading keys, [LOAD_KEYS_DOCS_URL], each a link. Apart from the row, which opens the screen, so
- * that each link is a target of its own.
+ * Under *Load keys* (#541): where its QR code is made, [API_KEYS_URL], in full as plain text that
+ * can be selected (#765: a link would open it on the phone, not the computer), and the
+ * documentation's guide to loading keys, [LOAD_KEYS_DOCS_URL], a link. Apart from the row, which
+ * opens the screen, so that the link is a target of its own.
  */
 @Composable
 private fun LoadKeysMore() {
     // With *Load keys*, whose row it explains (#649).
     if (!shownInSearch(stringResource(R.string.settings_scan_keys))) return
+    // The address written in, and the guide's place left for its link, as the first.
     val parts =
         linkedParts(
-            stringResource(R.string.settings_scan_keys_more),
-            TextPart.Link(shownAddress(API_KEYS_URL), API_KEYS_URL),
+            stringResource(R.string.settings_scan_keys_more, API_KEYS_URL, "%1\$s"),
             TextPart.Link(stringResource(R.string.settings_scan_keys_docs), LOAD_KEYS_DOCS_URL),
         )
-    LinkedText(
-        parts,
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurface,
-        modifier = Modifier.padding(bottom = 8.dp),
-    )
+    SelectionContainer {
+        LinkedText(
+            parts,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(bottom = 8.dp),
+        )
+    }
 }
 
 /**
@@ -161,7 +165,8 @@ private fun LoadKeysMore() {
  * the stored settings, after the key dialog's key in the same work in [saves], and the summary
  * says what was saved and switched on or off as written, or that the choices could not be, with
  * *Try again*. A link on *Load
- * keys* to a section of the settings calls [onOpen].
+ * keys* to a section of the settings calls [onOpen]. The key dialog's *Open Load keys* (#765), after
+ * a scan of a code it cannot take, closes it unsaved and calls [onOpenLoadKeys].
  */
 @Suppress("LongParameterList", "LongMethod") // The dialog, the keys, where they are saved, and what the screen hears.
 @Composable
@@ -177,6 +182,7 @@ internal fun KeyDialogs(
     showPhoneName: Boolean,
     onSealFailed: (Boolean) -> Unit,
     onOpen: (SettingsTarget) -> Unit,
+    onOpenLoadKeys: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     when (shown) {
@@ -235,6 +241,7 @@ internal fun KeyDialogs(
                 scanner = scanner,
                 keyboard = keyboard,
                 showPhoneName = showPhoneName,
+                onOpenLoadKeys = onOpenLoadKeys,
                 onDismiss = onDismiss,
             )
         }
@@ -244,7 +251,11 @@ internal fun KeyDialogs(
                 secrets = secrets,
                 settings = settings,
                 scanner = scanner,
-                onSave = { keys -> saves.async { saveAll(store, keys, onSealFailed) }.await() },
+                // The keys and then the choices, in one piece of work that outlives the screen, so
+                // a rotation during the save still switches the services on (#765).
+                onComplete = { keys, choices ->
+                    saves.async { complete(store, keys, onSealFailed) { applyChoices(choices) } }.await()
+                },
                 onApply = { choices -> saves.async { applyChoices(choices) }.await() },
                 onOpen = onOpen,
                 onDismiss = onDismiss,
@@ -282,6 +293,20 @@ private suspend fun saveAll(
     val results = keys.map { (id, key) -> id to store.set(id, key) }
     onSealFailed(results.any { it.second == SaveResult.NOT_SEALED })
     return results.filter { it.second != SaveResult.SAVED }.map { it.first }
+}
+
+/**
+ * *Load keys*' *Complete* (#765): saves [keys] to [store] ([saveAll]), and, once every one is saved,
+ * writes the choices with [apply]; what it did, as [Completed] has it.
+ */
+private suspend fun complete(
+    store: SecretStore,
+    keys: Map<SecretId, Secret>,
+    onSealFailed: (Boolean) -> Unit,
+    apply: suspend () -> Applied?,
+): Completed {
+    val unsaved = if (keys.isEmpty()) emptyList() else saveAll(store, keys, onSealFailed)
+    return Completed(unsaved, if (unsaved.isEmpty()) apply() else null)
 }
 
 /** What removing the key [id] says, from its row or its dialog. */

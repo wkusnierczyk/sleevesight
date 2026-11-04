@@ -91,6 +91,7 @@ class ScannedKeyTest {
                         scanner = scanner,
                         keyboard = keyboard,
                         showPhoneName = false,
+                        onOpenLoadKeys = {},
                         onDismiss = {},
                     )
                 }
@@ -285,6 +286,7 @@ class ScannedKeyTest {
                         scanner = scanner,
                         keyboard = { _, _, _, _ -> },
                         showPhoneName = false,
+                        onOpenLoadKeys = {},
                         onDismiss = {},
                     )
                 }

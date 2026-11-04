@@ -105,6 +105,7 @@ class KeyFieldIconsTest {
                             scanner = scanner,
                             keyboard = keyboard,
                             showPhoneName = false,
+                            onOpenLoadKeys = {},
                             onDismiss = { shown.open = false },
                         )
                     }

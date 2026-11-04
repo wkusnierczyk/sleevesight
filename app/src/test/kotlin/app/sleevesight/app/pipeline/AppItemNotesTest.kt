@@ -2,6 +2,7 @@ package app.sleevesight.app.pipeline
 
 import app.sleevesight.app.ui.home.HomeFixtures
 import app.sleevesight.core.Secret
+import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.model.NowPlaying
@@ -9,20 +10,24 @@ import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.pipeline.AiAccess
+import app.sleevesight.core.pipeline.AiOutcome
 import app.sleevesight.core.pipeline.CardKey
 import app.sleevesight.core.pipeline.ClearEpoch
 import app.sleevesight.core.pipeline.InsightItem
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.PipelineEvent
 import app.sleevesight.core.pipeline.PipelineParts
+import app.sleevesight.core.pipeline.QuestionCost
 import app.sleevesight.core.pipeline.TrackResolver
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.resolution.NameMatcher
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.settings.SourceSwitch
 import app.sleevesight.core.sources.AlbumFound
 import app.sleevesight.core.sources.AlbumLookup
+import app.sleevesight.core.sources.AlbumQuery
 import app.sleevesight.core.sources.ReleaseDate
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.ResolvedArtist
@@ -81,6 +86,9 @@ class AppItemNotesTest {
     private var open = true
     private val events = mutableListOf<PipelineEvent>()
 
+    // What was counted as paid (#885: an album's web searches among it).
+    private var paid = QuestionCost()
+
     private fun TestScope.notes(epoch: ClearEpoch = ClearEpoch()) =
         AppItemNotes(
             parts,
@@ -88,6 +96,7 @@ class AppItemNotesTest {
             this,
             NameMatcher(JvmAccentFolder),
             epoch,
+            paid = { paid += it },
             events = { events += it },
             gate = { open },
         )
@@ -156,6 +165,199 @@ class AppItemNotesTest {
             assertEquals(1, provider.requests)
             // The song's was never opened: no call for it.
             assertEquals(0, provider.requestsFor("the song's own story"))
+        }
+
+    // An album with a web search (#885): its lookups give the web's line once a search kept it.
+    private inner class WebAlbums : AlbumLookup {
+        var searches = 0
+        var kept: List<EvidenceDraft>? = null
+        private val web = HomeFixtures.draft(SourceId.WEB, "Sundown topped the Billboard 200.", scope = Scope.WEB)
+
+        override suspend fun lookup(query: AlbumQuery): AlbumFound {
+            albumLookups++
+            gathering?.await()
+            val lines =
+                listOf(HomeFixtures.draft(SourceId.WIKIPEDIA, "Sundown is his tenth album.", scope = Scope.RELEASE))
+            return AlbumFound(lines + kept.orEmpty(), webDue = query.web && kept == null)
+        }
+
+        // As `AlbumSource`'s: none with web search off; a request sent only when nothing is kept.
+        override suspend fun searchWeb(
+            query: AlbumQuery,
+            sent: () -> Unit,
+        ): List<EvidenceDraft>? =
+            if (!query.web) {
+                null
+            } else {
+                kept ?: listOf(web).also {
+                    searches++
+                    sent()
+                    kept = it
+                }
+            }
+    }
+
+    // The parts, with [albums] gathering the album's evidence.
+    private fun withAlbums(albums: AlbumLookup) {
+        parts.value =
+            PipelineParts(
+                normalizer = Normalizer(JvmAccentFolder),
+                adapters = emptyList(),
+                resolver = TrackResolver { _, _ -> Resolution.NONE },
+                hasher = JvmHasher,
+                ai = AiAccess(provider, Secret("key")),
+                cache = cache,
+                albums = albums,
+            )
+    }
+
+    @Test
+    fun `an album's web search is made by its write only, and its insight is found again with no search`() =
+        runTest {
+            val web = WebAlbums()
+            withAlbums(web)
+            val notes = notes()
+            val first = track(HomeFixtures.sundown)
+            // Shown, unfolded, its key looked up: no search.
+            assertEquals(ItemShown.Offered, notes.settled(first, InsightItem.ALBUM))
+            assertEquals(0, web.searches)
+
+            notes.write(first, InsightItem.ALBUM)
+            advanceUntilIdle()
+            assertEquals(1, web.searches)
+            assertEquals(1, provider.requests)
+            assertEquals(QuestionCost(searches = 1, calls = 1), paid)
+            assertTrue("Sundown topped the Billboard 200." in provider.prompts.single())
+            val shown = notes.settled(first, InsightItem.ALBUM) as ItemShown.Shown
+            assertTrue(
+                shown.evidence.evidence.lines
+                    .any { it.source == SourceId.WEB },
+            )
+            // *Sources* lists the web's line with the album's.
+            assertTrue(
+                notes
+                    .albumEvidence(first)
+                    .first()
+                    ?.lines
+                    .orEmpty()
+                    .any { it.source == SourceId.WEB },
+            )
+
+            // The next track of the album finds it kept, under the same key, with no search or call.
+            val next = track(HomeFixtures.carefree)
+            assertTrue(notes.settled(next, InsightItem.ALBUM) is ItemShown.Shown)
+            notes.write(next, InsightItem.ALBUM)
+            advanceUntilIdle()
+            assertEquals(1, web.searches)
+            assertEquals(1, provider.requests)
+            // The lines kept are not a search paid for.
+            assertEquals(QuestionCost(searches = 1, calls = 1), paid)
+        }
+
+    @Test
+    fun `an album opened on two tracks, written on one, shows on the other with the web's lines and no call`() =
+        runTest {
+            val web = WebAlbums()
+            withAlbums(web)
+            val notes = notes()
+            // Both opened before either is written: each gathered without the web's lines.
+            val first = track(HomeFixtures.sundown, songArticle = true)
+            val next = track(HomeFixtures.carefree)
+            assertEquals(ItemShown.Offered, notes.settled(first, InsightItem.ALBUM))
+            assertEquals(ItemShown.Offered, notes.settled(next, InsightItem.ALBUM))
+
+            notes.write(next, InsightItem.ALBUM)
+            advanceUntilIdle()
+            assertEquals(1, web.searches)
+            assertEquals(1, provider.requests)
+
+            // Back on the first: the insight written on the next, under the key the web's lines give.
+            val shown = notes.settled(first, InsightItem.ALBUM) as ItemShown.Shown
+            assertTrue(shown.state is InsightState.Written)
+            assertTrue(
+                shown.evidence.evidence.lines
+                    .any { it.source == SourceId.WEB },
+            )
+            // Its ids mapped to its own track's lines: the album's lines are none of the first's.
+            assertTrue(shown.evidence.trackIds.isEmpty())
+            assertTrue(
+                notes
+                    .albumEvidence(first)
+                    .first()
+                    ?.lines
+                    .orEmpty()
+                    .any { it.source == SourceId.WEB },
+            )
+            assertEquals(1, web.searches)
+            assertEquals(1, provider.requests)
+            assertEquals(2, albumLookups)
+        }
+
+    @Test
+    fun `a search paid for with no call after it ends its question with its cost`() =
+        runTest {
+            val web = WebAlbums()
+            withAlbums(web)
+            notes().write(track(HomeFixtures.sundown), InsightItem.ALBUM)
+            advanceUntilIdle()
+            // The web's lines no longer kept, the card still is: searched again, then found kept.
+            web.kept = null
+            events.clear()
+            notes().write(track(HomeFixtures.carefree), InsightItem.ALBUM)
+            advanceUntilIdle()
+            assertEquals(2, web.searches)
+            assertEquals(1, provider.requests)
+            val ended = events.filterIsInstance<PipelineEvent.AiEnded>().single()
+            assertEquals(AiOutcome.ANSWERED, ended.outcome)
+            assertEquals(QuestionCost(searches = 1), ended.cost)
+            assertEquals(1, events.filterIsInstance<PipelineEvent.AiAsked>().size)
+        }
+
+    @Test
+    fun `web search switched off while the album is gathered makes no search`() =
+        runTest {
+            val web = WebAlbums()
+            withAlbums(web)
+            val notes = notes()
+            val gate = CompletableDeferred<Unit>()
+            gathering = gate
+            notes.write(track(HomeFixtures.sundown), InsightItem.ALBUM)
+            advanceUntilIdle()
+            val now = checkNotNull(settings.value)
+            settings.value = now.copy(enabledSources = now.enabledSources - SourceSwitch.WEB)
+            gate.complete(Unit)
+            advanceUntilIdle()
+            assertEquals(0, web.searches)
+            assertEquals(0, paid.searches)
+            // The insight is written from what the free sources found.
+            assertEquals(1, provider.requests)
+        }
+
+    @Test
+    fun `an album kept from an earlier search is not counted as a search paid for`() =
+        runTest {
+            val web = WebAlbums()
+            withAlbums(web)
+            // Another track's write searched and kept the lines; its card is gone.
+            web.searchWeb(AlbumQuery("Sundown", "Gordon Lightfoot", "rg-sundown"))
+            val notes = notes()
+            notes.write(track(HomeFixtures.sundown), InsightItem.ALBUM)
+            advanceUntilIdle()
+            assertEquals(1, web.searches)
+            assertEquals(QuestionCost(calls = 1), paid)
+        }
+
+    @Test
+    fun `no web search for the album while the coordinator's gate is closed`() =
+        runTest {
+            val web = WebAlbums()
+            withAlbums(web)
+            val notes = notes()
+            open = false
+            notes.write(track(HomeFixtures.sundown), InsightItem.ALBUM, ItemAsk.BY_ITSELF)
+            advanceUntilIdle()
+            assertEquals(0, web.searches)
+            assertEquals(0, provider.requests)
         }
 
     @Test

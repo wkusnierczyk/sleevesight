@@ -55,8 +55,8 @@ internal fun scanned(
  * alone, as the API keys page makes it from one key; and otherwise what to say. That key alone
  * refused says why, as a bare key would; a code that names another service points to *Load keys*,
  * which shows what it holds, as does one with lines this version cannot read; a sealed code (#590),
- * which only *Load keys*' words open, points there too; a code of a later version asks for an
- * update, and one of no keys says so.
+ * which only *Load keys*' words open, points there too ([opensLoadKeys]); a code of a later version
+ * asks for an update, and one of no keys says so.
  */
 private fun setupKey(
     id: SecretId,
@@ -87,12 +87,19 @@ private fun setupFailure(
         setup == null -> R.string.settings_key_scan_setup
         named.any { it != id.keyName } -> R.string.settings_key_scan_setup
         id.keyName in setup.refused -> problemOf(setup.refused.getValue(id.keyName))
-        unread && id.keyName in named -> R.string.settings_key_scan_setup_more
-        unread -> R.string.settings_key_scan_setup_none
+        unread -> R.string.settings_key_scan_setup
         named.isEmpty() -> R.string.settings_key_scan_setup_empty
         else -> null
     }
 }
+
+/**
+ * Whether what the key dialog says of a scan, [failed], points to *Load keys*, and comes with *Open
+ * Load keys* (#765): a code with other keys, or keys this version cannot read, and a sealed code.
+ */
+internal fun opensLoadKeys(
+    @StringRes failed: Int?,
+): Boolean = failed == R.string.settings_key_scan_setup || failed == R.string.settings_key_scan_setup_sealed
 
 /** What the key dialog says of [scanned], a QR code's text, as the key [id]; null when it is one. */
 @StringRes

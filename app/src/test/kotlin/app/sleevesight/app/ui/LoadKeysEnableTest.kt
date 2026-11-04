@@ -2,6 +2,7 @@ package app.sleevesight.app.ui
 
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
@@ -59,8 +60,9 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
- * *Load keys* after a code is read (#763): which keys to save, which services to switch on, and
- * the summary; a key saved switches its service on only as chosen there.
+ * *Load keys* after a code is read (#763, #765): ③ which keys to save, ④ which services to switch
+ * on, and the summary; the keys are saved only at ④'s *Complete*, and a key saved switches its
+ * service on only as chosen there.
  */
 @RunWith(RobolectricTestRunner::class)
 class LoadKeysEnableTest {
@@ -113,7 +115,7 @@ class LoadKeysEnableTest {
 
     private fun stored(id: SecretId): String? = runBlocking { secrets.get(id) }?.reveal()
 
-    /** Opens *Load keys*, past its words, reading [code] at once, and waits for the keys to save. */
+    /** Opens *Load keys*, past its intro and words, reading [code] at once, and goes on to the keys to save. */
     private fun show(
         code: String,
         block: ActivityScenario<MainActivity>.() -> Unit,
@@ -138,7 +140,11 @@ class LoadKeysEnableTest {
             waitForText(text(R.string.settings_title))
             compose.openSection(SettingsSection.SECRETS)
             compose.onNodeWithText(text(R.string.settings_scan_keys)).performScrollTo().performClick()
+            waitForText(text(R.string.load_keys_start))
+            compose.onNodeWithText(text(R.string.load_keys_start)).performClick()
             waitForText(text(R.string.load_keys_next))
+            compose.onNodeWithText(text(R.string.load_keys_next)).performClick()
+            waitForText(text(R.string.load_keys_read_title))
             compose.onNodeWithText(text(R.string.load_keys_next)).performClick()
             waitFor("the keys to save") { shown(text(R.string.load_keys_only_selected)) }
             scenario.block()
@@ -165,6 +171,19 @@ class LoadKeysEnableTest {
 
     private fun next() = compose.onNodeWithText(text(R.string.load_keys_next)).performClick()
 
+    private fun complete() = compose.onNodeWithText(text(R.string.load_keys_complete)).performClick()
+
+    private fun previous() = compose.onNodeWithText(text(R.string.load_keys_previous)).performClick()
+
+    /** The row of the key [name] in [group], whose value is [key], on the keys to save. */
+    private fun keyRow(
+        name: Int,
+        group: Int,
+        key: String,
+    ) = compose.onNodeWithText(
+        "${text(name)}, ${text(group)}, ending ${key.takeLast(4)}, ${text(R.string.key_save_as_new)}",
+    )
+
     /** The services' row of [service] in [group], as a screen reader reads it. */
     private fun row(
         service: Int,
@@ -183,7 +202,7 @@ class LoadKeysEnableTest {
     }
 
     @Test
-    fun oneAiKeyAndTheSourcesStartTickedAndNextSwitchesThemOn() =
+    fun oneAiKeyAndTheSourcesStartTickedAndCompleteSwitchesThemOn() =
         show("sleevesight-keys:v1\nanthropic=$anthropicKey\nlastfm=$lastFmKey\nexa=$exaKey") {
             toServices()
             row(R.string.settings_ai_provider_anthropic, R.string.key_group_ai).assertIsOn()
@@ -197,11 +216,13 @@ class LoadKeysEnableTest {
                 assertTrue(!shown(text(absent)))
             }
             compose.onNodeWithText(where, substring = true).performScrollTo().assertIsDisplayed()
-            // Saved, but nothing switched on yet.
+            // Nothing saved, and nothing switched on, yet.
+            assertNull(stored(SecretId.ANTHROPIC))
             assertNull(current().aiProvider)
 
-            next()
+            complete()
             waitForText(text(R.string.load_keys_saved_title))
+            assertEquals(anthropicKey, stored(SecretId.ANTHROPIC))
             settled { current().aiProvider == ProviderId.ANTHROPIC }
             val now = current()
             assertTrue(SourceSwitch.LASTFM in now.enabledSources && LabelSource.LASTFM in now.labelSources)
@@ -239,7 +260,7 @@ class LoadKeysEnableTest {
             anthropic.performClick()
             anthropic.assertIsNotSelected()
 
-            next()
+            complete()
             waitForText(text(R.string.load_keys_saved_title))
             settled { current().aiProvider == null }
             compose
@@ -270,7 +291,7 @@ class LoadKeysEnableTest {
 
             anthropic.performClick()
             google.assertIsNotSelected()
-            next()
+            complete()
             waitForText(text(R.string.load_keys_saved_title))
             settled { current().aiProvider == ProviderId.ANTHROPIC }
             // The AI service replaced is listed too, though its key was not loaded.
@@ -293,15 +314,36 @@ class LoadKeysEnableTest {
     }
 
     @Test
-    fun cancelOnTheServicesKeepsTheKeysAndSwitchesNothing() =
+    fun cancelOnTheServicesSavesNothingAndSwitchesNothing() =
         show("sleevesight-keys:v1\nanthropic=$anthropicKey\nlastfm=$lastFmKey") {
             val before = current()
             toServices()
             compose.onNodeWithText(text(R.string.settings_cancel)).performClick()
             waitFor("the screen closed") { !shown(text(R.string.load_keys_enable_question)) }
-            assertEquals(anthropicKey, stored(SecretId.ANTHROPIC))
-            assertEquals(lastFmKey, stored(SecretId.LASTFM))
+            compose.waitForIdle()
+            assertNull(stored(SecretId.ANTHROPIC))
+            assertNull(stored(SecretId.LASTFM))
             assertEquals(before, current())
+        }
+
+    @Test
+    fun previousFromTheServicesKeepsTheTicksOfTheKeys() =
+        show("sleevesight-keys:v1\nanthropic=$anthropicKey\nlastfm=$lastFmKey") {
+            val anthropic = keyRow(R.string.settings_ai_provider_anthropic, R.string.key_group_ai, anthropicKey)
+            anthropic.performClick()
+            anthropic.assertIsOff()
+            toServices()
+            assertTrue(!shown("${text(R.string.settings_ai_provider_anthropic)}, ${text(R.string.key_group_ai)}"))
+
+            previous()
+            waitForText(text(R.string.load_keys_only_selected))
+            keyRow(R.string.settings_ai_provider_anthropic, R.string.key_group_ai, anthropicKey).assertIsOff()
+            keyRow(R.string.settings_source_lastfm, R.string.key_group_music, lastFmKey).assertIsOn()
+            // Nothing saved by going there and back.
+            assertNull(stored(SecretId.LASTFM))
+            toServices()
+            row(R.string.settings_source_lastfm, R.string.key_group_music).assertIsOn()
+            assertTrue(!shown("${text(R.string.settings_ai_provider_anthropic)}, ${text(R.string.key_group_ai)}"))
         }
 
     @Test
@@ -319,12 +361,12 @@ class LoadKeysEnableTest {
 
             lastFm.performClick()
             toServices()
+            // Only the key ticked has a row.
+            assertTrue(!shown(anthropicRow))
+            complete()
+            waitForText(text(R.string.load_keys_saved_title_one))
             assertNull(stored(SecretId.ANTHROPIC))
             assertEquals(lastFmKey, stored(SecretId.LASTFM))
-            // Only the key saved has a row.
-            assertTrue(!shown(anthropicRow))
-            next()
-            waitForText(text(R.string.load_keys_saved_title_one))
         }
 
     @Test
@@ -332,7 +374,7 @@ class LoadKeysEnableTest {
         show("sleevesight-keys:v1\nlastfm=$lastFmKey") {
             toServices()
             settingsData.writeFailures.set(1)
-            next()
+            complete()
             // Not the services as asked for: that they could not be switched, with *Try again*.
             waitForText(text(R.string.load_keys_services_failed))
             val lastFmOn = state(R.string.settings_source_lastfm, R.string.key_service_enabled)
@@ -348,23 +390,27 @@ class LoadKeysEnableTest {
     @Test
     fun afterAFailedSaveUntickingTheKeysLeftGoesOnWithThoseSaved() =
         show("sleevesight-keys:v1\nanthropic=$anthropicKey\nlastfm=$lastFmKey") {
+            toServices()
             // Anthropic's write fails; Last.fm's is saved.
             secretsData.writeFailures.set(1)
-            next()
+            complete()
             waitForText(app.getString(R.string.setup_failed, text(R.string.settings_key_name_anthropic)))
             assertEquals(lastFmKey, stored(SecretId.LASTFM))
-            val anthropicRow = "${text(R.string.settings_ai_provider_anthropic)}, ${text(R.string.key_group_ai)}"
-            compose
-                .onNodeWithText("$anthropicRow, ending ${anthropicKey.takeLast(4)}, ${text(R.string.key_save_as_new)}")
-                .performClick()
+            previous()
+            waitForText(text(R.string.load_keys_only_selected))
+            keyRow(R.string.settings_ai_provider_anthropic, R.string.key_group_ai, anthropicKey).performClick()
             val writes = secretsData.writes.get()
             compose.onNodeWithText(text(R.string.load_keys_next)).assertIsEnabled().performClick()
             waitForText(text(R.string.load_keys_enable_question))
-            // Nothing written again: Last.fm's row alone.
-            assertEquals(writes, secretsData.writes.get())
-            assertNull(stored(SecretId.ANTHROPIC))
+            // Last.fm's row alone.
+            val anthropicRow = "${text(R.string.settings_ai_provider_anthropic)}, ${text(R.string.key_group_ai)}"
             assertTrue(!shown(anthropicRow))
             row(R.string.settings_source_lastfm, R.string.key_group_music).assertIsOn()
+            complete()
+            waitForText(text(R.string.load_keys_saved_title_one))
+            // No key written again.
+            assertEquals(writes, secretsData.writes.get())
+            assertNull(stored(SecretId.ANTHROPIC))
         }
 
     @Test
@@ -382,7 +428,7 @@ class LoadKeysEnableTest {
                 assertTrue(!shown(text(absent)))
             }
             assertTrue(!shown("${text(R.string.settings_ai_provider_google)}, ${text(R.string.key_group_ai)}"))
-            next()
+            complete()
             waitForText(text(R.string.load_keys_saved_title_one))
             assertEquals(ProviderId.GOOGLE, current().aiProvider)
         }
@@ -398,46 +444,82 @@ class LoadKeysEnableTest {
                 .performScrollTo()
                 .assertIsDisplayed()
             row(R.string.settings_ai_provider_anthropic, R.string.key_group_ai).assertIsNotSelected()
-            next()
+            complete()
             waitForText(text(R.string.load_keys_saved_title_one))
             assertEquals(ProviderId.OLLAMA, current().aiProvider)
         }
     }
 
     @Test
-    fun theRowsAreLockedWhileNextRuns() =
+    fun theRowsAndButtonsAreLockedWhileCompleteSavesTheKeys() =
         show("sleevesight-keys:v1\nlastfm=$lastFmKey") {
-            val keyRow =
-                "${text(R.string.settings_source_lastfm)}, ${text(R.string.key_group_music)}, " +
-                    "ending ${lastFmKey.takeLast(4)}, ${text(R.string.key_save_as_new)}"
+            toServices()
             val keys = CompletableDeferred<Unit>()
             val keyWrites = secretsData.writes.get()
             secretsData.writeGate = keys
-            next()
+            complete()
             waitFor("the key's write held") { secretsData.writes.get() > keyWrites }
-            compose.onNodeWithText(keyRow).assertIsNotEnabled()
+            row(R.string.settings_source_lastfm, R.string.key_group_music).assertIsNotEnabled()
+            compose.onNodeWithText(text(R.string.load_keys_previous)).assertIsNotEnabled()
             keys.complete(Unit)
-            waitForText(text(R.string.load_keys_enable_question))
+            waitForText(text(R.string.load_keys_saved_title_one))
+        }
 
+    @Test
+    fun theRowsAreLockedWhileCompleteWritesTheChoices() =
+        show("sleevesight-keys:v1\nlastfm=$lastFmKey") {
+            toServices()
             val choices = CompletableDeferred<Unit>()
             val settingsWrites = settingsData.writes.get()
             settingsData.writeGate = choices
-            next()
-            waitFor("the choices' write held") { settingsData.writes.get() > settingsWrites }
+            complete()
+            // The choices are written once the keys' save has come back on the main thread.
+            waitFor("the choices' write held") {
+                compose.waitForIdle()
+                settingsData.writes.get() > settingsWrites
+            }
             row(R.string.settings_source_lastfm, R.string.key_group_music).assertIsNotEnabled()
             choices.complete(Unit)
             waitForText(text(R.string.load_keys_saved_title_one))
         }
 
     @Test
-    fun aLinkOpensItsSectionAndLeavesLoadKeys() =
+    fun aRotationWhileCompleteSavesStillSwitchesTheServicesOn() =
         show("sleevesight-keys:v1\nlastfm=$lastFmKey") {
             toServices()
+            val keys = CompletableDeferred<Unit>()
+            val keyWrites = secretsData.writes.get()
+            secretsData.writeGate = keys
+            complete()
+            waitFor("the key's write held") { secretsData.writes.get() > keyWrites }
+            // The screen goes with the activity, before the key is saved.
+            recreate()
+            keys.complete(Unit)
+            settled { SourceSwitch.LASTFM in current().enabledSources }
+            assertEquals(lastFmKey, stored(SecretId.LASTFM))
+        }
+
+    @Test
+    fun theServicesNameTheirSectionsWithoutLinksAndTheSummaryLinksThem() =
+        show("sleevesight-keys:v1\nlastfm=$lastFmKey") {
+            toServices()
+            // On ④, nothing saved yet: plain text, as a link would leave *Load keys* (#765).
+            val line =
+                compose
+                    .onNode(hasText(where, substring = true), useUnmergedTree = true)
+                    .performScrollTo()
+                    .fetchSemanticsNode()
+                    .config[SemanticsProperties.Text]
+                    .single()
+            assertTrue(line.getLinkAnnotations(0, line.length).isEmpty())
+
+            complete()
+            waitForText(text(R.string.load_keys_saved_title_one))
             compose
                 .onNode(hasText(where, substring = true), useUnmergedTree = true)
                 .performScrollTo()
                 .performFirstLinkClick { (it.item as? LinkAnnotation.Clickable)?.tag == SettingsTarget.genres.linkTag }
-            waitFor("the screen closed") { !shown(text(R.string.load_keys_enable_question)) }
+            waitFor("the screen closed") { !shown(text(R.string.load_keys_saved_title_one)) }
             // *Genres* is open: its first switch shows.
             waitForText(text(R.string.settings_show_genres))
         }

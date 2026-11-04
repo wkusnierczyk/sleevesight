@@ -105,10 +105,12 @@ internal fun <T> ChoiceDialog(
  *
  * *Scan QR code* reads the key from a QR code with [scanner] (#268) and fills the field with it, as
  * if typed, once it has the service's shape ([KeyShape]); otherwise it says why and leaves the
- * field as it was. A setup code of this key alone fills it too (#541); one with other keys is
- * pointed to *Load keys*; a keyboard session's code starts that session, as *Type on a computer*
- * would. Each icon's scan is a guided screen of its own ([KeyScanScreen]), as *Load keys* is. The window is secure
- * (`FLAG_SECURE`), so no screenshot or screen recording shows what is typed or scanned.
+ * field as it was. A setup code of this key alone fills it too (#541); one with other keys, and a
+ * sealed one, are pointed to *Load keys*, with *Open Load keys* (#765), which closes the dialog
+ * unsaved and calls [onOpenLoadKeys]; a keyboard session's code starts that session, as *Type on a
+ * computer* would. Each icon's scan is a guided screen of its own ([KeyScanScreen]), as *Load
+ * keys* is. The window is secure (`FLAG_SECURE`), so no screenshot or screen recording shows what
+ * is typed or scanned.
  *
  * *Type on a computer* (#394) scans the code `sleevesight.app/keyboard.html` shows, then runs that
  * session with [keyboard]: the field follows what is typed on the computer, unchecked, as typing
@@ -154,6 +156,7 @@ internal fun KeyDialog(
     scanner: QrScanner,
     keyboard: ComputerKeyboard,
     showPhoneName: Boolean,
+    onOpenLoadKeys: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     // What the field holds, whether it shows it, and whether a scan put it there (#432, #702).
@@ -173,11 +176,12 @@ internal fun KeyDialog(
     val value = field.value.trim()
     val autofill = LocalAutofillManager.current
 
-    // Ends the autofill session unsaved before the field goes, which would otherwise commit it. The
-    // effect after the dialog cancels as well; this makes the order certain on the dialog's own way out.
-    fun close() {
+    // Ends the autofill session unsaved before the field goes, which would otherwise commit it, and
+    // then the dialog, [then]: dismissed, or *Load keys* in its place (#765). The effect after the
+    // dialog cancels as well; this makes the order certain on the dialog's own ways out.
+    fun close(then: () -> Unit = onDismiss) {
         autofill?.cancel()
-        onDismiss()
+        then()
     }
 
     // Saves what the field holds; once saved, ends the autofill session, as [close] does, and the
@@ -204,6 +208,8 @@ internal fun KeyDialog(
 
     scanning?.let { purpose ->
         KeyScanScreen(purpose, scanner, onDismiss = { scanning = null }) { text ->
+            // The first code only: the camera may report another before the screen goes (#765).
+            if (scanning == null) return@KeyScanScreen
             scanning = null
             val result = scanned(purpose, id, text.trim(), ledger)
             failed = result.failed
@@ -230,7 +236,7 @@ internal fun KeyDialog(
             KeyEntry(id, field, failed, busy, running, onScan = {
                 failed = null
                 scanning = it
-            }) {
+            }, onOpenLoadKeys = { close(onOpenLoadKeys) }) {
                 EnableChoice(id, state != SecretState.ABSENT, offered, ticked, enabled = !busy) { ticked = it }
             }
         },
@@ -280,8 +286,9 @@ private fun CancelAutofillOnDestroy(autofill: AutofillManager?) {
  * service's terms, the agreement in bold (#543), with a link to them (#409), the [field], masked
  * unless it is shown, with its icons ([KeyFieldIcons]), the [keyboard] session when one runs, and
  * what is [below] it (whether the key is new, and what saving it switches on, #763), and
- * what [failed], if anything; the eye is not there while the field holds a scanned key, and is off
- * while [busy], and the scans while [busy] or while a session runs.
+ * what [failed], if anything, with *Open Load keys* ([onOpenLoadKeys], #765) when it points there
+ * ([opensLoadKeys]); the eye is not there while the field holds a scanned key, and is off while
+ * [busy], and the scans while [busy] or while a session runs.
  */
 @Suppress("LongParameterList") // What the body shows, and what it hears.
 @Composable
@@ -292,6 +299,7 @@ private fun KeyEntry(
     busy: Boolean,
     keyboard: (@Composable () -> Unit)?,
     onScan: (ScanFor) -> Unit,
+    onOpenLoadKeys: () -> Unit,
     below: @Composable () -> Unit,
 ) {
     // Hides the key when the app is left or the screen locks.
@@ -336,6 +344,11 @@ private fun KeyEntry(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.error,
             )
+            if (opensLoadKeys(it)) {
+                TextButton(onClick = onOpenLoadKeys, enabled = !busy) {
+                    Text(stringResource(R.string.settings_key_open_load_keys))
+                }
+            }
         }
     }
 }

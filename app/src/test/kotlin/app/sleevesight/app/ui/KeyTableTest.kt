@@ -223,7 +223,11 @@ class KeyTableTest {
             waitForText(text(R.string.settings_title))
             compose.openSection(SettingsSection.SECRETS)
             compose.onNodeWithText(text(R.string.settings_scan_keys)).performScrollTo().performClick()
-            // Past the words that seal a code (#590): these codes are clear ones.
+            // Past the intro and the words that seal a code (#590, #765): these codes are clear
+            // ones, read at once on the camera's step, whose *Next* goes on to the keys to save.
+            compose.onNodeWithText(text(R.string.load_keys_start)).performClick()
+            compose.onNodeWithText(text(R.string.load_keys_next)).performClick()
+            waitForText(text(R.string.load_keys_read_title))
             compose.onNodeWithText(text(R.string.load_keys_next)).performClick()
             // Read (#763): a new key and one that replaces a saved key, each row one item, its
             // ending read verbatim; the ending's own cell is left to its row.
@@ -237,7 +241,7 @@ class KeyTableTest {
 
             compose.onNodeWithText(text(R.string.load_keys_next)).performClick()
             waitForText(text(R.string.load_keys_enable_question))
-            compose.onNodeWithText(text(R.string.load_keys_next)).performClick()
+            compose.onNodeWithText(text(R.string.load_keys_complete)).performClick()
             waitForText(text(R.string.load_keys_saved_title))
             assertRow("$anthropic, ending Zq9x, ${text(R.string.key_saved_new)}", "Zq9x")
             assertRow("$exa, ending 3e4f, ${text(R.string.key_saved_replaced)}", "3e4f")

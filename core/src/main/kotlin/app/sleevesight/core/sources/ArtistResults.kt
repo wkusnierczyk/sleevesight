@@ -83,13 +83,19 @@ data class KeptPart(
  *   [ENCODINGS] - 1.
  * @property sources the sources the value depends on: it is kept for the shortest of their
  *   lifetimes ([app.sleevesight.core.settings.Settings.cacheLifetimes], D9), and not at all when
- *   one has none.
+ *   one has none; unless [keptAsHistory].
+ * @property keptAsHistory kept instead for *Keep history for*
+ *   ([app.sleevesight.core.settings.Settings.historyLifetime], for ever with *Forever*), the lifetime
+ *   of the cards written from it, whatever its sources' lifetimes: for a value a card's key depends
+ *   on, so the card is found again for as long as it is kept, rather than written again once the
+ *   value expires (#885: an album's web lines, `AlbumSource.WEB_PART`).
  */
 data class ArtistPart(
     val name: String,
     val extraction: Int,
     val encoding: Int,
     val sources: Set<SourceId>,
+    val keptAsHistory: Boolean = false,
 ) {
     init {
         require(name.isNotEmpty() && ' ' !in name) { "A part's name is empty or holds a space" }

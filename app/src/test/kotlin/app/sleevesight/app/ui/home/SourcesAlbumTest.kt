@@ -78,4 +78,43 @@ class SourcesAlbumTest {
         // The album's insight cites its own W1: Sources shows it as W3.
         assertEquals("W3", shownId("W1", album, shown))
     }
+
+    @Test
+    fun lastFmsAndTheWebsAlbumLinesAreMixedInByTheirSourcesNumberedOnFromTheTracks() {
+        // The track's own web line (its search's), and the album's Last.fm and web lines (#885).
+        val track =
+            EvidenceSet.of(
+                listOf(
+                    draft(
+                        SourceId.LASTFM,
+                        "The Last.fm biography of Gordon Lightfoot says: \"A folk icon.\"",
+                        scope = Scope.ARTIST,
+                    ),
+                    draft(SourceId.WEB, "Sundown was his only number one.", "https://example.com/song", Scope.WEB),
+                ),
+                JvmHasher,
+            )
+        val album =
+            EvidenceSet.of(
+                listOf(
+                    draft(
+                        SourceId.LASTFM,
+                        "The Last.fm wiki of “Sundown” says: \"Sundown is his tenth album.\"",
+                        "https://www.last.fm/music/Gordon+Lightfoot/Sundown",
+                        Scope.RELEASE,
+                    ),
+                    draft(SourceId.WEB, "Sundown topped the Billboard 200.", "https://example.org/album", Scope.WEB),
+                    // A page both searches found, with the same line: the track's, not listed twice.
+                    draft(SourceId.WEB, "Sundown was his only number one.", "https://example.com/song", Scope.WEB),
+                ),
+                JvmHasher,
+            )
+        val shown = withAlbum(track, album)
+        assertEquals(
+            listOf("L1", "L2", "S1", "S2"),
+            checkNotNull(shown.evidence).lines.map { it.id },
+        )
+        assertEquals(setOf("L2", "S2"), shown.album)
+        assertEquals("S1", shownId("S2", album, shown.evidence))
+    }
 }
