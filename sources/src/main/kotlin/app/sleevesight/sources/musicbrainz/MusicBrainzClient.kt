@@ -116,6 +116,7 @@ class MusicBrainzClient(
                 firstReleaseDate = json.string("first-release-date")?.ifEmpty { null },
                 credit = credits(json).joinToString("") { it.name + it.joinPhrase },
                 wikidataIds = wikidataIds(json.array("relations")),
+                releaseIds = json.array("releases").mapNotNull { it.string("id")?.ifEmpty { null } },
             )
         }
     }
@@ -209,8 +210,11 @@ class MusicBrainzClient(
 
         const val WORK_INC: String = "artist-rels+url-rels+recording-rels+artist-credits"
 
-        /** An album's release group (#522): its credit, and its Wikidata item among its URL relationships. */
-        const val ALBUM_INC: String = "artist-credits+url-rels"
+        /**
+         * An album's release group (#522): its credit, its Wikidata item among its URL relationships,
+         * and its releases (#885), which Last.fm's album is checked against (`AlbumSource`).
+         */
+        const val ALBUM_INC: String = "artist-credits+url-rels+releases"
 
         /**
          * A cover's original's releases, each with its release group (#724). MusicBrainz lists at
@@ -330,7 +334,8 @@ fun interface ReleaseGroups {
 /**
  * A release group as an album's insight reads it (#522): its [title], its primary type (`Album`,
  * `EP`, `Single`) and secondary types (`Live`, `Compilation`), the date its first release came out,
- * its artist credit as written ([credit]), and the Wikidata items it links ([wikidataIds]). Core data,
+ * its artist credit as written ([credit]), the Wikidata items it links ([wikidataIds]), and the ids
+ * of its releases ([releaseIds], #885), at most [LINKED_LIMIT], the most a lookup lists. Core data,
  * CC0.
  */
 data class MbAlbum(
@@ -341,4 +346,10 @@ data class MbAlbum(
     val firstReleaseDate: String?,
     val credit: String,
     val wikidataIds: List<String>,
-)
+    val releaseIds: List<String> = emptyList(),
+) {
+    companion object {
+        /** The most linked entities a MusicBrainz lookup lists: a group's releases past it are left out. */
+        const val LINKED_LIMIT: Int = 25
+    }
+}

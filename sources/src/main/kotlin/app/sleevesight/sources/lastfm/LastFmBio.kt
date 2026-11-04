@@ -16,7 +16,8 @@ internal object LastFmBio {
     /** Longer ones are passages, not short quotes. */
     const val MAX_LENGTH: Int = 300
 
-    private const val READ_MORE = "Read more on Last.fm"
+    // Last.fm's link at the summary's end, with the full stop an album's wiki puts after it (#885).
+    private val READ_MORE = Regex("Read more on Last\\.fm\\.?$")
     private const val LICENCE_NOTE =
         "User-contributed text is available under the Creative Commons By-SA License; additional terms may apply."
 
@@ -103,14 +104,14 @@ internal object LastFmBio {
 
     /**
      * [html] without tags (a line break or a block's edge leaves a space), Last.fm's "Read more"
-     * link and licence note, entities decoded, spaces collapsed.
+     * link (with a full stop after it or not) and licence note, entities decoded, spaces collapsed.
      */
     fun plainText(html: String): String =
         decodeEntities(stripTags(html))
             .replace(LICENCE_NOTE, " ")
             .replace(WHITESPACE, " ")
             .trim()
-            .removeSuffix(READ_MORE)
+            .replace(READ_MORE, "")
             .trim()
 
     /**

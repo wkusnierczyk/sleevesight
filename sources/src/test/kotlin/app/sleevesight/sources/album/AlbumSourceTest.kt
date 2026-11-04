@@ -1,5 +1,6 @@
 package app.sleevesight.sources.album
 
+import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.platform.JvmAccentFolder
@@ -9,20 +10,26 @@ import app.sleevesight.core.resolution.Wd
 import app.sleevesight.core.resolution.WdEntity
 import app.sleevesight.core.resolution.WikidataLookup
 import app.sleevesight.core.sources.AlbumQuery
+import app.sleevesight.core.sources.ArtistResults
 import app.sleevesight.core.testing.MemoryArtistResults
 import app.sleevesight.net.NetClient
 import app.sleevesight.net.NetError
 import app.sleevesight.net.NetRequest
 import app.sleevesight.net.NetResponse
 import app.sleevesight.net.NetResult
+import app.sleevesight.sources.lastfm.LastFmAlbum
+import app.sleevesight.sources.lastfm.LastFmAlbumInfo
 import app.sleevesight.sources.musicbrainz.MbAlbum
 import app.sleevesight.sources.musicbrainz.ReleaseGroups
+import app.sleevesight.sources.web.AlbumWebSearch
 import app.sleevesight.sources.wikipedia.WikipediaClient
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlin.time.Instant
 
 /** An album's evidence (#522): its release group, its Wikidata item and its article, kept per album. */
 class AlbumSourceTest {
@@ -89,6 +96,87 @@ class AlbumSourceTest {
 
         override fun close() = Unit
     }
+
+    // Last.fm's album, as `LastFmAlbums` reads it, or its failure; each request counted.
+    private class LastFm(
+        val album: LastFmAlbum? = null,
+        val failing: Boolean = false,
+    ) : LastFmAlbumInfo {
+        val asked = mutableListOf<Pair<String, String>>()
+
+        override suspend fun albumInfo(
+            artist: String,
+            album: String,
+        ): Lookup<LastFmAlbum> {
+            asked += artist to album
+            return when {
+                failing -> Lookup.Failed("offline")
+                this.album == null -> Lookup.NotFound
+                else -> Lookup.Found(this.album)
+            }
+        }
+    }
+
+    // A web search for an album, with the lines it finds, or its failure; each search counted.
+    private class Web(
+        val lines: List<String> = listOf("Sundown, Gordon Lightfoot's 1974 album, topped the Billboard 200."),
+        var failing: Boolean = false,
+    ) : AlbumWebSearch {
+        val asked = mutableListOf<Pair<String, String>>()
+
+        override suspend fun search(
+            album: String,
+            artist: String,
+        ): Lookup<List<EvidenceDraft>> {
+            asked += album to artist
+            if (failing) return Lookup.Failed("offline")
+            return Lookup.Found(
+                lines.mapIndexed { i, text ->
+                    EvidenceDraft(
+                        SourceId.WEB,
+                        Scope.WEB,
+                        text,
+                        "https://example.com/$i",
+                        Instant.fromEpochMilliseconds(1),
+                    )
+                },
+            )
+        }
+    }
+
+    private val summary =
+        "Sundown is the tenth studio album by Canadian singer-songwriter Gordon Lightfoot. " +
+            "It was released in January 1974 on Reprise Records. " +
+            "<a href=\"https://www.last.fm/music/Gordon+Lightfoot/Sundown\">Read more on Last.fm</a>."
+
+    private val lastFmSundown =
+        LastFmAlbum(
+            name = "Sundown",
+            artist = "Gordon Lightfoot",
+            mbid = null,
+            url = "https://www.last.fm/music/Gordon+Lightfoot/Sundown",
+            summary = summary,
+        )
+
+    // Asking MusicBrainz's group and Last.fm only, with [lastFm], [web] and [webKept] as given.
+    private fun source(
+        lastFm: LastFmAlbumInfo? = null,
+        web: AlbumWebSearch? = null,
+        group: MbAlbum = sundown,
+        kept: MemoryArtistResults = MemoryArtistResults(),
+        webKept: MemoryArtistResults? = null,
+    ) = AlbumSource(
+        Groups(mapOf(group.mbid to group)),
+        Wikidata(emptyMap()),
+        WikipediaClient(Wikipedia()),
+        names,
+        kept = kept,
+        lastFm = lastFm,
+        web = web,
+        webKept = webKept ?: ArtistResults.None,
+    )
+
+    private val query = AlbumQuery("Sundown", "Gordon Lightfoot", "rg-sundown", wikipedia = false)
 
     private val sundown =
         MbAlbum(
@@ -238,4 +326,130 @@ class AlbumSourceTest {
         assertEquals("EP", AlbumSource.typeOf(sundown.copy(primaryType = "EP")))
         assertEquals("release", AlbumSource.typeOf(sundown.copy(primaryType = null)))
     }
+
+    @Test
+    fun `Last fm's wiki gives the album's lines, its summary's sentences quoted with the album's page`() =
+        runTest {
+            val found = source(LastFm(lastFmSundown)).lookup(query)
+            val lastFm = found.drafts.filter { it.source == SourceId.LASTFM }
+            assertEquals(
+                listOf(
+                    "The Last.fm wiki of “Sundown” says: \"Sundown is the tenth studio album by Canadian " +
+                        "singer-songwriter Gordon Lightfoot.\"",
+                    "The Last.fm wiki of “Sundown” says: \"It was released in January 1974 on Reprise Records.\"",
+                ),
+                lastFm.map { it.text },
+            )
+            // The "Read more" link, with the full stop an album's wiki puts after it, is not a sentence.
+            assertTrue(lastFm.none { "Read more" in it.text })
+            assertTrue(lastFm.all { it.scope == Scope.RELEASE && it.url == lastFmSundown.url && !it.aggregate })
+        }
+
+    @Test
+    fun `Last fm's album under names it corrected to another's gives nothing`() =
+        runTest {
+            val corrected = lastFmSundown.copy(artist = "Rank and File")
+            assertTrue(source(LastFm(corrected)).lookup(query).drafts.none { it.source == SourceId.LASTFM })
+            val other = lastFmSundown.copy(name = "Sundown Live")
+            assertTrue(source(LastFm(other)).lookup(query).drafts.none { it.source == SourceId.LASTFM })
+        }
+
+    @Test
+    fun `Last fm's album is checked against the release group's releases by its MusicBrainz id`() =
+        runTest {
+            val group = sundown.copy(releaseIds = listOf("rel-1", "rel-2"))
+            // One of the group's releases: the album, whatever Last.fm calls it.
+            val ours = lastFmSundown.copy(mbid = "REL-2", name = "Sundown (Remastered)")
+            assertTrue(source(LastFm(ours), group = group).lookup(query).drafts.any { it.source == SourceId.LASTFM })
+            // Another release, while the group lists all of its own: another album of the name.
+            val theirs = lastFmSundown.copy(mbid = "rel-9")
+            assertTrue(
+                source(LastFm(theirs), group = group).lookup(query).drafts.none { it.source == SourceId.LASTFM },
+            )
+            // A group whose releases are not all listed cannot tell: the names decide.
+            val many = sundown.copy(releaseIds = (1..MbAlbum.LINKED_LIMIT).map { "rel-x$it" })
+            assertTrue(
+                source(LastFm(theirs), group = many).lookup(query).drafts.any { it.source == SourceId.LASTFM },
+            )
+        }
+
+    @Test
+    fun `Last fm is asked only while it is switched on, and its lines are kept with the album's`() =
+        runTest {
+            val lastFm = LastFm(lastFmSundown)
+            val kept = MemoryArtistResults()
+            val source = source(lastFm, kept = kept)
+            assertTrue(source.lookup(query.copy(lastFm = false)).drafts.none { it.source == SourceId.LASTFM })
+            assertTrue(lastFm.asked.isEmpty())
+            val first = source.lookup(query)
+            val again = source.lookup(query)
+            assertEquals(first.drafts, again.drafts)
+            assertEquals(1, lastFm.asked.size)
+        }
+
+    @Test
+    fun `Last fm that fails is unreachable, and nothing is kept`() =
+        runTest {
+            val kept = MemoryArtistResults()
+            val found = source(LastFm(failing = true), kept = kept).lookup(query)
+            assertTrue(found.unreachable)
+            assertTrue(kept.keys(AlbumSource.PART).isEmpty())
+        }
+
+    @Test
+    fun `a lookup never searches the web, and says a search is due until one is kept`() =
+        runTest {
+            val web = Web()
+            val webKept = MemoryArtistResults()
+            val source = source(web = web, webKept = webKept)
+            val before = source.lookup(query)
+            assertTrue(before.webDue)
+            assertTrue(before.drafts.none { it.source == SourceId.WEB })
+            assertTrue(web.asked.isEmpty())
+
+            val searched = checkNotNull(source.searchWeb(query))
+            assertEquals(listOf("Sundown" to "Gordon Lightfoot"), web.asked)
+            assertEquals(1, webKept.keys(AlbumSource.WEB_PART).size)
+
+            // Found again with no search: the same lines, so the same fingerprint.
+            val after = source.lookup(query)
+            assertFalse(after.webDue)
+            assertEquals(searched, after.drafts.filter { it.source == SourceId.WEB })
+            assertEquals(searched, source.searchWeb(query))
+            assertEquals(1, web.asked.size)
+        }
+
+    @Test
+    fun `a web search that finds nothing is kept too, so it is not made again`() =
+        runTest {
+            val web = Web(lines = emptyList())
+            val source = source(web = web)
+            assertEquals(emptyList(), source.searchWeb(query))
+            assertFalse(source.lookup(query).webDue)
+            source.searchWeb(query)
+            assertEquals(1, web.asked.size)
+        }
+
+    @Test
+    fun `a web search that fails keeps nothing, and is due again`() =
+        runTest {
+            val web = Web(failing = true)
+            val webKept = MemoryArtistResults()
+            val source = source(web = web, webKept = webKept)
+            assertNull(source.searchWeb(query))
+            assertTrue(webKept.keys(AlbumSource.WEB_PART).isEmpty())
+            assertTrue(source.lookup(query).webDue)
+        }
+
+    @Test
+    fun `the web is not searched while it is switched off, or without an engine`() =
+        runTest {
+            val web = Web()
+            val off = query.copy(web = false)
+            assertFalse(source(web = web).lookup(off).webDue)
+            assertNull(source(web = web).searchWeb(off))
+            assertFalse(source().lookup(query).webDue)
+            assertNull(source().searchWeb(query))
+            assertTrue(web.asked.isEmpty())
+        }
 }

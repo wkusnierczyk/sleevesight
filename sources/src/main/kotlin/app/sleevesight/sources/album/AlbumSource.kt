@@ -14,8 +14,13 @@ import app.sleevesight.core.sources.AlbumLookup
 import app.sleevesight.core.sources.AlbumQuery
 import app.sleevesight.core.sources.ArtistPart
 import app.sleevesight.core.sources.ArtistResults
+import app.sleevesight.sources.lastfm.LastFmAlbum
+import app.sleevesight.sources.lastfm.LastFmAlbumInfo
+import app.sleevesight.sources.lastfm.LastFmBio
+import app.sleevesight.sources.lastfm.Lru
 import app.sleevesight.sources.musicbrainz.MbAlbum
 import app.sleevesight.sources.musicbrainz.ReleaseGroups
+import app.sleevesight.sources.web.AlbumWebSearch
 import app.sleevesight.sources.wikipedia.WikipediaClient
 import app.sleevesight.sources.wikipedia.WikipediaSource
 import app.sleevesight.sources.wikipedia.articleUrl
@@ -41,14 +46,32 @@ import kotlin.time.Instant
  *   templated (CC0), and its English article's lead, at most three sentences naming the album,
  *   verbatim and linked (D1, CC BY-SA 4.0), as Wikipedia's lines on a track are
  *   ([WikipediaSource.sentences]).
+ * - **Last.fm** (with [AlbumQuery.lastFm] and the user's key, [lastFm], #885): the album
+ *   (`album.getInfo`), when it is the album asked for ([isAlbum]); its wiki summary's sentences,
+ *   taken as an artist's bio's are ([LastFmBio]: whole, of a quotable length, at most three, none
+ *   from a page several share, without the "Read more" link and the licence note), verbatim and
+ *   attributed (D1, CC BY-SA), with the album's page. Not its listeners, play counts or tags, counts
+ *   and lists of what many listeners did, which the artist's evidence leaves out too (`aggregate`):
+ *   they change from one lookup to the next, and so would the album's fingerprint, and its card's key.
+ * - **The web** (with [AlbumQuery.web] and an engine's key, [web], #885): the pages about the album
+ *   a search finds (`ExaAlbumSearch`), web lines. The search is paid, so [lookup] never makes it:
+ *   it gives the lines an earlier search kept, and says when one is due ([AlbumFound.webDue]);
+ *   [searchWeb] makes it, before the album's insight is written, and keeps what it found.
  *
- * Last.fm's album (`album.getInfo`, its wiki summary) and a web search for the album are not asked:
- * the album's insight is written from these alone.
- *
- * What it found is kept per album in [kept], the artist-level table (#238, [PART]), by the release
- * group, else the album's and the artist's names folded, with the sources asked, for the shortest
- * of their lifetimes (D9); not when a source could not be asked. Never throws but for cancellation.
+ * What the free sources found is kept per album in [kept], the artist-level table (#238, [PART]),
+ * by the release group, else the album's and the artist's names folded, with the sources asked,
+ * for the shortest of their lifetimes (D9); not when a source could not be asked. What the web
+ * search found, none included, is kept apart ([WEB_PART]), by the names folded, in [webKept],
+ * which the app keeps whatever *Keep what sources said about each artist* says, as it keeps a
+ * track's own web findings (`SourceResult.trackOnly`), for the web's lifetime: a later write, or a
+ * later lookup, of the album finds the same lines with no search. With a [webKept] that keeps
+ * nothing ([ArtistResults.persists] false: the CLI, tests), in memory for the most recent
+ * [REMEMBERED] albums instead. Never throws but for cancellation.
  */
+@Suppress(
+    "LongParameterList", // The sources, how names are read, the time, and where what they say is kept.
+    "TooManyFunctions", // Each source's lines, the web's kept apart, and the keys.
+)
 class AlbumSource(
     private val groups: ReleaseGroups,
     private val wikidata: WikidataLookup,
@@ -56,8 +79,58 @@ class AlbumSource(
     private val names: NameMatcher,
     private val clock: Clock = Clock.System,
     private val kept: ArtistResults = ArtistResults.None,
+    private val lastFm: LastFmAlbumInfo? = null,
+    private val web: AlbumWebSearch? = null,
+    private val webKept: ArtistResults = ArtistResults.None,
 ) : AlbumLookup {
+    // The web's lines by album, while [webKept] keeps nothing.
+    private val remembered = Lru<String, List<EvidenceDraft>>(REMEMBERED)
+
     override suspend fun lookup(query: AlbumQuery): AlbumFound {
+        val free = free(query)
+        val searches = searches(query)
+        val searched = if (searches) keptWeb(query) else null
+        return AlbumFound(free.drafts + searched.orEmpty(), free.unreachable, webDue = searches && searched == null)
+    }
+
+    override suspend fun searchWeb(query: AlbumQuery): List<EvidenceDraft>? =
+        web?.takeIf { searches(query) }?.let { search -> keptWeb(query) ?: searched(search, query) }
+
+    // What [search] finds for [query]'s album, none included, kept; null when it failed, and nothing is kept.
+    private suspend fun searched(
+        search: AlbumWebSearch,
+        query: AlbumQuery,
+    ): List<EvidenceDraft>? {
+        val found =
+            when (val answer = search.search(query.title, query.artist)) {
+                is Lookup.Found -> answer.value
+                Lookup.NotFound -> emptyList()
+                is Lookup.Failed -> null
+            }
+        val key = webKeyOf(query)
+        when {
+            found == null -> Unit
+            webKept.persists -> webKept.keep(WEB_PART, key, encode(found))
+            else -> remembered.put(key, found)
+        }
+        return found
+    }
+
+    // Whether the web may be searched for [query]'s album: asked for, with an engine.
+    private fun searches(query: AlbumQuery): Boolean = query.web && web != null
+
+    // The web's lines kept for [query]'s album, none included; null when no search was kept.
+    private suspend fun keptWeb(query: AlbumQuery): List<EvidenceDraft>? {
+        val key = webKeyOf(query)
+        return if (webKept.persists) {
+            webKept.get(WEB_PART, key)?.let { decode(it.value) }
+        } else {
+            remembered.get(key)
+        }
+    }
+
+    // What the free sources [query] may ask say about the album: kept, or gathered and kept.
+    private suspend fun free(query: AlbumQuery): AlbumFound {
         val key = keyOf(query)
         kept.get(PART, key)?.let { stored -> decode(stored.value)?.let { return AlbumFound(it) } }
         val found = gather(query)
@@ -74,7 +147,63 @@ class AlbumSource(
         val drafts = mutableListOf<EvidenceDraft>()
         album?.let { drafts += musicBrainzLine(it, at) }
         if (query.wikipedia) item(query, album, asking)?.let { drafts += wikiLines(it, query, at, asking) }
+        lastFm?.takeIf { query.lastFm }?.let { drafts += lastFmLines(it, query, album, at, asking) }
         return AlbumFound(drafts, asking.unreachable)
+    }
+
+    // Last.fm's lines on the album, when its answer is the album asked for: its wiki summary's
+    // sentences, as an artist's bio's are taken, quoted: "The Last.fm wiki of “Sundown” says: …".
+    @Suppress("LongParameterList") // The client, the album, MusicBrainz's group, the time, and the failures.
+    private suspend fun lastFmLines(
+        client: LastFmAlbumInfo,
+        query: AlbumQuery,
+        album: MbAlbum?,
+        at: Instant,
+        asking: Asking,
+    ): List<EvidenceDraft> {
+        val info = asking.read(client.albumInfo(query.artist, query.title), null)
+        if (info == null || !isAlbum(info, query, album)) return emptyList()
+        return LastFmBio.sentences(info.summary).map { sentence ->
+            EvidenceDraft(
+                SourceId.LASTFM,
+                Scope.RELEASE,
+                "The Last.fm wiki of “${query.title}” says: \"$sentence\"",
+                info.url,
+                at,
+            )
+        }
+    }
+
+    /**
+     * Whether Last.fm's [info] is the album [query] asks for, as strictly as an artist's page is
+     * judged (`LastFmMatch`), since another album's summary is worse than none: Last.fm keeps one
+     * page per artist's name and album's title, which its autocorrection may swap for another's.
+     *
+     * 1. Its MusicBrainz id (a release's, usually) and the album's release group ([album], its
+     *    releases listed) both known: an id of the group's, or of one of its releases, makes it the
+     *    album, whatever its names; another, while the group lists all its releases (fewer than
+     *    [MbAlbum.LINKED_LIMIT]), another album.
+     * 2. Otherwise its artist and title must be those asked, as [names] reads names: a name Last.fm
+     *    corrected beyond case, accents and punctuation is another album's page.
+     *
+     * A page its summary says several share gives no sentence ([LastFmBio.sentences]). The remaining
+     * risk is an artist's namesake's album of the same title, which nothing here can tell apart
+     * without the id.
+     */
+    private fun isAlbum(
+        info: LastFmAlbum,
+        query: AlbumQuery,
+        album: MbAlbum?,
+    ): Boolean {
+        val mbid = info.mbid?.lowercase()
+        val ids = album?.let { (it.releaseIds + it.mbid).map(String::lowercase).toSet() }
+        val listsAll = album != null && album.releaseIds.isNotEmpty() && album.releaseIds.size < MbAlbum.LINKED_LIMIT
+        val titled = names.albumKey(info.name).let { it.isNotEmpty() && it == names.albumKey(query.title) }
+        return when {
+            mbid != null && ids != null && mbid in ids -> true
+            mbid != null && listsAll -> false
+            else -> titled && names.sameName(info.artist, query.artist)
+        }
     }
 
     // MusicBrainz's line on the release group: "“Sundown” is an album by Gordon Lightfoot, first
@@ -197,28 +326,46 @@ class AlbumSource(
         return listOfNotNull(artist.takeIf { it.isNotEmpty() }?.let { "$title ($it album)" }, "$title (album)", title)
     }
 
-    // The album's key in the table: its release group, else its folded names; with the sources asked.
+    // The album's key in the table: its release group, else its folded names; with the sources asked
+    // (Last.fm only with its key).
     private fun keyOf(query: AlbumQuery): String {
-        val album =
-            query.group?.let { "mb:$it" }
-                ?: "name:${names.albumKey(
-                    query.artist,
-                ).length}:${names.albumKey(query.artist)}${names.albumKey(query.title)}"
-        return "$album ${if (query.musicBrainz) 1 else 0}${if (query.wikipedia) 1 else 0}"
+        val album = query.group?.let { "mb:$it" } ?: namesKeyOf(query)
+        val asked = listOf(query.musicBrainz, query.wikipedia, query.lastFm && lastFm != null)
+        return "$album ${asked.joinToString("") { if (it) "1" else "0" }}"
+    }
+
+    // The album's key for its web lines: its folded names, which the search sends, never the group.
+    private fun webKeyOf(query: AlbumQuery): String = namesKeyOf(query)
+
+    // The album's and the artist's names folded, the artist's length first, so no two pairs meet.
+    private fun namesKeyOf(query: AlbumQuery): String {
+        val artist = names.albumKey(query.artist)
+        return "name:${artist.length}:$artist${names.albumKey(query.title)}"
     }
 
     companion object {
         /**
-         * An album's lines in the artist-level table (#238), by [keyOf]'s key: MusicBrainz's, Wikidata's
-         * and Wikipedia's, so kept for the shortest of their lifetimes.
+         * An album's lines in the artist-level table (#238), by [keyOf]'s key: MusicBrainz's,
+         * Wikidata's, Wikipedia's and Last.fm's, so kept for the shortest of their lifetimes.
+         * Extraction 2 (#885): Last.fm's lines, and its switch in the key; an entry of 1 lacks them.
          */
         val PART: ArtistPart =
             ArtistPart(
                 "album.evidence",
-                extraction = 1,
+                extraction = 2,
                 encoding = 1,
-                sources = setOf(SourceId.MUSICBRAINZ, SourceId.WIKIPEDIA, SourceId.WIKIDATA),
+                sources = setOf(SourceId.MUSICBRAINZ, SourceId.WIKIPEDIA, SourceId.WIKIDATA, SourceId.LASTFM),
             )
+
+        /**
+         * An album's web lines (#885), by the album's and the artist's names folded: what its web
+         * search found, none included, kept for the web's lifetime, whatever *Keep what sources said
+         * about each artist* says (`PipelineWiring.TRACK_ONLY_PARTS`).
+         */
+        val WEB_PART: ArtistPart = ArtistPart("album.web", extraction = 1, encoding = 1, sources = setOf(SourceId.WEB))
+
+        /** The albums whose web lines are kept in memory, without a [webKept] that keeps them. */
+        const val REMEMBERED: Int = 256
 
         /** Wikidata's MusicBrainz release group ID. */
         const val MUSICBRAINZ_RELEASE_GROUP: String = "P436"

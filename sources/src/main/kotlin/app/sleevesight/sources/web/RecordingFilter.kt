@@ -37,15 +37,40 @@ class RecordingFilter(
         title: String?,
         snippet: String,
         url: String,
+    ): Boolean = names(listOfNotNull(track.title, track.from), requiredArtists(track), title, snippet, url)
+
+    /**
+     * Whether a result with [title], [snippet] and [url] is about the [album] by [artist] (#885,
+     * `ExaAlbumSearch`), by the rules for a recording, the album's title in the song's place: it
+     * names the album and the artist, and its own title does not name the artist without the album.
+     * Its limit beside a recording's: a page on the album's title track names both too.
+     */
+    fun isAboutAlbum(
+        album: String,
+        artist: String,
+        title: String?,
+        snippet: String,
+        url: String,
+    ): Boolean = names(listOf(album), requiredArtists(listOf(artist)), title, snippet, url)
+
+    // Whether the result names each of [song] (the title, and the work it is from) and one of
+    // [artists] (folded), and its title does not name such an artist without the song.
+    @Suppress("LongParameterList") // What it must name, and the result's three parts.
+    private fun names(
+        song: List<String>,
+        artists: List<String>,
+        title: String?,
+        snippet: String,
+        url: String,
     ): Boolean {
         if (isOwnSource(url)) return false
         val heading = padded(title.orEmpty())
         val text = padded("${title.orEmpty()} $snippet")
-        val song = listOfNotNull(track.title, track.from).map(::padded)
-        val artists = requiredArtists(track).map(::padded)
-        val namesSong = song.none { it.isBlank() } && song.all { it in text }
-        val namesArtist = artists.any { it in text }
-        val titledAfterOther = artists.any { it in heading } && !song.all { it in heading }
+        val phrases = song.map(::padded)
+        val required = artists.map { " $it " }
+        val namesSong = phrases.none { it.isBlank() } && phrases.all { it in text }
+        val namesArtist = required.any { it in text }
+        val titledAfterOther = required.any { it in heading } && !phrases.all { it in heading }
         return namesSong && namesArtist && !titledAfterOther
     }
 
@@ -58,12 +83,20 @@ class RecordingFilter(
             track.from?.let { fold(it).isNotEmpty() } != false &&
             requiredArtists(track).isNotEmpty()
 
+    /** Whether the [album] by [artist] can be checked at all: both fold to something. Else it is not searched. */
+    fun canCheckAlbum(
+        album: String,
+        artist: String,
+    ): Boolean = fold(album).isNotEmpty() && requiredArtists(listOf(artist)).isNotEmpty()
+
     /**
      * The credited artists a result must name one of, folded: the distinctive ones, those with a
      * word outside [COMMON_WORDS], or all of them when none is distinctive.
      */
-    internal fun requiredArtists(track: NormalizedTrack): List<String> {
-        val all = track.artists.map(::fold).filter { it.isNotEmpty() }
+    internal fun requiredArtists(track: NormalizedTrack): List<String> = requiredArtists(track.artists)
+
+    private fun requiredArtists(artists: List<String>): List<String> {
+        val all = artists.map(::fold).filter { it.isNotEmpty() }
         return all.filter { name -> name.split(' ').any { it !in COMMON_WORDS } }.ifEmpty { all }
     }
 
