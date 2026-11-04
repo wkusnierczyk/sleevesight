@@ -9,6 +9,7 @@ import app.sleevesight.core.evidence.EvidenceLine
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.evidence.Hasher
 import app.sleevesight.core.evidence.Scope
+import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.resolution.NameMatcher
 import app.sleevesight.core.settings.Settings
@@ -362,9 +363,42 @@ class ItemInsights(
         // The service the parts were built with, while it is the one selected: a switch to another
         // waits for the rebuild that brings it.
         val access = ai?.takeIf { settings.writeInsights && settings.aiProvider == it.provider.id }
-        val model = access?.let { settings.model(it.provider.id) }
+        return access?.let { keyFor(item, track, evidence, settings, it.provider.id) }
+    }
+
+    /**
+     * The key [item]'s insight on [track] is kept under, under [settings], whether or not it may be
+     * written now (#911): [key]'s while an AI service is ready; with none, the one the service and model
+     * selected would write under, so the insight kept for them, or another model's in its place, still
+     * shows while the selected model is found unavailable (#540, when the parts carry no AI access),
+     * though nothing is written. Null with *Show insights* off, no service or model selected, no entity,
+     * or while the parts' service is not yet the one selected (a switch waits for its rebuild).
+     */
+    fun keptKey(
+        item: InsightItem,
+        track: TrackState,
+        evidence: ItemEvidence,
+        settings: Settings,
+    ): CardKey? {
+        val provider = settings.aiProvider?.takeIf { settings.writeInsights }
+        return when {
+            ai != null -> key(item, track, evidence, settings)
+            provider == null -> null
+            else -> keyFor(item, track, evidence, settings, provider)
+        }
+    }
+
+    // [item]'s key on [track] from [evidence], with [provider]'s model and effort under [settings].
+    private fun keyFor(
+        item: InsightItem,
+        track: TrackState,
+        evidence: ItemEvidence,
+        settings: Settings,
+        provider: ProviderId,
+    ): CardKey? {
+        val model = settings.model(provider)
         val entity = entity(item, track)
-        return if (access == null || model == null || entity == null) {
+        return if (model == null || entity == null) {
             null
         } else {
             CardKey(
@@ -373,13 +407,16 @@ class ItemInsights(
                 evidenceFingerprint = evidence.evidence.fingerprint,
                 promptVersion = ItemPrompt.VERSION,
                 styleHash = styleHash(hasher),
-                provider = access.provider.id,
+                provider = provider,
                 model = model,
                 modelKnowledge = settings.isEnabled(SourceId.MODEL),
-                effort = settings.effort(access.provider.id),
+                effort = settings.effort(provider),
             )
         }
     }
+
+    /** Whether an insight may be written now: an AI service ready (none while its model is unavailable, #540). */
+    val writes: Boolean get() = ai != null
 
     /**
      * The insight kept for [key], checked against [evidence], with when it was written where the

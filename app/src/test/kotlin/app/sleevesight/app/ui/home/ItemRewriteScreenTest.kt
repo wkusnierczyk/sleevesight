@@ -182,6 +182,14 @@ class ItemRewriteScreenTest {
         }
 
     @Test
+    fun withNothingThatMayWriteTheInsightKeptShowsWithADisabledWriteInsightAndNoOffer() =
+        show(earlierShown().copy(canWrite = false)) {
+            compose.onNodeWithText(written).performScrollTo()
+            compose.onAllNodesWithText(offer, substring = true).assertCountEquals(0)
+            rewriteButton().assertIsNotEnabled().assertTextContains(text(R.string.home_write))
+        }
+
+    @Test
     fun anInsightARewriteWroteSaysRewrittenWithItsModelAndOffersNothing() {
         val rewritten =
             written("Sundown was recorded in Toronto [MB1].")

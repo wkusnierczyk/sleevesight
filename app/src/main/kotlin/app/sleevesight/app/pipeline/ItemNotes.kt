@@ -94,7 +94,9 @@ sealed interface ItemShown {
      * rewrite would use that it did not, and what it would write with; [model] is then the one that
      * wrote it. [rewriteFailed] when a rewrite of it ended without an insight: stopped
      * ([PipelineHost.STOPPED]), or failed, and why; it is shown again, and *Rewrite insight* offered
-     * again. Both null for the item's own insight.
+     * again. Both null for the item's own insight. [canWrite] is false while no insight may be written
+     * (no AI service ready: the model found unavailable, #540): what is kept still shows, and *Rewrite
+     * insight* is not offered.
      */
     data class Shown(
         val state: InsightState,
@@ -103,6 +105,7 @@ sealed interface ItemShown {
         val key: CardKey? = null,
         val rewriteWith: RewriteOffer? = null,
         val rewriteFailed: String? = null,
+        val canWrite: Boolean = true,
     ) : ItemShown
 }
 
@@ -310,7 +313,9 @@ class AppItemNotes(
             .map { it[at]?.evidence }
             .distinctUntilChanged()
             .flatMapLatest { evidence ->
-                val key = evidence?.let { insights.key(item, track, it, now) }
+                // The key it is kept under, with no AI service ready too (the model found unavailable,
+                // #540): what is kept still shows (#911), though nothing is written.
+                val key = evidence?.let { insights.keptKey(item, track, it, now) }
                 when {
                     evidence == null -> flowOf(ItemShown.Gathering)
                     key == null -> flowOf(ItemShown.NoService)
@@ -321,7 +326,8 @@ class AppItemNotes(
                             // Only once its own was looked for and not found (#911).
                             val earlier = if (key in kept) earlierFor(key, entries, kept[key], lifetime) else null
                             val play = track.nowPlaying.play
-                            shownFor(key, evidence, entries[key], earlier, lifetime, key in asked, play)
+                            val shown = shownFor(key, evidence, entries[key], earlier, lifetime, key in asked, play)
+                            if (insights.writes) shown else unwritable(shown)
                         }.onEach { seenOn(track, key, it) }
                     }
                 }
@@ -367,6 +373,16 @@ class AppItemNotes(
             asked -> ItemShown.Asking(key)
             earlier != null -> shownEarlier(key, evidence, earlier, failed = null)
             else -> ItemShown.Shown(entry.state, evidence, modelName(key.model), key)
+        }
+
+    // [shown] while no insight may be written (no AI service ready: its model found unavailable, #540,
+    // or its key gone): nothing offered, as with no service; an insight kept shows, with no *Rewrite
+    // insight* that could be tapped (#911).
+    private fun unwritable(shown: ItemShown): ItemShown =
+        when (shown) {
+            ItemShown.Offered, is ItemShown.Asking -> ItemShown.NoService
+            is ItemShown.Shown -> shown.copy(canWrite = false)
+            else -> shown
         }
 
     // [earlier], another service's, model's or effort's insight, shown under [key] with *Rewrite
@@ -438,7 +454,8 @@ class AppItemNotes(
         track: TrackState,
     ): Boolean {
         val play = track.nowPlaying.play ?: return false
-        return seen[key.subject()] == play && key !in shown.value
+        val own = shown.value[key]
+        return seen[key.subject()] == play && (own == null || stale(own, play))
     }
 
     override fun write(
@@ -939,7 +956,7 @@ class AppItemNotes(
         track: TrackState,
     ): Boolean {
         var added = false
-        if (open(key, ask) && (ask == ItemAsk.TAP || !held(key, track))) {
+        if (open(key, ask, track) && (ask == ItemAsk.TAP || !held(key, track))) {
             writing.update { asked ->
                 added = key !in asked
                 asked + key
@@ -948,15 +965,17 @@ class AppItemNotes(
         return added
     }
 
-    // Whether [key]'s insight may be asked for: not shown, or past *Keep history for*; on a tap, also
-    // one that failed or was stopped, which nothing asks again by itself.
+    // Whether [key]'s insight on [track] may be asked for: not shown, or past *Keep history for*; one
+    // that failed or was stopped on this play, only on a tap, which nothing asks again by itself; one
+    // that did on an earlier play ([stale], #911), as though there were none, by itself too.
     private fun open(
         key: CardKey,
         ask: ItemAsk,
+        track: TrackState,
     ): Boolean {
         val entry = shown.value[key]
         val again = ask == ItemAsk.TAP && (entry?.state is InsightState.Failed || entry?.state == InsightState.Stopped)
-        return entry == null || again || expired(entry.writtenAt)
+        return entry == null || again || expired(entry.writtenAt) || stale(entry, track.nowPlaying.play)
     }
 
     /**

@@ -1687,32 +1687,11 @@ class PipelineCoordinator(
                     kept = null,
                 )
             val settings = WriteSettings(writesOn, run.allowModel)
-            state = state.copy(ledger = decided(run, write, offered, settings.takeIf { lapsed }))
+            val kept = run.kept?.takeIf { offered }
+            state = state.copy(ledger = entry(run, write).answered(kept, settings.takeIf { lapsed }))
             effects += CoordinatorEffect.Decide(run.id, write)
         }
         state = state.copy(run = next)
-    }
-
-    // The ledger after [run]'s question was answered, [write] or not, Write [offered] or not, and
-    // [paused] under its settings when only the first action's expiry kept it from writing (#203).
-    // Not written by itself, with no card paid for: the one another service, model or effort wrote, if
-    // kept (#911, `Run.kept`), is the card paid for, so it is shown, and the Write offered beside it is
-    // *Rewrite insight*, as for a card written before a settings change. A ledger written by a call that
-    // failed or was stopped has no card either, so it takes it too; it stays written, so nothing is
-    // written again without a tap.
-    private fun decided(
-        run: CoordinatorState.Run,
-        write: Boolean,
-        offered: Boolean,
-        paused: WriteSettings?,
-    ): CoordinatorState.Ledger {
-        val decided = entry(run, write)
-        val kept = run.kept?.takeIf { offered && decided.card == null }
-        return when {
-            kept != null -> decided.copy(written = true, card = kept)
-            paused != null -> decided.copy(paused = paused)
-            else -> decided
-        }
     }
 
     // Whether Write is offered for [run] only because the first action expired (#203): it would
@@ -1830,3 +1809,19 @@ private data class Undo(
 )
 
 private fun CoordinatorState.Report.undo(): Undo = Undo(counted, expiredAction, keptTap)
+
+// The ledger entry after a run's question was answered, [paused] under its settings when only the
+// first action's expiry kept it from writing (#203). With [kept], the insight another service, model
+// or effort wrote (#911, `Run.kept`) when the run offers Write, and no card paid for: it is the card
+// paid for, so it is shown, and the Write offered beside it is *Rewrite insight*, as for a card written
+// before a settings change. A ledger written by a call that failed or was stopped has no card either,
+// so it takes it too; it stays written, so nothing is written again without a tap.
+private fun CoordinatorState.Ledger.answered(
+    kept: Card?,
+    paused: WriteSettings?,
+): CoordinatorState.Ledger =
+    when {
+        kept != null && card == null -> copy(written = true, card = kept)
+        paused != null -> copy(paused = paused)
+        else -> this
+    }

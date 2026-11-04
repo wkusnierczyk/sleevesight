@@ -37,15 +37,22 @@ internal fun WrittenFooter(
     ReportAction { context.onReport(track.copy(evidence = shown.evidence.evidence), state, item) }
     context.unavailable?.let { ModelUnavailable(it, context.onModelSettings) }
     if (shown.rewriteWith != null) {
-        RewriteButton(item, enabled = context.unavailable == null) { context.notes.write(track, item, ItemAsk.TAP) }
+        RewriteButton(item, enabled = rewrites(shown, context)) { context.notes.write(track, item, ItemAsk.TAP) }
     }
 }
+
+// Whether *Rewrite insight* can be tapped beside [shown]: an insight may be written now, and the
+// model is not found unavailable (#540), where a rewrite would fail.
+private fun rewrites(
+    shown: ItemShown.Shown,
+    context: ItemContext,
+): Boolean = shown.canWrite && context.unavailable == null
 
 /**
  * The history line under an item's insight (#911), as the key insight's footer's first line says it
  * (`writtenBefore`): for the insight another AI service, model or effort wrote, shown in place of none
  * ([ItemShown.Shown.rewriteWith]), *As written previously.*, then that a rewrite of it stopped or failed
- * ([ItemShown.Shown.rewriteFailed]), then, while the model is not found unavailable, what *Rewrite
+ * ([ItemShown.Shown.rewriteFailed]), then, while it can be tapped ([rewrites]), what *Rewrite
  * insight* would rewrite it with; for one a rewrite wrote, *Rewritten with …*; else none: an item's own
  * insight, kept or just written, says nothing of its history.
  */
@@ -58,7 +65,7 @@ private fun itemHistory(
     val offer = shown.rewriteWith ?: return rewrittenLine(state)
     val offered =
         offer
-            .takeIf { context.unavailable == null }
+            .takeIf { rewrites(shown, context) }
             ?.let { rewriteWhat(it.parts, it.with) }
             ?.let { stringResource(R.string.home_rewrite_offer, it) }
     val failed = shown.rewriteFailed?.let { rewriteFailure(it) }
