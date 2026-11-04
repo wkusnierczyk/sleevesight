@@ -95,6 +95,12 @@
     <!-- The album, then the year of the release being played: "Rubber Soul, 1965". -->
     <string name="home_album_year">%1$s, %2$s</string>
 
+    <!-- While the player plays an ad (#880): in place of the title, the player's name as the player
+         row names it; under it a line; then, where Key insights would be, the note. -->
+    <string name="home_ad_title">Ad playing on %1$s</string>
+    <string name="home_ad_next">The next track shows when the ad ends.</string>
+    <string name="home_ad_note">An ad is playing. Sleevesight looks nothing up for ads and writes no insight.</string>
+
     <!-- The dates under the album (#724): a button that opens in place into a panel of that title,
          with Close (page_close) at its top right. -->
     <string name="home_dates">Dates</string>

@@ -66,6 +66,9 @@ internal abstract class PipelineHostFixture {
     /** The next item in the queue (D13), and each resolution asked: the lookup key and the length. */
     protected val next = MutableStateFlow<NowPlaying?>(null)
 
+    /** A track the session layer took back, an ad told late (#880). */
+    protected val withdrawn = MutableStateFlow<NowPlaying?>(null)
+
     /** Whether the phone is online, as the host is told (#192). */
     protected val online = MutableStateFlow(true)
     protected val resolved = mutableListOf<Pair<String, Duration?>>()
@@ -91,6 +94,7 @@ internal abstract class PipelineHostFixture {
             online = online,
             epoch = epoch,
             clock = clock,
+            withdrawn = withdrawn,
             normalizer = Normalizer(JvmAccentFolder),
             parts = { keys, built ->
                 builds++

@@ -190,6 +190,9 @@ interface AiSearchFeed {
  * back to [deferred] with its kind and genre, once it is no longer under way (so a start at once is
  * not taken for it), to start later as if it had not been tried (off screen, on return). A tap is
  * gated by none of these: not the app's visibility, the setting, nor a genre's definition.
+ * A track the session layer took back ([withdraw]: an ad told late, #880) asks nothing either way:
+ * its searches under way are cancelled, showing and keeping nothing, and one that reaches its call
+ * after asks nothing and is not handed back.
  * Each search, and each read of the cache, is marked with [epoch] and the count of clears, and after
  * *Clear history* ([forget]) nothing it finds is shown or kept: a state is shown only under the lock
  * [forget] clears under ([ShownSearches.publish]), so one that passed the check cannot land after the
@@ -253,6 +256,12 @@ class AppAiSearches(
     // The keys whose kept search was looked for, and those asked, with their calls.
     private val looked: MutableSet<CardKey> = ConcurrentHashMap.newKeySet()
     private val asking = ConcurrentHashMap<CardKey, Job>()
+
+    // The track each search under way was asked for, and the last track taken back (#880).
+    private val askedFor = ConcurrentHashMap<CardKey, NowPlaying>()
+
+    @Volatile
+    private var gone: NowPlaying? = null
 
     // The searches asked whose answer has settled, which *Stop* no longer cancels, and those stopped
     // before they settled, whose answer is neither shown nor kept: one or the other, under [lock].
@@ -349,7 +358,11 @@ class AppAiSearches(
                     stopped.remove(key)
                     settled.remove(key)
                 }
-                job.invokeOnCompletion { asking.remove(key, job) }
+                askedFor[key] = track.nowPlaying
+                job.invokeOnCompletion {
+                    asking.remove(key, job)
+                    askedFor.remove(key, track.nowPlaying)
+                }
                 job.start()
             } else {
                 // Another ask got there first (a tap and an automatic one at once): this one never runs.
@@ -379,6 +392,22 @@ class AppAiSearches(
             shown.removeSearching(key)
         }
     }
+
+    /**
+     * The session layer took [track] back (#880: an ad, told only after it was published as a track):
+     * its searches under way are cancelled, nothing of them shown or kept, and none asks its call
+     * after this.
+     */
+    fun withdraw(track: NowPlaying) {
+        gone = track
+        askedFor.filterValues { sameInsightTrack(it, track) }.keys.forEach { key ->
+            asking.remove(key)?.cancel()
+            shown.removeSearching(key)
+        }
+    }
+
+    // Whether [track] is the one the session layer took back last ([withdraw]).
+    private fun isGone(track: TrackState): Boolean = gone?.let { sameInsightTrack(it, track.nowPlaying) } == true
 
     // Whether [key]'s search may be asked: not shown, shown as failed, or past *Keep history for*.
     private fun open(key: CardKey): Boolean {
@@ -433,10 +462,11 @@ class AppAiSearches(
                     shown.current(work, epoch)
                 }
                 publish(kept.state, kept.writtenAt ?: clock.now(), false)
-            } else if (gated) {
+            } else if (gated || isGone(track)) {
                 log(PipelineEvent.AiNotAsked(track.lookupKey, question))
                 work[Job]?.let { asking.remove(key, it) }
-                deferred(track, kind, asked.genre)
+                // A track taken back is not tried again.
+                if (!isGone(track)) deferred(track, kind, asked.genre)
             } else if (shown.current(work, epoch)) {
                 // Not paid for once a *Clear history* came since it started, whose clear it may have
                 // missed (a tap during `forget`): it would show nothing, and stay under way meanwhile.

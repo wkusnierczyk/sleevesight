@@ -121,9 +121,9 @@ class SessionHistory(
     /** The tracks of listening session [number], in the order they played. */
     fun session(number: Long): List<PlayedTrack> = queries.playedInSession(number).executeAsList().map(::playedTrack)
 
-    /** Records [change], with the playback states before it in the order they came. */
-    fun changed(change: TrackChangeRecord) {
-        queries.transaction {
+    /** Records [change], with the playback states before it in the order they came; returns its id. */
+    fun changed(change: TrackChangeRecord): Long =
+        queries.transactionWithResult {
             queries.trackChangeInsert(
                 player = change.player,
                 changed_at = change.changedAt.toEpochMilliseconds(),
@@ -147,6 +147,20 @@ class SessionHistory(
                     speed = state.speed.toDouble(),
                 )
             }
+            id
+        }
+
+    /**
+     * Deletes, in one transaction, the row [played] and the change [change] (either null for none),
+     * written for what turned out not to be a track (#880: an ad told only after it was recorded).
+     */
+    fun withdraw(
+        played: Long?,
+        change: Long?,
+    ) {
+        queries.transaction {
+            played?.let(queries::playedDelete)
+            change?.let(queries::trackChangeDelete)
         }
     }
 

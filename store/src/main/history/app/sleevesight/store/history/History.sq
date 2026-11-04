@@ -107,6 +107,10 @@ UPDATE played SET stopped_at = :stoppedAt WHERE id = (SELECT max(id) FROM played
 playedInSession:
 SELECT * FROM played WHERE session = :session ORDER BY id;
 
+-- A row written for what turned out not to be a track (#880: an ad told late).
+playedDelete:
+DELETE FROM played WHERE id = :id;
+
 -- Track changes
 
 trackChangeInsert:
@@ -127,6 +131,12 @@ VALUES (?, ?, ?, ?, ?, ?, ?);
 -- `limit`.
 trackChangesBefore:
 SELECT * FROM track_change WHERE id < :before AND id > :after ORDER BY id DESC LIMIT :limit;
+
+-- A change into what turned out not to be a track (#880: an ad told late), with its states.
+trackChangeDelete {
+    DELETE FROM track_change_state WHERE change_id = :id;
+    DELETE FROM track_change WHERE id = :id;
+}
 
 -- The id of the newest change, 0 with none. Ids only grow (`AUTOINCREMENT`), through deletions.
 trackChangeLastId:

@@ -25,6 +25,7 @@ import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.app.pipeline.UnavailableModel
 import app.sleevesight.app.report.MailHandoff
 import app.sleevesight.app.report.PhoneMail
+import app.sleevesight.app.session.AdPlaying
 import app.sleevesight.app.session.PlaybackInfo
 import app.sleevesight.app.settings.Dismissals
 import app.sleevesight.app.speech.ReadAloud
@@ -84,6 +85,8 @@ import kotlinx.coroutines.flow.StateFlow
  * @property aiSearches *Search with AI* under the empty state of *Dates*, *Genres* and *Lyrics*
  *   (#773): each panel's search, a paid call, and its *Stop*.
  * @property itemNotes the song's, the artist's and the album's insights under *Key insights* (#522).
+ * @property ad the ad the player plays in place of a track (#880), which Home shows as such
+ *   ([AdHome]); null while it plays none.
  */
 @Suppress("LongParameterList") // What one screen reads, each published on its own.
 class HomeFeed(
@@ -111,6 +114,7 @@ class HomeFeed(
     val askAgain: (RunKey, SourceId, NowPlaying) -> Unit = { _, _, _ -> },
     val aiSearches: AiSearchFeed = AiSearchFeed.None,
     val itemNotes: ItemNotes = ItemNotes.None,
+    val ad: StateFlow<AdPlaying?> = MutableStateFlow(null),
 )
 
 /**
@@ -158,7 +162,8 @@ private fun nowPlayingState(feed: HomeFeed): NowPlayingState {
     val settings by feed.settings.collectAsState()
     val unavailable by feed.unavailableModel.collectAsState()
     val guideHidden by feed.guideHidden.collectAsState()
-    return NowPlayingState(view, playing, playback, art, settings, unavailable, guideHidden)
+    val ad by feed.ad.collectAsState()
+    return NowPlayingState(view, playing, playback, art, settings, unavailable, guideHidden, ad)
 }
 
 private fun HomeFeed.actions(
@@ -191,7 +196,8 @@ private fun HomeFeed.actions(
 /**
  * What the screen shows, as published: [settings] is null until the first read; [unavailable] is
  * the switched-on AI service's model while it is found unavailable (#540); [guideHidden], whether
- * the guide to Home shown while nothing plays is hidden for now (#627, #759: *Hide once*).
+ * the guide to Home shown while nothing plays is hidden for now (#627, #759: *Hide once*); [ad], the
+ * ad the player plays in place of a track (#880), then [playing] being null.
  */
 @Suppress("LongParameterList") // What the screen shows, each published on its own.
 internal class NowPlayingState(
@@ -202,6 +208,7 @@ internal class NowPlayingState(
     val settings: Settings? = null,
     val unavailable: UnavailableModel? = null,
     val guideHidden: Boolean = false,
+    val ad: AdPlaying? = null,
 )
 
 /**
@@ -250,7 +257,8 @@ internal class NowPlayingActions(
  * the playback position, the key data, the *Dates*, *Genres* and *Lyrics* buttons or panels (#724,
  * #772, #728), *Key insights*, the song's, the artist's and the album's insights (#522, [ItemRows]) and
  * *Sources*, straight on Home's background, their accents in the art's colours (#609). Nothing playing in a
- * followed player shows the players to start and the guide to Home ([IdleHome], #627). A track the
+ * followed player shows the players to start and the guide to Home ([IdleHome], #627), and an ad
+ * playing in place of a track its neutral state ([AdHome], #880). A track the
  * pipeline has not reached yet shows at once, its evidence and insight to come.
  *
  * *Sounds like* waits for its card (Phase 2: `TrackState` has no similar artists yet), and so do
@@ -281,8 +289,8 @@ internal fun NowPlayingContent(
     val foldMemory = rememberFoldMemory()
     val itemMemory = rememberItemFoldMemory()
     val inPlace = rememberInPlaceMemory()
-    if (playing == null) {
-        IdleHome(state.settings, state.guideHidden, actions)
+    if (playing == null || state.ad != null) {
+        NoTrackHome(state, actions)
         return
     }
     val shown = Showing(state, playing)
