@@ -4,6 +4,7 @@ import app.sleevesight.core.ai.ModelNames
 import app.sleevesight.core.genres.GenreDefinitions
 import app.sleevesight.core.genres.GenreLabel
 import app.sleevesight.core.genres.GenreVocabulary
+import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.AiOutcome
 import app.sleevesight.core.pipeline.AiQuestion
 import app.sleevesight.core.pipeline.AiSearches
@@ -18,8 +19,10 @@ import app.sleevesight.core.pipeline.PipelineParts
 import app.sleevesight.core.pipeline.QuestionCost
 import app.sleevesight.core.pipeline.ReasonPath
 import app.sleevesight.core.pipeline.TrackState
+import app.sleevesight.core.settings.AiWebSearch
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.pastKeepHistory
+import app.sleevesight.core.synthesis.GenreListMode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
@@ -63,12 +66,17 @@ sealed interface GenreReason {
      * or [InsightState.Failed] (the list's call, or the reason's), beside which it is offered again.
      * [model] is the name of the model that writes it, for the credit under it. A reason written
      * before this play of the track, served from what was kept, has [keptAt], when it was written
-     * (#851); null for one written on this play.
+     * (#851); null for one written on this play. [couldHelp] is what is switched off in the settings
+     * and could explain it (#695: *AI service knowledge*, *AI web search* as *Settings* shows it, *Off*
+     * with Exa web search off too), in the order the panel names them, which the panel offers to
+     * switch on under "AI could not find an explanation." ([InsightState.NoEvidence]); empty with both
+     * on (*AI web search* used but with no search engine to run it included), and for every other state.
      */
     data class Shown(
         val state: InsightState,
         val model: String? = null,
         val keptAt: Instant? = null,
+        val couldHelp: List<GenreListMode> = emptyList(),
     ) : GenreReason
 }
 
@@ -294,19 +302,20 @@ class AppGenreNotes private constructor(
                 }
             }.combine(
                 combine(shown, lists, waiting, settings, plays) { reasons, known, asked, now, play ->
-                    Shown(reasons, known, asked, now?.historyLifetime, play)
+                    Shown(reasons, known, asked, now?.historyLifetime, play, now)
                 },
             ) { path, now -> shownFor(path, track, genre, now) }
     }
 
     // What the panel's states are made of: the reasons, the lists, the genres waiting on each,
-    // *Keep history for*, and the play now (#851).
+    // *Keep history for*, the play now (#851), and the settings, for what is off (#695).
     private class Shown(
         val reasons: Map<CardKey, Entry<InsightState>>,
         val known: Map<CardKey, Entry<GenreListState>>,
         val waiting: Map<CardKey, Set<String>>,
         val lifetime: Duration?,
         val play: Play?,
+        val settings: Settings?,
     )
 
     // What the panel shows for [track]'s [genre]'s [path], as [now] has it.
@@ -343,7 +352,29 @@ class AppGenreNotes private constructor(
                 when {
                     entry == null -> GenreReason.Offered
                     expired(entry.writtenAt, now.lifetime) -> GenreReason.Offered.also { drop(path.key) }
-                    else -> GenreReason.Shown(entry.state, modelName(path.key.model), keptAt(entry, track, now.play))
+                    else ->
+                        GenreReason.Shown(
+                            entry.state,
+                            modelName(path.key.model),
+                            keptAt(entry, track, now.play),
+                            couldHelp(now.settings).takeIf { entry.state == InsightState.NoEvidence }.orEmpty(),
+                        )
+                }
+            }
+        }
+
+    // What could explain a reason that is switched off in [settings] (#695): *AI service knowledge*,
+    // and *AI web search* as *Settings* shows it (`aiWebSearchUsed`): *Off*, set so or with Exa web
+    // search off, where the setting says Exa is needed. Not *AI web search* used but with no web
+    // search engine to run it; none with no settings read.
+    private fun couldHelp(settings: Settings?): List<GenreListMode> =
+        if (settings == null) {
+            emptyList()
+        } else {
+            GenreLists.MODES.filter { mode ->
+                when (mode) {
+                    GenreListMode.KNOWLEDGE -> !settings.isEnabled(SourceId.MODEL)
+                    GenreListMode.WEB -> settings.aiWebSearchUsed == AiWebSearch.OFF
                 }
             }
         }

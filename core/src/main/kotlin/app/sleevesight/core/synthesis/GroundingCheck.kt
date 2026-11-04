@@ -76,6 +76,24 @@ data class GroundedText(
             unknown = all[SentenceStatus.UNKNOWN] ?: 0,
         )
     }
+
+    /**
+     * Whether a sentence cites an evidence line, a source's or a web page's, and not only the model's
+     * own knowledge (`[AI]`), among those that pass the check ([SentenceStatus.OK],
+     * [SentenceStatus.MODEL]): read from the citations, never the words (#695).
+     */
+    val citesSource: Boolean by lazy {
+        paragraphs.flatten().any { sentence ->
+            (sentence.status == SentenceStatus.OK || sentence.status == SentenceStatus.MODEL) &&
+                sentence.cites.any { it != GroundingCheck.MODEL_ID }
+        }
+    }
+
+    /**
+     * Whether it is written from the model's own knowledge alone (#695): no sentence cites a source
+     * ([citesSource]), and one cites `[AI]`, as the knowledge allowed.
+     */
+    val fromModelAlone: Boolean get() = !citesSource && counts.model > 0
 }
 
 /** What the model replied, as the check reads it. */

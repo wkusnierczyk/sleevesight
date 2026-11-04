@@ -28,14 +28,22 @@
     <string name="genre_why_looking">Looking for an explanation…</string>
     <!-- Under every reason, in italics (#762): %1$s is the model's name ("Claude Haiku 5.5"). -->
     <string name="genre_why_by">by %1$s</string>
+    <!-- In its place under a reason from web pages (#695): asked again with web search, and citing a
+         page or a source. %1$s is the model's name. -->
+    <string name="genre_why_by_web">by %1$s, with web search</string>
+    <!-- Under the question, above a reason none of whose sentences cites a source or a web page, only
+         the model's own knowledge (#695), in the panel's quiet note style. -->
+    <string name="genre_why_from_model">The sources don’t explain this genre. This is from the AI model’s own knowledge, not verified.</string>
     <!-- Under the disabled button when the AI could not explain the genre (#762): the AI's genre list
-         does not have it, or the sources' evidence cannot support it. -->
+         does not have it, or nothing the reason was asked with explains it; then, for the reason,
+         genre_why_enable on its own line, naming what was off (#695: AI service knowledge, AI web
+         search), none with both on. -->
     <string name="genre_why_not_found">AI could not find an explanation.</string>
     <!-- When the AI's genre list cannot run (#762), for a genre only MusicBrainz gives: under the
          disabled button, this line, then genre_why_enable on its own line. -->
     <string name="genre_why_no_ai">No AI service enabled.</string>
     <!-- %1$s is what to switch on, each a link that opens Settings where it is (AI service
-         knowledge, under Sources), several joined by genre_why_or. -->
+         knowledge, under Sources; AI web search, under Insights), several joined by genre_why_or. -->
     <string name="genre_why_enable">Enable %1$s.</string>
     <string name="genre_why_or">%1$s or %2$s</string>
     <!-- Under the disabled button with no AI service ready (#762): %1$s is
