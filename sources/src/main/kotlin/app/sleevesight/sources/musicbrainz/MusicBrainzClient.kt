@@ -54,7 +54,8 @@ class MusicBrainzClient(
     // holds may have its original past the first page: *Dream On* by Aerosmith has some 170, and the
     // 1973 studio recording was not among the first 100, so a 1978 live one was chosen (#906). The
     // next pages are asked for too, up to [SEARCH_PAGES], and joined, each recording once. A later page
-    // that fails leaves the pages before it, and the answer incomplete ([MbRecordingSearch.complete]).
+    // that fails, is missing or comes empty leaves the pages before it, and the answer incomplete
+    // ([MbRecordingSearch.complete]).
     override suspend fun searchRecordings(
         title: String,
         artist: String,
@@ -76,10 +77,12 @@ class MusicBrainzClient(
         var offset = SEARCH_LIMIT
         var complete = true
         while (offset < total) {
-            val page = searchPage(query, offset)
-            complete = page !is Lookup.Failed
-            val found = (page as? Lookup.Found)?.value?.recordings.orEmpty()
-            if (found.isEmpty()) break
+            // A page the count promised that fails, is missing or comes empty leaves the search incomplete.
+            val found = (searchPage(query, offset) as? Lookup.Found)?.value?.recordings.orEmpty()
+            if (found.isEmpty()) {
+                complete = false
+                break
+            }
             recordings += found
             offset += SEARCH_LIMIT
         }

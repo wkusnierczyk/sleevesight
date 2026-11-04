@@ -119,7 +119,7 @@ class MusicBrainzResolutionTest {
         runTest {
             val resolution = resolve(55)
             // Of MusicBrainz's two recordings of the May 1956 single, the one closer to the player's
-            // length, on the third page of the search (#906).
+            // length, which the search re-recorded for #906 ranks on its first page.
             assertEquals("ffe4a448-1b9f-4458-a8ce-7402f5a28130", resolution.recordingMbid)
             assertEquals("1956-05", resolution.firstReleaseDate)
             assertEquals("Roll Over Beethoven / Drifting Heart", resolution.firstRelease?.title)

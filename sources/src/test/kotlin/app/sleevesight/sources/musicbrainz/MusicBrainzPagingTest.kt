@@ -115,6 +115,17 @@ class MusicBrainzPagingTest {
         }
 
     @Test
+    fun `a later page that comes empty or missing leaves the search incomplete`() =
+        runTest {
+            for (status in listOf(200, 404)) {
+                val net = Paged(count = 250, emptyFrom = 100, status = status)
+                val search = (MusicBrainzClient(net).searchRecordings("Song", "Artist") as Lookup.Found).value
+                assertEquals(100, search.recordings.size, "status $status")
+                assertFalse(search.complete, "status $status")
+            }
+        }
+
+    @Test
     fun `a search with fewer recordings than a page asks for one page`() =
         runTest {
             val net = ReplayNetClient("musicbrainz")
@@ -131,15 +142,24 @@ class MusicBrainzPagingTest {
             assertEquals(300, (found as Lookup.Found).value.recordings.size)
         }
 
-    // A search of [count] recordings, each page its own 100.
+    // A search of [count] recordings, each page its own 100; from [emptyFrom] on, pages answer [status]
+    // with no recordings.
     private class Paged(
         private val count: Int,
+        private val emptyFrom: Int = Int.MAX_VALUE,
+        private val status: Int = 200,
     ) : NetClient {
         val sent = mutableListOf<NetRequest>()
 
         override suspend fun send(request: NetRequest): NetResult<NetResponse> {
             sent += request
             val offset = request.query["offset"]?.toInt() ?: 0
+            if (offset >= emptyFrom) {
+                val empty = if (status == 200) """{"count":$count,"recordings":[]}""" else "{}"
+                return NetResult.Success(
+                    NetResponse(status, mapOf("content-type" to listOf("application/json")), empty.encodeToByteArray()),
+                )
+            }
             val recordings =
                 (offset until offset + 100).joinToString(",") {
                     """{"id":"rec-$it","title":"Song","score":100,"artist-credit":[]}"""
