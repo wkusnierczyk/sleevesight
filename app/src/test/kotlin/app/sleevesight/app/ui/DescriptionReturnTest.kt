@@ -63,7 +63,8 @@ import org.robolectric.annotation.GraphicsMode
  * *Foldable descriptions* and *Descriptions on return* under *Appearance* (#847): on a return to the
  * settings or to a section, *Folded* folds the descriptions again, *Unfolded* opens them, and *As
  * left* (the default) keeps them as left, across a restart too; the switch off shows everything in
- * full and disables the choice. *Restore dismissed messages* is the section's last row.
+ * full and disables the choice. A change of the choice waits for the next return (#874), so nothing
+ * moves under the tap. *Restore dismissed messages* is the section's last row.
  *
  * Drawn as on a phone (native graphics): Robolectric's own graphics measure text too narrow for
  * anything to fold.
@@ -207,6 +208,35 @@ class DescriptionReturnTest {
             compose.waitUntil(WAIT_MS) { settings.now().unfoldedDescriptions.isEmpty() }
             leaveAndComeBack(restart = true)
             assertFalse(isOpen(spin))
+        }
+    }
+
+    /** Chooses [label] in *Descriptions on return*'s button group, and waits for it to be saved as [mode]. */
+    private fun choose(
+        label: Int,
+        mode: DescriptionsOnReturn,
+    ) {
+        val returning = hasContentDescription(text(R.string.settings_descriptions_on_return), substring = true)
+        compose.onNode(hasText(text(label)) and isSelectable() and returning).performScrollTo().performClick()
+        compose.waitUntil(WAIT_MS) { settings.now().descriptionsOnReturn == mode }
+        compose.waitForIdle()
+    }
+
+    @Test
+    fun aChangeOfTheChoiceLeavesTheDescriptionsOnScreenAsTheyAreUntilTheNextReturn() {
+        show {
+            // *As left*, a first visit: all folded.
+            assertFalse(isOpen(spin))
+            assertFalse(isOpen(intro))
+            choose(R.string.settings_descriptions_unfolded, DescriptionsOnReturn.UNFOLDED)
+            assertFalse("nothing opens under the tap", isOpen(spin))
+            assertFalse(isOpen(intro))
+            reopenSection()
+            assertTrue("open on the next return", isOpen(spin))
+            choose(R.string.settings_descriptions_as_left, DescriptionsOnReturn.AS_LEFT)
+            assertTrue("nothing folds under the tap", isOpen(spin))
+            reopenSection()
+            assertFalse("as left, never tapped open, on the next return", isOpen(spin))
         }
     }
 
