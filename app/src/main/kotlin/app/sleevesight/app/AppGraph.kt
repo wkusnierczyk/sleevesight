@@ -31,6 +31,7 @@ import app.sleevesight.app.pipeline.AutoSearches
 import app.sleevesight.app.pipeline.ModelCheck
 import app.sleevesight.app.pipeline.PipelineHost
 import app.sleevesight.app.pipeline.Plays
+import app.sleevesight.app.pipeline.PromptDump
 import app.sleevesight.app.pipeline.UnavailableModel
 import app.sleevesight.app.pipeline.afterAcknowledged
 import app.sleevesight.app.pipeline.online
@@ -303,6 +304,8 @@ class AppGraph internal constructor(
             genres = { latestSettings.value?.showGenres != false },
             epoch = clearEpoch,
             musicBrainzThrough = musicBrainzThrough,
+            // Every AI request and its reply in logcat, in debug builds only (#767).
+            aiThrough = PromptDump::watching,
         )
 
     /**

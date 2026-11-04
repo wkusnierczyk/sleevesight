@@ -68,6 +68,8 @@ import app.sleevesight.sources.wikipedia.WikipediaSource
  * [epoch] is *Clear history*'s boundary (#547): an answer MusicBrainz gives to work started before
  * it is not remembered. [musicBrainzThrough] stands between the remembered answers and
  * MusicBrainz's client: the app's tests put a stand-in there, so they ask nothing of the network.
+ * [aiThrough] wraps each AI service's client ([aiProviders]): the app's debug builds log every
+ * request through it (`PromptDump`, #767).
  *
  * [close] closes the client when the wiring made it ([ownsNet], [appPipelineWiring]'s), and does
  * nothing otherwise: the CLI closes its own. The app closes it only from `Application.onTerminate`,
@@ -88,6 +90,7 @@ class PipelineWiring internal constructor(
     genres: () -> Boolean = { true },
     epoch: ClearEpoch = ClearEpoch(),
     musicBrainzThrough: (MusicBrainzLookup) -> MusicBrainzLookup = { it },
+    aiThrough: (AiProvider) -> AiProvider = { it },
 ) : AutoCloseable {
     private val names = NameMatcher(accentFolder)
 
@@ -163,7 +166,7 @@ class PipelineWiring internal constructor(
             ProviderId.ANTHROPIC to AnthropicProvider(net, HostPolicies.RETRY),
             ProviderId.OPENAI to OpenAiProvider(net, HostPolicies.RETRY),
             ProviderId.GOOGLE to GoogleProvider(net, HostPolicies.RETRY),
-        )
+        ).mapValues { aiThrough(it.value) }
 
     /**
      * The adapters for `PipelineParts.adapters`: MusicBrainz and Wikipedia (with Wikidata), which

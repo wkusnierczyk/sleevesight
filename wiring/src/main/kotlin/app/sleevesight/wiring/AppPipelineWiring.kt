@@ -1,6 +1,7 @@
 package app.sleevesight.wiring
 
 import app.sleevesight.core.ResourceReader
+import app.sleevesight.core.ai.AiProvider
 import app.sleevesight.core.normalizer.AccentFolder
 import app.sleevesight.core.pipeline.ClearEpoch
 import app.sleevesight.core.resolution.MusicBrainzLookup
@@ -15,8 +16,8 @@ import app.sleevesight.net.NetClient
  * are kept for a short time ([PipelineWiring], `RememberedMusicBrainz`), for preparing the next
  * track (D13). What sources give for an artist is kept in [artists], the app's artist cache (#238).
  * [genres] is whether genre information is asked for (*Show genres*, #444), as last read.
- * [epoch] is *Clear history*'s boundary (#547), and [musicBrainzThrough] a stand-in for the tests
- * ([PipelineWiring]).
+ * [epoch] is *Clear history*'s boundary (#547), [musicBrainzThrough] a stand-in for the tests, and
+ * [aiThrough] what wraps each AI service's client, the debug builds' log of requests ([PipelineWiring]).
  *
  * Its parameters and result are `:core` types and plain values, so `:app` calls it without `:net`
  * on its compile classpath. Kept apart from [pipelineWiringOn], which takes a `:net` type: no
@@ -31,6 +32,7 @@ fun appPipelineWiring(
     genres: () -> Boolean = { true },
     epoch: ClearEpoch = ClearEpoch(),
     musicBrainzThrough: (MusicBrainzLookup) -> MusicBrainzLookup = { it },
+    aiThrough: (AiProvider) -> AiProvider = { it },
 ): PipelineWiring =
     PipelineWiring(
         NetClient(HostPolicies.netConfig(appVersion)),
@@ -42,4 +44,5 @@ fun appPipelineWiring(
         genres = genres,
         epoch = epoch,
         musicBrainzThrough = musicBrainzThrough,
+        aiThrough = aiThrough,
     )
