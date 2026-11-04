@@ -33,7 +33,7 @@
   {%- assign page_n = parts[1] | times: 1000 | plus: page_n -%}
   {%- assign page_n = parts[2] | plus: page_n -%}
   {%- if page_n < released_n %}
-<p class="docs-wip" role="note">WIP. Last update: {{ page.docs_version }}, behind current release.</p>
+<p class="docs-wip" role="note">WIP. Last update: {{ page.docs_version }}</p>
   {%- else %}
 <p class="docs-version">Up to date for {{ page.docs_version }}</p>
   {%- endif -%}
