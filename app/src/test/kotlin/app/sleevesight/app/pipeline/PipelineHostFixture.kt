@@ -18,8 +18,11 @@ import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.sources.Resolution
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
@@ -79,14 +82,21 @@ internal abstract class PipelineHostFixture {
     /** The host, one per process: a new one ([newHost]) is a cold start (#190). */
     protected var host = newHost()
 
-    /** A host on the same fakes, the cache included, as a new process makes after a cold start. */
-    protected fun newHost(): PipelineHost =
+    /**
+     * A host on the same fakes, the cache included, as a new process makes after a cold start; with
+     * its stages built by [parts] (by default [fakeParts]), and rebuilt on [rebuilds] too, as the
+     * app's on a model found unavailable (#540).
+     */
+    protected fun newHost(
+        parts: (PipelineKeys, Settings) -> PipelineParts = ::fakeParts,
+        rebuilds: Flow<Unit> = emptyFlow(),
+    ): PipelineHost =
         PipelineHost(
             acknowledged = acknowledged,
             changes = changes.onStart { nowPlayingCollected = true },
             latestPlaying = { changes.value?.nowPlaying },
             settings = settings,
-            keyChanges = keyChanges.map { },
+            keyChanges = merge(keyChanges.map { }, rebuilds),
             readKeys = {
                 keyReads++
                 keysReady?.await()
@@ -103,19 +113,26 @@ internal abstract class PipelineHostFixture {
             parts = { keys, built ->
                 builds++
                 buildFailure?.let { throw it }
-                PipelineParts(
-                    normalizer = Normalizer(JvmAccentFolder),
-                    adapters = listOfNotNull(musicBrainz, keys.sources.lastFm?.let { lastFm }),
-                    resolver =
-                        TrackResolver { track, duration ->
-                            resolved += track.lookupKey to duration
-                            resolutions.removeFirstOrNull() ?: Resolution(Outcome.SongArticle, recordingMbid = "rec")
-                        },
-                    hasher = JvmHasher,
-                    ai = keys.ai?.let { AiAccess(providers[built.aiProvider] ?: provider, it) },
-                    cache = cache,
-                )
+                parts(keys, built)
             },
+        )
+
+    /** The stages on the fakes: MusicBrainz, Last.fm with its key, the resolver, the AI services, the cache. */
+    protected fun fakeParts(
+        keys: PipelineKeys,
+        built: Settings,
+    ): PipelineParts =
+        PipelineParts(
+            normalizer = Normalizer(JvmAccentFolder),
+            adapters = listOfNotNull(musicBrainz, keys.sources.lastFm?.let { lastFm }),
+            resolver =
+                TrackResolver { track, duration ->
+                    resolved += track.lookupKey to duration
+                    resolutions.removeFirstOrNull() ?: Resolution(Outcome.SongArticle, recordingMbid = "rec")
+                },
+            hasher = JvmHasher,
+            ai = keys.ai?.let { AiAccess(providers[built.aiProvider] ?: provider, it) },
+            cache = cache,
         )
 
     protected fun TestScope.started(visible: Boolean = true) {

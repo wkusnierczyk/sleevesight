@@ -5,6 +5,7 @@ import app.sleevesight.core.ai.CompletionRequest
 import app.sleevesight.core.ai.StopReason
 import app.sleevesight.core.ai.Usage
 import app.sleevesight.core.evidence.EvidenceSet
+import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.synthesis.CardKind
 import app.sleevesight.core.synthesis.GroundingCheck
@@ -35,8 +36,11 @@ import kotlin.time.TimeMark
  * nothing usable, not served, as though there were none. With no card under its own key, the one
  * kept for the same track and evidence by another AI service, model or effort, the most recently
  * written, goes to the control with the question whether to write (#911): shown in place of none,
- * with *Rewrite insight* offered, when the run does not write by itself.
+ * with *Rewrite insight* offered, when the run does not write by itself. While the selected model is
+ * found unavailable (#540, [PipelineParts.modelUnavailable]), nothing is written, but the card kept
+ * under the service and model selected, else another's, still shows, with nothing offered.
  */
+@Suppress("TooManyFunctions") // Each step of the insight: the card kept, the call, its reply, its check.
 internal class InsightWriter(
     private val parts: PipelineParts,
     private val time: PipelineTime,
@@ -72,6 +76,12 @@ internal class InsightWriter(
         // The switched-on provider's model, the one whose client the parts carry.
         val model = ai?.let { settings.model(it.provider.id) }
         when {
+            // The selected model found unavailable (#540), so no AI access: nothing written, but an
+            // insight kept for that model, or else another's, still shows (#911).
+            settings.writeInsights && ai == null && parts.modelUnavailable -> {
+                keptWithoutService(control)
+            }
+
             !settings.writeInsights || ai == null || model == null -> {
                 control.decidedWithoutCall()
                 show(InsightState.Idle(canWrite = false))
@@ -89,43 +99,72 @@ internal class InsightWriter(
         }
     }
 
+    // With the selected model unavailable, the insight kept for the track under the service and
+    // model selected (#911), served as any card from the cache; else the one another service, model
+    // or effort wrote, the newest, shown as a card from the cache, with nothing offered, since nothing
+    // can be written: the control records it as the card paid for. With none, or nothing selected,
+    // nothing is shown, as before. A track with nothing to narrate has neither.
+    private suspend fun keptWithoutService(control: RunControl) {
+        val provider = settings.aiProvider
+        val model = provider?.let { settings.model(it) }
+        val narrates = !evidence.nothingToNarrate(allowModel, artistsKnown = track.artists.isNotEmpty())
+        val wanted = if (provider != null && model != null && narrates) cardKey(provider, model) else null
+        if (wanted != null && served(wanted, control)) return
+        val other = wanted?.let { guard.keptByOther(it, evidence, allowModel) }
+        if (other == null) {
+            control.decidedWithoutCall()
+            show(InsightState.Idle(canWrite = false))
+        } else {
+            parts.sessionFacts.cite(key, ArtistFact.citedIn(other.grounded, evidence.lines))
+            control.cardShown(other, evidence)
+            show(other)
+        }
+    }
+
+    // The card kept under [wanted], if one reads as a reply, shown and reported to [control] as served
+    // from the cache; whether it was. With when it was written, which the app checks what it shows
+    // against (#643). Against the whole evidence: a card is kept only when it cites no line its prompt
+    // left out (`finish`), so it reads as it read when it was written. One kept before the check that
+    // revises itself (#798) is cut to its usable part, as when it was written; with none, the track is
+    // written as though it had no card.
+    private suspend fun served(
+        wanted: CardKey,
+        control: RunControl,
+    ): Boolean {
+        val kept = guard.attempt("read insight") { keptCard(wanted) }
+        val keptReply = kept?.let { reading(it.text, evidence, allowModel, cached = true) }
+        if (kept == null || keptReply == null) return false
+        emit(PipelineEvent.InsightCached(key))
+        val sent = Prompted(evidence, evidence)
+        val shown =
+            checked(
+                keptReply,
+                sent,
+                wanted,
+                cached = true,
+                usage = null,
+                complete = true,
+                writtenAt = kept.writtenAt,
+                rewritten = kept.rewritten,
+            )
+        // Its artist facts, for the next tracks of the listening session (#239).
+        (shown as? InsightState.Written)?.let {
+            parts.sessionFacts.cite(key, ArtistFact.citedIn(it.grounded, evidence.lines))
+        }
+        control.cardShown(shown as? InsightState.Written, evidence)
+        show(shown)
+        return true
+    }
+
     private suspend fun fromCacheOrModel(
         ai: AiAccess,
         model: String,
         control: RunControl,
     ) {
-        val wanted = cardKey(ai, model)
+        val wanted = cardKey(ai.provider.id, model)
         // What a call would write with, which *Rewrite insight* beside an insight kept compares (#854).
         sink.update { it.copy(writesWith = wanted.writtenBy()) }
-        // With when it was written, which the app checks what it shows against (#643). Against the
-        // whole evidence: a card is kept only when it cites no line its prompt left out (`finish`), so
-        // it reads as it read when it was written. One kept before the check that revises itself
-        // (#798) is cut to its usable part, as when it was written; with none, the track is written
-        // as though it had no card.
-        val kept = guard.attempt("read insight") { keptCard(wanted) }
-        val keptReply = kept?.let { reading(it.text, evidence, allowModel, cached = true) }
-        if (kept != null && keptReply != null) {
-            emit(PipelineEvent.InsightCached(key))
-            val sent = Prompted(evidence, evidence)
-            val shown =
-                checked(
-                    keptReply,
-                    sent,
-                    wanted,
-                    cached = true,
-                    usage = null,
-                    complete = true,
-                    writtenAt = kept.writtenAt,
-                    rewritten = kept.rewritten,
-                )
-            // Its artist facts, for the next tracks of the listening session (#239).
-            (shown as? InsightState.Written)?.let {
-                parts.sessionFacts.cite(key, ArtistFact.citedIn(it.grounded, evidence.lines))
-            }
-            control.cardShown(shown as? InsightState.Written, evidence)
-            show(shown)
-            return
-        }
+        if (served(wanted, control)) return
         // None under its own key: the one another service, model or effort wrote, if kept (#911),
         // which the control shows in its place unless the run writes anew.
         val other = guard.keptByOther(wanted, evidence, allowModel)
@@ -398,7 +437,7 @@ internal class InsightWriter(
         }
 
     private fun cardKey(
-        ai: AiAccess,
+        provider: ProviderId,
         model: String,
     ): CardKey =
         CardKey(
@@ -407,10 +446,10 @@ internal class InsightWriter(
             evidenceFingerprint = evidence.fingerprint,
             promptVersion = InsightPrompt.VERSION,
             styleHash = styleHash(parts.hasher),
-            provider = ai.provider.id,
+            provider = provider,
             model = model,
             modelKnowledge = allowModel,
-            effort = settings.effort(ai.provider.id),
+            effort = settings.effort(provider),
         )
 
     // Shows [insight], and returns it.

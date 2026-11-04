@@ -45,15 +45,17 @@ class AppPipelineParts(
     override fun invoke(
         keys: PipelineKeys,
         settings: Settings,
-    ): PipelineParts =
-        PipelineParts(
+    ): PipelineParts {
+        // The selected model found unavailable (#540): no AI access, and the pipeline told why (#911).
+        val blocked = models?.blocks(settings) == true
+        return PipelineParts(
             normalizer = normalizer,
             adapters = wiring.adapters(keys.sources, settings),
             resolver = wiring.resolver,
             hasher = JvmHasher,
             ai =
                 settings.aiProvider
-                    ?.takeUnless { models?.blocks(settings) == true }
+                    ?.takeUnless { blocked }
                     ?.let { wiring.aiProviders[it] }
                     ?.let { p -> keys.ai?.let { AiAccess(models?.watching(p) ?: p, it) } },
             cache = cache(),
@@ -62,7 +64,9 @@ class AppPipelineParts(
             sessionFacts = sessionFacts,
             webSearch = wiring.webSearcher(keys.sources.web.filterKeys { it in settings.webEngines }),
             albums = wiring.albums(keys.sources, settings),
+            modelUnavailable = blocked,
         )
+    }
 }
 
 /**
