@@ -22,7 +22,9 @@ import kotlin.time.Instant
  * list named, never one only MusicBrainz's tags give: D12) and gives its pages in the evidence;
  * *Up to 3 times* gives the model the search tool ([GenreReasonPrompt.withSearch]), each search's
  * pages as evidence lines ([toolResult]). [evidence] is then what the reply is checked against: the
- * track's and every page numbered, as the prompt gave them.
+ * track's and every page numbered, as the prompt gave them. Each prompt is the reason's user message
+ * ([GenreReasonPrompt.user]), under its system prompt ([system], with the search's instructions for
+ * *Up to 3 times*, [agentSystem]), sent on every call of the question (#767).
  */
 internal class ReasonQuestion(
     private val track: TrackState,
@@ -35,8 +37,11 @@ internal class ReasonQuestion(
     // The pages numbered so far, in their order, by address.
     private val numbered = LinkedHashMap<String, WebPage>()
 
+    override val system: String
+        get() = GenreReasonPrompt.system(allowModel)
+
     override val knowledge: String
-        get() = GenreReasonPrompt.build(track.nowPlaying, track.normalized, base, label, allowModel)
+        get() = GenreReasonPrompt.user(track.nowPlaying, track.normalized, base, label)
 
     override val query: String
         get() {
@@ -47,16 +52,12 @@ internal class ReasonQuestion(
 
     override fun once(pages: List<WebPage>): String {
         pages.forEach { numbered.putIfAbsent(it.url, it) }
-        return GenreReasonPrompt.build(track.nowPlaying, track.normalized, evidence(), label, allowModel)
+        return GenreReasonPrompt.user(track.nowPlaying, track.normalized, evidence(), label)
     }
 
-    override fun agent(limit: Int): String =
-        GenreReasonPrompt.withSearch(
-            knowledge,
-            limit,
-            firstId = "${SourceId.WEB.tag}${webLines(base) + 1}",
-            allowModel = allowModel,
-        )
+    override fun agent(limit: Int): String = knowledge
+
+    override fun agentSystem(limit: Int): String = GenreReasonPrompt.withSearch(system, limit, allowModel)
 
     override fun toolResult(pages: List<WebPage>): String {
         val before = numbered.size

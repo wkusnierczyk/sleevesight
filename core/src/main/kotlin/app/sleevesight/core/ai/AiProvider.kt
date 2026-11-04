@@ -42,7 +42,9 @@ interface AiProvider {
  * One completion: [prompt] as the single user message to [model]. [maxTokens] bounds the reply,
  * including any reasoning the model does before it, which counts against it. [effort] is how much
  * the model may reason before it answers, where the provider has such a control; null leaves the
- * provider's default.
+ * provider's default. [system], when given, is the system prompt, sent as the service's own system
+ * message where the model takes one (Anthropic's `system`, OpenAI's `instructions`, Google's
+ * `systemInstruction`), before the prompt; null sends none, and the request is as it was before there was one (#767).
  *
  * With [tools] (#801, a client that [AiProvider.usesTools]), the model may call them: its turn then
  * ends with [CompletionEvent.ToolUse] and [StopReason.TOOL_USE], and the next request sends the
@@ -58,6 +60,7 @@ data class CompletionRequest(
     val tools: List<ToolSpec> = emptyList(),
     val exchanges: List<ToolExchange> = emptyList(),
     val toolsAllowed: Boolean = true,
+    val system: String? = null,
 ) {
     init {
         require(maxTokens > 0) { "maxTokens must be positive, was $maxTokens" }

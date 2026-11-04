@@ -293,9 +293,16 @@ class GenreReasons(
         counted: (QuestionCost) -> Unit,
         show: (InsightState, Instant) -> Unit,
     ): ReplyOutcome {
-        val prompt = GenreReasonPrompt.build(track.nowPlaying, track.normalized, evidence, label, key.modelKnowledge)
+        val prompt = GenreReasonPrompt.user(track.nowPlaying, track.normalized, evidence, label)
         show(InsightState.Writing(""), now())
-        val request = CompletionRequest(key.model, prompt, CompletionRequest.maxTokensFor(key.effort), key.effort)
+        val request =
+            CompletionRequest(
+                key.model,
+                prompt,
+                CompletionRequest.maxTokensFor(key.effort),
+                key.effort,
+                system = GenreReasonPrompt.system(key.modelKnowledge),
+            )
         counted(QuestionCost.CALL)
         val shows: (String) -> Boolean =
             if (searches) {

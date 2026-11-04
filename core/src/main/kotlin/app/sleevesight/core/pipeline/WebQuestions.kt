@@ -23,6 +23,12 @@ import kotlinx.serialization.json.JsonPrimitive
  * another question that searches the web may ask (#762's genre reasons).
  */
 interface WebQuestion {
+    /**
+     * The system prompt of [knowledge]'s and [once]'s calls (#767), or null to keep the request's
+     * own (`CompletionRequest.system`).
+     */
+    val system: String? get() = null
+
     /** The prompt with *AI web search* off: the model answers from what it knows. */
     val knowledge: String
 
@@ -34,6 +40,12 @@ interface WebQuestion {
 
     /** *Up to 3 times*' prompt: the model searches up to [limit] times with [WebPrompt.TOOL]. */
     fun agent(limit: Int): String
+
+    /**
+     * The system prompt of *Up to 3 times*' calls, every turn of the loop (#767): [system] unless
+     * the question says how to search in it; null keeps the request's own.
+     */
+    fun agentSystem(limit: Int): String? = system
 
     /**
      * The search tool's answer with a search's [pages], none of them MusicBrainz's: [WebPrompt.pages],
@@ -128,7 +140,8 @@ class WebQuestions(
     ): WebReply =
         when (val way = used(search)) {
             AiWebSearch.OFF -> {
-                val (text, end) = call(base.copy(prompt = question.knowledge), counted)
+                val request = base.copy(prompt = question.knowledge, system = question.system ?: base.system)
+                val (text, end) = call(request, counted)
                 WebReply(text, end, pages = null, QuestionCost.CALL, way)
             }
             AiWebSearch.ONCE -> once(question, base, counted)
@@ -153,7 +166,8 @@ class WebQuestions(
                 searchFailed = found !is WebSearchOutcome.Found,
             )
         }
-        val (text, end) = call(base.copy(prompt = question.once(pages)), counted)
+        val request = base.copy(prompt = question.once(pages), system = question.system ?: base.system)
+        val (text, end) = call(request, counted)
         return WebReply(text, end, pages, QuestionCost(searches = 1, calls = 1), AiWebSearch.ONCE)
     }
 
@@ -165,6 +179,7 @@ class WebQuestions(
     ): WebReply {
         val engine = checkNotNull(web)
         val prompt = question.agent(limit)
+        val system = question.agentSystem(limit) ?: base.system
         val pages = LinkedHashMap<String, WebPage>()
         val exchanges = mutableListOf<ToolExchange>()
         var cost = QuestionCost()
@@ -176,6 +191,7 @@ class WebQuestions(
             val request =
                 base.copy(
                     prompt = prompt,
+                    system = system,
                     tools = listOf(WebPrompt.TOOL),
                     exchanges = exchanges.toList(),
                     toolsAllowed = allowed,

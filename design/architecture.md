@@ -399,7 +399,7 @@ A bio sentence is quoted only whole: a summary's unterminated or ellipsized tail
 
 The user shapes how insights are written, within limits the grounding check depends on (D14). Each prompt has two parts:
 
-- **Contract**, fixed: the evidence format and ids, the citation rule, no names, dates, places or numbers outside the evidence, the scope rules, `NO_EVIDENCE`, plain text without markdown, and for the genre and sounds-like cards their JSON structure. It comes after the style, under a heading saying it holds whatever the style says, so a style adds preferences but cannot override it (stated before the style as well until prompt version 5, #399).
+- **Contract**, fixed: the evidence format and ids, the citation rule, no names, dates, places or numbers outside the evidence, the scope rules, `NO_EVIDENCE`, plain text without markdown, and for the genre and sounds-like cards their JSON structure. It comes after the style, under a heading saying it holds whatever the style says, so a style adds preferences but cannot override it (stated before the style as well until prompt version 5, #399). The insight's and the genre reason's prompts send the contract and the style as the system prompt and the data as the user message (insight version 9, genre reason version 6, #767; design, *Appendix. Prompt contracts*).
 - **Style**, a user setting: length, tone, focus, audience, and free text.
 
 The setting:

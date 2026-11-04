@@ -91,6 +91,37 @@ class WebQuestionsTest {
         }
 
     @Test
+    fun aQuestionsSystemPromptGoesWithEveryCallAndTheLoopsWithEachTurn() =
+        runTest {
+            // #767: a genre's reason sends its rules as the system prompt, the search's in the loop's.
+            val withSystem =
+                object : WebQuestion by question {
+                    override val system = "SYSTEM"
+
+                    override fun agentSystem(limit: Int) = "SYSTEM $limit"
+                }
+            val web = Searches { WebSearchOutcome.Found(listOf(page)) }
+            val systems = mutableListOf<String?>()
+            for (way in listOf(AiWebSearch.OFF, AiWebSearch.ONCE)) {
+                val provider = FakeProvider { FakeProvider.done("{}") }
+                WebQuestions(AiAccess(provider, Secret("k")), web).ask(withSystem, way, 2, base)
+                systems += provider.requests.map { it.system }
+            }
+            assertEquals(listOf<String?>("SYSTEM", "SYSTEM"), systems)
+            val loop =
+                FakeProvider(usesTools = true) { request ->
+                    if (request.toolsAllowed) toolTurn("grace") else FakeProvider.done("{}")
+                }
+            WebQuestions(AiAccess(loop, Secret("k")), web).ask(withSystem, AiWebSearch.UP_TO, 2, base)
+            assertEquals(listOf<String?>("SYSTEM 2", "SYSTEM 2", "SYSTEM 2"), loop.requests.map { it.system })
+            // A question with none keeps the request's own.
+            val plain = FakeProvider { FakeProvider.done("{}") }
+            val withBase = base.copy(system = "BASE")
+            WebQuestions(AiAccess(plain, Secret("k")), web).ask(question, AiWebSearch.OFF, 2, withBase)
+            assertEquals(listOf<String?>("BASE"), plain.requests.map { it.system })
+        }
+
+    @Test
     fun noEngineAsksFromKnowledgeWhateverTheSetting() =
         runTest {
             val provider = FakeProvider { FakeProvider.done("{}") }

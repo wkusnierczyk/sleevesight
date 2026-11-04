@@ -18,6 +18,7 @@ import app.sleevesight.core.settings.WriteAutomatically
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.SourceResult
+import app.sleevesight.core.synthesis.InsightPrompt
 import app.sleevesight.core.synthesis.SentenceStatus
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -471,9 +472,13 @@ class PipelineTest {
             val state = pipeline(listOf(mb()), provider = provider).run(sundown, write = true)
 
             assertEquals(1, assertIs<InsightState.Written>(state.insight).grounded.counts.model)
-            val prompt = provider.requests.single().prompt
+            // The rules are the system prompt's (#767), the track and its evidence the user message's.
+            val request = provider.requests.single()
+            assertEquals(InsightPrompt.system(allowModel = true), request.system)
+            val prompt = request.system.orEmpty()
             assertTrue("[AI]" in prompt)
             assertFalse("[M]" in prompt)
+            assertTrue(request.prompt.startsWith("<track>\n"))
         }
 
     @Test

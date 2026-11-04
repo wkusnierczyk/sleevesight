@@ -25,6 +25,12 @@ import kotlin.time.Duration
 import kotlin.time.Instant
 
 class ArtistFactsTest {
+    // The prompt a call sent with [evidence], as measured: its system prompt and its user message.
+    private fun sentPrompt(
+        state: TrackState,
+        evidence: EvidenceSet,
+    ): String = InsightPrompt.system(false) + InsightPrompt.user(state.nowPlaying, state.normalized, evidence)
+
     private val at = Instant.parse("2026-10-21T00:00:00Z")
 
     private val formed = EvidenceDraft(SourceId.WIKIPEDIA, Scope.ARTIST, "The band formed in 1960.", null, at)
@@ -157,7 +163,7 @@ class ArtistFactsTest {
         assertEquals(listOf(0, 1), rows.map { it.resent })
         assertEquals(listOf(1, 2), rows.map { it.artistLines })
         val state = second.state
-        val prompt = InsightPrompt.build(state.nowPlaying, state.normalized, checkNotNull(state.evidence), false)
+        val prompt = sentPrompt(state, checkNotNull(state.evidence))
         assertEquals(prompt.length, rows[1].promptChars)
         val artistLines = checkNotNull(state.evidence).lines.filter { it.scope == Scope.ARTIST }
         assertEquals(artistLines.sumOf { InsightPrompt.evidenceLine(it).length + 1 }, rows[1].artistChars)
@@ -178,7 +184,7 @@ class ArtistFactsTest {
         assertEquals(listOf(0, 1), rows.map { it.leftOut })
         val state = second.state
         val sent = checkNotNull(state.evidence).without(JvmHasher) { it.id == "W2" }
-        assertEquals(InsightPrompt.build(state.nowPlaying, state.normalized, sent, false).length, rows[1].promptChars)
+        assertEquals(sentPrompt(state, sent).length, rows[1].promptChars)
         val labelLine = sent.lines.single { it.scope == Scope.ARTIST }
         assertEquals(InsightPrompt.evidenceLine(labelLine).length + 1, rows[1].artistChars)
         assertEquals(1, rows[1].resent)
@@ -225,11 +231,11 @@ class ArtistFactsTest {
         assertEquals(0, row.leftOut)
         val state = result.state
         val whole = checkNotNull(state.evidence)
-        val prompt = InsightPrompt.build(state.nowPlaying, state.normalized, whole, false)
+        val prompt = sentPrompt(state, whole)
         assertEquals(prompt.length, row.promptChars)
         // The totals count both prompts sent, the fewer lines' first.
         val fewer = whole.without(JvmHasher) { it.id == "W2" }
-        val first = InsightPrompt.build(state.nowPlaying, state.normalized, fewer, false)
+        val first = sentPrompt(state, fewer)
         val totals = ArtistFacts.totals(rows)
         assertEquals(2, totals.prompts)
         assertEquals(prompt.length + first.length, totals.promptChars)

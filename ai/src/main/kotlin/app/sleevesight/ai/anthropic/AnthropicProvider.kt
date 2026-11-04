@@ -46,6 +46,8 @@ import kotlin.time.Instant
  * /v1/models`, each model offered or not by its lifecycle ([modelInfo]). The key goes in
  * `x-api-key`, through `NetSecrets`, so it is never logged.
  *
+ * [CompletionRequest.system], when given, is the request's `system` (#767).
+ *
  * [CompletionRequest.effort] becomes `output_config.effort` (`low`, `medium`, `high`; [effortName])
  * for a model that takes it ([takesEffort]); without it, or for any other model, the model's default
  * applies.
@@ -195,6 +197,7 @@ class AnthropicProvider(
                 put("model", request.model)
                 put("max_tokens", maxTokensSent(request, takesEffort(request.model)))
                 put("stream", true)
+                request.system?.let { put("system", it) }
                 request.effort?.takeIf { takesEffort(request.model) }?.let { effort ->
                     putJsonObject("output_config") { put("effort", effortName(effort)) }
                 }

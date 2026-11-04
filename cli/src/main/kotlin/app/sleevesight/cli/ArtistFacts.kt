@@ -23,7 +23,8 @@ import app.sleevesight.core.synthesis.InsightPrompt
  * citations, not prose, so a fact restated from a differently worded line, or uncited, is not
  * counted.
  *
- * The prompt is the one each call sent ([InsightPrompt.build]), rebuilt from the track's state less
+ * The prompt is the one each call sent, its system prompt and its user message counted together
+ * ([InsightPrompt.system], [InsightPrompt.user]), rebuilt from the track's state less
  * the artist-level lines the call left out (`PipelineEvent.ModelCall.leftOut`), read from the track's
  * own events ([slices]); a track whose insight came from the cache, or was not written, sent none.
  */
@@ -201,7 +202,8 @@ object ArtistFacts {
         }
     }
 
-    // Each call's prompt, rebuilt: the evidence less the lines it left out; its length, its
+    // Each call's prompt, rebuilt: the evidence less the lines it left out; its length (the system
+    // prompt's and the user message's), its
     // artist-level lines' length, and those lines.
     private fun prompts(
         state: TrackState,
@@ -212,7 +214,8 @@ object ArtistFacts {
             state.evidence?.without(JvmHasher) { it.id in call.leftOut }?.let { sent ->
                 val artistSent = sent.lines.filter { it.scope == Scope.ARTIST }
                 Triple(
-                    InsightPrompt.build(state.nowPlaying, state.normalized, sent, allowModel).length,
+                    InsightPrompt.system(allowModel).length +
+                        InsightPrompt.user(state.nowPlaying, state.normalized, sent).length,
                     artistSent.sumOf { InsightPrompt.evidenceLine(it).length + 1 },
                     artistSent,
                 )

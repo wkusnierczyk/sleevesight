@@ -53,6 +53,7 @@ data class Options(
             """
             Usage: sleevesight-cli <replay|live|record> [options]
                    sleevesight-cli keys-qr [options]   (a QR code of the keys for the app: below)
+                   sleevesight-cli prompt [options]    (one prompt to an AI service: below)
 
               replay   Run the pipeline over the recorded responses in fixtures/http/: no network, no keys.
                        Fails on any source request with no recording.
@@ -98,7 +99,7 @@ data class Options(
             recorded AI reply is reported, not fatal) or whose answer could not be recorded; 3 when a
             criterion the run should have checked could not be, because a source was unreachable or
             failed, or an insight call failed.
-            """.trimIndent() + "\n\n" + KeysQr.USAGE
+            """.trimIndent() + "\n\n" + KeysQr.USAGE + "\n\n" + PromptCommand.USAGE
 
         /**
          * The AI services the CLI can run, by the name `--provider` and `--record` take, which is
