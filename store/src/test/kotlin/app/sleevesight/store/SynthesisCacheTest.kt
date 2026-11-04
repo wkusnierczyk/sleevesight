@@ -67,6 +67,39 @@ class SynthesisCacheTest {
     }
 
     @Test
+    fun `the cards another service, model or effort wrote come back newest first, never the key's own`() {
+        val at = Instant.parse("2026-10-14T11:00:00Z")
+        synthesis.put(key, "own")
+        val sonnet = key.copy(model = "claude-sonnet-5-5")
+        val openAi = key.copy(provider = ProviderId.OPENAI, model = "gpt-6", effort = null)
+        synthesis.put(sonnet, "by Sonnet", at, setOf(RewritePart.MODEL))
+        synthesis.put(openAi, "by GPT", at + 1.days)
+        // Not the same card otherwise: another track, other evidence, the model's knowledge switched.
+        synthesis.put(key.copy(model = "m", entityKey = "gordon lightfoot"), "other track")
+        synthesis.put(key.copy(model = "m", evidenceFingerprint = "9f2d"), "other evidence")
+        synthesis.put(key.copy(model = "m", modelKnowledge = true), "other knowledge")
+
+        assertEquals(
+            listOf(
+                openAi to CachedSynthesis("by GPT", at + 1.days),
+                sonnet to CachedSynthesis("by Sonnet", at, setOf(RewritePart.MODEL)),
+            ),
+            synthesis.others(key),
+        )
+        // From another model's key, the key's own is among them.
+        val models = synthesis.others(key.copy(model = "x")).map { it.first.model }
+        assertEquals(setOf("claude-haiku-5-5", "claude-sonnet-5-5", "gpt-6"), models.toSet())
+    }
+
+    @Test
+    fun `a card another model wrote past Keep history for is not found`() {
+        fixture.settings = fixture.settings.copy(historyLifetime = 7.days)
+        synthesis.put(key.copy(model = "claude-sonnet-5-5"), "by Sonnet", fixture.clock.now - 8.days)
+
+        assertEquals(emptyList(), synthesis.others(key))
+    }
+
+    @Test
     fun `with Keep history for at Forever, an insight is kept until evicted`() {
         fixture.settings = fixture.settings.copy(historyLifetime = null)
         synthesis.put(key, "text")

@@ -32,7 +32,10 @@ import kotlin.time.TimeMark
  * ([SelfRevision], #798) is cut to what follows the revision when that is usable, with no further
  * call; else it is asked for once more, a second paid call, and if that reply leaves nothing usable
  * either, the card shows the error state. A card kept from before is cut the same way, or, with
- * nothing usable, not served, as though there were none.
+ * nothing usable, not served, as though there were none. With no card under its own key, the one
+ * kept for the same track and evidence by another AI service, model or effort, the most recently
+ * written, goes to the control with the question whether to write (#911): shown in place of none,
+ * with *Rewrite insight* offered, when the run does not write by itself.
  */
 internal class InsightWriter(
     private val parts: PipelineParts,
@@ -101,34 +104,39 @@ internal class InsightWriter(
         // as though it had no card.
         val kept = guard.attempt("read insight") { keptCard(wanted) }
         val keptReply = kept?.let { reading(it.text, evidence, allowModel, cached = true) }
-        when {
-            kept != null && keptReply != null -> {
-                emit(PipelineEvent.InsightCached(key))
-                val sent = Prompted(evidence, evidence)
-                val shown =
-                    checked(
-                        keptReply,
-                        sent,
-                        wanted,
-                        cached = true,
-                        usage = null,
-                        complete = true,
-                        writtenAt = kept.writtenAt,
-                        rewritten = kept.rewritten,
-                    )
-                // Its artist facts, for the next tracks of the listening session (#239).
-                (shown as? InsightState.Written)?.let {
-                    parts.sessionFacts.cite(key, ArtistFact.citedIn(it.grounded, evidence.lines))
-                }
-                control.cardShown(shown as? InsightState.Written, evidence)
-                show(shown)
+        if (kept != null && keptReply != null) {
+            emit(PipelineEvent.InsightCached(key))
+            val sent = Prompted(evidence, evidence)
+            val shown =
+                checked(
+                    keptReply,
+                    sent,
+                    wanted,
+                    cached = true,
+                    usage = null,
+                    complete = true,
+                    writtenAt = kept.writtenAt,
+                    rewritten = kept.rewritten,
+                )
+            // Its artist facts, for the next tracks of the listening session (#239).
+            (shown as? InsightState.Written)?.let {
+                parts.sessionFacts.cite(key, ArtistFact.citedIn(it.grounded, evidence.lines))
             }
-
-            control.decide(settings) -> {
+            control.cardShown(shown as? InsightState.Written, evidence)
+            show(shown)
+            return
+        }
+        // None under its own key: the one another service, model or effort wrote, if kept (#911),
+        // which the control shows in its place unless the run writes anew.
+        val other = guard.keptByOther(wanted, evidence, allowModel)
+        when {
+            control.decide(settings, other, evidence) -> {
                 calls(ai, model, wanted, control)
             }
 
             else -> {
+                // Shown in its place, its artist facts are told, as a card from the cache's are (#239).
+                other?.let { parts.sessionFacts.cite(key, ArtistFact.citedIn(it.grounded, evidence.lines)) }
                 show(InsightState.Idle(canWrite = true))
                 emit(PipelineEvent.InsightWaits(key, WAITS_FOR_TAP))
                 if (control.waitsForTap) {
@@ -427,6 +435,30 @@ internal class InsightWriter(
 
     private companion object {
         const val WAITS_FOR_TAP = "waits for a tap on Write (Reactive)"
+    }
+}
+
+// The insight kept for [wanted]'s track and [evidence] by another AI service, model or effort (#911):
+// the most recently written that reads as one, checked against the whole evidence as a card from the
+// cache is ([allowModel] as the run's), written by its own key; null for none. `InsightWriter` reads it
+// only once [wanted] has none of its own, so it never stands in for one. Nothing is logged for it: it
+// is shown only when the run offers Write, and then as the card paid for, not as the run's own.
+private suspend fun CacheGuard.keptByOther(
+    wanted: CardKey,
+    evidence: EvidenceSet,
+    allowModel: Boolean,
+): InsightState.Written? {
+    val others = attempt("read other insights") { keptByOthers(wanted) }.orEmpty()
+    return others.firstNotNullOfOrNull { other ->
+        (readReply(other.card.text, evidence, allowModel) as? InsightReply.Written)?.let { reply ->
+            InsightState.Written(
+                reply.grounded,
+                cached = true,
+                writtenBy = other.key.writtenBy(),
+                writtenAt = other.card.writtenAt,
+                rewritten = other.card.rewritten,
+            )
+        }
     }
 }
 

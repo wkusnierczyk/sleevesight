@@ -190,12 +190,16 @@ sealed interface CoordinatorEvent {
      * that *Reactive* writes on, once the user has acted, under the run's
      * settings (`AutoWrite.causes`: none while *Show insights* is off or under *On demand*), and
      * [allowModel] whether its settings allow the model's own knowledge (#192: a run that asks
-     * again writes without a tap only under the settings the track was decided under).
+     * again writes without a tap only under the settings the track was decided under). [kept] is
+     * the insight kept for its track and evidence by another AI service, model or effort (#911,
+     * `RunControl.decide`), null for none: when the answer offers Write, it goes in the ledger as the
+     * card paid for, so it is shown, with *Rewrite insight* offered beside it.
      */
     data class InsightAsked(
         val run: RunId,
         val writesOn: Set<ChangeCause>,
         val allowModel: Boolean = false,
+        val kept: Card? = null,
     ) : CoordinatorEvent
 
     /**
@@ -571,7 +575,8 @@ data class CoordinatorState(
      * (*On track skip (auto)*, #625), the first action made. [lookAgain] on a run started by a tap
      * on *Look again* (#617) ([LookingAgain]). [retried] on a run started by a tap on *Retry*
      * (#724), and on every run replacing it: free, so it never writes unasked, only on a tap.
-     * [evidence] the fingerprint of its evidence, once assembled (#854).
+     * [evidence] the fingerprint of its evidence, once assembled (#854). [kept] is the insight its
+     * question came with, kept by another AI service, model or effort (#911), until it is answered.
      */
     data class Run(
         val id: RunId,
@@ -595,6 +600,7 @@ data class CoordinatorState(
         val lookAgain: LookingAgain? = null,
         val retried: Boolean = false,
         val evidence: String? = null,
+        val kept: Card? = null,
     ) {
         /**
          * What its look again (#617) found, as what a rewrite of it changed counts it (#854,
@@ -852,7 +858,12 @@ fun sameInsightTrack(
  * app keeps the first action) and that first action has not expired, the track came to play after it, and no mode was chosen while it played (#625: [CoordinatorState.Report.tapOnly]), and the ledger has not decided
  * this key (a rebuild's run of it again is not a track change, D5); else offer Write, marking the
  * run lapsed when only the expiry kept it from writing ([CoordinatorState.Run.lapsed]), so the
- * view says why. The ledger then records the decision. A model call that fails or is stopped
+ * view says why. The ledger then records the decision; one that offers Write for a track the ledger
+ * has no card for, its question asked with the insight another AI service, model or effort wrote for
+ * the same track and evidence (#911, `InsightAsked.kept`), records it written, with that insight as
+ * its card: it is shown, and the Write offered is a rewrite of it, as after a settings change. A
+ * decision to write leaves it out: the track is written anew, as for any track its model has not
+ * written. A model call that fails or is stopped
  * (#163) leaves the ledger written, as every call granted does, so nothing writes the track again
  * without a tap: its run offers Write again, and a tap on it is a new paid call. Then the next track's preparation (D13,
  * *Evidence*), while requests
@@ -917,7 +928,7 @@ fun sameInsightTrack(
  * | the run, its model call under way | StepEnded(MODEL_CALL) | calling = false; then a pending swap, or a run of latest if settled and not held | as for RebuildFinished, or StartRun |
  * | the run | StepEnded(LABELS) | labelled: its requests are over | none |
  * | the run | RunEnded | calling, offered, the steps it waits for and its question cleared; labelled; a kept tap dropped (keepsTap and tapped cleared); then as for StepEnded(MODEL_CALL) | as above |
- * | the run (current or not) | StepRequested(step), InsightAsked(causes, model knowledge) | the step or the question waiting, with the causes its settings write on; for the ledger's written track (its card not found), answered by offering Write to rewrite it, never by writing | none |
+ * | the run (current or not) | StepRequested(step), InsightAsked(causes, model knowledge, kept) | the step or the question waiting, with the causes its settings write on, and the insight another service, model or effort wrote, if kept (#911); for the ledger's written track (its card not found), answered by offering Write to rewrite it, never by writing; answered by offering Write with no card paid for, that insight kept goes in the ledger, written, as its card, so Write is offered as a rewrite of it | none |
  * | current run asking again, not yet decided, a run it replaced (or one before) offering Write, no tap kept yet, allowed, of the tap's key | WriteTapped(key) | the tap kept: it answers the run's question as a tap (one call, the ledger written); first action made | Acted |
  * | current run offering Write, allowed, of the tap's key | WriteTapped(key) | calling (its next call); the ledger written, under the run's key (or kept, if written already: a rewrite); first action made; the latest report no longer tap-only or while-paused | Grant(MODEL_CALL), Acted |
  * | otherwise (a tap for another run's key included) | WriteTapped(key) | unchanged | none |
@@ -1029,7 +1040,7 @@ class PipelineCoordinator(
         when (event) {
             is CoordinatorEvent.StepRequested -> requested(event.run, event.step)
             is CoordinatorEvent.InsightAsked -> {
-                ofRun(event.run) { it.copy(insight = event.writesOn, allowModel = event.allowModel) }
+                ofRun(event.run) { it.copy(insight = event.writesOn, allowModel = event.allowModel, kept = event.kept) }
             }
             is CoordinatorEvent.RetryAsked -> ofRun(event.run) { it.copy(offered = true) }
             is CoordinatorEvent.StepEnded -> stepEnded(event.run, event.step)
@@ -1610,23 +1621,44 @@ class PipelineCoordinator(
             val followed = own && !write && !lapsed && followed(writesOn)
             // For a written track, the question comes only when its card is not found (a rebuild
             // changed the card's key): Write is offered beside the card paid for, to rewrite it.
+            val offered = !write && offers(run)
             next =
                 next.copy(
                     insight = null,
-                    offered = !write && offers(run),
+                    offered = offered,
                     calling = write,
                     calls = next.calls + if (write) 1 else 0,
                     keepsTap = false,
                     tapped = false,
                     lapsed = lapsed,
                     followed = followed,
+                    kept = null,
                 )
-            val decided = entry(run, write)
             val settings = WriteSettings(writesOn, run.allowModel)
-            state = state.copy(ledger = if (lapsed) decided.copy(paused = settings) else decided)
+            state = state.copy(ledger = decided(run, write, offered, settings.takeIf { lapsed }))
             effects += CoordinatorEffect.Decide(run.id, write)
         }
         state = state.copy(run = next)
+    }
+
+    // The ledger after [run]'s question was answered, [write] or not, Write [offered] or not, and
+    // [paused] under its settings when only the first action's expiry kept it from writing (#203).
+    // Not written by itself, with no card paid for: the one another service, model or effort wrote, if
+    // kept (#911, `Run.kept`), is the card paid for, so it is shown, and the Write offered beside it is
+    // *Rewrite insight*, as for a card written before a settings change.
+    private fun decided(
+        run: CoordinatorState.Run,
+        write: Boolean,
+        offered: Boolean,
+        paused: WriteSettings?,
+    ): CoordinatorState.Ledger {
+        val decided = entry(run, write)
+        val kept = run.kept?.takeIf { offered && !decided.written }
+        return when {
+            kept != null -> decided.copy(written = true, card = kept)
+            paused != null -> decided.copy(paused = paused)
+            else -> decided
+        }
     }
 
     // Whether Write is offered for [run] only because the first action expired (#203): it would

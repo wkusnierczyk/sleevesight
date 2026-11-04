@@ -84,7 +84,9 @@ import kotlin.time.Instant
  * @property rewrite whether Write is offered beside the written insight shown, to write it again: a
  *   rebuild changed its card's key (new evidence, another service, model or effort, *AI service
  *   knowledge* switched), so its run
- *   found no card. The card paid for (the ledger's, with the evidence it cites) is shown whenever
+ *   found no card; or the track's run, not writing by itself, found none under its key but one
+ *   another service, model or effort wrote for the same track and evidence (#911), shown as the card
+ *   paid for. The card paid for (the ledger's, with the evidence it cites) is shown whenever
  *   the track's run has no insight of its own, offered or not ([cardShown]); this says only whether
  *   Write is offered beside it. The card shows beside the run's own source states, with the
  *   evidence it cites.
@@ -724,9 +726,22 @@ class PipelineHost(
             call(number).stopped.complete(Unit)
         }
 
-        override suspend fun decide(settings: Settings): Boolean {
+        override suspend fun decide(settings: Settings): Boolean = ask(settings, null)
+
+        // With the insight another service, model or effort wrote (#911), which the coordinator makes
+        // the card paid for when it offers Write.
+        override suspend fun decide(
+            settings: Settings,
+            kept: InsightState.Written?,
+            evidence: EvidenceSet,
+        ): Boolean = ask(settings, kept?.let { Card(it, evidence) })
+
+        private suspend fun ask(
+            settings: Settings,
+            kept: Card?,
+        ): Boolean {
             val decides = WriteSettings.of(settings)
-            queue.send(CoordinatorEvent.InsightAsked(id, decides.writesOn, decides.allowModel))
+            queue.send(CoordinatorEvent.InsightAsked(id, decides.writesOn, decides.allowModel, kept))
             return decision.await().also { write -> if (write) made++ }
         }
 

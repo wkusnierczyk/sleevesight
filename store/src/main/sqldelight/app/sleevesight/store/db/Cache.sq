@@ -264,6 +264,21 @@ WHERE kind = :kind
   AND model_knowledge = :modelKnowledge
   AND effort = :effort;
 
+-- The insights and cards kept for the same subject, evidence, prompt, style and model knowledge as a
+-- key, written with another AI service, model or effort than its own (#911), the most recently
+-- written first.
+synthesisOthers:
+SELECT id, text, written_at, rewritten, provider, model, effort
+FROM synthesis
+WHERE kind = :kind
+  AND entity_key = :entityKey
+  AND evidence_fingerprint = :evidenceFingerprint
+  AND prompt_version = :promptVersion
+  AND style_hash = :styleHash
+  AND model_knowledge = :modelKnowledge
+  AND (provider != :provider OR model != :model OR effort != :effort)
+ORDER BY written_at DESC, id DESC;
+
 synthesisRemoveKey:
 DELETE FROM synthesis
 WHERE kind = :kind

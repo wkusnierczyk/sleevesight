@@ -73,7 +73,11 @@ internal abstract class PipelineHostFixture {
     /** The resolver's answers, in turn; once they run out, a recording found. */
     protected val resolutions = ArrayDeque<Resolution>()
 
-    protected val host =
+    /** The host, one per process: a new one ([newHost]) is a cold start (#190). */
+    protected var host = newHost()
+
+    /** A host on the same fakes, the cache included, as a new process makes after a cold start. */
+    protected fun newHost(): PipelineHost =
         PipelineHost(
             acknowledged = acknowledged,
             changes = changes.onStart { nowPlayingCollected = true },

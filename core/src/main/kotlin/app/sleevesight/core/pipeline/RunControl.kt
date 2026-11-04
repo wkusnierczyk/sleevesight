@@ -43,6 +43,21 @@ interface RunControl {
      */
     suspend fun decide(settings: Settings): Boolean
 
+    /**
+     * As [decide], with [kept] (#911): the insight kept for the run's track and [evidence] that
+     * another AI service, model or effort wrote, the most recently written, read only once no card
+     * is kept under the run's own key, so it never stands in for one; null for none. When the answer
+     * is false (Write offered), the control may show it as the track's insight paid for, with
+     * *Rewrite insight* offered beside it, so a play whose model has written none shows the one kept
+     * rather than nothing; when true, the call writes anew and it is not shown. By default [decide],
+     * [kept] not shown: the CLI and [Pipeline.follow] show nothing in its place.
+     */
+    suspend fun decide(
+        settings: Settings,
+        kept: InsightState.Written?,
+        evidence: EvidenceSet,
+    ): Boolean = decide(settings)
+
     /** Whether a run that offers Write waits for a tap ([awaitTap]); if not, it ends offering it. */
     val waitsForTap: Boolean
 

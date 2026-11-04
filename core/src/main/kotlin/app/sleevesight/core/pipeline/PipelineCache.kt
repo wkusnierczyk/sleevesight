@@ -50,6 +50,15 @@ interface PipelineCache {
      */
     suspend fun keptCard(key: CardKey): KeptCard? = card(key)?.let { KeptCard(it, null) }
 
+    /**
+     * The cards kept for what [key]'s card is about, from the same evidence, prompt, style and model
+     * knowledge, but written with another AI service, model or reasoning effort (#911), the most
+     * recently written first, each with the key it is kept under; never [key]'s own. What a play
+     * whose model has written none shows in place of it, with *Rewrite insight* beside it, rather
+     * than nothing. By default none, where the cache cannot say.
+     */
+    suspend fun keptByOthers(key: CardKey): List<OtherCard> = emptyList()
+
     /** Keeps the card [text], written for [key]. */
     suspend fun keep(
         key: CardKey,
@@ -111,6 +120,15 @@ data class KeptCard(
     val text: String,
     val writtenAt: Instant?,
     val rewritten: Set<RewritePart> = emptySet(),
+)
+
+/**
+ * A card kept under [key], written with another AI service, model or reasoning effort than the key
+ * asked for (#911, [PipelineCache.keptByOthers]).
+ */
+data class OtherCard(
+    val key: CardKey,
+    val card: KeptCard,
 )
 
 /**
