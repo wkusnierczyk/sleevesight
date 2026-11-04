@@ -44,7 +44,7 @@ class NextInQueueTest {
     }
 
     @Test
-    fun `an ad next in Spotify's queue is not prepared, nor anything in its place`() {
+    fun `an ad next in Spotify's queue is skipped, and the track after it prepared`() {
         val withAd =
             spotifyQueue.copy(
                 items =
@@ -54,11 +54,32 @@ class NextInQueueTest {
                         spotifyQueue.items[1],
                     ),
             )
-        assertNull(NextInQueue.of(playing(mediaId = "spotify:track:1", item = 1), withAd))
+        assertEquals("Yamore", NextInQueue.of(playing(mediaId = "spotify:track:1", item = 1), withAd)?.title)
+        // Nothing after the ad: nothing prepared.
+        val adLast = withAd.copy(items = withAd.items.take(2))
+        assertNull(NextInQueue.of(playing(mediaId = "spotify:track:1", item = 1), adLast))
         // Another player's id in that form is its own business: the URI rule is Spotify's.
         val other = playing(mediaId = "x:1", item = 1).copy(player = "com.example.player")
         val otherQueue = withAd.copy(items = listOf(QueueEntry(1, "Kalabancoro", null, "x:1")) + withAd.items.drop(1))
         assertEquals("tetesept", NextInQueue.of(other, otherQueue)?.title)
+    }
+
+    @Test
+    fun `during an ad, the track after the ad's queue item, past any ad, is the next`() {
+        val adBreak =
+            spotifyQueue.copy(
+                items =
+                    listOf(
+                        QueueEntry(8, "tetesept", "Advertisement", "spotify:ad:1"),
+                        QueueEntry(9, "Another ad", "Advertisement", "spotify:ad:2"),
+                    ) + spotifyQueue.items,
+            )
+        val next = NextInQueue.afterAd(AdPlaying("com.spotify.music", queueItemId = 8), adBreak)
+        assertEquals("Kalabancoro", next?.title)
+        assertEquals(1L, next?.queueItemId)
+        assertNull("no queue item for the ad", NextInQueue.afterAd(AdPlaying("com.spotify.music"), adBreak))
+        assertNull("not in the queue", NextInQueue.afterAd(AdPlaying("com.spotify.music", queueItemId = 99), adBreak))
+        assertNull("no ad", NextInQueue.afterAd(null, adBreak))
     }
 
     @Test

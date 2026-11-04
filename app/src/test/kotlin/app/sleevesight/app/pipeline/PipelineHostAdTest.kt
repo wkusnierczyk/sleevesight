@@ -80,10 +80,9 @@ internal class PipelineHostAdTest : PipelineHostFixture() {
         backgroundScope.launch(now) { repository.trackChanges.collect { changes.value = it } }
         backgroundScope.launch(now) { repository.withdrawn.collect { withdrawn.value = it } }
         backgroundScope.launch(now) {
-            combine(repository.nowPlaying, repository.queue, NextInQueue::of).collect {
-                next.value =
-                    it
-            }
+            combine(repository.nowPlaying, repository.ad, repository.queue) { playing, ad, queue ->
+                NextInQueue.of(playing, queue) ?: NextInQueue.afterAd(ad, queue)
+            }.collect { next.value = it }
         }
         backgroundScope.launch(now) { host.state.collect { shown += it.track?.nowPlaying?.title } }
         repository.start()
@@ -191,6 +190,52 @@ internal class PipelineHostAdTest : PipelineHostFixture() {
             settle()
             assertEquals(1, provider.requestsFor("Carefree Highway"))
             assertFalse("written, not offered", host.state.value.lapsed)
+        }
+
+    @Test
+    fun `an ad told late after it was reported again counts as no track change for Saver`() =
+        runTest {
+            // The ad published as a track, then again with its length filled in, then told by its queue.
+            settings.value = settings.value.copy(pauseAutoWriteAfter = 1, lookUpInBackground = true)
+            val spotify = acted()
+            host.activityStopped(changingConfigurations = false)
+            runCurrent()
+            spotify.send(state(queueItem = 2))
+            spotify.send(metadata(title = "tetesept", artist = "Advertisement • 2 of 3"))
+            advanceTimeBy(SessionRepository.SETTLE + 100.milliseconds)
+            spotify.send(metadata(title = "tetesept", artist = "Advertisement • 2 of 3", durationMs = 28_000))
+            advanceTimeBy(SessionRepository.SETTLE + 100.milliseconds)
+            assertEquals(28.seconds, changes.value?.nowPlaying?.duration)
+            spotify.sendQueue(adQueue, "Play Queue")
+            settle()
+            spotify.send(carefree)
+            settle()
+            assertEquals(1, provider.requestsFor("Carefree Highway"))
+            assertFalse("written, not offered", host.state.value.lapsed)
+        }
+
+    @Test
+    fun `during an ad, the track after it in the queue is prepared`() =
+        runTest {
+            started()
+            val spotify = spotify()
+            settle()
+            spotify.sendQueue(
+                listOf(
+                    queueItem(1, "Sundown", mediaId = "spotify:track:1"),
+                    queueItem(2, "tetesept", mediaId = "spotify:ad:1"),
+                    queueItem(3, "Carefree Highway", "Gordon Lightfoot", mediaId = "spotify:track:2"),
+                ),
+                "Play Queue",
+            )
+            settle()
+            assertEquals("past the ad, before it", "Carefree Highway", next.value?.title)
+            spotify.send(state(queueItem = 2))
+            spotify.send(ad)
+            settle()
+            assertEquals("during it", "Carefree Highway", next.value?.title)
+            assertTrue("prepared: $resolved", resolved.any { "carefree highway" in it.first })
+            assertFalse(askedAboutTheAd())
         }
 
     @Test

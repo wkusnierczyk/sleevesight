@@ -83,21 +83,28 @@ object AdDetection {
  * publishes no track for it ([SessionRepository.nowPlaying] is null), so nothing downstream looks it
  * up, writes about it, reads it aloud, prepares or keeps it, and Home shows its neutral ad state
  * from this. It holds nothing of the ad's own: no title, artist or art, only its [duration], for the
- * playback position under the tile.
+ * playback position under the tile, and the queue item the state names for it ([queueItemId]), so
+ * the track after it is prepared meanwhile (`NextInQueue.afterAd`).
  */
 data class AdPlaying(
     val player: String,
     val duration: Duration? = null,
+    val queueItemId: Long? = null,
 ) {
     companion object {
-        /** The ad [metadata] of [player] reports, with its length when the player gives one. */
+        /**
+         * The ad [metadata] of [player] reports, with its length when the player gives one, and the
+         * queue item [state] names as active.
+         */
         fun of(
             player: String,
             metadata: MediaMetadata?,
+            state: PlaybackState? = null,
         ): AdPlaying =
             AdPlaying(
                 player,
                 metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION)?.takeIf { it > 0 }?.milliseconds,
+                SessionMapping.activeItem(state),
             )
     }
 }

@@ -524,8 +524,12 @@ class AppGraph internal constructor(
             // The type only: a message could quote a response or a request.
             onFailure = { Log.e(TAG, "The pipeline stopped: ${it::class.simpleName}") },
             onAction = userActions::acted,
-            // The next item in the shown player's queue, prepared ahead (D13).
-            next = combine(sessions.nowPlaying, sessions.queue, NextInQueue::of),
+            // The next item in the shown player's queue, prepared ahead (D13); during an ad, the one
+            // after it (#880).
+            next =
+                combine(sessions.nowPlaying, sessions.ad, sessions.queue) { playing, ad, queue ->
+                    NextInQueue.of(playing, queue) ?: NextInQueue.afterAd(ad, queue)
+                },
             // An ad told only once its queue came, published as a track first (#880): taken back.
             withdrawn = sessions.withdrawn,
             // Back online, the playing track's unreachable sources are asked again (#192).
@@ -703,6 +707,8 @@ class AppGraph internal constructor(
         // Each play of the track shown, from the session layer's reports as they come (not the
         // pipeline's debounced runs), so an AI answer written before it shows as kept (#851).
         mainScope.launch { plays.run(sessions.nowPlaying) }
+        // An ad told late (#880): *Ask AI*'s searches for it, under way or to come, ask nothing.
+        pipelineScope.launch { sessions.withdrawn.filterNotNull().collect(aiSearches::withdraw) }
         // *Search with AI*, the setting (#773): a panel's search starts as soon as its source has
         // nothing, open or not, for the playing track, while the app is on screen; again once an AI
         // service is ready.

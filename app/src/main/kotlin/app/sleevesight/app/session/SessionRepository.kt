@@ -1173,7 +1173,7 @@ class SessionRepository(
         private fun reportOrAd(previous: NowPlaying?): NowPlaying? {
             val item = item(previous)
             val isAd = isAdNow()
-            ad = if (isAd) AdPlaying.of(gate.player, metadata) else null
+            ad = if (isAd) AdPlaying.of(gate.player, metadata, state) else null
             misread = previous?.takeIf { isAd && it.title == SessionMapping.title(metadata) }
             return if (isAd) null else SessionMapping.nowPlaying(gate.player, metadata, item)
         }
