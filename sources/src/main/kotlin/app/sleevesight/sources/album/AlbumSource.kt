@@ -439,11 +439,12 @@ class AlbumSource(
          * An album's lines in the artist-level table (#238), by [keyOf]'s key: MusicBrainz's,
          * Wikidata's, Wikipedia's and Last.fm's, so kept for the shortest of their lifetimes.
          * Extraction 2 (#885): Last.fm's lines, and its switch in the key; an entry of 1 lacks them.
+         * 3 (#850): Wikipedia's lines without the brackets a dropped pronunciation left empty.
          */
         val PART: ArtistPart =
             ArtistPart(
                 "album.evidence",
-                extraction = 2,
+                extraction = 3,
                 encoding = 1,
                 sources = setOf(SourceId.MUSICBRAINZ, SourceId.WIKIPEDIA, SourceId.WIKIDATA, SourceId.LASTFM),
             )
