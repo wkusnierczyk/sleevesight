@@ -94,7 +94,13 @@ object InsightPrompt {
      * only, a date or a credit being enough for a sentence ([NOTHING_TO_TELL_RULE]), a web page's
      * facts are stated plainly and ids stay in the citations ([WEB_FACT_RULE]), and distributors and
      * codes are left out ([COUNTS_RULE]). Each version's exact prompt is kept in `design/prompts/`,
-     * with the variant tried and rejected.
+     * with the variants tried and rejected.
+     *
+     * A second blind A/B, against version 8 on the twelve tracks the first had a preference on, came
+     * out even (each preferred on three, six the same). A version 11 that left out the length "even
+     * when a web page gives it" did worse over two runs each, as the first rejected variant did:
+     * more uncited sentences on thinly documented tracks ("The evidence here is thin."), and the
+     * length named no less. Never shipped; its system prompt is kept in `design/prompts/`.
      */
     const val VERSION: Int = 10
 
