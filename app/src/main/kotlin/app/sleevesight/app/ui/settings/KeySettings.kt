@@ -161,7 +161,8 @@ private fun LoadKeysMore() {
  * the stored settings, after the key dialog's key in the same work in [saves], and the summary
  * says what was saved and switched on or off as written, or that the choices could not be, with
  * *Try again*. A link on *Load
- * keys* to a section of the settings calls [onOpen].
+ * keys* to a section of the settings calls [onOpen]. The key dialog's *Open Load keys* (#765), after
+ * a scan of a code it cannot take, closes it unsaved and calls [onOpenLoadKeys].
  */
 @Suppress("LongParameterList", "LongMethod") // The dialog, the keys, where they are saved, and what the screen hears.
 @Composable
@@ -177,6 +178,7 @@ internal fun KeyDialogs(
     showPhoneName: Boolean,
     onSealFailed: (Boolean) -> Unit,
     onOpen: (SettingsTarget) -> Unit,
+    onOpenLoadKeys: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     when (shown) {
@@ -235,6 +237,7 @@ internal fun KeyDialogs(
                 scanner = scanner,
                 keyboard = keyboard,
                 showPhoneName = showPhoneName,
+                onOpenLoadKeys = onOpenLoadKeys,
                 onDismiss = onDismiss,
             )
         }

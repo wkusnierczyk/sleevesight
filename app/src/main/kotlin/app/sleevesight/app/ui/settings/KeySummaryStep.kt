@@ -38,7 +38,8 @@ import kotlinx.coroutines.launch
  * (*New* or *Replaced*); then *Services configured*, a table of the services, *Service* and
  * *State* (*Enabled* or *Disabled*), as written ([summaryOf]); each by name. When the choices
  * could not be written, it says so in their place, with *Try again*, which writes them again
- * ([retry]); [onBusy] hears while it runs. *Done* calls [onDone].
+ * ([retry]); [onBusy] hears while it runs. *Done* calls [onDone]. [framed] on *Load keys* (#765),
+ * whose screen is titled *Summary*: all of it in one panel ([KeyPanel]), as its intro.
  */
 @Suppress("LongParameterList") // What was saved and written, and what the buttons do.
 @Composable
@@ -49,12 +50,13 @@ internal fun ColumnScope.SummaryStep(
     retry: suspend () -> Applied?,
     onBusy: (Boolean) -> Unit,
     onDone: () -> Unit,
+    framed: Boolean = false,
 ) {
     var applied by remember { mutableStateOf(first) }
     var busy by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val written = applied
-    SummaryTables(keys, written?.let { summaryOf(keys, it.before, secrets, it.after) })
+    SummaryTables(keys, written?.let { summaryOf(keys, it.before, secrets, it.after) }, framed)
     KeyScreenActions(
         cancel =
             {
@@ -83,86 +85,107 @@ internal fun ColumnScope.SummaryStep(
 }
 
 /**
- * The summary's tables: the [keys] saved, and the services configured ([summary]), or, for null,
- * that the choices could not be written, in the error colour.
+ * The summary's tables, scrolling: the [keys] saved, and the services configured ([summary]), or,
+ * for null, that the choices could not be written, in the error colour; [framed], with their
+ * headings, in one panel ([KeyPanel]).
  */
-@Suppress("LongMethod") // Its two tables.
 @Composable
 private fun ColumnScope.SummaryTables(
     keys: List<SavedKey>,
     summary: KeySummary?,
+    framed: Boolean,
 ) {
     val title = if (keys.size == 1) R.string.load_keys_saved_title_one else R.string.load_keys_saved_title
-    StepHeading(stringResource(title), announced = true)
-    Column(
-        modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        val body = MaterialTheme.typography.bodyMedium
-        val code = codeStyle()
-        val keyRows =
-            keys
-                .map { it to stringResource(serviceName(it.id)) }
-                .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.second })
-                .map { (key, name) ->
-                    val saved =
-                        stringResource(if (key.replaced) R.string.key_saved_replaced else R.string.key_saved_new)
-                    TableRow.Cells(
-                        spoken = spokenParts(keyLine(R.string.key_ending, name, key.ending), saved),
-                        cells =
-                            listOf<@Composable () -> Unit>(
-                                { Text(name, style = body) },
-                                { Text(buildAnnotatedString { appendCode(key.ending, code) }, style = body) },
-                                { Text(saved, style = body) },
-                            ),
-                    )
-                }
-        ChoiceTable(
-            headers =
-                listOf(
-                    stringResource(R.string.key_table_key),
-                    stringResource(R.string.key_table_ending),
-                    stringResource(R.string.key_table_saved),
-                ),
-            aligns = listOf(CellAlign.START, CellAlign.END, CellAlign.START),
-            rows = keyRows,
-        )
-        Column(modifier = Modifier.padding(top = 8.dp)) {
-            StepHeading(stringResource(R.string.load_keys_services_configured))
-        }
-        if (summary == null) {
-            Text(
-                stringResource(R.string.load_keys_services_failed),
-                style = body,
-                color = MaterialTheme.colorScheme.error,
-            )
-            return@Column
-        }
-        // Each service by its name, and whether it is on; an AI service that needs no key by its own.
-        val named =
-            summary.services.map { (id, on) -> stringResource(serviceName(id)) to on } +
-                listOfNotNull(summary.keylessOff?.let { stringResource(aiServiceName(it)) to false })
-        val serviceRows =
-            named
-                .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.first })
-                .map { (name, on) ->
-                    val state =
-                        stringResource(if (on) R.string.key_service_enabled else R.string.key_service_disabled)
-                    TableRow.Cells(
-                        spoken = AnnotatedString(parts(name, state)),
-                        cells =
-                            listOf<@Composable () -> Unit>(
-                                { Text(name, style = body) },
-                                { Text(state, style = body) },
-                            ),
-                    )
-                }
-        ChoiceTable(
-            headers = listOf(stringResource(R.string.key_table_service), stringResource(R.string.key_table_state)),
-            aligns = listOf(CellAlign.START, CellAlign.START),
-            rows = serviceRows,
-        )
+    if (!framed) {
+        StepHeading(stringResource(title), announced = true)
+        Column(
+            modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) { SummaryContent(keys, summary) }
+        return
     }
+    Column(modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())) {
+        KeyPanel {
+            StepHeading(stringResource(title), announced = true)
+            SummaryContent(keys, summary)
+        }
+    }
+}
+
+/**
+ * Under the summary's heading: the table of the [keys] saved, then *Services configured* and its
+ * table ([summary]), or, for null, that the choices could not be written, in the error colour.
+ */
+@Suppress("LongMethod") // Its two tables.
+@Composable
+private fun SummaryContent(
+    keys: List<SavedKey>,
+    summary: KeySummary?,
+) {
+    val body = MaterialTheme.typography.bodyMedium
+    val code = codeStyle()
+    val keyRows =
+        keys
+            .map { it to stringResource(serviceName(it.id)) }
+            .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.second })
+            .map { (key, name) ->
+                val saved =
+                    stringResource(if (key.replaced) R.string.key_saved_replaced else R.string.key_saved_new)
+                TableRow.Cells(
+                    spoken = spokenParts(keyLine(R.string.key_ending, name, key.ending), saved),
+                    cells =
+                        listOf<@Composable () -> Unit>(
+                            { Text(name, style = body) },
+                            { Text(buildAnnotatedString { appendCode(key.ending, code) }, style = body) },
+                            { Text(saved, style = body) },
+                        ),
+                )
+            }
+    ChoiceTable(
+        headers =
+            listOf(
+                stringResource(R.string.key_table_key),
+                stringResource(R.string.key_table_ending),
+                stringResource(R.string.key_table_saved),
+            ),
+        aligns = listOf(CellAlign.START, CellAlign.END, CellAlign.START),
+        rows = keyRows,
+    )
+    Column(modifier = Modifier.padding(top = 8.dp)) {
+        StepHeading(stringResource(R.string.load_keys_services_configured))
+    }
+    if (summary == null) {
+        Text(
+            stringResource(R.string.load_keys_services_failed),
+            style = body,
+            color = MaterialTheme.colorScheme.error,
+        )
+        return
+    }
+    // Each service by its name, and whether it is on; an AI service that needs no key by its own.
+    val named =
+        summary.services.map { (id, on) -> stringResource(serviceName(id)) to on } +
+            listOfNotNull(summary.keylessOff?.let { stringResource(aiServiceName(it)) to false })
+    val serviceRows =
+        named
+            .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.first })
+            .map { (name, on) ->
+                val state =
+                    stringResource(if (on) R.string.key_service_enabled else R.string.key_service_disabled)
+                TableRow.Cells(
+                    spoken = AnnotatedString(parts(name, state)),
+                    cells =
+                        listOf<@Composable () -> Unit>(
+                            { Text(name, style = body) },
+                            { Text(state, style = body) },
+                        ),
+                )
+            }
+    ChoiceTable(
+        headers = listOf(stringResource(R.string.key_table_service), stringResource(R.string.key_table_state)),
+        aligns = listOf(CellAlign.START, CellAlign.START),
+        rows = serviceRows,
+    )
 }
 
 /** A row's two parts, as a screen reader says them: "Anthropic, AI". */

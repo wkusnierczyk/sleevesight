@@ -195,6 +195,8 @@ fun SettingsScreen(
                 showPhoneName = settings?.showPhoneName ?: false,
                 onSealFailed = { sealFailed = it },
                 onOpen = { jump = it },
+                // The key dialog goes unsaved, and *Load keys* opens in its place (#765).
+                onOpenLoadKeys = { dialog = SettingsDialog.LoadKeys },
                 onDismiss = close,
             )
         }

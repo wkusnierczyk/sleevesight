@@ -156,39 +156,57 @@
     <string name="settings_layout_pages">Pages</string>
     <string name="settings_layout_summary">How Sources, the genres, and the song’s, the artist’s and the album’s insights open: in place on the home screen, as expandable boxes, or each on a page of its own, with a back arrow.</string>
 
-    <!-- Load keys and Purge keys (#446): the screens that replace their dialogs. Load keys starts
-         with five words, which seal the setup code (#590). -->
-    <string name="load_keys_words_intro">These words seal your keys: the QR code made with them opens only with them, so a photo or a screenshot of the code alone gives nothing away.</string>
-    <string name="load_keys_open">1. On your computer, open the API keys page:</string>
-    <string name="load_keys_type">2. Type these words there. The first three letters of each are enough.</string>
-    <!-- Under the words; the argument is how many minutes they last. -->
-    <plurals name="load_keys_words_expire">
-        <item quantity="one">This phone takes one QR code made with them, within %1$d minute; it forgets them when you leave this screen.</item>
-        <item quantity="other">This phone takes one QR code made with them, within %1$d minutes; it forgets them when you leave this screen.</item>
-    </plurals>
-    <string name="load_keys_words_expired">These words have expired. Show new words, and type those on the computer.</string>
+    <!-- Load keys and Purge keys (#446): the screens that replace their dialogs. Load keys (#765):
+         an intro, then four numbered steps, the words (#590), the QR code, the keys to save and the
+         services to enable (#763), then a summary. -->
+    <string name="load_keys_intro_open">On a computer, or another device that has your keys, open the API keys page:</string>
+    <string name="load_keys_intro_start">Tap Start to proceed.</string>
+    <string name="load_keys_start">Start</string>
+    <!-- What a screen reader says of a numbered step's title: %1$d is its number, %2$s its title. -->
+    <string name="load_keys_step">Step %1$d: %2$s</string>
+    <string name="load_keys_words_title">Encryption words</string>
+    <string name="load_keys_words_secret">The following five words are a unique one-time secret, used to encrypt your API keys in a QR code. Only this phone can read keys from the code.</string>
+    <string name="load_keys_words_give">Provide these words to the QR generator page; the first three letters are enough. See instructions given there.</string>
+    <!-- Under the words; %1$s is the time they have left, as 4:52, counting down. -->
+    <string name="load_keys_words_within">Use these words within %1$s. When expired, new words are generated automatically.</string>
+    <string name="load_keys_words_forget">The phone forgets the words once you leave this screen.</string>
+    <string name="load_keys_words_next">Once done, tap Next to proceed.</string>
     <string name="load_keys_new_words">New words</string>
     <string name="load_keys_next">Next</string>
-    <string name="load_keys_show_words">Show the words</string>
-    <string name="load_keys_make">3. Then give the page your keys, and it draws the QR code, as its instructions explain:</string>
-    <!-- What a screen reader says of the link to the instructions; the argument is their address. -->
-    <string name="load_keys_instructions_of">Open the instructions at %1$s</string>
-    <string name="load_keys_read_code">4. Read the QR code with the camera.</string>
-    <!-- The key field's Scan QR code, whose code is the step after making it. -->
-    <string name="load_keys_read">2. Read the QR code with the camera.</string>
+    <string name="load_keys_previous">Previous</string>
+    <string name="load_keys_scan_title">QR Code</string>
+    <string name="load_keys_scan_how">Use your phone’s camera to scan the QR code provided by the QR code generator page. The phone will read the QR code and decrypt your API keys using the five words from step 1.</string>
+    <string name="load_keys_scan_next">Once scanned, tap Next to proceed.</string>
+    <!-- Over the camera's view while a sealed code is opened. -->
     <string name="load_keys_opening">Opening the code…</string>
+    <!-- Under the camera's view: a code read, in a panel of the success colour; a code of version 1,
+         made without the words, in a warning panel under it; a code refused, in an error panel. -->
+    <string name="load_keys_read_title">QR code read</string>
+    <string name="load_keys_read_done">Your keys were decrypted.</string>
+    <string name="load_keys_clear_title">This code was not sealed with words</string>
+    <string name="load_keys_clear">Anyone who saw it can read these keys. Clear it from the computer’s screen.</string>
     <string name="load_keys_wrong_words_title">The words don’t match this code</string>
-    <string name="load_keys_wrong_words">The QR code was sealed with other words. Check the words typed on the computer against the ones this phone shows, and scan the code again.</string>
-    <string name="load_keys_expired_title">The words have expired</string>
-    <string name="load_keys_expired">Show new words, type them on the computer, and scan the new QR code it draws.</string>
-    <string name="load_keys_used_title">These words were used</string>
-    <string name="load_keys_used">They have already opened a QR code. Show new words, type them on the computer, and scan the new QR code it draws.</string>
-    <string name="load_keys_damaged_title">A damaged sealed code</string>
-    <string name="load_keys_damaged">This sealed QR code cannot be read. Make it again on the computer, and scan it again.</string>
-    <!-- Over what a setup code of version 1, made without the words, holds. -->
+    <string name="load_keys_wrong_words">It was made with other words. Tap Previous to see this phone’s words, check them against the page, and scan the new code.</string>
+    <string name="load_keys_expired_title">The words had expired</string>
+    <string name="load_keys_expired">New words have been drawn since. Tap Previous for them, type them on the page, and scan the new code it draws.</string>
+    <string name="load_keys_used_title">These words were already used</string>
+    <string name="load_keys_used">They open only one code. Tap Previous for new words, type them on the page, and scan the new code it draws.</string>
+    <string name="load_keys_damaged_title">This code can’t be opened</string>
+    <string name="load_keys_damaged">It is damaged, or was only partly read. Make it again on the page, and scan it again.</string>
+    <string name="load_keys_not_a_setup_title">Not a Sleevesight setup code</string>
+    <string name="load_keys_not_a_setup">Make one on the API keys page: never with an online QR generator, which would receive your keys.</string>
+    <string name="load_keys_newer_title">A code of a newer version</string>
+    <string name="load_keys_newer">This code was made for a newer Sleevesight. Update the app, then scan it again.</string>
+    <!-- Over what a setup code of version 1, made without the words, holds, on the keys to save. -->
     <string name="load_keys_clear_code">This QR code was not sealed with words: anyone who saw it can read these keys. Clear it from the computer’s screen.</string>
-    <!-- The guided screens of the key field's icons (#541), laid out as Load keys is. Scan QR code: -->
-    <string name="key_scan_make">1. Generate a QR code of this one key on your computer, as the instructions explain:</string>
+    <string name="load_keys_keys_title">Keys to save</string>
+    <string name="load_keys_enable_title">Services to enable</string>
+    <string name="load_keys_complete">Complete</string>
+    <string name="load_keys_summary_title">Summary</string>
+    <!-- The guided screens of the key field's icons (#541). Scan QR code (#765): -->
+    <string name="key_scan_open">1. On a computer, open the API keys page, and make a code of this one key under “A code without the words, for a single key”:</string>
+    <string name="key_scan_point">2. Point the camera at the code.</string>
+    <string name="key_scan_any">Any QR code that holds only this key works too.</string>
     <!-- Type on a computer: what it is, then its steps. -->
     <string name="keyboard_explained">Type the key on a computer’s keyboard instead of the phone’s. A page on the computer sends what you type to this phone over Bluetooth, encrypted, and it appears in the key’s field. The computer needs Bluetooth, and Chrome or Edge.</string>
     <string name="keyboard_open">1. On the computer, open the keyboard page:</string>
