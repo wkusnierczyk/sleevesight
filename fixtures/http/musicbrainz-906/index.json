@@ -1,0 +1,24 @@
+[
+ {
+  "method": "GET",
+  "url": "https://musicbrainz.org/ws/2/recording",
+  "query": {
+   "query": "recording:\"Dream On\" AND artist:\"Aerosmith\"",
+   "limit": "100",
+   "fmt": "json"
+  },
+  "status": 200,
+  "file": "recording-recording-dream-on-and-artist-aerosmith.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://musicbrainz.org/ws/2/recording",
+  "query": {
+   "query": "recording:\"Dream On\" AND artist:\"Aerosmith\" AND firstreleasedate:[* TO 1978-10]",
+   "limit": "100",
+   "fmt": "json"
+  },
+  "status": 200,
+  "file": "recording-recording-dream-on-and-artist-aerosmith-by-1978-10.json"
+ }
+]
