@@ -1,53 +1,50 @@
 package app.sleevesight.sources.web
 
 /**
- * Page boilerplate taken out of a web line before it is kept (#905; `design/design.md`, *Web search
- * provider (D11)*, *Page boilerplate*): the text of a page around its facts, which a search
- * engine's highlight often quotes and which, sent as an evidence line, the model wrote about ("an
- * official video is on YouTube", a rights notice called "a useful detail").
+ * Parts of a web line that are only page boilerplate, left out before the line is kept (#905;
+ * `design/design.md`, *Web search provider (D11)*, *Page boilerplate*): the text of a page around
+ * its facts, which a search engine's highlight often quotes and which, sent as an evidence line,
+ * the model wrote about ("an official video is on YouTube", a rights notice called "a useful
+ * detail").
  *
- * [clean] works on the line's parts, the passages between the separators ` ... ` the highlights
- * are joined with. Each page kind's rules run only on that kind's sites, by the result's own
- * address ([Site]), since the same words in another page's prose can be a fact ("the verse
- * alternates Am G", a single titled "All Rights Reserved"). By the kinds of page met on thinly
- * documented tracks (the #767 phone round, 2026-11-04), it takes out:
+ * [clean] never cuts text inside a part (a passage between the separators ` ... ` the highlights
+ * are joined with): it only decides whether a whole part goes. A part goes when it is boilerplate
+ * through and through: once its site's known page text is set aside, what is left has no digit, no
+ * credit (a role's label before a name, in any case: "Music by", "Lyrics:", "Written by"; not a
+ * streaming page's "song and lyrics by"), and no
+ * word beyond the subject's names (the track's title, its work and its artists, or the album and
+ * its artist) and a page's words ([PAGE_WORDS]: "official video", "chords", "YouTube", a site's
+ * address). Every other part stays exactly as it came, boilerplate and all: earlier versions that
+ * cut boilerplate out of a part took facts with it ("- Likes: 98K ## Description …", "is Am G D."),
+ * and dropping a real fact costs more than keeping a little noise. A line whose parts all go gives
+ * no line.
+ *
+ * The known page text is set aside only on its own kind of site, by the result's address ([Site]),
+ * by the kinds of page met on thinly documented tracks (the #767 phone round, 2026-11-04):
  *
  * - on a video site: the footer (YouTube's "About Press Copyright … Test new features"), the
- *   channel's stats as listed fields ("- Channel: … - Views: … - Likes: …") and the bits of them a
- *   cut leaves (".7K"), and a transcript's markers ("[Music]", "♪");
+ *   channel's stats as listed fields ("- Channel: … - Views: 12.3M - Likes: 98K"), each value
+ *   bounded, and the bits of them a cut leaves (".7K"), and a transcript's markers ("[Music]", "♪");
  * - on a streaming service: navigation and sign-in text ("Skip to main content", "Sign in to see
  *   lyrics and listen to the full track", "Listen on Audiomack");
  * - on Bandcamp: the rights heading ("### license all rights reserved"), the upcoming shows, and
  *   the supporters' user names: the "supported by" label, and a run of eight or more words without
- *   punctuation, two of them handles (`killer_tofu123`), that follows the label, or starts the part
- *   and meets the track list's table or a heading; never a sentence;
- * - on a chord site: the tuning, capo and "Chords used" fields, a practice tip, and chord symbols
- *   between lyrics (a run of two or more, one with more than its letter: `Dm C6`, `Bbmaj7 G`; not
- *   ending in a bare "A", the likelier article, nor before a word in lower case, as prose has them);
+ *   punctuation, two of them handles (`killer_tofu123`), after the label, or starting the part and
+ *   meeting the track list's table or a heading;
+ * - on a chord site: the tuning, capo and "Chords used" fields, a practice tip, and runs of chord
+ *   symbols (`Dm C6`, `Bbmaj7 G`);
  * - on Letras: its credits page's report links and registry line;
  * - on any page: a lyrics site's fixed sentences, whole ("Compare plain and time-synced lyrics, …",
- *   "Artists like … 10 similar artists"), and a rights notice standing on its own: a part that is
- *   only "All rights reserved", or that sentence right after a © or ℗ notice ending the part,
- *   which stays, since it names the label and the year.
- *
- * A passage taken out of the middle of a part leaves the separator in its place, so the line stays
- * a quote with its gaps shown; chord symbols and a transcript's markers leave a space, since the
- * words around them read on. Each part loses the dashes, bars and bullets at its ends.
- *
- * Then a part is kept if it has a digit (a year, a date, a duration), a credit (a label such as
- * "Music:" or "Written by" before a name, the subject's too), or a word that is neither the
- * subject's (the track's title, its work and its artists, or the album and its artist) nor a
- * page's ([PAGE_WORDS]: "official video", "chords", "YouTube", a site's address). A line with no
- * part left is no line. Everything else stays as the engine gave it: dropping a real fact costs
- * more than keeping a little noise, so the rules match the page text seen, where it is seen.
+ *   "Artists like … 10 similar artists"), and a part that is only "All rights reserved".
  */
 internal object WebBoilerplate {
     /** The separator between a line's parts: the one highlights are joined with. */
     const val SEPARATOR: String = " ... "
 
     /**
-     * [text] (whitespace collapsed) of the page at [url] without its boilerplate, for the [subject]
-     * (names, as given), folded by [fold] as the filter folds them; empty when no part is left.
+     * [text] (whitespace collapsed) of the page at [url] without its parts that are only
+     * boilerplate, for the [subject] (names, as given), folded by [fold] as the filter folds them;
+     * the parts kept as they came; empty when no part is left.
      */
     fun clean(
         text: String,
@@ -62,10 +59,7 @@ internal object WebBoilerplate {
             parts.withIndex().flatMap { (i, part) ->
                 // A separator the line starts or ends with stays: it shows the quote goes on.
                 if (part.isEmpty()) return@flatMap if (i == 0 || i == parts.lastIndex) listOf(part) else emptyList()
-                strip(part, site)
-                    .split(PART_BREAK)
-                    .map { withoutRights(tidy(it)) }
-                    .filter { it.isNotEmpty() && keeps(it, site, words, fold) }
+                if (onlyBoilerplate(part, site, words, fold)) emptyList() else listOf(part)
             }
         if (kept.none { it.isNotEmpty() }) return ""
         return kept.joinToString(SEPARATOR).trim()
@@ -101,7 +95,7 @@ internal object WebBoilerplate {
         }
     }
 
-    // [part] with its site's rules and the fixed sentences of any page applied.
+    // [part] with its site's known page text and any page's fixed sentences set aside, each leaving the separator.
     private fun strip(
         part: String,
         site: Site,
@@ -115,7 +109,7 @@ internal object WebBoilerplate {
         return text
     }
 
-    // A piece of a part without the spaces, dashes, bars and bullets at its ends, often left by a passage taken out.
+    // A piece of what is left without the spaces, dashes, bars and bullets at its ends.
     private fun tidy(piece: String): String =
         piece
             .replace(SPACES, " ")
@@ -124,15 +118,9 @@ internal object WebBoilerplate {
             .trimEnd { it in LEFT_OVER || it == '#' }
             .trim()
 
-    // [piece] without a rights notice standing on its own: all of it, or the sentence after a © notice ending it.
-    private fun withoutRights(piece: String): String =
-        if (ONLY_RIGHTS.matches(piece)) "" else NOTICE_RIGHTS.replace(piece, "$1")
-
     /**
-     * [text] without chord symbols in runs of two or more, one with more than its letter, the run
-     * never ending in a bare "A" and not followed by a word in lower case, which is prose about the
-     * chords: a chord sheet's chords above its lyrics. Scanned word by word, so a long highlight
-     * cannot exhaust the stack.
+     * [text] without runs of two or more chord symbols, one with more than its letter (not "A E"):
+     * a chord sheet's chords. Scanned word by word, so a long highlight cannot exhaust the stack.
      */
     internal fun withoutChords(text: String): String {
         val words = text.split(' ')
@@ -141,21 +129,9 @@ internal object WebBoilerplate {
         while (i < words.size) {
             var end = i
             while (end < words.size && CHORD.matches(words[end])) end++
-            val chords = if (end > i && words[end - 1] == "A") end - 1 else end
-            val run = words.subList(i, chords)
-            // Prose names chords mid-sentence ("alternates Am G throughout"); a sheet's next lyric starts a line.
-            val inSentence = words.getOrNull(chords)?.firstOrNull { it.isLetter() }?.isLowerCase() == true
-            when {
-                run.size >= 2 && run.any { it.length > 1 } && !inSentence -> i = chords
-                end > i -> {
-                    out += words.subList(i, end)
-                    i = end
-                }
-                else -> {
-                    out += words[i]
-                    i++
-                }
-            }
+            val run = words.subList(i, end)
+            if (run.size < 2 || run.none { it.length > 1 }) out += words.subList(i, maxOf(i + 1, end))
+            i = maxOf(i + 1, end)
         }
         return out.joinToString(" ")
     }
@@ -202,20 +178,30 @@ internal object WebBoilerplate {
         return end.takeIf { atEdge && names.size >= MIN_SUPPORTERS && names.count(::isHandle) >= 2 }
     }
 
-    // Whether [piece] stays: a digit, a credit, or a word beyond the subject's and a page's.
-    private fun keeps(
-        piece: String,
+    /**
+     * Whether [part] is page boilerplate through and through: with its [site]'s known page text set
+     * aside ([strip]), no piece left has a digit, a credit, or a word beyond the [subject]'s and a
+     * page's ([saysMore]). On a video site a count or a time stamp's tail alone (".7K") is what a
+     * cut left of the stats, not a number of the page's own.
+     */
+    private fun onlyBoilerplate(
+        part: String,
         site: Site,
         subject: Set<String>,
         fold: (String) -> String,
     ): Boolean =
-        when {
-            // What a cut leaves of a video's stats: ".7K", "01T01:42:14-08:".
-            site == Site.VIDEO && piece.length <= STATS_BIT_LENGTH && STATS_BIT.matches(piece) -> false
-            piece.any { it.isDigit() } -> true
-            CREDIT.containsMatchIn(piece) -> true
-            else -> saysMore(piece, subject, fold)
-        }
+        strip(part, site)
+            .split(PART_BREAK)
+            .map(::tidy)
+            .filter { it.isNotEmpty() }
+            .none { piece ->
+                when {
+                    site == Site.VIDEO && piece.length <= STATS_BIT_LENGTH && STATS_BIT.matches(piece) -> false
+                    piece.any { it.isDigit() } -> true
+                    CREDIT.containsMatchIn(piece) -> true
+                    else -> saysMore(piece, subject, fold)
+                }
+            }
 
     /**
      * Whether [part] says more than [subject] (folded words) in a page's words: at least two
@@ -269,30 +255,26 @@ internal object WebBoilerplate {
 
     private val IGNORE_CASE = setOf(RegexOption.IGNORE_CASE)
 
-    /** A piece that is only a rights notice's last sentence. */
-    private val ONLY_RIGHTS = Regex("all rights reserved\\.?", IGNORE_CASE)
-
-    /** "All rights reserved" right after a © or ℗ notice that starts the piece or a sentence, ending it. */
-    private val NOTICE_RIGHTS =
-        Regex("((?:^|(?<=[.!?] ))[©℗] ?\\d{4}[^©℗]{0,100}?\\.) all rights reserved\\.?$", IGNORE_CASE)
-
     /**
-     * A credit: a role's label and a name after it, which a part keeps even when the name is the
-     * subject's ("Music: Gordon Lightfoot", "Written by Gordon Lightfoot", "Compositor: …").
+     * A credit: a role's label and a name after it, in any case and script, which keeps a part even
+     * when the name is the subject's ("Music by Gordon Lightfoot", "Lyrics: gordon lightfoot",
+     * "Compositor: …").
      */
     private val CREDIT =
         Regex(
-            "(?:(?i:music|lyrics|words|writers?|composers?|lyricists?|songwriters?|producers?|arrangers?|" +
-                "compositor|writer/composer)\\s*:|" +
-                "(?i:written|composed|produced|arranged|mixed|engineered|recorded) by|(?i:escrita|composta) por:?)" +
-                "\\s*\\p{Lu}",
+            // Not a streaming page's title, "<song> - song and lyrics by <artist>".
+            "(?:\\b(?:music|(?<!song and )lyrics|words|written|composed|produced|arranged|mixed|engineered|" +
+                "recorded) by|" +
+                "\\b(?:music|lyrics|words|writers?|composers?|lyricists?|songwriters?|producers?|arrangers?|" +
+                "compositor|letra|writer/composer)\\s*:|\\b(?:escrita|composta) por:?)\\s*\\p{L}",
+            IGNORE_CASE,
         )
 
-    /** A transcript's markers on a video site, taken out leaving a space: the words around them read on. */
+    /** A transcript's markers on a video site, set aside leaving a space. */
     private val MARKERS: List<Regex> =
         listOf("\\[(?:Music|Applause|Laughter|Cheering|Instrumental)]", "♪").map { Regex(it, IGNORE_CASE) }
 
-    /** Each kind of site's page text, taken out leaving the separator. */
+    /** Each kind of site's known page text, set aside leaving the separator. */
     private val PASSAGES: Map<Site, List<Regex>> =
         mapOf(
             Site.VIDEO to
@@ -300,8 +282,13 @@ internal object WebBoilerplate {
                     "About Press Copyright Contact us Creators Advertise Developers Terms " +
                         "Privacy(?: Policy & Safety)? How YouTube works Test new features" +
                         "(?: NFL Sunday Ticket)?(?: © \\d{4} Google LLC)?",
-                    "(?<=^|\\s)- (?:Channel|Length|Duration|Views|Likes|Dislikes|Comments|Subscribers|Published|" +
-                        "Uploaded)\\b(?::.*?)?(?=\\s-(?:\\s|$)|$)",
+                    // Each stat with its value only: a count, a time, a date, or a channel's name up to the
+                    // next field; never past a heading, so a description after them is not counted as one.
+                    "(?<=^|\\s)- Channel: [^#]{1,60}?(?=\\s- (?:Length|Duration|Views|Likes|Published)\\b)",
+                    "(?<=^|\\s)- (?:Views|Likes|Dislikes|Comments|Subscribers)(?:: [\\d.,]+[KMB]?)?(?=\\s|$)",
+                    "(?<=^|\\s)- (?:Length|Duration)(?:: [\\d:]+)?(?=\\s|$)",
+                    "(?<=^|\\s)- (?:Published|Uploaded)(?:: [\\d-]+(?:T[\\d:+-]+)?)?(?=\\s|$)",
+                    "(?<=^|\\s)-(?=\\s|$)",
                 ),
             Site.STREAMING to
                 listOf(
@@ -335,7 +322,7 @@ internal object WebBoilerplate {
                 ),
         ).mapValues { (_, rules) -> rules.map { Regex(it, IGNORE_CASE) } }
 
-    /** A lyrics site's fixed sentences, whole, which no prose has: taken out on any page. */
+    /** A lyrics site's fixed sentences, whole, which no prose has, and a part only of a rights line: on any page. */
     private val ANY_PAGE: List<Regex> =
         listOf(
             "Format: Lyrics \\+ LRC",
@@ -343,6 +330,7 @@ internal object WebBoilerplate {
             "Compare plain and time-synced lyrics, check other recording versions, and download available " +
                 "lyric or subtitle formats\\.",
             "(?:\\d+\\. )?Artists like .{1,60}? \\d+ similar artists(?: \\d+\\.)?",
+            "^all rights reserved\\.?$",
         ).map { Regex(it, IGNORE_CASE) }
 
     // A chord symbol, a whole word: its letter, an accidental, a quality, a number, a bass note.

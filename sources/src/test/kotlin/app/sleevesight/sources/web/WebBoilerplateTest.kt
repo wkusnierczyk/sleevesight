@@ -21,6 +21,7 @@ import kotlin.test.assertTrue
  * streaming service, a store, a chord sheet, a lyrics site, a rights notice), on its site's host,
  * with the sites' fixed text as those pages had it and the project's own words for the rest
  * (`fixtures/http/web/README.md`); and the facts in prose that look like boilerplate, which stay.
+ * A part goes whole or stays whole: nothing is cut out of one.
  */
 class WebBoilerplateTest {
     private val recording = "web/exa-01-sundown-boilerplate.response.json"
@@ -56,12 +57,12 @@ class WebBoilerplateTest {
     }
 
     @Test
-    fun `a video page's footer is taken out, and a page with only its title gives no line`() {
+    fun `a video page with only its title and footer gives no line`() {
         assertEquals("", lineFor("https://www.youtube.com/watch?v=sundown-official"))
     }
 
     @Test
-    fun `a video page's channel stats are taken out and its description kept`() {
+    fun `a video page's part of channel stats goes, its description stays`() {
         assertEquals(
             "## Description Official audio for Sundown by Gordon Lightfoot, the title track of his 1974 album.",
             lineFor("https://www.youtube.com/watch?v=sundown-1974"),
@@ -69,15 +70,16 @@ class WebBoilerplateTest {
     }
 
     @Test
-    fun `a streaming page's navigation and sign-in text are taken out`() {
+    fun `a streaming page's navigation goes, and a part with a fact stays whole, sign-in text and all`() {
         assertEquals(
-            "Song # Sundown Gordon Lightfoot • Sundown• 1974• 3:33 ## Lyrics",
+            "Song # Sundown Gordon Lightfoot • Sundown• 1974• 3:33 ## Lyrics " +
+                "Sign in to see lyrics and listen to the full track",
             lineFor("https://open.spotify.com/track/sundown-fixture"),
         )
     }
 
     @Test
-    fun `a store page's rights line, shows and supporters' label are taken out`() {
+    fun `a store page's parts of its title, rights line and shows go`() {
         assertEquals(
             "### credits from Sundown, released January 1, 1974",
             lineFor("https://sundown-fixture.bandcamp.com/track/sundown"),
@@ -85,7 +87,7 @@ class WebBoilerplateTest {
     }
 
     @Test
-    fun `a list of user names is taken out`() {
+    fun `a part of supporters' user names goes`() {
         assertEquals(
             "1. | Sundown 03:33 | ### credits released January 1, 1974",
             lineFor("https://sundown-fixture.bandcamp.com/album/sundown"),
@@ -98,7 +100,7 @@ class WebBoilerplateTest {
     }
 
     @Test
-    fun `a chord sheet's tuning, capo, chords and practice tip are taken out, its tempo kept`() {
+    fun `a chord sheet's parts of fields and a practice tip go, its tempo stays`() {
         assertEquals(
             "# Sundown Chords by Gordon Lightfoot Tempo: 112 bpm",
             lineFor("https://chordu.com/chords-tabs-sundown-fixture"),
@@ -106,25 +108,28 @@ class WebBoilerplateTest {
     }
 
     @Test
-    fun `chord symbols between lyrics are taken out, an article after them kept`() {
+    fun `a part of chords alone goes, and lyrics with chords between them stay whole`() {
         assertEquals(
-            "The evening light along the shore A quiet road back home ... A small town after dark",
+            "\u200B Am G \u200BThe evening light along the shore \u200B Fmaj7 C \u200BA quiet road back home",
             lineFor("https://www.cifraclub.com.br/fixture/sundown/"),
         )
     }
 
     @Test
-    fun `a lyrics site's format and similar-artists lines are taken out, the lyric kept`() {
+    fun `a lyrics site's parts of format, similar artists and its fixed sentence go, the lyric stays`() {
         assertEquals("The evening light along the shore.", lineFor("https://lyrics.example/gordon-lightfoot/sundown"))
     }
 
     @Test
-    fun `a transcript's markers are taken out`() {
-        assertEquals("the evening light along the shore", lineFor("https://www.youtube.com/watch?v=sundown-live"))
+    fun `a part of transcript markers alone goes, a lyric with them stays whole`() {
+        assertEquals(
+            "the evening light [Music] ♪ along the shore ♪",
+            lineFor("https://www.youtube.com/watch?v=sundown-live"),
+        )
     }
 
     @Test
-    fun `a rights notice is taken out, the copyright line naming the label kept`() {
+    fun `a part that is only a rights line goes, the copyright line naming the label stays`() {
         assertEquals(
             "Sundown, Gordon Lightfoot, 1974. © 1974 Reprise Records.",
             lineFor("https://records.example/sundown"),
@@ -171,10 +176,31 @@ class WebBoilerplateTest {
         }
 
     @Test
-    fun `a site's rules run only on its own site`() {
-        val sheet = "# Sundown Chords by Gordon Lightfoot Tempo: 112 bpm Chords used: E A B7 C#m Capo:+0fret"
-        assertEquals(sheet, lineOf("https://lyrics.example/sundown", sheet))
-        assertEquals("# Sundown Chords by Gordon Lightfoot Tempo: 112 bpm", lineOf("https://chordu.com/fixture", sheet))
+    fun `a site's page text counts as boilerplate only on its own site`() {
+        val fields = "Chords used: E A B7 C#m Tuning: Standard Tuning (EADGBE) Capo:+0fret"
+        assertEquals(fields, lineOf("https://lyrics.example/sundown", fields))
+        assertEquals("", lineOf("https://chordu.com/fixture", fields))
+    }
+
+    @Test
+    fun `a description after a video's stats in one part is kept whole`() {
+        assertKeptEverywhere("- Likes: 98K ## Description Gordon Lightfoot recorded Sundown in 1974.")
+    }
+
+    @Test
+    fun `credits naming the subject are kept in any form and case`() {
+        assertKeptEverywhere("Music by Gordon Lightfoot. ... Lyrics by Gordon Lightfoot.")
+        assertKeptEverywhere("Music: gordon lightfoot.")
+    }
+
+    @Test
+    fun `chords named in a sentence are kept whole, on a chord site too`() {
+        assertKeptEverywhere("The progression in Sundown by Gordon Lightfoot is Am G D.")
+        assertKeptEverywhere("La progression de Sundown par Gordon Lightfoot est Am G D.")
+        assertEquals(
+            "The progression in Sundown by Gordon Lightfoot is Am G D.",
+            lineOf("https://chordu.com/fixture", "The progression in Sundown by Gordon Lightfoot is Am G D."),
+        )
     }
 
     @Test

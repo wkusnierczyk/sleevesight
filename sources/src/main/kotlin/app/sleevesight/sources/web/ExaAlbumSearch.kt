@@ -31,8 +31,9 @@ interface AlbumWebSearch {
  * of the track playing; the album's name without the edition a player or store adds in brackets,
  * `Edition.stripEditions`: "Abbey Road (Remastered)" is "Abbey Road", "Sundown (Live)" stays, which
  * the filter then asks a page to name too), the same host and policy ([ExaWebSearch.HOST_POLICY]),
- * and the same lines ([ExaWebSearch.lines]: Exa's highlights without page boilerplate, the album and
- * its artist as the subject ([WebBoilerplate]), cut to [ExaWebSearch.LINE_CHARACTERS],
+ * and the same lines ([ExaWebSearch.lines]: Exa's highlights without the parts that are only page
+ * boilerplate, the album and its artist as the subject ([WebBoilerplate]), cut to
+ * [ExaWebSearch.LINE_CHARACTERS],
  * at most [ExaWebSearch.MAX_LINES], with the result's URL), of the results about the album
  * ([RecordingFilter.isAboutAlbum]: its title and the artist named). Each line is a web line
  * (scope web) of the album's evidence.

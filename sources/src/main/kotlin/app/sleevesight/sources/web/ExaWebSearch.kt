@@ -31,9 +31,10 @@ import kotlin.time.TimeSource
 /**
  * Web search through Exa, the first provider (D11; `design/design.md`, *Web search provider (D11)*), on the
  * user's own key. One evidence line per kept result: Exa's highlight for it, verbatim apart from
- * whitespace and page boilerplate ([WebBoilerplate], #905), cut to at most [LINE_CHARACTERS] at a
- * word boundary ([cut]), with the result's URL (architecture, *Source adapters*). A result whose
- * highlight is all boilerplate, or names only the track in a page's words, gives no line.
+ * whitespace and the parts that are only page boilerplate ([WebBoilerplate], #905), cut to at most
+ * [LINE_CHARACTERS] at a word boundary ([cut]), with the result's URL (architecture, *Source
+ * adapters*). A result whose every part is boilerplate, or names only the track in a page's words,
+ * gives no line.
  *
  * The query names the song and its credited artists ([ExaSearchRequest.of]); the results are then
  * kept or dropped by [RecordingFilter], at most [MAX_LINES] in Exa's order. The filter judges the
@@ -153,8 +154,9 @@ class ExaWebSearch(
          * [extractionVersion]: raised when what the adapter makes of Exa's results changes. 2: each
          * line cut to [LINE_CHARACTERS] and judged as cut (#634), so a result kept before, with a
          * line up to ten times as long or kept for words past the cut, is missed instead of served.
-         * 3: page boilerplate taken out before the cut ([WebBoilerplate], #905), so a line kept
-         * before, with a video site's footer or a store's rights line in it, is looked up again.
+         * 3: the parts that are only page boilerplate left out before the cut ([WebBoilerplate],
+         * #905), so a line kept before, with a video site's footer or a store's rights line as a
+         * part of it, is looked up again.
          */
         const val EXTRACTION_VERSION: Int = 3
 
@@ -195,9 +197,9 @@ class ExaWebSearch(
 
         /**
          * A source's line for [result]: its highlights joined as [snippetOf] joins them, without
-         * the page's boilerplate by its site, for the [subject] ([WebBoilerplate.clean], #905), then [cut] to
-         * [LINE_CHARACTERS], so the room boilerplate took goes to the page's own text. Empty when
-         * nothing is left.
+         * the parts that are only its site's boilerplate, for the [subject] ([WebBoilerplate.clean],
+         * #905), then [cut] to [LINE_CHARACTERS], so the room those parts took goes to the page's
+         * own text. Empty when no part is left.
          */
         internal fun lineOf(
             result: ExaResult,
