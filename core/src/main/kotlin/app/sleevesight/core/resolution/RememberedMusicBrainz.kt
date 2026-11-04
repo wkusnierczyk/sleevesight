@@ -13,10 +13,11 @@ import kotlin.time.TimeSource
 /**
  * MusicBrainz's answers, kept in memory for a short time ([lifetime]), so that asking again soon
  * after sends no request (`design/architecture.md`, *Preparing the next track*, D13). Each question
- * is answered by [musicBrainz] once; a search by name, a recording, a recording's releases (#724),
- * a work and an artist search are each kept by what was asked, at most [capacity] of each kind, the least recently used
- * dropped first. An answer that could not be obtained ([Lookup.Failed]) is not kept, so the next
- * question asks again; one that MusicBrainz gave, found or not, is.
+ * is answered by [musicBrainz] once; a search by name, one for the recordings released by a date
+ * (#906), a recording, a recording's releases (#724), a work and an artist search are each kept by
+ * what was asked, at most [capacity] of each kind, the least recently used dropped first. An answer
+ * that could not be obtained ([Lookup.Failed]) is not kept, so the next question asks again; one that
+ * MusicBrainz gave, found or not, is.
  *
  * What it serves: preparing the next track looks it up from the player's queue item, which has
  * no length (or album), and so resolves it by name only; when the track then plays, its own run
@@ -49,6 +50,7 @@ class RememberedMusicBrainz(
     private val tags: () -> Boolean = { true },
 ) : MusicBrainzLookup {
     private val searches = Memory<Pair<String, String>, List<MbRecording>>()
+    private val earlier = Memory<Triple<String, String, String>, List<MbRecording>>()
     private val recordings = Memory<Pair<String, Boolean>, MbRecordingDetail>()
     private val releases = Memory<String, MbRecording>()
     private val works = Memory<String, MbWork>()
@@ -58,6 +60,16 @@ class RememberedMusicBrainz(
         title: String,
         artist: String,
     ): Lookup<List<MbRecording>> = searches.answer(title to artist) { musicBrainz.searchRecordings(title, artist) }
+
+    override suspend fun searchRecordingsBefore(
+        title: String,
+        artist: String,
+        date: String,
+    ): Lookup<List<MbRecording>> =
+        // A full answer may have skipped recordings (#906): it is used but not kept, so a retry asks again.
+        earlier.answer(Triple(title, artist, date), keeps = { it.size < MusicBrainzLookup.SEARCH_PAGE }) {
+            musicBrainz.searchRecordingsBefore(title, artist, date)
+        }
 
     override suspend fun recording(mbid: String): Lookup<MbRecordingDetail> =
         recordings.answer(mbid to tags()) { musicBrainz.recording(mbid) }
@@ -73,6 +85,7 @@ class RememberedMusicBrainz(
     /** Forgets every answer kept, for *Clear history* (#547): the next question asks again. */
     suspend fun forget() {
         searches.forget()
+        earlier.forget()
         recordings.forget()
         releases.forget()
         works.forget()
@@ -91,13 +104,15 @@ class RememberedMusicBrainz(
         // Insertion-ordered; an entry is moved to the end when used, so the first is the least recent.
         private val kept = LinkedHashMap<K, Kept>()
 
+        // [keeps]: whether a found answer is kept; one that is not, as one not obtained, is asked again.
         suspend fun answer(
             key: K,
+            keeps: (T) -> Boolean = { true },
             ask: suspend () -> Lookup<T>,
         ): Lookup<T> {
             if (!FreshLookups.active()) kept(key)?.let { return it }
             val answer = ask()
-            if (answer !is Lookup.Failed) keep(key, answer)
+            if (answer !is Lookup.Failed && (answer !is Lookup.Found || keeps(answer.value))) keep(key, answer)
             return answer
         }
 

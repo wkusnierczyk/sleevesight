@@ -9,6 +9,7 @@ gate run found resolution errors (`RecordedTracks` in `:sources`' tests).
 | Directory | Source | Licence of the content |
 |---|---|---|
 | `musicbrainz/` | MusicBrainz web service, `https://musicbrainz.org/ws/2` | Core data, CC0 ([Data License](https://musicbrainz.org/doc/About/Data_License)). Requested without `inc=genres`, and without `inc=tags` but on a recording's lookup, which asks for its tags for the track's genre labels (#439); the `tags` and `genres` fields (supplementary data, CC BY-NC-SA 3.0), asked for or returned unasked, are removed when recording, and nothing else is changed |
+| `musicbrainz-906/` | MusicBrainz web service: the recording search for *Dream On* by Aerosmith (#906), recorded by hand on 2026-11-04, not by `RecordHttpFixtures` or `:cli record`: a first page from a request whose ranking held none of the 1973 studio recording (the ranking varies from one request to the next), and the search for those released by 1978-10, the earliest date on it that could be chosen | As `musicbrainz/`, `tags` and `genres` removed |
 | `wikidata/` | Wikidata action API, `https://www.wikidata.org/w/api.php` | CC0 ([Wikidata licensing](https://www.wikidata.org/wiki/Wikidata:Licensing)); stored as received |
 | `wikipedia/` | English Wikipedia action API, `https://en.wikipedia.org/w/api.php` | Article text: Wikipedia contributors, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/); each response holds the article titles, so the articles and their histories, which credit the authors, can be found at `https://en.wikipedia.org/wiki/<title>`. Stored as received |
 
@@ -34,7 +35,7 @@ pruning would remove its old recording. Without the variable the test does nothi
 responses as the sources' data changes, so the tests' expectations are checked again after it.
 
 Recorded 2026-10-14; track 50 on 2026-10-16, with `:cli record` (#79); the releases of track 63's original
-(`inc=releases+release-groups`, a cover's one more lookup) on 2026-10-31 (#724).
+(`inc=releases+release-groups`, a cover's one more lookup) on 2026-10-31 (#724). Track 55's search by date (`firstreleasedate:[* TO 1956-05]`) and its recording `ffe4a448…` on 2026-11-04 with `:cli record` (#906); its first page and work kept from before.
 
 ### With the CLI
 
