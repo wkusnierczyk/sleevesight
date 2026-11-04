@@ -90,9 +90,10 @@ class GenreReasonPromptTest {
         assertTrue(GenreReasonPrompt.ABOUT_THE_MUSIC_RULE in text)
         assertTrue(GroundingCheck.NO_EVIDENCE in text)
         // The insight's, but its rule against readings of the model's own (telling what fits a genre
-        // is one) and its rule on counts, which leaves out tags and similar artists (they explain a genre).
+        // is one), its rule on counts, which leaves out tags and similar artists (they explain a genre),
+        // and its rule on nothing worth telling: the reason keeps the shared one, its LABEL_RULE beside it.
         val insight = InsightPrompt.rules(allowModel = false).lines()
-        val left = setOf(InsightPrompt.NO_READING_RULE, InsightPrompt.COUNTS_RULE)
+        val left = setOf(InsightPrompt.NO_READING_RULE, InsightPrompt.COUNTS_RULE, InsightPrompt.NOTHING_TO_TELL_RULE)
         val rules = GenreReasonPrompt.contract(allowModel = false).lines()
         assertEquals(insight - left, rules.filter { it in insight })
         assertTrue(GenreReasonPrompt.COUNTS_RULE in rules)

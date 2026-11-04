@@ -174,8 +174,10 @@ class InsightPromptTest {
             assertTrue("Write no sentence without a citation." in gap, gap)
             assertTrue("one good sentence is enough" in gap, "version 9's (#767)")
             assertFalse(contract.any { GroundingCheck.GAP_SENTENCE in it }, "version 2's gap sentence is gone")
-            val noEvidence = "- If no evidence is usable, reply with exactly: ${GroundingCheck.NO_EVIDENCE}"
-            assertEquals(noEvidence, contract.last())
+            // Nothing worth telling: the exact reply the app turns into its own text, and no sentence on why (#767).
+            assertEquals(InsightPrompt.NOTHING_TO_TELL_RULE, contract.last())
+            assertTrue("reply with exactly: ${GroundingCheck.NO_EVIDENCE}." in contract.last(), contract.last())
+            assertTrue("Never say what is missing." in contract.last(), contract.last())
             val knowledge = if (allowModel) MODEL_RULE else "- Do not use your own knowledge."
             assertTrue(knowledge in contract, knowledge)
             // The player shows the length, so the insight leaves it out (#722).

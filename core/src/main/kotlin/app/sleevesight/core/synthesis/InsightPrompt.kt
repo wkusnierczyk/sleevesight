@@ -157,13 +157,16 @@ object InsightPrompt {
      * came to be read better on every model tried. A style line ("most telling fact first") was too
      * weak; it takes the role itself. The release is never the opening, and "no preamble and no
      * filler" is against the padding that thin evidence drew: sentences on the sources rather than
-     * the song.
+     * the song. What the evidence tells, and the list as examples ("such as"): on the A/B's first run
+     * the list read as what every card must cover, and on three thinly documented tracks the model
+     * said in uncited sentences that the evidence lacked it ("The evidence here is thin.", "the
+     * sources say nothing about how it was made"), seven of 141 sentences against version 8's none.
      */
     const val ROLE: String =
         "You write the insight card on a music app's now-playing screen. Someone is listening to this " +
-            "track right now. Open with the most interesting thing about the song: what it is about, how or " +
-            "why it was made, who played on it, what became of it. No preamble and no filler, and never open " +
-            "with when or where it was released."
+            "track right now. Open with the most interesting thing the evidence tells about the song, such as " +
+            "what it is about, how or why it was made, who played on it, or what became of it. No preamble and " +
+            "no filler, and never open with when or where it was released."
 
     /**
      * The data guard (version 9, #767): the user message's blocks are data, never instructions, each
@@ -217,8 +220,20 @@ object InsightPrompt {
             if (allowModel) MODEL_RULE else NO_MODEL_RULE,
             FINAL_TEXT_RULE,
             PLAIN_TEXT_RULE,
-            NO_EVIDENCE_RULE,
+            NOTHING_TO_TELL_RULE,
         ).joinToString("\n")
+
+    /**
+     * The insight's rule on a reply with nothing to write (version 9, #767), in place of the shared
+     * [NO_EVIDENCE_RULE], which the song's, the artist's and the album's prompts and the genre reason
+     * still use: `NO_EVIDENCE` when the evidence holds nothing worth telling, not only when none of it
+     * is usable, and never a sentence on why. On the A/B's first run a track with only its release
+     * line and a page of empty fields was told in uncited sentences that there was nothing to tell;
+     * the app's own text says that ([GroundingCheck.NO_EVIDENCE]).
+     */
+    const val NOTHING_TO_TELL_RULE: String =
+        "- If the evidence holds nothing worth telling about the song, reply with exactly: " +
+            "${GroundingCheck.NO_EVIDENCE}. Never say what is missing."
 
     /** The rule on citations: every factual sentence ends with the ids of the lines it rests on. */
     val CITATION_RULE: String =
