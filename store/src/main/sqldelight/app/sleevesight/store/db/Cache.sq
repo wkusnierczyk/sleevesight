@@ -240,6 +240,10 @@ SELECT id, stored_at, sources FROM artist_result;
 artistResultDeleteAll:
 DELETE FROM artist_result;
 
+-- Every artist-level result but those of the parts named, kept whatever that switch says (#885).
+artistResultDeleteAllBut:
+DELETE FROM artist_result WHERE part NOT IN ?;
+
 -- Synthesis
 
 synthesisGet:

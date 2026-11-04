@@ -86,12 +86,14 @@ class ArtistKeeping(
 
         /**
          * The switch as [keeps] reads it, over the caches [caches] gives at the first clear, cleared
-         * in [io] ([Caches] makes blocking database calls).
+         * in [io] ([Caches] makes blocking database calls), but for the artist-level parts named in
+         * [spared], kept whatever the switch says ([Caches.clearArtists], #885).
          */
         fun over(
             caches: () -> Caches,
             io: CoroutineContext,
+            spared: Set<String> = emptySet(),
             keeps: () -> Boolean,
-        ): ArtistKeeping = ArtistKeeping(keeps) { withContext(io) { caches().clearArtists() } }
+        ): ArtistKeeping = ArtistKeeping(keeps) { withContext(io) { caches().clearArtists(spared) } }
     }
 }

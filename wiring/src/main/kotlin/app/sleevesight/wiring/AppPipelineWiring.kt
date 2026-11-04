@@ -13,7 +13,9 @@ import app.sleevesight.net.NetClient
  * the rate limiters belong to the client, so a second wiring would double every limit. The client
  * lives as long as the process; [PipelineWiring.close] closes it, for tests. MusicBrainz's answers
  * are kept for a short time ([PipelineWiring], `RememberedMusicBrainz`), for preparing the next
- * track (D13). What sources give for an artist is kept in [artists], the app's artist cache (#238).
+ * track (D13). What sources give for an artist is kept in [artists], the app's artist cache (#238);
+ * what an album's web search found, in [trackOnly], the same cache kept whatever *Keep what sources
+ * said about each artist* says (#885, [PipelineWiring.TRACK_ONLY_PARTS]).
  * [genres] is whether genre information is asked for (*Show genres*, #444), as last read.
  * [epoch] is *Clear history*'s boundary (#547), and [musicBrainzThrough] a stand-in for the tests
  * ([PipelineWiring]).
@@ -28,6 +30,7 @@ fun appPipelineWiring(
     accentFolder: AccentFolder,
     resources: ResourceReader,
     artists: ArtistResults,
+    trackOnly: ArtistResults = artists,
     genres: () -> Boolean = { true },
     epoch: ClearEpoch = ClearEpoch(),
     musicBrainzThrough: (MusicBrainzLookup) -> MusicBrainzLookup = { it },
@@ -39,6 +42,7 @@ fun appPipelineWiring(
         rememberMusicBrainz = true,
         ownsNet = true,
         artists = artists,
+        trackOnly = trackOnly,
         genres = genres,
         epoch = epoch,
         musicBrainzThrough = musicBrainzThrough,

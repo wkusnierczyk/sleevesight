@@ -317,7 +317,8 @@ class ArtistResultCacheTest {
             assertNull(store.get(LASTFM, "a"))
         }
 
-    private fun keeping(keeps: () -> Boolean) = ArtistKeeping.over({ fixture.caches }, EmptyCoroutineContext, keeps)
+    private fun keeping(keeps: () -> Boolean) =
+        ArtistKeeping.over({ fixture.caches }, EmptyCoroutineContext, keeps = keeps)
 
     private fun track(freshUntil: Instant) =
         SourceResult(Outcome.ArtistArticle, emptyList(), Duration.ZERO, freshUntil = freshUntil)
