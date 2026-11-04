@@ -10,6 +10,7 @@ import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.pipeline.AiAccess
+import app.sleevesight.core.pipeline.AiOutcome
 import app.sleevesight.core.pipeline.CardKey
 import app.sleevesight.core.pipeline.ClearEpoch
 import app.sleevesight.core.pipeline.InsightItem
@@ -169,7 +170,7 @@ class AppItemNotesTest {
     // An album with a web search (#885): its lookups give the web's line once a search kept it.
     private inner class WebAlbums : AlbumLookup {
         var searches = 0
-        private var kept: List<EvidenceDraft>? = null
+        var kept: List<EvidenceDraft>? = null
         private val web = HomeFixtures.draft(SourceId.WEB, "Sundown topped the Billboard 200.", scope = Scope.WEB)
 
         override suspend fun lookup(query: AlbumQuery): AlbumFound {
@@ -290,6 +291,26 @@ class AppItemNotesTest {
             assertEquals(1, web.searches)
             assertEquals(1, provider.requests)
             assertEquals(2, albumLookups)
+        }
+
+    @Test
+    fun `a search paid for with no call after it ends its question with its cost`() =
+        runTest {
+            val web = WebAlbums()
+            withAlbums(web)
+            notes().write(track(HomeFixtures.sundown), InsightItem.ALBUM)
+            advanceUntilIdle()
+            // The web's lines no longer kept, the card still is: searched again, then found kept.
+            web.kept = null
+            events.clear()
+            notes().write(track(HomeFixtures.carefree), InsightItem.ALBUM)
+            advanceUntilIdle()
+            assertEquals(2, web.searches)
+            assertEquals(1, provider.requests)
+            val ended = events.filterIsInstance<PipelineEvent.AiEnded>().single()
+            assertEquals(AiOutcome.ANSWERED, ended.outcome)
+            assertEquals(QuestionCost(searches = 1), ended.cost)
+            assertEquals(1, events.filterIsInstance<PipelineEvent.AiAsked>().size)
         }
 
     @Test

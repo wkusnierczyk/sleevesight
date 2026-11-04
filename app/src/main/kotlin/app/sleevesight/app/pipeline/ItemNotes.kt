@@ -490,10 +490,73 @@ class AppItemNotes(
         val show: (InsightState, Instant) -> Unit = { state, at ->
             publish(work) { shown.update { it.with(key, Entry(state, at, asked.evidence)) } }
         }
-        val question = AiQuestion.Item(item)
-        var started: Instant? = null
-        var cost = QuestionCost()
+        val question = Question(track, AiQuestion.Item(item), work)
+        val counted: (QuestionCost) -> Unit = { more -> question.count(more, key) }
+        try {
+            val next = toWrite(insights, key, asked, job, counted)
+            key = next.key
+            asked = next.asked
+            // Kept (under the key the search gave too), or written by another: no call, its search ended.
+            val settled = next.ended ?: AiOutcome.ANSWERED.takeIf { key != first && showKept(insights, key, asked) }
+            if (settled != null) return question.end(settled)
+            question.ask(key)
+            val last = insights.write(key, item, track, asked.evidence, { mayCall(key, asked) }, counted, show)
+            if (last == null) {
+                // Its gates closed while the evidence or the cache was read: not asked, offered again.
+                question.notAsked()
+                return
+            }
+            question.end(outcomeOf(last), (last as? InsightState.Failed)?.reason)
+        } catch (e: StopAsked) {
+            // Stopped by the user (*Stop writing*): said so, offered again on a tap; nothing was kept.
+            question.end(AiOutcome.STOPPED)
+            show(InsightState.Stopped, clock.now())
+            throw e
+        } catch (e: CancellationException) {
+            question.end(AiOutcome.STOPPED)
+            throw e
+        } catch (
+            // A bug, not the network, which the writer maps to a state: shown as failed, offered again.
+            @Suppress("TooGenericExceptionCaught") e: Exception,
+        ) {
+            val reason = e::class.simpleName ?: FAILED
+            question.end(AiOutcome.FAILED, reason)
+            show(InsightState.Failed(reason), clock.now())
+        } finally {
+            writing.update { it - key }
+            jobs.remove(key, job)
+        }
+    }
 
+    // An item's question on [track], for the diagnostics (#851) and [paid], in [work]: asked at its
+    // first paid part, an album's web search before its call (#885), else the call, so a search paid
+    // for with no call after it still ends in an event with its cost; ended once.
+    private inner class Question(
+        private val track: TrackState,
+        private val question: AiQuestion,
+        private val work: CoroutineContext,
+    ) {
+        private var started: Instant? = null
+        private var cost = QuestionCost()
+
+        // Asked, with [key]'s service and model, unless it is already.
+        fun ask(key: CardKey) {
+            if (started != null) return
+            note(work, PipelineEvent.AiAsked(track.normalized.lookupKey, question, false, key.provider, key.model))
+            started = clock.now()
+        }
+
+        // [more] paid for, asking it first.
+        fun count(
+            more: QuestionCost,
+            key: CardKey,
+        ) {
+            ask(key)
+            cost += more
+            paid(more)
+        }
+
+        // Ended as [outcome], with what it cost, if it was asked.
         fun end(
             outcome: AiOutcome,
             failure: String? = null,
@@ -505,49 +568,23 @@ class AppItemNotes(
                 PipelineEvent.AiEnded(track.normalized.lookupKey, question, outcome, cost, clock.now() - at, failure),
             )
         }
-        val counted: (QuestionCost) -> Unit = { more ->
-            cost += more
-            paid(more)
-        }
-        try {
-            val next = toWrite(insights, key, asked, job, counted)
-            key = next.key
-            asked = next.asked
-            if (next.done || (key != first && showKept(insights, key, asked))) return
-            note(work, PipelineEvent.AiAsked(track.normalized.lookupKey, question, false, key.provider, key.model))
-            started = clock.now()
-            val last = insights.write(key, item, track, asked.evidence, { mayCall(key, asked) }, counted, show)
-            if (last == null) {
-                // Its gates closed while the evidence or the cache was read: not asked, offered again.
+
+        // Its call not made, the gates closed: not asked, unless its web search was paid for, when it
+        // ends, with that cost, as stopped.
+        fun notAsked() {
+            if (cost.searches > 0) {
+                end(AiOutcome.STOPPED)
+            } else {
                 started = null
                 note(work, PipelineEvent.AiNotAsked(track.normalized.lookupKey, question))
-                return
             }
-            end(outcomeOf(last), (last as? InsightState.Failed)?.reason)
-        } catch (e: StopAsked) {
-            // Stopped by the user (*Stop writing*): said so, offered again on a tap; nothing was kept.
-            end(AiOutcome.STOPPED)
-            show(InsightState.Stopped, clock.now())
-            throw e
-        } catch (e: CancellationException) {
-            end(AiOutcome.STOPPED)
-            throw e
-        } catch (
-            // A bug, not the network, which the writer maps to a state: shown as failed, offered again.
-            @Suppress("TooGenericExceptionCaught") e: Exception,
-        ) {
-            val reason = e::class.simpleName ?: FAILED
-            end(AiOutcome.FAILED, reason)
-            show(InsightState.Failed(reason), clock.now())
-        } finally {
-            writing.update { it - key }
-            jobs.remove(key, job)
         }
     }
 
     // What [key]'s write goes on with: [key] and [asked], or, after an album's web search (#885,
-    // [searched]), the key and evidence it then has, the claim moved to it; [Next.done] when nothing
-    // is left to write: kept under [key], and shown, or the next key's written by another already.
+    // [searched]), the key and evidence it then has, the claim moved to it; [Next.ended] when nothing
+    // is left to write, as its question ended: answered, kept under [key] and shown, or stopped, the
+    // next key's written by another already.
     private suspend fun toWrite(
         insights: ItemInsights,
         key: CardKey,
@@ -555,7 +592,7 @@ class AppItemNotes(
         job: Job?,
         counted: (QuestionCost) -> Unit,
     ): Next {
-        if (showKept(insights, key, asked)) return Next(key, asked, done = true)
+        if (showKept(insights, key, asked)) return Next(key, asked, AiOutcome.ANSWERED)
         return searched(key, asked, counted)?.let { (next, found) ->
             // No suspension from here to the caller's taking the next key, so a Stop finds it.
             val moved = move(key, next, job)
@@ -564,15 +601,15 @@ class AppItemNotes(
             keep(at, Found(found, clock.now(), asked.track, asked.settings), asked.work)
             spread(insights, at, found, asked.work)
             // Another write of the same insight under way (another track of the album): it shows.
-            if (moved) Next(next, asked.with(found), done = false) else Next(key, asked, done = true)
-        } ?: Next(key, asked, done = false)
+            if (moved) Next(next, asked.with(found), null) else Next(key, asked, AiOutcome.STOPPED)
+        } ?: Next(key, asked, null)
     }
 
-    // A write's key and what was asked, and whether nothing is left to write ([toWrite]).
+    // A write's key and what was asked, and how its question ended when nothing is left to write ([toWrite]).
     private class Next(
         val key: CardKey,
         val asked: Asked,
-        val done: Boolean,
+        val ended: AiOutcome?,
     )
 
     // [key]'s insight kept in the cache, shown as [asked]'s, with no call; whether it was.
