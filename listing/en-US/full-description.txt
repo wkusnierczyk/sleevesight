@@ -9,11 +9,11 @@ ON SCREEN
 • The cover, title, artists, album and year of first release, in colors taken from the cover.
 • Genre labels from the artists' tags, each saying where it came from.
 • The insight, whose citations jump to their evidence.
-• Under it, the song, the artist and the album, each with an insight of its own, written when you open it.
+• Under it, the song, the artist and the album, each with an insight of its own, written when you open it (or tap Write).
 • The lines each source gave, linked to where they were found, what could not be verified, and a note when a source needs your key or could not be reached.
 
 WORKS WITH YOUR PLAYER
-Spotify is followed by default, and any other player whose Android media session reports music can be switched on. Calls from the phone app are never read. Sleevesight reads the phone's media session, not Spotify's Web API, so it needs no Spotify developer app and no Spotify login, whichever Spotify plan you have.
+Spotify is followed by default, and any other player whose Android media session reports music can be switched on. Calls from the phone app are never read. It reads the phone's media session, not Spotify's Web API, so it needs no Spotify login, whichever plan you have.
 
 YOU CHOOSE
 • Which sources to use, each a switch. MusicBrainz and Wikipedia need no key; Last.fm and Exa need your own API key.
@@ -27,7 +27,7 @@ WHAT YOU NEED
 • An AI service’s terms may set a minimum age: Google’s Gemini API requires 18 or older. Each key’s dialog says what its terms require.
 
 PRIVACY
-Sleevesight has no server, no accounts, no ads, no analytics and no telemetry. The track's title and artists go straight from your phone to the sources you switch on (by default, the next track's title and artists also go to MusicBrainz, before it plays). When you open the album’s insight, the album’s name and identifiers go to the sources you switch on as well. The title, artists and album, with what the sources found, go to your AI service, on your own key. A cover given only as a web address is fetched from the server that address names. Nothing reaches the developer unless you send a report from your mail app. Your keys are encrypted on the phone, and the settings remove them. The privacy policy: https://sleevesight.app/privacy.html
+Sleevesight has no server, no accounts, no ads, no analytics and no telemetry. The track's title and artists go straight from your phone to the sources you switch on (by default, the next track's title and artists also go to MusicBrainz, before it plays). Last.fm also gets the album’s name, for genre labels, and opening the album’s insight sends its name and identifiers to the sources you switch on. The title, artists and album, with what the sources found, go to your AI service, on your own key. A cover given only as a web address is fetched from the server that address names. Nothing reaches the developer unless you send a report from your mail app. Your keys are encrypted on the phone, and the settings remove them. The privacy policy: https://sleevesight.app/privacy.html
 
 OPEN SOURCE
 The code is on GitHub: https://github.com/wkusnierczyk/sleevesight
