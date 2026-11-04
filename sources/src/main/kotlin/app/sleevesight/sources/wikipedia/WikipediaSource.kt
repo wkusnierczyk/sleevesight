@@ -383,9 +383,11 @@ class WikipediaSource(
 
         // The plain-text extract drops pronunciations and leaves their punctuation behind:
         // `Frehley (, FRAY-lee; April 27, 1951 – …)`, or brackets with nothing left in them:
-        // `Basia Bulat (), is`. Only those, and doubled spaces, are tidied.
+        // `Basia Bulat (), is`. Only those, and doubled spaces, are tidied. Empty brackets that open a
+        // paragraph are kept: they are a title there, as Sigur Rós's album `( )`, whose article opens
+        // with it. Mid-sentence, such a title would go with them, a known limit.
         private val ORPHANED_PUNCTUATION = Regex("\\(\\s*[,;]\\s*")
-        private val EMPTY_BRACKETS = Regex("\\s*\\([\\s,;]*\\)")
+        private val EMPTY_BRACKETS = Regex("(?<=\\S)\\s*\\([\\s,;]*\\)")
         private val SPACES = Regex(" {2,}")
 
         /**

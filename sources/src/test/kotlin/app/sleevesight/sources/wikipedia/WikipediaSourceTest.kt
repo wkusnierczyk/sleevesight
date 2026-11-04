@@ -363,6 +363,27 @@ class WikipediaSourceTest {
     }
 
     @Test
+    fun `a lead's sentences come without the empty brackets`() {
+        val lead =
+            "Barbara Josephine Bulat (born April 13, 1984), known professionally as Basia Bulat (), is a " +
+                "Canadian folk singer-songwriter."
+        assertEquals(
+            listOf(
+                "Barbara Josephine Bulat (born April 13, 1984), known professionally as Basia Bulat, is a " +
+                    "Canadian folk singer-songwriter.",
+            ),
+            WikipediaSource.sentences(lead, listOf("Basia Bulat"), RecordedTracks.names),
+        )
+    }
+
+    @Test
+    fun `empty brackets that open a paragraph are a title, and kept`() {
+        // Sigur Rós's third album is called "( )".
+        val line = "( ) (sometimes referred to as the Untitled album) is the third studio album by Sigur Rós."
+        assertEquals(line, WikipediaSource.tidy(line))
+    }
+
+    @Test
     fun `brackets with content are left as they are`() {
         val kept =
             listOf(
