@@ -138,6 +138,11 @@ val SourceAdapter.tag: String get() = id.tag
  * up; MusicBrainz finding no recording). While *Keep what sources said about each artist* is off
  * (#420), the retrieval cache keeps and reads back only such results: false, the default, counts
  * as about the artists, so a result of a new kind is not kept until its adapter says otherwise.
+ *
+ * [pages] are the addresses of the web search results kept as about the recording whose text was
+ * all page boilerplate, so they gave no line (#905, `WebBoilerplate`): never cited, shown or sent
+ * to a prompt, read only for the *Lyrics* panel's links to a lyrics page (`webPages`), as the
+ * evidence's addresses are. Empty on every other source's result.
  */
 data class SourceResult(
     val outcome: Outcome,
@@ -156,6 +161,7 @@ data class SourceResult(
     val lyrics: WorkLyrics? = null,
     val freshUntil: Instant? = null,
     val trackOnly: Boolean = false,
+    val pages: List<String> = emptyList(),
 )
 
 /**

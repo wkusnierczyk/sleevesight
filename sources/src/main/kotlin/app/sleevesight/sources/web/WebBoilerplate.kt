@@ -10,7 +10,7 @@ package app.sleevesight.sources.web
  * [clean] never cuts text inside a part (a passage between the separators ` ... ` the highlights
  * are joined with): it only decides whether a whole part goes. A part goes when it is boilerplate
  * through and through: once its site's known page text is set aside, what is left has no digit, no
- * credit (a role's label before a name, in any case: "Music by", "Lyrics:", "Written by"; not a
+ * credit (a role's label before a name, in any case: "Music by", "Lyrics:", "Written by", "Album:"; not a
  * streaming page's "song and lyrics by"), and no
  * word beyond the subject's names (the track's title, its work and its artists, or the album and
  * its artist) and a page's words ([PAGE_WORDS]: "official video", "chords", "YouTube", a site's
@@ -24,9 +24,12 @@ package app.sleevesight.sources.web
  *
  * - on a video site: the footer (YouTube's "About Press Copyright … Test new features"), the
  *   channel's stats as listed fields ("- Channel: … - Views: 12.3M - Likes: 98K"), each value
- *   bounded, and the bits of them a cut leaves (".7K"), and a transcript's markers ("[Music]", "♪");
+ *   bounded, and the bits of them a cut leaves (".7K"), a transcript's markers ("[Music]", "♪"), and
+ *   "(Full Album)";
  * - on a streaming service: navigation and sign-in text ("Skip to main content", "Sign in to see
- *   lyrics and listen to the full track", "Listen on Audiomack");
+ *   lyrics and listen to the full track", "Listen on Audiomack"), and a listing's kind beside its
+ *   title ("- Single", "Album •"); "single" and "album" are no page's words elsewhere, since "a
+ *   single by" and "the album Sundown" are facts;
  * - on Bandcamp: the rights heading ("### license all rights reserved"), the upcoming shows, and
  *   the supporters' user names: the "supported by" label, and a run of eight or more words without
  *   punctuation, two of them handles (`killer_tofu123`), after the label, or starting the part and
@@ -258,7 +261,7 @@ internal object WebBoilerplate {
     /**
      * A credit: a role's label and a name after it, in any case and script, which keeps a part even
      * when the name is the subject's ("Music by Gordon Lightfoot", "Lyrics: gordon lightfoot",
-     * "Compositor: …").
+     * "Compositor: …", "Album: Sundown").
      */
     private val CREDIT =
         Regex(
@@ -266,7 +269,7 @@ internal object WebBoilerplate {
             "(?:\\b(?:music|(?<!song and )lyrics|words|written|composed|produced|arranged|mixed|engineered|" +
                 "recorded) by|" +
                 "\\b(?:music|lyrics|words|writers?|composers?|lyricists?|songwriters?|producers?|arrangers?|" +
-                "compositor|letra|writer/composer)\\s*:|\\b(?:escrita|composta) por:?)\\s*\\p{L}",
+                "compositor|letra|writer/composer|album|single|ep)\\s*:|\\b(?:escrita|composta) por:?)\\s*\\p{L}",
             IGNORE_CASE,
         )
 
@@ -282,6 +285,8 @@ internal object WebBoilerplate {
                     "About Press Copyright Contact us Creators Advertise Developers Terms " +
                         "Privacy(?: Policy & Safety)? How YouTube works Test new features" +
                         "(?: NFL Sunday Ticket)?(?: © \\d{4} Google LLC)?",
+                    // A video's title words for a whole album: "Sundown (Full Album)".
+                    "\\(?Full Album\\)?",
                     // Each stat with its value only: a count, a time, a date, or a channel's name up to the
                     // next field; never past a heading, so a description after them is not counted as one.
                     "(?<=^|\\s)- Channel: [^#]{1,60}?(?=\\s- (?:Length|Duration|Views|Likes|Published)\\b)",
@@ -300,6 +305,9 @@ internal object WebBoilerplate {
                     "Recommended Based on this song",
                     "Listen on (?:Spotify|Apple Music|Audiomack|Deezer|SoundCloud|Tidal|Amazon Music|Pandora|JioSaavn)",
                     "Listen to \\S.{0,80}? online\\.?",
+                    // A listing's kind beside its title: "Sundown - Single", "Single • 1974".
+                    "(?<=^|\\s)[-·•] ?(?:Single|EP|Album)(?=\\s|$)",
+                    "(?<=^|\\s)(?:Single|EP|Album) ?[·•]",
                 ),
             Site.BANDCAMP to
                 listOf(
@@ -354,7 +362,7 @@ internal object WebBoilerplate {
     internal val PAGE_WORDS: Set<String> =
         (
             "official video videos audio music lyric lyrics chord chords tab tabs song songs track tracks " +
-                "single album artist artists listen watch online stream streaming download play hd hq mv " +
+                "artist artists listen watch online stream streaming download play hd hq mv " +
                 "visualizer topic provided full feat ft featuring lrc " +
                 "youtube vevo spotify apple itunes deezer tidal amazon soundcloud bandcamp audiomack pandora " +
                 "napster shazam genius musixmatch azlyrics letras ultimate com www"

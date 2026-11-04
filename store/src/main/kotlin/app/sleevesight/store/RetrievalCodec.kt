@@ -98,6 +98,7 @@ internal object RetrievalCodec {
                     },
                 lyrics = result.lyrics?.let { LyricsJson(it.links, it.languages, it.instrumental) },
                 trackOnly = result.trackOnly,
+                pages = result.pages,
             ),
         )
 
@@ -141,6 +142,7 @@ internal object RetrievalCodec {
                     },
                 lyrics = stored.lyrics?.let { WorkLyrics(it.links, it.languages, it.instrumental) },
                 trackOnly = stored.trackOnly,
+                pages = stored.pages,
             )
         } catch (_: IllegalArgumentException) {
             // `SerializationException` is one too.
@@ -219,6 +221,8 @@ internal object RetrievalCodec {
         // Absent in an entry kept before #728: not known.
         val lyrics: LyricsJson? = null,
         val trackOnly: Boolean = false,
+        // Absent in an entry kept before #905: none.
+        val pages: List<String> = emptyList(),
     )
 
     // A first release (#724): of the recording, or of a cover's original.

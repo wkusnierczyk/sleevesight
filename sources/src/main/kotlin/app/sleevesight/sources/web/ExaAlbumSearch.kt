@@ -67,9 +67,10 @@ class ExaAlbumSearch(
             is NetResult.Success ->
                 fetched.value?.let { response ->
                     Lookup.Found(
-                        ExaWebSearch.lines(response, clock.now(), subject, filter::fold) { result, line ->
-                            filter.isAboutAlbum(name, artist, result.title, line, result.url)
-                        },
+                        ExaWebSearch
+                            .lines(response, clock.now(), subject, filter::fold) { result, snippet ->
+                                filter.isAboutAlbum(name, artist, result.title, snippet, result.url)
+                            }.lines,
                     )
                 } ?: Lookup.Failed(REFUSED)
         }

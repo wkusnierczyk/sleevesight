@@ -302,6 +302,16 @@ class RetrievalCacheTest {
     }
 
     @Test
+    fun `web search's addresses without a line round-trip, and an entry kept before them has none`() {
+        val genius = "https://genius.com/Gordon-lightfoot-sundown-lyrics"
+        val result = sample(Outcome.None, SourceId.WEB).copy(pages = listOf(genius))
+        assertEquals(listOf(genius), assertNotNull(RetrievalCodec.decode(RetrievalCodec.encode(result))).pages)
+        // As web search's result was kept before #905.
+        val old = """{"outcome":"none","latency":"PT0.4S","trackOnly":true}"""
+        assertEquals(emptyList(), assertNotNull(RetrievalCodec.decode(old)).pages)
+    }
+
+    @Test
     fun `an entry kept before the first release's title and the original decodes without them`() {
         // As MusicBrainz's result was kept before #724: the first release's date and the releases' dates only.
         val old =

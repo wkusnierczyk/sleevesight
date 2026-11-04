@@ -2,10 +2,12 @@ package app.sleevesight.sources.web
 
 import app.sleevesight.core.Secret
 import app.sleevesight.core.evidence.EvidenceDraft
+import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.resolution.Lookup
 import app.sleevesight.core.sources.Resolution
+import app.sleevesight.core.sources.SourceResult
 import app.sleevesight.fixtures.BelowSoundtrack
 import app.sleevesight.fixtures.Fixtures
 import kotlinx.coroutines.CompletableDeferred
@@ -249,6 +251,76 @@ class WebBoilerplateTest {
                 assertTrue(line.length <= ExaWebSearch.LINE_CHARACTERS + 1, url)
             }
         }
+    }
+
+    // The track's web search on the one result at [url] titled [title] with [highlights].
+    private suspend fun lookUp(
+        url: String,
+        title: String,
+        vararg highlights: String,
+    ): SourceResult {
+        val track = BelowSoundtrack.track(1).let { Normalizer(JvmAccentFolder).normalize(it.title, it.artist) }
+        val body =
+            ExaWebSearch.JSON.encodeToString(ExaSearchResponse(listOf(ExaResult(url, title, highlights.toList()))))
+        return ExaWebSearch(ReplayNetClient.ok(body), Secret("test-exa-key"), JvmAccentFolder)
+            .lookup(track, CompletableDeferred(Resolution.NONE))
+    }
+
+    @Test
+    fun `a page titled after neither is judged before its parts go, and keeps its fact`() =
+        runTest {
+            val result =
+                lookUp(
+                    "https://soundtrack.example/below",
+                    "Below (2002) soundtrack",
+                    "Sundown - Gordon Lightfoot",
+                    "Plays as the crew surfaces; courtesy of Reprise Records",
+                )
+            assertEquals(
+                listOf("Plays as the crew surfaces; courtesy of Reprise Records"),
+                result.evidence.map { it.text },
+            )
+        }
+
+    @Test
+    fun `an album's page titled after neither is judged before its parts go too`() =
+        runTest {
+            val body =
+                ExaWebSearch.JSON.encodeToString(
+                    ExaSearchResponse(
+                        listOf(
+                            ExaResult(
+                                "https://records.example/listing/1974",
+                                "Record shop listing",
+                                listOf("Sundown - Gordon Lightfoot", "Pressed on Reprise, in a gatefold sleeve"),
+                            ),
+                        ),
+                    ),
+                )
+            val found =
+                ExaAlbumSearch(ReplayNetClient.ok(body), Secret("test-exa-key"), JvmAccentFolder)
+                    .search("Sundown", "Gordon Lightfoot")
+            val lines = assertIs<Lookup.Found<List<EvidenceDraft>>>(found).value
+            assertEquals(listOf("Pressed on Reprise, in a gatefold sleeve"), lines.map { it.text })
+        }
+
+    @Test
+    fun `a lyrics page with only its title gives no line, its address kept for the lyrics link`() =
+        runTest {
+            val genius = "https://genius.com/Gordon-lightfoot-sundown-lyrics"
+            val title = "Gordon Lightfoot – Sundown Lyrics | Genius Lyrics"
+            val result = lookUp(genius, title, title)
+            assertTrue(result.evidence.isEmpty())
+            assertEquals(listOf(genius), result.pages)
+            // About the recording, but nothing to say: nothing found, not a rejection.
+            assertEquals(Outcome.None, result.outcome)
+        }
+
+    @Test
+    fun `release facts naming a single or an album are kept`() {
+        assertKeptEverywhere("Sundown is a single by Gordon Lightfoot.")
+        assertKeptEverywhere("Sundown is track one of the album Sundown by Gordon Lightfoot.")
+        assertKeptEverywhere("Album: Sundown")
     }
 
     @Test
