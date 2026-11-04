@@ -10,11 +10,12 @@ import app.sleevesight.core.model.NowPlaying
  * its own subject, [Subject], written from the evidence gathered for it, grounded and cited as the
  * key insight is.
  *
- * It is the insight's prompt ([InsightPrompt]) with another task: the same fenced data (the track as
- * the player reports it, the subject, and the evidence, each line flattened, [InsightPrompt.oneLine]),
- * the same order (data, style, then the contract under [InsightPrompt.CONTRACT_HEADING]), and the
- * insight's rules ([InsightPrompt.contract]: citations, evidence only, the scope rules, model
- * knowledge, plain text, `NO_EVIDENCE`), with one of its own per subject ([subjectRule]): the song's
+ * It is the insight's prompt ([InsightPrompt]) as it was until its version 9 (#767), with another
+ * task: the same fenced data (the track as the player reports it, the subject, and the evidence, each
+ * line flattened, [InsightPrompt.oneLine]), in one message, the same order (data, style, then the
+ * contract under [InsightPrompt.CONTRACT_HEADING]), and the insight's version 8 rules ([contract]:
+ * citations, evidence only, the scope rules, model knowledge, plain text, `NO_EVIDENCE`), with one
+ * of its own per subject ([subjectRule]): the song's
  * tells the song's own story and leaves the headline to the key insight; the artist's and the
  * album's are about the artist or the album, not the track playing, so they read the same
  * whichever of its tracks plays (#240), and the artist's leaves out lines about another artist
@@ -41,8 +42,12 @@ object ItemPrompt {
     /** The kinds this prompt writes. */
     val KINDS: Set<CardKind> = setOf(CardKind.SONG, CardKind.ARTIST, CardKind.ALBUM)
 
-    /** The built-in style: as the key insight's. */
-    const val BUILT_IN_STYLE: String = InsightPrompt.BUILT_IN_STYLE
+    /**
+     * The built-in style: the key insight's until its version 9 (#767), which this prompt has not
+     * taken up yet.
+     */
+    const val BUILT_IN_STYLE: String =
+        "- Write 2 to 4 sentences.\n- Plain conversational English. No hype."
 
     /**
      * The prompt for [subject], beside [nowPlaying], normalized as [normalized], written from
@@ -89,7 +94,7 @@ object ItemPrompt {
             appendLine()
             appendLine(InsightPrompt.CONTRACT_HEADING)
             appendLine(subjectRule(subject.kind))
-            appendLine(InsightPrompt.contract(allowModel))
+            appendLine(contract(allowModel))
             appendLine()
             append("Reply with the insight text only.")
         }
@@ -138,4 +143,32 @@ object ItemPrompt {
                 "- Write about the album named in <subject> only: how it was made, its release and how it " +
                     "was received. Say nothing about the track playing."
         }
+
+    /**
+     * The fixed rules: the key insight's as they were until its version 9 (#767), word for word, so
+     * this prompt and its [VERSION] stand while the insight's own move on ([InsightPrompt.rules]).
+     * Bringing these three insights to version 9's structure is a change of its own.
+     */
+    fun contract(allowModel: Boolean): String =
+        listOf(
+            InsightPrompt.CITATION_RULE,
+            InsightPrompt.EVIDENCE_RULE,
+            InsightPrompt.LENGTH_RULE,
+            InsightPrompt.ORIGINAL_SONG_RULE,
+            InsightPrompt.ARTIST_RULE,
+            InsightPrompt.SAME_NAME_RULE,
+            InsightPrompt.WEB_GENRE_RULE,
+            GAP_RULE,
+            if (allowModel) InsightPrompt.MODEL_RULE else InsightPrompt.NO_MODEL_RULE,
+            InsightPrompt.PLAIN_TEXT_RULE,
+            InsightPrompt.NO_EVIDENCE_RULE,
+        ).joinToString("\n")
+
+    /**
+     * The rule on a gap: the key insight's until its version 9 ([InsightPrompt.GAP_RULE], whose
+     * KDoc has its history), which says one good sentence is enough where this says a short insight.
+     */
+    const val GAP_RULE: String =
+        "- If the evidence supports fewer sentences than the style asks for, write fewer; a short insight " +
+            "is enough. Do not say what the evidence leaves out. Write no sentence without a citation."
 }

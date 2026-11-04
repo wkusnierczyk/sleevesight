@@ -48,6 +48,9 @@ internal class InsightWriter(
     private val key = track.lookupKey
     private val allowModel = settings.isEnabled(SourceId.MODEL)
 
+    // The rules, sent as the system prompt; the track and its evidence are each call's user message (#767).
+    private val system = InsightPrompt.system(allowModel)
+
     // Whether the run fell back to the whole evidence (#239), after `NO_EVIDENCE` to a prompt that
     // left lines out: every later call of the run, a tapped Retry too, goes straight to it.
     private var whole = false
@@ -179,9 +182,9 @@ internal class InsightWriter(
         val once = settings.artistFactsOncePerSession
         val given = if (whole) evidence else PromptEvidence.of(evidence, nowPlaying.album, facts, parts.hasher, once)
         val sent = Prompted(evidence, given)
-        val prompt = InsightPrompt.build(nowPlaying, track, sent.evidence, allowModel)
         val effort = settings.effort(ai.provider.id)
-        val request = CompletionRequest(model, prompt, CompletionRequest.maxTokensFor(effort), effort)
+        val prompt = InsightPrompt.user(nowPlaying, track, sent.evidence)
+        val request = CompletionRequest(model, prompt, CompletionRequest.maxTokensFor(effort), effort, system = system)
         val text = StringBuilder()
         var frozen = false
         var end: CompletionEvent? = null
