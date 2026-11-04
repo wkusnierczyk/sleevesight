@@ -104,6 +104,8 @@ The tag gives both versions, so a release needs no commit to bump them:
 - `versionName` is the tag without its `v`: `v1.2.3` gives `1.2.3`.
 - `versionCode` is `major × 1 000 000 + minor × 1 000 + patch`: `1.2.3` gives `1002003`.
 
+A release that adds features raises the minor version (0.1.19 to 0.2.0, then 0.3.0); one with fixes only raises the patch (0.2.0 to 0.2.1); 1.0.0 is the public launch on the production track. Until 0.1.19, every release raised the patch.
+
 Google Play needs every upload's `versionCode` higher than any before it. This code rises with the version, so releases go out in version order only: a patch to an older line, `1.1.4` after `1.2.0`, gets a lower code, and Play refuses it. The code can be read back as the version, and needs no state such as a counter. Minor and patch stay below 1000, and the code at or below Play's limit, 2 100 000 000. A tag is never moved or reused (the [tag rulesets](#3-tag-rulesets) block moving or deleting one): when a bundle is refused, or never uploaded, the next attempt is a new patch version. The workflow's run number was the alternative; it rises too, but says nothing about the version.
 
 Gradle reads the version from the property `sleevesight.version`, checks its form (`build-logic/src/main/kotlin/sleevesight/release/ReleaseVersion.kt`), and fails on anything else. Builds other than a release take the version of the release they lead to ([#614](https://github.com/wkusnierczyk/sleevesight/issues/614)):

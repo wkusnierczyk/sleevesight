@@ -1,0 +1,4 @@
+What's new in 0.2.0:
+- Key insights open with the song's own story, not its release date.
+- The album's insight also draws on Last.fm and, with Exa on, a web search.
+- Load keys goes step by step and saves nothing until Complete.
