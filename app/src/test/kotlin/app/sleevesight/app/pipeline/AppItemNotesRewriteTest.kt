@@ -183,6 +183,48 @@ class AppItemNotesRewriteTest {
         }
 
     @Test
+    fun `an automatic write that failed on a later play does not hide the insight kept on the next`() =
+        runTest {
+            val notes = notes()
+            written(notes, track(play = 1))
+
+            // A later play under an automatic mode: written anew with the other model, and it fails.
+            mode(WriteAutomatically.ON_EVERY_TRACK_CHANGE)
+            model(OTHER)
+            provider.error = AiErrorKind.SERVER
+            val failing = track(play = 2)
+            notes.song(failing)
+            notes.write(failing, InsightItem.SONG, ItemAsk.OPENED)
+            advanceUntilIdle()
+            val failed =
+                notes
+                    .item(
+                        failing,
+                        InsightItem.SONG,
+                    ).first { (it as? ItemShown.Shown)?.state is InsightState.Failed }
+            assertNull((failed as ItemShown.Shown).rewriteWith)
+            assertEquals(2, provider.requests)
+
+            // The next play, under On demand, in the same process: the insight kept, with Rewrite.
+            provider.error = null
+            mode(WriteAutomatically.NEVER)
+            val next = track(play = 3)
+            val shown = notes.song(next) as ItemShown.Shown
+            assertKeptWithRewrite(shown)
+            assertNull(shown.rewriteFailed)
+            // Nothing writes it unasked; a tap rewrites it.
+            notes.write(next, InsightItem.SONG, ItemAsk.BY_ITSELF)
+            advanceUntilIdle()
+            assertEquals(2, provider.requests)
+            notes.write(next, InsightItem.SONG, ItemAsk.TAP)
+            advanceUntilIdle()
+            val rewritten = notes.song(next) as ItemShown.Shown
+            assertEquals(OTHER, rewritten.writtenBy())
+            assertEquals(setOf(RewritePart.MODEL), (rewritten.state as InsightState.Written).rewritten)
+            assertEquals(3, provider.requests)
+        }
+
+    @Test
     fun `the chosen model's own insight is shown, never another's in its place, and the earlier one again`() =
         runTest {
             val notes = notes()

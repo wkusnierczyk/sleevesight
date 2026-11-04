@@ -1645,7 +1645,9 @@ class PipelineCoordinator(
     // [paused] under its settings when only the first action's expiry kept it from writing (#203).
     // Not written by itself, with no card paid for: the one another service, model or effort wrote, if
     // kept (#911, `Run.kept`), is the card paid for, so it is shown, and the Write offered beside it is
-    // *Rewrite insight*, as for a card written before a settings change.
+    // *Rewrite insight*, as for a card written before a settings change. A ledger written by a call that
+    // failed or was stopped has no card either, so it takes it too; it stays written, so nothing is
+    // written again without a tap.
     private fun decided(
         run: CoordinatorState.Run,
         write: Boolean,
@@ -1653,7 +1655,7 @@ class PipelineCoordinator(
         paused: WriteSettings?,
     ): CoordinatorState.Ledger {
         val decided = entry(run, write)
-        val kept = run.kept?.takeIf { offered && !decided.written }
+        val kept = run.kept?.takeIf { offered && decided.card == null }
         return when {
             kept != null -> decided.copy(written = true, card = kept)
             paused != null -> decided.copy(paused = paused)

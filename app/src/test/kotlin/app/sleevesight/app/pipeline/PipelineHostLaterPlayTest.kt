@@ -1,5 +1,6 @@
 package app.sleevesight.app.pipeline
 
+import app.sleevesight.core.ai.AiErrorKind
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.RewritePart
@@ -14,7 +15,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * A later play of a track whose insight only another model wrote (#911): another track in between,
@@ -103,6 +106,59 @@ internal class PipelineHostLaterPlayTest : PipelineHostFixture() {
             assertEquals(emptySet<RewritePart>(), written.rewritten)
             assertFalse(host.state.value.rewrite)
         }
+
+    @Test
+    fun `after an automatic write fails, another model chosen shows the insight kept with Rewrite`() =
+        runTest {
+            anotherModelWrites()
+            provider.error = AiErrorKind.SERVER
+            play("Alpha")
+            settle()
+            assertTrue(
+                host.state.value.track
+                    ?.insight is InsightState.Failed,
+            )
+
+            // The call granted left the ledger written, with no card: the one kept takes its place.
+            provider.error = null
+            settings.value = settings.value.withModel(ProviderId.ANTHROPIC, THIRD_MODEL)
+            settle()
+            assertKeptWithRewrite(FIRST_MODEL, requests = 2)
+            tap()
+            settle()
+            assertEquals(THIRD_MODEL, provider.models.last())
+        }
+
+    @Test
+    fun `after an automatic write is stopped, another model chosen shows the insight kept with Rewrite`() =
+        runTest {
+            anotherModelWrites()
+            provider.streaming = 10.seconds
+            play("Alpha")
+            settle()
+            host.stop(checkNotNull(host.state.value.stopCall))
+            settle()
+            assertEquals(
+                InsightState.Stopped,
+                host.state.value.track
+                    ?.insight,
+            )
+
+            provider.streaming = Duration.ZERO
+            settings.value = settings.value.withModel(ProviderId.ANTHROPIC, THIRD_MODEL)
+            settle()
+            assertKeptWithRewrite(FIRST_MODEL, requests = 2)
+        }
+
+    // Alpha written with the first model, then another track written by itself, and another model
+    // chosen: the next play of Alpha is written by itself with it.
+    private fun TestScope.anotherModelWrites() {
+        writtenWithFirstModel(WriteAutomatically.ON_EVERY_TRACK_CHANGE)
+        play("Beta")
+        settle()
+        settings.value = settings.value.withModel(ProviderId.ANTHROPIC, OTHER_MODEL)
+        settle()
+    }
 
     @Test
     fun `of several kept, the one written last is shown`() =
