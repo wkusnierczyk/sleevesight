@@ -15,6 +15,7 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -52,29 +53,34 @@ import app.sleevesight.core.settings.Settings
  * ([modeOf]): *Folded* folded, *Unfolded* open, *As left* as stored (`Settings.unfoldedDescriptions`),
  * so as last left, across restarts too. A change of the choice waits for the next return, so nothing
  * on the screen moves under the tap that changed it. Coming back, opening the settings again or a
- * section again ([reopen]), or back from a page the settings opened ([leave], #874), *Folded* and
- * *Unfolded* forget the taps in it. While a search finds a description, it shows unfolded whatever
+ * section again ([reopen]), or back from a page the settings opened ([leave], [comeBack], #874),
+ * *Folded* and *Unfolded* forget the taps in it. While a search finds a description, it shows unfolded whatever
  * was set for it, and a tap on it folds it only for that search ([endSearch] forgets those), as
  * [SectionFolds] does with the sections.
  */
 @Stable
 internal class DescriptionFolds(
-    // *Descriptions on return* as the settings were opened, or come back to from a page: for the
-    // sections not opened since.
-    private val entered: DescriptionsOnReturn,
+    entered: DescriptionsOnReturn,
     folded: Map<String, Boolean> = emptyMap(),
     inSearch: Map<String, Boolean> = emptyMap(),
     opened: Map<SettingsSection, DescriptionsOnReturn> = emptyMap(),
 ) {
+    // *Descriptions on return* as the settings were opened, or come back to from a page: for the
+    // sections not opened since.
+    private var entered by mutableStateOf(entered)
+
     // *Descriptions on return* as each section was last opened in this visit ([reopen]).
     private val opened = mutableStateMapOf<SettingsSection, DescriptionsOnReturn>().apply { putAll(opened) }
 
     // Each description tapped since its section opened, by section and key: whether it is folded.
     private val folded = mutableStateMapOf<String, Boolean>().apply { putAll(folded) }
 
-    // Whether the settings were left for a page that comes back to them ([leave]); not read in
-    // composition, only saved with the taps.
+    // Whether the settings were left for a page that comes back to them ([leave]) and are not yet
+    // on screen again ([comeBack]); not read in composition, only saved with the taps.
     private var left = false
+
+    // Whether *Descriptions on return* was applied for the way back already, on restoring them.
+    private var applied = false
 
     // Each description a search found and a tap folded or unfolded again during that search.
     private val inSearch = mutableStateMapOf<String, Boolean>().apply { putAll(inSearch) }
@@ -113,12 +119,34 @@ internal class DescriptionFolds(
 
     /**
      * The settings left for a page that comes back to them (#874): *Credits*, *Diagnostics*, *What
-     * leaves the device*. Nothing changes while they leave; restored on the way back ([saver]),
-     * *Descriptions on return* applies as on opening the settings. A rotation, which never calls
-     * this, keeps the taps.
+     * leaves the device*. Nothing changes while they leave; on the way back, restored ([saver]) or
+     * on screen again with nothing restored ([comeBack]), *Descriptions on return* applies as on
+     * opening the settings. A rotation, which never calls this, keeps the taps.
      */
     fun leave() {
         left = true
+        applied = false
+    }
+
+    /**
+     * The settings on screen again (resumed), [mode] as *Descriptions on return* is (#874). Back from
+     * a page they were left for ([leave]), it applies as on opening them, unless restoring them on
+     * the way back applied it already ([saver]): so also where they were never taken down, as when
+     * Android's back closes the page while it is still opening, and where they were drawn under a
+     * back gesture that was then let go. Otherwise nothing changes.
+     */
+    fun comeBack(mode: DescriptionsOnReturn) {
+        if (!left) return
+        if (!applied) returnAs(mode)
+        left = false
+        applied = false
+    }
+
+    // Back from a page: as on opening the settings, the search's own taps kept with it.
+    private fun returnAs(mode: DescriptionsOnReturn) {
+        entered = mode
+        opened.clear()
+        if (mode != DescriptionsOnReturn.AS_LEFT) folded.clear()
     }
 
     /** The search ended: the descriptions it found fold again as they were before it. */
@@ -130,9 +158,11 @@ internal class DescriptionFolds(
         /**
          * Saved as the ids tapped, each after `1` (folded) or `0` (open); those tapped in the search
          * under way after [FOUND] and then `1` or `0`; the mode on entering after [ENTERED], and each
-         * section's after [OPENED], its name and `=`; and [LEFT] once [leave] was called. Restored
-         * with [LEFT] in it, back from a page (#874), the settings take [mode], as on opening them,
-         * and *Folded* and *Unfolded* forget the taps; *As left* keeps them.
+         * section's after [OPENED], its name and `=`; and [LEFT] from [leave] until [comeBack].
+         * Restored with [LEFT] in it, back from a page (#874), the settings take [mode], as on
+         * opening them, and *Folded* and *Unfolded* forget the taps; *As left* keeps them. [LEFT]
+         * stays until they are on screen again, so drawn again before that, under a back gesture let
+         * go, they apply it again on the way back.
          */
         fun saver(mode: DescriptionsOnReturn): Saver<DescriptionFolds, ArrayList<String>> =
             Saver(
@@ -158,14 +188,6 @@ internal class DescriptionFolds(
         ): DescriptionFolds {
             val tapped = taps(saved.filter { it.startsWith("1") || it.startsWith("0") })
             val found = taps(saved.filter { it.startsWith(FOUND) }.map { it.drop(FOUND.length) })
-            if (LEFT in saved) {
-                // Back from a page: as on opening the settings, the search's own taps kept with it.
-                return DescriptionFolds(
-                    mode,
-                    if (mode == DescriptionsOnReturn.AS_LEFT) tapped else emptyMap(),
-                    found,
-                )
-            }
             val opened =
                 saved.filter { it.startsWith(OPENED) }.mapNotNull { s ->
                     val (section, m) = s.drop(OPENED.length).split("=", limit = 2).let { it[0] to it.getOrNull(1) }
@@ -177,7 +199,13 @@ internal class DescriptionFolds(
                 saved.firstOrNull { it.startsWith(ENTERED) }?.drop(ENTERED.length)?.let { m ->
                     DescriptionsOnReturn.entries.firstOrNull { it.name == m }
                 } ?: mode
-            return DescriptionFolds(entered, tapped, found, opened.toMap())
+            val folds = DescriptionFolds(entered, tapped, found, opened.toMap())
+            if (LEFT in saved) {
+                folds.left = true
+                folds.returnAs(mode)
+                folds.applied = true
+            }
+            return folds
         }
 
         // What starts each saved entry other than a tap's `1` or `0`, each a character of its own.
@@ -194,7 +222,8 @@ internal class DescriptionFolds(
 /**
  * [DescriptionFolds] for this visit to the settings, as [mode], *Descriptions on return*, has them
  * on opening them, a rotation keeping them; back from a page the settings opened
- * ([DescriptionFolds.leave]), restored as [mode] has them again (#874).
+ * ([DescriptionFolds.leave]), restored as [mode] has them again (#874), or, not restored, once on
+ * screen again ([DescriptionFolds.comeBack]).
  */
 @Composable
 internal fun rememberDescriptionFolds(mode: DescriptionsOnReturn): DescriptionFolds =
@@ -287,15 +316,18 @@ internal const val DESCRIPTION_TAG = "settings_description"
  * not fit on one line, it folds ([LocalDescriptionFolds]): folded, it shows its paragraphs joined by
  * a space, cut to one line, an ellipsis at its end, and nothing else marks it; a tap unfolds it to
  * its paragraphs (with [link] set in the one that has its text, [sentenceWith]), and another folds
- * it again. Its tap is its own, reaching [TAP_BELOW] below it but not over the row's name: on a
- * [SwitchRow], a tap on it no longer toggles the switch. A screen reader reads it as a node of its
- * own, the whole text folded or not, *collapsed* or *expanded*, a tap to *Expand* or *Collapse* it.
- * One that fits on one line, or with descriptions not foldable, shows in full as before, with no tap
- * of its own. [key] tells the description from the others for
- * its fold, within its section ([LocalDescriptionSection], [descriptionId]): its row's name, or a
- * section's or note's own string's name.
+ * it again. Its tap is its own, reaching [reach] below it but not over the row's name: on a
+ * [SwitchRow], a tap on it no longer toggles the switch. [reach] is at most the room before a
+ * control that follows it whose tap reaches past its bounds only by Compose's widening (a button
+ * group, 4 dp below it in a [ChoiceButtonsRow]), which a tap in the description's bounds would take
+ * from it. A screen reader reads it as a node of its own, the whole text folded or not,
+ * *collapsed* or *expanded*, a tap to *Expand* or *Collapse* it. One that fits on one line, or with
+ * descriptions not foldable, shows in full as before, with no tap of its own. [key] tells the
+ * description from the others for its fold, within its section ([LocalDescriptionSection],
+ * [descriptionId]): its row's name, or a section's or note's own string's name.
  * A search that finds [text] shows it open, the query marked in it ([RowSearch]).
  */
+@Suppress("LongParameterList") // What it shows and how; all but the first two have defaults.
 @Composable
 internal fun Description(
     key: String,
@@ -303,6 +335,7 @@ internal fun Description(
     modifier: Modifier = Modifier,
     color: Color = Color.Unspecified,
     link: TextPart.Linked? = null,
+    reach: Dp = TAP_BELOW,
 ) {
     val shown = LocalDescriptionFolds.current
     if (shown == null) {
@@ -335,19 +368,21 @@ internal fun Description(
         stringResource(if (shut) R.string.settings_description_expand else R.string.settings_description_collapse)
     // Its tap only where it is drawn: Compose widens a small target's touch area to the minimum
     // (48 dp), which would reach over the row's name and take its taps from the switch. What is in
-    // it, a link, keeps the minimum. Below it, where the name is not, it reaches [TAP_BELOW] further
+    // it, a link, keeps the minimum. Below it, where the name is not, it reaches [reach] further
     // (#874), into the row's padding, so a tap a little low still folds it rather than toggling the
-    // switch; what comes after it in the row (a note's link, a button group) keeps its own taps.
+    // switch. What comes after it in the row keeps its own taps: a control whose bounds reach there
+    // (a note's link) is placed later and takes them first; a button group's buttons, which reach
+    // there only by Compose's widening, start beyond [reach].
     val configuration = LocalViewConfiguration.current
     val exact = remember(configuration) { ExactTouch(configuration) }
     CompositionLocalProvider(LocalViewConfiguration provides exact) {
         Box(
             measured
-                .reachingBelow(TAP_BELOW)
+                .reachingBelow(reach)
                 .testTag(DESCRIPTION_TAG)
                 .clickable(onClickLabel = action) { shown.toggle(section, key, found) }
                 .semantics { stateDescription = state }
-                .padding(bottom = TAP_BELOW),
+                .padding(bottom = reach),
         ) {
             CompositionLocalProvider(LocalViewConfiguration provides configuration) {
                 if (shut) {
@@ -366,7 +401,7 @@ internal fun Description(
     }
 }
 
-/** How far below a foldable description its tap reaches (#874): a row's bottom padding. */
+/** How far below a foldable description its tap reaches (#874) where nothing needs the room: a row's bottom padding. */
 internal val TAP_BELOW = 8.dp
 
 /**

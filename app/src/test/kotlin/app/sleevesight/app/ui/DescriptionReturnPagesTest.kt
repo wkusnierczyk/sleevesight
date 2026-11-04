@@ -48,8 +48,9 @@ import org.robolectric.annotation.GraphicsMode
  * *Descriptions on return* back from the pages the settings open (#874), through the app's own
  * navigation: *Credits*, *Diagnostics* and *What leaves the device*, each left by its back arrow or
  * Android's back. *Folded* folds the descriptions again, *Unfolded* opens them, *As left* keeps them,
- * as on opening the settings, as the choice is then, though changed on the settings before the page;
- * a rotation keeps them as they are, on the settings or on a page.
+ * as on opening the settings, as the choice is then, though changed on the settings before the page,
+ * and when Android's back closes a page still opening; a rotation keeps them as they are, on the
+ * settings or on a page, and after such a back.
  *
  * Drawn as on a phone (native graphics): Robolectric's own graphics measure text too narrow for
  * anything to fold.
@@ -244,6 +245,38 @@ class DescriptionReturnPagesTest {
     }
 
     @Test
+    fun backWhileAPageStillOpensAppliesTheChoiceAndARotationAfterKeepsTheFolds() {
+        onSettings(DescriptionsOnReturn.FOLDED) { scenario ->
+            tap(spin)
+            assertTrue(isOpen(spin))
+            awaitText(text(Page.CREDITS.opener))
+            val opener = compose.onNodeWithText(text(Page.CREDITS.opener)).performScrollTo()
+            // Back a few frames into the page's opening, the settings still drawn under it: they are
+            // never taken down, so nothing is restored on the way back.
+            compose.mainClock.autoAdvance = false
+            opener.performClick()
+            repeat(OPENING_FRAMES) { compose.mainClock.advanceTimeByFrame() }
+            assertTrue("the page opening", compose.onAllNodesWithTag(PAGE_BACK_TAG).fetchSemanticsNodes().isNotEmpty())
+            assertTrue(
+                "the settings still drawn",
+                compose.onAllNodes(hasTestTag(DESCRIPTION_TAG) and hasText(spin)).fetchSemanticsNodes().isNotEmpty(),
+            )
+            scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+            compose.mainClock.autoAdvance = true
+            compose.waitForIdle()
+            compose.waitUntil(conditionDescription = "the settings", timeoutMillis = WAIT_MS) {
+                compose.onAllNodesWithTag(PAGE_BACK_TAG).fetchSemanticsNodes().isEmpty()
+            }
+            assertFalse("folded back from the page", isOpen(spin))
+            // A rotation after it is no return: it keeps a tap made since.
+            tap(spin)
+            scenario.recreate()
+            compose.waitForIdle()
+            assertTrue("open as tapped, after a rotation", isOpen(spin))
+        }
+    }
+
+    @Test
     fun aRotationOnAPageStillAppliesTheChoiceBackOnTheSettings() {
         onSettings(DescriptionsOnReturn.FOLDED) { scenario ->
             tap(spin)
@@ -256,3 +289,6 @@ class DescriptionReturnPagesTest {
         }
     }
 }
+
+/** Frames into a page's opening transition, short of its end. */
+private const val OPENING_FRAMES = 3

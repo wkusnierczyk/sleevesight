@@ -329,12 +329,13 @@ internal fun <T> ChoiceButtonsRow(
             color = color,
             modifier = Modifier.testTag(ROW_TITLE_TAG),
         )
-        summary?.let { Description(title, it, color = color) }
+        // Its tap reaches no further than the buttons' room above them, which is theirs (#874).
+        summary?.let { Description(title, it, color = color, reach = ABOVE_GROUP) }
         ChoiceButtonGroup(
             choices,
             selected,
             onSelect,
-            Modifier.padding(top = 4.dp),
+            Modifier.padding(top = ABOVE_GROUP),
             name = title,
             details = details,
             enabled = enabled,
@@ -345,6 +346,9 @@ internal fun <T> ChoiceButtonsRow(
         below?.invoke()
     }
 }
+
+/** The room above a [ChoiceButtonsRow]'s buttons, under its description. */
+internal val ABOVE_GROUP = 4.dp
 
 /**
  * Under a [ChoiceButtonsRow]'s buttons, what the [selected] value does, from [details], announced

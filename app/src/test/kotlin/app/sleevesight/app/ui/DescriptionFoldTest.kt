@@ -14,8 +14,10 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.click
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -50,6 +52,7 @@ import app.sleevesight.app.ui.settings.TAP_BELOW
 import app.sleevesight.app.ui.settings.oneLine
 import app.sleevesight.app.ui.settings.paragraphsOf
 import app.sleevesight.core.settings.DescriptionsOnReturn
+import app.sleevesight.core.settings.Layout
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -72,7 +75,7 @@ import org.robolectric.annotation.GraphicsMode
  * switch row's description has its own tap, one that fits on one line does not fold, a search shows
  * the descriptions it finds open, a screen reader hears the whole text and its fold, and a rotation
  * keeps the folds, a search's own too (#874). A tap a little below a folded description still
- * unfolds it (#874).
+ * unfolds it, but not where a button group under it takes the tap (#874).
  *
  * Drawn as on a phone (native graphics): Robolectric's own graphics measure text too narrow for
  * anything to fold.
@@ -372,6 +375,41 @@ class DescriptionFoldTest {
             compose.waitForIdle()
             assertEquals(text(R.string.settings_description_expanded), description(spin).state())
             assertTrue("the switch left as it was", settings.now().spinLogo)
+        }
+
+    @Test
+    fun aTapWhereAButtonGroupUnderADescriptionReachesChoosesAndLeavesTheFold() =
+        show {
+            // *Layout*'s row: its description, then its buttons 4 dp below it.
+            val summary = text(R.string.settings_layout_summary)
+            val node = description(summary)
+            assertEquals(text(R.string.settings_description_collapsed), node.state())
+            assertEquals(Layout.EXPANDABLE_BOXES, settings.now().layout)
+            val inRow = hasContentDescription(text(R.string.settings_layout), substring = true)
+            val pages = hasText(text(R.string.settings_layout_pages)) and isSelectable() and inRow
+            // The buttons on screen, the description just above them.
+            val button =
+                compose
+                    .onNode(pages)
+                    .performScrollTo()
+                    .fetchSemanticsNode()
+                    .boundsInRoot
+            val box = node.fetchSemanticsNode().boundsInRoot
+            val line = compose.onNode(hasText(summary), useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+            val dp = compose.density.density
+            // Above the button, which takes a tap there only by Compose's widening to 48 dp.
+            assertTrue("the button starts below the tap", button.top - line.bottom > 6 * dp)
+            assertTrue("the description reaches no further than the buttons' room", box.bottom - line.bottom < 6 * dp)
+            val x = button.center.x - box.left
+            node.performTouchInput { click(Offset(x, line.bottom - box.top + 6 * dp)) }
+            compose.waitForIdle()
+            compose.waitUntil(WAIT_MS) { settings.now().layout == Layout.SEPARATE_PAGES }
+            assertEquals("left folded", text(R.string.settings_description_collapsed), description(summary).state())
+            // Nearer the line, before the buttons' room, it still unfolds it.
+            node.performTouchInput { click(Offset(x, line.bottom - box.top + 2 * dp)) }
+            compose.waitForIdle()
+            assertEquals(text(R.string.settings_description_expanded), description(summary).state())
+            assertEquals(Layout.SEPARATE_PAGES, settings.now().layout)
         }
 
     private fun hasLinks() =

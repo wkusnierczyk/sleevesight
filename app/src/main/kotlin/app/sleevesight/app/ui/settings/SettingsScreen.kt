@@ -30,6 +30,8 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.ModelCheck
 import app.sleevesight.app.pipeline.UnavailableMark
@@ -456,6 +458,9 @@ private fun SettingsContent(
     // A section opened within the visit shows its descriptions as *Descriptions on return* has it then,
     // until it is opened again: a change of the choice waits for the next return.
     SideEffect { folds.onOpen = { descriptions.reopen(it, mode) } }
+    // On screen again, back from a page they were left for, though never taken down (Android's back
+    // while the page still opens): *Descriptions on return* applies as on restoring them (#874).
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { descriptions.comeBack(mode) }
     // A search's own folds and unfolds go with it: cleared, it leaves each as before it (#847).
     LaunchedEffect(folds.searching) { if (!folds.searching) descriptions.endSearch() }
     ProvideSettingsNavigator(folds) {
