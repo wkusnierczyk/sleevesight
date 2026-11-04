@@ -5,10 +5,15 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performFirstLinkClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ActivityScenario
@@ -24,6 +29,7 @@ import app.sleevesight.app.ui.home.HomeFixtures.normalizer
 import app.sleevesight.app.ui.home.HomeFixtures.sundown
 import app.sleevesight.app.ui.home.HomeFixtures.track
 import app.sleevesight.app.ui.home.HomeFixtures.written
+import app.sleevesight.app.ui.report.REPORT_TAG
 import app.sleevesight.app.ui.settings.SettingsSection
 import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.core.model.ProviderId
@@ -37,7 +43,8 @@ import org.robolectric.RobolectricTestRunner
 
 /**
  * The insight card while the switched-on AI service's model is found unavailable (#540): it says
- * so, and asks for another model or service, with a link to the settings, and offers no Write.
+ * so, and asks for another model or service, with a link to the settings, and offers no Write; in
+ * place of why nothing is written, or with an insight, last in its footer (#911).
  */
 @RunWith(RobolectricTestRunner::class)
 class ModelUnavailableScreenTest {
@@ -107,8 +114,30 @@ class ModelUnavailableScreenTest {
         }
 
     @Test
+    fun withAnInsightItIsSaidLastInTheFooterAboveTheDisabledWrite() =
+        // Kept from before, with a sentence the sources do not back: every line of the footer shows.
+        show(written("It is a song [MB1]. It was a hit.", cached = true), haiku) {
+            val previously = compose.onNodeWithText(app.getString(R.string.home_written_before)).performScrollTo()
+            val note = compose.onNodeWithText(app.getString(R.string.home_note_unbacked))
+            val report = compose.onNodeWithTag(REPORT_TAG)
+            val line = compose.onNodeWithTag(MODEL_UNAVAILABLE_TAG).assertTextEquals(said)
+            val write = compose.onNodeWithTag(NO_ACTION_TAG)
+            val tops = listOf(previously, note, report, line, write).map { it.fetchSemanticsNode().positionInRoot.y }
+            assertEquals("top to bottom, in this order", tops.sorted(), tops)
+            assertEquals(tops.size, tops.toSet().size)
+            // Write insight, disabled: a Rewrite would fail too, and nothing offers it.
+            write.assertIsNotEnabled().assertTextContains(app.getString(R.string.home_write))
+            assertEquals(0, count(WRITE_TAG))
+            compose.onAllNodesWithText(app.getString(R.string.home_rewrite), substring = true).assertCountEquals(0)
+            // Its link opens the model's row in the settings, as without an insight.
+            line.performFirstLinkClick()
+            compose.waitForIdle()
+            assertEquals(listOf(SettingsTarget(SettingsSection.AI_SERVICES, "model_ANTHROPIC")), settingsOpenedAt)
+        }
+
+    @Test
     fun aWrittenInsightStaysAndNothingIsSaidWithoutAnUnavailableModel() {
-        show(written("It is a song [MB1]."), haiku) { assertEquals(0, count(MODEL_UNAVAILABLE_TAG)) }
+        show(written("It is a song [MB1]."), null) { assertEquals(0, count(MODEL_UNAVAILABLE_TAG)) }
         show(InsightState.Idle(canWrite = false), null) { assertEquals(0, count(MODEL_UNAVAILABLE_TAG)) }
         // Insights off: that is why nothing is written.
         show(InsightState.Idle(canWrite = false), haiku, Settings(writeInsights = false)) {
