@@ -24,12 +24,15 @@ import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretState
+import app.sleevesight.app.ui.theme.LinkedText
+import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.app.ui.theme.appendCode
 import app.sleevesight.app.ui.theme.codeStyle
+import app.sleevesight.app.ui.theme.linkedParts
 import kotlinx.coroutines.launch
 
-// The summary after keys are saved (#763), on *Load keys* and after the key dialog, and how a
-// screen reader says the key tables' rows.
+// The summary after keys are saved (#763), on *Load keys* and after the key dialog, where the
+// services are (#765), and how a screen reader says the key tables' rows.
 
 /**
  * The summary (#763), on *Load keys* and after the key dialog, of the [keys] saved, with the keys
@@ -39,7 +42,8 @@ import kotlinx.coroutines.launch
  * *State* (*Enabled* or *Disabled*), as written ([summaryOf]); each by name. When the choices
  * could not be written, it says so in their place, with *Try again*, which writes them again
  * ([retry]); [onBusy] hears while it runs. *Done* calls [onDone]. [framed] on *Load keys* (#765),
- * whose screen is titled *Summary*: all of it in one panel ([KeyPanel]), as its intro.
+ * whose screen is titled *Summary*: all of it in one panel ([KeyPanel]), as its intro, ending with
+ * where the services are, each a link ([ServicesWhere]) that calls [onOpen], when given.
  */
 @Suppress("LongParameterList") // What was saved and written, and what the buttons do.
 @Composable
@@ -51,12 +55,13 @@ internal fun ColumnScope.SummaryStep(
     onBusy: (Boolean) -> Unit,
     onDone: () -> Unit,
     framed: Boolean = false,
+    onOpen: ((SettingsTarget) -> Unit)? = null,
 ) {
     var applied by remember { mutableStateOf(first) }
     var busy by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val written = applied
-    SummaryTables(keys, written?.let { summaryOf(keys, it.before, secrets, it.after) }, framed)
+    SummaryTables(keys, written?.let { summaryOf(keys, it.before, secrets, it.after) }, framed, onOpen)
     KeyScreenActions(
         cancel =
             {
@@ -87,13 +92,15 @@ internal fun ColumnScope.SummaryStep(
 /**
  * The summary's tables, scrolling: the [keys] saved, and the services configured ([summary]), or,
  * for null, that the choices could not be written, in the error colour; [framed], with their
- * headings, in one panel ([KeyPanel]).
+ * headings, in one panel ([KeyPanel]); and, after them, where the services are, with links that
+ * call [onOpen], when given.
  */
 @Composable
 private fun ColumnScope.SummaryTables(
     keys: List<SavedKey>,
     summary: KeySummary?,
     framed: Boolean,
+    onOpen: ((SettingsTarget) -> Unit)?,
 ) {
     val title = if (keys.size == 1) R.string.load_keys_saved_title_one else R.string.load_keys_saved_title
     if (!framed) {
@@ -101,13 +108,17 @@ private fun ColumnScope.SummaryTables(
         Column(
             modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) { SummaryContent(keys, summary) }
+        ) {
+            SummaryContent(keys, summary)
+            onOpen?.let { ServicesWhere(it) }
+        }
         return
     }
     Column(modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())) {
         KeyPanel {
             StepHeading(stringResource(title), announced = true)
             SummaryContent(keys, summary)
+            onOpen?.let { ServicesWhere(it) }
         }
     }
 }
@@ -185,6 +196,34 @@ private fun SummaryContent(
         headers = listOf(stringResource(R.string.key_table_service), stringResource(R.string.key_table_state)),
         aligns = listOf(CellAlign.START, CellAlign.START),
         rows = serviceRows,
+    )
+}
+
+/**
+ * Where the services are, in the quiet colour: *Sources*, *Genres* and *AI services*, each a link
+ * that calls [onOpen] when there is one (the summary's, which leaves *Load keys*, #765), else
+ * plain text (④'s, before anything is saved).
+ */
+@Composable
+internal fun ServicesWhere(onOpen: ((SettingsTarget) -> Unit)?) {
+    val style = MaterialTheme.typography.bodySmall
+    val quiet = MaterialTheme.colorScheme.onSurfaceVariant
+    val sources = stringResource(R.string.settings_section_sources)
+    val genres = stringResource(R.string.settings_section_labels)
+    val ai = stringResource(R.string.settings_section_ai)
+    if (onOpen == null) {
+        Text(stringResource(R.string.load_keys_where, sources, genres, ai), style = style, color = quiet)
+        return
+    }
+    LinkedText(
+        linkedParts(
+            stringResource(R.string.load_keys_where),
+            TextPart.Action(sources, SettingsTarget.sources.linkTag) { onOpen(SettingsTarget.sources) },
+            TextPart.Action(genres, SettingsTarget.genres.linkTag) { onOpen(SettingsTarget.genres) },
+            TextPart.Action(ai, SettingsTarget.aiServices.linkTag) { onOpen(SettingsTarget.aiServices) },
+        ),
+        style = style,
+        color = quiet,
     )
 }
 

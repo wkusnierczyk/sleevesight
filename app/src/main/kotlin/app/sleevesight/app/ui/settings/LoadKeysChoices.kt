@@ -26,11 +26,8 @@ import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretState
-import app.sleevesight.app.ui.theme.LinkedText
-import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.app.ui.theme.appendCode
 import app.sleevesight.app.ui.theme.codeStyle
-import app.sleevesight.app.ui.theme.linkedParts
 import app.sleevesight.core.Secret
 import app.sleevesight.core.keys.SetupRead
 import kotlinx.coroutines.launch
@@ -254,8 +251,9 @@ private fun bullet(entry: AnnotatedString): AnnotatedString =
  * *Key*, *Group* and *Enable*, of the services whose keys are ticked, by group and name, each with
  * its checkbox, or, for an AI service where more than one can be chosen, its radio; under *Already
  * configured*, the AI services whose keys were saved before. Under it, the AI service on, if it is
- * one of those; that only one AI service can be on, with radios; where the services are, each a
- * link ([onOpen], which leaves *Load keys*); and the keys a try of *Complete* could not save
+ * one of those; that only one AI service can be on, with radios; where the services are, as plain
+ * text: a link would leave *Load keys* before anything is saved, so the summary has them as links
+ * ([ServicesWhere]); and the keys a try of *Complete* could not save
  * ([unsaved]). *Complete* ([onComplete]) saves the keys and writes the choices; *Previous*
  * ([onPrevious]) goes back to ③, its ticks as left; *Cancel* ([onCancel]) saves nothing more, and
  * changes no switch.
@@ -265,7 +263,6 @@ private fun bullet(entry: AnnotatedString): AnnotatedString =
 internal fun ColumnScope.EnableStep(
     plan: EnablePlan,
     unsaved: List<SecretId>,
-    onOpen: (SettingsTarget) -> Unit,
     onPrevious: () -> Unit,
     onComplete: suspend (Map<SecretId, Boolean>) -> Unit,
     onCancel: () -> Unit,
@@ -309,19 +306,7 @@ internal fun ColumnScope.EnableStep(
             )
         }
         if (plan.radios) Text(stringResource(R.string.load_keys_one_ai), style = style, color = quiet)
-        val sources = stringResource(R.string.settings_section_sources)
-        val genres = stringResource(R.string.settings_section_labels)
-        val ai = stringResource(R.string.settings_section_ai)
-        LinkedText(
-            linkedParts(
-                stringResource(R.string.load_keys_where),
-                TextPart.Action(sources, SettingsTarget.sources.linkTag) { onOpen(SettingsTarget.sources) },
-                TextPart.Action(genres, SettingsTarget.genres.linkTag) { onOpen(SettingsTarget.genres) },
-                TextPart.Action(ai, SettingsTarget.aiServices.linkTag) { onOpen(SettingsTarget.aiServices) },
-            ),
-            style = style,
-            color = quiet,
-        )
+        ServicesWhere(onOpen = null)
         Unsaved(unsaved)
     }
     KeyScreenActions(

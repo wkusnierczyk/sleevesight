@@ -2,6 +2,7 @@ package app.sleevesight.app.ui
 
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
@@ -499,14 +500,26 @@ class LoadKeysEnableTest {
         }
 
     @Test
-    fun aLinkOpensItsSectionAndLeavesLoadKeys() =
+    fun theServicesNameTheirSectionsWithoutLinksAndTheSummaryLinksThem() =
         show("sleevesight-keys:v1\nlastfm=$lastFmKey") {
             toServices()
+            // On ④, nothing saved yet: plain text, as a link would leave *Load keys* (#765).
+            val line =
+                compose
+                    .onNode(hasText(where, substring = true), useUnmergedTree = true)
+                    .performScrollTo()
+                    .fetchSemanticsNode()
+                    .config[SemanticsProperties.Text]
+                    .single()
+            assertTrue(line.getLinkAnnotations(0, line.length).isEmpty())
+
+            complete()
+            waitForText(text(R.string.load_keys_saved_title_one))
             compose
                 .onNode(hasText(where, substring = true), useUnmergedTree = true)
                 .performScrollTo()
                 .performFirstLinkClick { (it.item as? LinkAnnotation.Clickable)?.tag == SettingsTarget.genres.linkTag }
-            waitFor("the screen closed") { !shown(text(R.string.load_keys_enable_question)) }
+            waitFor("the screen closed") { !shown(text(R.string.load_keys_saved_title_one)) }
             // *Genres* is open: its first switch shows.
             waitForText(text(R.string.settings_show_genres))
         }

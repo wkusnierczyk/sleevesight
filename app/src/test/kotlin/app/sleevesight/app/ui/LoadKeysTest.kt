@@ -11,6 +11,8 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isHeading
@@ -221,8 +223,10 @@ class LoadKeysTest {
             compose.onNodeWithText(text(R.string.load_keys_scan_next)).performScrollTo().assertIsDisplayed()
             // *Next* is dimmed until a code is read; *Previous* goes back to the words.
             compose.onNodeWithText(text(R.string.load_keys_next)).assertIsNotEnabled()
-            // The address is the intro's; none here.
-            assertEquals(0, compose.onAllNodesWithSubstring(API_KEYS_URL).size)
+            // The address is the intro's; none on this screen (the settings under it have theirs).
+            val onScreen = hasAnyAncestor(hasAnyDescendant(hasText(scanHow)))
+            val address = hasText(API_KEYS_URL, substring = true) and onScreen
+            assertTrue(compose.onAllNodes(address, useUnmergedTree = true).fetchSemanticsNodes().isEmpty())
             compose.onNodeWithText(text(R.string.load_keys_previous)).performClick()
             waitForText(text(R.string.load_keys_words_secret))
         }

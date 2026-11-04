@@ -154,7 +154,7 @@ class KeyGuidesTest {
     @Test
     fun loadKeysSaysWhereTheCodeIsMadeAndLinksTheGuideToIt() =
         show(scanner = notScanning) {
-            val more = hasText("sleevesight.app/api-keys", substring = true)
+            val more = hasText("https://sleevesight.app/api-keys", substring = true)
             waitForNode(more)
             val line =
                 compose
@@ -165,11 +165,13 @@ class KeyGuidesTest {
                     .config[SemanticsProperties.Text]
                     .single()
             val docsName = text(R.string.settings_scan_keys_docs)
-            val expected = app.getString(R.string.settings_scan_keys_more, "sleevesight.app/api-keys", docsName)
+            val expected =
+                app.getString(R.string.settings_scan_keys_more, "https://sleevesight.app/api-keys", docsName)
             assertEquals(expected, line.text)
+            // The address is plain text (#765): the guide alone is a link.
             val docs = "https://sleevesight.app/docs/tutorials/settings/#several-keys-at-once-load-keys"
             assertEquals(
-                listOf("https://sleevesight.app/api-keys", docs),
+                listOf(docs),
                 line.getLinkAnnotations(0, line.length).map { (it.item as LinkAnnotation.Url).url },
             )
 
@@ -177,8 +179,6 @@ class KeyGuidesTest {
             val guide = opened()
             assertEquals(Intent.ACTION_VIEW, guide?.action)
             assertEquals(docs, guide?.dataString)
-            compose.onNode(more).performFirstLinkClick { (it.item as LinkAnnotation.Url).url.endsWith("/api-keys") }
-            assertEquals("https://sleevesight.app/api-keys", opened()?.dataString)
             // The links are apart from the row, which still opens the screen.
             assertTrue(!shown(hasText(text(R.string.load_keys_intro_open))))
         }

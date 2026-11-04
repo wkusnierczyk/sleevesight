@@ -29,6 +29,7 @@ import app.sleevesight.app.ui.scan.QrScanner
 import app.sleevesight.app.ui.settings.Completed
 import app.sleevesight.app.ui.settings.LOAD_KEYS_WORD_TAG
 import app.sleevesight.app.ui.settings.LoadKeysScreen
+import app.sleevesight.app.ui.settings.WORDS_LIFETIME
 import app.sleevesight.core.keys.KeyCrypto
 import app.sleevesight.core.keys.KeyWords
 import app.sleevesight.core.keys.SealedSetup
@@ -51,7 +52,8 @@ import java.util.concurrent.atomic.AtomicInteger
  * *Load keys* while it opens a sealed code (#785), as picked in the mock-up: the heading *Opening
  * the code…* with the turning record before it on its line, over the camera's view since #765, no
  * progress bar, and the heading still a heading, announced as it shows; *Previous* and *Next* are
- * dimmed meanwhile. A code read while another opens is taken once that one is refused (#765).
+ * dimmed meanwhile. A code read while another opens is taken once that one is refused, and a code
+ * whose words are renewed while it opens is refused as expired (#765).
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w411dp-h891dp-420dpi")
@@ -210,6 +212,64 @@ class LoadKeysOpeningTest {
                 idleUntil("the right code opened") {
                     compose.onAllNodes(hasText(read)).fetchSemanticsNodes().isNotEmpty()
                 }
+            } finally {
+                first.countDown()
+            }
+        }
+    }
+
+    @Test
+    fun wordsRenewedWhileACodeOpensLeaveItRefusedAsExpired() {
+        // The phone's clock, moved by the test: the words are drawn at 0.
+        var now = 0L
+        var next by mutableStateOf<String?>(null)
+        val reading: QrScanner = { onScanned ->
+            val read = next
+            LaunchedEffect(read) {
+                if (read != null) {
+                    next = null
+                    onScanned(read)
+                }
+            }
+        }
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            try {
+                scenario.onActivity { activity ->
+                    activity.setContent {
+                        LoadKeysScreen(
+                            emptyMap(),
+                            Settings(),
+                            reading,
+                            { _, _ -> Completed(emptyList(), null) },
+                            { null },
+                            {},
+                            {},
+                            crypto = holdingFirst,
+                            clock = { now },
+                        )
+                    }
+                }
+                compose.onNodeWithText(app.getString(R.string.load_keys_start)).performClick()
+                val words =
+                    compose.onAllNodesWithTag(LOAD_KEYS_WORD_TAG).fetchSemanticsNodes().map { node ->
+                        node.config[SemanticsProperties.Text].joinToString("")
+                    }
+                compose.onNodeWithText(app.getString(R.string.load_keys_next)).performClick()
+                next = SealedSetup.seal("sleevesight-keys:v1\nlastfm=$LAST_FM_KEY", words, JvmKeyCrypto)
+                val opening = app.getString(R.string.load_keys_opening)
+                idleUntil("the opening step") {
+                    compose.onAllNodes(hasText(opening)).fetchSemanticsNodes().isNotEmpty()
+                }
+                // Their time runs out while the code opens: new words are drawn.
+                now = WORDS_LIFETIME.inWholeMilliseconds
+                compose.mainClock.advanceTimeBy(2_000)
+                first.countDown()
+                val expired = app.getString(R.string.load_keys_expired_title)
+                idleUntil("the code refused") {
+                    compose.onAllNodes(hasText(expired)).fetchSemanticsNodes().isNotEmpty()
+                }
+                val read = app.getString(R.string.load_keys_read_title)
+                assertTrue(compose.onAllNodes(hasText(read)).fetchSemanticsNodes().isEmpty())
             } finally {
                 first.countDown()
             }

@@ -146,8 +146,8 @@ internal class Completed(
  * those on the next try), and, once all are saved, the settings as written, or null when they
  * could not be. Then the summary ([SummaryStep]), of what was written, or that it could not be,
  * with *Try again*, which writes the choices again with [onApply]; *Done*.
- * *Previous* goes back a step, and *Cancel*, on any step, leaves without saving anything more. A
- * link to a section of the settings calls [onOpen] and leaves the screen.
+ * *Previous* goes back a step, and *Cancel*, on any step, leaves without saving anything more. On
+ * the summary, a link to a section of the settings calls [onOpen] and leaves the screen.
  *
  * The words that open a code are the ones ① shows. A sealed code scanned after the words last shown
  * there expired or opened a code, before ① has shown the new ones, is refused as expired or used,
@@ -277,10 +277,14 @@ internal fun LoadKeysScreen(
                         val opened =
                             withContext(Dispatchers.Default) { SealedSetup.open(opening.code, opening.words, crypto) }
                         val setup = (opened as? Opened.Setup)?.let { KeySetup.read(it.text) }
+                        // Renewed while it opened: the words it was opened with have gone, and
+                        // what it holds is not taken.
+                        val gone = words != opening.words
                         // Opened: the words are spent, whatever the code holds.
-                        if (setup != null && words == opening.words) retire(Refusal.USED)
+                        if (setup != null && !gone) retire(Refusal.USED)
                         scan =
                             when {
+                                gone -> ScanState.Reading(retired ?: Refusal.EXPIRED)
                                 opened == Opened.WrongWords -> ScanState.Reading(Refusal.WRONG_WORDS)
                                 setup == null -> ScanState.Reading(Refusal.DAMAGED)
                                 else -> scanned(setup, sealed = true, secrets)
@@ -325,10 +329,6 @@ internal fun LoadKeysScreen(
                 EnableStep(
                     plan = shown,
                     unsaved = unsaved,
-                    onOpen = { target ->
-                        onDismiss()
-                        onOpen(target)
-                    },
                     onPrevious = { step = LoadStep.KEYS },
                     onComplete = { choices ->
                         busy = true
@@ -364,6 +364,10 @@ internal fun LoadKeysScreen(
                     onBusy = { busy = it },
                     onDone = onDismiss,
                     framed = true,
+                    onOpen = { target ->
+                        onDismiss()
+                        onOpen(target)
+                    },
                 )
             }
         }

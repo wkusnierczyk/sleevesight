@@ -3,6 +3,7 @@ package app.sleevesight.app.ui.settings
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -124,26 +125,29 @@ internal fun SecretsSection(
 }
 
 /**
- * Under *Load keys* (#541): where its QR code is made, [API_KEYS_URL], and the documentation's guide
- * to loading keys, [LOAD_KEYS_DOCS_URL], each a link. Apart from the row, which opens the screen, so
- * that each link is a target of its own.
+ * Under *Load keys* (#541): where its QR code is made, [API_KEYS_URL], in full as plain text that
+ * can be selected (#765: a link would open it on the phone, not the computer), and the
+ * documentation's guide to loading keys, [LOAD_KEYS_DOCS_URL], a link. Apart from the row, which
+ * opens the screen, so that the link is a target of its own.
  */
 @Composable
 private fun LoadKeysMore() {
     // With *Load keys*, whose row it explains (#649).
     if (!shownInSearch(stringResource(R.string.settings_scan_keys))) return
+    // The address written in, and the guide's place left for its link, as the first.
     val parts =
         linkedParts(
-            stringResource(R.string.settings_scan_keys_more),
-            TextPart.Link(shownAddress(API_KEYS_URL), API_KEYS_URL),
+            stringResource(R.string.settings_scan_keys_more, API_KEYS_URL, "%1\$s"),
             TextPart.Link(stringResource(R.string.settings_scan_keys_docs), LOAD_KEYS_DOCS_URL),
         )
-    LinkedText(
-        parts,
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurface,
-        modifier = Modifier.padding(bottom = 8.dp),
-    )
+    SelectionContainer {
+        LinkedText(
+            parts,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(bottom = 8.dp),
+        )
+    }
 }
 
 /**
