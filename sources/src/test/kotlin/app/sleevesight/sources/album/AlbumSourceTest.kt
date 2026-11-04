@@ -484,6 +484,20 @@ class AlbumSourceTest {
         }
 
     @Test
+    fun `an album's web lines kept before the boilerplate was taken out are searched again`() =
+        runTest {
+            val web = Web()
+            val now = MemoryArtistResults()
+            source(web = web, webKept = now).searchWeb(query)
+            val key = now.keys(AlbumSource.WEB_PART).single()
+            val value = checkNotNull(now.get(AlbumSource.WEB_PART, key)).value
+            // The same entry, kept as an album's web lines were before #905: extraction 2.
+            val before = MemoryArtistResults()
+            before.keep(AlbumSource.WEB_PART.copy(extraction = 2), key, value)
+            assertTrue(source(web = web, webKept = before).lookup(query).webDue)
+        }
+
+    @Test
     fun `the caller is told of each request sent, not of lines kept or an album that sends none`() =
         runTest {
             var sent = 0
