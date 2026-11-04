@@ -254,6 +254,45 @@ class AppItemNotesTest {
         }
 
     @Test
+    fun `an album opened on two tracks, written on one, shows on the other with the web's lines and no call`() =
+        runTest {
+            val web = WebAlbums()
+            withAlbums(web)
+            val notes = notes()
+            // Both opened before either is written: each gathered without the web's lines.
+            val first = track(HomeFixtures.sundown, songArticle = true)
+            val next = track(HomeFixtures.carefree)
+            assertEquals(ItemShown.Offered, notes.settled(first, InsightItem.ALBUM))
+            assertEquals(ItemShown.Offered, notes.settled(next, InsightItem.ALBUM))
+
+            notes.write(next, InsightItem.ALBUM)
+            advanceUntilIdle()
+            assertEquals(1, web.searches)
+            assertEquals(1, provider.requests)
+
+            // Back on the first: the insight written on the next, under the key the web's lines give.
+            val shown = notes.settled(first, InsightItem.ALBUM) as ItemShown.Shown
+            assertTrue(shown.state is InsightState.Written)
+            assertTrue(
+                shown.evidence.evidence.lines
+                    .any { it.source == SourceId.WEB },
+            )
+            // Its ids mapped to its own track's lines: the album's lines are none of the first's.
+            assertTrue(shown.evidence.trackIds.isEmpty())
+            assertTrue(
+                notes
+                    .albumEvidence(first)
+                    .first()
+                    ?.lines
+                    .orEmpty()
+                    .any { it.source == SourceId.WEB },
+            )
+            assertEquals(1, web.searches)
+            assertEquals(1, provider.requests)
+            assertEquals(2, albumLookups)
+        }
+
+    @Test
     fun `web search switched off while the album is gathered makes no search`() =
         runTest {
             val web = WebAlbums()

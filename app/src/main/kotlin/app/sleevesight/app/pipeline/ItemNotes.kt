@@ -215,10 +215,13 @@ class AppItemNotes(
     // The insights shown, by key, oldest first, at most [KEPT].
     private val shown = MutableStateFlow<Map<CardKey, Entry>>(emptyMap())
 
-    // Evidence gathered, and when.
+    // Evidence gathered, and when; on which track, under which settings (for an album's web lines
+    // found on another of its tracks, [spread]).
     private class Found(
         val evidence: ItemEvidence,
         val at: Instant,
+        val track: TrackState,
+        val settings: Settings,
     )
 
     // The evidence gathered, by what it was gathered for, oldest first, at most [KEPT]: one a source
@@ -425,7 +428,7 @@ class AppItemNotes(
                         val found =
                             withContext(
                                 io,
-                            ) { insights.evidence(item, track, now) }?.let { Found(it, clock.now()) }
+                            ) { insights.evidence(item, track, now) }?.let { Found(it, clock.now(), track, now) }
                         found?.also { keep(at, it, coroutineContext) }
                     }
                 pending += job
@@ -557,7 +560,9 @@ class AppItemNotes(
             // No suspension from here to the caller's taking the next key, so a Stop finds it.
             val moved = move(key, next, job)
             // Kept once the claim moved, so the row goes from this key's to the next's, still asked.
-            keep(gatheredFor(insights, asked.track, asked.item, asked.settings), Found(found, clock.now()), asked.work)
+            val at = gatheredFor(insights, asked.track, asked.item, asked.settings)
+            keep(at, Found(found, clock.now(), asked.track, asked.settings), asked.work)
+            spread(insights, at, found, asked.work)
             // Another write of the same insight under way (another track of the album): it shows.
             if (moved) Next(next, asked.with(found), done = false) else Next(key, asked, done = true)
         } ?: Next(key, asked, done = false)
@@ -617,6 +622,32 @@ class AppItemNotes(
             val next = if (now != null && found != null) current?.key(asked.item, asked.track, found, now) else null
             if (found != null && next != null) next to found else null
         }
+
+    // The album's evidence gathered on its other tracks while its web search was due, given the web's
+    // lines of [found], gathered for [from] by its search (#885), with no search: each numbered as
+    // the album's, its ids mapped to its own track's lines ([ItemInsights.withWebOf]), so a track
+    // opened earlier, its row shown again or its Sources, has the lines and finds the insight the
+    // write keeps under the key they give, rather than its earlier key, under which none is kept. In
+    // place, under the lock [forget] clears under, unless a *Clear history* came since [work] began.
+    private fun spread(
+        insights: ItemInsights,
+        from: Gathered,
+        found: ItemEvidence,
+        work: CoroutineContext,
+    ) = publish(work) {
+        gathered.update { kept ->
+            kept.mapValues { (at, other) ->
+                val same = at != from && at.item == InsightItem.ALBUM && at.entity == from.entity
+                val given =
+                    if (same && other.evidence.webDue) {
+                        insights.withWebOf(other.track, other.settings, other.evidence, found)
+                    } else {
+                        null
+                    }
+                given?.let { Found(it, other.at, other.track, other.settings) } ?: other
+            }
+        }
+    }
 
     // The claim on [from], being written, moved to [to], with the Stop of [job]; false, the claim on
     // [from] dropped, when [to] is being written already.

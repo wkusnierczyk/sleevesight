@@ -262,14 +262,44 @@ class ItemInsights(
     ): ItemEvidence? {
         val lookup = albums?.takeIf { evidence.webDue && settings.isEnabled(SourceId.WEB) }
         val album = entity(item, track) as? CardEntity.Album
-        val shown = track.evidence
         val found =
             if (lookup != null && album != null) attempt { lookup.searchWeb(queryOf(album, settings), sent) } else null
-        if (found == null || shown == null) return null
-        val more = found.filter { settings.isEnabled(it.source) && !it.aggregate }
-        val drafts = evidence.evidence.lines.map(::draftOf) + more
-        val lines = EvidenceSet.of(drafts, hasher)
-        return ItemEvidence(lines, matching(lines.lines, shown), unreachable = evidence.unreachable)
+        return found?.let { withWeb(track, settings, evidence, it) }
+    }
+
+    /**
+     * [evidence], the album's gathered on [track] under [settings] while its web search was due, with
+     * the web's lines of [searched], the album's evidence that search gave on another of its tracks
+     * (#885), with no search: numbered as the album's lines are, each id mapped to [track]'s own line
+     * where it is one, so its insight has the key the other track's write keeps it under. Null
+     * before [track]'s evidence is in.
+     */
+    fun withWebOf(
+        track: TrackState,
+        settings: Settings,
+        evidence: ItemEvidence,
+        searched: ItemEvidence,
+    ): ItemEvidence? =
+        withWeb(
+            track,
+            settings,
+            evidence,
+            searched.evidence.lines
+                .filter { it.source == SourceId.WEB }
+                .map(::draftOf),
+        )
+
+    // [evidence] on [track] with the web's [lines], those [settings] switch on.
+    private fun withWeb(
+        track: TrackState,
+        settings: Settings,
+        evidence: ItemEvidence,
+        lines: List<EvidenceDraft>,
+    ): ItemEvidence? {
+        val shown = track.evidence ?: return null
+        val more = lines.filter { settings.isEnabled(it.source) && !it.aggregate }
+        val set = EvidenceSet.of(evidence.evidence.lines.map(::draftOf) + more, hasher)
+        return ItemEvidence(set, matching(set.lines, shown), unreachable = evidence.unreachable)
     }
 
     // The artist-level lines of the track's [own] evidence about the primary artist: all of them when
