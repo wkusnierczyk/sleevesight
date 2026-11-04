@@ -75,7 +75,7 @@ import org.robolectric.annotation.GraphicsMode
  * switch row's description has its own tap, one that fits on one line does not fold, a search shows
  * the descriptions it finds open, a screen reader hears the whole text and its fold, and a rotation
  * keeps the folds, a search's own too (#874). A tap a little below a folded description still
- * unfolds it, but not where a button group under it takes the tap (#874).
+ * unfolds it, but not where a button group or a note under it takes the tap (#874).
  *
  * Drawn as on a phone (native graphics): Robolectric's own graphics measure text too narrow for
  * anything to fold.
@@ -411,6 +411,25 @@ class DescriptionFoldTest {
             assertEquals(text(R.string.settings_description_expanded), description(summary).state())
             assertEquals(Layout.SEPARATE_PAGES, settings.now().layout)
         }
+
+    @Test
+    fun aTapOnTheNoteUnderADescriptionLeavesItsFold() {
+        // *Show genres* off: each genre source's row says so under its description, in full.
+        runBlocking { settings.update { it.copy(showGenres = false) } }
+        show(SettingsSection.GENRES) {
+            val summary = text(R.string.settings_labels_musicbrainz_summary)
+            val node = description(summary)
+            assertEquals(text(R.string.settings_description_collapsed), node.state())
+            val box = node.fetchSemanticsNode().boundsInRoot
+            val line = compose.onNode(hasText(summary), useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+            assertTrue("its tap ends at its line", box.bottom - line.bottom < 1f)
+            // In the note's upper half, just under the line.
+            val dp = compose.density.density
+            node.performTouchInput { click(Offset(width / 2f, line.bottom - box.top + 2 * dp)) }
+            compose.waitForIdle()
+            assertEquals(text(R.string.settings_description_collapsed), description(summary).state())
+        }
+    }
 
     private fun hasLinks() =
         SemanticsMatcher("has a link") { node ->

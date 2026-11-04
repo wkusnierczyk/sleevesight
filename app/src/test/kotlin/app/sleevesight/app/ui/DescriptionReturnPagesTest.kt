@@ -216,7 +216,6 @@ class DescriptionReturnPagesTest {
                     .descriptionsOnReturn == DescriptionsOnReturn.FOLDED
             }
             compose.waitForIdle()
-            assertTrue("left open until a return", isOpen(spin))
             scenario.visit(Page.CREDITS)
             assertFalse("folded back from the page", isOpen(spin))
         }

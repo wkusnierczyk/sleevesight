@@ -317,14 +317,16 @@ internal const val DESCRIPTION_TAG = "settings_description"
  * a space, cut to one line, an ellipsis at its end, and nothing else marks it; a tap unfolds it to
  * its paragraphs (with [link] set in the one that has its text, [sentenceWith]), and another folds
  * it again. Its tap is its own, reaching [reach] below it but not over the row's name: on a
- * [SwitchRow], a tap on it no longer toggles the switch. [reach] is at most the room before a
- * control that follows it whose tap reaches past its bounds only by Compose's widening (a button
- * group, 4 dp below it in a [ChoiceButtonsRow]), which a tap in the description's bounds would take
- * from it. A screen reader reads it as a node of its own, the whole text folded or not,
- * *collapsed* or *expanded*, a tap to *Expand* or *Collapse* it. One that fits on one line, or with
- * descriptions not foldable, shows in full as before, with no tap of its own. [key] tells the
- * description from the others for its fold, within its section ([LocalDescriptionSection],
- * [descriptionId]): its row's name, or a section's or note's own string's name.
+ * [SwitchRow], a tap on it no longer toggles the switch. [reach] is the padding under it, where
+ * nothing else is: [TAP_BELOW] where it is the last line of a row; 4 dp in a [Hint], its own
+ * padding, and over a [ChoiceButtonsRow]'s buttons, whose tap reaches past their bounds only by
+ * Compose's widening, which a tap in the description's bounds would take from them; none where a
+ * line follows it (a note, a link, an address). A screen reader reads it as a node of its own,
+ * the whole text folded or not, *collapsed* or *expanded*, a tap to *Expand* or *Collapse* it. One
+ * that fits on one line, or with descriptions not foldable, shows in full as before, with no tap of
+ * its own. [key] tells the description from the others for its fold, within its section
+ * ([LocalDescriptionSection], [descriptionId]): its row's name, or a section's or note's own
+ * string's name.
  * A search that finds [text] shows it open, the query marked in it ([RowSearch]).
  */
 @Suppress("LongParameterList") // What it shows and how; all but the first two have defaults.
@@ -335,7 +337,7 @@ internal fun Description(
     modifier: Modifier = Modifier,
     color: Color = Color.Unspecified,
     link: TextPart.Linked? = null,
-    reach: Dp = TAP_BELOW,
+    reach: Dp = 0.dp,
 ) {
     val shown = LocalDescriptionFolds.current
     if (shown == null) {
@@ -369,10 +371,9 @@ internal fun Description(
     // Its tap only where it is drawn: Compose widens a small target's touch area to the minimum
     // (48 dp), which would reach over the row's name and take its taps from the switch. What is in
     // it, a link, keeps the minimum. Below it, where the name is not, it reaches [reach] further
-    // (#874), into the row's padding, so a tap a little low still folds it rather than toggling the
-    // switch. What comes after it in the row keeps its own taps: a control whose bounds reach there
-    // (a note's link) is placed later and takes them first; a button group's buttons, which reach
-    // there only by Compose's widening, start beyond [reach].
+    // (#874), into the padding under it, so a tap a little low still folds it rather than toggling
+    // the switch; what comes after it (a note, a link, a button group) starts beyond [reach] and
+    // keeps its own taps.
     val configuration = LocalViewConfiguration.current
     val exact = remember(configuration) { ExactTouch(configuration) }
     CompositionLocalProvider(LocalViewConfiguration provides exact) {
@@ -401,7 +402,7 @@ internal fun Description(
     }
 }
 
-/** How far below a foldable description its tap reaches (#874) where nothing needs the room: a row's bottom padding. */
+/** How far below a foldable description that ends a row its tap reaches (#874): the row's bottom padding. */
 internal val TAP_BELOW = 8.dp
 
 /**

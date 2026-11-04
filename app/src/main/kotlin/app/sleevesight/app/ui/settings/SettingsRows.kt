@@ -50,6 +50,9 @@ private val NESTED = 16.dp
 /** The gap between what starts a row ([ROW_MARK]) and its title. */
 private val LEADING_GAP = 16.dp
 
+/** A [Hint]'s padding above and below it. */
+private val HINT_PADDING = 4.dp
+
 /**
  * Where a row under a badged row starts (#537): at the badged row's name, past its badge and the
  * gap after it, as the model and effort rows under an AI service do.
@@ -91,12 +94,13 @@ internal fun Hint(
     val search = LocalRowSearch.current
     if (search?.filtering == true && over.none { search.shows(it) }) return
     if (!foldable) {
-        Paragraphs(stringResource(text), Modifier.padding(vertical = 4.dp))
+        Paragraphs(stringResource(text), Modifier.padding(vertical = HINT_PADDING))
         return
     }
     // Folded to one line as a row's description is (#847), known by its string's name.
     val key = LocalResources.current.getResourceEntryName(text)
-    Description(key, stringResource(text), Modifier.padding(vertical = 4.dp))
+    // Its tap reaches into its own padding below it, not into the row after it (#874).
+    Description(key, stringResource(text), Modifier.padding(vertical = HINT_PADDING), reach = HINT_PADDING)
 }
 
 /**
@@ -159,7 +163,9 @@ internal fun SwitchRow(
             )
         },
     ) {
-        summary?.let { Description(title, it, color = color, link = summaryLink) }
+        // Its tap reaches into the row's padding where nothing comes under it (#874).
+        val reach = if (note == null && below == null) TAP_BELOW else 0.dp
+        summary?.let { Description(title, it, color = color, link = summaryLink, reach = reach) }
         note?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = color) }
         below?.invoke()
     }
@@ -197,7 +203,7 @@ internal fun ButtonRow(
             ) { Text(label) }
         },
     ) {
-        Description(title, summary, color = color)
+        Description(title, summary, color = color, reach = TAP_BELOW)
     }
 }
 
@@ -279,7 +285,8 @@ internal fun ValueRow(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.primary.copy(alpha = alpha),
         )
-        summary?.let { Description(title, it, color = color) }
+        // Its tap reaches into the row's padding where no note comes under it (#874).
+        summary?.let { Description(title, it, color = color, reach = if (note == null) TAP_BELOW else 0.dp) }
         note?.let {
             Text(
                 it,
