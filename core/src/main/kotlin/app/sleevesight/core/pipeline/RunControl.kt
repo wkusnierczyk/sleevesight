@@ -58,6 +58,13 @@ interface RunControl {
         evidence: EvidenceSet,
     ): Boolean = decide(settings)
 
+    /**
+     * Whether [kept], given to [decide] and answered false, is shown as the track's insight (#911):
+     * the run then tells its artist facts to the listening session (#239), as for a card from the
+     * cache; one left out tells nothing. By default false, as [decide] shows none.
+     */
+    fun shows(kept: InsightState.Written): Boolean = false
+
     /** Whether a run that offers Write waits for a tap ([awaitTap]); if not, it ends offering it. */
     val waitsForTap: Boolean
 

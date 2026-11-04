@@ -109,6 +109,7 @@ class ItemInsights(
     private val names: NameMatcher,
     private val clock: Clock = Clock.System,
     private val albums: AlbumLookup? = null,
+    private val modelUnavailable: Boolean = false,
 ) {
     /**
      * The name [item] goes by on [track]'s row: the title the player gives, the primary artist, or
@@ -368,11 +369,12 @@ class ItemInsights(
 
     /**
      * The key [item]'s insight on [track] is kept under, under [settings], whether or not it may be
-     * written now (#911): [key]'s while an AI service is ready; with none, the one the service and model
-     * selected would write under, so the insight kept for them, or another model's in its place, still
-     * shows while the selected model is found unavailable (#540, when the parts carry no AI access),
-     * though nothing is written. Null with *Show insights* off, no service or model selected, no entity,
-     * or while the parts' service is not yet the one selected (a switch waits for its rebuild).
+     * written now (#911): [key]'s while an AI service is ready; with none because the selected model
+     * is found unavailable ([modelUnavailable], #540, `PipelineParts.modelUnavailable`), the one the
+     * service and model selected would write under, so the insight kept for them, or another model's
+     * in its place, still shows, though nothing is written, as the key insight's does. Null with *Show
+     * insights* off, no service or model selected, no entity, no AI service for another reason (no
+     * key), or while the parts' service is not yet the one selected (a switch waits for its rebuild).
      */
     fun keptKey(
         item: InsightItem,
@@ -380,7 +382,7 @@ class ItemInsights(
         evidence: ItemEvidence,
         settings: Settings,
     ): CardKey? {
-        val provider = settings.aiProvider?.takeIf { settings.writeInsights }
+        val provider = settings.aiProvider?.takeIf { settings.writeInsights && modelUnavailable }
         return when {
             ai != null -> key(item, track, evidence, settings)
             provider == null -> null

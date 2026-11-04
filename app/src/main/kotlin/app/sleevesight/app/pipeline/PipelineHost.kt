@@ -750,6 +750,14 @@ class PipelineHost(
             evidence: EvidenceSet,
         ): Boolean = ask(settings, kept?.let { Card(it, evidence) })
 
+        // Whether the coordinator took [kept] as the card paid for of this run's track (#911): read
+        // once its answer came, so the state seen holds the decision.
+        override fun shows(kept: InsightState.Written): Boolean {
+            val state = snapshot.value
+            val run = state.run?.takeIf { it.id == id } ?: return false
+            return state.written(run.nowPlaying)?.card?.insight === kept
+        }
+
         private suspend fun ask(
             settings: Settings,
             kept: Card?,

@@ -85,6 +85,42 @@ internal class PipelineHostLaterPlayTest : PipelineHostFixture() {
         }
 
     @Test
+    fun `with automatic writing paused by Saver, the insight kept is shown with Rewrite offered`() =
+        runTest {
+            settings.value = settings.value.copy(pauseAutoWriteAfter = 1, lookUpInBackground = true)
+            writtenWithFirstModel(WriteAutomatically.ON_EVERY_TRACK_CHANGE)
+            settings.value = settings.value.withModel(ProviderId.ANTHROPIC, OTHER_MODEL)
+            settle()
+            host.activityStopped(changingConfigurations = false)
+            runCurrent()
+            // The first change away is written as usual; at the next the first action expires.
+            play("Beta")
+            settle()
+            assertEquals(1, provider.requestsFor("Beta"))
+
+            play("Alpha")
+            settle()
+            assertTrue("offered because automatic writing paused", host.state.value.lapsed)
+            assertKeptWithRewrite(FIRST_MODEL)
+        }
+
+    @Test
+    fun `under On track skip, a track that followed by itself shows the insight kept with Rewrite offered`() =
+        runTest {
+            writtenWithFirstModel(WriteAutomatically.WHEN_I_SKIP)
+            play("Beta")
+            settle()
+            assertEquals("followed by itself: not written", 0, provider.requestsFor("Beta"))
+            settings.value = settings.value.withModel(ProviderId.ANTHROPIC, OTHER_MODEL)
+            settle()
+
+            play("Alpha")
+            settle()
+            assertTrue("offered because it followed by itself", host.state.value.followed)
+            assertKeptWithRewrite(FIRST_MODEL)
+        }
+
+    @Test
     fun `under an automatic mode that writes by itself, the chosen model writes it anew`() =
         runTest {
             writtenWithFirstModel(WriteAutomatically.ON_EVERY_TRACK_CHANGE)

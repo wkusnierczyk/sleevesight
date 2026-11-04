@@ -375,9 +375,10 @@ class AppItemNotes(
             else -> ItemShown.Shown(entry.state, evidence, modelName(key.model), key)
         }
 
-    // [shown] while no insight may be written (no AI service ready: its model found unavailable, #540,
-    // or its key gone): nothing offered, as with no service; an insight kept shows, with no *Rewrite
-    // insight* that could be tapped (#911).
+    // [shown] while no insight may be written, the selected model found unavailable (#540; with no AI
+    // service for another reason, [ItemInsights.keptKey] gives none, so the row says so): nothing
+    // offered, as with no service; an insight kept shows, with no *Rewrite insight* that could be
+    // tapped (#911).
     private fun unwritable(shown: ItemShown): ItemShown =
         when (shown) {
             ItemShown.Offered, is ItemShown.Asking -> ItemShown.NoService
@@ -1030,7 +1031,7 @@ class AppItemNotes(
     ) = synchronized(lock) { if (current(work)) events(event) }
 
     private fun insightsOf(made: PipelineParts) =
-        ItemInsights(made.ai, made.cache, made.hasher, names, clock, made.albums)
+        ItemInsights(made.ai, made.cache, made.hasher, names, clock, made.albums, made.modelUnavailable)
 
     // Whether an insight written at [writtenAt] is past *Keep history for* ([lifetime]; null, for ever).
     private fun expired(

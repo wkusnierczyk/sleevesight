@@ -174,8 +174,11 @@ internal class InsightWriter(
             }
 
             else -> {
-                // Shown in its place, its artist facts are told, as a card from the cache's are (#239).
-                other?.let { parts.sessionFacts.cite(key, ArtistFact.citedIn(it.grounded, evidence.lines)) }
+                // Shown in its place, its artist facts are told, as a card from the cache's are (#239);
+                // only once the control says it is shown, never for one it left out.
+                other?.takeIf(control::shows)?.let {
+                    parts.sessionFacts.cite(key, ArtistFact.citedIn(it.grounded, evidence.lines))
+                }
                 show(InsightState.Idle(canWrite = true))
                 emit(PipelineEvent.InsightWaits(key, WAITS_FOR_TAP))
                 if (control.waitsForTap) {
@@ -481,7 +484,8 @@ internal class InsightWriter(
 // the most recently written that reads as one, checked against the whole evidence as a card from the
 // cache is ([allowModel] as the run's), written by its own key; null for none. `InsightWriter` reads it
 // only once [wanted] has none of its own, so it never stands in for one. Nothing is logged for it: it
-// is shown only when the run offers Write, and then as the card paid for, not as the run's own.
+// is shown when the run offers Write, as the card paid for, not as the run's own; or, with the
+// selected model unavailable (`keptWithoutService`), as the run's own, with nothing offered.
 private suspend fun CacheGuard.keptByOther(
     wanted: CardKey,
     evidence: EvidenceSet,

@@ -69,8 +69,8 @@ class AppItemNotesUnavailableTest {
     }
 
     // A rebuild, as the host's after a settings change or a model found unavailable.
-    private fun Built.rebuild() {
-        parts.value = build(keys, checkNotNull(settings.value))
+    private fun Built.rebuild(with: PipelineKeys = keys) {
+        parts.value = build(with, checkNotNull(settings.value))
     }
 
     // Once the check has heard the refusal and marked the selected model unavailable.
@@ -168,6 +168,35 @@ class AppItemNotesUnavailableTest {
             val shown = AppItemNotes(parts, settings, this, NameMatcher(JvmAccentFolder)).song(first) as ItemShown.Shown
             assertEquals(OTHER, shown.writtenBy())
             assertNull(shown.rewriteWith)
+        }
+
+    @Test
+    fun `with the AI key removed, an insight kept is not shown, and the row says no service is ready`() =
+        runTest {
+            val built = built()
+            built.rebuild()
+            val notes = AppItemNotes(parts, settings, this, NameMatcher(JvmAccentFolder))
+            val first = track()
+            notes.write(first, InsightItem.SONG, ItemAsk.TAP)
+            advanceUntilIdle()
+            assertEquals(FIRST, notes.song(first).writtenBy())
+            model(OTHER)
+
+            // No key: no AI access, and not for a model found unavailable. As before #911, as the key
+            // insight is: no service, whatever is kept, its own or another model's.
+            built.rebuild(PipelineKeys())
+            assertNull(parts.value?.ai)
+            assertFalse(checkNotNull(parts.value).modelUnavailable)
+            assertEquals(
+                ItemShown.NoService,
+                AppItemNotes(parts, settings, this, NameMatcher(JvmAccentFolder)).song(first),
+            )
+            model(FIRST)
+            assertEquals(
+                ItemShown.NoService,
+                AppItemNotes(parts, settings, this, NameMatcher(JvmAccentFolder)).song(first),
+            )
+            assertEquals(1, provider.requests)
         }
 
     @Test

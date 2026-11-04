@@ -503,7 +503,8 @@ data class CoordinatorState(
      * without it. [paused] (#203) is the settings of a decision that offered Write, or found nothing
      * to narrate, only because the first action had expired: a run of the key asking again under
      * the same settings, with the latest report's cause still one they write on, says so too
-     * ([Run.lapsed]). It never decides a write. A lapsed Decide sets it; a decision for nothing to
+     * ([Run.lapsed]). It never decides a write. A lapsed Decide sets it, unless it takes the insight another service, model or effort kept
+     * (#911, [Run.kept]), which writes the ledger instead; a decision for nothing to
      * narrate sets it as [wouldWrite] is set, with the first action expired in place of made, and a
      * run of the key asking again keeps it under the same settings; any other decision drops it.
      * [foundNew] (#854) is the fingerprint of the evidence a look again (#617) found something new
