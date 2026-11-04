@@ -372,8 +372,10 @@ class AlbumSourceTest {
         runTest {
             // The names those asked: still no sign that the page is this artist's, not a namesake's.
             assertFalse(citesLastFm(source(LastFm(lastFmSundown.copy(mbid = null))).lookup(query)))
-            // An album MusicBrainz does not name: nothing to check the id against.
-            assertFalse(citesLastFm(source(LastFm(lastFmSundown)).lookup(query.copy(group = null))))
+            // An album MusicBrainz does not name: nothing to check the id against, so Last.fm is not asked.
+            val unnamed = LastFm(lastFmSundown)
+            assertFalse(citesLastFm(source(unnamed).lookup(query.copy(group = null))))
+            assertTrue(unnamed.asked.isEmpty())
         }
 
     @Test

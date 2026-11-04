@@ -169,6 +169,8 @@ class AlbumSource(
         at: Instant,
         asking: Asking,
     ): List<EvidenceDraft> {
+        // With no release group, no answer could be confirmed ([isAlbum]): Last.fm is not asked.
+        if (query.group == null) return emptyList()
         val info = asking.read(client.albumInfo(query.artist, query.title), null)
         val sentences =
             if (info != null &&
