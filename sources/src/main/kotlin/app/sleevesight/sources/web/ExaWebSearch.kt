@@ -31,8 +31,9 @@ import kotlin.time.TimeSource
 /**
  * Web search through Exa, the first provider (D11; `design/design.md`, *Web search provider (D11)*), on the
  * user's own key. One evidence line per kept result: Exa's highlight for it, verbatim apart from
- * whitespace and cut to at most [LINE_CHARACTERS] at a word boundary ([cut]), with the result's URL
- * (architecture, *Source adapters*).
+ * whitespace and page boilerplate ([WebBoilerplate], #905), cut to at most [LINE_CHARACTERS] at a
+ * word boundary ([cut]), with the result's URL (architecture, *Source adapters*). A result whose
+ * highlight is all boilerplate, or names only the track in a page's words, gives no line.
  *
  * The query names the song and its credited artists ([ExaSearchRequest.of]); the results are then
  * kept or dropped by [RecordingFilter], at most [MAX_LINES] in Exa's order. The filter judges the
@@ -119,7 +120,12 @@ class ExaWebSearch(
         response: ExaSearchResponse,
         retrievedAt: Instant,
     ): List<EvidenceDraft> =
-        lines(response, retrievedAt) { result, snippet -> filter.isAbout(track, result.title, snippet, result.url) }
+        lines(response, retrievedAt, subjectOf(track), filter::fold) { result, line ->
+            filter.isAbout(track, result.title, line, result.url)
+        }
+
+    // The names a part of a line must say more than: the track's title, its work and its artists.
+    private fun subjectOf(track: NormalizedTrack): List<String> = listOfNotNull(track.title, track.from) + track.artists
 
     companion object {
         const val HOST: String = "api.exa.ai"
@@ -144,11 +150,13 @@ class ExaWebSearch(
             }
 
         /**
-         * [extractionVersion]. 2: each line cut to [LINE_CHARACTERS] and judged as cut (#634), so a
-         * result kept before, with a line up to ten times as long or kept for words past the cut,
-         * is missed instead of served.
+         * [extractionVersion]: raised when what the adapter makes of Exa's results changes. 2: each
+         * line cut to [LINE_CHARACTERS] and judged as cut (#634), so a result kept before, with a
+         * line up to ten times as long or kept for words past the cut, is missed instead of served.
+         * 3: page boilerplate taken out before the cut ([WebBoilerplate], #905), so a line kept
+         * before, with a video site's footer or a store's rights line in it, is looked up again.
          */
-        const val EXTRACTION_VERSION: Int = 2
+        const val EXTRACTION_VERSION: Int = 3
 
         // Unicode's White_Space, listed (no-break spaces, line and paragraph separators, NEL): a
         // JVM `\s` is ASCII only, and `(?U)` is not portable (D2). [cut] then finds every word
@@ -173,14 +181,29 @@ class ExaWebSearch(
         internal fun snippetOf(
             result: ExaResult,
             max: Int = LINE_CHARACTERS,
+            clean: (String) -> String = { it },
         ): String =
             cut(
-                result.highlights
-                    .map { it.replace(WHITESPACE, " ").trim() }
-                    .filter { it.isNotEmpty() }
-                    .joinToString(SEPARATOR),
+                clean(
+                    result.highlights
+                        .map { it.replace(WHITESPACE, " ").trim() }
+                        .filter { it.isNotEmpty() }
+                        .joinToString(SEPARATOR),
+                ),
                 max,
             )
+
+        /**
+         * A source's line for [result]: its highlights joined as [snippetOf] joins them, without
+         * the page's boilerplate for the [subject] ([WebBoilerplate.clean], #905), then [cut] to
+         * [LINE_CHARACTERS], so the room boilerplate took goes to the page's own text. Empty when
+         * nothing is left.
+         */
+        internal fun lineOf(
+            result: ExaResult,
+            subject: List<String>,
+            fold: (String) -> String,
+        ): String = snippetOf(result) { WebBoilerplate.clean(it, subject, fold) }
 
         /**
          * [text] (whitespace already collapsed) as it comes when it has at most [max] characters;
@@ -313,23 +336,27 @@ class ExaWebSearch(
             )
 
         /**
-         * One web line per result of [response] with a highlight ([snippetOf]), once per address,
-         * in Exa's order, of those [about] keeps (judging the line as cut), at most [MAX_LINES]: for
-         * the track's search, and the album's (`ExaAlbumSearch`, #885).
+         * One web line per result of [response] with a line left ([lineOf], for the [subject]:
+         * the track's title, its work and its artists, or the album and its artist; folded by
+         * [fold]), once per address, in Exa's order, of those [about] keeps (judging the line as
+         * kept: cleaned and cut), at most [MAX_LINES]: for the track's search, and the album's
+         * (`ExaAlbumSearch`, #885).
          */
         internal fun lines(
             response: ExaSearchResponse,
             retrievedAt: Instant,
+            subject: List<String>,
+            fold: (String) -> String,
             about: (ExaResult, String) -> Boolean,
         ): List<EvidenceDraft> {
             val seen = mutableSetOf<String>()
             return response.results
                 .asSequence()
                 .mapNotNull { result ->
-                    val snippet = snippetOf(result)
-                    if (snippet.isEmpty() || !seen.add(result.url)) return@mapNotNull null
-                    if (!about(result, snippet)) return@mapNotNull null
-                    EvidenceDraft(SourceId.WEB, Scope.WEB, snippet, result.url, retrievedAt)
+                    val line = lineOf(result, subject, fold)
+                    if (line.isEmpty() || !seen.add(result.url)) return@mapNotNull null
+                    if (!about(result, line)) return@mapNotNull null
+                    EvidenceDraft(SourceId.WEB, Scope.WEB, line, result.url, retrievedAt)
                 }.take(MAX_LINES)
                 .toList()
         }
