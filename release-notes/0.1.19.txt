@@ -1,0 +1,4 @@
+What's new in 0.1.19:
+- Song, Artist and Album are buttons that open panels, as Dates and Genres do.
+- Why is this …? answers from the AI's knowledge or the web when the sources can't.
+- The API keys page on the site reads in order, step by step.
