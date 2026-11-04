@@ -21,7 +21,7 @@ import kotlinx.coroutines.Deferred
  * insights (#522) open in place on Home (*Expandable boxes*, the default) or each on a page of its
  * own (*Separate pages*). *Sources on a new track* (#269; a choice since #522, the switch *Keep
  * Sources as you left them* before) and *Song, Artist and Album on a new track* (#522): *Folded*
- * (the default), *Unfolded* or *As you left them*, as button groups; under *Expandable boxes* only,
+ * (the default), *Unfolded* or *As left*, as button groups; under *Expandable boxes* only,
  * so they are shown, but not offered, under *Separate pages*, where each page opens fresh. Then
  * *Foldable descriptions* and *Descriptions on return*
  * (#847, [DescriptionRows]). *Lyrics links* (#728), on by default: whether Home shows a

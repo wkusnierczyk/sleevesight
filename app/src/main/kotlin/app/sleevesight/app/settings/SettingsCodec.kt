@@ -78,7 +78,7 @@ internal object SettingsCodec {
     private val SESSION_GAP_MS = longPreferencesKey("history.session_gap_ms")
 
     // *Keep Sources as you left them*, the switch *Sources on a new track* was before #522: read only
-    // while the choice is not stored, on as *As you left them*, off as *Folded*; removed once it is.
+    // while the choice is not stored, on as *As left*, off as *Folded*; removed once it is.
     private val KEEP_SOURCES_UNFOLDED = booleanPreferencesKey("home.keep_sources_unfolded")
     private val SOURCES_ON_NEW_TRACK = stringPreferencesKey("home.sources_on_new_track")
     private val ITEMS_ON_NEW_TRACK = stringPreferencesKey("home.items_on_new_track")
@@ -526,7 +526,7 @@ internal fun <T : Any> MutablePreferences.put(
 
 /**
  * *Sources on a new track* as [stored], else as the switch it was ([switch], *Keep Sources as you
- * left them*, #522: on, *As you left them*; off, *Folded*), else as [defaults] have it.
+ * left them*, #522: on, *As left*; off, *Folded*), else as [defaults] have it.
  */
 private fun newTrackFoldOf(
     stored: String?,
