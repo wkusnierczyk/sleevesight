@@ -13,12 +13,14 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertTrue
 
 /**
  * Page boilerplate taken out of web lines (#905), on `exa-01-sundown-boilerplate.response.json`:
  * one page of each kind the #767 phone round met on thinly documented tracks (a video site, a
- * streaming service, a store, a chord sheet, a lyrics site, a rights notice), with the sites' fixed
- * text as those pages had it and the project's own words for the rest (`fixtures/http/web/README.md`).
+ * streaming service, a store, a chord sheet, a lyrics site, a rights notice), on its site's host,
+ * with the sites' fixed text as those pages had it and the project's own words for the rest
+ * (`fixtures/http/web/README.md`); and the facts in prose that look like boilerplate, which stay.
  */
 class WebBoilerplateTest {
     private val recording = "web/exa-01-sundown-boilerplate.response.json"
@@ -30,16 +32,39 @@ class WebBoilerplateTest {
     private fun lineFor(url: String): String =
         ExaWebSearch.lineOf(response.results.single { it.url == url }, subject, filter::fold)
 
+    // The line kept for a page at [url] with [highlights].
+    private fun lineOf(
+        url: String,
+        vararg highlights: String,
+    ): String =
+        ExaWebSearch.lineOf(ExaResult(url, "Sundown - Gordon Lightfoot", highlights.toList()), subject, filter::fold)
+
+    // A page of each kind with rules of its own, and one with none.
+    private val sites =
+        listOf(
+            "https://www.youtube.com/watch?v=fixture",
+            "https://open.spotify.com/track/fixture",
+            "https://sundown-fixture.bandcamp.com/track/sundown",
+            "https://tabs.ultimate-guitar.com/tab/fixture",
+            "https://www.letras.com/fixture/",
+            "https://records.example/sundown",
+        )
+
+    // Asserts that [highlight] comes out as it went in, on every kind of site.
+    private fun assertKeptEverywhere(highlight: String) {
+        for (url in sites) assertEquals(highlight, lineOf(url, highlight), url)
+    }
+
     @Test
     fun `a video page's footer is taken out, and a page with only its title gives no line`() {
-        assertEquals("", lineFor("https://videos.example/watch?v=sundown-official"))
+        assertEquals("", lineFor("https://www.youtube.com/watch?v=sundown-official"))
     }
 
     @Test
     fun `a video page's channel stats are taken out and its description kept`() {
         assertEquals(
             "## Description Official audio for Sundown by Gordon Lightfoot, the title track of his 1974 album.",
-            lineFor("https://videos.example/watch?v=sundown-1974"),
+            lineFor("https://www.youtube.com/watch?v=sundown-1974"),
         )
     }
 
@@ -47,7 +72,7 @@ class WebBoilerplateTest {
     fun `a streaming page's navigation and sign-in text are taken out`() {
         assertEquals(
             "Song # Sundown Gordon Lightfoot • Sundown• 1974• 3:33 ## Lyrics",
-            lineFor("https://streaming.example/track/sundown-lightfoot"),
+            lineFor("https://open.spotify.com/track/sundown-fixture"),
         )
     }
 
@@ -55,7 +80,7 @@ class WebBoilerplateTest {
     fun `a store page's rights line, shows and supporters' label are taken out`() {
         assertEquals(
             "### credits from Sundown, released January 1, 1974",
-            lineFor("https://store.example/track/sundown"),
+            lineFor("https://sundown-fixture.bandcamp.com/track/sundown"),
         )
     }
 
@@ -63,20 +88,20 @@ class WebBoilerplateTest {
     fun `a list of user names is taken out`() {
         assertEquals(
             "1. | Sundown 03:33 | ### credits released January 1, 1974",
-            lineFor("https://store.example/album/sundown"),
+            lineFor("https://sundown-fixture.bandcamp.com/album/sundown"),
         )
     }
 
     @Test
     fun `a chord sheet's title alone gives no line`() {
-        assertEquals("", lineFor("https://chords.example/tab/gordon-lightfoot/sundown"))
+        assertEquals("", lineFor("https://tabs.ultimate-guitar.com/tab/fixture/sundown-chords"))
     }
 
     @Test
     fun `a chord sheet's tuning, capo, chords and practice tip are taken out, its tempo kept`() {
         assertEquals(
             "# Sundown Chords by Gordon Lightfoot Tempo: 112 bpm",
-            lineFor("https://chords.example/chords/gordon-lightfoot/sundown"),
+            lineFor("https://chordu.com/chords-tabs-sundown-fixture"),
         )
     }
 
@@ -84,7 +109,7 @@ class WebBoilerplateTest {
     fun `chord symbols between lyrics are taken out, an article after them kept`() {
         assertEquals(
             "The evening light along the shore A quiet road back home ... A small town after dark",
-            lineFor("https://chords.example/lyrics/gordon-lightfoot/sundown"),
+            lineFor("https://www.cifraclub.com.br/fixture/sundown/"),
         )
     }
 
@@ -95,7 +120,7 @@ class WebBoilerplateTest {
 
     @Test
     fun `a transcript's markers are taken out`() {
-        assertEquals("the evening light along the shore", lineFor("https://videos.example/watch?v=sundown-live"))
+        assertEquals("the evening light along the shore", lineFor("https://www.youtube.com/watch?v=sundown-live"))
     }
 
     @Test
@@ -124,10 +149,10 @@ class WebBoilerplateTest {
             assertEquals(
                 listOf(
                     "https://songnotes.example/gordon-lightfoot/sundown",
-                    "https://videos.example/watch?v=sundown-1974",
-                    "https://streaming.example/track/sundown-lightfoot",
-                    "https://store.example/track/sundown",
-                    "https://store.example/album/sundown",
+                    "https://www.youtube.com/watch?v=sundown-1974",
+                    "https://open.spotify.com/track/sundown-fixture",
+                    "https://sundown-fixture.bandcamp.com/track/sundown",
+                    "https://sundown-fixture.bandcamp.com/album/sundown",
                 ),
                 result.evidence.map { it.url },
             )
@@ -144,6 +169,61 @@ class WebBoilerplateTest {
             assertEquals("https://songnotes.example/gordon-lightfoot/sundown", lines.first().url)
             assertEquals(lines.map { lineFor(it.url!!) }, lines.map { it.text })
         }
+
+    @Test
+    fun `a site's rules run only on its own site`() {
+        val sheet = "# Sundown Chords by Gordon Lightfoot Tempo: 112 bpm Chords used: E A B7 C#m Capo:+0fret"
+        assertEquals(sheet, lineOf("https://lyrics.example/sundown", sheet))
+        assertEquals("# Sundown Chords by Gordon Lightfoot Tempo: 112 bpm", lineOf("https://chordu.com/fixture", sheet))
+    }
+
+    @Test
+    fun `prose naming artists with digits in their names is kept`() {
+        assertKeptEverywhere("The artist lists U2 and UB40 as influences on this recording.")
+    }
+
+    @Test
+    fun `a lyric with chord names in it is kept, off a chord site and on Bandcamp`() {
+        val lyric = "Fmaj7 the evening light along the shore Em7 a quiet road back home tonight"
+        for (url in sites - "https://tabs.ultimate-guitar.com/tab/fixture") assertEquals(lyric, lineOf(url, lyric), url)
+    }
+
+    @Test
+    fun `chord names in prose are kept`() {
+        assertKeptEverywhere("The verse alternates Am G throughout the recording.")
+        assertKeptEverywhere("Le couplet alterne Am G tout au long de l'enregistrement.")
+    }
+
+    @Test
+    fun `credits are kept, the subject's name in them too`() {
+        assertKeptEverywhere("Music: Gordon Lightfoot. ... Lyrics: Gordon Lightfoot.")
+        assertKeptEverywhere("Sundown, written by Gordon Lightfoot")
+    }
+
+    @Test
+    fun `a part with a number is kept`() {
+        assertKeptEverywhere("Gordon Lightfoot recorded Sundown at Eastern Sound ... 1974. ... © 1974")
+    }
+
+    @Test
+    fun `the words of a rights notice in a title or a lyric are kept`() {
+        assertKeptEverywhere("Their follow-up single was All Rights Reserved.")
+        assertKeptEverywhere("We sang all rights reserved for the ones who stay")
+    }
+
+    @Test
+    fun `a long highlight is cleaned without exhausting the stack`() {
+        val long = "Sundown by Gordon Lightfoot, 1974 " + "word ".repeat(10_000)
+        val chords = "Sundown by Gordon Lightfoot, 1974 " + "Am G ".repeat(10_000) + "The evening light"
+        val address = "Sundown by Gordon Lightfoot, 1974 " + "a.".repeat(10_000) + "com"
+        for (url in sites + "https://chordu.com/fixture") {
+            for (text in listOf(long, chords, address)) {
+                val line = lineOf(url, text)
+                assertTrue(line.startsWith("Sundown by Gordon Lightfoot, 1974"), "$url: $line")
+                assertTrue(line.length <= ExaWebSearch.LINE_CHARACTERS + 1, url)
+            }
+        }
+    }
 
     @Test
     fun `cached lines from before the cleaning are not served`() {

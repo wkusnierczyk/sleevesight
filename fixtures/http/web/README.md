@@ -8,7 +8,7 @@ distributing information obtained through its services without its written permi
 text Exa returned is kept here. Each response has the shape of Exa's `POST /search` answer, cut to
 the fields the adapter reads (each result's `url`, `title` and `highlights`), but the titles, URLs
 (on `.example` domains, except one Wikipedia URL that tests the exclusion of the pipeline's own
-sources) and highlights were written by the project, modelled on the kinds of result the live
+sources, and the boilerplate fixture's pages on their sites' hosts, below) and highlights were written by the project, modelled on the kinds of result the live
 spike returned (`design/design.md`, *Web search provider (D11)*). They are not facts about the
 recordings. Live behaviour is checked by `ExaLiveTest`, which runs only with a key and keeps nothing.
 
@@ -25,4 +25,4 @@ recordings. Live behaviour is checked by `ExaLiveTest`, which runs only with a k
 | `exa-45-i-will-follow-you-into-the-dark.*` | 45 I Will Follow You Into The Dark, Yanjoco | A page for another of the artist's songs that lists this one is dropped |
 | `exa-63-baby-please-dont-go.*` | 63 Baby, Please Don't Go, Them and Van Morrison | A version that says "them" but not Van Morrison is dropped |
 | `exa-77-forever-young.*` | 77 Forever Young, dearoldfriend and Winston Hunte | Every result is another artist's song: all rejected |
-| `exa-01-sundown-boilerplate.response.json` | 1 Sundown, Gordon Lightfoot | Page boilerplate (#905, `WebBoilerplateTest`): one page of each kind the #767 phone round met on thin tracks (a video site's footer and channel stats, a streaming service's navigation, a store's rights line, shows and supporters, a chord sheet, a lyrics site, a transcript, a rights notice). The sites' fixed text (a footer, navigation, field names) is as those pages had it, since the rules match it; titles, URLs and every other word are the project's. No request file: it is the track's request |
+| `exa-01-sundown-boilerplate.response.json` | 1 Sundown, Gordon Lightfoot | Page boilerplate (#905, `WebBoilerplateTest`): one page of each kind the #767 phone round met on thin tracks (a video site's footer and channel stats, a streaming service's navigation, a store's rights line, shows and supporters, a chord sheet, a lyrics site, a transcript, a rights notice). Each page is on its site's real host (YouTube, Spotify, Bandcamp, Ultimate Guitar, Chordu, Cifra Club), since the rules run by the result's site, at a made-up path; the sites' fixed text (a footer, navigation, field names) is as those pages had it, since the rules match it; every other word is the project's. No request file: it is the track's request |

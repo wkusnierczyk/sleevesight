@@ -183,8 +183,8 @@ class RecordingFilter(
             return OWN_SOURCE_HOSTS.any { host == it || host.endsWith(".$it") }
         }
 
-        // The authority of an absolute URL, without user info or port, lowercased; null if none.
-        private fun hostOf(url: String): String? {
+        /** The authority of an absolute URL, without user info or port, lowercased; null if none. */
+        internal fun hostOf(url: String): String? {
             val afterScheme = url.substringAfter("://", missingDelimiterValue = "")
             if (afterScheme.isEmpty()) return null
             val authority = afterScheme.takeWhile { it != '/' && it != '?' && it != '#' }

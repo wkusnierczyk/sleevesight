@@ -195,7 +195,7 @@ class ExaWebSearch(
 
         /**
          * A source's line for [result]: its highlights joined as [snippetOf] joins them, without
-         * the page's boilerplate for the [subject] ([WebBoilerplate.clean], #905), then [cut] to
+         * the page's boilerplate by its site, for the [subject] ([WebBoilerplate.clean], #905), then [cut] to
          * [LINE_CHARACTERS], so the room boilerplate took goes to the page's own text. Empty when
          * nothing is left.
          */
@@ -203,7 +203,7 @@ class ExaWebSearch(
             result: ExaResult,
             subject: List<String>,
             fold: (String) -> String,
-        ): String = snippetOf(result) { WebBoilerplate.clean(it, subject, fold) }
+        ): String = snippetOf(result) { WebBoilerplate.clean(it, result.url, subject, fold) }
 
         /**
          * [text] (whitespace already collapsed) as it comes when it has at most [max] characters;
