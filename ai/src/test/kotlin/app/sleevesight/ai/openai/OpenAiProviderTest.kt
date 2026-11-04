@@ -145,6 +145,21 @@ class OpenAiProviderTest {
         }
 
     @Test
+    fun `a system prompt goes in instructions, the prompt staying the input`() =
+        runTest {
+            val (_, net) =
+                events(request.copy(system = "You narrate.\nBriefly.")) { ok(recorded("openai/responses-stream.sse")) }
+
+            assertEquals(
+                Json.parseToJsonElement(
+                    """{"model":"gpt-6-luna","instructions":"You narrate.\nBriefly.",""" +
+                        """"input":"Say hello in three words.","max_output_tokens":256,"stream":true,"store":false}""",
+                ),
+                body(net),
+            )
+        }
+
+    @Test
     fun `an effort goes in reasoning, by its name, and none leaves the model's default`() =
         runTest {
             val names =

@@ -177,6 +177,21 @@ class GoogleProviderTest {
         }
 
     @Test
+    fun `a system prompt goes in systemInstruction, the prompt staying the user's content`() =
+        runTest {
+            val (_, net) = events(request.copy(system = "You narrate.\nBriefly.")) { ok(recorded(stream)) }
+
+            assertEquals(
+                Json.parseToJsonElement(
+                    """{"systemInstruction":{"parts":[{"text":"You narrate.\nBriefly."}]},""" +
+                        """"contents":[{"role":"user","parts":[{"text":"Say hello in three words."}]}],""" +
+                        """"generationConfig":{"maxOutputTokens":256}}""",
+                ),
+                body(net),
+            )
+        }
+
+    @Test
     fun `an effort goes in thinkingConfig, and none leaves the model's default`() =
         runTest {
             for (effort in ReasoningEffort.entries) {

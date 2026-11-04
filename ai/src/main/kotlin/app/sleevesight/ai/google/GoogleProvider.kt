@@ -58,6 +58,9 @@ import kotlin.time.Instant
  * its default says: for those, the effort chosen in the settings has no effect. Thoughts are not
  * asked for (`includeThoughts`), and a thought part that comes all the same is skipped.
  *
+ * [CompletionRequest.system], when given, is the request's `systemInstruction` (#767), a content of
+ * one text part with no role.
+ *
  * The stream's text becomes [CompletionEvent.Delta]s, and its end [CompletionEvent.Done], with the
  * usage and the stop reason, or [CompletionEvent.Error] ([ContentStream]). The request is a `POST`,
  * so `:net` never repeats it once it may have been acted on: a paid call is never sent twice.
@@ -197,6 +200,11 @@ class GoogleProvider(
         val level = request.effort?.let { thinkingLevel(request.model, it) }
         val body =
             buildJsonObject {
+                request.system?.let { system ->
+                    putJsonObject("systemInstruction") {
+                        putJsonArray("parts") { addJsonObject { put("text", system) } }
+                    }
+                }
                 putJsonArray("contents") {
                     addJsonObject {
                         put("role", "user")

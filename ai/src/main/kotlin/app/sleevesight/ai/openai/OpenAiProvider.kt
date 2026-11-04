@@ -59,7 +59,8 @@ import kotlin.time.Instant
  * `function_call_output` for each call; with [CompletionRequest.toolsAllowed] false, `tool_choice`
  * `none`, so the model answers now.
  *
- * The prompt is the request's `input`, as one user message. `store` is `false`: the response is
+ * The prompt is the request's `input`, as one user message; [CompletionRequest.system], when given,
+ * its `instructions` (#767), which the Responses API sends as a system message. `store` is `false`: the response is
  * not kept on OpenAI's side for later retrieval, which a one-shot card never does (by default the
  * API keeps it for at least 30 days).
  *
@@ -199,6 +200,7 @@ class OpenAiProvider(
         val body =
             buildJsonObject {
                 put("model", request.model)
+                request.system?.let { put("instructions", it) }
                 if (request.exchanges.isEmpty()) put("input", request.prompt) else put("input", inputOf(request))
                 put("max_output_tokens", maxTokens)
                 put("stream", true)
