@@ -93,7 +93,9 @@ data class KeptItem(
  * ([EvidenceSet.nothingToNarrate]), no call is made, and the item says so
  * ([InsightState.NoEvidence]). A cache that throws is a miss, and a write that fails keeps
  * nothing. Each state written comes with its time by [clock]; a reply kept is kept with the time it
- * is shown with (#643).
+ * is shown with (#643). Each kept under its own model: one written with another AI service, model or
+ * effort is never served as [key]'s, but is found apart ([keptByOther], #911), for a row to show it
+ * with *Rewrite insight* beside it, and a rewrite keeps both.
  */
 @Suppress(
     "LongParameterList", // Where items are written, kept, and gathered, and the time.
@@ -390,7 +392,30 @@ class ItemInsights(
     ): KeptItem? {
         val card = attempt { cache.keptCard(key) } ?: return null
         val reply = readReply(card.text, evidence.evidence, key.modelKnowledge)
-        return reply?.let { KeptItem(stateOf(it, key, cached = true, usage = null, complete = true), card.writtenAt) }
+        return reply?.let {
+            KeptItem(stateOf(it, key, cached = true, usage = null, complete = true, card.rewritten), card.writtenAt)
+        }
+    }
+
+    /**
+     * The insight kept for what [key]'s is about, from the same [evidence], written with another AI
+     * service, model or effort (#911, [PipelineCache.keptByOthers]): the most recently written that
+     * reads as an insight, checked as [kept]'s, its state written by its own key, so its byline names
+     * the model that wrote it; null for none. What a row shows in place of none under [key], with
+     * *Rewrite insight* offered beside it, and what a rewrite then replaces ([write]'s `rewriting`).
+     */
+    suspend fun keptByOther(
+        key: CardKey,
+        evidence: ItemEvidence,
+    ): KeptItem? {
+        val others = attempt { cache.keptByOthers(key) }.orEmpty()
+        return others.firstNotNullOfOrNull { other ->
+            val reply = readReply(other.card.text, evidence.evidence, key.modelKnowledge) as? InsightReply.Written
+            reply?.let {
+                val state = stateOf(it, other.key, cached = true, usage = null, complete = true, other.card.rewritten)
+                KeptItem(state, other.card.writtenAt)
+            }
+        }
     }
 
     /**
@@ -404,7 +429,11 @@ class ItemInsights(
      * the call) is neither shown nor kept. A reply that revises itself where it would show (#798) is
      * cut to what follows the revision when that is usable; else asked for once more, a second call,
      * and with nothing usable then either, it fails, as the key insight's does. While it streams, the
-     * text shown stops at such a revision. [counted] is told of each call.
+     * text shown stops at such a revision. [counted] is told of each call. [rewriting] is what wrote
+     * the insight the write replaces, kept by another AI service, model or effort (*Rewrite insight*,
+     * #911), null for none: the insight written then says what the rewrite changed
+     * ([InsightState.Written.rewritten], [rewriteParts]), and keeps it with the card, so a later play
+     * says it too.
      */
     @Suppress("LongParameterList") // The insight, what it is about and from, its gate, and where its states go.
     suspend fun write(
@@ -414,8 +443,10 @@ class ItemInsights(
         evidence: ItemEvidence,
         mayCall: () -> Boolean = { true },
         counted: (QuestionCost) -> Unit = {},
+        rewriting: WrittenBy? = null,
         show: (InsightState, Instant) -> Unit,
     ): InsightState? {
+        val rewritten = rewriting?.let { rewriteParts(it, key.writtenBy()) }.orEmpty()
         val access = checkNotNull(ai) { "no AI service" }
         val lines = evidence.evidence
         if (lines.nothingToNarrate(key.modelKnowledge, artistsKnown = track.normalized.artists.isNotEmpty())) {
@@ -440,7 +471,7 @@ class ItemInsights(
             counted(QuestionCost.CALL)
             val (text, end) = stream(access, request, key, show)
             val at = now()
-            when (val reply = outcome(end, text, key, lines, billed)) {
+            when (val reply = outcome(end, text, key, lines, billed, rewritten)) {
                 is Reply.RevisedAway -> {
                     if (calls >= CALLS) last = revisedAway(show) else asking = true
                     billed = reply.usage
@@ -448,7 +479,7 @@ class ItemInsights(
 
                 is Reply.Read -> {
                     if (reply.kept) {
-                        attempt { cache.keep(key, keptText(text, reply.state), at) }
+                        attempt { cache.keep(key, keptText(text, reply.state), at, rewritten) }
                         renewWeb(item, track)
                     }
                     val shown = (reply.state as? InsightState.Written)?.copy(writtenAt = at) ?: reply.state
@@ -522,7 +553,7 @@ class ItemInsights(
     }
 
     // [end] and [text] read as [key]'s insight, checked against [evidence], counting the tokens of
-    // the replies before it in this write ([billed]).
+    // the replies before it in this write ([billed]), written by a rewrite that changed [rewritten].
     @Suppress("LongParameterList") // The reply, its key and evidence, and what came before it.
     private fun outcome(
         end: CompletionEvent?,
@@ -530,6 +561,7 @@ class ItemInsights(
         key: CardKey,
         evidence: EvidenceSet,
         billed: Usage?,
+        rewritten: Set<RewritePart>,
     ): Reply =
         when (end) {
             is CompletionEvent.Done -> {
@@ -562,7 +594,7 @@ class ItemInsights(
                     reply == null -> Reply.RevisedAway(usage)
                     else ->
                         Reply.Read(
-                            stateOf(reply, key, cached = false, usage = usage, complete = complete),
+                            stateOf(reply, key, cached = false, usage = usage, complete = complete, rewritten),
                             complete,
                         )
                 }
@@ -578,13 +610,16 @@ class ItemInsights(
         state: InsightState,
     ): String = if (state == InsightState.NoEvidence) GroundingCheck.NO_EVIDENCE else text
 
-    // [reply] as [key]'s state.
+    // [reply] as [key]'s state, written by a rewrite that changed [rewritten] (#911), none for one
+    // written the first time.
+    @Suppress("LongParameterList") // The reply, its key, and how it came.
     private fun stateOf(
         reply: InsightReply,
         key: CardKey,
         cached: Boolean,
         usage: Usage?,
         complete: Boolean,
+        rewritten: Set<RewritePart> = emptySet(),
     ): InsightState =
         when (reply) {
             InsightReply.NoEvidence -> InsightState.NoEvidence
@@ -595,6 +630,7 @@ class ItemInsights(
                     usage,
                     complete,
                     writtenBy = key.writtenBy(),
+                    rewritten = rewritten,
                 )
         }
 
