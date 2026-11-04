@@ -37,6 +37,8 @@ internal class SessionAdTest : SessionRepositoryFixture() {
                 albumArt = bitmap(Color.YELLOW),
             ),
         )
+    private val adQueue =
+        listOf(queueItem(1, "Sundown", mediaId = "spotify:track:1"), queueItem(2, "tetesept", mediaId = "spotify:ad:1"))
     private val carefreeTrack = metadata(title = "Carefree Highway", mediaId = "spotify:track:2", durationMs = 230_000)
 
     private fun spotify(): FakeSession {
@@ -116,6 +118,31 @@ internal class SessionAdTest : SessionRepositoryFixture() {
         spotify.settled(metadata(title = "tetesept", artist = "Advertisement • 2 of 3"))
         assertNull(repository.nowPlaying.value)
         assertEquals(SPOTIFY, repository.ad.value?.player)
+    }
+
+    @Test
+    fun `an ad told by a queue that comes after its metadata and state have settled is still told`() {
+        val spotify = spotify()
+        spotify.send(state(queueItem = 2))
+        spotify.settled(metadata(title = "tetesept", artist = "Advertisement • 2 of 3"))
+        assertEquals("not told yet: no queue", "tetesept", repository.nowPlaying.value?.title)
+        spotify.sendQueue(adQueue, "Play Queue")
+        settle()
+        assertNull(repository.nowPlaying.value)
+        assertEquals(SPOTIFY, repository.ad.value?.player)
+    }
+
+    @Test
+    fun `the track after an ad shows while the active item still names the ad`() {
+        val spotify = spotify()
+        spotify.sendQueue(adQueue, "Play Queue")
+        spotify.send(state(queueItem = 2))
+        spotify.settled(metadata(title = "tetesept", artist = "Advertisement • 2 of 3"))
+        assertEquals(SPOTIFY, repository.ad.value?.player)
+        // Its own media id says it is music, whatever the lagging item says.
+        spotify.settled(carefreeTrack)
+        assertEquals("Carefree Highway", repository.nowPlaying.value?.title)
+        assertNull(repository.ad.value)
     }
 
     @Test

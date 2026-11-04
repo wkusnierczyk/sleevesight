@@ -651,6 +651,12 @@ class SessionRepository(
                     ifAttached {
                         SessionDump.queue(gate.player, queue)
                         this@Attached.queue = queue
+                        // A queue that now names the active item an ad, or no longer does, settles
+                        // again: the metadata and state may have settled before it came (#880).
+                        if (adByQueueChanged()) {
+                            beginReport()
+                            settleLater()
+                        }
                     }
                 }
 
@@ -1126,13 +1132,20 @@ class SessionRepository(
             return report.copy(play = ++plays)
         }
 
+        /** Whether the latest reports, with the queue as it now stands, tell an ad otherwise than the last settle. */
+        private fun adByQueueChanged(): Boolean = isAdNow() != (ad != null)
+
+        /** Whether the latest metadata, state and queue tell an ad ([AdDetection]). */
+        private fun isAdNow(): Boolean =
+            AdDetection.isAd(gate.player, metadata, AdDetection.activeItemMediaId(state, queue))
+
         /**
          * The latest pair mapped, after the [previous] track settled; null, and [ad] set, when it is
          * an ad ([AdDetection]: by the metadata, or by the active queue item).
          */
         private fun reportOrAd(previous: NowPlaying?): NowPlaying? {
             val item = item(previous)
-            val isAd = AdDetection.isAd(gate.player, metadata, AdDetection.activeItemMediaId(state, queue))
+            val isAd = isAdNow()
             ad = if (isAd) AdPlaying.of(gate.player, metadata) else null
             return if (isAd) null else SessionMapping.nowPlaying(gate.player, metadata, item)
         }

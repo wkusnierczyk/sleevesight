@@ -60,6 +60,15 @@ class AdDetectionTest {
     }
 
     @Test
+    fun `the metadata's own media id decides over the active queue item's`() {
+        // The active item lagging on the ad after it ended: the track's own id says music.
+        val track = metadata(title = "Carefree Highway", mediaId = "spotify:track:2")
+        assertFalse(AdDetection.isAd(SPOTIFY, track, "spotify:ad:1"))
+        // The flag counts on its own, whatever the ids.
+        assertTrue(AdDetection.isAd(SPOTIFY, advertised(track), "spotify:track:2"))
+    }
+
+    @Test
     fun `a spotify track URI is no ad`() {
         val track = metadata(mediaId = "spotify:track:4uLU6hMCjMI75M1A2tKUQC")
         assertFalse(AdDetection.isAd(SPOTIFY, track, "spotify:track:1"))

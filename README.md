@@ -27,7 +27,6 @@ Sleevesight is an open-source Android app that reads what your music player is p
 - Under them, the song's, the artist's and the album's own insights, folded by default, each written from what the sources say about it; the artist's and the album's are written once and shown again on every track of theirs.
 - Shows the sources behind the insight: what each one found, and where.
 - Reads the insight aloud, in the phone's own voice, for listening without looking at the phone.
-- Leaves ads alone: while Spotify Free plays an ad, Home says so, and nothing is looked up, written, read aloud or kept for it.
 
 [Usage](https://sleevesight.app/docs/tutorials/usage/) goes through each part of the app. Planned ([Roadmap](#roadmap)): the tracks by an artist or from an album, cards for a genre or a similar artist; follow-up questions; playing, pausing and skipping from the app.
 

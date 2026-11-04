@@ -17,10 +17,12 @@ import kotlin.time.Duration.Companion.milliseconds
  * - **The advertisement flag**, `android.media.metadata.ADVERTISEMENT` ([KEY_ADVERTISEMENT], the
  *   key behind `MediaMetadataCompat.METADATA_KEY_ADVERTISEMENT`; the framework's `MediaMetadata`
  *   names no constant for it) set to 1. A standard key, so it counts for every player.
- * - **Spotify's ad URI**: the media id (`METADATA_KEY_MEDIA_ID`), or the media id of the queue item
- *   the playback state names as active, beginning with `spotify:ad:` ([SPOTIFY_AD]) where a track's
- *   begins with `spotify:track:`. Spotify's own scheme, so it counts for Spotify alone
- *   ([Settings.SPOTIFY]).
+ * - **Spotify's ad URI**: the media id (`METADATA_KEY_MEDIA_ID`) beginning with `spotify:ad:`
+ *   ([SPOTIFY_AD]) where a track's begins with `spotify:track:`; only when the metadata names no
+ *   media id, the media id of the queue item the playback state names as active. The metadata's own
+ *   id decides when it has one: the active item can lag behind a new track (`NextInQueue`), and a
+ *   track after an ad must not read as the ad until the item moves. Spotify's own scheme, so it
+ *   counts for Spotify alone ([Settings.SPOTIFY]).
  *
  * Not used, as music can show them too: the artist text ("Advertisement", which Spotify translates
  * into the app's language), a missing album, a length of 30 s or less, skipping removed from the
@@ -37,17 +39,17 @@ object AdDetection {
 
     /**
      * Whether [player]'s [metadata], with the media id of the active queue item ([activeItemMediaId]),
-     * reports an ad: the advertisement flag set to 1, for any player; for Spotify, either media id a
-     * `spotify:ad:` URI.
+     * reports an ad: the advertisement flag set to 1, for any player; for Spotify, a `spotify:ad:`
+     * URI as the metadata's media id, else, when the metadata names none, as the active item's.
      */
     fun isAd(
         player: String,
         metadata: MediaMetadata?,
         activeItemMediaId: String? = null,
-    ): Boolean =
-        metadata?.getLong(KEY_ADVERTISEMENT) == FLAG_SET ||
-            isAdId(player, metadata?.getString(MediaMetadata.METADATA_KEY_MEDIA_ID)) ||
-            isAdId(player, activeItemMediaId)
+    ): Boolean {
+        val own = metadata?.getString(MediaMetadata.METADATA_KEY_MEDIA_ID)?.takeIf { it.isNotBlank() }
+        return metadata?.getLong(KEY_ADVERTISEMENT) == FLAG_SET || isAdId(player, own ?: activeItemMediaId)
+    }
 
     /**
      * Whether [mediaId], a media id [player] sends (its metadata's, or a queue item's), names an ad:
