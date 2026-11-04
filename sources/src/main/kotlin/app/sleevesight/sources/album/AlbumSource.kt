@@ -47,7 +47,8 @@ import kotlin.time.Instant
  *   verbatim and linked (D1, CC BY-SA 4.0), as Wikipedia's lines on a track are
  *   ([WikipediaSource.sentences]).
  * - **Last.fm** (with [AlbumQuery.lastFm] and the user's key, [lastFm], #885): the album
- *   (`album.getInfo`), when it is the album asked for ([isAlbum]); its wiki summary's sentences,
+ *   (`album.getInfo`), when its MusicBrainz id shows it is the album asked for ([isAlbum]: never
+ *   by its names alone); its wiki summary's sentences,
  *   taken as an artist's bio's are ([LastFmBio]: whole, of a quotable length, at most three, none
  *   from a page several share, without the "Read more" link and the licence note), verbatim and
  *   attributed (D1, CC BY-SA), with the album's page. Not its listeners, play counts or tags, counts
@@ -56,7 +57,9 @@ import kotlin.time.Instant
  * - **The web** (with [AlbumQuery.web] and an engine's key, [web], #885): the pages about the album
  *   a search finds (`ExaAlbumSearch`), web lines. The search is paid, so [lookup] never makes it:
  *   it gives the lines an earlier search kept, and says when one is due ([AlbumFound.webDue]);
- *   [searchWeb] makes it, before the album's insight is written, and keeps what it found.
+ *   [searchWeb] makes it, before the album's insight is written, and keeps what it found, telling
+ *   its caller when a request is sent, and only then (not for lines kept, or an album that cannot
+ *   be checked), so a search is counted as paid only when it is.
  *
  * What the free sources found is kept per album in [kept], the artist-level table (#238, [PART]),
  * by the release group, else the album's and the artist's names folded, with the sources asked,
@@ -93,16 +96,21 @@ class AlbumSource(
         return AlbumFound(free.drafts + searched.orEmpty(), free.unreachable, webDue = searches && searched == null)
     }
 
-    override suspend fun searchWeb(query: AlbumQuery): List<EvidenceDraft>? =
-        web?.takeIf { searches(query) }?.let { search -> keptWeb(query) ?: searched(search, query) }
+    override suspend fun searchWeb(
+        query: AlbumQuery,
+        sent: () -> Unit,
+    ): List<EvidenceDraft>? =
+        web?.takeIf { searches(query) }?.let { search -> keptWeb(query) ?: searched(search, query, sent) }
 
-    // What [search] finds for [query]'s album, none included, kept; null when it failed, and nothing is kept.
+    // What [search] finds for [query]'s album, none included, kept; null when it failed, and nothing
+    // is kept. [sent] is told when the request goes out.
     private suspend fun searched(
         search: AlbumWebSearch,
         query: AlbumQuery,
+        sent: () -> Unit,
     ): List<EvidenceDraft>? {
         val found =
-            when (val answer = search.search(query.title, query.artist)) {
+            when (val answer = search.search(query.title, query.artist, sent)) {
                 is Lookup.Found -> answer.value
                 Lookup.NotFound -> emptyList()
                 is Lookup.Failed -> null
@@ -162,47 +170,61 @@ class AlbumSource(
         asking: Asking,
     ): List<EvidenceDraft> {
         val info = asking.read(client.albumInfo(query.artist, query.title), null)
-        if (info == null || !isAlbum(info, query, album)) return emptyList()
-        return LastFmBio.sentences(info.summary).map { sentence ->
+        val sentences =
+            if (info != null &&
+                isAlbum(info, query, album, asking)
+            ) {
+                LastFmBio.sentences(info.summary)
+            } else {
+                null
+            }
+        return sentences.orEmpty().map { sentence ->
             EvidenceDraft(
                 SourceId.LASTFM,
                 Scope.RELEASE,
                 "The Last.fm wiki of “${query.title}” says: \"$sentence\"",
-                info.url,
+                info?.url,
                 at,
             )
         }
     }
 
     /**
-     * Whether Last.fm's [info] is the album [query] asks for, as strictly as an artist's page is
-     * judged (`LastFmMatch`), since another album's summary is worse than none: Last.fm keeps one
-     * page per artist's name and album's title, which its autocorrection may swap for another's.
+     * Whether Last.fm's [info] is the album [query] asks for, by its MusicBrainz id (a release's,
+     * usually), never by its names alone, since another album's summary is worse than none: Last.fm
+     * keeps one page per artist's name and album's title, which an artist's namesake may share and
+     * its autocorrection may swap for another's, and nothing here tells such a page apart by name.
+     * (An artist's own page is verified against the track's resolution, `LastFmMatch`, which an
+     * album's lookup, by the album alone, does not have.)
      *
-     * 1. Its MusicBrainz id (a release's, usually) and the album's release group ([album], its
-     *    releases listed) both known: an id of the group's, or of one of its releases, makes it the
-     *    album, whatever its names; another, while the group lists all its releases (fewer than
-     *    [MbAlbum.LINKED_LIMIT]), another album.
-     * 2. Otherwise its artist and title must be those asked, as [names] reads names: a name Last.fm
-     *    corrected beyond case, accents and punctuation is another album's page.
+     * 1. The id is the album's release group's (as [album] or [query] has it) or one of the group's
+     *    releases ([MbAlbum.releaseIds]): the album, whatever its names.
+     * 2. Otherwise, while the group lists all its releases (fewer than [MbAlbum.LINKED_LIMIT]),
+     *    another album.
+     * 3. Otherwise, with MusicBrainz on, the group of the release the id names, asked of MusicBrainz
+     *    ([ReleaseGroups.groupOfRelease]): the album when it is the album's group; not when it is
+     *    another's, or the release is not found. A request that fails gives nothing, and makes the
+     *    lookup unreachable, so it is not kept.
      *
-     * A page its summary says several share gives no sentence ([LastFmBio.sentences]). The remaining
-     * risk is an artist's namesake's album of the same title, which nothing here can tell apart
-     * without the id.
+     * No id, no group known (an album looked up by name), or MusicBrainz off with an id not the
+     * group's: not the album, and its summary is left out. A page its summary says several share
+     * gives no sentence either ([LastFmBio.sentences]).
      */
-    private fun isAlbum(
+    private suspend fun isAlbum(
         info: LastFmAlbum,
         query: AlbumQuery,
         album: MbAlbum?,
+        asking: Asking,
     ): Boolean {
         val mbid = info.mbid?.lowercase()
-        val ids = album?.let { (it.releaseIds + it.mbid).map(String::lowercase).toSet() }
-        val listsAll = album != null && album.releaseIds.isNotEmpty() && album.releaseIds.size < MbAlbum.LINKED_LIMIT
-        val titled = names.albumKey(info.name).let { it.isNotEmpty() && it == names.albumKey(query.title) }
+        val group = (album?.mbid ?: query.group)?.lowercase()
+        val releases = album?.releaseIds.orEmpty().map(String::lowercase)
+        val listsAll = releases.isNotEmpty() && releases.size < MbAlbum.LINKED_LIMIT
         return when {
-            mbid != null && ids != null && mbid in ids -> true
-            mbid != null && listsAll -> false
-            else -> titled && names.sameName(info.artist, query.artist)
+            mbid == null || group == null -> false
+            mbid == group || mbid in releases -> true
+            listsAll || !query.musicBrainz -> false
+            else -> asking.read(groups.groupOfRelease(mbid), null)?.lowercase() == group
         }
     }
 

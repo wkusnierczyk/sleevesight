@@ -30,9 +30,14 @@ fun interface AlbumLookup {
     /**
      * The album's web lines (#885), for a write of its insight only: those kept from an earlier
      * search, or found by a search made now, a paid one, and kept; null when no search may be made
-     * ([AlbumQuery.web] off, or no engine) or it failed, when nothing is kept. None by default.
+     * ([AlbumQuery.web] off, or no engine) or it failed, when nothing is kept. [sent] is told each
+     * time a request goes out to the engine, what is paid for, whatever comes back: not for lines
+     * kept, nor for an album the search cannot check, which sends nothing. None by default.
      */
-    suspend fun searchWeb(query: AlbumQuery): List<EvidenceDraft>? = null
+    suspend fun searchWeb(
+        query: AlbumQuery,
+        sent: () -> Unit = {},
+    ): List<EvidenceDraft>? = null
 }
 
 /**

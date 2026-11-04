@@ -245,28 +245,26 @@ class ItemInsights(
     /**
      * [evidence], the album's on [track] under [settings], with the lines of its web search (#885),
      * for a write of its insight only: the search is paid, so it is made here, never when the
-     * evidence is gathered ([evidence]), and only while it is due ([ItemEvidence.webDue]); [albums]
-     * keeps what it found, so the evidence gathered later holds the same lines, and the insight
-     * written from them is found again by its key. Null when no search is due, or none could be made
-     * (it failed, or the album lookup threw): the insight is then written from [evidence] as it is.
+     * evidence is gathered ([evidence]), and only while it is due ([ItemEvidence.webDue]) and
+     * [settings] switch web search on, which the caller reads right before ([AlbumQuery.web], the
+     * lookup's engine and key are the parts' then); [albums] keeps what it found, so the evidence
+     * gathered later holds the same lines, and the insight written from them is found again by its
+     * key. [sent] is told each time a request goes out to the engine ([AlbumLookup.searchWeb]). Null
+     * when no search is due or allowed, or none could be made (it failed, or the album lookup threw):
+     * the insight is then written from [evidence] as it is.
      */
     suspend fun searched(
         item: InsightItem,
         track: TrackState,
         settings: Settings,
         evidence: ItemEvidence,
+        sent: () -> Unit = {},
     ): ItemEvidence? {
-        val lookup = albums?.takeIf { evidence.webDue }
+        val lookup = albums?.takeIf { evidence.webDue && settings.isEnabled(SourceId.WEB) }
         val album = entity(item, track) as? CardEntity.Album
         val shown = track.evidence
         val found =
-            if (lookup != null &&
-                album != null
-            ) {
-                attempt { lookup.searchWeb(queryOf(album, settings)) }
-            } else {
-                null
-            }
+            if (lookup != null && album != null) attempt { lookup.searchWeb(queryOf(album, settings), sent) } else null
         if (found == null || shown == null) return null
         val more = found.filter { settings.isEnabled(it.source) && !it.aggregate }
         val drafts = evidence.evidence.lines.map(::draftOf) + more

@@ -121,6 +121,14 @@ class MusicBrainzClient(
         }
     }
 
+    override suspend fun groupOfRelease(mbid: String): Lookup<String> {
+        val request = NetRequest("$BASE/release/$mbid", query = mapOf("inc" to "release-groups", "fmt" to "json"))
+        return net.lookup(request) { response ->
+            parseObject(response.body).obj("release-group")?.string("id")?.ifEmpty { null }
+                ?: throw MissingField("release-group")
+        }
+    }
+
     override suspend fun recordingReleases(mbid: String): Lookup<MbRecording> {
         val request = NetRequest("$BASE/recording/$mbid", query = mapOf("inc" to RELEASES_INC, "fmt" to "json"))
         return net.lookup(request) { response -> recording(parseObject(response.body)) }
@@ -326,9 +334,16 @@ internal class MissingField(
  * MusicBrainz's release groups, looked up by id (#522): what an album's insight is written from
  * first (`AlbumSource`). Apart from `MusicBrainzLookup`, which resolution uses.
  */
-fun interface ReleaseGroups {
+interface ReleaseGroups {
     /** The release group [mbid], with its artist credit and its Wikidata item; not found for a release's own id. */
     suspend fun releaseGroup(mbid: String): Lookup<MbAlbum>
+
+    /**
+     * The id of the release group the release [mbid] belongs to (#885: Last.fm's album checked
+     * against the album's group when the group's releases are not all listed); not found for an id
+     * that is not a release's.
+     */
+    suspend fun groupOfRelease(mbid: String): Lookup<String>
 }
 
 /**

@@ -173,9 +173,11 @@ interface ItemNotes {
  * an automatic mode for one not tapped); closed, it is not made, and the item stays offered. *Stop
  * writing* ([stop]) cancels it: nothing is kept, and it shows as stopped, written again only on a tap.
  *
- * An album's web search (#885, `ItemInsights.searched`), a paid one and counted to [paid], is made
- * only on the way to its insight's call: once the insight is not found kept under the key of the
- * evidence gathered, through the same gates, never when a row is shown or unfolded. Its lines join
+ * An album's web search (#885, `ItemInsights.searched`), a paid one, is made only on the way to its
+ * insight's call: once the insight is not found kept under the key of the evidence gathered,
+ * through the same gates, with web search still switched on, its engine and key as the settings
+ * and parts have them right before it, never when a row is shown or unfolded. Each request sent to
+ * the engine is counted to [paid], lines kept from an earlier search not. Its lines join
  * the album's evidence gathered, which the album lookup keeps, so the insight then has another key,
  * under which the cache is read again before the call, and which a later gathering finds again.
  */
@@ -551,7 +553,7 @@ class AppItemNotes(
         counted: (QuestionCost) -> Unit,
     ): Next {
         if (showKept(insights, key, asked)) return Next(key, asked, done = true)
-        return searched(insights, key, asked, counted)?.let { (next, found) ->
+        return searched(key, asked, counted)?.let { (next, found) ->
             // No suspension from here to the caller's taking the next key, so a Stop finds it.
             val moved = move(key, next, job)
             // Kept once the claim moved, so the row goes from this key's to the next's, still asked.
@@ -588,26 +590,33 @@ class AppItemNotes(
     }
 
     // [key]'s album insight's evidence with its web search made (#885), while it is due and the call
-    // it comes before may be made now ([mayCall]: the search is paid, as the call is), counted to
-    // [counted], with the key the insight then has; the caller keeps it as the album's evidence
-    // gathered, so its row and *Sources* show the lines found. Null when no search is due, the gates
-    // are closed, or none could be made; the insight is then written, or not, as before.
+    // it comes before may be made now ([mayCall]: the search is paid, as the call is), with the key
+    // the insight then has; the caller keeps it as the album's evidence gathered, so its row and
+    // *Sources* show the lines found. The settings and the parts are read again right before the
+    // search, after any wait for the evidence or the cache: the card's key does not carry web
+    // search's switch, its engine or its key, so the search goes by those now, through the album
+    // lookup built with them, and none is made once web search is off. Each request sent to the
+    // engine is counted to [counted], and only those: not lines kept from an earlier search, nor an
+    // album that cannot be checked; a request that fails or is cancelled once sent is still counted.
+    // Null when no search is due or allowed, or none could be made; the insight is then written, or
+    // not, as before.
     private suspend fun searched(
-        insights: ItemInsights,
         key: CardKey,
         asked: Asked,
         counted: (QuestionCost) -> Unit,
-    ): Pair<CardKey, ItemEvidence>? {
-        val found =
-            if (asked.evidence.webDue && mayCall(key, asked)) {
-                withContext(io) { insights.searched(asked.item, asked.track, asked.settings, asked.evidence) }
-            } else {
-                null
-            }
-        found?.let { counted(QuestionCost.SEARCH) }
-        val next = found?.let { insights.key(asked.item, asked.track, it, asked.settings) }
-        return if (found != null && next != null) next to found else null
-    }
+    ): Pair<CardKey, ItemEvidence>? =
+        withContext(io) {
+            val now = settings.value?.takeIf { asked.evidence.webDue && mayCall(key, asked) }
+            val current = parts.value?.let(::insightsOf)
+            val found =
+                if (now != null && current != null) {
+                    current.searched(asked.item, asked.track, now, asked.evidence) { counted(QuestionCost.SEARCH) }
+                } else {
+                    null
+                }
+            val next = if (now != null && found != null) current?.key(asked.item, asked.track, found, now) else null
+            if (found != null && next != null) next to found else null
+        }
 
     // The claim on [from], being written, moved to [to], with the Stop of [job]; false, the claim on
     // [from] dropped, when [to] is being written already.

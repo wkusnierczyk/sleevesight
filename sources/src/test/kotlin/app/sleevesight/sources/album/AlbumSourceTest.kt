@@ -35,14 +35,27 @@ import kotlin.time.Instant
 class AlbumSourceTest {
     private val names = NameMatcher(JvmAccentFolder)
 
+    // The release groups by id, and the group of each release by the release's id ([failing]: that
+    // lookup fails); each asked counted.
     private class Groups(
         val albums: Map<String, MbAlbum>,
+        val ofRelease: Map<String, String> = emptyMap(),
+        val failing: Boolean = false,
     ) : ReleaseGroups {
         val asked = mutableListOf<String>()
+        val releasesAsked = mutableListOf<String>()
 
         override suspend fun releaseGroup(mbid: String): Lookup<MbAlbum> {
             asked += mbid
             return albums[mbid]?.let { Lookup.Found(it) } ?: Lookup.NotFound
+        }
+
+        override suspend fun groupOfRelease(mbid: String): Lookup<String> {
+            releasesAsked += mbid
+            return when {
+                failing -> Lookup.Failed("offline")
+                else -> ofRelease[mbid]?.let { Lookup.Found(it) } ?: Lookup.NotFound
+            }
         }
     }
 
@@ -117,18 +130,22 @@ class AlbumSourceTest {
         }
     }
 
-    // A web search for an album, with the lines it finds, or its failure; each search counted.
+    // A web search for an album, with the lines it finds, or its failure; each search counted, and,
+    // unless [sends] is off (an album it cannot check), its request sent.
     private class Web(
         val lines: List<String> = listOf("Sundown, Gordon Lightfoot's 1974 album, topped the Billboard 200."),
         var failing: Boolean = false,
+        val sends: Boolean = true,
     ) : AlbumWebSearch {
         val asked = mutableListOf<Pair<String, String>>()
 
         override suspend fun search(
             album: String,
             artist: String,
+            sent: () -> Unit,
         ): Lookup<List<EvidenceDraft>> {
             asked += album to artist
+            if (sends) sent()
             if (failing) return Lookup.Failed("offline")
             return Lookup.Found(
                 lines.mapIndexed { i, text ->
@@ -153,20 +170,21 @@ class AlbumSourceTest {
         LastFmAlbum(
             name = "Sundown",
             artist = "Gordon Lightfoot",
-            mbid = null,
+            mbid = "rel-1",
             url = "https://www.last.fm/music/Gordon+Lightfoot/Sundown",
             summary = summary,
         )
 
-    // Asking MusicBrainz's group and Last.fm only, with [lastFm], [web] and [webKept] as given.
+    // Asking MusicBrainz's group and Last.fm only, with [lastFm], [web] and [webKept] as given; the
+    // group lists its two releases, unless [groups] says otherwise.
     private fun source(
         lastFm: LastFmAlbumInfo? = null,
         web: AlbumWebSearch? = null,
-        group: MbAlbum = sundown,
         kept: MemoryArtistResults = MemoryArtistResults(),
         webKept: MemoryArtistResults? = null,
+        groups: Groups = Groups(mapOf("rg-sundown" to sundown.copy(releaseIds = listOf("rel-1", "rel-2")))),
     ) = AlbumSource(
-        Groups(mapOf(group.mbid to group)),
+        groups,
         Wikidata(emptyMap()),
         WikipediaClient(Wikipedia()),
         names,
@@ -345,32 +363,68 @@ class AlbumSourceTest {
             assertTrue(lastFm.all { it.scope == Scope.RELEASE && it.url == lastFmSundown.url && !it.aggregate })
         }
 
+    // Whether [found] has Last.fm's lines.
+    private fun citesLastFm(found: app.sleevesight.core.sources.AlbumFound) =
+        found.drafts.any { it.source == SourceId.LASTFM }
+
     @Test
-    fun `Last fm's album under names it corrected to another's gives nothing`() =
+    fun `Last fm's album with no MusicBrainz id, or no group to check it against, gives nothing, whatever its names`() =
         runTest {
-            val corrected = lastFmSundown.copy(artist = "Rank and File")
-            assertTrue(source(LastFm(corrected)).lookup(query).drafts.none { it.source == SourceId.LASTFM })
-            val other = lastFmSundown.copy(name = "Sundown Live")
-            assertTrue(source(LastFm(other)).lookup(query).drafts.none { it.source == SourceId.LASTFM })
+            // The names those asked: still no sign that the page is this artist's, not a namesake's.
+            assertFalse(citesLastFm(source(LastFm(lastFmSundown.copy(mbid = null))).lookup(query)))
+            // An album MusicBrainz does not name: nothing to check the id against.
+            assertFalse(citesLastFm(source(LastFm(lastFmSundown)).lookup(query.copy(group = null))))
         }
 
     @Test
-    fun `Last fm's album is checked against the release group's releases by its MusicBrainz id`() =
+    fun `Last fm's album is the album when its MusicBrainz id is the group's or one of its releases`() =
         runTest {
-            val group = sundown.copy(releaseIds = listOf("rel-1", "rel-2"))
             // One of the group's releases: the album, whatever Last.fm calls it.
-            val ours = lastFmSundown.copy(mbid = "REL-2", name = "Sundown (Remastered)")
-            assertTrue(source(LastFm(ours), group = group).lookup(query).drafts.any { it.source == SourceId.LASTFM })
-            // Another release, while the group lists all of its own: another album of the name.
-            val theirs = lastFmSundown.copy(mbid = "rel-9")
-            assertTrue(
-                source(LastFm(theirs), group = group).lookup(query).drafts.none { it.source == SourceId.LASTFM },
-            )
-            // A group whose releases are not all listed cannot tell: the names decide.
+            val renamed = lastFmSundown.copy(mbid = "REL-2", name = "Sundown (Remastered)")
+            assertTrue(citesLastFm(source(LastFm(renamed)).lookup(query)))
+            assertTrue(citesLastFm(source(LastFm(lastFmSundown.copy(mbid = "rg-sundown"))).lookup(query)))
+            // Another release, while the group lists all of its own: another album, with no request.
+            val groups = Groups(mapOf("rg-sundown" to sundown.copy(releaseIds = listOf("rel-1", "rel-2"))))
+            assertFalse(citesLastFm(source(LastFm(lastFmSundown.copy(mbid = "rel-9")), groups = groups).lookup(query)))
+            assertTrue(groups.releasesAsked.isEmpty())
+        }
+
+    @Test
+    fun `an id the group's list may leave out is checked by the group MusicBrainz says its release is of`() =
+        runTest {
             val many = sundown.copy(releaseIds = (1..MbAlbum.LINKED_LIMIT).map { "rel-x$it" })
-            assertTrue(
-                source(LastFm(theirs), group = many).lookup(query).drafts.any { it.source == SourceId.LASTFM },
-            )
+            val other = lastFmSundown.copy(mbid = "rel-9")
+
+            fun groups(
+                ofRelease: Map<String, String> = emptyMap(),
+                failing: Boolean = false,
+            ) = Groups(mapOf("rg-sundown" to many), ofRelease, failing)
+
+            val ours = groups(mapOf("rel-9" to "rg-sundown"))
+            assertTrue(citesLastFm(source(LastFm(other), groups = ours).lookup(query)))
+            assertEquals(listOf("rel-9"), ours.releasesAsked)
+            // Another group's release, or one MusicBrainz does not know: not the album.
+            assertFalse(citesLastFm(source(LastFm(other), groups = groups(mapOf("rel-9" to "rg-other"))).lookup(query)))
+            assertFalse(citesLastFm(source(LastFm(other), groups = groups()).lookup(query)))
+            // A group with no releases listed is checked the same way.
+            val bare = Groups(mapOf("rg-sundown" to sundown), mapOf("rel-9" to "rg-sundown"))
+            assertTrue(citesLastFm(source(LastFm(other), groups = bare).lookup(query)))
+            // A request that fails: nothing, and nothing kept.
+            val kept = MemoryArtistResults()
+            val failed = source(LastFm(other), groups = groups(failing = true), kept = kept).lookup(query)
+            assertFalse(citesLastFm(failed))
+            assertTrue(failed.unreachable)
+            assertTrue(kept.keys(AlbumSource.PART).isEmpty())
+        }
+
+    @Test
+    fun `with MusicBrainz off, only an id that is the group's own makes it the album`() =
+        runTest {
+            val off = query.copy(musicBrainz = false)
+            val groups = Groups(emptyMap(), mapOf("rel-1" to "rg-sundown"))
+            assertFalse(citesLastFm(source(LastFm(lastFmSundown), groups = groups).lookup(off)))
+            assertTrue(groups.releasesAsked.isEmpty())
+            assertTrue(citesLastFm(source(LastFm(lastFmSundown.copy(mbid = "rg-sundown"))).lookup(off)))
         }
 
     @Test
@@ -417,6 +471,22 @@ class AlbumSourceTest {
             assertEquals(searched, after.drafts.filter { it.source == SourceId.WEB })
             assertEquals(searched, source.searchWeb(query))
             assertEquals(1, web.asked.size)
+        }
+
+    @Test
+    fun `the caller is told of each request sent, not of lines kept or an album that sends none`() =
+        runTest {
+            var sent = 0
+            val source = source(web = Web(failing = true))
+            // A request sent that fails is still one sent.
+            assertNull(source.searchWeb(query) { sent++ })
+            assertEquals(1, sent)
+            val found = source(web = Web())
+            found.searchWeb(query) { sent++ }
+            found.searchWeb(query) { sent++ }
+            assertEquals(2, sent)
+            source(web = Web(sends = false)).searchWeb(query) { sent++ }
+            assertEquals(2, sent)
         }
 
     @Test

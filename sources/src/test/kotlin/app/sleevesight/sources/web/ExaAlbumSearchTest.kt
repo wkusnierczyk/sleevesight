@@ -39,7 +39,9 @@ class ExaAlbumSearchTest {
     fun `the search asks for the album by its artist, and keeps the pages about it`() =
         runTest {
             val net = ReplayNetClient.ok(body)
-            val found = search(net).search("Sundown", "Gordon Lightfoot")
+            var told = 0
+            val found = search(net).search("Sundown", "Gordon Lightfoot") { told++ }
+            assertEquals(1, told)
             val lines = (found as Lookup.Found).value
             // Not another artist's album of the name, a page titled after the artist, or Wikipedia's.
             assertEquals(listOf("https://example.com/sundown"), lines.map { it.url })
@@ -58,17 +60,25 @@ class ExaAlbumSearchTest {
     fun `an album that cannot be checked is not searched`() =
         runTest {
             val net = ReplayNetClient.ok(body)
-            assertEquals(Lookup.Found(emptyList()), search(net).search("!!!", "Gordon Lightfoot"))
-            assertEquals(Lookup.Found(emptyList()), search(net).search("Sundown", " "))
+            var sent = 0
+            assertEquals(Lookup.Found(emptyList()), search(net).search("!!!", "Gordon Lightfoot") { sent++ })
+            assertEquals(Lookup.Found(emptyList()), search(net).search("Sundown", " ") { sent++ })
             assertTrue(net.sent.isEmpty())
+            assertEquals(0, sent)
         }
 
     @Test
-    fun `a refusal or a network failure is failed`() =
+    fun `a refusal or a network failure is failed, its request still sent`() =
         runTest {
-            assertIs<Lookup.Failed>(search(ReplayNetClient.status(401, "{}")).search("Sundown", "Gordon Lightfoot"))
+            var sent = 0
+            val refused = search(ReplayNetClient.status(401, "{}")).search("Sundown", "Gordon Lightfoot") { sent++ }
+            assertIs<Lookup.Failed>(refused)
             assertIs<Lookup.Failed>(
-                search(ReplayNetClient.failing(NetError.Offline("io"))).search("Sundown", "Gordon Lightfoot"),
+                search(
+                    ReplayNetClient.failing(NetError.Offline("io")),
+                ).search("Sundown", "Gordon Lightfoot") { sent++ },
             )
+            // Each was sent, and is counted, whatever came back.
+            assertEquals(2, sent)
         }
 }

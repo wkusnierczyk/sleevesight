@@ -73,10 +73,14 @@ class ItemInsightsTest {
             return AlbumFound(lines + searched.orEmpty(), webDue = web != null && query.web && searched == null)
         }
 
-        override suspend fun searchWeb(query: AlbumQuery): List<EvidenceDraft>? {
+        override suspend fun searchWeb(
+            query: AlbumQuery,
+            sent: () -> Unit,
+        ): List<EvidenceDraft>? {
             if (web == null || !query.web) return null
             return kept ?: web.also {
                 searches++
+                sent()
                 kept = it
             }
         }
@@ -461,9 +465,16 @@ class ItemInsightsTest {
             assertNull(items.kept(before, gathered))
             assertEquals(0, web.searches)
 
-            // The write's search: the web's lines join the album's, under another key.
-            val searched = checkNotNull(items.searched(InsightItem.ALBUM, first, webOn, gathered))
+            // Web search switched off since the evidence was gathered: no search.
+            val off = webOn.copy(enabledSources = webOn.enabledSources - SourceSwitch.WEB)
+            assertNull(items.searched(InsightItem.ALBUM, first, off, gathered))
+            assertEquals(0, web.searches)
+
+            // The write's search: the web's lines join the album's, under another key, its request told.
+            var sent = 0
+            val searched = checkNotNull(items.searched(InsightItem.ALBUM, first, webOn, gathered) { sent++ })
             assertEquals(1, web.searches)
+            assertEquals(1, sent)
             assertEquals(listOf("MB1", "W1", "S1"), searched.evidence.ids)
             val key = checkNotNull(items.key(InsightItem.ALBUM, first, searched, webOn))
             assertNotEquals(before, key)

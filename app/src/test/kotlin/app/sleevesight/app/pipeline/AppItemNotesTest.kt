@@ -16,12 +16,14 @@ import app.sleevesight.core.pipeline.InsightItem
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.PipelineEvent
 import app.sleevesight.core.pipeline.PipelineParts
+import app.sleevesight.core.pipeline.QuestionCost
 import app.sleevesight.core.pipeline.TrackResolver
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.resolution.NameMatcher
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.settings.SourceSwitch
 import app.sleevesight.core.sources.AlbumFound
 import app.sleevesight.core.sources.AlbumLookup
 import app.sleevesight.core.sources.AlbumQuery
@@ -83,6 +85,9 @@ class AppItemNotesTest {
     private var open = true
     private val events = mutableListOf<PipelineEvent>()
 
+    // What was counted as paid (#885: an album's web searches among it).
+    private var paid = QuestionCost()
+
     private fun TestScope.notes(epoch: ClearEpoch = ClearEpoch()) =
         AppItemNotes(
             parts,
@@ -90,6 +95,7 @@ class AppItemNotesTest {
             this,
             NameMatcher(JvmAccentFolder),
             epoch,
+            paid = { paid += it },
             events = { events += it },
             gate = { open },
         )
@@ -168,15 +174,25 @@ class AppItemNotesTest {
 
         override suspend fun lookup(query: AlbumQuery): AlbumFound {
             albumLookups++
+            gathering?.await()
             val lines =
                 listOf(HomeFixtures.draft(SourceId.WIKIPEDIA, "Sundown is his tenth album.", scope = Scope.RELEASE))
             return AlbumFound(lines + kept.orEmpty(), webDue = query.web && kept == null)
         }
 
-        override suspend fun searchWeb(query: AlbumQuery): List<EvidenceDraft>? =
-            kept ?: listOf(web).also {
-                searches++
-                kept = it
+        // As `AlbumSource`'s: none with web search off; a request sent only when nothing is kept.
+        override suspend fun searchWeb(
+            query: AlbumQuery,
+            sent: () -> Unit,
+        ): List<EvidenceDraft>? =
+            if (!query.web) {
+                null
+            } else {
+                kept ?: listOf(web).also {
+                    searches++
+                    sent()
+                    kept = it
+                }
             }
     }
 
@@ -209,6 +225,7 @@ class AppItemNotesTest {
             advanceUntilIdle()
             assertEquals(1, web.searches)
             assertEquals(1, provider.requests)
+            assertEquals(QuestionCost(searches = 1, calls = 1), paid)
             assertTrue("Sundown topped the Billboard 200." in provider.prompts.single())
             val shown = notes.settled(first, InsightItem.ALBUM) as ItemShown.Shown
             assertTrue(
@@ -232,6 +249,42 @@ class AppItemNotesTest {
             advanceUntilIdle()
             assertEquals(1, web.searches)
             assertEquals(1, provider.requests)
+            // The lines kept are not a search paid for.
+            assertEquals(QuestionCost(searches = 1, calls = 1), paid)
+        }
+
+    @Test
+    fun `web search switched off while the album is gathered makes no search`() =
+        runTest {
+            val web = WebAlbums()
+            withAlbums(web)
+            val notes = notes()
+            val gate = CompletableDeferred<Unit>()
+            gathering = gate
+            notes.write(track(HomeFixtures.sundown), InsightItem.ALBUM)
+            advanceUntilIdle()
+            val now = checkNotNull(settings.value)
+            settings.value = now.copy(enabledSources = now.enabledSources - SourceSwitch.WEB)
+            gate.complete(Unit)
+            advanceUntilIdle()
+            assertEquals(0, web.searches)
+            assertEquals(0, paid.searches)
+            // The insight is written from what the free sources found.
+            assertEquals(1, provider.requests)
+        }
+
+    @Test
+    fun `an album kept from an earlier search is not counted as a search paid for`() =
+        runTest {
+            val web = WebAlbums()
+            withAlbums(web)
+            // Another track's write searched and kept the lines; its card is gone.
+            web.searchWeb(AlbumQuery("Sundown", "Gordon Lightfoot", "rg-sundown"))
+            val notes = notes()
+            notes.write(track(HomeFixtures.sundown), InsightItem.ALBUM)
+            advanceUntilIdle()
+            assertEquals(1, web.searches)
+            assertEquals(QuestionCost(calls = 1), paid)
         }
 
     @Test

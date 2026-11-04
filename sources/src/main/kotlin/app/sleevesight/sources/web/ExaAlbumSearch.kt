@@ -10,14 +10,16 @@ import app.sleevesight.net.fetch
 import kotlin.time.Clock
 
 /** A web search for the pages about an album (#885): `ExaAlbumSearch`; a fake in tests. */
-fun interface AlbumWebSearch {
+interface AlbumWebSearch {
     /**
      * The web lines about the [album] by [artist], at most [ExaWebSearch.MAX_LINES], none when
      * nothing found is about it; failed when the engine could not be reached or refused the request.
+     * [sent] is told right before the request goes out, the paid part, and not when none is sent.
      */
     suspend fun search(
         album: String,
         artist: String,
+        sent: () -> Unit = {},
     ): Lookup<List<EvidenceDraft>>
 }
 
@@ -46,9 +48,11 @@ class ExaAlbumSearch(
     override suspend fun search(
         album: String,
         artist: String,
+        sent: () -> Unit,
     ): Lookup<List<EvidenceDraft>> {
         if (!filter.canCheckAlbum(album, artist)) return Lookup.Found(emptyList())
         val request = ExaWebSearch.request(ExaSearchRequest.ofAlbum(album, artist), key)
+        sent()
         return when (val fetched = net.fetch(request, ExaWebSearch::parse)) {
             is NetResult.Failure -> Lookup.Failed(UNREACHABLE)
             is NetResult.Success ->
