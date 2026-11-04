@@ -4,13 +4,16 @@ import android.content.Intent
 import android.view.WindowManager
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasAnyDescendant
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isEnabled
 import androidx.compose.ui.test.isHeading
@@ -55,8 +58,9 @@ import org.robolectric.shadows.ShadowDialog
 
 /**
  * Where a key's QR code comes from (#541): the description and links under *Load keys*, no CLI on
- * its screen, and the guided screens the key field's icons open, laid out as *Load keys*' is; and a
- * setup code of one key, as the API keys page makes it, scanned into that key's field.
+ * its screen, and the guided screens the key field's icons open, laid out as *Load keys*' is, the
+ * API keys page's address as plain text (#765); and a setup code of one key, as the API keys page
+ * makes it, scanned into that key's field, and *Open Load keys* for one it cannot take.
  */
 @RunWith(RobolectricTestRunner::class)
 class KeyGuidesTest {
@@ -176,7 +180,7 @@ class KeyGuidesTest {
             compose.onNode(more).performFirstLinkClick { (it.item as LinkAnnotation.Url).url.endsWith("/api-keys") }
             assertEquals("https://sleevesight.app/api-keys", opened()?.dataString)
             // The links are apart from the row, which still opens the screen.
-            assertTrue(!shown(hasText(text(R.string.load_keys_type))))
+            assertTrue(!shown(hasText(text(R.string.load_keys_intro_open))))
         }
 
     @Test
@@ -184,10 +188,13 @@ class KeyGuidesTest {
         runBlocking { settings.update { it.copy(developerMode = true) } }
         show(scanner = notScanning) {
             compose.onNodeWithText(text(R.string.settings_scan_keys)).performScrollTo().performClick()
-            waitForText(text(R.string.load_keys_type))
+            waitForText(text(R.string.load_keys_intro_open))
+            assertTrue(!shown(hasText("keys-qr", substring = true)))
+            compose.onNodeWithText(text(R.string.load_keys_start)).performClick()
+            waitForText(text(R.string.load_keys_words_secret))
             assertTrue(!shown(hasText("keys-qr", substring = true)))
             compose.onNodeWithText(text(R.string.load_keys_next)).performClick()
-            waitForText(text(R.string.load_keys_read_code))
+            waitForText(text(R.string.load_keys_scan_how))
             assertTrue(!shown(hasText("keys-qr", substring = true)))
         }
     }
@@ -197,18 +204,21 @@ class KeyGuidesTest {
         show(scanner = notScanning) {
             openKey(R.string.settings_key_name_lastfm)
             compose.onNodeWithContentDescription(text(R.string.settings_key_scan)).performClick()
-            val make = text(R.string.key_scan_make)
+            val make = text(R.string.key_scan_open)
             waitForText(make)
             assertTrue(shown(hasText(text(R.string.settings_key_scan)) and isHeading()))
-            assertTrue(shown(hasText(make) and isHeading()))
-            assertTrue(shown(hasText(text(R.string.load_keys_read)) and isHeading()))
+            compose.onNodeWithText(make).assertIsDisplayed()
+            compose.onNodeWithText(text(R.string.key_scan_point)).performScrollTo().assertIsDisplayed()
+            compose.onNodeWithText(text(R.string.key_scan_any)).performScrollTo().assertIsDisplayed()
             assertTrue(latestWindowIsSecure())
 
+            // The address in full, as plain text: not a link, which would open it on the phone.
             compose
-                .onNodeWithContentDescription(
-                    app.getString(R.string.load_keys_instructions_of, "sleevesight.app/api-keys"),
-                ).performClick()
-            assertEquals("https://sleevesight.app/api-keys", opened()?.dataString)
+                .onNodeWithText("https://sleevesight.app/api-keys")
+                .performScrollTo()
+                .assertIsDisplayed()
+                .assert(SemanticsMatcher.keyNotDefined(SemanticsActions.OnClick))
+            assertTrue(!shown(hasClickAction() and hasText("api-keys", substring = true)))
 
             // *Cancel* returns to the key's dialog, which stays open.
             compose.onNode(inScreenWith(text(R.string.settings_cancel), make)).performClick()
@@ -256,6 +266,31 @@ class KeyGuidesTest {
             openKey(R.string.settings_key_name_lastfm)
             compose.onNodeWithContentDescription(text(R.string.settings_key_scan)).performClick()
             waitForText(text(R.string.settings_key_scan_setup))
+            compose.onNodeWithText(text(R.string.settings_key_open_load_keys)).assertIsDisplayed()
+        }
+
+    @Test
+    fun openLoadKeysClosesTheKeyDialogUnsavedAndOpensLoadKeys() =
+        show(scanner = scanning("sleevesight-keys:v1\nexa=$exaKey")) {
+            openKey(R.string.settings_key_name_lastfm)
+            compose.onNodeWithText(text(R.string.settings_key_field)).performTextInput(lastFmKey)
+            compose.onNodeWithContentDescription(text(R.string.settings_key_scan)).performClick()
+            waitForText(text(R.string.settings_key_scan_setup))
+            compose.onNodeWithText(text(R.string.settings_key_open_load_keys)).performClick()
+            waitForText(text(R.string.load_keys_intro_open))
+            assertTrue(!shown(hasText(text(R.string.settings_key_field))))
+            assertTrue(latestWindowIsSecure())
+            compose.waitForIdle()
+            assertEquals(null, stored(SecretId.LASTFM))
+        }
+
+    @Test
+    fun aRefusedKeyOffersNoWayToLoadKeys() =
+        show(scanner = scanning("sleevesight-keys:v1\nlastfm=not-a-key")) {
+            openKey(R.string.settings_key_name_lastfm)
+            compose.onNodeWithContentDescription(text(R.string.settings_key_scan)).performClick()
+            waitForText(text(R.string.settings_key_scan_shape))
+            assertTrue(!shown(hasText(text(R.string.settings_key_open_load_keys))))
         }
 
     @Test
@@ -266,15 +301,20 @@ class KeyGuidesTest {
             waitForText(text(R.string.settings_key_scan_shape))
         }
 
-    /** Scans [code] into Last.fm's field, and waits for [message]; the field stays empty. */
+    /**
+     * Scans [code] into Last.fm's field, and waits for [message], with *Open Load keys* when it
+     * points there ([loadKeys]); the field stays empty.
+     */
     private fun scannedSays(
         code: String,
         message: Int,
+        loadKeys: Boolean = false,
     ) = show(scanner = scanning(code)) {
         openKey(R.string.settings_key_name_lastfm)
         compose.onNodeWithContentDescription(text(R.string.settings_key_scan)).performClick()
         waitForText(text(message))
         compose.onNodeWithText(text(R.string.settings_save)).assertIsNotEnabled()
+        assertEquals(loadKeys, shown(hasText(text(R.string.settings_key_open_load_keys))))
     }
 
     @Test
@@ -283,15 +323,23 @@ class KeyGuidesTest {
 
     @Test
     fun aSetupCodeOfThisKeyAndAnUnknownServiceLeavesTheFieldEmpty() =
-        scannedSays("sleevesight-keys:v1\nlastfm=$lastFmKey\nmistral=abc", R.string.settings_key_scan_setup_more)
+        scannedSays(
+            "sleevesight-keys:v1\nlastfm=$lastFmKey\nmistral=abc",
+            R.string.settings_key_scan_setup,
+            loadKeys = true,
+        )
 
     @Test
     fun aSetupCodeOfThisKeyAndAnUnreadableLineLeavesTheFieldEmpty() =
-        scannedSays("sleevesight-keys:v1\nlastfm=$lastFmKey\nno equals", R.string.settings_key_scan_setup_more)
+        scannedSays(
+            "sleevesight-keys:v1\nlastfm=$lastFmKey\nno equals",
+            R.string.settings_key_scan_setup,
+            loadKeys = true,
+        )
 
     @Test
     fun aSetupCodeOfOnlyAnUnknownServiceSaysNoKeyCanBeRead() =
-        scannedSays("sleevesight-keys:v1\nmistral=abc", R.string.settings_key_scan_setup_none)
+        scannedSays("sleevesight-keys:v1\nmistral=abc", R.string.settings_key_scan_setup, loadKeys = true)
 
     @Test
     fun aSetupCodeOfALaterVersionAsksForAnUpdate() =
@@ -302,6 +350,7 @@ class KeyGuidesTest {
         scannedSays(
             "sleevesight-keys:v2:AAknwBAXHiUsMzpBSE9WXWRrcnnAzdrn9AEOGyg1Qk9O",
             R.string.settings_key_scan_setup_sealed,
+            loadKeys = true,
         )
 
     @Test
@@ -317,7 +366,7 @@ class KeyGuidesTest {
             openKey(R.string.settings_key_name_lastfm)
             compose.onNodeWithText(text(R.string.settings_key_field)).performTextInput(lastFmKey)
             compose.onNodeWithContentDescription(text(R.string.settings_key_scan)).performClick()
-            val make = text(R.string.key_scan_make)
+            val make = text(R.string.key_scan_open)
             waitForText(make)
             compose.onNode(inScreenWith(text(R.string.settings_cancel), make)).performClick()
             compose.waitUntil(WAIT_MS) { !shown(hasText(make)) }

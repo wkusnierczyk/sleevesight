@@ -8,6 +8,7 @@ import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isHeading
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
@@ -40,8 +41,9 @@ import java.util.concurrent.CountDownLatch
 
 /**
  * *Load keys* while it opens a sealed code (#785), as picked in the mock-up: the heading *Opening
- * the code…* with the turning record before it on its line, no progress bar, and the heading still
- * a heading, announced as it shows.
+ * the code…* with the turning record before it on its line, over the camera's view since #765, no
+ * progress bar, and the heading still a heading, announced as it shows; *Previous* and *Next* are
+ * dimmed meanwhile.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w411dp-h891dp-420dpi")
@@ -94,6 +96,7 @@ class LoadKeysOpeningTest {
                         )
                     }
                 }
+                compose.onNodeWithText(app.getString(R.string.load_keys_start)).performClick()
                 compose.onNodeWithText(app.getString(R.string.load_keys_next)).performClick()
                 idleUntil("the opening step") {
                     compose.onAllNodes(hasText(opening)).fetchSemanticsNodes().isNotEmpty()
@@ -123,6 +126,8 @@ class LoadKeysOpeningTest {
                             it.config[SemanticsProperties.ProgressBarRangeInfo] == ProgressBarRangeInfo.Indeterminate
                         }
                 assertEquals(0, bars.size)
+                compose.onNodeWithText(app.getString(R.string.load_keys_previous)).assertIsNotEnabled()
+                compose.onNodeWithText(app.getString(R.string.load_keys_next)).assertIsNotEnabled()
             } finally {
                 held.countDown()
             }

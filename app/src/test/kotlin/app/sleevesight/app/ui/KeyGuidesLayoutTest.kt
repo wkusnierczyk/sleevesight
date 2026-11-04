@@ -47,10 +47,10 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * The guided scans (#541) in a short window (320 dp, shorter than a phone in landscape) with text at
- * twice its size: the camera's view
- * keeps a usable height and can be scrolled wholly onto the screen, the title and the steps scroll,
- * and *Cancel* stays on the screen.
+ * The guided scans (#541), the key field's and *Load keys*' ② (#765), in a short window (320 dp,
+ * shorter than a phone in landscape) with text at twice its size: the camera's view keeps a usable
+ * height and can be scrolled wholly onto the screen, the title and the steps scroll, and *Cancel*
+ * stays on the screen.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w411dp-h320dp", fontScale = 2f)
@@ -81,12 +81,8 @@ class KeyGuidesLayoutTest {
             compose.onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty()
         }
 
-    /** Opens Last.fm's key dialog and the guided scan of its [icon], whose screen shows [shown]. */
-    private fun openGuide(
-        icon: Int,
-        shown: Int,
-        check: () -> Unit,
-    ) {
+    /** The settings screen, *Secrets* open, with [camera] as the scanner; then [block]. */
+    private fun showSecrets(block: () -> Unit) {
         val settings = SettingsStore(stores.open("settings"))
         val secrets = SecretStore(stores.open("secrets"), testCipher())
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
@@ -105,11 +101,20 @@ class KeyGuidesLayoutTest {
             }
             waitForNode(hasText(text(R.string.settings_title)))
             compose.openSection(SettingsSection.SECRETS)
-            compose.onNodeWithText(text(R.string.settings_key_name_lastfm)).performScrollTo().performClick()
-            compose.onNodeWithContentDescription(text(icon)).performClick()
-            waitForNode(hasText(text(shown)))
-            check()
+            block()
         }
+    }
+
+    /** Opens Last.fm's key dialog and the guided scan of its [icon], whose screen shows [shown]. */
+    private fun openGuide(
+        icon: Int,
+        shown: Int,
+        check: () -> Unit,
+    ) = showSecrets {
+        compose.onNodeWithText(text(R.string.settings_key_name_lastfm)).performScrollTo().performClick()
+        compose.onNodeWithContentDescription(text(icon)).performClick()
+        waitForNode(hasText(text(shown)))
+        check()
     }
 
     /**
@@ -138,10 +143,23 @@ class KeyGuidesLayoutTest {
 
     @Test
     fun theQrScanKeepsItsCameraAndCancelInAShortWindowWithLargeText() =
-        openGuide(R.string.settings_key_scan, R.string.key_scan_make) {
-            cameraUsableAndCancelReachable(R.string.key_scan_make)
+        openGuide(R.string.settings_key_scan, R.string.key_scan_open) {
+            cameraUsableAndCancelReachable(R.string.key_scan_open)
             // The steps under the camera are reached by scrolling.
-            compose.onNodeWithText(text(R.string.load_keys_read)).performScrollTo().assertIsDisplayed()
+            compose.onNodeWithText(text(R.string.key_scan_point)).performScrollTo().assertIsDisplayed()
+        }
+
+    @Test
+    fun loadKeysCameraStepKeepsItsCameraAndCancelInAShortWindowWithLargeText() =
+        showSecrets {
+            compose.onNodeWithText(text(R.string.settings_scan_keys)).performScrollTo().performClick()
+            waitForNode(hasText(text(R.string.load_keys_start)))
+            compose.onNodeWithText(text(R.string.load_keys_start)).performClick()
+            waitForNode(hasText(text(R.string.load_keys_next)))
+            compose.onNodeWithText(text(R.string.load_keys_next)).performClick()
+            waitForNode(hasText(text(R.string.load_keys_scan_how)))
+            cameraUsableAndCancelReachable(R.string.load_keys_scan_how)
+            compose.onNodeWithText(text(R.string.load_keys_scan_next)).performScrollTo().assertIsDisplayed()
         }
 
     @Test

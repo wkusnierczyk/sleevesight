@@ -154,6 +154,7 @@ class KeyAutofillTest {
                             scanner = { },
                             keyboard = { _, _, _, _ -> },
                             showPhoneName = false,
+                            onOpenLoadKeys = {},
                             onDismiss = {
                                 calls += RecordingAutofillManager.DISMISSED
                                 shown.open = false

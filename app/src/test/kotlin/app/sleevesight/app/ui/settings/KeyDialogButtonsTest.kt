@@ -116,6 +116,7 @@ class KeyDialogButtonsTest {
                                 scanner = scanner,
                                 keyboard = keyboard,
                                 showPhoneName = false,
+                                onOpenLoadKeys = {},
                                 onDismiss = { shown.dismissed++ },
                             )
                         }

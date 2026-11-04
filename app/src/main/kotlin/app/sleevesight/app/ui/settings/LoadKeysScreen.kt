@@ -184,9 +184,8 @@ internal fun LoadKeysScreen(
     }
     // While the words matter, on ① and ②: renewed once their time is up, checked each second, which
     // moves ①'s countdown, and at once on coming back to either.
-    val live = step == LoadStep.WORDS || step == LoadStep.SCAN
-    LaunchedEffect(words, live) {
-        if (words == null || !live) return@LaunchedEffect
+    LaunchedEffect(words, step) {
+        if (words == null || (step != LoadStep.WORDS && step != LoadStep.SCAN)) return@LaunchedEffect
         while (!due()) {
             now = clock()
             delay(minOf(lifetime - (now - drawnAt), WORDS_CHECK_MS))
