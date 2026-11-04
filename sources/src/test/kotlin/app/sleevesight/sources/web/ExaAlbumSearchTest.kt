@@ -57,6 +57,35 @@ class ExaAlbumSearchTest {
         }
 
     @Test
+    fun `an album's edition is left out of the query and of what a page must name`() =
+        runTest {
+            val net = ReplayNetClient.ok(body)
+            val found = search(net).search("Sundown (Remastered 2024)", "Gordon Lightfoot")
+            assertEquals(listOf("https://example.com/sundown"), (found as Lookup.Found).value.map { it.url })
+            val request =
+                Json
+                    .parseToJsonElement(
+                        net.sent
+                            .single()
+                            .body!!
+                            .text,
+                    ).jsonObject
+            assertEquals("\"Sundown\" by Gordon Lightfoot, album", request["query"]!!.jsonPrimitive.content)
+            // A live album is another release: its name stays.
+            val live = ReplayNetClient.ok(body)
+            assertEquals(Lookup.Found(emptyList()), search(live).search("Sundown (Live)", "Gordon Lightfoot"))
+            val sent =
+                Json
+                    .parseToJsonElement(
+                        live.sent
+                            .single()
+                            .body!!
+                            .text,
+                    ).jsonObject
+            assertEquals("\"Sundown (Live)\" by Gordon Lightfoot, album", sent["query"]!!.jsonPrimitive.content)
+        }
+
+    @Test
     fun `an album that cannot be checked is not searched`() =
         runTest {
             val net = ReplayNetClient.ok(body)

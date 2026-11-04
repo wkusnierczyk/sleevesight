@@ -3,6 +3,7 @@ package app.sleevesight.sources.album
 import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.normalizer.Edition
 import app.sleevesight.core.resolution.EvidenceText
 import app.sleevesight.core.resolution.Lookup
 import app.sleevesight.core.resolution.NameMatcher
@@ -24,6 +25,9 @@ import app.sleevesight.sources.web.AlbumWebSearch
 import app.sleevesight.sources.wikipedia.WikipediaClient
 import app.sleevesight.sources.wikipedia.WikipediaSource
 import app.sleevesight.sources.wikipedia.articleUrl
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
@@ -47,9 +51,9 @@ import kotlin.time.Instant
  *   verbatim and linked (D1, CC BY-SA 4.0), as Wikipedia's lines on a track are
  *   ([WikipediaSource.sentences]).
  * - **Last.fm** (with [AlbumQuery.lastFm] and the user's key, [lastFm], #885): the album
- *   (`album.getInfo`), when its MusicBrainz id shows it is the album asked for ([isAlbum]: never
- *   by its names alone); its wiki summary's sentences,
- *   taken as an artist's bio's are ([LastFmBio]: whole, of a quotable length, at most three, none
+ *   (`album.getInfo`, by its name without an edition, `Edition.stripEditions`), when its
+ *   MusicBrainz id shows it is the album asked for ([isAlbum]: never by its names alone); its wiki
+ *   summary's sentences, taken as an artist's bio's are ([LastFmBio]: whole, of a quotable length, at most three, none
  *   from a page several share, without the "Read more" link and the licence note), verbatim and
  *   attributed (D1, CC BY-SA), with the album's page. Not its listeners, play counts or tags, counts
  *   and lists of what many listeners did, which the artist's evidence leaves out too (`aggregate`):
@@ -57,7 +61,8 @@ import kotlin.time.Instant
  * - **The web** (with [AlbumQuery.web] and an engine's key, [web], #885): the pages about the album
  *   a search finds (`ExaAlbumSearch`), web lines. The search is paid, so [lookup] never makes it:
  *   it gives the lines an earlier search kept, and says when one is due ([AlbumFound.webDue]);
- *   [searchWeb] makes it, before the album's insight is written, and keeps what it found, telling
+ *   [searchWeb] makes it, before the album's insight is written, one at a time per album (a second
+ *   write of the album while one searches takes its outcome), and keeps what it found, telling
  *   its caller when a request is sent, and only then (not for lines kept, or an album that cannot
  *   be checked), so a search is counted as paid only when it is.
  *
@@ -89,6 +94,10 @@ class AlbumSource(
     // The web's lines by album, while [webKept] keeps nothing.
     private val remembered = Lru<String, List<EvidenceDraft>>(REMEMBERED)
 
+    // The web searches under way, by album ([webKeyOf]), under [searching]: one at a time per album.
+    private val searching = Mutex()
+    private val inFlight = mutableMapOf<String, CompletableDeferred<Searched?>>()
+
     override suspend fun lookup(query: AlbumQuery): AlbumFound {
         val free = free(query)
         val searches = searches(query)
@@ -100,7 +109,50 @@ class AlbumSource(
         query: AlbumQuery,
         sent: () -> Unit,
     ): List<EvidenceDraft>? =
-        web?.takeIf { searches(query) }?.let { search -> keptWeb(query) ?: searched(search, query, sent) }
+        web?.takeIf { searches(query) }?.let { search ->
+            once(webKeyOf(query)) { keptWeb(query) ?: searched(search, query, sent) }
+        }
+
+    // A search's outcome, shared with the writes that waited for it: its [lines], or null when it failed.
+    private class Searched(
+        val lines: List<EvidenceDraft>?,
+    )
+
+    // [search] for the album [key], one at a time: a second write of the album while one searches
+    // waits for it and takes its outcome (the lines it kept), rather than paying for its own. When the
+    // one under way is cancelled (a Stop), the next takes its place and reads, or searches, itself.
+    private suspend fun once(
+        key: String,
+        search: suspend () -> List<EvidenceDraft>?,
+    ): List<EvidenceDraft>? {
+        var outcome: Searched? = null
+        while (outcome == null) {
+            val mine = CompletableDeferred<Searched?>()
+            val pending =
+                searching.withLock {
+                    inFlight[key]?.takeIf { !it.isCompleted }
+                        ?: mine.also { inFlight[key] = it }
+                }
+            outcome = if (pending === mine) searchedOnce(key, mine, search) else pending.await()
+        }
+        return outcome.lines
+    }
+
+    // [search] made for [key], its outcome told to [pending] whatever happens (null when cancelled).
+    private suspend fun searchedOnce(
+        key: String,
+        pending: CompletableDeferred<Searched?>,
+        search: suspend () -> List<EvidenceDraft>?,
+    ): Searched =
+        try {
+            Searched(search()).also {
+                pending.complete(it)
+                searching.withLock { if (inFlight[key] === pending) inFlight.remove(key) }
+            }
+        } finally {
+            // Cancelled or failed: those waiting go on, and the next takes its place.
+            pending.complete(null)
+        }
 
     // What [search] finds for [query]'s album, none included, kept; null when it failed, and nothing
     // is kept. [sent] is told when the request goes out.
@@ -171,7 +223,10 @@ class AlbumSource(
     ): List<EvidenceDraft> {
         // With no release group, no answer could be confirmed ([isAlbum]): Last.fm is not asked.
         if (query.group == null) return emptyList()
-        val info = asking.read(client.albumInfo(query.artist, query.title), null)
+        // Without the edition a player or store adds (#885: "Abbey Road (Remastered)" is "Abbey Road"),
+        // which Last.fm's page for the album does not have.
+        val title = Edition.stripEditions(query.title)
+        val info = asking.read(client.albumInfo(query.artist, title), null)
         val sentences =
             if (info != null &&
                 isAlbum(info, query, album, asking)
@@ -184,7 +239,7 @@ class AlbumSource(
             EvidenceDraft(
                 SourceId.LASTFM,
                 Scope.RELEASE,
-                "The Last.fm wiki of “${query.title}” says: \"$sentence\"",
+                "The Last.fm wiki of “$title” says: \"$sentence\"",
                 info?.url,
                 at,
             )

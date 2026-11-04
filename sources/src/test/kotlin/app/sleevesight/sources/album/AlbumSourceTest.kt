@@ -9,6 +9,7 @@ import app.sleevesight.core.resolution.NameMatcher
 import app.sleevesight.core.resolution.Wd
 import app.sleevesight.core.resolution.WdEntity
 import app.sleevesight.core.resolution.WikidataLookup
+import app.sleevesight.core.sources.AlbumFound
 import app.sleevesight.core.sources.AlbumQuery
 import app.sleevesight.core.sources.ArtistResults
 import app.sleevesight.core.testing.MemoryArtistResults
@@ -23,7 +24,10 @@ import app.sleevesight.sources.musicbrainz.MbAlbum
 import app.sleevesight.sources.musicbrainz.ReleaseGroups
 import app.sleevesight.sources.web.AlbumWebSearch
 import app.sleevesight.sources.wikipedia.WikipediaClient
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.yield
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -139,6 +143,9 @@ class AlbumSourceTest {
     ) : AlbumWebSearch {
         val asked = mutableListOf<Pair<String, String>>()
 
+        // While set, a search waits for it: its answer on the way.
+        var answering: CompletableDeferred<Unit>? = null
+
         override suspend fun search(
             album: String,
             artist: String,
@@ -146,6 +153,7 @@ class AlbumSourceTest {
         ): Lookup<List<EvidenceDraft>> {
             asked += album to artist
             if (sends) sent()
+            answering?.await()
             if (failing) return Lookup.Failed("offline")
             return Lookup.Found(
                 lines.mapIndexed { i, text ->
@@ -364,8 +372,7 @@ class AlbumSourceTest {
         }
 
     // Whether [found] has Last.fm's lines.
-    private fun citesLastFm(found: app.sleevesight.core.sources.AlbumFound) =
-        found.drafts.any { it.source == SourceId.LASTFM }
+    private fun citesLastFm(found: AlbumFound) = found.drafts.any { it.source == SourceId.LASTFM }
 
     @Test
     fun `Last fm's album with no MusicBrainz id, or no group to check it against, gives nothing, whatever its names`() =
@@ -489,6 +496,47 @@ class AlbumSourceTest {
             assertEquals(2, sent)
             source(web = Web(sends = false)).searchWeb(query) { sent++ }
             assertEquals(2, sent)
+        }
+
+    @Test
+    fun `two writes of an album searching at once make one search, the second taking its lines`() =
+        runTest {
+            val gate = CompletableDeferred<Unit>()
+            val web = Web().apply { answering = gate }
+            val source = source(web = web)
+            var sent = 0
+            val first = async { source.searchWeb(query) { sent++ } }
+            val second = async { source.searchWeb(query) { sent++ } }
+            repeat(3) { yield() }
+            gate.complete(Unit)
+            assertEquals(first.await(), second.await())
+            assertEquals(1, web.asked.size)
+            assertEquals(1, sent)
+        }
+
+    @Test
+    fun `a search cancelled while another write waits for it is made by the one that waited`() =
+        runTest {
+            val gate = CompletableDeferred<Unit>()
+            val web = Web().apply { answering = gate }
+            val source = source(web = web)
+            val first = async { source.searchWeb(query) }
+            val second = async { source.searchWeb(query) }
+            repeat(3) { yield() }
+            first.cancel()
+            repeat(3) { yield() }
+            gate.complete(Unit)
+            assertTrue(checkNotNull(second.await()).isNotEmpty())
+            assertEquals(2, web.asked.size)
+        }
+
+    @Test
+    fun `an album's edition is left out of what Last fm is asked and its line`() =
+        runTest {
+            val lastFm = LastFm(lastFmSundown)
+            val found = source(lastFm).lookup(query.copy(title = "Sundown (Remastered)"))
+            assertEquals(listOf("Gordon Lightfoot" to "Sundown"), lastFm.asked)
+            assertTrue(found.drafts.filter { it.source == SourceId.LASTFM }.all { "wiki of “Sundown” says" in it.text })
         }
 
     @Test
