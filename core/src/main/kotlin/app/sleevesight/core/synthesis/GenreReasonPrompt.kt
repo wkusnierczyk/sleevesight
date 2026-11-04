@@ -251,11 +251,13 @@ object GenreReasonPrompt {
     /**
      * The reason's rules: the label's own first, then the insight's that fit a reason
      * ([InsightPrompt.rules]: all but [InsightPrompt.NO_READING_RULE], since telling what in the
-     * evidence fits a genre is a reading, and with [COUNTS_RULE] for the insight's), in the
-     * insight's order. With [allowModel] (version 5, #695), the reason's own rules on the evidence,
-     * the model's knowledge, a gap and `NO_EVIDENCE` in place of the insight's
-     * ([MODEL_EVIDENCE_RULE], [MODEL_RULE], [MODEL_GAP_RULE], [MODEL_LABEL_RULE]), and the first rule
-     * reworded to match.
+     * evidence fits a genre is a reading, with [COUNTS_RULE] for the insight's, the shared
+     * [InsightPrompt.WEB_READING_RULE] for the insight's [InsightPrompt.WEB_FACT_RULE], which
+     * extends it, and the shared [InsightPrompt.NO_EVIDENCE_RULE] for the insight's
+     * [InsightPrompt.NOTHING_TO_TELL_RULE]), in the insight's order. With [allowModel] (version 5,
+     * #695), the reason's own rules on the evidence, the model's knowledge, a gap and `NO_EVIDENCE`
+     * in place of the insight's ([MODEL_EVIDENCE_RULE], [MODEL_RULE], [MODEL_GAP_RULE],
+     * [MODEL_LABEL_RULE]), and the first rule reworded to match.
      */
     fun contract(allowModel: Boolean): String =
         listOfNotNull(

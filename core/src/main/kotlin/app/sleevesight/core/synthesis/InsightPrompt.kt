@@ -41,9 +41,11 @@ import app.sleevesight.core.model.SourceId
  *
  * Its fixed part is not cached. Until version 9 the data came first, so the fixed part was no
  * prefix; now it is the system prompt, a stable prefix, the same for every track while the
- * listener's switches and style stay, so caching it becomes possible (#330). It is still at or
- * under the least a provider caches on the default models, and a warm cache would save almost
- * nothing (#399; the design's *No cached prefix*).
+ * listener's switches and style stay, so caching it becomes possible (#330). Version 10's is 836
+ * input tokens on Claude Haiku 5.5 (867 with the model's own knowledge on; measured with
+ * `sleevesight-cli prompt`, 2026-11-04): over Anthropic's least for a cache, under OpenAI's and
+ * Google's, and a warm cache would save a fraction of a cent a call (#399; the design's *No cached
+ * prefix*).
  */
 object InsightPrompt {
     /**

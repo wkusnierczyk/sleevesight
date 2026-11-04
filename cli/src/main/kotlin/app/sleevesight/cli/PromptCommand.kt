@@ -164,7 +164,7 @@ class PromptCommand(
               sources, no grounding check, no cache. For the prompts a debug build logs
               (adb logcat -s SleevesightPrompt -v raw).
 
-              --system <file>     the system prompt (default: none, as the app sends today)
+              --system <file>     the system prompt (default: none)
               --provider <name>   anthropic, openai or google (default: anthropic)
               --model <id>        the provider's model (default: the app's default for it)
               --effort <level>    minimal, low, medium, high, or default for the service's own
