@@ -112,30 +112,14 @@ class ExaWebSearch(
     ): SourceResult = SourceResult(outcome, evidence, start.elapsedNow(), trackOnly = true)
 
     /** The search request for [track]: the key in a header, through [NetSecrets] only. */
-    internal fun request(track: NormalizedTrack): NetRequest =
-        NetRequest(
-            url = ENDPOINT,
-            method = NetMethod.POST,
-            secrets = NetSecrets(headers = mapOf(KEY_HEADER to key.reveal())),
-            body = NetBody(JSON.encodeToString(ExaSearchRequest.of(track)), "application/json"),
-        )
+    internal fun request(track: NormalizedTrack): NetRequest = request(ExaSearchRequest.of(track), key)
 
     private fun linesFor(
         track: NormalizedTrack,
         response: ExaSearchResponse,
         retrievedAt: Instant,
-    ): List<EvidenceDraft> {
-        val seen = mutableSetOf<String>()
-        return response.results
-            .asSequence()
-            .mapNotNull { result ->
-                val snippet = snippetOf(result)
-                if (snippet.isEmpty() || !seen.add(result.url)) return@mapNotNull null
-                if (!filter.isAbout(track, result.title, snippet, result.url)) return@mapNotNull null
-                EvidenceDraft(SourceId.WEB, Scope.WEB, snippet, result.url, retrievedAt)
-            }.take(MAX_LINES)
-            .toList()
-    }
+    ): List<EvidenceDraft> =
+        lines(response, retrievedAt) { result, snippet -> filter.isAbout(track, result.title, snippet, result.url) }
 
     companion object {
         const val HOST: String = "api.exa.ai"
@@ -316,6 +300,40 @@ class ExaWebSearch(
             )
         private val REGIONAL_INDICATORS = 0x1F1E6..0x1F1FF
 
+        /** The search request carrying [body], on [key]: the key in a header, through [NetSecrets] only. */
+        internal fun request(
+            body: ExaSearchRequest,
+            key: Secret,
+        ): NetRequest =
+            NetRequest(
+                url = ENDPOINT,
+                method = NetMethod.POST,
+                secrets = NetSecrets(headers = mapOf(KEY_HEADER to key.reveal())),
+                body = NetBody(JSON.encodeToString(body), "application/json"),
+            )
+
+        /**
+         * One web line per result of [response] with a highlight ([snippetOf]), once per address,
+         * in Exa's order, of those [about] keeps (judging the line as cut), at most [MAX_LINES]: for
+         * the track's search, and the album's (`ExaAlbumSearch`, #885).
+         */
+        internal fun lines(
+            response: ExaSearchResponse,
+            retrievedAt: Instant,
+            about: (ExaResult, String) -> Boolean,
+        ): List<EvidenceDraft> {
+            val seen = mutableSetOf<String>()
+            return response.results
+                .asSequence()
+                .mapNotNull { result ->
+                    val snippet = snippetOf(result)
+                    if (snippet.isEmpty() || !seen.add(result.url)) return@mapNotNull null
+                    if (!about(result, snippet)) return@mapNotNull null
+                    EvidenceDraft(SourceId.WEB, Scope.WEB, snippet, result.url, retrievedAt)
+                }.take(MAX_LINES)
+                .toList()
+        }
+
         /** A 2xx body read as a search response; null for any other status, which has no results. */
         internal fun parse(response: NetResponse): ExaSearchResponse? =
             if (response.isSuccess) JSON.decodeFromString<ExaSearchResponse>(response.body) else null
@@ -380,6 +398,20 @@ internal data class ExaSearchRequest(
                     ),
             )
         }
+
+        /**
+         * The query for an [album] by [artist] (#885, `ExaAlbumSearch`): `"<album>" by <artist>,
+         * album`, as [of] words a song's, nothing of the track playing, with highlights steered by
+         * the album's title and the artist.
+         */
+        fun ofAlbum(
+            album: String,
+            artist: String,
+        ): ExaSearchRequest =
+            ExaSearchRequest(
+                query = "\"$album\" by $artist, album",
+                contents = ExaContents(ExaHighlights("$album $artist", HIGHLIGHT_CHARACTERS)),
+            )
 
         /** What the request asks Exa for, and what the adapter cuts a line to ([ExaWebSearch.cut]). */
         const val HIGHLIGHT_CHARACTERS: Int = 300

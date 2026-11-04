@@ -42,12 +42,14 @@ enum class InsightItem(
 /**
  * The evidence an item is written from ([ItemInsights.evidence]): [evidence], and of its ids those
  * that are lines of the track's own evidence, by the track's id ([trackIds]), so a citation opens
- * *Sources* at its line. [unreachable] when a source of the album's could not be asked.
+ * *Sources* at its line. [unreachable] when a source of the album's could not be asked. [webDue]
+ * when the album's web search is due before its insight is written (#885, [ItemInsights.searched]).
  */
 class ItemEvidence(
     val evidence: EvidenceSet,
     val trackIds: Map<String, String>,
     val unreachable: Boolean = false,
+    val webDue: Boolean = false,
 )
 
 /**
@@ -73,7 +75,8 @@ data class KeptItem(
  *   Wikidata item), those naming the primary artist when the track credits several;
  * - **the album's** ([InsightItem.ALBUM]): about the album ([CardEntity.Album], by the release
  *   group the player's album name names, else by its name and the primary artist), from the
- *   evidence gathered for the album ([albums], [AlbumLookup]).
+ *   evidence gathered for the album ([albums], [AlbumLookup]), the pages its web search found
+ *   among it once a write made the search ([searched], #885).
  *
  * The artist's and the album's lines are numbered on their own ([EvidenceSet.of]), not as the
  * track's: their fingerprint, part of the key, depends on those lines alone, so an album's tracks
@@ -176,7 +179,8 @@ class ItemInsights(
      * switches), from the run's own evidence ([ownEvidence]), each id mapped to the line Home shows
      * ([TrackState.evidence]) where it is one: null while the track's evidence is not in, every
      * source answered, or with no name for it ([name]). The album's is asked of [albums] (free
-     * lookups, kept per album); with none, it is empty.
+     * lookups, kept per album, and the web's lines a search kept, never a search of its own); with
+     * none, it is empty.
      */
     suspend fun evidence(
         item: InsightItem,
@@ -204,24 +208,98 @@ class ItemInsights(
         return ItemEvidence(song, matching(song.lines, shown))
     }
 
-    // The evidence gathered for [album], by [albums], from the sources [settings] switch on.
+    // The evidence gathered for [album], by [albums], from the sources [settings] switch on: not the
+    // counts and lists of what many listeners did (`EvidenceDraft.aggregate`), as the artist's leaves
+    // them out ([artistLines]), so the album's fingerprint does not change with them (#885).
     private suspend fun albumEvidence(
         album: CardEntity.Album,
         own: EvidenceSet,
         settings: Settings,
     ): ItemEvidence {
-        val query =
-            AlbumQuery(
-                album.title,
-                album.artist,
-                album.group,
-                musicBrainz = settings.isEnabled(SourceId.MUSICBRAINZ),
-                wikipedia = settings.isEnabled(SourceId.WIKIPEDIA),
-            )
+        val query = queryOf(album, settings)
         val found = albums?.let { attempt { it.lookup(query) } ?: AlbumFound(emptyList(), unreachable = true) }
-        val drafts = found?.drafts.orEmpty().filter { settings.isEnabled(it.source) }
+        val drafts = found?.drafts.orEmpty().filter { settings.isEnabled(it.source) && !it.aggregate }
         val lines = EvidenceSet.of(drafts, hasher)
-        return ItemEvidence(lines, matching(lines.lines, own), unreachable = found?.unreachable == true)
+        return ItemEvidence(
+            lines,
+            matching(lines.lines, own),
+            unreachable = found?.unreachable == true,
+            webDue = found?.webDue == true,
+        )
+    }
+
+    // [album] as [albums] is asked about it, with the sources [settings] switch on.
+    private fun queryOf(
+        album: CardEntity.Album,
+        settings: Settings,
+    ) = AlbumQuery(
+        album.title,
+        album.artist,
+        album.group,
+        musicBrainz = settings.isEnabled(SourceId.MUSICBRAINZ),
+        wikipedia = settings.isEnabled(SourceId.WIKIPEDIA),
+        lastFm = settings.isEnabled(SourceId.LASTFM),
+        web = settings.isEnabled(SourceId.WEB),
+    )
+
+    /**
+     * [evidence], the album's on [track] under [settings], with the lines of its web search (#885),
+     * for a write of its insight only: the search is paid, so it is made here, never when the
+     * evidence is gathered ([evidence]), and only while it is due ([ItemEvidence.webDue]) and
+     * [settings] switch web search on, which the caller reads right before ([AlbumQuery.web], the
+     * lookup's engine and key are the parts' then); [albums] keeps what it found, so the evidence
+     * gathered later holds the same lines, and the insight written from them is found again by its
+     * key. [sent] is told each time a request goes out to the engine ([AlbumLookup.searchWeb]). Null
+     * when no search is due or allowed, or none could be made (it failed, or the album lookup threw):
+     * the insight is then written from [evidence] as it is.
+     */
+    suspend fun searched(
+        item: InsightItem,
+        track: TrackState,
+        settings: Settings,
+        evidence: ItemEvidence,
+        sent: () -> Unit = {},
+    ): ItemEvidence? {
+        val lookup = albums?.takeIf { evidence.webDue && settings.isEnabled(SourceId.WEB) }
+        val album = entity(item, track) as? CardEntity.Album
+        val found =
+            if (lookup != null && album != null) attempt { lookup.searchWeb(queryOf(album, settings), sent) } else null
+        return found?.let { withWeb(track, settings, evidence, it) }
+    }
+
+    /**
+     * [evidence], the album's gathered on [track] under [settings] while its web search was due, with
+     * the web's lines of [searched], the album's evidence that search gave on another of its tracks
+     * (#885), with no search: numbered as the album's lines are, each id mapped to [track]'s own line
+     * where it is one, so its insight has the key the other track's write keeps it under. Null
+     * before [track]'s evidence is in.
+     */
+    fun withWebOf(
+        track: TrackState,
+        settings: Settings,
+        evidence: ItemEvidence,
+        searched: ItemEvidence,
+    ): ItemEvidence? =
+        withWeb(
+            track,
+            settings,
+            evidence,
+            searched.evidence.lines
+                .filter { it.source == SourceId.WEB }
+                .map(::draftOf),
+        )
+
+    // [evidence] on [track] with the web's [lines], those [settings] switch on.
+    private fun withWeb(
+        track: TrackState,
+        settings: Settings,
+        evidence: ItemEvidence,
+        lines: List<EvidenceDraft>,
+    ): ItemEvidence? {
+        val shown = track.evidence ?: return null
+        val more = lines.filter { settings.isEnabled(it.source) && !it.aggregate }
+        val set = EvidenceSet.of(evidence.evidence.lines.map(::draftOf) + more, hasher)
+        return ItemEvidence(set, matching(set.lines, shown), unreachable = evidence.unreachable)
     }
 
     // The artist-level lines of the track's [own] evidence about the primary artist: all of them when
@@ -249,21 +327,13 @@ class ItemInsights(
         lines: List<EvidenceLine>,
         own: EvidenceSet,
     ): ItemEvidence {
-        val drafts =
-            lines.map {
-                EvidenceDraft(
-                    it.source,
-                    it.scope,
-                    it.text,
-                    it.url,
-                    it.retrievedAt,
-                    it.aggregate,
-                    it.about,
-                )
-            }
-        val set = EvidenceSet.of(drafts, hasher)
+        val set = EvidenceSet.of(lines.map(::draftOf), hasher)
         return ItemEvidence(set, matching(set.lines, own))
     }
+
+    // [line] as a draft, to be numbered again.
+    private fun draftOf(line: EvidenceLine): EvidenceDraft =
+        EvidenceDraft(line.source, line.scope, line.text, line.url, line.retrievedAt, line.aggregate, line.about)
 
     // Each of [lines]' ids whose line is in [own], the track's evidence, by its id there.
     private fun matching(
@@ -329,7 +399,8 @@ class ItemInsights(
      * the last, or null when [mayCall] closed before the call, which then is not made. [mayCall] is
      * asked right before each call, with no suspension between. With nothing to narrate, no call, and
      * [InsightState.NoEvidence]. A complete reply is kept in the cache, `NO_EVIDENCE` too, so the same
-     * item asks nothing again, with the one time it is shown with; a reply cut off (a Stop cancels
+     * item asks nothing again, with the one time it is shown with, and, for the album's, its web lines
+     * kept again with it ([AlbumLookup.renewWeb]); a reply cut off (a Stop cancels
      * the call) is neither shown nor kept. A reply that revises itself where it would show (#798) is
      * cut to what follows the revision when that is usable; else asked for once more, a second call,
      * and with nothing usable then either, it fails, as the key insight's does. While it streams, the
@@ -376,13 +447,30 @@ class ItemInsights(
                 }
 
                 is Reply.Read -> {
-                    if (reply.kept) attempt { cache.keep(key, keptText(text, reply.state), at) }
+                    if (reply.kept) {
+                        attempt { cache.keep(key, keptText(text, reply.state), at) }
+                        renewWeb(item, track)
+                    }
                     val shown = (reply.state as? InsightState.Written)?.copy(writtenAt = at) ?: reply.state
                     last = shown.also { show(it, at) }
                 }
             }
         }
         return last
+    }
+
+    // The album's web lines kept again from now with [item]'s card on [track] written from them (#885,
+    // [AlbumLookup.renewWeb]), so they last as long as this card, the last one kept; nothing for
+    // another item.
+    private suspend fun renewWeb(
+        item: InsightItem,
+        track: TrackState,
+    ) {
+        val album = entity(item, track) as? CardEntity.Album
+        val lookup = albums
+        if (album != null && lookup != null) {
+            attempt { lookup.renewWeb(AlbumQuery(album.title, album.artist, album.group)) }
+        }
     }
 
     // One call of [request]: its text, each piece shown as it comes while it may not be `NO_EVIDENCE`

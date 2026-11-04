@@ -41,6 +41,26 @@ data class LastFmArtist(
     val bioUrl: String?,
 )
 
+/**
+ * An album as Last.fm's `album.getInfo` gives it (format `json`, #885): what an album's insight may
+ * quote of it. Its listeners, play counts, tags and track list are not read: counts and lists of
+ * what many listeners did, which an album's evidence leaves out (`AlbumSource`).
+ *
+ * @property name the album Last.fm answered with, and [artist] its artist: with `autocorrect=1`,
+ *   its correction of the names asked for, which may be another album altogether.
+ * @property mbid Last.fm's MusicBrainz id for the album, when it has one: a release's, usually, not
+ *   the release group's.
+ * @property url the album's page on Last.fm.
+ * @property summary the wiki's summary, as Last.fm sends it (HTML, its "Read more" link), or null.
+ */
+data class LastFmAlbum(
+    val name: String,
+    val artist: String,
+    val mbid: String?,
+    val url: String?,
+    val summary: String?,
+)
+
 /** A similar artist: by listening overlap, not by sound. */
 @Serializable
 data class LastFmSimilar(
@@ -106,6 +126,21 @@ internal object LastFmJson {
                         ?.obj("links")
                         .items("link")
                         .firstNotNullOfOrNull { it.string("href") },
+            ),
+        )
+    }
+
+    fun albumInfo(body: String): LastFmAnswer<LastFmAlbum> {
+        val root = json.parseToJsonElement(body).jsonObject
+        root.error()?.let { return LastFmAnswer.Error(it) }
+        val album = root.obj("album") ?: error("no album")
+        return LastFmAnswer.Found(
+            LastFmAlbum(
+                name = album.string("name") ?: error("no album name"),
+                artist = album.string("artist") ?: error("no album artist"),
+                mbid = album.string("mbid")?.takeIf { it.isNotBlank() },
+                url = album.string("url")?.takeIf { it.isNotBlank() },
+                summary = album.obj("wiki")?.string("summary"),
             ),
         )
     }

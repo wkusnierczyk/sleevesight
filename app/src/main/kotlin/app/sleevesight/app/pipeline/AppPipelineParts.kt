@@ -32,7 +32,8 @@ import kotlinx.coroutines.flow.flow
  * through the client is watched for a model the service does not know or refuses
  * ([ModelCheck.watching]). [sessionFacts], the artist facts the listening session's insights cited
  * (#239), is one for the process, passed to every build. The album's evidence for its insight
- * under *Key insights* (#522) is gathered by [PipelineWiring.albums].
+ * under *Key insights* (#522) is gathered by [PipelineWiring.albums], Last.fm's album and its web
+ * search with their keys and the engines switched on, as the adapters (#885).
  */
 class AppPipelineParts(
     private val wiring: PipelineWiring,
@@ -60,7 +61,7 @@ class AppPipelineParts(
             lastFmLabels = keys.sources.lastFm?.let(wiring::lastFmLabels),
             sessionFacts = sessionFacts,
             webSearch = wiring.webSearcher(keys.sources.web.filterKeys { it in settings.webEngines }),
-            albums = wiring.albums,
+            albums = wiring.albums(keys.sources, settings),
         )
 }
 
