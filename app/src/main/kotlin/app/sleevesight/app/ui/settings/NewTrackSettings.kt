@@ -10,9 +10,9 @@ import app.sleevesight.core.settings.Settings
 /**
  * *Sources on a new track* (#269; the switch *Keep Sources as you left them* until #522) and *Song,
  * Artist and Album on a new track* (#522), after *Layout*: how the sources and the three insights
- * under *Key insights* start on each new track, *Folded* (the default), *Unfolded* or *As you left
- * them*, as button groups. Under *Expandable boxes* only: shown, but not offered, under *Separate
- * pages*, where each page opens fresh.
+ * under *Key insights* start on each new track, *Folded* (the default), *Unfolded* or *As left*, as
+ * button groups. Under *Expandable boxes* only: shown, but not offered, under *Separate pages*,
+ * where each page opens fresh.
  */
 @Composable
 internal fun NewTrackRows(
