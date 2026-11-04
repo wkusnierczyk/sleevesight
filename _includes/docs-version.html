@@ -7,7 +7,8 @@
   site is built from `main`, which a release's notes reach as it is released, so no step per release
   is needed. The versions are compared as numbers, part by part (each part below 1000, so 0.1.9 comes
   before 0.1.10). A page up to date says so under the line back to the index; a page behind says
-  what it was written for, in a banner in that line's place, until the docs are brought up to date.
+  what it was last brought up to, in a banner in that line's place, until the docs are brought up to date.
+  The banner names no released version, so that it stays true as releases come (#924).
 {% endcomment %}
 {%- assign released = "" -%}
 {%- assign released_n = -1 -%}
@@ -32,7 +33,7 @@
   {%- assign page_n = parts[1] | times: 1000 | plus: page_n -%}
   {%- assign page_n = parts[2] | plus: page_n -%}
   {%- if page_n < released_n %}
-<p class="docs-wip" role="note">Written for {{ page.docs_version }}; the app is now {{ released }}, so some details may differ.</p>
+<p class="docs-wip" role="note">WIP. Last update: {{ page.docs_version }}, behind current release.</p>
   {%- else %}
 <p class="docs-version">Up to date for {{ page.docs_version }}</p>
   {%- endif -%}
