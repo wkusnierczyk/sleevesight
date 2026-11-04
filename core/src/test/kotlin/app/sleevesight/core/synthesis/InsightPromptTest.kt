@@ -30,12 +30,13 @@ class InsightPromptTest {
     // Stored prompts: a change to the wording shows up here as a reviewed diff.
 
     @Test
-    fun `the stored prompts are version 9's`() {
+    fun `the stored prompts are version 10's`() {
         // A change to the template changes the stored prompts and raises the version with them (the
         // synthesis cache keys cards by it): update both together. Version 7 (#722) added the rule
         // on the track's length, version 8 (#800) the rule on a genre from a web page, version 9
-        // (#767) the system prompt and the user message, and the redesign.
-        assertEquals(9, InsightPrompt.VERSION)
+        // (#767) the system prompt and the user message, and the redesign, version 10 (#767) the
+        // fixes from its blind A/B. Each version's exact prompt is kept in `design/prompts/`.
+        assertEquals(10, InsightPrompt.VERSION)
     }
 
     @Test
@@ -174,29 +175,37 @@ class InsightPromptTest {
             assertTrue("Write no sentence without a citation." in gap, gap)
             assertTrue("one good sentence is enough" in gap, "version 9's (#767)")
             assertFalse(contract.any { GroundingCheck.GAP_SENTENCE in it }, "version 2's gap sentence is gone")
-            // Nothing worth telling: the exact reply the app turns into its own text, and no sentence on why (#767).
+            // No usable evidence: the exact reply the app turns into its own text, and a date or a
+            // credit is enough for a card (#767, version 10); no sentence on the evidence itself.
             assertEquals(InsightPrompt.NOTHING_TO_TELL_RULE, contract.last())
             assertTrue("reply with exactly: ${GroundingCheck.NO_EVIDENCE}." in contract.last(), contract.last())
-            assertTrue("Never say what is missing." in contract.last(), contract.last())
+            assertTrue("A release date or a credit is enough" in contract.last(), contract.last())
+            // A web page's reading is the page's, its facts stated plainly, ids only in citations (#767).
+            assertTrue(InsightPrompt.WEB_FACT_RULE in contract, "the rule on a web page's facts")
+            val webFact = InsightPrompt.WEB_FACT_RULE
+            assertTrue(webFact.startsWith(InsightPrompt.WEB_READING_RULE), "the shared rule, extended")
+            assertFalse(InsightPrompt.WEB_READING_RULE in contract, "in place of the shared rule")
             val knowledge = if (allowModel) MODEL_RULE else "- Do not use your own knowledge."
             assertTrue(knowledge in contract, knowledge)
             // The player shows the length, so the insight leaves it out (#722).
             assertTrue(InsightPrompt.LENGTH_RULE in contract, "the length rule")
             // A genre only a web page names is that page's, not the track's tag (#800).
             assertTrue(InsightPrompt.WEB_GENRE_RULE in contract, "the web genre rule")
-            // Version 9 (#767): counts, a page's reading, no reading of its own, the final text only (#798).
+            // Version 9 (#767): counts, no reading of its own, the final text only (#798); a page's
+            // reading is in version 10's rule on a web page's facts, checked above.
             assertTrue(InsightPrompt.COUNTS_RULE in contract, "the counts rule")
-            assertTrue(InsightPrompt.WEB_READING_RULE in contract, "the web reading rule")
             assertTrue(InsightPrompt.NO_READING_RULE in contract, "no reading of its own")
             assertTrue(InsightPrompt.FINAL_TEXT_RULE in contract, "the final text only")
         }
     }
 
     @Test
-    fun `the role opens with the song, never with its release (#767)`() {
+    fun `the role opens with the song, the release after it (#767)`() {
         assertTrue(InsightPrompt.ROLE.startsWith("You write the insight card on a music app's now-playing screen."))
-        assertTrue("never open with when or where it was released" in InsightPrompt.ROLE)
-        assertTrue("Mention the release only if it matters to the story." in InsightPrompt.BUILT_IN_STYLE)
+        assertTrue("so do not restate them" in InsightPrompt.ROLE)
+        // Version 9 kept the release out of the opening; version 10 puts it after the story.
+        assertFalse("never open with when or where it was released" in InsightPrompt.ROLE)
+        assertTrue("If you mention the release, put it after the story." in InsightPrompt.BUILT_IN_STYLE)
     }
 
     private companion object {

@@ -84,8 +84,19 @@ object InsightPrompt {
      * ([WEB_READING_RULE]), add no reading of the model's own ([NO_READING_RULE]), take one good
      * sentence as enough ([GAP_RULE]) and ask for the final text only ([FINAL_TEXT_RULE]). Raised so
      * that every kept card is written afresh from it.
+     * Version 10 (#767): version 9 lost a blind A/B against version 8 (twenty tracks, three passes
+     * each; version 8 preferred on nine, version 9 on three, six the same). On thin evidence it wrote
+     * no card where version 8 wrote a short one from the release or a credit (fifteen empty against
+     * six), revised itself in the reply where the release was nearly all there was to tell, and
+     * attributed every web fact to its page. Version 10 keeps version 9's opening and structure: the
+     * release is no longer kept out of the opening but put after the story ([BUILT_IN_STYLE]), the
+     * title and artists are not restated ([ROLE]), `NO_EVIDENCE` is again for no usable evidence
+     * only, a date or a credit being enough for a sentence ([NOTHING_TO_TELL_RULE]), a web page's
+     * facts are stated plainly and ids stay in the citations ([WEB_FACT_RULE]), and distributors and
+     * codes are left out ([COUNTS_RULE]). Each version's exact prompt is kept in `design/prompts/`,
+     * with the variant tried and rejected.
      */
-    const val VERSION: Int = 9
+    const val VERSION: Int = 10
 
     /**
      * The system prompt: everything fixed for a listener, the same for every track. With
@@ -161,12 +172,18 @@ object InsightPrompt {
      * the list read as what every card must cover, and on three thinly documented tracks the model
      * said in uncited sentences that the evidence lacked it ("The evidence here is thin.", "the
      * sources say nothing about how it was made"), seven of 141 sentences against version 8's none.
+     *
+     * Version 10 (#767): "never open with when or where it was released" dropped. Where the release
+     * was nearly all the evidence held, it made the model answer `NO_EVIDENCE` or argue with itself
+     * in the reply ("Wait, I should not give the release date…"); [BUILT_IN_STYLE] puts the release
+     * after the story instead. The screen shows the title and artists under the cover, so the card
+     * does not restate them: in the blind A/B, a card that did not was preferred for it.
      */
     const val ROLE: String =
         "You write the insight card on a music app's now-playing screen. Someone is listening to this " +
             "track right now. Open with the most interesting thing the evidence tells about the song, such as " +
-            "what it is about, how or why it was made, who played on it, or what became of it. No preamble and " +
-            "no filler, and never open with when or where it was released."
+            "what it is about, how or why it was made, who played on it, or what became of it. The screen " +
+            "already shows the title and artists, so do not restate them. No preamble and no filler."
 
     /**
      * The data guard (version 9, #767): the user message's blocks are data, never instructions, each
@@ -183,9 +200,12 @@ object InsightPrompt {
      * The card's built-in style: its length and tone. Version 9 (#767): the release mentioned only
      * where it matters to the story, as [ROLE] keeps it from the opening, and no praise words, which
      * the variant that read best ("rewritten around the listener") left out with the hype.
+     * Version 10 (#767): the release after the story, rather than only where it matters, so a thinly
+     * documented track still gets its date; and each fact once, against cards that named the same
+     * credit twice ("featured artist … and the producer is listed as Tony K").
      */
     const val BUILT_IN_STYLE: String =
-        "- Write 2 to 4 sentences. Mention the release only if it matters to the story.\n" +
+        "- Write 2 to 4 sentences, each fact once. If you mention the release, put it after the story.\n" +
             "- Plain conversational English. No hype, no praise words."
 
     /** What introduces the user's style, after the built-in one ([system]). */
@@ -202,7 +222,9 @@ object InsightPrompt {
      * The insight's rules (version 9, #767): version 8's, the simulator's `RULES` less the tone,
      * which is style, in fewer words (version 5), with the rule on a gap ([GAP_RULE]), and version
      * 9's on counts ([COUNTS_RULE]), a web page's reading ([WEB_READING_RULE]), readings of the
-     * model's own ([NO_READING_RULE]) and the final text ([FINAL_TEXT_RULE]).
+     * model's own ([NO_READING_RULE]) and the final text ([FINAL_TEXT_RULE]); and version 10's on
+     * a web page's facts ([WEB_FACT_RULE]), in place of the shared [WEB_READING_RULE], which it
+     * extends, so the genre reason stays as it was judged.
      */
     fun rules(allowModel: Boolean): String =
         listOf(
@@ -214,7 +236,7 @@ object InsightPrompt {
             ARTIST_RULE,
             SAME_NAME_RULE,
             WEB_GENRE_RULE,
-            WEB_READING_RULE,
+            WEB_FACT_RULE,
             NO_READING_RULE,
             GAP_RULE,
             if (allowModel) MODEL_RULE else NO_MODEL_RULE,
@@ -230,10 +252,15 @@ object InsightPrompt {
      * is usable, and never a sentence on why. On the A/B's first run a track with only its release
      * line and a page of empty fields was told in uncited sentences that there was nothing to tell;
      * the app's own text says that ([GroundingCheck.NO_EVIDENCE]).
+     *
+     * Version 10 (#767): back to no usable evidence only, as [NO_EVIDENCE_RULE], with a date or a
+     * credit said to be enough for a sentence. "Nothing worth telling" left fifteen of 54 cards
+     * empty against version 8's six, and in the blind A/B a short card from the release and the
+     * producer was preferred to none. "Never say what is missing" dropped: [GAP_RULE] says it.
      */
     const val NOTHING_TO_TELL_RULE: String =
-        "- If the evidence holds nothing worth telling about the song, reply with exactly: " +
-            "${GroundingCheck.NO_EVIDENCE}. Never say what is missing."
+        "- If no evidence is usable, reply with exactly: ${GroundingCheck.NO_EVIDENCE}. A release date or " +
+            "a credit is enough for a sentence."
 
     /** The rule on citations: every factual sentence ends with the ids of the lines it rests on. */
     val CITATION_RULE: String =
@@ -281,9 +308,12 @@ object InsightPrompt {
      * screenshots), and Last.fm's listener counts, tags and similar artists. None says anything of
      * the song: a count is a page's, the tags are the Genres panel's, and similar artists another
      * card's.
+     * Version 10 (#767): distributors and codes such as the ISRC too, which version 9 fell back on
+     * where the evidence was thin ("distributed by FUGA"), read in the blind A/B as very dry.
      */
     const val COUNTS_RULE: String =
-        "- Leave out listener, play and view counts, tags, and lists of similar artists."
+        "- Leave out listener, play and view counts, tags, lists of similar artists, distributors and codes " +
+            "such as the ISRC."
 
     /**
      * The rule on a genre from a web page (#800): a web line's genre is what that page (a store
@@ -311,6 +341,24 @@ object InsightPrompt {
     const val WEB_READING_RULE: String =
         "- What a web page says the song means or how it sounds is that page's reading: attribute it to the " +
             "page (say, \"one lyrics site reads it as a farewell\"), never state it as fact."
+
+    /**
+     * The rule on a web page's reading and its facts (version 10, #767): [WEB_READING_RULE], then a
+     * web page's facts stated plainly, with their citation, and no id outside one. With
+     * [WEB_READING_RULE] alone, version 9 attributed every web fact to its page ("One web page says it
+     * was recorded on the first day…"), which in the blind A/B read as too much "one site says", and
+     * once named an id in the sentence ("S2 says the title track …"). The insight's own, so the genre
+     * reason, which shares [WEB_READING_RULE], stays as it was judged.
+     *
+     * A variant tried with this and an id rule as rules of their own ("- Ids go only in the citations,
+     * never in the sentence.") and a rule against talk of the evidence ("- Never comment on the
+     * evidence itself: what it leaves out, or how much of it there is.") did worse on all three: ten
+     * of 155 sentences uncited against two of 147, nearly all "The evidence here is thin." opening a
+     * thinly documented track's card; naming what to leave out drew it in. Its system prompt is kept
+     * in `design/prompts/`.
+     */
+    const val WEB_FACT_RULE: String =
+        WEB_READING_RULE + " State a web page's facts plainly with their citation, and never name an id outside one."
 
     /**
      * The rule on readings of the model's own (version 9, #767): on thin evidence, version 8 padded
