@@ -43,8 +43,8 @@ interface AiProvider {
  * including any reasoning the model does before it, which counts against it. [effort] is how much
  * the model may reason before it answers, where the provider has such a control; null leaves the
  * provider's default. [system], when given, is the system prompt, sent as the service's own system
- * message (Anthropic's `system`, OpenAI's `instructions`, Google's `systemInstruction`), before the
- * prompt; null sends none, and the request is as it was before there was one (#767).
+ * message where the model takes one (Anthropic's `system`, OpenAI's `instructions`, Google's
+ * `systemInstruction`), before the prompt; null sends none, and the request is as it was before there was one (#767).
  *
  * With [tools] (#801, a client that [AiProvider.usesTools]), the model may call them: its turn then
  * ends with [CompletionEvent.ToolUse] and [StopReason.TOOL_USE], and the next request sends the

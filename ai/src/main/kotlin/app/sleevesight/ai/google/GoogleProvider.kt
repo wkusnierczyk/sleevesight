@@ -59,7 +59,8 @@ import kotlin.time.Instant
  * asked for (`includeThoughts`), and a thought part that comes all the same is skipped.
  *
  * [CompletionRequest.system], when given, is the request's `systemInstruction` (#767), a content of
- * one text part with no role.
+ * one text part with no role; for a Gemma model, which refuses it, the system prompt opens the
+ * user's content instead ([takesSystemInstruction]).
  *
  * The stream's text becomes [CompletionEvent.Delta]s, and its end [CompletionEvent.Done], with the
  * usage and the stop reason, or [CompletionEvent.Error] ([ContentStream]). The request is a `POST`,

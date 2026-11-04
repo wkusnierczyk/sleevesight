@@ -1,8 +1,10 @@
 # Prompt history
 
 Each version's exact prompt, frozen as it was sent, so a later version can be compared with it or
-taken back. Written from the fixture tracks the tests use (`FixtureEvidence`, track 1 *Sundown*
-and track 41, an original song; the genre reason's *So What*), never from a real run's evidence.
+taken back. Written from the fixtures the tests use, never from a real run's evidence: the insight's from
+`FixtureEvidence`'s track 1 (*Sundown*) and track 41 (an original song); the genre reason's
+version 5 from `GenreReasonPromptTest`'s *So What* ("Modal Jazz"), and its version 6 user
+message from track 1 with "Folk", the stored `genre-reason-1-user.txt`.
 The code that builds each one is in the repository's history (`git log --
 core/src/main/kotlin/app/sleevesight/core/synthesis/`); the version history with the reasons is in the KDoc of `InsightPrompt.VERSION` and `GenreReasonPrompt.VERSION`,
 and the contracts in `design.md`, *Appendix. Prompt contracts*. Versions before these are in the

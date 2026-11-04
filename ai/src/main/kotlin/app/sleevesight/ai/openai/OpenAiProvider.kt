@@ -59,10 +59,10 @@ import kotlin.time.Instant
  * `function_call_output` for each call; with [CompletionRequest.toolsAllowed] false, `tool_choice`
  * `none`, so the model answers now.
  *
- * The prompt is the request's `input`, as one user message; [CompletionRequest.system], when given,
- * its `instructions` (#767), which the Responses API sends as a system message. `store` is `false`: the response is
- * not kept on OpenAI's side for later retrieval, which a one-shot card never does (by default the
- * API keeps it for at least 30 days).
+ * The prompt is the request's `input`, as one user message; [CompletionRequest.system], when
+ * given, its `instructions` (#767), which the Responses API sends as a system message. `store` is
+ * `false`: the response is not kept on OpenAI's side for later retrieval, which a one-shot card
+ * never does (by default the API keeps it for at least 30 days).
  *
  * [CompletionRequest.effort] becomes `reasoning.effort` (`low`, `medium`, `high`) for a model that
  * takes those levels ([takesEffort]); without it, or for any other model, the model's default
