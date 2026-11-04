@@ -20,8 +20,8 @@ import kotlin.time.TimeSource
 /**
  * Debug builds only: logs every request the app sends an AI service and what came back, under
  * [TAG], for comparing the app's prompts with others sent from the command line (#767,
- * `sleevesight-cli prompt`). Read it with `adb logcat -s SleevesightPrompt -v raw`. A release build logs nothing of this, and [watching] hands back
- * the provider itself.
+ * `sleevesight-cli prompt`). Read it with `adb logcat -s SleevesightPrompt -v raw`. A release
+ * build logs nothing of this, and [watching] hands back the provider itself.
  *
  * Each request gets a number, from 1 at the process's start, and each record is
  * `#<number> <section> <part>/<parts> <text>`, the sections in this order: `request` (the
