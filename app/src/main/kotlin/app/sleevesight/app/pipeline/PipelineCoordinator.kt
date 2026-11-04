@@ -74,6 +74,15 @@ sealed interface CoordinatorEvent {
         val cause: ChangeCause = ChangeCause.NATURAL_END,
     ) : CoordinatorEvent
 
+    /**
+     * The session layer took back [nowPlaying], published as a track before it was told to be an ad
+     * (#880: the queue that names it one came after its metadata and state had settled). Its report
+     * gets no run, and a run of it already started is cancelled.
+     */
+    data class Withdrawn(
+        val nowPlaying: NowPlaying,
+    ) : CoordinatorEvent
+
     /** The debounce of report [report] passed. */
     data class Settled(
         val report: Long,
@@ -427,7 +436,9 @@ sealed interface CoordinatorEffect {
  * returns, from offline to online, so a run knows whether the network came back after its lookups
  * were granted (#192). [clears] counts *Clear history*'s clears (#547), and [cleared] is the track
  * playing at the last one, which gets no run (nor a rebuild's) until a report of another insight
- * track settles: no lookup, and no paid call, follows the clear on its own.
+ * track settles: no lookup, and no paid call, follows the clear on its own. [cleared] holds an ad
+ * told late the same way ([CoordinatorEvent.Withdrawn], #880), and [withdrawals] counts the runs of
+ * such ads cancelled, so the host forgets what they showed.
  */
 data class CoordinatorState(
     val acknowledged: Boolean = false,
@@ -455,6 +466,7 @@ data class CoordinatorState(
     val returns: Long = 0,
     val clears: Long = 0,
     val cleared: NowPlaying? = null,
+    val withdrawals: Long = 0,
 ) {
     /**
      * The insight ledger: one entry, for the current insight track ([sameInsightTrack]), saying
@@ -534,7 +546,10 @@ data class CoordinatorState(
      * card says so once opening Sleevesight has resumed it. [follows] when it followed another
      * insight track reported before, not the first report of the process. A report of the insight
      * track reported before keeps all three; an action in Sleevesight, or a tap on the Write
-     * offered for it, clears the first two.
+     * offered for it, clears the first two. [counted] when it counted one more track change away
+     * (#203), and [expiredAction] when that count expired the first action, with [keptTap] the kept
+     * tap of the run then current that the expiry dropped: what its withdrawal (an ad told late,
+     * #880) undoes. A report of the same insight track keeps all three.
      */
     data class Report(
         val seq: Long,
@@ -545,6 +560,16 @@ data class CoordinatorState(
         val tapOnly: Boolean = false,
         val whilePaused: Boolean = false,
         val follows: Boolean = false,
+        val counted: Boolean = false,
+        val expiredAction: Boolean = false,
+        val keptTap: KeptTap? = null,
+    )
+
+    /** The kept tap of run [run] ([Run.keepsTap], [Run.tapped]), as it stood before an expiry dropped it. */
+    data class KeptTap(
+        val run: RunId,
+        val keepsTap: Boolean,
+        val tapped: Boolean,
     )
 
     /**
@@ -900,6 +925,8 @@ fun sameInsightTrack(
  * | any | ModeChoiceSettled(choice, stored) | of the latest choice, with the store read: mode = the narrower of mode and stored; else unchanged (#625) | none |
  * | any | Reported(key, cause) | latest = the report, with its cause; of another insight track: tap-only when the first action is not made after it (as below), while-paused when it is expired, follows when a report came before; of the same insight track: as the report before; never tap-only or while-paused for an action in Sleevesight; the run current only if it holds it; first action made if the cause is an action in Sleevesight; a preparation cancelled unless the report is of the insight track reported before | CancelPreparation (if one is cancelled), StartTimer |
  * | none visible (no activity started or restarting) | Reported(key, cause), of another insight track than the report before (or the first), not an action in Sleevesight | as above; one more track change away; past the pause's count (the change after that many), with the first action made: the first action expired (acted false), until the user acts again, and a tap kept for the run dropped (keepsTap and tapped cleared); with *Off*, never | as above |
+ * | latest of this track | Withdrawn(track) (#880: an ad told late) | the track held as a clear holds it (no run, nor a rebuild's, until a report of another insight track settles); a run of it cancelled, counted in withdrawals; the ledger emptied if of it; its count away undone, and a first action it expired made again, with the kept tap that expiry dropped given back to its run if still in progress; all three as of the track's first report, kept through its reports since | CancelRun (if a run of it) |
+ * | otherwise | Withdrawn | unchanged | none |
  * | latest not this report | Settled | unchanged | none |
  * | any | Settled, of another insight track than the ledger's | latest settled; the ledger emptied; then as below | as below |
  * | a run of another insight track in progress | Settled | latest settled; the run orphaned (it holds nothing, its ledger reports are ignored); then as below | as below |
@@ -980,7 +1007,7 @@ class PipelineCoordinator(
 
     private fun onAcknowledged(event: CoordinatorEvent) {
         when (event) {
-            is CoordinatorEvent.Reported -> reported(event)
+            is CoordinatorEvent.Reported, is CoordinatorEvent.Withdrawn -> fromSession(event)
             is CoordinatorEvent.Settled -> settled(event.report)
             CoordinatorEvent.RebuildRequested -> rebuild()
             CoordinatorEvent.Cleared -> cleared()
@@ -1000,6 +1027,14 @@ class PipelineCoordinator(
     }
 
     // A tap on the screen: Write, *Look again* (#617), *Retry* (#724), Stop.
+    // What the session layer reports: a track, or a track taken back, an ad told late (#880).
+    private fun fromSession(event: CoordinatorEvent) {
+        if (event is CoordinatorEvent.Reported) return reported(event)
+        val (next, cancelled) = state.withdrawn((event as CoordinatorEvent.Withdrawn).nowPlaying)
+        cancelled?.let { effects += CoordinatorEffect.CancelRun(it) }
+        state = next
+    }
+
     private fun onTap(event: CoordinatorEvent) {
         when (event) {
             is CoordinatorEvent.WriteTapped -> tapped(event.key)
@@ -1113,11 +1148,13 @@ class PipelineCoordinator(
     // A track change reported while no activity is started (#203): one more away, and past the
     // count *Saver* names, the first action, if made, expires. A tap kept
     // for the run (#192) goes with it: it was made before, and must not pay after.
-    private fun counted() {
+    // One more track change away; whether it expired the first action.
+    private fun counted(): Boolean {
         val away = state.away + 1
         val expires = state.acted && state.pauseAfter?.let { away > it } == true
         state = state.copy(away = away, acted = state.acted && !expires, expired = state.expired || expires)
         if (expires) state = state.copy(run = state.run?.copy(keepsTap = false, tapped = false))
+        return expires
     }
 
     // A return of the network, from offline to online, is counted (#192).
@@ -1139,10 +1176,8 @@ class PipelineCoordinator(
         if (another) cancelPreparation()
         val seq = (earlier?.seq ?: 0) + 1
         state = state.copy(latest = CoordinatorState.Report(seq, event.key, event.nowPlaying, event.cause))
-        when {
-            event.cause == ChangeCause.USER_ACTION -> act()
-            another && !state.visible -> counted()
-        }
+        val undo = countAway(another, event.cause == ChangeCause.USER_ACTION, earlier)
+        if (event.cause == ChangeCause.USER_ACTION) act()
         // A track that came to play before the first action, or while it was expired, is written
         // only on a tap, once an action or the app's opening has started or resumed automatic
         // writing too (#625); the same track reported again keeps that, and an action in
@@ -1151,8 +1186,25 @@ class PipelineCoordinator(
         val tapOnly = !user && if (another) !state.acted else earlier?.tapOnly == true
         val whilePaused = !user && if (another) state.expired else earlier?.whilePaused == true
         val follows = if (another) earlier != null else earlier?.follows == true
-        state = state.copy(latest = state.latest?.copy(tapOnly = tapOnly, whilePaused = whilePaused, follows = follows))
+        val flagged = state.latest?.copy(tapOnly = tapOnly, whilePaused = whilePaused, follows = follows)
+        state =
+            state.copy(latest = flagged?.copy(counted = undo.counted, expiredAction = undo.expired, keptTap = undo.tap))
         effects += CoordinatorEffect.StartTimer(seq)
+    }
+
+    // A report of another insight track counts one more change away while no activity is started
+    // (not an action in Sleevesight, a [user] one); returns what its withdrawal (#880) undoes: that
+    // count, an expiry of the first action it caused, and the kept tap the expiry dropped. A report
+    // of the same insight track keeps what [earlier] would undo.
+    private fun countAway(
+        another: Boolean,
+        user: Boolean,
+        earlier: CoordinatorState.Report?,
+    ): Undo {
+        if (!another || user || state.visible) return if (another) Undo() else earlier?.undo() ?: Undo()
+        val tap = state.run?.let { CoordinatorState.KeptTap(it.id, it.keepsTap, it.tapped) }
+        val expires = counted()
+        return Undo(counted = true, expired = expires, tap = tap.takeIf { expires })
     }
 
     // A settled report of another insight track empties the ledger; one of its track updates the
@@ -1710,3 +1762,37 @@ class PipelineCoordinator(
         return writes && (!decided || asWouldHave)
     }
 }
+
+/**
+ * An ad told late ([CoordinatorEvent.Withdrawn], #880): the latest report, of [track], is held as a
+ * clear holds its track, so it gets no run; a run of it already started is cancelled (its id
+ * returned, for `CancelRun`) before any further grant, and the ledger it began is emptied; what its
+ * report did to *Saver*'s count is undone. Unchanged when the latest report is of another track.
+ */
+internal fun CoordinatorState.withdrawn(track: NowPlaying): Pair<CoordinatorState, RunId?> {
+    val report = latest?.takeIf { sameInsightTrack(it.nowPlaying, track) } ?: return this to null
+    val cancelled = run?.takeIf { sameInsightTrack(it.nowPlaying, track) }
+    val undone = report.expiredAction
+    // The kept tap the expiry dropped, given back to its run if that run is still the one in progress.
+    val tap = report.keptTap
+    val kept = tap?.let { t -> run?.takeIf { it.id == t.run }?.copy(keepsTap = t.keepsTap, tapped = t.tapped) }
+    return copy(
+        run = if (cancelled != null) null else kept ?: run,
+        ledger = ledger?.takeUnless { sameInsightTrack(it.track, track) },
+        cleared = track,
+        withdrawals = withdrawals + if (cancelled != null) 1 else 0,
+        away = if (report.counted) (away - 1).coerceAtLeast(0) else away,
+        acted = acted || undone,
+        expired = expired && !undone,
+        latest = report.copy(counted = false, expiredAction = false, keptTap = null),
+    ) to cancelled?.id
+}
+
+/** What a report's withdrawal undoes ([CoordinatorState.Report.counted] and the rest, #880). */
+private data class Undo(
+    val counted: Boolean = false,
+    val expired: Boolean = false,
+    val tap: CoordinatorState.KeptTap? = null,
+)
+
+private fun CoordinatorState.Report.undo(): Undo = Undo(counted, expiredAction, keptTap)

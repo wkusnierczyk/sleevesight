@@ -55,6 +55,8 @@ class MainActivity : ComponentActivity() {
             nowPlaying = graph.sessions.nowPlaying,
             playback = graph.sessions.playback,
             art = graph.sessions.art,
+            // An ad playing in place of a track (#880): Home's neutral ad state.
+            ad = graph.sessions.ad,
             settings = graph.latestSettings,
             normalizer = Normalizer(JvmAccentFolder),
             playerLabel = graph::playerLabel,

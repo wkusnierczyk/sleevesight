@@ -60,6 +60,11 @@ import kotlin.time.Instant
  *   ([SessionChange.learnedCrossfade]), and the time since the user's last action in Sleevesight
  *   before it, from [lastAction] (`UserActions`: a tap on Write taken; the transport controls in
  *   Phase 2), null with none since the process started.
+ * - **An ad told late** ([SessionRepository.withdrawn], #880): published as a track before the queue
+ *   that names it an ad came, so it may have a row and a change into it. Both are deleted, the row
+ *   only when it was started for that play (not a row it resumed), the change only when it is the
+ *   last recorded and leads into that play; and the playback is forgotten, so the next track starts
+ *   afresh.
  *
  * The session layer's times are on the [elapsed] clock (`SystemClock.elapsedRealtime`), which
  * restarts with the phone, so they are kept as wall-clock times from [wall] and as offsets from the
@@ -102,6 +107,10 @@ class HistoryRecorder(
     // Read and written by the writes alone, which run one at a time.
     private val playback = Playback()
 
+    // The last change recorded, by the play it led into ([NowPlaying.play]) and its id, for an ad
+    // told late (#880). Read and written by the writes alone.
+    private var lastInto: Pair<Long?, Long>? = null
+
     /** The wall clock less the [elapsed] one when the recorder was made: what a jump moves. */
     private val clockOffset = wall.now() - elapsed().milliseconds
 
@@ -113,7 +122,13 @@ class HistoryRecorder(
             launch {
                 sessions.lastChange.filterNotNull().collect { change ->
                     val record = record(change)
-                    writes.trySend(Write.record("a track change") { history.changed(record) })
+                    val into = change.track.play
+                    writes.trySend(Write.record("a track change") { lastInto = into to history.changed(record) })
+                }
+            }
+            launch {
+                sessions.withdrawn.filterNotNull().collect { ad ->
+                    writes.trySend(Write.record("an ad taken back") { withdraw(ad) })
                 }
             }
             launch {
@@ -148,6 +163,15 @@ class HistoryRecorder(
                 write.done?.complete(done)
             }
         }
+
+    // [ad], recorded as a track before it was told to be an ad (#880): its row and the change into it go.
+    private fun withdraw(ad: NowPlaying) {
+        val play = ad.play ?: return
+        val change = lastInto?.takeIf { it.first == play }?.second
+        history.withdraw(playback.rowOf(play), change)
+        if (change != null) lastInto = null
+        playback.forget()
+    }
 
     /**
      * *Clear history*: deletes the session history and the track changes, after every write queued
@@ -245,6 +269,9 @@ class HistoryRecorder(
         private var startedAt: Instant? = null
         private var written = false
         private var rowPlay: Long? = null
+
+        // The last row written, when it was started (not resumed or updated) for [rowPlay].
+        private var newRow: Long? = null
         private var witness: NowPlaying? = null
         private var witnessAt: Instant? = null
 
@@ -268,16 +295,23 @@ class HistoryRecorder(
             val start = startedAt
             if (goesOn && written && start != null) {
                 history.continued(track, start, gap, same)
+                if (rowPlay != track.play) newRow = null
                 wrote(track)
                 return
             }
             val from = if (goesOn && start != null) start else at
             startedAt = from
             written = false
-            history.started(track, from, gap, same)
+            val row = history.started(track, from, gap, same)
             written = true
+            // A row inserted now (not one resumed), or the one inserted for this play before.
+            val inserted = row.playedAt.toEpochMilliseconds() == from.toEpochMilliseconds() && row.resumedAt == null
+            newRow = row.id.takeIf { inserted || (it == newRow && rowPlay == track.play) }
             wrote(track)
         }
+
+        /** The last row, when it was started for [play] and not resumed: what an ad told late takes back. */
+        fun rowOf(play: Long): Long? = newRow?.takeIf { rowPlay == play }
 
         // How the last row was last matched, as the history asked: by the play, by its fields, or not.
         private var byPlay = false
@@ -341,6 +375,7 @@ class HistoryRecorder(
             startedAt = null
             written = false
             rowPlay = null
+            newRow = null
             witness = null
         }
     }
