@@ -16,7 +16,8 @@ import kotlin.time.TimeSource
  * is answered by [musicBrainz] once; a search by name, a recording, a recording's releases (#724),
  * a work and an artist search are each kept by what was asked, at most [capacity] of each kind, the least recently used
  * dropped first. An answer that could not be obtained ([Lookup.Failed]) is not kept, so the next
- * question asks again; one that MusicBrainz gave, found or not, is.
+ * question asks again, nor is a search a later page of which failed ([MbRecordingSearch.complete],
+ * #906); one that MusicBrainz gave, found or not, is.
  *
  * What it serves: preparing the next track looks it up from the player's queue item, which has
  * no length (or album), and so resolves it by name only; when the track then plays, its own run
@@ -48,7 +49,7 @@ class RememberedMusicBrainz(
     private val epoch: ClearEpoch = ClearEpoch(),
     private val tags: () -> Boolean = { true },
 ) : MusicBrainzLookup {
-    private val searches = Memory<Pair<String, String>, List<MbRecording>>()
+    private val searches = Memory<Pair<String, String>, MbRecordingSearch>()
     private val recordings = Memory<Pair<String, Boolean>, MbRecordingDetail>()
     private val releases = Memory<String, MbRecording>()
     private val works = Memory<String, MbWork>()
@@ -57,7 +58,8 @@ class RememberedMusicBrainz(
     override suspend fun searchRecordings(
         title: String,
         artist: String,
-    ): Lookup<List<MbRecording>> = searches.answer(title to artist) { musicBrainz.searchRecordings(title, artist) }
+    ): Lookup<MbRecordingSearch> =
+        searches.answer(title to artist, keeps = { it.complete }) { musicBrainz.searchRecordings(title, artist) }
 
     override suspend fun recording(mbid: String): Lookup<MbRecordingDetail> =
         recordings.answer(mbid to tags()) { musicBrainz.recording(mbid) }
@@ -91,13 +93,15 @@ class RememberedMusicBrainz(
         // Insertion-ordered; an entry is moved to the end when used, so the first is the least recent.
         private val kept = LinkedHashMap<K, Kept>()
 
+        // [keeps]: whether a found answer is kept; one that is not, as one not obtained, is asked again.
         suspend fun answer(
             key: K,
+            keeps: (T) -> Boolean = { true },
             ask: suspend () -> Lookup<T>,
         ): Lookup<T> {
             if (!FreshLookups.active()) kept(key)?.let { return it }
             val answer = ask()
-            if (answer !is Lookup.Failed) keep(key, answer)
+            if (answer !is Lookup.Failed && (answer !is Lookup.Found || keeps(answer.value))) keep(key, answer)
             return answer
         }
 

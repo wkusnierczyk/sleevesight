@@ -9,6 +9,7 @@ import app.sleevesight.core.resolution.MbCredit
 import app.sleevesight.core.resolution.MbPerformance
 import app.sleevesight.core.resolution.MbRecording
 import app.sleevesight.core.resolution.MbRecordingDetail
+import app.sleevesight.core.resolution.MbRecordingSearch
 import app.sleevesight.core.resolution.MbRelease
 import app.sleevesight.core.resolution.MbReleaseGroup
 import app.sleevesight.core.resolution.MbWork
@@ -53,11 +54,11 @@ class MusicBrainzClient(
     // holds may have its original past the first page: *Dream On* by Aerosmith has some 170, and the
     // 1973 studio recording was not among the first 100, so a 1978 live one was chosen (#906). The
     // next pages are asked for too, up to [SEARCH_PAGES], and joined, each recording once. A later page
-    // that fails leaves the pages before it, as the first page alone was used before.
+    // that fails leaves the pages before it, and the answer incomplete ([MbRecordingSearch.complete]).
     override suspend fun searchRecordings(
         title: String,
         artist: String,
-    ): Lookup<List<MbRecording>> {
+    ): Lookup<MbRecordingSearch> {
         val query = "recording:${phrase(title)} AND artist:${phrase(artist)}"
         return when (val first = searchPage(query, offset = 0)) {
             is Lookup.Found -> Lookup.Found(withLaterPages(query, first.value))
@@ -69,17 +70,20 @@ class MusicBrainzClient(
     private suspend fun withLaterPages(
         query: String,
         first: SearchPage,
-    ): List<MbRecording> {
+    ): MbRecordingSearch {
         val recordings = first.recordings.toMutableList()
         val total = minOf(first.count, SEARCH_LIMIT * SEARCH_PAGES)
         var offset = SEARCH_LIMIT
+        var complete = true
         while (offset < total) {
-            val page = (searchPage(query, offset) as? Lookup.Found)?.value
-            if (page == null || page.recordings.isEmpty()) break
-            recordings += page.recordings
+            val page = searchPage(query, offset)
+            complete = page !is Lookup.Failed
+            val found = (page as? Lookup.Found)?.value?.recordings.orEmpty()
+            if (found.isEmpty()) break
+            recordings += found
             offset += SEARCH_LIMIT
         }
-        return recordings.distinctBy { it.mbid }
+        return MbRecordingSearch(recordings.distinctBy { it.mbid }, complete)
     }
 
     private class SearchPage(

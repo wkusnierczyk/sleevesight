@@ -13,7 +13,7 @@ interface MusicBrainzLookup {
     suspend fun searchRecordings(
         title: String,
         artist: String,
-    ): Lookup<List<MbRecording>>
+    ): Lookup<MbRecordingSearch>
 
     /** The recording [mbid], with its work, artist and URL relationships, and its tags. */
     suspend fun recording(mbid: String): Lookup<MbRecordingDetail>
@@ -54,6 +54,16 @@ sealed interface Lookup<out T> {
         val reason: String,
     ) : Lookup<Nothing>
 }
+
+/**
+ * A recording search's answer: its [recordings], from as many of the search's pages as were asked
+ * for (#906), and whether every one of them answered ([complete]). An incomplete one, a later page
+ * having failed, is used as it is but not kept, and the resolution made from it is provisional.
+ */
+data class MbRecordingSearch(
+    val recordings: List<MbRecording>,
+    val complete: Boolean = true,
+)
 
 /**
  * One name in an artist credit: [name] as credited, which can differ from the artist's own

@@ -59,7 +59,11 @@ class RecordingResolver(
         return when (search) {
             null, is Lookup.NotFound -> Resolution.NONE
             is Lookup.Failed -> Resolution.unreachable(search.reason)
-            is Lookup.Found -> choose(track, duration, search.value)
+            // A search a later page of which failed gives a provisional choice (#906): a later run asks again.
+            is Lookup.Found ->
+                choose(track, duration, search.value.recordings).let {
+                    if (search.value.complete) it else it.copy(provisional = true)
+                }
         }
     }
 

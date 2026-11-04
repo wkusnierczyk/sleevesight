@@ -10,6 +10,7 @@ import app.sleevesight.core.resolution.Lookup
 import app.sleevesight.core.resolution.MbArtistSearch
 import app.sleevesight.core.resolution.MbRecording
 import app.sleevesight.core.resolution.MbRecordingDetail
+import app.sleevesight.core.resolution.MbRecordingSearch
 import app.sleevesight.core.resolution.MbWork
 import app.sleevesight.core.resolution.MusicBrainzLookup
 import app.sleevesight.core.resolution.RecordingResolver
@@ -23,6 +24,7 @@ import app.sleevesight.sources.testing.ReplayNetClient
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.seconds
@@ -49,7 +51,7 @@ class MusicBrainzPagingTest {
         override suspend fun searchRecordings(
             title: String,
             artist: String,
-        ): Lookup<List<MbRecording>> = client.searchRecordings(title, artist)
+        ): Lookup<MbRecordingSearch> = client.searchRecordings(title, artist)
 
         override suspend fun recording(mbid: String): Lookup<MbRecordingDetail> = Lookup.NotFound
 
@@ -76,7 +78,9 @@ class MusicBrainzPagingTest {
             val net = ReplayNetClient("musicbrainz-906")
             val found = MusicBrainzClient(net).searchRecordings("Dream On", "Aerosmith")
 
-            val recordings = (found as Lookup.Found).value
+            val search = (found as Lookup.Found).value
+            assertTrue(search.complete)
+            val recordings = search.recordings
             assertEquals(169, recordings.size)
             assertEquals(recordings.size, recordings.map { it.mbid }.distinct().size)
             assertEquals(listOf(null, "100"), net.sent.map { it.query["offset"] })
@@ -90,15 +94,24 @@ class MusicBrainzPagingTest {
         }
 
     @Test
-    fun `with the first page alone, a later recording would be chosen, as before the change`() =
+    fun `when a later page fails, the first page gives a provisional choice, a later recording`() =
         runTest {
+            val found =
+                MusicBrainzClient(
+                    FirstPageOnly(ReplayNetClient("musicbrainz-906")),
+                ).searchRecordings("Dream On", "Aerosmith")
+            val search = (found as Lookup.Found).value
+            assertEquals(100, search.recordings.size)
+            assertFalse(search.complete)
+
             val resolution =
                 RecordingResolver(SearchOnly(FirstPageOnly(ReplayNetClient("musicbrainz-906"))), RecordedTracks.names)
                     .resolve(dreamOn, length)
-            // A later page that fails leaves the first, as the search was before: the choice is made from it.
+            // The bug the second page fixes, and why the choice is only provisional: a later run asks again.
             assertEquals(Outcome.SongArticle, resolution.outcome)
             assertNotEquals(studio, resolution.recordingMbid)
             assertTrue(checkNotNull(resolution.firstReleaseDate) > "1973-01-05")
+            assertTrue(resolution.provisional)
         }
 
     @Test
@@ -115,7 +128,7 @@ class MusicBrainzPagingTest {
             val net = Paged(count = 1_000)
             val found = MusicBrainzClient(net).searchRecordings("Song", "Artist")
             assertEquals(listOf(null, "100", "200"), net.sent.map { it.query["offset"] })
-            assertEquals(300, (found as Lookup.Found).value.size)
+            assertEquals(300, (found as Lookup.Found).value.recordings.size)
         }
 
     // A search of [count] recordings, each page its own 100.

@@ -30,7 +30,7 @@ class RememberedMusicBrainzTest {
         override suspend fun searchRecordings(
             title: String,
             artist: String,
-        ): Lookup<List<MbRecording>> {
+        ): Lookup<MbRecordingSearch> {
             asked += "search $title"
             hold?.await()
             return if (failing) Lookup.Failed("unreachable") else inner.searchRecordings(title, artist)
@@ -105,6 +105,18 @@ class RememberedMusicBrainzTest {
             remembered.searchRecordings("Song", "Artist")
             withContext(FreshLookups) { remembered.searchRecordings("Song", "Artist") }
             remembered.searchRecordings("Song", "Artist")
+            assertEquals(listOf("search Song", "search Song"), counting.asked)
+        }
+
+    @Test
+    fun `a search a later page of which failed is used but not kept, so it is asked again`() =
+        runTest {
+            val incomplete = FakeMusicBrainz(search).apply { complete = false }
+            val counting = Counting(incomplete)
+            val remembered = RememberedMusicBrainz(counting, time, lifetime = 30.minutes, capacity = 2)
+            val first = remembered.searchRecordings("Song", "Artist")
+            remembered.searchRecordings("Song", "Artist")
+            assertEquals(false, (first as Lookup.Found).value.complete)
             assertEquals(listOf("search Song", "search Song"), counting.asked)
         }
 
