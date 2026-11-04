@@ -369,9 +369,9 @@ class WikipediaSource(
          * [extractionVersion]: raised when what the adapter makes of the articles changes, or the
          * resolution it checks them against. 2: a joint credit resolves on MusicBrainz (#661), so a
          * result kept against the earlier resolution's miss is looked up again; [ARTIST_PART] goes
-         * with it.
+         * with it. 3: brackets a dropped pronunciation leaves empty are removed ([tidy], #850).
          */
-        const val EXTRACTION_VERSION: Int = 2
+        const val EXTRACTION_VERSION: Int = 3
 
         private val json = Json { encodeDefaults = false }
 
@@ -382,8 +382,10 @@ class WikipediaSource(
         const val MAX_SENTENCE_LENGTH: Int = 300
 
         // The plain-text extract drops pronunciations and leaves their punctuation behind:
-        // `Frehley (, FRAY-lee; April 27, 1951 – …)`. Only that, and doubled spaces, are tidied.
+        // `Frehley (, FRAY-lee; April 27, 1951 – …)`, or brackets with nothing left in them:
+        // `Basia Bulat (), is`. Only those, and doubled spaces, are tidied.
         private val ORPHANED_PUNCTUATION = Regex("\\(\\s*[,;]\\s*")
+        private val EMPTY_BRACKETS = Regex("\\s*\\([\\s,;]*\\)")
         private val SPACES = Regex(" {2,}")
 
         /**
@@ -422,9 +424,16 @@ class WikipediaSource(
         private fun balanced(text: String): Boolean =
             text.count { it == '"' } % 2 == 0 && text.count { it == '“' } == text.count { it == '”' }
 
-        /** [paragraph] with the punctuation a dropped pronunciation leaves, and doubled spaces, tidied. */
+        /**
+         * [paragraph] with the punctuation a dropped pronunciation leaves, brackets it leaves empty
+         * (with the space before them), and doubled spaces, tidied.
+         */
         internal fun tidy(paragraph: String): String =
-            paragraph.replace(ORPHANED_PUNCTUATION, "(").replace(SPACES, " ").trim()
+            paragraph
+                .replace(ORPHANED_PUNCTUATION, "(")
+                .replace(EMPTY_BRACKETS, "")
+                .replace(SPACES, " ")
+                .trim()
 
         private val SMALL_WORDS =
             setOf(

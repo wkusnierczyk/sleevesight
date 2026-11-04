@@ -353,6 +353,32 @@ class WikipediaSourceTest {
     }
 
     @Test
+    fun `brackets a dropped pronunciation leaves empty go, with the space before them`() {
+        val bulat = "known professionally as Basia Bulat, is a Canadian folk singer-songwriter."
+        for (empty in listOf("()", "( )", "(; )", "(, )", "(,)", "( ; )")) {
+            val line = "known professionally as Basia Bulat $empty, is a Canadian folk singer-songwriter."
+            assertEquals(bulat, WikipediaSource.tidy(line), empty)
+        }
+        assertEquals("Foo is a song.", WikipediaSource.tidy("Foo () is a song."))
+    }
+
+    @Test
+    fun `brackets with content are left as they are`() {
+        val kept =
+            listOf(
+                "Paul Daniel \"Ace\" Frehley (FRAY-lee; April 27, 1951 – October 16, 2025) was an American musician.",
+                "\"Why?\" (1984) is a song by Bronski Beat.",
+                "Abbey Road (album) is the eleventh studio album.",
+            )
+        for (line in kept) assertEquals(line, WikipediaSource.tidy(line))
+        // The pronunciation's leading punctuation goes; the rest of the brackets stays.
+        assertEquals(
+            "Ace Frehley (FRAY-lee; April 27, 1951) was a guitarist.",
+            WikipediaSource.tidy("Ace Frehley (, FRAY-lee; April 27, 1951) was a guitarist."),
+        )
+    }
+
+    @Test
     fun `article addresses are percent-encoded paths`() {
         assertEquals("https://en.wikipedia.org/wiki/Why%3F_(Bronski_Beat_song)", articleUrl("Why? (Bronski Beat song)"))
         assertEquals("https://en.wikipedia.org/wiki/100%25_Pure_Love", articleUrl("100% Pure Love"))
