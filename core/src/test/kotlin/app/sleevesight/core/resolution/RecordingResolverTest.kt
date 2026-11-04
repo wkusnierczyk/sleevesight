@@ -6,7 +6,6 @@ import app.sleevesight.core.sources.ResolvedArtist
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.seconds
@@ -26,17 +25,6 @@ class RecordingResolverTest {
             assertEquals("original", resolution.recordingMbid)
             assertEquals("1974-01", resolution.firstReleaseDate)
             assertEquals(listOf(ResolvedArtist("Artist", "mbid-Artist")), resolution.artists)
-        }
-
-    @Test
-    fun `a search a later page of which failed gives a provisional resolution`() =
-        runTest {
-            val search = listOf(recording("original", "Song", "Artist", 203, "1974-01"))
-            val musicBrainz = FakeMusicBrainz(Lookup.Found(search)).apply { complete = false }
-            val resolution = resolve(musicBrainz, track("Song", "Artist"))
-            assertEquals("original", resolution.recordingMbid)
-            assertTrue(resolution.provisional)
-            assertFalse(resolve(FakeMusicBrainz(Lookup.Found(search)), track("Song", "Artist")).provisional)
         }
 
     @Test

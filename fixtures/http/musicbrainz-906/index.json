@@ -14,12 +14,11 @@
   "method": "GET",
   "url": "https://musicbrainz.org/ws/2/recording",
   "query": {
-   "query": "recording:\"Dream On\" AND artist:\"Aerosmith\"",
+   "query": "recording:\"Dream On\" AND artist:\"Aerosmith\" AND firstreleasedate:[* TO 1976]",
    "limit": "100",
-   "fmt": "json",
-   "offset": "100"
+   "fmt": "json"
   },
   "status": 200,
-  "file": "recording-recording-dream-on-and-artist-aerosmith-offset-100.json"
+  "file": "recording-recording-dream-on-and-artist-aerosmith-by-1976.json"
  }
 ]

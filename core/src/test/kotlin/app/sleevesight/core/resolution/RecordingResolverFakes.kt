@@ -28,21 +28,28 @@ internal class FakeMusicBrainz(
     /** Each recording with its releases (#724), by its id: a cover's original's. */
     val releases: Map<String, Lookup<MbRecording>> = emptyMap(),
 ) : MusicBrainzLookup {
-    /** Whether the search's every page answered (#906). */
-    var complete: Boolean = true
-
     /** The recordings whose releases were looked up, in order. */
     val releasesAsked = mutableListOf<String>()
+
+    /** The search for the recordings released by a date (#906), whatever the date. */
+    var before: Lookup<List<MbRecording>> = Lookup.NotFound
+
+    /** The dates searched by, in order. */
+    val beforeAsked = mutableListOf<String>()
 
     override suspend fun searchRecordings(
         title: String,
         artist: String,
-    ): Lookup<MbRecordingSearch> =
-        when (search) {
-            is Lookup.Found -> Lookup.Found(MbRecordingSearch(search.value, complete))
-            Lookup.NotFound -> Lookup.NotFound
-            is Lookup.Failed -> search
-        }
+    ) = search
+
+    override suspend fun searchRecordingsBefore(
+        title: String,
+        artist: String,
+        date: String,
+    ): Lookup<List<MbRecording>> {
+        beforeAsked += date
+        return before
+    }
 
     override suspend fun recording(mbid: String): Lookup<MbRecordingDetail> =
         recordingFailure?.let { Lookup.Failed(it) } ?: recordings[mbid]?.let { Lookup.Found(it) } ?: Lookup.NotFound

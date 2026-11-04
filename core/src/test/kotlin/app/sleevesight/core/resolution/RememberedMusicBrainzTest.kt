@@ -30,10 +30,19 @@ class RememberedMusicBrainzTest {
         override suspend fun searchRecordings(
             title: String,
             artist: String,
-        ): Lookup<MbRecordingSearch> {
+        ): Lookup<List<MbRecording>> {
             asked += "search $title"
             hold?.await()
             return if (failing) Lookup.Failed("unreachable") else inner.searchRecordings(title, artist)
+        }
+
+        override suspend fun searchRecordingsBefore(
+            title: String,
+            artist: String,
+            date: String,
+        ): Lookup<List<MbRecording>> {
+            asked += "search $title by $date"
+            return inner.searchRecordingsBefore(title, artist, date)
         }
 
         override suspend fun recording(mbid: String): Lookup<MbRecordingDetail> {
@@ -109,15 +118,17 @@ class RememberedMusicBrainzTest {
         }
 
     @Test
-    fun `a search a later page of which failed is used but not kept, so it is asked again`() =
+    fun `a search by date is kept by its date, and forgotten with the rest`() =
         runTest {
-            val incomplete = FakeMusicBrainz(search).apply { complete = false }
-            val counting = Counting(incomplete)
-            val remembered = RememberedMusicBrainz(counting, time, lifetime = 30.minutes, capacity = 2)
-            val first = remembered.searchRecordings("Song", "Artist")
-            remembered.searchRecordings("Song", "Artist")
-            assertEquals(false, (first as Lookup.Found).value.complete)
-            assertEquals(listOf("search Song", "search Song"), counting.asked)
+            remembered.searchRecordingsBefore("Song", "Artist", "1973")
+            remembered.searchRecordingsBefore("Song", "Artist", "1973")
+            remembered.searchRecordingsBefore("Song", "Artist", "1974")
+            remembered.forget()
+            remembered.searchRecordingsBefore("Song", "Artist", "1973")
+            assertEquals(
+                listOf("search Song by 1973", "search Song by 1974", "search Song by 1973"),
+                counting.asked,
+            )
         }
 
     @Test

@@ -15,7 +15,6 @@ import app.sleevesight.core.resolution.Lookup
 import app.sleevesight.core.resolution.MbArtistSearch
 import app.sleevesight.core.resolution.MbRecording
 import app.sleevesight.core.resolution.MbRecordingDetail
-import app.sleevesight.core.resolution.MbRecordingSearch
 import app.sleevesight.core.resolution.MbWork
 import app.sleevesight.core.resolution.MusicBrainzLookup
 import app.sleevesight.core.sources.ArtistPart
@@ -57,7 +56,7 @@ class ClearHistoryWiringTest {
         override suspend fun searchRecordings(
             title: String,
             artist: String,
-        ): Lookup<MbRecordingSearch> {
+        ): Lookup<List<MbRecording>> {
             searches++
             return Lookup.NotFound
         }

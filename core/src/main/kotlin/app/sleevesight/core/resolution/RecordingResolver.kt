@@ -59,11 +59,14 @@ class RecordingResolver(
         return when (search) {
             null, is Lookup.NotFound -> Resolution.NONE
             is Lookup.Failed -> Resolution.unreachable(search.reason)
-            // A search a later page of which failed gives a provisional choice (#906): a later run asks again.
-            is Lookup.Found ->
-                choose(track, duration, search.value.recordings).let {
-                    if (search.value.complete) it else it.copy(provisional = true)
-                }
+            is Lookup.Found -> {
+                val earlier =
+                    musicBrainz.earlierThan(search.value, track) { recording ->
+                        candidate(track, duration, recording).let { it.titleMatches && it.durationMatches }
+                    }
+                val found = (search.value + (earlier as? Lookup.Found)?.value.orEmpty()).distinctBy { it.mbid }
+                choose(track, duration, found).let { if (earlier is Lookup.Failed) it.copy(provisional = true) else it }
+            }
         }
     }
 
@@ -683,3 +686,23 @@ private fun lyricsOf(
         instrumental = detail.works.any { it.instrumental },
     )
 }
+
+// A full first page may not hold the earliest recording of a title the artist recorded more often
+// than a page holds: *Dream On* by Aerosmith has some 170, most of them live and most scoring alike,
+// so ranked differently from one request to the next, and once the first 100 held neither the 1973
+// studio recording nor any fitting one earlier than a 1978 live take (#906). Only a recording first
+// released by the first page's earliest one that [fits] (title and length) could be chosen over it,
+// so those are searched for, few enough for one page, and the usual rules then choose among both.
+// Null when the first page is not full, or nothing on it fits with a date. When the search fails,
+// the caller chooses from the first page, provisionally, so a later run asks again.
+private suspend fun MusicBrainzLookup.earlierThan(
+    firstPage: List<MbRecording>,
+    track: NormalizedTrack,
+    fits: (MbRecording) -> Boolean,
+): Lookup<List<MbRecording>>? =
+    firstPage
+        .takeIf { it.size >= MusicBrainzLookup.SEARCH_PAGE }
+        ?.filter(fits)
+        ?.mapNotNull { it.firstReleaseDate }
+        ?.minOrNull()
+        ?.let { searchRecordingsBefore(track.title, track.primary, it) }

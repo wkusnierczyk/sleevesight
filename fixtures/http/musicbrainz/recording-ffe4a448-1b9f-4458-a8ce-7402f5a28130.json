@@ -1,309 +1,309 @@
 {
- "first-release-date": "1956-05",
- "artist-credit": [
-  {
-   "joinphrase": "",
-   "name": "Chuck Berry",
-   "artist": {
-    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
-    "id": "592a3b6d-c42b-4567-99c9-ecf63bd66499",
-    "sort-name": "Berry, Chuck",
-    "type": "Person",
-    "disambiguation": "",
-    "name": "Chuck Berry",
-    "country": "US"
-   }
-  }
- ],
- "id": "ffe4a448-1b9f-4458-a8ce-7402f5a28130",
- "video": false,
- "length": 144666,
  "disambiguation": "",
+ "id": "ffe4a448-1b9f-4458-a8ce-7402f5a28130",
  "title": "Roll Over Beethoven",
+ "length": 144666,
  "relations": [
   {
-   "attribute-values": {},
-   "attributes": [
-    "guitar"
-   ],
+   "target-type": "artist",
+   "source-credit": "",
    "attribute-ids": {
     "guitar": "63021302-86cd-4aee-80df-2270d54f4978"
    },
    "begin": "1956-04-19",
-   "direction": "backward",
-   "ended": true,
+   "attribute-credits": {},
+   "attributes": [
+    "guitar"
+   ],
+   "type-id": "59054b12-01ac-43ee-a618-285fd397e461",
+   "type": "instrument",
    "artist": {
     "country": "US",
+    "id": "592a3b6d-c42b-4567-99c9-ecf63bd66499",
     "disambiguation": "",
-    "name": "Chuck Berry",
     "type": "Person",
-    "sort-name": "Berry, Chuck",
     "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
-    "id": "592a3b6d-c42b-4567-99c9-ecf63bd66499"
+    "sort-name": "Berry, Chuck",
+    "name": "Chuck Berry"
    },
-   "target-type": "artist",
-   "type": "instrument",
-   "attribute-credits": {},
+   "ended": true,
    "end": "1956-04-19",
-   "type-id": "59054b12-01ac-43ee-a618-285fd397e461",
+   "attribute-values": {},
    "target-credit": "",
-   "source-credit": ""
+   "direction": "backward"
   },
   {
+   "type": "instrument",
+   "artist": {
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "id": "b4d2b4d5-d8fc-45ca-9715-03037cdf9ad0",
+    "country": null,
+    "type": "Person",
+    "disambiguation": "",
+    "sort-name": "Billups, Melvin",
+    "name": "Melvin Billups"
+   },
+   "type-id": "59054b12-01ac-43ee-a618-285fd397e461",
    "attributes": [
     "drums (drum set)"
    ],
+   "direction": "backward",
+   "target-credit": "",
    "attribute-values": {},
+   "end": "1956-04-19",
+   "ended": true,
+   "source-credit": "",
+   "target-type": "artist",
+   "attribute-credits": {},
    "begin": "1956-04-19",
    "attribute-ids": {
     "drums (drum set)": "12092505-6ee1-46af-a15a-b5b468b6b155"
-   },
-   "direction": "backward",
-   "target-type": "artist",
-   "ended": true,
-   "artist": {
-    "name": "Melvin Billups",
-    "disambiguation": "",
-    "id": "b4d2b4d5-d8fc-45ca-9715-03037cdf9ad0",
-    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
-    "sort-name": "Billups, Melvin",
-    "type": "Person",
-    "country": null
-   },
-   "type": "instrument",
-   "end": "1956-04-19",
-   "attribute-credits": {},
-   "type-id": "59054b12-01ac-43ee-a618-285fd397e461",
-   "source-credit": "",
-   "target-credit": ""
+   }
   },
   {
+   "direction": "backward",
+   "attribute-values": {},
+   "target-credit": "",
+   "end": "1956-04-19",
+   "ended": true,
+   "artist": {
+    "sort-name": "Davis, Leroy C.",
+    "name": "Leroy C. Davis",
+    "country": null,
+    "id": "7e653c31-8862-44c8-a99c-03a8ec784535",
+    "disambiguation": "",
+    "type": "Person",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df"
+   },
+   "type": "instrument",
+   "attributes": [
+    "tenor saxophone"
+   ],
+   "type-id": "59054b12-01ac-43ee-a618-285fd397e461",
+   "attribute-credits": {},
    "begin": "1956-04-19",
    "attribute-ids": {
     "tenor saxophone": "ef7382cf-d5b4-4923-8b9e-3c482ed84b5e"
    },
-   "attributes": [
-    "tenor saxophone"
-   ],
-   "attribute-values": {},
-   "target-type": "artist",
-   "ended": true,
-   "artist": {
-    "type": "Person",
-    "sort-name": "Davis, Leroy C.",
-    "id": "7e653c31-8862-44c8-a99c-03a8ec784535",
-    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
-    "disambiguation": "",
-    "name": "Leroy C. Davis",
-    "country": null
-   },
-   "direction": "backward",
-   "type": "instrument",
-   "end": "1956-04-19",
-   "attribute-credits": {},
    "source-credit": "",
-   "target-credit": "",
-   "type-id": "59054b12-01ac-43ee-a618-285fd397e461"
+   "target-type": "artist"
   },
   {
-   "type-id": "59054b12-01ac-43ee-a618-285fd397e461",
    "source-credit": "",
-   "target-credit": "",
-   "attribute-credits": {},
-   "end": "1956-04-19",
-   "direction": "backward",
    "target-type": "artist",
-   "artist": {
-    "country": "US",
-    "name": "Willie Dixon",
-    "disambiguation": "",
-    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
-    "id": "ff4c8d42-4871-4778-885b-d41b01245133",
-    "type": "Person",
-    "sort-name": "Dixon, Willie"
-   },
-   "ended": true,
-   "attributes": [
-    "double bass"
-   ],
-   "attribute-values": {},
+   "attribute-credits": {},
    "begin": "1956-04-19",
    "attribute-ids": {
     "double bass": "7bd32b95-416f-4244-a98b-1311ec69c7db"
    },
-   "type": "instrument"
-  },
-  {
-   "type-id": "59054b12-01ac-43ee-a618-285fd397e461",
-   "target-credit": "",
-   "source-credit": "",
-   "end": "1956-04-19",
-   "attribute-credits": {},
    "type": "instrument",
-   "direction": "backward",
    "artist": {
+    "name": "Willie Dixon",
+    "sort-name": "Dixon, Willie",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "id": "ff4c8d42-4871-4778-885b-d41b01245133",
     "country": "US",
     "type": "Person",
-    "sort-name": "Johnson, Johnnie",
-    "id": "cc3a163c-b3dd-4913-bccc-92ad47309088",
-    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
-    "name": "Johnnie Johnson",
-    "disambiguation": "US jazz/blues/rock’n’roll pianist"
+    "disambiguation": ""
    },
-   "ended": true,
-   "target-type": "artist",
-   "attribute-values": {},
+   "type-id": "59054b12-01ac-43ee-a618-285fd397e461",
    "attributes": [
-    "piano"
+    "double bass"
    ],
+   "direction": "backward",
+   "attribute-values": {},
+   "target-credit": "",
+   "end": "1956-04-19",
+   "ended": true
+  },
+  {
    "attribute-ids": {
     "piano": "b3eac5f9-7859-4416-ac39-7154e2e8d348"
    },
-   "begin": "1956-04-19"
+   "attribute-credits": {},
+   "begin": "1956-04-19",
+   "target-type": "artist",
+   "source-credit": "",
+   "end": "1956-04-19",
+   "ended": true,
+   "direction": "backward",
+   "attribute-values": {},
+   "target-credit": "",
+   "attributes": [
+    "piano"
+   ],
+   "type-id": "59054b12-01ac-43ee-a618-285fd397e461",
+   "type": "instrument",
+   "artist": {
+    "sort-name": "Johnson, Johnnie",
+    "name": "Johnnie Johnson",
+    "type": "Person",
+    "disambiguation": "US jazz/blues/rock’n’roll pianist",
+    "country": "US",
+    "id": "cc3a163c-b3dd-4913-bccc-92ad47309088",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df"
+   }
   },
   {
-   "attribute-credits": {},
-   "end": "1956-04-19",
-   "type-id": "59054b12-01ac-43ee-a618-285fd397e461",
-   "target-credit": "",
-   "source-credit": "",
-   "attribute-values": {},
-   "attributes": [
-    "trumpet"
-   ],
    "attribute-ids": {
     "trumpet": "1c8f9780-2f16-4891-b66d-bb7aa0820dbd"
    },
    "begin": "1956-04-19",
-   "direction": "backward",
-   "artist": {
-    "country": null,
-    "type": "Person",
-    "sort-name": "Pitts, Vincent",
-    "id": "4a9967d3-1b04-491a-9e18-db76da943e42",
-    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
-    "disambiguation": "",
-    "name": "Vincent Pitts"
-   },
-   "ended": true,
+   "attribute-credits": {},
    "target-type": "artist",
-   "type": "instrument"
+   "source-credit": "",
+   "ended": true,
+   "end": "1956-04-19",
+   "target-credit": "",
+   "attribute-values": {},
+   "direction": "backward",
+   "type-id": "59054b12-01ac-43ee-a618-285fd397e461",
+   "attributes": [
+    "trumpet"
+   ],
+   "type": "instrument",
+   "artist": {
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "type": "Person",
+    "disambiguation": "",
+    "country": null,
+    "id": "4a9967d3-1b04-491a-9e18-db76da943e42",
+    "name": "Vincent Pitts",
+    "sort-name": "Pitts, Vincent"
+   }
   },
   {
    "end": null,
-   "type-id": "5c0ceac3-feb4-41f0-868d-dc06f6e27fc0",
-   "source-credit": "",
-   "target-credit": "",
-   "type": "producer",
-   "attributes": [],
-   "attribute-values": {},
-   "begin": null,
-   "attribute-ids": {},
+   "ended": false,
    "direction": "backward",
-   "target-type": "artist",
+   "target-credit": "",
+   "attribute-values": {},
+   "type-id": "5c0ceac3-feb4-41f0-868d-dc06f6e27fc0",
+   "attributes": [],
+   "type": "producer",
    "artist": {
-    "type": "Group",
     "sort-name": "Chess, Leonard & Phil",
-    "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
-    "id": "31b36b91-191f-4f68-9ad7-40299fc22f93",
     "name": "Leonard & Phil Chess",
+    "country": "US",
+    "id": "31b36b91-191f-4f68-9ad7-40299fc22f93",
+    "type": "Group",
     "disambiguation": "legendary US production duo",
-    "country": "US"
+    "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b"
    },
-   "ended": false
+   "attribute-ids": {},
+   "begin": null,
+   "target-type": "artist",
+   "source-credit": ""
   },
   {
-   "target-type": "artist",
-   "ended": true,
-   "artist": {
-    "country": "US",
-    "disambiguation": "",
-    "name": "Chuck Berry",
-    "type": "Person",
-    "sort-name": "Berry, Chuck",
-    "id": "592a3b6d-c42b-4567-99c9-ecf63bd66499",
-    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df"
-   },
-   "direction": "backward",
-   "begin": "1956-04-19",
-   "attribute-ids": {
-    "lead vocals": "8e2a3255-87c2-4809-a174-98cb3704f1a5"
-   },
    "attributes": [
     "lead vocals"
    ],
-   "attribute-values": {},
-   "type": "vocal",
-   "source-credit": "",
-   "target-credit": "",
    "type-id": "0fdbe3c6-7700-4a31-ae54-b53f06ae1cfa",
+   "artist": {
+    "sort-name": "Berry, Chuck",
+    "name": "Chuck Berry",
+    "disambiguation": "",
+    "type": "Person",
+    "country": "US",
+    "id": "592a3b6d-c42b-4567-99c9-ecf63bd66499",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df"
+   },
+   "type": "vocal",
+   "end": "1956-04-19",
+   "ended": true,
+   "direction": "backward",
+   "target-credit": "",
+   "attribute-values": {},
+   "target-type": "artist",
+   "source-credit": "",
+   "attribute-ids": {
+    "lead vocals": "8e2a3255-87c2-4809-a174-98cb3704f1a5"
+   },
    "attribute-credits": {},
-   "end": "1956-04-19"
+   "begin": "1956-04-19"
   },
   {
+   "source-credit": "",
+   "target-type": "url",
+   "begin": null,
+   "attribute-ids": {},
+   "type": "free streaming",
+   "type-id": "7e41ef12-a124-4324-afdb-fdbae687a89c",
+   "attributes": [],
    "url": {
     "resource": "https://www.deezer.com/track/3247670121",
     "id": "958250db-1923-46b8-84c4-ffb6fcf573f3"
    },
-   "end": null,
-   "source-credit": "",
    "target-credit": "",
-   "type-id": "7e41ef12-a124-4324-afdb-fdbae687a89c",
-   "begin": null,
-   "attribute-ids": {},
-   "attributes": [],
    "attribute-values": {},
-   "target-type": "url",
-   "ended": false,
    "direction": "forward",
-   "type": "free streaming"
+   "ended": false,
+   "end": null
   },
   {
-   "type": "streaming",
-   "attribute-values": {},
-   "attributes": [],
-   "attribute-ids": {},
-   "begin": null,
-   "direction": "forward",
    "ended": false,
-   "target-type": "url",
    "end": null,
-   "type-id": "b5f3058a-666c-406f-aafb-f9249fc7b122",
+   "attribute-values": {},
    "target-credit": "",
-   "source-credit": "",
+   "direction": "forward",
    "url": {
     "id": "4723c4ca-793e-4d6b-a182-84c10245086c",
     "resource": "https://tidal.com/track/36300377"
-   }
+   },
+   "type-id": "b5f3058a-666c-406f-aafb-f9249fc7b122",
+   "attributes": [],
+   "type": "streaming",
+   "attribute-ids": {},
+   "begin": null,
+   "target-type": "url",
+   "source-credit": ""
   },
   {
+   "target-credit": "",
+   "attribute-values": {},
+   "direction": "forward",
+   "ended": true,
+   "end": "1956-04-19",
    "work": {
+    "attributes": [],
+    "type-id": "f061270a-2fd6-32f1-a641-f0f8676d14e6",
     "disambiguation": "",
-    "iswcs": [
-     "T-070.940.070-3"
-    ],
-    "title": "Roll Over Beethoven",
     "type": "Song",
     "id": "3d55b4e1-36f5-3cec-b702-59d1b534611e",
-    "type-id": "f061270a-2fd6-32f1-a641-f0f8676d14e6",
-    "language": "eng",
-    "attributes": [],
+    "title": "Roll Over Beethoven",
     "languages": [
      "eng"
+    ],
+    "language": "eng",
+    "iswcs": [
+     "T-070.940.070-3"
     ]
    },
-   "target-type": "work",
-   "ended": true,
-   "direction": "forward",
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attributes": [],
    "begin": "1956-04-19",
    "attribute-ids": {},
-   "attributes": [],
-   "attribute-values": {},
-   "type": "performance",
    "source-credit": "",
-   "target-credit": "",
-   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
-   "end": "1956-04-19"
+   "target-type": "work"
+  }
+ ],
+ "video": false,
+ "first-release-date": "1956-05",
+ "artist-credit": [
+  {
+   "artist": {
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "type": "Person",
+    "disambiguation": "",
+    "id": "592a3b6d-c42b-4567-99c9-ecf63bd66499",
+    "country": "US",
+    "name": "Chuck Berry",
+    "sort-name": "Berry, Chuck"
+   },
+   "joinphrase": "",
+   "name": "Chuck Berry"
   }
  ]
 }

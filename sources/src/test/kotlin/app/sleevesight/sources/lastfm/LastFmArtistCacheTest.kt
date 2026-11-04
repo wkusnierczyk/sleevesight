@@ -10,7 +10,6 @@ import app.sleevesight.core.resolution.MbArtist
 import app.sleevesight.core.resolution.MbArtistSearch
 import app.sleevesight.core.resolution.MbRecording
 import app.sleevesight.core.resolution.MbRecordingDetail
-import app.sleevesight.core.resolution.MbRecordingSearch
 import app.sleevesight.core.resolution.MbWork
 import app.sleevesight.core.resolution.MusicBrainzLookup
 import app.sleevesight.core.sources.ArtistResults
@@ -290,7 +289,7 @@ class LastFmArtistCacheTest {
         override suspend fun searchRecordings(
             title: String,
             artist: String,
-        ): Lookup<MbRecordingSearch> = error("unexpected recording search")
+        ): Lookup<List<MbRecording>> = error("unexpected recording search")
 
         override suspend fun recording(mbid: String): Lookup<MbRecordingDetail> = error("unexpected recording")
 

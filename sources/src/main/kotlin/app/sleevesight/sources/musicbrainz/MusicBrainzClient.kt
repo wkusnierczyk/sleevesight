@@ -9,7 +9,6 @@ import app.sleevesight.core.resolution.MbCredit
 import app.sleevesight.core.resolution.MbPerformance
 import app.sleevesight.core.resolution.MbRecording
 import app.sleevesight.core.resolution.MbRecordingDetail
-import app.sleevesight.core.resolution.MbRecordingSearch
 import app.sleevesight.core.resolution.MbRelease
 import app.sleevesight.core.resolution.MbReleaseGroup
 import app.sleevesight.core.resolution.MbWork
@@ -50,70 +49,33 @@ class MusicBrainzClient(
 ) : MusicBrainzLookup,
     ArtistTags,
     ReleaseGroups {
-    // MusicBrainz says how many recordings match. A title the artist recorded more often than a page
-    // holds may have its original past the first page: *Dream On* by Aerosmith has some 170, and the
-    // 1973 studio recording was not among the first 100, so a 1978 live one was chosen (#906). The
-    // next pages are asked for too, up to [SEARCH_PAGES], and joined, each recording once. A later page
-    // that fails, is missing or comes empty leaves the pages before it, and the answer incomplete
-    // ([MbRecordingSearch.complete]).
     override suspend fun searchRecordings(
         title: String,
         artist: String,
-    ): Lookup<MbRecordingSearch> {
-        val query = "recording:${phrase(title)} AND artist:${phrase(artist)}"
-        return when (val first = searchPage(query, offset = 0)) {
-            is Lookup.Found -> Lookup.Found(withLaterPages(query, first.value))
-            Lookup.NotFound -> Lookup.NotFound
-            is Lookup.Failed -> first
-        }
+    ): Lookup<List<MbRecording>> = search("recording:${phrase(title)} AND artist:${phrase(artist)}")
+
+    override suspend fun searchRecordingsBefore(
+        title: String,
+        artist: String,
+        date: String,
+    ): Lookup<List<MbRecording>> {
+        require(DATE.matches(date)) { "not a MusicBrainz date" }
+        return search("recording:${phrase(title)} AND artist:${phrase(artist)} AND firstreleasedate:[* TO $date]")
     }
 
-    private suspend fun withLaterPages(
-        query: String,
-        first: SearchPage,
-    ): MbRecordingSearch {
-        val recordings = first.recordings.toMutableList()
-        val total = minOf(first.count, SEARCH_LIMIT * SEARCH_PAGES)
-        var offset = SEARCH_LIMIT
-        var complete = true
-        while (offset < total) {
-            // A page the count promised that fails, is missing or comes empty leaves the search incomplete.
-            val found = (searchPage(query, offset) as? Lookup.Found)?.value?.recordings.orEmpty()
-            if (found.isEmpty()) {
-                complete = false
-                break
-            }
-            recordings += found
-            offset += SEARCH_LIMIT
-        }
-        return MbRecordingSearch(recordings.distinctBy { it.mbid }, complete)
-    }
-
-    private class SearchPage(
-        val count: Int,
-        val recordings: List<MbRecording>,
-    )
-
-    // One page of the search; the first page's request is the one it always was, with no offset.
-    private suspend fun searchPage(
-        query: String,
-        offset: Int,
-    ): Lookup<SearchPage> {
+    private suspend fun search(query: String): Lookup<List<MbRecording>> {
         val request =
             NetRequest(
                 "$BASE/recording",
                 query =
-                    buildMap {
-                        put("query", query)
-                        put("limit", "$SEARCH_LIMIT")
-                        if (offset > 0) put("offset", "$offset")
-                        put("fmt", "json")
-                    },
+                    mapOf(
+                        "query" to query,
+                        "limit" to "$SEARCH_LIMIT",
+                        "fmt" to "json",
+                    ),
             )
         return net.lookup(request) { response ->
-            val json = parseObject(response.body)
-            val recordings = json.array("recordings").map { recording(it) }
-            SearchPage(json.int("count") ?: recordings.size, recordings)
+            parseObject(response.body).array("recordings").map { recording(it) }
         }
     }
 
@@ -255,15 +217,13 @@ class MusicBrainzClient(
          * MusicBrainz's maximum. A much-recorded song has dozens of recordings by the same artist,
          * and the search ranks the original far down, differently from one request to the next:
          * with 50, Chuck Berry's 1956 "Roll Over Beethoven" was sometimes not among them (#78).
+         * With more than that, it may still be missing, and a search for the recordings released by
+         * the first page's earliest date adds it ([searchRecordingsBefore], #906).
          */
-        const val SEARCH_LIMIT: Int = 100
+        const val SEARCH_LIMIT: Int = MusicBrainzLookup.SEARCH_PAGE
 
-        /**
-         * The most pages of a recording search asked for (#906), so at most 300 recordings and two
-         * more requests, a second each at MusicBrainz's rate: only for a title the artist recorded
-         * more than 100 times.
-         */
-        const val SEARCH_PAGES: Int = 3
+        // A date as MusicBrainz writes one: a year, a month or a day.
+        private val DATE = Regex("^[0-9]{4}(-[0-9]{2}){0,2}$")
 
         /** With `tags`, for the track's genre labels (#439), which only [MbRecordingDetail.tags] holds. */
         const val RECORDING_INC: String = "artist-credits+work-rels+artist-rels+url-rels+tags"
