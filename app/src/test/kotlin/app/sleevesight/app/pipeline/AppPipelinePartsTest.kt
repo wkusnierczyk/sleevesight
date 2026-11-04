@@ -131,6 +131,7 @@ class AppPipelinePartsTest {
         val anthropic = Settings(aiProvider = ProviderId.ANTHROPIC)
         val keys = PipelineKeys(ai = Secret("ai"))
         assertEquals(ProviderId.ANTHROPIC, checked(keys, anthropic).ai?.provider?.id)
+        assertFalse(checked(keys, anthropic).modelUnavailable)
 
         val model = checkNotNull(anthropic.model(ProviderId.ANTHROPIC))
         runBlocking {
@@ -139,6 +140,8 @@ class AppPipelinePartsTest {
             check.ticket()
         }
         assertNull("its model unavailable", checked(keys, anthropic).ai)
+        // And the pipeline told why, so the insight kept still shows (#911).
+        assertTrue(checked(keys, anthropic).modelUnavailable)
         // Another model chosen, or another service, is not held back by it.
         val other = anthropic.withModel(ProviderId.ANTHROPIC, "claude-opus-5-5")
         assertEquals(ProviderId.ANTHROPIC, checked(keys, other).ai?.provider?.id)

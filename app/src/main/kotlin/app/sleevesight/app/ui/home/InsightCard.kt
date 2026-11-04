@@ -129,7 +129,8 @@ private fun InsightBody(
     groundingDetails: Boolean,
 ) {
     // A model found unavailable (#540): said in place of why nothing is written, or of the failure
-    // it caused; the split button offers no Write, which would fail again.
+    // it caused; the split button offers no Write, which would fail again. With an insight, it is
+    // said under it, last in its footer (#911).
     val unavailable = context.unavailable
     if (unavailable != null && withoutInsight(insight)) {
         ModelUnavailable(unavailable, actions.onSettings)
@@ -206,7 +207,10 @@ private fun Written(
  *   stays where the counts are, which take its place in developer mode: under the line about the
  *   insight's history and above *Report a problem*, the action it leads to;
  * - that the reply stopped early, for an incomplete insight;
- * - *Report a problem* ([ReportAction]), in the theme's error colour.
+ * - *Report a problem* ([ReportAction]), in the theme's error colour;
+ * - while the model is found unavailable (#540), that it is ([ModelUnavailable]), with its link to the
+ *   settings (#911): last, just above the split button, whose Write it leaves disabled, and in place
+ *   of what *Rewrite insight* would use, which is not offered then.
  */
 @Composable
 private fun Footer(
@@ -229,6 +233,8 @@ private fun Footer(
         GroundingLine(insight.grounded, details = groundingDetails)
         if (!insight.complete) Quiet(stringResource(R.string.home_insight_incomplete))
         context.track?.let { track -> ReportAction { actions.onReport(track, insight) } }
+        // Last, just above the split button's disabled Write, which it explains (#911).
+        context.unavailable?.let { ModelUnavailable(it, actions.onSettings) }
     }
 }
 
@@ -266,9 +272,12 @@ private fun writtenBefore(
     return (listOf(rewritten ?: stringResource(R.string.home_written_before)) + after).joinToString(" ")
 }
 
-// Why the card's rewrite ended without an insight: stopped, or failed and why.
+/**
+ * Why a rewrite ended without an insight (#854): stopped ([PipelineHost.STOPPED]), or failed and why;
+ * said after *As written previously.*, by the key insight's footer and by the items' (#911).
+ */
 @Composable
-private fun rewriteFailure(why: String): String =
+internal fun rewriteFailure(why: String): String =
     if (why == PipelineHost.STOPPED) {
         stringResource(R.string.home_rewrite_stopped)
     } else {

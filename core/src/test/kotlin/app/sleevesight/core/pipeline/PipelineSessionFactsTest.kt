@@ -152,6 +152,22 @@ class PipelineSessionFactsTest {
         }
 
     @Test
+    fun `another model's insight kept but not shown tells the session nothing`() =
+        runTest {
+            val pipeline = pipeline(cache = MemoryCache())
+            pipeline.run(track("One"), write = true)
+
+            // A new session, another model: its control does not write, nor show the one kept (#911).
+            session = 2L
+            settings = settings.withModel(ProviderId.ANTHROPIC, "claude-other")
+            val again = pipeline.run(track("One"), write = false)
+            assertEquals(InsightState.Idle(canWrite = true), again.insight)
+
+            val two = normalizer.normalize(track("Two")).lookupKey
+            assertEquals(emptySet(), facts.citedByOthers(two))
+        }
+
+    @Test
     fun `a track with enough evidence of its own gets no artist line, and cites the whole evidence's ids`() =
         runTest {
             val pipeline = pipeline(adapters(songLines = PromptEvidence.ENOUGH_OF_ITS_OWN))

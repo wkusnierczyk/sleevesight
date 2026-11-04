@@ -2,6 +2,7 @@ package app.sleevesight.app.pipeline
 
 import app.sleevesight.core.ai.ModelNames
 import app.sleevesight.core.evidence.EvidenceSet
+import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.AiOutcome
 import app.sleevesight.core.pipeline.AiQuestion
@@ -16,6 +17,9 @@ import app.sleevesight.core.pipeline.PipelineEvent
 import app.sleevesight.core.pipeline.PipelineParts
 import app.sleevesight.core.pipeline.QuestionCost
 import app.sleevesight.core.pipeline.TrackState
+import app.sleevesight.core.pipeline.WrittenBy
+import app.sleevesight.core.pipeline.rewriteParts
+import app.sleevesight.core.pipeline.writtenBy
 import app.sleevesight.core.resolution.NameMatcher
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WriteAutomatically
@@ -35,6 +39,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -83,12 +88,24 @@ sealed interface ItemShown {
      * offered again, on a tap only. [model] is
      * the name of the model that writes it, for "by {model}"; [evidence] what it was written from, which
      * its citations read, each mapped to the track's line where it is one ([ItemEvidence.trackIds]).
+     *
+     * [rewriteWith] (#911) when [state] is the insight another AI service, model or effort wrote, kept,
+     * shown in place of none under [key]: *Rewrite insight* is offered beside it, and this is what a
+     * rewrite would use that it did not, and what it would write with; [model] is then the one that
+     * wrote it. [rewriteFailed] when a rewrite of it ended without an insight: stopped
+     * ([PipelineHost.STOPPED]), or failed, and why; it is shown again, and *Rewrite insight* offered
+     * again. Both null for the item's own insight. [canWrite] is false while no insight may be written
+     * (no AI service ready: the model found unavailable, #540): what is kept still shows, and *Rewrite
+     * insight* is not offered.
      */
     data class Shown(
         val state: InsightState,
         val evidence: ItemEvidence,
         val model: String? = null,
         val key: CardKey? = null,
+        val rewriteWith: RewriteOffer? = null,
+        val rewriteFailed: String? = null,
+        val canWrite: Boolean = true,
     ) : ItemShown
 }
 
@@ -173,6 +190,15 @@ interface ItemNotes {
  * an automatic mode for one not tapped); closed, it is not made, and the item stays offered. *Stop
  * writing* ([stop]) cancels it: nothing is kept, and it shows as stopped, written again only on a tap.
  *
+ * With none kept under its card's key, the insight another AI service, model or effort wrote for the
+ * same item and evidence, kept in memory or in the cache, the most recently written, is shown in its
+ * place, with *Rewrite insight* (#911): read only once the key's own is not found, so it never stands
+ * in for it. A tap on *Rewrite insight* writes it with the settings now, a rewrite, which its footer
+ * says; one stopped or failed shows the earlier insight again, saying so, with *Rewrite insight*. Under
+ * an automatic mode the item is written anew when opened, as for any item its model has not written,
+ * but not on the play its row showed an insight before the model changed ([held]): that one stays,
+ * with *Rewrite insight*, as the key insight's does after a settings change.
+ *
  * An album's web search (#885, `ItemInsights.searched`), a paid one, is made only on the way to its
  * insight's call: once the insight is not found kept under the key of the evidence gathered,
  * through the same gates, with web search still switched on, its engine and key as the settings
@@ -195,11 +221,15 @@ class AppItemNotes(
     private val events: (PipelineEvent) -> Unit = {},
     private val gate: (ItemAsk) -> Boolean = { true },
 ) : ItemNotes {
-    // An insight shown, and when it was written.
+    // An insight shown, and when it was written; [rewrites] when the write that showed it rewrites
+    // the insight another service, model or effort wrote (#911), and [play] the play
+    // ([NowPlaying.play]) it was written on, null where none was counted or it came from the cache.
     private class Entry(
         val state: InsightState,
         val writtenAt: Instant,
         val evidence: ItemEvidence,
+        val rewrites: Boolean = false,
+        val play: Long? = null,
     )
 
     // What an item's evidence is gathered for: the item, the run's own evidence under the switches
@@ -233,6 +263,15 @@ class AppItemNotes(
 
     // The calls under way, by key, for *Stop writing*.
     private val jobs = ConcurrentHashMap<CardKey, Job>()
+
+    // The insight another service, model or effort wrote, found in the cache once a key's own was not
+    // (#911), by that key, at most [KEPT]: null when none was; no entry before the cache was read.
+    private val others = MutableStateFlow<Map<CardKey, Entry?>>(emptyMap())
+
+    // The play ([NowPlaying.play]) on which each item's own insight was last shown, by what it is about
+    // and from, its model aside ([subject]): on that play, a model changed since holds back an
+    // automatic write of its insight ([held]).
+    private val seen = ConcurrentHashMap<CardKey, Long>()
 
     // The keys whose cached insight was looked for, and those being written.
     private val looked: MutableSet<CardKey> = ConcurrentHashMap.newKeySet()
@@ -274,35 +313,151 @@ class AppItemNotes(
             .map { it[at]?.evidence }
             .distinctUntilChanged()
             .flatMapLatest { evidence ->
-                val key = evidence?.let { insights.key(item, track, it, now) }
+                // The key it is kept under, with no AI service ready too (the model found unavailable,
+                // #540): what is kept still shows (#911), though nothing is written.
+                val key = evidence?.let { insights.keptKey(item, track, it, now) }
                 when {
                     evidence == null -> flowOf(ItemShown.Gathering)
                     key == null -> flowOf(ItemShown.NoService)
                     else -> {
                         look(insights, key, track, item, evidence)
-                        combine(shown, writing, settings) { entries, asked, latest ->
-                            shownFor(key, evidence, entries[key], latest?.historyLifetime, key in asked)
-                        }
+                        combine(shown, others, writing, settings) { entries, kept, asked, latest ->
+                            val lifetime = latest?.historyLifetime
+                            // Only once its own was looked for and not found (#911).
+                            val earlier = if (key in kept) earlierFor(key, entries, kept[key], lifetime) else null
+                            val play = track.nowPlaying.play
+                            val shown = shownFor(key, evidence, entries[key], earlier, lifetime, key in asked, play)
+                            if (insights.writes) shown else unwritable(shown)
+                        }.onEach { seenOn(track, key, it) }
                     }
                 }
             }
     }
 
+    // On [play]: a write that failed or was stopped on an earlier play counts as no insight beside
+    // another model's (#911), which shows again with *Rewrite insight*.
+    @Suppress("LongParameterList") // The key, what it is shown from, and what it has.
     private fun shownFor(
         key: CardKey,
         evidence: ItemEvidence,
         entry: Entry?,
+        earlier: Entry?,
         lifetime: Duration?,
         asked: Boolean,
+        play: Long?,
     ): ItemShown =
         when {
             entry == null && asked -> ItemShown.Asking(key)
-            entry == null -> ItemShown.Offered
+            entry == null -> earlier?.let { shownEarlier(key, evidence, it, failed = null) } ?: ItemShown.Offered
             expired(entry.writtenAt, lifetime) -> ItemShown.Offered.also { drop(key) }
+            stale(entry, play) -> shownStale(key, evidence, entry, earlier, asked)
+            // A rewrite that ended without an insight (#911): the earlier one again, saying why.
+            entry.rewrites && earlier != null && failure(entry.state) != null ->
+                shownEarlier(key, evidence, earlier, failure(entry.state))
             // The insight's evidence numbered as when it was written, but mapped to this track's lines:
             // an artist's or album's insight kept from another track cites the same ids (#522).
             else -> ItemShown.Shown(entry.state, evidence, modelName(key.model), key)
         }
+
+    // [entry], a write under [key] that failed or was stopped on an earlier play ([stale], #911): asked
+    // for again, being written; else [earlier], another model's insight, with *Rewrite insight*, as
+    // though there were none; with none, as it ended.
+    private fun shownStale(
+        key: CardKey,
+        evidence: ItemEvidence,
+        entry: Entry,
+        earlier: Entry?,
+        asked: Boolean,
+    ): ItemShown =
+        when {
+            asked -> ItemShown.Asking(key)
+            earlier != null -> shownEarlier(key, evidence, earlier, failed = null)
+            else -> ItemShown.Shown(entry.state, evidence, modelName(key.model), key)
+        }
+
+    // [shown] while no insight may be written, the selected model found unavailable (#540; with no AI
+    // service for another reason, [ItemInsights.keptKey] gives none, so the row says so): nothing
+    // offered, as with no service; an insight kept shows, with no *Rewrite insight* that could be
+    // tapped (#911).
+    private fun unwritable(shown: ItemShown): ItemShown =
+        when (shown) {
+            ItemShown.Offered, is ItemShown.Asking -> ItemShown.NoService
+            is ItemShown.Shown -> shown.copy(canWrite = false)
+            else -> shown
+        }
+
+    // [earlier], another service's, model's or effort's insight, shown under [key] with *Rewrite
+    // insight* offered (#911): what a rewrite under [key] would use that it did not, and why the
+    // last one [failed], if it did.
+    private fun shownEarlier(
+        key: CardKey,
+        evidence: ItemEvidence,
+        earlier: Entry,
+        failed: String?,
+    ): ItemShown {
+        val by = (earlier.state as? InsightState.Written)?.writtenBy
+        val with = key.writtenBy()
+        val offer = by?.let { RewriteOffer(rewriteParts(it, with), with) }
+        return ItemShown.Shown(earlier.state, evidence, by?.model?.let(modelName), key, offer, failed)
+    }
+
+    // Whether [entry] is a write that failed or was stopped on another play than [play] (#911): beside
+    // another model's insight, no insight of its own; a tap still writes it again, nothing else does.
+    private fun stale(
+        entry: Entry,
+        play: Long?,
+    ): Boolean = failure(entry.state) != null && entry.play != play
+
+    // Why a write ended without an insight, as the key insight's footer says it: stopped, or failed and why.
+    private fun failure(state: InsightState): String? =
+        when (state) {
+            is InsightState.Failed -> state.reason
+            InsightState.Stopped -> PipelineHost.STOPPED
+            else -> null
+        }
+
+    // The insight another service, model or effort wrote for what [key]'s is about, from the same
+    // evidence (#911): the most recently written of those shown ([entries]) and the one found in the
+    // cache ([cached]), within *Keep history for* ([lifetime]); null for none.
+    private fun earlierFor(
+        key: CardKey,
+        entries: Map<CardKey, Entry>,
+        cached: Entry?,
+        lifetime: Duration?,
+    ): Entry? {
+        val about = key.subject()
+        val shownBefore =
+            entries
+                .filter { (other, entry) ->
+                    other != key && other.subject() == about && entry.state is InsightState.Written
+                }.values
+        return (shownBefore + listOfNotNull(cached))
+            .filterNot { expired(it.writtenAt, lifetime) }
+            .maxByOrNull { it.writtenAt }
+    }
+
+    // [shown], under [key] on [track]: its own insight written, the play noted for what it is about (#911).
+    private fun seenOn(
+        track: TrackState,
+        key: CardKey,
+        shown: ItemShown,
+    ) {
+        val play = track.nowPlaying.play ?: return
+        val own = shown as? ItemShown.Shown
+        if (own?.state is InsightState.Written && own.rewriteWith == null) seen[key.subject()] = play
+    }
+
+    // Whether an automatic write of [key]'s insight on [track] is held back (#911): none of its own,
+    // and on this play its row showed one another model wrote, before the model changed. It stays,
+    // with *Rewrite insight*, as the key insight does after a settings change; nothing writes it unasked.
+    private fun held(
+        key: CardKey,
+        track: TrackState,
+    ): Boolean {
+        val play = track.nowPlaying.play ?: return false
+        val own = shown.value[key]
+        return seen[key.subject()] == play && (own == null || stale(own, play))
+    }
 
     override fun write(
         track: TrackState,
@@ -318,8 +473,11 @@ class AppItemNotes(
             val evidence = evidenceOf(insights, track, item, now)
             // Not after a *Clear history* that came while the evidence was gathered.
             val key = evidence?.let { insights.key(item, track, it, now) }?.takeIf { current(work) }
-            if (evidence != null && key != null && claim(key, ask)) {
-                write(insights, key, Asked(item, track, evidence, ask, work, now))
+            // What a tap rewrites (#911): the earlier insight shown in place of the key's own, or again
+            // after a rewrite of it ended without one. Read before the claim, as the row showed it.
+            val replaces = key?.let { replaced(it, ask, track) }
+            if (evidence != null && key != null && claim(key, ask, track)) {
+                write(insights, key, Asked(item, track, evidence, ask, work, now, replaces))
             }
         }
     }
@@ -374,6 +532,8 @@ class AppItemNotes(
 
     // An item asked for: what it is, of which track, from what evidence, how it was asked, and under
     // which settings its evidence was gathered.
+    // [replaces] is what wrote the insight a tap rewrites (#911), null for none.
+    @Suppress("LongParameterList") // What was asked, and what it rewrites.
     private class Asked(
         val item: InsightItem,
         val track: TrackState,
@@ -381,8 +541,27 @@ class AppItemNotes(
         val ask: ItemAsk,
         val work: CoroutineContext,
         val settings: Settings,
+        val replaces: WrittenBy? = null,
     ) {
-        fun with(found: ItemEvidence) = Asked(item, track, found, ask, work, settings)
+        fun with(found: ItemEvidence) = Asked(item, track, found, ask, work, settings, replaces)
+    }
+
+    // What wrote the insight a tap under [key] on [track] rewrites (#911): the earlier insight's, while
+    // the row shows it, in place of none, of a rewrite that ended without one, or of a write that did
+    // on an earlier play; null otherwise, and for any ask but a tap.
+    private fun replaced(
+        key: CardKey,
+        ask: ItemAsk,
+        track: TrackState,
+    ): WrittenBy? {
+        val entry = shown.value[key]
+        // As the row shows it: the earlier one once its own was looked for, in place of none, of a
+        // rewrite that ended without one, or of a write on an earlier play that did ([stale]).
+        val showsEarlier =
+            key in others.value && (entry == null || entry.rewrites || stale(entry, track.nowPlaying.play))
+        if (ask != ItemAsk.TAP || !showsEarlier) return null
+        val earlier = earlierFor(key, shown.value, others.value[key], settings.value?.historyLifetime)
+        return (earlier?.state as? InsightState.Written)?.writtenBy
     }
 
     // What a Stop cancels an item's call with, told apart from the scope's own cancellation.
@@ -487,8 +666,10 @@ class AppItemNotes(
         val work = currentCoroutineContext()
         val job = work[Job]
         job?.let { jobs[key] = it }
+        val rewrites = firstAsked.replaces != null
         val show: (InsightState, Instant) -> Unit = { state, at ->
-            publish(work) { shown.update { it.with(key, Entry(state, at, asked.evidence)) } }
+            val entry = Entry(state, at, asked.evidence, rewrites, track.nowPlaying.play)
+            publish(work) { shown.update { it.with(key, entry) } }
         }
         val question = Question(track, AiQuestion.Item(item), work)
         val counted: (QuestionCost) -> Unit = { more -> question.count(more, key) }
@@ -500,7 +681,8 @@ class AppItemNotes(
             val settled = next.ended ?: AiOutcome.ANSWERED.takeIf { key != first && showKept(insights, key, asked) }
             if (settled != null) return question.end(settled)
             question.ask(key)
-            val last = insights.write(key, item, track, asked.evidence, { mayCall(key, asked) }, counted, show)
+            val last =
+                insights.write(key, item, track, asked.evidence, { mayCall(key, asked) }, counted, asked.replaces, show)
             if (last == null) {
                 // Its gates closed while the evidence or the cache was read: not asked, offered again.
                 question.notAsked()
@@ -713,7 +895,9 @@ class AppItemNotes(
             else -> AiOutcome.STOPPED
         }
 
-    // [key]'s insight kept in the synthesis cache, read once, unless one is shown already.
+    // [key]'s insight kept in the synthesis cache, read once, unless one is shown already (not a write
+    // that failed or was stopped on an earlier play, [stale]); with none, the one another service,
+    // model or effort wrote, if kept (#911), read only then.
     private fun look(
         insights: ItemInsights,
         key: CardKey,
@@ -721,14 +905,30 @@ class AppItemNotes(
         item: InsightItem,
         evidence: ItemEvidence,
     ) {
-        if (key in shown.value || !looked.add(key)) return
+        val play = track.nowPlaying.play
+        val standing = shown.value[key]
+        if ((standing != null && !stale(standing, play)) || !looked.add(key)) return
         tracked {
             val work = coroutineContext
-            val kept = insights.kept(key, evidence)?.takeIf { !expired(it.writtenAt) } ?: return@tracked
+            val kept = insights.kept(key, evidence)?.takeIf { !expired(it.writtenAt) }
+            if (kept == null) {
+                val other =
+                    insights
+                        .keptByOther(key, evidence)
+                        ?.takeIf { !expired(it.writtenAt) }
+                        ?.let { Entry(it.state, it.writtenAt ?: clock.now(), evidence) }
+                publish(work) { others.update { it.withOther(key, other) } }
+                return@tracked
+            }
             val entry = Entry(kept.state, kept.writtenAt ?: clock.now(), evidence)
             publish(work) {
                 var added = false
-                shown.update { (if (key in it) it else it.with(key, entry)).also { next -> added = next !== it } }
+                // In place of none, or of a write that failed or was stopped on an earlier play.
+                shown.update { kept ->
+                    val other = kept[key]
+                    val next = if (other != null && !stale(other, play)) kept else kept.with(key, entry)
+                    next.also { added = it !== kept }
+                }
                 if (added) events(kept(track, key, AiQuestion.Item(item), kept.writtenAt))
             }
         }
@@ -749,13 +949,15 @@ class AppItemNotes(
         automatic = false,
     )
 
-    // Whether [key]'s insight may be asked for ([open]), and if so, marked as being written, unless it is already.
+    // Whether [key]'s insight on [track] may be asked for ([open]), and if so, marked as being written,
+    // unless it is already. Not by itself or on opening while it is [held] (#911).
     private fun claim(
         key: CardKey,
         ask: ItemAsk,
+        track: TrackState,
     ): Boolean {
         var added = false
-        if (open(key, ask)) {
+        if (open(key, ask, track) && (ask == ItemAsk.TAP || !held(key, track))) {
             writing.update { asked ->
                 added = key !in asked
                 asked + key
@@ -764,15 +966,17 @@ class AppItemNotes(
         return added
     }
 
-    // Whether [key]'s insight may be asked for: not shown, or past *Keep history for*; on a tap, also
-    // one that failed or was stopped, which nothing asks again by itself.
+    // Whether [key]'s insight on [track] may be asked for: not shown, or past *Keep history for*; one
+    // that failed or was stopped on this play, only on a tap, which nothing asks again by itself; one
+    // that did on an earlier play ([stale], #911), as though there were none, by itself too.
     private fun open(
         key: CardKey,
         ask: ItemAsk,
+        track: TrackState,
     ): Boolean {
         val entry = shown.value[key]
         val again = ask == ItemAsk.TAP && (entry?.state is InsightState.Failed || entry?.state == InsightState.Stopped)
-        return entry == null || again || expired(entry.writtenAt)
+        return entry == null || again || expired(entry.writtenAt) || stale(entry, track.nowPlaying.play)
     }
 
     /**
@@ -784,6 +988,8 @@ class AppItemNotes(
         synchronized(lock) {
             forgets++
             shown.value = emptyMap()
+            others.value = emptyMap()
+            seen.clear()
             gathered.value = emptyMap()
             inflight.clear()
             looked.clear()
@@ -825,7 +1031,7 @@ class AppItemNotes(
     ) = synchronized(lock) { if (current(work)) events(event) }
 
     private fun insightsOf(made: PipelineParts) =
-        ItemInsights(made.ai, made.cache, made.hasher, names, clock, made.albums)
+        ItemInsights(made.ai, made.cache, made.hasher, names, clock, made.albums, made.modelUnavailable)
 
     // Whether an insight written at [writtenAt] is past *Keep history for* ([lifetime]; null, for ever).
     private fun expired(
@@ -838,6 +1044,26 @@ class AppItemNotes(
         shown.update { it - key }
         looked.remove(key)
     }
+
+    // [this] with [other] for [key], last, the oldest dropped past [KEPT], and no longer counted as
+    // looked for, so the cache is read again if it is asked for again.
+    private fun Map<CardKey, Entry?>.withOther(
+        key: CardKey,
+        other: Entry?,
+    ): Map<CardKey, Entry?> {
+        val next = LinkedHashMap(this)
+        next.remove(key)
+        next[key] = other
+        while (next.size > KEPT) {
+            val oldest = next.keys.first()
+            next.remove(oldest)
+            if (oldest !in shown.value) looked.remove(oldest)
+        }
+        return next
+    }
+
+    // What [this] key's card is about and from, whatever service, model and effort write it (#911).
+    private fun CardKey.subject(): CardKey = copy(provider = ProviderId.ANTHROPIC, model = "", effort = null)
 
     // [this] with [entry] for [key], last, the oldest dropped past [KEPT], and no longer counted as looked for.
     private fun Map<CardKey, Entry>.with(

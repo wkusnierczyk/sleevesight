@@ -104,6 +104,9 @@ private fun evidenceParts(
         else -> emptySet()
     }
 
-/** What a card written under this key is written with ([InsightState.Written.writtenBy]). */
-internal fun CardKey.writtenBy(): WrittenBy =
+/**
+ * What a card written under this key is written with ([InsightState.Written.writtenBy]): what a
+ * rewrite under it would use too, which the song's, the artist's and the album's rows offer (#911).
+ */
+fun CardKey.writtenBy(): WrittenBy =
     WrittenBy(promptVersion, provider, model, effort, modelKnowledge, evidenceFingerprint)

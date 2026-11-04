@@ -5,6 +5,7 @@ import app.sleevesight.core.pipeline.CardEntity
 import app.sleevesight.core.pipeline.CardKey
 import app.sleevesight.core.pipeline.ClearEpoch
 import app.sleevesight.core.pipeline.KeptCard
+import app.sleevesight.core.pipeline.OtherCard
 import app.sleevesight.core.pipeline.PipelineCache
 import app.sleevesight.core.pipeline.RewritePart
 import app.sleevesight.core.sources.SourceAdapter
@@ -30,6 +31,7 @@ import kotlin.time.Instant
  *
  * Nothing found by work started before *Clear history* is kept after it ([epoch], #547).
  */
+@Suppress("TooManyFunctions") // One for each read and keep of `PipelineCache`, and its keys.
 class StorePipelineCache(
     private val caches: Caches,
     private val io: CoroutineContext,
@@ -65,6 +67,16 @@ class StorePipelineCache(
 
     override suspend fun keptCard(key: CardKey): KeptCard? =
         withContext(io) { caches.synthesis.get(key.toStore())?.let { KeptCard(it.text, it.writtenAt, it.rewritten) } }
+
+    override suspend fun keptByOthers(key: CardKey): List<OtherCard> =
+        withContext(io) {
+            caches.synthesis.others(key.toStore()).map { (other, kept) ->
+                OtherCard(
+                    key.copy(provider = other.provider, model = other.model, effort = other.effort),
+                    KeptCard(kept.text, kept.writtenAt, kept.rewritten),
+                )
+            }
+        }
 
     override suspend fun keep(
         key: CardKey,

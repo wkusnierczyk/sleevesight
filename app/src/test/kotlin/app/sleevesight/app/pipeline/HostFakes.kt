@@ -17,6 +17,7 @@ import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.CardKey
 import app.sleevesight.core.pipeline.ClearEpoch
 import app.sleevesight.core.pipeline.KeptCard
+import app.sleevesight.core.pipeline.OtherCard
 import app.sleevesight.core.pipeline.PipelineCache
 import app.sleevesight.core.pipeline.RewritePart
 import app.sleevesight.core.settings.pastKeepHistory
@@ -212,6 +213,14 @@ internal class CardCache(
         }
         return kept
     }
+
+    // As the store finds them (#911): the cards of [key]'s kind, subject, evidence, prompt, style and
+    // model knowledge kept under another service, model or effort, the most recently kept first.
+    override suspend fun keptByOthers(key: CardKey): List<OtherCard> =
+        cards.keys
+            .filter { it != key && it.copy(provider = key.provider, model = key.model, effort = key.effort) == key }
+            .mapNotNull { other -> keptCard(other)?.let { OtherCard(other, it) } }
+            .sortedByDescending { it.card.writtenAt }
 
     override suspend fun keep(
         key: CardKey,

@@ -15,7 +15,10 @@ import kotlin.time.Instant
  * with the track's place in the history (#523 for a genre's reason, #643 for an insight). An
  * entry is reused only for exactly the same [SynthesisKey]: the same evidence (R2), the same
  * prompt template and style (D14), and the same provider, model and model-knowledge switch. Each
- * one is a paid call on the user's key (driver 5), so a hit saves money as well as time.
+ * one is a paid call on the user's key (driver 5), so a hit saves money as well as time. One written
+ * with another service, model or effort is never served as the key's, but is found by [others], for
+ * a play to show it with *Rewrite insight* beside it (#911); a rewrite keeps both, each under its own
+ * key.
  */
 class SynthesisCache internal constructor(
     private val context: CacheContext,
@@ -45,6 +48,56 @@ class SynthesisCache internal constructor(
         }
         return if (expired) null else CachedSynthesis(row.text, writtenAt, RewritePart.decode(row.rewritten))
     }
+
+    /**
+     * What was written for [key]'s card with another AI service, model or effort (#911): each kept
+     * card of the same kind, entity, evidence, prompt version, style and model-knowledge switch, under
+     * its own key, the most recently written first; never [key]'s own. Those past *Keep history for*
+     * are left out, as [get] leaves them, and so is one whose service or effort this app no longer
+     * knows. Reading them marks none as used: only the one a play shows is, by [get] once it is
+     * written again or chosen.
+     */
+    fun others(key: SynthesisKey): List<Pair<SynthesisKey, CachedSynthesis>> {
+        val rows =
+            context.queries
+                .synthesisOthers(
+                    kind = key.kind.key,
+                    entityKey = key.entityKey,
+                    evidenceFingerprint = key.evidenceFingerprint,
+                    promptVersion = key.promptVersion.toLong(),
+                    styleHash = key.styleHash,
+                    modelKnowledge = key.modelKnowledge.toLong(),
+                    provider = key.provider.name,
+                    model = key.model,
+                    effort = key.effortKey,
+                ).executeAsList()
+        val lifetime = lifetimeOf(context.settings())
+        val now = context.clock.now()
+        return rows.mapNotNull { row ->
+            val writtenAt = Instant.fromEpochMilliseconds(row.written_at)
+            val provider = ProviderId.entries.firstOrNull { it.name == row.provider }
+            val effort = effortOf(row.effort)
+            if (pastKeepHistory(writtenAt, lifetime, now) || provider == null || effort == null) {
+                null
+            } else {
+                val other = key.copy(provider = provider, model = row.model, effort = effort.value)
+                other to CachedSynthesis(row.text, writtenAt, RewritePart.decode(row.rewritten))
+            }
+        }
+    }
+
+    // A stored effort ([SynthesisKey.effortKey]) as the key holds it, wrapped so the default (null)
+    // is told apart from an effort this app no longer knows (null itself).
+    private fun effortOf(stored: String): Effort? =
+        if (stored == SynthesisKey.DEFAULT_EFFORT) {
+            Effort(null)
+        } else {
+            ReasoningEffort.entries.firstOrNull { it.name.lowercase() == stored }?.let(::Effort)
+        }
+
+    private class Effort(
+        val value: ReasoningEffort?,
+    )
 
     /**
      * Keeps [text], written for [key] at [writtenAt] by a rewrite that changed [rewritten] (#854,
@@ -147,7 +200,12 @@ data class SynthesisKey(
     val effort: ReasoningEffort?,
 ) {
     /** [effort] as stored: its name, or `default`. */
-    internal val effortKey: String get() = effort?.name?.lowercase() ?: "default"
+    internal val effortKey: String get() = effort?.name?.lowercase() ?: DEFAULT_EFFORT
+
+    internal companion object {
+        /** [effortKey] for the provider's default effort. */
+        const val DEFAULT_EFFORT = "default"
+    }
 }
 
 /** A kept card: its [text], when it was written, and what the rewrite that wrote it changed (#854). */

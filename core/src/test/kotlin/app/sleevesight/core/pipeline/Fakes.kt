@@ -160,6 +160,12 @@ class MemoryCache : PipelineCache {
     override suspend fun keptCard(key: CardKey): KeptCard? =
         cards[key]?.let { KeptCard(it, null, rewrittenParts[key].orEmpty()) }
 
+    // The cards of [key]'s card kept under another service, model or effort (#911), in the order kept.
+    override suspend fun keptByOthers(key: CardKey): List<OtherCard> =
+        cards.keys
+            .filter { it != key && it.copy(provider = key.provider, model = key.model, effort = key.effort) == key }
+            .mapNotNull { other -> keptCard(other)?.let { OtherCard(other, it) } }
+
     override suspend fun keep(
         key: CardKey,
         text: String,

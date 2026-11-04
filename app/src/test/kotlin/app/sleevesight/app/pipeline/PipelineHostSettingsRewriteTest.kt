@@ -4,6 +4,7 @@ import app.sleevesight.core.Secret
 import app.sleevesight.core.ai.ReasoningEffort
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.pipeline.ChangeCause
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.settings.SourceSwitch
 import app.sleevesight.core.settings.WriteAutomatically
@@ -13,6 +14,7 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.time.Duration.Companion.seconds
@@ -23,7 +25,8 @@ import kotlin.time.Duration.Companion.seconds
  * offers it, and going back to the ones the card was written with withdraws it. So do the
  * *Sources* switches (#857): a source switched on is looked up for the track under way and one
  * switched off drops its lines, changing the evidence the key fingerprints, and *AI service
- * knowledge* is in the key itself. Nothing is written without a tap.
+ * knowledge* is in the key itself. Nothing is written without a tap, under an automatic mode too
+ * (#911), and a rewrite keeps the insight it replaces, which the model it was written with shows again.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class PipelineHostSettingsRewriteTest : PipelineHostFixture() {
@@ -40,6 +43,55 @@ internal class PipelineHostSettingsRewriteTest : PipelineHostFixture() {
             settings.value = settings.value.withModel(ProviderId.ANTHROPIC, first)
             settle()
             assertKeptWithRewrite(false)
+        }
+
+    @Test
+    fun `under On track change, another model offers Rewrite beside the insight written by itself`() =
+        runTest {
+            writtenByItself(WriteAutomatically.ON_EVERY_TRACK_CHANGE, ChangeCause.NATURAL_END)
+            val first = settings.value.model
+
+            settings.value = settings.value.withModel(ProviderId.ANTHROPIC, OTHER_MODEL)
+            settle()
+            assertKeptWithRewrite(true)
+
+            settings.value = settings.value.withModel(ProviderId.ANTHROPIC, first)
+            settle()
+            assertKeptWithRewrite(false)
+        }
+
+    @Test
+    fun `under On track skip, another model offers Rewrite beside the insight written by itself`() =
+        runTest {
+            writtenByItself(WriteAutomatically.WHEN_I_SKIP, ChangeCause.SKIP_IN_PLAYER)
+            val first = settings.value.model
+
+            settings.value = settings.value.withModel(ProviderId.ANTHROPIC, OTHER_MODEL)
+            settle()
+            assertKeptWithRewrite(true)
+
+            settings.value = settings.value.withModel(ProviderId.ANTHROPIC, first)
+            settle()
+            assertKeptWithRewrite(false)
+        }
+
+    @Test
+    fun `the earlier model chosen again after a rewrite shows its insight again, with no call`() =
+        runTest {
+            written()
+            val first = settings.value.model
+            settings.value = settings.value.withModel(ProviderId.ANTHROPIC, OTHER_MODEL)
+            settle()
+            tap()
+            settle()
+            assertEquals(OTHER_MODEL, writtenBy())
+
+            // Both are kept, each under its own model (#911).
+            settings.value = settings.value.withModel(ProviderId.ANTHROPIC, first)
+            settle()
+            assertEquals(first, writtenBy())
+            assertFalse(host.state.value.rewrite)
+            assertEquals(2, provider.requestsFor("Alpha"))
         }
 
     @Test
@@ -207,6 +259,31 @@ internal class PipelineHostSettingsRewriteTest : PipelineHostFixture() {
         settle()
         assertKeptWithRewrite(false)
     }
+
+    // The track written by itself under [mode], once a tap on another track made the first action:
+    // played after it by [cause], which [mode] writes on.
+    private fun TestScope.writtenByItself(
+        mode: WriteAutomatically,
+        cause: ChangeCause,
+    ) {
+        settings.value = settings.value.copy(writeAutomatically = mode)
+        started()
+        play("One")
+        settle()
+        tap()
+        settle()
+        play("Alpha", cause = cause)
+        settle()
+        assertKeptWithRewrite(false)
+    }
+
+    // The model the insight shown was written with.
+    private fun writtenBy(): String? =
+        (
+            host.state.value.track
+                ?.insight as? InsightState.Written
+        )?.writtenBy
+            ?.model
 
     // The insight written stays on screen, with *Rewrite insight* offered beside it or not; no call
     // made since the first, through any service.

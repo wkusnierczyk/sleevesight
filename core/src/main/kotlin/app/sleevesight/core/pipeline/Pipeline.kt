@@ -62,9 +62,11 @@ class AiAccess(
  * app passes the same one to each. [webSearch] is the web search engine *AI web search* asks with
  * (#801, [AiSearches]), on the user's key, or none: no engine switched on with its key. [albums]
  * gathers the evidence for an album's insight under *Key insights* (#522, [ItemInsights]), or none
- * (the CLI), when the album's insight has nothing to be written from.
+ * (the CLI), when the album's insight has nothing to be written from. [modelUnavailable] when there
+ * is no [ai] because the selected service's model is found unavailable (#540): nothing is written,
+ * but the key insight kept is still read and shown (#911, `InsightWriter`).
  */
-@Suppress("LongParameterList") // Eleven independent stages; the last seven are optional.
+@Suppress("LongParameterList") // Eleven independent stages, and why one is missing; the last eight are optional.
 class PipelineParts(
     val normalizer: Normalizer,
     val adapters: List<SourceAdapter>,
@@ -77,6 +79,7 @@ class PipelineParts(
     val sessionFacts: SessionFacts = SessionFacts.None,
     val webSearch: WebSearcher? = null,
     val albums: AlbumLookup? = null,
+    val modelUnavailable: Boolean = false,
 ) {
     init {
         require(adapters.map { it.id }.distinct().size == adapters.size) { "One adapter per source" }
