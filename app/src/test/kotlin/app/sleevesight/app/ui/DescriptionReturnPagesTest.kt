@@ -6,8 +6,10 @@ import android.provider.Settings
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
@@ -23,6 +25,7 @@ import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.WAIT_MS
+import app.sleevesight.app.now
 import app.sleevesight.app.session.SleevesightListenerService
 import app.sleevesight.app.ui.home.PAGE_BACK_TAG
 import app.sleevesight.app.ui.home.PAGE_TITLE_TAG
@@ -45,7 +48,8 @@ import org.robolectric.annotation.GraphicsMode
  * *Descriptions on return* back from the pages the settings open (#874), through the app's own
  * navigation: *Credits*, *Diagnostics* and *What leaves the device*, each left by its back arrow or
  * Android's back. *Folded* folds the descriptions again, *Unfolded* opens them, *As left* keeps them,
- * as on opening the settings; a rotation keeps them as they are, on the settings or on a page.
+ * as on opening the settings, as the choice is then, though changed on the settings before the page;
+ * a rotation keeps them as they are, on the settings or on a page.
  *
  * Drawn as on a phone (native graphics): Robolectric's own graphics measure text too narrow for
  * anything to fold.
@@ -192,6 +196,28 @@ class DescriptionReturnPagesTest {
                 scenario.visit(page)
                 assertFalse("folded as left, back from $page", isOpen(spin))
             }
+        }
+
+    @Test
+    fun aChoiceChangedOnTheSettingsAppliesBackFromAPage() =
+        onSettings(DescriptionsOnReturn.AS_LEFT) { scenario ->
+            tap(spin)
+            val returning = hasContentDescription(text(R.string.settings_descriptions_on_return), substring = true)
+            compose
+                .onNode(hasText(text(R.string.settings_descriptions_folded)) and isSelectable() and returning)
+                .performScrollTo()
+                .performClick()
+            // Idle first, so the tap's save runs before the store is read.
+            compose.waitForIdle()
+            compose.waitUntil(WAIT_MS) {
+                app.graph.settings
+                    .now()
+                    .descriptionsOnReturn == DescriptionsOnReturn.FOLDED
+            }
+            compose.waitForIdle()
+            assertTrue("left open until a return", isOpen(spin))
+            scenario.visit(Page.CREDITS)
+            assertFalse("folded back from the page", isOpen(spin))
         }
 
     @Test

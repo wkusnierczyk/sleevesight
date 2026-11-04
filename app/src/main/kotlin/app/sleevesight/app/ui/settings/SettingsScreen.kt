@@ -444,8 +444,8 @@ private fun SettingsContent(
     val mode = settings.descriptionsOnReturn
     val descriptions = rememberDescriptionFolds(mode)
     val descriptionsShown =
-        remember(descriptions, settings.foldDescriptions, mode, settings.unfoldedDescriptions) {
-            FoldsShown(descriptions, mode, settings.unfoldedDescriptions.toSet()) { id, unfolded ->
+        remember(descriptions, settings.foldDescriptions, settings.unfoldedDescriptions) {
+            FoldsShown(descriptions, settings.unfoldedDescriptions.toSet()) { id, unfolded ->
                 update {
                     it.copy(
                         unfoldedDescriptions = unfoldedIds(it.unfoldedDescriptions, id, unfolded),
@@ -453,7 +453,8 @@ private fun SettingsContent(
                 }
             }.takeIf { settings.foldDescriptions }
         }
-    // A section opened again within the visit shows its descriptions as *Descriptions on return* has it.
+    // A section opened within the visit shows its descriptions as *Descriptions on return* has it then,
+    // until it is opened again: a change of the choice waits for the next return.
     SideEffect { folds.onOpen = { descriptions.reopen(it, mode) } }
     // A search's own folds and unfolds go with it: cleared, it leaves each as before it (#847).
     LaunchedEffect(folds.searching) { if (!folds.searching) descriptions.endSearch() }

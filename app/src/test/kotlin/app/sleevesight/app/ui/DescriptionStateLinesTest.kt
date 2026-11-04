@@ -27,6 +27,7 @@ import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.testCipher
 import app.sleevesight.app.ui.settings.DESCRIPTION_TAG
+import app.sleevesight.app.ui.settings.InstalledPlayers
 import app.sleevesight.app.ui.settings.ROW_NOTE_TAG
 import app.sleevesight.app.ui.settings.SEARCH_FIELD_TAG
 import app.sleevesight.app.ui.settings.SettingsScreen
@@ -46,6 +47,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -60,8 +62,8 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * What folding leaves in full or marks (#847): a model found unavailable is said under its row in
- * full, never folded, and so is what *Stop after*'s count does (#874); and a search's marks show in
- * a description's paragraph with a link, the link still working.
+ * full, never folded, and so are what *Stop after*'s count does and *No players yet* (#874); and a
+ * search's marks show in a description's paragraph with a link, the link still working.
  *
  * Drawn as on a phone (native graphics): Robolectric's own graphics measure text too narrow for
  * anything to fold.
@@ -102,6 +104,7 @@ class DescriptionStateLinesTest {
 
     private fun show(
         modelCheck: ModelCheck? = null,
+        installedPlayers: InstalledPlayers? = null,
         block: () -> Unit,
     ) = ActivityScenario.launch(MainActivity::class.java).use { scenario ->
         scenario.onActivity { activity ->
@@ -113,6 +116,7 @@ class DescriptionStateLinesTest {
                     { CompletableDeferred(true) },
                     saves,
                     modelCheck = modelCheck,
+                    installedPlayers = installedPlayers,
                 ) { it }
             }
         }
@@ -176,6 +180,24 @@ class DescriptionStateLinesTest {
             val layout = layouts.single()
             assertTrue("laid out in full, on more than one line", layout.lineCount > 1 && !layout.hasVisualOverflow)
             // As the line under a button group: no fold of its own.
+            assertTrue(
+                compose.onAllNodes(hasTestTag(DESCRIPTION_TAG) and hasText(said)).fetchSemanticsNodes().isEmpty(),
+            )
+        }
+    }
+
+    @Test
+    fun noPlayersYetIsSaidInFull() {
+        // None of the players stored is on the phone.
+        val phone = InstalledPlayers(icon = { null }, visible = { false }, seen = MutableStateFlow(emptySet()))
+        show(installedPlayers = phone) {
+            compose.openSection(SettingsSection.PLAYERS)
+            val said = text(R.string.settings_players_none)
+            compose.waitUntil(WAIT_MS) {
+                compose.onAllNodes(hasText(said), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+            }
+            compose.onNode(hasText(said), useUnmergedTree = true).performScrollTo()
+            // A state, not a description: no fold of its own.
             assertTrue(
                 compose.onAllNodes(hasTestTag(DESCRIPTION_TAG) and hasText(said)).fetchSemanticsNodes().isEmpty(),
             )

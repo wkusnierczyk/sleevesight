@@ -79,15 +79,21 @@ private class FirstLine {
  * ([Description], #847). As a sub-heading over rows, [over] names them by
  * title: a search that shows only some rows shows it while any of them shows (#649); with none, it
  * is not a setting of its own, and such a search leaves it out. A blank line in [text] starts a
- * paragraph ([Paragraphs], #758).
+ * paragraph ([Paragraphs], #758). Not [foldable], a line saying a state rather than a description
+ * (*No players yet*, #874), it shows in full.
  */
 @Composable
 internal fun Hint(
     @StringRes text: Int,
     over: List<String> = emptyList(),
+    foldable: Boolean = true,
 ) {
     val search = LocalRowSearch.current
     if (search?.filtering == true && over.none { search.shows(it) }) return
+    if (!foldable) {
+        Paragraphs(stringResource(text), Modifier.padding(vertical = 4.dp))
+        return
+    }
     // Folded to one line as a row's description is (#847), known by its string's name.
     val key = LocalResources.current.getResourceEntryName(text)
     Description(key, stringResource(text), Modifier.padding(vertical = 4.dp))
