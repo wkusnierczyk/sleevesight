@@ -7,22 +7,19 @@
   site is built from `main`, which a release's notes reach as it is released, so no step per release
   is needed. The versions are compared as numbers, part by part (each part below 1000, so 0.1.9 comes
   before 0.1.10). A page up to date says so under the line back to the index; a page behind says
-  what it was last brought up to, in a banner in that line's place, until the docs are brought up to date.
-  The banner names no released version, so that it stays true as releases come (#924).
+  what it was last brought up to, in a banner in that line's place, until the docs are brought up
+  to date. The banner names no released version, so that it stays true as releases come (#924).
 {% endcomment %}
-{%- assign released = "" -%}
 {%- assign released_n = -1 -%}
 {%- for file in site.static_files -%}
   {%- if file.path contains "/release-notes/" and file.extname == ".txt" -%}
-    {%- assign version = file.name | remove: ".txt" -%}
-    {%- assign parts = version | split: "." -%}
+    {%- assign parts = file.name | remove: ".txt" | split: "." -%}
     {%- if parts.size == 3 -%}
       {%- assign n = parts[0] | times: 1000000 -%}
       {%- assign n = parts[1] | times: 1000 | plus: n -%}
       {%- assign n = parts[2] | plus: n -%}
       {%- if n > released_n -%}
         {%- assign released_n = n -%}
-        {%- assign released = version -%}
       {%- endif -%}
     {%- endif -%}
   {%- endif -%}
