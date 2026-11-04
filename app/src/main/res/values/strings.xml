@@ -339,7 +339,7 @@
     <string name="credits_wikipedia">Wikipedia</string>
     <string name="credits_wikipedia_text">Sentences from articles, by Wikipedia contributors.</string>
     <string name="credits_wikidata">Wikidata</string>
-    <string name="credits_wikidata_text">Facts on songs and artists, from Wikidata.</string>
+    <string name="credits_wikidata_text">Facts on songs, albums and artists, from Wikidata.</string>
     <string name="credits_lastfm">Last.fm</string>
     <string name="credits_lastfm_text">Artist bios by Last.fm users, under CC BY-SA; listeners, tags, genre labels and similar artists under Last.fm’s API terms.</string>
     <string name="credits_exa">Exa</string>
