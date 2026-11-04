@@ -52,8 +52,21 @@ class MusicBrainzClient(
     override suspend fun searchRecordings(
         title: String,
         artist: String,
-    ): Lookup<List<MbRecording>> {
-        val query = "recording:${phrase(title)} AND artist:${phrase(artist)}"
+    ): Lookup<List<MbRecording>> = search("recording:${phrase(title)} AND artist:${phrase(artist)}")
+
+    override suspend fun searchRecordingsBefore(
+        title: String,
+        artist: String,
+        date: String,
+    ): Lookup<List<MbRecording>> =
+        // Only a date as MusicBrainz writes one reaches the query; anything else is not asked.
+        if (DATE.matches(date)) {
+            search("recording:${phrase(title)} AND artist:${phrase(artist)} AND firstreleasedate:[* TO $date]")
+        } else {
+            Lookup.Failed("InvalidDate")
+        }
+
+    private suspend fun search(query: String): Lookup<List<MbRecording>> {
         val request =
             NetRequest(
                 "$BASE/recording",
@@ -207,8 +220,13 @@ class MusicBrainzClient(
          * MusicBrainz's maximum. A much-recorded song has dozens of recordings by the same artist,
          * and the search ranks the original far down, differently from one request to the next:
          * with 50, Chuck Berry's 1956 "Roll Over Beethoven" was sometimes not among them (#78).
+         * With more than that, it may still be missing, and a search for the recordings released by
+         * the first page's earliest date adds it ([searchRecordingsBefore], #906).
          */
-        const val SEARCH_LIMIT: Int = 100
+        const val SEARCH_LIMIT: Int = MusicBrainzLookup.SEARCH_PAGE
+
+        // A date as MusicBrainz writes one: a year, a month or a day.
+        private val DATE = Regex("^[0-9]{4}(-[0-9]{2}){0,2}$")
 
         /** With `tags`, for the track's genre labels (#439), which only [MbRecordingDetail.tags] holds. */
         const val RECORDING_INC: String = "artist-credits+work-rels+artist-rels+url-rels+tags"
