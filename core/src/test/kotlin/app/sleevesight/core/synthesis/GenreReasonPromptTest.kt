@@ -96,7 +96,11 @@ class GenreReasonPromptTest {
         val text = prompt(allowModel = true)
         assertTrue(GenreReasonPrompt.MODEL_RULE in text)
         assertTrue(GenreReasonPrompt.MODEL_EVIDENCE_RULE in text)
-        assertTrue("as many as the explanation needs: end each with [${GroundingCheck.MODEL_ID}]" in text)
+        assertTrue("as many of the style's sentences as the explanation needs: end each with [AI]" in text)
+        // Its own rule on a gap, counting the knowledge too: no evidence line is no "write none".
+        assertTrue(GenreReasonPrompt.MODEL_GAP_RULE in text)
+        assertTrue("If the evidence and your own knowledge support fewer sentences" in text)
+        assertFalse(InsightPrompt.GAP_RULE in text)
         // The insight's rules that cap it, or keep it to the evidence alone, are not there.
         assertFalse("at most one sentence of your own general knowledge" in text)
         assertFalse(InsightPrompt.EVIDENCE_RULE in text)
@@ -111,7 +115,6 @@ class GenreReasonPromptTest {
         assertFalse(GenreReasonPrompt.LABEL_RULE in text)
         // The insight's other rules stand, word for word.
         assertTrue(InsightPrompt.WEB_GENRE_RULE in text)
-        assertTrue(InsightPrompt.GAP_RULE in text)
         assertTrue(InsightPrompt.LENGTH_RULE in text)
         assertTrue(GenreReasonPrompt.ABOUT_THE_MUSIC_RULE in text)
     }

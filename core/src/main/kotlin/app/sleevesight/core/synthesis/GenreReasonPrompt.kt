@@ -43,8 +43,8 @@ object GenreReasonPrompt {
      * ([LABEL_RULE]).
      * Version 5 (#695): with the model's own knowledge on, a reason may be written from it where the
      * evidence does not explain the label, as many sentences as it needs, each cited `[AI]`
-     * ([MODEL_EVIDENCE_RULE], [MODEL_RULE]), and `NO_EVIDENCE` only when neither the evidence nor
-     * the model's knowledge explains it ([MODEL_LABEL_RULE]); until then it shared the insight's
+     * ([MODEL_EVIDENCE_RULE], [MODEL_RULE], [MODEL_GAP_RULE]), and `NO_EVIDENCE` only when neither
+     * the evidence nor the model's knowledge explains it ([MODEL_LABEL_RULE]); until then it shared the insight's
      * rules, which allow one `[AI]` sentence and otherwise only the evidence, so a label the sources
      * did not explain was answered `NO_EVIDENCE` with the knowledge on too. The prompt with it off is
      * version 4's. Raised so that reasons kept as `NO_EVIDENCE` with the knowledge on are asked again.
@@ -122,7 +122,17 @@ object GenreReasonPrompt {
      */
     val MODEL_RULE: String =
         "- You may write sentences from your own general knowledge of the track, the artists and the genre, " +
-            "as many as the explanation needs: end each with [${GroundingCheck.MODEL_ID}]."
+            "as many of the style's sentences as the explanation needs: end each with [${GroundingCheck.MODEL_ID}]."
+
+    /**
+     * The rule on a gap with the model's own knowledge on (version 5, #695), in place of the
+     * insight's ([InsightPrompt.GAP_RULE]), which counts only the evidence: with no evidence line,
+     * "write fewer" would read as "write none", against an explanation from the knowledge alone.
+     */
+    const val MODEL_GAP_RULE: String =
+        "- If the evidence and your own knowledge support fewer sentences than the style asks for, write fewer; " +
+            "a short explanation is enough. Do not say what the evidence leaves out. Write no sentence without a " +
+            "citation."
 
     /**
      * The prompt for why [nowPlaying], normalized as [normalized], carries the genre label [genre],
@@ -207,9 +217,9 @@ object GenreReasonPrompt {
 
     /**
      * The insight's rules ([InsightPrompt.contract]), with the label's own first. With [allowModel]
-     * (version 5, #695), the reason's own rules on the evidence, the model's knowledge and
+     * (version 5, #695), the reason's own rules on the evidence, the model's knowledge, a gap and
      * `NO_EVIDENCE` in place of the insight's ([MODEL_EVIDENCE_RULE], [MODEL_RULE],
-     * [MODEL_LABEL_RULE]), and the first rule reworded to match.
+     * [MODEL_GAP_RULE], [MODEL_LABEL_RULE]), and the first rule reworded to match.
      */
     fun contract(allowModel: Boolean): String =
         if (allowModel) {
@@ -218,7 +228,7 @@ object GenreReasonPrompt {
                     "from your own knowledge.",
                 ABOUT_THE_MUSIC_RULE,
                 MODEL_LABEL_RULE,
-                InsightPrompt.contract(MODEL_EVIDENCE_RULE, MODEL_RULE, noEvidence = null),
+                InsightPrompt.contract(MODEL_EVIDENCE_RULE, MODEL_RULE, noEvidence = null, gap = MODEL_GAP_RULE),
             )
         } else {
             listOf(

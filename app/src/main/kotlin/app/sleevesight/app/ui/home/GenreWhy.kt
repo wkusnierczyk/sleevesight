@@ -118,7 +118,7 @@ internal class ReasonActions(
     val readAloud: ReadAloudControl?,
     val again: () -> Unit,
     val afterRetry: () -> Unit,
-    val openSettingsAt: (SettingsTarget) -> Unit = {},
+    val openSettingsAt: (SettingsTarget) -> Unit,
 )
 
 // The reason asked for ([shown]), under the [question] (#523, #762): while the AI service is asked

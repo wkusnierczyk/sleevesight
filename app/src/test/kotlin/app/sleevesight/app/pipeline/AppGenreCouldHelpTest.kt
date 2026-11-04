@@ -39,8 +39,9 @@ import org.junit.Test
 
 /**
  * What the panel offers to switch on when nothing explains a genre (#695): what is off in the
- * settings and could explain it, *AI service knowledge* and *AI web search* set to *Off*; not *AI
- * web search* set on but unable to search (no web search engine), which switching on would not change.
+ * settings and could explain it, *AI service knowledge* and *AI web search* as *Settings* shows it
+ * (*Off*, set so or with Exa web search off); not *AI web search* used but with no web search engine
+ * to run it, which nothing in the panel's link would change.
  */
 class AppGenreCouldHelpTest {
     private val provider = CountingProvider().apply { reply = { GroundingCheck.NO_EVIDENCE } }
@@ -101,10 +102,12 @@ class AppGenreCouldHelpTest {
         }
 
     @Test
-    fun `with web search on but Exa web search off, it names only what is off`() =
+    fun `with Exa web search off, AI web search shows as Off, and is named`() =
         runTest {
             val noExa = base.copy(enabledSources = Settings.DEFAULT_SOURCES - SourceSwitch.WEB)
-            assertEquals(listOf(GenreListMode.KNOWLEDGE), couldHelp(noExa))
+            assertEquals(listOf(GenreListMode.KNOWLEDGE, GenreListMode.WEB), couldHelp(noExa))
+            val knowledgeNoExa = noExa.copy(enabledSources = noExa.enabledSources + SourceSwitch.MODEL)
+            assertEquals(listOf(GenreListMode.WEB), couldHelp(knowledgeNoExa))
         }
 
     @Test

@@ -154,16 +154,17 @@ object InsightPrompt {
         )
 
     /**
-     * The fixed rules with [evidence], [model] and [noEvidence] in place of the insight's rules on
-     * the evidence ([EVIDENCE_RULE]), on the model's own knowledge, and on a reply with nothing to
-     * write ([NO_EVIDENCE_RULE]; left out when null): the genre reason's own (#695,
-     * `GenreReasonPrompt.contract`), which, with the model's own knowledge on, may be written from it
-     * alone. The others are the insight's, word for word.
+     * The fixed rules with [evidence], [model], [noEvidence] and [gap] in place of the insight's
+     * rules on the evidence ([EVIDENCE_RULE]), on the model's own knowledge, on a reply with nothing
+     * to write ([NO_EVIDENCE_RULE]; left out when null) and on a gap ([GAP_RULE]): the genre reason's
+     * own (#695, `GenreReasonPrompt.contract`), which, with the model's own knowledge on, may be
+     * written from it alone. The others are the insight's, word for word.
      */
     fun contract(
         evidence: String,
         model: String,
         noEvidence: String?,
+        gap: String = GAP_RULE,
     ): String =
         listOfNotNull(
             "- End every factual sentence with the id(s) that support it, like [W1] or [W2][${SourceId.WEB.tag}1].",
@@ -174,7 +175,7 @@ object InsightPrompt {
             "- An \"artist\" line is about the performer, not this recording.",
             "- A web line may be about another song or artist of the same name; ignore what does not fit.",
             WEB_GENRE_RULE,
-            GAP_RULE,
+            gap,
             model,
             "- Plain text only: no headings, lists or markdown.",
             noEvidence,

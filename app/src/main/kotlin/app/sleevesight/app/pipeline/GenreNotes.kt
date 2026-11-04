@@ -67,10 +67,10 @@ sealed interface GenreReason {
      * [model] is the name of the model that writes it, for the credit under it. A reason written
      * before this play of the track, served from what was kept, has [keptAt], when it was written
      * (#851); null for one written on this play. [couldHelp] is what is switched off in the settings
-     * and could explain it (#695: *AI service knowledge*, *AI web search* set to *Off*), in the order
-     * the panel names them, which the panel offers to switch on under "AI could not find an
-     * explanation." ([InsightState.NoEvidence]); empty with both on (*AI web search* on but unable to
-     * search included), and for every other state.
+     * and could explain it (#695: *AI service knowledge*, *AI web search* as *Settings* shows it, *Off*
+     * with Exa web search off too), in the order the panel names them, which the panel offers to
+     * switch on under "AI could not find an explanation." ([InsightState.NoEvidence]); empty with both
+     * on (*AI web search* used but with no search engine to run it included), and for every other state.
      */
     data class Shown(
         val state: InsightState,
@@ -364,8 +364,9 @@ class AppGenreNotes private constructor(
         }
 
     // What could explain a reason that is switched off in [settings] (#695): *AI service knowledge*,
-    // and *AI web search* set to *Off*. Not *AI web search* set on but unable to search (Exa web
-    // search off, or no key): switching it on would change nothing; none with no settings read.
+    // and *AI web search* as *Settings* shows it (`aiWebSearchUsed`): *Off*, set so or with Exa web
+    // search off, where the setting says Exa is needed. Not *AI web search* used but with no web
+    // search engine to run it; none with no settings read.
     private fun couldHelp(settings: Settings?): List<GenreListMode> =
         if (settings == null) {
             emptyList()
@@ -373,7 +374,7 @@ class AppGenreNotes private constructor(
             GenreLists.MODES.filter { mode ->
                 when (mode) {
                     GenreListMode.KNOWLEDGE -> !settings.isEnabled(SourceId.MODEL)
-                    GenreListMode.WEB -> settings.aiWebSearch == AiWebSearch.OFF
+                    GenreListMode.WEB -> settings.aiWebSearchUsed == AiWebSearch.OFF
                 }
             }
         }
