@@ -526,6 +526,8 @@ class AppGraph internal constructor(
             onAction = userActions::acted,
             // The next item in the shown player's queue, prepared ahead (D13).
             next = combine(sessions.nowPlaying, sessions.queue, NextInQueue::of),
+            // An ad told only once its queue came, published as a track first (#880): taken back.
+            withdrawn = sessions.withdrawn,
             // Back online, the playing track's unreachable sources are asked again (#192).
             online = appContext.getSystemService(ConnectivityManager::class.java).online(),
             epoch = clearEpoch,

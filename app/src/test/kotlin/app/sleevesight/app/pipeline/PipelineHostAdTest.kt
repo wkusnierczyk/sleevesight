@@ -12,6 +12,7 @@ import app.sleevesight.app.session.Sessions.SPOTIFY
 import app.sleevesight.app.session.Sessions.advertised
 import app.sleevesight.app.session.Sessions.metadata
 import app.sleevesight.app.session.Sessions.queueItem
+import app.sleevesight.app.session.Sessions.state
 import app.sleevesight.app.speech.FakeFocus
 import app.sleevesight.app.speech.FakeSpeech
 import app.sleevesight.app.speech.ReadAloud
@@ -26,6 +27,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -36,6 +38,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import java.util.Locale
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * An ad between two tracks (#880), from the real session layer into the host, as the app wires them
@@ -74,6 +78,7 @@ internal class PipelineHostAdTest : PipelineHostFixture() {
                 clock = { testScheduler.currentTime },
             )
         backgroundScope.launch(now) { repository.trackChanges.collect { changes.value = it } }
+        backgroundScope.launch(now) { repository.withdrawn.collect { withdrawn.value = it } }
         backgroundScope.launch(now) {
             combine(repository.nowPlaying, repository.queue, NextInQueue::of).collect {
                 next.value =
@@ -101,6 +106,92 @@ internal class PipelineHostAdTest : PipelineHostFixture() {
         provider.prompts.any { "tetesept" in it } ||
             resolved.any { "tetesept" in it.first } ||
             musicBrainz.asked.any { "tetesept" in it }
+
+    // Spotify's queue with an ad as its second item.
+    private val adQueue =
+        listOf(queueItem(1, "Sundown", mediaId = "spotify:track:1"), queueItem(2, "tetesept", mediaId = "spotify:ad:1"))
+
+    // The ad's metadata, with no flag and no media id, and the state naming its queue item: a track
+    // until the queue that names that item an ad comes.
+    private fun FakeSession.adWithoutItsQueue() {
+        send(state(queueItem = 2))
+        send(metadata(title = "tetesept", artist = "Advertisement • 2 of 3", durationMs = 28_000))
+    }
+
+    @Test
+    fun `an ad told by a queue after the session settled, before the debounce, is never looked up`() =
+        runTest {
+            val spotify = acted()
+            spotify.adWithoutItsQueue()
+            advanceTimeBy(SessionRepository.SETTLE + 100.milliseconds)
+            assertEquals("published as a track first", "tetesept", changes.value?.nowPlaying?.title)
+            spotify.sendQueue(adQueue, "Play Queue")
+            settle()
+            assertFalse("nothing looked up or written for the ad", askedAboutTheAd())
+            spotify.send(carefree)
+            settle()
+            assertEquals("the track after it, as usual", 1, provider.requestsFor("Carefree Highway"))
+        }
+
+    @Test
+    fun `an ad told after its run started has the run cancelled, and nothing more done for it`() =
+        runTest {
+            settings.value = settings.value.copy(readNewInsightsAloud = true)
+            val speech = FakeSpeech()
+            val readAloud =
+                ReadAloud(
+                    speech,
+                    FakeFocus(),
+                    settings,
+                    SpokenWords("Unverified:") { title, artists -> "$title, by $artists." },
+                    { false },
+                    { _, _ -> },
+                    backgroundScope,
+                ) { Locale.UK }
+            readAloud.activityStarted()
+            val spotify = acted()
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+                readAloud.follow(repository.nowPlaying, host.state)
+            }
+            runCurrent()
+            val read = speech.spoken.size
+            provider.streaming = 10.seconds
+            spotify.adWithoutItsQueue()
+            advanceTimeBy(3.seconds)
+            assertEquals("its run started, its call under way", 1, provider.requestsFor("tetesept"))
+            val lookedUp = resolved.size
+            val completed = provider.completed
+
+            spotify.sendQueue(adQueue, "Play Queue")
+            settle()
+            assertEquals("its call cut off", completed, provider.completed)
+            assertEquals("nothing more asked", 1, provider.requestsFor("tetesept"))
+            assertEquals("nothing more looked up", lookedUp, resolved.size)
+            assertTrue(
+                "not shown: ${host.state.value.track}",
+                host.state.value.track
+                    ?.nowPlaying
+                    ?.title != "tetesept",
+            )
+            assertEquals("nothing read", read, speech.spoken.size)
+        }
+
+    @Test
+    fun `an ad told late counts as no track change for Saver either`() =
+        runTest {
+            settings.value = settings.value.copy(pauseAutoWriteAfter = 1, lookUpInBackground = true)
+            val spotify = acted()
+            host.activityStopped(changingConfigurations = false)
+            runCurrent()
+            spotify.adWithoutItsQueue()
+            advanceTimeBy(SessionRepository.SETTLE + 100.milliseconds)
+            spotify.sendQueue(adQueue, "Play Queue")
+            settle()
+            spotify.send(carefree)
+            settle()
+            assertEquals(1, provider.requestsFor("Carefree Highway"))
+            assertFalse("written, not offered", host.state.value.lapsed)
+        }
 
     @Test
     fun `automatic writing writes no insight for an ad, and writes the track after it`() =

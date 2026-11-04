@@ -111,6 +111,7 @@ class SessionRepository(
 ) {
     private val nowPlayingState = MutableStateFlow<NowPlaying?>(null)
     private val adState = MutableStateFlow<AdPlaying?>(null)
+    private val withdrawnState = MutableStateFlow<NowPlaying?>(null)
     private val playbackState = MutableStateFlow(PlaybackInfo.NONE)
     private val queueState = MutableStateFlow<SessionQueue?>(null)
     private val artState = MutableStateFlow<Bitmap?>(null)
@@ -140,6 +141,14 @@ class SessionRepository(
      * reading both never sees neither for a moment.
      */
     val ad: StateFlow<AdPlaying?> = adState.asStateFlow()
+
+    /**
+     * The last track published that turned out to be an ad (#880): told only by a queue that came
+     * after its metadata and state had settled, so it was published as a track first. Set as [ad]
+     * replaces it, for the pipeline to take its report back (`PipelineHost`: no run for it, and a
+     * run of it already started cancelled); a track's play tag tells each apart.
+     */
+    val withdrawn: StateFlow<NowPlaying?> = withdrawnState.asStateFlow()
 
     /**
      * The last change of [nowPlaying] from one track to another, with when it began and the
@@ -452,6 +461,7 @@ class SessionRepository(
         val switched = shown !== lastShown
         lastShown = shown
         val previous = nowPlayingState.value
+        takeBack(shown, previous)
         var judgedCause: ChangeCause? = null
         val track = trackOf(shown, previous, switched)
         val ad = shown?.ad
@@ -480,6 +490,15 @@ class SessionRepository(
         // After the change, so a collector that sees a new track playing finds its change.
         publishPlaying(shown)
         updateArt(previous, track, SessionMapping.artSources(shown?.trackMetadata?.takeIf { track != null }))
+    }
+
+    /** [previous], the track shown, taken back ([withdrawn]) when [shown] now tells it to be an ad. */
+    private fun takeBack(
+        shown: Attached?,
+        previous: NowPlaying?,
+    ) {
+        val misread = shown?.misread ?: return
+        if (previous != null && TrackIdentity.same(previous, misread)) withdrawnState.value = misread
     }
 
     /**
@@ -710,6 +729,13 @@ class SessionRepository(
         var ad: AdPlaying? = null
             private set
 
+        /**
+         * The track the last settle found to be the ad it had settled before as a track ([ad] of the
+         * same title, told by the queue only now); null when it found none.
+         */
+        var misread: NowPlaying? = null
+            private set
+
         /** The change the last settle made, if it made one: for skip detection (D5). */
         var change: SessionChange? = null
             private set
@@ -891,6 +917,7 @@ class SessionRepository(
             track = null
             trackMetadata = null
             ad = null
+            misread = null
             change = null
             stateItem = null
             knownItem = null
@@ -1147,6 +1174,7 @@ class SessionRepository(
             val item = item(previous)
             val isAd = isAdNow()
             ad = if (isAd) AdPlaying.of(gate.player, metadata) else null
+            misread = previous?.takeIf { isAd && it.title == SessionMapping.title(metadata) }
             return if (isAd) null else SessionMapping.nowPlaying(gate.player, metadata, item)
         }
 
