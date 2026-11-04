@@ -1,672 +1,8 @@
 {
- "created": "2026-11-04T19:42:54.151Z",
- "count": 11,
+ "created": "2026-11-04T20:06:49.207Z",
+ "count": 13,
  "offset": 0,
  "recordings": [
-  {
-   "id": "08c8545d-2489-4d4a-b10f-4b9c7cbf70b3",
-   "score": 100,
-   "artist-credit-id": "ec91ef47-fd3d-3e19-a285-fe68a8c2c58a",
-   "title": "Dream On",
-   "disambiguation": "live, 1975-08-29: The Shaeffer Music Festival, Woolman Rink, Central Park, New York City, NY",
-   "video": null,
-   "artist-credit": [
-    {
-     "name": "Aerosmith",
-     "artist": {
-      "id": "3d2b98e5-556f-4451-a3ff-c50ea18d57cb",
-      "name": "Aerosmith",
-      "sort-name": "Aerosmith",
-      "disambiguation": "American hard rock band",
-      "aliases": [
-       {
-        "sort-name": "エアロスミス",
-        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
-        "name": "エアロスミス",
-        "locale": null,
-        "type": "Search hint",
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "Aerosmith",
-        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
-        "name": "Aerosmith",
-        "locale": null,
-        "type": "Artist name",
-        "primary": null,
-        "begin-date": "1970",
-        "end-date": null
-       },
-       {
-        "sort-name": "Aersomith",
-        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
-        "name": "Aersomith",
-        "locale": null,
-        "type": "Search hint",
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "Aero-smith",
-        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
-        "name": "Aero-smith",
-        "locale": null,
-        "type": "Search hint",
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "Aerosmidt",
-        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
-        "name": "Aerosmidt",
-        "locale": null,
-        "type": "Search hint",
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "Aroesmith",
-        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
-        "name": "Aroesmith",
-        "locale": null,
-        "type": "Search hint",
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "Aerosmit",
-        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
-        "name": "Aerosmit",
-        "locale": null,
-        "type": "Search hint",
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "Aero Smith",
-        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
-        "name": "Aero Smith",
-        "locale": null,
-        "type": "Search hint",
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "Arosmith",
-        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
-        "name": "Arosmith",
-        "locale": null,
-        "type": "Search hint",
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "Areosmith",
-        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
-        "name": "Areosmith",
-        "locale": null,
-        "type": "Search hint",
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       }
-      ]
-     }
-    }
-   ],
-   "first-release-date": "1976",
-   "releases": [
-    {
-     "id": "2fc10f3c-e20a-4edd-b666-793007d8e45c",
-     "status-id": "1156806e-d06a-38bd-83f0-cf2284a808b9",
-     "artist-credit-id": "ec91ef47-fd3d-3e19-a285-fe68a8c2c58a",
-     "count": 1,
-     "title": "Rock This Way",
-     "status": "Bootleg",
-     "artist-credit": [
-      {
-       "name": "Aerosmith",
-       "artist": {
-        "id": "3d2b98e5-556f-4451-a3ff-c50ea18d57cb",
-        "name": "Aerosmith",
-        "sort-name": "Aerosmith",
-        "disambiguation": "American hard rock band"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "320e16bc-f570-42fe-b743-1713f3940d19",
-      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
-      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "Access To Excess",
-      "primary-type": "Album",
-      "secondary-types": [
-       "Live"
-      ],
-      "secondary-type-ids": [
-       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
-      ]
-     },
-     "date": "1976",
-     "country": "US",
-     "release-events": [
-      {
-       "date": "1976",
-       "area": {
-        "id": "489ce91b-6658-3307-9877-795b68554c98",
-        "name": "United States",
-        "sort-name": "United States",
-        "iso-3166-1-codes": [
-         "US"
-        ]
-       }
-      }
-     ],
-     "track-count": 8,
-     "media": [
-      {
-       "id": "425848f2-57e1-351c-a459-2a3f0bc98c55",
-       "position": 1,
-       "format": "12\" Vinyl",
-       "track": [
-        {
-         "id": "9a6b3a94-7390-4209-ac39-5ae7c3aabad8",
-         "number": "A3",
-         "title": "Dream On"
-        }
-       ],
-       "track-count": 8,
-       "track-offset": 2
-      }
-     ]
-    },
-    {
-     "id": "ae909961-59a4-4513-b719-72eb04c64496",
-     "status-id": "1156806e-d06a-38bd-83f0-cf2284a808b9",
-     "artist-credit-id": "ec91ef47-fd3d-3e19-a285-fe68a8c2c58a",
-     "count": 1,
-     "title": "King Biscuit Flower Hour",
-     "status": "Bootleg",
-     "artist-credit": [
-      {
-       "name": "Aerosmith",
-       "artist": {
-        "id": "3d2b98e5-556f-4451-a3ff-c50ea18d57cb",
-        "name": "Aerosmith",
-        "sort-name": "Aerosmith",
-        "disambiguation": "American hard rock band"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "320e16bc-f570-42fe-b743-1713f3940d19",
-      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
-      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "Access To Excess",
-      "primary-type": "Album",
-      "secondary-types": [
-       "Live"
-      ],
-      "secondary-type-ids": [
-       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
-      ]
-     },
-     "track-count": 9,
-     "media": [
-      {
-       "id": "069ac3bc-3fd3-3f35-8391-066c20073c78",
-       "position": 1,
-       "format": "CD",
-       "track": [
-        {
-         "id": "ec6c40f3-5c16-4505-9320-abc832321aa9",
-         "number": "3",
-         "title": "Dream On"
-        }
-       ],
-       "track-count": 9,
-       "track-offset": 2
-      }
-     ]
-    }
-   ]
-  },
-  {
-   "id": "737822a5-6d20-4976-8a23-563d60ab2e42",
-   "score": 100,
-   "artist-credit-id": "ec91ef47-fd3d-3e19-a285-fe68a8c2c58a",
-   "title": "Dream On",
-   "length": 280000,
-   "disambiguation": "live, 1973-09-26: Counterpart Studios, Cincinnati, OH, USA",
-   "video": null,
-   "artist-credit": [
-    {
-     "name": "Aerosmith",
-     "artist": {
-      "id": "3d2b98e5-556f-4451-a3ff-c50ea18d57cb",
-      "name": "Aerosmith",
-      "sort-name": "Aerosmith",
-      "disambiguation": "American hard rock band",
-      "aliases": [
-       {
-        "sort-name": "エアロスミス",
-        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
-        "name": "エアロスミス",
-        "locale": null,
-        "type": "Search hint",
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "Aerosmith",
-        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
-        "name": "Aerosmith",
-        "locale": null,
-        "type": "Artist name",
-        "primary": null,
-        "begin-date": "1970",
-        "end-date": null
-       },
-       {
-        "sort-name": "Aersomith",
-        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
-        "name": "Aersomith",
-        "locale": null,
-        "type": "Search hint",
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "Aero-smith",
-        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
-        "name": "Aero-smith",
-        "locale": null,
-        "type": "Search hint",
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "Aerosmidt",
-        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
-        "name": "Aerosmidt",
-        "locale": null,
-        "type": "Search hint",
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "Aroesmith",
-        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
-        "name": "Aroesmith",
-        "locale": null,
-        "type": "Search hint",
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "Aerosmit",
-        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
-        "name": "Aerosmit",
-        "locale": null,
-        "type": "Search hint",
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "Aero Smith",
-        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
-        "name": "Aero Smith",
-        "locale": null,
-        "type": "Search hint",
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "Arosmith",
-        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
-        "name": "Arosmith",
-        "locale": null,
-        "type": "Search hint",
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "Areosmith",
-        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
-        "name": "Areosmith",
-        "locale": null,
-        "type": "Search hint",
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       }
-      ]
-     }
-    }
-   ],
-   "first-release-date": "1973-10-10",
-   "releases": [
-    {
-     "id": "fab28508-ef7b-49c4-a8af-13017b0e4456",
-     "status-id": "1156806e-d06a-38bd-83f0-cf2284a808b9",
-     "artist-credit-id": "ec91ef47-fd3d-3e19-a285-fe68a8c2c58a",
-     "count": 1,
-     "title": "Rattlesnake Shake",
-     "status": "Bootleg",
-     "artist-credit": [
-      {
-       "name": "Aerosmith",
-       "artist": {
-        "id": "3d2b98e5-556f-4451-a3ff-c50ea18d57cb",
-        "name": "Aerosmith",
-        "sort-name": "Aerosmith",
-        "disambiguation": "American hard rock band"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "936fe6b1-1e2d-3ea2-b251-29fd718202dd",
-      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
-      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "Rattlesnake Shake",
-      "primary-type": "Album",
-      "secondary-types": [
-       "Live"
-      ],
-      "secondary-type-ids": [
-       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
-      ]
-     },
-     "date": "1981",
-     "country": "DE",
-     "release-events": [
-      {
-       "date": "1981",
-       "area": {
-        "id": "85752fda-13c4-31a3-bee5-0e5cb1f51dad",
-        "name": "Germany",
-        "sort-name": "Germany",
-        "iso-3166-1-codes": [
-         "DE"
-        ]
-       }
-      }
-     ],
-     "track-count": 9,
-     "media": [
-      {
-       "id": "20017c1a-2e86-4e53-af7b-de094520a027",
-       "position": 1,
-       "format": "12\" Vinyl",
-       "track": [
-        {
-         "id": "497107c4-2a49-4e40-9e0a-daf2d5940148",
-         "number": "A4",
-         "title": "Dream On",
-         "length": 286000
-        }
-       ],
-       "track-count": 9,
-       "track-offset": 3
-      }
-     ]
-    },
-    {
-     "id": "40079689-cc71-41a0-86f9-51b04d308c78",
-     "status-id": "1156806e-d06a-38bd-83f0-cf2284a808b9",
-     "artist-credit-id": "ec91ef47-fd3d-3e19-a285-fe68a8c2c58a",
-     "count": 1,
-     "title": "Rattlesnake Shake (live)",
-     "status": "Bootleg",
-     "artist-credit": [
-      {
-       "name": "Aerosmith",
-       "artist": {
-        "id": "3d2b98e5-556f-4451-a3ff-c50ea18d57cb",
-        "name": "Aerosmith",
-        "sort-name": "Aerosmith",
-        "disambiguation": "American hard rock band"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "936fe6b1-1e2d-3ea2-b251-29fd718202dd",
-      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
-      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "Rattlesnake Shake",
-      "primary-type": "Album",
-      "secondary-types": [
-       "Live"
-      ],
-      "secondary-type-ids": [
-       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
-      ]
-     },
-     "date": "1973-10-10",
-     "country": "US",
-     "release-events": [
-      {
-       "date": "1973-10-10",
-       "area": {
-        "id": "489ce91b-6658-3307-9877-795b68554c98",
-        "name": "United States",
-        "sort-name": "United States",
-        "iso-3166-1-codes": [
-         "US"
-        ]
-       }
-      }
-     ],
-     "track-count": 12,
-     "media": [
-      {
-       "id": "98c8efa2-01e0-313d-af54-e5bbe82501d2",
-       "position": 1,
-       "track": [
-        {
-         "id": "15b62fd6-556b-371b-8f42-4e4379406d3f",
-         "number": "4",
-         "title": "Dream On",
-         "length": 280000
-        }
-       ],
-       "track-count": 12,
-       "track-offset": 3
-      }
-     ]
-    }
-   ]
-  },
-  {
-   "id": "ba7b7fba-865c-421d-945c-947f6b4a6e9b",
-   "score": 100,
-   "artist-credit-id": "ec91ef47-fd3d-3e19-a285-fe68a8c2c58a",
-   "title": "Dream On",
-   "length": 303000,
-   "video": null,
-   "artist-credit": [
-    {
-     "name": "Aerosmith",
-     "artist": {
-      "id": "3d2b98e5-556f-4451-a3ff-c50ea18d57cb",
-      "name": "Aerosmith",
-      "sort-name": "Aerosmith",
-      "disambiguation": "American hard rock band",
-      "aliases": [
-       {
-        "sort-name": "エアロスミス",
-        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
-        "name": "エアロスミス",
-        "locale": null,
-        "type": "Search hint",
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "Aerosmith",
-        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
-        "name": "Aerosmith",
-        "locale": null,
-        "type": "Artist name",
-        "primary": null,
-        "begin-date": "1970",
-        "end-date": null
-       },
-       {
-        "sort-name": "Aersomith",
-        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
-        "name": "Aersomith",
-        "locale": null,
-        "type": "Search hint",
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "Aero-smith",
-        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
-        "name": "Aero-smith",
-        "locale": null,
-        "type": "Search hint",
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "Aerosmidt",
-        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
-        "name": "Aerosmidt",
-        "locale": null,
-        "type": "Search hint",
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "Aroesmith",
-        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
-        "name": "Aroesmith",
-        "locale": null,
-        "type": "Search hint",
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "Aerosmit",
-        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
-        "name": "Aerosmit",
-        "locale": null,
-        "type": "Search hint",
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "Aero Smith",
-        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
-        "name": "Aero Smith",
-        "locale": null,
-        "type": "Search hint",
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "Arosmith",
-        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
-        "name": "Arosmith",
-        "locale": null,
-        "type": "Search hint",
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "Areosmith",
-        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
-        "name": "Areosmith",
-        "locale": null,
-        "type": "Search hint",
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       }
-      ]
-     }
-    }
-   ],
-   "first-release-date": "1975",
-   "releases": [
-    {
-     "id": "8a60f9cd-6c88-4d67-ad6d-0e844481a381",
-     "status-id": "1156806e-d06a-38bd-83f0-cf2284a808b9",
-     "artist-credit-id": "ec91ef47-fd3d-3e19-a285-fe68a8c2c58a",
-     "count": 1,
-     "title": "Live in Yonkers 1975",
-     "status": "Bootleg",
-     "artist-credit": [
-      {
-       "name": "Aerosmith",
-       "artist": {
-        "id": "3d2b98e5-556f-4451-a3ff-c50ea18d57cb",
-        "name": "Aerosmith",
-        "sort-name": "Aerosmith",
-        "disambiguation": "American hard rock band"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "ea5b0c14-5321-4280-bb7f-d64fd6626bec",
-      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
-      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "Central Park 1975",
-      "primary-type": "Album",
-      "secondary-types": [
-       "Live"
-      ],
-      "secondary-type-ids": [
-       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
-      ]
-     },
-     "track-count": 7,
-     "media": [
-      {
-       "id": "b7c45c05-809a-33fa-bf83-a193f8e1598c",
-       "position": 1,
-       "track": [
-        {
-         "id": "64721e94-f94b-3850-ae11-43e2d022d7f2",
-         "number": "3",
-         "title": "Dream On",
-         "length": 303000
-        }
-       ],
-       "track-count": 7,
-       "track-offset": 2
-      }
-     ]
-    }
-   ]
-  },
   {
    "id": "e135871f-0fed-4683-90e3-ebbe435fbe4e",
    "score": 100,
@@ -10272,6 +9608,2483 @@
    ]
   },
   {
+   "id": "fc94ce19-cd01-4061-b5eb-c22383fd3cd1",
+   "score": 100,
+   "artist-credit-id": "ec91ef47-fd3d-3e19-a285-fe68a8c2c58a",
+   "title": "Dream On",
+   "length": 271466,
+   "disambiguation": "live, 1977‐07‐03: Freedom Hall, Louisville, KY, USA",
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "Aerosmith",
+     "artist": {
+      "id": "3d2b98e5-556f-4451-a3ff-c50ea18d57cb",
+      "name": "Aerosmith",
+      "sort-name": "Aerosmith",
+      "disambiguation": "American hard rock band",
+      "aliases": [
+       {
+        "sort-name": "エアロスミス",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "エアロスミス",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Aerosmith",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "Aerosmith",
+        "locale": null,
+        "type": "Artist name",
+        "primary": null,
+        "begin-date": "1970",
+        "end-date": null
+       },
+       {
+        "sort-name": "Aersomith",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Aersomith",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Aero-smith",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Aero-smith",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Aerosmidt",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Aerosmidt",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Aroesmith",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Aroesmith",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Aerosmit",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Aerosmit",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Aero Smith",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Aero Smith",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Arosmith",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Arosmith",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Areosmith",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Areosmith",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "1978-10",
+   "releases": [
+    {
+     "id": "504fa361-de3a-4657-ae82-f9d65ef9bb3e",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "ec91ef47-fd3d-3e19-a285-fe68a8c2c58a",
+     "count": 1,
+     "title": "Live! Bootleg",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Aerosmith",
+       "artist": {
+        "id": "3d2b98e5-556f-4451-a3ff-c50ea18d57cb",
+        "name": "Aerosmith",
+        "sort-name": "Aerosmith",
+        "disambiguation": "American hard rock band"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "5b5b7af8-a499-3d7e-8cb2-9bd0bb448d7a",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Live! Bootleg",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "date": "2011-11-23",
+     "country": "JP",
+     "release-events": [
+      {
+       "date": "2011-11-23",
+       "area": {
+        "id": "2db42837-c832-3c27-b4a3-08198f75693c",
+        "name": "Japan",
+        "sort-name": "Japan",
+        "iso-3166-1-codes": [
+         "JP"
+        ]
+       }
+      }
+     ],
+     "track-count": 16,
+     "media": [
+      {
+       "id": "e6eb50b4-55c9-488e-8da9-58bdb9f64347",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "9ef688b3-735c-4674-9023-79043fed3fbe",
+         "number": "9",
+         "title": "Dream On",
+         "length": 271400
+        }
+       ],
+       "track-count": 16,
+       "track-offset": 8
+      }
+     ]
+    },
+    {
+     "id": "35f00897-fae8-40aa-b2d1-9369a8f2c8f1",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "ec91ef47-fd3d-3e19-a285-fe68a8c2c58a",
+     "count": 2,
+     "title": "Live! Bootleg",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Aerosmith",
+       "artist": {
+        "id": "3d2b98e5-556f-4451-a3ff-c50ea18d57cb",
+        "name": "Aerosmith",
+        "sort-name": "Aerosmith",
+        "disambiguation": "American hard rock band"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "5b5b7af8-a499-3d7e-8cb2-9bd0bb448d7a",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Live! Bootleg",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "date": "1978-10",
+     "country": "AU",
+     "release-events": [
+      {
+       "date": "1978-10",
+       "area": {
+        "id": "106e0bec-b638-3b37-b731-f53d507dc00e",
+        "name": "Australia",
+        "sort-name": "Australia",
+        "iso-3166-1-codes": [
+         "AU"
+        ]
+       }
+      }
+     ],
+     "track-count": 16,
+     "media": [
+      {
+       "id": "763ebe5c-4c27-31e9-b475-a8cd7431e7d6",
+       "position": 2,
+       "format": "12\" Vinyl",
+       "track": [
+        {
+         "id": "d6a6064e-5ece-48f3-8e82-47e244310a2f",
+         "number": "C1",
+         "title": "Dream On",
+         "length": 271000
+        }
+       ],
+       "track-count": 8,
+       "track-offset": 0
+      }
+     ]
+    },
+    {
+     "id": "866b2876-87fe-4169-a2f4-483533fb1623",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "ec91ef47-fd3d-3e19-a285-fe68a8c2c58a",
+     "count": 2,
+     "title": "Live! Bootleg",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Aerosmith",
+       "artist": {
+        "id": "3d2b98e5-556f-4451-a3ff-c50ea18d57cb",
+        "name": "Aerosmith",
+        "sort-name": "Aerosmith",
+        "disambiguation": "American hard rock band"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "5b5b7af8-a499-3d7e-8cb2-9bd0bb448d7a",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Live! Bootleg",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "date": "1990-04-09",
+     "country": "AU",
+     "release-events": [
+      {
+       "date": "1990-04-09",
+       "area": {
+        "id": "106e0bec-b638-3b37-b731-f53d507dc00e",
+        "name": "Australia",
+        "sort-name": "Australia",
+        "iso-3166-1-codes": [
+         "AU"
+        ]
+       }
+      }
+     ],
+     "track-count": 17,
+     "media": [
+      {
+       "id": "2db07378-91e0-353f-af84-a0488319edaf",
+       "position": 2,
+       "format": "CD",
+       "track": [
+        {
+         "id": "5e15dc57-a316-4d07-9700-11a153e6249f",
+         "number": "1",
+         "title": "Dream On",
+         "length": 273000
+        }
+       ],
+       "track-count": 9,
+       "track-offset": 0
+      }
+     ]
+    },
+    {
+     "id": "4f98cd5c-001c-46fb-8fe2-9d225e134837",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "ec91ef47-fd3d-3e19-a285-fe68a8c2c58a",
+     "count": 1,
+     "title": "Live! Bootleg",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Aerosmith",
+       "artist": {
+        "id": "3d2b98e5-556f-4451-a3ff-c50ea18d57cb",
+        "name": "Aerosmith",
+        "sort-name": "Aerosmith",
+        "disambiguation": "American hard rock band"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "5b5b7af8-a499-3d7e-8cb2-9bd0bb448d7a",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Live! Bootleg",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "date": "2022-12-07",
+     "country": "XW",
+     "release-events": [
+      {
+       "date": "2022-12-07",
+       "area": {
+        "id": "525d4e18-3d00-31b9-a58b-a146a916de8f",
+        "name": "[Worldwide]",
+        "sort-name": "[Worldwide]",
+        "iso-3166-1-codes": [
+         "XW"
+        ]
+       }
+      }
+     ],
+     "track-count": 16,
+     "media": [
+      {
+       "id": "a5ed1f1c-9bb2-371a-b2d8-c275ec536114",
+       "position": 1,
+       "format": "Digital Media",
+       "track": [
+        {
+         "id": "8b63367d-85a2-4103-b2a8-0ec93f9194e4",
+         "number": "9",
+         "title": "Dream On (live at Freedom Hall, Louisville, KY – July 1977)",
+         "length": 272024
+        }
+       ],
+       "track-count": 16,
+       "track-offset": 8
+      }
+     ]
+    },
+    {
+     "id": "be06b1ad-d4b5-4fe6-a11f-348cd2c3eaf7",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "ec91ef47-fd3d-3e19-a285-fe68a8c2c58a",
+     "count": 1,
+     "title": "Live! Bootleg",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Aerosmith",
+       "artist": {
+        "id": "3d2b98e5-556f-4451-a3ff-c50ea18d57cb",
+        "name": "Aerosmith",
+        "sort-name": "Aerosmith",
+        "disambiguation": "American hard rock band"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "5b5b7af8-a499-3d7e-8cb2-9bd0bb448d7a",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Live! Bootleg",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "date": "2022-12-07",
+     "country": "XW",
+     "release-events": [
+      {
+       "date": "2022-12-07",
+       "area": {
+        "id": "525d4e18-3d00-31b9-a58b-a146a916de8f",
+        "name": "[Worldwide]",
+        "sort-name": "[Worldwide]",
+        "iso-3166-1-codes": [
+         "XW"
+        ]
+       }
+      }
+     ],
+     "track-count": 16,
+     "media": [
+      {
+       "id": "c65dfb84-596e-3ae8-add3-7c77f9d572af",
+       "position": 1,
+       "format": "Digital Media",
+       "track": [
+        {
+         "id": "2efa3be4-33ac-411f-a428-70133caf306f",
+         "number": "9",
+         "title": "Dream On (live at Freedom Hall, Louisville, KY – July 1977)",
+         "length": 272025
+        }
+       ],
+       "track-count": 16,
+       "track-offset": 8
+      }
+     ]
+    },
+    {
+     "id": "2b9e396b-28a3-4cd9-b19f-896675f1d428",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "ec91ef47-fd3d-3e19-a285-fe68a8c2c58a",
+     "count": 1,
+     "title": "Live! Bootleg",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Aerosmith",
+       "artist": {
+        "id": "3d2b98e5-556f-4451-a3ff-c50ea18d57cb",
+        "name": "Aerosmith",
+        "sort-name": "Aerosmith",
+        "disambiguation": "American hard rock band"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "5b5b7af8-a499-3d7e-8cb2-9bd0bb448d7a",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Live! Bootleg",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "date": "2013-10-09",
+     "country": "JP",
+     "release-events": [
+      {
+       "date": "2013-10-09",
+       "area": {
+        "id": "2db42837-c832-3c27-b4a3-08198f75693c",
+        "name": "Japan",
+        "sort-name": "Japan",
+        "iso-3166-1-codes": [
+         "JP"
+        ]
+       }
+      }
+     ],
+     "track-count": 16,
+     "media": [
+      {
+       "id": "6f0c8038-d6a0-3d19-975c-48b16986a722",
+       "position": 1,
+       "format": "Blu-spec CD",
+       "track": [
+        {
+         "id": "e889ea7f-76d1-4512-848e-99666e067e61",
+         "number": "9",
+         "title": "Dream On",
+         "length": 271000
+        }
+       ],
+       "track-count": 16,
+       "track-offset": 8
+      }
+     ]
+    },
+    {
+     "id": "01aa4954-b37a-42e3-b39e-7cfe3854d7e4",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "ec91ef47-fd3d-3e19-a285-fe68a8c2c58a",
+     "count": 13,
+     "title": "Box of Fire",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Aerosmith",
+       "artist": {
+        "id": "3d2b98e5-556f-4451-a3ff-c50ea18d57cb",
+        "name": "Aerosmith",
+        "sort-name": "Aerosmith",
+        "disambiguation": "American hard rock band"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "f229fe85-68c6-437e-8e34-fe75187c50d7",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Box of Fire",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "1994-11-22",
+     "country": "US",
+     "release-events": [
+      {
+       "date": "1994-11-22",
+       "area": {
+        "id": "489ce91b-6658-3307-9877-795b68554c98",
+        "name": "United States",
+        "sort-name": "United States",
+        "iso-3166-1-codes": [
+         "US"
+        ]
+       }
+      }
+     ],
+     "track-count": 121,
+     "media": [
+      {
+       "id": "d25c304d-4d69-3e74-a1ae-1a0f36d67dec",
+       "position": 6,
+       "format": "CD",
+       "track": [
+        {
+         "id": "fcb0162d-c2ef-46cf-b60c-30d9afb28f18",
+         "number": "9",
+         "title": "Dream On",
+         "length": 271466
+        }
+       ],
+       "track-count": 16,
+       "track-offset": 8
+      }
+     ]
+    },
+    {
+     "id": "00e3e880-2338-381c-aef7-89604990f364",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "ec91ef47-fd3d-3e19-a285-fe68a8c2c58a",
+     "count": 1,
+     "title": "Live! Bootleg",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Aerosmith",
+       "artist": {
+        "id": "3d2b98e5-556f-4451-a3ff-c50ea18d57cb",
+        "name": "Aerosmith",
+        "sort-name": "Aerosmith",
+        "disambiguation": "American hard rock band"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "5b5b7af8-a499-3d7e-8cb2-9bd0bb448d7a",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Live! Bootleg",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "date": "2004-07-15",
+     "country": "JP",
+     "release-events": [
+      {
+       "date": "2004-07-15",
+       "area": {
+        "id": "2db42837-c832-3c27-b4a3-08198f75693c",
+        "name": "Japan",
+        "sort-name": "Japan",
+        "iso-3166-1-codes": [
+         "JP"
+        ]
+       }
+      }
+     ],
+     "track-count": 16,
+     "media": [
+      {
+       "id": "da2005e0-9634-3196-a401-a218b187f59e",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "8bce2824-0cd2-3d0a-b88f-f90b7c44d082",
+         "number": "9",
+         "title": "Dream On",
+         "length": 271866
+        }
+       ],
+       "track-count": 16,
+       "track-offset": 8
+      }
+     ]
+    },
+    {
+     "id": "3ec12dfa-b7a1-458f-ab5c-29d1e5e7f34f",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "ec91ef47-fd3d-3e19-a285-fe68a8c2c58a",
+     "count": 1,
+     "title": "Dream On",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Aerosmith",
+       "artist": {
+        "id": "3d2b98e5-556f-4451-a3ff-c50ea18d57cb",
+        "name": "Aerosmith",
+        "sort-name": "Aerosmith",
+        "disambiguation": "American hard rock band"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "ae871407-6a25-3dab-ad04-e72a5fa5cb39",
+      "type-id": "d6038452-8ee0-3f68-affc-2de9a1ede0b9",
+      "primary-type-id": "d6038452-8ee0-3f68-affc-2de9a1ede0b9",
+      "title": "Dream On",
+      "primary-type": "Single",
+      "secondary-types": [
+       "Live",
+       "Soundtrack"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+       "22a628ad-c082-3c4f-b1b6-d41665107b88"
+      ]
+     },
+     "date": "1993",
+     "country": "XE",
+     "release-events": [
+      {
+       "date": "1993",
+       "area": {
+        "id": "89a675c2-3e37-3518-b83c-418bad59a85a",
+        "name": "Europe",
+        "sort-name": "Europe",
+        "iso-3166-1-codes": [
+         "XE"
+        ]
+       }
+      }
+     ],
+     "track-count": 3,
+     "media": [
+      {
+       "id": "e72516d3-508d-3ae4-8996-d60cb5134dcb",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "eae71bda-5b21-34a6-bb45-9a8e1c9d9e89",
+         "number": "2",
+         "title": "Dream On (live)",
+         "length": 276000
+        }
+       ],
+       "track-count": 3,
+       "track-offset": 1
+      }
+     ]
+    },
+    {
+     "id": "33db30d6-4de5-46d6-ad86-aac8fb390736",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "ec91ef47-fd3d-3e19-a285-fe68a8c2c58a",
+     "count": 2,
+     "title": "Live! Bootleg",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Aerosmith",
+       "artist": {
+        "id": "3d2b98e5-556f-4451-a3ff-c50ea18d57cb",
+        "name": "Aerosmith",
+        "sort-name": "Aerosmith",
+        "disambiguation": "American hard rock band"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "5b5b7af8-a499-3d7e-8cb2-9bd0bb448d7a",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Live! Bootleg",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "date": "1978-10",
+     "country": "US",
+     "release-events": [
+      {
+       "date": "1978-10",
+       "area": {
+        "id": "489ce91b-6658-3307-9877-795b68554c98",
+        "name": "United States",
+        "sort-name": "United States",
+        "iso-3166-1-codes": [
+         "US"
+        ]
+       }
+      }
+     ],
+     "track-count": 16,
+     "media": [
+      {
+       "id": "d220a36f-ff38-3805-bd7c-37d23004fd0e",
+       "position": 2,
+       "format": "12\" Vinyl",
+       "track": [
+        {
+         "id": "6cb2bd43-bf5b-4c2c-81f6-e64d00a935ed",
+         "number": "C1",
+         "title": "Dream On",
+         "length": 271000
+        }
+       ],
+       "track-count": 8,
+       "track-offset": 0
+      }
+     ]
+    },
+    {
+     "id": "c4d8b0c2-1847-47d4-a36b-02f614489f19",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "ec91ef47-fd3d-3e19-a285-fe68a8c2c58a",
+     "count": 2,
+     "title": "Live! Bootleg",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Aerosmith",
+       "artist": {
+        "id": "3d2b98e5-556f-4451-a3ff-c50ea18d57cb",
+        "name": "Aerosmith",
+        "sort-name": "Aerosmith",
+        "disambiguation": "American hard rock band"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "5b5b7af8-a499-3d7e-8cb2-9bd0bb448d7a",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Live! Bootleg",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "date": "1978",
+     "country": "CA",
+     "release-events": [
+      {
+       "date": "1978",
+       "area": {
+        "id": "71bbafaa-e825-3e15-8ca9-017dcad1748b",
+        "name": "Canada",
+        "sort-name": "Canada",
+        "iso-3166-1-codes": [
+         "CA"
+        ]
+       }
+      }
+     ],
+     "track-count": 16,
+     "media": [
+      {
+       "id": "64e5f507-698a-3175-86cd-06653d68cc4d",
+       "position": 2,
+       "format": "12\" Vinyl",
+       "track": [
+        {
+         "id": "7806b32c-07c3-4a4a-8f94-7ea301acc135",
+         "number": "C1",
+         "title": "Dream On",
+         "length": 271000
+        }
+       ],
+       "track-count": 8,
+       "track-offset": 0
+      }
+     ]
+    },
+    {
+     "id": "280a27cd-d664-4109-b501-e2e267935976",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "ec91ef47-fd3d-3e19-a285-fe68a8c2c58a",
+     "count": 2,
+     "title": "Live! Bootleg",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Aerosmith",
+       "artist": {
+        "id": "3d2b98e5-556f-4451-a3ff-c50ea18d57cb",
+        "name": "Aerosmith",
+        "sort-name": "Aerosmith",
+        "disambiguation": "American hard rock band"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "5b5b7af8-a499-3d7e-8cb2-9bd0bb448d7a",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Live! Bootleg",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "date": "1978-10",
+     "country": "JP",
+     "release-events": [
+      {
+       "date": "1978-10",
+       "area": {
+        "id": "2db42837-c832-3c27-b4a3-08198f75693c",
+        "name": "Japan",
+        "sort-name": "Japan",
+        "iso-3166-1-codes": [
+         "JP"
+        ]
+       }
+      }
+     ],
+     "track-count": 17,
+     "media": [
+      {
+       "id": "5c3bdd3b-eb40-3e66-b055-e5aedf504b4c",
+       "position": 2,
+       "format": "12\" Vinyl",
+       "track": [
+        {
+         "id": "c13d4eb7-3275-4ed2-b982-909cd1f023de",
+         "number": "C1",
+         "title": "Dream On",
+         "length": 271000
+        }
+       ],
+       "track-count": 9,
+       "track-offset": 0
+      }
+     ]
+    },
+    {
+     "id": "3f6e35c1-d219-4cca-8a53-e4d3488d40c3",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "ec91ef47-fd3d-3e19-a285-fe68a8c2c58a",
+     "count": 2,
+     "title": "Live! Bootleg",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Aerosmith",
+       "artist": {
+        "id": "3d2b98e5-556f-4451-a3ff-c50ea18d57cb",
+        "name": "Aerosmith",
+        "sort-name": "Aerosmith",
+        "disambiguation": "American hard rock band"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "5b5b7af8-a499-3d7e-8cb2-9bd0bb448d7a",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Live! Bootleg",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "date": "1978",
+     "country": "XE",
+     "release-events": [
+      {
+       "date": "1978",
+       "area": {
+        "id": "89a675c2-3e37-3518-b83c-418bad59a85a",
+        "name": "Europe",
+        "sort-name": "Europe",
+        "iso-3166-1-codes": [
+         "XE"
+        ]
+       }
+      }
+     ],
+     "track-count": 16,
+     "media": [
+      {
+       "id": "a0fa6e42-73f3-3816-821b-aac03aab75dd",
+       "position": 2,
+       "format": "12\" Vinyl",
+       "track": [
+        {
+         "id": "e019695e-5174-4d99-808d-a140e7ef42e4",
+         "number": "C1",
+         "title": "Dream On",
+         "length": 275000
+        }
+       ],
+       "track-count": 8,
+       "track-offset": 0
+      }
+     ]
+    },
+    {
+     "id": "8065c0fb-51c7-4a32-9451-cf15be4771ed",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "ec91ef47-fd3d-3e19-a285-fe68a8c2c58a",
+     "count": 1,
+     "title": "Live! Bootleg",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Aerosmith",
+       "artist": {
+        "id": "3d2b98e5-556f-4451-a3ff-c50ea18d57cb",
+        "name": "Aerosmith",
+        "sort-name": "Aerosmith",
+        "disambiguation": "American hard rock band"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "5b5b7af8-a499-3d7e-8cb2-9bd0bb448d7a",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Live! Bootleg",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "date": "2011-08-26",
+     "country": "XW",
+     "release-events": [
+      {
+       "date": "2011-08-26",
+       "area": {
+        "id": "525d4e18-3d00-31b9-a58b-a146a916de8f",
+        "name": "[Worldwide]",
+        "sort-name": "[Worldwide]",
+        "iso-3166-1-codes": [
+         "XW"
+        ]
+       }
+      }
+     ],
+     "track-count": 16,
+     "media": [
+      {
+       "id": "aca31f6b-837b-35ad-8fb9-0b341fe38c79",
+       "position": 1,
+       "format": "Digital Media",
+       "track": [
+        {
+         "id": "03e820f8-f759-4d83-b8cd-24cb64f42066",
+         "number": "9",
+         "title": "Dream On (live at Freedom Hall, Louisville, KY - July 1977)",
+         "length": 271000
+        }
+       ],
+       "track-count": 16,
+       "track-offset": 8
+      }
+     ]
+    },
+    {
+     "id": "a6727f2a-7270-3fa3-ac8b-1f7ed64a9997",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "ec91ef47-fd3d-3e19-a285-fe68a8c2c58a",
+     "count": 2,
+     "title": "Live! Bootleg",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Aerosmith",
+       "artist": {
+        "id": "3d2b98e5-556f-4451-a3ff-c50ea18d57cb",
+        "name": "Aerosmith",
+        "sort-name": "Aerosmith",
+        "disambiguation": "American hard rock band"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "5b5b7af8-a499-3d7e-8cb2-9bd0bb448d7a",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Live! Bootleg",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "date": "1978",
+     "country": "US",
+     "release-events": [
+      {
+       "date": "1978",
+       "area": {
+        "id": "489ce91b-6658-3307-9877-795b68554c98",
+        "name": "United States",
+        "sort-name": "United States",
+        "iso-3166-1-codes": [
+         "US"
+        ]
+       }
+      }
+     ],
+     "track-count": 16,
+     "media": [
+      {
+       "id": "83fe3ac4-1371-319b-91cd-0fe0f4ce2d6c",
+       "position": 2,
+       "format": "12\" Vinyl",
+       "track": [
+        {
+         "id": "eaddd5ca-ccc4-33c8-9081-bb59d0b79fc0",
+         "number": "C1",
+         "title": "Dream On",
+         "length": 271000
+        }
+       ],
+       "track-count": 8,
+       "track-offset": 0
+      }
+     ]
+    },
+    {
+     "id": "99e361f2-2596-444c-9517-84b74ccd3def",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "ec91ef47-fd3d-3e19-a285-fe68a8c2c58a",
+     "count": 1,
+     "title": "Live! Bootleg",
+     "status": "Official",
+     "disambiguation": "Nice price line",
+     "artist-credit": [
+      {
+       "name": "Aerosmith",
+       "artist": {
+        "id": "3d2b98e5-556f-4451-a3ff-c50ea18d57cb",
+        "name": "Aerosmith",
+        "sort-name": "Aerosmith",
+        "disambiguation": "American hard rock band"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "5b5b7af8-a499-3d7e-8cb2-9bd0bb448d7a",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Live! Bootleg",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "date": "1993-02-01",
+     "country": "JP",
+     "release-events": [
+      {
+       "date": "1993-02-01",
+       "area": {
+        "id": "2db42837-c832-3c27-b4a3-08198f75693c",
+        "name": "Japan",
+        "sort-name": "Japan",
+        "iso-3166-1-codes": [
+         "JP"
+        ]
+       }
+      }
+     ],
+     "track-count": 17,
+     "media": [
+      {
+       "id": "60478c83-1a0b-336e-8d10-f82d3b9915cc",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "168741ea-25cd-4944-80cb-aec832e939a6",
+         "number": "9",
+         "title": "Dream On",
+         "length": 271000
+        }
+       ],
+       "track-count": 17,
+       "track-offset": 8
+      }
+     ]
+    },
+    {
+     "id": "39506bb1-1f38-484e-9e91-1e051f3ade47",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "ec91ef47-fd3d-3e19-a285-fe68a8c2c58a",
+     "count": 1,
+     "title": "Live! Bootleg",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Aerosmith",
+       "artist": {
+        "id": "3d2b98e5-556f-4451-a3ff-c50ea18d57cb",
+        "name": "Aerosmith",
+        "sort-name": "Aerosmith",
+        "disambiguation": "American hard rock band"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "5b5b7af8-a499-3d7e-8cb2-9bd0bb448d7a",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Live! Bootleg",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "date": "1993",
+     "country": "CA",
+     "release-events": [
+      {
+       "date": "1993",
+       "area": {
+        "id": "71bbafaa-e825-3e15-8ca9-017dcad1748b",
+        "name": "Canada",
+        "sort-name": "Canada",
+        "iso-3166-1-codes": [
+         "CA"
+        ]
+       }
+      }
+     ],
+     "track-count": 16,
+     "media": [
+      {
+       "id": "559fd682-84b1-39a7-8f7a-e589b0009251",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "8e9cbb77-669c-4f12-b29e-3395e7cf6a00",
+         "number": "9",
+         "title": "Dream On",
+         "length": 271866
+        }
+       ],
+       "track-count": 16,
+       "track-offset": 8
+      }
+     ]
+    },
+    {
+     "id": "0ae5bf5c-6881-3be2-a430-c3d2af0ab546",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "ec91ef47-fd3d-3e19-a285-fe68a8c2c58a",
+     "count": 1,
+     "title": "Live! Bootleg",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Aerosmith",
+       "artist": {
+        "id": "3d2b98e5-556f-4451-a3ff-c50ea18d57cb",
+        "name": "Aerosmith",
+        "sort-name": "Aerosmith",
+        "disambiguation": "American hard rock band"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "5b5b7af8-a499-3d7e-8cb2-9bd0bb448d7a",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Live! Bootleg",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "date": "1993",
+     "country": "GB",
+     "release-events": [
+      {
+       "date": "1993",
+       "area": {
+        "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
+        "name": "United Kingdom",
+        "sort-name": "United Kingdom",
+        "iso-3166-1-codes": [
+         "GB"
+        ]
+       }
+      }
+     ],
+     "track-count": 16,
+     "media": [
+      {
+       "id": "575f6bde-6835-35c2-9296-abc434540111",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "819cce1f-21df-36b0-8140-6b0075b7a0b0",
+         "number": "9",
+         "title": "Dream On",
+         "length": 271866
+        }
+       ],
+       "track-count": 16,
+       "track-offset": 8
+      }
+     ]
+    },
+    {
+     "id": "164a6f36-8ec5-4161-bb81-1504aa8ce343",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "ec91ef47-fd3d-3e19-a285-fe68a8c2c58a",
+     "count": 1,
+     "title": "Live! Bootleg",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Aerosmith",
+       "artist": {
+        "id": "3d2b98e5-556f-4451-a3ff-c50ea18d57cb",
+        "name": "Aerosmith",
+        "sort-name": "Aerosmith",
+        "disambiguation": "American hard rock band"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "5b5b7af8-a499-3d7e-8cb2-9bd0bb448d7a",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Live! Bootleg",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "date": "2012-11-02",
+     "country": "US",
+     "release-events": [
+      {
+       "date": "2012-11-02",
+       "area": {
+        "id": "489ce91b-6658-3307-9877-795b68554c98",
+        "name": "United States",
+        "sort-name": "United States",
+        "iso-3166-1-codes": [
+         "US"
+        ]
+       }
+      }
+     ],
+     "track-count": 16,
+     "media": [
+      {
+       "id": "876d20e0-f589-3694-a06b-75f44b5e15ad",
+       "position": 1,
+       "format": "Digital Media",
+       "track": [
+        {
+         "id": "3d0e685f-8e1c-462b-b485-4123394ab321",
+         "number": "9",
+         "title": "Dream On",
+         "length": 272025
+        }
+       ],
+       "track-count": 16,
+       "track-offset": 8
+      }
+     ]
+    },
+    {
+     "id": "e18adb73-7205-311c-a70c-83df5d032069",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "ec91ef47-fd3d-3e19-a285-fe68a8c2c58a",
+     "count": 1,
+     "title": "Live! Bootleg",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Aerosmith",
+       "artist": {
+        "id": "3d2b98e5-556f-4451-a3ff-c50ea18d57cb",
+        "name": "Aerosmith",
+        "sort-name": "Aerosmith",
+        "disambiguation": "American hard rock band"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "5b5b7af8-a499-3d7e-8cb2-9bd0bb448d7a",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Live! Bootleg",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "date": "1989",
+     "country": "DE",
+     "release-events": [
+      {
+       "date": "1989",
+       "area": {
+        "id": "85752fda-13c4-31a3-bee5-0e5cb1f51dad",
+        "name": "Germany",
+        "sort-name": "Germany",
+        "iso-3166-1-codes": [
+         "DE"
+        ]
+       }
+      }
+     ],
+     "track-count": 16,
+     "media": [
+      {
+       "id": "747cb0a2-0d8d-3c31-b015-ee8db4715c9b",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "045200ae-99c6-3363-8c30-00c5f95bf260",
+         "number": "9",
+         "title": "Dream On",
+         "length": 271866
+        }
+       ],
+       "track-count": 16,
+       "track-offset": 8
+      }
+     ]
+    },
+    {
+     "id": "916d007c-1f03-46b9-9158-859c21ac8064",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "ec91ef47-fd3d-3e19-a285-fe68a8c2c58a",
+     "count": 1,
+     "title": "Live! Bootleg",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Aerosmith",
+       "artist": {
+        "id": "3d2b98e5-556f-4451-a3ff-c50ea18d57cb",
+        "name": "Aerosmith",
+        "sort-name": "Aerosmith",
+        "disambiguation": "American hard rock band"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "5b5b7af8-a499-3d7e-8cb2-9bd0bb448d7a",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Live! Bootleg",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "date": "1993-09-07",
+     "country": "US",
+     "release-events": [
+      {
+       "date": "1993-09-07",
+       "area": {
+        "id": "489ce91b-6658-3307-9877-795b68554c98",
+        "name": "United States",
+        "sort-name": "United States",
+        "iso-3166-1-codes": [
+         "US"
+        ]
+       }
+      }
+     ],
+     "track-count": 16,
+     "media": [
+      {
+       "id": "20cb33c4-4c34-35f2-9969-00c4e3cf8fa0",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "89547b6f-f2a7-3c28-bf0f-0f38d919b07e",
+         "number": "9",
+         "title": "Dream On",
+         "length": 271866
+        }
+       ],
+       "track-count": 16,
+       "track-offset": 8
+      }
+     ]
+    },
+    {
+     "id": "aba31f7e-479d-4fe7-9401-8e6573bd8088",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "ec91ef47-fd3d-3e19-a285-fe68a8c2c58a",
+     "count": 13,
+     "title": "Box of Fire",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Aerosmith",
+       "artist": {
+        "id": "3d2b98e5-556f-4451-a3ff-c50ea18d57cb",
+        "name": "Aerosmith",
+        "sort-name": "Aerosmith",
+        "disambiguation": "American hard rock band"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "f229fe85-68c6-437e-8e34-fe75187c50d7",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Box of Fire",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "1994-11-22",
+     "country": "US",
+     "release-events": [
+      {
+       "date": "1994-11-22",
+       "area": {
+        "id": "489ce91b-6658-3307-9877-795b68554c98",
+        "name": "United States",
+        "sort-name": "United States",
+        "iso-3166-1-codes": [
+         "US"
+        ]
+       }
+      }
+     ],
+     "track-count": 121,
+     "media": [
+      {
+       "id": "dadb5f8f-686f-3b9e-84c3-dca315d8f707",
+       "position": 6,
+       "format": "CD",
+       "track": [
+        {
+         "id": "36370510-c56b-3e82-a6e1-79ff8ff80cac",
+         "number": "9",
+         "title": "Dream On",
+         "length": 271000
+        }
+       ],
+       "track-count": 16,
+       "track-offset": 8
+      }
+     ]
+    },
+    {
+     "id": "51c200ed-d979-4769-91a2-416bfd31fb20",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "ec91ef47-fd3d-3e19-a285-fe68a8c2c58a",
+     "count": 1,
+     "title": "Live! Bootleg",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Aerosmith",
+       "artist": {
+        "id": "3d2b98e5-556f-4451-a3ff-c50ea18d57cb",
+        "name": "Aerosmith",
+        "sort-name": "Aerosmith",
+        "disambiguation": "American hard rock band"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "5b5b7af8-a499-3d7e-8cb2-9bd0bb448d7a",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Live! Bootleg",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "date": "1993",
+     "country": "US",
+     "release-events": [
+      {
+       "date": "1993",
+       "area": {
+        "id": "489ce91b-6658-3307-9877-795b68554c98",
+        "name": "United States",
+        "sort-name": "United States",
+        "iso-3166-1-codes": [
+         "US"
+        ]
+       }
+      }
+     ],
+     "track-count": 16,
+     "media": [
+      {
+       "id": "2a9e5e0f-6f73-33a4-a38a-b32c778ed93f",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "ac916100-e4ee-478d-b34e-96e15a5f0759",
+         "number": "9",
+         "title": "Dream On",
+         "length": 271000
+        }
+       ],
+       "track-count": 16,
+       "track-offset": 8
+      }
+     ]
+    }
+   ],
+   "isrcs": [
+    "USSM17800960"
+   ]
+  },
+  {
+   "id": "737822a5-6d20-4976-8a23-563d60ab2e42",
+   "score": 100,
+   "artist-credit-id": "ec91ef47-fd3d-3e19-a285-fe68a8c2c58a",
+   "title": "Dream On",
+   "length": 280000,
+   "disambiguation": "live, 1973-09-26: Counterpart Studios, Cincinnati, OH, USA",
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "Aerosmith",
+     "artist": {
+      "id": "3d2b98e5-556f-4451-a3ff-c50ea18d57cb",
+      "name": "Aerosmith",
+      "sort-name": "Aerosmith",
+      "disambiguation": "American hard rock band",
+      "aliases": [
+       {
+        "sort-name": "エアロスミス",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "エアロスミス",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Aerosmith",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "Aerosmith",
+        "locale": null,
+        "type": "Artist name",
+        "primary": null,
+        "begin-date": "1970",
+        "end-date": null
+       },
+       {
+        "sort-name": "Aersomith",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Aersomith",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Aero-smith",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Aero-smith",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Aerosmidt",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Aerosmidt",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Aroesmith",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Aroesmith",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Aerosmit",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Aerosmit",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Aero Smith",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Aero Smith",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Arosmith",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Arosmith",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Areosmith",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Areosmith",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "1973-10-10",
+   "releases": [
+    {
+     "id": "fab28508-ef7b-49c4-a8af-13017b0e4456",
+     "status-id": "1156806e-d06a-38bd-83f0-cf2284a808b9",
+     "artist-credit-id": "ec91ef47-fd3d-3e19-a285-fe68a8c2c58a",
+     "count": 1,
+     "title": "Rattlesnake Shake",
+     "status": "Bootleg",
+     "artist-credit": [
+      {
+       "name": "Aerosmith",
+       "artist": {
+        "id": "3d2b98e5-556f-4451-a3ff-c50ea18d57cb",
+        "name": "Aerosmith",
+        "sort-name": "Aerosmith",
+        "disambiguation": "American hard rock band"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "936fe6b1-1e2d-3ea2-b251-29fd718202dd",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Rattlesnake Shake",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "date": "1981",
+     "country": "DE",
+     "release-events": [
+      {
+       "date": "1981",
+       "area": {
+        "id": "85752fda-13c4-31a3-bee5-0e5cb1f51dad",
+        "name": "Germany",
+        "sort-name": "Germany",
+        "iso-3166-1-codes": [
+         "DE"
+        ]
+       }
+      }
+     ],
+     "track-count": 9,
+     "media": [
+      {
+       "id": "20017c1a-2e86-4e53-af7b-de094520a027",
+       "position": 1,
+       "format": "12\" Vinyl",
+       "track": [
+        {
+         "id": "497107c4-2a49-4e40-9e0a-daf2d5940148",
+         "number": "A4",
+         "title": "Dream On",
+         "length": 286000
+        }
+       ],
+       "track-count": 9,
+       "track-offset": 3
+      }
+     ]
+    },
+    {
+     "id": "40079689-cc71-41a0-86f9-51b04d308c78",
+     "status-id": "1156806e-d06a-38bd-83f0-cf2284a808b9",
+     "artist-credit-id": "ec91ef47-fd3d-3e19-a285-fe68a8c2c58a",
+     "count": 1,
+     "title": "Rattlesnake Shake (live)",
+     "status": "Bootleg",
+     "artist-credit": [
+      {
+       "name": "Aerosmith",
+       "artist": {
+        "id": "3d2b98e5-556f-4451-a3ff-c50ea18d57cb",
+        "name": "Aerosmith",
+        "sort-name": "Aerosmith",
+        "disambiguation": "American hard rock band"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "936fe6b1-1e2d-3ea2-b251-29fd718202dd",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Rattlesnake Shake",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "date": "1973-10-10",
+     "country": "US",
+     "release-events": [
+      {
+       "date": "1973-10-10",
+       "area": {
+        "id": "489ce91b-6658-3307-9877-795b68554c98",
+        "name": "United States",
+        "sort-name": "United States",
+        "iso-3166-1-codes": [
+         "US"
+        ]
+       }
+      }
+     ],
+     "track-count": 12,
+     "media": [
+      {
+       "id": "98c8efa2-01e0-313d-af54-e5bbe82501d2",
+       "position": 1,
+       "track": [
+        {
+         "id": "15b62fd6-556b-371b-8f42-4e4379406d3f",
+         "number": "4",
+         "title": "Dream On",
+         "length": 280000
+        }
+       ],
+       "track-count": 12,
+       "track-offset": 3
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ba7b7fba-865c-421d-945c-947f6b4a6e9b",
+   "score": 100,
+   "artist-credit-id": "ec91ef47-fd3d-3e19-a285-fe68a8c2c58a",
+   "title": "Dream On",
+   "length": 303000,
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "Aerosmith",
+     "artist": {
+      "id": "3d2b98e5-556f-4451-a3ff-c50ea18d57cb",
+      "name": "Aerosmith",
+      "sort-name": "Aerosmith",
+      "disambiguation": "American hard rock band",
+      "aliases": [
+       {
+        "sort-name": "エアロスミス",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "エアロスミス",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Aerosmith",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "Aerosmith",
+        "locale": null,
+        "type": "Artist name",
+        "primary": null,
+        "begin-date": "1970",
+        "end-date": null
+       },
+       {
+        "sort-name": "Aersomith",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Aersomith",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Aero-smith",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Aero-smith",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Aerosmidt",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Aerosmidt",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Aroesmith",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Aroesmith",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Aerosmit",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Aerosmit",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Aero Smith",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Aero Smith",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Arosmith",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Arosmith",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Areosmith",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Areosmith",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "1975",
+   "releases": [
+    {
+     "id": "8a60f9cd-6c88-4d67-ad6d-0e844481a381",
+     "status-id": "1156806e-d06a-38bd-83f0-cf2284a808b9",
+     "artist-credit-id": "ec91ef47-fd3d-3e19-a285-fe68a8c2c58a",
+     "count": 1,
+     "title": "Live in Yonkers 1975",
+     "status": "Bootleg",
+     "artist-credit": [
+      {
+       "name": "Aerosmith",
+       "artist": {
+        "id": "3d2b98e5-556f-4451-a3ff-c50ea18d57cb",
+        "name": "Aerosmith",
+        "sort-name": "Aerosmith",
+        "disambiguation": "American hard rock band"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "ea5b0c14-5321-4280-bb7f-d64fd6626bec",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Central Park 1975",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "track-count": 7,
+     "media": [
+      {
+       "id": "b7c45c05-809a-33fa-bf83-a193f8e1598c",
+       "position": 1,
+       "track": [
+        {
+         "id": "64721e94-f94b-3850-ae11-43e2d022d7f2",
+         "number": "3",
+         "title": "Dream On",
+         "length": 303000
+        }
+       ],
+       "track-count": 7,
+       "track-offset": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "08c8545d-2489-4d4a-b10f-4b9c7cbf70b3",
+   "score": 100,
+   "artist-credit-id": "ec91ef47-fd3d-3e19-a285-fe68a8c2c58a",
+   "title": "Dream On",
+   "disambiguation": "live, 1975-08-29: The Shaeffer Music Festival, Woolman Rink, Central Park, New York City, NY",
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "Aerosmith",
+     "artist": {
+      "id": "3d2b98e5-556f-4451-a3ff-c50ea18d57cb",
+      "name": "Aerosmith",
+      "sort-name": "Aerosmith",
+      "disambiguation": "American hard rock band",
+      "aliases": [
+       {
+        "sort-name": "エアロスミス",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "エアロスミス",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Aerosmith",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "Aerosmith",
+        "locale": null,
+        "type": "Artist name",
+        "primary": null,
+        "begin-date": "1970",
+        "end-date": null
+       },
+       {
+        "sort-name": "Aersomith",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Aersomith",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Aero-smith",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Aero-smith",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Aerosmidt",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Aerosmidt",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Aroesmith",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Aroesmith",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Aerosmit",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Aerosmit",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Aero Smith",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Aero Smith",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Arosmith",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Arosmith",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Areosmith",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Areosmith",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "1976",
+   "releases": [
+    {
+     "id": "2fc10f3c-e20a-4edd-b666-793007d8e45c",
+     "status-id": "1156806e-d06a-38bd-83f0-cf2284a808b9",
+     "artist-credit-id": "ec91ef47-fd3d-3e19-a285-fe68a8c2c58a",
+     "count": 1,
+     "title": "Rock This Way",
+     "status": "Bootleg",
+     "artist-credit": [
+      {
+       "name": "Aerosmith",
+       "artist": {
+        "id": "3d2b98e5-556f-4451-a3ff-c50ea18d57cb",
+        "name": "Aerosmith",
+        "sort-name": "Aerosmith",
+        "disambiguation": "American hard rock band"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "320e16bc-f570-42fe-b743-1713f3940d19",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Access To Excess",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "date": "1976",
+     "country": "US",
+     "release-events": [
+      {
+       "date": "1976",
+       "area": {
+        "id": "489ce91b-6658-3307-9877-795b68554c98",
+        "name": "United States",
+        "sort-name": "United States",
+        "iso-3166-1-codes": [
+         "US"
+        ]
+       }
+      }
+     ],
+     "track-count": 8,
+     "media": [
+      {
+       "id": "425848f2-57e1-351c-a459-2a3f0bc98c55",
+       "position": 1,
+       "format": "12\" Vinyl",
+       "track": [
+        {
+         "id": "9a6b3a94-7390-4209-ac39-5ae7c3aabad8",
+         "number": "A3",
+         "title": "Dream On"
+        }
+       ],
+       "track-count": 8,
+       "track-offset": 2
+      }
+     ]
+    },
+    {
+     "id": "ae909961-59a4-4513-b719-72eb04c64496",
+     "status-id": "1156806e-d06a-38bd-83f0-cf2284a808b9",
+     "artist-credit-id": "ec91ef47-fd3d-3e19-a285-fe68a8c2c58a",
+     "count": 1,
+     "title": "King Biscuit Flower Hour",
+     "status": "Bootleg",
+     "artist-credit": [
+      {
+       "name": "Aerosmith",
+       "artist": {
+        "id": "3d2b98e5-556f-4451-a3ff-c50ea18d57cb",
+        "name": "Aerosmith",
+        "sort-name": "Aerosmith",
+        "disambiguation": "American hard rock band"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "320e16bc-f570-42fe-b743-1713f3940d19",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Access To Excess",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "track-count": 9,
+     "media": [
+      {
+       "id": "069ac3bc-3fd3-3f35-8391-066c20073c78",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "ec6c40f3-5c16-4505-9320-abc832321aa9",
+         "number": "3",
+         "title": "Dream On"
+        }
+       ],
+       "track-count": 9,
+       "track-offset": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ed155978-7356-423c-a092-06c6e4f050b3",
+   "score": 100,
+   "artist-credit-id": "ec91ef47-fd3d-3e19-a285-fe68a8c2c58a",
+   "title": "Dream On",
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "Aerosmith",
+     "artist": {
+      "id": "3d2b98e5-556f-4451-a3ff-c50ea18d57cb",
+      "name": "Aerosmith",
+      "sort-name": "Aerosmith",
+      "disambiguation": "American hard rock band",
+      "aliases": [
+       {
+        "sort-name": "エアロスミス",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "エアロスミス",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Aerosmith",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "Aerosmith",
+        "locale": null,
+        "type": "Artist name",
+        "primary": null,
+        "begin-date": "1970",
+        "end-date": null
+       },
+       {
+        "sort-name": "Aersomith",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Aersomith",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Aero-smith",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Aero-smith",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Aerosmidt",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Aerosmidt",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Aroesmith",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Aroesmith",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Aerosmit",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Aerosmit",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Aero Smith",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Aero Smith",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Arosmith",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Arosmith",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Areosmith",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Areosmith",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "1978",
+   "releases": [
+    {
+     "id": "1e589e36-9e75-4724-b8f3-c96c7e4f783d",
+     "status-id": "1156806e-d06a-38bd-83f0-cf2284a808b9",
+     "artist-credit-id": "ec91ef47-fd3d-3e19-a285-fe68a8c2c58a",
+     "count": 1,
+     "title": "5 The Hard Way !",
+     "status": "Bootleg",
+     "artist-credit": [
+      {
+       "name": "Aerosmith",
+       "artist": {
+        "id": "3d2b98e5-556f-4451-a3ff-c50ea18d57cb",
+        "name": "Aerosmith",
+        "sort-name": "Aerosmith",
+        "disambiguation": "American hard rock band"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "0282e832-dfed-442b-9562-a0357262677d",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "5 The Hard Way !",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "date": "1978",
+     "country": "US",
+     "release-events": [
+      {
+       "date": "1978",
+       "area": {
+        "id": "489ce91b-6658-3307-9877-795b68554c98",
+        "name": "United States",
+        "sort-name": "United States",
+        "iso-3166-1-codes": [
+         "US"
+        ]
+       }
+      }
+     ],
+     "track-count": 11,
+     "media": [
+      {
+       "id": "4092b47a-4076-3629-8a58-f1a95968fb97",
+       "position": 1,
+       "format": "12\" Vinyl",
+       "track": [
+        {
+         "id": "3828be36-7073-4f13-8df4-eccb2c70c596",
+         "number": "B1",
+         "title": "Dream On"
+        }
+       ],
+       "track-count": 11,
+       "track-offset": 6
+      }
+     ]
+    }
+   ]
+  },
+  {
    "id": "b3bf749e-4e96-497e-a8ab-79c1e7d77241",
    "score": 100,
    "artist-credit-id": "ec91ef47-fd3d-3e19-a285-fe68a8c2c58a",
@@ -12412,180 +14225,6 @@
    ]
   },
   {
-   "id": "285c8479-71eb-47ba-9111-64093dd61445",
-   "score": 86,
-   "artist-credit-id": "ec91ef47-fd3d-3e19-a285-fe68a8c2c58a",
-   "title": "Dream On - Live, 1990",
-   "length": 296936,
-   "video": null,
-   "artist-credit": [
-    {
-     "name": "Aerosmith",
-     "artist": {
-      "id": "3d2b98e5-556f-4451-a3ff-c50ea18d57cb",
-      "name": "Aerosmith",
-      "sort-name": "Aerosmith",
-      "disambiguation": "American hard rock band",
-      "aliases": [
-       {
-        "sort-name": "エアロスミス",
-        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
-        "name": "エアロスミス",
-        "locale": null,
-        "type": "Search hint",
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "Aerosmith",
-        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
-        "name": "Aerosmith",
-        "locale": null,
-        "type": "Artist name",
-        "primary": null,
-        "begin-date": "1970",
-        "end-date": null
-       },
-       {
-        "sort-name": "Aersomith",
-        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
-        "name": "Aersomith",
-        "locale": null,
-        "type": "Search hint",
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "Aero-smith",
-        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
-        "name": "Aero-smith",
-        "locale": null,
-        "type": "Search hint",
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "Aerosmidt",
-        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
-        "name": "Aerosmidt",
-        "locale": null,
-        "type": "Search hint",
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "Aroesmith",
-        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
-        "name": "Aroesmith",
-        "locale": null,
-        "type": "Search hint",
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "Aerosmit",
-        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
-        "name": "Aerosmit",
-        "locale": null,
-        "type": "Search hint",
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "Aero Smith",
-        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
-        "name": "Aero Smith",
-        "locale": null,
-        "type": "Search hint",
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "Arosmith",
-        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
-        "name": "Arosmith",
-        "locale": null,
-        "type": "Search hint",
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "Areosmith",
-        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
-        "name": "Areosmith",
-        "locale": null,
-        "type": "Search hint",
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       }
-      ]
-     }
-    }
-   ],
-   "first-release-date": "1973",
-   "releases": [
-    {
-     "id": "32ff01f3-e22b-4ee2-8cef-8567e271e497",
-     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
-     "artist-credit-id": "ec91ef47-fd3d-3e19-a285-fe68a8c2c58a",
-     "count": 1,
-     "title": "5ive of a Kind - Dream On (Live)",
-     "status": "Official",
-     "artist-credit": [
-      {
-       "name": "Aerosmith",
-       "artist": {
-        "id": "3d2b98e5-556f-4451-a3ff-c50ea18d57cb",
-        "name": "Aerosmith",
-        "sort-name": "Aerosmith",
-        "disambiguation": "American hard rock band"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "a2cde389-1bcd-4608-8892-e3fb5d61f98b",
-      "type-id": "6d0c5bf6-7a33-3420-a519-44fc63eedebf",
-      "primary-type-id": "6d0c5bf6-7a33-3420-a519-44fc63eedebf",
-      "title": "5ive of a Kind - Dream On (Live)",
-      "primary-type": "EP",
-      "secondary-types": [
-       "Live"
-      ],
-      "secondary-type-ids": [
-       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
-      ]
-     },
-     "track-count": 5,
-     "media": [
-      {
-       "id": "37964f4a-d126-4585-8e03-4501f9286c8b",
-       "position": 1,
-       "format": "Digital Media",
-       "track": [
-        {
-         "id": "2a034f18-6dc8-478d-aa90-fe673a3154e6",
-         "number": "4",
-         "title": "Dream On - Live, 1990",
-         "length": 296936
-        }
-       ],
-       "track-count": 5,
-       "track-offset": 3
-      }
-     ]
-    }
-   ]
-  },
-  {
    "id": "4abf782e-520c-481e-af40-9e706c99d2b8",
    "score": 86,
    "artist-credit-id": "ec91ef47-fd3d-3e19-a285-fe68a8c2c58a",
@@ -12928,6 +14567,180 @@
        ],
        "track-count": 5,
        "track-offset": 0
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "285c8479-71eb-47ba-9111-64093dd61445",
+   "score": 86,
+   "artist-credit-id": "ec91ef47-fd3d-3e19-a285-fe68a8c2c58a",
+   "title": "Dream On - Live, 1990",
+   "length": 296936,
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "Aerosmith",
+     "artist": {
+      "id": "3d2b98e5-556f-4451-a3ff-c50ea18d57cb",
+      "name": "Aerosmith",
+      "sort-name": "Aerosmith",
+      "disambiguation": "American hard rock band",
+      "aliases": [
+       {
+        "sort-name": "エアロスミス",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "エアロスミス",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Aerosmith",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "Aerosmith",
+        "locale": null,
+        "type": "Artist name",
+        "primary": null,
+        "begin-date": "1970",
+        "end-date": null
+       },
+       {
+        "sort-name": "Aersomith",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Aersomith",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Aero-smith",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Aero-smith",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Aerosmidt",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Aerosmidt",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Aroesmith",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Aroesmith",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Aerosmit",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Aerosmit",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Aero Smith",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Aero Smith",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Arosmith",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Arosmith",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Areosmith",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Areosmith",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "1973",
+   "releases": [
+    {
+     "id": "32ff01f3-e22b-4ee2-8cef-8567e271e497",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "ec91ef47-fd3d-3e19-a285-fe68a8c2c58a",
+     "count": 1,
+     "title": "5ive of a Kind - Dream On (Live)",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Aerosmith",
+       "artist": {
+        "id": "3d2b98e5-556f-4451-a3ff-c50ea18d57cb",
+        "name": "Aerosmith",
+        "sort-name": "Aerosmith",
+        "disambiguation": "American hard rock band"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "a2cde389-1bcd-4608-8892-e3fb5d61f98b",
+      "type-id": "6d0c5bf6-7a33-3420-a519-44fc63eedebf",
+      "primary-type-id": "6d0c5bf6-7a33-3420-a519-44fc63eedebf",
+      "title": "5ive of a Kind - Dream On (Live)",
+      "primary-type": "EP",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "track-count": 5,
+     "media": [
+      {
+       "id": "37964f4a-d126-4585-8e03-4501f9286c8b",
+       "position": 1,
+       "format": "Digital Media",
+       "track": [
+        {
+         "id": "2a034f18-6dc8-478d-aa90-fe673a3154e6",
+         "number": "4",
+         "title": "Dream On - Live, 1990",
+         "length": 296936
+        }
+       ],
+       "track-count": 5,
+       "track-offset": 3
       }
      ]
     }

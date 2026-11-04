@@ -61,11 +61,21 @@ class RecordingResolver(
             is Lookup.Failed -> Resolution.unreachable(search.reason)
             is Lookup.Found -> {
                 val earlier =
-                    musicBrainz.earlierThan(search.value, track) { recording ->
-                        candidate(track, duration, recording).let { it.titleMatches && it.durationMatches }
+                    musicBrainz.earlierThan(search.value, track, measured = duration != null) { recording ->
+                        candidate(track, duration, recording).let {
+                            it.titleMatches && it.durationMatches && (it.named.isNotEmpty() || it.led.isNotEmpty())
+                        }
                     }
-                val found = (search.value + (earlier as? Lookup.Found)?.value.orEmpty()).distinctBy { it.mbid }
-                choose(track, duration, found).let { if (earlier is Lookup.Failed) it.copy(provisional = true) else it }
+                val found = (search.value + earlier?.recordings.orEmpty()).distinctBy { it.mbid }
+                choose(track, duration, found).let {
+                    if (earlier?.complete ==
+                        false
+                    ) {
+                        it.copy(provisional = true)
+                    } else {
+                        it
+                    }
+                }
             }
         }
     }
@@ -691,18 +701,31 @@ private fun lyricsOf(
 // than a page holds: *Dream On* by Aerosmith has some 170, most of them live and most scoring alike,
 // so ranked differently from one request to the next, and once the first 100 held neither the 1973
 // studio recording nor any fitting one earlier than a 1978 live take (#906). Only a recording first
-// released by the first page's earliest one that [fits] (title and length) could be chosen over it,
-// so those are searched for, few enough for one page, and the usual rules then choose among both.
-// Null when the first page is not full, or nothing on it fits with a date. When the search fails,
-// the caller chooses from the first page, provisionally, so a later run asks again.
+// released by the first page's earliest one that [fits] (title, length, an artist credited by name or
+// a band's; with the player's length, [measured], one whose length is known, as the choice prefers
+// it) could be chosen over it, so those are searched for, few enough for one page, and the usual
+// rules then choose among both. Null when the first page is not full. Incomplete, so the choice is
+// provisional and a later run asks again, when that search fails or is itself full, or when nothing
+// on the full first page fits with a date to search by.
 private suspend fun MusicBrainzLookup.earlierThan(
     firstPage: List<MbRecording>,
     track: NormalizedTrack,
+    measured: Boolean,
     fits: (MbRecording) -> Boolean,
-): Lookup<List<MbRecording>>? =
-    firstPage
-        .takeIf { it.size >= MusicBrainzLookup.SEARCH_PAGE }
-        ?.filter(fits)
-        ?.mapNotNull { it.firstReleaseDate }
-        ?.minOrNull()
-        ?.let { searchRecordingsBefore(track.title, track.primary, it) }
+): Earlier? {
+    if (firstPage.size < MusicBrainzLookup.SEARCH_PAGE) return null
+    val fitting = firstPage.filter(fits).filter { it.firstReleaseDate != null }
+    val preferred = fitting.filter { it.lengthMs != null }.takeIf { measured && it.isNotEmpty() } ?: fitting
+    val date = preferred.mapNotNull { it.firstReleaseDate }.minOrNull()
+    return when (val found = date?.let { searchRecordingsBefore(track.title, track.primary, it) }) {
+        null, is Lookup.Failed -> Earlier(emptyList(), complete = false)
+        Lookup.NotFound -> Earlier(emptyList(), complete = true)
+        is Lookup.Found -> Earlier(found.value, complete = found.value.size < MusicBrainzLookup.SEARCH_PAGE)
+    }
+}
+
+// The recordings [earlierThan] found, and whether they are all there are.
+private class Earlier(
+    val recordings: List<MbRecording>,
+    val complete: Boolean,
+)

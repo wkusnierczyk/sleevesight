@@ -25,7 +25,7 @@ import kotlin.time.Duration.Companion.seconds
  * The search for the recordings released by a date (#906), against *Dream On* by Aerosmith as
  * MusicBrainz answered (`fixtures/http/musicbrainz-906/`): a first page of 100 of its 169
  * recordings that holds none of the 1973 studio one, and the search by the first page's earliest
- * fitting date, which does.
+ * date that could be chosen (the 1978 live take's), which does.
  */
 class MusicBrainzEarlierTest {
     private val net = ReplayNetClient("musicbrainz-906")
@@ -70,9 +70,9 @@ class MusicBrainzEarlierTest {
     @Test
     fun `the search by date asks for the recordings first released on or before it`() =
         runTest {
-            client.searchRecordingsBefore("Dream On", "Aerosmith", "1976")
+            client.searchRecordingsBefore("Dream On", "Aerosmith", "1978-10")
             assertEquals(
-                "recording:\"Dream On\" AND artist:\"Aerosmith\" AND firstreleasedate:[* TO 1976]",
+                "recording:\"Dream On\" AND artist:\"Aerosmith\" AND firstreleasedate:[* TO 1978-10]",
                 net.sent.single().query["query"],
             )
         }
