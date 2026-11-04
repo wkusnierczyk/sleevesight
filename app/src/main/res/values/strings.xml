@@ -214,28 +214,24 @@
     <string name="settings_section_keys">Secrets</string>
     <string name="settings_scan_keys">Load keys</string>
     <string name="settings_scan_keys_value">Save several API keys at once from one QR code.</string>
-    <!-- Under Load keys (#541): %1$s is the address of the page that makes the code, a link; %2$s
-         is settings_scan_keys_docs, a link to the documentation. -->
+    <!-- Under Load keys (#541): %1$s is the address of the page that makes the code, as plain text
+         (#765); %2$s is settings_scan_keys_docs, a link to the documentation. -->
     <string name="settings_scan_keys_more">Make the QR code on a computer, at %1$s: the page sends your keys nowhere. More in %2$s.</string>
     <string name="settings_scan_keys_docs">the guide to loading keys</string>
     <string name="settings_key_scan">Scan QR code</string>
     <string name="settings_key_scan_empty">The QR code holds nothing.</string>
     <string name="settings_key_scan_characters">The QR code holds a space or a character no such key has: it is not this key.</string>
     <string name="settings_key_scan_shape">The QR code does not hold a key of this service’s form.</string>
-    <string name="settings_key_scan_setup">This QR code holds keys other than this one: use “Load keys”, in Settings under Secrets, which shows what it holds.</string>
-    <!-- A setup code scanned into one key's field (#541) that cannot fill it. -->
-    <string name="settings_key_scan_setup_more">This QR code holds more than this key, and Sleevesight cannot read the rest. “Load keys”, in Settings under Secrets, shows what it holds.</string>
-    <string name="settings_key_scan_setup_none">This QR code holds no key this version of Sleevesight can read. “Load keys”, in Settings under Secrets, shows what it holds.</string>
-    <string name="settings_key_scan_setup_sealed">This QR code is sealed with words: read it with “Load keys”, in Settings under Secrets, which shows them. For this field, make a code without them: on the page, open “A code without the words, for a single key” and tick “Make the code without the words”.</string>
+    <!-- A setup code scanned into one key's field (#541) that cannot fill it: one with other keys,
+         or keys this version cannot read, and a sealed one, each with Open Load keys (#765). -->
+    <string name="settings_key_scan_setup">This code holds other keys than this one. Load keys shows them all, and saves those you choose.</string>
+    <string name="settings_key_scan_setup_sealed">This code is sealed with words, which only Load keys can open. Read it there, or make a code of this key without the words.</string>
+    <string name="settings_key_open_load_keys">Open Load keys</string>
     <string name="settings_key_scan_setup_newer">This QR code is of a later version than this app reads. Update Sleevesight, then scan it again.</string>
     <string name="settings_key_scan_duplicate">The QR code holds this key on two lines, so which one to use cannot be told.</string>
     <string name="settings_key_scan_setup_empty">This setup code holds no keys.</string>
     <string name="setup_explained">Each is stored encrypted on this phone, and sent only to its own service.</string>
     <string name="setup_failed">Not saved: %1$s. The phone’s key store or storage failed. Try again.</string>
-    <string name="setup_not_a_setup_title">Not a setup code</string>
-    <string name="setup_not_a_setup">This QR code is not a Sleevesight setup code. One is made on a computer at sleevesight.app/api-keys: never with an online QR generator, which would receive the keys.</string>
-    <string name="setup_unsupported_title">A newer setup code</string>
-    <string name="setup_unsupported">This setup code is of a later version (%1$s) than this app reads. Update Sleevesight, then scan it again.</string>
     <string name="setup_scan_again">Scan again</string>
     <string name="settings_key_type">Type on a computer</string>
     <string name="keyboard_not_code">This QR code is not a keyboard code. On a computer, open sleevesight.app/keyboard.html and scan the code it shows.</string>

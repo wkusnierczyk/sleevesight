@@ -1,12 +1,8 @@
 package app.sleevesight.app.ui.settings
 
 import android.os.SystemClock
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -17,22 +13,11 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretState
-import app.sleevesight.app.ui.ExternalLink
-import app.sleevesight.app.ui.rememberOpenUrl
 import app.sleevesight.app.ui.scan.QrScanner
-import app.sleevesight.app.ui.shownAddress
 import app.sleevesight.core.Secret
 import app.sleevesight.core.keys.KeyCrypto
 import app.sleevesight.core.keys.KeySetup
@@ -49,9 +34,10 @@ import kotlinx.coroutines.withContext
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 
-// *Load keys* (#268, #446, #590): five words to type on the computer, which seal the setup code to
-// this phone; how to make the code, the camera to read it, what it holds before anything is saved,
-// which services to switch on, and then what was saved and switched (#763).
+// *Load keys* (#268, #446, #590, #765): an intro, then four numbered steps: ① five words to type
+// on the computer, which seal the setup code to this phone; ② the camera to read the code; ③ the
+// keys it holds, to save; ④ the services to switch on (#763); then a summary of what was saved and
+// switched. Nothing is saved before ④'s *Complete*.
 
 /** The page that makes a setup code (`api-keys.html`, #436), which *Load keys* points to. */
 internal const val API_KEYS_URL = "https://sleevesight.app/api-keys"
@@ -59,90 +45,115 @@ internal const val API_KEYS_URL = "https://sleevesight.app/api-keys"
 /** How long the words *Load keys* shows can open a code, from when they are drawn. */
 internal val WORDS_LIFETIME: Duration = 5.minutes
 
-/** How often, at most, the words' age is checked while they show, so they go soon after waking. */
+/** How often, at most, the words' age is checked while they matter, so the countdown moves each second. */
 private const val WORDS_CHECK_MS = 1_000L
 
 /** What a screen test finds each word *Load keys* shows by. */
 internal const val LOAD_KEYS_WORD_TAG = "load-keys-word"
 
-/** Why a sealed code is not opened. */
+/** Why a code read on ② gives no keys (#765): each says so in a panel under the camera, which keeps reading. */
 internal enum class Refusal {
-    /** It was sealed with other words, or changed since. */
+    /** A sealed code the words shown do not open: sealed with other words, or changed since. */
     WRONG_WORDS,
 
-    /** The words expired before it was scanned. */
+    /** A sealed code scanned after the words last shown expired, before new ones were shown. */
     EXPIRED,
 
-    /** The words have already opened a code. */
+    /** A sealed code scanned after the words last shown opened a code, before new ones were shown. */
     USED,
 
     /** It cannot be read as a sealed code. */
     DAMAGED,
+
+    /** It is not a setup code. */
+    NOT_A_SETUP,
+
+    /** It is a setup code of a later version. */
+    NEWER,
 }
 
-/**
- * Where *Load keys* is: the words, the camera, a sealed code being opened or refused, what the code
- * read holds, the services to enable, or what was saved.
- */
-private sealed interface LoadStep {
-    data object Words : LoadStep
+/** *Load keys*' screens, in order (#765), each by its [title] and the [number] before it, if any. */
+@Suppress("MagicNumber") // The steps' numbers, as their titles show them.
+private enum class LoadStep(
+    @StringRes val title: Int?,
+    val number: Int?,
+) {
+    INTRO(R.string.settings_scan_keys, null),
+    WORDS(R.string.load_keys_words_title, 1),
 
-    data object Scanning : LoadStep
+    // The guided scan's title, inside what scrolls (#541), [ScanStep]'s.
+    SCAN(null, 2),
+    KEYS(R.string.load_keys_keys_title, 3),
+    ENABLE(R.string.load_keys_enable_title, 4),
+    SUMMARY(R.string.load_keys_summary_title, null),
+}
 
+/** What ② has made of the codes it read: none yet or one refused, a sealed one being opened, or one read. */
+internal sealed interface ScanState {
+    /** The camera reads, after the code [refused], if any. */
+    class Reading(
+        val refused: Refusal? = null,
+    ) : ScanState
+
+    /** A sealed [code] being opened with the [words] shown. */
     class Opening(
         val code: String,
         val words: List<String>,
-    ) : LoadStep
+    ) : ScanState
 
-    class Refused(
-        val reason: Refusal,
-    ) : LoadStep
-
-    /** What the code [read] holds; [sealed] when it came sealed with the words. */
-    class Found(
-        val read: SetupRead,
-        val sealed: Boolean,
-    ) : LoadStep
-
-    /** The services to enable once the [keys] are saved, as [plan] has them (#763). */
-    class Enable(
-        val keys: List<SavedKey>,
-        val before: Map<SecretId, SecretState>,
-        val plan: EnablePlan,
-    ) : LoadStep
-
-    /**
-     * What was saved ([keys], with the keys stored [before]) and switched on or off: the [choices]
-     * as written ([applied]), or null when they could not be.
-     */
-    class Saved(
-        val keys: List<SavedKey>,
-        val before: Map<SecretId, SecretState>,
-        val choices: Map<SecretId, Boolean>,
-        val applied: Applied?,
-    ) : LoadStep
+    /** The code read, [load]: the camera has stopped. */
+    class Read(
+        val load: KeyLoad,
+    ) : ScanState
 }
 
 /**
- * *Load keys*, a screen of its own ([KeyScreen], secure). First, five words drawn from [list] at
- * random ([crypto]), each large, to type on the computer at [API_KEYS_URL], where the page seals the
- * setup code with them (#590), with *New words* and *Next*; they open one code, and are forgotten
- * after [WORDS_LIFETIME] by [clock], which counts deep sleep, or when the screen is left (never
- * saved, so a recreated screen draws new
- * ones). Then how to make the code, the camera's view ([scanner]) to read it, *Show the words* and
- * *Cancel* ([GuidedScan], as the key field's scans, #541). A sealed code is opened with the words
- * (about a second, while the screen says so), or refused: the words do not match it, have expired
- * or were used, or it is damaged. A clear code (version 1) is read as before, and the screen says
- * it was not sealed. Once a code is read (#763), the keys it holds, before anything is saved: each
- * by its group, name and last four characters, whether it is new or replaces a key stored
- * ([secrets]), and a checkbox, ticked, and the keys that did not scan ([KeysStep]); *Next* saves the
- * keys ticked with [onSave], which returns those it could not save: the screen names them, and saves
- * only those on the next try. Then which services to switch on ([EnableStep], [enablePlan]), from
- * the [settings] as they are: *Next* writes the choices with [onApply], which returns the settings
- * as written, or null when they could not be; *Cancel* leaves every switch as it was. Then the
- * summary ([SummaryStep]), of what was written, or that it could not be, with *Try again*; *Done*.
- * A link to a section of the settings calls [onOpen] and leaves the screen. A code that is not a
- * setup code, or one of a later version, says so, with *Scan again* and *Cancel*.
+ * What was saved ([keys], with the keys stored [before]) and switched on or off: the [choices] as
+ * written ([applied]), or null when they could not be.
+ */
+private class Done(
+    val keys: List<SavedKey>,
+    val before: Map<SecretId, SecretState>,
+    val choices: Map<SecretId, Boolean>,
+    val applied: Applied?,
+)
+
+/**
+ * What ④'s *Complete* did (#765), in one piece of work that outlives the screen, so that a rotation
+ * during the save still writes the choices: the keys it could not save ([unsaved]), and, once every
+ * key is saved, the choices as written ([applied]), or null when they could not be, or were not
+ * written for a key not saved.
+ */
+internal class Completed(
+    val unsaved: List<SecretId>,
+    val applied: Applied?,
+)
+
+/**
+ * *Load keys*, a screen of its own ([KeyScreen], secure), in steps (#765). The intro says where the
+ * code is made, [API_KEYS_URL], as plain text, with *Start*. ① five words drawn from [list] at
+ * random ([crypto]) when *Start* is tapped, each large ([WordsStep]), to give the page, which seals
+ * the setup code with them (#590), with the time they have left; they open one code, and when
+ * their [WORDS_LIFETIME] is up, by [clock], which counts deep sleep, new ones are drawn by
+ * themselves. They are never saved, so a recreated screen draws new ones. ② the camera ([scanner],
+ * [ScanStep]): a sealed code is opened with the words, or refused, in a panel under the camera,
+ * which keeps reading; a code read stops it, and enables *Next*. A code read while another opens
+ * waits, and is taken if that one is refused. ③ the keys the code holds, each
+ * ticked ([KeysStep]), with *Next* while any is. ④ the services to switch on ([EnableStep],
+ * [enablePlan]), planned from the keys ticked, as if saved, and the [settings] as they are:
+ * *Complete* saves the keys ticked and then writes the choices, as one piece of work, with
+ * [onComplete] ([Completed]): it returns the keys it could not save (④ names them, and saves only
+ * those on the next try), and, once all are saved, the settings as written, or null when they
+ * could not be. Then the summary ([SummaryStep]), of what was written, or that it could not be,
+ * with *Try again*, which writes the choices again with [onApply]; *Done*.
+ * *Previous* goes back a step, and *Cancel*, on any step, leaves without saving anything more. On
+ * the summary, a link to a section of the settings calls [onOpen] and leaves the screen.
+ *
+ * The words that open a code are the ones ① shows. A sealed code scanned after the words last shown
+ * there expired or opened a code, before ① has shown the new ones, is refused as expired or used,
+ * without trying the new ones, which it cannot have been made with; one the words shown do not
+ * open is refused as made with other words. So a code is never opened with words that have expired
+ * or been spent.
  */
 @Suppress("LongMethod", "CyclomaticComplexMethod", "LongParameterList") // The steps, and what tests may give.
 @Composable
@@ -150,7 +161,7 @@ internal fun LoadKeysScreen(
     secrets: Map<SecretId, SecretState>,
     settings: Settings,
     scanner: QrScanner,
-    onSave: suspend (Map<SecretId, Secret>) -> List<SecretId>,
+    onComplete: suspend (Map<SecretId, Secret>, Map<SecretId, Boolean>) -> Completed,
     onApply: suspend (Map<SecretId, Boolean>) -> Applied?,
     onOpen: (SettingsTarget) -> Unit,
     onDismiss: () -> Unit,
@@ -158,132 +169,183 @@ internal fun LoadKeysScreen(
     crypto: KeyCrypto = JvmKeyCrypto,
     clock: () -> Long = SystemClock::elapsedRealtime,
 ) {
-    var step by remember { mutableStateOf<LoadStep>(LoadStep.Words) }
+    var step by remember { mutableStateOf(LoadStep.INTRO) }
     var busy by remember { mutableStateOf(false) }
-    // The words while they can open a code; once they cannot, why. Their age is told by [clock],
-    // which counts deep sleep, as a coroutine's delay does not: a phone asleep on this screen for
-    // an hour finds them expired. The delay below only hides them on time while the phone is awake.
-    var words by remember { mutableStateOf<List<String>?>(list.draw(crypto::pick)) }
-    var drawnAt by remember { mutableLongStateOf(clock()) }
-    var gone by remember { mutableStateOf<Refusal?>(null) }
+    // The words, drawn at *Start*. Their age is told by [clock], which counts deep sleep, as a
+    // coroutine's delay does not: a phone asleep on this screen for an hour finds them renewed.
+    var words by remember { mutableStateOf<List<String>?>(null) }
+    var drawnAt by remember { mutableLongStateOf(0L) }
+    var now by remember { mutableLongStateOf(0L) }
+    // Whether ① has shown the words since they were drawn, and why the ones before them went.
+    var seen by remember { mutableStateOf(false) }
+    var retired by remember { mutableStateOf<Refusal?>(null) }
+    var scan by remember { mutableStateOf<ScanState>(ScanState.Reading()) }
+    // The last code the camera read while another opened: the camera does not read it again.
+    var queued by remember { mutableStateOf<String?>(null) }
+    var plan by remember { mutableStateOf<EnablePlan?>(null) }
+    var done by remember { mutableStateOf<Done?>(null) }
     val lifetime = WORDS_LIFETIME.inWholeMilliseconds
     val due = { clock() - drawnAt >= lifetime }
-    val expire = {
-        words = null
-        gone = Refusal.EXPIRED
-    }
-    LaunchedEffect(words) {
-        while (words != null && !due()) delay(minOf(lifetime - (clock() - drawnAt), WORDS_CHECK_MS))
-        if (words != null) expire()
-    }
-    val newWords = {
+    val draw = {
         words = list.draw(crypto::pick)
         drawnAt = clock()
-        gone = null
-        step = LoadStep.Words
+        now = drawnAt
+        seen = false
     }
-    // While scanning, the title is the guided scan's, inside what scrolls (#541).
-    val title = R.string.settings_scan_keys.takeIf { step != LoadStep.Scanning }
-    KeyScreen(title, busy || step is LoadStep.Opening, onDismiss) {
-        when (val shown = step) {
-            LoadStep.Words -> {
-                LaunchedEffect(Unit) { if (words != null && due()) expire() }
+    // The words shown go, [why], and new ones take their place, for ① to show.
+    val retire = { why: Refusal ->
+        retired = why
+        draw()
+    }
+    // While the words matter, on ① and ②: renewed once their time is up, checked each second, which
+    // moves ①'s countdown, and at once on coming back to either.
+    LaunchedEffect(words, step) {
+        if (words == null || (step != LoadStep.WORDS && step != LoadStep.SCAN)) return@LaunchedEffect
+        while (!due()) {
+            now = clock()
+            delay(minOf(lifetime - (now - drawnAt), WORDS_CHECK_MS))
+        }
+        retire(Refusal.EXPIRED)
+    }
+    // A code the camera read on ②: taken while it reads, kept for later while another opens.
+    val take = take@{ code: String ->
+        when (scan) {
+            is ScanState.Opening -> {
+                queued = code
+                return@take
+            }
+
+            is ScanState.Read -> {
+                return@take
+            }
+
+            is ScanState.Reading -> {}
+        }
+        val setup = KeySetup.read(code)
+        if (setup != SetupRead.Sealed) {
+            scan = scanned(setup, sealed = false, secrets)
+            return@take
+        }
+        if (due()) retire(Refusal.EXPIRED)
+        val shown = words
+        // Words ① has not shown cannot have made the code: why the ones it showed went.
+        scan =
+            if (shown == null || !seen) {
+                ScanState.Reading(retired ?: Refusal.EXPIRED)
+            } else {
+                ScanState.Opening(code, shown)
+            }
+    }
+    // ② afresh: the camera reads, with nothing refused or waiting.
+    val rescan = {
+        scan = ScanState.Reading()
+        queued = null
+        step = LoadStep.SCAN
+    }
+    val read = (scan as? ScanState.Read)?.load
+    // The keys ticked on ③, as left there; those a try of *Complete* saved, and those it could not.
+    var ticked by remember(read) { mutableStateOf(read?.let { load -> load.keys.map { it.id }.toSet() }.orEmpty()) }
+    var saved by remember(read) { mutableStateOf(emptySet<SecretId>()) }
+    var unsaved by remember(read) { mutableStateOf(emptyList<SecretId>()) }
+    KeyScreen(step.title, busy, onDismiss, step.number) {
+        when (step) {
+            LoadStep.INTRO -> {
+                IntroStep(
+                    onStart = {
+                        draw()
+                        step = LoadStep.WORDS
+                    },
+                    onCancel = onDismiss,
+                )
+            }
+
+            LoadStep.WORDS -> {
+                val shown = words ?: return@KeyScreen
+                LaunchedEffect(shown) { seen = true }
                 WordsStep(
-                    words = words?.takeUnless { due() },
-                    onNewWords = newWords,
-                    onNext = { step = LoadStep.Scanning },
+                    words = shown,
+                    left = lifetime - (now - drawnAt),
+                    onNewWords = draw,
+                    onNext = rescan,
                     onCancel = onDismiss,
                 )
             }
 
-            LoadStep.Scanning -> {
-                GuidedScan(
-                    title = R.string.settings_scan_keys,
-                    make = stringResource(R.string.load_keys_make),
-                    url = API_KEYS_URL,
-                    linkDescription = R.string.load_keys_instructions_of,
-                    read = stringResource(R.string.load_keys_read_code),
-                    scanner = scanner,
-                    onScanned = { code ->
-                        val read = KeySetup.read(code)
-                        if (read == SetupRead.Sealed && words != null && due()) expire()
-                        val shownWords = words
-                        step =
+            LoadStep.SCAN -> {
+                (scan as? ScanState.Opening)?.let { opening ->
+                    LaunchedEffect(opening) {
+                        val opened =
+                            withContext(Dispatchers.Default) { SealedSetup.open(opening.code, opening.words, crypto) }
+                        val setup = (opened as? Opened.Setup)?.let { KeySetup.read(it.text) }
+                        // Renewed while it opened: the words it was opened with have gone, and
+                        // what it holds is not taken.
+                        val gone = words != opening.words
+                        // Opened: the words are spent, whatever the code holds.
+                        if (setup != null && !gone) retire(Refusal.USED)
+                        scan =
                             when {
-                                read != SetupRead.Sealed -> LoadStep.Found(read, sealed = false)
-                                shownWords == null -> LoadStep.Refused(gone ?: Refusal.EXPIRED)
-                                else -> LoadStep.Opening(code, shownWords)
+                                gone -> ScanState.Reading(retired ?: Refusal.EXPIRED)
+                                opened == Opened.WrongWords -> ScanState.Reading(Refusal.WRONG_WORDS)
+                                setup == null -> ScanState.Reading(Refusal.DAMAGED)
+                                else -> scanned(setup, sealed = true, secrets)
                             }
-                    },
-                    onCancel = onDismiss,
-                    actions = {
-                        TextButton(onClick = { step = LoadStep.Words }) {
-                            Text(stringResource(R.string.load_keys_show_words))
-                        }
-                    },
-                )
-            }
-
-            is LoadStep.Opening -> {
-                OpeningStep()
-                LaunchedEffect(shown) {
-                    val opened = withContext(Dispatchers.Default) { SealedSetup.open(shown.code, shown.words, crypto) }
-                    val read = (opened as? Opened.Setup)?.let { KeySetup.read(it.text) }
-                    step =
-                        when {
-                            opened == Opened.WrongWords -> LoadStep.Refused(Refusal.WRONG_WORDS)
-                            read == null || read == SetupRead.Sealed -> LoadStep.Refused(Refusal.DAMAGED)
-                            else -> LoadStep.Found(read, sealed = true)
-                        }
-                    // Opened: the words are spent, whatever the code holds.
-                    if (read != null) {
-                        words = null
-                        gone = Refusal.USED
+                        // Refused: the code that waited meanwhile, if any, is taken now.
+                        val next = queued
+                        queued = null
+                        if (next != null && scan is ScanState.Reading) take(next)
                     }
                 }
-            }
-
-            is LoadStep.Refused -> {
-                RefusedStep(
-                    reason = shown.reason,
-                    onShowWords = { step = LoadStep.Words },
-                    onNewWords = newWords,
-                    onScanAgain = { step = LoadStep.Scanning },
+                ScanStep(
+                    scan = scan,
+                    scanner = scanner,
+                    onScanned = take,
+                    onPrevious = { step = LoadStep.WORDS },
+                    onNext = { step = LoadStep.KEYS },
                     onCancel = onDismiss,
                 )
             }
 
-            is LoadStep.Found -> {
-                val read = shown.read
-                if (read is SetupRead.Setup) {
-                    KeysStep(
-                        setup = read,
-                        sealed = shown.sealed,
-                        secrets = secrets,
-                        onSave = onSave,
-                        onBusy = { busy = it },
-                        onSaved = { keys, before ->
-                            step = LoadStep.Enable(keys, before, enablePlan(keys.map { it.id }, before, settings))
-                        },
-                        onScanAgain = { step = LoadStep.Scanning },
-                        onCancel = onDismiss,
-                    )
-                } else {
-                    UnreadStep(read, onScanAgain = { step = LoadStep.Scanning }, onCancel = onDismiss)
-                }
+            LoadStep.KEYS -> {
+                val load = read ?: return@KeyScreen
+                KeysStep(
+                    load = load,
+                    ticked = ticked,
+                    saved = saved,
+                    unsaved = unsaved,
+                    onTick = { id, on -> ticked = if (on) ticked + id else ticked - id },
+                    onPrevious = { step = LoadStep.SCAN },
+                    onScanAgain = rescan,
+                    onNext = {
+                        plan = enablePlan(load.keys.map { it.id }.filter { it in ticked }, load.before, settings)
+                        step = LoadStep.ENABLE
+                    },
+                    onCancel = onDismiss,
+                )
             }
 
-            is LoadStep.Enable -> {
+            LoadStep.ENABLE -> {
+                val load = read ?: return@KeyScreen
+                val shown = plan ?: return@KeyScreen
                 EnableStep(
-                    plan = shown.plan,
-                    onOpen = { target ->
-                        onDismiss()
-                        onOpen(target)
-                    },
-                    onNext = { choices ->
+                    plan = shown,
+                    unsaved = unsaved,
+                    onPrevious = { step = LoadStep.KEYS },
+                    onComplete = { choices ->
                         busy = true
                         try {
-                            step = LoadStep.Saved(shown.keys, shown.before, choices, onApply(choices))
+                            // After a failure, the keys saved on the first try are not saved again.
+                            val left = load.keys.filter { it.id in ticked && it.id !in saved }
+                            val completed = onComplete(left.associate { it.id to it.key }, choices)
+                            unsaved = completed.unsaved
+                            saved = saved + left.map { it.id }.filterNot { it in unsaved }
+                            if (unsaved.isEmpty()) {
+                                val keys =
+                                    load.keys
+                                        .filter { it.id in ticked }
+                                        .map { SavedKey(it.id, endingOf(it.key.reveal()), it.replaces) }
+                                done = Done(keys, load.before, choices, completed.applied)
+                                step = LoadStep.SUMMARY
+                            }
                         } finally {
                             busy = false
                         }
@@ -292,7 +354,8 @@ internal fun LoadKeysScreen(
                 )
             }
 
-            is LoadStep.Saved -> {
+            LoadStep.SUMMARY -> {
+                val shown = done ?: return@KeyScreen
                 SummaryStep(
                     keys = shown.keys,
                     secrets = shown.before,
@@ -300,143 +363,60 @@ internal fun LoadKeysScreen(
                     retry = { onApply(shown.choices) },
                     onBusy = { busy = it },
                     onDone = onDismiss,
-                )
-            }
-        }
-    }
-}
-
-/**
- * A code read that holds no keys to offer: one that is not a setup code ([read] is
- * [SetupRead.NotASetup]), or one of a later version; with *Scan again* ([onScanAgain]) and *Cancel*
- * ([onCancel]). A sealed code never shows here: it is opened, or refused, first.
- */
-@Composable
-private fun ColumnScope.UnreadStep(
-    read: SetupRead,
-    onScanAgain: () -> Unit,
-    onCancel: () -> Unit,
-) {
-    val unsupported = read as? SetupRead.Unsupported
-    val title = if (unsupported != null) R.string.setup_unsupported_title else R.string.setup_not_a_setup_title
-    StepHeading(stringResource(title), announced = true)
-    Column(modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())) {
-        val text =
-            unsupported?.let { stringResource(R.string.setup_unsupported, it.version) }
-                ?: stringResource(R.string.setup_not_a_setup)
-        Text(text, style = MaterialTheme.typography.bodyMedium)
-    }
-    KeyScreenActions(
-        cancel = { TextButton(onClick = onCancel) { Text(stringResource(R.string.settings_cancel)) } },
-    ) {
-        TextButton(onClick = onScanAgain) { Text(stringResource(R.string.setup_scan_again)) }
-    }
-}
-
-/**
- * The words step: [words], each on a line of its own, large, its first three letters bold, which
- * are enough to type it; or, once they have expired, that they have. *New words* calls
- * [onNewWords], *Next* (while there are words) [onNext], and *Cancel* [onCancel].
- */
-@Composable
-private fun ColumnScope.WordsStep(
-    words: List<String>?,
-    onNewWords: () -> Unit,
-    onNext: () -> Unit,
-    onCancel: () -> Unit,
-) {
-    Column(
-        modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        val style = MaterialTheme.typography.bodyMedium
-        Text(stringResource(R.string.load_keys_words_intro), style = style)
-        StepHeading(stringResource(R.string.load_keys_open))
-        val address = shownAddress(API_KEYS_URL)
-        ExternalLink(
-            text = address,
-            description = stringResource(R.string.load_keys_instructions_of, address),
-            onClick = rememberOpenUrl(API_KEYS_URL),
-        )
-        StepHeading(stringResource(R.string.load_keys_type))
-        if (words == null) {
-            Text(
-                stringResource(R.string.load_keys_words_expired),
-                style = style,
-                color = MaterialTheme.colorScheme.error,
-            )
-        } else {
-            for (word in words) {
-                Text(
-                    buildAnnotatedString {
-                        withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(word.take(KeyWords.PREFIX)) }
-                        append(word.drop(KeyWords.PREFIX))
+                    framed = true,
+                    onOpen = { target ->
+                        onDismiss()
+                        onOpen(target)
                     },
-                    style = MaterialTheme.typography.headlineMedium,
-                    modifier = Modifier.testTag(LOAD_KEYS_WORD_TAG),
                 )
             }
-            val minutes = WORDS_LIFETIME.inWholeMinutes.toInt()
-            Text(pluralStringResource(R.plurals.load_keys_words_expire, minutes, minutes), style = style)
         }
     }
-    KeyScreenActions(
-        cancel = { TextButton(onClick = onCancel) { Text(stringResource(R.string.settings_cancel)) } },
-    ) {
-        TextButton(onClick = onNewWords) { Text(stringResource(R.string.load_keys_new_words)) }
-        if (words != null) TextButton(onClick = onNext) { Text(stringResource(R.string.load_keys_next)) }
+}
+
+/**
+ * What ② makes of a code read as [setup], [sealed] with the words or not: the keys it holds, with
+ * the keys stored as [secrets] has them then; or why it holds none to offer.
+ */
+private fun scanned(
+    setup: SetupRead,
+    sealed: Boolean,
+    secrets: Map<SecretId, SecretState>,
+): ScanState =
+    when (setup) {
+        is SetupRead.Setup -> ScanState.Read(KeyLoad(setup, sealed, secrets))
+        is SetupRead.Unsupported -> ScanState.Reading(Refusal.NEWER)
+        SetupRead.NotASetup -> ScanState.Reading(Refusal.NOT_A_SETUP)
+        // Sealed inside a sealed code: none the page makes.
+        SetupRead.Sealed -> ScanState.Reading(Refusal.DAMAGED)
     }
-}
 
 /**
- * While a sealed code is opened: about a second, on a slow phone. Its heading has the turning record
- * before it, in place of a progress bar (#785).
+ * The intro (#765): in a panel centred on the screen, to open the API keys page on a computer, its
+ * address in full as plain text ([ApiKeysAddress]), and to tap *Start* ([onStart]), which draws the
+ * words; *Cancel* calls [onCancel].
  */
 @Composable
-private fun OpeningStep() {
-    StepHeading(stringResource(R.string.load_keys_opening), announced = true, busy = true)
-}
-
-/**
- * Why a sealed code was not opened ([reason]), and what to do: words that do not match it offer
- * *Show the words* ([onShowWords]) and *Scan again* ([onScanAgain]); words expired or used, *New
- * words* ([onNewWords]); a damaged code, *Scan again*; each with *Cancel* ([onCancel]).
- */
-@Composable
-private fun ColumnScope.RefusedStep(
-    reason: Refusal,
-    onShowWords: () -> Unit,
-    onNewWords: () -> Unit,
-    onScanAgain: () -> Unit,
+private fun ColumnScope.IntroStep(
+    onStart: () -> Unit,
     onCancel: () -> Unit,
 ) {
-    val (title, text) =
-        when (reason) {
-            Refusal.WRONG_WORDS -> R.string.load_keys_wrong_words_title to R.string.load_keys_wrong_words
-            Refusal.EXPIRED -> R.string.load_keys_expired_title to R.string.load_keys_expired
-            Refusal.USED -> R.string.load_keys_used_title to R.string.load_keys_used
-            Refusal.DAMAGED -> R.string.load_keys_damaged_title to R.string.load_keys_damaged
-        }
-    StepHeading(stringResource(title), announced = true)
-    Column(modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())) {
-        Text(stringResource(text), style = MaterialTheme.typography.bodyMedium)
-    }
+    FilledMiddle(
+        least = null,
+        above = {},
+        middle = {
+            KeyPanel {
+                val style = MaterialTheme.typography.bodyMedium
+                Text(stringResource(R.string.load_keys_intro_open), style = style)
+                ApiKeysAddress(centred = true)
+                Text(stringResource(R.string.load_keys_intro_start), style = style)
+            }
+        },
+        below = {},
+    )
     KeyScreenActions(
         cancel = { TextButton(onClick = onCancel) { Text(stringResource(R.string.settings_cancel)) } },
     ) {
-        when (reason) {
-            Refusal.WRONG_WORDS -> {
-                TextButton(onClick = onShowWords) { Text(stringResource(R.string.load_keys_show_words)) }
-                TextButton(onClick = onScanAgain) { Text(stringResource(R.string.setup_scan_again)) }
-            }
-
-            Refusal.EXPIRED, Refusal.USED -> {
-                TextButton(onClick = onNewWords) { Text(stringResource(R.string.load_keys_new_words)) }
-            }
-
-            Refusal.DAMAGED -> {
-                TextButton(onClick = onScanAgain) { Text(stringResource(R.string.setup_scan_again)) }
-            }
-        }
+        TextButton(onClick = onStart) { Text(stringResource(R.string.load_keys_start)) }
     }
 }

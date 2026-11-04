@@ -1,7 +1,10 @@
 package app.sleevesight.app.ui.settings
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -11,30 +14,38 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.text
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.SecureFlagPolicy
+import app.sleevesight.app.R
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.ui.logo.Busy
 import app.sleevesight.app.ui.theme.appendCode
 import app.sleevesight.app.ui.theme.codeStyle
 
 // The key settings' own screens (#446): *Load keys* ([LoadKeysScreen]) and *Purge keys*
-// ([PurgeKeysScreen]), in place of their dialogs.
+// ([PurgeKeysScreen]), in place of their dialogs; their titles, *Load keys*' numbered (#765), their
+// headings, panels and buttons.
 
 /** How many of a key's last characters the key screens show. */
 internal const val SHOWN_END = 4
@@ -82,17 +93,19 @@ internal fun keyLine(
 private const val ENDING_MARK = "\uFFFC"
 
 /**
- * A key screen: [title] at the top, then [content], filling the screen. It is a window of its own,
- * secure (`FLAG_SECURE`), so no screenshot or screen recording shows it, as the key dialogs are.
- * Back calls [onDismiss], except while [busy]: a save or a deletion then ends as its result says.
- * With no [title], [content] shows it itself ([KeyScreenTitle]), as a guided scan does inside what
- * scrolls, so that a short window leaves the camera's view as much room as it can (#541).
+ * A key screen: [title] at the top, after its [step]'s number, if any ([KeyScreenTitle], #765), then
+ * [content], filling the screen. It is a window of its own, secure (`FLAG_SECURE`), so no screenshot
+ * or screen recording shows it, as the key dialogs are. Back calls [onDismiss], except while
+ * [busy]: a save or a deletion then ends as its result says. With no [title], [content] shows it
+ * itself, as a guided scan does inside what scrolls, so that a short window leaves the camera's view
+ * as much room as it can (#541).
  */
 @Composable
 internal fun KeyScreen(
     @StringRes title: Int?,
     busy: Boolean,
     onDismiss: () -> Unit,
+    step: Int? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Dialog(
@@ -104,22 +117,77 @@ internal fun KeyScreen(
                 modifier = Modifier.safeDrawingPadding().padding(horizontal = 24.dp, vertical = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                title?.let { KeyScreenTitle(it) }
+                title?.let { KeyScreenTitle(it, step) }
                 content()
             }
         }
     }
 }
 
-/** A key screen's [title], which a screen reader reads as a heading. */
+/**
+ * A key screen's [title], which a screen reader reads as a heading. With a [step], *Load keys*'
+ * numbered steps (#765), its number goes before it, in an outlined circle, in the quiet colour, at
+ * [STEP_NUMBER_SCALE] of the title's size, as the API keys page draws its steps; a screen reader
+ * reads the two as one heading, "Step 1: Encryption words".
+ */
 @Composable
 internal fun KeyScreenTitle(
     @StringRes title: Int,
+    step: Int? = null,
 ) {
-    Text(
-        stringResource(title),
-        style = MaterialTheme.typography.headlineMedium,
-        modifier = Modifier.semantics { heading() },
+    val style = MaterialTheme.typography.headlineMedium
+    val name = stringResource(title)
+    if (step == null) {
+        Text(name, style = style, modifier = Modifier.semantics { heading() })
+        return
+    }
+    val spoken = stringResource(R.string.load_keys_step, step, name)
+    Row(
+        modifier =
+            Modifier.clearAndSetSemantics {
+                heading()
+                text = AnnotatedString(spoken)
+            },
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        val number = style.copy(fontSize = style.fontSize * STEP_NUMBER_SCALE, fontFeatureSettings = "tnum")
+        // The circle as wide as the number's size and a half again, as the page's.
+        val side = with(LocalDensity.current) { (number.fontSize * STEP_CIRCLE_SCALE).toDp() }
+        Box(
+            modifier = Modifier.size(side).border(2.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(step.toString(), style = number, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Text(name, style = style)
+    }
+}
+
+/** How large a step's number is, against its title ([KeyScreenTitle]). */
+private const val STEP_NUMBER_SCALE = 0.7f
+
+/** How wide a step's circle is, against its number. */
+private const val STEP_CIRCLE_SCALE = 1.4f
+
+/**
+ * A panel on a key screen (#765): filled with the surface container colour, 16 dp corners and
+ * padding, its [content] 10 dp apart; *Load keys*' intro and summary are each one.
+ */
+@Composable
+internal fun KeyPanel(
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val shape = RoundedCornerShape(16.dp)
+    Column(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surfaceContainer, shape)
+                .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+        content = content,
     )
 }
 

@@ -24,6 +24,7 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executor
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.math.abs
 
 /**
@@ -34,8 +35,10 @@ import kotlin.math.abs
  *
  * The camera opens when the view's surface is created and closes when it is destroyed (the app
  * leaving the screen), so it opens again on return; the surface is not given back until the camera
- * has let go of it. [onScanned] hears the first code read, once, and [onUnavailable] that the camera
- * cannot be used; both on the main thread, and neither after [release], which ends it. Everything
+ * has let go of it. [onScanned] hears each code read, once: the code last heard, read again, is not
+ * heard again, but another code is, so a screen that refuses a code keeps reading (*Load keys*,
+ * #765). [onUnavailable] hears that the camera cannot be used; both on the main thread, and neither
+ * after [release], which ends it. Everything
  * that touches the camera runs on the camera thread, in order, so a camera that opens after its
  * surface has gone, or after the release, is closed at once; the thread ends only once no camera is
  * still opening, so none is left open.
@@ -49,7 +52,9 @@ internal class QrCamera(
     private val thread = HandlerThread("qr-scan").apply { start() }
     private val handler = Handler(thread.looper)
     private val main = Handler(Looper.getMainLooper())
-    private val done = AtomicBoolean(false)
+
+    // The last code heard: the same code, read again, is not heard again.
+    private val last = AtomicReference<String?>(null)
     private val released = AtomicBoolean(false)
 
     /** The camera, the back one if there is one, and what it can do; null when none can be used. */
@@ -285,8 +290,11 @@ internal class QrCamera(
     // The newest frame, if any: its luminance, decoded.
     private fun read(images: ImageReader) {
         images.acquireLatestImage()?.use { image ->
-            val text = if (done.get()) null else frames.decode(image)
-            if (text != null && done.compareAndSet(false, true)) main.post { if (!released.get()) onScanned(text) }
+            val text = frames.decode(image)
+            val heard = last.get()
+            if (text != null && text != heard && last.compareAndSet(heard, text)) {
+                main.post { if (!released.get()) onScanned(text) }
+            }
         }
     }
 

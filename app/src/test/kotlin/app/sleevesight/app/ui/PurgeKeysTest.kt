@@ -484,6 +484,7 @@ class PurgeKeysTest {
                             showPhoneName = false,
                             onSealFailed = { sealFailed = it },
                             onOpen = {},
+                            onOpenLoadKeys = {},
                             onDismiss = {},
                         )
                     }

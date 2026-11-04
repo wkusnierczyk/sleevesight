@@ -150,6 +150,26 @@ class KeyScanTest {
         }
 
     @Test
+    fun aSecondCodeReportedBeforeTheScanGoesIsIgnored() {
+        // The camera reports each new code (#765): two in a row, before the scan's screen has gone.
+        val other = "fedcba9876543210fedcba9876543210"
+        val twice: QrScanner = { onScanned ->
+            LaunchedEffect(Unit) {
+                onScanned(lastFmKey)
+                onScanned(other)
+            }
+        }
+        show(scanner = twice) {
+            compose.onNodeWithText(text(R.string.settings_key_name_lastfm)).performScrollTo().performClick()
+            compose.onNodeWithContentDescription(text(R.string.settings_key_scan)).performClick()
+            waitForNode(hasText(text(R.string.settings_save)) and isEnabled())
+            compose.onNodeWithText(text(R.string.settings_save)).performClick()
+            waitFor("a scanned Last.fm key stored") { stored(SecretId.LASTFM) != null }
+            assertEquals(lastFmKey, stored(SecretId.LASTFM))
+        }
+    }
+
+    @Test
     fun eachAiServicesKeyRowScansItsOwnKey() {
         val keys =
             listOf(SecretId.ANTHROPIC to anthropicKey, SecretId.OPENAI to openAiKey, SecretId.GOOGLE to googleKey)
