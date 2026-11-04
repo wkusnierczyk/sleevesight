@@ -7,13 +7,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.LocalSaveableStateRegistry
 import androidx.compose.runtime.saveable.SaveableStateRegistry
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.click
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -23,6 +27,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performFirstLinkClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextReplacement
+import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.test.core.app.ActivityScenario
@@ -43,9 +48,11 @@ import app.sleevesight.app.ui.settings.SEARCH_FIELD_TAG
 import app.sleevesight.app.ui.settings.SettingsScreen
 import app.sleevesight.app.ui.settings.SettingsSection
 import app.sleevesight.app.ui.settings.SettingsTarget
+import app.sleevesight.app.ui.settings.TAP_BELOW
 import app.sleevesight.app.ui.settings.oneLine
 import app.sleevesight.app.ui.settings.paragraphsOf
 import app.sleevesight.core.settings.DescriptionsOnReturn
+import app.sleevesight.core.settings.Layout
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -67,7 +74,8 @@ import org.robolectric.annotation.GraphicsMode
  * The settings' descriptions folded to one line (#847): a tap unfolds one and another folds it, a
  * switch row's description has its own tap, one that fits on one line does not fold, a search shows
  * the descriptions it finds open, a screen reader hears the whole text and its fold, and a rotation
- * keeps the folds.
+ * keeps the folds, a search's own too (#874). A tap a little below a folded description still
+ * unfolds it, but not where a button group or a note under it takes the tap (#874).
  *
  * Drawn as on a phone (native graphics): Robolectric's own graphics measure text too narrow for
  * anything to fold.
@@ -322,6 +330,104 @@ class DescriptionFoldTest {
             tap(description(spin))
             restore()
             assertEquals(text(R.string.settings_description_expanded), description(spin).state())
+        }
+    }
+
+    @Test
+    fun aRotationDuringASearchKeepsTheSearchsOwnFolds() =
+        show {
+            val query = "comes to rest"
+            compose.onNodeWithTag(SEARCH_FIELD_TAG).performTextReplacement(query)
+            compose.waitForIdle()
+            tap(description(spin))
+            assertEquals(text(R.string.settings_description_collapsed), description(spin).state())
+            restore()
+            assertEquals(
+                "folded for the search, after a rotation",
+                text(R.string.settings_description_collapsed),
+                description(spin).state(),
+            )
+            // Cleared, as the person had it before the search: folded, on a first visit.
+            compose.onNodeWithTag(SEARCH_CLEAR_TAG).performClick()
+            compose.waitForIdle()
+            compose.onNodeWithTag(SEARCH_FIELD_TAG).performTextReplacement(query)
+            compose.waitForIdle()
+            assertEquals(
+                "open again in the next search",
+                text(R.string.settings_description_expanded),
+                description(spin).state(),
+            )
+        }
+
+    @Test
+    fun aTapJustBelowAFoldedDescriptionUnfoldsItWithoutTogglingTheSwitch() =
+        show {
+            assertTrue(settings.now().spinLogo)
+            val node = description(spin)
+            assertEquals(text(R.string.settings_description_collapsed), node.state())
+            val box = node.fetchSemanticsNode().boundsInRoot
+            val line = compose.onNode(hasText(spin), useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+            val below = with(compose.density) { TAP_BELOW.toPx() }
+            assertTrue("its tap reaches below its line", box.bottom - line.bottom >= below - 1f)
+            assertTrue("but not above it, over the name", line.top - box.top < 1f)
+            // Halfway into the row's padding under the line, where the switch's row took the tap.
+            node.performTouchInput { click(Offset(width / 2f, line.bottom - box.top + below / 2f)) }
+            compose.waitForIdle()
+            assertEquals(text(R.string.settings_description_expanded), description(spin).state())
+            assertTrue("the switch left as it was", settings.now().spinLogo)
+        }
+
+    @Test
+    fun aTapWhereAButtonGroupUnderADescriptionReachesChoosesAndLeavesTheFold() =
+        show {
+            // *Layout*'s row: its description, then its buttons 4 dp below it.
+            val summary = text(R.string.settings_layout_summary)
+            val node = description(summary)
+            assertEquals(text(R.string.settings_description_collapsed), node.state())
+            assertEquals(Layout.EXPANDABLE_BOXES, settings.now().layout)
+            val inRow = hasContentDescription(text(R.string.settings_layout), substring = true)
+            val pages = hasText(text(R.string.settings_layout_pages)) and isSelectable() and inRow
+            // The buttons on screen, the description just above them.
+            val button =
+                compose
+                    .onNode(pages)
+                    .performScrollTo()
+                    .fetchSemanticsNode()
+                    .boundsInRoot
+            val box = node.fetchSemanticsNode().boundsInRoot
+            val line = compose.onNode(hasText(summary), useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+            val dp = compose.density.density
+            // Above the button, which takes a tap there only by Compose's widening to 48 dp.
+            assertTrue("the button starts below the tap", button.top - line.bottom > 6 * dp)
+            assertTrue("the description reaches no further than the buttons' room", box.bottom - line.bottom < 6 * dp)
+            val x = button.center.x - box.left
+            node.performTouchInput { click(Offset(x, line.bottom - box.top + 6 * dp)) }
+            compose.waitForIdle()
+            compose.waitUntil(WAIT_MS) { settings.now().layout == Layout.SEPARATE_PAGES }
+            assertEquals("left folded", text(R.string.settings_description_collapsed), description(summary).state())
+            // Nearer the line, before the buttons' room, it still unfolds it.
+            node.performTouchInput { click(Offset(x, line.bottom - box.top + 2 * dp)) }
+            compose.waitForIdle()
+            assertEquals(text(R.string.settings_description_expanded), description(summary).state())
+            assertEquals(Layout.SEPARATE_PAGES, settings.now().layout)
+        }
+
+    @Test
+    fun aTapOnTheNoteUnderADescriptionLeavesItsFold() {
+        // *Show genres* off: each genre source's row says so under its description, in full.
+        runBlocking { settings.update { it.copy(showGenres = false) } }
+        show(SettingsSection.GENRES) {
+            val summary = text(R.string.settings_labels_musicbrainz_summary)
+            val node = description(summary)
+            assertEquals(text(R.string.settings_description_collapsed), node.state())
+            val box = node.fetchSemanticsNode().boundsInRoot
+            val line = compose.onNode(hasText(summary), useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+            assertTrue("its tap ends at its line", box.bottom - line.bottom < 1f)
+            // In the note's upper half, just under the line.
+            val dp = compose.density.density
+            node.performTouchInput { click(Offset(width / 2f, line.bottom - box.top + 2 * dp)) }
+            compose.waitForIdle()
+            assertEquals(text(R.string.settings_description_collapsed), description(summary).state())
         }
     }
 

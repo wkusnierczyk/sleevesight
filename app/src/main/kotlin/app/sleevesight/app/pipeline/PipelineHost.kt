@@ -52,6 +52,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -252,6 +253,7 @@ class PipelineHost(
     private val online: Flow<Boolean> = emptyFlow(),
     private val epoch: ClearEpoch = ClearEpoch(),
     private val clock: Clock = Clock.System,
+    private val withdrawn: Flow<NowPlaying?> = emptyFlow(),
 ) {
     private val queue = Channel<CoordinatorEvent>(Channel.UNLIMITED)
 
@@ -264,6 +266,7 @@ class PipelineHost(
     // The clears the view was last published for, and the track state shown before the last of
     // them, which is never shown again (#547).
     private var viewClears = 0L
+    private var viewWithdrawals = 0L
     private var forgotten: TrackState? = null
 
     // One per process, never recreated or persisted: its `acted` starting false is what makes a
@@ -493,6 +496,10 @@ class PipelineHost(
                 online.distinctUntilChanged().collect { queue.send(CoordinatorEvent.NetworkChanged(it)) }
             }
             launch {
+                // An ad told late (#880): its report taken back, its run cancelled.
+                withdrawn.filterNotNull().collect { queue.send(CoordinatorEvent.Withdrawn(it)) }
+            }
+            launch {
                 changes.collect { change ->
                     change?.let {
                         val playing = it.nowPlaying
@@ -514,7 +521,14 @@ class PipelineHost(
                 built.values.forEach { (pipeline, _) -> pipeline.forget() }
                 failed.value = null
             }
+            val withdrawals = coordinator.state.withdrawals
             val effects = coordinator.on(event)
+            // A run of an ad told late cancelled (#880): what it showed goes, and nothing it still
+            // publishes shows, before the view hears of it.
+            if (coordinator.state.withdrawals != withdrawals) {
+                live.value?.pipeline?.forget()
+                built.values.forEach { (pipeline, _) -> pipeline.forget() }
+            }
             snapshot.value = coordinator.state
             effects.forEach { perform(it, scope) }
             if (event == CoordinatorEvent.Cleared) forgetting.poll()?.complete(Unit)
@@ -815,9 +829,11 @@ class PipelineHost(
             // A clear since the view was published (#547): nothing shown before it is shown again,
             // not the track shown, nor a state the pipeline published before it that this has not
             // yet seen replaced.
-            val fresh = owner.clears == viewClears
+            // So too an ad told late whose run had started (#880).
+            val fresh = owner.clears == viewClears && owner.withdrawals == viewWithdrawals
             if (!fresh) {
                 viewClears = owner.clears
+                viewWithdrawals = owner.withdrawals
                 forgotten = track
             }
             val own = track?.takeUnless { it === forgotten }

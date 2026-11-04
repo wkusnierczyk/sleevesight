@@ -36,6 +36,15 @@ class RememberedMusicBrainzTest {
             return if (failing) Lookup.Failed("unreachable") else inner.searchRecordings(title, artist)
         }
 
+        override suspend fun searchRecordingsBefore(
+            title: String,
+            artist: String,
+            date: String,
+        ): Lookup<List<MbRecording>> {
+            asked += "search $title by $date"
+            return inner.searchRecordingsBefore(title, artist, date)
+        }
+
         override suspend fun recording(mbid: String): Lookup<MbRecordingDetail> {
             asked += "recording $mbid"
             return inner.recording(mbid)
@@ -106,6 +115,32 @@ class RememberedMusicBrainzTest {
             withContext(FreshLookups) { remembered.searchRecordings("Song", "Artist") }
             remembered.searchRecordings("Song", "Artist")
             assertEquals(listOf("search Song", "search Song"), counting.asked)
+        }
+
+    @Test
+    fun `a search by date is kept by its date, and forgotten with the rest`() =
+        runTest {
+            remembered.searchRecordingsBefore("Song", "Artist", "1973")
+            remembered.searchRecordingsBefore("Song", "Artist", "1973")
+            remembered.searchRecordingsBefore("Song", "Artist", "1974")
+            remembered.forget()
+            remembered.searchRecordingsBefore("Song", "Artist", "1973")
+            assertEquals(
+                listOf("search Song by 1973", "search Song by 1974", "search Song by 1973"),
+                counting.asked,
+            )
+        }
+
+    @Test
+    fun `a search by date that is full is used but not kept, so it is asked again`() =
+        runTest {
+            val page = (1..MusicBrainzLookup.SEARCH_PAGE).map { recording("r-$it", "Song", "Artist", 200, "1970") }
+            val full = FakeMusicBrainz(search).apply { before = Lookup.Found(page) }
+            val counting = Counting(full)
+            val remembered = RememberedMusicBrainz(counting, time, lifetime = 30.minutes, capacity = 2)
+            remembered.searchRecordingsBefore("Song", "Artist", "1973")
+            remembered.searchRecordingsBefore("Song", "Artist", "1973")
+            assertEquals(listOf("search Song by 1973", "search Song by 1973"), counting.asked)
         }
 
     @Test

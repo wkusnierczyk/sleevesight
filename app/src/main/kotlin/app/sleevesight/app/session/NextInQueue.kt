@@ -25,7 +25,9 @@ object NextInQueue {
      * The item after [playing] in [queue], as the track it would be: its title and artists (the
      * item's subtitle), the player's package, and the item's media id and queue item id; no album
      * and no length, which [QueueEntry] does not read (Spotify's items carry neither; Castbox's
-     * carry both in their extras, #172). Null when there is none, or it has no title.
+     * carry both in their extras, #172). An ad ([AdDetection.isAdId], #880) is never prepared:
+     * the first item after the playing track that is not one is. Null when there is none, or it has
+     * no title.
      */
     fun of(
         playing: NowPlaying?,
@@ -33,18 +35,38 @@ object NextInQueue {
     ): NowPlaying? {
         val items = queue?.items.orEmpty()
         val at = playing?.let { position(it, items) } ?: -1
-        val next = items.getOrNull(at + 1)?.takeIf { at >= 0 && !it.title.isNullOrBlank() }
-        return if (playing == null || next?.title == null) {
-            null
-        } else {
-            NowPlaying(
-                title = next.title,
-                artists = next.subtitle.orEmpty(),
-                player = playing.player,
-                mediaId = next.mediaId,
-                queueItemId = next.id,
-            )
-        }
+        return playing?.takeIf { at >= 0 }?.let { firstAfter(it.player, items, at) }
+    }
+
+    /**
+     * The item after [ad], the ad playing (#880), in [queue]: the first after the queue item the
+     * state names for the ad that is no ad itself, as [of] gives it, so an ad break prepares the
+     * track after it. Null when the ad names no queue item, it is not in the queue, or there is none.
+     */
+    fun afterAd(
+        ad: AdPlaying?,
+        queue: SessionQueue?,
+    ): NowPlaying? {
+        val items = queue?.items.orEmpty()
+        val at = ad?.queueItemId?.let { id -> items.indexOfFirst { it.id == id } } ?: -1
+        return ad?.takeIf { at >= 0 }?.let { firstAfter(it.player, items, at) }
+    }
+
+    // The first of [items] after index [at] that is no ad of [player]'s, as a track; null if it has no title.
+    private fun firstAfter(
+        player: String,
+        items: List<QueueEntry>,
+        at: Int,
+    ): NowPlaying? {
+        val next = items.drop(at + 1).firstOrNull { !AdDetection.isAdId(player, it.mediaId) }
+        val title = next?.title?.takeIf { it.isNotBlank() } ?: return null
+        return NowPlaying(
+            title = title,
+            artists = next.subtitle.orEmpty(),
+            player = player,
+            mediaId = next.mediaId,
+            queueItemId = next.id,
+        )
     }
 
     // The playing track's index in [items]: by its media id, the active queue item choosing among

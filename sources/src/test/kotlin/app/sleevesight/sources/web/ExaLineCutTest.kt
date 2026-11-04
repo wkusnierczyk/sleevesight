@@ -156,8 +156,9 @@ class ExaLineCutTest {
     fun `cached results from before the cut are not served`() {
         // The retrieval cache misses an entry kept under another extraction version
         // (`RetrievalCacheTest`, "a result kept under other extraction rules is a miss"); results
-        // kept before #634 were made at version 1, every adapter's default.
+        // kept before #634 were made at version 1, every adapter's default; 2 was the cut's own,
+        // raised since (#905, `WebBoilerplateTest`).
         val adapter = ExaWebSearch(ReplayNetClient.ok("{}"), Secret("test-exa-key"), JvmAccentFolder)
-        assertEquals(2, adapter.extractionVersion)
+        assertTrue(adapter.extractionVersion > 1)
     }
 }

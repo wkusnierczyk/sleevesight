@@ -49,6 +49,12 @@ internal object Sessions {
                 date?.let { putString(MediaMetadata.METADATA_KEY_DATE, it) }
             }.build()
 
+    /** [metadata] with the advertisement flag ([AdDetection.KEY_ADVERTISEMENT]) set to [flag], as an ad's (#880). */
+    fun advertised(
+        metadata: MediaMetadata = metadata(),
+        flag: Long = 1,
+    ): MediaMetadata = MediaMetadata.Builder(metadata).putLong(AdDetection.KEY_ADVERTISEMENT, flag).build()
+
     fun state(
         state: Int = PlaybackState.STATE_PLAYING,
         positionMs: Long = 0,

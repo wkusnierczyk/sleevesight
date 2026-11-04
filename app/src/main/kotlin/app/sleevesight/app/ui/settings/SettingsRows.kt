@@ -50,6 +50,9 @@ private val NESTED = 16.dp
 /** The gap between what starts a row ([ROW_MARK]) and its title. */
 private val LEADING_GAP = 16.dp
 
+/** A [Hint]'s padding above and below it. */
+private val HINT_PADDING = 4.dp
+
 /**
  * Where a row under a badged row starts (#537): at the badged row's name, past its badge and the
  * gap after it, as the model and effort rows under an AI service do.
@@ -79,18 +82,25 @@ private class FirstLine {
  * ([Description], #847). As a sub-heading over rows, [over] names them by
  * title: a search that shows only some rows shows it while any of them shows (#649); with none, it
  * is not a setting of its own, and such a search leaves it out. A blank line in [text] starts a
- * paragraph ([Paragraphs], #758).
+ * paragraph ([Paragraphs], #758). Not [foldable], a line saying a state rather than a description
+ * (*No players yet*, #874), it shows in full.
  */
 @Composable
 internal fun Hint(
     @StringRes text: Int,
     over: List<String> = emptyList(),
+    foldable: Boolean = true,
 ) {
     val search = LocalRowSearch.current
     if (search?.filtering == true && over.none { search.shows(it) }) return
+    if (!foldable) {
+        Paragraphs(stringResource(text), Modifier.padding(vertical = HINT_PADDING))
+        return
+    }
     // Folded to one line as a row's description is (#847), known by its string's name.
     val key = LocalResources.current.getResourceEntryName(text)
-    Description(key, stringResource(text), Modifier.padding(vertical = 4.dp))
+    // Its tap reaches into its own padding below it, not into the row after it (#874).
+    Description(key, stringResource(text), Modifier.padding(vertical = HINT_PADDING), reach = HINT_PADDING)
 }
 
 /**
@@ -153,7 +163,9 @@ internal fun SwitchRow(
             )
         },
     ) {
-        summary?.let { Description(title, it, color = color, link = summaryLink) }
+        // Its tap reaches into the row's padding where nothing comes under it (#874).
+        val reach = if (note == null && below == null) TAP_BELOW else 0.dp
+        summary?.let { Description(title, it, color = color, link = summaryLink, reach = reach) }
         note?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = color) }
         below?.invoke()
     }
@@ -191,7 +203,7 @@ internal fun ButtonRow(
             ) { Text(label) }
         },
     ) {
-        Description(title, summary, color = color)
+        Description(title, summary, color = color, reach = TAP_BELOW)
     }
 }
 
@@ -240,7 +252,7 @@ private fun MarkedRow(
  * ([UNDER_BADGE]) instead. [leading] goes at the row's start, before the title, [ROW_MARK] a side,
  * centred on the title's first line as a [SwitchRow]'s is: a source's badge (#670). The summary
  * folds ([Description], #847); [note], under it, says the setting's state (a model found
- * unavailable) and always shows in full.
+ * unavailable), or what the value chosen does (*Stop after*, #874), and always shows in full.
  */
 @Suppress("LongParameterList") // Each sets one aspect of the row; all but the title, value and action have defaults.
 @Composable
@@ -273,7 +285,8 @@ internal fun ValueRow(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.primary.copy(alpha = alpha),
         )
-        summary?.let { Description(title, it, color = color) }
+        // Its tap reaches into the row's padding where no note comes under it (#874).
+        summary?.let { Description(title, it, color = color, reach = if (note == null) TAP_BELOW else 0.dp) }
         note?.let {
             Text(
                 it,
@@ -323,12 +336,13 @@ internal fun <T> ChoiceButtonsRow(
             color = color,
             modifier = Modifier.testTag(ROW_TITLE_TAG),
         )
-        summary?.let { Description(title, it, color = color) }
+        // Its tap reaches no further than the buttons' room above them, which is theirs (#874).
+        summary?.let { Description(title, it, color = color, reach = ABOVE_GROUP) }
         ChoiceButtonGroup(
             choices,
             selected,
             onSelect,
-            Modifier.padding(top = 4.dp),
+            Modifier.padding(top = ABOVE_GROUP),
             name = title,
             details = details,
             enabled = enabled,
@@ -339,6 +353,9 @@ internal fun <T> ChoiceButtonsRow(
         below?.invoke()
     }
 }
+
+/** The room above a [ChoiceButtonsRow]'s buttons, under its description. */
+internal val ABOVE_GROUP = 4.dp
 
 /**
  * Under a [ChoiceButtonsRow]'s buttons, what the [selected] value does, from [details], announced

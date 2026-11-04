@@ -1,0 +1,8 @@
+# SYNTHETIC: written by hand from the candidate signals in #880, not captured from a player.
+# Replace or extend with a capture of Spotify Free playing an ad (SessionDump, #897); see README.md.
+# kind	player	metadata, as SessionDump logs it	active queue item's media id, or -
+track	com.spotify.music	{android.media.metadata.ARTIST=Gordon Lightfoot, android.media.metadata.DURATION=225000, android.media.metadata.MEDIA_ID=spotify:track:1, android.media.metadata.TITLE=Sundown}	spotify:track:1
+ad	com.spotify.music	{android.media.metadata.ADVERTISEMENT=1, android.media.metadata.ARTIST=Advertisement • 2 of 3, android.media.metadata.DURATION=28000, android.media.metadata.TITLE=tetesept}	-
+ad	com.spotify.music	{android.media.metadata.ARTIST=Advertisement • 2 of 3, android.media.metadata.DURATION=28000, android.media.metadata.MEDIA_ID=spotify:ad:1, android.media.metadata.TITLE=tetesept}	-
+ad	com.spotify.music	{android.media.metadata.ARTIST=Advertisement • 2 of 3, android.media.metadata.DURATION=28000, android.media.metadata.TITLE=tetesept}	spotify:ad:1
+track	com.spotify.music	{android.media.metadata.ADVERTISEMENT=0, android.media.metadata.ARTIST=Advertisement • 2 of 3, android.media.metadata.DURATION=28000, android.media.metadata.TITLE=tetesept}	-

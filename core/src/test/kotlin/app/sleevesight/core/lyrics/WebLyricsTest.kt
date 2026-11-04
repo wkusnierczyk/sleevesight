@@ -56,6 +56,20 @@ class WebLyricsTest {
     }
 
     @Test
+    fun aLyricsPageWhoseTextWasAllBoilerplateIsStillTheNoLinksWebPage() {
+        // A web search result kept as about the recording, whose highlight was only its title (#905).
+        val genius = "https://genius.com/Emily-jane-white-the-black-oak-lyrics"
+        val web =
+            SourceState.Done(
+                SourceResult(Outcome.None, emptyList(), Duration.ZERO, trackOnly = true, pages = listOf(genius)),
+                cached = false,
+            )
+        val track = track().let { it.copy(sources = it.sources + (SourceId.WEB to web)) }
+        val links = lyricsLinks(track, search = false, accentFolder = JvmAccentFolder)
+        assertEquals(listOf(LyricsLink(LyricsSite.GENIUS, genius)), (links as LyricsLinks.NoLink).web)
+    }
+
+    @Test
     fun withNoneThereIsNoWebPage() {
         val links = lyricsLinks(track("https://example.org/review"), search = false, accentFolder = JvmAccentFolder)
         assertEquals(LyricsLinks.NoLink(NoLinkReason.NotFound, null), links)

@@ -456,10 +456,12 @@ class AlbumSource(
          * ([ArtistPart.keptAsHistory]: *Keep history for*), so its card's key stays the same across
          * days; the web's own lifetime would expire them first, and a later lookup without them
          * would key the album anew and pay for another search and call. Extraction 2: kept so; an
-         * entry of 1 was kept for the web's lifetime.
+         * entry of 1 was kept for the web's lifetime. 3 (#905): the lines without the parts that are
+         * only page boilerplate (`ExaWebSearch.EXTRACTION_VERSION` 3), so an album's lines kept
+         * before are searched again.
          */
         val WEB_PART: ArtistPart =
-            ArtistPart("album.web", extraction = 2, encoding = 1, sources = setOf(SourceId.WEB), keptAsHistory = true)
+            ArtistPart("album.web", extraction = 3, encoding = 1, sources = setOf(SourceId.WEB), keptAsHistory = true)
 
         /** The albums whose web lines are kept in memory, without a [webKept] that keeps them. */
         const val REMEMBERED: Int = 256

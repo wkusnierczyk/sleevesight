@@ -131,6 +131,16 @@
  },
  {
   "method": "GET",
+  "url": "https://musicbrainz.org/ws/2/recording/ffe4a448-1b9f-4458-a8ce-7402f5a28130",
+  "query": {
+   "inc": "artist-credits+work-rels+artist-rels+url-rels+tags",
+   "fmt": "json"
+  },
+  "status": 200,
+  "file": "recording-ffe4a448-1b9f-4458-a8ce-7402f5a28130.json"
+ },
+ {
+  "method": "GET",
   "url": "https://musicbrainz.org/ws/2/recording",
   "query": {
    "query": "recording:\"Baby, Please Don't Go\" AND artist:\"Them\"",
@@ -249,6 +259,17 @@
   },
   "status": 200,
   "file": "recording-recording-new-york-groove-and-artist-ace-frehley.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://musicbrainz.org/ws/2/recording",
+  "query": {
+   "query": "recording:\"Roll Over Beethoven\" AND artist:\"Chuck Berry\" AND firstreleasedate:[* TO 1956-05]",
+   "limit": "100",
+   "fmt": "json"
+  },
+  "status": 200,
+  "file": "recording-recording-roll-over-beethoven-and-artist-chuck-berry-and-firstreleasedate-to-1956-05.json"
  },
  {
   "method": "GET",

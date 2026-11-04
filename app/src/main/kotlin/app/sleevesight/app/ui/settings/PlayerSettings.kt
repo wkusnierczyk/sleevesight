@@ -100,7 +100,8 @@ internal fun PlayersSection(
 ) {
     // Asked once, by the screen, for the search too (#649); null until loaded.
     if (listed == null) return
-    if (listed.isEmpty()) Hint(R.string.settings_players_none)
+    // A state, not a description: in full (#874).
+    if (listed.isEmpty()) Hint(R.string.settings_players_none, foldable = false)
     for (player in listed) {
         val followed = settings.followedPlayers[player.packageName] ?: false
         key(player.packageName) { PlayerRow(player, followed, settings.developerMode, apps, update) }
