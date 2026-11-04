@@ -66,7 +66,10 @@ class RememberedMusicBrainz(
         artist: String,
         date: String,
     ): Lookup<List<MbRecording>> =
-        earlier.answer(Triple(title, artist, date)) { musicBrainz.searchRecordingsBefore(title, artist, date) }
+        // A full answer may have skipped recordings (#906): it is used but not kept, so a retry asks again.
+        earlier.answer(Triple(title, artist, date), keeps = { it.size < MusicBrainzLookup.SEARCH_PAGE }) {
+            musicBrainz.searchRecordingsBefore(title, artist, date)
+        }
 
     override suspend fun recording(mbid: String): Lookup<MbRecordingDetail> =
         recordings.answer(mbid to tags()) { musicBrainz.recording(mbid) }
@@ -101,13 +104,15 @@ class RememberedMusicBrainz(
         // Insertion-ordered; an entry is moved to the end when used, so the first is the least recent.
         private val kept = LinkedHashMap<K, Kept>()
 
+        // [keeps]: whether a found answer is kept; one that is not, as one not obtained, is asked again.
         suspend fun answer(
             key: K,
+            keeps: (T) -> Boolean = { true },
             ask: suspend () -> Lookup<T>,
         ): Lookup<T> {
             if (!FreshLookups.active()) kept(key)?.let { return it }
             val answer = ask()
-            if (answer !is Lookup.Failed) keep(key, answer)
+            if (answer !is Lookup.Failed && (answer !is Lookup.Found || keeps(answer.value))) keep(key, answer)
             return answer
         }
 

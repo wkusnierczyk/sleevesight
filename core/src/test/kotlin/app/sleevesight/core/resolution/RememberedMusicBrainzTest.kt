@@ -132,6 +132,18 @@ class RememberedMusicBrainzTest {
         }
 
     @Test
+    fun `a search by date that is full is used but not kept, so it is asked again`() =
+        runTest {
+            val page = (1..MusicBrainzLookup.SEARCH_PAGE).map { recording("r-$it", "Song", "Artist", 200, "1970") }
+            val full = FakeMusicBrainz(search).apply { before = Lookup.Found(page) }
+            val counting = Counting(full)
+            val remembered = RememberedMusicBrainz(counting, time, lifetime = 30.minutes, capacity = 2)
+            remembered.searchRecordingsBefore("Song", "Artist", "1973")
+            remembered.searchRecordingsBefore("Song", "Artist", "1973")
+            assertEquals(listOf("search Song by 1973", "search Song by 1973"), counting.asked)
+        }
+
+    @Test
     fun `forgetting asks every question again`() =
         runTest {
             remembered.searchRecordings("Song", "Artist")

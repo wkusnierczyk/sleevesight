@@ -94,6 +94,21 @@ class RecordingResolverEarlierTest {
             assertTrue(resolution.provisional)
         }
 
+    @Test
+    fun `with the player's length, a date only lengthless recordings give leaves the choice provisional`() =
+        runTest {
+            // Nothing on the page with a length fits: the lengthless 1970 one gives the date, which may
+            // be too early for a later one that would be preferred.
+            val page =
+                (1 until MusicBrainzLookup.SEARCH_PAGE).map { live(it) } +
+                    recording("demo", "Dream On", "Aerosmith", null, "1970")
+            val musicBrainz = musicBrainz(page = page, before = Lookup.Found(listOf(page.last())))
+            val resolution = resolve(musicBrainz, track("Dream On", "Aerosmith"), 267)
+            assertEquals("demo", resolution.recordingMbid)
+            assertEquals(listOf("1970"), musicBrainz.beforeAsked)
+            assertTrue(resolution.provisional)
+        }
+
     // A live take too long to fit.
     private fun live(n: Int) = recording("live-$n", "Dream On", "Aerosmith", 300 + n, "1970")
 }

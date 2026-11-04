@@ -705,8 +705,9 @@ private fun lyricsOf(
 // a band's; with the player's length, [measured], one whose length is known, as the choice prefers
 // it) could be chosen over it, so those are searched for, few enough for one page, and the usual
 // rules then choose among both. Null when the first page is not full. Incomplete, so the choice is
-// provisional and a later run asks again, when that search fails or is itself full, or when nothing
-// on the full first page fits with a date to search by.
+// provisional and a later run asks again, when that search fails or is itself full, when nothing on
+// the full first page fits with a date to search by, or when, with the player's length, only
+// lengthless recordings give the date.
 private suspend fun MusicBrainzLookup.earlierThan(
     firstPage: List<MbRecording>,
     track: NormalizedTrack,
@@ -715,12 +716,16 @@ private suspend fun MusicBrainzLookup.earlierThan(
 ): Earlier? {
     if (firstPage.size < MusicBrainzLookup.SEARCH_PAGE) return null
     val fitting = firstPage.filter(fits).filter { it.firstReleaseDate != null }
-    val preferred = fitting.filter { it.lengthMs != null }.takeIf { measured && it.isNotEmpty() } ?: fitting
+    val withLength = fitting.filter { it.lengthMs != null }
+    val preferred = withLength.takeIf { measured && it.isNotEmpty() } ?: fitting
+    // With the player's length, a date that only lengthless recordings give may be too early for the
+    // one the choice prefers: what it finds is used, provisionally.
+    val certain = !measured || withLength.isNotEmpty()
     val date = preferred.mapNotNull { it.firstReleaseDate }.minOrNull()
     return when (val found = date?.let { searchRecordingsBefore(track.title, track.primary, it) }) {
         null, is Lookup.Failed -> Earlier(emptyList(), complete = false)
-        Lookup.NotFound -> Earlier(emptyList(), complete = true)
-        is Lookup.Found -> Earlier(found.value, complete = found.value.size < MusicBrainzLookup.SEARCH_PAGE)
+        Lookup.NotFound -> Earlier(emptyList(), complete = certain)
+        is Lookup.Found -> Earlier(found.value, complete = certain && found.value.size < MusicBrainzLookup.SEARCH_PAGE)
     }
 }
 
