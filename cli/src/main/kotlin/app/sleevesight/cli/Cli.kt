@@ -10,6 +10,7 @@ import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.pipeline.AiAccess
 import app.sleevesight.core.pipeline.CardKey
+import app.sleevesight.core.pipeline.KeptCard
 import app.sleevesight.core.pipeline.ListeningSessionFacts
 import app.sleevesight.core.pipeline.Pipeline
 import app.sleevesight.core.pipeline.PipelineCache
@@ -366,12 +367,16 @@ class Cli(
  * [cache] that serves no card, so every insight is written afresh, and keeps the rest: a repeated
  * run (`--repeat`) measures the model's replies, which vary from one call to the next (#399), and a
  * run with every artist fact (`--artist-facts-every-track`, #407) is not served the cards a default
- * run wrote without them.
+ * run wrote without them. Both reads serve nothing: the pipeline reads [keptCard], which the store
+ * implements on its own, so blanking [card] alone let every pass after the first be served the
+ * first's cards (#767).
  */
 internal class FreshCards(
     private val cache: PipelineCache,
 ) : PipelineCache by cache {
     override suspend fun card(key: CardKey): String? = null
+
+    override suspend fun keptCard(key: CardKey): KeptCard? = null
 }
 
 // Whether MusicBrainz's recording tags (#439) would label the track: counted, never listed (`Report`).
