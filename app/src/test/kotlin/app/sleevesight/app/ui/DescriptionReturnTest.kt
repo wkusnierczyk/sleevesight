@@ -215,12 +215,13 @@ class DescriptionReturnTest {
         runBlocking { settings.update { it.copy(foldDescriptions = false) } }
         show {
             val folded = text(R.string.settings_descriptions_folded)
-            // *Folded* of *Descriptions on return*, not of the two on a new track (#522).
+            // *Folded* and *As left* of *Descriptions on return*, not of the two on a new track (#522),
+            // which name the same choices (#910).
             val returning = hasContentDescription(text(R.string.settings_descriptions_on_return), substring = true)
             compose.onNode(hasText(folded) and isSelectable() and returning).performScrollTo().assertIsNotEnabled()
             compose
                 .onNode(
-                    hasText(text(R.string.settings_descriptions_as_left)) and isSelectable(),
+                    hasText(text(R.string.settings_descriptions_as_left)) and isSelectable() and returning,
                 ).assertIsNotEnabled()
             assertEquals(
                 "no description folds",

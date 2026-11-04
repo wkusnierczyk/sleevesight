@@ -161,7 +161,7 @@
     <!-- The choices of both (#522). -->
     <string name="settings_new_track_folded">Folded</string>
     <string name="settings_new_track_unfolded">Unfolded</string>
-    <string name="settings_new_track_as_left">As you left them</string>
+    <string name="settings_new_track_as_left">As left</string>
     <string name="settings_background">Look up in the background</string>
     <string name="settings_background_summary">Allows Sleevesight to look up information from sources while it is in the background, for every track played. With Reactive set to On track change (auto) or On track skip (auto), insights are then written, and paid for, whether you read them or not, up to the Stop after limit when Saver is on.</string>
     <string name="settings_artist_facts_once">Don’t repeat artist facts</string>

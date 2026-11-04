@@ -159,7 +159,7 @@ internal fun restoredTrack(saved: List<Any?>): NowPlaying? =
  * The fold of the list shown beside [playing]: as it is kept while [playing] plays on the track
  * last shown ([TrackIdentity.playsOn]); for a new track, as [onNewTrack] says (*Sources on a new
  * track*, #522): [start] (folded on Home) for *Folded*, its first screenful for *Unfolded*, and as
- * it was left ([Fold.forNextTrack]) for *As you left them*; [onNewTrack] is null until the settings
+ * it was left ([Fold.forNextTrack]) for *As left*; [onNewTrack] is null until the settings
  * are read, and a new track shows [start] until then. Worked out as it is read, so a new
  * track never shows the last one's fold for a frame; [follow] then keeps it as the new track's, so
  * a track played again after others starts afresh too. On a page of its own (#447) the list starts

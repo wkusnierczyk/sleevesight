@@ -28,7 +28,7 @@ class NewTrackFoldCodecTest {
         val prefs = mutablePreferencesOf(KEEP_SOURCES to true)
         val read = SettingsCodec.read(prefs)
         // Folded is the default, so it is stored as no key at all; the switch must go too, or it would
-        // read as As you left them again.
+        // read as *As left* again.
         SettingsCodec.write(read.copy(sourcesOnNewTrack = NewTrackFold.FOLDED), prefs)
         assertEquals(NewTrackFold.FOLDED, SettingsCodec.read(prefs).sourcesOnNewTrack)
         assertFalse(KEEP_SOURCES in prefs.asMap())

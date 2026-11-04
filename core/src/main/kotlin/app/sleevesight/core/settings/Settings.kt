@@ -756,7 +756,7 @@ enum class Layout {
 /**
  * How a box of Home's starts on each new track, under *Expandable boxes* (#522): *Sources on a new
  * track* ([Settings.sourcesOnNewTrack]) and *Song, Artist and Album on a new track*
- * ([Settings.itemsOnNewTrack]). Shown as *Folded*, *Unfolded* and *As you left them*.
+ * ([Settings.itemsOnNewTrack]). Shown as *Folded*, *Unfolded* and *As left*.
  *
  * @property key the choice as the settings store it. It is fixed, not the constant's name, so
  *   renaming a constant does not lose what was chosen.

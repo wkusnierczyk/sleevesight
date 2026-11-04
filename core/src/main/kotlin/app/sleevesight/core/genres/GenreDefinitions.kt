@@ -91,9 +91,10 @@ class GenreDefinitions(
         /**
          * A genre's definition in the artist-level cache, by its MusicBrainz genre, or by [ARTICLE]
          * and the title of the article the vocabulary names for it: a JSON array of its text, the
-         * article's title and its address, or an empty one for a genre with no article.
+         * article's title and its address, or an empty one for a genre with no article. Extraction 2
+         * (#850): brackets a dropped pronunciation left empty are removed (`WikipediaSource.tidy`).
          */
-        val PART: ArtistPart = ArtistPart("wikipedia.genre", 1, 1, setOf(SourceId.WIKIPEDIA))
+        val PART: ArtistPart = ArtistPart("wikipedia.genre", 2, 1, setOf(SourceId.WIKIPEDIA))
 
         /** In memory, without a store: Wikipedia's default lifetime. */
         val DEFAULT_LIFETIME: Duration = Settings.DEFAULT_CACHE_LIFETIMES.getValue(SourceId.WIKIPEDIA)
