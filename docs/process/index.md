@@ -204,7 +204,7 @@ The details, with the one-time setup outside the repository, are in [`design/rel
 
 ## Lessons learned
 
-What the project learned along the way: which practices paid off, which cost more than they returned, and what changed because of them. Each lesson says what happened, what changed, and links an example. The figures are a snapshot of the project's own records, dated in the text.
+What the project learned along the way: which practices paid off, which cost more than they returned, and what changed because of them. Each lesson says what happened, what was done about it, and what was learned, with links to examples. The figures are a snapshot of the project's own records, dated in the text.
 
 ### Simulate every visible change before building it
 
