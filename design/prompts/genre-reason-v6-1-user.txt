@@ -1,0 +1,35 @@
+<genre>
+Folk
+</genre>
+
+<track>
+Title: Sundown
+Artists: Gordon Lightfoot
+Release: Sundown
+Normalized title: Sundown
+Primary artist: Gordon Lightfoot
+</track>
+
+<evidence>
+[W1] (Wikipedia, song) Single issued 25 March 1974 on Reprise, written by Lightfoot and produced by Lenny Waronker.
+[W2] (Wikipedia, song) Recorded in November 1973 at Eastern Sound in Toronto; Red Shea played electric lead guitar.
+[W3] (Wikipedia, song) Reached number one on the US Hot 100 and Easy Listening charts, and also topped the Canadian chart; his only Hot 100 number one.
+[W4] (Wikipedia, song) Certified Gold by the RIAA for a million units shipped.
+[W5] (Wikipedia, song) Lightfoot said in 2008 the lyrics came from wondering what his girlfriend was doing out with friends while he wrote at home; often linked to Cathy Smith.
+[W6] (Wikipedia, song) Covered by Deryl Dodd (1999) and Elwood (2000), both minor chart entries.
+[L1] (Last.fm, artist) Canadian singer-songwriter born 17 November 1938 in Orillia, Ontario; died 1 May 2023 aged 84.
+[L2] (Last.fm, artist) Credited with helping define the 1970s singer-songwriter era and considered among Canada's most influential songwriters.
+[L3] (Last.fm, artist) His biographer Nicholas Jennings summed up his subjects as trains, shipwrecks, rivers, highways, lovers and loneliness.
+[L4] (Last.fm, artist) Last.fm counts 683,942 listeners for this artist.
+[L5] (Last.fm, artist) Last.fm tags the artist as: folk, singer-songwriter, 70s, canadian, acoustic.
+[L6] (Last.fm, artist) Last.fm lists similar artists: Jim Croce, John Denver, James Taylor, Harry Chapin.
+[S1] (Web search, web) Sundown was the lead single and title track of Lightfoot's ninth studio album, released January 1974.
+[S2] (Web search, web) The album hit number one in the US and Canada, staying top in Canada for five straight weeks.
+[S3] (Web search, web) Despite its mellow sound the song is described as dark, expressing jealousy and paranoia.
+[S4] (Web search, web) Lightfoot said it concerned his roughly three-year relationship with Cathy Smith, not his ex-wife.
+[S5] (Web search, web) He said he wrote it around sunset at a farm he rented as a writing retreat.
+[S6] (Web search, web) Obituary lists Sundown among Lightfoot's staple pop radio hits alongside Rainy Day People and Carefree Highway.
+[S7] (Web search, web) Gordon Lightfoot died aged 84; he was born 17 November 1938 in Orillia, Ontario.
+[S8] (Web search, web) His first hit as a singer was If You Could Read My Mind in 1970.
+[P1] (player metadata, release) This recording is on the release "Sundown" (1974).
+</evidence>

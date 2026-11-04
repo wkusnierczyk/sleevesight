@@ -1,0 +1,29 @@
+# Prompt history
+
+Each version's exact prompt, frozen as it was sent, so a later version can be compared with it or
+taken back. Written from the fixture tracks the tests use (`FixtureEvidence`, track 1 *Sundown*
+and track 41, an original song; the genre reason's *So What*), never from a real run's evidence.
+The code that builds each one is in the repository's history (`git log --
+core/src/main/kotlin/app/sleevesight/core/synthesis/`); the version history with the reasons is in the KDoc of `InsightPrompt.VERSION` and `GenreReasonPrompt.VERSION`,
+and the contracts in `design.md`, *Appendix. Prompt contracts*. Versions before these are in the
+history of `core/src/test/resources/prompts/`.
+
+To take a version back: restore its texts from these files (the stored prompts the tests pin are
+the current version's), raise `VERSION` (never reuse a number: the synthesis cache keys cards by
+it), and say so in the KDoc.
+
+## Key insight (`InsightPrompt`)
+
+| Version | Files | How it fared |
+|---|---|---|
+| 8 (#800) | `insight-v8-1.txt`, `insight-v8-41.txt`: one message, the data then the rules | The baseline of #767's blind A/B. |
+| 9 (#767) | `insight-v9-system.txt`, `insight-v9-system-model.txt`, `insight-v9-1-user.txt`, `insight-v9-41-user.txt`: a system prompt and a user message | Lost the blind A/B to version 8 (20 tracks, 3 passes each): version 8 preferred on 9, version 9 on 3, 6 the same. 15 of 54 cards empty against 6, two replies revising themselves. |
+| 10 (#767) | `insight-v10-system.txt`, `insight-v10-system-model.txt`; the user message is version 9's | Version 9's opening and structure with the A/B's fixes: 2 of 147 sentences uncited, 6 empty, no reply revising itself. |
+| 10, rejected | `insight-v10-rejected-system.txt` | Version 10 with an id rule and a rule against talk of the evidence of their own: 10 of 155 sentences uncited, nearly all "The evidence here is thin.". Never shipped. |
+
+## Genre reason (`GenreReasonPrompt`)
+
+| Version | Files | How it fared |
+|---|---|---|
+| 5 (#695) | `genre-reason-v5-1.txt`, `genre-reason-v5-1-model.txt`: one message | The baseline of #767's blind A/B. |
+| 6 (#767) | `genre-reason-v6-system.txt`, `genre-reason-v6-system-model-search.txt`, `genre-reason-v6-1-user.txt` | Even with version 5 in the blind A/B (8 prompts: 1 each, 6 the same); kept for the insight's structure. |
