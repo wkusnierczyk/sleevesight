@@ -34,6 +34,9 @@ internal class FakeMusicBrainz(
     /** The search for the recordings released by a date (#906), whatever the date. */
     var before: Lookup<List<MbRecording>> = Lookup.NotFound
 
+    /** Answers to the searches by date, in order, before [before]. */
+    val beforeAnswers = mutableListOf<Lookup<List<MbRecording>>>()
+
     /** The dates searched by, in order. */
     val beforeAsked = mutableListOf<String>()
 
@@ -48,7 +51,7 @@ internal class FakeMusicBrainz(
         date: String,
     ): Lookup<List<MbRecording>> {
         beforeAsked += date
-        return before
+        return beforeAnswers.removeFirstOrNull() ?: before
     }
 
     override suspend fun recording(mbid: String): Lookup<MbRecordingDetail> =

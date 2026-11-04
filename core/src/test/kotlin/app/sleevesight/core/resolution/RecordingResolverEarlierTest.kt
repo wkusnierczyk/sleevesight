@@ -109,6 +109,47 @@ class RecordingResolverEarlierTest {
             assertTrue(resolution.provisional)
         }
 
+    @Test
+    fun `a full search by date is followed by one by its own earliest date, up to three`() =
+        runTest {
+            // Hundreds of live releases: the search by 1978-10 is full, its earliest fit 1975; the
+            // search by 1975 holds the studio recording.
+            val byLive =
+                listOf(recording("take-75", "Dream On", "Aerosmith", 266, "1975")) +
+                    (1 until MusicBrainzLookup.SEARCH_PAGE).map { live(it) }
+            val musicBrainz = musicBrainz()
+            musicBrainz.beforeAnswers += Lookup.Found(byLive)
+            musicBrainz.before = Lookup.Found(listOf(studio))
+            val resolution = resolve(musicBrainz, track("Dream On", "Aerosmith"), 267)
+            assertEquals("studio", resolution.recordingMbid)
+            assertEquals(listOf("1978-10", "1975"), musicBrainz.beforeAsked)
+            assertFalse(resolution.provisional)
+
+            val always = musicBrainz(before = Lookup.Found(byLive))
+            val capped = resolve(always, track("Dream On", "Aerosmith"), 267)
+            assertEquals(3, always.beforeAsked.size)
+            assertTrue(capped.provisional)
+        }
+
+    @Test
+    fun `a date from lengthless recordings is enough when the search finds one with a length`() =
+        runTest {
+            val page =
+                (1 until MusicBrainzLookup.SEARCH_PAGE).map { live(it) } +
+                    recording("demo", "Dream On", "Aerosmith", null, "1970")
+            val musicBrainz =
+                musicBrainz(
+                    page = page,
+                    before =
+                        Lookup.Found(
+                            listOf(page.last(), recording("early", "Dream On", "Aerosmith", 267, "1969")),
+                        ),
+                )
+            val resolution = resolve(musicBrainz, track("Dream On", "Aerosmith"), 267)
+            assertEquals("early", resolution.recordingMbid)
+            assertFalse(resolution.provisional)
+        }
+
     // A live take too long to fit.
     private fun live(n: Int) = recording("live-$n", "Dream On", "Aerosmith", 300 + n, "1970")
 }

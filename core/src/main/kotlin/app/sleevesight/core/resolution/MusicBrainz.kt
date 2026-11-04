@@ -18,13 +18,13 @@ interface MusicBrainzLookup {
     /**
      * Recordings matching [title] by [artist] first released on or before [date] (as MusicBrainz writes
      * dates, `1973`, `1973-01` or `1973-01-05`), at most [SEARCH_PAGE] (#906): the ones that could be
-     * earlier than a full first page's. Not found for a lookup with no such search.
+     * earlier than a full first page's.
      */
     suspend fun searchRecordingsBefore(
         title: String,
         artist: String,
         date: String,
-    ): Lookup<List<MbRecording>> = Lookup.NotFound
+    ): Lookup<List<MbRecording>>
 
     /** The recording [mbid], with its work, artist and URL relationships, and its tags. */
     suspend fun recording(mbid: String): Lookup<MbRecordingDetail>

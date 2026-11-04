@@ -58,10 +58,13 @@ class MusicBrainzClient(
         title: String,
         artist: String,
         date: String,
-    ): Lookup<List<MbRecording>> {
-        require(DATE.matches(date)) { "not a MusicBrainz date" }
-        return search("recording:${phrase(title)} AND artist:${phrase(artist)} AND firstreleasedate:[* TO $date]")
-    }
+    ): Lookup<List<MbRecording>> =
+        // Only a date as MusicBrainz writes one reaches the query; anything else is not asked.
+        if (DATE.matches(date)) {
+            search("recording:${phrase(title)} AND artist:${phrase(artist)} AND firstreleasedate:[* TO $date]")
+        } else {
+            Lookup.Failed("InvalidDate")
+        }
 
     private suspend fun search(query: String): Lookup<List<MbRecording>> {
         val request =

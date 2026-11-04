@@ -721,6 +721,12 @@ class LastFmAdapterTest {
             artist: String,
         ): Lookup<List<MbRecording>> = error("unexpected recording search")
 
+        override suspend fun searchRecordingsBefore(
+            title: String,
+            artist: String,
+            date: String,
+        ): Lookup<List<MbRecording>> = error("unexpected recording search")
+
         override suspend fun recording(mbid: String): Lookup<MbRecordingDetail> = error("unexpected recording")
 
         override suspend fun recordingReleases(mbid: String): Lookup<MbRecording> = error("unexpected releases")

@@ -18,7 +18,6 @@ import app.sleevesight.sources.testing.ReplayNetClient
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 import kotlin.time.Duration.Companion.seconds
 
 /**
@@ -78,14 +77,9 @@ class MusicBrainzEarlierTest {
         }
 
     @Test
-    fun `a date that is not MusicBrainz's is refused`() =
+    fun `a date that is not MusicBrainz's is not asked`() =
         runTest {
-            assertFailsWith<IllegalArgumentException> {
-                client.searchRecordingsBefore(
-                    "Song",
-                    "Artist",
-                    "1978] OR x:[*",
-                )
-            }
+            assertEquals(Lookup.Failed("InvalidDate"), client.searchRecordingsBefore("Song", "Artist", "1978] OR x:[*"))
+            assertEquals(emptyList(), net.sent)
         }
 }
