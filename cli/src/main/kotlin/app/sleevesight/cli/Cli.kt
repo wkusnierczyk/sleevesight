@@ -50,7 +50,7 @@ import kotlin.time.TimeSource
  * The Phase 0.5 command-line tool (`design/design.md`, *Phase 0.5*): runs the pipeline over the
  * fixture playlist, one track after another, and prints the coverage report ([Report]), whose gate
  * criteria ([Gate]) decide the exit status. See [Options.USAGE]. `keys-qr` draws a setup code of the
- * keys instead ([KeysQr]).
+ * keys instead ([KeysQr]), and `prompt` sends one prompt to an AI service ([PromptCommand]).
  *
  * One [NetClient] per process (architecture, *Networking*), with every host policy `:wiring` lists
  * ([HostPolicies]); the adapters, the resolver and the provider are the app's, built by `:wiring`
@@ -65,10 +65,10 @@ class Cli(
     private val terminal: () -> Terminal = { Terminal() },
 ) {
     fun run(args: List<String>): Int =
-        if (args.firstOrNull() == KEYS_QR) {
-            KeysQr(out, err, environment, input, terminal).run(args.drop(1))
-        } else {
-            runPipeline(args)
+        when (args.firstOrNull()) {
+            KEYS_QR -> KeysQr(out, err, environment, input, terminal).run(args.drop(1))
+            PROMPT -> PromptCommand(out, err, environment, input).run(args.drop(1))
+            else -> runPipeline(args)
         }
 
     private fun runPipeline(args: List<String>): Int {
@@ -314,6 +314,9 @@ class Cli(
 
         /** The command that draws a setup code of the keys ([KeysQr]). */
         const val KEYS_QR = "keys-qr"
+
+        /** The command that sends one prompt to an AI service ([PromptCommand], #767). */
+        const val PROMPT = "prompt"
 
         /** A gate criterion failed. */
         const val EXIT_GATE = 1
