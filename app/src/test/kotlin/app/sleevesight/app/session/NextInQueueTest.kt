@@ -44,6 +44,24 @@ class NextInQueueTest {
     }
 
     @Test
+    fun `an ad next in Spotify's queue is not prepared, nor anything in its place`() {
+        val withAd =
+            spotifyQueue.copy(
+                items =
+                    listOf(
+                        spotifyQueue.items[0],
+                        QueueEntry(9, "tetesept", "Advertisement", "spotify:ad:1"),
+                        spotifyQueue.items[1],
+                    ),
+            )
+        assertNull(NextInQueue.of(playing(mediaId = "spotify:track:1", item = 1), withAd))
+        // Another player's id in that form is its own business: the URI rule is Spotify's.
+        val other = playing(mediaId = "x:1", item = 1).copy(player = "com.example.player")
+        val otherQueue = withAd.copy(items = listOf(QueueEntry(1, "Kalabancoro", null, "x:1")) + withAd.items.drop(1))
+        assertEquals("tetesept", NextInQueue.of(other, otherQueue)?.title)
+    }
+
+    @Test
     fun `the media id goes first, since the active item can lag behind a new queue`() {
         assertEquals("Madan", NextInQueue.of(playing(mediaId = "spotify:track:2", item = 1), spotifyQueue)?.title)
     }

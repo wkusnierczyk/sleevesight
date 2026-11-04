@@ -25,7 +25,8 @@ object NextInQueue {
      * The item after [playing] in [queue], as the track it would be: its title and artists (the
      * item's subtitle), the player's package, and the item's media id and queue item id; no album
      * and no length, which [QueueEntry] does not read (Spotify's items carry neither; Castbox's
-     * carry both in their extras, #172). Null when there is none, or it has no title.
+     * carry both in their extras, #172). Null when there is none, or it has no title, or it is an
+     * ad ([AdDetection.isAdId], #880): an ad is never prepared, and nothing is in its place.
      */
     fun of(
         playing: NowPlaying?,
@@ -33,7 +34,7 @@ object NextInQueue {
     ): NowPlaying? {
         val items = queue?.items.orEmpty()
         val at = playing?.let { position(it, items) } ?: -1
-        val next = items.getOrNull(at + 1)?.takeIf { at >= 0 && !it.title.isNullOrBlank() }
+        val next = items.getOrNull(at + 1)?.takeIf { at >= 0 && !it.title.isNullOrBlank() && !isAd(playing, it) }
         return if (playing == null || next?.title == null) {
             null
         } else {
@@ -46,6 +47,12 @@ object NextInQueue {
             )
         }
     }
+
+    // Whether [entry], in [playing]'s player's queue, is an ad (#880).
+    private fun isAd(
+        playing: NowPlaying?,
+        entry: QueueEntry,
+    ): Boolean = playing != null && AdDetection.isAdId(playing.player, entry.mediaId)
 
     // The playing track's index in [items]: by its media id, the active queue item choosing among
     // several of it, or, when it names another entry (lagging behind), the first of them after

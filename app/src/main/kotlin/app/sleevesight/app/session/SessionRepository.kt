@@ -110,6 +110,7 @@ class SessionRepository(
     private val classify: (SessionChange) -> SessionChange = { it },
 ) {
     private val nowPlayingState = MutableStateFlow<NowPlaying?>(null)
+    private val adState = MutableStateFlow<AdPlaying?>(null)
     private val playbackState = MutableStateFlow(PlaybackInfo.NONE)
     private val queueState = MutableStateFlow<SessionQueue?>(null)
     private val artState = MutableStateFlow<Bitmap?>(null)
@@ -128,6 +129,17 @@ class SessionRepository(
      * sends constantly, do not emit.
      */
     val nowPlaying: StateFlow<NowPlaying?> = nowPlayingState.asStateFlow()
+
+    /**
+     * The ad the shown session plays in place of a track ([AdDetection], #880), as of the settle that
+     * found it; null while it plays none. While it is set, [nowPlaying], [trackChanges] and [playing]
+     * are null and [art] is cleared: the ad is published as no track, so the pipeline, read-aloud,
+     * the preparation of the next track and the history never see it, and the changes into and out
+     * of it are recorded as none ([lastChange]), for skip detection to learn from. Set before
+     * [nowPlaying] turns null, and cleared after the track that follows is published, so a screen
+     * reading both never sees neither for a moment.
+     */
+    val ad: StateFlow<AdPlaying?> = adState.asStateFlow()
 
     /**
      * The last change of [nowPlaying] from one track to another, with when it began and the
@@ -442,7 +454,10 @@ class SessionRepository(
         val previous = nowPlayingState.value
         var judgedCause: ChangeCause? = null
         val track = trackOf(shown, previous, switched)
+        val ad = shown?.ad
+        if (ad != null) adState.value = ad
         nowPlayingState.value = track
+        adState.value = ad
         if (track != null) lastPlay = track
         if (previous != null && track != null && !TrackIdentity.same(previous, track)) {
             val change = changeTo(previous, track, settled?.takeIf { it === shown }?.change, switched)
@@ -600,7 +615,9 @@ class SessionRepository(
                         val previousTitle = SessionMapping.title(this@Attached.metadata)
                         beginReport(newTitle = title != null && title != previousTitle)
                         this@Attached.metadata = metadata
-                        accumulate(SessionMapping.nowPlaying(gate.player, metadata, null))
+                        // An ad is no play: it fills none in and begins none ([AdDetection]).
+                        val ad = AdDetection.isAd(gate.player, metadata)
+                        accumulate(SessionMapping.nowPlaying(gate.player, metadata, null)?.takeUnless { ad })
                         settleLater()
                     }
                 }
@@ -678,6 +695,13 @@ class SessionRepository(
         var track: NowPlaying? = null
             private set
         var trackMetadata: MediaMetadata? = null
+            private set
+
+        /**
+         * The ad the last settle found in place of a track ([AdDetection], #880), then [track] being
+         * null; null when it found none.
+         */
+        var ad: AdPlaying? = null
             private set
 
         /** The change the last settle made, if it made one: for skip detection (D5). */
@@ -860,6 +884,7 @@ class SessionRepository(
             queueTitle = null
             track = null
             trackMetadata = null
+            ad = null
             change = null
             stateItem = null
             knownItem = null
@@ -1041,10 +1066,13 @@ class SessionRepository(
          * ([TrackIdentity.continues]): it fills the play in ([TrackIdentity.merged]), or begins
          * another, with a new tag. A state with no item (−1, as YouTube Music reports while stopped
          * in the background) keeps the last item the state named, while the title is unchanged.
+         * An ad ([AdDetection]: the metadata, or the active queue item) maps to no track, as a
+         * session naming no title does, and is kept as [ad]: the play before it is kept, so the
+         * track after it is judged against that play, and no change is made into or out of it.
          */
         private fun settle() {
             val previous = track
-            val report = SessionMapping.nowPlaying(gate.player, metadata, item(previous))
+            val report = reportOrAd(previous)
             val known = play
             val reported = next
             next = null
@@ -1096,6 +1124,17 @@ class SessionRepository(
                 return TrackIdentity.merged(resumed, report)
             }
             return report.copy(play = ++plays)
+        }
+
+        /**
+         * The latest pair mapped, after the [previous] track settled; null, and [ad] set, when it is
+         * an ad ([AdDetection]: by the metadata, or by the active queue item).
+         */
+        private fun reportOrAd(previous: NowPlaying?): NowPlaying? {
+            val item = item(previous)
+            val isAd = AdDetection.isAd(gate.player, metadata, AdDetection.activeItemMediaId(state, queue))
+            ad = if (isAd) AdPlaying.of(gate.player, metadata) else null
+            return if (isAd) null else SessionMapping.nowPlaying(gate.player, metadata, item)
         }
 
         /** The queue item to map the latest pair with, after the [previous] track settled. */
