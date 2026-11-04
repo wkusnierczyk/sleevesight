@@ -347,7 +347,29 @@ private class Navigation(
     val chooseMode: ((WriteAutomatically) -> Unit)?,
     val dismissals: Dismissals,
     val restoreDismissed: () -> Deferred<Boolean>,
-)
+) {
+    /** These ways out, [leave] called before each that opens a page coming back to the settings (#874). */
+    fun leaving(leave: () -> Unit): Navigation =
+        Navigation(
+            players,
+            modelName,
+            openCredits = {
+                leave()
+                openCredits()
+            },
+            openDiagnostics = {
+                leave()
+                openDiagnostics()
+            },
+            openWhatLeaves = {
+                leave()
+                openWhatLeaves()
+            },
+            chooseMode,
+            dismissals,
+            restoreDismissed,
+        )
+}
 
 /**
  * The saved keys' states, and whether *Purge keys* says why to use it: a saved key cannot be read,
@@ -402,7 +424,8 @@ private fun Notices(
  * opened at [landOn], if any, once per visit (a rotation does not land again), and at [jump], a
  * link's target from a key screen over them (#763), which [onJumped] then clears. Their
  * descriptions fold to one line ([DescriptionFolds], #847) while *Foldable descriptions* is on,
- * showing on each return as *Descriptions on return* has them.
+ * showing on each return as *Descriptions on return* has them, back from a page the settings opened
+ * too (#874).
  */
 @Suppress("LongParameterList") // What the sections show and change.
 @Composable
@@ -418,8 +441,8 @@ private fun SettingsContent(
     open: (SettingsDialog) -> Unit,
 ) {
     val folds = rememberSectionFolds()
-    val descriptions = rememberDescriptionFolds()
     val mode = settings.descriptionsOnReturn
+    val descriptions = rememberDescriptionFolds(mode)
     val descriptionsShown =
         remember(descriptions, settings.foldDescriptions, mode, settings.unfoldedDescriptions) {
             FoldsShown(descriptions, mode, settings.unfoldedDescriptions.toSet()) { id, unfolded ->
@@ -468,7 +491,9 @@ private fun SettingsContent(
             }
         found?.let { SearchAnnouncement(folds.query, it.size) }
         CompositionLocalProvider(LocalDescriptionFolds provides descriptionsShown) {
-            SettingsColumn(settings, keys, navigation, unavailable, Found(listed, found), folds, update, open)
+            // Left for a page, the descriptions show on the way back as on opening the settings (#874).
+            val leaving = navigation.leaving(descriptions::leave)
+            SettingsColumn(settings, keys, leaving, unavailable, Found(listed, found), folds, update, open)
         }
     }
 }

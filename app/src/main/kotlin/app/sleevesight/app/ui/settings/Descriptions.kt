@@ -45,10 +45,10 @@ import app.sleevesight.core.settings.Settings
  * description is known by its section and a key of its own ([Description]). One not tapped since its
  * section opened shows as *Descriptions on return* has it ([FoldsShown.isFolded]): *Folded* folded,
  * *Unfolded* open, *As left* as stored (`Settings.unfoldedDescriptions`), so as last left, across
- * restarts too. Coming back, opening the settings again or a section again ([reopen]), *Folded* and
- * *Unfolded* forget the taps in it. While a search finds a description, it shows unfolded whatever
- * was set for it, and a tap on it folds it only for that search ([endSearch] forgets those), as
- * [SectionFolds] does with the sections.
+ * restarts too. Coming back, opening the settings again or a section again ([reopen]), or back from
+ * a page the settings opened ([leave], #874), *Folded* and *Unfolded* forget the taps in it. While
+ * a search finds a description, it shows unfolded whatever was set for it, and a tap on it folds it
+ * only for that search ([endSearch] forgets those), as [SectionFolds] does with the sections.
  */
 @Stable
 internal class DescriptionFolds(
@@ -56,6 +56,10 @@ internal class DescriptionFolds(
 ) {
     // Each description tapped since its section opened, by section and key: whether it is folded.
     private val folded = mutableStateMapOf<String, Boolean>().apply { putAll(folded) }
+
+    // Whether the settings were left for a page that comes back to them ([leave]); not read in
+    // composition, only saved with the taps.
+    private var left = false
 
     // Each description a search found and a tap folded or unfolded again during that search.
     private val inSearch = mutableStateMapOf<String, Boolean>()
@@ -87,28 +91,56 @@ internal class DescriptionFolds(
         folded.keys.filter { it.startsWith(idPrefix(section)) }.forEach { folded.remove(it) }
     }
 
+    /**
+     * The settings left for a page that comes back to them (#874): *Credits*, *Diagnostics*, *What
+     * leaves the device*. Nothing changes while they leave; restored on the way back ([saver]),
+     * *Descriptions on return* applies as on opening the settings. A rotation, which never calls
+     * this, keeps the taps.
+     */
+    fun leave() {
+        left = true
+    }
+
     /** The search ended: the descriptions it found fold again as they were before it. */
     fun endSearch() {
         inSearch.clear()
     }
 
     companion object {
-        /** Saved as the ids tapped, each after `1` (folded) or `0` (open). */
-        val Saver: Saver<DescriptionFolds, ArrayList<String>> =
+        /**
+         * Saved as the ids tapped, each after `1` (folded) or `0` (open), and [LEFT] once [leave]
+         * was called. Restored with [LEFT] in it, back from a page (#874), *Folded* and *Unfolded*
+         * ([mode]) forget the taps, as on opening the settings; *As left* keeps them.
+         */
+        fun saver(mode: DescriptionsOnReturn): Saver<DescriptionFolds, ArrayList<String>> =
             Saver(
-                save = { folds -> ArrayList(folds.folded.map { (id, f) -> (if (f) "1" else "0") + id }) },
-                restore = { saved -> DescriptionFolds(saved.associate { it.drop(1) to it.startsWith("1") }) },
+                save = { folds ->
+                    val tapped = folds.folded.map { (id, f) -> (if (f) "1" else "0") + id }
+                    ArrayList(if (folds.left) tapped + LEFT else tapped)
+                },
+                restore = { saved ->
+                    val back = LEFT in saved && mode != DescriptionsOnReturn.AS_LEFT
+                    val tapped = (saved - LEFT).associate { it.drop(1) to it.startsWith("1") }
+                    DescriptionFolds(if (back) emptyMap() else tapped)
+                },
             )
+
+        // Saved after the ids, starting with neither `1` nor `0`, when the settings were left for a page.
+        private const val LEFT = "<"
 
         /** The start of the id of every description in [section]. */
         fun idPrefix(section: SettingsSection?): String = "${section?.name.orEmpty()}/"
     }
 }
 
-/** [DescriptionFolds] for this visit to the settings. */
+/**
+ * [DescriptionFolds] for this visit to the settings, a rotation keeping them; back from a page the
+ * settings opened ([DescriptionFolds.leave]), restored as [mode], *Descriptions on return*, has them
+ * (#874).
+ */
 @Composable
-internal fun rememberDescriptionFolds(): DescriptionFolds =
-    rememberSaveable(saver = DescriptionFolds.Saver) { DescriptionFolds() }
+internal fun rememberDescriptionFolds(mode: DescriptionsOnReturn): DescriptionFolds =
+    rememberSaveable(saver = DescriptionFolds.saver(mode)) { DescriptionFolds() }
 
 /**
  * The descriptions' [folds] as the settings show them, while *Foldable descriptions* is on: [mode],
