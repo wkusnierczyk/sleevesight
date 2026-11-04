@@ -208,6 +208,8 @@ internal fun KeyDialog(
 
     scanning?.let { purpose ->
         KeyScanScreen(purpose, scanner, onDismiss = { scanning = null }) { text ->
+            // The first code only: the camera may report another before the screen goes (#765).
+            if (scanning == null) return@KeyScanScreen
             scanning = null
             val result = scanned(purpose, id, text.trim(), ledger)
             failed = result.failed

@@ -119,6 +119,17 @@ private class Done(
 )
 
 /**
+ * What ④'s *Complete* did (#765), in one piece of work that outlives the screen, so that a rotation
+ * during the save still writes the choices: the keys it could not save ([unsaved]), and, once every
+ * key is saved, the choices as written ([applied]), or null when they could not be, or were not
+ * written for a key not saved.
+ */
+internal class Completed(
+    val unsaved: List<SecretId>,
+    val applied: Applied?,
+)
+
+/**
  * *Load keys*, a screen of its own ([KeyScreen], secure), in steps (#765). The intro says where the
  * code is made, [API_KEYS_URL], as plain text, with *Start*. ① five words drawn from [list] at
  * random ([crypto]) when *Start* is tapped, each large ([WordsStep]), to give the page, which seals
@@ -126,13 +137,15 @@ private class Done(
  * their [WORDS_LIFETIME] is up, by [clock], which counts deep sleep, new ones are drawn by
  * themselves. They are never saved, so a recreated screen draws new ones. ② the camera ([scanner],
  * [ScanStep]): a sealed code is opened with the words, or refused, in a panel under the camera,
- * which keeps reading; a code read stops it, and enables *Next*. ③ the keys the code holds, each
+ * which keeps reading; a code read stops it, and enables *Next*. A code read while another opens
+ * waits, and is taken if that one is refused. ③ the keys the code holds, each
  * ticked ([KeysStep]), with *Next* while any is. ④ the services to switch on ([EnableStep],
  * [enablePlan]), planned from the keys ticked, as if saved, and the [settings] as they are:
- * *Complete* saves the keys ticked with [onSave], which returns those it could not save (④ names
- * them, and saves only those on the next try), and then writes the choices with [onApply], which
- * returns the settings as written, or null when they could not be. Then the summary
- * ([SummaryStep]), of what was written, or that it could not be, with *Try again*; *Done*.
+ * *Complete* saves the keys ticked and then writes the choices, as one piece of work, with
+ * [onComplete] ([Completed]): it returns the keys it could not save (④ names them, and saves only
+ * those on the next try), and, once all are saved, the settings as written, or null when they
+ * could not be. Then the summary ([SummaryStep]), of what was written, or that it could not be,
+ * with *Try again*, which writes the choices again with [onApply]; *Done*.
  * *Previous* goes back a step, and *Cancel*, on any step, leaves without saving anything more. A
  * link to a section of the settings calls [onOpen] and leaves the screen.
  *
@@ -148,7 +161,7 @@ internal fun LoadKeysScreen(
     secrets: Map<SecretId, SecretState>,
     settings: Settings,
     scanner: QrScanner,
-    onSave: suspend (Map<SecretId, Secret>) -> List<SecretId>,
+    onComplete: suspend (Map<SecretId, Secret>, Map<SecretId, Boolean>) -> Completed,
     onApply: suspend (Map<SecretId, Boolean>) -> Applied?,
     onOpen: (SettingsTarget) -> Unit,
     onDismiss: () -> Unit,
@@ -167,6 +180,8 @@ internal fun LoadKeysScreen(
     var seen by remember { mutableStateOf(false) }
     var retired by remember { mutableStateOf<Refusal?>(null) }
     var scan by remember { mutableStateOf<ScanState>(ScanState.Reading()) }
+    // The last code the camera read while another opened: the camera does not read it again.
+    var queued by remember { mutableStateOf<String?>(null) }
     var plan by remember { mutableStateOf<EnablePlan?>(null) }
     var done by remember { mutableStateOf<Done?>(null) }
     val lifetime = WORDS_LIFETIME.inWholeMilliseconds
@@ -192,6 +207,41 @@ internal fun LoadKeysScreen(
         }
         retire(Refusal.EXPIRED)
     }
+    // A code the camera read on ②: taken while it reads, kept for later while another opens.
+    val take = take@{ code: String ->
+        when (scan) {
+            is ScanState.Opening -> {
+                queued = code
+                return@take
+            }
+
+            is ScanState.Read -> {
+                return@take
+            }
+
+            is ScanState.Reading -> {}
+        }
+        val setup = KeySetup.read(code)
+        if (setup != SetupRead.Sealed) {
+            scan = scanned(setup, sealed = false, secrets)
+            return@take
+        }
+        if (due()) retire(Refusal.EXPIRED)
+        val shown = words
+        // Words ① has not shown cannot have made the code: why the ones it showed went.
+        scan =
+            if (shown == null || !seen) {
+                ScanState.Reading(retired ?: Refusal.EXPIRED)
+            } else {
+                ScanState.Opening(code, shown)
+            }
+    }
+    // ② afresh: the camera reads, with nothing refused or waiting.
+    val rescan = {
+        scan = ScanState.Reading()
+        queued = null
+        step = LoadStep.SCAN
+    }
     val read = (scan as? ScanState.Read)?.load
     // The keys ticked on ③, as left there; those a try of *Complete* saved, and those it could not.
     var ticked by remember(read) { mutableStateOf(read?.let { load -> load.keys.map { it.id }.toSet() }.orEmpty()) }
@@ -216,10 +266,7 @@ internal fun LoadKeysScreen(
                     words = shown,
                     left = lifetime - (now - drawnAt),
                     onNewWords = draw,
-                    onNext = {
-                        scan = ScanState.Reading()
-                        step = LoadStep.SCAN
-                    },
+                    onNext = rescan,
                     onCancel = onDismiss,
                 )
             }
@@ -238,29 +285,16 @@ internal fun LoadKeysScreen(
                                 setup == null -> ScanState.Reading(Refusal.DAMAGED)
                                 else -> scanned(setup, sealed = true, secrets)
                             }
+                        // Refused: the code that waited meanwhile, if any, is taken now.
+                        val next = queued
+                        queued = null
+                        if (next != null && scan is ScanState.Reading) take(next)
                     }
                 }
                 ScanStep(
                     scan = scan,
                     scanner = scanner,
-                    onScanned = { code ->
-                        // Only while the camera reads: not while a code opens.
-                        if (scan !is ScanState.Reading) return@ScanStep
-                        val setup = KeySetup.read(code)
-                        if (setup != SetupRead.Sealed) {
-                            scan = scanned(setup, sealed = false, secrets)
-                            return@ScanStep
-                        }
-                        if (due()) retire(Refusal.EXPIRED)
-                        val shown = words
-                        // Words ① has not shown cannot have made the code: why the ones it showed went.
-                        scan =
-                            if (shown == null || !seen) {
-                                ScanState.Reading(retired ?: Refusal.EXPIRED)
-                            } else {
-                                ScanState.Opening(code, shown)
-                            }
-                    },
+                    onScanned = take,
                     onPrevious = { step = LoadStep.WORDS },
                     onNext = { step = LoadStep.KEYS },
                     onCancel = onDismiss,
@@ -276,10 +310,7 @@ internal fun LoadKeysScreen(
                     unsaved = unsaved,
                     onTick = { id, on -> ticked = if (on) ticked + id else ticked - id },
                     onPrevious = { step = LoadStep.SCAN },
-                    onScanAgain = {
-                        scan = ScanState.Reading()
-                        step = LoadStep.SCAN
-                    },
+                    onScanAgain = rescan,
                     onNext = {
                         plan = enablePlan(load.keys.map { it.id }.filter { it in ticked }, load.before, settings)
                         step = LoadStep.ENABLE
@@ -304,14 +335,15 @@ internal fun LoadKeysScreen(
                         try {
                             // After a failure, the keys saved on the first try are not saved again.
                             val left = load.keys.filter { it.id in ticked && it.id !in saved }
-                            unsaved = if (left.isEmpty()) emptyList() else onSave(left.associate { it.id to it.key })
+                            val completed = onComplete(left.associate { it.id to it.key }, choices)
+                            unsaved = completed.unsaved
                             saved = saved + left.map { it.id }.filterNot { it in unsaved }
                             if (unsaved.isEmpty()) {
                                 val keys =
                                     load.keys
                                         .filter { it.id in ticked }
                                         .map { SavedKey(it.id, endingOf(it.key.reveal()), it.replaces) }
-                                done = Done(keys, load.before, choices, onApply(choices))
+                                done = Done(keys, load.before, choices, completed.applied)
                                 step = LoadStep.SUMMARY
                             }
                         } finally {

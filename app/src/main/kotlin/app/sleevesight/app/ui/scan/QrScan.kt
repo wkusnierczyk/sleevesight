@@ -66,7 +66,8 @@ import com.google.zxing.qrcode.QRCodeReader
 /**
  * The camera's view for a QR scan, filling the space it is given, reading QR codes: it calls
  * `onScanned` with each code's text, once, not again for the code last heard (#765), so a screen
- * that refuses a code can keep the view and read the next. The settings screen takes it as a parameter, so its
+ * that refuses a code can keep the view and read the next; a screen that takes one code ignores any
+ * that come before it goes, as the key dialog does. The settings screen takes it as a parameter, so its
  * tests scan without a camera. Where it is shown, the key settings' guided screens (one key's
  * field, *Type on a computer*, *Load keys*), says what to do and offers *Cancel*.
  */

@@ -247,7 +247,11 @@ internal fun KeyDialogs(
                 secrets = secrets,
                 settings = settings,
                 scanner = scanner,
-                onSave = { keys -> saves.async { saveAll(store, keys, onSealFailed) }.await() },
+                // The keys and then the choices, in one piece of work that outlives the screen, so
+                // a rotation during the save still switches the services on (#765).
+                onComplete = { keys, choices ->
+                    saves.async { complete(store, keys, onSealFailed) { applyChoices(choices) } }.await()
+                },
                 onApply = { choices -> saves.async { applyChoices(choices) }.await() },
                 onOpen = onOpen,
                 onDismiss = onDismiss,
@@ -285,6 +289,20 @@ private suspend fun saveAll(
     val results = keys.map { (id, key) -> id to store.set(id, key) }
     onSealFailed(results.any { it.second == SaveResult.NOT_SEALED })
     return results.filter { it.second != SaveResult.SAVED }.map { it.first }
+}
+
+/**
+ * *Load keys*' *Complete* (#765): saves [keys] to [store] ([saveAll]), and, once every one is saved,
+ * writes the choices with [apply]; what it did, as [Completed] has it.
+ */
+private suspend fun complete(
+    store: SecretStore,
+    keys: Map<SecretId, Secret>,
+    onSealFailed: (Boolean) -> Unit,
+    apply: suspend () -> Applied?,
+): Completed {
+    val unsaved = if (keys.isEmpty()) emptyList() else saveAll(store, keys, onSealFailed)
+    return Completed(unsaved, if (unsaved.isEmpty()) apply() else null)
 }
 
 /** What removing the key [id] says, from its row or its dialog. */

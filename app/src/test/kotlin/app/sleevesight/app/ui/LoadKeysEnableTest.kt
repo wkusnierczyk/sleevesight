@@ -483,6 +483,22 @@ class LoadKeysEnableTest {
         }
 
     @Test
+    fun aRotationWhileCompleteSavesStillSwitchesTheServicesOn() =
+        show("sleevesight-keys:v1\nlastfm=$lastFmKey") {
+            toServices()
+            val keys = CompletableDeferred<Unit>()
+            val keyWrites = secretsData.writes.get()
+            secretsData.writeGate = keys
+            complete()
+            waitFor("the key's write held") { secretsData.writes.get() > keyWrites }
+            // The screen goes with the activity, before the key is saved.
+            recreate()
+            keys.complete(Unit)
+            settled { SourceSwitch.LASTFM in current().enabledSources }
+            assertEquals(lastFmKey, stored(SecretId.LASTFM))
+        }
+
+    @Test
     fun aLinkOpensItsSectionAndLeavesLoadKeys() =
         show("sleevesight-keys:v1\nlastfm=$lastFmKey") {
             toServices()
