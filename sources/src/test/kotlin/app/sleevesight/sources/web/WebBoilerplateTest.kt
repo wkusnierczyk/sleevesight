@@ -324,6 +324,16 @@ class WebBoilerplateTest {
     }
 
     @Test
+    fun `a fact after a practice tip or a shows list keeps its part`() {
+        val tip =
+            "Sundown chords, your practice should emphasize these chord progressions: E, A and D. " +
+                "Lightfoot recorded it at Eastern Sound."
+        assertEquals(tip, lineOf("https://chordu.com/fixture", tip))
+        val shows = "### shows - Jun 12 Riverside Hall Orillia, ON. Recorded at Eastern Sound."
+        assertEquals(shows, lineOf("https://sundown-fixture.bandcamp.com/track/sundown", shows))
+    }
+
+    @Test
     fun `cached lines from before the cleaning are not served`() {
         // The retrieval cache misses an entry kept under another extraction version
         // (`RetrievalCacheTest`); lines kept before #905 were made at version 2.

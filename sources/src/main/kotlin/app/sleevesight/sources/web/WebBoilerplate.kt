@@ -312,7 +312,8 @@ internal object WebBoilerplate {
             Site.BANDCAMP to
                 listOf(
                     "#+ license all rights reserved\\.?(?=\\s#|$)",
-                    "#+ shows\\b.*?(?=\\s#|$)",
+                    // The shows list to its sentence's end or the next heading, never a fact after it.
+                    "#+ shows\\b[^.#]*\\.?",
                     "supported by(?=\\s#|$)",
                 ),
             Site.CHORDS to
@@ -320,7 +321,8 @@ internal object WebBoilerplate {
                     "Chords used:",
                     "Tuning: ?(?:Standard(?: Tuning)?|Half Step Down|Drop [A-G]|Open [A-G])?(?: ?\\([A-Ga-g#b ]+\\))?",
                     "Capo: ?(?:no capo|\\+?\\d+ ?(?:st|nd|rd|th)? ?(?:fret)?)",
-                    "your practice should emphasi[sz]e these chord progressions\\b.*$",
+                    // The tip's own sentence, never a fact after it.
+                    "your practice should emphasi[sz]e these chord progressions\\b[^.]*\\.?",
                 ),
             Site.LETRAS to
                 listOf(
