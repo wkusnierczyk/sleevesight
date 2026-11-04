@@ -71,8 +71,10 @@ import kotlin.time.Instant
  * for the shortest of their lifetimes (D9); not when a source could not be asked. What the web
  * search found, none included, is kept apart ([WEB_PART]), by the names folded, in [webKept],
  * which the app keeps whatever *Keep what sources said about each artist* says, as it keeps a
- * track's own web findings (`SourceResult.trackOnly`), for the web's lifetime: a later write, or a
- * later lookup, of the album finds the same lines with no search. With a [webKept] that keeps
+ * track's own web findings (`SourceResult.trackOnly`), and for as long as the album's insight is
+ * kept (*Keep history for*, [ArtistPart.keptAsHistory]), not for the web's own lifetime: a later
+ * write, or a later lookup, of the album finds the same lines with no search, and so the insight
+ * under the same key, on any day it is kept. With a [webKept] that keeps
  * nothing ([ArtistResults.persists] false: the CLI, tests), in memory for the most recent
  * [REMEMBERED] albums instead. Never throws but for cancellation.
  */
@@ -438,10 +440,15 @@ class AlbumSource(
 
         /**
          * An album's web lines (#885), by the album's and the artist's names folded: what its web
-         * search found, none included, kept for the web's lifetime, whatever *Keep what sources said
-         * about each artist* says (`PipelineWiring.TRACK_ONLY_PARTS`).
+         * search found, none included, kept whatever *Keep what sources said about each artist* says
+         * (`PipelineWiring.TRACK_ONLY_PARTS`), and as long as the album's insight written from them
+         * ([ArtistPart.keptAsHistory]: *Keep history for*), so its card's key stays the same across
+         * days; the web's own lifetime would expire them first, and a later lookup without them
+         * would key the album anew and pay for another search and call. Extraction 2: kept so; an
+         * entry of 1 was kept for the web's lifetime.
          */
-        val WEB_PART: ArtistPart = ArtistPart("album.web", extraction = 1, encoding = 1, sources = setOf(SourceId.WEB))
+        val WEB_PART: ArtistPart =
+            ArtistPart("album.web", extraction = 2, encoding = 1, sources = setOf(SourceId.WEB), keptAsHistory = true)
 
         /** The albums whose web lines are kept in memory, without a [webKept] that keeps them. */
         const val REMEMBERED: Int = 256

@@ -76,7 +76,10 @@ class Caches(
             deleted += queries.retrievalPurgeFormat(RetrievalCodec.FORMAT.toLong()).value
             deleted += queries.artistPurge((now - current.artistCacheLifetime).toEpochMilliseconds()).value
             SynthesisCache.lifetimeOf(current)?.let { lifetime ->
-                deleted += queries.synthesisPurge((now - lifetime).toEpochMilliseconds()).value
+                val cutoff = (now - lifetime).toEpochMilliseconds()
+                deleted += queries.synthesisPurge(cutoff).value
+                // The artist-level parts kept as long as the cards (#885).
+                deleted += queries.artistResultPurgeSources(ArtistResultCache.HISTORY, cutoff).value
             }
             deleted + enforceLimit()
         }
@@ -118,7 +121,8 @@ class Caches(
     private fun purgeUnknownSources(): Long {
         val known = SourceId.entries.map { it.tag }.toSet()
 
-        fun unknown(sources: String) = sources.split(' ').any { it.isNotEmpty() && it !in known }
+        fun unknown(sources: String) =
+            sources.split(' ').any { it.isNotEmpty() && it !in known && it != ArtistResultCache.HISTORY_TAG }
         val retrieval =
             queries
                 .retrievalSources()
