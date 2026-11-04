@@ -131,7 +131,8 @@ class GenreCascadeTest {
             val run = reasons(provider).run(base.copy(aiWebSearch = AiWebSearch.OFF))
             assertEquals(InsightState.NoEvidence, run.state)
             assertEquals(1, provider.requests.size)
-            assertFalse(GenreReasonPrompt.MODEL_RULE in provider.requests.single().prompt)
+            val system = provider.requests.single().system
+            assertFalse(GenreReasonPrompt.MODEL_RULE in system.orEmpty())
         }
 
     // Knowledge on, web off.
@@ -146,7 +147,8 @@ class GenreCascadeTest {
             assertNull(written.searched)
             assertEquals(1, provider.requests.size)
             assertTrue(queries.isEmpty())
-            assertTrue(GenreReasonPrompt.MODEL_RULE in provider.requests.single().prompt)
+            val system = provider.requests.single().system
+            assertTrue(GenreReasonPrompt.MODEL_RULE in system.orEmpty())
         }
 
     @Test
@@ -186,7 +188,8 @@ class GenreCascadeTest {
             assertEquals(2, provider.requests.size)
             assertEquals(1, queries.size)
             // The second call may use the knowledge too.
-            assertTrue(GenreReasonPrompt.MODEL_RULE in provider.requests.last().prompt)
+            val system = provider.requests.last().system
+            assertTrue(GenreReasonPrompt.MODEL_RULE in system.orEmpty())
             // One answer: the first call's text never shows, not even as it came.
             assertTrue(run.shown.none { it is InsightState.Writing && it.partial.isNotEmpty() && "[AI]" in it.partial })
             assertEquals(listOf(written), run.shown.filterIsInstance<InsightState.Written>())
@@ -325,7 +328,8 @@ class GenreCascadeTest {
             val written = assertIs<InsightState.Written>(run.state)
             assertNotNull(written.searched)
             assertEquals(2, provider.requests.size)
-            assertFalse(GenreReasonPrompt.MODEL_RULE in provider.requests.last().prompt)
+            val system = provider.requests.last().system
+            assertFalse(GenreReasonPrompt.MODEL_RULE in system.orEmpty())
         }
 
     @Test

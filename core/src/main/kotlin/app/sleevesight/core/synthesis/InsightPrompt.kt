@@ -45,7 +45,6 @@ import app.sleevesight.core.model.SourceId
  * under the least a provider caches on the default models, and a warm cache would save almost
  * nothing (#399; the design's *No cached prefix*).
  */
-@Suppress("TooManyFunctions") // Version 8's rules beside version 9's, until the genre reason moves to version 9.
 object InsightPrompt {
     /**
      * The version of this prompt's template, part of the synthesis cache key: raised when the
@@ -219,37 +218,6 @@ object InsightPrompt {
             FINAL_TEXT_RULE,
             PLAIN_TEXT_RULE,
             NO_EVIDENCE_RULE,
-        ).joinToString("\n")
-
-    /**
-     * Version 8's rules ([ItemPrompt.contract]), which the genre reason's prompt still builds on
-     * (`GenreReasonPrompt.contract`) until it moves to version 9's structure.
-     */
-    fun contract(allowModel: Boolean): String = ItemPrompt.contract(allowModel)
-
-    /**
-     * Version 8's rules with [evidence], [model], [noEvidence] and [gap] in place of its rules on the
-     * evidence, the model's own knowledge, a reply with nothing to write (left out when null) and a
-     * gap: the genre reason's own (#695, `GenreReasonPrompt.contract`).
-     */
-    fun contract(
-        evidence: String,
-        model: String,
-        noEvidence: String?,
-        gap: String = ItemPrompt.GAP_RULE,
-    ): String =
-        listOfNotNull(
-            CITATION_RULE,
-            evidence,
-            LENGTH_RULE,
-            ORIGINAL_SONG_RULE,
-            ARTIST_RULE,
-            SAME_NAME_RULE,
-            WEB_GENRE_RULE,
-            gap,
-            model,
-            PLAIN_TEXT_RULE,
-            noEvidence,
         ).joinToString("\n")
 
     /** The rule on citations: every factual sentence ends with the ids of the lines it rests on. */

@@ -258,7 +258,9 @@ class GenreWebTest {
             val state = reasons.write(key, track, "Folk", AiSearches.Asking(AiWebSearch.UP_TO, 2)) { _, _ -> }
             assertIs<InsightState.Written>(state)
             val loop = provider.requests[1]
-            assertTrue("numbered from [S2] on" in loop.prompt)
+            // The search's instructions are in the system prompt (#767), sent on every turn of the loop.
+            assertTrue("numbered on after the evidence's web lines" in loop.system.orEmpty())
+            assertEquals(loop.system, provider.requests[2].system)
             val result =
                 provider.requests[2]
                     .exchanges

@@ -88,7 +88,7 @@ class GenreReasonsTest {
             val shown = mutableListOf<InsightState>()
             val written = assertIs<InsightState.Written>(write(shown = shown))
             assertEquals(1, provider.requests.size)
-            assertTrue("\"Jazz\"" in provider.requests.single().prompt)
+            assertTrue("<genre>\nJazz\n</genre>" in provider.requests.single().prompt)
             assertEquals(1, written.grounded.counts.ok)
             assertEquals(false, written.cached)
             assertIs<InsightState.Writing>(shown.first())
