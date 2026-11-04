@@ -232,6 +232,11 @@ DELETE FROM artist_result WHERE id = :id;
 artistResultPurgeSource:
 DELETE FROM artist_result WHERE instr(sources, ' ' || :tag || ' ') > 0 AND stored_at <= :storedAtOrBefore;
 
+-- Rows with exactly these sources stored at or before the cutoff: the parts kept as long as the
+-- cards (#885), whose sources column is `ArtistResultCache.HISTORY`.
+artistResultPurgeSources:
+DELETE FROM artist_result WHERE sources = :sources AND stored_at <= :storedAtOrBefore;
+
 -- Each row's sources, for purging the rows that hold a source the app no longer has.
 artistResultSources:
 SELECT id, stored_at, sources FROM artist_result;
@@ -239,6 +244,10 @@ SELECT id, stored_at, sources FROM artist_result;
 -- Every artist-level result, when keeping what is said about artists is switched off (#420).
 artistResultDeleteAll:
 DELETE FROM artist_result;
+
+-- Every artist-level result but those of the parts named, kept whatever that switch says (#885).
+artistResultDeleteAllBut:
+DELETE FROM artist_result WHERE part NOT IN ?;
 
 -- Synthesis
 

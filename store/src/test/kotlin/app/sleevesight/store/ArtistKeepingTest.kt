@@ -244,6 +244,24 @@ class ArtistKeepingTest {
     }
 
     @Test
+    fun `clearing spares the parts kept whatever the switch says`() =
+        runBlocking {
+            val always = StoreArtistResults({ fixture.caches }, EmptyCoroutineContext, ArtistKeeping.ALWAYS)
+            val spared = ArtistPart("album.web", 1, 1, setOf(SourceId.WEB))
+            keeps = true
+            artists.keep(PART, "gordon lightfoot", "Bio.")
+            keeps = false
+            always.keep(spared, "sundown", "[]")
+            val sparing =
+                ArtistKeeping.over({ fixture.caches }, EmptyCoroutineContext, setOf(spared.name)) { keeps }
+
+            assertTrue(sparing.clear())
+
+            assertEquals(1, stats().artistResults.entries)
+            assertNotNull(always.get(spared, "sundown"))
+        }
+
+    @Test
     fun `a clear that failed is tried again by an artist-cache read while off`() =
         runBlocking {
             keeps = true

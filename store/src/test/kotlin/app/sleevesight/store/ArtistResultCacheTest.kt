@@ -1,10 +1,13 @@
 package app.sleevesight.store
 
+import app.sleevesight.core.ai.ReasoningEffort
 import app.sleevesight.core.model.Outcome
+import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.sources.ArtistPart
 import app.sleevesight.core.sources.SourceResult
+import app.sleevesight.core.synthesis.CardKind
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -317,15 +320,90 @@ class ArtistResultCacheTest {
             assertNull(store.get(LASTFM, "a"))
         }
 
-    private fun keeping(keeps: () -> Boolean) = ArtistKeeping.over({ fixture.caches }, EmptyCoroutineContext, keeps)
+    private fun keeping(keeps: () -> Boolean) =
+        ArtistKeeping.over({ fixture.caches }, EmptyCoroutineContext, keeps = keeps)
 
     private fun track(freshUntil: Instant) =
         SourceResult(Outcome.ArtistArticle, emptyList(), Duration.ZERO, freshUntil = freshUntil)
+
+    @Test
+    fun `a part kept as history outlives its sources' lifetime, for as long as the cards are kept`() {
+        results.put(HISTORY, "sundown", "[]")
+        // The album's card, written from those lines, under the key they give.
+        fixture.caches.synthesis.put(ALBUM_CARD, "Sundown is his tenth album [S1].")
+        val web = Settings.DEFAULT_CACHE_LIFETIMES.getValue(SourceId.WEB)
+
+        fixture.clock.advance(web + 1.days)
+        // An album's web lines: found again past the web's lifetime, so its card's key is the same,
+        // and the card is found again, with no search or call.
+        assertEquals("[]", results.get(HISTORY, "sundown")?.value)
+        assertNotNull(fixture.caches.synthesis.get(ALBUM_CARD))
+        fixture.caches.purgeExpired()
+        assertNotNull(fixture.caches.synthesis.get(ALBUM_CARD))
+        assertEquals(
+            1,
+            fixture.caches
+                .stats()
+                .artistResults.entries,
+            "no source's purge deletes it",
+        )
+
+        // *Keep history for* shortened past it: gone, as the cards written then are.
+        fixture.settings = Settings(historyLifetime = 1.days)
+        assertNull(results.get(HISTORY, "sundown"))
+        results.put(HISTORY, "rumours", "[]")
+        fixture.clock.advance(2.days)
+        fixture.caches.purgeExpired()
+        assertEquals(
+            0,
+            fixture.caches
+                .stats()
+                .artistResults.entries,
+            "the purge deletes it with the cards",
+        )
+        fixture.assertTotals()
+    }
+
+    @Test
+    fun `a part kept as history kept again with a later card lasts as long as that card`() {
+        results.put(HISTORY, "sundown", "[]")
+        // A second card from the same lines on day 60: the lines kept again with it.
+        fixture.clock.advance(60.days)
+        results.put(HISTORY, "sundown", "[]")
+        fixture.caches.synthesis.put(ALBUM_CARD, "Sundown is his tenth album [S1].")
+        // Day 100, with the default 90 days: both still there, past the first card's 90.
+        fixture.clock.advance(40.days)
+        fixture.caches.purgeExpired()
+        assertEquals("[]", results.get(HISTORY, "sundown")?.value)
+        assertNotNull(fixture.caches.synthesis.get(ALBUM_CARD))
+    }
+
+    @Test
+    fun `a part kept as history is kept for ever with Keep history for set to Forever`() {
+        fixture.settings = Settings(historyLifetime = null)
+        results.put(HISTORY, "sundown", "[]")
+        fixture.clock.advance(3650.days)
+        fixture.caches.purgeExpired()
+        assertEquals("[]", results.get(HISTORY, "sundown")?.value)
+    }
 
     private companion object {
         val LASTFM_LIFETIME = Settings.DEFAULT_CACHE_LIFETIMES.getValue(SourceId.LASTFM)
         val MUSICBRAINZ = ArtistPart("musicbrainz.tags", 1, 1, setOf(SourceId.MUSICBRAINZ))
         val LASTFM = ArtistPart("lastfm.artist", 1, 1, setOf(SourceId.LASTFM))
         val WIKIPEDIA = ArtistPart("wikipedia.artist", 1, 1, setOf(SourceId.WIKIPEDIA, SourceId.WIKIDATA))
+        val HISTORY = ArtistPart("album.web", 1, 1, setOf(SourceId.WEB), keptAsHistory = true)
+        val ALBUM_CARD =
+            SynthesisKey(
+                kind = CardKind.ALBUM,
+                entityKey = "album|rg-sundown",
+                evidenceFingerprint = "9f2c",
+                promptVersion = 1,
+                styleHash = "built-in",
+                provider = ProviderId.ANTHROPIC,
+                model = "claude-haiku-5-5",
+                modelKnowledge = false,
+                effort = ReasoningEffort.LOW,
+            )
     }
 }

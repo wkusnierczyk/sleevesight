@@ -19,7 +19,7 @@
     <string name="first_run_no_audio">Sleevesight receives no audio.</string>
 
     <string name="first_run_leaves_title">What leaves the phone, and to whom</string>
-    <string name="first_run_to_sources">To the sources you switch on, such as MusicBrainz and Wikipedia: the title and artists of the playing track, cleaned of tags such as “2006 Remaster”. For genre labels, Last.fm gets the album name. While the album’s insight is unfolded or open on its page, Wikipedia gets the album’s name too, and MusicBrainz and Wikidata its identifiers. While the “Proactive” setting is on, as it is by default, the title and artists of the next track in the player’s queue also go to MusicBrainz if the service is enabled.</string>
+    <string name="first_run_to_sources">To the sources you enable, such as MusicBrainz and Wikipedia: the title and artists of the playing track, cleaned of tags such as “2006 Remaster”. For genre labels, Last.fm gets the album name. While the album’s insight is unfolded or open on its page, Wikipedia and Last.fm get the album’s name too, and MusicBrainz and Wikidata its identifiers; when it is written, Exa also gets a search for the album, if Exa web search is on. While the “Proactive” setting is on, as it is by default, the title and artists of the next track in the player’s queue also go to MusicBrainz if the service is enabled.</string>
     <string name="first_run_to_ai">To the AI service you choose: the title, artists and album, and what the sources found. This is for the playing track only: the next one in the queue is looked up ahead in the sources, but no AI insight is written for it until it plays.</string>
     <string name="first_run_api_keys">Your API keys: each only to the service it belongs to, with each request to it. Always encrypted.</string>
     <string name="first_run_to_art_host">To the server a cover’s web address names, when a player gives the cover only as a web address: a request for the cover image. The address itself may identify the album or episode.</string>
@@ -176,7 +176,7 @@
     <string name="settings_section_history">History</string>
     <string name="settings_keep_history">Keep history for</string>
     <string name="settings_keep_history_forever">Forever</string>
-    <string name="settings_keep_history_summary">How long Sleevesight keeps, on this phone, the list of tracks you played, the track changes recorded to learn your skips, and the insights and genre explanations written for them, counted from when each was played or written. Anything older is no longer shown and is deleted. A shorter time applies at once.</string>
+    <string name="settings_keep_history_summary">How long Sleevesight keeps, on this phone, the list of tracks you played, the track changes recorded to learn your skips, and the insights and genre explanations written for them, with the web pages an album’s insight was written from, counted from when each was played or written. Anything older is no longer shown and is deleted. A shorter time applies at once.</string>
     <string name="settings_session_gap">New session idle trigger</string>
     <string name="settings_session_gap_summary">A track that starts after a longer break begins a new listening session, counted from when the last track was heard. Earlier sessions stay in your history, for as long as “Keep history for” is set. Within a session, each artist fact is told once, unless “Don’t repeat artist facts” is off. A change applies from the next track that starts.</string>
     <string name="settings_clear_history">Clear history</string>
@@ -337,7 +337,7 @@
     <string name="credits_wikidata">Wikidata</string>
     <string name="credits_wikidata_text">Facts on songs, albums and artists, from Wikidata.</string>
     <string name="credits_lastfm">Last.fm</string>
-    <string name="credits_lastfm_text">Artist bios by Last.fm users, under CC BY-SA; listeners, tags, genre labels and similar artists under Last.fm’s API terms.</string>
+    <string name="credits_lastfm_text">Artist bios and album summaries by Last.fm users, under CC BY-SA; listeners, tags, genre labels and similar artists under Last.fm’s API terms.</string>
     <string name="credits_exa">Exa</string>
     <string name="credits_exa_text">Web search results, under Exa’s terms of service.</string>
     <string name="credits_roboto">Roboto</string>

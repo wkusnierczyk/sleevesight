@@ -116,7 +116,16 @@ class MusicBrainzClient(
                 firstReleaseDate = json.string("first-release-date")?.ifEmpty { null },
                 credit = credits(json).joinToString("") { it.name + it.joinPhrase },
                 wikidataIds = wikidataIds(json.array("relations")),
+                releaseIds = json.array("releases").mapNotNull { it.string("id")?.ifEmpty { null } },
             )
+        }
+    }
+
+    override suspend fun groupOfRelease(mbid: String): Lookup<String> {
+        val request = NetRequest("$BASE/release/$mbid", query = mapOf("inc" to "release-groups", "fmt" to "json"))
+        return net.lookup(request) { response ->
+            parseObject(response.body).obj("release-group")?.string("id")?.ifEmpty { null }
+                ?: throw MissingField("release-group")
         }
     }
 
@@ -209,8 +218,11 @@ class MusicBrainzClient(
 
         const val WORK_INC: String = "artist-rels+url-rels+recording-rels+artist-credits"
 
-        /** An album's release group (#522): its credit, and its Wikidata item among its URL relationships. */
-        const val ALBUM_INC: String = "artist-credits+url-rels"
+        /**
+         * An album's release group (#522): its credit, its Wikidata item among its URL relationships,
+         * and its releases (#885), which Last.fm's album is checked against (`AlbumSource`).
+         */
+        const val ALBUM_INC: String = "artist-credits+url-rels+releases"
 
         /**
          * A cover's original's releases, each with its release group (#724). MusicBrainz lists at
@@ -322,15 +334,23 @@ internal class MissingField(
  * MusicBrainz's release groups, looked up by id (#522): what an album's insight is written from
  * first (`AlbumSource`). Apart from `MusicBrainzLookup`, which resolution uses.
  */
-fun interface ReleaseGroups {
+interface ReleaseGroups {
     /** The release group [mbid], with its artist credit and its Wikidata item; not found for a release's own id. */
     suspend fun releaseGroup(mbid: String): Lookup<MbAlbum>
+
+    /**
+     * The id of the release group the release [mbid] belongs to (#885: Last.fm's album checked
+     * against the album's group when the group's releases are not all listed); not found for an id
+     * that is not a release's.
+     */
+    suspend fun groupOfRelease(mbid: String): Lookup<String>
 }
 
 /**
  * A release group as an album's insight reads it (#522): its [title], its primary type (`Album`,
  * `EP`, `Single`) and secondary types (`Live`, `Compilation`), the date its first release came out,
- * its artist credit as written ([credit]), and the Wikidata items it links ([wikidataIds]). Core data,
+ * its artist credit as written ([credit]), the Wikidata items it links ([wikidataIds]), and the ids
+ * of its releases ([releaseIds], #885), at most [LINKED_LIMIT], the most a lookup lists. Core data,
  * CC0.
  */
 data class MbAlbum(
@@ -341,4 +361,10 @@ data class MbAlbum(
     val firstReleaseDate: String?,
     val credit: String,
     val wikidataIds: List<String>,
-)
+    val releaseIds: List<String> = emptyList(),
+) {
+    companion object {
+        /** The most linked entities a MusicBrainz lookup lists: a group's releases past it are left out. */
+        const val LINKED_LIMIT: Int = 25
+    }
+}

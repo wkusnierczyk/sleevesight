@@ -14,6 +14,7 @@ import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.resolution.NameMatcher
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.SourceSwitch
+import app.sleevesight.core.settings.WebEngine
 import app.sleevesight.core.sources.AlbumFound
 import app.sleevesight.core.sources.AlbumLookup
 import app.sleevesight.core.sources.AlbumQuery
@@ -26,6 +27,7 @@ import app.sleevesight.core.synthesis.ItemPrompt
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
@@ -51,19 +53,41 @@ class ItemInsightsTest {
     private val items = ItemInsights(AiAccess(provider, Secret("k")), cache, JvmHasher, names, albums = albums)
     private val settings = Settings(aiProvider = ProviderId.ANTHROPIC)
 
-    // The album's lines, as `AlbumSource` gives them, the same whichever track asks.
+    // The album's lines, as `AlbumSource` gives them, the same whichever track asks; with [web], a
+    // web search for it, its lines given by a lookup once a search kept them (#885).
     private class FakeAlbums(
         var lines: List<EvidenceDraft> =
             listOf(
                 line(SourceId.MUSICBRAINZ, "“Sundown” is an album by Gordon Lightfoot.", Scope.RELEASE),
                 line(SourceId.WIKIPEDIA, "Sundown is the tenth album by Gordon Lightfoot.", Scope.RELEASE),
             ),
+        val web: List<EvidenceDraft>? = null,
     ) : AlbumLookup {
         val asked = mutableListOf<AlbumQuery>()
+        var searches = 0
+        val renewed = mutableListOf<AlbumQuery>()
+        private var kept: List<EvidenceDraft>? = null
+
+        override suspend fun renewWeb(query: AlbumQuery) {
+            renewed += query
+        }
 
         override suspend fun lookup(query: AlbumQuery): AlbumFound {
             asked += query
-            return AlbumFound(lines)
+            val searched = kept?.takeIf { query.web }
+            return AlbumFound(lines + searched.orEmpty(), webDue = web != null && query.web && searched == null)
+        }
+
+        override suspend fun searchWeb(
+            query: AlbumQuery,
+            sent: () -> Unit,
+        ): List<EvidenceDraft>? {
+            if (web == null || !query.web) return null
+            return kept ?: web.also {
+                searches++
+                sent()
+                kept = it
+            }
         }
     }
 
@@ -414,6 +438,126 @@ class ItemInsightsTest {
             assertEquals(listOf(CardKind.SONG, CardKind.ARTIST, CardKind.ALBUM), kinds)
             assertNotEquals(CardKind.INSIGHT, kinds.first())
             assertNotNull(items.name(InsightItem.ALBUM, track))
+        }
+
+    @Test
+    fun `only the album's card keeps its web lines again, and only once kept`() =
+        runTest {
+            val track = track("Sundown", listOf(line(SourceId.MUSICBRAINZ, "It runs three minutes.")))
+            for (item in listOf(InsightItem.SONG, InsightItem.ARTIST)) {
+                val evidence = checkNotNull(items.evidence(item, track, settings))
+                items.write(checkNotNull(items.key(item, track, evidence, settings)), item, track, evidence) { _, _ -> }
+            }
+            assertTrue(albums.renewed.isEmpty())
+            val evidence = checkNotNull(items.evidence(InsightItem.ALBUM, track, settings))
+            items.write(
+                checkNotNull(items.key(InsightItem.ALBUM, track, evidence, settings)),
+                InsightItem.ALBUM,
+                track,
+                evidence,
+            ) { _, _ -> }
+            assertEquals(1, albums.renewed.size)
+        }
+
+    // [settings] with web search switched on, through an engine.
+    private val webOn =
+        settings.copy(
+            enabledSources = settings.enabledSources + SourceSwitch.WEB,
+            webEngines = setOf(WebEngine.EXA),
+        )
+
+    private val webLine =
+        EvidenceDraft(
+            SourceId.WEB,
+            Scope.WEB,
+            "Sundown, Gordon Lightfoot's 1974 album, topped the Billboard 200.",
+            "https://example.com/sundown",
+            RETRIEVED,
+        )
+
+    @Test
+    fun `the album's web search is made only for a write, and its insight is found again once it is kept`() =
+        runTest {
+            val web = FakeAlbums(web = listOf(webLine))
+            val items = ItemInsights(AiAccess(provider, Secret("k")), cache, JvmHasher, names, albums = web)
+            val first = track("Sundown", listOf(line(SourceId.MUSICBRAINZ, "It runs three minutes.")))
+            // Gathered for the row, its key looked up: no search.
+            val gathered = checkNotNull(items.evidence(InsightItem.ALBUM, first, webOn))
+            assertTrue(gathered.webDue)
+            assertTrue(gathered.evidence.lines.none { it.source == SourceId.WEB })
+            val before = checkNotNull(items.key(InsightItem.ALBUM, first, gathered, webOn))
+            assertNull(items.kept(before, gathered))
+            assertEquals(0, web.searches)
+
+            // Web search switched off since the evidence was gathered: no search.
+            val off = webOn.copy(enabledSources = webOn.enabledSources - SourceSwitch.WEB)
+            assertNull(items.searched(InsightItem.ALBUM, first, off, gathered))
+            assertEquals(0, web.searches)
+
+            // The write's search: the web's lines join the album's, under another key, its request told.
+            var sent = 0
+            val searched = checkNotNull(items.searched(InsightItem.ALBUM, first, webOn, gathered) { sent++ })
+            assertEquals(1, web.searches)
+            assertEquals(1, sent)
+            assertEquals(listOf("MB1", "W1", "S1"), searched.evidence.ids)
+            val key = checkNotNull(items.key(InsightItem.ALBUM, first, searched, webOn))
+            assertNotEquals(before, key)
+            assertIs<InsightState.Written>(items.write(key, InsightItem.ALBUM, first, searched) { _, _ -> })
+            assertTrue(webLine.text in provider.requests.single().prompt)
+            // Its web lines kept again with the card written from them.
+            assertEquals(listOf("Sundown"), web.renewed.map { it.title })
+
+            // The next track of the album gathers the kept lines, with no search, and finds the insight.
+            val next = track("Carefree Highway", listOf(line(SourceId.MUSICBRAINZ, "It was a hit.")))
+            val again = checkNotNull(items.evidence(InsightItem.ALBUM, next, webOn))
+            assertFalse(again.webDue)
+            assertEquals(key, items.key(InsightItem.ALBUM, next, again, webOn))
+            assertNotNull(items.kept(key, again))
+            assertNull(items.searched(InsightItem.ALBUM, next, webOn, again))
+            assertEquals(1, web.searches)
+            assertEquals(1, provider.requests.size)
+        }
+
+    @Test
+    fun `no web search for the album while web search is off`() =
+        runTest {
+            val web = FakeAlbums(web = listOf(webLine))
+            val items = ItemInsights(AiAccess(provider, Secret("k")), cache, JvmHasher, names, albums = web)
+            val track = track("Sundown", emptyList())
+            val off = settings.copy(enabledSources = settings.enabledSources - SourceSwitch.WEB)
+            val evidence = checkNotNull(items.evidence(InsightItem.ALBUM, track, off))
+            assertFalse(evidence.webDue)
+            assertFalse(web.asked.single().web)
+            assertNull(items.searched(InsightItem.ALBUM, track, off, evidence))
+            assertEquals(0, web.searches)
+        }
+
+    @Test
+    fun `the album asks Last fm and the web as Sources has them switched`() =
+        runTest {
+            val track = track("Sundown", emptyList())
+            items.evidence(InsightItem.ALBUM, track, webOn)
+            val off = settings.copy(enabledSources = settings.enabledSources - SourceSwitch.LASTFM - SourceSwitch.WEB)
+            items.evidence(InsightItem.ALBUM, track, off)
+            assertEquals(listOf(true to true, false to false), albums.asked.map { it.lastFm to it.web })
+        }
+
+    @Test
+    fun `the album's key is the same whatever the counts of what many listeners did`() =
+        runTest {
+            val track = track("Sundown", emptyList())
+
+            fun counted(listeners: Int) =
+                line(SourceId.LASTFM, "Last.fm counts $listeners listeners for Sundown.", Scope.RELEASE)
+                    .copy(aggregate = true)
+            val keys =
+                listOf(1000, 1001).map { listeners ->
+                    albums.lines = albums.lines.filterNot { it.aggregate } + counted(listeners)
+                    val evidence = checkNotNull(items.evidence(InsightItem.ALBUM, track, settings))
+                    assertTrue(evidence.evidence.lines.none { it.aggregate })
+                    checkNotNull(items.key(InsightItem.ALBUM, track, evidence, settings))
+                }
+            assertEquals(1, keys.distinct().size)
         }
 
     private companion object {
