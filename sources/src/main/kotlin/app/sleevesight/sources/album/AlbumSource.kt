@@ -72,9 +72,10 @@ import kotlin.time.Instant
  * search found, none included, is kept apart ([WEB_PART]), by the names folded, in [webKept],
  * which the app keeps whatever *Keep what sources said about each artist* says, as it keeps a
  * track's own web findings (`SourceResult.trackOnly`), and for as long as the album's insight is
- * kept (*Keep history for*, [ArtistPart.keptAsHistory]), not for the web's own lifetime: a later
- * write, or a later lookup, of the album finds the same lines with no search, and so the insight
- * under the same key, on any day it is kept. With a [webKept] that keeps
+ * kept (*Keep history for*, [ArtistPart.keptAsHistory]), not for the web's own lifetime, counted
+ * from the last card written from them ([renewWeb]): a later write, or a later lookup, of the
+ * album finds the same lines with no search, and so the insight under the same key, on any day it
+ * is kept. With a [webKept] that keeps
  * nothing ([ArtistResults.persists] false: the CLI, tests), in memory for the most recent
  * [REMEMBERED] albums instead. Never throws but for cancellation.
  */
@@ -114,6 +115,15 @@ class AlbumSource(
         web?.takeIf { searches(query) }?.let { search ->
             once(webKeyOf(query)) { keptWeb(query) ?: searched(search, query, sent) }
         }
+
+    override suspend fun renewWeb(query: AlbumQuery) {
+        val key = webKeyOf(query)
+        if (webKept.persists) {
+            webKept.get(WEB_PART, key)?.let { webKept.keep(WEB_PART, key, it.value) }
+        } else {
+            remembered.get(key)?.let { remembered.put(key, it) }
+        }
+    }
 
     // A search's outcome, shared with the writes that waited for it: its [lines], or null when it failed.
     private class Searched(

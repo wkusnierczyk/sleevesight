@@ -65,7 +65,12 @@ class ItemInsightsTest {
     ) : AlbumLookup {
         val asked = mutableListOf<AlbumQuery>()
         var searches = 0
+        val renewed = mutableListOf<AlbumQuery>()
         private var kept: List<EvidenceDraft>? = null
+
+        override suspend fun renewWeb(query: AlbumQuery) {
+            renewed += query
+        }
 
         override suspend fun lookup(query: AlbumQuery): AlbumFound {
             asked += query
@@ -435,6 +440,25 @@ class ItemInsightsTest {
             assertNotNull(items.name(InsightItem.ALBUM, track))
         }
 
+    @Test
+    fun `only the album's card keeps its web lines again, and only once kept`() =
+        runTest {
+            val track = track("Sundown", listOf(line(SourceId.MUSICBRAINZ, "It runs three minutes.")))
+            for (item in listOf(InsightItem.SONG, InsightItem.ARTIST)) {
+                val evidence = checkNotNull(items.evidence(item, track, settings))
+                items.write(checkNotNull(items.key(item, track, evidence, settings)), item, track, evidence) { _, _ -> }
+            }
+            assertTrue(albums.renewed.isEmpty())
+            val evidence = checkNotNull(items.evidence(InsightItem.ALBUM, track, settings))
+            items.write(
+                checkNotNull(items.key(InsightItem.ALBUM, track, evidence, settings)),
+                InsightItem.ALBUM,
+                track,
+                evidence,
+            ) { _, _ -> }
+            assertEquals(1, albums.renewed.size)
+        }
+
     // [settings] with web search switched on, through an engine.
     private val webOn =
         settings.copy(
@@ -480,6 +504,8 @@ class ItemInsightsTest {
             assertNotEquals(before, key)
             assertIs<InsightState.Written>(items.write(key, InsightItem.ALBUM, first, searched) { _, _ -> })
             assertTrue(webLine.text in provider.requests.single().prompt)
+            // Its web lines kept again with the card written from them.
+            assertEquals(listOf("Sundown"), web.renewed.map { it.title })
 
             // The next track of the album gathers the kept lines, with no search, and finds the insight.
             val next = track("Carefree Highway", listOf(line(SourceId.MUSICBRAINZ, "It was a hit.")))

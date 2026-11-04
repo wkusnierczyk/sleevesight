@@ -38,6 +38,14 @@ fun interface AlbumLookup {
         query: AlbumQuery,
         sent: () -> Unit = {},
     ): List<EvidenceDraft>? = null
+
+    /**
+     * The album's web lines kept again, from now (#885), when a card of the album's insight was
+     * written from them, "found nothing" included: they are kept as long as the insight is, so they
+     * last as long as the last card written from them, not only the first. Nothing when none is kept.
+     * Nothing by default.
+     */
+    suspend fun renewWeb(query: AlbumQuery) = Unit
 }
 
 /**

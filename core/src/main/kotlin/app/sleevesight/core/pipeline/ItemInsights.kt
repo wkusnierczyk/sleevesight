@@ -399,7 +399,8 @@ class ItemInsights(
      * the last, or null when [mayCall] closed before the call, which then is not made. [mayCall] is
      * asked right before each call, with no suspension between. With nothing to narrate, no call, and
      * [InsightState.NoEvidence]. A complete reply is kept in the cache, `NO_EVIDENCE` too, so the same
-     * item asks nothing again, with the one time it is shown with; a reply cut off (a Stop cancels
+     * item asks nothing again, with the one time it is shown with, and, for the album's, its web lines
+     * kept again with it ([AlbumLookup.renewWeb]); a reply cut off (a Stop cancels
      * the call) is neither shown nor kept. A reply that revises itself where it would show (#798) is
      * cut to what follows the revision when that is usable; else asked for once more, a second call,
      * and with nothing usable then either, it fails, as the key insight's does. While it streams, the
@@ -446,13 +447,30 @@ class ItemInsights(
                 }
 
                 is Reply.Read -> {
-                    if (reply.kept) attempt { cache.keep(key, keptText(text, reply.state), at) }
+                    if (reply.kept) {
+                        attempt { cache.keep(key, keptText(text, reply.state), at) }
+                        renewWeb(item, track)
+                    }
                     val shown = (reply.state as? InsightState.Written)?.copy(writtenAt = at) ?: reply.state
                     last = shown.also { show(it, at) }
                 }
             }
         }
         return last
+    }
+
+    // The album's web lines kept again from now with [item]'s card on [track] written from them (#885,
+    // [AlbumLookup.renewWeb]), so they last as long as this card, the last one kept; nothing for
+    // another item.
+    private suspend fun renewWeb(
+        item: InsightItem,
+        track: TrackState,
+    ) {
+        val album = entity(item, track) as? CardEntity.Album
+        val lookup = albums
+        if (album != null && lookup != null) {
+            attempt { lookup.renewWeb(AlbumQuery(album.title, album.artist, album.group)) }
+        }
     }
 
     // One call of [request]: its text, each piece shown as it comes while it may not be `NO_EVIDENCE`

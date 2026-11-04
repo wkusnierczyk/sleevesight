@@ -33,6 +33,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.days
 import kotlin.time.Instant
 
 /** An album's evidence (#522): its release group, its Wikidata item and its article, kept per album. */
@@ -537,6 +538,47 @@ class AlbumSourceTest {
             val found = source(lastFm).lookup(query.copy(title = "Sundown (Remastered)"))
             assertEquals(listOf("Gordon Lightfoot" to "Sundown"), lastFm.asked)
             assertTrue(found.drafts.filter { it.source == SourceId.LASTFM }.all { "wiki of “Sundown” says" in it.text })
+        }
+
+    // A clock the test moves.
+    private class Moving(
+        var now: Instant = Instant.fromEpochMilliseconds(0),
+    ) : kotlin.time.Clock {
+        override fun now(): Instant = now
+    }
+
+    @Test
+    fun `the web's lines kept again with each card written from them last as long as the last`() =
+        runTest {
+            for (lines in listOf(listOf("Sundown topped the Billboard 200."), emptyList())) {
+                val clock = Moving()
+                // As *Keep history for* keeps them: 90 days from when they were last kept.
+                val webKept = MemoryArtistResults(clock, 90.days)
+                val web = Web(lines = lines)
+                val source = source(web = web, webKept = webKept)
+                source.searchWeb(query)
+                // A second card written from them on day 60 (another model, say).
+                clock.now += 60.days
+                source.renewWeb(query)
+                clock.now += 40.days
+                val found = source.lookup(query)
+                assertFalse(found.webDue, "kept on day 100, with no search")
+                assertEquals(lines, found.drafts.filter { it.source == SourceId.WEB }.map { it.text })
+                assertEquals(1, web.asked.size)
+            }
+        }
+
+    @Test
+    fun `the web's lines not kept again expire with their first card`() =
+        runTest {
+            val clock = Moving()
+            val source = source(web = Web(), webKept = MemoryArtistResults(clock, 90.days))
+            source.searchWeb(query)
+            clock.now += 100.days
+            assertTrue(source.lookup(query).webDue)
+            // Nothing kept: nothing to keep again.
+            source.renewWeb(query)
+            assertTrue(source.lookup(query).webDue)
         }
 
     @Test

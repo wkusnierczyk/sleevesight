@@ -365,6 +365,20 @@ class ArtistResultCacheTest {
     }
 
     @Test
+    fun `a part kept as history kept again with a later card lasts as long as that card`() {
+        results.put(HISTORY, "sundown", "[]")
+        // A second card from the same lines on day 60: the lines kept again with it.
+        fixture.clock.advance(60.days)
+        results.put(HISTORY, "sundown", "[]")
+        fixture.caches.synthesis.put(ALBUM_CARD, "Sundown is his tenth album [S1].")
+        // Day 100, with the default 90 days: both still there, past the first card's 90.
+        fixture.clock.advance(40.days)
+        fixture.caches.purgeExpired()
+        assertEquals("[]", results.get(HISTORY, "sundown")?.value)
+        assertNotNull(fixture.caches.synthesis.get(ALBUM_CARD))
+    }
+
+    @Test
     fun `a part kept as history is kept for ever with Keep history for set to Forever`() {
         fixture.settings = Settings(historyLifetime = null)
         results.put(HISTORY, "sundown", "[]")
