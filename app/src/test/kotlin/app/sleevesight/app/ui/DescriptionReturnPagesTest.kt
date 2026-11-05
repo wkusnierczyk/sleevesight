@@ -25,6 +25,7 @@ import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.WAIT_MS
+import app.sleevesight.app.idleUntil
 import app.sleevesight.app.now
 import app.sleevesight.app.session.SleevesightListenerService
 import app.sleevesight.app.ui.home.PAGE_BACK_TAG
@@ -208,13 +209,15 @@ class DescriptionReturnPagesTest {
                 .onNode(hasText(text(R.string.settings_descriptions_folded)) and isSelectable() and returning)
                 .performScrollTo()
                 .performClick()
-            // Idle first, so the tap's save runs before the store is read.
-            compose.waitForIdle()
-            compose.waitUntil(WAIT_MS) {
+            // The tap saves in the app's main scope, and DataStore runs the edit back in it, on the
+            // main thread, once its own thread has the file: a turn the main looper must run, which
+            // `compose.waitUntil` never does (it moves only Compose's clock), so the wait runs it.
+            val stored = {
                 app.graph.settings
                     .now()
-                    .descriptionsOnReturn == DescriptionsOnReturn.FOLDED
+                    .descriptionsOnReturn
             }
+            idleUntil("Folded stored", seen = stored) { stored() == DescriptionsOnReturn.FOLDED }
             compose.waitForIdle()
             scenario.visit(Page.CREDITS)
             assertFalse("folded back from the page", isOpen(spin))
