@@ -26,7 +26,8 @@ class AiSearchPromptTest {
 
     @Test
     fun theSystemPartComesFirstThenTheTrackThenTheQuestion() {
-        for (kind in SearchKind.entries) {
+        // What the song is about is asked from web pages only (#908): `ExplainAnswersTest`'s.
+        for (kind in SearchKind.entries - SearchKind.EXPLAIN) {
             val prompt = AiSearchPrompt.build(kind, facts)
             assertEquals(AiSearchPrompt.system(kind) + "\n\n" + AiSearchPrompt.user(kind, facts), prompt)
             // A definition's data is the genre (#786), fenced as the track is.
@@ -37,11 +38,13 @@ class AiSearchPromptTest {
     }
 
     @Test
-    fun aDefinitionWritesDatesInTheAppsFormTheJsonAnswersAsIsoDates() {
-        // A definition is prose shown as written (#957); the other answers are JSON the app reads,
-        // their dates partial ISO dates it writes in its own form.
+    fun aDefinitionAndAnExplanationWriteDatesInTheAppsFormTheJsonAnswersAsIsoDates() {
+        // A definition and what the song is about are prose shown as written (#957); the other
+        // answers are JSON the app reads, their dates partial ISO dates it writes in its own form.
         assertTrue(InsightPrompt.DATE_RULE in AiSearchPrompt.build(SearchKind.DEFINITION, SearchFacts.ofGenre("Blues")))
-        for (kind in SearchKind.entries - SearchKind.DEFINITION) {
+        assertTrue(InsightPrompt.DATE_RULE in ExplainPrompt.system(limit = null))
+        assertTrue(InsightPrompt.DATE_RULE in ExplainPrompt.system(limit = 3))
+        for (kind in SearchKind.entries - SearchKind.DEFINITION - SearchKind.EXPLAIN) {
             assertFalse(InsightPrompt.DATE_RULE in AiSearchPrompt.build(kind, facts), kind.key)
         }
     }
@@ -93,7 +96,7 @@ class AiSearchPromptTest {
 
     @Test
     fun eachKindAsksForJsonInItsShapeAndNeverAGuess() {
-        for (kind in SearchKind.entries) {
+        for (kind in SearchKind.entries - SearchKind.EXPLAIN) {
             val system = AiSearchPrompt.system(kind)
             assertTrue(AiSearchPrompt.shape(kind) in system)
             assertTrue("never guess" in system)
