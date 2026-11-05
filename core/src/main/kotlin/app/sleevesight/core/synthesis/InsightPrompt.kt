@@ -104,12 +104,13 @@ object InsightPrompt {
      * when a web page gives it" did worse over two runs each, as the first rejected variant did:
      * more uncited sentences on thinly documented tracks ("The evidence here is thin."), and the
      * length named no less. Never shipped; its system prompt is kept in `design/prompts/`.
-     * Version 12 (#902; 11 was the rejected one above, a number not reused): a rule has a line found
-     * in the track's language, marked with it, translated and cited as usual ([TRANSLATION_RULE]).
-     * Raised as a contract change is, though a card kept from version 10 had no such line to
-     * translate.
+     *
+     * Not raised when a rule had a line found in the track's language, marked with it, translated and
+     * cited as usual ([TRANSLATION_RULE], #902): the lines' languages are in the evidence fingerprint,
+     * part of every card's key, so a track that gains such lines is written anew anyway, and raising
+     * the version would only pay again for every card kept without them.
      */
-    const val VERSION: Int = 12
+    const val VERSION: Int = 10
 
     /**
      * The system prompt: everything fixed for a listener, the same for every track. With

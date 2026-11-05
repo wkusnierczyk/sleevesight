@@ -25,10 +25,11 @@ object ItemPrompt {
     /**
      * The version of this prompt's template, part of the synthesis cache key ([CardKind.SONG],
      * [CardKind.ARTIST], [CardKind.ALBUM]): raised when its contract or built-in style changes, so
-     * insights written from the old prompt are not reused. Version 2 (#902): a line found in the
-     * track's language is translated and cited as usual ([InsightPrompt.TRANSLATION_RULE]).
+     * insights written from the old prompt are not reused. Not raised for the rule on a line found in
+     * the track's language ([InsightPrompt.TRANSLATION_RULE], #902), as `InsightPrompt.VERSION` was
+     * not: the lines' languages are in the evidence fingerprint, part of every insight's key.
      */
-    const val VERSION: Int = 2
+    const val VERSION: Int = 1
 
     /** What an insight is about: the [kind] of card, and the [name] it goes by (the title, the artist, the album). */
     class Subject(

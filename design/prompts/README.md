@@ -21,7 +21,6 @@ it), and say so in the KDoc.
 | 8 (#800) | `insight-v8-1.txt`, `insight-v8-41.txt`: one message, the data then the rules | The baseline of #767's blind A/B. |
 | 9 (#767) | `insight-v9-system.txt`, `insight-v9-system-model.txt`, `insight-v9-1-user.txt`, `insight-v9-41-user.txt`: a system prompt and a user message | Lost the blind A/B to version 8 (20 tracks, 3 passes each): version 8 preferred on 9, version 9 on 3, 6 the same. 15 of 54 cards empty against 6, two replies revising themselves. |
 | 10 (#767) | `insight-v10-system.txt`, `insight-v10-system-model.txt`; the user message is version 9's | Version 9's opening and structure with the A/B's fixes: 2 and 4 of 147 and 153 sentences uncited over two runs, 6 empty, no reply revising itself. Even with version 8 in a second blind A/B (12 tracks: 3 each, 6 the same), at about a third less cost per card. |
-| 12 (#902) | `insight-v12-system.txt`, `insight-v12-system-model.txt`; the user message is version 9's | Version 10 with the rule on a line found in the track's language, translated and cited as usual. Not compared: a track with no such line is prompted as before but for the rule. |
 | 11, rejected | `insight-v11-rejected-system.txt` | Version 10 with the length left out "even when a web page gives it", after a second blind A/B against version 8 (12 tracks) came out even (3 each, 6 the same) and version 10 named a web listing's length twice. Worse over two runs each: 6 and 9 of 159 and 168 sentences uncited (version 10: 2 and 4 of 147 and 153), the length named once and three times (version 10: twice each run), "the evidence …" opening thin cards 8 and 10 times. Never shipped. |
 | 10, rejected | `insight-v10-rejected-system.txt` | Version 10 with an id rule and a rule against talk of the evidence of their own: 10 of 155 sentences uncited, nearly all "The evidence here is thin.". Never shipped. |
 
@@ -31,4 +30,9 @@ it), and say so in the KDoc.
 |---|---|---|
 | 5 (#695) | `genre-reason-v5-1.txt`, `genre-reason-v5-1-model.txt`: one message | The baseline of #767's blind A/B. |
 | 6 (#767) | `genre-reason-v6-system.txt`, `genre-reason-v6-system-model-search.txt`, `genre-reason-v6-1-user.txt` | Even with version 5 in the blind A/B (8 prompts: 1 each, 6 the same); kept for the insight's structure. |
-| 7 (#902) | `genre-reason-v7-system.txt`, `genre-reason-v7-system-model-search.txt`; the user message is version 6's | Version 6 with the insight's rule on a line found in the track's language. Not compared. |
+
+## Changes made without a version
+
+| Change | Prompts | Why no version |
+|---|---|---|
+| A rule on a line found in the track's language (#902): `- A line marked with a language, like (Wikipedia, release, Hindi), is in that language: translate what you use of it into English, and cite it as usual.` (`InsightPrompt.TRANSLATION_RULE`), after the rule on using only the evidence | The insight's (version 10), the song's, artist's and album's (`ItemPrompt`, version 1) and the genre reason's (version 6); the files above keep each version as it first shipped, the stored prompts the tests pin hold the rule | The lines' languages are in the evidence fingerprint, part of every card's key: a track that gains such lines is written anew anyway, and a raised version would only pay again for the cards kept without them. |

@@ -60,10 +60,11 @@ object GenreReasonPrompt {
      * insight's version 9 one ([InsightPrompt.GAP_RULE]). With web search's tool, the search's
      * instructions are in the system prompt ([withSearch]). Raised so that kept reasons are asked
      * again from it.
-     * Version 7 (#902): a line found in the track's language is translated and cited as usual
-     * ([InsightPrompt.TRANSLATION_RULE]).
+     * Not raised for the rule on a line found in the track's language ([InsightPrompt.TRANSLATION_RULE],
+     * #902), as `InsightPrompt.VERSION` was not: the lines' languages are in the evidence fingerprint,
+     * part of every reason's key.
      */
-    const val VERSION: Int = 7
+    const val VERSION: Int = 6
 
     /** The built-in style: shorter than the insight's, since it answers one question. */
     const val BUILT_IN_STYLE: String =
