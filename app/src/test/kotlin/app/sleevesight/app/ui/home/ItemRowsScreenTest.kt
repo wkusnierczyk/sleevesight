@@ -110,6 +110,11 @@ class ItemRowsScreenTest {
 
         override fun albumEvidence(track: TrackState): Flow<EvidenceSet?> = album
 
+        // The artist's lines, once gathered: its web lines for an artist the sources miss (#912).
+        val artist = MutableStateFlow<EvidenceSet?>(null)
+
+        override fun artistEvidence(track: TrackState): Flow<EvidenceSet?> = artist
+
         override fun write(
             track: TrackState,
             item: InsightItem,
@@ -473,6 +478,44 @@ class ItemRowsScreenTest {
             compose.onNodeWithTag(LINE_PREFIX + "W2").performScrollTo().assertExists()
             compose.onNodeWithText("album · en.wikipedia.org", substring = true, useUnmergedTree = true).assertExists()
             compose.onNodeWithTag(LINE_PREFIX + "W1").assertExists()
+        }
+    }
+
+    @Test
+    fun anArtistCitationOfItsWebLineOpensSourcesAtTheLineSaidToBeAboutTheArtist() {
+        // An artist the sources say nothing about: its web search's line, about the artist (#912).
+        val artist =
+            EvidenceSet.of(
+                listOf(
+                    draft(
+                        SourceId.WEB,
+                        "Gordon Lightfoot was a Canadian folk singer.",
+                        "https://example.com/lightfoot",
+                        Scope.ARTIST,
+                    ),
+                ),
+                JvmHasher,
+            )
+        notes.artist.value = artist
+        val reply =
+            GroundingCheck.check("He was a folk singer [S1].", artist, allowModel = false) as InsightReply.Written
+        notes.shown.value =
+            mapOf(
+                InsightItem.ARTIST to
+                    ItemShown.Shown(
+                        InsightState.Written(reply.grounded, cached = false),
+                        ItemEvidence(artist, emptyMap()),
+                    ),
+            )
+        show(state(onDemand)) {
+            row(InsightItem.ARTIST).performScrollTo().performClick()
+            compose.onNodeWithText("folk singer", substring = true).performScrollTo().performFirstLinkClick {
+                (it.item as? LinkAnnotation.Clickable)?.tag == CITE_PREFIX + "S1"
+            }
+            compose.waitForIdle()
+            // The track has no web line: the artist's is S1 in *Sources*, said to be about the artist.
+            compose.onNodeWithTag(LINE_PREFIX + "S1").performScrollTo().assertExists()
+            compose.onNodeWithText("artist · example.com", substring = true, useUnmergedTree = true).assertExists()
         }
     }
 

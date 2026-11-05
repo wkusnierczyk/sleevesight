@@ -269,7 +269,7 @@ class AppGraph internal constructor(
     /**
      * *Keep what sources said about each artist* (#420), as last read (off until the first read),
      * for the artist-level cache and the retrieval cache alike. Its clear spares the parts of the
-     * artist-level table kept whatever it says ([PipelineWiring.TRACK_ONLY_PARTS], #885).
+     * artist-level table kept whatever it says ([PipelineWiring.TRACK_ONLY_PARTS], #885, #912).
      */
     private val artistKeeping =
         ArtistKeeping.over({ caches }, Dispatchers.IO, PipelineWiring.TRACK_ONLY_PARTS) {

@@ -342,11 +342,12 @@ class ExaWebSearch(
 
         /**
          * The web lines of [response]'s results, once per address, in Exa's order, at most
-         * [MAX_LINES]: for the track's search, and the album's (`ExaAlbumSearch`, #885). [about]
+         * [MAX_LINES]: for the track's search, the album's (`ExaAlbumSearch`, #885) and the artist's
+         * (`ExaArtistSearch`, #912). [about]
          * judges each result on its snippet as it came, cut ([snippetOf], #634), before any part
          * goes: a part naming only the song and the artist, which goes as boilerplate, is the
          * surest sign of what the page is about. A kept result's line is [lineOf] it, for the
-         * [subject] (the track's title, its work and its artists, or the album and its artist;
+         * [subject] (the track's title, its work and its artists, the album and its artist, or the artist;
          * folded by [fold]); a kept result with no line left is in [WebLines.emptied].
          */
         internal fun lines(
@@ -461,6 +462,20 @@ internal data class ExaSearchRequest(
             ExaSearchRequest(
                 query = "\"$album\" by $artist, album",
                 contents = ExaContents(ExaHighlights("$album $artist", HIGHLIGHT_CHARACTERS)),
+            )
+
+        /**
+         * The query for an [artist] the other sources say nothing about (#912, `ExaArtistSearch`):
+         * `"<artist>", music artist`, the name quoted to keep a name of common words together, and
+         * "music artist" for a person and a band alike, nothing of the track playing; highlights
+         * steered toward the artist's biography. Compared live (2026-11-05) on a composer the sources
+         * missed (Shashwat Sachdev) and a band named in common words (The National): the artist's own
+         * pages, an encyclopedia's, a store's and a magazine's came first, each naming the artist.
+         */
+        fun ofArtist(artist: String): ExaSearchRequest =
+            ExaSearchRequest(
+                query = "\"$artist\", music artist",
+                contents = ExaContents(ExaHighlights("$artist biography", HIGHLIGHT_CHARACTERS)),
             )
 
         /** What the request asks Exa for, and what the adapter cuts a line to ([ExaWebSearch.cut]). */

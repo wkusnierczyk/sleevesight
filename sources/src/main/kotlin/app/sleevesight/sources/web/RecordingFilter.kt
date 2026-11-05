@@ -28,6 +28,7 @@ import app.sleevesight.core.normalizer.AccentFolder
  * several artists, this one among them, but not the song ("Below soundtrack: Ray Johnson And The
  * Sou' Westers, Die Hexen and others") is dropped by the third rule, even when it lists the song.
  */
+@Suppress("TooManyFunctions") // The rules for a recording, an album and an artist, and the folding they share.
 class RecordingFilter(
     private val accentFolder: AccentFolder,
 ) {
@@ -52,6 +53,26 @@ class RecordingFilter(
         snippet: String,
         url: String,
     ): Boolean = names(listOf(album), requiredArtists(listOf(artist)), title, snippet, url)
+
+    /**
+     * Whether a result with [title], [snippet] and [url] is about the [artist] (#912,
+     * `ExaArtistSearch`): it names the artist, whole, in its title or snippet, and is not from a
+     * source the pipeline reads itself ([OWN_SOURCE_HOSTS]), whose artist pages have their own
+     * checks. A page titled after the artist is the artist's own, as wanted here. Its limit: an
+     * artist whose name is made of common words ("The National") is named by pages on other things.
+     */
+    fun isAboutArtist(
+        artist: String,
+        title: String?,
+        snippet: String,
+        url: String,
+    ): Boolean {
+        val name = fold(artist)
+        return !isOwnSource(url) && name.isNotEmpty() && " $name " in padded("${title.orEmpty()} $snippet")
+    }
+
+    /** Whether the [artist] can be checked at all: its name folds to something. Else it is not searched. */
+    fun canCheckArtist(artist: String): Boolean = fold(artist).isNotEmpty()
 
     // Whether the result names each of [song] (the title, and the work it is from) and one of
     // [artists] (folded), and its title does not name such an artist without the song.

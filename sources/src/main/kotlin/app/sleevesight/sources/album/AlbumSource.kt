@@ -15,6 +15,8 @@ import app.sleevesight.core.sources.AlbumLookup
 import app.sleevesight.core.sources.AlbumQuery
 import app.sleevesight.core.sources.ArtistPart
 import app.sleevesight.core.sources.ArtistResults
+import app.sleevesight.sources.KeptDrafts
+import app.sleevesight.sources.OneSearchAtATime
 import app.sleevesight.sources.lastfm.LastFmAlbum
 import app.sleevesight.sources.lastfm.LastFmAlbumInfo
 import app.sleevesight.sources.lastfm.LastFmBio
@@ -25,12 +27,6 @@ import app.sleevesight.sources.web.AlbumWebSearch
 import app.sleevesight.sources.wikipedia.WikipediaClient
 import app.sleevesight.sources.wikipedia.WikipediaSource
 import app.sleevesight.sources.wikipedia.articleUrl
-import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.SerializationException
-import kotlinx.serialization.json.Json
 import kotlin.time.Clock
 import kotlin.time.Instant
 
@@ -97,9 +93,8 @@ class AlbumSource(
     // The web's lines by album, while [webKept] keeps nothing.
     private val remembered = Lru<String, List<EvidenceDraft>>(REMEMBERED)
 
-    // The web searches under way, by album ([webKeyOf]), under [searching]: one at a time per album.
-    private val searching = Mutex()
-    private val inFlight = mutableMapOf<String, CompletableDeferred<Searched?>>()
+    // The web searches under way, by album ([webKeyOf]): one at a time per album.
+    private val searching = OneSearchAtATime<List<EvidenceDraft>>()
 
     override suspend fun lookup(query: AlbumQuery): AlbumFound {
         val free = free(query)
@@ -113,7 +108,7 @@ class AlbumSource(
         sent: () -> Unit,
     ): List<EvidenceDraft>? =
         web?.takeIf { searches(query) }?.let { search ->
-            once(webKeyOf(query)) { keptWeb(query) ?: searched(search, query, sent) }
+            searching.once(webKeyOf(query)) { keptWeb(query) ?: searched(search, query, sent) }
         }
 
     override suspend fun renewWeb(query: AlbumQuery) {
@@ -124,47 +119,6 @@ class AlbumSource(
             remembered.get(key)?.let { remembered.put(key, it) }
         }
     }
-
-    // A search's outcome, shared with the writes that waited for it: its [lines], or null when it failed.
-    private class Searched(
-        val lines: List<EvidenceDraft>?,
-    )
-
-    // [search] for the album [key], one at a time: a second write of the album while one searches
-    // waits for it and takes its outcome (the lines it kept), rather than paying for its own. When the
-    // one under way is cancelled (a Stop), the next takes its place and reads, or searches, itself.
-    private suspend fun once(
-        key: String,
-        search: suspend () -> List<EvidenceDraft>?,
-    ): List<EvidenceDraft>? {
-        var outcome: Searched? = null
-        while (outcome == null) {
-            val mine = CompletableDeferred<Searched?>()
-            val pending =
-                searching.withLock {
-                    inFlight[key]?.takeIf { !it.isCompleted }
-                        ?: mine.also { inFlight[key] = it }
-                }
-            outcome = if (pending === mine) searchedOnce(key, mine, search) else pending.await()
-        }
-        return outcome.lines
-    }
-
-    // [search] made for [key], its outcome told to [pending] whatever happens (null when cancelled).
-    private suspend fun searchedOnce(
-        key: String,
-        pending: CompletableDeferred<Searched?>,
-        search: suspend () -> List<EvidenceDraft>?,
-    ): Searched =
-        try {
-            Searched(search()).also {
-                pending.complete(it)
-                searching.withLock { if (inFlight[key] === pending) inFlight.remove(key) }
-            }
-        } finally {
-            // Cancelled or failed: those waiting go on, and the next takes its place.
-            pending.complete(null)
-        }
 
     // What [search] finds for [query]'s album, none included, kept; null when it failed, and nothing
     // is kept. [sent] is told when the request goes out.
@@ -182,7 +136,7 @@ class AlbumSource(
         val key = webKeyOf(query)
         when {
             found == null -> Unit
-            webKept.persists -> webKept.keep(WEB_PART, key, encode(found))
+            webKept.persists -> webKept.keep(WEB_PART, key, KeptDrafts.encode(found))
             else -> remembered.put(key, found)
         }
         return found
@@ -195,7 +149,7 @@ class AlbumSource(
     private suspend fun keptWeb(query: AlbumQuery): List<EvidenceDraft>? {
         val key = webKeyOf(query)
         return if (webKept.persists) {
-            webKept.get(WEB_PART, key)?.let { decode(it.value) }
+            webKept.get(WEB_PART, key)?.let { KeptDrafts.decode(it.value) }
         } else {
             remembered.get(key)
         }
@@ -204,9 +158,9 @@ class AlbumSource(
     // What the free sources [query] may ask say about the album: kept, or gathered and kept.
     private suspend fun free(query: AlbumQuery): AlbumFound {
         val key = keyOf(query)
-        kept.get(PART, key)?.let { stored -> decode(stored.value)?.let { return AlbumFound(it) } }
+        kept.get(PART, key)?.let { stored -> KeptDrafts.decode(stored.value)?.let { return AlbumFound(it) } }
         val found = gather(query)
-        if (!found.unreachable) kept.keep(PART, key, encode(found.drafts))
+        if (!found.unreachable) kept.keep(PART, key, KeptDrafts.encode(found.drafts))
         return found
     }
 
@@ -481,8 +435,6 @@ class AlbumSource(
 
         private const val MUSICBRAINZ_GROUP = "https://musicbrainz.org/release-group/"
 
-        private val json = Json { encodeDefaults = false }
-
         // "Album" is an album; "Live" with "Album", a live album; none, a release.
         internal fun typeOf(album: MbAlbum): String {
             val primary = album.primaryType?.let { if (it == "EP") it else it.lowercase() } ?: "release"
@@ -498,54 +450,6 @@ class AlbumSource(
                 "an"
             } else {
                 "a"
-            }
-
-        @Serializable
-        private class KeptLine(
-            val s: String,
-            val c: String,
-            val t: String,
-            val u: String? = null,
-            val a: Long,
-        )
-
-        private fun encode(drafts: List<EvidenceDraft>): String =
-            json.encodeToString(
-                drafts.map {
-                    KeptLine(
-                        it.source.name,
-                        it.scope.key,
-                        it.text,
-                        it.url,
-                        it.retrievedAt.toEpochMilliseconds(),
-                    )
-                },
-            )
-
-        // The lines kept, or null when they cannot be read (the table's entry from another encoding).
-        private fun decode(value: String): List<EvidenceDraft>? =
-            try {
-                json.decodeFromString<List<KeptLine>>(value).map { line ->
-                    EvidenceDraft(
-                        SourceId.valueOf(line.s),
-                        Scope.entries.first { it.key == line.c },
-                        line.t,
-                        line.u,
-                        Instant.fromEpochMilliseconds(line.a),
-                    )
-                }
-            } catch (
-                @Suppress("SwallowedException") e: SerializationException,
-            ) {
-                null
-            } catch (
-                @Suppress("SwallowedException") e: IllegalArgumentException,
-            ) {
-                null
-            } catch (
-                @Suppress("SwallowedException") e: NoSuchElementException,
-            ) {
-                null
             }
     }
 }
