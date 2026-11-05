@@ -10,11 +10,15 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.intl.LocaleList
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
@@ -269,4 +273,24 @@ class InLanguageScreenTest {
             // An English line's source line says no language.
             assertEquals(0, count("en.wikipedia.org · in", substring = true))
         }
+
+    @Test
+    fun aLineFoundInHindiCarriesItsLanguageToAScreenReaderAndAnEnglishOneNone() =
+        show(searched()) {
+            unfold()
+            // The text as a screen reader is given it: a span over the whole of it, in Hindi.
+            val hindi = spoken(film.text)
+            assertEquals(
+                listOf(AnnotatedString.Range(SpanStyle(localeList = LocaleList("hi")), 0, film.text.length)),
+                hindi.spanStyles,
+            )
+            assertEquals(emptyList<AnnotatedString.Range<SpanStyle>>(), spoken(wikipediaLine.text).spanStyles)
+        }
+
+    private fun spoken(text: String): AnnotatedString =
+        compose
+            .onNode(hasText(text), useUnmergedTree = true)
+            .fetchSemanticsNode()
+            .config[SemanticsProperties.Text]
+            .single()
 }

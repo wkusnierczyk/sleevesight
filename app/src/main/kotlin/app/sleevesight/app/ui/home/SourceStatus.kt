@@ -3,6 +3,9 @@ package app.sleevesight.app.ui.home
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.intl.LocaleList
 import app.sleevesight.app.R
 import app.sleevesight.core.evidence.EvidenceLine
 import app.sleevesight.core.evidence.Scope
@@ -139,3 +142,16 @@ internal fun rowName(
  * for one it does not.
  */
 internal fun languageName(code: String): String = Languages.ofCode(code)?.name ?: code
+
+/**
+ * [text], with a span setting it in [language]'s locale (#902) over the whole of it when given: for
+ * the drawing and for a screen reader, which a `TextStyle`'s locale does not reach.
+ */
+internal fun inLanguage(
+    text: String,
+    language: String?,
+): AnnotatedString {
+    if (language == null) return AnnotatedString(text)
+    val span = AnnotatedString.Range(SpanStyle(localeList = LocaleList(language)), 0, text.length)
+    return AnnotatedString(text, listOf(span))
+}

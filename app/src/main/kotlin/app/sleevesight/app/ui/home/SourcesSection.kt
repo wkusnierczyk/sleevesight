@@ -29,7 +29,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.intl.LocaleList
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -299,7 +298,8 @@ private fun Entries(
 /**
  * One evidence line: its id, its text, and its scope with a link to where it was found; flashed
  * when a citation points at it. A line found in the track's language (#902, `EvidenceLine.language`)
- * shows its text as found, set in that language's locale, and says the language after the host:
+ * shows its text as found, set in that language's locale (a span over the whole text, so a screen
+ * reader is given the language too, not only the drawing), and says the language after the host:
  * *release · hi.wikipedia.org · in Hindi*.
  */
 @Composable
@@ -325,8 +325,7 @@ private fun EvidenceRow(
     ) {
         Tag(line.id, tagWidth)
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            val style = MaterialTheme.typography.bodySmall
-            Text(line.text, style = line.language?.let { style.copy(localeList = LocaleList(it)) } ?: style)
+            Text(inLanguage(line.text, line.language), style = MaterialTheme.typography.bodySmall)
             val language = line.language?.let { stringResource(R.string.home_source_line_in, languageName(it)) }
             Where(if (album) stringResource(R.string.home_scope_album) else scopeText(line.scope), line.url, language)
         }
