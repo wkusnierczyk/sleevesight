@@ -60,6 +60,18 @@ object TrackLanguage {
      */
     fun ofIso3(codes: List<String>): List<Language> = codes.mapNotNull(Languages::ofIso3).distinct()
 
+    /**
+     * The language most of a recording's releases record for their tracklists ([codes], ISO 639-3,
+     * one per release), as one hint: the head of the count, ties in the order given, unknown codes
+     * left out; none when no release records a known one. So an English song whose releases are
+     * twelve English tracklists and one Spanish is English, not searched in Spanish: one pressing
+     * abroad does not name the language the song is sung in.
+     */
+    fun ofReleases(codes: List<String>): List<Language> {
+        val languages = codes.mapNotNull(Languages::ofIso3)
+        return listOfNotNull(languages.distinct().maxByOrNull { language -> languages.count { it == language } })
+    }
+
     /** The languages of Wikidata's language [items] (`Q1568`), in their order, once each; unknown ones left out. */
     fun ofItems(items: List<String>): List<Language> = items.mapNotNull(Languages::ofItem).distinct()
 }

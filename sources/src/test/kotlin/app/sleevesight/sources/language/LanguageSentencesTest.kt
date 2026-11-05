@@ -2,6 +2,7 @@ package app.sleevesight.sources.language
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 /** The sentences of a lead in the track's language (#902), cut at its script's sentence ends. */
 class LanguageSentencesTest {
@@ -104,5 +105,26 @@ class LanguageSentencesTest {
             listOf("Er sagte: „Es ist ein Lied.“", "Dann ging er."),
             LanguageSentences.split("Er sagte: „Es ist ein Lied.“ Dann ging er."),
         )
+    }
+
+    @Test
+    fun `Thai, which ends no sentence with a mark, is quoted in stretches between spaces`() {
+        val lead =
+            "ขอใจเธอแลกเบอร์โทร เป็นเพลงของ หญิงลี ศรีจุมพล ออกเมื่อ พ.ศ. 2560 " +
+                "เพลงนี้ได้รับความนิยมอย่างมากในประเทศไทย"
+        // One stretch: the whole paragraph fits, the year kept with the era before it.
+        assertEquals(listOf(lead), LanguageSentences.stretches(lead))
+        assertEquals(listOf(lead), LanguageSentences.of(lead, listOf("ขอใจเธอแลกเบอร์โทร"), stops = false))
+        // With marks looked for, a Thai paragraph ends no sentence at its era's full stop.
+        assertEquals(emptyList(), LanguageSentences.split("ออกเมื่อ พ.ศ. 2560 เพลงนี้ได้รับความนิยม"))
+    }
+
+    @Test
+    fun `a long Thai paragraph is cut at spaces into stretches no longer than a quote, never before a number`() {
+        val part = "ก".repeat(100)
+        val lead = "$part $part พ.ศ. 2560 $part $part"
+        val stretches = LanguageSentences.stretches(lead)
+        assertEquals(listOf("$part $part พ.ศ. 2560", "$part $part"), stretches)
+        assertTrue(stretches.all { it.length <= 300 })
     }
 }

@@ -29,11 +29,13 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.testTimeSource
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Duration
@@ -151,7 +153,7 @@ class PipelineLanguageTest {
                         Scope.RELEASE to "आशिक़ी 2 मोहित सूरी द्वारा निर्देशित 2013 की फ़िल्म है।",
                     )
                 "ta" -> listOf(Scope.SONG to "கண்ணான கண்ணே 2019 இல் வெளியான பாடல்.")
-                "ko" -> listOf(Scope.RELEASE to "《BE》는 방탄소년단의 앨범이다.")
+                "ko" -> listOf(Scope.RELEASE to "《BE》는 방탄소년단의 앨범이다.", Scope.ARTIST to "방탄소년단은 대한민국의 그룹이다.")
                 "pt" -> listOf(Scope.SONG to "Evidências é uma canção de José Augusto e Paulo Sérgio Valle.")
                 else -> emptyList()
             }
@@ -171,8 +173,11 @@ class PipelineLanguageTest {
         var releasesAsked = 0
         var itemsAsked = 0
 
+        var workWait = Duration.ZERO
+
         override suspend fun workLanguages(resolution: Resolution): Lookup<List<String>> {
             workAsked++
+            delay(workWait)
             return Lookup.Found(regional().wikidata)
         }
 
@@ -255,7 +260,8 @@ class PipelineLanguageTest {
                     // Tamil script names Tamil.
                     "கண்ணான கண்ணே" to listOf("MB1 MB song -", "W1 W song ta", "S1 S web ta"),
                     // Hangul names Korean: the album's article.
-                    "잠시" to listOf("MB1 MB song -", "W1 W release ko", "S1 S web ko", "P1 P release -"),
+                    "잠시" to
+                        listOf("MB1 MB song -", "W1 W release ko", "W2 W artist ko", "S1 S web ko", "P1 P release -"),
                     // MusicBrainz's lyrics language names Portuguese; the English lines keep their ids.
                     "Evidências" to listOf("MB1 MB song -", "W1 W song -", "W2 W song pt", "S1 S web pt"),
                     // Latin letters and nothing recorded: no language, no search.
@@ -534,18 +540,79 @@ class PipelineLanguageTest {
         }
 
     @Test
-    fun `the album's insight takes the lines found in the language on the album's own article`() =
+    fun `under Always the album's insight takes the lines found in the language on the album's own article`() =
         runTest {
+            settings = settings.copy(trackLanguageSearch = TrackLanguageSearch.ALWAYS)
             val deluxe = Regional(nowPlaying("잠시", "BTS", "BE (Deluxe Edition)"), kpop.english)
             val state = pipeline().play(deluxe)
             val items = ItemInsights(null, cache, JvmHasher, NameMatcher(JvmAccentFolder))
             val album = items.evidence(InsightItem.ALBUM, state, settings)!!.evidence
             assertEquals(listOf("《BE》는 방탄소년단의 앨범이다."), album.lines.map { it.text })
             assertEquals(listOf("ko"), album.lines.map { it.language })
+            val artist = items.evidence(InsightItem.ARTIST, state, settings)!!.evidence
+            assertEquals(listOf("방탄소년단은 대한민국의 그룹이다."), artist.lines.map { it.text })
 
             val other = Regional(nowPlaying("잠시", "BTS", "Map of the Soul"), kpop.english)
             val elsewhere = pipeline().play(other)
             assertTrue(items.evidence(InsightItem.ALBUM, elsewhere, settings)!!.evidence.isEmpty())
+        }
+
+    @Test
+    fun `under If needed the artist's and the album's insights take no line found in the language`() =
+        runTest {
+            // Only the thin tracks are searched then: with their lines, the artist's and the album's
+            // fingerprints would change from one of their tracks to the next.
+            val deluxe = Regional(nowPlaying("잠시", "BTS", "BE (Deluxe Edition)"), kpop.english)
+            val state = pipeline().play(deluxe)
+            assertEquals("ko", state.inLanguage?.language)
+            val items = ItemInsights(null, cache, JvmHasher, NameMatcher(JvmAccentFolder))
+            assertTrue(items.evidence(InsightItem.ALBUM, state, settings)!!.evidence.isEmpty())
+            assertTrue(items.evidence(InsightItem.ARTIST, state, settings)!!.evidence.isEmpty())
+            // The song's keeps them, the artist's line aside.
+            assertEquals(
+                2,
+                items.evidence(InsightItem.SONG, state, settings)!!.evidence.lines.count {
+                    it.language ==
+                        "ko"
+                },
+            )
+        }
+
+    @Test
+    fun `while the language is being decided the track's sources are not all landed`() =
+        runTest {
+            search.workWait = 5.seconds
+            val pipeline = pipeline()
+            playing = bollywood
+            resolver.resolution = bollywood.resolution
+            val run = launch { pipeline.run(bollywood.nowPlaying, write = false) }
+            advanceTimeBy(1.seconds)
+            val deciding = pipeline.state.value!!
+            assertTrue(deciding.searchingInLanguage)
+            assertFalse(deciding.gathered, "the English sources landed, the search in the language not")
+            run.join()
+            assertTrue(pipeline.state.value!!.gathered)
+            assertFalse(pipeline.state.value!!.searchingInLanguage)
+        }
+
+    @Test
+    fun `a replay asks nothing to decide the language again, English included`() =
+        runTest {
+            val english =
+                Regional(
+                    nowPlaying("Sundown", "Gordon Lightfoot"),
+                    mapOf(SourceId.MUSICBRAINZ to listOf("“Sundown” was released in 1974.")),
+                    releases = listOf("eng", "eng", "spa"),
+                )
+            pipeline().play(english)
+            assertEquals(1, resolver.calls)
+            assertEquals(1, search.releasesAsked)
+            assertEquals(listOf("en"), cache.decided.values.toList())
+            val again = pipeline().play(english)
+            assertNull(again.inLanguage)
+            assertEquals(1, resolver.calls, "no resolution made for the replay")
+            assertEquals(1, search.releasesAsked)
+            assertEquals(0, wikipedia.queries.size + web.queries.size)
         }
 
     @Test
@@ -577,6 +644,20 @@ class PipelineLanguageTest {
 private class LanguageMemoryCache : PipelineCache by MemoryCache() {
     private val english = MemoryCache()
     val languageResults = mutableMapOf<Triple<SourceId, String, String>, SourceResult>()
+    val decided = mutableMapOf<String, String>()
+
+    override suspend fun trackLanguage(
+        track: NormalizedTrack,
+        duration: Duration?,
+    ): String? = decided["${track.lookupKey}@$duration"]
+
+    override suspend fun keepTrackLanguage(
+        track: NormalizedTrack,
+        duration: Duration?,
+        code: String,
+    ) {
+        decided["${track.lookupKey}@$duration"] = code
+    }
 
     override suspend fun result(
         adapter: SourceAdapter,

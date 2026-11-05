@@ -143,6 +143,10 @@ val SourceAdapter.tag: String get() = id.tag
  * all page boilerplate, so they gave no line (#905, `WebBoilerplate`): never cited, shown or sent
  * to a prompt, read only for the *Lyrics* panel's links to a lyrics page (`webPages`), as the
  * evidence's addresses are. Empty on every other source's result.
+ *
+ * [language] is the language the search in the track's language decided the track is sung in
+ * (#902): a language's code, `en`, or empty for none, on the result the retrieval cache keeps that
+ * decision in (`PipelineCache.trackLanguage`) only; null on every lookup's result.
  */
 data class SourceResult(
     val outcome: Outcome,
@@ -162,6 +166,7 @@ data class SourceResult(
     val freshUntil: Instant? = null,
     val trackOnly: Boolean = false,
     val pages: List<String> = emptyList(),
+    val language: String? = null,
 )
 
 /**

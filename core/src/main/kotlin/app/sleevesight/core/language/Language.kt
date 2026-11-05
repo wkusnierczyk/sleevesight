@@ -45,6 +45,9 @@ enum class Script(
      */
     val unspaced: Boolean get() = this == THAI || this == KANA || this == HAN
 
+    /** Whether this script ends its sentences with a mark; Thai ends them with a space. */
+    val stops: Boolean get() = this != THAI
+
     companion object {
         /**
          * The script [text] is written in, other than Latin, or null when it has no letter of

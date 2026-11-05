@@ -95,9 +95,9 @@ class LanguageSourcesTest {
         }
 
     @Test
-    fun `the releases' tracklist languages, most releases first`() =
+    fun `the releases' tracklist languages, one per release that records one`() =
         runTest {
-            assertEquals(Lookup.Found(listOf("hin", "eng")), sources.releaseLanguages(resolution))
+            assertEquals(Lookup.Found(listOf("hin", "eng", "hin")), sources.releaseLanguages(resolution))
             assertEquals(Lookup.Found(emptyList()), sources.releaseLanguages(Resolution.NONE))
         }
 

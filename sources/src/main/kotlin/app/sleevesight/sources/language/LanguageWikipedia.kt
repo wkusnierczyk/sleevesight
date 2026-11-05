@@ -139,7 +139,7 @@ class LanguageWikipedia(
             language: Language,
             retrievedAt: Instant,
         ): List<EvidenceDraft> =
-            LanguageSentences.of(lead.orEmpty(), subjects).map {
+            LanguageSentences.of(lead.orEmpty(), subjects, stops = language.scripts.all { it.stops }).map {
                 EvidenceDraft(
                     SourceId.WIKIPEDIA,
                     scope,

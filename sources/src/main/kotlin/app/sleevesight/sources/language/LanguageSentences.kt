@@ -1,5 +1,6 @@
 package app.sleevesight.sources.language
 
+import app.sleevesight.core.language.Script
 import app.sleevesight.sources.wikipedia.WikipediaSource
 
 /**
@@ -11,16 +12,22 @@ import app.sleevesight.sources.wikipedia.WikipediaSource
  * do not all put spaces between words, nor case their letters.
  */
 internal object LanguageSentences {
-    /** [lead]'s sentences that name one of [subjects], the first whether or not it names one. */
+    /**
+     * [lead]'s sentences that name one of [subjects], the first whether or not it names one. With
+     * [stops] false, for a script that ends no sentence with a mark (Thai), its stretches between
+     * spaces stand for sentences ([stretches]).
+     */
     fun of(
         lead: String,
         subjects: List<String>,
+        stops: Boolean = true,
     ): List<String> {
         val wanted = subjects.map { it.trim().lowercase() }.filter { it.isNotEmpty() }.distinct()
         val paragraphs = lead.split('\n').map(WikipediaSource::tidy).filter { it.isNotEmpty() }
-        val first = paragraphs.firstOrNull()?.let { split(it).firstOrNull() }
+        val cut: (String) -> List<String> = if (stops) ::split else ::stretches
+        val first = paragraphs.firstOrNull()?.let { cut(it).firstOrNull() }
         return paragraphs
-            .flatMap(::split)
+            .flatMap(cut)
             .filter { sentence -> sentence == first || wanted.any { it in sentence.lowercase() } }
             .filter { it.length <= WikipediaSource.MAX_SENTENCE_LENGTH }
             .take(WikipediaSource.MAX_SENTENCES)
@@ -52,6 +59,34 @@ internal object LanguageSentences {
             }
         }
         return sentences
+    }
+
+    /**
+     * [paragraph], in a script that ends no sentence with a mark (Thai, which puts a space where
+     * another script puts a full stop), as stretches of at most [WikipediaSource.MAX_SENTENCE_LENGTH]
+     * characters, each ending at a space: as many of its space-separated parts as fit, never cut
+     * before a part that opens with a digit (a year after `พ.ศ.`), so each is a verbatim quote of
+     * whole parts. A part longer than that alone is left out.
+     */
+    fun stretches(paragraph: String): List<String> {
+        // The parts between spaces, a part opening with a digit kept with the one before it.
+        val parts = mutableListOf<String>()
+        for (part in paragraph.split(' ').filter { it.isNotEmpty() }) {
+            if (part.first().isDigit() && parts.isNotEmpty()) parts[parts.lastIndex] += " $part" else parts += part
+        }
+        val stretches = mutableListOf<String>()
+        var current = ""
+        for (part in parts) {
+            val joined = if (current.isEmpty()) part else "$current $part"
+            if (joined.length <= WikipediaSource.MAX_SENTENCE_LENGTH || current.isEmpty()) {
+                current = joined
+            } else {
+                stretches += current
+                current = part
+            }
+        }
+        if (current.isNotEmpty()) stretches += current
+        return stretches.filter { it.length <= WikipediaSource.MAX_SENTENCE_LENGTH }
     }
 
     // The paragraph cut at each sentence end, quotations aside.
@@ -91,14 +126,20 @@ internal object LanguageSentences {
     ): Boolean {
         val next = text.substring(end).trimStart().firstOrNull()
         val starts = next == null || next.isDigit() || next in OPENERS || (next.isLetter() && !next.isLowerCase())
-        val before = text.getOrNull(mark - 1)
-        val initial =
-            text[mark] == '.' &&
-                before != null &&
-                before.isUpperCase() &&
-                text.getOrNull(mark - 2)?.isLetter() != true
-        val spaced = end < text.length && text[end].isWhitespace() && starts && !initial
+        val spaced = end < text.length && text[end].isWhitespace() && starts && !shortened(text, mark)
         return end >= text.length || text[mark] in UNSPACED_ENDS || spaced
+    }
+
+    // Whether the full stop at [mark] shortens a word, ending no sentence: after a single capital of a
+    // cased script (an initial), or after a Thai letter (`พ.ศ.`, the Buddhist era: Thai ends no
+    // sentence with a full stop).
+    private fun shortened(
+        text: String,
+        mark: Int,
+    ): Boolean {
+        val before = text.getOrNull(mark - 1) ?: return false
+        val initial = before.isUpperCase() && text.getOrNull(mark - 2)?.isLetter() != true
+        return text[mark] == '.' && (initial || before.code in Script.THAI)
     }
 
     /**

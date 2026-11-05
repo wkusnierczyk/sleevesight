@@ -19,6 +19,7 @@ import kotlin.time.Instant
  *
  * An implementation may throw; the pipeline then goes on as if it had missed, and logs it.
  */
+@Suppress("TooManyFunctions") // A read and a keep for each kind of entry the pipeline keeps.
 interface PipelineCache {
     /**
      * What [adapter] gave for [track], played at [duration] (the player's length, or null), if kept
@@ -60,6 +61,23 @@ interface PipelineCache {
         track: NormalizedTrack,
         duration: Duration?,
         result: SourceResult,
+    ) = Unit
+
+    /**
+     * The language the search in the track's language decided [track] at [duration] is sung in
+     * (#902): a language's code, `en`, or empty for none found; null when none is kept. By default
+     * none.
+     */
+    suspend fun trackLanguage(
+        track: NormalizedTrack,
+        duration: Duration?,
+    ): String? = null
+
+    /** Keeps [code], the language decided for [track] at [duration] ([trackLanguage]); by default nothing. */
+    suspend fun keepTrackLanguage(
+        track: NormalizedTrack,
+        duration: Duration?,
+        code: String,
     ) = Unit
 
     /** The card written for [key], if kept. */

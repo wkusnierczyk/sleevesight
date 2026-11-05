@@ -99,6 +99,7 @@ internal object RetrievalCodec {
                 lyrics = result.lyrics?.let { LyricsJson(it.links, it.languages, it.instrumental) },
                 trackOnly = result.trackOnly,
                 pages = result.pages,
+                language = result.language,
             ),
         )
 
@@ -143,6 +144,7 @@ internal object RetrievalCodec {
                 lyrics = stored.lyrics?.let { WorkLyrics(it.links, it.languages, it.instrumental) },
                 trackOnly = stored.trackOnly,
                 pages = stored.pages,
+                language = stored.language,
             )
         } catch (_: IllegalArgumentException) {
             // `SerializationException` is one too.
@@ -225,6 +227,8 @@ internal object RetrievalCodec {
         val trackOnly: Boolean = false,
         // Absent in an entry kept before #905: none.
         val pages: List<String> = emptyList(),
+        // The decided language of a track (#902, `SourceResult.language`), on that decision's entry only.
+        val language: String? = null,
     )
 
     // A first release (#724): of the recording, or of a cover's original.

@@ -49,11 +49,7 @@ class LanguageSources(
     override suspend fun releaseLanguages(resolution: Resolution): Lookup<List<String>> {
         val mbid = resolution.recordingMbid ?: return Lookup.Found(emptyList())
         return when (val found = musicBrainz.recordingReleases(mbid)) {
-            is Lookup.Found -> {
-                val languages = found.value.releases.mapNotNull { it.language }
-                // Most releases first; a tie in the order MusicBrainz lists them.
-                Lookup.Found(languages.distinct().sortedByDescending { code -> languages.count { it == code } })
-            }
+            is Lookup.Found -> Lookup.Found(found.value.releases.mapNotNull { it.language })
             is Lookup.NotFound -> Lookup.Found(emptyList())
             is Lookup.Failed -> found
         }

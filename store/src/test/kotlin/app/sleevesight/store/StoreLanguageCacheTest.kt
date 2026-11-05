@@ -31,9 +31,9 @@ class StoreLanguageCacheTest {
     private val cache = StorePipelineCache(fixture.caches, EmptyCoroutineContext, ArtistKeeping.ALWAYS)
     private val track = fixture.normalizer.normalize("Tum Hi Ho", "Arijit Singh")
 
-    private val english =
+    private fun english(source: SourceId = SourceId.MUSICBRAINZ): SourceAdapter =
         object : SourceAdapter {
-            override val id: SourceId = SourceId.WIKIPEDIA
+            override val id: SourceId = source
 
             override suspend fun lookup(
                 track: NormalizedTrack,
@@ -77,7 +77,7 @@ class StoreLanguageCacheTest {
         runBlocking {
             val hindi = result("आशिक़ी 2 एक फ़िल्म है।", "hi")
             val englishResult = result("Aashiqui 2 is a film.", null)
-            cache.keep(english, track, 240.seconds, englishResult)
+            cache.keep(english(SourceId.WIKIPEDIA), track, 240.seconds, englishResult)
             cache.keep(inLanguage, "hi", track, 240.seconds, hindi)
 
             assertEquals(hindi, cache.result(inLanguage, "hi", track, 240.seconds))
@@ -89,7 +89,7 @@ class StoreLanguageCacheTest {
                     .single()
                     .language,
             )
-            assertEquals(englishResult, cache.result(english, track, 240.seconds))
+            assertEquals(englishResult, cache.result(english(SourceId.WIKIPEDIA), track, 240.seconds))
             assertNull(cache.result(inLanguage, "mr", track, 240.seconds))
             assertNull(cache.result(inLanguage, "hi", track, null))
             assertNull(
@@ -111,4 +111,21 @@ class StoreLanguageCacheTest {
                 .language,
         )
     }
+
+    @Test
+    fun `the language decided for a track is kept under its key, English and none included`() =
+        runBlocking {
+            assertNull(cache.trackLanguage(track, 240.seconds))
+            cache.keepTrackLanguage(track, 240.seconds, "hi")
+            assertEquals("hi", cache.trackLanguage(track, 240.seconds))
+            assertNull(cache.trackLanguage(track, null))
+            val sundown = fixture.normalizer.normalize("Sundown", "Gordon Lightfoot")
+            cache.keepTrackLanguage(sundown, null, "en")
+            assertEquals("en", cache.trackLanguage(sundown, null))
+            val polish = fixture.normalizer.normalize("Kocham cię, kochanie moje", "Maanam")
+            cache.keepTrackLanguage(polish, null, "")
+            assertEquals("", cache.trackLanguage(polish, null))
+            // Apart from MusicBrainz's own result for the track.
+            assertNull(cache.result(english(), track, 240.seconds))
+        }
 }

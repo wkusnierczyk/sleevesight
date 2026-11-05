@@ -34,7 +34,10 @@ class TrackLanguageTest {
                 listOf(
                     hint("lyrics", *lyrics.toTypedArray()),
                     hint("wikidata", *wikidata.toTypedArray()),
-                    hint("releases", *releases.toTypedArray()),
+                    {
+                        asked += "releases"
+                        TrackLanguage.ofReleases(releases)
+                    },
                 ),
             )?.code
 
@@ -102,6 +105,17 @@ class TrackLanguageTest {
             assertEquals("pt", find("Evidências", "Chitãozinho & Xororó", lyrics = listOf("por")))
             // Several languages in one hint: its first that is not English.
             assertEquals("hi", find("Tum Hi Ho", "Arijit Singh", lyrics = listOf("eng", "hin")))
+        }
+
+    @Test
+    fun `the releases' hint is their majority, so one pressing abroad does not name the language`() =
+        runTest {
+            assertEquals("en", find("Sundown", "X", releases = listOf("eng", "eng", "spa")))
+            assertEquals("hi", find("Tum Hi Ho", "Arijit Singh", releases = listOf("eng", "hin", "hin")))
+            // A tie in MusicBrainz's order.
+            assertEquals("hi", find("Tum Hi Ho", "Arijit Singh", releases = listOf("hin", "eng")))
+            assertEquals(listOf("en"), TrackLanguage.ofReleases(listOf("xyz", "eng")).map { it.code })
+            assertEquals(emptyList(), TrackLanguage.ofReleases(listOf("zxx")))
         }
 
     @Test

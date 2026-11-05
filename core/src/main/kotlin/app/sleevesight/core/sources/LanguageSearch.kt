@@ -24,7 +24,8 @@ interface LanguageSearch {
 
     /**
      * The languages (ISO 639-3) MusicBrainz records for the tracklists of the resolved recording's
-     * releases, most releases first; none when no recording was accepted.
+     * releases, one per release that records one, in MusicBrainz's order (`TrackLanguage.ofReleases`
+     * takes their majority); none when no recording was accepted.
      */
     suspend fun releaseLanguages(resolution: Resolution): Lookup<List<String>>
 

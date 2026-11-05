@@ -46,6 +46,9 @@ import kotlin.time.Instant
  * @property inLanguage the search in the track's language (#902), once the run decided to make it;
  *   null before, and for a run that makes none (English, no language found, the setting off, or
  *   enough found in English under *If needed*). See [InLanguageState].
+ * @property searchingInLanguage while the run's search in the track's language (#902) waits for its
+ *   grant, decides the language or looks up in it: the track's sources are not all landed until it
+ *   ends ([gathered]).
  */
 data class TrackState(
     val nowPlaying: NowPlaying,
@@ -61,11 +64,16 @@ data class TrackState(
     val genresAssembled: Boolean = false,
     val writesWith: WrittenBy? = null,
     val inLanguage: InLanguageState? = null,
+    val searchingInLanguage: Boolean = false,
 ) {
-    /** Whether every source has landed, those searched in the track's language too (#902). */
+    /**
+     * Whether every source has landed, those searched in the track's language too (#902), and the
+     * search in it is not still deciding or looking up ([searchingInLanguage]).
+     */
     val gathered: Boolean
         get() =
             sources.values.none { it is SourceState.Pending } &&
+                !searchingInLanguage &&
                 inLanguage?.sources?.values?.none { it is SourceState.Pending } != false
 }
 

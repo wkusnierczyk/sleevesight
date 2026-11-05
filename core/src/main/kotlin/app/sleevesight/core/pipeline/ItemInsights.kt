@@ -16,6 +16,7 @@ import app.sleevesight.core.normalizer.Edition
 import app.sleevesight.core.resolution.NameMatcher
 import app.sleevesight.core.settings.AiWebSearch
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.settings.TrackLanguageSearch
 import app.sleevesight.core.sources.AlbumFound
 import app.sleevesight.core.sources.AlbumLookup
 import app.sleevesight.core.sources.AlbumQuery
@@ -291,7 +292,7 @@ class ItemInsights(
         track: TrackState,
         settings: Settings,
     ): ItemEvidence {
-        val lines = artistLines(own, track)
+        val lines = artistLines(own, track, settings)
         val lookup = artistWeb?.takeIf { lines.isEmpty() && searchesArtist(settings) }
         val query = artistQuery(track)
         return when {
@@ -350,7 +351,8 @@ class ItemInsights(
     // counts and lists of what many listeners did (`EvidenceDraft.aggregate`), as the artist's leaves
     // them out ([artistLines]), so the album's fingerprint does not change with them (#885). With the
     // lines the search in the track's language found on the album's own article (#902), those of the
-    // run's [track] evidence about a release named as the album is ([inLanguage]), after the album's.
+    // run's [track] evidence about a release named as the album is ([inLanguage]), after the album's,
+    // under *Always* only ([everyTrack]).
     private suspend fun albumEvidence(
         album: CardEntity.Album,
         own: EvidenceSet,
@@ -361,7 +363,7 @@ class ItemInsights(
         val found = albums?.let { attempt { it.lookup(query) } ?: AlbumFound(emptyList(), unreachable = true) }
         val drafts =
             found?.drafts.orEmpty().filter { settings.isEnabled(it.source) && !it.aggregate } +
-                inLanguage(album, track).map(::draftOf)
+                inLanguage(album, track).filter { everyTrack(settings) }.map(::draftOf)
         val lines = EvidenceSet.of(drafts, hasher)
         return ItemEvidence(
             lines,
@@ -738,11 +740,18 @@ class ItemInsights(
     private fun artistLines(
         own: EvidenceSet,
         track: TrackState,
+        settings: Settings,
     ): List<EvidenceLine> {
         // Not the counts and lists of what many listeners did (Last.fm's listeners, tags, similar
         // artists: `EvidenceLine.aggregate`), whose numbers and order change from one lookup to the
-        // next: in the artist's fingerprint, they would key the same artist anew on each.
-        val lines = own.lines.filter { it.scope == Scope.ARTIST && !it.aggregate }
+        // next: in the artist's fingerprint, they would key the same artist anew on each. Nor, but
+        // under *Always*, the lines found in the track's language ([everyTrack], #902).
+        val lines =
+            own.lines.filter {
+                it.scope == Scope.ARTIST &&
+                    !it.aggregate &&
+                    (it.language == null || everyTrack(settings))
+            }
         val primary = track.normalized.primary
         if (track.normalized.artists.size <= 1) return lines
         val key = " ${names.key(primary)} "
@@ -750,6 +759,12 @@ class ItemInsights(
             line.about?.let { names.sameName(it, primary) } ?: (key.isNotBlank() && key in " ${names.key(line.text)} ")
         }
     }
+
+    // Whether the lines found in the track's language (#902) join the artist's and the album's
+    // evidence: under *Always* only, where every track with a language is searched in it. Under *If
+    // needed* only the thin ones are, so with them the artist's and the album's fingerprints would
+    // change from one of their tracks to the next, and their insights be paid for again.
+    private fun everyTrack(settings: Settings): Boolean = settings.trackLanguageSearch == TrackLanguageSearch.ALWAYS
 
     // [lines], numbered on their own, with each id mapped to its line's id in the track's [own] evidence.
     private fun numbered(
