@@ -206,7 +206,7 @@ jobs:
           name: test-reports
           path: |
             */build/reports/tests/
-            */build/test-results/
+            */build/test-results/**/*.xml
           if-no-files-found: ignore
           retention-days: 14
 
