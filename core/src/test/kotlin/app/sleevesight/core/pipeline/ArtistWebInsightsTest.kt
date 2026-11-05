@@ -75,13 +75,17 @@ class ArtistWebInsightsTest {
         override suspend fun search(
             artist: ArtistWebQuery,
             sent: () -> Unit,
+            keeping: (List<EvidenceDraft>) -> Unit,
             mayPay: () -> Boolean,
         ): List<EvidenceDraft>? =
             kept[artist] ?: run {
                 if (!mayPay()) return null
                 searches++
                 sent()
-                found?.also { kept[artist] = it }
+                found?.also {
+                    keeping(it)
+                    kept[artist] = it
+                }
             }
 
         override suspend fun keep(

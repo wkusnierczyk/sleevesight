@@ -73,7 +73,7 @@ sealed interface ItemSearch {
     /** The artist's search failed: nothing is kept, and it is due again at the next write. */
     data object Failed : ItemSearch
 
-    /** The artist's search was not made: its gate closed after the waits, before the request. */
+    /** The artist's or the album's search was not made: its gate closed after the waits, before the request. */
     data object Refused : ItemSearch
 
     /** The item's [evidence] with the lines its search found, or an earlier one kept. */
@@ -308,13 +308,20 @@ class ItemInsights(
 
     /**
      * Whether [item]'s evidence under [settings] may hold the web's lines a search for it keeps, or
-     * call for one (#912): the artist's, with *AI web search* used and a lookup to keep and search
-     * them ([artistWeb], an engine's key). Its evidence is gathered again when this changes.
+     * call for one: the artist's (#912), with *AI web search* used and a lookup to keep and search
+     * them ([artistWeb], an engine's key); the album's (#935), with web search switched on and an
+     * album lookup that can search ([AlbumLookup.searchesWeb], an engine's key). Its evidence is
+     * gathered again when this changes.
      */
     fun searchesWeb(
         item: InsightItem,
         settings: Settings,
-    ): Boolean = item == InsightItem.ARTIST && artistWeb != null && searchesArtist(settings)
+    ): Boolean =
+        when (item) {
+            InsightItem.ARTIST -> artistWeb != null && searchesArtist(settings)
+            InsightItem.ALBUM -> albums?.searchesWeb == true && settings.isEnabled(SourceId.WEB)
+            InsightItem.SONG -> false
+        }
 
     // Whether the artist may be searched for under [settings] (#912): *AI web search* used, which
     // needs *Exa web search* on.
@@ -415,14 +422,18 @@ class ItemInsights(
      *
      * - **The album's** (#885): with web search switched on ([AlbumQuery.web]), through
      *   [AlbumLookup.searchWeb]; [ItemSearch.None] when none could be made (it failed, or the lookup
-     *   threw), and the insight is written from [evidence] as it is.
+     *   threw), and the insight is written from [evidence] as it is. [reserve] is asked for the key
+     *   the lines a search made now give, before they are kept (#935), which the caller claims then;
+     *   so for the artist's *Once* search.
      * - **The artist's** (#912): with *AI web search* used, the lines kept for the artist since the
      *   evidence was gathered (another track's write), with no search; else under *Once* (or *Up to 3
      *   times* with a service whose client takes no tools), the app's own search for the artist
      *   ([ArtistWebLookup.search]), [ItemSearch.Failed] when it fails, which keeps nothing. Under *Up
      *   to 3 times*, [ItemSearch.None]: the AI service searches itself while it writes ([writeSearching]).
-     *   [mayPay] is asked after the lookup's waits (its kept lines read, another write's search),
-     *   right before the request: closed, none is sent, and [ItemSearch.Refused] (#912's review).
+     *
+     * Either way, [mayPay] is asked after the lookup's waits (its kept lines read, another write's
+     * search), right before the request: closed, none is sent, and [ItemSearch.Refused] (#912's
+     * review; the album's, #935).
      */
     @Suppress("LongParameterList") // The item, what it is searched for from and under, and its gates.
     suspend fun search(
@@ -431,37 +442,68 @@ class ItemInsights(
         settings: Settings,
         evidence: ItemEvidence,
         sent: () -> Unit = {},
+        reserve: (CardKey) -> Boolean = { true },
         mayPay: () -> Boolean = { true },
     ): ItemSearch =
         when {
             !evidence.webDue -> ItemSearch.None
-            item == InsightItem.ALBUM -> albumSearch(track, settings, evidence, sent)
-            item == InsightItem.ARTIST -> artistSearch(track, settings, evidence, sent, mayPay)
+            item == InsightItem.ALBUM -> albumSearch(track, settings, evidence, sent, WriteGates(mayPay, reserve))
+            item == InsightItem.ARTIST -> artistSearch(track, settings, evidence, sent, WriteGates(mayPay, reserve))
             else -> ItemSearch.None
         }
 
-    // The album's web search for a write (#885), as [search] says.
+    // The album's web search for a write (#885), as [search] says: made only while [gates]' `mayPay`,
+    // asked right before its request, says so, [ItemSearch.Refused] when it did not; the key the lines
+    // found give reserved before they are kept (#935). A reservation refused (another write of that
+    // key under way) keeps them still: the same lines, which that write is written from.
     private suspend fun albumSearch(
         track: TrackState,
         settings: Settings,
         evidence: ItemEvidence,
         sent: () -> Unit,
+        gates: WriteGates,
     ): ItemSearch {
         val lookup = albums?.takeIf { settings.isEnabled(SourceId.WEB) }
         val album = entity(InsightItem.ALBUM, track) as? CardEntity.Album
+        var refused = false
+        val mayPay = { gates.mayPay().also { if (!it) refused = true } }
+        val keeping = reserving(InsightItem.ALBUM, track, settings, evidence, gates)
         val found =
-            if (lookup != null && album != null) attempt { lookup.searchWeb(queryOf(album, settings), sent) } else null
-        return found?.let { withWeb(track, settings, evidence, it) }?.let(ItemSearch::Found) ?: ItemSearch.None
+            if (lookup != null && album != null) {
+                attempt { lookup.searchWeb(queryOf(album, settings), mayPay, keeping, sent) }
+            } else {
+                null
+            }
+        return when {
+            found != null -> withWeb(track, settings, evidence, found)?.let(ItemSearch::Found) ?: ItemSearch.None
+            refused -> ItemSearch.Refused
+            else -> ItemSearch.None
+        }
     }
 
+    // What a search for [item] is given, right before the lines it found are kept: the key they give
+    // [evidence] reserved through [gates] (#935), so the write claims it before another track can
+    // gather them. A reservation refused keeps them still.
+    private fun reserving(
+        item: InsightItem,
+        track: TrackState,
+        settings: Settings,
+        evidence: ItemEvidence,
+        gates: WriteGates,
+    ): (List<EvidenceDraft>) -> Unit =
+        { lines ->
+            withWeb(track, settings, evidence, lines)?.let { key(item, track, it, settings) }?.let { gates.reserve(it) }
+        }
+
     // The artist's web lines for a write (#912), as [search] says: kept, or *Once*'s search, made only
-    // while [mayPay], asked right before its request, says so; [ItemSearch.Refused] when it did not.
+    // while [gates]' `mayPay`, asked right before its request, says so; [ItemSearch.Refused] when it
+    // did not; the key its pages give reserved before they are kept (#935), as the album's.
     private suspend fun artistSearch(
         track: TrackState,
         settings: Settings,
         evidence: ItemEvidence,
         sent: () -> Unit,
-        mayPay: () -> Boolean,
+        gates: WriteGates,
     ): ItemSearch {
         val lookup = artistWeb
         val query = artistQuery(track)
@@ -474,7 +516,10 @@ class ItemInsights(
                 kept != null -> kept
                 // The AI service searches itself while it writes ([writeSearching]).
                 way == AiWebSearch.UP_TO -> null
-                else -> attempt { lookup.search(query, sent) { mayPay().also { if (!it) refused = true } } }
+                else -> {
+                    val keeping = reserving(InsightItem.ARTIST, track, settings, evidence, gates)
+                    attempt { lookup.search(query, sent, keeping) { gates.mayPay().also { if (!it) refused = true } } }
+                }
             }
         return when {
             found != null -> withWeb(track, settings, evidence, found)?.let(ItemSearch::Found) ?: ItemSearch.None

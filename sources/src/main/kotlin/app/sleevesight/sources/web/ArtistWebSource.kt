@@ -21,7 +21,9 @@ import app.sleevesight.sources.lastfm.Lru
  * - [search], *AI web search* set to *Once*: the app's own search for the artist ([web],
  *   `ExaArtistSearch`), one at a time per artist (a second write of the artist while one searches
  *   takes its outcome), telling its caller when a request is sent, and only then (not for lines
- *   kept, or an artist whose name cannot be checked), so a search is counted as paid only when it is.
+ *   kept, or an artist whose name cannot be checked), so a search is counted as paid only when it is;
+ *   its caller's gate asked after the waits, right before the request, and given what was found
+ *   before it is kept, to claim the key it gives (#935).
  * - [keep], *Up to 3 times*: the pages the AI service's own searches found while it wrote the
  *   artist's insight (`ItemInsights.writeSearching`), as given.
  *
@@ -55,11 +57,12 @@ class ArtistWebSource(
     override suspend fun search(
         artist: ArtistWebQuery,
         sent: () -> Unit,
+        keeping: (List<EvidenceDraft>) -> Unit,
         mayPay: () -> Boolean,
     ): List<EvidenceDraft>? =
         web?.let { engine ->
             try {
-                searching.once(keyOf(artist)) { kept(artist) ?: searched(engine, artist, sent, mayPay) }
+                searching.once(keyOf(artist)) { kept(artist) ?: searched(engine, artist, sent, keeping, mayPay) }
             } catch (
                 @Suppress("SwallowedException") e: NotPaid,
             ) {
@@ -93,10 +96,12 @@ class ArtistWebSource(
 
     // What [engine] finds for [artist], none included, kept; null when it failed, and nothing is kept.
     // [mayPay] is asked right before the request, with no suspension between; closed, [NotPaid].
+    // [keeping] is given what was found before it is kept.
     private suspend fun searched(
         engine: ArtistWebSearch,
         artist: ArtistWebQuery,
         sent: () -> Unit,
+        keeping: (List<EvidenceDraft>) -> Unit,
         mayPay: () -> Boolean,
     ): List<EvidenceDraft>? {
         if (!mayPay()) throw NotPaid()
@@ -106,7 +111,10 @@ class ArtistWebSource(
                 Lookup.NotFound -> emptyList()
                 is Lookup.Failed -> null
             }
-        found?.let { keep(artist, it) }
+        found?.let {
+            keeping(it)
+            keep(artist, it)
+        }
         return found
     }
 

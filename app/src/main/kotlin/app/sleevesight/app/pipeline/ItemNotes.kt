@@ -226,10 +226,15 @@ private sealed interface WebStep {
  * An album's web search (#885, `ItemInsights.searched`), a paid one, is made only on the way to its
  * insight's call: once the insight is not found kept under the key of the evidence gathered,
  * through the same gates, with web search still switched on, its engine and key as the settings
- * and parts have them right before it, never when a row is shown or unfolded. Each request sent to
- * the engine is counted to [paid], lines kept from an earlier search not. Its lines join
- * the album's evidence gathered, which the album lookup keeps, so the insight then has another key,
- * under which the cache is read again before the call, and which a later gathering finds again.
+ * and parts have them right before it, never when a row is shown or unfolded; the gates are asked
+ * again after the lookup's waits, right before the request (#935): closed, nothing is sent, and the
+ * album is offered again. Each request sent to the engine is counted to [paid], lines kept from an
+ * earlier search not. Its lines join the album's evidence gathered, which the album lookup keeps, so
+ * the insight then has another key, under which the cache is read again before the call, and which
+ * a later gathering finds again; that key is claimed before the lines are kept, so another track
+ * gathering them meanwhile finds it being written, rather than paying for a write of its own.
+ * Whether the album may be searched (web search on, an engine's key) is part of what its evidence is
+ * gathered for, so giving the key gathers it again, a search due.
  *
  * The artist's web search (#912), for an artist the sources say nothing about, is made the same way,
  * with *AI web search* used: under *Once*, the app's own search before the call, as the album's; one
@@ -270,8 +275,9 @@ class AppItemNotes(
 
     // What an item's evidence is gathered for: the item, the run's own evidence under the switches
     // now (`ItemInsights.ownEvidence`), its entity, the sources switched on, and whether a web search
-    // may give it lines (`ItemInsights.searchesWeb`, #912: the artist's, with *AI web search* used and
-    // an engine's key), so switching that on, or giving the key, gathers it again.
+    // may give it lines (`ItemInsights.searchesWeb`: the artist's, #912, with *AI web search* used and
+    // an engine's key; the album's, #935, with web search on and an engine's key), so switching that
+    // on, or giving the key, gathers it again.
     private data class Gathered(
         val item: InsightItem,
         val lookupKey: String,
@@ -871,13 +877,26 @@ class AppItemNotes(
         counted: (QuestionCost) -> Unit,
     ): Next {
         if (showKept(insights, key, asked)) return Next(key, asked, AiOutcome.ANSWERED)
-        return when (val step = searched(key, asked, counted)) {
-            null -> searchingWrite(insights, key, asked, job, counted) ?: Next(key, asked, null)
-            WebStep.Failed ->
-                Next(key, asked, AiOutcome.FAILED, shown = InsightState.Failed(AiSearches.WEB_SEARCH_FAILED))
-            // Its gates closed after the waits, before the search's request: not asked, offered again.
-            WebStep.Refused -> Next(key, asked, null, notAsked = true)
-            is WebStep.Found -> moved(insights, key, asked.with(step.evidence), step.key, job, null)
+        // The key an album's or the artist's *Once* search's lines give, claimed beside [key] before
+        // they are kept (#935).
+        var reserved: CardKey? = null
+        var taken = false
+        val reserve = { next: CardKey -> reserve(key, next, job).also { if (it) reserved = next } }
+        try {
+            return when (val step = searched(key, asked, counted, reserve)) {
+                null -> searchingWrite(insights, key, asked, job, counted) ?: Next(key, asked, null)
+                WebStep.Failed ->
+                    Next(key, asked, AiOutcome.FAILED, shown = InsightState.Failed(AiSearches.WEB_SEARCH_FAILED))
+                // Its gates closed after the waits, before the search's request: not asked, offered again.
+                WebStep.Refused -> Next(key, asked, null, notAsked = true)
+                is WebStep.Found -> {
+                    taken = step.key != key && step.key == reserved
+                    moved(insights, key, asked.with(step.evidence), step.key, job, null, claimed = taken)
+                }
+            }
+        } finally {
+            // A reservation the write did not get to use is let go.
+            reserved?.takeIf { it != key && !taken }?.let { release(it, job) }
         }
     }
 
@@ -895,7 +914,8 @@ class AppItemNotes(
     // [asked], the write of [key] with the evidence a web search gave, moved to the key [next] that
     // evidence gives, unless another write of it is under way (another track of the album or artist),
     // which shows: kept as the item's evidence gathered, given to its other tracks ([spread]), its
-    // question ended as [ended] says, with [shown], when the write is done already.
+    // question ended as [ended] says, with [shown], when the write is done already. [claimed] when
+    // [next] was reserved by this write before its lines were kept (#935): [key]'s claim goes.
     @Suppress("LongParameterList") // The write, where it goes, and how it ended.
     private fun moved(
         insights: ItemInsights,
@@ -905,9 +925,10 @@ class AppItemNotes(
         job: Job?,
         ended: AiOutcome?,
         shown: InsightState? = null,
+        claimed: Boolean = false,
     ): Next {
         // No suspension from here to the caller's taking the next key, so a Stop finds it.
-        val moved = move(key, next, job)
+        val moved = if (claimed) true.also { release(key, job) } else move(key, next, job)
         // Kept once the claim moved, so the row goes from this key's to the next's, still asked.
         gatheredAgain(insights, asked)
         return if (moved) Next(next, asked, ended, shown) else Next(key, asked, AiOutcome.STOPPED)
@@ -984,8 +1005,8 @@ class AppItemNotes(
         return parts.value?.let(::insightsOf)?.searchesItself(asked.item, asked.evidence, now) == true
     }
 
-    // Whether [asked]'s item may still have a web search under the settings and the parts now (#912):
-    // *AI web search* not switched off, nor its engine's key removed, since the write began.
+    // Whether [asked]'s item may still have a web search under the settings and the parts now (#912,
+    // the album's #935): web search not switched off, nor its engine's key removed, since the write began.
     private fun searchesWebNow(asked: Asked): Boolean {
         val now = settings.value ?: return false
         return parts.value?.let(::insightsOf)?.searchesWeb(asked.item, now) == true
@@ -1049,13 +1070,17 @@ class AppItemNotes(
     // lookups built with them, and none is made once web search is off. Each request sent to the
     // engine is counted to [counted], and only those: not lines kept from an earlier search, nor an
     // album that cannot be checked; a request that fails or is cancelled once sent is still counted.
-    // [WebStep.Failed] when the artist's search failed; null when no search is due or allowed, or
-    // none could be made (the album's), or the AI service makes it itself (the artist's under *Up to
-    // 3 times*, [searchingWrite]); the insight is then written, or not, as before.
+    // [WebStep.Failed] when the artist's search failed; [WebStep.Refused] when the gates closed after
+    // the lookup's waits, before the request (#912, the album's #935); null when no search is due or
+    // allowed, or none could be made (the album's), or the AI service makes it itself (the artist's
+    // under *Up to 3 times*, [searchingWrite]); the insight is then written, or not, as before. The key
+    // the lines a search found give (the album's, the artist's *Once*) is claimed with [reserve]
+    // before they are kept (#935).
     private suspend fun searched(
         key: CardKey,
         asked: Asked,
         counted: (QuestionCost) -> Unit,
+        reserve: (CardKey) -> Boolean,
     ): WebStep? =
         withContext(io) {
             val now = settings.value?.takeIf { asked.evidence.webDue && mayCall(key, asked) }
@@ -1063,7 +1088,8 @@ class AppItemNotes(
             val found =
                 if (now != null && current != null) {
                     val gate = { mayCall(key, asked) && searchesWebNow(asked) }
-                    current.search(asked.item, asked.track, now, asked.evidence, { counted(QuestionCost.SEARCH) }, gate)
+                    val sent = { counted(QuestionCost.SEARCH) }
+                    current.search(asked.item, asked.track, now, asked.evidence, sent, reserve, gate)
                 } else {
                     ItemSearch.None
                 }
