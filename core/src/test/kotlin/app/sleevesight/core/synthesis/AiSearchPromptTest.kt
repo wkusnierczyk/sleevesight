@@ -37,6 +37,16 @@ class AiSearchPromptTest {
     }
 
     @Test
+    fun aDefinitionWritesDatesInTheAppsFormTheJsonAnswersAsIsoDates() {
+        // A definition is prose shown as written (#957); the other answers are JSON the app reads,
+        // their dates partial ISO dates it writes in its own form.
+        assertTrue(InsightPrompt.DATE_RULE in AiSearchPrompt.build(SearchKind.DEFINITION, SearchFacts.ofGenre("Blues")))
+        for (kind in SearchKind.entries - SearchKind.DEFINITION) {
+            assertFalse(InsightPrompt.DATE_RULE in AiSearchPrompt.build(kind, facts), kind.key)
+        }
+    }
+
+    @Test
     fun theTrackGivesTheCleanedTitleTheArtistsTheAlbumAndWhatTheSourcesGave() {
         val user = AiSearchPrompt.user(SearchKind.LYRICS, facts)
         val track =

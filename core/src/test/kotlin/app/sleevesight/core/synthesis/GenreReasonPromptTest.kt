@@ -198,6 +198,18 @@ class GenreReasonPromptTest {
     }
 
     @Test
+    fun `it asks for dates in the app's form, with the style (#957)`() {
+        for (allowModel in listOf(false, true)) {
+            val style =
+                GenreReasonPrompt
+                    .system(allowModel)
+                    .substringAfter("STYLE\n")
+                    .substringBefore(InsightPrompt.CONTRACT_HEADING)
+            assertTrue(InsightPrompt.DATE_RULE in style)
+        }
+    }
+
+    @Test
     fun `it asks for the final text only, and leaves out counts (#767)`() {
         for (allowModel in listOf(false, true)) {
             val rules = GenreReasonPrompt.contract(allowModel)

@@ -5,6 +5,7 @@ The user message holds a <genre> block, the genre's label, a <track> block, what
 STYLE
 - Write 1 to 3 sentences.
 - Plain conversational English. No hype.
+- Write dates in the form 17 October 2026, October 2026 or 2026.
 
 RULES, which hold whatever the style says:
 - The genre is a label, not a fact: explain it from the evidence and, where the evidence does not, from your own knowledge.

@@ -5,6 +5,7 @@ import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.fixtures.Fixtures
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 /** The song's, the artist's and the album's prompt (#522): stored, so a change to it is a reviewed diff. */
 class ItemPromptTest {
@@ -18,8 +19,20 @@ class ItemPromptTest {
         // synthesis cache keys insights by it): update both together. The key insight's version 9
         // (#767) left this prompt as it was: it keeps version 8's rules and style ([ItemPrompt.contract]).
         // The rule on a line found in the track's language (#902) came without a version, the lines'
-        // languages being in the evidence fingerprint.
+        // languages being in the evidence fingerprint. Nor did the rule on dates (#957).
         assertEquals(1, ItemPrompt.VERSION)
+    }
+
+    @Test
+    fun `each asks for dates in the app's form, with the style (#957)`() {
+        val playing = FixtureEvidence.nowPlaying(1)
+        val normalized = normalizer.normalize(playing)
+        for (kind in ItemPrompt.KINDS) {
+            val prompt =
+                ItemPrompt.build(ItemPrompt.Subject(kind, "Name"), playing, normalized, FixtureEvidence.of(1), false)
+            val style = prompt.substringAfter("\nSTYLE\n").substringBefore(InsightPrompt.CONTRACT_HEADING)
+            assertTrue(InsightPrompt.DATE_RULE in style, kind.key)
+        }
     }
 
     @Test
