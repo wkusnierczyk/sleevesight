@@ -523,7 +523,7 @@ class ItemInsightsTest {
         }
 
     @Test
-    fun `the artist's and the album's cards keep their lines in the track's language again`() =
+    fun `a card written from lines in the track's language keeps them again, and only then`() =
         runTest {
             val kept = MemoryLanguageLines()
             val items =
@@ -535,18 +535,64 @@ class ItemInsightsTest {
                     albums = albums,
                     languageLines = kept,
                 )
+            val gordon = LanguageSubject.Artist("Gordon Lightfoot", "mb-gordon")
+            val sundown = LanguageSubject.Album("Sundown", "Gordon Lightfoot", "rg-sundown")
             val track = track("Sundown", listOf(line(SourceId.MUSICBRAINZ, "It runs three minutes.")))
-            for (item in InsightItem.entries) {
-                val evidence = checkNotNull(items.evidence(item, track, settings))
-                items.write(checkNotNull(items.key(item, track, evidence, settings)), item, track, evidence) { _, _ -> }
+
+            suspend fun writeAll(settings: Settings) {
+                for (item in InsightItem.entries) {
+                    val evidence = checkNotNull(items.evidence(item, track, settings))
+                    val key = checkNotNull(items.key(item, track, evidence, settings))
+                    items.write(key, item, track, evidence) { _, _ -> }
+                }
             }
+
+            // No line in a language in the cards' evidence: nothing kept again.
+            writeAll(settings)
+            assertTrue(kept.renewed.isEmpty())
+
+            kept.keep(gordon, "ko", listOf(inLanguage("고든 라이트풋은 가수이다.", "ko")))
+            val release = line(SourceId.WIKIPEDIA, "선다운은 앨범이다.", Scope.RELEASE).copy(about = "Sundown", language = "ko")
+            kept.keep(sundown, "ko", listOf(release))
+            // Under Off, or with their source switched off, the cards hold none: nothing kept again.
+            writeAll(settings.copy(trackLanguageSearch = TrackLanguageSearch.OFF))
+            writeAll(settings.copy(enabledSources = settings.enabledSources - SourceSwitch.WIKIPEDIA))
+            assertTrue(kept.renewed.isEmpty())
+
+            writeAll(settings)
+            assertEquals(listOf<LanguageSubject>(gordon, sundown), kept.renewed)
+        }
+
+    @Test
+    fun `what the search in the language found is kept when the track's evidence is in, no insight opened`() =
+        runTest {
+            val kept = MemoryLanguageLines()
+            val items = ItemInsights(AiAccess(provider, Secret("k")), cache, JvmHasher, names, languageLines = kept)
+            val release = line(SourceId.WIKIPEDIA, "선다운은 앨범이다.", Scope.RELEASE).copy(about = "Sundown", language = "ko")
+            val songLines = listOf(line(SourceId.MUSICBRAINZ, "It runs three minutes."), release)
+            val artist = inLanguage("고든 라이트풋은 가수이다.", "ko")
+            val searched = track("Sundown", songLines, extraArtistLines = listOf(artist))
+
+            items.keepInLanguage(searched, settings.copy(trackLanguageSearch = TrackLanguageSearch.OFF))
+            assertTrue(kept.kept(LanguageSubject.Artist("Gordon Lightfoot", "mb-gordon")).isEmpty())
+
+            items.keepInLanguage(searched, settings)
             assertEquals(
-                listOf(
-                    LanguageSubject.Artist("Gordon Lightfoot", "mb-gordon"),
-                    LanguageSubject.Album("Sundown", "Gordon Lightfoot", "rg-sundown"),
-                ),
-                kept.renewed,
+                listOf(artist.text),
+                kept.kept(LanguageSubject.Artist("Gordon Lightfoot", "mb-gordon")).map { it.text },
             )
+            val sundown = LanguageSubject.Album("Sundown", "Gordon Lightfoot", "rg-sundown")
+            assertEquals(listOf(release.text), kept.kept(sundown).map { it.text })
+
+            // Another track, not searched, takes them.
+            val plain = track("Carefree Highway", listOf(line(SourceId.MUSICBRAINZ, "It runs four minutes.")))
+            val album = checkNotNull(items.evidence(InsightItem.ALBUM, plain, settings)).evidence.lines.map { it.text }
+            assertTrue(release.text in album)
+            val artistLines =
+                checkNotNull(
+                    items.evidence(InsightItem.ARTIST, plain, settings),
+                ).evidence.lines.map { it.text }
+            assertTrue(artist.text in artistLines)
         }
 
     // [settings] with web search switched on, through an engine.

@@ -39,6 +39,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.distinctUntilChangedBy
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -671,13 +674,15 @@ class AppItemNotes(
     ): Deferred<Found?> {
         val gathering =
             inflight.computeIfAbsent(at) {
+                // Where the lines in the track's language are kept, when it began (#939).
+                val keeping = keepings
                 val job =
                     scope.async(mark(), start = CoroutineStart.LAZY) {
                         val found =
                             withContext(
                                 io,
                             ) { insights.evidence(item, track, now) }?.let { Found(it, clock.now(), track, now) }
-                        found?.also { keep(at, it, coroutineContext) }
+                        found?.also { keep(at, it, coroutineContext) { at.inLanguage && keeping != keepings } }
                     }
                 pending += job
                 job.invokeOnCompletion {
@@ -692,12 +697,14 @@ class AppItemNotes(
     }
 
     // Keeps [found] for [at], last, the oldest dropped past [KEPT], unless a *Clear history* came since
-    // [work] began.
+    // [work] began, or, under the same lock, it is [stale].
     private fun keep(
         at: Gathered,
         found: Found,
         work: CoroutineContext,
+        stale: () -> Boolean = { false },
     ) = publish(work) {
+        if (stale()) return@publish
         gathered.update { kept ->
             val next = LinkedHashMap(kept)
             next.remove(at)
@@ -1255,6 +1262,42 @@ class AppItemNotes(
     }
 
     /**
+     * *Keep what sources said about each artist* changed (#939), which says where the lines in the
+     * track's language are kept: the artist's and the album's evidence gathered with them is dropped,
+     * and a gathering under way keeps nothing, so each is gathered again from where they are kept now.
+     * Without it, switching on and off again would find the evidence gathered before under the same
+     * key, with lines the switch's turn dropped.
+     */
+    fun artistKeepingChanged() {
+        synchronized(lock) {
+            keepings++
+            gathered.update { kept -> kept.filterKeys { !it.inLanguage } }
+            inflight.keys.removeIf { it.inLanguage }
+        }
+    }
+
+    /**
+     * Keeps what the search in the track's language found about the artist and the album of each of
+     * [tracks] (the pipeline's track) once its evidence is in (#939, `ItemInsights.keepInLanguage`),
+     * under the parts and settings then, whether or not their insights are opened, so the next of
+     * their tracks finds the lines. Until cancelled; nothing kept after a *Clear history* by work
+     * begun before it.
+     */
+    suspend fun keepAhead(tracks: Flow<TrackState?>) {
+        tracks
+            .filterNotNull()
+            .filter(ItemInsights::offered)
+            .distinctUntilChangedBy { it.normalized.lookupKey to it.evidence?.fingerprint }
+            .collect { track ->
+                val made = parts.value
+                val now = settings.value
+                if (made != null && now != null) {
+                    withContext(io + mark()) { insightsOf(made).keepInLanguage(track, now) }
+                }
+            }
+    }
+
+    /**
      * Forgets the insights shown and the evidence gathered, for *Clear history* (#547); the cache's
      * are deleted with it. After the epoch's advance: work that checked it before shows its state
      * before this clears it, never after.
@@ -1276,6 +1319,10 @@ class AppItemNotes(
 
     // Guards each insight shown against *Clear history* ([forget]).
     private val lock = Any()
+
+    // How many times *Keep what sources said about each artist* changed ([artistKeepingChanged]), under [lock].
+    @Volatile
+    private var keepings = 0L
 
     // How many times [forget] ran, under [lock], as `AppGenreNotes` counts them (#791).
     @Volatile

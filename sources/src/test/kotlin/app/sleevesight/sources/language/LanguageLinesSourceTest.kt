@@ -91,6 +91,29 @@ class LanguageLinesSourceTest {
         }
 
     @Test
+    fun `the switch turned on during a keep or a renew moves nothing from memory to the table`() =
+        runTest {
+            val table = MemoryArtistResults()
+            // The switch reads off until it has been read [offUntil] times, then on.
+            var reads = 0
+            var offUntil = Int.MAX_VALUE
+            val source = LanguageLinesSource(names, table, keeps = { reads++ >= offUntil })
+            source.keep(bts, "ko", listOf(line("방탄소년단은 대한민국의 그룹이다.", "ko")))
+
+            // A keep that read the switch off keeps in memory, whatever the switch says after.
+            offUntil = reads + 1
+            source.keep(bts, "ja", listOf(line("BTSは韓国のグループである。", "ja")))
+            assertTrue(table.keys(LanguageLinesSource.ARTIST_PART).isEmpty())
+
+            // A renew likewise.
+            offUntil = Int.MAX_VALUE
+            assertEquals(2, source.kept(bts).size)
+            offUntil = reads + 1
+            source.renew(bts)
+            assertTrue(table.keys(LanguageLinesSource.ARTIST_PART).isEmpty())
+        }
+
+    @Test
     fun `with a table that keeps nothing they are kept in memory, which Clear history forgets`() =
         runTest {
             val source = LanguageLinesSource(names, ArtistResults.None)

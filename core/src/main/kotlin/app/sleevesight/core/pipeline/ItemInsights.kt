@@ -705,7 +705,7 @@ class ItemInsights(
             is Reply.Read -> {
                 if (read.kept) {
                     attempt { cache.keep(key, keptText(text, read.state), at, rewritten) }
-                    renewWeb(asked.item, asked.track)
+                    renewWeb(asked.item, asked.track, asked.evidence.evidence)
                 }
                 (read.state as? InsightState.Written)?.copy(writtenAt = at) ?: read.state
             }
@@ -796,14 +796,46 @@ class ItemInsights(
             if (lookup == null || subject == null) {
                 emptyList()
             } else {
-                drafts.groupBy { it.language }.forEach { (language, lines) ->
-                    language?.let { attempt { lookup.keep(subject, it, lines) } }
-                }
+                keep(lookup, subject, drafts)
                 attempt { lookup.kept(subject) }.orEmpty()
             }
         val keptIn = kept.mapNotNullTo(mutableSetOf()) { it.language }
         val more = drafts.filter { it.language !in keptIn }
         return (kept + more).filter { settings.isEnabled(it.source) }
+    }
+
+    // [drafts], found in the track's language, kept for [subject] in [lookup], each language's apart.
+    private suspend fun keep(
+        lookup: ItemLanguageLines,
+        subject: LanguageSubject,
+        drafts: List<EvidenceDraft>,
+    ) = drafts.groupBy { it.language }.forEach { (language, lines) ->
+        language?.let { attempt { lookup.keep(subject, it, lines) } }
+    }
+
+    /**
+     * Keeps what the search in [track]'s language found about its artist and its album (#939), as
+     * their evidence ([evidence]) would, under [settings]: the artist-level lines about the primary
+     * artist, and those found on the article of a release named as the album is; for when the track's
+     * evidence is in, whether or not the artist's or the album's insight is opened, so the next of
+     * their tracks finds them. Nothing under *Off*, without [languageLines], or before the track's
+     * evidence is in.
+     */
+    suspend fun keepInLanguage(
+        track: TrackState,
+        settings: Settings,
+    ) {
+        val lookup = languageLines ?: return
+        val own = ownEvidence(track, settings)
+        if (own == null || settings.trackLanguageSearch == TrackLanguageSearch.OFF) return
+        artistQuery(track)?.let { query ->
+            val found = artistLines(own, track).filter { it.language != null }
+            keep(lookup, LanguageSubject.Artist(query.name, query.mbid), found.map(::draftOf))
+        }
+        (entity(InsightItem.ALBUM, track) as? CardEntity.Album)?.let { album ->
+            val found = albumInLanguage(album, own)
+            keep(lookup, LanguageSubject.Album(album.title, album.artist, album.group), found.map(::draftOf))
+        }
     }
 
     // [lines], numbered on their own, with each id mapped to its line's id in the track's [own] evidence.
@@ -1009,7 +1041,7 @@ class ItemInsights(
                 is Reply.Read -> {
                     if (reply.kept) {
                         attempt { cache.keep(key, keptText(text, reply.state), at, rewritten) }
-                        renewWeb(item, track)
+                        renewWeb(item, track, lines)
                     }
                     val shown = (reply.state as? InsightState.Written)?.copy(writtenAt = at) ?: reply.state
                     last = shown.also { show(it, at) }
@@ -1021,11 +1053,12 @@ class ItemInsights(
 
     // The album's or the artist's web lines kept again from now with [item]'s card on [track] written
     // from them (#885, [AlbumLookup.renewWeb]; #912, [ArtistWebLookup.renew]), and its lines in the
-    // track's language (#939, [ItemLanguageLines.renew]), so they last as long as this card, the last
-    // one kept; nothing for the song's, or when none are kept.
+    // track's language (#939, [ItemLanguageLines.renew]) when the card's [evidence] holds some, so they
+    // last as long as this card, the last one kept; nothing for the song's, or when none are kept.
     private suspend fun renewWeb(
         item: InsightItem,
         track: TrackState,
+        evidence: EvidenceSet,
     ) {
         val album = entity(item, track) as? CardEntity.Album
         val lookup = albums
@@ -1042,7 +1075,8 @@ class ItemInsights(
                 InsightItem.SONG -> null
             }
         val lines = languageLines
-        if (subject != null && lines != null) attempt { lines.renew(subject) }
+        val inLanguage = evidence.lines.any { it.language != null }
+        if (subject != null && lines != null && inLanguage) attempt { lines.renew(subject) }
     }
 
     // One call of [request]: its text, each piece shown as it comes while it may not be `NO_EVIDENCE`

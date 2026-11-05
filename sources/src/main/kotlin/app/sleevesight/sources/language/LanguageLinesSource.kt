@@ -42,11 +42,14 @@ class LanguageLinesSource(
     private val artists = Lru<String, List<EvidenceDraft>>(REMEMBERED)
     private val albums = Lru<String, List<EvidenceDraft>>(REMEMBERED)
 
-    // One read and write of a subject's lines at a time, so a language found on two tracks at once
-    // is kept once, and two languages found at once are both kept.
-    private val writing = Mutex()
+    // One read, or read and write, of the lines at a time, each wholly in the table or wholly in
+    // memory, as the switch read once at its start says: so a language found on two tracks at once is
+    // kept once, two languages found at once are both kept, and lines read from memory are never
+    // written to the table when the switch turns on between the read and the write.
+    private val turns = Mutex()
 
-    override suspend fun kept(subject: LanguageSubject): List<EvidenceDraft> = read(subject).orEmpty()
+    override suspend fun kept(subject: LanguageSubject): List<EvidenceDraft> =
+        turns.withLock { read(subject, inTable()).orEmpty() }
 
     override suspend fun keep(
         subject: LanguageSubject,
@@ -54,49 +57,63 @@ class LanguageLinesSource(
         lines: List<EvidenceDraft>,
     ) {
         if (lines.isEmpty()) return
-        writing.withLock {
-            val now = read(subject).orEmpty()
-            if (now.none { it.language == language }) write(subject, (now + lines).sortedBy { it.language.orEmpty() })
+        turns.withLock {
+            val table = inTable()
+            val now = read(subject, table).orEmpty()
+            if (now.none { it.language == language }) {
+                write(subject, (now + lines).sortedBy { it.language.orEmpty() }, table)
+            }
         }
     }
 
     override suspend fun renew(subject: LanguageSubject) {
-        writing.withLock { read(subject)?.let { write(subject, it) } }
+        turns.withLock {
+            val table = inTable()
+            read(subject, table)?.let { write(subject, it, table) }
+        }
     }
 
     /** Drops the lines kept in memory, for *Clear history* (#547); the table's are cleared with it. */
     suspend fun forget() {
-        artists.clear()
-        albums.clear()
+        turns.withLock { dropMemory() }
     }
 
-    // [subject]'s lines kept, null for none: in the table while it is used, else in memory.
-    private suspend fun read(subject: LanguageSubject): List<EvidenceDraft>? =
-        if (inTable()) {
+    // [subject]'s lines kept, null for none: in the [table], else in memory.
+    private suspend fun read(
+        subject: LanguageSubject,
+        table: Boolean,
+    ): List<EvidenceDraft>? =
+        if (table) {
             kept.get(partOf(subject), keyOf(subject))?.let { KeptDrafts.decode(it.value) }
         } else {
             memoryOf(subject).get(keyOf(subject))
         }
 
-    // Keeps [lines] for [subject]: in the table while it is used, else in memory, unless *Clear
-    // history* came since the work began.
+    // Keeps [lines] for [subject]: in the [table], else in memory, unless *Clear history* came since
+    // the work began.
     private suspend fun write(
         subject: LanguageSubject,
         lines: List<EvidenceDraft>,
+        table: Boolean,
     ) {
-        if (inTable()) {
+        if (table) {
             kept.keep(partOf(subject), keyOf(subject), KeptDrafts.encode(lines))
         } else {
             epoch.ifCurrent(currentCoroutineContext()) { memoryOf(subject).put(keyOf(subject), lines) }
         }
     }
 
-    // Whether the table is used now: it keeps, and *Keep what sources said about each artist* is on.
-    // Then the memory is dropped, so a value is never kept in both.
+    // Whether the table is used now, with [turns] held: it keeps, and *Keep what sources said about
+    // each artist* is on. Then the memory is dropped, so a value is never kept in both.
     private suspend fun inTable(): Boolean {
         val table = kept.persists && keeps()
-        if (table) forget()
+        if (table) dropMemory()
         return table
+    }
+
+    private suspend fun dropMemory() {
+        artists.clear()
+        albums.clear()
     }
 
     private fun memoryOf(subject: LanguageSubject): Lru<String, List<EvidenceDraft>> =
