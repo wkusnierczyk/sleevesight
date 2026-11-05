@@ -28,14 +28,28 @@ fun interface AlbumLookup {
     suspend fun lookup(query: AlbumQuery): AlbumFound
 
     /**
+     * Whether a web search for an album may be made here (#935): an engine with its key, which
+     * [AlbumQuery.web] still has to ask for. Its evidence is gathered again when this changes
+     * (`ItemInsights.searchesWeb`), as the artist's is when its lookup comes or goes. None by default.
+     */
+    val searchesWeb: Boolean get() = false
+
+    /**
      * The album's web lines (#885), for a write of its insight only: those kept from an earlier
      * search, or found by a search made now, a paid one, and kept; null when no search may be made
      * ([AlbumQuery.web] off, or no engine) or it failed, when nothing is kept. [sent] is told each
      * time a request goes out to the engine, what is paid for, whatever comes back: not for lines
-     * kept, nor for an album the search cannot check, which sends nothing. None by default.
+     * kept, nor for an album the search cannot check, which sends nothing. [mayPay] is asked after
+     * any wait (the kept lines read, another write's search of the album), right before the request
+     * goes out: when it says no, nothing is sent or kept, and null is given (#935, as
+     * `ArtistWebLookup.search`). [keeping] is told the lines a search made now found, right before
+     * they are kept (not lines kept earlier), so its caller claims the key they give before another
+     * track can gather them (#935). None by default.
      */
     suspend fun searchWeb(
         query: AlbumQuery,
+        mayPay: () -> Boolean = { true },
+        keeping: (List<EvidenceDraft>) -> Unit = {},
         sent: () -> Unit = {},
     ): List<EvidenceDraft>? = null
 

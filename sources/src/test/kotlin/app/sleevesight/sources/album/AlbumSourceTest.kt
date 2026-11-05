@@ -11,7 +11,9 @@ import app.sleevesight.core.resolution.WdEntity
 import app.sleevesight.core.resolution.WikidataLookup
 import app.sleevesight.core.sources.AlbumFound
 import app.sleevesight.core.sources.AlbumQuery
+import app.sleevesight.core.sources.ArtistPart
 import app.sleevesight.core.sources.ArtistResults
+import app.sleevesight.core.sources.KeptPart
 import app.sleevesight.core.testing.MemoryArtistResults
 import app.sleevesight.net.NetClient
 import app.sleevesight.net.NetError
@@ -190,7 +192,7 @@ class AlbumSourceTest {
         lastFm: LastFmAlbumInfo? = null,
         web: AlbumWebSearch? = null,
         kept: MemoryArtistResults = MemoryArtistResults(),
-        webKept: MemoryArtistResults? = null,
+        webKept: ArtistResults? = null,
         groups: Groups = Groups(mapOf("rg-sundown" to sundown.copy(releaseIds = listOf("rel-1", "rel-2")))),
     ) = AlbumSource(
         groups,
@@ -543,6 +545,58 @@ class AlbumSourceTest {
             gate.complete(Unit)
             assertTrue(checkNotNull(second.await()).isNotEmpty())
             assertEquals(2, web.asked.size)
+        }
+
+    @Test
+    fun `a gate closed while the kept lines are read sends nothing and keeps nothing`() =
+        runTest {
+            val reading = CompletableDeferred<Unit>()
+            val store = MemoryArtistResults()
+            // The table the web's lines are kept in, its read held until [reading] completes.
+            val held =
+                object : ArtistResults by store {
+                    override suspend fun get(
+                        part: ArtistPart,
+                        key: String,
+                    ): KeptPart? {
+                        reading.await()
+                        return store.get(part, key)
+                    }
+                }
+            val web = Web()
+            val source = source(web = web, webKept = held)
+            var open = true
+            var sent = 0
+            val search = async { source.searchWeb(query, { open }) { sent++ } }
+            repeat(3) { yield() }
+            // The app left, or web search switched off, during the read.
+            open = false
+            reading.complete(Unit)
+            assertNull(search.await())
+            assertTrue(web.asked.isEmpty())
+            assertEquals(0, sent)
+            assertTrue(store.keys(AlbumSource.WEB_PART).isEmpty())
+            // Open again: the next write searches.
+            open = true
+            assertTrue(checkNotNull(source.searchWeb(query, { open }) { sent++ }).isNotEmpty())
+            assertEquals(1, sent)
+        }
+
+    @Test
+    fun `the lines a search found are given to the caller before they are kept, not lines kept`() =
+        runTest {
+            val webKept = MemoryArtistResults()
+            val source = source(web = Web(), webKept = webKept)
+            val given = mutableListOf<List<EvidenceDraft>>()
+            val found =
+                source.searchWeb(query, keeping = { lines ->
+                    // Not kept yet: another track's lookup would not find them before the caller's claim.
+                    assertTrue(webKept.keys(AlbumSource.WEB_PART).isEmpty())
+                    given += lines
+                })
+            assertEquals(listOf(checkNotNull(found)), given)
+            source.searchWeb(query, keeping = { given += it })
+            assertEquals(1, given.size)
         }
 
     @Test

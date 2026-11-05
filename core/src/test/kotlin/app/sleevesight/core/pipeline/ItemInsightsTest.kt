@@ -32,6 +32,7 @@ import kotlin.test.assertIs
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.ZERO
 import kotlin.time.Duration.Companion.seconds
@@ -78,17 +79,27 @@ class ItemInsightsTest {
             return AlbumFound(lines + searched.orEmpty(), webDue = web != null && query.web && searched == null)
         }
 
+        override val searchesWeb: Boolean get() = web != null
+
+        // As `AlbumSource`'s: the gate asked right before the request, the lines given before they are kept.
         override suspend fun searchWeb(
             query: AlbumQuery,
+            mayPay: () -> Boolean,
+            keeping: (List<EvidenceDraft>) -> Unit,
             sent: () -> Unit,
-        ): List<EvidenceDraft>? {
-            if (web == null || !query.web) return null
-            return kept ?: web.also {
-                searches++
-                sent()
-                kept = it
+        ): List<EvidenceDraft>? =
+            when {
+                web == null || !query.web -> null
+                kept != null -> kept
+                !mayPay() -> null
+                else ->
+                    web.also {
+                        searches++
+                        sent()
+                        keeping(it)
+                        kept = it
+                    }
             }
-        }
     }
 
     // A track of Sundown: its own song lines, then the artist's, as the sources give them.
@@ -516,6 +527,35 @@ class ItemInsightsTest {
             assertNull(items.searched(InsightItem.ALBUM, next, webOn, again))
             assertEquals(1, web.searches)
             assertEquals(1, provider.requests.size)
+        }
+
+    @Test
+    fun `the album's search is refused when its gate closes, and the key its lines give is reserved first`() =
+        runTest {
+            val web = FakeAlbums(web = listOf(webLine))
+            val items = ItemInsights(AiAccess(provider, Secret("k")), cache, JvmHasher, names, albums = web)
+            val off = webOn.copy(enabledSources = webOn.enabledSources - SourceSwitch.WEB)
+            // Eligibility, in what the evidence is gathered for: web search on and a lookup that can search.
+            assertTrue(items.searchesWeb(InsightItem.ALBUM, webOn))
+            assertFalse(items.searchesWeb(InsightItem.ALBUM, off))
+            val noEngine = ItemInsights(AiAccess(provider, Secret("k")), cache, JvmHasher, names, albums = FakeAlbums())
+            assertFalse(noEngine.searchesWeb(InsightItem.ALBUM, webOn))
+
+            val track = track("Sundown", listOf(line(SourceId.MUSICBRAINZ, "It runs three minutes.")))
+            val gathered = checkNotNull(items.evidence(InsightItem.ALBUM, track, webOn))
+            assertSame(ItemSearch.Refused, items.search(InsightItem.ALBUM, track, webOn, gathered, mayPay = { false }))
+            assertEquals(0, web.searches)
+
+            val reserved = mutableListOf<CardKey>()
+            val found =
+                assertIs<ItemSearch.Found>(
+                    items.search(InsightItem.ALBUM, track, webOn, gathered, reserve = { key ->
+                        reserved += key
+                        true
+                    }),
+                )
+            assertEquals(1, web.searches)
+            assertEquals(listOf(items.key(InsightItem.ALBUM, track, found.evidence, webOn)), reserved)
         }
 
     @Test

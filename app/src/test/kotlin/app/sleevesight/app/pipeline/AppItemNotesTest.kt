@@ -167,34 +167,66 @@ class AppItemNotesTest {
             assertEquals(0, provider.requestsFor("the song's own story"))
         }
 
-    // An album with a web search (#885): its lookups give the web's line once a search kept it.
-    private inner class WebAlbums : AlbumLookup {
+    // An album with a web search (#885): its lookups give the web's line once a search kept it. With
+    // no [engine] (Exa's key not given), no search, as `AlbumSource` without one; with [free] none,
+    // nothing but the web's line.
+    private inner class WebAlbums(
+        private val engine: Boolean = true,
+        private val free: Boolean = true,
+    ) : AlbumLookup {
         var searches = 0
         var kept: List<EvidenceDraft>? = null
         private val web = HomeFixtures.draft(SourceId.WEB, "Sundown topped the Billboard 200.", scope = Scope.WEB)
+
+        // While set, a search's read of the kept lines waits for it.
+        var reading: CompletableDeferred<Unit>? = null
+
+        // While set, a search that kept its lines waits for it before it returns.
+        var returning: CompletableDeferred<Unit>? = null
+
+        override val searchesWeb: Boolean get() = engine
 
         override suspend fun lookup(query: AlbumQuery): AlbumFound {
             albumLookups++
             gathering?.await()
             val lines =
-                listOf(HomeFixtures.draft(SourceId.WIKIPEDIA, "Sundown is his tenth album.", scope = Scope.RELEASE))
-            return AlbumFound(lines + kept.orEmpty(), webDue = query.web && kept == null)
+                listOf(
+                    HomeFixtures.draft(SourceId.WIKIPEDIA, "Sundown is his tenth album.", scope = Scope.RELEASE),
+                ).takeIf { free }.orEmpty()
+            return AlbumFound(lines + kept.orEmpty(), webDue = query.web && engine && kept == null)
         }
 
-        // As `AlbumSource`'s: none with web search off; a request sent only when nothing is kept.
+        // As `AlbumSource`'s: none with web search off; a request sent only when nothing is kept, and
+        // only while [mayPay] says so after the read; the lines given to [keeping] before they are kept.
         override suspend fun searchWeb(
             query: AlbumQuery,
+            mayPay: () -> Boolean,
+            keeping: (List<EvidenceDraft>) -> Unit,
             sent: () -> Unit,
-        ): List<EvidenceDraft>? =
-            if (!query.web) {
-                null
-            } else {
-                kept ?: listOf(web).also {
-                    searches++
-                    sent()
-                    kept = it
-                }
+        ): List<EvidenceDraft>? {
+            val may = query.web && engine
+            if (may) reading?.await()
+            return when {
+                !may -> null
+                kept != null -> kept
+                !mayPay() -> null
+                else -> searched(keeping, sent)
             }
+        }
+
+        // The search's request sent, its lines given to [keeping], kept, then returned.
+        private suspend fun searched(
+            keeping: (List<EvidenceDraft>) -> Unit,
+            sent: () -> Unit,
+        ): List<EvidenceDraft> {
+            searches++
+            sent()
+            return listOf(web).also {
+                keeping(it)
+                kept = it
+                returning?.await()
+            }
+        }
     }
 
     // The parts, with [albums] gathering the album's evidence.
@@ -358,6 +390,116 @@ class AppItemNotesTest {
             advanceUntilIdle()
             assertEquals(0, web.searches)
             assertEquals(0, provider.requests)
+        }
+
+    @Test
+    fun `an album opened before Exa's key was given is searched for once it is`() =
+        runTest {
+            withAlbums(WebAlbums(engine = false))
+            val notes = notes()
+            val first = track(HomeFixtures.sundown)
+            assertEquals(ItemShown.Offered, notes.settled(first, InsightItem.ALBUM))
+
+            // The key given: the parts rebuilt with the album's web search; its next write searches.
+            val web = WebAlbums()
+            withAlbums(web)
+            assertEquals(ItemShown.Offered, notes.settled(first, InsightItem.ALBUM))
+            notes.write(first, InsightItem.ALBUM)
+            advanceUntilIdle()
+            assertEquals(1, web.searches)
+            assertEquals(1, provider.requests)
+            assertTrue("Sundown topped the Billboard 200." in provider.prompts.single())
+        }
+
+    @Test
+    fun `an album with nothing to write from before Exa's key was given is searched for once it is`() =
+        runTest {
+            withAlbums(WebAlbums(engine = false, free = false))
+            val notes = notes()
+            val first = track(HomeFixtures.sundown)
+            notes.write(first, InsightItem.ALBUM)
+            advanceUntilIdle()
+            val none = notes.item(first, InsightItem.ALBUM).first { it is ItemShown.Shown } as ItemShown.Shown
+            assertEquals(InsightState.NoEvidence, none.state)
+            assertEquals(0, provider.requests)
+
+            // The key given: gathered again, a search due; the earlier "nothing to write from" stands for none.
+            val web = WebAlbums(free = false)
+            withAlbums(web)
+            assertEquals(ItemShown.Offered, notes.settled(first, InsightItem.ALBUM))
+            notes.write(first, InsightItem.ALBUM)
+            advanceUntilIdle()
+            assertEquals(1, web.searches)
+            assertEquals(1, provider.requests)
+            assertTrue((notes.settled(first, InsightItem.ALBUM) as ItemShown.Shown).state is InsightState.Written)
+        }
+
+    // An album's write, its search's read of the kept lines held until [then] has changed what it may do.
+    private fun TestScope.albumReadHeld(then: () -> Unit): AppItemNotes {
+        val web = WebAlbums()
+        withAlbums(web)
+        val notes = notes()
+        val reading = CompletableDeferred<Unit>()
+        web.reading = reading
+        notes.write(track(HomeFixtures.sundown), InsightItem.ALBUM)
+        advanceUntilIdle()
+        then()
+        reading.complete(Unit)
+        advanceUntilIdle()
+        assertEquals(0, web.searches)
+        assertEquals(0, paid.searches)
+        assertEquals(0, provider.requests)
+        assertEquals(null, web.kept)
+        return notes
+    }
+
+    @Test
+    fun `the gate closed while the album's kept lines are read makes no search, and the album is offered again`() =
+        runTest {
+            val notes = albumReadHeld { open = false }
+            assertEquals(
+                ItemShown.Offered,
+                notes.item(track(HomeFixtures.sundown), InsightItem.ALBUM).first { it !is ItemShown.Gathering },
+            )
+        }
+
+    @Test
+    fun `web search switched off while the album's kept lines are read makes no search`() =
+        runTest {
+            albumReadHeld {
+                settings.value = settings.value?.let { it.copy(enabledSources = it.enabledSources - SourceSwitch.WEB) }
+            }
+        }
+
+    @Test
+    fun `another track asking while the album's search keeps its lines makes no second write`() =
+        runTest {
+            val web = WebAlbums()
+            withAlbums(web)
+            val notes = notes()
+            val returning = CompletableDeferred<Unit>()
+            web.returning = returning
+            val first = track(HomeFixtures.sundown)
+            notes.write(first, InsightItem.ALBUM)
+            advanceUntilIdle()
+            // The lines kept, the write not yet on their key: the next track gathers them and asks.
+            assertEquals(1, web.searches)
+            val next = track(HomeFixtures.carefree)
+            notes.write(next, InsightItem.ALBUM)
+            advanceUntilIdle()
+            assertEquals(0, provider.requests)
+
+            returning.complete(Unit)
+            advanceUntilIdle()
+            assertEquals(1, provider.requests)
+            assertEquals(1, web.searches)
+            assertEquals(QuestionCost(searches = 1, calls = 1), paid)
+            assertTrue((notes.settled(first, InsightItem.ALBUM) as ItemShown.Shown).state is InsightState.Written)
+            assertTrue((notes.settled(next, InsightItem.ALBUM) as ItemShown.Shown).state is InsightState.Written)
+            // The first write ends answered, with the search and the call; the next asked for nothing.
+            val ended = events.filterIsInstance<PipelineEvent.AiEnded>().single()
+            assertEquals(AiOutcome.ANSWERED, ended.outcome)
+            assertEquals(QuestionCost(searches = 1, calls = 1), ended.cost)
         }
 
     @Test
