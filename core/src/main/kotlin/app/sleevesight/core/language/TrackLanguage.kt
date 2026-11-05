@@ -23,6 +23,7 @@ object TrackLanguage {
      * for English or none. A script that names its language alone, with no other written in it
      * (Hangul, Tamil), decides without asking any.
      */
+    @Suppress("RedundantSuspendModifier") // It calls the hints, suspend lambdas, which the rule misses.
     suspend fun find(
         names: List<String>,
         recorded: List<suspend () -> List<Language>>,

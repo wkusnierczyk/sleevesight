@@ -63,7 +63,11 @@ class ExaLanguageSearch(
             } else {
                 null
             }
-        val response = (fetched as? NetResult.Success)?.value
+        val response =
+            when (fetched) {
+                is NetResult.Success -> fetched.value
+                is NetResult.Failure, null -> null
+            }
         val found = response?.let { linesOf(query, native, it) }
         val lines = found?.lines.orEmpty().map { it.marked(query.language) }
         val outcome =
