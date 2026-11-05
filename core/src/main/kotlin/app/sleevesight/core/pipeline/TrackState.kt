@@ -43,6 +43,9 @@ import kotlin.time.Instant
  * @property writesWith what a model call of the run would write the insight with, from the card's
  *   key it looks up (#854): set once the run looks its card up, null before and for a run that
  *   writes none. Beside an insight kept from before, it is what *Rewrite insight* would use.
+ * @property inLanguage the search in the track's language (#902), once the run decided to make it;
+ *   null before, and for a run that makes none (English, no language found, the setting off, or
+ *   enough found in English under *If needed*). See [InLanguageState].
  */
 data class TrackState(
     val nowPlaying: NowPlaying,
@@ -57,10 +60,27 @@ data class TrackState(
     val laterAnswered: Set<LabelSource> = emptySet(),
     val genresAssembled: Boolean = false,
     val writesWith: WrittenBy? = null,
+    val inLanguage: InLanguageState? = null,
 ) {
-    /** Whether every source has landed. */
-    val gathered: Boolean get() = sources.values.none { it is SourceState.Pending }
+    /** Whether every source has landed, those searched in the track's language too (#902). */
+    val gathered: Boolean
+        get() =
+            sources.values.none { it is SourceState.Pending } &&
+                inLanguage?.sources?.values?.none { it is SourceState.Pending } != false
 }
+
+/**
+ * The search in the track's language (#902), once a run decided to make it: the [language]'s code
+ * (`Language.code`, `hi`), and each of its lookups' progress by source ([SourceId.WIKIPEDIA] for the
+ * language's Wikipedia, with Wikidata's names in it; [SourceId.WEB] for the web search in it), as
+ * [TrackState.sources] holds the English ones'. Its lines carry the language
+ * (`EvidenceDraft.language`) and join the track's evidence after the English ones, so the English
+ * ids stay as they were.
+ */
+data class InLanguageState(
+    val language: String,
+    val sources: Map<SourceId, SourceState>,
+)
 
 /**
  * How a label source's requests after the evidence stand (#772; [TrackState.laterLabels]): still

@@ -31,13 +31,18 @@ import app.sleevesight.core.normalizer.AccentFolder
 class RecordingFilter(
     private val accentFolder: AccentFolder,
 ) {
-    /** Whether a result with [title], [snippet] and [url] is about [track]. */
+    /**
+     * Whether a result with [title], [snippet] and [url] is about [track]. Without [wholeWords] (the
+     * search in a language whose script puts no spaces between words, #902: Thai, Japanese, Chinese),
+     * a name counts wherever it stands in the text, not only between word boundaries.
+     */
     fun isAbout(
         track: NormalizedTrack,
         title: String?,
         snippet: String,
         url: String,
-    ): Boolean = names(listOfNotNull(track.title, track.from), requiredArtists(track), title, snippet, url)
+        wholeWords: Boolean = true,
+    ): Boolean = names(listOfNotNull(track.title, track.from), requiredArtists(track), title, snippet, url, wholeWords)
 
     /**
      * Whether a result with [title], [snippet] and [url] is about the [album] by [artist] (#885,
@@ -55,19 +60,21 @@ class RecordingFilter(
 
     // Whether the result names each of [song] (the title, and the work it is from) and one of
     // [artists] (folded), and its title does not name such an artist without the song.
-    @Suppress("LongParameterList") // What it must name, and the result's three parts.
+    @Suppress("LongParameterList") // What it must name, the result's three parts, and how.
     private fun names(
         song: List<String>,
         artists: List<String>,
         title: String?,
         snippet: String,
         url: String,
+        wholeWords: Boolean = true,
     ): Boolean {
         if (isOwnSource(url)) return false
-        val heading = padded(title.orEmpty())
-        val text = padded("${title.orEmpty()} $snippet")
-        val phrases = song.map(::padded)
-        val required = artists.map { " $it " }
+        val words: (String) -> String = if (wholeWords) ::padded else ::fold
+        val heading = words(title.orEmpty())
+        val text = words("${title.orEmpty()} $snippet")
+        val phrases = song.map(words)
+        val required = artists.map { if (wholeWords) " $it " else it }
         val namesSong = phrases.none { it.isBlank() } && phrases.all { it in text }
         val namesArtist = required.any { it in text }
         val titledAfterOther = required.any { it in heading } && !phrases.all { it in heading }

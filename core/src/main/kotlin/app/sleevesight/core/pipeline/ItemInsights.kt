@@ -164,7 +164,8 @@ class ItemInsights(
 
     /**
      * The evidence of [track]'s own run under [settings], as the run assembles it: the player's
-     * release line and each source's result, of the sources [settings] switch on now; null before
+     * release line and each source's result, with those of the search in the track's language
+     * (#902), of the sources [settings] switch on now; null before
      * every source answered. Not [TrackState.evidence], which Home may show from an earlier card, kept
      * from before, in place of the run's, and which a source switched off since still holds.
      */
@@ -174,7 +175,9 @@ class ItemInsights(
     ): EvidenceSet? {
         if (!track.gathered || track.evidence == null) return null
         val results = track.sources.values.mapNotNull { (it as? SourceState.Done)?.result }
-        val drafts = playerLines(track.nowPlaying, clock.now()) + results.flatMap { it.evidence }
+        // With what the search in the track's language found (#902), after the English lines, as the run has them.
+        val drafts =
+            playerLines(track.nowPlaying, clock.now()) + results.flatMap { it.evidence } + track.languageDrafts()
         return EvidenceSet.of(drafts.filter { settings.isEnabled(it.source) }, hasher)
     }
 
@@ -337,7 +340,16 @@ class ItemInsights(
 
     // [line] as a draft, to be numbered again.
     private fun draftOf(line: EvidenceLine): EvidenceDraft =
-        EvidenceDraft(line.source, line.scope, line.text, line.url, line.retrievedAt, line.aggregate, line.about)
+        EvidenceDraft(
+            line.source,
+            line.scope,
+            line.text,
+            line.url,
+            line.retrievedAt,
+            line.aggregate,
+            line.about,
+            line.language,
+        )
 
     // Each of [lines]' ids whose line is in [own], the track's evidence, by its id there.
     private fun matching(

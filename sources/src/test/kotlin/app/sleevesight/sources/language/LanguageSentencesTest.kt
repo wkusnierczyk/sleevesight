@@ -1,0 +1,75 @@
+package app.sleevesight.sources.language
+
+import kotlin.test.Test
+import kotlin.test.assertEquals
+
+/** The sentences of a lead in the track's language (#902), cut at its script's sentence ends. */
+class LanguageSentencesTest {
+    // Hindi Wikipedia's lead of "Tum Hi Ho", as its extract gives it (CC BY-SA 4.0), fetched 2026-11-05.
+    private val tumHiHo =
+        "तुम ही हो 2013 की सुपरहिट फिल्म आशिकी 2 का एक सुपरहिट गाना हैं। आशिकी 2 का यह गाना फिल्म के लिए " +
+            "अरिजीत सिंह ने गाया है। इस गाने को गीतकार संगीतकार मिथुन ने लिखा हैं।"
+
+    @Test
+    fun `a danda ends a Devanagari sentence before a space and a letter`() {
+        assertEquals(
+            listOf(
+                "तुम ही हो 2013 की सुपरहिट फिल्म आशिकी 2 का एक सुपरहिट गाना हैं।",
+                "आशिकी 2 का यह गाना फिल्म के लिए अरिजीत सिंह ने गाया है।",
+                "इस गाने को गीतकार संगीतकार मिथुन ने लिखा हैं।",
+            ),
+            LanguageSentences.split(tumHiHo),
+        )
+    }
+
+    @Test
+    fun `the first sentence and those naming a subject are quoted, at most three`() {
+        val lead = "$tumHiHo यह 2013 का गाना था। तुम ही हो का संगीत मिथुन का है। तुम ही हो लोकप्रिय हुआ।"
+        assertEquals(
+            listOf(
+                "तुम ही हो 2013 की सुपरहिट फिल्म आशिकी 2 का एक सुपरहिट गाना हैं।",
+                "तुम ही हो का संगीत मिथुन का है।",
+                "तुम ही हो लोकप्रिय हुआ।",
+            ),
+            LanguageSentences.of(lead, listOf("तुम ही हो")),
+        )
+    }
+
+    @Test
+    fun `an ideographic full stop needs no space after it`() {
+        assertEquals(
+            listOf("「夜に駆ける」は、YOASOBIの楽曲。", "2019年に配信された。"),
+            LanguageSentences.split("「夜に駆ける」は、YOASOBIの楽曲。2019年に配信された。"),
+        )
+    }
+
+    @Test
+    fun `a Latin full stop ends a sentence before a capital, not after an initial or before a lower case letter`() {
+        assertEquals(
+            listOf("Evidências é uma canção de J. Augusto, etc. gravada em 1989.", "Foi um sucesso."),
+            LanguageSentences.split("Evidências é uma canção de J. Augusto, etc. gravada em 1989. Foi um sucesso."),
+        )
+    }
+
+    @Test
+    fun `Hangul, which has no case, starts a sentence after a full stop`() {
+        assertEquals(
+            listOf("《BE》는 방탄소년단의 앨범이다.", "2020년에 발매되었다."),
+            LanguageSentences.split("《BE》는 방탄소년단의 앨범이다. 2020년에 발매되었다."),
+        )
+    }
+
+    @Test
+    fun `a tail without an end is dropped, and a sentence never ends inside a quotation`() {
+        assertEquals(listOf("यह “एक। दो” गाना है।"), LanguageSentences.split("यह “एक। दो” गाना है। और यह"))
+    }
+
+    @Test
+    fun `a sentence longer than the most quoted is left out, but for nothing else`() {
+        val long = "आ".repeat(301) + "।"
+        assertEquals(
+            listOf("तुम ही हो गाना है।"),
+            LanguageSentences.of("$long तुम ही हो गाना है।", listOf("तुम ही हो")),
+        )
+    }
+}

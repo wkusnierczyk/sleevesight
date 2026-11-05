@@ -24,18 +24,22 @@ import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WebEngine
 import app.sleevesight.core.sources.AlbumLookup
 import app.sleevesight.core.sources.ArtistResults
+import app.sleevesight.core.sources.LanguageSearch
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.WebSearcher
 import app.sleevesight.net.NetClient
 import app.sleevesight.sources.album.AlbumSource
 import app.sleevesight.sources.art.ArtFetcher
 import app.sleevesight.sources.art.ArtResult
+import app.sleevesight.sources.language.LanguageSources
+import app.sleevesight.sources.language.LanguageWikipedia
 import app.sleevesight.sources.lastfm.LastFmAdapter
 import app.sleevesight.sources.lastfm.LastFmAlbums
 import app.sleevesight.sources.lastfm.LastFmTags
 import app.sleevesight.sources.musicbrainz.MusicBrainzClient
 import app.sleevesight.sources.musicbrainz.MusicBrainzSource
 import app.sleevesight.sources.web.ExaAlbumSearch
+import app.sleevesight.sources.web.ExaLanguageSearch
 import app.sleevesight.sources.web.ExaPageSearch
 import app.sleevesight.sources.web.ExaWebSearch
 import app.sleevesight.sources.wikidata.WikidataClient
@@ -239,6 +243,27 @@ class PipelineWiring internal constructor(
      */
     fun web(engines: Map<WebEngine, Secret>): SourceAdapter? =
         engines[WebEngine.EXA]?.let { ExaWebSearch(net, it, accentFolder) }
+
+    /**
+     * The search in the track's language (#902, `PipelineParts.languageSearch`): the language's
+     * Wikipedia, with Wikidata's names in it and its identity check, and the web search in it through
+     * the [engines] given, each with its key ([ExaLanguageSearch]), or none without one. The
+     * pipeline reads *Search in the track's language* and each source's switch for each track.
+     * Wikidata's genres only with [genres], as [wikipedia]'s.
+     */
+    fun languageSearch(
+        engines: Map<WebEngine, Secret>,
+        genres: Boolean = true,
+    ): LanguageSearch {
+        val check = IdentityCheck(WikidataClient(net), names, genres)
+        return LanguageSources(
+            WikidataClient(net),
+            check,
+            musicBrainz,
+            wikipedia = LanguageWikipedia(net, check),
+            web = engines[WebEngine.EXA]?.let { ExaLanguageSearch(net, it, accentFolder) },
+        )
+    }
 
     /**
      * *AI web search*'s searches (#801, `PipelineParts.webSearch`) through the [engines] given, each

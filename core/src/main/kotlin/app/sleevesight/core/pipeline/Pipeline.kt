@@ -11,6 +11,7 @@ import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.sources.AlbumLookup
+import app.sleevesight.core.sources.LanguageSearch
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.WebSearcher
@@ -64,9 +65,11 @@ class AiAccess(
  * gathers the evidence for an album's insight under *Key insights* (#522, [ItemInsights]), or none
  * (the CLI), when the album's insight has nothing to be written from. [modelUnavailable] when there
  * is no [ai] because the selected service's model is found unavailable (#540): nothing is written,
- * but the key insight kept is still read and shown (#911, `InsightWriter`).
+ * but the key insight kept is still read and shown (#911, `InsightWriter`). [languageSearch] looks the
+ * track up in the language it is sung in, when not English (#902, [LanguageSearch]), or none (no
+ * such search).
  */
-@Suppress("LongParameterList") // Eleven independent stages, and why one is missing; the last eight are optional.
+@Suppress("LongParameterList") // Twelve independent stages, and why one is missing; the last nine are optional.
 class PipelineParts(
     val normalizer: Normalizer,
     val adapters: List<SourceAdapter>,
@@ -80,6 +83,7 @@ class PipelineParts(
     val webSearch: WebSearcher? = null,
     val albums: AlbumLookup? = null,
     val modelUnavailable: Boolean = false,
+    val languageSearch: LanguageSearch? = null,
 ) {
     init {
         require(adapters.map { it.id }.distinct().size == adapters.size) { "One adapter per source" }

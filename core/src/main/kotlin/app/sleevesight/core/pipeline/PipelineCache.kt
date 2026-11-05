@@ -4,6 +4,7 @@ import app.sleevesight.core.ai.ReasoningEffort
 import app.sleevesight.core.evidence.Hasher
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.ProviderId
+import app.sleevesight.core.sources.LanguageAdapter
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.SourceResult
 import app.sleevesight.core.synthesis.CardKind
@@ -39,6 +40,27 @@ interface PipelineCache {
         duration: Duration?,
         result: SourceResult,
     )
+
+    /**
+     * What [adapter], a lookup in the track's language (#902), gave for [track] at [duration] in
+     * [language] (`Language.code`), if kept and current: kept apart from the English lookups' results,
+     * under a key that holds the language. By default none, where the cache keeps no such results.
+     */
+    suspend fun result(
+        adapter: LanguageAdapter,
+        language: String,
+        track: NormalizedTrack,
+        duration: Duration?,
+    ): SourceResult? = null
+
+    /** Keeps what [adapter] gave for [track] at [duration] in [language]; by default nothing. */
+    suspend fun keep(
+        adapter: LanguageAdapter,
+        language: String,
+        track: NormalizedTrack,
+        duration: Duration?,
+        result: SourceResult,
+    ) = Unit
 
     /** The card written for [key], if kept. */
     suspend fun card(key: CardKey): String?

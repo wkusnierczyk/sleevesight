@@ -99,6 +99,30 @@ sealed interface PipelineEvent {
         val cached: Boolean,
     ) : PipelineEvent
 
+    /**
+     * The run looked for the language the track is sung in, for the search in it (#902,
+     * `TrackLanguage`): [language]'s code, or null for English or none found, when nothing is
+     * searched in another language.
+     */
+    data class LanguageFound(
+        override val key: String,
+        val language: String?,
+    ) : PipelineEvent
+
+    /**
+     * A lookup in the track's [language] (#902) landed, from the network or, when [cached], the
+     * retrieval cache: [source]'s lookup in that language, as [SourceLanded] tells an English one.
+     */
+    data class LanguageLanded(
+        override val key: String,
+        val language: String,
+        val source: SourceId,
+        val outcome: Outcome,
+        val evidence: Int,
+        val latency: Duration,
+        val cached: Boolean,
+    ) : PipelineEvent
+
     /** An adapter threw; [reason] is the exception's type. */
     data class SourceFailed(
         override val key: String,

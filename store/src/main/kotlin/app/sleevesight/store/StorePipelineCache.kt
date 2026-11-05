@@ -8,6 +8,7 @@ import app.sleevesight.core.pipeline.KeptCard
 import app.sleevesight.core.pipeline.OtherCard
 import app.sleevesight.core.pipeline.PipelineCache
 import app.sleevesight.core.pipeline.RewritePart
+import app.sleevesight.core.sources.LanguageAdapter
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.SourceResult
 import kotlinx.coroutines.currentCoroutineContext
@@ -62,6 +63,47 @@ class StorePipelineCache(
             }
         if (RetrievalCodec.aboutArtists(result)) keeping.ifOn { put() } else put()
     }
+
+    override suspend fun result(
+        adapter: LanguageAdapter,
+        language: String,
+        track: NormalizedTrack,
+        duration: Duration?,
+    ): SourceResult? {
+        keeping.retryClear()
+        return withContext(io) {
+            caches.retrieval.get(adapter.id, languageKey(track, duration, language), adapter.extractionVersion)?.result
+        }?.takeUnless { RetrievalCodec.aboutArtists(it) && !keeping.on }
+    }
+
+    override suspend fun keep(
+        adapter: LanguageAdapter,
+        language: String,
+        track: NormalizedTrack,
+        duration: Duration?,
+        result: SourceResult,
+    ) {
+        val work = currentCoroutineContext()
+        val key = languageKey(track, duration, language)
+        val put =
+            suspend {
+                epoch.ifCurrent(work) {
+                    withContext(io) {
+                        caches.retrieval.put(adapter.id, key, adapter.extractionVersion, result, adapter.consults)
+                    }
+                }
+            }
+        if (RetrievalCodec.aboutArtists(result)) keeping.ifOn { put() } else put()
+    }
+
+    // The retrieval key of a lookup in the track's language (#902): the track's, then the language's
+    // code past a line break, so it never meets the English lookup's entry (whose parts are
+    // length-prefixed, so none starts with one) nor another language's.
+    private fun languageKey(
+        track: NormalizedTrack,
+        duration: Duration?,
+        language: String,
+    ): String = caches.retrieval.keyOf(track, duration) + "\n" + LANGUAGE + language
 
     override suspend fun card(key: CardKey): String? = withContext(io) { caches.synthesis.get(key.toStore())?.text }
 
@@ -138,5 +180,6 @@ class StorePipelineCache(
     private companion object {
         const val BY_ID = "mb:"
         const val BY_NAME = "name:"
+        const val LANGUAGE = "language:"
     }
 }

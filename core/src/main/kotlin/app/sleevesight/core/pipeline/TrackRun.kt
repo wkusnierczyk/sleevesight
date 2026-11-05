@@ -149,6 +149,8 @@ internal class TrackRun(
             publish(state.value)
             withContext(if (looksAgain) FreshLookups else EmptyCoroutineContext) {
                 gather()
+                // In the track's language (#902), before the evidence is assembled: the insight waits for it.
+                InLanguage(parts, input, control, guard, this@TrackRun) { state.value }.search()
                 control.gathered(Gathered(state.value.sources, state.value.resolution))
                 // Published as asked for with the assembled genres, before they may start (#772): a
                 // panel says it is still looking.
@@ -331,8 +333,14 @@ internal class TrackRun(
     private fun assemble(): EvidenceSet {
         val results =
             parts.adapters.mapNotNull { (state.value.sources[it.id] as? SourceState.Done)?.result }
+        // The lines found in the track's language after the English ones (#902), so the English ids stay.
         val drafts =
-            playerLines() + results.flatMap { it.evidence }.filter { settings.isEnabled(it.source) }
+            playerLines() +
+                (results.flatMap { it.evidence } + state.value.languageDrafts()).filter {
+                    settings.isEnabled(
+                        it.source,
+                    )
+                }
         val evidence = EvidenceSet.of(drafts, parts.hasher)
         // The genres and how their later requests stand, in one update with the evidence (#772).
         update {
