@@ -333,7 +333,7 @@ class AiSearchAnswers(
         const val MARKUP: String = "<>[]`*#|"
 
         // A link or a web address: a scheme, `www.`, or a name under a common top-level domain.
-        internal val ADDRESS = Regex("""(?i)\b[a-z][a-z0-9+.-]*://|\bwww\.|\b[a-z0-9-]+\.(com|org|net|io|info)\b""")
+        private val ADDRESS = Regex("""(?i)\b[a-z][a-z0-9+.-]*://|\bwww\.|\b[a-z0-9-]+\.(com|org|net|io|info)\b""")
 
         // Whether [text] has a link, a web address, or a mark of [MARKUP].
         private fun linksOrMarks(text: String): Boolean = text.any { it in MARKUP } || ADDRESS.containsMatchIn(text)
@@ -464,7 +464,7 @@ private fun explanationIn(
         answer
             .text("explanation")
             ?.let(::oneLine)
-            ?.takeIf { it.length <= AiSearchAnswers.EXPLANATION_MAX && !AiSearchAnswers.ADDRESS.containsMatchIn(it) }
+            ?.takeIf { it.length <= AiSearchAnswers.EXPLANATION_MAX && !EXPLANATION_ADDRESS.containsMatchIn(it) }
     val byId = sources.associateBy { it.id }
     val grounded =
         text?.let { (GroundingCheck.check(it, byId.keys, allowModel = false) as? InsightReply.Written)?.grounded }
@@ -473,6 +473,19 @@ private fun explanationIn(
     val backed = sentences.any { it.status == SentenceStatus.OK }
     return if (grounded == null || !backed) null else SearchAnswer.Explanation(grounded, pages)
 }
+
+/**
+ * A link or a web address in an explanation (#908): a scheme (`https://`), `www.`, or a bare domain,
+ * any labels before a top-level domain of two or more lowercase letters (`songfacts.co.uk`,
+ * `Genius.com`). Not a stop before a space (`Vol. 2`, `St. Louis`), initials or abbreviations whose
+ * last part is one letter (`U.S.`, `e.g.`), a number (`3.5`), nor a capital after a stop with no space
+ * (`St.Louis`). A genre's definition keeps its own check ([AiSearchAnswers], `ADDRESS`).
+ */
+private val EXPLANATION_ADDRESS: Regex =
+    run {
+        val label = """[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?"""
+        Regex("""(?i:\b[a-z][a-z0-9+.-]*://|\bwww\.)|\b$label(?:\.$label)*\.[a-z]{2,}\b""")
+    }
 
 // The string at [key], trimmed, when it is one and not blank.
 private fun JsonObject.text(key: String): String? =

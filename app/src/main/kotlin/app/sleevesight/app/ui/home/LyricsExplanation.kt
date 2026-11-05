@@ -14,7 +14,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
@@ -26,16 +25,12 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.em
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.theme.LinkLabel
 import app.sleevesight.app.ui.theme.TextPart
@@ -61,12 +56,8 @@ internal fun AiExplanation(answer: SearchAnswer.Explanation) {
     val uris = LocalUriHandler.current
     val resources = LocalResources.current
     val colours = MaterialTheme.colorScheme
-    val styles =
-        ExplainStyles(
-            chip = chip(colours.secondaryContainer, colours.onSecondaryContainer),
-            missing = chip(colours.errorContainer, colours.onErrorContainer),
-            flagged = SpanStyle(color = colours.onSurfaceVariant, fontStyle = FontStyle.Italic),
-        )
+    val chips = citeStyles()
+    val flagged = SpanStyle(color = colours.onSurfaceVariant, fontStyle = FontStyle.Italic)
     val byId = remember(answer) { answer.pages.associateBy { it.id } }
     val sentences = answer.grounded.paragraphs.flatten()
     val runs = remember(answer) { sentences.zip(shown(sentences.map { it.text })) }
@@ -76,7 +67,7 @@ internal fun AiExplanation(answer: SearchAnswer.Explanation) {
             " ",
         ) { (sentence, parts) -> spokenSentence(sentence, parts, byId, uncited, resources) }
     Text(
-        explanationText(runs, byId, styles) { open(uris, it) },
+        explanationText(runs, byId, chips, flagged) { id -> byId[id]?.let { open(uris, it.url) } },
         style = MaterialTheme.typography.bodyLarge,
         modifier =
             Modifier.testTag(LYRICS_EXPLANATION_TAG).semantics {
@@ -101,29 +92,18 @@ internal fun AiExplanation(answer: SearchAnswer.Explanation) {
     }
 }
 
-// How the explanation's text is set: a citation of a page given, one of none, a doubtful sentence.
-private class ExplainStyles(
-    val chip: SpanStyle,
-    val missing: SpanStyle,
-    val flagged: SpanStyle,
-)
-
-// A citation's chip, as an insight's are.
-private fun chip(
-    background: Color,
-    foreground: Color,
-) = SpanStyle(color = foreground, fontSize = CITE_SIZE, fontWeight = FontWeight.Medium, background = background)
-
 // Whether [sentence] is shown dimmed: no page backs it.
 private fun doubtful(sentence: CheckedSentence): Boolean =
     sentence.status == SentenceStatus.UNCITED || sentence.status == SentenceStatus.UNKNOWN
 
-// The sentences' [runs] as shown: a doubtful one dimmed, each citation of a page in [byId] a chip
-// that opens it ([open]), any other a chip in the error colours.
+// The sentences' [runs] as shown: a doubtful one dimmed ([flagged]), each citation of a page in
+// [byId] a chip as the insight's ([appendCite], in [chips]) whose tap runs [open] with its id,
+// any other a missing one's.
 private fun explanationText(
     runs: List<Pair<CheckedSentence, List<ShownRun>>>,
     byId: Map<String, CitedPage>,
-    styles: ExplainStyles,
+    chips: CiteStyles,
+    flagged: SpanStyle,
     open: (String) -> Unit,
 ): AnnotatedString =
     buildAnnotatedString {
@@ -138,18 +118,12 @@ private fun explanationText(
                                 fontWeight = if (part.bold) FontWeight.Bold else null,
                             )
                         withStyle(
-                            if (doubtful(sentence)) styles.flagged.merge(marked) else marked,
+                            if (doubtful(sentence)) flagged.merge(marked) else marked,
                         ) { append(part.text) }
                     }
                     is ShownRun.Cite -> {
-                        val page = byId[part.id]
-                        if (page == null) {
-                            withStyle(styles.missing) { append(" ${part.id} ") }
-                        } else {
-                            withLink(LinkAnnotation.Url(page.url, TextLinkStyles(styles.chip)) { open(page.url) }) {
-                                append(" ${part.id} ")
-                            }
-                        }
+                        val kind = if (part.id in byId) CiteKind.LINE else CiteKind.UNKNOWN
+                        appendCite(part.id, part.id, kind, chips, open)
                     }
                 }
             }
@@ -243,7 +217,6 @@ const val LYRICS_PAGES_CITED_TAG: String = "lyrics-explanation:pages"
 /** The test tag of the cited page with [id] ("S1") under the explanation. */
 fun lyricsCitedPageTag(id: String): String = "lyrics-explanation:page:$id"
 
-private val CITE_SIZE = 0.8.em
 private val ID_WIDTH = 28.dp
 private val SPACES = Regex("\\s+")
 private val SPACE_BEFORE_STOP = Regex(" ([.,;:!?])")

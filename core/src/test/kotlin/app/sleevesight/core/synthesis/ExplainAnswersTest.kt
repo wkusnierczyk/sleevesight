@@ -80,6 +80,34 @@ class ExplainAnswersTest {
     }
 
     @Test
+    fun anyBareDomainIsAnAddressButOrdinaryProseIsNot() {
+        val addresses =
+            listOf(
+                "See songfacts.co.uk for its meaning. [S1]",
+                "Genius.com reads it as a farewell. [S1]",
+                "An interview on music-mag.example says so. [S1]",
+                "It is told at www.example for fans. [S1]",
+                "It is at ftp://example for fans. [S1]",
+                "The band's site, band.fm, says so. [S1]",
+            )
+        for (text in addresses) {
+            assertEquals(SearchReading.NothingUsable, read("""{"explanation": "$text"}"""), text)
+        }
+        val prose =
+            listOf(
+                "On Vol. 2 she sings of loss. [S1]",
+                "It charted in the U.S. after the tour. [S1]",
+                "It names trees, e.g. the oak, as lasting. [S1]",
+                "It runs 3.5 minutes and is about loss. [S1]",
+                "She wrote it in St. Louis about loss. [S1]",
+                "She wrote it in St.Louis about loss. [S1]",
+                "It is about loss, i.e. a farewell. [S1]",
+                "She waited... and then left. [S1]",
+            )
+        for (text in prose) assertIs<SearchReading.Found>(read("""{"explanation": "$text"}"""), text)
+    }
+
+    @Test
     fun aReplyOnSeveralLinesIsReadOnOne() {
         val found = explanation("{\"explanation\": \"It is a farewell. [S1]\\n\\nThe oak lasts. [S2]\"}")
         assertEquals(1, found.grounded.paragraphs.size)
