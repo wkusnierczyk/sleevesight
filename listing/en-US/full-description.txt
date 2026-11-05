@@ -2,14 +2,14 @@ Sleevesight shows short insights about the music you are playing on your phone: 
 
 HOW IT WORKS
 • Track. Sleevesight follows what your music player is playing, through the player's Android media session. It reads the title, artists, album, cover and playback state, and the queue up next. It never touches the audio.
-• Trace. It looks the track up in the sources you switch on: MusicBrainz, Wikipedia and Wikidata, Last.fm and Exa web search, and for a track sung in another language, Wikipedia and the web in that language. A match that fails an identity check is never used.
+• Trace. It looks the track up in the sources you switch on: MusicBrainz, Wikipedia and Wikidata, Last.fm and Exa web search, and, when needed, Wikipedia and the web in a track's language. A match that fails an identity check is never used.
 • Tell. Your AI service turns what the sources found into a few sentences, each citing its evidence. The app then checks its citations: a sentence without a source, or citing evidence that does not exist, is flagged. With the AI model's own knowledge on (off by default), the model may add what it knows, marked unverified. When the sources give nothing to write from, Sleevesight says so and makes no AI call, unless the model's own knowledge is on.
 
 ON SCREEN
 • The cover, title, artists, album and year of first release, in colors taken from the cover.
 • Genre labels from the artists' tags, each saying where it came from.
 • The insight, whose citations jump to their evidence.
-• Under it, the song, the artist and the album, each with an insight of its own, written when you open it (or tap Write). With web search on, the web fills in for an artist or album the sources miss.
+• Under it, the song, the artist and the album, each with an insight of its own, written when you open it (or tap Write). With Exa on, the web fills in for an album the sources miss, and with AI web search, for an artist.
 • The lines each source gave, linked to where they were found, what could not be verified, and a note when a source needs your key or could not be reached.
 
 WORKS WITH YOUR PLAYER
