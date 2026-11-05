@@ -108,10 +108,10 @@ class TrackLanguageTest {
     fun `a stronger hint recording English alone settles it, whatever a weaker hint records`() =
         runTest {
             // English lyrics on a film's soundtrack whose tracklist MusicBrainz records as Hindi.
-            assertNull(find("Main Hoon Na", "Artist", lyrics = listOf("eng"), releases = listOf("hin")))
+            assertEquals("en", find("Main Hoon Na", "Artist", lyrics = listOf("eng"), releases = listOf("hin")))
             assertEquals(listOf("lyrics"), asked)
             asked.clear()
-            assertNull(find("Main Hoon Na", "Artist", wikidata = listOf("eng"), releases = listOf("hin")))
+            assertEquals("en", find("Main Hoon Na", "Artist", wikidata = listOf("eng"), releases = listOf("hin")))
             assertEquals(listOf("lyrics", "wikidata"), asked)
             // A hint that records nothing, or no known language, settles nothing.
             assertEquals("hi", find("Main Hoon Na", "Artist", lyrics = listOf("zxx"), releases = listOf("hin")))
@@ -128,9 +128,10 @@ class TrackLanguageTest {
         }
 
     @Test
-    fun `English, no linguistic content and nothing recorded are no language`() =
+    fun `English is told apart from no language, and no linguistic content or nothing recorded is none`() =
         runTest {
-            assertNull(find("Sundown", "Gordon Lightfoot", lyrics = listOf("eng")))
+            // English, told apart from none: no search either way.
+            assertEquals("en", find("Sundown", "Gordon Lightfoot", lyrics = listOf("eng")))
             assertNull(find("Sundown", "Gordon Lightfoot", lyrics = listOf("zxx"), wikidata = listOf("mul", "und")))
             // A Polish track with no recorded language: its letters are Latin, so nothing names it.
             assertNull(find("Kocham cię, kochanie moje", "Maanam"))

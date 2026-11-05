@@ -478,6 +478,44 @@ class PipelineLanguageTest {
         }
 
     @Test
+    fun `a look again whose hints now name English searches nothing, the language before not kept`() =
+        runTest {
+            val pipeline = pipeline()
+            val first = pipeline.play(bollywood)
+            assertEquals("hi", first.inLanguage?.language)
+            val gathered = Gathered(first.sources, first.resolution, inLanguage = first.inLanguage)
+            resolver.resolution = bollywood.resolution.copy(lyrics = WorkLyrics(languages = listOf("eng")))
+            val again =
+                pipeline.run(
+                    bollywood.nowPlaying,
+                    RunControl.Unattended(false),
+                    lookAgain = LookAgain(gathered),
+                )
+            assertNull(again.inLanguage)
+            assertEquals(listOf(1, 1), listOf(wikipedia.queries.size, web.queries.size), "nothing searched again")
+        }
+
+    @Test
+    fun `a Retry of another source keeps an unreachable lookup in the language as it was, asking it nothing`() =
+        runTest {
+            web.down = true
+            val pipeline = pipeline()
+            val first = pipeline.play(bollywood)
+            val gathered = Gathered(first.sources, first.resolution, inLanguage = first.inLanguage)
+            web.down = false
+            val again =
+                pipeline.run(
+                    bollywood.nowPlaying,
+                    RunControl.Unattended(false),
+                    again = gathered.asking(setOf(SourceId.WIKIPEDIA)),
+                )
+            assertEquals(1, web.queries.size, "the web search in the language not asked again")
+            assertEquals(1, wikipedia.queries.size)
+            val kept = again.inLanguage!!.sources.getValue(SourceId.WEB) as SourceState.Done
+            assertEquals(Outcome.Unreachable, kept.result.outcome)
+        }
+
+    @Test
     fun `a run asking again keeps the lookups in the language that found something and asks the others again`() =
         runTest {
             web.down = true

@@ -98,8 +98,11 @@ internal class InLanguage(
     ) {
         val before = state()
         val (resolution, made) = before.resolution?.let { it to (it.outcome != Outcome.Unreachable) } ?: resolve()
-        // A run asking or looking again keeps the language the run before named, when its hints now name none.
-        val language = language(search, before, resolution) ?: earlier?.language?.let(Languages::ofCode)
+        // A run asking or looking again keeps the language the run before named when its hints now
+        // name none; not when they name English, which is no search.
+        val language =
+            (language(search, before, resolution) ?: earlier?.language?.let(Languages::ofCode))
+                ?.takeUnless { it == Languages.ENGLISH }
         sink.emit(PipelineEvent.LanguageFound(key, language?.code))
         if (language == null) return
         val pending = adapters.associate { it.id to SourceState.Pending }
@@ -121,8 +124,8 @@ internal class InLanguage(
     }
 
     // What a run asking again (#192) keeps of the run before's lookups in [language], as it does the
-    // English ones (`TrackRun`): every lookup that found something, but those it asks again
-    // ([Gathered.languageAsked]: unreachable, or provisional).
+    // English ones (`TrackRun`): every lookup but those it asks again ([Gathered.languageAsked]:
+    // unreachable, or provisional, all of them or those a *Retry* names), each as it landed.
     private fun keptBefore(
         adapters: List<LanguageAdapter>,
         language: Language,
@@ -134,10 +137,14 @@ internal class InLanguage(
                 ?.takeIf { it.language == language.code }
                 ?.sources
                 .orEmpty()
+        val asked = again?.languageAsked.orEmpty()
+        // One unreachable or provisional that a *Retry* of another source does not ask stays so.
+        val failed = again?.languageRetryable.orEmpty()
         return adapters
-            .filter { again != null && it.id !in again.languageAsked }
-            .mapNotNull { adapter -> before[adapter.id]?.takeIf(TrackRun::keeps)?.let { adapter to it } }
-            .toMap()
+            .filter { again != null && it.id !in asked }
+            .mapNotNull { adapter ->
+                before[adapter.id]?.takeIf { TrackRun.keeps(it) || adapter.id in failed }?.let { adapter to it }
+            }.toMap()
     }
 
     // The resolution, for a track whose sources all came from the cache: made now, if MusicBrainz is on.

@@ -21,10 +21,11 @@ package app.sleevesight.core.language
 object TrackLanguage {
     /**
      * The language of a track named [names] (its title first, then its artists), from the
-     * [recorded] languages, each list asked for only when the ones before it have not decided; null
-     * for English or none. A script that names its language alone, with no other written in it
-     * (Hangul, Tamil), decides without asking any. Without a script, a hint recording English only
-     * decides too, for no search; with one, the script outweighs it.
+     * [recorded] languages, each list asked for only when the ones before it have not decided. A
+     * script that names its language alone, with no other written in it (Hangul, Tamil), decides
+     * without asking any. Without a script, a hint recording English only decides too:
+     * [Languages.ENGLISH], no search, told apart from null, when nothing names a language at all;
+     * with a script, the script outweighs it.
      */
     @Suppress("RedundantSuspendModifier") // It calls the hints, suspend lambdas, which the rule misses.
     suspend fun find(
@@ -49,7 +50,8 @@ object TrackLanguage {
                 }
             settled = found != null || (script == null && languages.isNotEmpty())
         }
-        return if (alone) own else found ?: own
+        // Settled with nothing found: a hint without a script recorded English alone.
+        return if (alone) own else found ?: if (settled) Languages.ENGLISH else own
     }
 
     /**

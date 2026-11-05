@@ -528,17 +528,25 @@ data class CoordinatorState(
     /**
      * What a decision for nothing to narrate that would have written leaves (#192): the
      * [settings] it was made under, and the sources [unreachable] then, against which a run that
-     * asks again measures new evidence, however many replacements came between.
+     * asks again measures new evidence, however many replacements came between; and, apart, the
+     * lookups in the track's language unreachable or provisional then ([inLanguage], #902,
+     * `Gathered.languageRetryable`).
      */
     data class WouldWrite(
         val settings: WriteSettings,
         val unreachable: Set<SourceId>,
+        val inLanguage: Set<SourceId> = emptySet(),
     ) {
-        /** Whether [gathered] holds lines from a source unreachable when the decision was made. */
+        /**
+         * Whether [gathered] holds lines from a source unreachable when the decision was made, or
+         * from a lookup in the track's language that failed then.
+         */
         fun brought(gathered: Gathered?): Boolean =
-            unreachable.any { source ->
-                (gathered?.sources?.get(source) as? SourceState.Done)?.result?.evidence?.isNotEmpty() == true
-            }
+            unreachable.any { source -> lines(gathered?.sources?.get(source)) } ||
+                inLanguage.any { source -> lines(gathered?.inLanguage?.sources?.get(source)) }
+
+        private fun lines(state: SourceState?): Boolean =
+            (state as? SourceState.Done)?.result?.evidence?.isNotEmpty() == true
     }
 
     /**
@@ -590,7 +598,9 @@ data class CoordinatorState(
      * holds no report and is never current again, and its reports to the ledger are ignored, so
      * it cannot bring its track back; a report of its track that returns gets a run, and a
      * decision, of its own. [gathered] is what its sources ended with, once every one has landed;
-     * [lookedUp] the network's [returns] when its lookups were granted; [again] whether it asks
+     * [lookedUp] the network's [returns] when its lookups were first granted (its second grant, for
+     * the search in the track's language, #902, leaves it, so a return between the two still asks
+     * the English sources again); [again] whether it asks
      * again the sources its run before found unreachable (#192). [keepsTap] while such a run has not
      * decided and a run it replaced, itself or one before it, offered Write: a tap shown for that
      * run is kept ([tapped]), through further replacements, and answers its question as a tap.
@@ -1616,9 +1626,10 @@ class PipelineCoordinator(
                 stands() &&
                 state.current?.id == run.id
         val unreachable = run.gathered?.unreachable.orEmpty()
+        val inLanguage = run.gathered?.languageRetryable.orEmpty()
         return when {
             recorded.written -> null
-            first -> CoordinatorState.WouldWrite(settings, unreachable).takeIf { writes }
+            first -> CoordinatorState.WouldWrite(settings, unreachable, inLanguage).takeIf { writes }
             else -> before?.wouldWrite?.takeIf { run.again && it.settings == settings }
         }
     }
@@ -1664,7 +1675,7 @@ class PipelineCoordinator(
         val run = state.current ?: return
         if (!state.allowed) return
         run.asked.forEach { effects += CoordinatorEffect.Grant(run.id, it) }
-        val lookedUp = if (RunStep.LOOKUPS in run.asked) state.returns else run.lookedUp
+        val lookedUp = if (RunStep.LOOKUPS in run.asked) run.lookedUp ?: state.returns else run.lookedUp
         var next = run.copy(asked = emptySet(), lookedUp = lookedUp)
         val writesOn = run.insight
         if (writesOn != null) {

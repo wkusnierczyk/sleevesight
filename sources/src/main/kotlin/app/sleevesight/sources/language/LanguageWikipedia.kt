@@ -34,7 +34,8 @@ import kotlin.time.TimeSource
  * at its script's sentence ends ([LanguageSentences]), each linking its article on the language's
  * host and marked with the language (`EvidenceDraft.language`); Wikipedia's lines (`W`), numbered
  * after the English ones. In order: the song's (its scope as the check gave it), the works' (release,
- * about the work by its English name), then each artist's (artist, about the artist the track
+ * about the work by its English name, the sentences chosen by the work's name alone, so they are the
+ * same whichever of its songs plays), then each artist's (artist, about the artist the track
  * credits). No Wikidata line: the English lookup templates those already.
  *
  * Outcomes: the song's scope when its article gave lines, [Outcome.SongArticle] for a work's alone,
@@ -94,7 +95,9 @@ class LanguageWikipedia(
         val songPage = song?.let { (article, scope) -> Page(article, scope, listOfNotNull(items.song?.label, title)) }
         val works =
             items.comes.mapNotNull { work ->
-                work.article?.let { Page(it, Scope.RELEASE, listOfNotNull(work.label, title), about = work.name) }
+                // By the work's name alone, never the song's: the album's insight takes these lines, the
+                // same whichever of its tracks is playing.
+                work.article?.let { Page(it, Scope.RELEASE, listOfNotNull(work.label), about = work.name) }
             }
         val artists =
             items.artists.mapNotNull { (credited, artist) ->

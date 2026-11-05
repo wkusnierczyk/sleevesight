@@ -1,11 +1,13 @@
 package app.sleevesight.sources.language
 
+import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.language.Languages
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.platform.JvmAccentFolder
+import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.resolution.IdentityCheck
 import app.sleevesight.core.resolution.NameMatcher
 import app.sleevesight.core.resolution.Wd
@@ -188,5 +190,32 @@ class LanguageWikipediaTest {
                     .url!!
                     .startsWith("https://ta.wikipedia.org/wiki/"),
             )
+        }
+
+    @Test
+    fun `a work's sentences do not depend on the song playing, so its album's fingerprint does not either`() =
+        runTest {
+            // The film's name in the first and last sentences; one song's alone in the third.
+            val lead =
+                "आशिक़ी 2 2013 की फ़िल्म है। इसका संगीत मिथुन ने दिया। तुम ही हो इसका एक गाना है। " +
+                    "आशिक़ी 2 सफल रही।"
+            val net =
+                RoutedNet { request ->
+                    """{"query":{"pages":[{"title":"${request.query["titles"]}","extract":"$lead"}]}}"""
+                }
+            val adapter =
+                LanguageWikipedia(net, IdentityCheck(FakeWikidata(emptyMap()), NameMatcher(JvmAccentFolder)), clock)
+            val film = LanguageItems(comes = listOf(LocalName("Q4662712", "आशिक़ी 2", "आशिक़ी 2", "Aashiqui 2")))
+
+            suspend fun releaseOf(title: String): EvidenceSet {
+                val query = LanguageQuery(normalizer.normalize(title, "Artist"), Resolution.NONE, hindi)
+                val lines = adapter.lookup(query, film).evidence.filter { it.scope == Scope.RELEASE }
+                return EvidenceSet.of(lines, JvmHasher)
+            }
+            val one = releaseOf("तुम ही हो")
+            val other = releaseOf("सुन रहा है")
+            assertEquals(listOf("आशिक़ी 2 2013 की फ़िल्म है।", "आशिक़ी 2 सफल रही।"), one.lines.map { it.text })
+            assertEquals(one.lines.map { it.text }, other.lines.map { it.text })
+            assertEquals(one.fingerprint, other.fingerprint)
         }
 }
