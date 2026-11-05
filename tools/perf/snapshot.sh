@@ -40,9 +40,10 @@ take() {
   echo "android=$(adb shell getprop ro.build.version.release | tr -d '\r')"
   echo "sdk=$(adb shell getprop ro.build.version.sdk | tr -d '\r')"
   echo "build=$(adb shell getprop ro.build.display.id | tr -d '\r')"
+  # The uid is `userId=` up to Android 16, `appId=` from 17; both are written as `userId=`.
   adb shell dumpsys package "$package" | tr -d '\r' |
-    grep -E '^ +(userId|versionCode|versionName|firstInstallTime|lastUpdateTime)=' |
-    sed -E 's/^ +//; s/ .*//' | head -5
+    grep -E '^ +(userId|appId|versionCode|versionName|firstInstallTime|lastUpdateTime)=' |
+    sed -E 's/^ +//; s/ .*//; s/^appId=/userId=/' | head -5
   echo "uptime_ms=$(adb shell cat /proc/uptime | tr -d '\r' | awk '{printf "%d", $1 * 1000}')"
 } >"$out/meta.txt"
 
