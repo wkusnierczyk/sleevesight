@@ -780,9 +780,10 @@ class ItemInsights(
 
     // The lines in the track's language for [subject]'s evidence (#902, #939), from the sources
     // [settings] switch on: those [found] on this track kept for it, each language's only while none is
-    // kept, then every language's kept for it ([languageLines]), with those found here that are not
-    // among them after (a store that throws, or the language's kept lines differ), as the same source,
-    // scope and text. None under *Off*. Without [languageLines] (the CLI, tests), those found here.
+    // kept, then every language's kept for it ([languageLines]), with those found here in a language
+    // none is kept in after (a store that throws). A language kept gives its kept lines alone, even
+    // where this track found others, so every track of the artist or album gives the same. None
+    // under *Off*. Without [languageLines] (the CLI, tests), those found here.
     private suspend fun inLanguage(
         subject: LanguageSubject?,
         found: List<EvidenceLine>,
@@ -800,8 +801,8 @@ class ItemInsights(
                 }
                 attempt { lookup.kept(subject) }.orEmpty()
             }
-        val keptLines = kept.mapTo(mutableSetOf()) { Triple(it.source, it.scope, it.text) }
-        val more = drafts.filter { Triple(it.source, it.scope, it.text) !in keptLines }
+        val keptIn = kept.mapNotNullTo(mutableSetOf()) { it.language }
+        val more = drafts.filter { it.language !in keptIn }
         return (kept + more).filter { settings.isEnabled(it.source) }
     }
 

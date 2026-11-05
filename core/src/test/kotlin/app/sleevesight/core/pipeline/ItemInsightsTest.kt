@@ -502,12 +502,13 @@ class ItemInsightsTest {
                 listOf("ゴードン・ライトフットは歌手である。", "고든 라이트풋은 가수이다."),
                 kept.kept(gordon).map { it.text },
             )
-            assertTrue(bothLines.containsAll(kept.kept(gordon).map { it.text } + "고든 라이트풋은 캐나다의 가수이다."))
 
-            // A track searched in no language takes what was kept, after its source's English lines.
+            // A track searched in no language takes what was kept, after its source's English lines; so
+            // does one that found other lines in a language kept: the same lines on every track.
             val plain = texts(items.evidence(InsightItem.ARTIST, track("Rainy Day People", songLines), settings))
             val (wikipedia, lastFm) = ARTIST_LINES.partition { it.source == SourceId.WIKIPEDIA }
             assertEquals((wikipedia + kept.kept(gordon) + lastFm).map { it.text }, plain)
+            assertEquals(plain, bothLines)
 
             // Off: none, and nothing more is kept.
             val off = settings.copy(trackLanguageSearch = TrackLanguageSearch.OFF)
