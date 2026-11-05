@@ -6,7 +6,10 @@ import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.resolution.Lookup
 import app.sleevesight.core.resolution.NameMatcher
+import app.sleevesight.core.sources.ArtistPart
+import app.sleevesight.core.sources.ArtistResults
 import app.sleevesight.core.sources.ArtistWebQuery
+import app.sleevesight.core.sources.KeptPart
 import app.sleevesight.core.testing.MemoryArtistResults
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
@@ -56,12 +59,12 @@ class ArtistWebSourceTest {
             val source = ArtistWebSource(web, names, kept)
             assertNull(source.kept(artist))
             var sent = 0
-            val found = checkNotNull(source.search(artist) { sent++ })
+            val found = checkNotNull(source.search(artist, { sent++ }))
             assertEquals(1, sent)
             assertEquals(setOf("mb:mb-sachdev"), kept.keys(ArtistWebSource.PART))
             assertEquals(found, source.kept(artist))
             // Found again with no search, its request not told.
-            assertEquals(found, source.search(artist) { sent++ })
+            assertEquals(found, source.search(artist, { sent++ }))
             assertEquals(1, web.asked.size)
             assertEquals(1, sent)
             // With no id, by the name folded.
@@ -93,6 +96,41 @@ class ArtistWebSourceTest {
             }
             // No engine: no search, nothing kept.
             assertNull(ArtistWebSource(null, names).search(ArtistWebQuery("Someone Else", null)))
+        }
+
+    @Test
+    fun `a gate closed while the kept lines are read sends nothing and keeps nothing`() =
+        runTest {
+            val reading = CompletableDeferred<Unit>()
+            val store = MemoryArtistResults()
+            // The artist-level table, its read held until [reading] completes.
+            val held =
+                object : ArtistResults by store {
+                    override suspend fun get(
+                        part: ArtistPart,
+                        key: String,
+                    ): KeptPart? {
+                        reading.await()
+                        return store.get(part, key)
+                    }
+                }
+            val web = Web()
+            val source = ArtistWebSource(web, names, held)
+            var open = true
+            var sent = 0
+            val search = async { source.search(artist, { sent++ }) { open } }
+            repeat(3) { yield() }
+            // The app left, or web search switched off, during the read.
+            open = false
+            reading.complete(Unit)
+            assertNull(search.await())
+            assertTrue(web.asked.isEmpty())
+            assertEquals(0, sent)
+            assertTrue(store.keys(ArtistWebSource.PART).isEmpty())
+            // Open again: the next write searches.
+            open = true
+            assertTrue(checkNotNull(source.search(artist, { sent++ }) { open }).isNotEmpty())
+            assertEquals(1, sent)
         }
 
     @Test

@@ -54,9 +54,18 @@ class ArtistWebSource(
     override suspend fun search(
         artist: ArtistWebQuery,
         sent: () -> Unit,
+        mayPay: () -> Boolean,
     ): List<EvidenceDraft>? =
         web?.let { engine ->
-            searching.once(keyOf(artist)) { kept(artist) ?: searched(engine, artist, sent) }
+            try {
+                searching.once(keyOf(artist)) { kept(artist) ?: searched(engine, artist, sent, mayPay) }
+            } catch (
+                @Suppress("SwallowedException") e: NotPaid,
+            ) {
+                // Its gate closed after the waits: nothing sent, nothing kept; a write waiting for this
+                // one searches, or reads, itself.
+                null
+            }
         }
 
     override suspend fun keep(
@@ -77,11 +86,14 @@ class ArtistWebSource(
     }
 
     // What [engine] finds for [artist], none included, kept; null when it failed, and nothing is kept.
+    // [mayPay] is asked right before the request, with no suspension between; closed, [NotPaid].
     private suspend fun searched(
         engine: ArtistWebSearch,
         artist: ArtistWebQuery,
         sent: () -> Unit,
+        mayPay: () -> Boolean,
     ): List<EvidenceDraft>? {
+        if (!mayPay()) throw NotPaid()
         val found =
             when (val answer = engine.search(artist.name, sent)) {
                 is Lookup.Found -> answer.value
@@ -95,6 +107,9 @@ class ArtistWebSource(
     // The artist's key: its MusicBrainz id, else its name folded, as its card's entity is keyed.
     private fun keyOf(artist: ArtistWebQuery): String =
         artist.mbid?.let { "mb:$it" } ?: "name:${names.key(artist.name)}"
+
+    // A search its caller's gate refused right before the request (#912's review).
+    private class NotPaid : Exception("not paid")
 
     companion object {
         /**

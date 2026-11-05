@@ -75,8 +75,10 @@ class ArtistWebInsightsTest {
         override suspend fun search(
             artist: ArtistWebQuery,
             sent: () -> Unit,
+            mayPay: () -> Boolean,
         ): List<EvidenceDraft>? =
             kept[artist] ?: run {
+                if (!mayPay()) return null
                 searches++
                 sent()
                 found?.also { kept[artist] = it }
@@ -159,7 +161,7 @@ class ArtistWebInsightsTest {
 
             // The write's search: the web's lines are the artist's, under another key, its request told.
             var sent = 0
-            val searched = items.search(InsightItem.ARTIST, first, settings, gathered) { sent++ }
+            val searched = items.search(InsightItem.ARTIST, first, settings, gathered, sent = { sent++ })
             val found = assertIs<ItemSearch.Found>(searched).evidence
             assertEquals(1, artistWeb.searches)
             assertEquals(1, sent)
@@ -238,6 +240,21 @@ class ArtistWebInsightsTest {
             artistWeb.found = listOf(WEB_LINE)
             assertIs<ItemSearch.Found>(items.search(InsightItem.ARTIST, track, webOn(), evidence))
             assertEquals(2, artistWeb.searches)
+        }
+
+    @Test
+    fun `once, a gate closed after the lookup's waits makes no search, refused rather than failed`() =
+        runTest {
+            val items = items(written)
+            val track = track()
+            val evidence = checkNotNull(items.evidence(InsightItem.ARTIST, track, webOn()))
+            var sent = 0
+            val search = items.search(InsightItem.ARTIST, track, webOn(), evidence, { sent++ }) { false }
+            assertSame(ItemSearch.Refused, search)
+            assertEquals(0, artistWeb.searches)
+            assertEquals(0, sent)
+            assertTrue(artistWeb.kept.isEmpty())
+            assertTrue(checkNotNull(items.evidence(InsightItem.ARTIST, track, webOn())).webDue)
         }
 
     @Test

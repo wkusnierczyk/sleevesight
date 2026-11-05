@@ -186,6 +186,8 @@ private sealed interface WebStep {
     ) : WebStep
 
     data object Failed : WebStep
+
+    data object Refused : WebStep
 }
 
 /**
@@ -842,10 +844,11 @@ class AppItemNotes(
             )
         }
 
-        // Its call not made, the gates closed: not asked, unless its web search was paid for, when it
-        // ends, with that cost, as stopped.
+        // Its call not made, the gates closed: not asked, unless a web search or a call was paid for
+        // (the AI service's own searches stopped after its first call, #912), when it ends, with that
+        // cost, as stopped.
         fun notAsked() {
-            if (cost.searches > 0) {
+            if (cost.searches > 0 || cost.calls > 0) {
                 end(AiOutcome.STOPPED)
             } else {
                 started = null
@@ -872,6 +875,8 @@ class AppItemNotes(
             null -> searchingWrite(insights, key, asked, job, counted) ?: Next(key, asked, null)
             WebStep.Failed ->
                 Next(key, asked, AiOutcome.FAILED, shown = InsightState.Failed(AiSearches.WEB_SEARCH_FAILED))
+            // Its gates closed after the waits, before the search's request: not asked, offered again.
+            WebStep.Refused -> Next(key, asked, null, notAsked = true)
             is WebStep.Found -> moved(insights, key, asked.with(step.evidence), step.key, job, null)
         }
     }
@@ -977,6 +982,13 @@ class AppItemNotes(
         return parts.value?.let(::insightsOf)?.searchesItself(asked.item, asked.evidence, now) == true
     }
 
+    // Whether [asked]'s item may still have a web search under the settings and the parts now (#912):
+    // *AI web search* not switched off, nor its engine's key removed, since the write began.
+    private fun searchesWebNow(asked: Asked): Boolean {
+        val now = settings.value ?: return false
+        return parts.value?.let(::insightsOf)?.searchesWeb(asked.item, now) == true
+    }
+
     // [to] claimed beside [from], with the Stop of [job], unless it is being written already; [from]
     // itself is claimed already.
     private fun reserve(
@@ -1048,13 +1060,15 @@ class AppItemNotes(
             val current = parts.value?.let(::insightsOf)
             val found =
                 if (now != null && current != null) {
-                    current.search(asked.item, asked.track, now, asked.evidence) { counted(QuestionCost.SEARCH) }
+                    val gate = { mayCall(key, asked) && searchesWebNow(asked) }
+                    current.search(asked.item, asked.track, now, asked.evidence, { counted(QuestionCost.SEARCH) }, gate)
                 } else {
                     ItemSearch.None
                 }
             when (found) {
                 ItemSearch.None -> null
                 ItemSearch.Failed -> WebStep.Failed
+                ItemSearch.Refused -> WebStep.Refused
                 is ItemSearch.Found ->
                     now?.let { current?.key(asked.item, asked.track, found.evidence, it) }?.let { next ->
                         WebStep.Found(next, found.evidence)

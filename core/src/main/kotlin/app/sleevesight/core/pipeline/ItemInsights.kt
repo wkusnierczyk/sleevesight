@@ -70,6 +70,9 @@ sealed interface ItemSearch {
     /** The artist's search failed: nothing is kept, and it is due again at the next write. */
     data object Failed : ItemSearch
 
+    /** The artist's search was not made: its gate closed after the waits, before the request. */
+    data object Refused : ItemSearch
+
     /** The item's [evidence] with the lines its search found, or an earlier one kept. */
     class Found(
         val evidence: ItemEvidence,
@@ -382,18 +385,22 @@ class ItemInsights(
      *   times* with a service whose client takes no tools), the app's own search for the artist
      *   ([ArtistWebLookup.search]), [ItemSearch.Failed] when it fails, which keeps nothing. Under *Up
      *   to 3 times*, [ItemSearch.None]: the AI service searches itself while it writes ([writeSearching]).
+     *   [mayPay] is asked after the lookup's waits (its kept lines read, another write's search),
+     *   right before the request: closed, none is sent, and [ItemSearch.Refused] (#912's review).
      */
+    @Suppress("LongParameterList") // The item, what it is searched for from and under, and its gates.
     suspend fun search(
         item: InsightItem,
         track: TrackState,
         settings: Settings,
         evidence: ItemEvidence,
         sent: () -> Unit = {},
+        mayPay: () -> Boolean = { true },
     ): ItemSearch =
         when {
             !evidence.webDue -> ItemSearch.None
             item == InsightItem.ALBUM -> albumSearch(track, settings, evidence, sent)
-            item == InsightItem.ARTIST -> artistSearch(track, settings, evidence, sent)
+            item == InsightItem.ARTIST -> artistSearch(track, settings, evidence, sent, mayPay)
             else -> ItemSearch.None
         }
 
@@ -411,28 +418,32 @@ class ItemInsights(
         return found?.let { withWeb(track, settings, evidence, it) }?.let(ItemSearch::Found) ?: ItemSearch.None
     }
 
-    // The artist's web lines for a write (#912), as [search] says: kept, or *Once*'s search.
+    // The artist's web lines for a write (#912), as [search] says: kept, or *Once*'s search, made only
+    // while [mayPay], asked right before its request, says so; [ItemSearch.Refused] when it did not.
     private suspend fun artistSearch(
         track: TrackState,
         settings: Settings,
         evidence: ItemEvidence,
         sent: () -> Unit,
+        mayPay: () -> Boolean,
     ): ItemSearch {
         val lookup = artistWeb
         val query = artistQuery(track)
         val way = artistWay(settings)
         if (lookup == null || query == null || way == AiWebSearch.OFF) return ItemSearch.None
+        var refused = false
         val kept = attempt { lookup.kept(query) }
         val found =
             when {
                 kept != null -> kept
                 // The AI service searches itself while it writes ([writeSearching]).
                 way == AiWebSearch.UP_TO -> null
-                else -> attempt { lookup.search(query, sent) }
+                else -> attempt { lookup.search(query, sent) { mayPay().also { if (!it) refused = true } } }
             }
         return when {
             found != null -> withWeb(track, settings, evidence, found)?.let(ItemSearch::Found) ?: ItemSearch.None
             way == AiWebSearch.UP_TO -> ItemSearch.None
+            refused -> ItemSearch.Refused
             else -> ItemSearch.Failed
         }
     }

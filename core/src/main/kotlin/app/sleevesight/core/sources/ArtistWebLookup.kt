@@ -24,10 +24,13 @@ interface ArtistWebLookup {
      * made now finds, a paid one, kept, none included; null when it failed, and nothing is kept.
      * [sent] is told right before a request goes out to the engine, what is paid for, whatever comes
      * back: not for lines kept, nor for an artist whose name cannot be checked, which sends nothing.
+     * [mayPay] is asked after any wait (the kept lines read, another write's search of the artist),
+     * right before the request goes out: when it says no, nothing is sent or kept, and null is given.
      */
     suspend fun search(
         artist: ArtistWebQuery,
         sent: () -> Unit = {},
+        mayPay: () -> Boolean = { true },
     ): List<EvidenceDraft>?
 
     /** Keeps [lines], what the AI service's own searches found for the artist (*Up to 3 times*), none included. */

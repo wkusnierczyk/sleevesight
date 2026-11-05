@@ -18,12 +18,14 @@ import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.pipeline.AiAccess
+import app.sleevesight.core.pipeline.AiOutcome
 import app.sleevesight.core.pipeline.AiSearches
 import app.sleevesight.core.pipeline.CardKey
 import app.sleevesight.core.pipeline.ClearEpoch
 import app.sleevesight.core.pipeline.InsightItem
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.PipelineCache
+import app.sleevesight.core.pipeline.PipelineEvent
 import app.sleevesight.core.pipeline.PipelineParts
 import app.sleevesight.core.pipeline.QuestionCost
 import app.sleevesight.core.pipeline.RewritePart
@@ -77,6 +79,7 @@ class AppArtistWebNotesTest {
         )
     private var open = true
     private var paid = QuestionCost()
+    private val events = mutableListOf<PipelineEvent>()
 
     // As `ArtistWebSource`'s: what a search found kept per artist; a failed one keeps nothing.
     private class Lines(
@@ -85,17 +88,24 @@ class AppArtistWebNotesTest {
         val kept = mutableMapOf<ArtistWebQuery, List<EvidenceDraft>>()
         var searches = 0
 
+        // While set, a search's read of the kept lines waits for it.
+        var reading: CompletableDeferred<Unit>? = null
+
         override suspend fun kept(artist: ArtistWebQuery): List<EvidenceDraft>? = kept[artist]
 
         override suspend fun search(
             artist: ArtistWebQuery,
             sent: () -> Unit,
-        ): List<EvidenceDraft>? =
-            kept[artist] ?: run {
+            mayPay: () -> Boolean,
+        ): List<EvidenceDraft>? {
+            reading?.await()
+            return kept[artist] ?: run {
+                if (!mayPay()) return null
                 searches++
                 sent()
                 found?.also { kept[artist] = it }
             }
+        }
 
         override suspend fun keep(
             artist: ArtistWebQuery,
@@ -178,6 +188,7 @@ class AppArtistWebNotesTest {
             NameMatcher(JvmAccentFolder),
             ClearEpoch(),
             paid = { paid += it },
+            events = { events += it },
             gate = { open },
         )
 
@@ -394,6 +405,12 @@ class AppArtistWebNotesTest {
             assertEquals(1, provider.requests)
             assertEquals(QuestionCost(calls = 1), paid)
             assertTrue(artistWeb.kept.isEmpty())
+            // The call paid for ends the question as stopped, with its cost; never "not asked".
+            val ended = events.filterIsInstance<PipelineEvent.AiEnded>().single()
+            assertEquals(AiOutcome.STOPPED, ended.outcome)
+            assertEquals(QuestionCost(calls = 1), ended.cost)
+            assertEquals(1, events.filterIsInstance<PipelineEvent.AiAsked>().size)
+            assertTrue(events.none { it is PipelineEvent.AiNotAsked })
         }
 
     @Test
@@ -407,6 +424,42 @@ class AppArtistWebNotesTest {
             assertEquals(0, pages.searches)
             assertEquals(1, provider.requests)
             assertTrue(artistWeb.kept.isEmpty())
+        }
+
+    // *Once*, with the lookup's read of the kept lines held until [then] has changed what the write may do.
+    private fun TestScope.onceReadHeld(then: () -> Unit): AppItemNotes {
+        val provider = CountingProvider().apply { reply = { "Gordon Lightfoot was a Canadian folk singer [S1]." } }
+        val notes = notes(parts(provider))
+        val reading = CompletableDeferred<Unit>()
+        artistWeb.reading = reading
+        notes.write(track(HomeFixtures.sundown), InsightItem.ARTIST)
+        advanceUntilIdle()
+        then()
+        reading.complete(Unit)
+        advanceUntilIdle()
+        assertEquals(0, artistWeb.searches)
+        assertEquals(0, paid.searches)
+        assertEquals(0, provider.requests)
+        assertTrue(artistWeb.kept.isEmpty())
+        return notes
+    }
+
+    @Test
+    fun `once, the gate closed while the kept lines are read makes no search, and the artist is offered again`() =
+        runTest {
+            val notes = onceReadHeld { open = false }
+            assertEquals(
+                ItemShown.Offered,
+                notes.item(track(HomeFixtures.sundown), InsightItem.ARTIST).first { it !is ItemShown.Gathering },
+            )
+        }
+
+    @Test
+    fun `once, Exa web search switched off while the kept lines are read makes no search`() =
+        runTest {
+            onceReadHeld {
+                settings.value = settings.value?.let { it.copy(enabledSources = it.enabledSources - SourceSwitch.WEB) }
+            }
         }
 
     @Test
