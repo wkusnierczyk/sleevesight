@@ -14,17 +14,18 @@ import app.sleevesight.core.synthesis.SearchKind
  * What the song is about, asked with web search (#908, *Explain the song*; [ExplainPrompt]): about
  * [facts], from the pages numbered in one run, `S1`, `S2` … ([ExplainPrompt.id]): first [base], the
  * track's own pages about the song ([of]), then each page a search finds that is not among them yet,
- * in the order found. *Once* searches [query] and gives every page with the question ([once]);
- * *Up to 3 times* gives [base] with the question and each search's new pages as the tool's answer
- * ([toolResult]). [sources] is then what the reply's citations are read against, and what is kept
- * with it.
+ * in the order found; a page found again keeps its id, with any passage it did not have joined
+ * to its own. *Once* searches [query] and gives every page with the question ([once]);
+ * *Up to 3 times* gives [base] with the question and, as the tool's answer, each search's new
+ * pages and the pages it gave a passage they lacked, under their ids ([toolResult]). [sources] is
+ * then what the reply's citations are read against, and what is kept with it.
  */
 internal class ExplainQuestion(
     private val facts: SearchFacts,
     base: List<WebPage>,
 ) : WebQuestion {
     // The pages numbered so far, in their order, by address.
-    private val numbered = LinkedHashMap<String, WebPage>().apply { base.forEach { putIfAbsent(it.url, it) } }
+    private val numbered = LinkedHashMap<String, WebPage>().apply { base.forEach { add(it) } }
 
     // The track's own pages, given with every prompt.
     private val given = numbered.values.toList()
@@ -36,17 +37,20 @@ internal class ExplainQuestion(
         get() = ExplainPrompt.query(facts)
 
     override fun once(pages: List<WebPage>): String {
-        pages.forEach { numbered.putIfAbsent(it.url, it) }
+        pages.forEach { numbered.add(it) }
         return ExplainPrompt.once(facts, numbered.values.toList())
     }
 
     override fun agent(limit: Int): String = ExplainPrompt.agent(facts, given, limit)
 
     override fun toolResult(pages: List<WebPage>): String {
-        val before = numbered.size
-        pages.forEach { numbered.putIfAbsent(it.url, it) }
-        val found = numbered.values.drop(before)
-        return if (found.isEmpty()) ALREADY_GIVEN else ExplainPrompt.pages(found, first = before)
+        // The pages this search added, or gave a passage they lacked, each under its id.
+        val changed = pages.filter { numbered.add(it) }.map { it.url }.toSet()
+        val found =
+            numbered.values
+                .withIndex()
+                .filter { it.value.url in changed }
+        return if (found.isEmpty()) ALREADY_GIVEN else ExplainPrompt.numberedPages(found)
     }
 
     /** The pages numbered so far, each with its id, address and title. */
@@ -54,6 +58,26 @@ internal class ExplainQuestion(
         get() = numbered.values.mapIndexed { i, page -> CitedPage(ExplainPrompt.id(i), page.url, page.title) }
 
     companion object {
+        /**
+         * Adds [page] to the pages numbered: a new address after the others; one numbered already
+         * keeps its id and title (its title from [page] if it had none), its passage joined with
+         * [page]'s where that says something more (#908: the track's own line may be about the
+         * release, a search's passage about the meaning), never the same text twice. Whether
+         * anything was added.
+         */
+        private fun MutableMap<String, WebPage>.add(page: WebPage): Boolean {
+            val had = get(page.url)
+            val merged =
+                when {
+                    had == null -> page
+                    page.text.isBlank() || page.text.trim() in had.text -> had.copy(title = had.title ?: page.title)
+                    had.text.trim() in page.text -> had.copy(title = had.title ?: page.title, text = page.text)
+                    else -> had.copy(title = had.title ?: page.title, text = had.text + " " + page.text.trim())
+                }
+            put(page.url, merged)
+            return merged.text != had?.text
+        }
+
         /** The tool's answer when every page of a search is among those given already. */
         const val ALREADY_GIVEN: String = "These pages are among the pages already given."
 

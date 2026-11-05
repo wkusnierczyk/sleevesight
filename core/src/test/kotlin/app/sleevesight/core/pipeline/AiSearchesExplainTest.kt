@@ -174,6 +174,48 @@ class AiSearchesExplainTest {
         }
 
     @Test
+    fun aPageFoundAgainKeepsItsIdWithThePassageItLackedJoinedOnce() =
+        runTest {
+            val meaning = WebPage(wikipedia, "The Black Oak – Wikipedia", "The oak stands for a love that outlasts.")
+            outcome = WebSearchOutcome.Found(listOf(meaning, found))
+            val key = checkNotNull(searches.key(track, SearchKind.EXPLAIN, settings))
+            val last =
+                searches.search(
+                    key,
+                    SearchKind.EXPLAIN,
+                    track,
+                    facts,
+                    { _, _ -> },
+                    asking = AiSearches.Asking(AiWebSearch.ONCE),
+                )
+            val prompt = provider.requests.single().prompt
+            assertEquals(1, Regex("\\[S\\d+] ${Regex.escape(wikipedia)}").findAll(prompt).count())
+            assertTrue(
+                "Text: The song is about an oak. It was released in 2009. The oak stands for a love that outlasts." in
+                    prompt,
+            )
+            // Its id and title stay; the next page is numbered on.
+            assertTrue("[S2] ${found.url}" in prompt)
+            val explanation = assertIs<SearchAnswer.Explanation>(assertIs<SearchState.Answered>(last).answer)
+            assertEquals(CitedPage("S1", wikipedia, "Wikipedia"), explanation.pages.last())
+            assertEquals(last, searches.kept(key, SearchKind.EXPLAIN, track.copy(evidence = null))?.state)
+        }
+
+    @Test
+    fun upToNGivesAPageFoundAgainUnderItsIdOnlyWithAPassageItLacked() {
+        val question = checkNotNull(ExplainQuestion.of(SearchKind.EXPLAIN, facts, evidence))
+        val meaning = WebPage(wikipedia, null, "The oak stands for a love that outlasts.")
+        val result = question.toolResult(listOf(meaning, found))
+        assertTrue("[S1] $wikipedia" in result)
+        assertTrue("Text: The song is about an oak. It was released in 2009. The oak stands for" in result)
+        assertTrue("[S2] ${found.url}" in result)
+        // The same passages again: nothing new.
+        assertEquals(ExplainQuestion.ALREADY_GIVEN, question.toolResult(listOf(meaning, found)))
+        assertEquals(listOf("S1", "S2"), question.sources.map { it.id })
+        assertEquals("Wikipedia", question.sources.first().title)
+    }
+
+    @Test
     fun noPageFoundIsNothingFoundWithNoCall() =
         runTest {
             outcome = WebSearchOutcome.Found(emptyList())

@@ -145,13 +145,19 @@ object ExplainPrompt {
     fun pages(
         found: List<WebPage>,
         first: Int = 0,
-    ): String =
+    ): String = numberedPages(found.mapIndexed { i, page -> IndexedValue(first + i, page) })
+
+    /**
+     * [found] as [pages] gives them, each numbered by its own index (from 0): for a search's answer
+     * that holds a page given before under its id, with a passage it lacked, beside new pages.
+     */
+    fun numberedPages(found: List<IndexedValue<WebPage>>): String =
         buildString {
             appendLine("<pages>")
             if (found.isEmpty()) appendLine("(none)")
-            found.forEachIndexed { i, page ->
+            found.forEachIndexed { i, (index, page) ->
                 if (i > 0) appendLine()
-                appendLine("[${id(first + i)}] ${InsightPrompt.oneLine(page.url)}")
+                appendLine("[${id(index)}] ${InsightPrompt.oneLine(page.url)}")
                 page.title?.let { appendLine("Title: ${InsightPrompt.oneLine(it)}") }
                 appendLine("Text: ${InsightPrompt.oneLine(page.text)}")
             }
