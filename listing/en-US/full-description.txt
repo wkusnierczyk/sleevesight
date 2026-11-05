@@ -9,7 +9,7 @@ ON SCREEN
 • The cover, title, artists, album and year of first release, in colors taken from the cover.
 • Genre labels from the artists' tags, each saying where it came from.
 • The insight, whose citations jump to their evidence.
-• Under it, the song, the artist and the album, each with an insight of its own, written when you open it (or tap Write). With Exa on, the web fills in for an album the sources miss, and with AI web search, for an artist.
+• Under it, the song, the artist and the album, each with an insight of its own, written when you open it (or tap Write). With Exa on, the web adds to an album's sources, and with AI web search, fills in for an artist they miss.
 • The lines each source gave, linked to where they were found, what could not be verified, and a note when a source needs your key or could not be reached.
 
 WORKS WITH YOUR PLAYER
