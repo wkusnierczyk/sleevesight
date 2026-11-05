@@ -399,7 +399,8 @@ class ItemInsights(
      * - **The album's** (#885): with web search switched on ([AlbumQuery.web]), through
      *   [AlbumLookup.searchWeb]; [ItemSearch.None] when none could be made (it failed, or the lookup
      *   threw), and the insight is written from [evidence] as it is. [reserve] is asked for the key
-     *   the lines a search made now give, before they are kept (#935), which the caller claims then.
+     *   the lines a search made now give, before they are kept (#935), which the caller claims then;
+     *   so for the artist's *Once* search.
      * - **The artist's** (#912): with *AI web search* used, the lines kept for the artist since the
      *   evidence was gathered (another track's write), with no search; else under *Once* (or *Up to 3
      *   times* with a service whose client takes no tools), the app's own search for the artist
@@ -423,7 +424,7 @@ class ItemInsights(
         when {
             !evidence.webDue -> ItemSearch.None
             item == InsightItem.ALBUM -> albumSearch(track, settings, evidence, sent, WriteGates(mayPay, reserve))
-            item == InsightItem.ARTIST -> artistSearch(track, settings, evidence, sent, mayPay)
+            item == InsightItem.ARTIST -> artistSearch(track, settings, evidence, sent, WriteGates(mayPay, reserve))
             else -> ItemSearch.None
         }
 
@@ -442,12 +443,7 @@ class ItemInsights(
         val album = entity(InsightItem.ALBUM, track) as? CardEntity.Album
         var refused = false
         val mayPay = { gates.mayPay().also { if (!it) refused = true } }
-        val keeping = { lines: List<EvidenceDraft> ->
-            withWeb(track, settings, evidence, lines)?.let { key(InsightItem.ALBUM, track, it, settings) }?.let {
-                gates.reserve(it)
-            }
-            Unit
-        }
+        val keeping = reserving(InsightItem.ALBUM, track, settings, evidence, gates)
         val found =
             if (lookup != null && album != null) {
                 attempt { lookup.searchWeb(queryOf(album, settings), mayPay, keeping, sent) }
@@ -461,14 +457,29 @@ class ItemInsights(
         }
     }
 
+    // What a search for [item] is given, right before the lines it found are kept: the key they give
+    // [evidence] reserved through [gates] (#935), so the write claims it before another track can
+    // gather them. A reservation refused keeps them still.
+    private fun reserving(
+        item: InsightItem,
+        track: TrackState,
+        settings: Settings,
+        evidence: ItemEvidence,
+        gates: WriteGates,
+    ): (List<EvidenceDraft>) -> Unit =
+        { lines ->
+            withWeb(track, settings, evidence, lines)?.let { key(item, track, it, settings) }?.let { gates.reserve(it) }
+        }
+
     // The artist's web lines for a write (#912), as [search] says: kept, or *Once*'s search, made only
-    // while [mayPay], asked right before its request, says so; [ItemSearch.Refused] when it did not.
+    // while [gates]' `mayPay`, asked right before its request, says so; [ItemSearch.Refused] when it
+    // did not; the key its pages give reserved before they are kept (#935), as the album's.
     private suspend fun artistSearch(
         track: TrackState,
         settings: Settings,
         evidence: ItemEvidence,
         sent: () -> Unit,
-        mayPay: () -> Boolean,
+        gates: WriteGates,
     ): ItemSearch {
         val lookup = artistWeb
         val query = artistQuery(track)
@@ -481,7 +492,10 @@ class ItemInsights(
                 kept != null -> kept
                 // The AI service searches itself while it writes ([writeSearching]).
                 way == AiWebSearch.UP_TO -> null
-                else -> attempt { lookup.search(query, sent) { mayPay().also { if (!it) refused = true } } }
+                else -> {
+                    val keeping = reserving(InsightItem.ARTIST, track, settings, evidence, gates)
+                    attempt { lookup.search(query, sent, keeping) { gates.mayPay().also { if (!it) refused = true } } }
+                }
             }
         return when {
             found != null -> withWeb(track, settings, evidence, found)?.let(ItemSearch::Found) ?: ItemSearch.None

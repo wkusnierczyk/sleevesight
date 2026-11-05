@@ -91,11 +91,15 @@ class AppArtistWebNotesTest {
         // While set, a search's read of the kept lines waits for it.
         var reading: CompletableDeferred<Unit>? = null
 
+        // While set, a search that kept its pages waits for it before it returns.
+        var returning: CompletableDeferred<Unit>? = null
+
         override suspend fun kept(artist: ArtistWebQuery): List<EvidenceDraft>? = kept[artist]
 
         override suspend fun search(
             artist: ArtistWebQuery,
             sent: () -> Unit,
+            keeping: (List<EvidenceDraft>) -> Unit,
             mayPay: () -> Boolean,
         ): List<EvidenceDraft>? {
             reading?.await()
@@ -103,7 +107,11 @@ class AppArtistWebNotesTest {
                 if (!mayPay()) return null
                 searches++
                 sent()
-                found?.also { kept[artist] = it }
+                found?.also {
+                    keeping(it)
+                    kept[artist] = it
+                    returning?.await()
+                }
             }
         }
 
@@ -544,6 +552,36 @@ class AppArtistWebNotesTest {
             assertTrue((notes.settled(next) as ItemShown.Shown).state is InsightState.Written)
             assertEquals(2, provider.requests)
             assertEquals(1, pages.searches)
+        }
+
+    @Test
+    fun `once, another track asking while the artist's search keeps its pages makes no write of its own`() =
+        runTest {
+            val provider = CountingProvider().apply { reply = { "Gordon Lightfoot was a Canadian folk singer [S1]." } }
+            val notes = notes(parts(provider))
+            val returning = CompletableDeferred<Unit>()
+            artistWeb.returning = returning
+            val first = track(HomeFixtures.sundown)
+            notes.write(first, InsightItem.ARTIST)
+            advanceUntilIdle()
+            // The pages kept, the write not yet on their key: the next track gathers them and asks.
+            assertEquals(1, artistWeb.searches)
+            val next = track(HomeFixtures.carefree)
+            notes.write(next, InsightItem.ARTIST)
+            advanceUntilIdle()
+            assertEquals(0, provider.requests)
+
+            returning.complete(Unit)
+            advanceUntilIdle()
+            assertEquals(1, provider.requests)
+            assertEquals(1, artistWeb.searches)
+            assertEquals(QuestionCost(searches = 1, calls = 1), paid)
+            assertTrue((notes.settled(first) as ItemShown.Shown).state is InsightState.Written)
+            assertTrue((notes.settled(next) as ItemShown.Shown).state is InsightState.Written)
+            // The first write ends answered, with the search and the call; the next asked for nothing.
+            val ended = events.filterIsInstance<PipelineEvent.AiEnded>().single()
+            assertEquals(AiOutcome.ANSWERED, ended.outcome)
+            assertEquals(QuestionCost(searches = 1, calls = 1), ended.cost)
         }
 
     @Test

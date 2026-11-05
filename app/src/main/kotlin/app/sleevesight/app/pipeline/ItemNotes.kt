@@ -877,7 +877,8 @@ class AppItemNotes(
         counted: (QuestionCost) -> Unit,
     ): Next {
         if (showKept(insights, key, asked)) return Next(key, asked, AiOutcome.ANSWERED)
-        // The key an album's search's lines give, claimed beside [key] before they are kept (#935).
+        // The key an album's or the artist's *Once* search's lines give, claimed beside [key] before
+        // they are kept (#935).
         var reserved: CardKey? = null
         var taken = false
         val reserve = { next: CardKey -> reserve(key, next, job).also { if (it) reserved = next } }
@@ -1073,7 +1074,8 @@ class AppItemNotes(
     // the lookup's waits, before the request (#912, the album's #935); null when no search is due or
     // allowed, or none could be made (the album's), or the AI service makes it itself (the artist's
     // under *Up to 3 times*, [searchingWrite]); the insight is then written, or not, as before. The key
-    // the lines an album's search found give is claimed with [reserve] before they are kept (#935).
+    // the lines a search found give (the album's, the artist's *Once*) is claimed with [reserve]
+    // before they are kept (#935).
     private suspend fun searched(
         key: CardKey,
         asked: Asked,

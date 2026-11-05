@@ -26,10 +26,14 @@ interface ArtistWebLookup {
      * back: not for lines kept, nor for an artist whose name cannot be checked, which sends nothing.
      * [mayPay] is asked after any wait (the kept lines read, another write's search of the artist),
      * right before the request goes out: when it says no, nothing is sent or kept, and null is given.
+     * [keeping] is told the lines a search made now found, right before they are kept (not lines
+     * kept earlier), so its caller claims the key they give before another track can gather them
+     * (#935, as `AlbumLookup.searchWeb`).
      */
     suspend fun search(
         artist: ArtistWebQuery,
         sent: () -> Unit = {},
+        keeping: (List<EvidenceDraft>) -> Unit = {},
         mayPay: () -> Boolean = { true },
     ): List<EvidenceDraft>?
 
