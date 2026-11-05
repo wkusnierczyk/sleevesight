@@ -57,8 +57,8 @@ import app.sleevesight.core.settings.Layout
  * button: "Song, Paper Boats, uses AI. Button. Double-tap to show the song's insight", the whole name,
  * clipped or not; with *Show insights* off, "Song, Paper Boats".
  *
- * A row opened on the track, in its panel or on its page ([ItemFolds.visited]), follows its item's
- * state while closed (#948): while its insight is written, the turning record before its name, and
+ * A closed row follows whether its item's insight is being written ([itemWrites], #948), on this track
+ * or, for the same artist or album, on one before: meanwhile, the turning record before its name, and
  * ", writing" after what a screen reader reads; the call goes on when its panel or page is closed,
  * and the insight is kept when it comes.
  *
@@ -126,8 +126,7 @@ internal fun ItemRows(
                         actions = { centred -> ItemReadAloud(item, context, shown, centred) },
                     ) { ItemContent(item, context, folds.tapped(item), shown, readAloud = false, folds.opening(item)) }
                 } else {
-                    // Followed closed only once opened on the track: no evidence gathered for a row only shown.
-                    val writing = if (folds.visited(item)) writing(itemShown(item, context)) else false
+                    val writing = itemWrites(item, context)
                     ItemRowLine(
                         kinds[index],
                         row,
@@ -137,7 +136,6 @@ internal fun ItemRows(
                         button = Modifier.handoffTarget(handoff, buttonOf(item)),
                     ) {
                         if (pages) {
-                            folds.visit(item)
                             openPage(item)
                         } else {
                             folds.toggle(item)

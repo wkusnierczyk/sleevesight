@@ -250,6 +250,21 @@ class ItemTapWritesScreenTest {
         }
 
     @Test
+    fun aRowClosedWhileItWritesStillShowsItOnTheNextTrackOfTheSameArtist() =
+        show(state(onDemand)) { current ->
+            row(InsightItem.ARTIST).performScrollTo().performClick()
+            compose.waitForIdle()
+            compose.onNodeWithTag(itemPanelTag(InsightItem.ARTIST) + ":close").performScrollTo().performClick()
+            compose.waitForIdle()
+            // The next track, by the same artist: the artist's write goes on, and its row shows it.
+            current.value = state(onDemand, track(carefree))
+            compose.waitForIdle()
+            row(InsightItem.ARTIST).assertExistsWith("Artist, Gordon Lightfoot, uses AI, writing")
+            rowRecords().assertCountEquals(1)
+            row(InsightItem.SONG).assertExistsWith("Song, Carefree Highway, uses AI")
+        }
+
+    @Test
     fun withShowInsightsOffTheButtonsCarryNoMarkAndReadAsBefore() =
         show(state(onDemand.copy(writeInsights = false))) {
             row(InsightItem.SONG).assertExistsWith("Song, Sundown")

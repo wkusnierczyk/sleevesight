@@ -5,14 +5,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import app.sleevesight.app.R
-import app.sleevesight.app.pipeline.ItemShown
+import app.sleevesight.app.pipeline.ItemNotes
 import app.sleevesight.app.ui.logo.Busy
 import app.sleevesight.core.pipeline.InsightItem
-import app.sleevesight.core.pipeline.InsightState
 
 // The states of the song's, the artist's and the album's insights (#522) that say something of their
 // own, in the key insight's words: gathering, writing with *Stop writing*, stopped with *Write
@@ -97,9 +99,27 @@ internal fun offeredLine(
         else -> R.string.home_item_tap_write
     }
 
-/** Whether [shown] is an insight being written: asked for, or its reply coming (#948). */
-internal fun writing(shown: ItemShown): Boolean =
-    shown is ItemShown.Asking || (shown as? ItemShown.Shown)?.state is InsightState.Writing
+/**
+ * Whether [item]'s insight is being written for what it is about on [context]'s track (#948), as its
+ * notes say ([ItemNotes.writes]): followed with no gathering, so a closed row costs nothing; followed
+ * again only when what it is about may change, as [itemShown] is.
+ */
+@Composable
+internal fun itemWrites(
+    item: InsightItem,
+    context: ItemContext,
+): Boolean {
+    val track = context.track ?: return false
+    val writes by remember(
+        item,
+        context.notes,
+        track.normalized,
+        track.nowPlaying,
+        track.sources,
+        track.resolution,
+    ) { context.notes.writes(track, item) }.collectAsState(false)
+    return writes
+}
 
 /** [text] in the notes' quiet style. */
 @Composable

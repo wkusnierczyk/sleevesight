@@ -160,6 +160,17 @@ interface ItemNotes {
     fun artistEvidence(track: TrackState): Flow<EvidenceSet?> = flowOf(null)
 
     /**
+     * Whether [item]'s insight is being written for what it is about on [track] (its entity, #948):
+     * asked for, or its reply coming, whichever track asked, so the next track of an artist or album
+     * whose insight is under way follows it too. Read with no gathering: a closed row follows it at no
+     * cost.
+     */
+    fun writes(
+        track: TrackState,
+        item: InsightItem,
+    ): Flow<Boolean> = flowOf(false)
+
+    /**
      * *Stop writing* under the insight of card [key] (as [ItemShown.Asking] or [ItemShown.Shown] carry
      * it): the write under way is cut off, nothing is kept, and it shows as stopped.
      */
@@ -323,8 +334,10 @@ class AppItemNotes(
     // automatic write of its insight ([held]).
     private val seen = ConcurrentHashMap<CardKey, Long>()
 
-    // The keys whose cached insight was looked for, and those being written.
+    // The keys whose cached insight was looked for, those whose cache is still being read for it (its
+    // own, then another model's, #948), and those being written.
     private val looked: MutableSet<CardKey> = ConcurrentHashMap.newKeySet()
+    private val reading = MutableStateFlow<Set<CardKey>>(emptySet())
     private val writing = MutableStateFlow<Set<CardKey>>(emptySet())
 
     // The work under way (gathering, reading the cache, writing), cancelled by *Clear history*.
@@ -371,13 +384,14 @@ class AppItemNotes(
                     key == null -> flowOf(ItemShown.NoService)
                     else -> {
                         look(insights, key, track, item, evidence)
-                        combine(shown, others, writing, settings) { entries, kept, asked, latest ->
+                        combine(shown, others, writing, settings, reading) { entries, kept, asked, latest, read ->
                             val lifetime = latest?.historyLifetime
                             // Only once its own was looked for and not found (#911).
                             val earlier = if (key in kept) earlierFor(key, entries, kept[key], lifetime) else null
                             val play = track.nowPlaying.play
                             val own = entries[key]?.takeUnless { beforeSearch(it.state, evidence) }
-                            val shown = shownFor(key, evidence, own, earlier, lifetime, key in asked, play)
+                            val now = Now(key in asked, key in read, play)
+                            val shown = shownFor(key, evidence, own, earlier, lifetime, now)
                             if (insights.writes) shown else unwritable(shown)
                         }.onEach { seenOn(track, key, it) }
                     }
@@ -385,8 +399,16 @@ class AppItemNotes(
             }
     }
 
-    // On [play]: a write that failed or was stopped on an earlier play counts as no insight beside
-    // another model's (#911), which shows again with *Rewrite insight*.
+    // Where a key's insight is now, as [shownFor] reads it: being written ([asked]), its cache still
+    // being read ([reading], #948), and the play it is shown on.
+    private class Now(
+        val asked: Boolean,
+        val reading: Boolean,
+        val play: Long?,
+    )
+
+    // On [now]'s play: a write that failed or was stopped on an earlier play counts as no insight
+    // beside another model's (#911), which shows again with *Rewrite insight*.
     @Suppress("LongParameterList") // The key, what it is shown from, and what it has.
     private fun shownFor(
         key: CardKey,
@@ -394,20 +416,34 @@ class AppItemNotes(
         entry: Entry?,
         earlier: Entry?,
         lifetime: Duration?,
-        asked: Boolean,
-        play: Long?,
+        now: Now,
     ): ItemShown =
         when {
-            entry == null && asked -> ItemShown.Asking(key)
-            entry == null -> earlier?.let { shownEarlier(key, evidence, it, failed = null) } ?: ItemShown.Offered
+            entry == null -> shownNone(key, evidence, earlier, now)
             expired(entry.writtenAt, lifetime) -> ItemShown.Offered.also { drop(key) }
-            stale(entry, play) -> shownStale(key, evidence, entry, earlier, asked)
+            stale(entry, now.play) -> shownStale(key, evidence, entry, earlier, now.asked)
             // A rewrite that ended without an insight (#911): the earlier one again, saying why.
             entry.rewrites && earlier != null && failure(entry.state) != null ->
                 shownEarlier(key, evidence, earlier, failure(entry.state))
             // The insight's evidence numbered as when it was written, but mapped to this track's lines:
             // an artist's or album's insight kept from another track cites the same ids (#522).
             else -> ItemShown.Shown(entry.state, evidence, modelName(key.model), key)
+        }
+
+    // [key] with none of its own: being written; else [earlier], another model's insight, with *Rewrite
+    // insight* (#911); while the cache is still read for it (#948), gathering, not offered, so an opening
+    // by a tap under *On demand* waits for what the cache keeps before it writes; else offered.
+    private fun shownNone(
+        key: CardKey,
+        evidence: ItemEvidence,
+        earlier: Entry?,
+        now: Now,
+    ): ItemShown =
+        when {
+            now.asked -> ItemShown.Asking(key)
+            earlier != null -> shownEarlier(key, evidence, earlier, failed = null)
+            now.reading -> ItemShown.Gathering
+            else -> ItemShown.Offered
         }
 
     // [entry], a write under [key] that failed or was stopped on an earlier play ([stale], #911): asked
@@ -543,11 +579,12 @@ class AppItemNotes(
 
     // [block] in [scope], marked with the epoch and the count of *Clear history*, held in [pending]
     // until it ends, so a clear cancels it.
-    private fun tracked(block: suspend CoroutineScope.() -> Unit) {
+    private fun tracked(block: suspend CoroutineScope.() -> Unit): Job {
         val job = scope.launch(mark(), start = CoroutineStart.LAZY, block = block)
         pending += job
         job.invokeOnCompletion { pending -= job }
         job.start()
+        return job
     }
 
     // The album's lines gathered for [track] and its album as it names it now (its entity: the
@@ -574,6 +611,16 @@ class AppItemNotes(
                 }?.value
                 ?.evidence
                 ?.evidence
+        }.distinctUntilChanged()
+
+    // The claims under way of [item]'s kind for what it is about on [track] now (its entity).
+    override fun writes(
+        track: TrackState,
+        item: InsightItem,
+    ): Flow<Boolean> =
+        combine(writing, parts) { asked, made ->
+            val entity = made?.let { insightsOf(it).entity(item, track) }
+            entity != null && asked.any { it.kind == item.kind && it.entity == entity }
         }.distinctUntilChanged()
 
     // The write under way for [key], by its own job, whatever the evidence kept meanwhile.
@@ -644,8 +691,8 @@ class AppItemNotes(
     }
 
     // Whether [ask] is a tap's opening under *On demand* (#948) of a row that shows the insight another
-    // service, model or effort wrote in place of its own (#911): that stays, with *Rewrite insight*,
-    // and the opening writes nothing.
+    // service, model or effort wrote in place of its own (#911), or may yet, its cache still read: that
+    // stays, with *Rewrite insight*, and the opening writes nothing.
     private fun opensOverEarlier(
         key: CardKey,
         ask: ItemAsk,
@@ -653,7 +700,7 @@ class AppItemNotes(
     ): Boolean =
         ask == ItemAsk.OPENED &&
             settings.value?.writeAutomatically == WriteAutomatically.NEVER &&
-            shownEarlier(key, track) != null
+            (key in reading.value || shownEarlier(key, track) != null)
 
     // What a Stop cancels an item's call with, told apart from the scope's own cancellation.
     private class StopAsked : CancellationException("stopped")
@@ -1188,7 +1235,7 @@ class AppItemNotes(
 
     // [key]'s insight kept in the synthesis cache, read once, unless one is shown already (not a write
     // that failed or was stopped on an earlier play, [stale]); with none, the one another service,
-    // model or effort wrote, if kept (#911), read only then.
+    // model or effort wrote, if kept (#911), read only then; [reading] meanwhile (#948).
     private fun look(
         insights: ItemInsights,
         key: CardKey,
@@ -1199,6 +1246,7 @@ class AppItemNotes(
         val play = track.nowPlaying.play
         val standing = shown.value[key]
         if ((standing != null && !stale(standing, play)) || !looked.add(key)) return
+        reading.update { it + key }
         tracked {
             val work = coroutineContext
             val kept =
@@ -1223,7 +1271,7 @@ class AppItemNotes(
                 }
                 if (added) events(kept(track, key, AiQuestion.Item(item), kept.writtenAt))
             }
-        }
+        }.invokeOnCompletion { reading.update { it - key } }
     }
 
     // [key]'s answer to [question], kept, written at [writtenAt], served for [track] (#851).

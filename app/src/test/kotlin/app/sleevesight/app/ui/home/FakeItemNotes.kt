@@ -9,6 +9,7 @@ import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.pipeline.CardEntity
 import app.sleevesight.core.pipeline.CardKey
 import app.sleevesight.core.pipeline.InsightItem
+import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.synthesis.CardKind
 import kotlinx.coroutines.flow.Flow
@@ -26,6 +27,16 @@ internal class FakeItemNotes : ItemNotes {
         track: TrackState,
         item: InsightItem,
     ): Flow<ItemShown> = shown.map { it[item] ?: ItemShown.Offered }.also { followed += item }
+
+    // Being written, as the test set it, whatever the track: the same artist's or album's on the next.
+    override fun writes(
+        track: TrackState,
+        item: InsightItem,
+    ): Flow<Boolean> =
+        shown.map { now ->
+            val state = now[item]
+            state is ItemShown.Asking || (state as? ItemShown.Shown)?.state is InsightState.Writing
+        }
 
     val asks = mutableListOf<ItemAsk>()
     val stops = mutableListOf<CardKey>()
