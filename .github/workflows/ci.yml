@@ -170,18 +170,6 @@ jobs:
           ./gradlew test :app:assembleDebug :app:checkApkClassesDebug :app:checkApkNoticesDebug \
             ${VERSION_ARG:+"$VERSION_ARG"} --console=plain
 
-      # A failed test's report, with each class's output and the order the classes ran in, which the
-      # log does not give (#940: a test that failed only here).
-      - uses: actions/upload-artifact@v7
-        if: failure()
-        with:
-          name: test-reports
-          path: |
-            */build/reports/tests/
-            */build/test-results/
-          if-no-files-found: ignore
-          retention-days: 14
-
       # The debug APK names itself apart from the Play build (#614).
       - name: Build identity
         env:
@@ -208,6 +196,19 @@ jobs:
           ./gradlew :app:testDebugUnitTest --tests 'app.sleevesight.app.settings.DeveloperModeDefaultTest' \
             -Psleevesight.developerMode=true ${VERSION_ARG:+"$VERSION_ARG"} --console=plain
           .github/scripts/check-developer-mode.sh debug true
+
+      # A failed test's report, with each class's output and the order the classes ran in, which the
+      # log does not give (#940: a test that failed only here). Last, so that a failure in any step
+      # of the job uploads them, the developer-mode test's included.
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: test-reports
+          path: |
+            */build/reports/tests/
+            */build/test-results/
+          if-no-files-found: ignore
+          retention-days: 14
 
   # The release build as `build` makes it: the release compile, R8, `lintVital`, and the checks of the
   # release APK.
