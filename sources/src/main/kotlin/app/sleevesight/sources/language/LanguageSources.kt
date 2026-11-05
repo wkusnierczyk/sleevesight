@@ -104,7 +104,7 @@ class LanguageSources(
             if (found is Lookup.Failed) unreachable = true
             val item = (found as? Lookup.Found)?.value
             val verdict = item?.let { check.artist(it, artist) }
-            if (verdict is Verdict.Accepted && item != null) artists[artist.name] = item
+            if (verdict is Verdict.Accepted) artists[artist.name] = item
             if (verdict is Verdict.Unreachable) unreachable = true
         }
         return Checked(artists, unreachable)

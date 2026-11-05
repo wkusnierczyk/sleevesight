@@ -128,7 +128,7 @@ internal class LanguageDecision(
         if (!settings.isEnabled(SourceId.MUSICBRAINZ)) return Resolution.NONE to false
         val made = attempt(SourceId.MUSICBRAINZ) { parts.resolver.resolve(track, input.nowPlaying.duration) }
         val reached = made != null && made.outcome != Outcome.Unreachable
-        if (!reached || made?.provisional == true) answered = false
+        if (made == null || !reached || made.provisional) answered = false
         return (made ?: Resolution.NONE) to reached
     }
 
