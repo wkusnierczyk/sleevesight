@@ -60,6 +60,14 @@ class AiSearchesExplainTest {
                 EvidenceDraft(SourceId.WIKIPEDIA, Scope.ARTIST, "She is a singer.", "https://en.wikipedia.org/a", at),
                 EvidenceDraft(SourceId.MUSICBRAINZ, Scope.SONG, "Recorded in 2008.", "https://musicbrainz.org/r", at),
                 EvidenceDraft(SourceId.LASTFM, Scope.SONG, "Many listeners.", null, at),
+                EvidenceDraft(
+                    SourceId.LASTFM,
+                    Scope.SONG,
+                    "1,204 listeners tag it folk.",
+                    "https://www.last.fm/music/x",
+                    at,
+                    aggregate = true,
+                ),
             ),
             JvmHasher,
         )
@@ -91,7 +99,7 @@ class AiSearchesExplainTest {
     }
 
     @Test
-    fun theTracksOwnPagesAboutTheSongComeFirstOnePerAddressNoneOfMusicBrainzs() {
+    fun theTracksOwnPagesAboutTheSongComeFirstOnePerAddressNoneOfMusicBrainzsNorAggregates() {
         val pages = ExplainQuestion.pagesOf(evidence)
         assertEquals(1, pages.size)
         assertEquals(wikipedia, pages.single().url)

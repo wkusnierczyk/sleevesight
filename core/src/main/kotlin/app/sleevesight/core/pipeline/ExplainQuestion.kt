@@ -99,15 +99,17 @@ internal class ExplainQuestion(
 
         /**
          * [evidence]'s lines about the song (not the artist's, nor the release's) that have a page,
-         * none of MusicBrainz's, as pages, one per address, in the evidence's order: its lines'
-         * texts joined, titled by its source ("Wikipedia"), or untitled for the web search's own.
+         * none of MusicBrainz's nor one counting what listeners did (Last.fm's aggregate lines), as
+         * pages, one per address, in the evidence's order: its lines' texts joined, titled by its
+         * source ("Wikipedia"), or untitled for the web search's own.
          */
         fun pagesOf(evidence: EvidenceSet?): List<WebPage> =
             evidence
                 ?.lines
                 .orEmpty()
-                .filter { it.scope in ABOUT_THE_SONG && it.source !in NO_PAGE && !it.url.isNullOrBlank() }
-                .groupBy { checkNotNull(it.url) }
+                .filter {
+                    it.scope in ABOUT_THE_SONG && it.source !in NO_PAGE && !it.aggregate && !it.url.isNullOrBlank()
+                }.groupBy { checkNotNull(it.url) }
                 .map { (url, lines) ->
                     val source = lines.first().source
                     val title = InsightPrompt.sourceLabel(source).takeIf { source != SourceId.WEB }

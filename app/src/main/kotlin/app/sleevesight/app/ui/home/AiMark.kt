@@ -122,11 +122,11 @@ internal fun aiButtonWidth(labels: List<String>): Dp {
     val typography = MaterialTheme.typography
     val density = LocalDensity.current
     val mark = stringResource(R.string.home_ai_mark)
-    val widest =
-        labels.maxOfOrNull { label -> measurer.measure(label, typography.labelLarge).size.width }
-            ?: return Dp.Unspecified
-    val markWidth = measurer.measure(mark, typography.labelSmall).size.width
-    return with(density) { (widest + markWidth).toDp() } + MARK_SPACE + PADDING_SIDES
+    return remember(labels, typography, density, mark) {
+        val widest = labels.maxOfOrNull { label -> measurer.measure(label, typography.labelLarge).size.width }
+        val markWidth = measurer.measure(mark, typography.labelSmall).size.width
+        widest?.let { with(density) { (it + markWidth).toDp() } + MARK_SPACE + PADDING_SIDES } ?: Dp.Unspecified
+    }
 }
 
 /** The room between the label and the mark, as between a source chip's letter and its name. */

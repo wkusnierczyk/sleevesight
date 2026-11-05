@@ -28,8 +28,6 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.theme.LinkLabel
@@ -111,16 +109,7 @@ private fun explanationText(
             if (i > 0) append(' ')
             for (part in parts) {
                 when (part) {
-                    is ShownRun.Text -> {
-                        val marked =
-                            SpanStyle(
-                                fontStyle = if (part.italic) FontStyle.Italic else null,
-                                fontWeight = if (part.bold) FontWeight.Bold else null,
-                            )
-                        withStyle(
-                            if (doubtful(sentence)) flagged.merge(marked) else marked,
-                        ) { append(part.text) }
-                    }
+                    is ShownRun.Text -> appendText(part, flagged.takeIf { doubtful(sentence) })
                     is ShownRun.Cite -> {
                         val kind = if (part.id in byId) CiteKind.LINE else CiteKind.UNKNOWN
                         appendCite(part.id, part.id, kind, chips, open)

@@ -254,7 +254,11 @@ private fun AnnotatedString.Builder.appendSentence(
     }
 }
 
-private fun AnnotatedString.Builder.appendText(
+/**
+ * A run of a sentence's [text], its title in italics and its bold in bold (#555), in [flagged] when
+ * the sentence is dimmed, where a title is set upright (#819). Also *Explain the song*'s (#908).
+ */
+internal fun AnnotatedString.Builder.appendText(
     text: ShownRun.Text,
     flagged: SpanStyle?,
 ) {

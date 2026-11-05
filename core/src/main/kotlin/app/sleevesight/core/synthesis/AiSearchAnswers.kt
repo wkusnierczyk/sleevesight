@@ -170,7 +170,7 @@ class AiSearchAnswers(
      * choose between two lyrics pages on one site. With [pages] (#801), the addresses of the pages
      * the web searches found, the answer is one from the web, each value with its page among them.
      * An explanation ([SearchKind.EXPLAIN], #908) is read against the pages its prompt numbered
-     * ([sources]); none, nothing usable.
+     * ([sources]); none, nothing usable. Its [artists]' names are no web address ("will.i.am").
      */
     fun read(
         kind: SearchKind,
@@ -182,7 +182,7 @@ class AiSearchAnswers(
         val answer = objectIn(reply) ?: return SearchReading.Malformed
         val found =
             if (kind == SearchKind.EXPLAIN) {
-                explanationIn(answer, sources.orEmpty())
+                explanationIn(answer, sources.orEmpty(), artists)
             } else if (pages != null) {
                 fromWeb(kind, answer, artists, pages)
             } else {
@@ -455,16 +455,21 @@ class AiSearchAnswers(
 }
 
 // The explanation in [answer] (#908), checked against the ids of [sources]: null for none, one too
-// long or with an address, or one no page backs.
+// long or with an address, or one no page backs. The track's [artists] are masked, in any case,
+// before the address test, so a name such as "will.i.am" is no address.
 private fun explanationIn(
     answer: JsonObject,
     sources: List<CitedPage>,
+    artists: List<String>,
 ): SearchAnswer.Explanation? {
     val text =
         answer
             .text("explanation")
             ?.let(::oneLine)
-            ?.takeIf { it.length <= AiSearchAnswers.EXPLANATION_MAX && !EXPLANATION_ADDRESS.containsMatchIn(it) }
+            ?.takeIf {
+                it.length <= AiSearchAnswers.EXPLANATION_MAX &&
+                    !EXPLANATION_ADDRESS.containsMatchIn(masked(it, artists))
+            }
     val byId = sources.associateBy { it.id }
     val grounded =
         text?.let { (GroundingCheck.check(it, byId.keys, allowModel = false) as? InsightReply.Written)?.grounded }
@@ -473,6 +478,15 @@ private fun explanationIn(
     val backed = sentences.any { it.status == SentenceStatus.OK }
     return if (grounded == null || !backed) null else SearchAnswer.Explanation(grounded, pages)
 }
+
+// [text] with each of [names] (not blank) put as a plain word, matched in any case.
+private fun masked(
+    text: String,
+    names: List<String>,
+): String =
+    names.map(String::trim).filter(String::isNotEmpty).fold(text) { masked, name ->
+        masked.replace(name, "name", ignoreCase = true)
+    }
 
 /**
  * A link or a web address in an explanation (#908): a scheme (`https://`), `www.`, or a bare domain,

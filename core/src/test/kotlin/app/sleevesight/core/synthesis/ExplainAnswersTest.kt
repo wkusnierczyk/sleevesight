@@ -108,6 +108,25 @@ class ExplainAnswersTest {
     }
 
     @Test
+    fun theTracksArtistsAreNoAddressButAnAddressBesideThemStillIs() {
+        val artists = listOf("Black Eyed Peas", "will.i.am")
+        val named = """{"explanation": "will.i.am wrote it about a night out. [S1]"}"""
+        assertIs<SearchReading.Found>(answers.read(SearchKind.EXPLAIN, named, artists, sources = sources))
+        val capitalised = """{"explanation": "Will.I.Am wrote it about a night out. [S1]"}"""
+        assertIs<SearchReading.Found>(answers.read(SearchKind.EXPLAIN, capitalised, artists, sources = sources))
+        assertEquals(SearchReading.NothingUsable, read(named))
+        assertEquals(
+            SearchReading.NothingUsable,
+            answers.read(
+                SearchKind.EXPLAIN,
+                """{"explanation": "See songfacts.com. [S1]"}""",
+                artists,
+                sources = sources,
+            ),
+        )
+    }
+
+    @Test
     fun aReplyOnSeveralLinesIsReadOnOne() {
         val found = explanation("{\"explanation\": \"It is a farewell. [S1]\\n\\nThe oak lasts. [S2]\"}")
         assertEquals(1, found.grounded.paragraphs.size)
