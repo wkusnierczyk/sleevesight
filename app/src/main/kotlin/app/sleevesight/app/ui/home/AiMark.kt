@@ -106,8 +106,11 @@ internal fun AiLabel(
     }
 }
 
-/** The room between the label and the mark, as between a source chip's letter and its name. */
-private val MARK_GAP = 4.dp
+/**
+ * The room between the label and the mark, as between a source chip's letter and its name; a column
+ * of chips with the mark keeps it ([chipColumnWidth], #948).
+ */
+internal val MARK_GAP = 4.dp
 
 /** The test tag of the **AI** mark, on every button that calls the AI service. */
 const val AI_MARK_TAG: String = "ai-mark"

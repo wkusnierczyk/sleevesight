@@ -8,9 +8,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -76,7 +79,8 @@ internal fun SourcesChip(
  * "Song, Paper Boats", #894), a [heading] when it is one, collapsed while [collapsed] (its panel
  * opens in its place, so it is only ever collapsed), its action named [action] when given. With
  * [width], it is that wide, its name centred in it (the rows of the song, the artist and the album,
- * #894). [modifier] goes on the chip's outside: a focus requester.
+ * #894), with the **AI** mark after it when [ai] (#948, [AiLabel]; [description] then says "uses AI").
+ * [modifier] goes on the chip's outside: a focus requester.
  */
 @Suppress("LongParameterList") // What the chip says and is, each its own.
 @Composable
@@ -89,6 +93,7 @@ internal fun PanelChip(
     heading: Boolean = false,
     description: String = name,
     width: Dp? = null,
+    ai: Boolean = false,
     onClick: () -> Unit,
 ) {
     val folded = stringResource(R.string.home_fold_collapsed)
@@ -107,6 +112,13 @@ internal fun PanelChip(
     ) {
         if (width == null) {
             Text(name, style = MaterialTheme.typography.labelLarge, color = content)
+        } else if (ai) {
+            // The mark after the name, centred with it; read in [description], with the rest.
+            Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                CompositionLocalProvider(LocalContentColor provides content) {
+                    ProvideTextStyle(MaterialTheme.typography.labelLarge) { AiLabel(name, described = description) }
+                }
+            }
         } else {
             Text(
                 name,
@@ -332,18 +344,25 @@ private fun LetterChip(
 
 /**
  * A column of chips as wide as the widest of [labels] as a chip draws them ([LetterChip], [PanelChip]):
- * its text, on one line, and [CHIP_PADDING] at each side, each side rounded as it is laid out. The
- * letters' column of *Sources*' table (#662); the buttons of the song's, the artist's and the album's
- * rows (#894).
+ * its text, on one line, with the **AI** mark after it as [AiLabel] sets it when [mark] (#948), and
+ * [CHIP_PADDING] at each side, each side rounded as it is laid out. The letters' column of *Sources*'
+ * table (#662); the buttons of the song's, the artist's and the album's rows (#894).
  */
 @Composable
-internal fun chipColumnWidth(labels: List<String>): Dp {
+internal fun chipColumnWidth(
+    labels: List<String>,
+    mark: Boolean = false,
+): Dp {
     val measurer = rememberTextMeasurer()
     val style = MaterialTheme.typography.labelLarge
+    val small = MaterialTheme.typography.labelSmall
+    val ai = stringResource(R.string.home_ai_mark)
     val density = LocalDensity.current
-    return remember(labels, style, density) {
+    return remember(labels, mark, style, small, ai, density) {
         val widest = labels.maxOfOrNull { measurer.measure(it, style, softWrap = false, maxLines = 1).size.width } ?: 0
-        with(density) { (widest + 2 * CHIP_PADDING.roundToPx()).toDp() }
+        val gap = with(density) { MARK_GAP.roundToPx() }
+        val marked = if (mark) measurer.measure(ai, small, softWrap = false, maxLines = 1).size.width + gap else 0
+        with(density) { (widest + marked + 2 * CHIP_PADDING.roundToPx()).toDp() }
     }
 }
 

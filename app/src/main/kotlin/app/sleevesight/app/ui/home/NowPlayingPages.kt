@@ -161,7 +161,10 @@ private fun ItemPageOf(
     val openedOn = rememberSaveable(saver = OPENED_ON) { mutableStateOf<NowPlaying?>(playing) }
     val tapped = openedOn.value?.let { TrackIdentity.playsOn(it, playing) } == true
     SideEffect { if (!tapped) openedOn.value = null }
-    ItemPage(item, itemName(item, header, actions.normalize(header).primary), context, tapped)
+    // Its opening's write (#948), asked for once, on that track only: not again after a rotation.
+    var due by rememberSaveable { mutableStateOf(true) }
+    val opening = if (tapped && due) OpeningWrite(due = true) { due = false } else OpeningWrite.NONE
+    ItemPage(item, itemName(item, header, actions.normalize(header).primary), context, tapped, opening)
 }
 
 // The track an item page was opened on, saved as plain values ([savedTrack]).

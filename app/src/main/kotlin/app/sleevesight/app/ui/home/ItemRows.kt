@@ -33,6 +33,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
+import app.sleevesight.app.ui.logo.SpinningRecord
 import app.sleevesight.app.ui.theme.Panel
 import app.sleevesight.app.ui.theme.handoffTarget
 import app.sleevesight.app.ui.theme.rememberFocusHandoff
@@ -49,10 +50,17 @@ import app.sleevesight.core.settings.Layout
 /**
  * The rows under *Key insights* (#522, #894), before *Sources*: [rows] as a table of two columns, no
  * lines between them. On the left each kind (*Song*, *Artist*, *Album*) as a button drawn as *Dates*'
- * is ([PanelChip]), all as wide as the widest, so both their edges line up and the names start in
- * one column; on the right its name, on one line clipped with an ellipsis, a tap showing it whole and
- * another clipping it again ([NameText]). A screen reader reads a row as one stop, its button: "Song,
- * Paper Boats. Button. Double-tap to show the song's insight", the whole name, clipped or not.
+ * is ([PanelChip]), with the **AI** mark after it while *Show insights* is on (#948), its tap writing
+ * what it opens, all as wide as the widest, mark included, so both their edges line up and the names
+ * start in one column; on the right its name, on one line clipped with an ellipsis, a tap showing it
+ * whole and another clipping it again ([NameText]). A screen reader reads a row as one stop, its
+ * button: "Song, Paper Boats, uses AI. Button. Double-tap to show the song's insight", the whole name,
+ * clipped or not; with *Show insights* off, "Song, Paper Boats".
+ *
+ * A row opened on the track, in its panel or on its page ([ItemFolds.visited]), follows its item's
+ * state while closed (#948): while its insight is written, the turning record before its name, and
+ * ", writing" after what a screen reader reads; the call goes on when its panel or page is closed,
+ * and the insight is kept when it comes.
  *
  * Under *Expandable boxes* ([pages] false) a button opens its item in a panel in its row's place
  * ([Panel]: the kind as its title, the name under it, *Read aloud* once written and *Close* on the
@@ -94,8 +102,10 @@ internal fun ItemRows(
         if (handBack != null) handoff.moveTo(buttonOf(handBack))
     }
     val kinds = rows.map { itemKind(it.item) }
+    // The mark on every button while insights are written (#948): what each opens is AI-written.
+    val ai = context.settings.writeInsights
     // The widest kind sets every button's width, whichever rows are open, so nothing moves on opening.
-    val width = chipColumnWidth(kinds)
+    val width = chipColumnWidth(kinds, mark = ai)
     Column(Modifier.fillMaxWidth().testTag(ITEM_ROWS_TAG), verticalArrangement = Arrangement.spacedBy(ROW_GAP)) {
         rows.forEachIndexed { index, row ->
             val item = row.item
@@ -114,18 +124,20 @@ internal fun ItemRows(
                             handoff.moveTo(buttonOf(item))
                         },
                         actions = { centred -> ItemReadAloud(item, context, shown, centred) },
-                    ) { ItemContent(item, context, tapped = folds.tapped(item), shown = shown, readAloud = false) }
+                    ) { ItemContent(item, context, folds.tapped(item), shown, readAloud = false, folds.opening(item)) }
                 } else {
+                    // Followed closed only once opened on the track: no evidence gathered for a row only shown.
+                    val writing = if (folds.visited(item)) writing(itemShown(item, context)) else false
                     ItemRowLine(
                         kinds[index],
                         row,
-                        width,
-                        pages,
+                        RowLook(width, pages, ai, writing),
                         whole = folds.whole(item),
                         onName = { folds.toggleWhole(item) },
                         button = Modifier.handoffTarget(handoff, buttonOf(item)),
                     ) {
                         if (pages) {
+                            folds.visit(item)
                             openPage(item)
                         } else {
                             folds.toggle(item)
@@ -164,21 +176,33 @@ private fun ItemPanel(
     }
 }
 
-// A row: [kind]'s button, [width] wide, under [button]'s modifier (a focus requester), read with
-// [row]'s name as one stop; the name beside it, [whole] or clipped, [onName] on a tap that changes it.
+// How a row looks: its button [width] wide, opening a page ([pages]) or its panel, with the **AI**
+// mark ([ai], #948); [writing] while its insight is written, its panel or page closed (#948).
+private class RowLook(
+    val width: Dp,
+    val pages: Boolean,
+    val ai: Boolean,
+    val writing: Boolean,
+)
+
+// A row: [kind]'s button, as [look] says, under [button]'s modifier (a focus requester), read with
+// [row]'s name as one stop; the name beside it, [whole] or clipped, [onName] on a tap that changes it,
+// the turning record before it while the insight is written (#948).
 @Suppress("LongParameterList") // What the row shows, and its taps.
 @Composable
 private fun ItemRowLine(
     kind: String,
     row: ItemRow,
-    width: Dp,
-    pages: Boolean,
+    look: RowLook,
     whole: Boolean,
     onName: () -> Unit,
     button: Modifier,
     onClick: () -> Unit,
 ) {
-    val action = stringResource(if (pages) R.string.home_page_open else itemShowAction(row.item))
+    val action = stringResource(if (look.pages) R.string.home_page_open else itemShowAction(row.item))
+    val named = "$kind, ${row.name}"
+    val marked = if (look.ai) stringResource(R.string.home_uses_ai, named) else named
+    val described = if (look.writing) stringResource(R.string.home_item_writing, marked) else marked
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         PanelChip(
             kind,
@@ -186,11 +210,16 @@ private fun ItemRowLine(
             modifier = button,
             action = action,
             collapsed = false,
-            description = "$kind, ${row.name}",
-            width = width,
+            description = described,
+            width = look.width,
+            ai = look.ai,
             onClick = onClick,
         )
         Spacer(Modifier.width(COLUMN_GAP))
+        if (look.writing) {
+            SpinningRecord()
+            Spacer(Modifier.width(RECORD_GAP))
+        }
         NameText(row.name, whole, onName, Modifier.weight(1f), itemNameTag(row.item))
     }
 }
@@ -236,6 +265,9 @@ private fun NameText(
 private val COLUMN_GAP = 14.dp
 private val ROW_GAP = 6.dp
 private val PANEL_GAP = 2.dp
+
+// The space between the turning record and the name it comes before (#948), as beside a message.
+private val RECORD_GAP = 8.dp
 
 // A name's cell's least height: a tap target's, as its button's.
 private val NAME_CELL = 48.dp

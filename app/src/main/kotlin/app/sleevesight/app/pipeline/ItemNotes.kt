@@ -117,7 +117,11 @@ enum class ItemAsk {
     /** A tap on *Write insight*, or on *Retry* after a failure: written again after a failure or a Stop. */
     TAP,
 
-    /** Its row unfolded, or its page opened, by a tap, under an automatic mode. */
+    /**
+     * Its row unfolded, or its page opened, by a tap: under an automatic mode, at once; under *On
+     * demand*, the tap's consent (#948), asked once, where nothing is written; never in place of the
+     * insight another AI service, model or effort wrote (#911), which *Rewrite insight* rewrites.
+     */
     OPENED,
 
     /** Its row unfolded at a new track's start, under an automatic mode: as the track's own writing is. */
@@ -211,7 +215,7 @@ private sealed interface WebStep {
  * app on screen or *Look up in the background* on, and for one asked by itself what holds the
  * track's own automatic writing back), asked right before it, after any wait for the evidence or
  * the cache, with the settings read again then (insights on, the same AI service, model and effort,
- * an automatic mode for one not tapped); closed, it is not made, and the item stays offered. *Stop
+ * an automatic mode for one asked by itself); closed, it is not made, and the item stays offered. *Stop
  * writing* ([stop]) cancels it: nothing is kept, and it shows as stopped, written again only on a tap.
  *
  * With none kept under its card's key, the insight another AI service, model or effort wrote for the
@@ -221,7 +225,8 @@ private sealed interface WebStep {
  * says; one stopped or failed shows the earlier insight again, saying so, with *Rewrite insight*. Under
  * an automatic mode the item is written anew when opened, as for any item its model has not written,
  * but not on the play its row showed an insight before the model changed ([held]): that one stays,
- * with *Rewrite insight*, as the key insight's does after a settings change.
+ * with *Rewrite insight*, as the key insight's does after a settings change. Under *On demand* an
+ * opening by a tap (#948) writes only where none is shown: the earlier one stays, with *Rewrite insight*.
  *
  * An album's web search (#885, `ItemInsights.searched`), a paid one, is made only on the way to its
  * insight's call: once the insight is not found kept under the key of the evidence gathered,
@@ -578,7 +583,8 @@ class AppItemNotes(
 
     // Whether [ask]'s call may start now (#522): the coordinator's [gate] open for it, and under the
     // settings now (after any wait for the evidence or the cache), insights on, the same AI service,
-    // model and effort as [key] was made with, and, for one not tapped, an automatic mode still.
+    // model and effort as [key] was made with, and, for one asked by itself, an automatic mode still:
+    // a tap, on *Write insight* or on the button that opens it (#948), writes in every mode.
     private fun mayCall(
         key: CardKey,
         asked: Asked,
@@ -587,7 +593,7 @@ class AppItemNotes(
         val made = parts.value
         val same =
             now != null && made != null && insightsOf(made).key(asked.item, asked.track, asked.evidence, now) == key
-        val mode = asked.ask == ItemAsk.TAP || now?.writeAutomatically != WriteAutomatically.NEVER
+        val mode = asked.ask != ItemAsk.BY_ITSELF || now?.writeAutomatically != WriteAutomatically.NEVER
         // The service selected now, the one the parts carry and the card's (`ItemInsights.key` asks
         // the first two): a switch waits for the rebuild that brings the new service.
         val service = now?.aiProvider == key.provider && made?.ai?.provider?.id == key.provider
@@ -618,15 +624,36 @@ class AppItemNotes(
         ask: ItemAsk,
         track: TrackState,
     ): WrittenBy? {
+        if (ask != ItemAsk.TAP) return null
+        return (shownEarlier(key, track)?.state as? InsightState.Written)?.writtenBy
+    }
+
+    // The insight another service, model or effort wrote that [key]'s row on [track] shows in place of
+    // its own (#911), as the row shows it: the earlier one once its own was looked for, in place of
+    // none, of a rewrite that ended without one, or of a write on an earlier play that did ([stale]);
+    // null for none.
+    private fun shownEarlier(
+        key: CardKey,
+        track: TrackState,
+    ): Entry? {
         val entry = shown.value[key]
-        // As the row shows it: the earlier one once its own was looked for, in place of none, of a
-        // rewrite that ended without one, or of a write on an earlier play that did ([stale]).
         val showsEarlier =
             key in others.value && (entry == null || entry.rewrites || stale(entry, track.nowPlaying.play))
-        if (ask != ItemAsk.TAP || !showsEarlier) return null
-        val earlier = earlierFor(key, shown.value, others.value[key], settings.value?.historyLifetime)
-        return (earlier?.state as? InsightState.Written)?.writtenBy
+        if (!showsEarlier) return null
+        return earlierFor(key, shown.value, others.value[key], settings.value?.historyLifetime)
     }
+
+    // Whether [ask] is a tap's opening under *On demand* (#948) of a row that shows the insight another
+    // service, model or effort wrote in place of its own (#911): that stays, with *Rewrite insight*,
+    // and the opening writes nothing.
+    private fun opensOverEarlier(
+        key: CardKey,
+        ask: ItemAsk,
+        track: TrackState,
+    ): Boolean =
+        ask == ItemAsk.OPENED &&
+            settings.value?.writeAutomatically == WriteAutomatically.NEVER &&
+            shownEarlier(key, track) != null
 
     // What a Stop cancels an item's call with, told apart from the scope's own cancellation.
     private class StopAsked : CancellationException("stopped")
@@ -1215,7 +1242,8 @@ class AppItemNotes(
     )
 
     // Whether [key]'s insight on [track] may be asked for ([open]), and if so, marked as being written,
-    // unless it is already. Not by itself or on opening while it is [held] (#911).
+    // unless it is already. Not by itself or on opening while it is [held] (#911), nor on opening
+    // under *On demand* in place of another's insight shown ([opensOverEarlier], #948).
     private fun claim(
         key: CardKey,
         ask: ItemAsk,
@@ -1223,7 +1251,8 @@ class AppItemNotes(
         evidence: ItemEvidence,
     ): Boolean {
         var added = false
-        if (open(key, ask, track, evidence) && (ask == ItemAsk.TAP || !held(key, track))) {
+        val allowed = ask == ItemAsk.TAP || (!held(key, track) && !opensOverEarlier(key, ask, track))
+        if (open(key, ask, track, evidence) && allowed) {
             writing.update { asked ->
                 added = key !in asked
                 asked + key

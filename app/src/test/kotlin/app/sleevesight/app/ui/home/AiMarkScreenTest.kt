@@ -130,7 +130,12 @@ class AiMarkScreenTest {
             stop.assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.ContentDescription))
             assertEquals(0, marksIn(STOP_TAG))
             assertEquals(0, marksIn(WRITE_MODE_TAG))
-            val anywhere = compose.onAllNodes(hasTestTag(AI_MARK_TAG), useUnmergedTree = true)
+            // None on the card: the rows under it carry theirs, as what they open is AI-written (#948).
+            val anywhere =
+                compose.onAllNodes(
+                    hasTestTag(AI_MARK_TAG) and !hasAnyAncestor(hasTestTag(ITEM_ROWS_TAG)),
+                    useUnmergedTree = true,
+                )
             assertEquals(0, anywhere.fetchSemanticsNodes().size)
         }
     }
@@ -144,7 +149,7 @@ class AiMarkScreenTest {
         show {
             val inWrite = hasText("Write insight") and hasAnyAncestor(hasTestTag(WRITE_TAG))
             val label = compose.onNode(inWrite, useUnmergedTree = true)
-            val mark = compose.onNodeWithTag(AI_MARK_TAG, useUnmergedTree = true)
+            val mark = compose.onNode(hasTestTag(AI_MARK_TAG) and hasAnyAncestor(hasTestTag(WRITE_TAG)), true)
             val labelBounds = label.getUnclippedBoundsInRoot()
             val markBounds = mark.getUnclippedBoundsInRoot()
             assertTrue("after the label", markBounds.left >= labelBounds.right)

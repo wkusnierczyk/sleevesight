@@ -321,6 +321,10 @@
     <string name="home_item_show_song">show the song’s insight</string>
     <string name="home_item_show_artist">show the artist’s insight</string>
     <string name="home_item_show_album">show the album’s insight</string>
+    <!-- A row of the song, the artist or the album as a screen reader reads it while its insight is
+         written with its panel or page closed (#948): "Song, Paper Boats, uses AI, writing"; %1$s:
+         the row as read otherwise, "Song, Paper Boats, uses AI". -->
+    <string name="home_item_writing">%1$s, writing</string>
     <!-- An item with nothing written under On demand, above its Write insight. -->
     <string name="home_item_tap_write">Tap Write insight to have it written from the sources.</string>
     <!-- An item the sources give nothing to write from: no call is made. -->

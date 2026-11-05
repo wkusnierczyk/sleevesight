@@ -43,7 +43,9 @@ import app.sleevesight.core.settings.WriteAutomatically
 /**
  * What an item shown needs besides its state: the [track] it is of, the [settings] (*Reactive*),
  * whether the track would be written by itself now ([writesItself], `PipelineView.writesItself`),
- * the [notes] it is written by, where
+ * and why automatic writing left it, as the key insight says it (#948): *Saver*'s pause ([lapsed],
+ * `PipelineView.lapsed`), or a track that followed the last one by itself ([followed],
+ * `PipelineView.followed`); the [notes] it is written by, where
  * a citation goes on the track's evidence ([cite]), where a report goes ([onReport]), *Read aloud*,
  * and the note of a model found unavailable ([unavailable], [onModelSettings]).
  */
@@ -59,6 +61,8 @@ internal class ItemContext(
     val unavailable: UnavailableModel? = null,
     val onModelSettings: () -> Unit = {},
     val sources: EvidenceSet? = null,
+    val lapsed: Boolean = false,
+    val followed: Boolean = false,
 ) {
     /**
      * Whether *Reactive* is set to an automatic mode, with *Show insights* on: an item unfolded or on
@@ -71,11 +75,28 @@ internal class ItemContext(
 }
 
 /**
+ * The write of an item's opening by a tap under *On demand* (#948): [due] until the item's state is
+ * known, then [taken], so it is asked for once; [NONE] where no tap opened it, or it is taken.
+ */
+internal class OpeningWrite(
+    val due: Boolean,
+    val taken: () -> Unit = {},
+) {
+    companion object {
+        val NONE = OpeningWrite(due = false)
+    }
+}
+
+/**
  * What [item] shows unfolded, or on its page: "by {model}" and *Read aloud* once written; the insight,
  * cited (a citation opens *Sources* at its line, the album's own lines among them, #522); *Report a
- * problem*. Before it is written: under *On demand*, "Tap Write
- * insight…" and *Write insight* with the **AI** mark; under an automatic mode, written at once
- * ([ItemContext.automatic], [tapped]), *Writing…* with the turning record meanwhile. The insight
+ * problem*. Before it is written: opened by a tap ([tapped]), written at once in every mode (#948),
+ * *Writing…* with the turning record meanwhile: under an automatic mode as an opening
+ * ([ItemContext.automatic]); under *On demand* once, the tap's consent, while [opening] is due, which
+ * it ends as soon as the item's state is known, so a written, kept, stopped or failed one opens as it
+ * is, and nothing asks again. Else, "Tap Write insight…" and *Write insight* with the **AI** mark (a
+ * panel left open at a new track under *On demand*, or one an automatic mode held back, which says
+ * why as the key insight does). The insight
  * another AI service, model or effort wrote, shown in place of none (#911), says so ("As written
  * previously.", with what *Rewrite insight* would rewrite it with), and *Rewrite insight*, with the
  * **AI** mark, rewrites it; one a rewrite wrote says "Rewritten with …". With the model found
@@ -86,6 +107,7 @@ internal class ItemContext(
  * draws *Read aloud* in its heading ([ItemReadAloud], #894) and so passes [readAloud] false, leaving
  * it out of the byline's row.
  */
+@Suppress("LongParameterList") // The item, what it is shown with, and how it was opened.
 @Composable
 internal fun ItemContent(
     item: InsightItem,
@@ -93,13 +115,53 @@ internal fun ItemContent(
     tapped: Boolean,
     shown: ItemShown? = null,
     readAloud: Boolean = true,
+    opening: OpeningWrite = OpeningWrite.NONE,
 ) {
     val track = context.track
     if (track == null) {
         Gathering()
         return
     }
-    ItemShownContent(item, track, context, tapped, shown ?: itemShown(item, context), readAloud)
+    val now = shown ?: itemShown(item, context)
+    WritesOnTap(item, track, context, now, opening)
+    ItemShownContent(item, track, context, tapped, now, readAloud, writingDue = opening.due && !context.automatic)
+}
+
+/**
+ * Under *On demand*, the write of [item]'s opening by a tap (#948), while [opening] is due: asked for
+ * once, the tap's consent ([ItemAsk.OPENED]), when [shown] says nothing is written
+ * ([ItemShown.Offered]), with the app on screen; taken as soon as its state is known, whatever it is,
+ * so a written, kept, stopped or failed one opens as it is, and neither a recomposition nor a return
+ * to the screen asks again. Under an automatic mode it is taken at once: the opening is written as
+ * one ([WritesAtOnce]).
+ */
+@Composable
+private fun WritesOnTap(
+    item: InsightItem,
+    track: TrackState,
+    context: ItemContext,
+    shown: ItemShown,
+    opening: OpeningWrite,
+) {
+    val due = opening.due
+    val taken = opening.taken
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val resumed by lifecycle.currentStateFlow.collectAsState()
+    val onScreen = resumed.isAtLeast(Lifecycle.State.RESUMED)
+    val known = shown != ItemShown.Gathering
+    val offered = shown == ItemShown.Offered
+    val automatic = context.automatic
+    LaunchedEffect(due, known, offered, automatic, onScreen) {
+        when {
+            !due -> Unit
+            automatic -> taken()
+            known && !offered -> taken()
+            offered && onScreen -> {
+                taken()
+                context.notes.write(track, item, ItemAsk.OPENED)
+            }
+        }
+    }
 }
 
 /**
@@ -145,7 +207,8 @@ internal fun ItemReadAloud(
     }
 }
 
-// [ItemContent] of [track], [shown] as followed.
+// [ItemContent] of [track], [shown] as followed; *Writing…* for one offered while its tap's write is
+// due ([writingDue], #948), asked for at once, rather than *Write insight* for a frame.
 @Suppress("LongParameterList") // What the item shows, and where.
 @Composable
 private fun ItemShownContent(
@@ -155,6 +218,7 @@ private fun ItemShownContent(
     tapped: Boolean,
     shown: ItemShown,
     readAloud: Boolean,
+    writingDue: Boolean,
 ) {
     WritesAtOnce(item, track, context, tapped)
     val unavailable = context.unavailable
@@ -168,11 +232,14 @@ private fun ItemShownContent(
         ItemShown.Off -> ItemQuiet(stringResource(R.string.home_insight_off))
         ItemShown.NoService -> ItemQuiet(stringResource(R.string.home_insight_unavailable))
         // Nothing written and nothing under way: *Write insight*, whatever the mode, so an automatic
-        // write the gates refused never shows as writing.
-        ItemShown.Offered -> {
-            ItemQuiet(stringResource(R.string.home_item_tap_write))
-            WriteButton(item) { context.notes.write(track, item, ItemAsk.TAP) }
-        }
+        // write the gates refused never shows as writing; why, when an automatic mode held it back.
+        ItemShown.Offered ->
+            if (writingDue) {
+                Writing()
+            } else {
+                ItemQuiet(stringResource(offeredLine(context, tapped)))
+                WriteButton(item) { context.notes.write(track, item, ItemAsk.TAP) }
+            }
 
         is ItemShown.Asking -> WritingItem(item) { context.notes.stop(now.key) }
 
@@ -326,6 +393,8 @@ internal fun itemContext(
     settings = settings,
     notes = actions.itemNotes,
     writesItself = shown.view.writesItself,
+    lapsed = shown.view.lapsed,
+    followed = shown.view.followed,
     cite = cite,
     onReport = onReport,
     readAloud = actions.readAloud,
