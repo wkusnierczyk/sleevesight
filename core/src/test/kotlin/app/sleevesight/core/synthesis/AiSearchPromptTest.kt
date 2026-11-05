@@ -26,7 +26,8 @@ class AiSearchPromptTest {
 
     @Test
     fun theSystemPartComesFirstThenTheTrackThenTheQuestion() {
-        for (kind in SearchKind.entries) {
+        // What the song is about is asked from web pages only (#908): `ExplainAnswersTest`'s.
+        for (kind in SearchKind.entries - SearchKind.EXPLAIN) {
             val prompt = AiSearchPrompt.build(kind, facts)
             assertEquals(AiSearchPrompt.system(kind) + "\n\n" + AiSearchPrompt.user(kind, facts), prompt)
             // A definition's data is the genre (#786), fenced as the track is.
@@ -83,7 +84,7 @@ class AiSearchPromptTest {
 
     @Test
     fun eachKindAsksForJsonInItsShapeAndNeverAGuess() {
-        for (kind in SearchKind.entries) {
+        for (kind in SearchKind.entries - SearchKind.EXPLAIN) {
             val system = AiSearchPrompt.system(kind)
             assertTrue(AiSearchPrompt.shape(kind) in system)
             assertTrue("never guess" in system)

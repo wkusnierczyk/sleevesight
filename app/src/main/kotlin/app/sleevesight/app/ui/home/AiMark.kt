@@ -9,12 +9,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.FirstBaseline
 import androidx.compose.ui.layout.LastBaseline
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.offset
@@ -36,8 +39,9 @@ internal const val MARK_ALPHA = 0.75f
  * dimmed **AI**, set as the source chips' letters were (`labelSmall`, at [MARK_ALPHA] of the
  * label's colour) but after the label, on its baseline. It goes in the button's content slot, in
  * place of the label's `Text`: `Button(onClick) { AiLabel(label) }`. Every button that calls the AI
- * shows its label through it, but *Search with AI* (#773), whose plain label was picked, its name
- * saying it; and no other does: not *Stop writing*, not the split button's arrow.
+ * shows its label through it, but *Ask AI* (#773) under *Dates*, *Genres* and a genre's definition,
+ * whose plain label was picked, its name saying it (the *Lyrics* panel's *Find the lyrics* and
+ * *Explain the song* have it, #908); and no other does: not *Stop writing*, not the split button's arrow.
  *
  * A label too long for its width wraps rather than being cut off; the mark then follows its last
  * line's end, on that line's baseline. Room for the mark is kept at the end of every line, so it
@@ -106,8 +110,31 @@ internal fun AiLabel(
     }
 }
 
+/**
+ * The width that fits the widest of [labels] as a search's button sets it with the AI mark
+ * (`labelLarge`, the mark in `labelSmall` after it, [AiLabel]; the button's padding around,
+ * `AiSearchBlock`), so buttons given it as their least width are all as wide as the widest (#908:
+ * the *Lyrics* panel's two). A label wider than the panel wraps in its button as before.
+ */
+@Composable
+internal fun aiButtonWidth(labels: List<String>): Dp {
+    val measurer = rememberTextMeasurer()
+    val typography = MaterialTheme.typography
+    val density = LocalDensity.current
+    val mark = stringResource(R.string.home_ai_mark)
+    val widest =
+        labels.maxOfOrNull { label -> measurer.measure(label, typography.labelLarge).size.width }
+            ?: return Dp.Unspecified
+    val markWidth = measurer.measure(mark, typography.labelSmall).size.width
+    return with(density) { (widest + markWidth).toDp() } + MARK_SPACE + PADDING_SIDES
+}
+
 /** The room between the label and the mark, as between a source chip's letter and its name. */
 private val MARK_GAP = 4.dp
+
+// [MARK_GAP] with a pixel's rounding to spare, and a search button's padding at its two sides.
+private val MARK_SPACE = MARK_GAP + 1.dp
+private val PADDING_SIDES = 24.dp
 
 /** The test tag of the **AI** mark, on every button that calls the AI service. */
 const val AI_MARK_TAG: String = "ai-mark"
