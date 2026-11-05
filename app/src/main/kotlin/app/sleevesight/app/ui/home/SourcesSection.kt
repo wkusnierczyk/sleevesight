@@ -29,6 +29,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.intl.LocaleList
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -297,7 +298,9 @@ private fun Entries(
 
 /**
  * One evidence line: its id, its text, and its scope with a link to where it was found; flashed
- * when a citation points at it.
+ * when a citation points at it. A line found in the track's language (#902, `EvidenceLine.language`)
+ * shows its text as found, set in that language's locale, and says the language after the host:
+ * *release · hi.wikipedia.org · in Hindi*.
  */
 @Composable
 private fun EvidenceRow(
@@ -322,8 +325,10 @@ private fun EvidenceRow(
     ) {
         Tag(line.id, tagWidth)
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(line.text, style = MaterialTheme.typography.bodySmall)
-            Where(if (album) stringResource(R.string.home_scope_album) else scopeText(line.scope), line.url)
+            val style = MaterialTheme.typography.bodySmall
+            Text(line.text, style = line.language?.let { style.copy(localeList = LocaleList(it)) } ?: style)
+            val language = line.language?.let { stringResource(R.string.home_source_line_in, languageName(it)) }
+            Where(if (album) stringResource(R.string.home_scope_album) else scopeText(line.scope), line.url, language)
         }
     }
 }
@@ -369,17 +374,22 @@ private fun Tag(
 
 /**
  * What a line is about ([scope], in words: "artist", or "album" for the album's own line, #522), and
- * the host it was found on, linked; the link opens in the browser.
+ * the host it was found on, linked; the link opens in the browser. Then, for a line found in the
+ * track's language, [language]: "in Hindi" (#902).
  */
 @Composable
 private fun Where(
     scope: String,
     url: String?,
+    language: String? = null,
 ) {
     val host = hostOf(url)
     val parts =
-        listOf(TextPart.Words(scope)) +
-            if (url != null && host != null) listOf(TextPart.Words(" · "), TextPart.Link(host, url)) else emptyList()
+        buildList<TextPart> {
+            add(TextPart.Words(scope))
+            if (url != null && host != null) addAll(listOf(TextPart.Words(" · "), TextPart.Link(host, url)))
+            language?.let { add(TextPart.Words(" · $it")) }
+        }
     LinkedText(parts, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 

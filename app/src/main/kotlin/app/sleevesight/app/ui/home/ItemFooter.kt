@@ -19,7 +19,8 @@ import app.sleevesight.core.pipeline.TrackState
 
 /**
  * The footer under [item]'s written insight [state], as the key insight's, top to bottom: the history
- * line ([itemHistory], #911), the grounding note, that the reply stopped early, *Report a problem*;
+ * line ([itemHistory], #911), the grounding note, which citations it translated from the track's
+ * language ([TranslatedLine], #902), that the reply stopped early, *Report a problem*;
  * then, while the model is found unavailable (#540), that it is, last, just above the Write it leaves
  * disabled; and *Rewrite insight* beside another model's insight ([ItemShown.Shown.rewriteWith]).
  */
@@ -33,6 +34,7 @@ internal fun WrittenFooter(
 ) {
     itemHistory(shown, state, context)?.let { ItemQuiet(it) }
     GroundingLine(state.grounded, details = false)
+    TranslatedLine(state.grounded, shown.evidence.evidence)
     if (!state.complete) ItemQuiet(stringResource(R.string.home_insight_incomplete))
     ReportAction { context.onReport(track.copy(evidence = shown.evidence.evidence), state, item) }
     context.unavailable?.let { ModelUnavailable(it, context.onModelSettings) }

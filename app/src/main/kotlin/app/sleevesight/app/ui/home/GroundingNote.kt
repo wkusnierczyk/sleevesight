@@ -5,10 +5,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.theme.DeveloperMark
+import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.synthesis.GroundedText
 import app.sleevesight.core.synthesis.SentenceStatus
 
@@ -69,6 +72,59 @@ private val DIMMED = setOf(SentenceStatus.UNCITED, SentenceStatus.UNKNOWN)
  * the ones dimmed ([DIMMED], which the note counts) and the model's own knowledge.
  */
 internal val UNBACKED = setOf(SentenceStatus.UNCITED, SentenceStatus.UNKNOWN, SentenceStatus.MODEL)
+
+/**
+ * Under an insight, a song's, an artist's or an album's insight or a genre's reason that cites lines
+ * found in the track's language (#902, `EvidenceLine.language`), after the grounding note: which
+ * citations it translated, *Translated from Hindi: W2 and S1.* ([R.string.home_note_translated]), one
+ * line per language, the citations joined as *Sources*' lists are ([listText]). The citations are
+ * those of [grounded] that point at a line of [evidence], in the order they first come, a citation
+ * outside [held] (the ids its prompt held, when it left some out, #239) not one, as its chip shows
+ * it; the chips themselves stay as they are. Nothing is drawn when none is in another language.
+ */
+@Suppress("SpreadOperator") // A handful of arguments, passed straight through.
+@Composable
+internal fun TranslatedLine(
+    grounded: GroundedText,
+    evidence: EvidenceSet?,
+    held: Set<String>? = null,
+    modifier: Modifier = Modifier,
+) {
+    val translated = remember(grounded, evidence, held) { translatedCites(grounded, evidence, held) }
+    if (translated.isEmpty()) return
+    val resources = LocalResources.current
+    val words = Words { id, args -> resources.getString(id, *args) }
+    for ((language, ids) in translated) {
+        MetaLine(
+            stringResource(R.string.home_note_translated, languageName(language), listText(ids, words)),
+            modifier.testTag(TRANSLATED_PREFIX + language),
+        )
+    }
+}
+
+/**
+ * The citations of [grounded] that point at a line of [evidence] found in another language (#902),
+ * by its language's code, each language and each citation in the order they first come; a citation
+ * outside [held], when given, is no line's ([citeKind]).
+ */
+internal fun translatedCites(
+    grounded: GroundedText,
+    evidence: EvidenceSet?,
+    held: Set<String>? = null,
+): List<Pair<String, List<String>>> {
+    if (evidence == null) return emptyList()
+    return grounded.paragraphs
+        .flatten()
+        .flatMap { it.cites }
+        .distinct()
+        .mapNotNull { id ->
+            evidence[id]?.takeIf { held == null || id in held }?.language?.let { it to id }
+        }.groupBy({ it.first }, { it.second })
+        .toList()
+}
+
+/** The test tag of the line on what an insight translated (#902), before the language's code. */
+const val TRANSLATED_PREFIX: String = "translated:"
 
 /**
  * The grounding check's counts in full, as the simulator gives them (*Show grounding details*).

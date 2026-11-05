@@ -5,6 +5,7 @@ import app.sleevesight.app.pipeline.RewriteOffer
 import app.sleevesight.app.pipeline.UnavailableModel
 import app.sleevesight.app.session.TrackIdentity
 import app.sleevesight.core.evidence.EvidenceDraft
+import app.sleevesight.core.evidence.EvidenceLine
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.Outcome
@@ -147,12 +148,26 @@ internal fun citeKind(
         else -> CiteKind.UNKNOWN
     }
 
-/** A source's status chip: its [status], and the evidence sources whose lines it shows or hides. */
+/**
+ * A source's status chip: its [status], and the evidence sources whose lines it shows or hides. With
+ * a [language] (the language's code, #902), the source's lookup in the track's language
+ * (`TrackState.inLanguage`): its row of *Sources*' table is its own, and what it found is from its
+ * own lines, those in that language; its letter shows and hides its source's lines, as the source's
+ * own row's does, since they are cited by the same letter.
+ */
 internal data class SourceChip(
     val source: SourceId,
     val status: ChipStatus,
     val filters: Set<SourceId>,
-)
+    val language: String? = null,
+) {
+    /** The lines of [lines] that are this chip's own: its sources', in its [language] (none for English). */
+    fun own(lines: List<EvidenceLine>): List<EvidenceLine> =
+        lines.filter { it.source in filters && it.language == language }
+
+    /** Its key among the table's rows, in its test tags: the source's tag, with the language after a colon. */
+    val key: String get() = language?.let { "${source.tag}:$it" } ?: source.tag
+}
 
 /** What a source's chip says. */
 internal sealed interface ChipStatus {
@@ -177,7 +192,9 @@ internal sealed interface ChipStatus {
  * it): the player's release when there is a `P` line, each source looked up, each keyed source
  * that needs its key, each keyed source switched off ([off]) that was not looked up, as off (#667:
  * one with no key saved is off, not in need of its key), and the model's own knowledge when it is
- * allowed. The Wikipedia chip shows and hides Wikidata's lines too, which its adapter brings.
+ * allowed. The Wikipedia chip shows and hides Wikidata's lines too, which its adapter brings. Each
+ * lookup in the track's language (#902, `TrackState.inLanguage`) has a chip of its own, after its
+ * source's.
  */
 internal fun sourceChips(
     track: TrackState,
@@ -206,14 +223,11 @@ internal fun sourceChips(
                 }
             }
         }
+    val inLanguage = track.inLanguage
+    val language = inLanguage?.sources.orEmpty()
     for ((source, state) in looked) {
-        val status =
-            when (state) {
-                SourceState.Pending -> ChipStatus.Pending
-                is SourceState.Failed -> ChipStatus.Failed
-                is SourceState.Done -> ChipStatus.Done(state.result.outcome, state.cached)
-            }
-        chips += SourceChip(source, status, filtersOf(source))
+        chips += SourceChip(source, chipStatus(state), filtersOf(source))
+        language[source]?.let { chips += SourceChip(source, chipStatus(it), filtersOf(source), inLanguage?.language) }
     }
     for (source in order.filter { it !in track.sources }) {
         val status =
@@ -227,6 +241,13 @@ internal fun sourceChips(
     if (modelAllowed) chips += SourceChip(SourceId.MODEL, ChipStatus.ModelAllowed, setOf(SourceId.MODEL))
     return chips
 }
+
+private fun chipStatus(state: SourceState): ChipStatus =
+    when (state) {
+        SourceState.Pending -> ChipStatus.Pending
+        is SourceState.Failed -> ChipStatus.Failed
+        is SourceState.Done -> ChipStatus.Done(state.result.outcome, state.cached)
+    }
 
 private fun filtersOf(source: SourceId): Set<SourceId> =
     if (source == SourceId.WIKIPEDIA) setOf(SourceId.WIKIPEDIA, SourceId.WIKIDATA) else setOf(source)
