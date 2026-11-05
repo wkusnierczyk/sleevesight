@@ -3,6 +3,7 @@ package app.sleevesight.core.synthesis
 import app.sleevesight.core.evidence.EvidenceLine
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.evidence.Scope
+import app.sleevesight.core.language.Languages
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.SourceId
@@ -103,8 +104,12 @@ object InsightPrompt {
      * when a web page gives it" did worse over two runs each, as the first rejected variant did:
      * more uncited sentences on thinly documented tracks ("The evidence here is thin."), and the
      * length named no less. Never shipped; its system prompt is kept in `design/prompts/`.
+     * Version 12 (#902; 11 was the rejected one above, a number not reused): a rule has a line found
+     * in the track's language, marked with it, translated and cited as usual ([TRANSLATION_RULE]).
+     * Raised as a contract change is, though a card kept from version 10 had no such line to
+     * translate.
      */
-    const val VERSION: Int = 10
+    const val VERSION: Int = 12
 
     /**
      * The system prompt: everything fixed for a listener, the same for every track. With
@@ -238,6 +243,7 @@ object InsightPrompt {
         listOf(
             CITATION_RULE,
             EVIDENCE_RULE,
+            TRANSLATION_RULE,
             LENGTH_RULE,
             COUNTS_RULE,
             ORIGINAL_SONG_RULE,
@@ -276,6 +282,17 @@ object InsightPrompt {
 
     /** The rule on the evidence: the only facts the insight may use. */
     const val EVIDENCE_RULE: String = "- Use only the evidence: no names, dates, places or numbers that are not in it."
+
+    /**
+     * The rule on a line found in the track's language (#902): marked with its language in the
+     * parentheses ([evidenceLine]), it is translated into the answer's language, English until #290
+     * brings others, and cited as any other line. In every prompt that holds evidence lines: the
+     * insight's, the song's, the artist's and the album's ([ItemPrompt]) and the genre reason's
+     * ([GenreReasonPrompt]).
+     */
+    const val TRANSLATION_RULE: String =
+        "- A line marked with a language, like (Wikipedia, release, Hindi), is in that language: translate " +
+            "what you use of it into English, and cite it as usual."
 
     /** The rule with the model's own knowledge on: one sentence of it at most, cited `[AI]`. */
     val MODEL_RULE: String =
@@ -419,9 +436,15 @@ object InsightPrompt {
     const val FINAL_TEXT_RULE: String =
         "- Write only the final text: never revise or correct yourself in the reply."
 
-    /** `[ID] (source, scope) text`, on one line. */
-    fun evidenceLine(line: EvidenceLine): String =
-        "[${line.id}] (${sourceLabel(line.source)}, ${scopeLabel(line.scope)}) ${oneLine(line.text)}"
+    /**
+     * `[ID] (source, scope) text`, on one line; a line found in the track's language (#902) has the
+     * language's English name after its scope, `[W2] (Wikipedia, release, Hindi) …`, which
+     * [TRANSLATION_RULE] asks the model to translate.
+     */
+    fun evidenceLine(line: EvidenceLine): String {
+        val language = line.language?.let { code -> ", " + (Languages.ofCode(code)?.name ?: code) }.orEmpty()
+        return "[${line.id}] (${sourceLabel(line.source)}, ${scopeLabel(line.scope)}$language) ${oneLine(line.text)}"
+    }
 
     /** How the prompt names a source. */
     fun sourceLabel(source: SourceId): String =

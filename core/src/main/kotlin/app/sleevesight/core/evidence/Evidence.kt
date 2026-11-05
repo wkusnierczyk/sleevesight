@@ -38,6 +38,12 @@ enum class Scope(
  * lines whatever their text names (a Wikipedia lead's "Gordon Meredith Lightfoot Jr."), and the same
  * lines on a solo track and on a collaboration. Null for any other line, and for one an adapter or a
  * kept result does not say. The fingerprint does not read it.
+ *
+ * [language] is the language the line's text is in, by its code (`hi`, `Language.code`), when the
+ * search in the track's language found it (#902): the prompt marks the line with it, so the model
+ * translates what it uses, and Sources shows it. Null for English or not known, as every line found
+ * by the other lookups is. The fingerprint reads it, when set, so two lines that differ only by it
+ * are never taken for the same evidence.
  */
 @Suppress("LongParameterList") // One for each of the draft's own fields.
 class EvidenceDraft(
@@ -48,6 +54,7 @@ class EvidenceDraft(
     val retrievedAt: Instant,
     val aggregate: Boolean = false,
     val about: String? = null,
+    val language: String? = null,
 ) {
     val text: String = text.withoutLoneSurrogates()
 
@@ -60,7 +67,8 @@ class EvidenceDraft(
         retrievedAt: Instant = this.retrievedAt,
         aggregate: Boolean = this.aggregate,
         about: String? = this.about,
-    ): EvidenceDraft = EvidenceDraft(source, scope, text, url, retrievedAt, aggregate, about)
+        language: String? = this.language,
+    ): EvidenceDraft = EvidenceDraft(source, scope, text, url, retrievedAt, aggregate, about, language)
 
     override fun equals(other: Any?): Boolean =
         other is EvidenceDraft &&
@@ -70,19 +78,22 @@ class EvidenceDraft(
             url == other.url &&
             retrievedAt == other.retrievedAt &&
             aggregate == other.aggregate &&
-            about == other.about
+            about == other.about &&
+            language == other.language
 
-    override fun hashCode(): Int = listOf(source, scope, text, url, retrievedAt, aggregate, about).hashCode()
+    override fun hashCode(): Int = listOf(source, scope, text, url, retrievedAt, aggregate, about, language).hashCode()
 
     override fun toString(): String =
         "EvidenceDraft(source=$source, scope=$scope, text=$text, url=$url, retrievedAt=$retrievedAt" +
-            (if (aggregate) ", aggregate=true" else "") + (about?.let { ", about=$it)" } ?: ")")
+            (if (aggregate) ", aggregate=true" else "") + (about?.let { ", about=$it" } ?: "") +
+            (language?.let { ", language=$it)" } ?: ")")
 }
 
 /**
  * An evidence line with its id, the source tag plus its position among that source's lines, from
  * 1: `W1`, `L3`, `S2`, `P1`. Ids are assigned by [EvidenceSet], from [EvidenceDraft]s, whose text
- * is already well-formed.
+ * is already well-formed. [language] as the draft's ([EvidenceDraft.language]): null for English or
+ * not known.
  */
 data class EvidenceLine(
     val id: String,
@@ -93,6 +104,7 @@ data class EvidenceLine(
     val retrievedAt: Instant,
     val aggregate: Boolean = false,
     val about: String? = null,
+    val language: String? = null,
 )
 
 /** [this] with every unpaired UTF-16 surrogate replaced by U+FFFD. */

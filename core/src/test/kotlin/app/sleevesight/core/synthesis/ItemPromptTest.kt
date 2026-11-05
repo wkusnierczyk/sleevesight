@@ -13,11 +13,12 @@ class ItemPromptTest {
     private fun stored(name: String): String = Fixtures.text("prompts/$name").removeSuffix("\n")
 
     @Test
-    fun `the stored prompts are version 1's`() {
+    fun `the stored prompts are version 2's`() {
         // A change to the template changes the stored prompts and raises the version with them (the
         // synthesis cache keys insights by it): update both together. The key insight's version 9
         // (#767) left this prompt as it was: it keeps version 8's rules and style ([ItemPrompt.contract]).
-        assertEquals(1, ItemPrompt.VERSION)
+        // Version 2 (#902): the rule on a line found in the track's language.
+        assertEquals(2, ItemPrompt.VERSION)
     }
 
     @Test

@@ -41,7 +41,18 @@ internal fun withAlbum(
     val more =
         album.lines
             .filter { Triple(it.source, it.scope, it.text) !in own }
-            .map { EvidenceDraft(it.source, it.scope, it.text, it.url, it.retrievedAt, it.aggregate, it.about) }
+            .map {
+                EvidenceDraft(
+                    it.source,
+                    it.scope,
+                    it.text,
+                    it.url,
+                    it.retrievedAt,
+                    it.aggregate,
+                    it.about,
+                    it.language,
+                )
+            }
     val shown = evidence.with(more, JvmHasher)
     return SourcesLines(shown, (shown.ids - evidence.ids.toSet()).toSet())
 }

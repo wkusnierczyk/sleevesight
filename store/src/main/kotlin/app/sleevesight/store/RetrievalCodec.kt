@@ -190,6 +190,7 @@ internal object RetrievalCodec {
             retrievedAt = draft.retrievedAt.toString(),
             aggregate = draft.aggregate,
             about = draft.about,
+            language = draft.language,
         )
 
     private fun draft(stored: DraftJson): EvidenceDraft =
@@ -201,6 +202,7 @@ internal object RetrievalCodec {
             retrievedAt = Instant.parse(stored.retrievedAt),
             aggregate = stored.aggregate,
             about = stored.about,
+            language = stored.language,
         )
 
     @Serializable
@@ -299,6 +301,9 @@ internal object RetrievalCodec {
         // The artist an artist-level line is about (#522, `EvidenceDraft.about`); left out when none,
         // and none in an entry kept before it.
         val about: String? = null,
+        // The language of a line found in the track's language (#902, `EvidenceDraft.language`); left
+        // out for English or not known, and none in an entry kept before it.
+        val language: String? = null,
     )
 
     @Serializable

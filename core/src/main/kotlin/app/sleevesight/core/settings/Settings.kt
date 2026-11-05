@@ -79,6 +79,11 @@ import kotlin.time.Duration.Companion.seconds
  *   AI* or automatically, searches the web with Exa ([AiWebSearch]); *Once* by default. It needs Exa
  *   web search on ([aiWebSearchOn]); with it off, the questions are asked as with *Off*, and this
  *   choice is kept for when it is on again.
+ * @property trackLanguageSearch *Search in the track's language* (#902): whether a track sung in a
+ *   language other than English is also looked up on Wikipedia and searched on the web in that
+ *   language ([TrackLanguageSearch]); *If needed* by default. Each search keeps its own source's switch
+ *   (Wikipedia and Wikidata; Exa web search), and the language is named only by what is written or
+ *   recorded (`TrackLanguage`).
  * @property cacheLifetimes the retrieval cache lifetime per source (D9). A source with none (the
  *   pseudo-sources, which retrieve nothing) is not cached.
  * @property keepArtistResults *Keep what sources said about each artist* (#420): whether what the
@@ -216,6 +221,7 @@ data class Settings(
     val readNewInsightsAloud: Boolean = false,
     val searchWithAi: Boolean = false,
     val aiWebSearch: AiWebSearch = AiWebSearch.ONCE,
+    val trackLanguageSearch: TrackLanguageSearch = TrackLanguageSearch.IF_NEEDED,
     val cacheLifetimes: Map<SourceId, Duration> = DEFAULT_CACHE_LIFETIMES,
     val keepArtistResults: Boolean = false,
     val artistCacheLifetime: Duration = DEFAULT_ARTIST_CACHE_LIFETIME,
@@ -619,6 +625,26 @@ enum class AiWebSearch {
      * fixed), then answers: up to that many searches, and a call more.
      */
     UP_TO,
+}
+
+/**
+ * *Search in the track's language* (#902, [Settings.trackLanguageSearch]): when a track sung in a
+ * language other than English is also looked up in that language, on its Wikipedia and with a web
+ * search in it, beside the English lookups. The insight waits for it, so it is written once.
+ */
+enum class TrackLanguageSearch {
+    /** English only. */
+    OFF,
+
+    /**
+     * Only when the English sources say little about the track itself: fewer lines about the song,
+     * its original or the web than `PromptEvidence.ENOUGH_OF_ITS_OWN`. With Exa on, one more Exa
+     * call for such a track.
+     */
+    IF_NEEDED,
+
+    /** For every track with a language other than English. With Exa on, one more Exa call for each. */
+    ALWAYS,
 }
 
 /**
