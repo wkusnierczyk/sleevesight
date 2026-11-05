@@ -45,7 +45,7 @@ Sleevesight is an open-source Android app that reads what your music player is p
 Every choice is a setting, with a reasoned default:
 
 - **Players:** Spotify by default; any player that reports music can be followed.
-- **Sources:** each one a switch; MusicBrainz and Wikipedia need no key, Last.fm and Exa your own.
+- **Sources:** each one a switch; MusicBrainz and Wikipedia need no key, Last.fm and Exa your own. A track sung in a language other than English can also be looked up on Wikipedia and with Exa in that language, the insight saying which citations it translated (*Search in the track’s language*: *Off*, *If needed*, the default, or *Always*).
 - **AI service:** Anthropic, OpenAI or Google, with your own key, model and reasoning effort.
 - **When it writes:** on every track change, only on a skip, or only when you tap *Write insight*.
 - **Layout:** what opens from Home (*Sources*, the genres, the song's, the artist's and the album's insights) in place or each on a page of its own; in place, whether *Sources* and the three insights start folded on each new track, unfolded, or as you left them.

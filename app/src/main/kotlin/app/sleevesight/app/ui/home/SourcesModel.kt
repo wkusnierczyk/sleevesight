@@ -60,18 +60,19 @@ internal val FINDING_ORDER: List<Scope> = listOf(Scope.SONG, Scope.ORIGINAL_SONG
 
 /**
  * What [chip]'s source found (#768), from the scopes of its own lines in [lines] (those of the
- * sources it [SourceChip.filters]), not from its single outcome: for a lookup done with a found
- * outcome (the song's article, the artist's, the original song's), the scopes of [FINDING_ORDER]
- * its lines have, in that order; web search's, [Finding.Pages], with its lines shown or not; with no
- * line of those scopes (its lines not in the evidence shown), the outcome's own scope alone. A lookup
- * that found nothing, of a source that lists the album's own lines (#522), found the album. Null for
- * any other status, which says what it says ([statusText]).
+ * sources it [SourceChip.filters], in its language, #902: [SourceChip.own]), not from its single
+ * outcome: for a lookup done with a found outcome (the song's article, the artist's, the original
+ * song's), the scopes of [FINDING_ORDER] its lines have, in that order; web search's,
+ * [Finding.Pages], with its lines shown or not; with no line of those scopes (its lines not in the
+ * evidence shown), the outcome's own scope alone. A lookup that found nothing, of a source that
+ * lists the album's own lines (#522), found the album. Null for any other status, which says what
+ * it says ([statusText]).
  */
 internal fun finding(
     chip: SourceChip,
     lines: List<EvidenceLine>,
 ): Finding? {
-    val own = lines.filter { it.source in chip.filters }
+    val own = chip.own(lines)
     val outcome = (chip.status as? ChipStatus.Done)?.outcome
     val nothing = outcome == Outcome.None || outcome is Outcome.Rejected
     val album = chip.source != SourceId.PLAYER && own.any { it.scope == Scope.RELEASE }
@@ -102,9 +103,13 @@ private val FOUND_ALONE: Map<Outcome, Scope> =
 internal val SourceChip.isOff: Boolean
     get() = status == ChipStatus.NeedsKey || (status as? ChipStatus.Done)?.outcome == Outcome.SourceOff
 
-/** What *Sources* tells the listener of a source (#440): only what needs them or went wrong. */
+/**
+ * What *Sources* tells the listener of a source (#440): only what needs them or went wrong; of its
+ * lookup in the track's language when [language] (its code, #902) is set.
+ */
 internal sealed interface SourceNote {
     val source: SourceId
+    val language: String? get() = null
 
     /** On, but its key is not saved: it was not asked. */
     data class NeedsKey(
@@ -114,11 +119,13 @@ internal sealed interface SourceNote {
     /** It could not be reached. */
     data class Unreachable(
         override val source: SourceId,
+        override val language: String? = null,
     ) : SourceNote
 
     /** Its lookup went wrong. */
     data class Failed(
         override val source: SourceId,
+        override val language: String? = null,
     ) : SourceNote
 }
 
@@ -136,21 +143,28 @@ internal fun sourceNotes(
         val status = chip.status
         when {
             status == ChipStatus.NeedsKey -> SourceNote.NeedsKey(chip.source)
-            status == ChipStatus.Failed -> SourceNote.Failed(chip.source)
+            status == ChipStatus.Failed -> SourceNote.Failed(chip.source, chip.language)
             status is ChipStatus.Done && status.outcome == Outcome.Unreachable && !offline ->
-                SourceNote.Unreachable(chip.source)
+                SourceNote.Unreachable(chip.source, chip.language)
             else -> null
         }
     }
 
 /**
  * Whether the *Sources* section says the phone is offline (#192): while it is ([view]'s
- * `offline`), for a [track] with a source unreachable, which is asked again once the phone is
- * back online.
+ * `offline`), for a [track] with a source unreachable, or a lookup in its language (#902), which is
+ * asked again once the phone is back online.
  */
 internal fun offlineShown(
     view: PipelineView,
     track: TrackState?,
-): Boolean =
-    view.offline &&
-        track?.sources?.values?.any { (it as? SourceState.Done)?.result?.outcome == Outcome.Unreachable } == true
+): Boolean {
+    val states =
+        track?.sources?.values.orEmpty() +
+            track
+                ?.inLanguage
+                ?.sources
+                ?.values
+                .orEmpty()
+    return view.offline && states.any { (it as? SourceState.Done)?.result?.outcome == Outcome.Unreachable }
+}

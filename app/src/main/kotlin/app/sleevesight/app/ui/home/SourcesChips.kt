@@ -135,7 +135,7 @@ internal fun Notes(
     val settings = stringResource(R.string.home_source_note_settings)
     val sentences =
         notes.map { note ->
-            val name = chipName(note.source)
+            val name = rowName(note.source, note.language)
             when (note) {
                 is SourceNote.NeedsKey -> stringResource(R.string.home_source_note_key, name, settings)
                 is SourceNote.Unreachable -> stringResource(R.string.home_source_note_unreachable, name)
@@ -170,7 +170,9 @@ internal fun Notes(
  * matched to its source. On the left, right-aligned in a column as wide as the widest, a chip with
  * the letter the source's lines and citations use (`SourceId.tag`, the one place it is set); on the
  * right, the source's name on one line and what it found on the next ([statusText]: from the
- * scopes of its own [lines], *Found the track and the artist*, #768). The chip
+ * scopes of its own [lines], *Found the track and the artist*, #768). A lookup in the track's
+ * language has a row of its own after its source's (#902: *Wikipedia in Hindi*), from its own lines;
+ * its letter shows and hides its source's lines with the source's own row's. The chip
  * shows, at a glance, what a tap does to its source's [lines] ([focus]): filled while they show,
  * outlined while they are hidden, a tap showing them again (unfolded to by [fold]); dimmed for a
  * source that gave none, with nothing to show or hide, and no button. The rows sit close, the
@@ -213,7 +215,7 @@ private fun Table(
         for (row in rows) {
             val state =
                 when {
-                    lines.none { it.source in row.filters } -> LetterState.DIMMED
+                    row.own(lines).isEmpty() -> LetterState.DIMMED
                     row.filters.none { it in focus.hidden } -> LetterState.SHOWN
                     else -> LetterState.HIDDEN
                 }
@@ -241,7 +243,7 @@ private fun SourceRow(
     details: Boolean,
     onToggle: () -> Unit,
 ) {
-    val name = chipName(chip.source)
+    val name = rowName(chip.source, chip.language)
     val filters = state != LetterState.DIMMED
     // At least [ROW_HEIGHT] tall, the chip centred: with [ROW_GAP], each chip's 48 dp touch area
     // ends where the next row's begins, so a touch between two chips goes to the nearer.
@@ -250,7 +252,7 @@ private fun SourceRow(
         verticalAlignment = Alignment.CenterVertically,
         modifier =
             Modifier
-                .testTag(ROW_PREFIX + chip.source.tag)
+                .testTag(ROW_PREFIX + chip.key)
                 .heightIn(min = ROW_HEIGHT),
     ) {
         Box(Modifier.width(width), contentAlignment = Alignment.CenterEnd) {
@@ -272,7 +274,7 @@ private fun SourceRow(
             val colors = MaterialTheme.colorScheme
             val status = statusText(chip, lines, details)
             val style = MaterialTheme.typography.bodySmall
-            val tag = Modifier.testTag(STATUS_PREFIX + chip.source.tag)
+            val tag = Modifier.testTag(STATUS_PREFIX + chip.key)
             val color = if (details && chip.status.wentWrong) colors.error else colors.onSurfaceVariant
             // A lookup under way with the turning record before its *Looking…* (#785); the status the
             // same node, and the row as tall, once it ends.
@@ -315,7 +317,7 @@ private fun LetterChip(
         }
     CompactChipFrame(
         look.fill,
-        modifier = Modifier.testTag(CHIP_PREFIX + chip.source.tag).then(outline),
+        modifier = Modifier.testTag(CHIP_PREFIX + chip.key).then(outline),
         action = action,
     ) {
         Text(
@@ -360,13 +362,13 @@ const val SOURCES_CHIP_TAG: String = "sources-chip"
 /** The test tag of the note of what needs the listener. */
 const val SOURCES_NOTE_TAG: String = "sources-note"
 
-/** The test tag of a source's chip, before its tag (`MB`, `W`). */
+/** The test tag of a source's chip, before its tag (`MB`, `W`; `W:hi` in the track's language, #902). */
 const val CHIP_PREFIX: String = "chip:"
 
-/** The test tag of what a source's row says it found, before its tag (`MB`, `W`). */
+/** The test tag of what a source's row says it found, before its tag (`MB`, `W`; `W:hi`, #902). */
 const val STATUS_PREFIX: String = "source-status:"
 
-/** The test tag of a source's row of the table, before its tag (`MB`, `W`). */
+/** The test tag of a source's row of the table, before its tag (`MB`, `W`; `W:hi`, #902). */
 const val ROW_PREFIX: String = "source-row:"
 
 /** The test tag of *Sources*' table of the sources. */

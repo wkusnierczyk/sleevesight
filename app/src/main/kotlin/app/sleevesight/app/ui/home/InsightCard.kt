@@ -206,6 +206,7 @@ private fun Written(
  *   [groundingDetails] (developer mode, inside its mark), the grounding check's counts. The note
  *   stays where the counts are, which take its place in developer mode: under the line about the
  *   insight's history and above *Report a problem*, the action it leads to;
+ * - which citations it translated from the track's language ([TranslatedLine], #902);
  * - that the reply stopped early, for an incomplete insight;
  * - *Report a problem* ([ReportAction]), in the theme's error colour;
  * - while the model is found unavailable (#540), that it is ([ModelUnavailable]), with its link to the
@@ -231,6 +232,7 @@ private fun Footer(
         }
         // Not *Kept from before.*: the line above says so.
         GroundingLine(insight.grounded, details = groundingDetails)
+        TranslatedLine(insight.grounded, context.track?.evidence, insight.held)
         if (!insight.complete) Quiet(stringResource(R.string.home_insight_incomplete))
         context.track?.let { track -> ReportAction { actions.onReport(track, insight) } }
         // Last, just above the split button's disabled Write, which it explains (#911).

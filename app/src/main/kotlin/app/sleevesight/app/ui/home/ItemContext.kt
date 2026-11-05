@@ -255,7 +255,7 @@ private fun Shown(
             for (paragraph in state.grounded.paragraphs) {
                 CheckedProse(paragraph, state.grounded, shown.evidence.evidence, onCite, label = label)
             }
-            WrittenFooter(item, shown, state, track, context)
+            WrittenFooter(item, shown, state, track, context, label)
         }
 
         InsightState.NoEvidence -> ItemQuiet(stringResource(noEvidence(item)))

@@ -2,10 +2,16 @@ package app.sleevesight.app.ui.home
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.intl.LocaleList
 import app.sleevesight.app.R
 import app.sleevesight.core.evidence.EvidenceLine
 import app.sleevesight.core.evidence.Scope
+import app.sleevesight.core.language.Languages
 import app.sleevesight.core.model.Outcome
+import app.sleevesight.core.model.SourceId
 
 // What a source's row in *Sources*' table says it found (#662), and what each source found as a
 // list (#768), in words the resources give.
@@ -114,3 +120,46 @@ private fun outcomeText(
         Outcome.SourceOff -> words.get(R.string.home_source_off)
         Outcome.Unreachable -> words.get(R.string.home_source_unreachable)
     }
+
+/**
+ * The name of a row of *Sources*' table and of its note (#440): [chipName], or for a lookup in the
+ * track's [language] (its code, #902), *Wikipedia in Hindi*, *Web search in Hindi*.
+ */
+@Composable
+internal fun rowName(
+    source: SourceId,
+    language: String?,
+): String =
+    when {
+        language == null -> chipName(source)
+        source == SourceId.WIKIPEDIA -> stringResource(R.string.home_source_wikipedia_in, languageName(language))
+        source == SourceId.WEB -> stringResource(R.string.home_source_web_in, languageName(language))
+        else -> chipName(source)
+    }
+
+/**
+ * The name a rejected [match] is listed under: its source's ([sourceName]), or for a lookup in the
+ * track's language, its row's (#902: *Web search in Hindi*, [rowName]).
+ */
+@Composable
+internal fun rejectedName(match: RejectedMatch): String =
+    match.language?.let { rowName(match.source, it) } ?: sourceName(match.source)
+
+/**
+ * A language's name, as the app knows it (`Languages`: "Hindi"), from its [code]; the code itself
+ * for one it does not.
+ */
+internal fun languageName(code: String): String = Languages.ofCode(code)?.name ?: code
+
+/**
+ * [text], with a span setting it in [language]'s locale (#902) over the whole of it when given: for
+ * the drawing and for a screen reader, which a `TextStyle`'s locale does not reach.
+ */
+internal fun inLanguage(
+    text: String,
+    language: String?,
+): AnnotatedString {
+    if (language == null) return AnnotatedString(text)
+    val span = AnnotatedString.Range(SpanStyle(localeList = LocaleList(language)), 0, text.length)
+    return AnnotatedString(text, listOf(span))
+}

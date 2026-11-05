@@ -432,6 +432,11 @@
          a line of its own (home_ai_kept_today, #851), an insight in its footer ("As written
          previously.", #671). -->
     <string name="home_note_unbacked">Dimmed text is not backed by the sources.</string>
+    <!-- Under an insight, a song's, an artist's or an album's insight and a genre's reason that cite lines
+         found in the track's language (#902), after the note above: one line per language. %1$s is the
+         language's name ("Hindi"), %2$s the citations, joined as home_source_finding_comma and
+         home_source_finding_and join a list ("W2 and S1"). -->
+    <string name="home_note_translated">Translated from %1$s: %2$s.</string>
     <!-- The grounding check's counts in full, under Show grounding details (a developer setting). -->
     <plurals name="home_meta_grounded">
         <item quantity="one">%1$d of %2$d sentence grounded</item>
@@ -556,6 +561,12 @@
     <string name="home_source_name_wikidata">Wikidata</string>
     <string name="home_source_name_discogs">Discogs</string>
     <string name="home_source_name_web">Web search</string>
+    <!-- The rows of the Sources table for the lookups in the track's language (#902), after Wikipedia's and
+         Web search's; %1$s is the language's name ("Hindi"). -->
+    <string name="home_source_wikipedia_in">Wikipedia in %1$s</string>
+    <string name="home_source_web_in">Web search in %1$s</string>
+    <!-- After a line's host, for a line found in the track's language (#902): "release · hi.wikipedia.org · in Hindi". -->
+    <string name="home_source_line_in">in %1$s</string>
     <string name="home_source_name_player">the player</string>
     <!-- Chips' names under Sources, beside their letters, where they differ from the settings' names. -->
     <string name="home_source_chip_wikipedia">Wikipedia</string>

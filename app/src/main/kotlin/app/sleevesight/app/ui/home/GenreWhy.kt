@@ -22,6 +22,7 @@ import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.app.ui.theme.linkedParts
+import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.pipeline.AiSearches
 import app.sleevesight.core.pipeline.GenreLists
 import app.sleevesight.core.pipeline.InsightState
@@ -157,12 +158,13 @@ internal fun ReasonShown(
                 if (state.grounded.fromModelAlone) {
                     QuietNote(stringResource(R.string.genre_why_from_model), Modifier.testTag(GENRE_WHY_FROM_MODEL_TAG))
                 }
+                // A reason asked again with web search cites the pages it found too (#801).
+                val evidence = state.searched ?: context.track?.evidence
                 for (paragraph in state.grounded.paragraphs) {
-                    // A reason asked again with web search cites the pages it found too (#801).
-                    CheckedProse(paragraph, state.grounded, state.searched ?: context.track?.evidence, actions.onCite)
+                    CheckedProse(paragraph, state.grounded, evidence, actions.onCite)
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    ReasonCredits(shown, state, Modifier.weight(1f))
+                    ReasonCredits(shown, state, evidence, Modifier.weight(1f))
                     actions.readAloud?.let { ReadAloudButton(it, GENRE_READ_ALOUD_TAG) }
                 }
                 if (!state.complete) QuietNote(stringResource(R.string.genre_why_incomplete))
@@ -195,12 +197,14 @@ internal fun ReasonShown(
     }
 }
 
-// Under a written reason ([state]): "by {model}", the grounding note, and, kept from before, when it
-// was written (#851).
+// Under a written reason ([state]): "by {model}", the grounding note, which of its citations of
+// [evidence] it translated from the track's language (#902), and, kept from before, when it was
+// written (#851).
 @Composable
 private fun ReasonCredits(
     shown: GenreReason.Shown,
     state: InsightState.Written,
+    evidence: EvidenceSet?,
     modifier: Modifier,
 ) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -209,6 +213,7 @@ private fun ReasonCredits(
         val by = if (fromWeb) R.string.genre_why_by_web else R.string.genre_why_by
         shown.model?.let { SearchCredit(stringResource(by, it)) }
         GroundingLine(state.grounded, details = false)
+        TranslatedLine(state.grounded, evidence)
         shown.keptAt?.let { KeptLine(it) }
     }
 }
