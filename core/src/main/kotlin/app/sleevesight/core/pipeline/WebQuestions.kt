@@ -75,8 +75,10 @@ data class QuestionCost(
  * when no call was made); every page the searches found, once each ([pages]), null for a question
  * from the model's knowledge; what it cost ([cost]); and the way it was asked ([used]: *Once* for
  * *Up to 3 times* with a service that takes no tools). [searchFailed]: *Once*'s search failed,
- * so no call was made.
+ * so no call was made. [refused]: the caller's gate ([WebQuestions.ask]'s `mayPay`) closed before a
+ * search or a call, which was not made, nor any after it; what the reply holds is incomplete.
  */
+@Suppress("LongParameterList") // What came back, what it cost, how it was asked, and how it ended.
 class WebReply(
     val text: String,
     val end: CompletionEvent?,
@@ -84,6 +86,7 @@ class WebReply(
     val cost: QuestionCost,
     val used: AiWebSearch,
     val searchFailed: Boolean = false,
+    val refused: Boolean = false,
 )
 
 /**
@@ -110,7 +113,10 @@ class WebReply(
  *
  * Each search and call is counted to [ask]'s `counted` as it is made, before its answer, so one
  * stopped or failed still counts. Cancelling the caller cancels the whole loop: the call under way
- * and any search after it.
+ * and any search after it. [ask]'s `mayPay` is asked right before each search and each call, with
+ * no suspension between: once it says no, that one and every one after it are not made
+ * ([WebReply.refused]), so a gate that closes while a call streams (the app left, web search
+ * switched off, #912) stops the loop at its next paid step.
  */
 class WebQuestions(
     private val ai: AiAccess,
@@ -129,62 +135,106 @@ class WebQuestions(
 
     /**
      * Asks [question] with [search] (up to [limit] searches for [AiWebSearch.UP_TO]), each call as
-     * [base] is but for its prompt and tools; each search and call counted to [counted] as made.
+     * [base] is but for its prompt and tools; each search and call counted to [counted] as made, and
+     * made only while [mayPay], asked right before it, says so.
      */
+    @Suppress("LongParameterList") // The question, how it searches, its request, and its cost and gate.
     suspend fun ask(
         question: WebQuestion,
         search: AiWebSearch,
         limit: Int,
         base: CompletionRequest,
         counted: (QuestionCost) -> Unit = {},
-    ): WebReply =
-        when (val way = used(search)) {
+        mayPay: () -> Boolean = { true },
+    ): WebReply {
+        val way = used(search)
+        val paying = Paying(counted, mayPay)
+        return when (way) {
             AiWebSearch.OFF -> {
                 val request = base.copy(prompt = question.knowledge, system = question.system ?: base.system)
+                if (!mayPay()) return WebReply("", null, null, QuestionCost(), way, refused = true)
                 val (text, end) = call(request, counted)
                 WebReply(text, end, pages = null, QuestionCost.CALL, way)
             }
-            AiWebSearch.ONCE -> once(question, base, counted)
-            AiWebSearch.UP_TO -> agent(question, limit, base, counted)
+            AiWebSearch.ONCE -> once(question, base, paying)
+            AiWebSearch.UP_TO -> agent(question, limit, base, paying)
         }
+    }
+
+    // How a question pays: each search and call counted to [counted], made only while [mayPay].
+    private class Paying(
+        val counted: (QuestionCost) -> Unit,
+        val mayPay: () -> Boolean,
+    )
 
     private suspend fun once(
         question: WebQuestion,
         base: CompletionRequest,
-        counted: (QuestionCost) -> Unit,
+        paying: Paying,
+    ): WebReply =
+        if (paying.mayPay()) {
+            searchedOnce(question, base, paying)
+        } else {
+            WebReply("", null, null, QuestionCost(), AiWebSearch.ONCE, refused = true)
+        }
+
+    // *Once*'s search, its gate open, then its call, while the gate is still open.
+    private suspend fun searchedOnce(
+        question: WebQuestion,
+        base: CompletionRequest,
+        paying: Paying,
     ): WebReply {
-        counted(QuestionCost.SEARCH)
+        paying.counted(QuestionCost.SEARCH)
         val found = checkNotNull(web).search(question.query)
         val pages = (found as? WebSearchOutcome.Found)?.pages.orEmpty().let(::usable)
-        if (found !is WebSearchOutcome.Found || pages.isEmpty()) {
-            return WebReply(
-                "",
-                null,
-                pages,
-                QuestionCost.SEARCH,
-                AiWebSearch.ONCE,
-                searchFailed = found !is WebSearchOutcome.Found,
-            )
+        return when {
+            found !is WebSearchOutcome.Found || pages.isEmpty() ->
+                WebReply(
+                    "",
+                    null,
+                    pages,
+                    QuestionCost.SEARCH,
+                    AiWebSearch.ONCE,
+                    searchFailed = found !is WebSearchOutcome.Found,
+                )
+            !paying.mayPay() -> WebReply("", null, pages, QuestionCost.SEARCH, AiWebSearch.ONCE, refused = true)
+            else -> {
+                val request = base.copy(prompt = question.once(pages), system = question.system ?: base.system)
+                val (text, end) = call(request, paying.counted)
+                WebReply(text, end, pages, QuestionCost(searches = 1, calls = 1), AiWebSearch.ONCE)
+            }
         }
-        val request = base.copy(prompt = question.once(pages), system = question.system ?: base.system)
-        val (text, end) = call(request, counted)
-        return WebReply(text, end, pages, QuestionCost(searches = 1, calls = 1), AiWebSearch.ONCE)
     }
 
     private suspend fun agent(
         question: WebQuestion,
         limit: Int,
         base: CompletionRequest,
-        counted: (QuestionCost) -> Unit,
+        paying: Paying,
     ): WebReply {
-        val engine = checkNotNull(web)
-        val prompt = question.agent(limit)
-        val system = question.agentSystem(limit) ?: base.system
-        val pages = LinkedHashMap<String, WebPage>()
-        val exchanges = mutableListOf<ToolExchange>()
-        var cost = QuestionCost()
-        var failed = 0
-        while (true) {
+        val loop = AgentLoop(question, limit, base, paying, checkNotNull(web))
+        var reply: WebReply? = null
+        while (reply == null) reply = loop.turn()
+        return reply
+    }
+
+    // *Up to 3 times*' loop (see the class): what it has found and paid for so far, a turn at a time.
+    private inner class AgentLoop(
+        private val question: WebQuestion,
+        private val limit: Int,
+        private val base: CompletionRequest,
+        private val paying: Paying,
+        private val engine: WebSearcher,
+    ) {
+        private val prompt = question.agent(limit)
+        private val system = question.agentSystem(limit) ?: base.system
+        private val pages = LinkedHashMap<String, WebPage>()
+        private val exchanges = mutableListOf<ToolExchange>()
+        private var cost = QuestionCost()
+        private var failed = 0
+
+        // One call, and the searches it asks for: the question's reply when it ends here, else null.
+        suspend fun turn(): WebReply? {
             // Searches left, and calls: at most [limit] + 1 in all, the last never with the tool,
             // whatever the turns' calls look like (one with no query counts no search).
             val allowed = cost.searches < limit && cost.calls < limit
@@ -196,28 +246,41 @@ class WebQuestions(
                     exchanges = exchanges.toList(),
                     toolsAllowed = allowed,
                 )
+            if (!paying.mayPay()) return refused()
             cost += QuestionCost.CALL
-            val (text, end, turn) = turn(request, counted)
+            val (text, end, turn) = turn(request, paying.counted)
             val calledTools = (end as? CompletionEvent.Done)?.stopReason == StopReason.TOOL_USE && turn != null
-            if (!calledTools || !allowed) {
-                // Searches made and every one failed: the answer had nothing to go on, and is not kept.
-                val allFailed = cost.searches > 0 && failed == cost.searches
-                return WebReply(text, end, pages.values.toList(), cost, AiWebSearch.UP_TO, searchFailed = allFailed)
+            // Searches made and every one failed: the answer had nothing to go on, and is not kept.
+            val allFailed = cost.searches > 0 && failed == cost.searches
+            return if (!calledTools || !allowed) {
+                WebReply(text, end, pages.values.toList(), cost, AiWebSearch.UP_TO, searchFailed = allFailed)
+            } else {
+                searched(checkNotNull(turn))
             }
-            val results =
-                checkNotNull(turn).calls.map { call ->
-                    val answer = answer(question, call, engine, cost.searches < limit, pages, counted)
-                    if (answer.searched) cost += QuestionCost.SEARCH
-                    if (answer.failed) failed++
-                    answer.result
-                }
-            exchanges += ToolExchange(turn, results)
         }
+
+        // The searches [turn] asks for, answered for the next call; the question refused, when the gate
+        // closed before one.
+        private suspend fun searched(turn: ToolTurn): WebReply? {
+            val results = mutableListOf<ToolResult>()
+            for (call in turn.calls) {
+                val answer = answer(question, call, engine, cost.searches < limit, pages, paying)
+                if (answer.refused) return refused()
+                if (answer.searched) cost += QuestionCost.SEARCH
+                if (answer.failed) failed++
+                results += answer.result
+            }
+            exchanges += ToolExchange(turn, results)
+            return null
+        }
+
+        private fun refused() = WebReply("", null, pages.values.toList(), cost, AiWebSearch.UP_TO, refused = true)
     }
 
     // What the search tool answers [call] (searching with [engine] when [searchesLeft], counted, its
     // pages added to [pages]): the pages; that the search found none, or failed (an error); that no
-    // searches are left; or, for a call with no query or to another tool, an error.
+    // searches are left; or, for a call with no query or to another tool, an error. Refused, with no
+    // search, once [paying]'s gate has closed.
     @Suppress("LongParameterList") // The question, the call, the engine, and what the loop keeps.
     private suspend fun answer(
         question: WebQuestion,
@@ -225,7 +288,7 @@ class WebQuestions(
         engine: WebSearcher,
         searchesLeft: Boolean,
         pages: MutableMap<String, WebPage>,
-        counted: (QuestionCost) -> Unit,
+        paying: Paying,
     ): ToolAnswer {
         val query = queryOf(call.arguments)
         return when {
@@ -235,8 +298,11 @@ class WebQuestions(
             !searchesLeft -> {
                 ToolAnswer(ToolResult(call.id, WebPrompt.NO_SEARCHES_LEFT))
             }
+            !paying.mayPay() -> {
+                ToolAnswer(ToolResult(call.id, WebPrompt.SEARCH_FAILED, isError = true), refused = true)
+            }
             else -> {
-                counted(QuestionCost.SEARCH)
+                paying.counted(QuestionCost.SEARCH)
                 val found = engine.search(query)
                 val kept = (found as? WebSearchOutcome.Found)?.pages?.let(::usable).orEmpty()
                 kept.forEach { pages.putIfAbsent(it.url, it) }
@@ -251,11 +317,13 @@ class WebQuestions(
         }
     }
 
-    // A tool's answer, whether a search was made for it, and whether that search failed.
+    // A tool's answer, whether a search was made for it, whether that search failed, and whether it
+    // was refused, the gate closed.
     private class ToolAnswer(
         val result: ToolResult,
         val searched: Boolean = false,
         val failed: Boolean = false,
+        val refused: Boolean = false,
     )
 
     // One call of [request], counted: its text and its end.

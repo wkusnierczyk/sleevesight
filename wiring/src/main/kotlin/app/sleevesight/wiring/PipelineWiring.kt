@@ -24,6 +24,7 @@ import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WebEngine
 import app.sleevesight.core.sources.AlbumLookup
 import app.sleevesight.core.sources.ArtistResults
+import app.sleevesight.core.sources.ArtistWebLookup
 import app.sleevesight.core.sources.LanguageSearch
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.WebSearcher
@@ -38,7 +39,9 @@ import app.sleevesight.sources.lastfm.LastFmAlbums
 import app.sleevesight.sources.lastfm.LastFmTags
 import app.sleevesight.sources.musicbrainz.MusicBrainzClient
 import app.sleevesight.sources.musicbrainz.MusicBrainzSource
+import app.sleevesight.sources.web.ArtistWebSource
 import app.sleevesight.sources.web.ExaAlbumSearch
+import app.sleevesight.sources.web.ExaArtistSearch
 import app.sleevesight.sources.web.ExaLanguageSearch
 import app.sleevesight.sources.web.ExaPageSearch
 import app.sleevesight.sources.web.ExaWebSearch
@@ -66,8 +69,9 @@ import app.sleevesight.sources.wikipedia.WikipediaSource
  * [artists] is the artist cache (#238): what Last.fm, the Wikipedia artist article and MusicBrainz's
  * tags give for an artist is kept there per artist, so a second track by the same artist does not
  * ask for it again. The app's is the cache database's, the CLI's the run's cache, if it has one.
- * [trackOnly] is where what an album's web search found is kept (#885, [TRACK_ONLY_PARTS]): the
- * app's is the same table, kept whatever *Keep what sources said about each artist* says.
+ * [trackOnly] is where what an album's web search found is kept (#885, [TRACK_ONLY_PARTS]), and an
+ * artist's (#912): the app's is the same table, kept whatever *Keep what sources said about each
+ * artist* says.
  *
  * [genres] says whether genre information is asked for at all (*Show genres*, #444), read at each
  * MusicBrainz recording's lookup, whose tags are asked for only then; the adapters take it from
@@ -175,6 +179,21 @@ class PipelineWiring internal constructor(
                 },
             webKept = trackOnly,
         )
+
+    /**
+     * The web search for an artist the sources say nothing about, and what it found, kept per artist
+     * (#912, `PipelineParts.artistWeb`): Exa's search for the artist ([ExaArtistSearch]) with its key
+     * in [keys] while Exa is switched on in [settings], its lines kept in [trackOnly]
+     * ([ArtistWebSource]); none without that engine and key, as *AI web search* then makes no search.
+     * Read when the list is built, as the adapters' keys are ([adapters]).
+     */
+    fun artistWeb(
+        keys: SourceKeys,
+        settings: Settings,
+    ): ArtistWebLookup? =
+        keys.web[WebEngine.EXA]?.takeIf { WebEngine.EXA in settings.webEngines }?.let {
+            ArtistWebSource(ExaArtistSearch(net, it, accentFolder), names, kept = trackOnly)
+        }
 
     /**
      * Forgets MusicBrainz's answers kept in memory ([RememberedMusicBrainz]), for *Clear history*
@@ -286,10 +305,12 @@ class PipelineWiring internal constructor(
         /**
          * The parts of the artist-level table kept whatever *Keep what sources said about each
          * artist* says, which its switching off does not clear (#885): an album's web lines
-         * ([AlbumSource.WEB_PART]), paid for and found by the album, as a track's own web findings
-         * are kept in the retrieval cache (`SourceResult.trackOnly`). *Clear history* clears them.
+         * ([AlbumSource.WEB_PART]), paid for and found by the album, and an artist's (#912,
+         * [ArtistWebSource.PART]), paid for and found by the artist's insight, as a track's own web
+         * findings are kept in the retrieval cache (`SourceResult.trackOnly`). *Clear history*
+         * clears them.
          */
-        val TRACK_ONLY_PARTS: Set<String> = setOf(AlbumSource.WEB_PART.name)
+        val TRACK_ONLY_PARTS: Set<String> = setOf(AlbumSource.WEB_PART.name, ArtistWebSource.PART.name)
     }
 }
 

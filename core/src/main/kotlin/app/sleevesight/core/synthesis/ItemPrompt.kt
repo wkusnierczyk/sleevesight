@@ -3,6 +3,7 @@ package app.sleevesight.core.synthesis
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
+import app.sleevesight.core.model.SourceId
 
 /**
  * The prompt for the song's, the artist's and the album's insights under *Key insights* (#522;
@@ -98,8 +99,32 @@ object ItemPrompt {
             appendLine(subjectRule(subject.kind))
             appendLine(contract(allowModel))
             appendLine()
-            append("Reply with the insight text only.")
+            append(REPLY)
         }
+
+    /** The prompt's last line. */
+    private const val REPLY: String = "Reply with the insight text only."
+
+    /**
+     * [prompt], the artist's insight's from no evidence ([build]), for *AI web search* set to *Up to 3
+     * times* (#912): before its last line, the model is told to search the web for the artist with
+     * [WebPrompt.TOOL], at most [limit] times; each search's pages that name the artist come back as
+     * evidence lines numbered from `S1` (`ArtistQuestion.toolResult`), which it cites and keeps to as
+     * the others, and `NO_EVIDENCE` only when they say nothing about the artist either. Only the
+     * artist's insight is written so, and only when its sources say nothing about the artist; its
+     * card is keyed by those pages, kept, so the same [VERSION] stands: a later card from them is
+     * written with [build]'s prompt, which gives them as its evidence.
+     */
+    fun withSearch(
+        prompt: String,
+        limit: Int,
+    ): String =
+        prompt.removeSuffix(REPLY) +
+            "The evidence has nothing on the artist: search the web for the artist with the " +
+            "${WebPrompt.TOOL_NAME} tool, at most $limit times. Each search's pages that name the artist come " +
+            "back as evidence lines, in the same format, numbered from [${SourceId.WEB.tag}1]: cite them as " +
+            "evidence lines, and use only what they say. Reply ${GroundingCheck.NO_EVIDENCE} only if what the " +
+            "searches find says nothing about the artist either.\n\n" + REPLY
 
     // The task: what the card is about.
     private fun task(kind: CardKind): String =

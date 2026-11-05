@@ -11,6 +11,7 @@ import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.sources.AlbumLookup
+import app.sleevesight.core.sources.ArtistWebLookup
 import app.sleevesight.core.sources.LanguageSearch
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.SourceAdapter
@@ -65,11 +66,13 @@ class AiAccess(
  * gathers the evidence for an album's insight under *Key insights* (#522, [ItemInsights]), or none
  * (the CLI), when the album's insight has nothing to be written from. [modelUnavailable] when there
  * is no [ai] because the selected service's model is found unavailable (#540): nothing is written,
- * but the key insight kept is still read and shown (#911, `InsightWriter`). [languageSearch] looks the
- * track up in the language it is sung in, when not English (#902, [LanguageSearch]), or none (no
- * such search).
+ * but the key insight kept is still read and shown (#911, `InsightWriter`). [artistWeb] searches the
+ * web for an artist the sources say nothing about, and keeps what it found (#912, [ItemInsights]),
+ * on the user's web search key, or none (no engine switched on with its key, the CLI).
+ * [languageSearch] looks the track up in the language it is sung in, when not English (#902,
+ * [LanguageSearch]), or none (no such search).
  */
-@Suppress("LongParameterList") // Twelve independent stages, and why one is missing; the last nine are optional.
+@Suppress("LongParameterList") // Thirteen independent stages, and why one is missing; the last ten are optional.
 class PipelineParts(
     val normalizer: Normalizer,
     val adapters: List<SourceAdapter>,
@@ -83,6 +86,7 @@ class PipelineParts(
     val webSearch: WebSearcher? = null,
     val albums: AlbumLookup? = null,
     val modelUnavailable: Boolean = false,
+    val artistWeb: ArtistWebLookup? = null,
     val languageSearch: LanguageSearch? = null,
 ) {
     init {
