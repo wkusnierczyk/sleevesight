@@ -9,6 +9,7 @@ import app.sleevesight.core.evidence.EvidenceLine
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.evidence.Hasher
 import app.sleevesight.core.evidence.Scope
+import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.resolution.NameMatcher
@@ -22,6 +23,7 @@ import app.sleevesight.core.sources.ArtistWebQuery
 import app.sleevesight.core.sources.ReleaseDate
 import app.sleevesight.core.sources.ResolvedArtist
 import app.sleevesight.core.sources.SourceResult
+import app.sleevesight.core.sources.WebPage
 import app.sleevesight.core.sources.WebSearcher
 import app.sleevesight.core.synthesis.CardKind
 import app.sleevesight.core.synthesis.GroundingCheck
@@ -157,6 +159,7 @@ data class KeptItem(
 @Suppress(
     "LongParameterList", // Where items are written, kept, and gathered, and the time.
     "TooManyFunctions", // Each step of an item: its name, entity, evidence, key, read and write.
+    "LargeClass", // Those steps, with the album's and the artist's web searches among them (#885, #912).
 )
 class ItemInsights(
     private val ai: AiAccess?,
@@ -274,7 +277,10 @@ class ItemInsights(
 
     // The artist-level lines of the run's [own] evidence, numbered on their own; with none, while *AI
     // web search* is used, the web's lines kept for the artist ([artistWeb], #912), a search due
-    // while none is kept. A store that throws keeps nothing, so a search is due.
+    // while none is kept. A store that throws keeps nothing, so a search is due. Not while a source
+    // that gives artist-level lines (or MusicBrainz, whose resolution names the artist they look up)
+    // could not be asked ([unanswered]): it may have something on the artist, so no search is due,
+    // and the evidence is unreachable, gathered again, as an album's is when a source fails.
     private suspend fun artistEvidence(
         own: EvidenceSet,
         shown: EvidenceSet,
@@ -284,10 +290,16 @@ class ItemInsights(
         val lines = artistLines(own, track)
         val lookup = artistWeb?.takeIf { lines.isEmpty() && searchesArtist(settings) }
         val query = artistQuery(track)
-        if (lookup == null || query == null) return numbered(lines, shown)
-        val kept = attempt { lookup.kept(query) }
-        val set = EvidenceSet.of(kept.orEmpty().filter { settings.isEnabled(it.source) }, hasher)
-        return ItemEvidence(set, matching(set.lines, shown), webDue = kept == null)
+        return when {
+            lookup == null || query == null -> numbered(lines, shown)
+            unanswered(track, settings) ->
+                ItemEvidence(EvidenceSet.of(emptyList(), hasher), emptyMap(), unreachable = true)
+            else -> {
+                val kept = attempt { lookup.kept(query) }
+                val set = EvidenceSet.of(kept.orEmpty().filter { settings.isEnabled(it.source) }, hasher)
+                ItemEvidence(set, matching(set.lines, shown), webDue = kept == null)
+            }
+        }
     }
 
     /**
@@ -503,7 +515,8 @@ class ItemInsights(
                 ?.takeIf { searchesItself(item, evidence, settings) }
                 ?: return null
         val subject = ItemPrompt.Subject(item.kind, searching.name)
-        val question = ArtistQuestion(subject, track, first.modelKnowledge, names, hasher, now())
+        val line = { page: WebPage -> searching.lookup.pageLine(searching.query, page) }
+        val question = ArtistQuestion(subject, track, first.modelKnowledge, names, hasher, now(), line)
         val base = CompletionRequest(first.model, "", CompletionRequest.maxTokensFor(first.effort), first.effort)
         val questions = WebQuestions(searching.access, searching.engine)
         val reply =
@@ -1049,3 +1062,22 @@ class ItemInsights(
         fun offered(track: TrackState): Boolean = track.gathered && track.evidence != null
     }
 }
+
+// The sources whose answer the artist's web search waits for (#912): those that give artist-level
+// lines, and MusicBrainz, whose resolution names the artist they look up.
+private val ARTIST_SOURCES = setOf(SourceId.MUSICBRAINZ, SourceId.WIKIPEDIA, SourceId.LASTFM)
+
+// Whether a source [settings] switch on that the artist's lines come from, or MusicBrainz, ended on
+// [track] unreachable (the network, the source), or failed in a way its adapter did not map.
+private fun unanswered(
+    track: TrackState,
+    settings: Settings,
+): Boolean =
+    ARTIST_SOURCES.any { source ->
+        settings.isEnabled(source) &&
+            when (val state = track.sources[source]) {
+                is SourceState.Failed -> true
+                is SourceState.Done -> state.result.outcome == Outcome.Unreachable
+                else -> false
+            }
+    }

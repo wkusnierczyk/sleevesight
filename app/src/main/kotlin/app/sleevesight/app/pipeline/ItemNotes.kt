@@ -964,7 +964,9 @@ class AppItemNotes(
                     )
                 }
             val with = if (result == null || result.evidence === asked.evidence) asked else asked.with(result.evidence)
-            if (result != null) gatheredAgain(insights, with)
+            // Only evidence the write gave (pages, or "found nothing", kept): one that kept nothing
+            // leaves the artist's gathered evidence, and its other tracks', with the search due.
+            if (with !== asked) gatheredAgain(insights, with)
             handed = result != null
             return result?.let { Next(it.key, with, outcomeOf(it.state), it.state) }
                 ?: Next(key, asked, null, notAsked = true)
@@ -1092,8 +1094,9 @@ class AppItemNotes(
         gathered.update { kept ->
             kept.mapValues { (at, other) ->
                 val same = at != from && at.item == from.item && at.item != InsightItem.SONG && at.entity == from.entity
+                // Never the evidence of a search that kept nothing, with a search still due.
                 val given =
-                    if (same && other.evidence.webDue) {
+                    if (same && other.evidence.webDue && !found.webDue) {
                         insights.withWebOf(other.track, other.settings, other.evidence, found)
                     } else {
                         null

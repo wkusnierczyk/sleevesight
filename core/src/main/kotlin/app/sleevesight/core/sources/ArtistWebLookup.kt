@@ -40,6 +40,17 @@ interface ArtistWebLookup {
     )
 
     /**
+     * The line [page], found by the AI service's own search (*Up to 3 times*), gives for [artist], by
+     * the rules the app's own search keeps a result by (#912's review: about the artist, not a
+     * source the app reads itself, page boilerplate left out, cut as a web line is); null when it
+     * gives none. As the page came by default.
+     */
+    fun pageLine(
+        artist: ArtistWebQuery,
+        page: WebPage,
+    ): String? = page.text
+
+    /**
      * The artist's web lines kept again, from now, when a card of the artist's insight was written,
      * "found nothing" included: they last as long as the last card written from them (*Keep history
      * for*), as an album's do (`AlbumLookup.renewWeb`). Nothing when none is kept.

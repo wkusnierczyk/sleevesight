@@ -5,6 +5,7 @@ import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.resolution.Lookup
+import app.sleevesight.core.sources.WebPage
 import app.sleevesight.net.NetError
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
@@ -14,6 +15,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -93,4 +95,32 @@ class ExaArtistSearchTest {
             )
             assertEquals(2, sent)
         }
+
+    @Test
+    fun `a page the AI service's search found gives its line by the same rules`() {
+        val search = search(ReplayNetClient.ok(body))
+        val artist = "Shashwat Sachdev"
+        // A source the app reads itself, or a page that does not name the artist: no line.
+        val wiki =
+            WebPage(
+                "https://en.wikipedia.org/wiki/Shashwat_Sachdev",
+                "Shashwat Sachdev",
+                "Shashwat Sachdev is a composer.",
+            )
+        assertNull(search.line(artist, wiki))
+        assertNull(search.line(artist, WebPage("https://films.example.net/d", "Dhurandhar", "An action film.")))
+        // A part that is only page boilerplate left out.
+        val rights =
+            WebPage("https://composer.example.org/a", null, "Shashwat Sachdev scored Uri. ... All rights reserved")
+        assertEquals("Shashwat Sachdev scored Uri.", search.line(artist, rights))
+        // Cut as a web line is, at a word boundary, the cut shown.
+        val long =
+            WebPage(
+                "https://composer.example.org/b",
+                null,
+                "Shashwat Sachdev " + "scored another film ".repeat(30),
+            )
+        val cut = checkNotNull(search.line(artist, long))
+        assertTrue(cut.length <= ExaWebSearch.LINE_CHARACTERS + 1 && cut.endsWith("…"))
+    }
 }

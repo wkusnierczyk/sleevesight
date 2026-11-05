@@ -8,6 +8,7 @@ import app.sleevesight.core.sources.ArtistPart
 import app.sleevesight.core.sources.ArtistResults
 import app.sleevesight.core.sources.ArtistWebLookup
 import app.sleevesight.core.sources.ArtistWebQuery
+import app.sleevesight.core.sources.WebPage
 import app.sleevesight.sources.KeptDrafts
 import app.sleevesight.sources.OneSearchAtATime
 import app.sleevesight.sources.lastfm.Lru
@@ -75,6 +76,11 @@ class ArtistWebSource(
         val key = keyOf(artist)
         if (kept.persists) kept.keep(PART, key, KeptDrafts.encode(lines)) else remembered.put(key, lines)
     }
+
+    override fun pageLine(
+        artist: ArtistWebQuery,
+        page: WebPage,
+    ): String? = web?.line(artist.name, page) ?: page.text.takeIf { web == null }
 
     override suspend fun renew(artist: ArtistWebQuery) {
         val key = keyOf(artist)

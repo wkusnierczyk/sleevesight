@@ -10,6 +10,7 @@ import app.sleevesight.core.sources.ArtistPart
 import app.sleevesight.core.sources.ArtistResults
 import app.sleevesight.core.sources.ArtistWebQuery
 import app.sleevesight.core.sources.KeptPart
+import app.sleevesight.core.sources.WebPage
 import app.sleevesight.core.testing.MemoryArtistResults
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
@@ -132,6 +133,22 @@ class ArtistWebSourceTest {
             assertTrue(checkNotNull(source.search(artist, { sent++ }) { open }).isNotEmpty())
             assertEquals(1, sent)
         }
+
+    @Test
+    fun `a page the AI service found gives the line the artist's search's rules give`() {
+        val page = WebPage("https://example.com/sachdev", "Shashwat Sachdev", "Shashwat Sachdev scored Uri.")
+        val rules =
+            object : ArtistWebSearch by Web() {
+                override fun line(
+                    artist: String,
+                    page: WebPage,
+                ): String = "$artist: ${page.text}"
+            }
+        assertEquals(
+            "Shashwat Sachdev: Shashwat Sachdev scored Uri.",
+            ArtistWebSource(rules, names).pageLine(artist, page),
+        )
+    }
 
     @Test
     fun `two writes of an artist searching at once make one search`() =

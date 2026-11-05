@@ -5,6 +5,7 @@ import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.normalizer.AccentFolder
 import app.sleevesight.core.resolution.Lookup
+import app.sleevesight.core.sources.WebPage
 import app.sleevesight.net.NetClient
 import app.sleevesight.net.NetResult
 import app.sleevesight.net.fetch
@@ -21,6 +22,15 @@ interface ArtistWebSearch {
         artist: String,
         sent: () -> Unit = {},
     ): Lookup<List<EvidenceDraft>>
+
+    /**
+     * The line a [page] the AI service's own search found gives about the [artist] (#912), by
+     * [search]'s rules; null when it gives none. As the page came by default.
+     */
+    fun line(
+        artist: String,
+        page: WebPage,
+    ): String? = page.text
 }
 
 /**
@@ -66,6 +76,25 @@ class ExaArtistSearch(
                     )
                 } ?: Lookup.Failed(REFUSED)
         }
+    }
+
+    /**
+     * The line [page] gives for [artist] by [search]'s rules (#912's review): judged on its passage
+     * cut as a line is ([ExaWebSearch.cut]), kept only when about the artist
+     * ([RecordingFilter.isAboutArtist], no source the app reads itself), the parts that are only
+     * page boilerplate left out ([WebBoilerplate]), then cut to [ExaWebSearch.LINE_CHARACTERS];
+     * null when it is not about the artist, or nothing is left. A page's passage is at most
+     * `ExaPageSearch.PAGE_CHARACTERS` long, so its boilerplate is judged on that much of it.
+     */
+    override fun line(
+        artist: String,
+        page: WebPage,
+    ): String? {
+        if (!filter.isAboutArtist(artist, page.title, ExaWebSearch.cut(page.text), page.url)) return null
+        return ExaWebSearch
+            .cut(
+                WebBoilerplate.clean(page.text, page.url, listOf(artist), filter::fold),
+            ).ifEmpty { null }
     }
 
     private companion object {

@@ -94,6 +94,13 @@ class ArtistWebInsightsTest {
         override suspend fun renew(artist: ArtistWebQuery) {
             renewed += artist
         }
+
+        // As the app's own search's rules would give a page's line: here, its passage marked, none
+        // for a page on "elsewhere".
+        override fun pageLine(
+            artist: ArtistWebQuery,
+            page: WebPage,
+        ): String? = page.text.takeIf { "elsewhere" !in page.url }?.let { "Line: $it" }
     }
 
     // The AI's own searches (*Up to 3 times*), each answered with [answer].
@@ -117,6 +124,7 @@ class ArtistWebInsightsTest {
     private fun track(
         title: String = "Gehra Hua",
         artistLines: List<EvidenceDraft> = emptyList(),
+        others: Map<SourceId, SourceState> = emptyMap(),
     ): TrackState {
         val playing =
             NowPlaying(
@@ -131,7 +139,10 @@ class ArtistWebInsightsTest {
             nowPlaying = playing,
             normalized = Normalizer(JvmAccentFolder).normalize(playing),
             sources =
-                mapOf(SourceId.MUSICBRAINZ to SourceState.Done(SourceResult(Outcome.SongArticle, drafts, ZERO), false)),
+                mapOf(
+                    SourceId.MUSICBRAINZ to SourceState.Done(SourceResult(Outcome.SongArticle, drafts, ZERO), false),
+                ) +
+                    others,
             resolution =
                 Resolution(
                     outcome = Outcome.SongArticle,
@@ -513,6 +524,71 @@ class ArtistWebInsightsTest {
             val written = checkNotNull(other.writeSearching(first, InsightItem.ARTIST, track, upTo, gathered))
             assertTrue(written.evidence.webDue)
             assertTrue(artistWeb.kept.isEmpty())
+        }
+
+    @Test
+    fun `no search is due while a source that gives artist lines could not be asked`() =
+        runTest {
+            val items = items(written)
+            val unreachable = SourceState.Done(SourceResult(Outcome.Unreachable, emptyList(), ZERO), false)
+            for (others in listOf(
+                mapOf(SourceId.LASTFM to unreachable),
+                mapOf(SourceId.WIKIPEDIA to SourceState.Failed("IllegalStateException")),
+            )) {
+                val track = track(others = others)
+                val evidence = checkNotNull(items.evidence(InsightItem.ARTIST, track, webOn()))
+                assertFalse(evidence.webDue)
+                assertTrue(evidence.unreachable)
+                assertSame(ItemSearch.None, items.search(InsightItem.ARTIST, track, webOn(), evidence))
+                assertFalse(items.searchesItself(InsightItem.ARTIST, evidence, upTo))
+            }
+            // A source switched off is not waited for.
+            val off = webOn().copy(enabledSources = webOn().enabledSources - SourceSwitch.LASTFM)
+            val evidence =
+                checkNotNull(
+                    items.evidence(
+                        InsightItem.ARTIST,
+                        track(
+                            others =
+                                mapOf(
+                                    SourceId.LASTFM to unreachable,
+                                ),
+                        ),
+                        off,
+                    ),
+                )
+            assertTrue(evidence.webDue)
+            assertEquals(0, artistWeb.searches)
+        }
+
+    @Test
+    fun `up to 3 times, the pages it numbers and keeps are the lines the app's own search's rules give`() =
+        runTest {
+            val elsewhere = WebPage("https://elsewhere.example/sachdev", "Shashwat Sachdev", "Shashwat Sachdev, again.")
+            val provider = searching("Shashwat Sachdev scored Uri: The Surgical Strike [S1].")
+            val engine = Searches { WebSearchOutcome.Found(listOf(elsewhere, ABOUT)) }
+            val (_, result) = writtenSearching(provider, engine, track())
+            // The page the rules give no line for is left out; the other's line is theirs.
+            val tool =
+                provider.requests[1]
+                    .exchanges
+                    .single()
+                    .results
+                    .single()
+                    .content
+            assertTrue("[S1]" in tool && "Line: ${ABOUT.text}" in tool)
+            assertFalse(elsewhere.text in tool)
+            assertEquals(
+                listOf("Line: ${ABOUT.text}"),
+                artistWeb.kept.values
+                    .flatten()
+                    .map { it.text },
+            )
+            assertEquals(
+                listOf("Line: ${ABOUT.text}"),
+                result.evidence.evidence.lines
+                    .map { it.text },
+            )
         }
 
     private companion object {

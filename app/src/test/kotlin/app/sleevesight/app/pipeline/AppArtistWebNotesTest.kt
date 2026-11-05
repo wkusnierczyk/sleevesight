@@ -147,13 +147,14 @@ class AppArtistWebNotesTest {
             }
     }
 
-    // The AI's own searches, each finding a page about the artist.
+    // The AI's own searches, each finding a page about the artist, or failing while [failing].
     private class Pages : WebSearcher {
         var searches = 0
+        var failing = false
 
         override suspend fun search(query: String): WebSearchOutcome {
             searches++
-            return WebSearchOutcome.Found(listOf(PAGE))
+            return if (failing) WebSearchOutcome.Failed else WebSearchOutcome.Found(listOf(PAGE))
         }
     }
 
@@ -543,6 +544,32 @@ class AppArtistWebNotesTest {
             assertTrue((notes.settled(next) as ItemShown.Shown).state is InsightState.Written)
             assertEquals(2, provider.requests)
             assertEquals(1, pages.searches)
+        }
+
+    @Test
+    fun `up to 3 times, a write whose searches all fail leaves the artist's other tracks with the search due`() =
+        runTest {
+            settings.value = settings.value?.copy(aiWebSearch = AiWebSearch.UP_TO)
+            val provider = Searching(usesTools = true)
+            val pages = Pages().apply { failing = true }
+            val notes = notes(parts(provider, pages))
+            val first = track(HomeFixtures.sundown)
+            val next = track(HomeFixtures.carefree)
+            // The next track gathered before the first's write.
+            assertEquals(ItemShown.Offered, notes.settled(next))
+            notes.write(first, InsightItem.ARTIST)
+            advanceUntilIdle()
+            assertEquals(1, pages.searches)
+            val failed = notes.item(first, InsightItem.ARTIST).first { it is ItemShown.Shown } as ItemShown.Shown
+            assertEquals(InsightState.Failed(AiSearches.WEB_SEARCH_FAILED), failed.state)
+            assertTrue(artistWeb.kept.isEmpty())
+
+            // A tap on the next track makes the loop's search, and writes the insight.
+            pages.failing = false
+            notes.write(next, InsightItem.ARTIST, ItemAsk.TAP)
+            advanceUntilIdle()
+            assertEquals(2, pages.searches)
+            assertTrue((notes.settled(next) as ItemShown.Shown).state is InsightState.Written)
         }
 
     private companion object {
