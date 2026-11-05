@@ -1,24 +1,24 @@
-Sleevesight shows short insights about the song you are playing: who made it, where it comes from, what is worth knowing about it. Each insight cites its sources, and the app checks every citation.
+Sleevesight shows short insights about the music you are playing on your phone: who made it, where it comes from, what is worth knowing about it. Each insight cites its sources, and the app checks every citation.
 
 HOW IT WORKS
-• Track. Sleevesight follows what your music player is playing, through the player's Android media session. It reads the title, artists, album, cover and playback state, and the queue up next, and never touches the audio.
-• Trace. It looks the track up in the sources you switch on: MusicBrainz, Wikipedia and Wikidata, Last.fm and Exa web search. A match that fails an identity check is never used.
-• Tell. Your AI service turns what the sources found into a few sentences, each citing its evidence. Once an insight is written, the app checks its citations: a sentence without a source, or citing evidence that does not exist, is flagged. With the model's own knowledge on (off by default), the model may add what it knows, marked unverified. When little is documented about a track, the insight is short. When the sources give nothing to write from, Sleevesight says so and makes no AI call, unless the model's own knowledge is on.
+• Track. Sleevesight follows what your music player is playing, through the player's Android media session. It reads the title, artists, album, cover and playback state, and the queue up next. It never touches the audio.
+• Trace. It looks the track up in the sources you switch on: MusicBrainz, Wikipedia and Wikidata, Last.fm and Exa web search, and for a track sung in another language, Wikipedia and the web in that language. A match that fails an identity check is never used.
+• Tell. Your AI service turns what the sources found into a few sentences, each citing its evidence. The app then checks its citations: a sentence without a source, or citing evidence that does not exist, is flagged. With the AI model's own knowledge on (off by default), the model may add what it knows, marked unverified. When the sources give nothing to write from, Sleevesight says so and makes no AI call, unless the model's own knowledge is on.
 
 ON SCREEN
 • The cover, title, artists, album and year of first release, in colors taken from the cover.
 • Genre labels from the artists' tags, each saying where it came from.
 • The insight, whose citations jump to their evidence.
-• Under it, the song, the artist and the album, each with an insight of its own, written when you open it (or tap Write).
+• Under it, the song, the artist and the album, each with an insight of its own, written when you open it (or tap Write). With web search on, the web fills in for an artist or album the sources miss.
 • The lines each source gave, linked to where they were found, what could not be verified, and a note when a source needs your key or could not be reached.
 
 WORKS WITH YOUR PLAYER
-Spotify is followed by default, and any other player whose Android media session reports music can be switched on. Calls from the phone app are never read. It reads the phone's media session, not Spotify's Web API, so it needs no Spotify login, whichever plan you have.
+Spotify is followed by default, and any other player whose Android media session reports music can be switched on. Calls from the phone app are never read. It needs no Spotify login, on any plan.
 
 YOU CHOOSE
 • Which sources to use, each a switch. MusicBrainz and Wikipedia need no key; Last.fm and Exa need your own API key.
-• Whether anything happens in the background. With “Look up in the background” off, as it is by default, lookups and writing happen only while the app is on screen.
-• When insights are written: for every track, only when you skip, or only when you tap Write. Each insight is a request on your own AI key, so it is on your bill. With “Look up in the background” on, automatic writing pauses after five tracks with the app off screen; you can change the count or turn the pause off.
+• Whether anything happens in the background: by default, lookups and writing happen only while the app is on screen.
+• When insights are written: for every track, only when you skip, or only when you tap Write. Each insight is a request on your own AI key, so it is on your bill. In the background, automatic writing pauses after five tracks, a count you can change or turn off.
 
 WHAT YOU NEED
 • Android 8 or later.
@@ -27,7 +27,7 @@ WHAT YOU NEED
 • An AI service’s terms may set a minimum age: Google’s Gemini API requires 18 or older. Each key’s dialog says what its terms require.
 
 PRIVACY
-Sleevesight has no server, no accounts, no ads, no analytics and no telemetry. The track's title and artists go straight from your phone to the sources you switch on (by default, the next track's title and artists also go to MusicBrainz, before it plays). Last.fm also gets the album’s name, for genre labels, and opening the album’s insight sends its name and identifiers to the sources you switch on. The title, artists and album, with what the sources found, go to your AI service, on your own key. A cover given only as a web address is fetched from the server that address names. Nothing reaches the developer unless you send a report from your mail app. Your keys are encrypted on the phone, and the settings remove them. The privacy policy: https://sleevesight.app/privacy.html
+Sleevesight has no server, no accounts, no ads, no analytics and no telemetry. The track's title and artists go straight from your phone to the sources you switch on (by default, the next track's title and artists also go to MusicBrainz, before it plays). A track in another language may also go to Wikipedia and Exa in that language. Last.fm also gets the album’s name, for genre labels, and opening the album’s insight sends its name and identifiers to the sources you switch on. The title, artists and album, with what the sources found, go to your AI service, on your own key. A cover given only as a web address is fetched from the server that address names. Nothing reaches the developer unless you send a report from your mail app. Your keys are encrypted on the phone, and the settings remove them. The privacy policy: https://sleevesight.app/privacy.html
 
 OPEN SOURCE
 The code is on GitHub: https://github.com/wkusnierczyk/sleevesight
