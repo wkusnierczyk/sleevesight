@@ -138,6 +138,14 @@ internal fun rowName(
     }
 
 /**
+ * The name a rejected [match] is listed under: its source's ([sourceName]), or for a lookup in the
+ * track's language, its row's (#902: *Web search in Hindi*, [rowName]).
+ */
+@Composable
+internal fun rejectedName(match: RejectedMatch): String =
+    match.language?.let { rowName(match.source, it) } ?: sourceName(match.source)
+
+/**
  * A language's name, as the app knows it (`Languages`: "Hindi"), from its [code]; the code itself
  * for one it does not.
  */

@@ -121,11 +121,12 @@ class InLanguageScreenTest {
 
     private fun show(
         track: TrackState,
+        offline: Boolean = false,
         block: () -> Unit,
     ) {
         val state =
             NowPlayingState(
-                PipelineView(track, aiReady = true),
+                PipelineView(track, aiReady = true, offline = offline),
                 track.nowPlaying,
                 PlaybackInfo(Settings.SPOTIFY, PlaybackStatus.PLAYING),
                 settings = Settings(),
@@ -260,6 +261,21 @@ class InLanguageScreenTest {
             unfold()
             assertEquals(listOf("Web search in Hindi", text(R.string.home_source_unreachable)), said("S:hi"))
             assertEquals(1, count("Web search in Hindi could not be reached.", substring = true))
+        }
+
+    @Test
+    fun offlineAnUnreachableLookupInHindiGivesTheOfflineLineAndNoNoteOfItsOwn() =
+        show(searched(web = done(Outcome.Unreachable)), offline = true) {
+            unfold()
+            assertEquals(1, count(text(R.string.home_sources_offline)))
+            assertEquals(0, count("Web search in Hindi could not be reached.", substring = true))
+        }
+
+    @Test
+    fun wikipediaInHindiThatFailedIsNamedInTheNote() =
+        show(searched(wikipedia = SourceState.Failed("IllegalStateException"))) {
+            unfold()
+            assertEquals(1, count("Wikipedia in Hindi failed.", substring = true))
         }
 
     @Test

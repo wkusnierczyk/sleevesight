@@ -252,23 +252,44 @@ private fun chipStatus(state: SourceState): ChipStatus =
 private fun filtersOf(source: SourceId): Set<SourceId> =
     if (source == SourceId.WIKIPEDIA) setOf(SourceId.WIKIPEDIA, SourceId.WIKIDATA) else setOf(source)
 
-/** A candidate a source rejected: the [source], what it was looked up for ([subject], when named) and why. */
+/**
+ * A candidate a source rejected: the [source], what it was looked up for ([subject], when named) and
+ * why; in the track's [language] (its code, #902) for its lookup in that language.
+ */
 internal data class RejectedMatch(
     val source: SourceId,
     val subject: String?,
     val reason: String,
+    val language: String? = null,
 )
 
 /**
  * Each match the sources rejected, with its reason: every candidate a source lists
- * (`SourceResult.rejections`), and a source's own rejection when it lists none.
+ * (`SourceResult.rejections`), and a source's own rejection when it lists none; then those of the
+ * lookups in the track's language (#902, `TrackState.inLanguage`), marked with it.
  */
-internal fun rejectedMatches(track: TrackState): List<RejectedMatch> =
-    landed(track).flatMap { (source, done) ->
-        val listed = done.result.rejections.map { RejectedMatch(source, it.subject, it.reason) }
-        val own = (done.result.outcome as? Outcome.Rejected)?.let { RejectedMatch(source, null, it.reason) }
-        listed.ifEmpty { listOfNotNull(own) }
-    }
+internal fun rejectedMatches(track: TrackState): List<RejectedMatch> {
+    val language = track.inLanguage
+    val inLanguage =
+        language
+            ?.sources
+            ?.entries
+            ?.mapNotNull { (source, state) -> (state as? SourceState.Done)?.let { source to it } }
+            .orEmpty()
+    return landed(track).flatMap { (source, done) -> rejected(source, done, null) } +
+        inLanguage.flatMap { (source, done) -> rejected(source, done, language?.language) }
+}
+
+// What [source]'s lookup [done] rejected, in [language] when it was made in one.
+private fun rejected(
+    source: SourceId,
+    done: SourceState.Done,
+    language: String?,
+): List<RejectedMatch> {
+    val listed = done.result.rejections.map { RejectedMatch(source, it.subject, it.reason, language) }
+    val own = (done.result.outcome as? Outcome.Rejected)?.let { RejectedMatch(source, null, it.reason, language) }
+    return listed.ifEmpty { listOfNotNull(own) }
+}
 
 /** The lines of matches that could not be verified: shown, never cited (D4). */
 internal fun unverifiedLines(track: TrackState): List<EvidenceDraft> =

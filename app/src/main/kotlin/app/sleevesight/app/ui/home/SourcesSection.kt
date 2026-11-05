@@ -280,7 +280,7 @@ private fun Entries(
                     is Entry.Rejected -> {
                         if (previous !is Entry.Rejected) Small(stringResource(R.string.home_rejected_title))
                         val match = entry.match
-                        val name = sourceName(match.source)
+                        val name = rejectedName(match)
                         val reason = match.reason
                         Small(
                             match.subject?.let { stringResource(R.string.home_rejected_subject, name, it, reason) }
