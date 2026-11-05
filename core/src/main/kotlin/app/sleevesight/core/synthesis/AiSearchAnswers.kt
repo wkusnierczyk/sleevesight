@@ -465,9 +465,9 @@ private fun explanationIn(
             .text("explanation")
             ?.let(::oneLine)
             ?.takeIf { it.length <= AiSearchAnswers.EXPLANATION_MAX && !AiSearchAnswers.ADDRESS.containsMatchIn(it) }
-            ?: return null
     val byId = sources.associateBy { it.id }
-    val grounded = (GroundingCheck.check(text, byId.keys, allowModel = false) as? InsightReply.Written)?.grounded
+    val grounded =
+        text?.let { (GroundingCheck.check(it, byId.keys, allowModel = false) as? InsightReply.Written)?.grounded }
     val sentences = grounded?.paragraphs?.flatten().orEmpty()
     val pages = sentences.flatMap { it.cites }.distinct().mapNotNull(byId::get)
     val backed = sentences.any { it.status == SentenceStatus.OK }
