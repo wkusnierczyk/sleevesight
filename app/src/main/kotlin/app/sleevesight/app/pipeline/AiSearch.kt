@@ -48,7 +48,8 @@ import kotlin.time.Instant
 sealed interface AiSearch {
     /**
      * Not offered: no searches here (previews, tests), before the pipeline and the settings are in,
-     * or with *Show insights* off, which stops every AI call (as *Why is this …?* is not offered then).
+     * or with *Show insights* off, which stops every AI call (as *Why is this …?* is not offered then);
+     * what the song is about (#908) also while *AI web search* is off as used (`AiSearches.offered`).
      */
     data object None : AiSearch
 
@@ -305,10 +306,12 @@ class AppAiSearches(
         val offers =
             combine(parts, settings) { made, now ->
                 val searches = made?.searches(answers, clock)
-                if (now == null || searches == null || !now.writeInsights) {
+                // Not offered at all: *Show insights* off, or what the song is about with no web search (#908).
+                val ready = now?.takeIf { it.writeInsights && searches?.offered(kind, it) == true }
+                if (ready == null || searches == null) {
                     Offer(null, known = false)
                 } else {
-                    Offer(searches.key(track, kind, now, genre), known = true)
+                    Offer(searches.key(track, kind, ready, genre), known = true)
                 }
             }
         return offers
