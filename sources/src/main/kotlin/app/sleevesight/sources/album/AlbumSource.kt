@@ -60,7 +60,9 @@ import kotlin.time.Instant
  *   [searchWeb] makes it, before the album's insight is written, one at a time per album (a second
  *   write of the album while one searches takes its outcome), and keeps what it found, telling
  *   its caller when a request is sent, and only then (not for lines kept, or an album that cannot
- *   be checked), so a search is counted as paid only when it is.
+ *   be checked), so a search is counted as paid only when it is. The caller's gate is asked after
+ *   the waits (the kept lines read, another write's search), right before the request, and the
+ *   caller is given what was found before it is kept, to claim the key it gives (#935).
  *
  * What the free sources found is kept per album in [kept], the artist-level table (#238, [PART]),
  * by the release group, else the album's and the artist's names folded, with the sources asked,
@@ -103,12 +105,24 @@ class AlbumSource(
         return AlbumFound(free.drafts + searched.orEmpty(), free.unreachable, webDue = searches && searched == null)
     }
 
+    override val searchesWeb: Boolean get() = web != null
+
     override suspend fun searchWeb(
         query: AlbumQuery,
+        mayPay: () -> Boolean,
+        keeping: (List<EvidenceDraft>) -> Unit,
         sent: () -> Unit,
     ): List<EvidenceDraft>? =
         web?.takeIf { searches(query) }?.let { search ->
-            searching.once(webKeyOf(query)) { keptWeb(query) ?: searched(search, query, sent) }
+            try {
+                searching.once(webKeyOf(query)) { keptWeb(query) ?: searched(search, query, sent, mayPay, keeping) }
+            } catch (
+                @Suppress("SwallowedException") e: NotPaid,
+            ) {
+                // Its gate closed after the waits: nothing sent, nothing kept; a write waiting for this
+                // one searches, or reads, itself.
+                null
+            }
         }
 
     override suspend fun renewWeb(query: AlbumQuery) {
@@ -121,18 +135,23 @@ class AlbumSource(
     }
 
     // What [search] finds for [query]'s album, none included, kept; null when it failed, and nothing
-    // is kept. [sent] is told when the request goes out.
+    // is kept. [sent] is told when the request goes out; [mayPay] is asked right before it, with no
+    // suspension between (closed, [NotPaid]); [keeping] is given what was found before it is kept.
     private suspend fun searched(
         search: AlbumWebSearch,
         query: AlbumQuery,
         sent: () -> Unit,
+        mayPay: () -> Boolean,
+        keeping: (List<EvidenceDraft>) -> Unit,
     ): List<EvidenceDraft>? {
+        if (!mayPay()) throw NotPaid()
         val found =
             when (val answer = search.search(query.title, query.artist, sent)) {
                 is Lookup.Found -> answer.value
                 Lookup.NotFound -> emptyList()
                 is Lookup.Failed -> null
             }
+        found?.let(keeping)
         val key = webKeyOf(query)
         when {
             found == null -> Unit
@@ -141,6 +160,9 @@ class AlbumSource(
         }
         return found
     }
+
+    // A search its caller's gate refused right before the request (#935, as `ArtistWebSource`'s).
+    private class NotPaid : Exception("not paid")
 
     // Whether the web may be searched for [query]'s album: asked for, with an engine.
     private fun searches(query: AlbumQuery): Boolean = query.web && web != null
