@@ -19,8 +19,12 @@ The release build from Play is measured, on the phone's own settings, over wirel
 Each session is a snapshot before, the listening by hand, and a snapshot after; the date, the
 version, the Android version and the settings go on the page with its figures.
 
-1. **Screen off, one hour**: default settings, music from the usual player, Sleevesight in the
-   background, screen off throughout. Battery, CPU, data, wakeups.
+1. **Screen off, one hour**: default settings with one AI service switched on (its default model),
+   Exa off, music from the usual player, Sleevesight in the background or left on top when the
+   screen goes off (both count as off screen), screen off throughout, off the charger. Battery,
+   CPU, data, wakeups.
+   - **1b.** As 1, with *Look up in the background* on: the heavy case, someone who leaves it
+     running on a drive. Saver stays on, so writing stops after its track changes.
 2. **On screen, 20 minutes**: as 1, with Sleevesight open on *Now playing* and the screen on.
 3. **Data, three runs of 10 tracks each**: insights off; insights with the default AI service;
    insights with the default AI service and Exa web search on. Data and CPU per track.
