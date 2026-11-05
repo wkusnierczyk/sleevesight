@@ -5,12 +5,33 @@ import app.sleevesight.core.text.EnglishDateWords
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-/** Dates in a language's own form through `java.time` (#957), in English the app's portable form. */
+/**
+ * Dates in a language's own form through `java.time` (#957), from the patterns a platform gives for
+ * the skeletons, here as Android and CLDR give them; with the English ones, the app's portable form.
+ */
 class JvmDateWordsTest {
-    private val words = JvmDateWords()
+    // Each language's patterns for the day, the month and the year.
+    private val patterns =
+        mapOf(
+            "en" to listOf("d MMMM y", "MMMM y", "y"),
+            "de" to listOf("d. MMMM y", "MMMM y", "y"),
+            "pl" to listOf("d MMMM y", "LLLL y", "y"),
+            "ja" to listOf("y年M月d日", "y年M月", "y年"),
+            "eu" to listOf("y('e')'ko' MMMM'ren' d('a')", "y('e')'ko' MMMM", "y"),
+        )
+
+    private val words =
+        JvmDateWords { skeleton, locale ->
+            val (day, month, year) = patterns.getValue(locale.language)
+            when (skeleton) {
+                JvmDateWords.DAY -> day
+                JvmDateWords.MONTH -> month
+                else -> year
+            }
+        }
 
     @Test
-    fun `in English it writes what the portable form writes, at every precision`() {
+    fun `with the English patterns it writes what the portable form writes, at every precision`() {
         val dates =
             listOf(
                 "2014-07-29",
@@ -58,16 +79,16 @@ class JvmDateWordsTest {
     }
 
     @Test
-    fun `in Japanese the month's and the year's patterns are the day's less the day, then the month`() {
+    fun `in Japanese the year and the month with their own marks`() {
         assertEquals("2014年7月29日", words.format("2014-07-29", "ja"))
         assertEquals("2014年7月", words.format("2014-07", "ja"))
         assertEquals("2014年", words.format("2014", "ja"))
     }
 
     @Test
-    fun `the patterns come from the function given`() {
-        val iso = JvmDateWords { skeleton, _ -> if (skeleton == JvmDateWords.DAY) "y-MM-dd" else "'year' y" }
-        assertEquals("2014-07-29", iso.format("2014-07-29", DateWords.TEXT_LANGUAGE))
-        assertEquals("year 2014", iso.format("2014", DateWords.TEXT_LANGUAGE))
+    fun `in Basque each precision with its own endings, none left over from another`() {
+        assertEquals("2014(e)ko uztailaren 29(a)", words.format("2014-07-29", "eu"))
+        assertEquals("2014(e)ko uztaila", words.format("2014-07", "eu"))
+        assertEquals("2014", words.format("2014", "eu"))
     }
 }

@@ -174,6 +174,10 @@ class DatesScreenTest {
         }
         assertEquals("29 lipca 2014", PHONE_DATE_WORDS.format("2014-07-29", "pl"))
         assertEquals("lipiec 2014", PHONE_DATE_WORDS.format("2014-07", "pl"))
+        // Each precision with its own pattern: none left with another's endings.
+        assertEquals("2014(e)ko uztailaren 29(a)", PHONE_DATE_WORDS.format("2014-07-29", "eu"))
+        assertEquals("2014(e)ko uztaila", PHONE_DATE_WORDS.format("2014-07", "eu"))
+        assertEquals("2014", PHONE_DATE_WORDS.format("2014", "eu"))
     }
 
     // A track with its dates known: Sundown, its album's release, and its first release on it.

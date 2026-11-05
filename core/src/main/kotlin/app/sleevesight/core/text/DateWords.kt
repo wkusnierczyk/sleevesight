@@ -61,8 +61,8 @@ sealed interface DateWhen {
  * (`InsightPrompt.DATE_RULE`), each date at the precision it has ([DateWhen]), in a language given by
  * its BCP 47 tag. Portable, as `:core`'s code is (D2): [EnglishDateWords] writes the app's English
  * form with no platform's help, for the evidence lines and the prompts; `JvmDateWords` writes any
- * language with its own patterns, on the phone (the app passes `DateFormat.getBestDateTimePattern`)
- * and the JVM. The two agree in English.
+ * language with the platform's patterns, on the phone those the app passes from
+ * `DateFormat.getBestDateTimePattern`. With the English patterns the two agree.
  */
 fun interface DateWords {
     /** [date] in [language]'s form: "29 July 2014", "July 2014", "2014" in [TEXT_LANGUAGE]. */
