@@ -100,7 +100,21 @@ class TrackLanguageTest {
             // A Bollywood title transliterated: the tracklist's recorded language names it.
             assertEquals("hi", find("Tum Hi Ho", "Arijit Singh", releases = listOf("hin")))
             assertEquals("pt", find("Evidências", "Chitãozinho & Xororó", lyrics = listOf("por")))
-            assertEquals("hi", find("Tum Hi Ho", "Arijit Singh", lyrics = listOf("eng"), wikidata = listOf("hin")))
+            // Several languages in one hint: its first that is not English.
+            assertEquals("hi", find("Tum Hi Ho", "Arijit Singh", lyrics = listOf("eng", "hin")))
+        }
+
+    @Test
+    fun `a stronger hint recording English alone settles it, whatever a weaker hint records`() =
+        runTest {
+            // English lyrics on a film's soundtrack whose tracklist MusicBrainz records as Hindi.
+            assertNull(find("Main Hoon Na", "Artist", lyrics = listOf("eng"), releases = listOf("hin")))
+            assertEquals(listOf("lyrics"), asked)
+            asked.clear()
+            assertNull(find("Main Hoon Na", "Artist", wikidata = listOf("eng"), releases = listOf("hin")))
+            assertEquals(listOf("lyrics", "wikidata"), asked)
+            // A hint that records nothing, or no known language, settles nothing.
+            assertEquals("hi", find("Main Hoon Na", "Artist", lyrics = listOf("zxx"), releases = listOf("hin")))
         }
 
     @Test

@@ -133,6 +133,7 @@ class LanguageSources(
 
     private companion object {
         const val UNANSWERED = "Wikidata"
+        const val ENGLISH = "en"
 
         // The works [entity] says it comes from: the film it was made for, what it is part of, where published.
         fun comesFrom(entity: WdEntity?): List<String> =
@@ -147,6 +148,12 @@ class LanguageSources(
             item: String,
             entity: WdEntity?,
             language: Language,
-        ): LocalName = LocalName(item, entity?.labels?.get(language.label), entity?.sitelinks?.get(language.sitelink))
+        ): LocalName =
+            LocalName(
+                item,
+                entity?.labels?.get(language.label),
+                entity?.sitelinks?.get(language.sitelink),
+                name = entity?.labels?.get(ENGLISH) ?: entity?.label,
+            )
     }
 }

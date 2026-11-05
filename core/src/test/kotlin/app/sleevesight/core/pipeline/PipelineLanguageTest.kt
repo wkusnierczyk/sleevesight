@@ -105,7 +105,11 @@ class PipelineLanguageTest {
             }
         }
 
-    /** A lookup in a language, answering one line per scope it is given, after [delay], noting each query. */
+    /**
+     * A lookup in a language, answering one line per scope it is given, after [wait], noting each
+     * query; a release's line about the release [RELEASES] names; unreachable while [down];
+     * provisional when Wikidata's names could not be read, as the real ones are.
+     */
     private class FakeLanguageAdapter(
         override val id: SourceId,
         private val wait: Duration = Duration.ZERO,
@@ -113,6 +117,7 @@ class PipelineLanguageTest {
     ) : LanguageAdapter {
         val queries = mutableListOf<LanguageQuery>()
         val items = mutableListOf<LanguageItems>()
+        var down = false
 
         override suspend fun lookup(
             query: LanguageQuery,
@@ -121,12 +126,19 @@ class PipelineLanguageTest {
             queries += query
             this.items += items
             delay(wait)
+            if (down) return SourceResult(Outcome.Unreachable, emptyList(), Duration.ZERO)
             val host = "https://${query.language.host}/wiki/"
             val drafts =
                 texts(query).mapIndexed { i, (scope, text) ->
-                    EvidenceDraft(id, scope, text, "$host$i", RETRIEVED, language = query.language.code)
+                    val about = RELEASES[query.language.code].takeIf { scope == Scope.RELEASE }
+                    EvidenceDraft(id, scope, text, "$host$i", RETRIEVED, about = about, language = query.language.code)
                 }
-            return SourceResult(if (drafts.isEmpty()) Outcome.None else Outcome.SongArticle, drafts, Duration.ZERO)
+            val outcome = if (drafts.isEmpty()) Outcome.None else Outcome.SongArticle
+            return SourceResult(outcome, drafts, Duration.ZERO, provisional = items.unreachable)
+        }
+
+        companion object {
+            val RELEASES = mapOf("hi" to "Aashiqui 2", "ko" to "BE")
         }
     }
 
@@ -169,9 +181,11 @@ class PipelineLanguageTest {
             return Lookup.Found(regional().releases)
         }
 
+        var namesDown = false
+
         override suspend fun items(query: LanguageQuery): LanguageItems {
             itemsAsked++
-            return LanguageItems(song = LocalName("Q1", "तुम ही हो", "तुम ही हो"))
+            return LanguageItems(song = LocalName("Q1", "तुम ही हो", "तुम ही हो"), unreachable = namesDown)
         }
     }
 
@@ -441,6 +455,76 @@ class PipelineLanguageTest {
             val state = pipeline().play(sertanejo)
             assertEquals(2, resolver.calls)
             assertEquals("pt", state.inLanguage?.language)
+        }
+
+    @Test
+    fun `a look again keeps what the search in the language found when its lookups now fail`() =
+        runTest {
+            val pipeline = pipeline()
+            val first = pipeline.play(bollywood)
+            val gathered = Gathered(first.sources, first.resolution, inLanguage = first.inLanguage)
+            val kept = cache.languageResults.toMap()
+            wikipedia.down = true
+            web.down = true
+            val again =
+                pipeline.run(
+                    bollywood.nowPlaying,
+                    RunControl.Unattended(false),
+                    lookAgain = LookAgain(gathered),
+                )
+            assertEquals(2, wikipedia.queries.size, "asked afresh, past the cache")
+            assertEquals(first.lines(), again.lines())
+            assertEquals(kept, cache.languageResults, "what was shown from before is not kept again")
+        }
+
+    @Test
+    fun `a run asking again keeps the lookups in the language that found something and asks the others again`() =
+        runTest {
+            web.down = true
+            val pipeline = pipeline()
+            val first = pipeline.play(bollywood)
+            val gathered = Gathered(first.sources, first.resolution, inLanguage = first.inLanguage)
+            assertEquals(setOf(SourceId.WEB), gathered.languageRetryable)
+            assertEquals(setOf(SourceId.WEB), gathered.languageAsked)
+            assertEquals(emptySet(), gathered.asking(setOf(SourceId.WIKIPEDIA)).languageAsked)
+            web.down = false
+            cache.languageResults.clear()
+            val again = pipeline.run(bollywood.nowPlaying, RunControl.Unattended(false), again = gathered)
+            assertEquals(1, wikipedia.queries.size, "Wikipedia's lookup in the language kept as it landed")
+            assertEquals(2, web.queries.size)
+            assertTrue("S1 S web hi" in again.lines())
+        }
+
+    @Test
+    fun `the album's insight takes the lines found in the language on the album's own article`() =
+        runTest {
+            val deluxe = Regional(nowPlaying("잠시", "BTS", "BE (Deluxe Edition)"), kpop.english)
+            val state = pipeline().play(deluxe)
+            val items = ItemInsights(null, cache, JvmHasher, NameMatcher(JvmAccentFolder))
+            val album = items.evidence(InsightItem.ALBUM, state, settings)!!.evidence
+            assertEquals(listOf("《BE》는 방탄소년단의 앨범이다."), album.lines.map { it.text })
+            assertEquals(listOf("ko"), album.lines.map { it.language })
+
+            val other = Regional(nowPlaying("잠시", "BTS", "Map of the Soul"), kpop.english)
+            val elsewhere = pipeline().play(other)
+            assertTrue(items.evidence(InsightItem.ALBUM, elsewhere, settings)!!.evidence.isEmpty())
+        }
+
+    @Test
+    fun `a lookup made while Wikidata's names failed is not kept, and the next play searches again`() =
+        runTest {
+            search.namesDown = true
+            pipeline().play(bollywood)
+            assertTrue(cache.languageResults.isEmpty())
+            search.namesDown = false
+            pipeline().play(bollywood)
+            assertEquals(2, web.queries.size)
+            assertEquals(
+                setOf(SourceId.WIKIPEDIA, SourceId.WEB),
+                cache.languageResults.keys
+                    .map { it.first }
+                    .toSet(),
+            )
         }
 
     private fun TestScope.recording(pipeline: Pipeline): List<PipelineEvent> {

@@ -97,7 +97,7 @@ class LanguageWikipediaTest {
     private val items =
         LanguageItems(
             song = LocalName("Q15322556", "तुम ही हो", "तुम ही हो"),
-            comes = listOf(LocalName("Q4662712", "आशिक़ी 2", "आशिक़ी 2")),
+            comes = listOf(LocalName("Q4662712", "आशिक़ी 2", "आशिक़ी 2", "Aashiqui 2")),
             artists = mapOf("Arijit Singh" to LocalName("Q4790608", "अरिजीत सिंह", "अरिजीत सिंह")),
         )
 
@@ -123,7 +123,8 @@ class LanguageWikipediaTest {
                         it.retrievedAt == now
                 },
             )
-            assertEquals(listOf(null, null, "Arijit Singh"), result.evidence.map { it.about })
+            // The film's line is about the film by its English name, the album insight's key to it.
+            assertEquals(listOf(null, "Aashiqui 2", "Arijit Singh"), result.evidence.map { it.about })
             assertEquals(articleUrl("आशिक़ी 2", "hi"), result.evidence[1].url)
             assertTrue(result.evidence[1].url!!.startsWith("https://hi.wikipedia.org/wiki/%E0%A4%86"))
             assertEquals(

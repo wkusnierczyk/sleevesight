@@ -125,13 +125,16 @@ sealed interface SourceState {
  * every source [unreachable], or with [only] (a *Retry*'s, #724, [asking]), those of [retryable] it
  * names, the others kept as they were. [labelsFailed] are the sources whose label requests after
  * the evidence failed (#772, [TrackState.laterLabels]), reported once those end: a *Retry* of one
- * asks those requests again alone ([labelsAsked]), its lookup kept.
+ * asks those requests again alone ([labelsAsked]), its lookup kept. [inLanguage] is the search in
+ * the track's language as it ended (#902), when the run made one: a later run in the same language
+ * asks again its lookups [languageAsked] and keeps the others, as for the English ones.
  */
 data class Gathered(
     val sources: Map<SourceId, SourceState>,
     val resolution: Resolution?,
     val only: Set<SourceId>? = null,
     val labelsFailed: Set<SourceId> = emptySet(),
+    val inLanguage: InLanguageState? = null,
 ) {
     /** The sources that ended `Unreachable`: a network or source error. */
     val unreachable: Set<SourceId>
@@ -162,6 +165,25 @@ data class Gathered(
      */
     val labelsAsked: Set<SourceId>
         get() = only?.let { labelsFailed intersect it }.orEmpty() - asked
+
+    /**
+     * The lookups in the track's language (#902, [inLanguage]) that ended `Unreachable`, or shown but
+     * not kept, a lookup for a part of them having failed ([SourceResult.provisional]), by source:
+     * those a later run asks again.
+     */
+    val languageRetryable: Set<SourceId>
+        get() =
+            inLanguage
+                ?.sources
+                ?.filterValues { state ->
+                    (state as? SourceState.Done)?.result?.let { it.outcome == Outcome.Unreachable || it.provisional } ==
+                        true
+                }?.keys
+                .orEmpty()
+
+    /** Of [languageRetryable], those a run started with it asks again: all, or with [only], those it names. */
+    val languageAsked: Set<SourceId>
+        get() = only?.let { languageRetryable intersect it } ?: languageRetryable
 
     /**
      * As a run asking again [sources] alone starts with it (a *Retry*, #724): the other sources

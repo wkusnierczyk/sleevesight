@@ -106,10 +106,13 @@ class LanguageSourcesTest {
         runTest {
             val track = Normalizer(JvmAccentFolder).normalize("Tum Hi Ho", "Arijit Singh")
             val items = sources.items(LanguageQuery(track, resolution, Languages.ofCode("hi")!!))
-            assertEquals(LocalName("Q15322556", "तुम ही हो", "तुम ही हो"), items.song)
+            assertEquals(LocalName("Q15322556", "तुम ही हो", "तुम ही हो", "Tum Hi Ho"), items.song)
             assertEquals(Scope.SONG, items.songScope)
-            assertEquals(listOf(LocalName("Q4662712", "आशिक़ी 2", "आशिक़ी 2")), items.comes)
-            assertEquals(mapOf("Arijit Singh" to LocalName("Q4790608", "अरिजीत सिंह", "अरिजीत सिंह")), items.artists)
+            assertEquals(listOf(LocalName("Q4662712", "आशिक़ी 2", "आशिक़ी 2", "Aashiqui 2")), items.comes)
+            assertEquals(
+                mapOf("Arijit Singh" to LocalName("Q4790608", "अरिजीत सिंह", "अरिजीत सिंह", "Arijit Singh")),
+                items.artists,
+            )
             assertEquals(false, items.unreachable)
             assertEquals(listOf(listOf("Q15322556") to "hi", listOf("Q4662712", "Q4790608") to "hi"), wikidata.askedIn)
         }

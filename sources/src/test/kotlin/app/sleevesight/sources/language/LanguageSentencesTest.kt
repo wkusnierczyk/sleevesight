@@ -72,4 +72,37 @@ class LanguageSentencesTest {
             LanguageSentences.of("$long तुम ही हो गाना है।", listOf("तुम ही हो")),
         )
     }
+
+    @Test
+    fun `German and Polish low quotes, guillemets and Swedish quotes are quotations too`() {
+        assertEquals(
+            listOf("„Evidências“ ist ein Lied.", "Es wurde 1989 veröffentlicht."),
+            LanguageSentences.split("„Evidências“ ist ein Lied. Es wurde 1989 veröffentlicht."),
+        )
+        assertEquals(
+            listOf("„Kocham cię” to piosenka.", "Wydana w 1984."),
+            LanguageSentences.split("„Kocham cię” to piosenka. Wydana w 1984."),
+        )
+        assertEquals(
+            listOf("« Évidences » est une chanson.", "Elle date de 1989."),
+            LanguageSentences.split("« Évidences » est une chanson. Elle date de 1989."),
+        )
+        assertEquals(
+            listOf("”Låten” är känd.", "Den kom 1989."),
+            LanguageSentences.split("”Låten” är känd. Den kom 1989."),
+        )
+        assertEquals(listOf("「夜に駆ける」は楽曲。", "配信された。"), LanguageSentences.split("「夜に駆ける」は楽曲。配信された。"))
+    }
+
+    @Test
+    fun `a sentence ends after a German closing quote, and never inside the quotation`() {
+        assertEquals(
+            listOf("Er sang „Hallo. Welt“ laut.", "Dann ging er."),
+            LanguageSentences.split("Er sang „Hallo. Welt“ laut. Dann ging er."),
+        )
+        assertEquals(
+            listOf("Er sagte: „Es ist ein Lied.“", "Dann ging er."),
+            LanguageSentences.split("Er sagte: „Es ist ein Lied.“ Dann ging er."),
+        )
+    }
 }

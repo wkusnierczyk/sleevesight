@@ -78,7 +78,16 @@ class ExaLanguageSearch(
                 response.results.isEmpty() || found?.emptied?.isNotEmpty() == true -> Outcome.None
                 else -> Outcome.Rejected(ExaWebSearch.REJECTED)
             }
-        return SourceResult(outcome, lines, start.elapsedNow(), trackOnly = true, pages = found?.emptied.orEmpty())
+        // Made with fallback names when Wikidata's in the language could not be read: shown, not kept,
+        // so a later play searches with them.
+        return SourceResult(
+            outcome,
+            lines,
+            start.elapsedNow(),
+            provisional = items.unreachable,
+            trackOnly = true,
+            pages = found?.emptied.orEmpty(),
+        )
     }
 
     // The lines of [response]'s results about the recording, under the [native] names or the track's own.

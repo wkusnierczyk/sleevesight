@@ -67,12 +67,14 @@ interface LanguageAdapter {
 
 /**
  * An item in a language: its Wikidata [item], its [label] in the language and the title of its
- * [article] on the language's Wikipedia, each null when it has none.
+ * [article] on the language's Wikipedia, each null when it has none; and its English [name], which a
+ * release's lines are about (`EvidenceDraft.about`).
  */
 data class LocalName(
     val item: String?,
     val label: String?,
     val article: String?,
+    val name: String? = null,
 )
 
 /**

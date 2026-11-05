@@ -151,7 +151,9 @@ internal class TrackRun(
                 gather()
                 // In the track's language (#902), before the evidence is assembled: the insight waits for it.
                 InLanguage(parts, input, control, guard, this@TrackRun) { state.value }.search()
-                control.gathered(Gathered(state.value.sources, state.value.resolution))
+                control.gathered(
+                    Gathered(state.value.sources, state.value.resolution, inLanguage = state.value.inLanguage),
+                )
                 // Published as asked for with the assembled genres, before they may start (#772): a
                 // panel says it is still looking.
                 val later = labels.later(state.value)

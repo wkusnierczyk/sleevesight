@@ -13,15 +13,18 @@ package app.sleevesight.core.language
  *    language of the work (the song's item, and the film's or album's it comes from), and the
  *    language MusicBrainz records for the tracklists of the recording's releases.
  *
- * With a script found, the first recorded language written in it; else the first recorded one that is
- * not English. English, or none found, is none: no search.
+ * With a script found, the first recorded language written in it; else the first hint that records a
+ * language settles it: its first language that is not English, or, when it records English only, no
+ * search, whatever a weaker hint records (English lyrics on a film's soundtrack with a Hindi
+ * tracklist are English). English, or none found, is none: no search.
  */
 object TrackLanguage {
     /**
      * The language of a track named [names] (its title first, then its artists), from the
      * [recorded] languages, each list asked for only when the ones before it have not decided; null
      * for English or none. A script that names its language alone, with no other written in it
-     * (Hangul, Tamil), decides without asking any.
+     * (Hangul, Tamil), decides without asking any. Without a script, a hint recording English only
+     * decides too, for no search; with one, the script outweighs it.
      */
     @Suppress("RedundantSuspendModifier") // It calls the hints, suspend lambdas, which the rule misses.
     suspend fun find(
@@ -31,16 +34,21 @@ object TrackLanguage {
         val script = names.firstNotNullOfOrNull { Script.of(it) }
         val own = script?.own?.let(Languages::ofCode)
         val alone = own != null && Languages.ALL.none { it != own && script in it.scripts }
-        // With a script, the first recorded language written in it; else the first not English.
-        val fits: (Language) -> Boolean =
-            if (script != null) {
-                { language -> script in language.scripts }
-            } else {
-                { language -> language != Languages.ENGLISH }
-            }
         var found: Language? = null
+        var settled = alone
         val hints = recorded.iterator()
-        while (!alone && found == null && hints.hasNext()) found = hints.next()().firstOrNull(fits)
+        while (!settled && hints.hasNext()) {
+            val languages = hints.next()()
+            // With a script, the first recorded language written in it; else the hint's first not
+            // English, or none when it records English alone.
+            found =
+                if (script != null) {
+                    languages.firstOrNull { script in it.scripts }
+                } else {
+                    languages.firstOrNull { it != Languages.ENGLISH }
+                }
+            settled = found != null || (script == null && languages.isNotEmpty())
+        }
         return if (alone) own else found ?: own
     }
 

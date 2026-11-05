@@ -158,4 +158,14 @@ class ExaLanguageSearchTest {
             )
             assertNull(net.sent.firstOrNull())
         }
+
+    @Test
+    fun `a search made with fallback names, Wikidata's unread, is provisional, and one with them is not`() =
+        runTest {
+            val search = ExaLanguageSearch(ReplayNetClient.ok(response()), Secret("k"), JvmAccentFolder, clock)
+            val failed = search.lookup(query, LanguageItems(unreachable = true))
+            assertTrue(failed.provisional)
+            assertEquals(Outcome.None, failed.outcome)
+            assertFalse(search.lookup(query, items).provisional)
+        }
 }

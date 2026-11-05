@@ -36,8 +36,10 @@ enum class Scope(
  * [about] names the artist an artist-level line ([Scope.ARTIST]) is about, as the track credits it
  * (#522): the adapter that looked the artist up says, so the artist's insight takes that artist's
  * lines whatever their text names (a Wikipedia lead's "Gordon Meredith Lightfoot Jr."), and the same
- * lines on a solo track and on a collaboration. Null for any other line, and for one an adapter or a
- * kept result does not say. The fingerprint does not read it.
+ * lines on a solo track and on a collaboration. On a release-level line ([Scope.RELEASE]) found in the
+ * track's language (#902), it names the release (the film, the album) by its English name, so the
+ * album's insight takes the lines of its own article. Null for any other line, and for one an adapter
+ * or a kept result does not say. The fingerprint does not read it.
  *
  * [language] is the language the line's text is in, by its code (`hi`, `Language.code`), when the
  * search in the track's language found it (#902): the prompt marks the line with it, so the model

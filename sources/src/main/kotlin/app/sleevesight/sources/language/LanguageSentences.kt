@@ -34,7 +34,8 @@ internal object LanguageSentences {
      * the paragraph's end or before a space and a letter that is not lower case (a capital, or a
      * letter of a script without case), a digit or an opening quote, and a full stop after a single
      * letter of a cased script (an initial) never does. A tail without an end, a lead cut off, is
-     * dropped. As in English (`WikipediaSource.split`), a sentence never ends inside a quotation, and
+     * dropped. As in English (`WikipediaSource.split`), a sentence never ends inside a quotation (in
+     * the quotation marks of the languages searched, [balanced]), and
      * a paragraph with a quotation mark straight after a digit (an inch mark, maybe) gives none.
      */
     fun split(paragraph: String): List<String> {
@@ -100,13 +101,33 @@ internal object LanguageSentences {
         return end >= text.length || text[mark] in UNSPACED_ENDS || spaced
     }
 
-    private fun balanced(text: String): Boolean =
-        text.count { it == '"' } % 2 == 0 && text.count { it == '“' } == text.count { it == '”' }
+    /**
+     * Whether every quotation [text] opens it also closes, in the quotation marks of the languages
+     * searched: straight `"` in pairs; `«…»`, `‹…›`, `「…」` and `『…』` balanced; and the curly doubles
+     * as each language pairs them, `„…“` (German) or `„…”` (Polish, Hungarian) when a low `„` opens,
+     * else `“…”`, else `”…”` (Swedish, Finnish) in pairs. Single curly quotes are left out, as an
+     * apostrophe is one of them.
+     */
+    internal fun balanced(text: String): Boolean {
+        fun count(c: Char) = text.count { it == c }
+        val low = count('„')
+        val left = count('“')
+        val right = count('”')
+        val doubles =
+            when {
+                low > 0 -> low == left + right
+                left > 0 -> left == right
+                else -> right % 2 == 0
+            }
+        return count('"') % 2 == 0 && doubles && PAIRS.all { (open, close) -> count(open) == count(close) }
+    }
+
+    private val PAIRS = listOf('«' to '»', '‹' to '›', '「' to '」', '『' to '』')
 
     private const val ENDS = ".!?।॥؟۔։。！？"
     private const val UNSPACED_ENDS = "。！？"
-    private const val CLOSERS = "\"')]”’」』）"
-    private const val OPENERS = "\"'(“‘「『（"
+    private const val CLOSERS = "\"')]”’“»›」』）"
+    private const val OPENERS = "\"'(“‘„‚«‹「『（"
 
     // As `WikipediaSource`'s: a closing quote straight after any number, an inch mark or a quoted
     // number's end, which would throw the quotations' pairing off.

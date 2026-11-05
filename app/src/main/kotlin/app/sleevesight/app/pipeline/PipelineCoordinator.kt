@@ -716,7 +716,8 @@ data class CoordinatorState(
     /**
      * Whether the playing track's run asks its unreachable sources again now (back online, #192):
      * requests are allowed, the phone is online, and the current run has no model call under way
-     * (what it costs is not lost), its sources have landed with some unreachable, and the network
+     * (what it costs is not lost), its sources have landed with some unreachable (those searched in the
+     * track's language too, #902), and the network
      * came back after its lookups were granted. Once per return: the run that asks again has its
      * lookups granted after it.
      */
@@ -726,7 +727,7 @@ data class CoordinatorState(
             return allowed &&
                 online &&
                 !run.calling &&
-                run.gathered?.unreachable?.isNotEmpty() == true &&
+                run.gathered?.let { it.unreachable.isNotEmpty() || it.languageRetryable.isNotEmpty() } == true &&
                 run.lookedUp?.let { it < returns } == true
         }
 

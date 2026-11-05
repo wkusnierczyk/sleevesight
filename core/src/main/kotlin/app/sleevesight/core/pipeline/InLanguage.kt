@@ -2,6 +2,7 @@ package app.sleevesight.core.pipeline
 
 import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.language.Language
+import app.sleevesight.core.language.Languages
 import app.sleevesight.core.language.TrackLanguage
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
@@ -40,6 +41,12 @@ import kotlin.coroutines.cancellation.CancellationException
  * Each lookup is kept in the retrieval cache under the track's key and the language
  * ([PipelineCache.result]), as the English ones are: not when unreachable or provisional, nor when
  * the resolution it was made with could not be made.
+ *
+ * What it ended with goes in [Gathered.inLanguage], so a later run of the track treats its lookups as
+ * the English ones: one asking again (#192, a *Retry*) keeps those that found something and asks the
+ * others again ([Gathered.languageAsked]); one looking again (#617) shows no less than the run
+ * before found in the same language ([LookAgain.keptInLanguage]). Either searches whenever the run
+ * before did, but under *Off*, in the language it named when the hints now name none.
  */
 internal class InLanguage(
     private val parts: PipelineParts,
@@ -54,6 +61,10 @@ internal class InLanguage(
     private val key = track.lookupKey
     private val looksAgain = input.lookAgain != null
 
+    // What the run before found in the track's language, for a run asking again (#192) or looking
+    // again (#617): its language, and each lookup's state.
+    private val earlier: InLanguageState? = (input.lookAgain?.before ?: input.again)?.inLanguage
+
     /** Searches in the track's language, when the setting and the switches have it searched. */
     suspend fun search() {
         val search = parts.languageSearch ?: return
@@ -67,11 +78,15 @@ internal class InLanguage(
         }
     }
 
-    // Whether the setting has the track searched in its language, given what [before] found in English.
+    // Whether the setting has the track searched in its language, given what [before] found in English;
+    // always, but under *Off*, for a run asking or looking again after one that searched, so it finds
+    // no less than that run did.
     private fun wanted(before: TrackState): Boolean =
         when (settings.trackLanguageSearch) {
             TrackLanguageSearch.OFF -> false
-            TrackLanguageSearch.IF_NEEDED -> ownLines(before, settings) < PromptEvidence.ENOUGH_OF_ITS_OWN
+            TrackLanguageSearch.IF_NEEDED ->
+                earlier != null ||
+                    ownLines(before, settings) < PromptEvidence.ENOUGH_OF_ITS_OWN
             TrackLanguageSearch.ALWAYS -> true
         }
 
@@ -83,13 +98,16 @@ internal class InLanguage(
     ) {
         val before = state()
         val (resolution, made) = before.resolution?.let { it to (it.outcome != Outcome.Unreachable) } ?: resolve()
-        val language = language(search, before, resolution)
+        // A run asking or looking again keeps the language the run before named, when its hints now name none.
+        val language = language(search, before, resolution) ?: earlier?.language?.let(Languages::ofCode)
         sink.emit(PipelineEvent.LanguageFound(key, language?.code))
         if (language == null) return
         val pending = adapters.associate { it.id to SourceState.Pending }
         sink.update { it.copy(inLanguage = InLanguageState(language.code, pending)) }
         val query = LanguageQuery(track, resolution, language)
-        val misses = adapters.filter { looksAgain || !fromCache(it, language) }
+        val kept = keptBefore(adapters, language)
+        kept.forEach { (adapter, state) -> land(adapter, language, state) }
+        val misses = adapters.filter { it !in kept && (looksAgain || !fromCache(it, language)) }
         if (misses.isEmpty()) return
         val items =
             if (settings.isEnabled(SourceId.WIKIDATA)) {
@@ -100,6 +118,26 @@ internal class InLanguage(
         coroutineScope {
             for (adapter in misses) launch { lookup(adapter, query, items, made) }
         }
+    }
+
+    // What a run asking again (#192) keeps of the run before's lookups in [language], as it does the
+    // English ones (`TrackRun`): every lookup that found something, but those it asks again
+    // ([Gathered.languageAsked]: unreachable, or provisional).
+    private fun keptBefore(
+        adapters: List<LanguageAdapter>,
+        language: Language,
+    ): Map<LanguageAdapter, SourceState> {
+        val again = input.again
+        val before =
+            again
+                ?.inLanguage
+                ?.takeIf { it.language == language.code }
+                ?.sources
+                .orEmpty()
+        return adapters
+            .filter { again != null && it.id !in again.languageAsked }
+            .mapNotNull { adapter -> before[adapter.id]?.takeIf(TrackRun::keeps)?.let { adapter to it } }
+            .toMap()
     }
 
     // The resolution, for a track whose sources all came from the cache: made now, if MusicBrainz is on.
@@ -174,9 +212,13 @@ internal class InLanguage(
             ) {
                 SourceState.Failed(TrackRun.nameOf(e))
             }
-        land(adapter, query.language, landed)
+        // A look again (#617) shows what it found, or what was found before when it found nothing new;
+        // one shown with what was found before is not kept, as for the English lookups.
+        val shown = input.lookAgain?.keptInLanguage(query.language.code, adapter.id, landed) ?: landed
+        land(adapter, query.language, shown)
         val result = (landed as? SourceState.Done)?.result ?: return
-        if (made && !result.provisional && result.outcome != Outcome.Unreachable) {
+        val keeps = made && !result.provisional && result.outcome != Outcome.Unreachable
+        if (shown === landed && keeps) {
             guard.attempt("write ${adapter.id.tag} in ${query.language.code}") {
                 keep(adapter, query.language.code, track, input.nowPlaying.duration, result)
             }
@@ -230,8 +272,6 @@ internal class InLanguage(
             null
         }
 
-    private fun <T> found(lookup: Lookup<T>?): T? = (lookup as? Lookup.Found)?.value
-
     internal companion object {
         /**
          * The lines about the track itself (the song, its original, the web) of [state]'s English
@@ -247,6 +287,8 @@ internal class InLanguage(
                 .count { settings.isEnabled(it.source) && it.scope in PromptEvidence.TRACK_SCOPES }
     }
 }
+
+private fun <T> found(lookup: Lookup<T>?): T? = (lookup as? Lookup.Found)?.value
 
 /**
  * The lines the search in the track's language found (#902, [TrackState.inLanguage]), to join the
