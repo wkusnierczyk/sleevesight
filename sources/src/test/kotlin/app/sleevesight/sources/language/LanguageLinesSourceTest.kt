@@ -3,9 +3,9 @@ package app.sleevesight.sources.language
 import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.pipeline.ClearEpoch
 import app.sleevesight.core.platform.JvmAccentFolder
-import app.sleevesight.core.resolution.NameMatcher
 import app.sleevesight.core.sources.ArtistResults
 import app.sleevesight.core.sources.LanguageSubject
 import app.sleevesight.core.testing.MemoryArtistResults
@@ -20,7 +20,7 @@ import kotlin.time.Instant
 
 /** The lines in the track's language kept per artist and per album (#939): the first found in each language. */
 class LanguageLinesSourceTest {
-    private val names = NameMatcher(JvmAccentFolder)
+    private val names = Normalizer(JvmAccentFolder)
     private val bts = LanguageSubject.Artist("BTS", "mb-bts")
     private val be = LanguageSubject.Album("BE", "BTS", "rg-be")
 
@@ -68,8 +68,18 @@ class LanguageLinesSourceTest {
             source.keep(LanguageSubject.Artist("Björk", null), "is", listOf(line("Björk er söngkona.", "is")))
             assertTrue(source.kept(bts).isEmpty())
             assertEquals(album, source.kept(be))
-            assertEquals(setOf("mb:rg-be", "name:3:btsbe"), table.keys(LanguageLinesSource.ALBUM_PART))
-            assertEquals(setOf("name:bjork"), table.keys(LanguageLinesSource.ARTIST_PART))
+            assertEquals(setOf("mb:rg-be", "name:3:bts2:be"), table.keys(LanguageLinesSource.ALBUM_PART))
+            assertEquals(setOf("name:5:bjork"), table.keys(LanguageLinesSource.ARTIST_PART))
+        }
+
+    @Test
+    fun `two albums whose cards are keyed apart by name keep their lines apart`() =
+        runTest {
+            val source = LanguageLinesSource(names, MemoryArtistResults())
+            val plus = listOf(line("C++는 앨범이다.", "ko", Scope.RELEASE))
+            source.keep(LanguageSubject.Album("C++", "BTS", null), "ko", plus)
+            assertTrue(source.kept(LanguageSubject.Album("C", "BTS", null)).isEmpty())
+            assertEquals(plus, source.kept(LanguageSubject.Album("C++", "BTS", null)))
         }
 
     @Test

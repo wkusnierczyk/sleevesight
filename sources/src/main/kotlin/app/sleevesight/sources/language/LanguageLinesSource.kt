@@ -2,8 +2,8 @@ package app.sleevesight.sources.language
 
 import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.pipeline.ClearEpoch
-import app.sleevesight.core.resolution.NameMatcher
 import app.sleevesight.core.sources.ArtistPart
 import app.sleevesight.core.sources.ArtistResults
 import app.sleevesight.core.sources.ItemLanguageLines
@@ -30,10 +30,12 @@ import kotlinx.coroutines.sync.withLock
  * album's insights still take them on each track played meanwhile. The memory is read only while
  * the table is not, and dropped when the table is read again, so a value is never in both; [forget]
  * drops it for *Clear history*, and a write by work started before that clear is dropped ([epoch],
- * #547). Never throws but for cancellation.
+ * #547). Never throws but for cancellation. Names are folded by [normalizer] as the cards' entity
+ * keys fold them (`Normalizer.foldForKey`, `StorePipelineCache`), so two names that key two cards
+ * apart key their lines apart too.
  */
 class LanguageLinesSource(
-    private val names: NameMatcher,
+    private val normalizer: Normalizer,
     private val kept: ArtistResults = ArtistResults.None,
     private val keeps: () -> Boolean = { true },
     private val epoch: ClearEpoch = ClearEpoch(),
@@ -122,18 +124,18 @@ class LanguageLinesSource(
             is LanguageSubject.Album -> albums
         }
 
-    // [subject]'s key, as its card's entity is keyed: an artist by its MusicBrainz id, else its name
-    // folded; an album by its release group, else its and its artist's names folded, the artist's
-    // length first, so no two pairs meet.
-    private fun keyOf(subject: LanguageSubject): String =
-        when (subject) {
-            is LanguageSubject.Artist -> subject.mbid?.let { "mb:$it" } ?: "name:${names.key(subject.name)}"
-            is LanguageSubject.Album ->
-                subject.group?.let { "mb:$it" } ?: run {
-                    val artist = names.albumKey(subject.artist)
-                    "name:${artist.length}:$artist${names.albumKey(subject.title)}"
-                }
-        }
+    // [subject]'s key, as its card's entity is keyed (`StorePipelineCache`): an artist by its
+    // MusicBrainz id, else its name folded; an album by its release group, else its artist's and its
+    // own names folded, each length-prefixed, so no two pairs meet.
+    private fun keyOf(subject: LanguageSubject): String {
+        val (id, names) =
+            when (subject) {
+                is LanguageSubject.Artist -> subject.mbid to listOf(subject.name)
+                is LanguageSubject.Album -> subject.group to listOf(subject.artist, subject.title)
+            }
+        return id?.let { "mb:$it" }
+            ?: ("name:" + names.joinToString("") { name -> normalizer.foldForKey(name).let { "${it.length}:$it" } })
+    }
 
     companion object {
         /**

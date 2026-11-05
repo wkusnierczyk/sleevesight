@@ -203,7 +203,7 @@ class PipelineWiring internal constructor(
 
     // What the search in the track's language found about each artist and album: one for the
     // wiring, so what it keeps in memory lasts the process, whatever the parts built since.
-    private val languageLinesSource = LanguageLinesSource(names, artists, keepsArtists, epoch)
+    private val languageLinesSource = LanguageLinesSource(Normalizer(accentFolder), artists, keepsArtists, epoch)
 
     /**
      * What the search in the track's language found about an artist or an album, kept per artist and
