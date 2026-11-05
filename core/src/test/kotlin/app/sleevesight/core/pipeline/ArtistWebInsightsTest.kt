@@ -463,6 +463,41 @@ class ArtistWebInsightsTest {
             assertTrue(cache.cards.isEmpty())
         }
 
+    @Test
+    fun `up to 3 times, a reply of no evidence with no search made keeps found nothing, so no loop runs again`() =
+        runTest {
+            // The model answers at once, searching nothing.
+            val provider = FakeProvider(usesTools = true) { FakeProvider.done(GroundingCheck.NO_EVIDENCE) }
+            val engine = Searches { WebSearchOutcome.Found(listOf(ABOUT)) }
+            val items = items(provider, engine)
+            val track = track()
+            val gathered = checkNotNull(items.evidence(InsightItem.ARTIST, track, upTo))
+            val first = checkNotNull(items.key(InsightItem.ARTIST, track, gathered, upTo))
+            val result = checkNotNull(items.writeSearching(first, InsightItem.ARTIST, track, upTo, gathered))
+            assertEquals(InsightState.NoEvidence, result.state)
+            assertTrue(engine.queries.isEmpty())
+            assertFalse(result.evidence.webDue)
+            assertEquals(first, result.key)
+            // "Found nothing" kept for the artist, as a search that found none keeps it.
+            assertEquals(listOf(emptyList<EvidenceDraft>()), artistWeb.kept.values.toList())
+            assertNotNull(cache.cards[first])
+
+            // Gathered again: no search due, nothing to write from, found kept with no call.
+            val again = checkNotNull(items.evidence(InsightItem.ARTIST, track("Jaiye Sajana"), upTo))
+            assertFalse(again.webDue)
+            assertFalse(items.searchesItself(InsightItem.ARTIST, again, upTo))
+            assertEquals(InsightState.NoEvidence, items.kept(first, again)?.state)
+            assertEquals(1, provider.requests.size)
+
+            // A reply that is not `NO_EVIDENCE`, with no search, keeps nothing: still due.
+            artistWeb.kept.clear()
+            val knowing = FakeProvider(usesTools = true) { FakeProvider.done("He is a composer [S1].") }
+            val other = items(knowing, engine)
+            val written = checkNotNull(other.writeSearching(first, InsightItem.ARTIST, track, upTo, gathered))
+            assertTrue(written.evidence.webDue)
+            assertTrue(artistWeb.kept.isEmpty())
+        }
+
     private companion object {
         val WEB_LINE =
             EvidenceDraft(

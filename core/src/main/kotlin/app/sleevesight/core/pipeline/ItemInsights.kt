@@ -549,9 +549,11 @@ class ItemInsights(
 
     // [asked]'s insight once the AI service's searches ended in [reply] (#912, [writeSearching]): the
     // key the pages [question] numbered give reserved ([WriteGates.reserve]; null when another write
-    // has it), those pages kept for the artist, "found nothing" included, when a search was made
-    // (nothing when none was), the artist's evidence then, and the reply read against it, kept under
-    // [first]'s key with its fingerprint when complete, with the lines kept again.
+    // has it), those pages kept for the artist, "found nothing" included, when a search was made, the
+    // artist's evidence then, and the reply read against it, kept under [first]'s key with its
+    // fingerprint when complete, with the lines kept again. With no search made and a complete reply
+    // of `NO_EVIDENCE`, "found nothing" is kept too, as for a search that found none: else a search
+    // would stay due, and every later write would pay for the loop again.
     @Suppress("LongParameterList") // What was asked, how it was searched, and what came back.
     private suspend fun searched(
         first: CardKey,
@@ -564,25 +566,41 @@ class ItemInsights(
         val drafts = question.drafts()
         val searched = reply.cost.searches > 0
         val found = if (searched) withWeb(asked.track, asked.settings, asked.evidence, drafts) else null
-        val evidence = found ?: asked.evidence
+        val lines = (found ?: asked.evidence).evidence
         // Written by [first]'s service, model and effort, from the lines found.
-        val key = first.copy(evidenceFingerprint = evidence.evidence.fingerprint)
+        val key = first.copy(evidenceFingerprint = lines.fingerprint)
         if (!gates.reserve(key)) return null
-        if (searched) attempt { searching.lookup.keep(searching.query, drafts) }
         val rewritten = asked.rewriting?.let { rewriteParts(it, key.writtenBy()) }.orEmpty()
+        val read = outcome(reply.end, reply.text, key, lines, null, rewritten)
+        val nothing = !searched && read is Reply.Read && read.kept && read.state == InsightState.NoEvidence
+        if (searched || nothing) attempt { searching.lookup.keep(searching.query, drafts) }
+        // With "found nothing" kept, the artist's evidence has no search due.
+        val none = if (nothing) withWeb(asked.track, asked.settings, asked.evidence, emptyList()) else null
+        val evidence = found ?: none ?: asked.evidence
+        return SearchedWrite(evidence, key, kept(read, key, reply.text, rewritten, asked))
+    }
+
+    // The state [read], [key]'s reply [text] as read, comes to (a reply that revised itself away
+    // fails), kept when complete, with the item's web lines kept again, at the time it is shown with.
+    @Suppress("LongParameterList") // The reply as read and as written, its key, and what it was asked.
+    private suspend fun kept(
+        read: Reply,
+        key: CardKey,
+        text: String,
+        rewritten: Set<RewritePart>,
+        asked: Asked,
+    ): InsightState {
         val at = now()
-        val state =
-            when (val read = outcome(reply.end, reply.text, key, evidence.evidence, null, rewritten)) {
-                is Reply.RevisedAway -> InsightState.Failed(ReplyFailures.SELF_REVISED)
-                is Reply.Read -> {
-                    if (read.kept) {
-                        attempt { cache.keep(key, keptText(reply.text, read.state), at, rewritten) }
-                        renewWeb(asked.item, asked.track)
-                    }
-                    (read.state as? InsightState.Written)?.copy(writtenAt = at) ?: read.state
+        return when (read) {
+            is Reply.RevisedAway -> InsightState.Failed(ReplyFailures.SELF_REVISED)
+            is Reply.Read -> {
+                if (read.kept) {
+                    attempt { cache.keep(key, keptText(text, read.state), at, rewritten) }
+                    renewWeb(asked.item, asked.track)
                 }
+                (read.state as? InsightState.Written)?.copy(writtenAt = at) ?: read.state
             }
-        return SearchedWrite(evidence, key, state)
+        }
     }
 
     /**
