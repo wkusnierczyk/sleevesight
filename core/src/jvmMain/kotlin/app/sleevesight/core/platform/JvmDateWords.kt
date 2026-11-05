@@ -21,7 +21,9 @@ import java.util.Locale
  * pattern's own form, so a language that declines it gets the form the pattern asks for: Polish "29
  * lipca 2014" beside "lipiec 2014". The year keeps the four digits the sources give it (`0965`), and a
  * day is written as given, as `EnglishDateWords` writes them, even one the month does not have (30
- * February): with the English patterns the two agree.
+ * February): with the English patterns the two agree. The language's calendar is always the
+ * Gregorian one the sources' dates are in: a tag that names another (`zh-u-ca-chinese`) would get a
+ * pattern with that calendar's fields (`rU年MMMMd`), which `java.time` cannot write.
  */
 class JvmDateWords(
     private val pattern: (skeleton: String, locale: Locale) -> String,
@@ -30,7 +32,7 @@ class JvmDateWords(
         date: DateWhen,
         language: String,
     ): String {
-        val locale = Locale.forLanguageTag(language)
+        val locale = gregorian(Locale.forLanguageTag(language))
         val year = date.year.toLong()
         val fields =
             mutableMapOf<TemporalField, Long>(
@@ -76,6 +78,14 @@ class JvmDateWords(
 
         /** The skeleton of a year: "2014". */
         const val YEAR: String = "y"
+
+        // [locale] with the Gregorian calendar, whatever calendar it names.
+        private fun gregorian(locale: Locale): Locale =
+            Locale
+                .Builder()
+                .setLocale(locale)
+                .setUnicodeLocaleKeyword("ca", "gregory")
+                .build()
 
         // [pattern] with a lone `y` written `yyyy`: the year with the four digits the sources give it.
         private fun fourDigitYear(pattern: String): String =

@@ -91,4 +91,17 @@ class JvmDateWordsTest {
         assertEquals("2014(e)ko uztaila", words.format("2014-07", "eu"))
         assertEquals("2014", words.format("2014", "eu"))
     }
+
+    @Test
+    fun `a language naming another calendar gets the Gregorian one's patterns`() {
+        val asked = mutableListOf<String?>()
+        val chinese =
+            JvmDateWords { _, locale ->
+                asked += locale.getUnicodeLocaleType("ca")
+                // What Android gives for the Chinese calendar, which `java.time` cannot write.
+                if (locale.getUnicodeLocaleType("ca") == "chinese") "rU年MMMMd" else "y年M月d日"
+            }
+        assertEquals("2014年7月29日", chinese.format("2014-07-29", "zh-u-ca-chinese"))
+        assertEquals(listOf<String?>("gregory"), asked)
+    }
 }
