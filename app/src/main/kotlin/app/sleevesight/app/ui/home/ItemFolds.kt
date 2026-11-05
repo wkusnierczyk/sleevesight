@@ -67,35 +67,43 @@ internal fun itemShowAction(item: InsightItem): Int =
  * Which rows are unfolded, kept across recompositions and a recreated screen, as *Sources*' fold is
  * ([FoldMemory]): the items [open] on the track last shown, [track], and those a tap opened on it
  * ([tapped], not saved), which write at once under an automatic mode whatever held the track's own
- * writing back; of those, the ones whose tap's write is still to be asked for ([due], #948, not
- * saved), once their state is known; and the rows whose name a tap showed whole ([whole], #894, not
+ * writing back; of those, the ones whose tap's write is still to be asked for ([due], #948, saved
+ * with the track it is of, so a recreated screen still writes it once, and never on another track),
+ * once their state is known; and the rows whose name a tap showed whole ([whole], #894, not
  * saved).
  */
 @Stable
 internal class ItemFoldMemory(
     open: Set<InsightItem> = emptySet(),
     track: NowPlaying? = null,
+    due: Set<InsightItem> = emptySet(),
 ) {
     var open: Set<InsightItem> by mutableStateOf(open)
     var track: NowPlaying? by mutableStateOf(track)
     var tapped: Set<InsightItem> by mutableStateOf(emptySet())
-    var due: Set<InsightItem> by mutableStateOf(emptySet())
+    var due: Set<InsightItem> by mutableStateOf(due)
     var whole: Set<InsightItem> by mutableStateOf(emptySet())
 
     companion object {
-        /** Saved as plain values: the items open, by name, and the track as [savedTrack] keeps it. */
+        /**
+         * Saved as plain values: the items open and those whose tap's write is due (#948), by name,
+         * and the track both are of, as [savedTrack] keeps it.
+         */
         val Saver: Saver<ItemFoldMemory, Any> =
             listSaver(
-                save = { memory -> listOf<Any?>(memory.open.joinToString(",") { it.name }) + savedTrack(memory.track) },
+                save = { memory -> listOf<Any?>(names(memory.open), names(memory.due)) + savedTrack(memory.track) },
                 restore = { saved ->
-                    val open =
-                        (saved[0] as String)
-                            .split(',')
-                            .mapNotNull { name -> InsightItem.entries.firstOrNull { it.name == name } }
-                            .toSet()
-                    ItemFoldMemory(open, restoredTrack(saved.drop(1)))
+                    ItemFoldMemory(items(saved[0] as String), restoredTrack(saved.drop(2)), items(saved[1] as String))
                 },
             )
+
+        private fun names(items: Set<InsightItem>): String = items.joinToString(",") { it.name }
+
+        private fun items(names: String): Set<InsightItem> =
+            names
+                .split(',')
+                .mapNotNull { name -> InsightItem.entries.firstOrNull { it.name == name } }
+                .toSet()
     }
 }
 

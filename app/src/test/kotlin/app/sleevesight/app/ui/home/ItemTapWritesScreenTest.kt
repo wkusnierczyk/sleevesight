@@ -4,8 +4,13 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.LocalSaveableStateRegistry
+import androidx.compose.runtime.saveable.SaveableStateRegistry
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsNodeInteraction
@@ -263,6 +268,81 @@ class ItemTapWritesScreenTest {
             rowRecords().assertCountEquals(1)
             row(InsightItem.SONG).assertExistsWith("Song, Carefree Highway, uses AI")
         }
+
+    // The screen's saved state, as an activity keeps it: [restore] saves it, drops the content and
+    // composes it afresh from what was saved, as for a recreated activity (as `SourcesFoldScreenTest`).
+    private var emitted by mutableStateOf(true)
+    private var registry by mutableStateOf(SaveableStateRegistry(null) { true })
+
+    private fun restore() {
+        val saved = registry.performSave()
+        emitted = false
+        compose.waitForIdle()
+        registry = SaveableStateRegistry(saved) { true }
+        emitted = true
+        compose.waitForIdle()
+    }
+
+    private fun showSaved(
+        current: MutableState<NowPlayingState>,
+        block: () -> Unit,
+    ) {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity {
+                it.setContent {
+                    if (emitted) {
+                        CompositionLocalProvider(LocalSaveableStateRegistry provides registry) {
+                            Column(Modifier.verticalScroll(rememberScrollState())) {
+                                NowPlayingContent(
+                                    current.value,
+                                    NowPlayingActions(normalizer::normalize, itemNotes = notes),
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            compose.waitForIdle()
+            block()
+        }
+    }
+
+    @Test
+    fun underOnDemandATapsWriteStillDueOutlivesARecreatedScreenAndIsMadeOnce() {
+        // The evidence or the cache still read: nothing known yet when the panel opens.
+        notes.shown.value = mapOf(InsightItem.SONG to ItemShown.Gathering)
+        val current = mutableStateOf(state(onDemand))
+        showSaved(current) {
+            row(InsightItem.SONG).performScrollTo().performClick()
+            compose.waitForIdle()
+            assertTrue(notes.asks.isEmpty())
+            restore()
+            compose.onNodeWithTag(itemPanelTag(InsightItem.SONG)).assertExists()
+            notes.shown.value = emptyMap()
+            compose.waitForIdle()
+            assertEquals(listOf(ItemAsk.OPENED), notes.asks)
+            restore()
+            assertEquals(listOf(ItemAsk.OPENED), notes.asks)
+        }
+    }
+
+    @Test
+    fun aTapsWriteDueOnOneTrackNeverWritesOnTheNext() {
+        notes.shown.value = mapOf(InsightItem.SONG to ItemShown.Gathering)
+        val left = onDemand.copy(itemsOnNewTrack = NewTrackFold.AS_LEFT)
+        val current = mutableStateOf(state(left))
+        showSaved(current) {
+            row(InsightItem.SONG).performScrollTo().performClick()
+            compose.waitForIdle()
+            restore()
+            // The next track, the panel left open: its write was the last track's, so nothing is asked.
+            current.value = state(left, track(carefree))
+            notes.shown.value = emptyMap()
+            compose.waitForIdle()
+            assertTrue(notes.asks.isEmpty())
+            compose.onNodeWithText(text(R.string.home_item_tap_write)).assertExists()
+        }
+    }
 
     @Test
     fun withShowInsightsOffTheButtonsCarryNoMarkAndReadAsBefore() =
