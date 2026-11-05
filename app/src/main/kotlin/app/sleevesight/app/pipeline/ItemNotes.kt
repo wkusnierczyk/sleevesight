@@ -277,7 +277,10 @@ class AppItemNotes(
     // now (`ItemInsights.ownEvidence`), its entity, the sources switched on, and whether a web search
     // may give it lines (`ItemInsights.searchesWeb`: the artist's, #912, with *AI web search* used and
     // an engine's key; the album's, #935, with web search on and an engine's key), so switching that
-    // on, or giving the key, gathers it again.
+    // on, or giving the key, gathers it again; and whether it takes the lines found in the track's
+    // language, and where those are kept (`ItemInsights.takesInLanguage`, #939: *Search in the track's
+    // language* off or not, and *Keep what sources said about each artist*), so switching either
+    // gathers it again.
     private data class Gathered(
         val item: InsightItem,
         val lookupKey: String,
@@ -285,6 +288,8 @@ class AppItemNotes(
         val entity: CardEntity?,
         val sources: Set<SourceId>,
         val searchesWeb: Boolean,
+        val inLanguage: Boolean,
+        val keepsArtists: Boolean,
     )
 
     // The insights shown, by key, oldest first, at most [KEPT].
@@ -714,6 +719,8 @@ class AppItemNotes(
         insights.entity(item, track),
         SourceId.entries.filter(now::isEnabled).toSet(),
         insights.searchesWeb(item, now),
+        insights.takesInLanguage(item, now),
+        insights.takesInLanguage(item, now) && now.keepArtistResults,
     )
 
     // [first]'s insight, kept meanwhile (another track of the artist or album wrote it), with no call,
@@ -1309,6 +1316,7 @@ class AppItemNotes(
             made.modelUnavailable,
             made.artistWeb,
             made.webSearch,
+            made.languageLines,
         )
 
     // Whether an insight written at [writtenAt] is past *Keep history for* ([lifetime]; null, for ever).

@@ -25,6 +25,7 @@ import app.sleevesight.core.settings.WebEngine
 import app.sleevesight.core.sources.AlbumLookup
 import app.sleevesight.core.sources.ArtistResults
 import app.sleevesight.core.sources.ArtistWebLookup
+import app.sleevesight.core.sources.ItemLanguageLines
 import app.sleevesight.core.sources.LanguageSearch
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.WebSearcher
@@ -32,6 +33,7 @@ import app.sleevesight.net.NetClient
 import app.sleevesight.sources.album.AlbumSource
 import app.sleevesight.sources.art.ArtFetcher
 import app.sleevesight.sources.art.ArtResult
+import app.sleevesight.sources.language.LanguageLinesSource
 import app.sleevesight.sources.language.LanguageSources
 import app.sleevesight.sources.language.LanguageWikipedia
 import app.sleevesight.sources.lastfm.LastFmAdapter
@@ -71,15 +73,18 @@ import app.sleevesight.sources.wikipedia.WikipediaSource
  * ask for it again. The app's is the cache database's, the CLI's the run's cache, if it has one.
  * [trackOnly] is where what an album's web search found is kept (#885, [TRACK_ONLY_PARTS]), and an
  * artist's (#912): the app's is the same table, kept whatever *Keep what sources said about each
- * artist* says.
+ * artist* says. [keepsArtists] is that switch, as last read (on for the CLI), which says whether what
+ * the search in the track's language found about an artist or an album is kept in [artists] or in
+ * memory ([languageLines], #939).
  *
  * [genres] says whether genre information is asked for at all (*Show genres*, #444), read at each
  * MusicBrainz recording's lookup, whose tags are asked for only then; the adapters take it from
  * the settings they are built with ([adapters]).
  *
  * [epoch] is *Clear history*'s boundary (#547): an answer MusicBrainz gives to work started before
- * it is not remembered. [musicBrainzThrough] stands between the remembered answers and
- * MusicBrainz's client: the app's tests put a stand-in there, so they ask nothing of the network.
+ * it is not remembered, nor a line in the track's language ([languageLines]). [musicBrainzThrough]
+ * stands between the remembered answers and MusicBrainz's client: the app's tests put a stand-in
+ * there, so they ask nothing of the network.
  * [aiThrough] wraps each AI service's client ([aiProviders]): the app's debug builds log every
  * request through it (`PromptDump`, #767).
  *
@@ -104,6 +109,7 @@ class PipelineWiring internal constructor(
     epoch: ClearEpoch = ClearEpoch(),
     musicBrainzThrough: (MusicBrainzLookup) -> MusicBrainzLookup = { it },
     aiThrough: (AiProvider) -> AiProvider = { it },
+    keepsArtists: () -> Boolean = { true },
 ) : AutoCloseable {
     private val names = NameMatcher(accentFolder)
 
@@ -195,12 +201,26 @@ class PipelineWiring internal constructor(
             ArtistWebSource(ExaArtistSearch(net, it, accentFolder), names, kept = trackOnly)
         }
 
+    // What the search in the track's language found about each artist and album: one for the
+    // wiring, so what it keeps in memory lasts the process, whatever the parts built since.
+    private val languageLinesSource = LanguageLinesSource(names, artists, keepsArtists, epoch)
+
+    /**
+     * What the search in the track's language found about an artist or an album, kept per artist and
+     * per album (#939, `PipelineParts.languageLines`): in [artists] while *Keep what sources said about
+     * each artist* is on ([keepsArtists]), else in memory for the process ([LanguageLinesSource]). One
+     * for the wiring, so each build of the parts shares it.
+     */
+    val languageLines: ItemLanguageLines get() = languageLinesSource
+
     /**
      * Forgets MusicBrainz's answers kept in memory ([RememberedMusicBrainz]), for *Clear history*
-     * (#547); nothing to forget without [rememberMusicBrainz].
+     * (#547), nothing to forget without [rememberMusicBrainz]; and the lines in the track's language
+     * kept in memory ([languageLines], #939).
      */
     suspend fun forgetRemembered() {
         (musicBrainz as? RememberedMusicBrainz)?.forget()
+        languageLinesSource.forget()
     }
 
     /** The AI services with a client, by service. */

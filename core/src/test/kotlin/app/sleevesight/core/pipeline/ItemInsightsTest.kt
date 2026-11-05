@@ -14,16 +14,19 @@ import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.resolution.NameMatcher
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.SourceSwitch
+import app.sleevesight.core.settings.TrackLanguageSearch
 import app.sleevesight.core.settings.WebEngine
 import app.sleevesight.core.sources.AlbumFound
 import app.sleevesight.core.sources.AlbumLookup
 import app.sleevesight.core.sources.AlbumQuery
+import app.sleevesight.core.sources.LanguageSubject
 import app.sleevesight.core.sources.ReleaseDate
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.ResolvedArtist
 import app.sleevesight.core.sources.SourceResult
 import app.sleevesight.core.synthesis.CardKind
 import app.sleevesight.core.synthesis.ItemPrompt
+import app.sleevesight.core.testing.MemoryLanguageLines
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -468,6 +471,81 @@ class ItemInsightsTest {
                 evidence,
             ) { _, _ -> }
             assertEquals(1, albums.renewed.size)
+        }
+
+    // An artist-level line about Gordon Lightfoot found in the track's [language] (#902).
+    private fun inLanguage(
+        text: String,
+        language: String,
+    ): EvidenceDraft = about(line(SourceId.WIKIPEDIA, text, Scope.ARTIST), "Gordon Lightfoot").copy(language = language)
+
+    @Test
+    fun `the artist's lines in the track's language are kept per artist, the first found in each language`() =
+        runTest {
+            val kept = MemoryLanguageLines()
+            val items = ItemInsights(AiAccess(provider, Secret("k")), cache, JvmHasher, names, languageLines = kept)
+            val gordon = LanguageSubject.Artist("Gordon Lightfoot", "mb-gordon")
+            val songLines = listOf(line(SourceId.MUSICBRAINZ, "It runs three minutes."))
+            val korean = track("Sundown", songLines, extraArtistLines = listOf(inLanguage("고든 라이트풋은 가수이다.", "ko")))
+
+            fun texts(evidence: ItemEvidence?) = checkNotNull(evidence).evidence.lines.map { it.text }
+
+            assertTrue("고든 라이트풋은 가수이다." in texts(items.evidence(InsightItem.ARTIST, korean, settings)))
+            assertEquals(listOf("고든 라이트풋은 가수이다."), kept.kept(gordon).map { it.text })
+
+            // Another Korean line does not replace the first; a Japanese one is kept beside it.
+            val more =
+                listOf(inLanguage("고든 라이트풋은 캐나다의 가수이다.", "ko"), inLanguage("ゴードン・ライトフットは歌手である。", "ja"))
+            val both = track("Carefree Highway", songLines, extraArtistLines = more)
+            val bothLines = texts(items.evidence(InsightItem.ARTIST, both, settings))
+            assertEquals(
+                listOf("ゴードン・ライトフットは歌手である。", "고든 라이트풋은 가수이다."),
+                kept.kept(gordon).map { it.text },
+            )
+            assertTrue(bothLines.containsAll(kept.kept(gordon).map { it.text } + "고든 라이트풋은 캐나다의 가수이다."))
+
+            // A track searched in no language takes what was kept, after its source's English lines.
+            val plain = texts(items.evidence(InsightItem.ARTIST, track("Rainy Day People", songLines), settings))
+            val (wikipedia, lastFm) = ARTIST_LINES.partition { it.source == SourceId.WIKIPEDIA }
+            assertEquals((wikipedia + kept.kept(gordon) + lastFm).map { it.text }, plain)
+
+            // Off: none, and nothing more is kept.
+            val off = settings.copy(trackLanguageSearch = TrackLanguageSearch.OFF)
+            val other =
+                track(
+                    "Sundown",
+                    songLines,
+                    extraArtistLines = listOf(inLanguage("Gordon Lightfoot est un chanteur.", "fr")),
+                )
+            assertEquals(ARTIST_LINES.map { it.text }, texts(items.evidence(InsightItem.ARTIST, other, off)))
+            assertEquals(2, kept.kept(gordon).size)
+        }
+
+    @Test
+    fun `the artist's and the album's cards keep their lines in the track's language again`() =
+        runTest {
+            val kept = MemoryLanguageLines()
+            val items =
+                ItemInsights(
+                    AiAccess(provider, Secret("k")),
+                    cache,
+                    JvmHasher,
+                    names,
+                    albums = albums,
+                    languageLines = kept,
+                )
+            val track = track("Sundown", listOf(line(SourceId.MUSICBRAINZ, "It runs three minutes.")))
+            for (item in InsightItem.entries) {
+                val evidence = checkNotNull(items.evidence(item, track, settings))
+                items.write(checkNotNull(items.key(item, track, evidence, settings)), item, track, evidence) { _, _ -> }
+            }
+            assertEquals(
+                listOf(
+                    LanguageSubject.Artist("Gordon Lightfoot", "mb-gordon"),
+                    LanguageSubject.Album("Sundown", "Gordon Lightfoot", "rg-sundown"),
+                ),
+                kept.renewed,
+            )
         }
 
     // [settings] with web search switched on, through an engine.

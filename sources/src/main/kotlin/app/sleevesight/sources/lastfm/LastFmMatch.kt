@@ -309,4 +309,7 @@ internal class Lru<K : Any, V : Any>(
             map[key] = value
             if (map.size > capacity) map.remove(map.keys.first())
         }
+
+    /** Drops every entry. */
+    suspend fun clear(): Unit = mutex.withLock { map.clear() }
 }

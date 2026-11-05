@@ -313,6 +313,9 @@ class AppGraph internal constructor(
             musicBrainzThrough = musicBrainzThrough,
             // Every AI request and its reply in logcat, in debug builds only (#767).
             aiThrough = PromptDump::watching,
+            // What the search in the track's language found about an artist or an album (#939): in
+            // [artistResults] while the switch is on, else in memory for the process.
+            keepsArtists = { artistKeeping.on },
         )
 
     /**
