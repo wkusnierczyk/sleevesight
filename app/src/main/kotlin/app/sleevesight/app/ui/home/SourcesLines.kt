@@ -11,8 +11,8 @@ import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.platform.JvmHasher
 import kotlinx.coroutines.flow.flowOf
 
-// The album's own lines in *Sources* (#522), so a citation of the album's insight opens *Sources* at
-// its line, as the key insight's do.
+// The album's own lines in *Sources* (#522), and the artist's web lines (#912), so a citation of the
+// album's or the artist's insight opens *Sources* at its line, as the key insight's do.
 
 /**
  * What *Sources* lists ([evidence]): the track's evidence, then, once the album's insight has
@@ -28,25 +28,37 @@ internal class SourcesLines(
 )
 
 /**
- * [evidence], the track's, with [album]'s lines (#522) mixed in by source and numbered on from the
- * track's; a line the track has already (its source, scope and words) once. Not the key insight's
- * evidence: a list to read.
+ * [evidence], the track's, with [album]'s lines (#522) and [artist]'s, the artist's insight's (its web
+ * lines for an artist the sources say nothing about, #912), mixed in by source and numbered on from
+ * the track's; a line the track, or the album, has already (its source, scope and words) once. The
+ * artist's lines say "artist" as their scope does. Not the key insight's evidence: a list to read.
  */
 internal fun withAlbum(
     evidence: EvidenceSet?,
     album: EvidenceSet?,
+    artist: EvidenceSet? = null,
 ): SourcesLines {
-    if (evidence == null || album == null || album.isEmpty()) return SourcesLines(evidence)
-    val own = evidence.lines.mapTo(mutableSetOf()) { Triple(it.source, it.scope, it.text) }
+    val seen = evidence?.lines.orEmpty().mapTo(mutableSetOf()) { Triple(it.source, it.scope, it.text) }
     val more =
-        album.lines
-            .filter { Triple(it.source, it.scope, it.text) !in own }
+        listOfNotNull(album, artist)
+            .flatMap { it.lines }
+            .filter { seen.add(Triple(it.source, it.scope, it.text)) }
             .map { EvidenceDraft(it.source, it.scope, it.text, it.url, it.retrievedAt, it.aggregate, it.about) }
+    if (evidence == null || more.isEmpty()) return SourcesLines(evidence)
     val shown = evidence.with(more, JvmHasher)
-    return SourcesLines(shown, (shown.ids - evidence.ids.toSet()).toSet())
+    val albums = album?.lines.orEmpty().mapTo(mutableSetOf()) { Triple(it.source, it.scope, it.text) }
+    val own = evidence.ids.toSet()
+    val albumIds =
+        shown.lines
+            .filter { it.id !in own && Triple(it.source, it.scope, it.text) in albums }
+            .mapTo(mutableSetOf()) { it.id }
+    return SourcesLines(shown, albumIds)
 }
 
-/** What *Sources* lists for [track]: its evidence, with its album's lines once [notes] gathered them. */
+/**
+ * What *Sources* lists for [track]: its evidence, with its album's lines, and its artist's web lines
+ * (#912), once [notes] gathered them.
+ */
 @Composable
 internal fun sourcesLines(
     notes: ItemNotes,
@@ -56,8 +68,11 @@ internal fun sourcesLines(
     val album by remember(notes, track?.normalized, track?.nowPlaying?.album, track?.resolution, track?.sources) {
         track?.let(notes::albumEvidence) ?: flowOf(null)
     }.collectAsState(null)
+    val artist by remember(notes, track?.normalized, track?.resolution, track?.sources) {
+        track?.let(notes::artistEvidence) ?: flowOf(null)
+    }.collectAsState(null)
     val evidence = track?.evidence
-    return remember(evidence, album) { withAlbum(evidence, album) }
+    return remember(evidence, album, artist) { withAlbum(evidence, album, artist) }
 }
 
 /**

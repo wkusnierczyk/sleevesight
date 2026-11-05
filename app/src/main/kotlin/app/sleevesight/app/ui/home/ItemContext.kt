@@ -27,6 +27,7 @@ import app.sleevesight.app.speech.Reading
 import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.pipeline.AiSearches
 import app.sleevesight.core.pipeline.InsightItem
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.ItemEvidence
@@ -261,7 +262,12 @@ private fun Shown(
 
         is InsightState.Failed ->
             RetryLine(
-                stringResource(R.string.home_item_failed, failureText(state.reason)),
+                // The artist's web search failed (#912): that, as the whole line, as *Ask AI* says it.
+                if (state.reason == AiSearches.WEB_SEARCH_FAILED) {
+                    stringResource(R.string.home_ai_web_search_failed)
+                } else {
+                    stringResource(R.string.home_item_failed, failureText(state.reason))
+                },
                 source = "",
                 onRetry = { context.notes.write(track, item, ItemAsk.TAP) },
                 modifier = Modifier.testTag(ITEM_FAILED_TAG),

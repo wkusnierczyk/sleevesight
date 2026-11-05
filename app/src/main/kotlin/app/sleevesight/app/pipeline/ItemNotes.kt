@@ -6,6 +6,7 @@ import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.AiOutcome
 import app.sleevesight.core.pipeline.AiQuestion
+import app.sleevesight.core.pipeline.AiSearches
 import app.sleevesight.core.pipeline.CardEntity
 import app.sleevesight.core.pipeline.CardKey
 import app.sleevesight.core.pipeline.ClearEpoch
@@ -13,6 +14,7 @@ import app.sleevesight.core.pipeline.InsightItem
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.ItemEvidence
 import app.sleevesight.core.pipeline.ItemInsights
+import app.sleevesight.core.pipeline.ItemSearch
 import app.sleevesight.core.pipeline.PipelineEvent
 import app.sleevesight.core.pipeline.PipelineParts
 import app.sleevesight.core.pipeline.QuestionCost
@@ -146,6 +148,13 @@ interface ItemNotes {
     fun albumEvidence(track: TrackState): Flow<EvidenceSet?> = flowOf(null)
 
     /**
+     * The artist's lines gathered for [track]'s artist's insight on this track, as they come, the web's
+     * lines for an artist the sources say nothing about among them (#912); null until it is gathered:
+     * what *Sources* lists beside the track's, its lines the track has already once.
+     */
+    fun artistEvidence(track: TrackState): Flow<EvidenceSet?> = flowOf(null)
+
+    /**
      * *Stop writing* under the insight of card [key] (as [ItemShown.Asking] or [ItemShown.Shown] carry
      * it): the write under way is cut off, nothing is kept, and it shows as stopped.
      */
@@ -164,6 +173,18 @@ interface ItemNotes {
             ask: ItemAsk,
         ) = Unit
     }
+}
+
+// What a web search on the way to an item's write gave (`AppItemNotes.searched`, #885, #912): the
+// evidence with its lines, and the key the insight then has; or a failure, the artist's, which keeps
+// nothing.
+private sealed interface WebStep {
+    class Found(
+        val key: CardKey,
+        val evidence: ItemEvidence,
+    ) : WebStep
+
+    data object Failed : WebStep
 }
 
 /**
@@ -206,8 +227,20 @@ interface ItemNotes {
  * the engine is counted to [paid], lines kept from an earlier search not. Its lines join
  * the album's evidence gathered, which the album lookup keeps, so the insight then has another key,
  * under which the cache is read again before the call, and which a later gathering finds again.
+ *
+ * The artist's web search (#912), for an artist the sources say nothing about, is made the same way,
+ * with *AI web search* used: under *Once*, the app's own search before the call, as the album's; one
+ * that fails keeps nothing and shows the write failed ([AiSearches.WEB_SEARCH_FAILED]), *Retry*
+ * offered. Under *Up to 3 times*, the AI service searches itself while it writes
+ * (`ItemInsights.writeSearching`), through the same gates, asked right before it, each search and
+ * call counted to [paid]; the row shows the insight asked for until the reply comes whole, then
+ * under the key the pages found give it, which the artist's evidence gathered then holds.
  */
-@Suppress("LongParameterList", "TooManyFunctions") // Where items come from, where they run, and the time; each step.
+@Suppress(
+    "LongParameterList", // Where items come from, where they run, and the time.
+    "TooManyFunctions", // Each step.
+    "LargeClass", // Each step of an item's write, its web search on the way among them (#885, #912).
+)
 class AppItemNotes(
     private val parts: StateFlow<PipelineParts?>,
     private val settings: StateFlow<Settings?>,
@@ -493,15 +526,25 @@ class AppItemNotes(
 
     // The album's lines gathered for [track] and its album as it names it now (its entity: the
     // player's album name, its release group): the same song from another album has none of them.
-    override fun albumEvidence(track: TrackState): Flow<EvidenceSet?> =
+    override fun albumEvidence(track: TrackState): Flow<EvidenceSet?> = gatheredLines(track, InsightItem.ALBUM)
+
+    // The artist's lines gathered for [track] and its artist as its card names it now (its entity), the
+    // web's for an artist the sources say nothing about among them (#912).
+    override fun artistEvidence(track: TrackState): Flow<EvidenceSet?> = gatheredLines(track, InsightItem.ARTIST)
+
+    // [item]'s lines gathered for [track], and what it is about as it names it now (its entity).
+    private fun gatheredLines(
+        track: TrackState,
+        item: InsightItem,
+    ): Flow<EvidenceSet?> =
         combine(gathered, parts) { kept, made ->
-            val album = made?.let { insightsOf(it).entity(InsightItem.ALBUM, track) }
+            val entity = made?.let { insightsOf(it).entity(item, track) }
             kept.entries
                 .lastOrNull { (at, _) ->
-                    album != null &&
-                        at.item == InsightItem.ALBUM &&
+                    entity != null &&
+                        at.item == item &&
                         at.lookupKey == track.normalized.lookupKey &&
-                        at.entity == album
+                        at.entity == entity
                 }?.value
                 ?.evidence
                 ?.evidence
@@ -677,18 +720,7 @@ class AppItemNotes(
             val next = toWrite(insights, key, asked, job, counted)
             key = next.key
             asked = next.asked
-            // Kept (under the key the search gave too), or written by another: no call, its search ended.
-            val settled = next.ended ?: AiOutcome.ANSWERED.takeIf { key != first && showKept(insights, key, asked) }
-            if (settled != null) return question.end(settled)
-            question.ask(key)
-            val last =
-                insights.write(key, item, track, asked.evidence, { mayCall(key, asked) }, counted, asked.replaces, show)
-            if (last == null) {
-                // Its gates closed while the evidence or the cache was read: not asked, offered again.
-                question.notAsked()
-                return
-            }
-            question.end(outcomeOf(last), (last as? InsightState.Failed)?.reason)
+            finish(insights, first, next, Writing(question, counted, show))
         } catch (e: StopAsked) {
             // Stopped by the user (*Stop writing*): said so, offered again on a tap; nothing was kept.
             question.end(AiOutcome.STOPPED)
@@ -710,9 +742,54 @@ class AppItemNotes(
         }
     }
 
+    // A write's question, how its costs are counted, and where its states are shown ([write]).
+    private class Writing(
+        val question: Question,
+        val counted: (QuestionCost) -> Unit,
+        val show: (InsightState, Instant) -> Unit,
+    )
+
+    // [next]'s write, [first]'s as [toWrite] left it: kept (under the key a search gave too), or
+    // written by another, with no call, its search ended; written already, or failed, on the way
+    // (the artist's search, #912), and shown; not asked, its gates closed while the evidence or the
+    // cache was read, and offered again; or written now.
+    private suspend fun finish(
+        insights: ItemInsights,
+        first: CardKey,
+        next: Next,
+        writing: Writing,
+    ) {
+        val key = next.key
+        val asked = next.asked
+        val question = writing.question
+        val settled = next.ended ?: AiOutcome.ANSWERED.takeIf { key != first && showKept(insights, key, asked) }
+        if (settled != null) {
+            next.shown?.let { writing.show(it, (it as? InsightState.Written)?.writtenAt ?: clock.now()) }
+            question.end(settled, (next.shown as? InsightState.Failed)?.reason)
+            return
+        }
+        question.ask(key)
+        val item = asked.item
+        val last =
+            next.takeUnless { it.notAsked }?.let {
+                val gate = { mayCall(key, asked) }
+                insights.write(
+                    key,
+                    item,
+                    asked.track,
+                    asked.evidence,
+                    gate,
+                    writing.counted,
+                    asked.replaces,
+                    writing.show,
+                )
+            }
+        if (last == null) question.notAsked() else question.end(outcomeOf(last), (last as? InsightState.Failed)?.reason)
+    }
+
     // An item's question on [track], for the diagnostics (#851) and [paid], in [work]: asked at its
-    // first paid part, an album's web search before its call (#885), else the call, so a search paid
-    // for with no call after it still ends in an event with its cost; ended once.
+    // first paid part, an album's or an artist's web search before its call (#885, #912), else the
+    // call, so a search paid for with no call after it still ends in an event with its cost; ended once.
     private inner class Question(
         private val track: TrackState,
         private val question: AiQuestion,
@@ -763,10 +840,12 @@ class AppItemNotes(
         }
     }
 
-    // What [key]'s write goes on with: [key] and [asked], or, after an album's web search (#885,
-    // [searched]), the key and evidence it then has, the claim moved to it; [Next.ended] when nothing
-    // is left to write, as its question ended: answered, kept under [key] and shown, or stopped, the
-    // next key's written by another already.
+    // What [key]'s write goes on with: [key] and [asked], or, after an album's or an artist's web
+    // search (#885, #912, [searched]), the key and evidence it then has, the claim moved to it;
+    // [Next.ended] when nothing is left to write, as its question ended: answered, kept under [key]
+    // and shown, stopped, the next key's written by another already, failed, the artist's search
+    // failing with nothing else to write from, or written while the AI service searched
+    // ([searchingWrite]).
     private suspend fun toWrite(
         insights: ItemInsights,
         key: CardKey,
@@ -775,24 +854,76 @@ class AppItemNotes(
         counted: (QuestionCost) -> Unit,
     ): Next {
         if (showKept(insights, key, asked)) return Next(key, asked, AiOutcome.ANSWERED)
-        return searched(key, asked, counted)?.let { (next, found) ->
-            // No suspension from here to the caller's taking the next key, so a Stop finds it.
-            val moved = move(key, next, job)
-            // Kept once the claim moved, so the row goes from this key's to the next's, still asked.
-            val at = gatheredFor(insights, asked.track, asked.item, asked.settings)
-            keep(at, Found(found, clock.now(), asked.track, asked.settings), asked.work)
-            spread(insights, at, found, asked.work)
-            // Another write of the same insight under way (another track of the album): it shows.
-            if (moved) Next(next, asked.with(found), null) else Next(key, asked, AiOutcome.STOPPED)
-        } ?: Next(key, asked, null)
+        return when (val step = searched(key, asked, counted)) {
+            null -> searchingWrite(insights, key, asked, job, counted) ?: Next(key, asked, null)
+            WebStep.Failed ->
+                Next(key, asked, AiOutcome.FAILED, shown = InsightState.Failed(AiSearches.WEB_SEARCH_FAILED))
+            is WebStep.Found -> moved(insights, key, asked.with(step.evidence), step.key, job, null)
+        }
     }
 
-    // A write's key and what was asked, and how its question ended when nothing is left to write ([toWrite]).
+    // A write's key and what was asked, and how its question ended when nothing is left to write
+    // ([toWrite]), with the state to show then, if any; [notAsked] when its gates closed before the
+    // AI service's own searches ([searchingWrite]).
     private class Next(
         val key: CardKey,
         val asked: Asked,
         val ended: AiOutcome?,
+        val shown: InsightState? = null,
+        val notAsked: Boolean = false,
     )
+
+    // [asked], the write of [key] with the evidence a web search gave, moved to the key [next] that
+    // evidence gives, unless another write of it is under way (another track of the album or artist),
+    // which shows: kept as the item's evidence gathered, given to its other tracks ([spread]), its
+    // question ended as [ended] says, with [shown], when the write is done already.
+    @Suppress("LongParameterList") // The write, where it goes, and how it ended.
+    private fun moved(
+        insights: ItemInsights,
+        key: CardKey,
+        asked: Asked,
+        next: CardKey,
+        job: Job?,
+        ended: AiOutcome?,
+        shown: InsightState? = null,
+    ): Next {
+        // No suspension from here to the caller's taking the next key, so a Stop finds it.
+        val moved = move(key, next, job)
+        // Kept once the claim moved, so the row goes from this key's to the next's, still asked.
+        val at = gatheredFor(insights, asked.track, asked.item, asked.settings)
+        keep(at, Found(asked.evidence, clock.now(), asked.track, asked.settings), asked.work)
+        spread(insights, at, asked.evidence, asked.work)
+        return if (moved) Next(next, asked, ended, shown) else Next(key, asked, AiOutcome.STOPPED)
+    }
+
+    // [key]'s artist insight written while the AI service searches the web for the artist itself
+    // (#912, `ItemInsights.writeSearching`), when [asked]'s evidence calls for it under the settings
+    // and parts read again now, right before it, as for an album's search ([searched]); its gates
+    // asked right before it ([mayCall]): closed, not asked. Each search and call counted to
+    // [counted]; the key and evidence it ends with taken as a search's are ([moved]). Null when it
+    // does not apply: the write goes on as any other.
+    private suspend fun searchingWrite(
+        insights: ItemInsights,
+        key: CardKey,
+        asked: Asked,
+        job: Job?,
+        counted: (QuestionCost) -> Unit,
+    ): Next? {
+        val now = settings.value
+        val current = parts.value?.let(::insightsOf)
+        if (now == null || current == null || !current.searchesItself(asked.item, asked.evidence, now)) return null
+        val result =
+            withContext(io) {
+                if (mayCall(key, asked)) {
+                    current.writeSearching(key, asked.item, asked.track, now, asked.evidence, counted, asked.replaces)
+                } else {
+                    null
+                }
+            }
+        val with = if (result == null || result.evidence === asked.evidence) asked else asked.with(result.evidence)
+        return result?.let { moved(insights, key, with, it.key, job, outcomeOf(it.state), it.state) }
+            ?: Next(key, asked, null, notAsked = true)
+    }
 
     // [key]'s insight kept in the cache, shown as [asked]'s, with no call; whether it was.
     private suspend fun showKept(
@@ -813,41 +944,49 @@ class AppItemNotes(
         return kept != null
     }
 
-    // [key]'s album insight's evidence with its web search made (#885), while it is due and the call
-    // it comes before may be made now ([mayCall]: the search is paid, as the call is), with the key
-    // the insight then has; the caller keeps it as the album's evidence gathered, so its row and
-    // *Sources* show the lines found. The settings and the parts are read again right before the
-    // search, after any wait for the evidence or the cache: the card's key does not carry web
-    // search's switch, its engine or its key, so the search goes by those now, through the album
-    // lookup built with them, and none is made once web search is off. Each request sent to the
+    // [key]'s album or artist insight's evidence with its web search made (#885, #912), while it is
+    // due and the call it comes before may be made now ([mayCall]: the search is paid, as the call
+    // is), with the key the insight then has; the caller keeps it as the item's evidence gathered, so
+    // its row and *Sources* show the lines found. The settings and the parts are read again right
+    // before the search, after any wait for the evidence or the cache: the card's key does not carry
+    // web search's switch, its engine or its key, so the search goes by those now, through the
+    // lookups built with them, and none is made once web search is off. Each request sent to the
     // engine is counted to [counted], and only those: not lines kept from an earlier search, nor an
     // album that cannot be checked; a request that fails or is cancelled once sent is still counted.
-    // Null when no search is due or allowed, or none could be made; the insight is then written, or
-    // not, as before.
+    // [WebStep.Failed] when the artist's search failed; null when no search is due or allowed, or
+    // none could be made (the album's), or the AI service makes it itself (the artist's under *Up to
+    // 3 times*, [searchingWrite]); the insight is then written, or not, as before.
     private suspend fun searched(
         key: CardKey,
         asked: Asked,
         counted: (QuestionCost) -> Unit,
-    ): Pair<CardKey, ItemEvidence>? =
+    ): WebStep? =
         withContext(io) {
             val now = settings.value?.takeIf { asked.evidence.webDue && mayCall(key, asked) }
             val current = parts.value?.let(::insightsOf)
             val found =
                 if (now != null && current != null) {
-                    current.searched(asked.item, asked.track, now, asked.evidence) { counted(QuestionCost.SEARCH) }
+                    current.search(asked.item, asked.track, now, asked.evidence) { counted(QuestionCost.SEARCH) }
                 } else {
-                    null
+                    ItemSearch.None
                 }
-            val next = if (now != null && found != null) current?.key(asked.item, asked.track, found, now) else null
-            if (found != null && next != null) next to found else null
+            when (found) {
+                ItemSearch.None -> null
+                ItemSearch.Failed -> WebStep.Failed
+                is ItemSearch.Found ->
+                    now?.let { current?.key(asked.item, asked.track, found.evidence, it) }?.let { next ->
+                        WebStep.Found(next, found.evidence)
+                    }
+            }
         }
 
-    // The album's evidence gathered on its other tracks while its web search was due, given the web's
-    // lines of [found], gathered for [from] by its search (#885), with no search: each numbered as
-    // the album's, its ids mapped to its own track's lines ([ItemInsights.withWebOf]), so a track
-    // opened earlier, its row shown again or its Sources, has the lines and finds the insight the
-    // write keeps under the key they give, rather than its earlier key, under which none is kept. In
-    // place, under the lock [forget] clears under, unless a *Clear history* came since [work] began.
+    // The album's (or the artist's, #912) evidence gathered on its other tracks while its web search
+    // was due, given the web's lines of [found], gathered for [from] by its search (#885), with no
+    // search: each numbered as the item's, its ids mapped to its own track's lines
+    // ([ItemInsights.withWebOf]), so a track opened earlier, its row shown again or its Sources, has
+    // the lines and finds the insight the write keeps under the key they give, rather than its
+    // earlier key, under which none is kept. In place, under the lock [forget] clears under, unless a
+    // *Clear history* came since [work] began.
     private fun spread(
         insights: ItemInsights,
         from: Gathered,
@@ -856,7 +995,7 @@ class AppItemNotes(
     ) = publish(work) {
         gathered.update { kept ->
             kept.mapValues { (at, other) ->
-                val same = at != from && at.item == InsightItem.ALBUM && at.entity == from.entity
+                val same = at != from && at.item == from.item && at.item != InsightItem.SONG && at.entity == from.entity
                 val given =
                     if (same && other.evidence.webDue) {
                         insights.withWebOf(other.track, other.settings, other.evidence, found)
@@ -1031,7 +1170,17 @@ class AppItemNotes(
     ) = synchronized(lock) { if (current(work)) events(event) }
 
     private fun insightsOf(made: PipelineParts) =
-        ItemInsights(made.ai, made.cache, made.hasher, names, clock, made.albums, made.modelUnavailable)
+        ItemInsights(
+            made.ai,
+            made.cache,
+            made.hasher,
+            names,
+            clock,
+            made.albums,
+            made.modelUnavailable,
+            made.artistWeb,
+            made.webSearch,
+        )
 
     // Whether an insight written at [writtenAt] is past *Keep history for* ([lifetime]; null, for ever).
     private fun expired(

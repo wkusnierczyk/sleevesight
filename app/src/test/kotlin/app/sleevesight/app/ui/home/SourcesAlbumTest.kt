@@ -10,7 +10,10 @@ import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** The album's own lines in *Sources* (#522): mixed in by source, numbered on from the track's. */
+/**
+ * The album's own lines in *Sources* (#522), and the artist's web lines (#912): mixed in by source,
+ * numbered on from the track's.
+ */
 class SourcesAlbumTest {
     private val track =
         EvidenceSet.of(
@@ -57,6 +60,36 @@ class SourcesAlbumTest {
         )
         // Wikidata's tag is `WD`: its lines are WD1 and WD2 when the track has none.
         assertEquals(setOf("MB2", "W3", "WD1", "WD2"), shown.album)
+    }
+
+    @Test
+    fun theArtistsWebLinesAreMixedInByTheirSourceAboutTheArtistNotTheAlbum() {
+        // The web search's lines for an artist the sources miss (#912), about the artist.
+        val artist =
+            EvidenceSet.of(
+                listOf(
+                    draft(SourceId.WEB, "Gordon Lightfoot was a folk singer.", "https://example.com/gl", Scope.ARTIST),
+                ),
+                JvmHasher,
+            )
+        val shown = withAlbum(track, album, artist)
+        val lines = checkNotNull(shown.evidence)
+        assertEquals(listOf("MB1", "MB2", "W1", "W2", "W3", "WD1", "WD2", "S1"), lines.ids)
+        assertEquals(Scope.ARTIST, lines["S1"]?.scope)
+        // Said to be about the artist, as its scope says: not among the album's lines.
+        assertEquals(setOf("MB2", "W3", "WD1", "WD2"), shown.album)
+        assertEquals("S1", shownId("S1", artist, lines))
+        // With no album gathered yet, the artist's line alone.
+        val alone = withAlbum(track, null, artist)
+        assertEquals(listOf("MB1", "W1", "W2", "S1"), checkNotNull(alone.evidence).ids)
+        assertTrue(alone.album.isEmpty())
+    }
+
+    @Test
+    fun theArtistsLinesTheTrackHasAlreadyAreNotListedTwice() {
+        val bio = draft(SourceId.WIKIPEDIA, "It topped the charts.")
+        val artist = EvidenceSet.of(listOf(bio), JvmHasher)
+        assertSame(track, withAlbum(track, null, artist).evidence)
     }
 
     @Test

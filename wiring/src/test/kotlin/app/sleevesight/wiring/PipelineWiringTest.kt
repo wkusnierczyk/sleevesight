@@ -16,6 +16,7 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
 class PipelineWiringTest {
@@ -71,6 +72,15 @@ class PipelineWiringTest {
             listOf(SourceId.MUSICBRAINZ, SourceId.WIKIPEDIA, SourceId.LASTFM),
             ids(keyed, Settings(webEngines = emptySet())),
         )
+    }
+
+    @Test
+    fun `the artist's web search is built only with Exa switched on and its key, its lines spared by the clear`() {
+        val keyed = SourceKeys(web = mapOf(WebEngine.EXA to exa))
+        assertNotNull(wiring.artistWeb(keyed, Settings()))
+        assertNull(wiring.artistWeb(keyed, Settings(webEngines = emptySet())))
+        assertNull(wiring.artistWeb(SourceKeys(), Settings()))
+        assertEquals(setOf("album.web", "artist.web"), PipelineWiring.TRACK_ONLY_PARTS)
     }
 
     @Test
