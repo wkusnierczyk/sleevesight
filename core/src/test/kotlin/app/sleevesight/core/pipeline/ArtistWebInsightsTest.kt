@@ -402,6 +402,67 @@ class ArtistWebInsightsTest {
             assertFalse(checkNotNull(items.evidence(InsightItem.ARTIST, track, settings)).webDue)
         }
 
+    @Test
+    fun `up to 3 times, a gate closed while the first call is under way makes no search or call after it`() =
+        runTest {
+            // #912's review: the app left, or web search switched off, during the model's first turn.
+            var open = true
+            val provider =
+                FakeProvider(usesTools = true) { request ->
+                    open = false
+                    searching("unused").reply(request)
+                }
+            val engine = Searches { WebSearchOutcome.Found(listOf(ABOUT)) }
+            val items = items(provider, engine)
+            val track = track()
+            val gathered = checkNotNull(items.evidence(InsightItem.ARTIST, track, upTo))
+            val first = checkNotNull(items.key(InsightItem.ARTIST, track, gathered, upTo))
+            val counted = mutableListOf<QuestionCost>()
+            val gates = WriteGates(mayPay = { open })
+            val result =
+                items.writeSearching(first, InsightItem.ARTIST, track, upTo, gathered, { counted += it }, null, gates)
+            assertNull(result)
+            assertTrue(engine.queries.isEmpty())
+            assertEquals(1, provider.requests.size)
+            assertEquals(QuestionCost(calls = 1), counted.fold(QuestionCost(), QuestionCost::plus))
+            assertTrue(artistWeb.kept.isEmpty())
+            assertTrue(cache.cards.isEmpty())
+        }
+
+    @Test
+    fun `up to 3 times, the key its pages give is reserved before they are kept, and refused keeps nothing`() =
+        runTest {
+            val provider = searching("Shashwat Sachdev scored Uri: The Surgical Strike [S1].")
+            val engine = Searches { WebSearchOutcome.Found(listOf(ABOUT)) }
+            val items = items(provider, engine)
+            val track = track()
+            val gathered = checkNotNull(items.evidence(InsightItem.ARTIST, track, upTo))
+            val first = checkNotNull(items.key(InsightItem.ARTIST, track, gathered, upTo))
+            val reserved = mutableListOf<CardKey>()
+            val accepting =
+                WriteGates(
+                    reserve = { key ->
+                        // Nothing kept yet: another track gathering now finds no pages, or finds the key claimed.
+                        assertTrue(artistWeb.kept.isEmpty())
+                        assertTrue(cache.cards.isEmpty())
+                        reserved += key
+                        true
+                    },
+                )
+            val result =
+                checkNotNull(items.writeSearching(first, InsightItem.ARTIST, track, upTo, gathered, gates = accepting))
+            assertEquals(listOf(result.key), reserved)
+            assertNotNull(cache.cards[result.key])
+
+            // Another write of that key under way: nothing kept, no card.
+            artistWeb.kept.clear()
+            cache.cards.clear()
+            val refusing = WriteGates(reserve = { false })
+            assertNull(items.writeSearching(first, InsightItem.ARTIST, track, upTo, gathered, gates = refusing))
+            assertTrue(artistWeb.kept.isEmpty())
+            assertTrue(cache.cards.isEmpty())
+        }
+
     private companion object {
         val WEB_LINE =
             EvidenceDraft(

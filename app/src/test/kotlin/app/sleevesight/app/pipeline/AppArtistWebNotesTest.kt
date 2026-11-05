@@ -19,11 +19,14 @@ import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.pipeline.AiAccess
 import app.sleevesight.core.pipeline.AiSearches
+import app.sleevesight.core.pipeline.CardKey
 import app.sleevesight.core.pipeline.ClearEpoch
 import app.sleevesight.core.pipeline.InsightItem
 import app.sleevesight.core.pipeline.InsightState
+import app.sleevesight.core.pipeline.PipelineCache
 import app.sleevesight.core.pipeline.PipelineParts
 import app.sleevesight.core.pipeline.QuestionCost
+import app.sleevesight.core.pipeline.RewritePart
 import app.sleevesight.core.pipeline.TrackResolver
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.platform.JvmAccentFolder
@@ -41,6 +44,7 @@ import app.sleevesight.core.sources.WebPage
 import app.sleevesight.core.sources.WebSearchOutcome
 import app.sleevesight.core.sources.WebSearcher
 import app.sleevesight.core.synthesis.WebPrompt
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -52,6 +56,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import kotlin.time.Instant
 
 /**
  * The artist's insight in the app for an artist the sources say nothing about (#912): a web search
@@ -109,6 +114,9 @@ class AppArtistWebNotesTest {
         override val id: ProviderId = ProviderId.ANTHROPIC
         var requests = 0
 
+        // While set, the first call waits for it: the model's first turn under way.
+        var hold: CompletableDeferred<Unit>? = null
+
         override suspend fun models(key: Secret): ModelList = ModelList.Listed(emptyList())
 
         override fun stream(
@@ -117,6 +125,7 @@ class AppArtistWebNotesTest {
         ): Flow<CompletionEvent> =
             flow {
                 requests++
+                if (requests == 1) hold?.await()
                 if (request.tools.isNotEmpty() && request.toolsAllowed && request.exchanges.isEmpty()) {
                     val call = ToolCall("c1", WebPrompt.TOOL_NAME, """{"query":"Gordon Lightfoot singer"}""")
                     emit(CompletionEvent.ToolUse(ToolTurn(listOf(call), "[]")))
@@ -141,17 +150,24 @@ class AppArtistWebNotesTest {
     private fun parts(
         provider: AiProvider,
         web: WebSearcher? = null,
-    ) = MutableStateFlow<PipelineParts?>(
-        PipelineParts(
-            normalizer = Normalizer(JvmAccentFolder),
-            adapters = emptyList(),
-            resolver = TrackResolver { _, _ -> Resolution.NONE },
-            hasher = JvmHasher,
-            ai = AiAccess(provider, Secret("key")),
-            cache = cache,
-            webSearch = web,
-            artistWeb = artistWeb,
-        ),
+        lookup: ArtistWebLookup? = artistWeb,
+        cards: PipelineCache = cache,
+    ) = MutableStateFlow<PipelineParts?>(made(provider, web, lookup, cards))
+
+    private fun made(
+        provider: AiProvider,
+        web: WebSearcher?,
+        lookup: ArtistWebLookup?,
+        cards: PipelineCache = cache,
+    ) = PipelineParts(
+        normalizer = Normalizer(JvmAccentFolder),
+        adapters = emptyList(),
+        resolver = TrackResolver { _, _ -> Resolution.NONE },
+        hasher = JvmHasher,
+        ai = AiAccess(provider, Secret("key")),
+        cache = cards,
+        webSearch = web,
+        artistWeb = lookup,
     )
 
     private fun TestScope.notes(parts: MutableStateFlow<PipelineParts?>) =
@@ -353,6 +369,127 @@ class AppArtistWebNotesTest {
             assertEquals(0, pages.searches)
             assertEquals(1, artistWeb.searches)
             assertEquals(1, provider.requests)
+        }
+
+    // Up to 3 times, with the model's first turn held until [then] has changed what the write may do.
+    private fun TestScope.firstTurnHeld(then: () -> Unit): Pair<Searching, Pages> {
+        settings.value = settings.value?.copy(aiWebSearch = AiWebSearch.UP_TO)
+        val provider = Searching(usesTools = true).apply { hold = CompletableDeferred() }
+        val pages = Pages()
+        val notes = notes(parts(provider, pages))
+        notes.write(track(HomeFixtures.sundown), InsightItem.ARTIST)
+        advanceUntilIdle()
+        assertEquals(1, provider.requests)
+        then()
+        checkNotNull(provider.hold).complete(Unit)
+        advanceUntilIdle()
+        return provider to pages
+    }
+
+    @Test
+    fun `up to 3 times, the gate closed during the first call stops the write before any search or call`() =
+        runTest {
+            val (provider, pages) = firstTurnHeld { open = false }
+            assertEquals(0, pages.searches)
+            assertEquals(1, provider.requests)
+            assertEquals(QuestionCost(calls = 1), paid)
+            assertTrue(artistWeb.kept.isEmpty())
+        }
+
+    @Test
+    fun `up to 3 times, Exa web search switched off during the first call stops the write before any search`() =
+        runTest {
+            val (provider, pages) =
+                firstTurnHeld {
+                    settings.value =
+                        settings.value?.let { it.copy(enabledSources = it.enabledSources - SourceSwitch.WEB) }
+                }
+            assertEquals(0, pages.searches)
+            assertEquals(1, provider.requests)
+            assertTrue(artistWeb.kept.isEmpty())
+        }
+
+    @Test
+    fun `an artist opened with AI web search off is searched for once Once is chosen`() =
+        runTest {
+            settings.value = settings.value?.copy(aiWebSearch = AiWebSearch.OFF)
+            val provider = CountingProvider().apply { reply = { "Gordon Lightfoot was a Canadian folk singer [S1]." } }
+            val notes = notes(parts(provider))
+            val first = track(HomeFixtures.sundown)
+            notes.write(first, InsightItem.ARTIST)
+            advanceUntilIdle()
+            assertEquals(InsightState.NoEvidence, (notes.settled(first) as ItemShown.Shown).state)
+
+            // Once chosen: gathered again, a search due; the earlier "nothing to write from" stands for none.
+            settings.value = settings.value?.copy(aiWebSearch = AiWebSearch.ONCE)
+            assertEquals(ItemShown.Offered, notes.settled(first))
+            notes.write(first, InsightItem.ARTIST)
+            advanceUntilIdle()
+            assertEquals(1, artistWeb.searches)
+            assertTrue((notes.settled(first) as ItemShown.Shown).state is InsightState.Written)
+        }
+
+    @Test
+    fun `an artist opened before Exa's key was given is searched for once it is`() =
+        runTest {
+            val provider = CountingProvider().apply { reply = { "Gordon Lightfoot was a Canadian folk singer [S1]." } }
+            val parts = parts(provider, lookup = null)
+            val notes = notes(parts)
+            val first = track(HomeFixtures.sundown)
+            notes.write(first, InsightItem.ARTIST)
+            advanceUntilIdle()
+            assertEquals(InsightState.NoEvidence, (notes.settled(first) as ItemShown.Shown).state)
+
+            // The key given: the parts rebuilt with the artist's web search.
+            parts.value = made(provider, null, artistWeb)
+            assertEquals(ItemShown.Offered, notes.settled(first))
+            notes.write(first, InsightItem.ARTIST)
+            advanceUntilIdle()
+            assertEquals(1, artistWeb.searches)
+            assertTrue((notes.settled(first) as ItemShown.Shown).state is InsightState.Written)
+        }
+
+    @Test
+    fun `up to 3 times, another track asking while the card is being kept makes no second write`() =
+        runTest {
+            settings.value = settings.value?.copy(aiWebSearch = AiWebSearch.UP_TO)
+            val keeping = CompletableDeferred<Unit>()
+            // The synthesis cache, its keeping of a card held until [keeping] completes.
+            val held =
+                object : PipelineCache by cache {
+                    override suspend fun keep(
+                        key: CardKey,
+                        text: String,
+                        writtenAt: Instant,
+                        rewritten: Set<RewritePart>,
+                    ) {
+                        keeping.await()
+                        cache.keep(key, text, writtenAt, rewritten)
+                    }
+                }
+            val provider = Searching(usesTools = true)
+            val pages = Pages()
+            val notes = notes(parts(provider, pages, cards = held))
+            notes.write(track(HomeFixtures.sundown), InsightItem.ARTIST)
+            advanceUntilIdle()
+            // The pages kept, the card not yet: the next track gathers them and asks for the insight.
+            assertEquals(
+                listOf(PAGE.url),
+                artistWeb.kept.values
+                    .flatten()
+                    .map { it.url },
+            )
+            val next = track(HomeFixtures.carefree)
+            notes.write(next, InsightItem.ARTIST)
+            advanceUntilIdle()
+            assertEquals(2, provider.requests)
+            assertEquals(1, pages.searches)
+
+            keeping.complete(Unit)
+            advanceUntilIdle()
+            assertTrue((notes.settled(next) as ItemShown.Shown).state is InsightState.Written)
+            assertEquals(2, provider.requests)
+            assertEquals(1, pages.searches)
         }
 
     private companion object {

@@ -88,6 +88,16 @@ class SearchedWrite(
 )
 
 /**
+ * What the caller of [ItemInsights.writeSearching] lets it do (#912): pay for each search and call
+ * ([mayPay], asked right before each), and write the key its pages give ([reserve], asked before
+ * they are kept, which the caller claims then).
+ */
+class WriteGates(
+    val mayPay: () -> Boolean = { true },
+    val reserve: (CardKey) -> Boolean = { true },
+)
+
+/**
  * An item's insight kept in the cache: its [state] as checked, and when it was written
  * ([writtenAt]), if the cache says.
  */
@@ -277,6 +287,16 @@ class ItemInsights(
         return ItemEvidence(set, matching(set.lines, shown), webDue = kept == null)
     }
 
+    /**
+     * Whether [item]'s evidence under [settings] may hold the web's lines a search for it keeps, or
+     * call for one (#912): the artist's, with *AI web search* used and a lookup to keep and search
+     * them ([artistWeb], an engine's key). Its evidence is gathered again when this changes.
+     */
+    fun searchesWeb(
+        item: InsightItem,
+        settings: Settings,
+    ): Boolean = item == InsightItem.ARTIST && artistWeb != null && searchesArtist(settings)
+
     // Whether the artist may be searched for under [settings] (#912): *AI web search* used, which
     // needs *Exa web search* on.
     private fun searchesArtist(settings: Settings): Boolean = settings.aiWebSearchUsed != AiWebSearch.OFF
@@ -443,8 +463,17 @@ class ItemInsights(
      * ([ArtistWebLookup.renew]). A reply that revises itself away fails (no second loop: a tap writes
      * it again from the pages kept, with the plain prompt). When every search failed, nothing is kept,
      * the evidence stays as it was, a search due, and the write fails ([AiSearches.WEB_SEARCH_FAILED]).
-     * [rewriting] as [write]'s. Null when it does not apply ([searchesItself] false, or no entity).
-     * Nothing is shown while it runs: the reply comes whole, at the end of the loop.
+     * [rewriting] as [write]'s. Nothing is shown while it runs: the reply comes whole, at the end of
+     * the loop.
+     *
+     * [gates] (#912's review): [WriteGates.mayPay] is asked right before each search and each call,
+     * with no suspension between; once it says no, nothing more is paid for, nothing is kept, and
+     * the write ends with null. [WriteGates.reserve] is asked for the key the pages give, before they
+     * are kept, so the caller claims it while the pages and the card are kept: another track that
+     * gathers the pages meanwhile finds the key being written, rather than writing it again; told no
+     * (another write of that key under way), nothing is kept, and the write ends with null.
+     *
+     * Null too when it does not apply ([searchesItself] false, or no entity).
      */
     @Suppress("LongParameterList") // The insight, what it is about and from, and where its cost goes.
     suspend fun writeSearching(
@@ -455,6 +484,7 @@ class ItemInsights(
         evidence: ItemEvidence,
         counted: (QuestionCost) -> Unit = {},
         rewriting: WrittenBy? = null,
+        gates: WriteGates = WriteGates(),
     ): SearchedWrite? {
         val searching =
             Searching
@@ -465,11 +495,20 @@ class ItemInsights(
         val question = ArtistQuestion(subject, track, first.modelKnowledge, names, hasher, now())
         val base = CompletionRequest(first.model, "", CompletionRequest.maxTokensFor(first.effort), first.effort)
         val questions = WebQuestions(searching.access, searching.engine)
-        val reply = questions.ask(question, AiWebSearch.UP_TO, Settings.AI_WEB_SEARCH_LIMIT, base, counted)
-        return if (reply.searchFailed) {
-            SearchedWrite(evidence, first, InsightState.Failed(AiSearches.WEB_SEARCH_FAILED))
-        } else {
-            searched(first, Asked(item, track, settings, evidence, rewriting), searching, question, reply)
+        val reply =
+            questions.ask(question, AiWebSearch.UP_TO, Settings.AI_WEB_SEARCH_LIMIT, base, counted, gates.mayPay)
+        return when {
+            reply.refused -> null
+            reply.searchFailed -> SearchedWrite(evidence, first, InsightState.Failed(AiSearches.WEB_SEARCH_FAILED))
+            else ->
+                searched(
+                    first,
+                    Asked(item, track, settings, evidence, rewriting),
+                    searching,
+                    question,
+                    reply,
+                    gates,
+                )
         }
     }
 
@@ -509,30 +548,31 @@ class ItemInsights(
     )
 
     // [asked]'s insight once the AI service's searches ended in [reply] (#912, [writeSearching]): the
-    // pages [question] numbered kept for the artist, "found nothing" included, when a search was made
+    // key the pages [question] numbered give reserved ([WriteGates.reserve]; null when another write
+    // has it), those pages kept for the artist, "found nothing" included, when a search was made
     // (nothing when none was), the artist's evidence then, and the reply read against it, kept under
     // [first]'s key with its fingerprint when complete, with the lines kept again.
+    @Suppress("LongParameterList") // What was asked, how it was searched, and what came back.
     private suspend fun searched(
         first: CardKey,
         asked: Asked,
         searching: Searching,
         question: ArtistQuestion,
         reply: WebReply,
-    ): SearchedWrite {
+        gates: WriteGates,
+    ): SearchedWrite? {
         val drafts = question.drafts()
-        val found =
-            if (reply.cost.searches > 0) {
-                attempt { searching.lookup.keep(searching.query, drafts) }
-                withWeb(asked.track, asked.settings, asked.evidence, drafts) ?: asked.evidence
-            } else {
-                asked.evidence
-            }
+        val searched = reply.cost.searches > 0
+        val found = if (searched) withWeb(asked.track, asked.settings, asked.evidence, drafts) else null
+        val evidence = found ?: asked.evidence
         // Written by [first]'s service, model and effort, from the lines found.
-        val key = first.copy(evidenceFingerprint = found.evidence.fingerprint)
+        val key = first.copy(evidenceFingerprint = evidence.evidence.fingerprint)
+        if (!gates.reserve(key)) return null
+        if (searched) attempt { searching.lookup.keep(searching.query, drafts) }
         val rewritten = asked.rewriting?.let { rewriteParts(it, key.writtenBy()) }.orEmpty()
         val at = now()
         val state =
-            when (val read = outcome(reply.end, reply.text, key, found.evidence, null, rewritten)) {
+            when (val read = outcome(reply.end, reply.text, key, evidence.evidence, null, rewritten)) {
                 is Reply.RevisedAway -> InsightState.Failed(ReplyFailures.SELF_REVISED)
                 is Reply.Read -> {
                     if (read.kept) {
@@ -542,7 +582,7 @@ class ItemInsights(
                     (read.state as? InsightState.Written)?.copy(writtenAt = at) ?: read.state
                 }
             }
-        return SearchedWrite(found, key, state)
+        return SearchedWrite(evidence, key, state)
     }
 
     /**
