@@ -26,7 +26,9 @@ object ItemPrompt {
     /**
      * The version of this prompt's template, part of the synthesis cache key ([CardKind.SONG],
      * [CardKind.ARTIST], [CardKind.ALBUM]): raised when its contract or built-in style changes, so
-     * insights written from the old prompt are not reused.
+     * insights written from the old prompt are not reused. Not raised for the rule on a line found in
+     * the track's language ([InsightPrompt.TRANSLATION_RULE], #902), as `InsightPrompt.VERSION` was
+     * not: the lines' languages are in the evidence fingerprint, part of every insight's key.
      */
     const val VERSION: Int = 1
 
@@ -178,6 +180,7 @@ object ItemPrompt {
         listOf(
             InsightPrompt.CITATION_RULE,
             InsightPrompt.EVIDENCE_RULE,
+            InsightPrompt.TRANSLATION_RULE,
             InsightPrompt.LENGTH_RULE,
             InsightPrompt.ORIGINAL_SONG_RULE,
             InsightPrompt.ARTIST_RULE,

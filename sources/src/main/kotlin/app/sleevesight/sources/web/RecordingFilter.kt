@@ -32,13 +32,18 @@ import app.sleevesight.core.normalizer.AccentFolder
 class RecordingFilter(
     private val accentFolder: AccentFolder,
 ) {
-    /** Whether a result with [title], [snippet] and [url] is about [track]. */
+    /**
+     * Whether a result with [title], [snippet] and [url] is about [track]. Without [wholeWords] (the
+     * search in a language whose script puts no spaces between words, #902: Thai, Japanese, Chinese),
+     * a name counts wherever it stands in the text, not only between word boundaries.
+     */
     fun isAbout(
         track: NormalizedTrack,
         title: String?,
         snippet: String,
         url: String,
-    ): Boolean = names(listOfNotNull(track.title, track.from), requiredArtists(track), title, snippet, url)
+        wholeWords: Boolean = true,
+    ): Boolean = names(listOfNotNull(track.title, track.from), requiredArtists(track), title, snippet, url, wholeWords)
 
     /**
      * Whether a result with [title], [snippet] and [url] is about the [album] by [artist] (#885,
@@ -76,19 +81,21 @@ class RecordingFilter(
 
     // Whether the result names each of [song] (the title, and the work it is from) and one of
     // [artists] (folded), and its title does not name such an artist without the song.
-    @Suppress("LongParameterList") // What it must name, and the result's three parts.
+    @Suppress("LongParameterList") // What it must name, the result's three parts, and how.
     private fun names(
         song: List<String>,
         artists: List<String>,
         title: String?,
         snippet: String,
         url: String,
+        wholeWords: Boolean = true,
     ): Boolean {
         if (isOwnSource(url)) return false
-        val heading = padded(title.orEmpty())
-        val text = padded("${title.orEmpty()} $snippet")
-        val phrases = song.map(::padded)
-        val required = artists.map { " $it " }
+        val words: (String) -> String = if (wholeWords) ::padded else ::fold
+        val heading = words(title.orEmpty())
+        val text = words("${title.orEmpty()} $snippet")
+        val phrases = song.map(words)
+        val required = artists.map { if (wholeWords) " $it " else it }
         val namesSong = phrases.none { it.isBlank() } && phrases.all { it in text }
         val namesArtist = required.any { it in text }
         val titledAfterOther = required.any { it in heading } && !phrases.all { it in heading }
@@ -125,7 +132,9 @@ class RecordingFilter(
     private fun padded(phrase: String): String = " ${fold(phrase)} "
 
     /**
-     * [text] lowercased, decomposed, without combining marks, with `&` read as `and`, apostrophes
+     * [text] lowercased, decomposed, without the Latin combining marks (accents: U+0300 to U+036F),
+     * the marks of other scripts kept in their word (#902: an Indic or Thai vowel sign, a virama, so
+     * "तुम ही हो" is not "तुम ही है"), with `&` read as `and`, apostrophes
      * (`'`, `’`, `ʼ`) dropped so "Don't" and "Dont" agree, except before a possessive `s`, which
      * stays a word of its own so "Lightfoot's" still names Lightfoot, every other run of characters
      * other than letters and digits (in any script) made one space, and trimmed.
@@ -150,7 +159,7 @@ class RecordingFilter(
                     space = true
                 }
 
-                c.isLetterOrDigit() -> {
+                c.isLetterOrDigit() || joinsWord(c, out, space) -> {
                     if (space && out.isNotEmpty()) out.append(' ')
                     out.append(c)
                     space = false
@@ -160,6 +169,13 @@ class RecordingFilter(
         }
         return out.toString()
     }
+
+    // Whether [c] is another script's mark following a letter in [out], kept with it in its word.
+    private fun joinsWord(
+        c: Char,
+        out: StringBuilder,
+        space: Boolean,
+    ): Boolean = c.category in SCRIPT_MARKS && out.isNotEmpty() && !space
 
     // Whether the apostrophe at [i] is followed by an `s` that ends the word: `lightfoot's`. [text]
     // is decomposed, so an accented `s` is an `s` and a combining mark, which does not end it.
@@ -181,6 +197,10 @@ class RecordingFilter(
             listOf("wikipedia.org", "wikiwand.com", "wikidata.org", "musicbrainz.org", "last.fm", "discogs.com")
 
         private val COMBINING_MARKS = '\u0300'..'\u036F'
+
+        // The categories of the marks another script's letters carry, kept with the letter they follow.
+        private val SCRIPT_MARKS =
+            setOf(CharCategory.NON_SPACING_MARK, CharCategory.COMBINING_SPACING_MARK, CharCategory.ENCLOSING_MARK)
 
         // ASCII apostrophe, right single quotation mark, modifier letter apostrophe.
         private val APOSTROPHES = setOf('\'', '\u2019', '\u02BC')

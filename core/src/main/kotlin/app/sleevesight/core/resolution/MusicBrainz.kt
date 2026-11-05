@@ -89,12 +89,17 @@ data class MbReleaseGroup(
     val primaryType: String?,
 )
 
-/** A release a recording appears on. [date] is null when MusicBrainz has none. */
+/**
+ * A release a recording appears on. [date] is null when MusicBrainz has none. [language] is the
+ * language MusicBrainz records for its tracklist (ISO 639-3, `text-representation`), a hint of the
+ * track's language (#902); null when it records none, or the answer carries none (a search's).
+ */
 data class MbRelease(
     val mbid: String,
     val title: String,
     val date: String?,
     val releaseGroup: MbReleaseGroup?,
+    val language: String? = null,
 )
 
 /**

@@ -43,6 +43,12 @@ import kotlin.time.Instant
  * @property writesWith what a model call of the run would write the insight with, from the card's
  *   key it looks up (#854): set once the run looks its card up, null before and for a run that
  *   writes none. Beside an insight kept from before, it is what *Rewrite insight* would use.
+ * @property inLanguage the search in the track's language (#902), once the run decided to make it;
+ *   null before, and for a run that makes none (English, no language found, the setting off, or
+ *   enough found in English under *If needed*). See [InLanguageState].
+ * @property searchingInLanguage while the run's search in the track's language (#902) waits for its
+ *   grant, decides the language or looks up in it: the track's sources are not all landed until it
+ *   ends ([gathered]).
  */
 data class TrackState(
     val nowPlaying: NowPlaying,
@@ -57,10 +63,32 @@ data class TrackState(
     val laterAnswered: Set<LabelSource> = emptySet(),
     val genresAssembled: Boolean = false,
     val writesWith: WrittenBy? = null,
+    val inLanguage: InLanguageState? = null,
+    val searchingInLanguage: Boolean = false,
 ) {
-    /** Whether every source has landed. */
-    val gathered: Boolean get() = sources.values.none { it is SourceState.Pending }
+    /**
+     * Whether every source has landed, those searched in the track's language too (#902), and the
+     * search in it is not still deciding or looking up ([searchingInLanguage]).
+     */
+    val gathered: Boolean
+        get() =
+            sources.values.none { it is SourceState.Pending } &&
+                !searchingInLanguage &&
+                inLanguage?.sources?.values?.none { it is SourceState.Pending } != false
 }
+
+/**
+ * The search in the track's language (#902), once a run decided to make it: the [language]'s code
+ * (`Language.code`, `hi`), and each of its lookups' progress by source ([SourceId.WIKIPEDIA] for the
+ * language's Wikipedia, with Wikidata's names in it; [SourceId.WEB] for the web search in it), as
+ * [TrackState.sources] holds the English ones'. Its lines carry the language
+ * (`EvidenceDraft.language`) and join the track's evidence after the English ones, so the English
+ * ids stay as they were.
+ */
+data class InLanguageState(
+    val language: String,
+    val sources: Map<SourceId, SourceState>,
+)
 
 /**
  * How a label source's requests after the evidence stand (#772; [TrackState.laterLabels]): still
@@ -105,13 +133,16 @@ sealed interface SourceState {
  * every source [unreachable], or with [only] (a *Retry*'s, #724, [asking]), those of [retryable] it
  * names, the others kept as they were. [labelsFailed] are the sources whose label requests after
  * the evidence failed (#772, [TrackState.laterLabels]), reported once those end: a *Retry* of one
- * asks those requests again alone ([labelsAsked]), its lookup kept.
+ * asks those requests again alone ([labelsAsked]), its lookup kept. [inLanguage] is the search in
+ * the track's language as it ended (#902), when the run made one: a later run in the same language
+ * asks again its lookups [languageAsked] and keeps the others, as for the English ones.
  */
 data class Gathered(
     val sources: Map<SourceId, SourceState>,
     val resolution: Resolution?,
     val only: Set<SourceId>? = null,
     val labelsFailed: Set<SourceId> = emptySet(),
+    val inLanguage: InLanguageState? = null,
 ) {
     /** The sources that ended `Unreachable`: a network or source error. */
     val unreachable: Set<SourceId>
@@ -142,6 +173,25 @@ data class Gathered(
      */
     val labelsAsked: Set<SourceId>
         get() = only?.let { labelsFailed intersect it }.orEmpty() - asked
+
+    /**
+     * The lookups in the track's language (#902, [inLanguage]) that ended `Unreachable`, or shown but
+     * not kept, a lookup for a part of them having failed ([SourceResult.provisional]), by source:
+     * those a later run asks again.
+     */
+    val languageRetryable: Set<SourceId>
+        get() =
+            inLanguage
+                ?.sources
+                ?.filterValues { state ->
+                    (state as? SourceState.Done)?.result?.let { it.outcome == Outcome.Unreachable || it.provisional } ==
+                        true
+                }?.keys
+                .orEmpty()
+
+    /** Of [languageRetryable], those a run started with it asks again: all, or with [only], those it names. */
+    val languageAsked: Set<SourceId>
+        get() = only?.let { languageRetryable intersect it } ?: languageRetryable
 
     /**
      * As a run asking again [sources] alone starts with it (a *Retry*, #724): the other sources

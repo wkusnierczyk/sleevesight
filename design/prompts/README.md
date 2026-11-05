@@ -30,3 +30,9 @@ it), and say so in the KDoc.
 |---|---|---|
 | 5 (#695) | `genre-reason-v5-1.txt`, `genre-reason-v5-1-model.txt`: one message | The baseline of #767's blind A/B. |
 | 6 (#767) | `genre-reason-v6-system.txt`, `genre-reason-v6-system-model-search.txt`, `genre-reason-v6-1-user.txt` | Even with version 5 in the blind A/B (8 prompts: 1 each, 6 the same); kept for the insight's structure. |
+
+## Changes made without a version
+
+| Change | Prompts | Why no version |
+|---|---|---|
+| A rule on a line found in the track's language (#902): `- A line marked with a language, like (Wikipedia, release, Hindi), is in that language: translate what you use of it into English, and cite it as usual.` (`InsightPrompt.TRANSLATION_RULE`), after the rule on using only the evidence | The insight's (version 10), the song's, artist's and album's (`ItemPrompt`, version 1) and the genre reason's (version 6); the files above keep each version as it first shipped, the stored prompts the tests pin hold the rule | The lines' languages are in the evidence fingerprint, part of every card's key: a track that gains such lines is written anew anyway, and a raised version would only pay again for the cards kept without them. |

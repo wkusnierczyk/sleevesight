@@ -46,6 +46,7 @@ RULES, which hold whatever the style says:
 - Tell the song's own story: how it was written and recorded, who plays on it, its release and its versions. Another card gives the headline about the track; do not open with it.
 - End every factual sentence with the id(s) that support it, like [W1] or [W2][S1].
 - Use only the evidence: no names, dates, places or numbers that are not in it.
+- A line marked with a language, like (Wikipedia, release, Hindi), is in that language: translate what you use of it into English, and cite it as usual.
 - Never mention the track's length or running time: the player already shows it.
 - An "original song" line is about the song as first recorded by someone else. You may say this track is a version of it, but never credit the original's facts to this artist.
 - An "artist" line is about the performer, not this recording.

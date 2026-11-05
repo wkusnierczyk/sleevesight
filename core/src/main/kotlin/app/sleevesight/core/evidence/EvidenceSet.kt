@@ -11,13 +11,15 @@ import app.sleevesight.core.model.SourceId
  * deterministic order (the order of its response). A source's ids do not depend on the other
  * sources' lines.
  *
- * [fingerprint] is a SHA-256 over the ordered (id, scope, text) triples, in lowercase hex. It is
- * part of the synthesis cache key (R2): a cached insight is reused only for the exact evidence it
- * was written from. The URL and the retrieval time are not part of it, so a refetch that finds
- * the same lines keeps the cached insight. Encoding, per line in order: for each of the id,
- * [Scope.key] and the text, its UTF-8 byte length in decimal, `:`, and its UTF-8 bytes; then
- * `\n`. The text is well-formed Unicode (see [EvidenceDraft]), so the encoding is the same on every
- * platform. Changing the encoding, [SOURCE_ORDER], a tag or a scope key changes every fingerprint,
+ * [fingerprint] is a SHA-256 over the ordered (id, scope, text) triples, in lowercase hex, each
+ * with the line's language after its text when it has one (#902): a line in Hindi and the same
+ * text unmarked are prompted differently, so they are different evidence. It is part of the
+ * synthesis cache key (R2): a cached insight is reused only for the exact evidence it was written
+ * from. The URL and the retrieval time are not part of it, so a refetch that finds the same lines
+ * keeps the cached insight. Encoding, per line in order: for each of the id, [Scope.key], the text
+ * and the language's code (only when set), its UTF-8 byte length in decimal, `:`, and its UTF-8
+ * bytes; then `\n`. The text is well-formed Unicode (see [EvidenceDraft]), so the encoding is the
+ * same on every platform. Changing the encoding, [SOURCE_ORDER], a tag or a scope key changes every fingerprint,
  * which empties the synthesis cache in effect; a golden test pins them. So web search's lines are
  * fingerprinted with their ids as they were before its tag became `S` (#769): `G1`, `G2`
  * ([SourceId.LEGACY_WEB_TAG]). A card kept citing `[G1]` is then still found for the same lines, and
@@ -84,7 +86,9 @@ class EvidenceSet private constructor(
     ): EvidenceSet {
         if (more.isEmpty()) return this
         val drafts =
-            lines.map { EvidenceDraft(it.source, it.scope, it.text, it.url, it.retrievedAt, it.aggregate, it.about) }
+            lines.map {
+                EvidenceDraft(it.source, it.scope, it.text, it.url, it.retrievedAt, it.aggregate, it.about, it.language)
+            }
         return of(drafts + more, hasher)
     }
 
@@ -115,6 +119,7 @@ class EvidenceSet private constructor(
                                 retrievedAt = draft.retrievedAt,
                                 aggregate = draft.aggregate,
                                 about = draft.about,
+                                language = draft.language,
                             )
                         }
                     }
@@ -148,7 +153,10 @@ class EvidenceSet private constructor(
         ): String {
             val parts = mutableListOf<ByteArray>()
             for (line in lines) {
-                for (field in listOf(fingerprintId(line), line.scope.key, line.text.withoutLoneSurrogates())) {
+                // A line's language only when it has one (#902), so the lines found before it keep their fingerprints.
+                val fields =
+                    listOfNotNull(fingerprintId(line), line.scope.key, line.text.withoutLoneSurrogates(), line.language)
+                for (field in fields) {
                     val bytes = field.encodeToByteArray()
                     parts += "${bytes.size}:".encodeToByteArray()
                     parts += bytes

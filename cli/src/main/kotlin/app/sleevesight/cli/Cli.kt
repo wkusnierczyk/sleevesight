@@ -212,6 +212,11 @@ class Cli(
                             cache = cache,
                             lastFmLabels = lastFmLabels,
                             sessionFacts = ListeningSessionFacts { pass.toLong() },
+                            // In the track's language (#902), as the app: the core default, *If needed*.
+                            languageSearch =
+                                wiring.languageSearch(
+                                    liveWeb?.let { mapOf(WebEngine.EXA to it) }.orEmpty(),
+                                ),
                         ),
                     ) { settings }
                 runBlocking {
@@ -276,6 +281,10 @@ class Cli(
                 SourceStatus(SourceId.WEB, true, "Exa, lite search") to wiring.web(mapOf(WebEngine.EXA to key))
             }
         }
+
+        // Exa's key when web search runs (live, not `--no-web`): the search in the track's language
+        // searches the web only then, as the track's own search.
+        private val liveWeb: Secret? get() = keys.exa?.takeIf { options.mode == Mode.LIVE && options.web }
 
         private fun aiAccess(): AiAccess? {
             val key =

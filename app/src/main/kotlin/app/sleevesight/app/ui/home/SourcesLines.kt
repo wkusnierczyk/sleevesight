@@ -43,7 +43,18 @@ internal fun withAlbum(
         listOfNotNull(album, artist)
             .flatMap { it.lines }
             .filter { seen.add(Triple(it.source, it.scope, it.text)) }
-            .map { EvidenceDraft(it.source, it.scope, it.text, it.url, it.retrievedAt, it.aggregate, it.about) }
+            .map {
+                EvidenceDraft(
+                    it.source,
+                    it.scope,
+                    it.text,
+                    it.url,
+                    it.retrievedAt,
+                    it.aggregate,
+                    it.about,
+                    it.language,
+                )
+            }
     if (evidence == null || more.isEmpty()) return SourcesLines(evidence)
     val shown = evidence.with(more, JvmHasher)
     val albums = album?.lines.orEmpty().mapTo(mutableSetOf()) { Triple(it.source, it.scope, it.text) }

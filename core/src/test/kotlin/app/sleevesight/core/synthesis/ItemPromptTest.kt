@@ -17,6 +17,8 @@ class ItemPromptTest {
         // A change to the template changes the stored prompts and raises the version with them (the
         // synthesis cache keys insights by it): update both together. The key insight's version 9
         // (#767) left this prompt as it was: it keeps version 8's rules and style ([ItemPrompt.contract]).
+        // The rule on a line found in the track's language (#902) came without a version, the lines'
+        // languages being in the evidence fingerprint.
         assertEquals(1, ItemPrompt.VERSION)
     }
 

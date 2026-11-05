@@ -34,7 +34,8 @@ import kotlinx.coroutines.flow.flow
  * (#239), is one for the process, passed to every build. The album's evidence for its insight
  * under *Key insights* (#522) is gathered by [PipelineWiring.albums], Last.fm's album and its web
  * search with their keys and the engines switched on, as the adapters (#885); the web search for an
- * artist the sources say nothing about by [PipelineWiring.artistWeb], likewise (#912).
+ * artist the sources say nothing about by [PipelineWiring.artistWeb], likewise (#912). The search in the
+ * track's language (#902) is [PipelineWiring.languageSearch]'s, its web search likewise.
  */
 class AppPipelineParts(
     private val wiring: PipelineWiring,
@@ -67,6 +68,8 @@ class AppPipelineParts(
             albums = wiring.albums(keys.sources, settings),
             modelUnavailable = blocked,
             artistWeb = wiring.artistWeb(keys.sources, settings),
+            languageSearch =
+                wiring.languageSearch(keys.sources.web.filterKeys { it in settings.webEngines }, settings.showGenres),
         )
     }
 }

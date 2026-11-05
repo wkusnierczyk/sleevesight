@@ -35,7 +35,7 @@ pruning would remove its old recording. Without the variable the test does nothi
 responses as the sources' data changes, so the tests' expectations are checked again after it.
 
 Recorded 2026-10-14; track 50 on 2026-10-16, with `:cli record` (#79); the releases of track 63's original
-(`inc=releases+release-groups`, a cover's one more lookup) on 2026-10-31 (#724). Track 55's search by date (`firstreleasedate:[* TO 1956-05]`) and its recording `ffe4a448…` on 2026-11-04 with `:cli record` (#906); its first page and work kept from before.
+(`inc=releases+release-groups`, a cover's one more lookup) on 2026-10-31 (#724). Track 55's search by date (`firstreleasedate:[* TO 1956-05]`) and its recording `ffe4a448…` on 2026-11-04 with `:cli record` (#906); its first page and work kept from before. The releases of the recordings of *The Veil Between Worlds* (Die Hexen) and *Here Comes The Sun* (Alexander S.) (`inc=releases+release-groups`, `recording-…-2.json`), the tracklists' recorded language the search in the track's language asks for (#902), on 2026-11-05, by hand as `record.py` writes them (neither holds `tags` or `genres`).
 
 ### With the CLI
 

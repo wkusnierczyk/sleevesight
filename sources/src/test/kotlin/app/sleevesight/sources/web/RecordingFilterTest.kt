@@ -140,4 +140,13 @@ class RecordingFilterTest {
         assertTrue(about(sundown, title, url = "https://notwikipedia.org/x"))
         assertTrue(about(sundown, title, url = "https://example.com/en.wikipedia.org"))
     }
+
+    @Test
+    fun `folding drops Latin accents only, keeping another script's vowel signs in their word`() {
+        assertEquals("evidencias", filter.fold("Evidências"))
+        assertEquals(filter.fold("तुम ही हो"), filter.fold("तुम ही हो"))
+        assertTrue(filter.fold("तुम ही हो") != filter.fold("तुम ही है"))
+        assertEquals(3, filter.fold("तुम ही हो").split(' ').size)
+        assertTrue(filter.fold("கண்ணான கண்ணே") != filter.fold("கண்ணன் கண்ணா"))
+    }
 }

@@ -271,6 +271,7 @@ class MusicBrainzClient(
                                 release.obj("release-group")?.let {
                                     MbReleaseGroup(it.required("id"), it.required("title"), it.string("primary-type"))
                                 },
+                            language = release.obj("text-representation").string("language")?.ifEmpty { null },
                         )
                     },
                 score = json.int("score") ?: 0,

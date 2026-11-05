@@ -419,6 +419,7 @@ internal val SETTING_LINES: List<Pair<String, (Settings) -> String>> =
         "artistFactsOncePerSession" to { onOff(it.artistFactsOncePerSession) },
         "searchWithAi" to { onOff(it.searchWithAi) },
         "aiWebSearch" to { it.aiWebSearch.name },
+        "trackLanguageSearch" to { it.trackLanguageSearch.name },
         "readAloudMusic" to { it.readAloudMusic.name },
         "readTrackLineFirst" to { onOff(it.readTrackLineFirst) },
         "readNewInsightsAloud" to { onOff(it.readNewInsightsAloud) },

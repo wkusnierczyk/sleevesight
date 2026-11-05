@@ -19,6 +19,12 @@ object EventLine {
             is PipelineEvent.Resolved -> "resolved   ${e.key}: ${outcome(e.outcome, e.failure)} in ${ms(e.latency)}"
             is PipelineEvent.Prepared -> prepared(e)
             is PipelineEvent.SourceLanded -> landed(e)
+            is PipelineEvent.LanguageFound -> "language   ${e.key}: ${e.language ?: "none to search in"}"
+            is PipelineEvent.LanguageLanded ->
+                "source     ${e.key}: ${e.source.tag} in ${e.language} ${outcomeKey(
+                    e.outcome,
+                )}, ${e.evidence} cited, " +
+                    ms(e.latency) + if (e.cached) ", cache hit" else ""
             is PipelineEvent.SourceFailed -> "failed     ${e.key}: ${e.source.tag} ${e.reason}"
             is PipelineEvent.NotCached -> "not cached ${e.key}: ${e.source.tag}, ${e.reason}"
             is PipelineEvent.CacheFailed -> "cache      ${e.key}: ${e.operation} failed, ${e.reason}"

@@ -35,7 +35,9 @@ class InsightPromptTest {
         // synthesis cache keys cards by it): update both together. Version 7 (#722) added the rule
         // on the track's length, version 8 (#800) the rule on a genre from a web page, version 9
         // (#767) the system prompt and the user message, and the redesign, version 10 (#767) the
-        // fixes from its blind A/B. Each version's exact prompt is kept in `design/prompts/`.
+        // fixes from its blind A/B. Each version's exact prompt is kept in `design/prompts/`. The rule
+        // on a line found in the track's language (#902) came without a version: the lines'
+        // languages are in the evidence fingerprint, part of every card's key.
         assertEquals(10, InsightPrompt.VERSION)
     }
 

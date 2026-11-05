@@ -36,8 +36,28 @@ class LookAgain(
     internal fun kept(
         source: SourceId,
         landed: SourceState,
+    ): SourceState? = earlier(before.sources[source])?.let { kept(it, landed) }
+
+    /**
+     * [source]'s lookup in the track's [language] (#902) as the look again shows it, by [kept]'s
+     * rules, over what [before] found of it in the same language; null when [landed] stands.
+     */
+    internal fun keptInLanguage(
+        language: String,
+        source: SourceId,
+        landed: SourceState,
+    ): SourceState? =
+        earlier(
+            before.inLanguage
+                ?.takeIf { it.language == language }
+                ?.sources
+                ?.get(source),
+        )?.let { kept(it, landed) }
+
+    private fun kept(
+        earlier: SourceState.Done,
+        landed: SourceState,
     ): SourceState? {
-        val earlier = earlier(source) ?: return null
         val fresh = reached(landed)
         return when {
             fresh == null || !LineContent.bringsNew(contents(fresh), contents(earlier.result)) -> earlier
@@ -49,9 +69,9 @@ class LookAgain(
     internal fun resolution(fresh: Resolution): Resolution? =
         before.resolution?.takeIf { fresh.outcome == Outcome.Unreachable && it.outcome != Outcome.Unreachable }
 
-    // [source]'s state in [before], when it found something.
-    private fun earlier(source: SourceId): SourceState.Done? =
-        (before.sources[source] as? SourceState.Done)?.takeIf { TrackRun.keeps(it) }
+    // A source's [state] in [before], when it found something.
+    private fun earlier(state: SourceState?): SourceState.Done? =
+        (state as? SourceState.Done)?.takeIf { TrackRun.keeps(it) }
 
     // [landed]'s result, when the source answered.
     private fun reached(landed: SourceState): SourceResult? =

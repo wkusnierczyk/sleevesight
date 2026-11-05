@@ -10,6 +10,7 @@ import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.pipeline.AutoWrite
 import app.sleevesight.core.pipeline.ChangeCause
 import app.sleevesight.core.pipeline.Gathered
+import app.sleevesight.core.pipeline.InLanguageState
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.RunKey
 import app.sleevesight.core.pipeline.RunStep
@@ -126,6 +127,20 @@ internal class World {
      * network back, Wikipedia not yet), false once it answers with a line. Offline, it is unreachable.
      */
     var wikipediaDown: Boolean? = null
+
+    /**
+     * Whether the runs search in the track's language too (#902): after the English lookups, a
+     * second lookups step, whose web search in the language finds a line, or is unreachable while
+     * [languageDown] or [offline] when it is granted.
+     */
+    var inLanguage = false
+    var languageDown = false
+
+    /** Whether the English web search finds a line when it answers; else it finds nothing. */
+    var englishFinds = true
+
+    // The runs whose English lookups were granted, with whether they were offline then.
+    private val englishOffline = HashMap<RunId, Boolean>()
 
     /** Whether MusicBrainz's result is shown but not kept, a lookup for a part of it having failed (#728). */
     var musicBrainzProvisional = false
@@ -312,11 +327,7 @@ internal class World {
         val title = titles.getValue(run)
         when (step) {
             RunStep.LOOKUPS -> {
-                grants += "run $title"
-                lookups += title
-                if (cache) retrieved += keys.getValue(run)
-                schedule(lookupMs, CoordinatorEvent.StepEnded(run, step), run)
-                gathered(run, lookupMs, unreachable = offline)
+                lookupsGranted(run, title)
             }
             RunStep.LABELS -> {
                 grants += "labels $title"
@@ -342,6 +353,44 @@ internal class World {
         }
     }
 
+    // A run's lookups granted: its English ones, then, searching in the track's language, a second
+    // step for those in it; else the sources land with the English ones.
+    private fun lookupsGranted(
+        run: RunId,
+        title: String,
+    ) {
+        val wasOffline = englishOffline[run]
+        schedule(lookupMs, CoordinatorEvent.StepEnded(run, RunStep.LOOKUPS), run)
+        when {
+            wasOffline != null -> {
+                grants += "language $title"
+                gathered(run, lookupMs, unreachable = wasOffline, languageUnreachable = offline || languageDown)
+            }
+            else -> {
+                grants += "run $title"
+                lookups += title
+                if (cache) retrieved += keys.getValue(run)
+                if (inLanguage) {
+                    englishOffline[run] = offline
+                    schedule(lookupMs, CoordinatorEvent.StepRequested(run, RunStep.LOOKUPS), run)
+                } else {
+                    gathered(run, lookupMs, unreachable = offline)
+                }
+            }
+        }
+    }
+
+    // Whether a run finds something to narrate: lines a source found, or the model's own knowledge.
+    private fun finds(
+        unreachable: Boolean,
+        languageUnreachable: Boolean,
+    ): Boolean =
+        offlineFinds ||
+            newSource ||
+            allowModel ||
+            (!unreachable && englishFinds) ||
+            (inLanguage && !languageUnreachable)
+
     // The sources landed, reported with what they ended with ([unreachable]: the web search, from
     // lookups made offline); then the evidence in: a card kept under this key and service is
     // shown; else the question.
@@ -349,8 +398,14 @@ internal class World {
         run: RunId,
         delayMs: Long,
         unreachable: Boolean = false,
+        languageUnreachable: Boolean = false,
     ) {
-        schedule(delayMs, CoordinatorEvent.SourcesGathered(run, sources(unreachable)), run)
+        val sources =
+            sources(
+                unreachable,
+            ).let { if (inLanguage) it.copy(inLanguage = language(languageUnreachable)) else it }
+        val finds = finds(unreachable, languageUnreachable)
+        schedule(delayMs, CoordinatorEvent.SourcesGathered(run, sources), run)
         schedule(delayMs, CoordinatorEvent.EvidenceAssembled(run, evidence()), run)
         val insight =
             when {
@@ -359,7 +414,7 @@ internal class World {
                     CoordinatorEvent.CardShown(run, cards[keys.getValue(run) to service]?.let(::card))
                 }
                 noAi -> CoordinatorEvent.DecidedWithoutCall(run)
-                run in withoutEvidence || (unreachable && !offlineFinds && !newSource && !allowModel) -> {
+                run in withoutEvidence || !finds -> {
                     CoordinatorEvent.DecidedWithoutCall(run, WriteSettings(writesOn, allowModel))
                 }
                 else -> CoordinatorEvent.InsightAsked(run, writesOn, allowModel)
@@ -382,7 +437,12 @@ internal class World {
                 cached = false,
             )
         }
-        val web = if (unreachable) Outcome.Unreachable else Outcome.SongArticle
+        val web =
+            when {
+                unreachable -> Outcome.Unreachable
+                englishFinds -> Outcome.SongArticle
+                else -> Outcome.None
+            }
         val found =
             mapOf(
                 SourceId.MUSICBRAINZ to done(SourceId.MUSICBRAINZ, Outcome.None, musicBrainzProvisional),
@@ -395,6 +455,14 @@ internal class World {
                 mapOf(SourceId.WIKIPEDIA to done(SourceId.WIKIPEDIA, outcome))
             } ?: emptyMap()
         return Gathered(found + lastFm + wikipedia, null)
+    }
+
+    // The search in the track's language (#902): its web search finds a line, or is unreachable.
+    private fun language(unreachable: Boolean): InLanguageState {
+        val outcome = if (unreachable) Outcome.Unreachable else Outcome.SongArticle
+        val lines = if (unreachable) emptyList() else listOf(line(SourceId.WEB))
+        val web = SourceState.Done(SourceResult(outcome, lines, Duration.ZERO), cached = false)
+        return InLanguageState("hi", mapOf(SourceId.WEB to web))
     }
 
     private fun line(source: SourceId) =
