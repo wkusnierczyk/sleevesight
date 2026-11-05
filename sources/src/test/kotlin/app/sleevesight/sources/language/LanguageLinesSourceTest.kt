@@ -124,6 +124,18 @@ class LanguageLinesSourceTest {
         }
 
     @Test
+    fun `an entry the table holds but cannot read is left as it is, not replaced`() =
+        runTest {
+            val table = MemoryArtistResults()
+            table.keep(LanguageLinesSource.ARTIST_PART, "mb:mb-bts", "not lines")
+            val source = LanguageLinesSource(names, table)
+            assertTrue(source.kept(bts).isEmpty())
+            source.keep(bts, "ko", listOf(line("방탄소년단은 대한민국의 그룹이다.", "ko")))
+            source.renew(bts)
+            assertEquals("not lines", table.get(LanguageLinesSource.ARTIST_PART, "mb:mb-bts")?.value)
+        }
+
+    @Test
     fun `with a table that keeps nothing they are kept in memory, which Clear history forgets`() =
         runTest {
             val source = LanguageLinesSource(names, ArtistResults.None)

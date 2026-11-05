@@ -25,6 +25,7 @@ import app.sleevesight.core.pipeline.rewriteParts
 import app.sleevesight.core.pipeline.writtenBy
 import app.sleevesight.core.resolution.NameMatcher
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.settings.TrackLanguageSearch
 import app.sleevesight.core.settings.WriteAutomatically
 import app.sleevesight.core.settings.pastKeepHistory
 import kotlinx.coroutines.CoroutineScope
@@ -40,8 +41,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.distinctUntilChangedBy
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -1280,22 +1279,35 @@ class AppItemNotes(
      * Keeps what the search in the track's language found about the artist and the album of each of
      * [tracks] (the pipeline's track) once its evidence is in (#939, `ItemInsights.keepInLanguage`),
      * under the parts and settings then, whether or not their insights are opened, so the next of
-     * their tracks finds the lines. Until cancelled; nothing kept after a *Clear history* by work
-     * begun before it.
+     * their tracks finds the lines: only while insights are shown (*Show insights*) and an AI service
+     * is ready, since nothing is written from them otherwise, and *Search in the track's language* is
+     * not *Off*. Again when the parts or the settings come, or change in one of those, for the same
+     * track. Until cancelled; nothing kept after a *Clear history* by work begun before it.
      */
     suspend fun keepAhead(tracks: Flow<TrackState?>) {
-        tracks
-            .filterNotNull()
-            .filter(ItemInsights::offered)
-            .distinctUntilChangedBy { it.normalized.lookupKey to it.evidence?.fingerprint }
-            .collect { track ->
-                val made = parts.value
-                val now = settings.value
-                if (made != null && now != null) {
-                    withContext(io + mark()) { insightsOf(made).keepInLanguage(track, now) }
+        combine(tracks, parts, settings) { track, made, now ->
+            val offered = track?.takeIf(ItemInsights::offered)
+            val insights = made?.let(::insightsOf)
+            // Insights shown and an AI service ready: else nothing is written from the lines.
+            val writes = insights?.writes == true && now?.writeInsights == true
+            val inLanguage = now != null && now.trackLanguageSearch != TrackLanguageSearch.OFF
+            val keep =
+                when {
+                    offered == null || insights == null || now == null -> null
+                    writes && inLanguage -> suspend { insights.keepInLanguage(offered, now) }
+                    else -> null
                 }
-            }
+            Ahead(listOf(offered?.normalized?.lookupKey, offered?.evidence?.fingerprint, writes, inLanguage), keep)
+        }.distinctUntilChangedBy { it.on }
+            .collect { ahead -> ahead.keep?.let { withContext(io + mark()) { it() } } }
     }
+
+    // What [keepAhead] keeps on: the track once offered (its key and evidence), whether insights are
+    // written and *Search in the track's language* is on, and the keep then, null for none.
+    private class Ahead(
+        val on: List<Any?>,
+        val keep: (suspend () -> Unit)?,
+    )
 
     /**
      * Forgets the insights shown and the evidence gathered, for *Clear history* (#547); the cache's

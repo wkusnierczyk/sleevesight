@@ -27,11 +27,14 @@ import app.sleevesight.core.sources.ResolvedArtist
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -125,7 +128,8 @@ class AppLanguageLinesNotesTest {
     fun `a track searched with no insight opened keeps its lines for the artist's and the album's other tracks`() =
         runTest {
             val notes = notes()
-            notes.keepAhead(flowOf(track(HomeFixtures.sundown, listOf(korean, release))))
+            backgroundScope.launch { notes.keepAhead(flowOf(track(HomeFixtures.sundown, listOf(korean, release)))) }
+            runCurrent()
             assertEquals(listOf(korean), kept.entries[gordon])
 
             val next = track(HomeFixtures.carefree)
@@ -139,6 +143,47 @@ class AppLanguageLinesNotesTest {
                     ?.lines
                     ?.map { it.text },
             )
+        }
+
+    @Test
+    fun `nothing is kept ahead before the parts come, with no AI service or insights off, until they do`() =
+        runTest {
+            val made = checkNotNull(parts.value)
+            parts.value = null
+            settings.value = settings.value?.copy(writeInsights = false)
+            val notes = notes()
+            backgroundScope.launch { notes.keepAhead(flowOf(track(HomeFixtures.sundown, listOf(korean, release)))) }
+            runCurrent()
+
+            // Parts with no AI service ready, then insights off: nothing is written from the lines.
+            parts.value =
+                PipelineParts(made.normalizer, made.adapters, made.resolver, made.hasher, languageLines = kept)
+            runCurrent()
+            settings.value = settings.value?.copy(writeInsights = true)
+            runCurrent()
+            parts.value = made
+            settings.value = settings.value?.copy(writeInsights = false)
+            runCurrent()
+            assertTrue(kept.entries.isEmpty())
+
+            // Insights on, for the same track: kept now.
+            settings.value = settings.value?.copy(writeInsights = true)
+            runCurrent()
+            assertEquals(listOf(korean), kept.entries[gordon])
+        }
+
+    @Test
+    fun `nothing is kept ahead while the search in the language is off, and the same track is kept once it is on`() =
+        runTest {
+            settings.value = settings.value?.copy(trackLanguageSearch = TrackLanguageSearch.OFF)
+            val notes = notes()
+            backgroundScope.launch { notes.keepAhead(flowOf(track(HomeFixtures.sundown, listOf(korean, release)))) }
+            runCurrent()
+            assertTrue(kept.entries.isEmpty())
+
+            settings.value = settings.value?.copy(trackLanguageSearch = TrackLanguageSearch.ALWAYS)
+            runCurrent()
+            assertEquals(listOf(korean), kept.entries[gordon])
         }
 
     @Test

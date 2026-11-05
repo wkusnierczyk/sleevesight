@@ -30,9 +30,12 @@ import kotlinx.coroutines.sync.withLock
  * album's insights still take them on each track played meanwhile. The memory is read only while
  * the table is not, and dropped when the table is read again, so a value is never in both; [forget]
  * drops it for *Clear history*, and a write by work started before that clear is dropped ([epoch],
- * #547). Never throws but for cancellation. Names are folded by [normalizer] as the cards' entity
- * keys fold them (`Normalizer.foldForKey`, `StorePipelineCache`), so two names that key two cards
- * apart key their lines apart too.
+ * #547). An entry the table holds but cannot read (another encoding) is read as none, and a keep
+ * leaves it as it is rather than replace it, every language's lines with it; a read the table fails
+ * (a database error, which [ArtistResults] reads as a miss) cannot be told from none, and a keep then
+ * replaces the entry with what it found. Never throws but for cancellation. Names are folded by
+ * [normalizer] as the cards' entity keys fold them (`Normalizer.foldForKey`, `StorePipelineCache`),
+ * so two names that key two cards apart key their lines apart too.
  */
 class LanguageLinesSource(
     private val normalizer: Normalizer,
@@ -51,7 +54,7 @@ class LanguageLinesSource(
     private val turns = Mutex()
 
     override suspend fun kept(subject: LanguageSubject): List<EvidenceDraft> =
-        turns.withLock { read(subject, inTable()).orEmpty() }
+        turns.withLock { read(subject, inTable())?.lines.orEmpty() }
 
     override suspend fun keep(
         subject: LanguageSubject,
@@ -61,7 +64,9 @@ class LanguageLinesSource(
         if (lines.isEmpty()) return
         turns.withLock {
             val table = inTable()
-            val now = read(subject, table).orEmpty()
+            val entry = read(subject, table)
+            // An entry that cannot be read is left as it is, not replaced with this language's lines alone.
+            val now = if (entry == null) emptyList() else entry.lines ?: return@withLock
             if (now.none { it.language == language }) {
                 write(subject, (now + lines).sortedBy { it.language.orEmpty() }, table)
             }
@@ -71,7 +76,7 @@ class LanguageLinesSource(
     override suspend fun renew(subject: LanguageSubject) {
         turns.withLock {
             val table = inTable()
-            read(subject, table)?.let { write(subject, it, table) }
+            read(subject, table)?.lines?.let { write(subject, it, table) }
         }
     }
 
@@ -80,15 +85,20 @@ class LanguageLinesSource(
         turns.withLock { dropMemory() }
     }
 
-    // [subject]'s lines kept, null for none: in the [table], else in memory.
+    // An entry kept for a subject: its [lines], null when it cannot be read.
+    private class Entry(
+        val lines: List<EvidenceDraft>?,
+    )
+
+    // [subject]'s entry kept, null for none: in the [table], else in memory.
     private suspend fun read(
         subject: LanguageSubject,
         table: Boolean,
-    ): List<EvidenceDraft>? =
+    ): Entry? =
         if (table) {
-            kept.get(partOf(subject), keyOf(subject))?.let { KeptDrafts.decode(it.value) }
+            kept.get(partOf(subject), keyOf(subject))?.let { Entry(KeptDrafts.decode(it.value)) }
         } else {
-            memoryOf(subject).get(keyOf(subject))
+            memoryOf(subject).get(keyOf(subject))?.let(::Entry)
         }
 
     // Keeps [lines] for [subject]: in the [table], else in memory, unless *Clear history* came since
@@ -149,7 +159,7 @@ class LanguageLinesSource(
                 "artist.language",
                 extraction = 1,
                 encoding = 1,
-                sources = setOf(SourceId.WIKIPEDIA, SourceId.WEB),
+                sources = setOf(SourceId.WIKIPEDIA),
                 keptAsHistory = true,
             )
 
