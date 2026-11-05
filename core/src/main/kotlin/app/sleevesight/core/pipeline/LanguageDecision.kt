@@ -33,7 +33,8 @@ internal class LanguageDecision(
     private val track = input.track
     private var resolved: Pair<Resolution, Boolean>? = null
 
-    // Whether every hint asked answered, so the decision may be kept.
+    // Whether every hint the decision reached was asked and answered, so it may be kept: not when a
+    // source a hint needs was switched off, could not be asked, or answered only in part.
     private var answered = true
 
     /**
@@ -41,9 +42,13 @@ internal class LanguageDecision(
      * MusicBrainz off): the run's own, else made now, once.
      */
     suspend fun resolution(): Pair<Resolution, Boolean> =
-        resolved ?: (before.resolution?.let { it to (it.outcome != Outcome.Unreachable) } ?: resolve()).also {
+        resolved ?: (own()?.let { it to (it.outcome != Outcome.Unreachable) } ?: resolve()).also {
             resolved = it
         }
+
+    // The run's own resolution; one unreachable or provisional answers its hints only in part.
+    private fun own(): Resolution? =
+        before.resolution?.also { if (it.outcome == Outcome.Unreachable || it.provisional) answered = false }
 
     /**
      * The language the track is sung in: a language, [Languages.ENGLISH], or null when nothing names
@@ -69,19 +74,21 @@ internal class LanguageDecision(
 
     // The hints, in turn (`TrackLanguage.find`): MusicBrainz's lyrics language (the run's
     // resolution's, else the one MusicBrainz's kept result holds, a request only when it holds none),
-    // Wikidata's (Wikipedia's switch) and the releases' majority (MusicBrainz's switch).
+    // Wikidata's (Wikipedia's switch) and the releases' majority (MusicBrainz's switch). A hint its
+    // source's switch skips leaves the decision unkept, so switching it on decides again.
     private suspend fun decide(search: LanguageSearch): Language? {
         val kept = (before.sources[SourceId.MUSICBRAINZ] as? SourceState.Done)?.result?.lyrics
         val musicBrainz = settings.isEnabled(SourceId.MUSICBRAINZ)
+        val names = listOf(track.title) + track.artists
         return TrackLanguage.find(
-            listOf(track.title) + track.artists,
+            names,
             listOf(
                 {
                     if (musicBrainz) {
-                        val lyrics = before.resolution?.lyrics ?: kept ?: resolution().first.lyrics
+                        val lyrics = own()?.lyrics ?: kept ?: resolution().first.lyrics
                         TrackLanguage.ofIso3(lyrics.languages)
                     } else {
-                        emptyList()
+                        skipped()
                     }
                 },
                 {
@@ -91,21 +98,29 @@ internal class LanguageDecision(
                             ?.let(TrackLanguage::ofItems)
                             .orEmpty()
                     } else {
-                        emptyList()
+                        skipped()
                     }
                 },
                 {
                     val resolution = if (musicBrainz) resolution().first else Resolution.NONE
-                    if (resolution.resolved) {
-                        answer(attempt(SourceId.MUSICBRAINZ) { search.releaseLanguages(resolution) })
-                            ?.let(TrackLanguage::ofReleases)
-                            .orEmpty()
-                    } else {
-                        emptyList()
+                    when {
+                        !musicBrainz -> skipped()
+                        // No recording accepted: no release to record a language, a real answer.
+                        !resolution.resolved -> emptyList()
+                        else ->
+                            answer(attempt(SourceId.MUSICBRAINZ) { search.releaseLanguages(resolution) })
+                                ?.let { TrackLanguage.ofReleases(it, TrackLanguage.scriptOf(names)) }
+                                .orEmpty()
                     }
                 },
             ),
         )
+    }
+
+    // A hint its source's switch skips: none, and the decision not kept.
+    private fun skipped(): List<Language> {
+        answered = false
+        return emptyList()
     }
 
     // The resolution, for a track whose sources all came from the cache: made now, if MusicBrainz is on.
@@ -113,7 +128,7 @@ internal class LanguageDecision(
         if (!settings.isEnabled(SourceId.MUSICBRAINZ)) return Resolution.NONE to false
         val made = attempt(SourceId.MUSICBRAINZ) { parts.resolver.resolve(track, input.nowPlaying.duration) }
         val reached = made != null && made.outcome != Outcome.Unreachable
-        if (!reached) answered = false
+        if (!reached || made?.provisional == true) answered = false
         return (made ?: Resolution.NONE) to reached
     }
 

@@ -632,6 +632,31 @@ class PipelineLanguageTest {
             )
         }
 
+    @Test
+    fun `a decision made while MusicBrainz could not be asked is not kept, so a later play finds the language`() =
+        runTest {
+            playing = bollywood
+            resolver.resolution = Resolution.unreachable("Offline")
+            val offline = pipeline().run(bollywood.nowPlaying, write = false)
+            assertNull(offline.inLanguage)
+            assertTrue(cache.decided.isEmpty(), "no decision kept from an unreachable resolution")
+            val back = pipeline().play(bollywood)
+            assertEquals("hi", back.inLanguage?.language)
+            assertEquals(listOf("hi"), cache.decided.values.toList())
+        }
+
+    @Test
+    fun `a decision made with a hint's source switched off is not kept, so switching it on finds the language`() =
+        runTest {
+            // A title in Latin letters whose language only Wikidata records.
+            val film = Regional(bollywood.nowPlaying, bollywood.english, wikidata = listOf("Q1568"))
+            settings = settings.copy(enabledSources = settings.enabledSources - SourceSwitch.WIKIPEDIA)
+            assertNull(pipeline().play(film).inLanguage)
+            assertTrue(cache.decided.isEmpty())
+            settings = settings.copy(enabledSources = settings.enabledSources + SourceSwitch.WIKIPEDIA)
+            assertEquals("hi", pipeline().play(film).inLanguage?.language)
+        }
+
     private fun TestScope.recording(pipeline: Pipeline): List<PipelineEvent> {
         val events = mutableListOf<PipelineEvent>()
         backgroundScope.launch { pipeline.events.toList(events) }

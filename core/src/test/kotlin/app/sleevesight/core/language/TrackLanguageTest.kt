@@ -36,7 +36,7 @@ class TrackLanguageTest {
                     hint("wikidata", *wikidata.toTypedArray()),
                     {
                         asked += "releases"
-                        TrackLanguage.ofReleases(releases)
+                        TrackLanguage.ofReleases(releases, TrackLanguage.scriptOf(names.toList()))
                     },
                 ),
             )?.code
@@ -116,6 +116,8 @@ class TrackLanguageTest {
             assertEquals("hi", find("Tum Hi Ho", "Arijit Singh", releases = listOf("hin", "eng")))
             assertEquals(listOf("en"), TrackLanguage.ofReleases(listOf("xyz", "eng")).map { it.code })
             assertEquals(emptyList(), TrackLanguage.ofReleases(listOf("zxx")))
+            // In a script other than Latin, the majority among the languages written in it.
+            assertEquals("mr", find("झिंगाट", "Ajay-Atul", releases = listOf("eng", "eng", "mar")))
         }
 
     @Test

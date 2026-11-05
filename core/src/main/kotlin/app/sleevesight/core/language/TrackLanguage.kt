@@ -32,7 +32,7 @@ object TrackLanguage {
         names: List<String>,
         recorded: List<suspend () -> List<Language>>,
     ): Language? {
-        val script = names.firstNotNullOfOrNull { Script.of(it) }
+        val script = scriptOf(names)
         val own = script?.own?.let(Languages::ofCode)
         val alone = own != null && Languages.ALL.none { it != own && script in it.scripts }
         var found: Language? = null
@@ -60,15 +60,23 @@ object TrackLanguage {
      */
     fun ofIso3(codes: List<String>): List<Language> = codes.mapNotNull(Languages::ofIso3).distinct()
 
+    /** The script a track named [names] (its title first, then its artists) is written in, other than Latin. */
+    fun scriptOf(names: List<String>): Script? = names.firstNotNullOfOrNull { Script.of(it) }
+
     /**
      * The language most of a recording's releases record for their tracklists ([codes], ISO 639-3,
      * one per release), as one hint: the head of the count, ties in the order given, unknown codes
      * left out; none when no release records a known one. So an English song whose releases are
      * twelve English tracklists and one Spanish is English, not searched in Spanish: one pressing
-     * abroad does not name the language the song is sung in.
+     * abroad does not name the language the song is sung in. For a track whose names are in a
+     * [script] other than Latin, the majority among the languages written in it, so a Marathi song
+     * titled in Devanagari whose releases record English more often than Marathi is Marathi.
      */
-    fun ofReleases(codes: List<String>): List<Language> {
-        val languages = codes.mapNotNull(Languages::ofIso3)
+    fun ofReleases(
+        codes: List<String>,
+        script: Script? = null,
+    ): List<Language> {
+        val languages = codes.mapNotNull(Languages::ofIso3).filter { script == null || script in it.scripts }
         return listOfNotNull(languages.distinct().maxByOrNull { language -> languages.count { it == language } })
     }
 
