@@ -75,6 +75,16 @@
     <string name="settings_source_wikipedia_summary">Articles on songs, albums and artists, and the facts behind them.</string>
     <string name="settings_source_lastfm_summary">Listeners’ tags and artist biographies.</string>
     <string name="settings_engine_exa_summary">Searches the web for articles about the track.</string>
+    <!-- Search in the track's language (#902): after Exa web search, a button group Off | If needed |
+         Always, with what the chosen one does under it. -->
+    <string name="settings_track_language">Search in the track’s language</string>
+    <string name="settings_track_language_summary">When a track is sung in a language other than English, also looks it up on Wikipedia and searches the web in that language. The insight translates what they give and says which citations it translated.</string>
+    <string name="settings_track_language_off">Off</string>
+    <string name="settings_track_language_if_needed">If needed</string>
+    <string name="settings_track_language_always">Always</string>
+    <string name="settings_track_language_off_detail">Looks up every track in English only.</string>
+    <string name="settings_track_language_if_needed_detail">Searches in the track’s language only when the English sources say little about the track itself. With Exa on, one more Exa API call for such a track.</string>
+    <string name="settings_track_language_always_detail">Searches in the track’s language for every track that has one other than English. With Exa on, one more Exa API call for each such track.</string>
     <!-- Under a service that needs a key it lacks; the argument names the service, as Last.fm or Anthropic. -->
     <string name="settings_needs_key">Needs your %1$s key, in Secrets.</string>
     <!-- Under each service that needs a key (#539): %1$s is the key's name ("Anthropic API key"), a link to its row in Secrets. -->
