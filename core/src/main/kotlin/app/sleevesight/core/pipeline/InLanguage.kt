@@ -20,8 +20,8 @@ import kotlin.coroutines.cancellation.CancellationException
  * A run's search in the track's language (#902; `design/architecture.md`, *Search in the track's
  * language*), made once every English source has landed and before the evidence is assembled, so the
  * insight is written once, from all of it: one paid call, not one before the search and a rewrite
- * after. The song's, the artist's and the album's insights and the genre reasons read the same
- * evidence ([languageDrafts]).
+ * after. The song's insight and the genre reasons read the same evidence ([languageDrafts]); the
+ * artist's and the album's read its lines only under *Always* (`ItemInsights`).
  *
  * Under *Search in the track's language* ([Settings.trackLanguageSearch]): *Off*, none; *If needed*,
  * only while the English sources give fewer than [PromptEvidence.ENOUGH_OF_ITS_OWN] lines about the

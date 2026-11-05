@@ -115,8 +115,6 @@ class LanguageSentencesTest {
         // One stretch: the whole paragraph fits, the year kept with the era before it.
         assertEquals(listOf(lead), LanguageSentences.stretches(lead))
         assertEquals(listOf(lead), LanguageSentences.of(lead, listOf("ขอใจเธอแลกเบอร์โทร"), stops = false))
-        // With marks looked for, a Thai paragraph ends no sentence at its era's full stop.
-        assertEquals(emptyList(), LanguageSentences.split("ออกเมื่อ พ.ศ. 2560 เพลงนี้ได้รับความนิยม"))
     }
 
     @Test

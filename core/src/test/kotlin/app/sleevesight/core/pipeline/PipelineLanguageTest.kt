@@ -657,6 +657,19 @@ class PipelineLanguageTest {
             assertEquals("hi", pipeline().play(film).inLanguage?.language)
         }
 
+    @Test
+    fun `a kept decision is not served once a source it may have come from is switched off`() =
+        runTest {
+            // Hindi decided from the releases' tracklist language, with MusicBrainz on, and kept.
+            pipeline().play(bollywood)
+            assertEquals(listOf("hi"), cache.decided.values.toList())
+            settings = settings.copy(enabledSources = settings.enabledSources - SourceSwitch.MUSICBRAINZ)
+            val off = pipeline().play(bollywood)
+            assertNull(off.inLanguage, "decided afresh: no hint names the language with MusicBrainz off")
+            assertEquals(1, wikipedia.queries.size)
+            assertEquals(1, web.queries.size)
+        }
+
     private fun TestScope.recording(pipeline: Pipeline): List<PipelineEvent> {
         val events = mutableListOf<PipelineEvent>()
         backgroundScope.launch { pipeline.events.toList(events) }

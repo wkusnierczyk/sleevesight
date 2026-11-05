@@ -52,12 +52,15 @@ internal class LanguageDecision(
 
     /**
      * The language the track is sung in: a language, [Languages.ENGLISH], or null when nothing names
-     * one; from the cache unless the run looks again.
+     * one; from the cache unless the run looks again, or a source a kept decision may have come from
+     * (MusicBrainz, Wikidata) is switched off now: then it is decided afresh, so a language a source
+     * switched off named sends no search out.
      */
     suspend fun language(search: LanguageSearch): Language? {
         val looksAgain = input.lookAgain != null
+        val sourcesOn = settings.isEnabled(SourceId.MUSICBRAINZ) && settings.isEnabled(SourceId.WIKIDATA)
         val kept =
-            if (looksAgain) {
+            if (looksAgain || !sourcesOn) {
                 null
             } else {
                 guard.attempt("read language") { trackLanguage(track, input.nowPlaying.duration) }

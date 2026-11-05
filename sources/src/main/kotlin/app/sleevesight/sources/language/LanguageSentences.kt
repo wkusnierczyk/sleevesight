@@ -1,6 +1,5 @@
 package app.sleevesight.sources.language
 
-import app.sleevesight.core.language.Script
 import app.sleevesight.sources.wikipedia.WikipediaSource
 
 /**
@@ -131,15 +130,13 @@ internal object LanguageSentences {
     }
 
     // Whether the full stop at [mark] shortens a word, ending no sentence: after a single capital of a
-    // cased script (an initial), or after a Thai letter (`พ.ศ.`, the Buddhist era: Thai ends no
-    // sentence with a full stop).
+    // cased script (an initial).
     private fun shortened(
         text: String,
         mark: Int,
     ): Boolean {
         val before = text.getOrNull(mark - 1) ?: return false
-        val initial = before.isUpperCase() && text.getOrNull(mark - 2)?.isLetter() != true
-        return text[mark] == '.' && (initial || before.code in Script.THAI)
+        return text[mark] == '.' && before.isUpperCase() && text.getOrNull(mark - 2)?.isLetter() != true
     }
 
     /**
