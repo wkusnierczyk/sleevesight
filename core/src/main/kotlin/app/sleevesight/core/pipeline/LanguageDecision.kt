@@ -21,8 +21,10 @@ import kotlin.coroutines.cancellation.CancellationException
  * for a track whose sources all came from the cache. Last, the lines the English sources found about
  * the track, by their script (#987, [TrackLanguage.ofLines]), with no request. The decision (a
  * language, English, or none) is kept per track in the retrieval cache ([PipelineCache.trackLanguage])
- * once every hint it asked answered, so a replay asks nothing to decide it again, but for a language
- * only the lines named; a look again (#617) decides afresh.
+ * once every hint it asked answered, so a replay asks nothing to decide it again; a look again (#617)
+ * decides afresh. One the recorded hints left to the names and the lines is kept as none, and read
+ * back as what the names and the run's own lines say then: the lines change with the sources'
+ * switches and what they found, and need no request to read again.
  */
 internal class LanguageDecision(
     private val parts: PipelineParts,
@@ -38,6 +40,9 @@ internal class LanguageDecision(
     // Whether every hint the decision reached was asked and answered, so it may be kept: not when a
     // source a hint needs was switched off, could not be asked, or answered only in part.
     private var answered = true
+
+    // Whether the recorded hints left the decision to the names and the lines (#987), so it is kept as none.
+    private var reachedLines = false
 
     /**
      * The resolution the run's lookups are made with, and whether it was made (not unreachable, nor
@@ -67,12 +72,12 @@ internal class LanguageDecision(
             } else {
                 guard.attempt("read language") { trackLanguage(track, input.nowPlaying.duration) }
             }
-        if (kept != null) return Languages.ofCode(kept)
+        if (kept != null) return if (kept.isEmpty()) unrecorded() else Languages.ofCode(kept)
         val decided = decide(search)
         if (answered) {
-            guard.attempt(
-                "write language",
-            ) { keepTrackLanguage(track, input.nowPlaying.duration, decided?.code.orEmpty()) }
+            // Left to the names and the lines, none: the next run reads them again.
+            val code = if (reachedLines) "" else decided?.code.orEmpty()
+            guard.attempt("write language") { keepTrackLanguage(track, input.nowPlaying.duration, code) }
         }
         return decided
     }
@@ -119,20 +124,27 @@ internal class LanguageDecision(
                                 .orEmpty()
                     }
                 },
-                { linesHint() },
+                {
+                    reachedLines = true
+                    linesHint()
+                },
             ),
         )
     }
 
-    // The English sources' lines about the track, by their script (#987): an answer only once each
-    // source switched on has landed in full. A language they name is not kept: a kept decision is
-    // read by MusicBrainz's and Wikidata's switches alone, and the source of the lines may be off by
-    // the replay, so it is decided afresh then, from the lines that replay has.
-    private fun linesHint(): List<Language> {
-        if (!InLanguage.landedInFull(before, settings)) answered = false
-        val texts = InLanguage.trackLines(before, settings).map { it.text }
-        return TrackLanguage.ofLines(texts).also { if (it.isNotEmpty()) answered = false }
-    }
+    // The language of a track no recorded hint names a language for (a kept none): the names' and
+    // this run's lines', asking nothing.
+    private suspend fun unrecorded(): Language? =
+        TrackLanguage.find(
+            listOf(track.title) + track.artists,
+            listOf {
+                linesHint()
+            },
+        )
+
+    // The English sources' lines about the track, by their script (#987).
+    private fun linesHint(): List<Language> =
+        TrackLanguage.ofLines(InLanguage.trackLines(before, settings).map { it.text })
 
     // A hint its source's switch skips: none, and the decision not kept.
     private fun skipped(): List<Language> {

@@ -49,15 +49,6 @@ import kotlin.time.Duration.Companion.seconds
  * English (synthetic fixtures, no source's real text), show what each source gives before and after.
  */
 class PipelineLanguageTest {
-    /** A track: as played, what the English sources give, and what MusicBrainz and Wikidata record. */
-    private class Regional(
-        val nowPlaying: NowPlaying,
-        val english: Map<SourceId, List<String>>,
-        val resolution: Resolution = Resolution(outcome = Outcome.SongArticle, recordingMbid = "rec"),
-        val wikidata: List<String> = emptyList(),
-        val releases: List<String> = emptyList(),
-    )
-
     private val bollywood =
         Regional(
             nowPlaying("Tum Hi Ho", "Arijit Singh", "Aashiqui 2"),
@@ -108,43 +99,6 @@ class PipelineLanguageTest {
             }
         }
 
-    /**
-     * A lookup in a language, answering one line per scope it is given, after [wait], noting each
-     * query; a release's line about the release [RELEASES] names; unreachable while [down];
-     * provisional when Wikidata's names could not be read, as the real ones are.
-     */
-    private class FakeLanguageAdapter(
-        override val id: SourceId,
-        private val wait: Duration = Duration.ZERO,
-        private val texts: (LanguageQuery) -> List<Pair<Scope, String>>,
-    ) : LanguageAdapter {
-        val queries = mutableListOf<LanguageQuery>()
-        val items = mutableListOf<LanguageItems>()
-        var down = false
-
-        override suspend fun lookup(
-            query: LanguageQuery,
-            items: LanguageItems,
-        ): SourceResult {
-            queries += query
-            this.items += items
-            delay(wait)
-            if (down) return SourceResult(Outcome.Unreachable, emptyList(), Duration.ZERO)
-            val host = "https://${query.language.host}/wiki/"
-            val drafts =
-                texts(query).mapIndexed { i, (scope, text) ->
-                    val about = RELEASES[query.language.code].takeIf { scope == Scope.RELEASE }
-                    EvidenceDraft(id, scope, text, "$host$i", RETRIEVED, about = about, language = query.language.code)
-                }
-            val outcome = if (drafts.isEmpty()) Outcome.None else Outcome.SongArticle
-            return SourceResult(outcome, drafts, Duration.ZERO, provisional = items.unreachable)
-        }
-
-        companion object {
-            val RELEASES = mapOf("hi" to "Aashiqui 2", "ko" to "BE")
-        }
-    }
-
     private val wikipedia =
         FakeLanguageAdapter(SourceId.WIKIPEDIA, wait = 2.seconds) { query ->
             when (query.language.code) {
@@ -164,36 +118,6 @@ class PipelineLanguageTest {
         FakeLanguageAdapter(SourceId.WEB) { query ->
             listOf(Scope.WEB to "${query.track.title} (${query.language.name}).")
         }
-
-    private class FakeSearch(
-        override val wikipedia: LanguageAdapter?,
-        override val web: LanguageAdapter?,
-        private val regional: () -> Regional,
-    ) : LanguageSearch {
-        var workAsked = 0
-        var releasesAsked = 0
-        var itemsAsked = 0
-
-        var workWait = Duration.ZERO
-
-        override suspend fun workLanguages(resolution: Resolution): Lookup<List<String>> {
-            workAsked++
-            delay(workWait)
-            return Lookup.Found(regional().wikidata)
-        }
-
-        override suspend fun releaseLanguages(resolution: Resolution): Lookup<List<String>> {
-            releasesAsked++
-            return Lookup.Found(regional().releases)
-        }
-
-        var namesDown = false
-
-        override suspend fun items(query: LanguageQuery): LanguageItems {
-            itemsAsked++
-            return LanguageItems(song = LocalName("Q1", "तुम ही हो", "तुम ही हो"), unreachable = namesDown)
-        }
-    }
 
     private val search = FakeSearch(wikipedia, web) { playing }
     private val provider = FakeProvider()
@@ -655,55 +579,6 @@ class PipelineLanguageTest {
             assertFalse(pipeline.state.value!!.searchingInLanguage)
         }
 
-    // A title in Latin letters with no recorded language, and two Devanagari captions about it that the
-    // English web search found (#987).
-    private val captioned =
-        Regional(
-            nowPlaying("Tum Se Hi", "Pritam", "Jab We Met"),
-            mapOf(
-                SourceId.MUSICBRAINZ to listOf("“Tum Se Hi” was written by Irshad Kamil."),
-                SourceId.WEB to listOf("यह गीत 2007 की एक फ़िल्म का है।", "मोहित चौहान ने यह गीत गाया।", "A page."),
-            ),
-        )
-
-    @Test
-    fun `lines about the track in a script that names a language are the weakest hint, never kept`() =
-        runTest {
-            settings = settings.copy(trackLanguageSearch = TrackLanguageSearch.ALWAYS)
-            assertEquals("hi", pipeline().play(captioned).inLanguage?.language)
-            assertEquals(1, search.releasesAsked, "asked after the recorded hints")
-            assertTrue(cache.decided.isEmpty(), "a language the lines name is decided afresh")
-            assertEquals("hi", pipeline().play(captioned).inLanguage?.language)
-            assertEquals(2, search.releasesAsked)
-        }
-
-    @Test
-    fun `a recorded language outweighs the lines', English included`() =
-        runTest {
-            settings = settings.copy(trackLanguageSearch = TrackLanguageSearch.ALWAYS)
-            val marathi = Regional(captioned.nowPlaying, captioned.english, releases = listOf("mar"))
-            assertEquals("mr", pipeline().play(marathi).inLanguage?.language)
-            cache.decided.clear()
-            val english = Regional(captioned.nowPlaying, captioned.english, wikidata = listOf("Q1860"))
-            assertNull(pipeline().play(english).inLanguage)
-            assertEquals(listOf("en"), cache.decided.values.toList())
-        }
-
-    @Test
-    fun `no lines in a script that names a language is none, kept unless a source did not land in full`() =
-        runTest {
-            pipeline().play(polish)
-            assertEquals(listOf(""), cache.decided.values.toList())
-            cache.decided.clear()
-            val adapters =
-                englishAdapters +
-                    FakeAdapter(SourceId.LASTFM, verifies = false) { _, _ ->
-                        SourceResult(Outcome.Unreachable, emptyList(), Duration.ZERO)
-                    }
-            assertNull(pipeline(adapters).play(polish).inLanguage)
-            assertTrue(cache.decided.isEmpty(), "a source that may have had lines about the track did not land")
-        }
-
     @Test
     fun `a replay asks nothing to decide the language again, English included`() =
         runTest {
@@ -784,6 +659,223 @@ class PipelineLanguageTest {
         backgroundScope.launch { pipeline.events.toList(events) }
         runCurrent()
         return events
+    }
+}
+
+/**
+ * The lines the English sources found about the track as the weakest hint of its language (#987),
+ * through the pipeline: after the recorded hints, outweighed by them, and kept as none, read again.
+ */
+class PipelineLanguageLinesTest {
+    // A title in Latin letters with no recorded language, and two Devanagari captions about it that the
+    // English web search found (#987).
+    private val captioned =
+        Regional(
+            nowPlaying("Tum Se Hi", "Pritam", "Jab We Met"),
+            mapOf(
+                SourceId.MUSICBRAINZ to listOf("“Tum Se Hi” was written by Irshad Kamil."),
+                SourceId.WEB to listOf("यह गीत 2007 की एक फ़िल्म का है।", "मोहित चौहान ने यह गीत गाया।", "A page."),
+            ),
+        )
+
+    private var playing: Regional = captioned
+
+    private val englishAdapters =
+        listOf(SourceId.MUSICBRAINZ, SourceId.WIKIPEDIA, SourceId.WEB).map { source ->
+            FakeAdapter(source, verifies = false) { _, _ ->
+                val texts = playing.english[source].orEmpty()
+                val scope = if (source == SourceId.WEB) Scope.WEB else Scope.SONG
+                val drafts = texts.map { EvidenceDraft(source, scope, it, "https://example.org/$source", RETRIEVED) }
+                SourceResult(if (texts.isEmpty()) Outcome.None else Outcome.SongArticle, drafts, Duration.ZERO)
+            }
+        }
+
+    private val wikipedia =
+        FakeLanguageAdapter(SourceId.WIKIPEDIA, wait = 2.seconds) { query ->
+            when (query.language.code) {
+                "hi" ->
+                    listOf(
+                        Scope.SONG to "तुम ही हो 2013 की फिल्म आशिकी 2 का एक गाना है।",
+                        Scope.RELEASE to "आशिक़ी 2 मोहित सूरी द्वारा निर्देशित 2013 की फ़िल्म है।",
+                    )
+                "ta" -> listOf(Scope.SONG to "கண்ணான கண்ணே 2019 இல் வெளியான பாடல்.")
+                "ko" -> listOf(Scope.RELEASE to "《BE》는 방탄소년단의 앨범이다.", Scope.ARTIST to "방탄소년단은 대한민국의 그룹이다.")
+                "pt" -> listOf(Scope.SONG to "Evidências é uma canção de José Augusto e Paulo Sérgio Valle.")
+                else -> emptyList()
+            }
+        }
+
+    private val web =
+        FakeLanguageAdapter(SourceId.WEB) { query ->
+            listOf(Scope.WEB to "${query.track.title} (${query.language.name}).")
+        }
+
+    private val search = FakeSearch(wikipedia, web) { playing }
+    private val provider = FakeProvider()
+    private val resolver = FakeResolver()
+    private val cache = LanguageMemoryCache()
+
+    private var settings =
+        Settings(aiProvider = ProviderId.ANTHROPIC, trackLanguageSearch = TrackLanguageSearch.IF_NEEDED)
+
+    private fun TestScope.pipeline(
+        adapters: List<SourceAdapter> = englishAdapters,
+        languageSearch: LanguageSearch? = search,
+    ): Pipeline =
+        Pipeline(
+            PipelineParts(
+                normalizer = Normalizer(JvmAccentFolder),
+                adapters = adapters,
+                resolver = resolver,
+                hasher = JvmHasher,
+                ai = AiAccess(provider, Secret("sk-test")),
+                cache = cache,
+                languageSearch = languageSearch,
+            ),
+            PipelineTime(timeSource = testTimeSource),
+        ) { settings }
+
+    private suspend fun Pipeline.play(
+        regional: Regional,
+        write: Boolean = false,
+    ): TrackState {
+        playing = regional
+        resolver.resolution = regional.resolution
+        return run(regional.nowPlaying, write)
+    }
+
+    @Test
+    fun `lines about the track in a script that names a language are the weakest hint, kept as none`() =
+        runTest {
+            settings = settings.copy(trackLanguageSearch = TrackLanguageSearch.ALWAYS)
+            assertEquals("hi", pipeline().play(captioned).inLanguage?.language)
+            assertEquals(1, search.releasesAsked, "asked after the recorded hints")
+            assertEquals(listOf(""), cache.decided.values.toList(), "left to the lines, which are read again")
+            assertEquals("hi", pipeline().play(captioned).inLanguage?.language)
+            assertEquals(1, search.releasesAsked, "a replay asks nothing")
+        }
+
+    @Test
+    fun `a recorded language outweighs the lines', English included`() =
+        runTest {
+            settings = settings.copy(trackLanguageSearch = TrackLanguageSearch.ALWAYS)
+            val marathi = Regional(captioned.nowPlaying, captioned.english, releases = listOf("mar"))
+            assertEquals("mr", pipeline().play(marathi).inLanguage?.language)
+            cache.decided.clear()
+            val english = Regional(captioned.nowPlaying, captioned.english, wikidata = listOf("Q1860"))
+            assertNull(pipeline().play(english).inLanguage)
+            assertEquals(listOf("en"), cache.decided.values.toList())
+        }
+
+    @Test
+    fun `a kept none reads the lines again, so a source switched on since names the language`() =
+        runTest {
+            settings =
+                settings.copy(
+                    trackLanguageSearch = TrackLanguageSearch.ALWAYS,
+                    enabledSources = settings.enabledSources - SourceSwitch.WEB,
+                )
+            assertNull(pipeline().play(captioned).inLanguage)
+            assertEquals(listOf(""), cache.decided.values.toList())
+            settings = settings.copy(enabledSources = settings.enabledSources + SourceSwitch.WEB)
+            assertEquals("hi", pipeline().play(captioned).inLanguage?.language)
+            assertEquals(1, search.releasesAsked, "read again with no request")
+        }
+
+    @Test
+    fun `a look again that leaves the language to the lines replaces the language kept before`() =
+        runTest {
+            settings = settings.copy(trackLanguageSearch = TrackLanguageSearch.ALWAYS)
+            val pipeline = pipeline()
+            val first = pipeline.play(Regional(captioned.nowPlaying, captioned.english, releases = listOf("mar")))
+            assertEquals("mr", first.inLanguage?.language)
+            playing = captioned
+            val gathered = Gathered(first.sources, first.resolution, inLanguage = first.inLanguage)
+            val again =
+                pipeline.run(
+                    captioned.nowPlaying,
+                    RunControl.Unattended(false),
+                    lookAgain = LookAgain(gathered),
+                )
+            assertEquals("hi", again.inLanguage?.language)
+            assertEquals(listOf(""), cache.decided.values.toList())
+            assertEquals("hi", pipeline().play(captioned).inLanguage?.language)
+        }
+}
+
+/** A track: as played, what the English sources give, and what MusicBrainz and Wikidata record. */
+private class Regional(
+    val nowPlaying: NowPlaying,
+    val english: Map<SourceId, List<String>>,
+    val resolution: Resolution = Resolution(outcome = Outcome.SongArticle, recordingMbid = "rec"),
+    val wikidata: List<String> = emptyList(),
+    val releases: List<String> = emptyList(),
+)
+
+/**
+ * A lookup in a language, answering one line per scope it is given, after [wait], noting each
+ * query; a release's line about the release [RELEASES] names; unreachable while [down];
+ * provisional when Wikidata's names could not be read, as the real ones are.
+ */
+private class FakeLanguageAdapter(
+    override val id: SourceId,
+    private val wait: Duration = Duration.ZERO,
+    private val texts: (LanguageQuery) -> List<Pair<Scope, String>>,
+) : LanguageAdapter {
+    val queries = mutableListOf<LanguageQuery>()
+    val items = mutableListOf<LanguageItems>()
+    var down = false
+
+    override suspend fun lookup(
+        query: LanguageQuery,
+        items: LanguageItems,
+    ): SourceResult {
+        queries += query
+        this.items += items
+        delay(wait)
+        if (down) return SourceResult(Outcome.Unreachable, emptyList(), Duration.ZERO)
+        val host = "https://${query.language.host}/wiki/"
+        val drafts =
+            texts(query).mapIndexed { i, (scope, text) ->
+                val about = RELEASES[query.language.code].takeIf { scope == Scope.RELEASE }
+                EvidenceDraft(id, scope, text, "$host$i", RETRIEVED, about = about, language = query.language.code)
+            }
+        val outcome = if (drafts.isEmpty()) Outcome.None else Outcome.SongArticle
+        return SourceResult(outcome, drafts, Duration.ZERO, provisional = items.unreachable)
+    }
+
+    companion object {
+        val RELEASES = mapOf("hi" to "Aashiqui 2", "ko" to "BE")
+    }
+}
+
+private class FakeSearch(
+    override val wikipedia: LanguageAdapter?,
+    override val web: LanguageAdapter?,
+    private val regional: () -> Regional,
+) : LanguageSearch {
+    var workAsked = 0
+    var releasesAsked = 0
+    var itemsAsked = 0
+
+    var workWait = Duration.ZERO
+
+    override suspend fun workLanguages(resolution: Resolution): Lookup<List<String>> {
+        workAsked++
+        delay(workWait)
+        return Lookup.Found(regional().wikidata)
+    }
+
+    override suspend fun releaseLanguages(resolution: Resolution): Lookup<List<String>> {
+        releasesAsked++
+        return Lookup.Found(regional().releases)
+    }
+
+    var namesDown = false
+
+    override suspend fun items(query: LanguageQuery): LanguageItems {
+        itemsAsked++
+        return LanguageItems(song = LocalName("Q1", "तुम ही हो", "तुम ही हो"), unreachable = namesDown)
     }
 }
 

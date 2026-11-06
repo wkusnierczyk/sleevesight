@@ -298,22 +298,6 @@ internal class InLanguage(
                 .mapNotNull { (it as? SourceState.Done)?.result }
                 .flatMap { it.evidence }
                 .filter { settings.isEnabled(it.source) && it.scope in PromptEvidence.TRACK_SCOPES }
-
-        /**
-         * Whether each of [state]'s English sources switched on has landed in full: reached, and not
-         * provisional, so its lines are all it has.
-         */
-        fun landedInFull(
-            state: TrackState,
-            settings: Settings,
-        ): Boolean =
-            state.sources
-                .filterKeys { settings.isEnabled(it) }
-                .values
-                .all { landed ->
-                    val result = (landed as? SourceState.Done)?.result
-                    result != null && result.outcome != Outcome.Unreachable && !result.provisional
-                }
     }
 }
 
