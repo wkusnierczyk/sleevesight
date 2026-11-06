@@ -161,9 +161,12 @@ internal data class SourceChip(
     val filters: Set<SourceId>,
     val language: String? = null,
 ) {
-    /** The lines of [lines] that are this chip's own: its sources', in its [language] (none for English). */
+    /**
+     * The lines of [lines] that are this chip's own: its sources', found in its [language] (none for
+     * English); a line marked with a language by its script (#949) is its English lookup's.
+     */
     fun own(lines: List<EvidenceLine>): List<EvidenceLine> =
-        lines.filter { it.source in filters && it.language == language }
+        lines.filter { it.source in filters && it.found == language }
 
     /** Its key among the table's rows, in its test tags: the source's tag, with the language after a colon. */
     val key: String get() = language?.let { "${source.tag}:$it" } ?: source.tag

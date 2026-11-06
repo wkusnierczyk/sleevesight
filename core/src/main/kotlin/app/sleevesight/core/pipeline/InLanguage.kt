@@ -243,6 +243,12 @@ internal class InLanguage(
 }
 
 /**
+ * The track's language, when the search in it named one (#902), for the lines of other lookups
+ * written in its script (#949, `EvidenceSet.of`): a Marathi track's lines in Devanagari are Marathi.
+ */
+internal fun TrackState.knownLanguage(): Language? = inLanguage?.language?.let(Languages::ofCode)
+
+/**
  * The lines the search in the track's language found (#902, [TrackState.inLanguage]), to join the
  * English ones after them: each lookup's evidence, less a line whose page an English line of its
  * source already quotes (a web search in the language that found an English page found before).

@@ -303,6 +303,39 @@ class InLanguageScreenTest {
             assertEquals(emptyList<AnnotatedString.Range<SpanStyle>>(), spoken(wikipediaLine.text).spanStyles)
         }
 
+    // Tum Se Hi (#949): no search in its language; the English web search found two captions in Devanagari.
+    private val captions =
+        listOf(
+            EvidenceDraft(SourceId.WEB, Scope.WEB, "Tum Se Hi is from Jab We Met.", "https://example.org/a", at),
+            EvidenceDraft(
+                SourceId.WEB,
+                Scope.WEB,
+                "ना है ये पाना, ना खोना ही है",
+                "https://www.youtube.com/watch?v=a",
+                at,
+            ),
+        )
+
+    private fun captioned(insight: InsightState = InsightState.Idle(canWrite = false)): TrackState {
+        val sources = english + (SourceId.WEB to done(evidence = captions))
+        val lines = EvidenceSet.of(listOf(musicBrainzLine, wikipediaLine) + captions, JvmHasher)
+        return track(sources = sources, evidence = lines, insight = insight)
+    }
+
+    @Test
+    fun aLineInDevanagariTheEnglishSearchFoundIsSaidToBeTranslatedAndStaysInItsRow() {
+        val evidence = captioned().evidence!!
+        show(captioned(insight = written("It is from the film [S1], about letting go [S2].", from = evidence))) {
+            assertEquals(1, count("Translated from Hindi: S2."))
+            unfold()
+            // No row in Hindi: the line is the English web search's, which found pages.
+            assertEquals(listOf("MB", "W", "S"), rows())
+            assertEquals(listOf(text(R.string.home_source_found_pages)), said("S"))
+            assertEquals(1, count("web · youtube.com · in Hindi"))
+            assertEquals(0, count("web · example.org · in", substring = true))
+        }
+    }
+
     private fun spoken(text: String): AnnotatedString =
         compose
             .onNode(hasText(text), useUnmergedTree = true)
