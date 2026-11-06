@@ -196,6 +196,24 @@ class AskAiEventsTest {
         }
 
     @Test
+    fun `a kept answer read only is not told as served, and then read for its panel is`() =
+        runTest {
+            provider.streaming = 3.seconds
+            app().panels.follow(empty(), settings.value)
+            advanceUntilIdle()
+            // After a restart, read only (#996: *Genres* reading *Find the lyrics*' answer): not told.
+            val restarted = app()
+            settings.value = off
+            restarted.searches.answered(empty(), SearchKind.DATES).first { it is AiSearch.NothingFound }
+            advanceUntilIdle()
+            assertEquals(emptyList<PipelineEvent>(), restarted.events)
+            // Its panel then: served, told once.
+            restarted.searches.search(empty(), SearchKind.DATES).first { it is AiSearch.NothingFound }
+            advanceUntilIdle()
+            assertEquals(listOf(PipelineEvent.AiKept::class), restarted.events.map { it::class })
+        }
+
+    @Test
     fun `nothing of a question under way at Clear history is told after it`() =
         runTest {
             settings.value = off

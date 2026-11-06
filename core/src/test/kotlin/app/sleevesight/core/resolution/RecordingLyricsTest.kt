@@ -123,4 +123,23 @@ class RecordingLyricsTest {
             val none = FakeMusicBrainz(Lookup.Found(emptyList()), emptyMap(), emptyMap())
             assertEquals(WorkLyrics.NONE, resolve(none, track("Song", "Act")).lyrics)
         }
+
+    @Test
+    fun `those credited with vocals on the recording, with or without an attribute, once each`() =
+        runTest {
+            val relations =
+                listOf(
+                    MbArtistRelation("vocal", "mb-y", "Yurika Hanashima", emptyList()),
+                    MbArtistRelation("vocal", "mb-y", "Yurika Hanashima", listOf("lead vocals")),
+                    MbArtistRelation("vocal", "mb-c", "Choir", listOf("background vocals")),
+                    MbArtistRelation("instrument", "mb-g", "Guitarist", listOf("guitar")),
+                )
+            val detail =
+                MbRecordingDetail("ours", "Song", listOf(credit("Act")), "1978", emptyList(), relations, emptyList())
+            val musicBrainz = FakeMusicBrainz(Lookup.Found(search), mapOf("ours" to detail), emptyMap())
+            assertEquals(
+                listOf("Yurika Hanashima", "Choir"),
+                resolve(musicBrainz, track("Song", "Act")).lyrics.vocalists,
+            )
+        }
 }

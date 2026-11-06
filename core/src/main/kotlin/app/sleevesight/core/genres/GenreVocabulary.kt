@@ -97,13 +97,17 @@ class GenreVocabulary(
      * there is none. [level] is what the tags were given to, and [artist] the credited artist they
      * describe, for an artist's ([GenreLabel.artist]). [votes] are the tags' votes, by tag, where the
      * source counts them (MusicBrainz's recording tags, #799), for each label's [GenreLabel.votes].
+     * The genres of [keepBeyondCap] (identities) past the cap follow, [GenreLabel.beyondCap], so that
+     * what the tags include is known though no row shows them (#996: an artist's Instrumental).
      */
+    @Suppress("LongParameterList") // The tags, where they are from and what of, their votes, what passes the cap.
     fun labelsFor(
         tags: List<String>,
         url: String? = null,
         level: GenreLevel = GenreLevel.ARTIST,
         artist: String? = null,
         votes: Map<String, Int> = emptyMap(),
+        keepBeyondCap: Set<String> = emptySet(),
     ): List<GenreLabel> {
         val seen = mutableSetOf<String>()
         val votesOf = votes.mapKeys { key(it.key) }
@@ -113,10 +117,23 @@ class GenreVocabulary(
             .mapNotNull { tag -> familyOf[tag]?.let { tag to it } }
             .map { (tag, family) -> Triple(tag, family, synonymOf[tag] ?: spelling(tag)) }
             .filter { (_, _, identity) -> seen.add(identity) }
-            .take(MAX_LABELS)
-            .map { (tag, family, identity) ->
+            .withIndex()
+            .filter { (at, found) -> at < MAX_LABELS || found.third in keepBeyondCap }
+            .map { (at, found) ->
+                val (tag, family, identity) = found
                 val label = labelOverrides[tag] ?: titleCase(tag)
-                GenreLabel(tag, family.id, label, identity, url, level, artist, votesOf[tag])
+                GenreLabel(
+                    tag,
+                    family.id,
+                    label,
+                    identity,
+                    url,
+                    level,
+                    artist,
+                    votesOf[tag],
+                    beyondCap =
+                        at >= MAX_LABELS,
+                )
             }.toList()
     }
 
@@ -184,6 +201,9 @@ data class GenreFamily(
  *   recording tags (#799), by which a track's label is backed among the chips rather than weak
  *   ([TrackGenres.chips], #875). Null where it does not: Last.fm's counts are weights out of 100, not
  *   votes, and an artist's MusicBrainz tags are kept without theirs.
+ * @property beyondCap a tag past the [GenreVocabulary.MAX_LABELS] the source's labels show, kept only
+ *   so the track knows its artist's tags include it ([GenreVocabulary.labelsFor]'s `keepBeyondCap`,
+ *   #996: Instrumental, for a featured artist); on no row ([combineGenres]).
  */
 data class GenreLabel(
     val tag: String,
@@ -194,6 +214,7 @@ data class GenreLabel(
     val level: GenreLevel = GenreLevel.ARTIST,
     val artist: String? = null,
     val votes: Int? = null,
+    val beyondCap: Boolean = false,
 )
 
 @Serializable

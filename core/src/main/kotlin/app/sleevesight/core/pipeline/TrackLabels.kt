@@ -6,11 +6,15 @@ import app.sleevesight.core.genres.LabelLookup
 import app.sleevesight.core.genres.LabelSource
 import app.sleevesight.core.genres.LastFmLabels
 import app.sleevesight.core.genres.MusicBrainzLabels
+import app.sleevesight.core.genres.Singing
 import app.sleevesight.core.genres.TrackGenres
 import app.sleevesight.core.genres.combineGenres
+import app.sleevesight.core.lyrics.NO_LINGUISTIC_CONTENT
+import app.sleevesight.core.lyrics.instrumental
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.sources.WorkLyrics
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
@@ -50,7 +54,10 @@ internal class TrackLabels(
     private val later =
         MutableStateFlow(kept?.found.orEmpty().filterKeys { !asks(it) })
 
-    /** The genres for [current]'s results, with those asked for after the evidence that are in. */
+    /**
+     * The genres for [current]'s results, with those asked for after the evidence that are in, their
+     * Instrumental weighed against what MusicBrainz's result says of the singing ([singing], #996).
+     */
     fun of(current: TrackState): TrackGenres {
         val landed = later.value
         return combineGenres(
@@ -65,8 +72,23 @@ internal class TrackLabels(
                 credited(given + landed[source].orEmpty(), current.normalized.artists)
             },
             current.normalized.artists,
+            singing(current.done(SourceId.MUSICBRAINZ)?.lyrics),
         )
     }
+
+    // What MusicBrainz's [lyrics] say of whether the track is sung (#996): marked instrumental (or only
+    // `zxx` works, as the *Lyrics* panel reads it, `instrumental`); lyrics links listed; the works'
+    // languages but `zxx` (and `und`, undetermined, which says nothing of words); those credited with
+    // vocals. Nothing while MusicBrainz has not answered with the song.
+    private fun singing(lyrics: WorkLyrics?): Singing =
+        lyrics?.let {
+            Singing(
+                instrumental = instrumental(it),
+                lyrics = !it.links.isNullOrEmpty(),
+                languages = it.languages.filter { code -> code != NO_LINGUISTIC_CONTENT && code != UNDETERMINED },
+                vocalists = it.vocalists,
+            )
+        } ?: Singing.NONE
 
     // Each artist's label under the name this track credits, by its folded key ([fold]): a result
     // served from the cache was kept for a spelling of the key's ("Sigur Rós" for "Sigur Ros").
@@ -237,3 +259,6 @@ internal class TrackLabels(
 
     private fun TrackState.done(source: SourceId) = (sources[source] as? SourceState.Done)?.result
 }
+
+// ISO 639-3's code for an undetermined language (#996): no sign of words.
+private const val UNDETERMINED = "und"

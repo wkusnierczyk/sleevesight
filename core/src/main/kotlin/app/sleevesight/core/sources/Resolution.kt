@@ -263,11 +263,15 @@ data class ResolvedWork(
  *   linguistic content), deduplicated; empty when MusicBrainz gives none.
  * @property instrumental whether MusicBrainz marks the recording's performance of any of its works
  *   `instrumental`.
+ * @property vocalists the artists MusicBrainz credits with a `vocal` relationship on the recording
+ *   (#996), by MusicBrainz's names, in its order, once each: a sign the track is sung, against which
+ *   an artist's Instrumental tag is weighed (`TrackGenres.chips`).
  */
 data class WorkLyrics(
     val links: List<String>? = emptyList(),
     val languages: List<String> = emptyList(),
     val instrumental: Boolean = false,
+    val vocalists: List<String> = emptyList(),
 ) {
     companion object {
         /** Nothing known of the lyrics: links not known, no language, not instrumental. */

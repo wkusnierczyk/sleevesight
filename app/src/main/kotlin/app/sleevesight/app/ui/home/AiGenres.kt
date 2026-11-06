@@ -15,6 +15,8 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.pipeline.AiGenreList
+import app.sleevesight.app.pipeline.AiSearch
+import app.sleevesight.app.pipeline.AiSearchFeed
 import app.sleevesight.app.pipeline.GenreNotes
 import app.sleevesight.app.ui.theme.PanelRule
 import app.sleevesight.app.ui.theme.handoffTarget
@@ -23,10 +25,13 @@ import app.sleevesight.core.genres.GenreLabel
 import app.sleevesight.core.genres.GenreLevel
 import app.sleevesight.core.genres.GenreRow
 import app.sleevesight.core.genres.PlacedLabel
+import app.sleevesight.core.genres.TrackGenres
 import app.sleevesight.core.genres.TrackLabel
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.synthesis.SearchAnswer
 import app.sleevesight.core.synthesis.SearchKind
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 // The genres *Search with AI* named under an empty *Genres* (#773): chips as the panel's, each unfolding
 // its genre under them, which shows what the genre is and nothing else.
@@ -44,11 +49,39 @@ internal fun GenresSearch(
     notes: PanelNotes,
 ) {
     if (track != null && !track.genres.isEmpty || shown.looking.isNotEmpty()) return
-    AiSearchBlock(search, SearchKind.GENRES) { answer, model ->
+    // With lyrics found, never Instrumental (#996), as in the rows; with no other genre, nothing found.
+    val drops = track?.genres?.singing?.dropsInstrumental == true
+    val feed = remember(search.feed, drops) { if (drops) LyricsFoundFeed(search.feed) else search.feed }
+    AiSearchBlock(PanelSearch(feed, search.track, search.header), SearchKind.GENRES) { answer, model ->
         if (answer is SearchAnswer.Genres && track != null) {
             AiGenres(track, answer.genres, notes.notes, search, model)
             // From the web (#801): the pages that give them, under the chips.
             for (source in answer.sources) FromSite(source)
+        }
+    }
+}
+
+/**
+ * [feed], for a track with lyrics found (#996): *Search with AI*'s genres without Instrumental, as
+ * the rows have none ([TrackGenres.aiShown]); with no other genre, nothing found, as an answer with
+ * nothing usable is shown.
+ */
+private class LyricsFoundFeed(
+    private val feed: AiSearchFeed,
+) : AiSearchFeed by feed {
+    override fun search(
+        track: TrackState,
+        kind: SearchKind,
+        genre: String?,
+    ): Flow<AiSearch> = feed.search(track, kind, genre).map(::withoutInstrumental)
+
+    private fun withoutInstrumental(state: AiSearch): AiSearch {
+        val answer = (state as? AiSearch.Answered)?.answer as? SearchAnswer.Genres ?: return state
+        val left = answer.genres.filter { it.identity != TrackGenres.INSTRUMENTAL }
+        return if (left.isEmpty()) {
+            AiSearch.NothingFound(state.model, state.way, state.keptAt)
+        } else {
+            state.copy(answer = answer.copy(genres = left))
         }
     }
 }
@@ -73,7 +106,8 @@ internal fun AiGenres(
     var chosen by rememberSaveable(track.normalized.lookupKey) { mutableStateOf<String?>(null) }
     // Marked AI, as the genres the AI's list adds are (#762, #801), credited to [model].
     val row = GenreRow(GenreLevel.TRACK, null, genres.map { TrackLabel(it, emptyList(), aiModel = model) })
-    val labels = row.labels.map { PlacedLabel(row, it) }
+    // Instrumental on a sung track (#996): weak, as the rows' AI genres are, with its line.
+    val labels = row.labels.map { PlacedLabel(row, it, weak = track.genres.aiSignOfVocals(it.genre.identity) != null) }
     val open = genres.firstOrNull { it.identity == chosen }
     val handoff = rememberFocusHandoff()
     val chips = remember(track.normalized.lookupKey) { mutableMapOf<String, FocusRequester>() }
@@ -87,8 +121,16 @@ internal fun AiGenres(
             PanelRule()
             Box(Modifier.testTag(GENRE_PANEL_TAG)) {
                 // *Retry* under a failed lookup gives way to the loading line: the focus to the chip.
-                GenreDefinitionNote(genre, notes, search) {
-                    labels.firstOrNull { it.label.genre.identity == genre.identity }?.let { handoff.moveTo(chipOf(it)) }
+                // Spaced as a genre's body is ([GenreBody]).
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    GenreDefinitionNote(genre, notes, search) {
+                        labels.firstOrNull { it.label.genre.identity == genre.identity }?.let {
+                            handoff.moveTo(
+                                chipOf(it),
+                            )
+                        }
+                    }
+                    WeakEvidenceNote(track.genres.aiSignOfVocals(genre.identity), genre)
                 }
             }
         }

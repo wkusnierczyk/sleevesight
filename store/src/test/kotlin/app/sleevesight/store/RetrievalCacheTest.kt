@@ -287,6 +287,26 @@ class RetrievalCacheTest {
     }
 
     @Test
+    fun `the vocal credits and a label past the cap round-trip, and an entry kept before them decodes without`() {
+        val result = sample(Outcome.SongArticle, SourceId.MUSICBRAINZ)
+        val decoded = assertNotNull(RetrievalCodec.decode(RetrievalCodec.encode(result)))
+        assertEquals(listOf("Gordon Lightfoot"), decoded.lyrics?.vocalists)
+        assertEquals(listOf(false, false, true), decoded.genres.map { it.beyondCap })
+        // As kept before #996: no vocal credits, no label past the cap.
+        val before =
+            result.copy(
+                lyrics = result.lyrics?.copy(vocalists = emptyList()),
+                genres = result.genres.map { it.copy(beyondCap = false) },
+            )
+        val text = RetrievalCodec.encode(before)
+        assertFalse("vocalists" in text)
+        assertFalse("beyondCap" in text)
+        val old = assertNotNull(RetrievalCodec.decode(text))
+        assertEquals(emptyList(), old.lyrics?.vocalists)
+        assertTrue(old.genres.none { it.beyondCap })
+    }
+
+    @Test
     fun `the votes on the recording's tags round-trip, and an entry kept before them decodes without`() {
         val result = sample(Outcome.SongArticle, SourceId.MUSICBRAINZ)
         val decoded = assertNotNull(RetrievalCodec.decode(RetrievalCodec.encode(result)))
@@ -526,18 +546,7 @@ class RetrievalCacheTest {
             latency = 412.milliseconds + 7.nanoseconds,
             unverified = listOf(EvidenceDraft(source, Scope.ARTIST, "An unverified line.", null, at)),
             rejections = listOf(Rejection("Sundown", "a disambiguation page", Scope.SONG)),
-            genres =
-                listOf(
-                    GenreLabel(
-                        "folk rock",
-                        "folk",
-                        "Folk Rock",
-                        "folkrock",
-                        "https://www.last.fm/music/Gordon+Lightfoot",
-                        artist = "Gordon Lightfoot",
-                    ),
-                    GenreLabel("folk", "folk", "Folk", "folk"),
-                ),
+            genres = labels,
             labelArtists =
                 listOf(
                     ResolvedArtist("Gordon Lightfoot", "mb-gl"),
@@ -559,9 +568,26 @@ class RetrievalCacheTest {
                     listOf("https://genius.com/Gordon-lightfoot-sundown-lyrics"),
                     listOf("eng"),
                     instrumental = true,
+                    // Those credited with vocals (#996).
+                    vocalists = listOf("Gordon Lightfoot"),
                 ),
         )
     }
+
+    // The artists' labels; Instrumental past the cap, on no row (#996).
+    private val labels =
+        listOf(
+            GenreLabel(
+                "folk rock",
+                "folk",
+                "Folk Rock",
+                "folkrock",
+                "https://www.last.fm/music/Gordon+Lightfoot",
+                artist = "Gordon Lightfoot",
+            ),
+            GenreLabel("folk", "folk", "Folk", "folk"),
+            GenreLabel("instrumental", "score", "Instrumental", "instrumental", beyondCap = true),
+        )
 
     // The recording's tags, with their votes (#799).
     private val recordingTags =

@@ -5,6 +5,7 @@ import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.genres.GenreLevel
 import app.sleevesight.core.genres.GenreVocabulary
+import app.sleevesight.core.genres.TrackGenres
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
@@ -216,6 +217,8 @@ class LastFmAdapter(
                             artist.url,
                             GenreLevel.ARTIST,
                             credited,
+                            // An Instrumental past the cap too, for a featured artist's (#996).
+                            keepBeyondCap = setOf(TrackGenres.INSTRUMENTAL),
                         )
                     } else {
                         emptyList()
@@ -306,7 +309,11 @@ class LastFmAdapter(
          * bio verified (#75). 3: without genres, no line of the artist's tags (#545); 1002, the
          * version without genres before it, holds that line and must not be served. 4: the lines of
          * counts and lists are marked `aggregate` (#617), which results kept before lack, so *Look
-         * again* would take a count that changed in them for something new.
+         * again* would take a count that changed in them for something new. An artist's
+         * Instrumental past the labels' cap (`GenreLabel.beyondCap`, #996) is an optional field,
+         * not raised for: a result kept before it decodes without, so until it expires a featured
+         * artist with Instrumental as a sixth tag may be taken for one without it, rather than every
+         * kept result asking Last.fm again.
          */
         const val EXTRACTION_VERSION: Int = 4
 

@@ -675,7 +675,8 @@ class RecordingResolver(
 // What MusicBrainz says of the lyrics (#728): the lyrics pages of the work [lookup] found (only the
 // first work is looked up; none without a work, or when MusicBrainz has no such work; not known when
 // the lookup failed), the languages of every work the recording performs, and whether its
-// performance of any of them is marked instrumental.
+// performance of any of them is marked instrumental; and who is credited with vocals on the recording
+// (#996): a `vocal` relationship, with or without an attribute (`lead vocals`, `background vocals`).
 private fun lyricsOf(
     detail: MbRecordingDetail,
     lookup: Lookup<MbWork>?,
@@ -690,6 +691,11 @@ private fun lyricsOf(
             },
         languages = (detail.works.flatMap { it.languages } + work?.languages.orEmpty()).distinct(),
         instrumental = detail.works.any { it.instrumental },
+        vocalists =
+            detail.artistRelations
+                .filter { it.type == "vocal" }
+                .map { it.artistName }
+                .distinct(),
     )
 }
 

@@ -111,6 +111,16 @@ interface AiSearchFeed {
     ): Flow<AiSearch>
 
     /**
+     * [track]'s search of [kind] as [search] gives it, read only: a kept answer read so is not told
+     * to the log as served (#996: *Genres* reads *Find the lyrics*' answer, whether or not *Lyrics*
+     * shows it). By default, [search]'s.
+     */
+    fun answered(
+        track: TrackState,
+        kind: SearchKind,
+    ): Flow<AiSearch> = search(track, kind)
+
+    /**
      * A tap on *Search with AI* or *Retry*, or, [automatic], the search starting by itself (*Search
      * with AI*, the setting, [AutoSearches]): [track]'s search of [kind] asks about [facts], unless it
      * is under way, answered or kept, or, [automatic], once stopped (*Stop* is the user's "no" to it).
@@ -302,6 +312,19 @@ class AppAiSearches(
         track: TrackState,
         kind: SearchKind,
         genre: String?,
+    ): Flow<AiSearch> = searchOf(track, kind, genre, serving = true)
+
+    override fun answered(
+        track: TrackState,
+        kind: SearchKind,
+    ): Flow<AiSearch> = searchOf(track, kind, null, serving = false)
+
+    // [search], telling a kept answer shown to the log as served only while [serving] (#851, #996).
+    private fun searchOf(
+        track: TrackState,
+        kind: SearchKind,
+        genre: String?,
+        serving: Boolean,
     ): Flow<AiSearch> {
         val offers =
             combine(parts, settings) { made, now ->
@@ -331,7 +354,7 @@ class AppAiSearches(
                     expired(entry.writtenAt, lifetime) -> AiSearch.Offered.also { drop(key) }
                     else ->
                         shownAs(entry.state, modelName(key.model), keptAt(entry, track, play))
-                            .also { serve(key, kind, genre, track, entry) }
+                            .also { if (serving) serve(key, kind, genre, track, entry) }
                 }
             }
     }

@@ -46,7 +46,8 @@ internal object RetrievalCodec {
      * (MusicBrainz's extraction version 7), so a track played before is asked again rather than shown
      * as having no lyrics page.
      * The votes on the recording's tags (#799) are an optional field too, made a miss the same way
-     * (MusicBrainz's extraction version 8).
+     * (MusicBrainz's extraction version 8). Those credited with vocals on the recording (#996) are an
+     * optional field too, made a miss the same way (MusicBrainz's extraction version 10).
      */
     const val FORMAT: Int = 7
 
@@ -79,7 +80,18 @@ internal object RetrievalCodec {
                 evidence = result.evidence.map(::draftJson),
                 unverified = result.unverified.map(::draftJson),
                 rejections = result.rejections.map { RejectionJson(it.subject, it.reason, it.scope.key) },
-                genres = result.genres.map { GenreJson(it.tag, it.family, it.label, it.identity, it.url, it.artist) },
+                genres =
+                    result.genres.map {
+                        GenreJson(
+                            it.tag,
+                            it.family,
+                            it.label,
+                            it.identity,
+                            it.url,
+                            it.artist,
+                            it.beyondCap,
+                        )
+                    },
                 labelArtists = result.labelArtists.map { LabelArtistJson(it.name, it.mbid) },
                 recordingTags = result.recordingTags?.let { RecordingTagsJson(it.mbid, it.tags, it.votes) },
                 firstReleased = result.firstReleased,
@@ -96,7 +108,7 @@ internal object RetrievalCodec {
                             release = it.release?.let(::releaseJson),
                         )
                     },
-                lyrics = result.lyrics?.let { LyricsJson(it.links, it.languages, it.instrumental) },
+                lyrics = result.lyrics?.let { LyricsJson(it.links, it.languages, it.instrumental, it.vocalists) },
                 trackOnly = result.trackOnly,
                 pages = result.pages,
                 language = result.language,
@@ -123,7 +135,16 @@ internal object RetrievalCodec {
                 // Kept results hold the artists' labels only: the track's and album's are asked apart.
                 genres =
                     stored.genres.map {
-                        GenreLabel(it.tag, it.family, it.label, it.identity, it.url, GenreLevel.ARTIST, it.artist)
+                        GenreLabel(
+                            it.tag,
+                            it.family,
+                            it.label,
+                            it.identity,
+                            it.url,
+                            GenreLevel.ARTIST,
+                            it.artist,
+                            beyondCap = it.beyondCap,
+                        )
                     },
                 labelArtists = stored.labelArtists.map { ResolvedArtist(it.name, it.mbid) },
                 recordingTags = stored.recordingTags?.let { RecordingTags(it.mbid, it.tags, it.votes) },
@@ -141,7 +162,7 @@ internal object RetrievalCodec {
                             release = it.release?.let(::release),
                         )
                     },
-                lyrics = stored.lyrics?.let { WorkLyrics(it.links, it.languages, it.instrumental) },
+                lyrics = stored.lyrics?.let { WorkLyrics(it.links, it.languages, it.instrumental, it.vocalists) },
                 trackOnly = stored.trackOnly,
                 pages = stored.pages,
                 language = stored.language,
@@ -258,6 +279,7 @@ internal object RetrievalCodec {
         val links: List<String>? = emptyList(),
         val languages: List<String> = emptyList(),
         val instrumental: Boolean = false,
+        val vocalists: List<String> = emptyList(),
     )
 
     @Serializable
@@ -277,6 +299,8 @@ internal object RetrievalCodec {
         val identity: String,
         val url: String? = null,
         val artist: String? = null,
+        // A label past the cap (#996), on no row; one kept before it decodes without.
+        val beyondCap: Boolean = false,
     )
 
     @Serializable
