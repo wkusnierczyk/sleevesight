@@ -86,16 +86,23 @@ internal class ItemFoldMemory(
 
     companion object {
         /**
-         * Saved as plain values: the items open and those whose tap's write is due (#948), by name,
-         * and the track both are of, as [savedTrack] keeps it.
+         * Saved as plain values: the items open, by name, the track as [savedTrack] keeps it, then the
+         * items whose tap's write is due on it (#948), last, so a state saved before them, which ends
+         * with the track, restores with none due.
          */
         val Saver: Saver<ItemFoldMemory, Any> =
             listSaver(
-                save = { memory -> listOf<Any?>(names(memory.open), names(memory.due)) + savedTrack(memory.track) },
+                save = { memory ->
+                    listOf<Any?>(names(memory.open)) + savedTrack(memory.track) + names(memory.due)
+                },
                 restore = { saved ->
-                    ItemFoldMemory(items(saved[0] as String), restoredTrack(saved.drop(2)), items(saved[1] as String))
+                    val due = (saved.getOrNull(DUE_AT) as? String).orEmpty()
+                    ItemFoldMemory(items(saved[0] as String), restoredTrack(saved.drop(1)), items(due))
                 },
             )
+
+        // Where the items due are saved: after the items open and the track's five values.
+        private const val DUE_AT = 6
 
         private fun names(items: Set<InsightItem>): String = items.joinToString(",") { it.name }
 
