@@ -8,11 +8,11 @@ header.top{font-family:var(--f-ui);font-weight:400}
    with the page's Flex). */
 header.top .row{display:flex;align-items:center;justify-content:space-between;gap:14px 24px;padding:20px 16px}
 .brand{display:flex;align-items:center;flex:none;text-decoration:none}
-/* The logo: the brand sheet's 8b mark, the words (`#words`) with the record (`#lp`) beside them, as
-   tall as "sight". The svg is the words' ink box, 69 units tall, and 72 px tall at the top of the
-   page. */
-.brand>svg{display:block;flex:none;width:133.84px;height:72px;overflow:visible}
-@media (max-width:370px){.brand>svg{width:107.82px;height:58px}}
+/* The logo: the one-line logo (#985), as in the app's header: "Sleeve", then "sight" and the record
+   moved up beside it from where they are in the brand sheet's 8b mark. The svg is its ink box, from
+   the top of the "l" to the foot of the "g", 192.11 by 35.16 units; the type is 30 px at the top of
+   the page and 24 px scrolled down (37.6 units to the em), as the linear logo's (`logo-linear.html`). */
+.brand>svg{display:block;flex:none;width:153.28px;height:28.05px;overflow:visible}
 nav.top{flex:none}
 .sl-stack header.top .row{flex-direction:column;align-items:flex-start}
 .sl-stack nav.top ul{flex-direction:column;gap:0}
@@ -26,7 +26,7 @@ nav.top{flex:none}
 .js header.top .bar{position:fixed;top:0;left:0;right:0;z-index:10;background:var(--bg);border-bottom:1px solid transparent}
 .sl-compact header.top .bar{border-bottom-color:var(--line);box-shadow:0 8px 18px -14px rgba(0,0,0,.45)}
 .sl-compact header.top .row{padding-top:12px;padding-bottom:12px}
-.sl-compact .brand>svg{width:66.92px;height:36px}
+.sl-compact .brand>svg{width:122.62px;height:22.44px}
 .sl-compact nav.top ul{font-size:15px;gap:4px 18px}
 .sl-compact.sl-stack header.top .row{flex-direction:row}
 .sl-compact.sl-stack nav.top{display:none}
@@ -55,12 +55,6 @@ nav.top{flex:none}
 .lp-rim{fill:var(--rim)}
 .lp-core{display:var(--core)}
 .lp-groove{display:var(--groove)}
-/* The linear logo (`include.linear`, `logo-linear.html`'s type, in its light colours), in place of the
-   stacked one at phone width, where the menu stacks under it. */
-.brand .lin{display:none;font-family:var(--f-ui);font-weight:400;font-stretch:88%;font-variation-settings:"opsz" 52.64;font-size:30px;line-height:1.2;letter-spacing:-.015em;color:#141a22;white-space:nowrap}
-.brand .lin .sight{color:#cf222e}
-.brand .lin svg{width:.935em;height:.935em;vertical-align:-.211em;margin-left:.267em}
-@media (max-width:506px){.brand.lin-narrow>svg{display:none}.brand.lin-narrow .lin{display:inline-block}.sl-compact .brand.lin-narrow .lin{font-size:24px}}
 nav.top ul{list-style:none;margin:0;padding:0;display:flex;gap:4px 22px;font-size:17px;white-space:nowrap}
 nav.top a{color:var(--muted);text-decoration:none}
 nav.top a:hover{color:var(--ink);text-decoration:underline}
@@ -86,7 +80,8 @@ footer .prov-stop{position:absolute;width:1px;height:1px;margin:-1px;overflow:hi
    typed address, a bookmark or a link from elsewhere sends no referrer of the site, and plays it. One
    of those below, picked at random (`data-logo`); no address picks one. Each plays large in the middle
    of the window (`.splash`) and ends on the 8b mark, which then shrinks onto the header's (`--fx`,
-   `--fy`, `--fs`, measured by the script), where the header's own logo takes over at `--land` and the
+   `--fy`, `--fs`, measured by the script), "sight" and the record (`.ln`) moving up beside "Sleeve" on
+   the way, as in the app (`sl-line`), so it lands as the one-line logo, where the header's own logo takes over at `--land` and the
    rest of the page fades in. Scrolling, a key or a click ends the intro at once. On the product page,
    activating the logo (a click, Enter or Space) plays one again where the page is (`replay()`); on
    the documentation pages the logo is a link to the product page.
@@ -128,6 +123,13 @@ footer .prov-stop{position:absolute;width:1px;height:1px;margin:-1px;overflow:hi
 .sl-intro[data-logo="g"] .sp-g,.sl-intro[data-logo="h"] .sp-h,.sl-intro[data-logo="i"] .sp-i{display:block;animation:tl-in 700ms ease-out both,sl-gone 1ms var(--land) forwards}
 .sl-intro[data-logo="r1"] .sp-r1,.sl-intro[data-logo="r2"] .sp-r2{display:block;animation:sl-gone 1ms var(--land) forwards}
 .splash .fly{width:var(--sb);height:var(--sbh);transform-origin:0 0;animation:sl-fly 650ms cubic-bezier(.3,0,.2,1) var(--fly) both}
+/* "sight" and the record move onto the line as the app's do: each part's place goes straight from the
+   splash to the header in the window, so in the shrinking splash's units the move is the flight's
+   progress (`--e`, eased as the flight) times `--fs` over the splash's scale at that moment. */
+@property --e{syntax:"<number>";inherits:false;initial-value:0}
+.splash .ln{animation:sl-line 650ms cubic-bezier(.3,0,.2,1) var(--fly) both;
+  transform:translate(calc(63.84px * var(--e) * var(--fs) / (1 + (var(--fs) - 1) * var(--e))),
+                      calc(-33.84px * var(--e) * var(--fs) / (1 + (var(--fs) - 1) * var(--e))))}
 .splash .spin{width:100%;height:100%;animation:tl-spin 2000ms cubic-bezier(.45,0,.55,1) 900ms both}
 .splash svg{display:block;width:100%;height:100%;overflow:visible}
 /* The record's path is about the dot, the origin of the words' units. */
@@ -158,6 +160,7 @@ footer .prov-stop{position:absolute;width:1px;height:1px;margin:-1px;overflow:hi
   .brand.play .lp-disc{animation:lg-turn 900ms cubic-bezier(.45,0,.55,1)}
 }
 @keyframes sl-fly{to{transform:translate(var(--fx),var(--fy)) scale(var(--fs))}}
+@keyframes sl-line{to{--e:1}}
 @keyframes sl-gone{from,to{visibility:hidden;opacity:0}}
 @keyframes sl-hold{from,to{opacity:0}}
 @keyframes sl-arrive{from{opacity:0}}
