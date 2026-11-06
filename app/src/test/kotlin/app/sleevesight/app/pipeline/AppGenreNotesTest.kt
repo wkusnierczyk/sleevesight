@@ -33,6 +33,7 @@ import app.sleevesight.core.sources.WebSearchOutcome
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.TestScope
@@ -531,7 +532,7 @@ class AppGenreNotesTest {
             settings.value = on.copy(showGenres = false)
             val notes = notes()
             val tracks = MutableStateFlow<TrackState?>(playing("rock"))
-            val following = launch { notes.lookups.fetchAhead(tracks) }
+            val following = launch { notes.lookups.fetchAhead(tracks, flowOf(true)) }
             advanceUntilIdle()
             assertEquals(emptyList<String>(), articles.asked)
             settings.value = on
