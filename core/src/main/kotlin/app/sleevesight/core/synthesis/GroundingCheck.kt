@@ -184,10 +184,19 @@ object GroundingCheck {
      * (`U.S.`, `R.E.M.`, `J.`) or one of [ABBREVIATIONS] (`Dr.`, `St.`, `feat.`, `e.g.`, `i.e.`;
      * #574). The simulator split `the U.S. Billboard Hot 100` into two sentences, the first of them
      * uncited. Initials before a word that usually opens a sentence ([SENTENCE_OPENERS]: `... a hit
-     * in the U.S. It ...`) still end one. The cost: a sentence that ends in initials before another
-     * word (`... toured the U.S. Billboard named ...`), or in one of [ABBREVIATIONS], is joined to
-     * the next, and if it was uncited, the next one's citation hides that. `etc.`, which ends
-     * sentences as often as not, is no abbreviation here: before a capital it ends one.
+     * in the U.S. It ...`) still end one, and so do `Jr.` and `Sr.` ([NAME_SUFFIXES]). One of
+     * [NUMBER_ABBREVIATIONS] (`Vol.`, `No.`, `Pt.`, `Op.`) ends none before a numeral, a Roman one
+     * (`Pachamantra Vol. I`) or one in words (`the No. One spot`), and ends one before anything
+     * else (`... the second vol. It ...`); before a digit no stop ends a sentence anyway (`Op. 27
+     * No. 2`). The cost: a sentence that ends in initials before another word (`... toured the
+     * U.S. Billboard named ...`), in one of [ABBREVIATIONS], or in `no.` before the pronoun `I` or
+     * a number in words (`... said no. One year later ...`), is joined to the next, and if it was
+     * uncited, the next one's citation hides that. `etc.`, which ends sentences as often as not, is
+     * no abbreviation here: before a capital it ends one.
+     *
+     * Nor does a stop end a sentence when all that would follow it is a Roman numeral and its
+     * citations (`... Mk. I [W1].`, #953): a numeral alone is no sentence, and split off it would
+     * take the citations from the words they back.
      *
      * Another (#423): a `.`, `!` or `?` followed by closing quotes ([CLOSING_QUOTES]: `"`, `”`,
      * `'`, `’`) and then citations ends a sentence, as it does with the citations straight after it
@@ -234,7 +243,9 @@ object GroundingCheck {
             }
             val listed = lineBreak && MarkdownMarks.isLineMark(t, end)
             val opens = listed || MarkdownMarks.opens(t, end, OPENERS)
-            if (opens && endsSentence(t, i, listed)) {
+            val ends = opens && endsSentence(t, i, listed)
+            // A Roman numeral and its citations alone are no sentence (#953).
+            if (ends && (listed || !NUMERAL_CITED.matches(t.substring(end)))) {
                 sentences += (start until i) to startsLine
                 start = end
                 startsLine = lineBreak
@@ -327,8 +338,9 @@ object GroundingCheck {
 
     /**
      * Whether the text just before [end] is an abbreviation and its `.`: the word before [end],
-     * after any opening `(`, `"` or `“`, is one of [ABBREVIATIONS], or a run of capital initials
-     * not followed by one of [SENTENCE_OPENERS], which may be in emphasis marks (#574).
+     * after any opening `(`, `"` or `“`, is one of [ABBREVIATIONS], one of [NUMBER_ABBREVIATIONS]
+     * followed by a numeral, or a run of capital initials or one of [NAME_SUFFIXES] not followed by
+     * one of [SENTENCE_OPENERS]; the next word may be in emphasis marks (#574, #953).
      */
     private fun endsAbbreviation(
         t: String,
@@ -339,15 +351,14 @@ object GroundingCheck {
         while (start > 0 && !isJsWhitespace(t[start - 1])) start--
         while (start < end && t[start] in WORD_OPENERS) start++
         val word = t.substring(start, end)
-        // The next word, after the whitespace and any opening `(`, `"`, `“` or emphasis marks.
-        var next = end
-        while (next < t.length && (isJsWhitespace(t[next]) || t[next] in NEXT_WORD_OPENERS)) next++
-        var stop = next
-        while (stop < t.length && !isJsWhitespace(t[stop])) stop++
+        val bare = word.dropLast(1)
+        val nextWord = nextWord(t, end)
         // A curly apostrophe reads as a straight one: `It’s` opens a sentence as `It's` does.
-        val nextWord = t.substring(next, stop).trimEnd { it in WORD_CLOSERS }
         val opens = nextWord.replace('’', '\'') in SENTENCE_OPENERS
-        return word.dropLast(1) in ABBREVIATIONS || (INITIALS.matches(word) && !opens)
+        val numeral = nextWord.trimEnd { it in ".!?" }.let { ROMAN.matches(it) || it in NUMBER_WORDS }
+        return bare in ABBREVIATIONS ||
+            (bare in NUMBER_ABBREVIATIONS && numeral) ||
+            ((INITIALS.matches(word) || bare in NAME_SUFFIXES) && !opens)
     }
 
     /**
@@ -403,6 +414,24 @@ object GroundingCheck {
     private val ABBREVIATIONS: Set<String> =
         setOf("Dr", "Mr", "Mrs", "Ms", "St", "feat", "Feat", "ft", "Ft", "vs", "Vs", "e.g", "E.g", "i.e", "I.e")
 
+    /**
+     * Words that end in `.` before a number in music text, a volume's, a catalogue's, a part's or
+     * an opus's (`Vol. I`, `No. One`, `Pt. II`; #953), and that may also end a sentence: they end
+     * none only before a numeral ([endsAbbreviation]). Matched with their case, without their `.`.
+     */
+    private val NUMBER_ABBREVIATIONS: Set<String> =
+        setOf("Vol", "vol", "Vols", "vols", "No", "no", "Nos", "nos", "Pt", "pt", "Op", "op")
+
+    /**
+     * Words that end in `.` after a name (`Hank Williams Jr. Band`) and end a sentence as often as
+     * initials do: like initials, they end one only before one of [SENTENCE_OPENERS] (#953).
+     */
+    private val NAME_SUFFIXES: Set<String> = setOf("Jr", "Sr")
+
+    /** Numbers in words after one of [NUMBER_ABBREVIATIONS], with a capital, as titles write them. */
+    private val NUMBER_WORDS: Set<String> =
+        setOf("One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten")
+
     /** Where the citation (`[W1]`, `[MB12]`, `[AI]`) that ends just before [end] starts, or null. */
     private fun citationBefore(
         t: String,
@@ -420,12 +449,21 @@ object GroundingCheck {
     }
 
     private const val OPENERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ\"“("
-    private const val WORD_OPENERS = "\"“("
     private const val CLOSING_QUOTES = "\"”'’"
     private const val CLOSING_MARKS = CLOSING_QUOTES + MarkdownMarks.EMPHASIS
-    private const val NEXT_WORD_OPENERS = WORD_OPENERS + MarkdownMarks.EMPHASIS
-    private const val WORD_CLOSERS = ",;:" + MarkdownMarks.EMPHASIS
     private val INITIALS = Regex("(?:[A-Z]\\.)+")
+
+    // A Roman numeral from I to XXXIX, as volumes and parts are numbered.
+    private const val ROMAN_PATTERN = "(?=[IVX])X{0,3}(?:IX|IV|V?I{0,3})"
+    private val ROMAN = Regex(ROMAN_PATTERN)
+
+    // The rest of a paragraph when all of it up to the next sentence's end is a Roman numeral and
+    // its citations, a stop before them, after them or both, or none at the paragraph's end
+    // ([sentenceRanges], #953).
+    private const val CITES = "(?:$JS_WHITESPACE_CLASS*\\[[A-Z]{1,2}[0-9]*\\])+"
+    private const val REST = "(?:$JS_WHITESPACE_CLASS[\\s\\S]*)?"
+    private val NUMERAL_CITED =
+        Regex("$ROMAN_PATTERN(?:[.!?]?$CITES[.!?]$REST|[.!?]$CITES$REST|$CITES)")
     private val PARAGRAPH_BREAK = Regex("\\n$JS_WHITESPACE_CLASS*\\n")
     private val CITATION = Regex("\\[([A-Z]{1,2}[0-9]*)\\]")
 
@@ -464,3 +502,20 @@ internal fun sentenceSpans(t: String): List<IntRange> =
     }
 
 private val SPACES_AND_TABS = Regex("[ \\t]+")
+
+// The word after [end] in [t] ([GroundingCheck]'s abbreviations), past the whitespace and any
+// opening `(`, `"`, `“` or emphasis marks, without the punctuation and emphasis marks after it.
+private fun nextWord(
+    t: String,
+    end: Int,
+): String {
+    var next = end
+    while (next < t.length && (isJsWhitespace(t[next]) || t[next] in NEXT_WORD_OPENERS)) next++
+    var stop = next
+    while (stop < t.length && !isJsWhitespace(t[stop])) stop++
+    return t.substring(next, stop).trimEnd { it in WORD_CLOSERS }
+}
+
+private const val WORD_OPENERS = "\"“("
+private const val NEXT_WORD_OPENERS = WORD_OPENERS + MarkdownMarks.EMPHASIS
+private const val WORD_CLOSERS = ",;:" + MarkdownMarks.EMPHASIS
