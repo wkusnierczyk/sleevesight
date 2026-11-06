@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -159,12 +160,17 @@ internal fun openPlayerScreen(
     }
 }
 
-/** The art, square, or a placeholder; under it the playback position, when the player gives the length. */
+/**
+ * The art, square, or a placeholder; under it the playback position, when the player gives the length.
+ * With [turn], a tap turns the art over to show the album's tracklist on its back ([FlippingCover],
+ * #984); without (an ad's), it is the art alone.
+ */
 @Composable
 internal fun ArtAndProgress(
     art: Bitmap?,
     playback: PlaybackInfo,
     duration: Duration?,
+    turn: CoverTurn? = null,
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -177,22 +183,36 @@ internal fun ArtAndProgress(
                 .widthIn(max = ART_WIDTH)
                 .fillMaxWidth()
                 .aspectRatio(1f)
-                .clip(shape)
-        if (art != null) {
-            val image = remember(art) { art.asImageBitmap() }
-            Image(image, stringResource(R.string.home_art), square, contentScale = ContentScale.Crop)
+        if (turn == null) {
+            Art(art, square.clip(shape), stringResource(R.string.home_art))
         } else {
-            Box(square.background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
-                Icon(
-                    painterResource(R.drawable.ic_music_note),
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(64.dp),
-                )
-            }
+            // The cover that turns names itself, as the art or as the tracklist.
+            FlippingCover(square, shape, turn) { Art(art, Modifier.fillMaxSize(), description = null) }
         }
         if (duration != null && duration.isPositive()) {
             Progress(playback, duration, Modifier.widthIn(max = ART_WIDTH).fillMaxWidth())
+        }
+    }
+}
+
+// [art] in [modifier], cropped to it, read as [description]; or the placeholder, a note on the surface.
+@Composable
+private fun Art(
+    art: Bitmap?,
+    modifier: Modifier,
+    description: String?,
+) {
+    if (art != null) {
+        val image = remember(art) { art.asImageBitmap() }
+        Image(image, description, modifier, contentScale = ContentScale.Crop)
+    } else {
+        Box(modifier.background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
+            Icon(
+                painterResource(R.drawable.ic_music_note),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(64.dp),
+            )
         }
     }
 }
