@@ -146,7 +146,7 @@
     <!-- Reactive's choices, each described under its name in the choice dialog (#546). -->
     <string name="settings_write_every_change_detail">Writes automatically on every track change.</string>
     <string name="settings_write_when_skip_detail">Writes automatically only when you skip to a track, not when one follows another by itself.</string>
-    <string name="settings_write_never_detail">Only when you tap Write insight.</string>
+    <string name="settings_write_never_detail">Only when you tap Write insight, or Song, Artist or Album.</string>
     <string name="settings_crossfade">Crossfade</string>
     <string name="settings_crossfade_summary">The player’s crossfade, for telling your skips from natural ends under “On track skip (auto)”.</string>
     <string name="settings_crossfade_auto">Autodetect</string>
