@@ -106,27 +106,13 @@
     <string name="home_dates">Dates</string>
     <!-- The Dates button's action, as a screen reader names it ("Double-tap to show dates"). -->
     <string name="home_dates_show">show dates</string>
-    <!-- In the Dates panel, a date as precisely as it is known, in the sentences below ({when}): a day
-         (the day, the month's name, the year: "on 29 July 2014"), a month ("in July 2014"), a year
-         ("in 2014"). -->
-    <string name="home_dates_on_day">on %1$s %2$s %3$s</string>
-    <string name="home_dates_in_month">in %1$s %2$s</string>
+    <!-- In the Dates panel, a date as precisely as it is known, in the sentences below ({when}): the
+         words around it, the date itself written by the app in its language's own form: a day ("on 29
+         July 2014", the date "29 July 2014"), a month ("in July 2014", the date "July 2014"), a year
+         ("in 2014", the date "2014"). -->
+    <string name="home_dates_on_day">on %1$s</string>
+    <string name="home_dates_in_month">in %1$s</string>
     <string name="home_dates_in_year">in %1$s</string>
-    <!-- The months' names, January first, for the dates above. -->
-    <string-array name="home_dates_months">
-        <item>January</item>
-        <item>February</item>
-        <item>March</item>
-        <item>April</item>
-        <item>May</item>
-        <item>June</item>
-        <item>July</item>
-        <item>August</item>
-        <item>September</item>
-        <item>October</item>
-        <item>November</item>
-        <item>December</item>
-    </string-array>
     <!-- The album's release, of the album's name whose year the album line shows: "This album was
          released on 29 July 2014." The date as above. -->
     <string name="home_dates_album">This album was released %1$s.</string>

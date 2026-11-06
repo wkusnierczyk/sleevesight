@@ -433,6 +433,7 @@ The setting:
 - For the genre and sounds-like cards, the style shapes the tone and length of the text fields only.
 - The synthesis cache key includes a hash of the style the card actually used, so a changed style writes afresh rather than serving text in the old one.
 - The output language is a separate question: the grounding check's hedge detection is English-only.
+- Dates have one form (#957): *Dates*' sentences, the evidence lines and the replies. `DateWords` in `:core` writes a date at the precision its source gives: `EnglishDateWords`, portable, the app's English form ("17 October 2026", "October 2026", "2026") for the evidence lines and the prompts' examples; `JvmDateWords` (`jvmMain`), a language's own pattern for the skeletons `dMMMMy`, `MMMMy` and `y`, which the app takes from `DateFormat.getBestDateTimePattern` for British English, so the two agree. The style of each prompt whose reply is prose asks for that form with those examples (`InsightPrompt.DATE_RULE`). The reply is shown as the model wrote it. #290 brings the text's language.
 
 Free text is the user's own input to their own prompt, so it is not untrusted in the sense web snippets are; a style that asks for uncited claims still meets the contract after it and then the grounding check.
 

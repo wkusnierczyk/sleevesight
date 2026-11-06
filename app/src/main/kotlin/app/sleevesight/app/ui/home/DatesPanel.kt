@@ -1,9 +1,9 @@
 package app.sleevesight.app.ui.home
 
+import android.text.format.DateFormat
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import app.sleevesight.app.R
@@ -13,8 +13,11 @@ import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.app.ui.theme.linkedParts
 import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.platform.JvmDateWords
 import app.sleevesight.core.synthesis.SearchAnswer
 import app.sleevesight.core.synthesis.SearchKind
+import app.sleevesight.core.text.DateWhen
+import app.sleevesight.core.text.DateWords
 
 // The *Dates* panel under the album (#724): each date known about the album, the track and the song,
 // said in full.
@@ -153,19 +156,24 @@ internal fun dateText(sentence: DateSentence): AnnotatedString =
 
 /**
  * [date] as precisely as it is known ([DateWhen]): "on 29 July 2014" (the day without a leading
- * zero), "in July 2014", "in 2014"; as given when it has no year, which [homeDates] never gives.
+ * zero), "in July 2014", "in 2014"; as given when it has no year, which [homeDates] never gives. The
+ * date in the app's form ([PHONE_DATE_WORDS] in [DateWords.TEXT_LANGUAGE], #957), as the evidence
+ * lines write it and the prompts ask the AI to; the words around it from the resources.
  */
 @Composable
 internal fun whenText(date: String): String {
-    val months = stringArrayResource(R.array.home_dates_months)
-    return when (val known = DateWhen.of(date)) {
-        is DateWhen.Day ->
-            stringResource(R.string.home_dates_on_day, known.day.toString(), months[known.month - 1], known.year)
-        is DateWhen.Month -> stringResource(R.string.home_dates_in_month, months[known.month - 1], known.year)
-        is DateWhen.Year -> stringResource(R.string.home_dates_in_year, known.year)
-        null -> date
+    val known = DateWhen.of(date) ?: return date
+    val words = PHONE_DATE_WORDS.format(known, DateWords.TEXT_LANGUAGE)
+    return when (known) {
+        is DateWhen.Day -> stringResource(R.string.home_dates_on_day, words)
+        is DateWhen.Month -> stringResource(R.string.home_dates_in_month, words)
+        is DateWhen.Year -> stringResource(R.string.home_dates_in_year, words)
     }
 }
+
+/** Dates in words with the phone's own pattern for each locale and skeleton (#957). */
+internal val PHONE_DATE_WORDS: DateWords =
+    JvmDateWords { skeleton, locale -> DateFormat.getBestDateTimePattern(locale, skeleton) }
 
 /** The test tags of *Dates*' button and its panel (#724), the panel's heading and *Close* as [Panel] makes them. */
 const val DATES_CHIP_TAG: String = "dates-chip"

@@ -46,6 +46,7 @@ The evidence, the only facts you may use. Each line: its id, (source, what it is
 STYLE
 - Write 2 to 4 sentences.
 - Plain conversational English. No hype.
+- Write dates in the form 17 October 2026, October 2026 or 2026.
 
 RULES, which hold whatever the style says:
 - Write about the artist named in <subject> only: their background, career and work. Leave out lines about any other artist, and say nothing about the track playing.

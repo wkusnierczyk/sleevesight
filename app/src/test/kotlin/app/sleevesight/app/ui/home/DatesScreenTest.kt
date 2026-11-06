@@ -57,6 +57,8 @@ import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.sources.FirstRelease
 import app.sleevesight.core.sources.ReleaseDate
 import app.sleevesight.core.sources.Resolution
+import app.sleevesight.core.text.DateWords
+import app.sleevesight.core.text.EnglishDateWords
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -157,6 +159,26 @@ class DatesScreenTest {
             compose.onNodeWithText("This album was released in July 2014.").assertExists()
             compose.onNodeWithText("The song was originally recorded in 2014 by Someone.").assertExists()
         }
+
+    @Test
+    fun thePhonesPatternsWriteTheDatesAsCoreDoes() {
+        // The phone's patterns (`DateFormat.getBestDateTimePattern`) give the app's English form, the
+        // one the evidence lines and the prompts' examples have (#957), a year before 1000 and a day
+        // the month does not have included, and another language its own.
+        for (date in listOf("2014-07-29", "2014-07-09", "2014-07", "2014", "0965-03-25", "1974-02-30")) {
+            assertEquals(
+                date,
+                EnglishDateWords.format(date, DateWords.TEXT_LANGUAGE),
+                PHONE_DATE_WORDS.format(date, DateWords.TEXT_LANGUAGE),
+            )
+        }
+        assertEquals("29 lipca 2014", PHONE_DATE_WORDS.format("2014-07-29", "pl"))
+        assertEquals("lipiec 2014", PHONE_DATE_WORDS.format("2014-07", "pl"))
+        // Each precision with its own pattern: none left with another's endings.
+        assertEquals("2014(e)ko uztailaren 29(a)", PHONE_DATE_WORDS.format("2014-07-29", "eu"))
+        assertEquals("2014(e)ko uztaila", PHONE_DATE_WORDS.format("2014-07", "eu"))
+        assertEquals("2014", PHONE_DATE_WORDS.format("2014", "eu"))
+    }
 
     // A track with its dates known: Sundown, its album's release, and its first release on it.
     private fun dated(playing: TrackState = track()): TrackState =

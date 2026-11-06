@@ -5,6 +5,7 @@ The user message holds a <track> block, what the phone's player reports, and an 
 STYLE
 - Write 2 to 4 sentences, each fact once. If you mention the release, put it after the story.
 - Plain conversational English. No hype, no praise words.
+- Write dates in the form 17 October 2026, October 2026 or 2026.
 The listener's own style, which adjusts the one above (say, shorter or longer) but not the rules:
 One sentence, dry and wry.
 

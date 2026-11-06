@@ -2,6 +2,7 @@ package app.sleevesight.core.sources
 
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.normalizer.Edition
+import app.sleevesight.core.text.DateWhen
 
 /**
  * What entity resolution established about a track, which adapters verify their matches against
@@ -230,11 +231,11 @@ data class ReleaseDate(
             return of(album).ifEmpty { if (stripped != album.trim()) of(stripped) else emptyList() }
         }
 
-        /** The year [date] begins with (`1974` of `1974-03-25`), or null when it has none. */
-        fun yearIn(date: String): String? =
-            date.take(YEAR_LENGTH).takeIf { it.length == YEAR_LENGTH && it.all(Char::isDigit) }
-
-        private const val YEAR_LENGTH = 4
+        /**
+         * The year [date] begins with (`1974` of `1974-03-25`), or null when it has none, read as
+         * [DateWhen.of] reads it, so the album line's year and *Dates*' agree.
+         */
+        fun yearIn(date: String): String? = DateWhen.of(date)?.year
 
         // The earliest date first, an undated release after every dated one.
         private val EARLIEST: Comparator<ReleaseDate> =
