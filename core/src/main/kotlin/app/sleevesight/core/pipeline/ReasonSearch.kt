@@ -56,7 +56,7 @@ internal class ReasonQuestion(
 
     // The track's names, as its web search source's (the genre's label is what the pages must say).
     override val subjectNames: List<String>
-        get() = listOfNotNull(track.normalized.title, track.normalized.from) + track.normalized.artists
+        get() = track.normalized.subjectNames
 
     override fun once(pages: List<WebPage>): String {
         pages.forEach { numbered.putIfAbsent(it.url, it) }

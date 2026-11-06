@@ -145,6 +145,36 @@ class ExaPageSearchTest {
             assertEquals(WebSearchOutcome.Found(emptyList()), search(body))
         }
 
+    @Test
+    fun `with no names, a lyrics page whose passage is only its title stays, for its address`() =
+        runTest {
+            val genius = "https://genius.com/Gordon-lightfoot-sundown-lyrics"
+            val title = "Gordon Lightfoot – Sundown Lyrics | Genius Lyrics"
+            assertEquals(emptyList(), pagesIn(one(genius, title)))
+            assertEquals(listOf(genius), pagesIn(one(genius, title), subject = emptyList()).map { it.url })
+        }
+
+    @Test
+    fun `with no names, an artist's page named only in a part of its own still gives the artist's line`() =
+        runTest {
+            // The artist's insight's searches send none: `ArtistWebSearch.line` judges, then cleans.
+            val body =
+                ExaWebSearch.JSON.encodeToString(
+                    ExaSearchResponse(
+                        listOf(
+                            ExaResult(
+                                "https://folk-archive.example/1938",
+                                "Folk archive",
+                                listOf("Gordon Lightfoot", "Born in Orillia in 1938."),
+                            ),
+                        ),
+                    ),
+                )
+            val page = pagesIn(body, subject = emptyList()).single()
+            val artist = ExaArtistSearch(ReplayNetClient.ok("{}"), Secret("exa-key"), JvmAccentFolder)
+            assertEquals("Born in Orillia in 1938.", artist.line("Gordon Lightfoot", page))
+        }
+
     private companion object {
         const val BOILERPLATE = "web/exa-01-sundown-boilerplate.response.json"
     }

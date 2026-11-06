@@ -305,7 +305,10 @@ class AiSearches(
         return object : WebQuestion {
             override val knowledge: String get() = AiSearchPrompt.build(kind, facts, genres, dates())
             override val query: String get() = WebPrompt.query(kind, facts)
-            override val subjectNames: List<String> get() = facts.names
+
+            // None for the lyrics pages: a lyrics page whose passage is only its title would go, and its
+            // address is the answer (`AiSearchAnswers`: only a page found is given, #905's Genius page).
+            override val subjectNames: List<String> get() = if (kind == SearchKind.LYRICS) emptyList() else facts.names
 
             override fun once(pages: List<WebPage>): String = WebPrompt.once(kind, facts, pages, genres)
 
