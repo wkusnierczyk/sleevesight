@@ -5,7 +5,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import app.sleevesight.app.pipeline.ItemNotes
-import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.platform.JvmHasher
@@ -43,17 +42,11 @@ internal fun withAlbum(
         listOfNotNull(album, artist)
             .flatMap { it.lines }
             .filter { seen.add(Triple(it.source, it.scope, it.text)) }
+            // A language read from the line's script by the item's set is read again with the track's (#949).
             .map {
-                EvidenceDraft(
-                    it.source,
-                    it.scope,
-                    it.text,
-                    it.url,
-                    it.retrievedAt,
-                    it.aggregate,
-                    it.about,
-                    it.language,
-                )
+                it.draft().let { draft ->
+                    if (draft.scripted) draft.copy(language = null, scripted = false) else draft
+                }
             }
     if (evidence == null || more.isEmpty()) return SourcesLines(evidence)
     val shown = evidence.with(more, JvmHasher)

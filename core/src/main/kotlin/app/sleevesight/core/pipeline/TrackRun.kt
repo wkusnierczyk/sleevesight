@@ -374,7 +374,7 @@ internal class TrackRun(
                         it.source,
                     )
                 }
-        val evidence = EvidenceSet.of(drafts, parts.hasher)
+        val evidence = EvidenceSet.of(drafts, parts.hasher, state.value.knownLanguage())
         // The genres and how their later requests stand, in one update with the evidence (#772).
         update {
             it.copy(
