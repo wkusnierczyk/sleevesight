@@ -72,10 +72,10 @@ class KeyScreenTitleTest {
         area: IntArray? = null,
         matching: (Int, Int, Int) -> Boolean,
     ): IntArray {
-        val (x0, y0, x1, y1) = area ?: intArrayOf(0, 0, image.width - 1, image.height - 1)
+        val within = area ?: intArrayOf(0, 0, image.width - 1, image.height - 1)
         var bounds = intArrayOf(Int.MAX_VALUE, Int.MAX_VALUE, Int.MIN_VALUE, Int.MIN_VALUE)
-        for (y in y0..y1) {
-            for (x in x0..x1) {
+        for (y in within[1]..within[3]) {
+            for (x in within[0]..within[2]) {
                 val p = image.getPixel(x, y)
                 if (matching(p shr 16 and 0xFF, p shr 8 and 0xFF, p and 0xFF)) {
                     bounds =
