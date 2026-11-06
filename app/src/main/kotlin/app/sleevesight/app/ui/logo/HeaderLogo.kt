@@ -58,8 +58,9 @@ import kotlin.math.floor
  * (music playing, *Spin the logo while music plays* on), getting up to speed and coming to rest as a
  * turntable does ([recordMotion]); once the intro has ended, from where the intro landed it. The
  * record is drawn once, into a layer, in a box of its own just its size with a layer of its own,
- * and a step of the turn redraws only that box's layer, drawing the record's turned (#963): the
- * words are not drawn again, nor the record, and the screen redrawn is the record's square. In a
+ * and a step of the turn redraws only that box's layer, which draws the record's layer turned
+ * (#963): the words are not drawn again, nor the record, and the screen redrawn is the record's
+ * square. In a
  * debug build the bug in its place never turns: while the record would, it crawls ([bugCrawl]),
  * every few seconds up out of [crawlSpace] (the header's box, in the root's pixels; the logo's own
  * box without one), and back in from its bottom to its place, drawn only inside that box.
