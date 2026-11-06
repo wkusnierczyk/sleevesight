@@ -33,7 +33,7 @@ Sleevesight is an open-source Android app that reads what your music player is p
 ## How it works
 
 1. **Read.** A notification listener gives the app the player's media session: the title, artists, album and cover. Sleevesight never touches the audio, and never reads your notifications ([why it needs notification access](https://sleevesight.app/docs/faq/)).
-2. **Look up.** The title and artists are cleaned up and matched against the sources you switched on: MusicBrainz, Wikipedia and Wikidata, Last.fm, and the Exa web search. Matches that fail an identity check are never used.
+2. **Look up.** The title and artists are cleaned up and matched against the sources you switched on: MusicBrainz, Wikipedia and Wikidata, Last.fm, and the Exa web search. Matches that fail an identity check are never used. When one of the track's genres is Instrumental, LRCLIB, an open lyrics library, is asked with the track's length whether the song has lyrics.
 3. **Write.** The AI service you chose turns what the sources found into the insight, citing it line by line. It is told to add no facts of its own unless you allow it, and those it adds are then marked unverified.
 4. **Check.** The citations are checked in code: a sentence with no citation, or one citing evidence that does not exist, is flagged.
 5. **Report.** *Report a problem* sends the developer an insight that is wrong or offensive, from your own mail app, once you have seen what it holds.
@@ -45,7 +45,7 @@ Sleevesight is an open-source Android app that reads what your music player is p
 Every choice is a setting, with a reasoned default:
 
 - **Players:** Spotify by default; any player that reports music can be followed.
-- **Sources:** each one a switch; MusicBrainz and Wikipedia need no key, Last.fm and Exa your own. A track sung in a language other than English can also be looked up on Wikipedia and with Exa in that language, the insight saying which citations it translated (*Search in the track’s language*: *Off*, *If needed*, the default, or *Always*).
+- **Sources:** each one a switch; MusicBrainz, Wikipedia and LRCLIB need no key, Last.fm and Exa your own. A track sung in a language other than English can also be looked up on Wikipedia and with Exa in that language, the insight saying which citations it translated (*Search in the track’s language*: *Off*, *If needed*, the default, or *Always*).
 - **AI service:** Anthropic, OpenAI or Google, with your own key, model and reasoning effort.
 - **When it writes:** on every track change, only on a skip, or only when you tap *Write insight*; *Song*, *Artist* and *Album* write theirs as you open them.
 - **Layout:** what opens from Home (*Sources*, the genres, the song's, the artist's and the album's insights) in place or each on a page of its own; in place, whether *Sources* and the three insights start folded on each new track, unfolded, or as you left them.

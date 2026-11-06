@@ -120,6 +120,7 @@
     <string name="settings_source_musicbrainz">MusicBrainz</string>
     <string name="settings_source_wikipedia">Wikipedia and Wikidata</string>
     <string name="settings_source_lastfm">Last.fm</string>
+    <string name="settings_source_lrclib">LRCLIB</string>
     <string name="settings_engine_exa">Exa web search</string>
     <string name="settings_source_model">AI service knowledge</string>
     <!-- %1$s is settings_section_ai, a link to that section (#581). -->

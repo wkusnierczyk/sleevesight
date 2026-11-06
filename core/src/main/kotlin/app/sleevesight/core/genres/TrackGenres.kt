@@ -1,6 +1,7 @@
 package app.sleevesight.core.genres
 
 import app.sleevesight.core.language.Languages
+import app.sleevesight.core.lyrics.LibraryLyrics
 
 /**
  * What a genre label's tags were given to (#439): sources tag the track and its album as well as
@@ -81,22 +82,34 @@ sealed interface WeakEvidence {
 }
 
 /**
- * What MusicBrainz says of whether the track is sung (#996; `design/design.md`, *Genre labels*),
+ * What MusicBrainz, and LRCLIB (#997), say of whether the track is sung (#996; `design/design.md`, *Genre labels*),
  * against which its genre Instrumental ([TrackGenres.INSTRUMENTAL]) is weighed, from the recording's
  * lookup and its work's (`WorkLyrics`). [instrumental]: the recording marked instrumental, or only
  * `zxx` works; then Instrumental stands as tagged, whatever the rest says. Else, [lyrics] (lyrics
  * pages listed for its work, or found by *Find the lyrics*) drops it from every row; and its works'
  * [languages] (ISO 639-3, `zxx` left out) or the artists credited with vocals ([vocalists]) leave it
- * at most weak, on every row.
+ * at most weak, on every row. [library] is LRCLIB's answer (#997), when it was asked: lyrics drop
+ * Instrumental as lyrics links do, and its instrumental mark keeps it as MusicBrainz's does
+ * ([marked]). Where the two disagree, the mark wins: a wrong match must not drop a real Instrumental.
  */
 data class Singing(
     val instrumental: Boolean = false,
     val lyrics: Boolean = false,
     val languages: List<String> = emptyList(),
     val vocalists: List<String> = emptyList(),
+    val library: LibraryLyrics? = null,
 ) {
-    /** Whether Instrumental is dropped from every row: lyrics found, the recording not marked instrumental. */
-    val dropsInstrumental: Boolean get() = lyrics && !instrumental
+    /**
+     * Whether the track is marked instrumental: by MusicBrainz ([instrumental]) or by LRCLIB
+     * ([library], #997). Instrumental then stands as tagged, whatever the rest says.
+     */
+    val marked: Boolean get() = instrumental || library == LibraryLyrics.INSTRUMENTAL
+
+    /**
+     * Whether Instrumental is dropped from every row: lyrics found ([lyrics], or LRCLIB's, #997), the
+     * track not [marked] instrumental.
+     */
+    val dropsInstrumental: Boolean get() = (lyrics || library == LibraryLyrics.LYRICS) && !marked
 
     companion object {
         /** Nothing known: Instrumental stands as tagged. */
@@ -209,9 +222,9 @@ data class TrackGenres(
      * credits with vocals on the recording; else a language MusicBrainz gives its work; else, placed
      * on an artist's or the album's row, a featured artist: with several credited, one ([credited],
      * other than the row's own) whose tags, from any source, do not include Instrumental, or who has
-     * none. Null for any other genre, with none of them, or with the recording marked instrumental
-     * ([Singing.instrumental]), where Instrumental stands as tagged. Lyrics found drop it instead
-     * ([Singing.dropsInstrumental], [combineGenres]).
+     * none. Null for any other genre, with none of them, or with the track marked instrumental
+     * ([Singing.marked]: by MusicBrainz, or by LRCLIB, #997), where Instrumental stands as tagged.
+     * Lyrics found drop it instead ([Singing.dropsInstrumental], [combineGenres]).
      */
     private fun signOfVocals(placed: PlacedLabel): WeakEvidence.SignOfVocals? =
         signOfVocals(placed.label.genre.identity, placed.row)
@@ -228,7 +241,7 @@ data class TrackGenres(
         identity: String,
         row: GenreRow?,
     ): WeakEvidence.SignOfVocals? {
-        val weighed = identity == INSTRUMENTAL && !singing.instrumental
+        val weighed = identity == INSTRUMENTAL && !singing.marked
         val vocalist = singing.vocalists.firstOrNull()
         val language = singing.languages.firstOrNull()
         return when {
@@ -254,10 +267,11 @@ data class TrackGenres(
     /**
      * These genres with lyrics found for the track by *Find the lyrics* (#996): Instrumental dropped
      * from every row, as for MusicBrainz's lyrics links ([Singing.dropsInstrumental]), a row left
-     * with no label dropped too; unchanged with the recording marked instrumental.
+     * with no label dropped too; unchanged with the track marked instrumental ([Singing.marked]), or
+     * its lyrics known already.
      */
     fun withLyricsFound(): TrackGenres {
-        if (singing.instrumental || singing.lyrics) return this
+        if (singing.marked || singing.dropsInstrumental) return this
         val sung = singing.copy(lyrics = true)
         // Combined again without it, so a label it kept out of a full row takes its room; genres built
         // without the sources' labels (previews, tests) lose it from their rows alone.

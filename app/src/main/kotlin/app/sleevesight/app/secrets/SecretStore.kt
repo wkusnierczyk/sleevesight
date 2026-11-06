@@ -79,6 +79,7 @@ enum class SecretId(
                 SourceSwitch.LASTFM -> LASTFM
                 SourceSwitch.MUSICBRAINZ,
                 SourceSwitch.WIKIPEDIA,
+                SourceSwitch.LRCLIB,
                 SourceSwitch.DISCOGS,
                 SourceSwitch.WEB,
                 SourceSwitch.MODEL,

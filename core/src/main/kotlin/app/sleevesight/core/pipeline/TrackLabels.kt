@@ -28,7 +28,8 @@ import kotlin.coroutines.cancellation.CancellationException
  * recording labels, from the tags its resolution brought. After the evidence is assembled, never
  * part of it, so the insight neither waits for them nor sees them, come the rest ([addLater]):
  * MusicBrainz's artist labels, from the tags of the artists its result names ([musicBrainz]), and
- * Last.fm's track and album labels ([lastFm], with the user's key).
+ * Last.fm's track and album labels ([lastFm], with the user's key). Their Instrumental is weighed
+ * with LRCLIB's answer too, once known ([library], #997).
  */
 @Suppress("LongParameterList") // The label sources, the run's settings and key, where it reports, and what it keeps.
 internal class TrackLabels(
@@ -40,6 +41,7 @@ internal class TrackLabels(
     private val fold: (String) -> String,
     kept: LaterKept? = null,
     private val asking: Set<SourceId>? = null,
+    private val library: LibrarySign? = null,
 ) {
     // The sources all of whose requests the run before answered: only those a *Retry* may keep.
     private val keptAnswered: Set<LabelSource> = kept?.answered.orEmpty()
@@ -72,14 +74,14 @@ internal class TrackLabels(
                 credited(given + landed[source].orEmpty(), current.normalized.artists)
             },
             current.normalized.artists,
-            singing(current.done(SourceId.MUSICBRAINZ)?.lyrics),
+            singing(current.done(SourceId.MUSICBRAINZ)?.lyrics).copy(library = library?.answer),
         )
     }
 
     // What MusicBrainz's [lyrics] say of whether the track is sung (#996): marked instrumental (or only
     // `zxx` works, as the *Lyrics* panel reads it, `instrumental`); lyrics links listed; the works'
     // languages but `zxx` (and `und`, undetermined, which says nothing of words); those credited with
-    // vocals. Nothing while MusicBrainz has not answered with the song.
+    // vocals. Nothing while MusicBrainz has not answered with the song; LRCLIB's answer is added to it.
     private fun singing(lyrics: WorkLyrics?): Singing =
         lyrics?.let {
             Singing(
@@ -108,12 +110,14 @@ internal class TrackLabels(
     /**
      * What a *Retry* keeps of the run before's requests after the evidence (#772), for the sources it
      * does not ask again: the labels they gave ([found]), how they stood ([states]), and the sources
-     * all of whose requests answered ([answered]), the only ones it keeps.
+     * all of whose requests answered ([answered]), the only ones it keeps; and whether LRCLIB could not
+     * be reached ([libraryFailed], #997).
      */
     class LaterKept(
         val found: Map<LabelSource, List<GenreLabel>>,
         val states: Map<LabelSource, LaterLabels>,
         val answered: Set<LabelSource>,
+        val libraryFailed: Boolean = false,
     )
 
     /** A request after the evidence: [source]'s, which [ask] makes. */
@@ -151,8 +155,14 @@ internal class TrackLabels(
     /** The labels the requests after the evidence gave, kept ones included ([TrackState.laterFound]). */
     val found: Map<LabelSource, List<GenreLabel>> get() = later.value
 
-    /** The sources whose requests after the evidence failed, kept ones included ([RunControl.labelsFailed]). */
-    val failedSources: Set<SourceId> get() = failed.value.map { it.source }.toSet()
+    /**
+     * The sources whose requests after the evidence failed, kept ones included ([RunControl.labelsFailed]),
+     * and LRCLIB when it could not be reached (#997).
+     */
+    val failedSources: Set<SourceId>
+        get() =
+            failed.value.map { it.source }.toSet() +
+                setOfNotNull(SourceId.LRCLIB.takeIf { library?.failed == true })
 
     /**
      * The labels that come after the evidence, for [current], counted as asked for from now (#772,

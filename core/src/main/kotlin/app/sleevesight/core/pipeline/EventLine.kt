@@ -1,6 +1,7 @@
 package app.sleevesight.core.pipeline
 
 import app.sleevesight.core.model.Outcome
+import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.model.outcomeKey
 import app.sleevesight.core.synthesis.SearchKind
 import kotlin.time.Duration
@@ -26,6 +27,9 @@ object EventLine {
                 )}, ${e.evidence} cited, " +
                     ms(e.latency) + if (e.cached) ", cache hit" else ""
             is PipelineEvent.GatherCut -> cut(e, ms(e.after))
+            is PipelineEvent.LibraryAnswered ->
+                "lyrics     ${e.key}: ${SourceId.LRCLIB.tag} ${e.answer.name.lowercase()}" +
+                    if (e.cached) ", cache hit" else ""
             is PipelineEvent.SourceFailed -> "failed     ${e.key}: ${e.source.tag} ${e.reason}"
             is PipelineEvent.NotCached -> "not cached ${e.key}: ${e.source.tag}, ${e.reason}"
             is PipelineEvent.CacheFailed -> "cache      ${e.key}: ${e.operation} failed, ${e.reason}"

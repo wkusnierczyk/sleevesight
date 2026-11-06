@@ -74,6 +74,8 @@
     <string name="settings_source_musicbrainz_summary">An open music encyclopedia: recordings, releases, credits and release dates.</string>
     <string name="settings_source_wikipedia_summary">Articles on songs, albums and artists, and the facts behind them.</string>
     <string name="settings_source_lastfm_summary">Listeners’ tags and artist biographies.</string>
+    <!-- LRCLIB (#997): asked only when one of the track's genres is Instrumental. -->
+    <string name="settings_source_lrclib_summary">An open lyrics library: whether a song has lyrics, to tell sung tracks from instrumental ones.</string>
     <string name="settings_engine_exa_summary">Searches the web for articles about the track.</string>
     <!-- Search in the track's language (#902): after Exa web search, a button group Off | If needed |
          Always, with what the chosen one does under it. -->

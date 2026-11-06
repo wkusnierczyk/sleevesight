@@ -325,6 +325,7 @@ class Report(
                 SourceId.WIKIPEDIA -> "Wikipedia"
                 SourceId.WIKIDATA -> "Wikidata"
                 SourceId.LASTFM -> "Last.fm"
+                SourceId.LRCLIB -> "LRCLIB"
                 SourceId.DISCOGS -> "Discogs"
                 SourceId.WEB -> "Web search"
                 SourceId.MODEL -> "Model"
@@ -423,6 +424,9 @@ private class TrackSection(
             evidence()
             appendLine()
             appendLine("Genre labels: ${labels(state.genres)}.")
+            // LRCLIB's answer, when a genre was Instrumental (#997).
+            state.genres.singing.library
+                ?.let { appendLine("LRCLIB: ${it.name.lowercase()}.") }
             appendLine()
             insight()
         }

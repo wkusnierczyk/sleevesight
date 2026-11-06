@@ -22,7 +22,10 @@ class NetConfig(
     val hosts: Map<String, HostPolicy> = hosts.mapKeys { normalizeHost(it.key) }
 
     /** In the form MusicBrainz asks for: application, version, and a contact in parentheses. */
-    val userAgent: String get() = "Sleevesight/$appVersion ( $CONTACT )"
+    val userAgent: String get() = userAgent(null)
+
+    /** The User-Agent for a host under [policy]: [userAgent], with the policy's own contact if it names one. */
+    fun userAgent(policy: HostPolicy?): String = "Sleevesight/$appVersion ( ${policy?.contact ?: CONTACT} )"
 
     /** The configured domain [host] belongs to (the longest match), or null if it has no limit. */
     fun domainFor(host: String): String? {
@@ -64,11 +67,18 @@ class NetConfig(
  * also when the account is out of credit or over its spending limit, which no retry mends, and says
  * which in the body. Its 429 is then passed on as a response, body and headers, for the caller to
  * read, and is not retried; without the flag a 429 is retried and then [NetError.RateLimited].
+ *
+ * [contact] replaces [NetConfig.CONTACT] in the User-Agent sent to the host, for one that asks for a
+ * homepage (LRCLIB, #997). [retryJitter] adds a random wait of up to it to the wait before retrying a
+ * 429 (its `Retry-After`, or the backoff), for a host that asks clients for jitter (LRCLIB), so
+ * clients refused together do not come back together.
  */
 data class HostPolicy(
     val minInterval: Duration,
     val rateLimitedOn503: Boolean = false,
     val passOn429: Boolean = false,
+    val contact: String? = null,
+    val retryJitter: Duration = Duration.ZERO,
 )
 
 /**

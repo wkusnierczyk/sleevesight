@@ -49,6 +49,8 @@ import kotlin.time.Instant
  * @property searchingInLanguage while the run's search in the track's language (#902) waits for its
  *   grant, decides the language or looks up in it: the track's sources are not all landed until it
  *   ends ([gathered]).
+ * @property libraryUnreachable whether LRCLIB, asked whether the track has lyrics (#997, [LibrarySign]),
+ *   could not be reached: *Retry* may ask it again. Its answer is in [genres] (`Singing.library`).
  */
 data class TrackState(
     val nowPlaying: NowPlaying,
@@ -65,6 +67,7 @@ data class TrackState(
     val writesWith: WrittenBy? = null,
     val inLanguage: InLanguageState? = null,
     val searchingInLanguage: Boolean = false,
+    val libraryUnreachable: Boolean = false,
 ) {
     /**
      * Whether every source has landed, those searched in the track's language too (#902), and the

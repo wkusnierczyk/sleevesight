@@ -4,6 +4,7 @@ import app.sleevesight.core.ai.ModelNames
 import app.sleevesight.core.genres.GenreDefinitions
 import app.sleevesight.core.genres.GenreLabel
 import app.sleevesight.core.genres.GenreVocabulary
+import app.sleevesight.core.lyrics.LibraryLyrics
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.AiOutcome
 import app.sleevesight.core.pipeline.AiQuestion
@@ -14,6 +15,8 @@ import app.sleevesight.core.pipeline.GenreListState
 import app.sleevesight.core.pipeline.GenreLists
 import app.sleevesight.core.pipeline.GenreReasons
 import app.sleevesight.core.pipeline.InsightState
+import app.sleevesight.core.pipeline.LibraryAnswer
+import app.sleevesight.core.pipeline.LibraryLookup
 import app.sleevesight.core.pipeline.PipelineEvent
 import app.sleevesight.core.pipeline.PipelineParts
 import app.sleevesight.core.pipeline.QuestionCost
@@ -123,6 +126,13 @@ interface GenreNotes : DefinitionFeed {
      * not under the settings now).
      */
     fun aiGenres(track: TrackState): Flow<AiGenreList?> = flowOf(null)
+
+    /**
+     * LRCLIB's answer for [track] (#997), for an Instrumental the AI's genre list added, which the
+     * run never saw: kept or asked once, when collected, with LRCLIB on under *Sources*; null while
+     * none is known. The panel collects it only when its genres call for it (`wantsLibrary`).
+     */
+    fun libraryLyrics(track: TrackState): Flow<LibraryLyrics?> = flowOf(null)
 
     /** [track]'s reason for [genre], as it changes. */
     fun reason(
@@ -282,6 +292,50 @@ class AppGenreNotes private constructor(
                         )
                     }?.let { AiGenreList(it.genres, modelName(it.model), it.sources) }
             }.distinctUntilChanged()
+
+    override fun libraryLyrics(track: TrackState): Flow<LibraryLyrics?> {
+        val key = libraryKey(track)
+        return combine(parts, settings) { made, now ->
+            made?.takeIf { it.lyricsLibrary != null && now?.isEnabled(SourceId.LRCLIB) == true }
+        }.distinctUntilChanged()
+            .onEach { made -> made?.let { askLibrary(it, track, key) } }
+            .combine(libraries) { made, known -> known[key]?.takeIf { made != null } }
+            .distinctUntilChanged()
+    }
+
+    // LRCLIB asked for [track] once (#997): its kept answer, else its own, shown unless a *Clear
+    // history* came since. A failure is not kept, so a later collection asks again.
+    private fun askLibrary(
+        made: PipelineParts,
+        track: TrackState,
+        key: String,
+    ) {
+        val library = made.lyricsLibrary ?: return
+        if (key in libraries.value || !libraryAsked.add(key)) return
+        scope.launch(mark()) {
+            val work = coroutineContext
+            try {
+                when (val answer = LibraryLookup(library, made.cache, events).ask(track.normalized, track.nowPlaying)) {
+                    is LibraryAnswer.Known -> {
+                        events(PipelineEvent.LibraryAnswered(track.normalized.lookupKey, answer.lyrics, answer.cached))
+                        publish(work) { libraries.update { it + (key to answer.lyrics) } }
+                    }
+                    is LibraryAnswer.Failed ->
+                        events(PipelineEvent.SourceFailed(track.normalized.lookupKey, SourceId.LRCLIB, answer.reason))
+                    null -> Unit
+                }
+            } finally {
+                libraryAsked.remove(key)
+            }
+        }
+    }
+
+    // LRCLIB's answers for the AI's Instrumental (#997), by track and length, and those being asked.
+    private val libraries = MutableStateFlow<Map<String, LibraryLyrics>>(emptyMap())
+    private val libraryAsked: MutableSet<String> = ConcurrentHashMap.newKeySet()
+
+    private fun libraryKey(track: TrackState): String =
+        "${track.normalized.lookupKey}|${track.nowPlaying.duration?.inWholeMilliseconds}"
 
     override fun reason(
         track: TrackState,
@@ -718,6 +772,7 @@ class AppGenreNotes private constructor(
             waiting.value = emptyMap()
             looked.clear()
             told.clear()
+            libraries.value = emptyMap()
         }
         lookups.forget()
     }

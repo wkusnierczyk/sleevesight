@@ -2,6 +2,7 @@ package app.sleevesight.core.pipeline
 
 import app.sleevesight.core.ai.ReasoningEffort
 import app.sleevesight.core.evidence.Hasher
+import app.sleevesight.core.lyrics.LibraryLyrics
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.sources.LanguageAdapter
@@ -78,6 +79,22 @@ interface PipelineCache {
         track: NormalizedTrack,
         duration: Duration?,
         code: String,
+    ) = Unit
+
+    /**
+     * LRCLIB's answer for [track] at [duration] (#997), as kept with the track's findings, so a
+     * replay asks it nothing again; null when none is kept. By default none.
+     */
+    suspend fun libraryLyrics(
+        track: NormalizedTrack,
+        duration: Duration?,
+    ): LibraryLyrics? = null
+
+    /** Keeps [answer], LRCLIB's for [track] at [duration] ([libraryLyrics]); by default nothing. */
+    suspend fun keepLibraryLyrics(
+        track: NormalizedTrack,
+        duration: Duration?,
+        answer: LibraryLyrics,
     ) = Unit
 
     /** The card written for [key], if kept. */

@@ -63,6 +63,7 @@ internal fun sourceName(source: SourceId): String =
             SourceId.WIKIPEDIA -> R.string.settings_source_wikipedia
             SourceId.WIKIDATA -> R.string.home_source_name_wikidata
             SourceId.LASTFM -> R.string.settings_source_lastfm
+            SourceId.LRCLIB -> R.string.settings_source_lrclib
             SourceId.DISCOGS -> R.string.home_source_name_discogs
             SourceId.WEB -> R.string.home_source_name_web
             SourceId.MODEL -> R.string.settings_source_model
