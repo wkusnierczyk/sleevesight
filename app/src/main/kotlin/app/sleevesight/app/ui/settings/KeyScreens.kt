@@ -179,7 +179,7 @@ internal fun KeyScreenTitle(
                 lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.Both),
                 fontFeatureSettings = "tnum",
             )
-        // The circle as wide as the number's size and a half again, as the page's.
+        // The circle wider than the number's size by STEP_CIRCLE_SCALE, as the page's.
         val side = with(LocalDensity.current) { (number.fontSize * STEP_CIRCLE_SCALE).toDp() }
         Box(
             modifier = Modifier.size(side).border(2.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
@@ -188,7 +188,7 @@ internal fun KeyScreenTitle(
             // Centred by its ink, not its text box: a digit's side bearings differ (Roboto's 1 sits
             // left of its box's middle), so the box's centre is not the glyph's (#1012).
             val digits = step.toString()
-            val ink = inkCentre(digits, number)
+            val ink = rememberInkCentre(digits, number)
             var shift by remember { mutableStateOf(Offset.Zero) }
             Text(
                 digits,
@@ -213,7 +213,7 @@ internal fun KeyScreenTitle(
  * outlines, which a text layout does not give (its paths are selection boxes).
  */
 @Composable
-private fun inkCentre(
+private fun rememberInkCentre(
     text: String,
     style: TextStyle,
 ): Offset {
@@ -229,7 +229,7 @@ private fun inkCentre(
     return remember(text, style, typeface, density) {
         val paint =
             Paint().apply {
-                this.typeface = typeface as Typeface
+                this.typeface = typeface as? Typeface ?: Typeface.DEFAULT
                 textSize = with(density) { style.fontSize.toPx() }
                 fontFeatureSettings = style.fontFeatureSettings
             }
