@@ -1,5 +1,8 @@
 package app.sleevesight.app.ui.settings
 
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RectF
@@ -60,6 +63,7 @@ import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.ui.logo.Busy
 import app.sleevesight.app.ui.theme.appendCode
 import app.sleevesight.app.ui.theme.codeStyle
+import kotlin.math.ceil
 
 // The key settings' own screens (#446): *Load keys* ([LoadKeysScreen]) and *Purge keys*
 // ([PurgeKeysScreen]), in place of their dialogs; their titles, *Load keys*' numbered (#765), their
@@ -209,8 +213,10 @@ internal fun KeyScreenTitle(
 }
 
 /**
- * The centre of [text]'s ink in [style], in pixels from the start of its baseline: the glyphs'
- * outlines, which a text layout does not give (its paths are selection boxes).
+ * The centre of [text]'s ink in [style], in pixels from the start of its baseline, from the glyphs'
+ * outlines, which a text layout does not give (its paths are selection boxes). Down, the middle of
+ * the outline; across, where the ink's weight balances, as the eye centres a glyph: a 1's flag
+ * reaches left of its stem, and centring the outline put the stem right of the middle (#1012).
  */
 @Composable
 private fun rememberInkCentre(
@@ -233,11 +239,42 @@ private fun rememberInkCentre(
                 textSize = with(density) { style.fontSize.toPx() }
                 fontFeatureSettings = style.fontFeatureSettings
             }
-        val bounds = RectF()
-        Path().apply { paint.getTextPath(text, 0, text.length, 0f, 0f, this) }.computeBounds(bounds, true)
-        Offset(bounds.centerX(), bounds.centerY())
+        val outline = Path().apply { paint.getTextPath(text, 0, text.length, 0f, 0f, this) }
+        val bounds = RectF().also { outline.computeBounds(it, true) }
+        Offset(bounds.left + balanceAcross(outline, bounds), bounds.centerY())
     }
 }
+
+/**
+ * Where [outline]'s ink balances across, in pixels from [bounds]' left: the mean of its filled
+ * columns, each weighed by its coverage.
+ */
+private fun balanceAcross(
+    outline: Path,
+    bounds: RectF,
+): Float {
+    val width = ceil(bounds.width()).toInt()
+    val height = ceil(bounds.height()).toInt()
+    if (width <= 0 || height <= 0) return bounds.width() / 2
+    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+    Canvas(bitmap).apply {
+        translate(-bounds.left, -bounds.top)
+        drawPath(outline, Paint().apply { isAntiAlias = true })
+    }
+    val pixels = IntArray(width * height).also { bitmap.getPixels(it, 0, width, 0, 0, width, height) }
+    bitmap.recycle()
+    var weight = 0.0
+    var moment = 0.0
+    pixels.forEachIndexed { i, pixel ->
+        val alpha = Color.alpha(pixel)
+        weight += alpha
+        moment += alpha * (i % width + PIXEL_MIDDLE)
+    }
+    return if (weight == 0.0) bounds.width() / 2 else (moment / weight).toFloat()
+}
+
+/** A pixel's middle, from its left edge, in pixels. */
+private const val PIXEL_MIDDLE = 0.5
 
 /** How large a step's number is, against its title ([KeyScreenTitle]). */
 private const val STEP_NUMBER_SCALE = 0.7f

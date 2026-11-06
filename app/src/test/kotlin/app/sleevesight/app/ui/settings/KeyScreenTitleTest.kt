@@ -32,7 +32,8 @@ import org.robolectric.annotation.GraphicsMode
 /**
  * A *Load keys* step's number sits in the middle of its circle (#1012), for each step, in either
  * *Font*, at the default font size and a large one: drawn in colours apart (circle red, number
- * blue, title black), the number's ink is centred in the circle's to within a pixel.
+ * blue, title black), the number's ink is centred in the circle's to within a pixel, across where
+ * its weight balances (a 1's stem, not the middle of stem and flag), down by its outline.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w411dp-h891dp-420dpi")
@@ -74,7 +75,7 @@ class KeyScreenTitleTest {
             val circle = ink(image) { r, g, b -> r > 200 && g < 120 && b < 120 }
             val number = ink(image, circle) { r, g, b -> b > 150 && r < 120 && g < 120 }
             val case = "step $step, $font, font scale $fontScale"
-            assertEquals("$case: horizontal centre", centre(circle[0], circle[2]), centre(number[0], number[2]), 1.0)
+            assertEquals("$case: horizontal centre", centre(circle[0], circle[2]), balanceAcross(image, number), 1.0)
             assertEquals("$case: vertical centre", centre(circle[1], circle[3]), centre(number[1], number[3]), 1.0)
         }
     }
@@ -98,6 +99,27 @@ class KeyScreenTitleTest {
         }
         check(bounds[0] <= bounds[2]) { "no matching ink" }
         return bounds
+    }
+
+    /**
+     * Where the number's blue ink within [area] balances across: each pixel's column weighed by how
+     * blue it is over the white (its blue less its red), which leaves out the red circle's.
+     */
+    private fun balanceAcross(
+        image: Bitmap,
+        area: IntArray,
+    ): Double {
+        var weight = 0.0
+        var moment = 0.0
+        for (y in area[1]..area[3]) {
+            for (x in area[0]..area[2]) {
+                val p = image.getPixel(x, y)
+                val blue = ((p and 0xFF) - (p shr 16 and 0xFF)).coerceAtLeast(0)
+                weight += blue
+                moment += blue * (x + 0.5)
+            }
+        }
+        return moment / weight - 0.5
     }
 
     private fun centre(
