@@ -32,6 +32,7 @@ import app.sleevesight.core.synthesis.GroundingCheck
 import app.sleevesight.core.synthesis.InsightReply
 import app.sleevesight.core.synthesis.ItemPrompt
 import app.sleevesight.core.synthesis.SelfRevision
+import app.sleevesight.core.text.DateForm
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Clock
 import kotlin.time.Instant
@@ -156,7 +157,8 @@ data class KeptItem(
  * nothing. Each state written comes with its time by [clock]; a reply kept is kept with the time it
  * is shown with (#643). Each kept under its own model: one written with another AI service, model or
  * effort is never served as [key]'s, but is found apart ([keptByOther], #911), for a row to show it
- * with *Rewrite insight* beside it, and a rewrite keeps both.
+ * with *Rewrite insight* beside it, and a rewrite keeps both. Each prompt asks for dates in the form
+ * [dates] gives as it is built (#957: the phone's, read anew for each write), which no key holds.
  */
 @Suppress(
     "LongParameterList", // Where items are written, kept, and gathered, and the time.
@@ -173,6 +175,7 @@ class ItemInsights(
     private val modelUnavailable: Boolean = false,
     private val artistWeb: ArtistWebLookup? = null,
     private val web: WebSearcher? = null,
+    private val dates: () -> DateForm = { DateForm.APP },
 ) {
     /**
      * The name [item] goes by on [track]'s row: the title the player gives, the primary artist, or
@@ -587,7 +590,7 @@ class ItemInsights(
                 ?: return null
         val subject = ItemPrompt.Subject(item.kind, searching.name)
         val line = { page: WebPage -> searching.lookup.pageLine(searching.query, page) }
-        val question = ArtistQuestion(subject, track, first.modelKnowledge, names, hasher, now(), line)
+        val question = ArtistQuestion(subject, track, first.modelKnowledge, names, hasher, now(), line, dates())
         val base = CompletionRequest(first.model, "", CompletionRequest.maxTokensFor(first.effort), first.effort)
         val questions = WebQuestions(searching.access, searching.engine)
         val reply =
@@ -942,7 +945,7 @@ class ItemInsights(
             return InsightState.NoEvidence.also { show(it, now()) }
         }
         val subject = ItemPrompt.Subject(item.kind, checkNotNull(name(item, track)))
-        val prompt = ItemPrompt.build(subject, track.nowPlaying, track.normalized, lines, key.modelKnowledge)
+        val prompt = ItemPrompt.build(subject, track.nowPlaying, track.normalized, lines, key.modelKnowledge, dates())
         val request = CompletionRequest(key.model, prompt, CompletionRequest.maxTokensFor(key.effort), key.effort)
         var billed: Usage? = null
         var calls = 0

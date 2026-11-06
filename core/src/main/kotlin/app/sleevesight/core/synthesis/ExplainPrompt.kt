@@ -2,6 +2,7 @@ package app.sleevesight.core.synthesis
 
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.sources.WebPage
+import app.sleevesight.core.text.DateForm
 
 /**
  * The prompts of *Explain the song* in the *Lyrics* panel (#908; `design/design.md`, *Search with
@@ -41,10 +42,10 @@ object ExplainPrompt {
     /**
      * The rules of the explanation: the insight's on citations and the evidence, in the app's ids;
      * its length; a page's reading attributed to it ([InsightPrompt.WEB_READING_RULE]); the lyrics
-     * ([LYRICS_RULE]); plain text; dates in the app's form ([InsightPrompt.DATE_RULE], #957); and `{}`
+     * ([LYRICS_RULE]); plain text; dates in [dates]' form ([InsightPrompt.dateRule], #957); and `{}`
      * when no page says what the song is about.
      */
-    val RULES: List<String> =
+    fun rules(dates: DateForm = DateForm.APP): List<String> =
         listOf(
             "- explanation: 2 to 4 short sentences on what the song is about: its subject, its story, what it " +
                 "was written about. Plain conversational English. No hype.",
@@ -56,7 +57,7 @@ object ExplainPrompt {
                 "version.",
             LYRICS_RULE,
             InsightPrompt.PLAIN_TEXT_RULE + " No links or web addresses.",
-            InsightPrompt.DATE_RULE,
+            InsightPrompt.dateRule(dates),
             "- If no page says what the song is about, reply {}.",
         )
 
@@ -80,29 +81,36 @@ object ExplainPrompt {
     fun knowledge(
         facts: SearchFacts,
         numbered: List<WebPage>,
-    ): String = once(facts, numbered)
+        dates: DateForm = DateForm.APP,
+    ): String = once(facts, numbered, dates)
 
-    /** *Once*'s prompt about [facts], with every page [numbered] so far after the track. */
+    /** *Once*'s prompt about [facts], with every page [numbered] so far after the track, its dates in [dates]' form. */
     fun once(
         facts: SearchFacts,
         numbered: List<WebPage>,
-    ): String = system(limit = null) + "\n\n" + user(facts, numbered)
+        dates: DateForm = DateForm.APP,
+    ): String = system(limit = null, dates) + "\n\n" + user(facts, numbered)
 
     /**
      * *Up to 3 times*' prompt about [facts]: the model searches up to [limit] times, the [numbered]
-     * pages (the track's own) given first.
+     * pages (the track's own) given first; its dates in [dates]' form.
      */
     fun agent(
         facts: SearchFacts,
         numbered: List<WebPage>,
         limit: Int,
-    ): String = system(limit) + "\n\n" + user(facts, numbered)
+        dates: DateForm = DateForm.APP,
+    ): String = system(limit, dates) + "\n\n" + user(facts, numbered)
 
     /**
      * The system part: what the model writes and from what, the data not instructions, JSON only in
-     * [SHAPE], and the [RULES]; with a [limit], how it searches, else that the pages are given.
+     * [SHAPE], and the [rules], dates in [dates]' form; with a [limit], how it searches, else that the
+     * pages are given.
      */
-    fun system(limit: Int?): String =
+    fun system(
+        limit: Int?,
+        dates: DateForm = DateForm.APP,
+    ): String =
         buildString {
             appendLine("You explain what one song is about for a music app, from web pages about it.")
             appendLine(
@@ -127,7 +135,7 @@ object ExplainPrompt {
             appendLine(SHAPE)
             appendLine()
             appendLine("RULES:")
-            append(RULES.joinToString("\n"))
+            append(rules(dates).joinToString("\n"))
         }
 
     // The track, fenced as data, the pages numbered so far, then the question.

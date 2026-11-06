@@ -4,6 +4,7 @@ import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.text.DateForm
 
 /**
  * The prompt for *Why is this …?* in a genre's panel (#523; `design/design.md`, *Appendix. Prompt
@@ -63,13 +64,13 @@ object GenreReasonPrompt {
      * Not raised for the rule on a line found in the track's language ([InsightPrompt.TRANSLATION_RULE],
      * #902), as `InsightPrompt.VERSION` was not: the lines' languages are in the evidence fingerprint,
      * part of every reason's key.
-     * Nor for the rule on dates ([InsightPrompt.DATE_RULE], #957), as `InsightPrompt.VERSION` was not.
+     * Nor for the rule on dates ([InsightPrompt.dateRule], #957), as `InsightPrompt.VERSION` was not.
      */
     const val VERSION: Int = 6
 
     /**
      * The built-in style: shorter than the insight's, since it answers one question. The system
-     * prompt follows it with the rule on dates ([InsightPrompt.DATE_RULE], #957).
+     * prompt follows it with the rule on dates ([InsightPrompt.dateRule], #957).
      */
     const val BUILT_IN_STYLE: String =
         "- Write 1 to 3 sentences.\n- Plain conversational English. No hype."
@@ -169,9 +170,12 @@ object GenreReasonPrompt {
      * The system prompt: the role, the data guard, the style, the rules and the reply line, the same
      * for every genre and track. With [allowModel] (the *Model's own knowledge* switch), the reason
      * may also come from the model's own knowledge where the evidence does not explain the label,
-     * its sentences cited `[AI]` (#695).
+     * its sentences cited `[AI]` (#695). Its dates in [dates]' form ([InsightPrompt.dateRule]).
      */
-    fun system(allowModel: Boolean): String =
+    fun system(
+        allowModel: Boolean,
+        dates: DateForm = DateForm.APP,
+    ): String =
         buildString {
             appendLine(role(allowModel))
             appendLine()
@@ -179,7 +183,7 @@ object GenreReasonPrompt {
             appendLine()
             appendLine("STYLE")
             appendLine(BUILT_IN_STYLE)
-            appendLine(InsightPrompt.DATE_RULE)
+            appendLine(InsightPrompt.dateRule(dates))
             appendLine()
             appendLine(InsightPrompt.CONTRACT_HEADING)
             appendLine(contract(allowModel))

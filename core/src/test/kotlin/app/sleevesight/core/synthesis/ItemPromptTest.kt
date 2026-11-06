@@ -2,9 +2,13 @@ package app.sleevesight.core.synthesis
 
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.platform.JvmAccentFolder
+import app.sleevesight.core.text.APP_DATE_RULE
+import app.sleevesight.core.text.US_DATES
+import app.sleevesight.core.text.US_DATE_RULE
 import app.sleevesight.fixtures.Fixtures
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /** The song's, the artist's and the album's prompt (#522): stored, so a change to it is a reviewed diff. */
@@ -24,14 +28,19 @@ class ItemPromptTest {
     }
 
     @Test
-    fun `each asks for dates in the app's form, with the style (#957)`() {
+    fun `each asks for dates in the form given, with the style (#957)`() {
         val playing = FixtureEvidence.nowPlaying(1)
         val normalized = normalizer.normalize(playing)
         for (kind in ItemPrompt.KINDS) {
-            val prompt =
-                ItemPrompt.build(ItemPrompt.Subject(kind, "Name"), playing, normalized, FixtureEvidence.of(1), false)
-            val style = prompt.substringAfter("\nSTYLE\n").substringBefore(InsightPrompt.CONTRACT_HEADING)
-            assertTrue(InsightPrompt.DATE_RULE in style, kind.key)
+            val subject = ItemPrompt.Subject(kind, "Name")
+            val style = { prompt: String ->
+                prompt.substringAfter("\nSTYLE\n").substringBefore(InsightPrompt.CONTRACT_HEADING)
+            }
+            val app = ItemPrompt.build(subject, playing, normalized, FixtureEvidence.of(1), false)
+            assertTrue(APP_DATE_RULE in style(app), kind.key)
+            val us = ItemPrompt.build(subject, playing, normalized, FixtureEvidence.of(1), false, US_DATES)
+            assertTrue(US_DATE_RULE in style(us), kind.key)
+            assertFalse(APP_DATE_RULE in us, kind.key)
         }
     }
 
