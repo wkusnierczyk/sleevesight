@@ -338,7 +338,13 @@ class ItemInsights(
         if (!SongListings.listingOnly(song.lines)) return ItemEvidence(song, matching(song.lines, shown))
         val artist = artistLines(all, track).mapTo(mutableSetOf()) { it.id }
         val set = all.without(hasher) { it.scope == Scope.ARTIST && it.id !in artist }
-        return ItemEvidence(set, matching(set.lines, shown), webDue = webDue, onlyListings = true)
+        // No line at all, not even the release: nothing to write from, and nothing for the plain sentence
+        // to be true of; no call, whatever is known of the artist.
+        return if (song.isEmpty()) {
+            ItemEvidence(song, emptyMap(), webDue = webDue)
+        } else {
+            ItemEvidence(set, matching(set.lines, shown), webDue = webDue, onlyListings = true)
+        }
     }
 
     // [track]'s song as its web search is asked for and kept by (#958), in its language when one is
@@ -697,9 +703,10 @@ class ItemInsights(
      * about the song are numbered after the track's own lines, and kept for the track
      * ([SongWebLookup.keep]); its evidence then is what they give ([songWith]), a card's key with it.
      * When a description was found, that evidence no longer has the artist's lines the model was given:
-     * a sentence citing one is taken out before the reply is read and kept
+     * a sentence citing one, and the plain sentence, are taken out before the reply is read and kept
      * ([withoutCiting]), with no further call. With nothing left, the write fails as for
      * an empty reply, no card is kept, the pages are, and *Retry* writes it from them, with no search.
+     * A complete reply with no search made keeps "found nothing" for the song, so no search stays due.
      */
     @Suppress("LongParameterList") // The insight, what it is about and from, and where its cost goes.
     suspend fun writeSearching(
@@ -795,7 +802,7 @@ class ItemInsights(
                 subject,
                 track,
                 first.modelKnowledge,
-                evidence.evidence,
+                evidence,
                 own,
                 hasher,
                 query.language?.name,
@@ -837,8 +844,7 @@ class ItemInsights(
         val lines = (found ?: asked.evidence).evidence
         // The lines the model was given that the evidence no longer has (#958: the artist's, once a
         // description was found): a sentence citing one goes, before the reply is read and kept.
-        val gone = asked.evidence.evidence.ids - lines.ids.toSet()
-        val text = withoutCiting(reply.text, gone.toSet())
+        val text = withoutGone(reply.text, asked.evidence, found ?: asked.evidence)
         // Written by [first]'s service, model and effort, from the lines found.
         val key =
             first.copy(
@@ -848,14 +854,34 @@ class ItemInsights(
         if (!gates.reserve(key)) return null
         val rewritten = asked.rewriting?.let { rewriteParts(it, key.writtenBy()) }.orEmpty()
         val read = outcome(reply.end, text, key, lines, null, rewritten)
-        val nothing = !searched && read is Reply.Read && read.kept && read.state == InsightState.NoEvidence
+        val nothing = !searched && foundNothing(asked.item, read)
         if (searched || nothing) attempt { searching.keep(drafts) }
-        // With "found nothing" kept, the artist's evidence has no search due.
+        // With "found nothing" kept, the item's evidence has no search due.
         val none =
             if (nothing) webEvidence(asked.item, asked.track, asked.settings, asked.evidence, emptyList()) else null
         val evidence = found ?: none ?: asked.evidence
         return SearchedWrite(evidence, key, kept(read, key, text, rewritten, asked))
     }
+
+    // [text] as written from [now], the lines it was asked from having been [was] (#958): without the
+    // sentences citing a line gone, nor the plain sentence once a line is read as describing the song.
+    private fun withoutGone(
+        text: String,
+        was: ItemEvidence,
+        now: ItemEvidence,
+    ): String {
+        val gone = was.evidence.ids.toSet() - now.evidence.ids.toSet()
+        return withoutCiting(text, gone, was.onlyListings && !now.onlyListings)
+    }
+
+    // Whether [read], a reply with no search made, keeps "found nothing" for [item]: a complete one of
+    // `NO_EVIDENCE`; for the song, any complete one (#958), whose card has the key it would have with
+    // none kept, so a search left due would have that card set aside, and written and paid for, at
+    // every play.
+    private fun foundNothing(
+        item: InsightItem,
+        read: Reply,
+    ): Boolean = read is Reply.Read && read.kept && (read.state == InsightState.NoEvidence || item == InsightItem.SONG)
 
     // The state [read], [key]'s reply [text] as read, comes to (a reply that revised itself away
     // fails), kept when complete, with the item's web lines kept again, at the time it is shown with.

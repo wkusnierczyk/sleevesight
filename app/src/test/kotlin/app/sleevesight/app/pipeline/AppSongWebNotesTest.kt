@@ -219,6 +219,81 @@ class AppSongWebNotesTest {
             assertTrue(ARTIST_TEXT in provider.prompts.single())
         }
 
+    // The plain-sentence card, written with *AI web search* off; then *Once*.
+    private suspend fun TestScope.plainThenOnce(provider: CountingProvider): AppItemNotes {
+        settings.value = settings.value?.copy(aiWebSearch = AiWebSearch.OFF)
+        provider.reply = { "${GroundingCheck.ONLY_RELEASE_SENTENCE} It came out in 1974 [MB1]." }
+        val notes = notes(parts(provider))
+        notes.write(track(), InsightItem.SONG)
+        advanceUntilIdle()
+        assertEquals(1, provider.requests)
+        assertTrue((notes.settled(track()) as ItemShown.Shown).state is InsightState.Written)
+        settings.value = settings.value?.copy(aiWebSearch = AiWebSearch.ONCE)
+        advanceUntilIdle()
+        return notes
+    }
+
+    @Test
+    fun `a plain card from before the search can be made is offered, and written once with it`() =
+        runTest {
+            val provider = CountingProvider()
+            val notes = plainThenOnce(provider)
+            assertEquals(ItemShown.Offered, notes.settled(track()))
+            assertEquals(0, songWeb.searches)
+
+            provider.reply = { "A slow groove [S1]." }
+            notes.write(track(), InsightItem.SONG)
+            advanceUntilIdle()
+            assertEquals(1, songWeb.searches)
+            assertEquals(2, provider.requests)
+            assertTrue(WEB_LINE.text in provider.prompts.last())
+
+            // No repeated write, here or after a restart.
+            notes.write(track(), InsightItem.SONG)
+            advanceUntilIdle()
+            val again = notes(parts(provider))
+            assertTrue((again.settled(track()) as ItemShown.Shown).state is InsightState.Written)
+            again.write(track(), InsightItem.SONG)
+            advanceUntilIdle()
+            assertEquals(1, songWeb.searches)
+            assertEquals(2, provider.requests)
+        }
+
+    @Test
+    fun `a plain card whose search then finds nothing stands, with no second call`() =
+        runTest {
+            songWeb.found = emptyList()
+            val provider = CountingProvider()
+            val notes = plainThenOnce(provider)
+            notes.write(track(), InsightItem.SONG)
+            advanceUntilIdle()
+            assertEquals(1, songWeb.searches)
+            assertEquals(1, provider.requests)
+            assertTrue((notes.settled(track()) as ItemShown.Shown).state is InsightState.Written)
+        }
+
+    @Test
+    fun `a plain card written with a search already kept is shown as it is`() =
+        runTest {
+            songWeb.found = emptyList()
+            val provider =
+                CountingProvider().apply {
+                    reply =
+                        { "${GroundingCheck.ONLY_RELEASE_SENTENCE} It came out in 1974 [MB1]." }
+                }
+            val notes = notes(parts(provider))
+            notes.write(track(), InsightItem.SONG)
+            advanceUntilIdle()
+            assertEquals(1, songWeb.searches)
+            assertEquals(1, provider.requests)
+            val fresh = notes(parts(provider))
+            assertTrue((fresh.settled(track()) as ItemShown.Shown).state is InsightState.Written)
+            fresh.write(track(), InsightItem.SONG)
+            advanceUntilIdle()
+            assertEquals(1, songWeb.searches)
+            assertEquals(1, provider.requests)
+        }
+
     @Test
     fun `a closed gate before the search makes neither search nor call, and it is offered again`() =
         runTest {

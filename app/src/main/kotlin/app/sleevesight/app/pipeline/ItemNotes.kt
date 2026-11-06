@@ -526,11 +526,14 @@ class AppItemNotes(
 
     // Whether [state], kept or shown, is one that found nothing to write from before a web search for
     // its item was due ([evidence] now has one due, #912: *AI web search* switched on, or a key given,
-    // since), so it stands for none, and the item is offered.
+    // since), so it stands for none, and the item is offered. So too an insight that says the sources
+    // only list the song (#958): same lines, same key, written while no search could be made.
     private fun beforeSearch(
         state: InsightState,
         evidence: ItemEvidence,
-    ): Boolean = state == InsightState.NoEvidence && evidence.webDue
+    ): Boolean =
+        evidence.webDue &&
+            (state == InsightState.NoEvidence || (evidence.onlyListings && state is InsightState.Written))
 
     // The insight another service, model or effort wrote for what [key]'s is about, from the same
     // evidence (#911): the most recently written of those shown ([entries]) and the one found in the
@@ -939,7 +942,9 @@ class AppItemNotes(
         val key = next.key
         val asked = next.asked
         val question = writing.question
-        val settled = next.ended ?: AiOutcome.ANSWERED.takeIf { key != first && showKept(insights, key, asked) }
+        // The song's, its search finding nothing new (#958): the same key, and the card set aside for it stands.
+        val again = key != first || asked.evidence.onlyListings
+        val settled = next.ended ?: AiOutcome.ANSWERED.takeIf { again && showKept(insights, key, asked) }
         if (settled != null) {
             next.shown?.let { writing.show(it, (it as? InsightState.Written)?.writtenAt ?: clock.now()) }
             question.end(settled, (next.shown as? InsightState.Failed)?.reason)

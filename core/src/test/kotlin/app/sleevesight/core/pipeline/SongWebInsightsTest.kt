@@ -135,12 +135,13 @@ class SongWebInsightsTest {
         artist: List<EvidenceDraft> = listOf(ARTIST_LINE),
         inLanguage: InLanguageState? = null,
         others: Map<SourceId, SourceState> = emptyMap(),
+        album: String? = "Getaway",
     ): TrackState {
         val playing =
             NowPlaying(
                 title = "Phil's First Tear",
                 artists = "Kolonel Djafaar",
-                album = "Getaway",
+                album = album,
                 player = "p",
                 duration = 300.seconds,
             )
@@ -396,6 +397,9 @@ class SongWebInsightsTest {
         assertEquals(reply, withoutCiting(reply, emptySet()))
         assertEquals("", withoutCiting("Two [W1].", setOf("W1")))
         assertEquals(GroundingCheck.NO_EVIDENCE, withoutCiting(GroundingCheck.NO_EVIDENCE, setOf("W1")))
+        val plain = "${GroundingCheck.ONLY_RELEASE_SENTENCE} One [S1]."
+        assertEquals(plain, withoutCiting(plain, emptySet()))
+        assertEquals("One [S1].", withoutCiting(plain, emptySet(), described = true))
     }
 
     @Test
@@ -552,6 +556,80 @@ class SongWebInsightsTest {
             val result = checkNotNull(items.writeSearching(key, InsightItem.SONG, track(), upTo, evidence))
             assertEquals(reply, assertIs<InsightState.Written>(result.state).grounded.text)
             assertEquals(reply, cache.cards[result.key])
+        }
+
+    @Test
+    fun `no line at all but the artist's, no album, stays nothing to write from, with no call`() =
+        runTest {
+            val items = items(plain)
+            val bare = track(own = emptyList(), album = null)
+            val off = webOn(AiWebSearch.OFF)
+            val evidence = checkNotNull(items.evidence(InsightItem.SONG, bare, off))
+            assertTrue(evidence.evidence.isEmpty())
+            assertFalse(evidence.onlyListings)
+            assertFalse(evidence.webDue)
+            val key = checkNotNull(items.key(InsightItem.SONG, bare, evidence, off))
+            assertEquals(ItemPrompt.VERSION, key.promptVersion)
+            assertSame(InsightState.NoEvidence, items.write(key, InsightItem.SONG, bare, evidence) { _, _ -> })
+            assertTrue(plain.requests.isEmpty())
+
+            // A search can still be due for it; found nothing, the same.
+            songWeb.found = emptyList()
+            val settings = webOn()
+            val due = checkNotNull(items.evidence(InsightItem.SONG, bare, settings))
+            assertTrue(due.webDue)
+            val found = assertIs<ItemSearch.Found>(items.search(InsightItem.SONG, bare, settings, due)).evidence
+            assertTrue(found.evidence.isEmpty())
+            assertFalse(found.onlyListings)
+            val after = checkNotNull(items.key(InsightItem.SONG, bare, found, settings))
+            assertSame(InsightState.NoEvidence, items.write(after, InsightItem.SONG, bare, found) { _, _ -> })
+            assertTrue(plain.requests.isEmpty())
+        }
+
+    @Test
+    fun `up to 3 times, a thin page read as a description, the plain sentence and the artist's go`() =
+        runTest {
+            val reply =
+                "${GroundingCheck.ONLY_RELEASE_SENTENCE} The band plays Afrobeat [${artistId()}]. " +
+                    "It came out in 2024 [MB1]."
+            val (_, result) = writtenFromDescription(reply)
+            val state = assertIs<InsightState.Written>(result.state)
+            assertEquals("It came out in 2024 [MB1].", state.grounded.text)
+            assertEquals("It came out in 2024 [MB1].", cache.cards[result.key])
+        }
+
+    @Test
+    fun `up to 3 times, a description found, the plain sentence alone leaves nothing, and the write fails`() =
+        runTest {
+            val (_, result) = writtenFromDescription(GroundingCheck.ONLY_RELEASE_SENTENCE)
+            assertIs<InsightState.Failed>(result.state)
+            assertTrue(cache.cards.isEmpty())
+            assertEquals(
+                listOf(PAGE.url),
+                songWeb.kept.values
+                    .flatten()
+                    .map { it.url },
+            )
+        }
+
+    @Test
+    fun `up to 3 times, a complete reply with no search made keeps found nothing, so no search stays due`() =
+        runTest {
+            val provider = searching("It came out in 2024 [MB1].", searches = 0)
+            val engine = Searches { WebSearchOutcome.Found(emptyList()) }
+            val items = items(provider, engine)
+            val upTo = webOn(AiWebSearch.UP_TO)
+            val evidence = checkNotNull(items.evidence(InsightItem.SONG, track(), upTo))
+            val key = checkNotNull(items.key(InsightItem.SONG, track(), evidence, upTo))
+            val result = checkNotNull(items.writeSearching(key, InsightItem.SONG, track(), upTo, evidence))
+            assertTrue(engine.queries.isEmpty())
+            assertEquals(key, result.key)
+            assertFalse(result.evidence.webDue)
+            assertEquals(emptyList(), songWeb.kept.values.single())
+            val again = checkNotNull(items.evidence(InsightItem.SONG, track(), upTo))
+            assertFalse(again.webDue)
+            assertFalse(items.searchesItself(InsightItem.SONG, again, upTo))
+            assertEquals(key, items.key(InsightItem.SONG, track(), again, upTo))
         }
 
     @Test

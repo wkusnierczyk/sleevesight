@@ -12,7 +12,7 @@ import app.sleevesight.core.text.DateForm
 /**
  * The song's insight written while the AI service searches the web for the song itself (#958, *AI web
  * search* set to *Up to 3 times*), when the sources only list it: the song's prompt with its rule on
- * listings, from the evidence as it stands ([evidence]), with the search tool
+ * listings, or, with no line at all, without, from the evidence as it stands ([asked]), with the search tool
  * ([ItemPrompt.withSongSearch]), told the track's language ([language]), asked by [WebQuestions]. Each
  * search's pages are evidence lines, each the line [line] gives for it (the app's own search's rules:
  * `SongWebLookup.pageLine`; none, no line), at most [ArtistQuestion.PAGES_PER_SEARCH] of them, numbered
@@ -29,7 +29,7 @@ internal class SongQuestion(
     private val subject: ItemPrompt.Subject,
     private val track: TrackState,
     private val allowModel: Boolean,
-    private val evidence: EvidenceSet,
+    private val asked: ItemEvidence,
     private val own: EvidenceSet,
     private val hasher: Hasher,
     private val language: String?,
@@ -40,7 +40,7 @@ internal class SongQuestion(
     private val numbered = LinkedHashMap<String, EvidenceDraft>()
 
     override val knowledge: String
-        get() = prompt(evidence)
+        get() = prompt(asked.evidence)
 
     override val query: String
         get() = songReviewQuery(track.normalized.title, track.normalized.primary)
@@ -50,7 +50,7 @@ internal class SongQuestion(
 
     override fun once(pages: List<WebPage>): String {
         about(pages).forEach { numbered.putIfAbsent(checkNotNull(it.url), it) }
-        return prompt(evidence.with(drafts(), hasher))
+        return prompt(asked.evidence.with(drafts(), hasher))
     }
 
     override fun agent(limit: Int): String = ItemPrompt.withSongSearch(knowledge, limit, language)
@@ -75,7 +75,7 @@ internal class SongQuestion(
     override fun drafts(): List<EvidenceDraft> = numbered.values.toList()
 
     private fun prompt(lines: EvidenceSet): String =
-        ItemPrompt.build(subject, track.nowPlaying, track.normalized, lines, allowModel, dates, onlyListings = true)
+        ItemPrompt.build(subject, track.nowPlaying, track.normalized, lines, allowModel, dates, asked.onlyListings)
 
     // Of [pages], the lines of those that give one ([line]) and no line of the track's own quotes, at
     // most [ArtistQuestion.PAGES_PER_SEARCH].

@@ -157,7 +157,7 @@ object ItemPrompt {
     ): String {
         val inLanguage = language?.let { " The song is in $it: search in $it." }.orEmpty()
         return prompt.removeSuffix(REPLY) +
-            "The evidence only lists this song: search the web for what it sounds like and how it was made " +
+            "The evidence does not describe this song: search the web for what it sounds like and how it was made " +
             "with the ${WebPrompt.TOOL_NAME} tool, at most $limit times.$inLanguage Each search's pages about " +
             "the song come back as evidence lines, in the same format, numbered on from those above: cite " +
             "them as evidence lines, and use only what they say.\n\n" + REPLY
