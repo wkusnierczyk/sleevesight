@@ -292,6 +292,29 @@ class DescribedGenresTest {
     }
 
     @Test
+    fun `every tag of the list names itself as written`() {
+        for (tag in vocabulary.tags) {
+            val found = vocabulary.namedIn(tag)
+            assertEquals(listOf(vocabulary.identity(tag)), found.map { it.first.identity }, tag)
+            assertEquals(tag.indices, found.single().second, tag)
+        }
+        // Spaced with apostrophes, straight or curly.
+        assertEquals(listOf("Rock 'n' Roll"), named("A rock 'n' roll band."))
+        assertEquals(listOf("Rock 'n' Roll"), named("A rock ’n’ roll band."))
+        assertEquals(listOf("Rock 'n' Roll"), named("Pure rock'n'roll."))
+    }
+
+    @Test
+    fun `genres in a list before a music noun, with commas, make a music phrase`() {
+        assertEquals(listOf("Folk", "Soul", "Pop"), named("A folk, soul and pop band."))
+        assertEquals(listOf("Folk", "Soul", "Pop"), named("A folk, soul, and pop band."))
+        assertEquals(listOf("Folk", "Soul", "Pop"), named("A folk, soul & pop band."))
+        // Still not without the noun at the end.
+        assertEquals(emptyList(), named("Far from the country, soul of the city."))
+        assertEquals(emptyList(), named("A house, pop art and dance floor."))
+    }
+
+    @Test
     fun `genres that chain before a music noun, and the nouns of musicians, make a music phrase`() {
         assertEquals(listOf("Ambient", "Electronic"), named("An ambient electronic duo."))
         assertEquals(listOf("Punk", "Soul"), named("A punk guitarist and soul vocalist."))

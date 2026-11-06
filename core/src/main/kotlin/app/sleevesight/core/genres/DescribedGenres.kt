@@ -160,13 +160,14 @@ internal object EverydayNames {
     // The word after a name, past nothing but spaces: letters, with hyphens inside.
     private val NEXT_WORD = Regex("^\\s+(\\p{L}+(?:-\\p{L}+)*)")
 
-    // What may stand between two genres of a chain before a noun: spaces, "and", "&" or "/".
-    private val CHAIN_GAP = Regex("\\s+|\\s+and\\s+|\\s*[&/]\\s*")
+    // What may stand between two genres of a chain before a noun: spaces, "and", "&" or "/", or a
+    // comma, with "and" or "&" after it or not ("a folk, soul and pop band", "folk, soul, and pop").
+    private val CHAIN_GAP = Regex("\\s+|\\s+and\\s+|\\s*[&/]\\s*|\\s*,\\s*(?:(?:and|&)\\s+)?")
 
     /**
      * Whether the vocabulary tag [tag], found at [range] of [text], names the genre there: always for
      * a tag of several words or one not in [WORDS]; for one of [WORDS], only in a music phrase: the
-     * genres [found] in [text] that follow it, past spaces, "and", "&" or "/" ("an ambient electronic
+     * genres [found] in [text] that follow it, past spaces, "and", "&", "/" or commas ("an ambient electronic
      * duo", "a jazz and soul singer"), then one of [MUSIC_NOUNS] or its plural. Instrumental, unless
      * the word after it is "in" or "to".
      */

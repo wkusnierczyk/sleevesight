@@ -460,7 +460,8 @@ class AppGenreNotes private constructor(
         lifetime: Duration?,
     ): GenreListState.Listed? = known[key]?.takeIf { !expired(it.writtenAt, lifetime) }?.state as? GenreListState.Listed
 
-    // [genre]'s label, as the chip shows it, with the AI's list known for [track].
+    // [genre]'s label, as the chip shows it, with the AI's list known for [track]: one an artist's
+    // description names too (#1000).
     private fun label(
         track: TrackState,
         genre: String,
@@ -473,7 +474,7 @@ class AppGenreNotes private constructor(
             } else {
                 listsOf(made).key(track, now)?.let { listed(it, lists.value, now.historyLifetime) }
             }
-        return (track.genres.all.map { it.genre } + list?.genres.orEmpty())
+        return (track.genres.everyLabel.map { it.genre } + list?.genres.orEmpty())
             .firstOrNull { it.identity == genre }
             ?.label ?: genre
     }

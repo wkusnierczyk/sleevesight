@@ -150,7 +150,8 @@ class GenreVocabulary(
      * name of several words whole, the longest name first where names overlap ("indie rock", not
      * "indie" and "rock"). A word is letters and digits, with hyphens, apostrophes or `&` inside it:
      * "post-punk" and "R&B" are one word each, so "electro-acoustic" names no *Acoustic* and
-     * "folklore" no *Folk*. The words of a name of several are spaced (or joined by a spaced `&`),
+     * "folklore" no *Folk*. The words of a name of several are spaced (or joined by a spaced `&`, or
+     * spaced with apostrophes beside them: "rock 'n' roll"),
      * so "hip hop", "hip-hop" and "Hiphop" all name *Hip-Hop*. Each with the [IntRange] of [text] it spans.
      */
     fun namedIn(text: String): List<Pair<GenreLabel, IntRange>> {
@@ -184,8 +185,9 @@ class GenreVocabulary(
         // A word of text as [namedIn] reads it: letters and digits, with hyphens, apostrophes or `&` inside.
         private val NAME_WORD = Regex("[\\p{L}\\p{N}]+(?:[-‐‑'’&][\\p{L}\\p{N}]+)*")
 
-        // What may stand between the words of one name in text: spaces, or a spaced `&` ("R & B").
-        private val GAP = Regex("\\s+|\\s*&\\s*")
+        // What may stand between the words of one name in text: spaces, with apostrophes beside them
+        // ("rock 'n' roll", straight or curly), or a spaced `&` ("R & B").
+        private val GAP = Regex("[\\s'‘’]*\\s[\\s'‘’]*|\\s*&\\s*")
 
         /** The vocabulary's path among `:core`'s resources. */
         const val RESOURCE: String = "sleevesight/genre-vocabulary.json"
