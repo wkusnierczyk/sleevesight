@@ -57,9 +57,10 @@ private fun rewrites(
  * The history line under an item's insight (#911), as the key insight's footer's first line says it
  * (`writtenBefore`): for the insight another AI service, model or effort wrote, shown in place of none
  * ([ItemShown.Shown.rewriteWith]), *As written previously.*, then that a rewrite of it stopped or failed
- * ([ItemShown.Shown.rewriteFailed]), then, while it can be tapped ([rewrites]), what *Rewrite
- * insight* would rewrite it with; for one a rewrite wrote, *Rewritten with …*; else none: an item's own
- * insight, kept or just written, says nothing of its history.
+ * ([ItemShown.Shown.rewriteFailed]; not that the service refused the model while it is found
+ * unavailable, which the footer's last line says, #969: [rewriteFailureShown]), then, while it can be
+ * tapped ([rewrites]), what *Rewrite insight* would rewrite it with; for one a rewrite wrote,
+ * *Rewritten with …*; else none: an item's own insight, kept or just written, says nothing of its history.
  */
 @Composable
 private fun itemHistory(
@@ -73,7 +74,7 @@ private fun itemHistory(
             .takeIf { rewrites(shown, context) }
             ?.let { rewriteWhat(it.parts, it.with) }
             ?.let { stringResource(R.string.home_rewrite_offer, it) }
-    val failed = shown.rewriteFailed?.let { rewriteFailure(it) }
+    val failed = rewriteFailureShown(shown.rewriteFailed, context.unavailable)?.let { rewriteFailure(it) }
     return listOfNotNull(stringResource(R.string.home_written_before), failed, offered).joinToString(" ")
 }
 
