@@ -207,22 +207,17 @@ class ItemTapWritesScreenTest {
     }
 
     @Test
-    fun aPanelHeldBackUnderAnAutomaticModeSaysWhyAsTheKeyInsightDoes() {
+    fun aPanelHeldBackUnderOnTrackSkipShowsThePlainLineForATrackThatFollowedByItself() {
         val skip =
             Settings(writeAutomatically = WriteAutomatically.WHEN_I_SKIP, itemsOnNewTrack = NewTrackFold.UNFOLDED)
         notes.takenUp = false
-        val reasons =
-            listOf(
-                PipelineView(track(), aiReady = true, followed = true) to R.string.home_insight_followed,
-                PipelineView(track(), aiReady = true, lapsed = true) to R.string.home_insight_resumed,
-                PipelineView(track(), aiReady = true) to R.string.home_item_tap_write,
-            )
-        for ((view, line) in reasons) {
-            val playback = PlaybackInfo(Settings.SPOTIFY, PlaybackStatus.PLAYING)
-            show(NowPlayingState(view, view.track!!.nowPlaying, playback, settings = skip)) {
-                compose.waitForIdle()
-                compose.onAllNodesWithText(text(line)).assertCountEquals(3)
-            }
+        // The key insight says why it was not written; the items say nothing of it.
+        val view = PipelineView(track(), aiReady = true, followed = true)
+        val playback = PlaybackInfo(Settings.SPOTIFY, PlaybackStatus.PLAYING)
+        show(NowPlayingState(view, view.track!!.nowPlaying, playback, settings = skip)) {
+            compose.waitForIdle()
+            compose.onAllNodesWithText(text(R.string.home_item_tap_write)).assertCountEquals(3)
+            for (item in InsightItem.entries) compose.onNodeWithTag(itemWriteTag(item)).assertExists()
         }
         assertTrue(notes.asks.all { it == ItemAsk.BY_ITSELF })
     }

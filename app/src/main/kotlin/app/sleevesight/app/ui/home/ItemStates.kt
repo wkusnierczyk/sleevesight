@@ -82,24 +82,6 @@ internal fun Writing() =
     )
 
 /**
- * The line above *Write insight* for an item with nothing written: under an automatic mode, for one
- * asked for by itself (a panel left open at a new track, one unfolded at its start) that it held back,
- * why, in the key insight's words (#948): *Saver*'s pause ([ItemContext.lapsed]), or a track that
- * followed the last one by itself under *On track skip (auto)* ([ItemContext.followed]); else "Tap
- * Write insight…".
- */
-internal fun offeredLine(
-    context: ItemContext,
-    tapped: Boolean,
-): Int =
-    when {
-        !context.automatic || tapped -> R.string.home_item_tap_write
-        context.lapsed -> R.string.home_insight_resumed
-        context.followed -> R.string.home_insight_followed
-        else -> R.string.home_item_tap_write
-    }
-
-/**
  * Whether [item]'s insight is being written for what it is about on [context]'s track (#948), as its
  * notes say ([ItemNotes.writes]): followed with no gathering, so a closed row costs nothing; followed
  * again only when what it is about may change, as [itemShown] is.

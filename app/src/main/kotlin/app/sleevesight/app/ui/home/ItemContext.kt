@@ -43,9 +43,7 @@ import app.sleevesight.core.settings.WriteAutomatically
 /**
  * What an item shown needs besides its state: the [track] it is of, the [settings] (*Reactive*),
  * whether the track would be written by itself now ([writesItself], `PipelineView.writesItself`),
- * and why automatic writing left it, as the key insight says it (#948): *Saver*'s pause ([lapsed],
- * `PipelineView.lapsed`), or a track that followed the last one by itself ([followed],
- * `PipelineView.followed`); the [notes] it is written by, where
+ * the [notes] it is written by, where
  * a citation goes on the track's evidence ([cite]), where a report goes ([onReport]), *Read aloud*,
  * and the note of a model found unavailable ([unavailable], [onModelSettings]).
  */
@@ -61,8 +59,6 @@ internal class ItemContext(
     val unavailable: UnavailableModel? = null,
     val onModelSettings: () -> Unit = {},
     val sources: EvidenceSet? = null,
-    val lapsed: Boolean = false,
-    val followed: Boolean = false,
 ) {
     /**
      * Whether *Reactive* is set to an automatic mode, with *Show insights* on: an item unfolded or on
@@ -94,9 +90,9 @@ internal class OpeningWrite(
  * *Writing…* with the turning record meanwhile: under an automatic mode as an opening
  * ([ItemContext.automatic]); under *On demand* once, the tap's consent, while [opening] is due, which
  * it ends as soon as the item's state is known, so a written, kept, stopped or failed one opens as it
- * is, and nothing asks again. Else, "Tap Write insight…" and *Write insight* with the **AI** mark (a
- * panel left open at a new track under *On demand*, or one an automatic mode held back, which says
- * why as the key insight does). The insight
+ * is, and nothing asks again. Else, "Tap Write insight…" and *Write insight* with the **AI** mark,
+ * whatever the mode and whatever held it back (a panel left open at a new track under *On demand*,
+ * or one an automatic mode held back): an item says nothing of why (#948). The insight
  * another AI service, model or effort wrote, shown in place of none (#911), says so ("As written
  * previously.", with what *Rewrite insight* would rewrite it with), and *Rewrite insight*, with the
  * **AI** mark, rewrites it; one a rewrite wrote says "Rewritten with …". With the model found
@@ -232,12 +228,12 @@ private fun ItemShownContent(
         ItemShown.Off -> ItemQuiet(stringResource(R.string.home_insight_off))
         ItemShown.NoService -> ItemQuiet(stringResource(R.string.home_insight_unavailable))
         // Nothing written and nothing under way: *Write insight*, whatever the mode, so an automatic
-        // write the gates refused never shows as writing; why, when an automatic mode held it back.
+        // write the gates refused never shows as writing; the plain line, whatever held it back.
         ItemShown.Offered ->
             if (writingDue) {
                 Writing()
             } else {
-                ItemQuiet(stringResource(offeredLine(context, tapped)))
+                ItemQuiet(stringResource(R.string.home_item_tap_write))
                 WriteButton(item) { context.notes.write(track, item, ItemAsk.TAP) }
             }
 
@@ -393,8 +389,6 @@ internal fun itemContext(
     settings = settings,
     notes = actions.itemNotes,
     writesItself = shown.view.writesItself,
-    lapsed = shown.view.lapsed,
-    followed = shown.view.followed,
     cite = cite,
     onReport = onReport,
     readAloud = actions.readAloud,
