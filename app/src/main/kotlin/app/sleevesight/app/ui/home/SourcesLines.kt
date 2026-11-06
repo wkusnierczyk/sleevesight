@@ -42,7 +42,12 @@ internal fun withAlbum(
         listOfNotNull(album, artist)
             .flatMap { it.lines }
             .filter { seen.add(Triple(it.source, it.scope, it.text)) }
-            .map { it.draft() }
+            // A language read from the line's script by the item's set is read again with the track's (#949).
+            .map {
+                it.draft().let { draft ->
+                    if (draft.scripted) draft.copy(language = null, scripted = false) else draft
+                }
+            }
     if (evidence == null || more.isEmpty()) return SourcesLines(evidence)
     val shown = evidence.with(more, JvmHasher)
     val albums = album?.lines.orEmpty().mapTo(mutableSetOf()) { Triple(it.source, it.scope, it.text) }

@@ -77,7 +77,9 @@ enum class Script(
          * Han as Korean does, so a Korean line quoting a Japanese title is Korean; but only when kana
          * or Hangul are at least a [MIXED_SHARE] of them, so a Chinese line quoting a Japanese title
          * stays Han. The katakana middle dot and long-vowel mark, which Chinese names use too, are no
-         * kana. On a tie, kana or Hangul before Han alone.
+         * kana. A kana, Hangul or Han character, a syllable or a word, weighs [SYLLABLE] Latin letters,
+         * so a Korean caption quoting an English title is Korean. On a tie, kana or Hangul before Han
+         * alone.
          */
         fun mostly(text: String): Script? {
             val counts = mutableMapOf<Script, Int>()
@@ -89,7 +91,8 @@ enum class Script(
             val han = counts[HAN] ?: 0
             val scores =
                 counts.filterKeys { it != LATIN }.mapValues { (script, n) ->
-                    if (script.mixesHan && n * MIXED_SHARE >= n + han) n + han else n
+                    val letters = if (script.mixesHan && n * MIXED_SHARE >= n + han) n + han else n
+                    if (script.mixesHan || script == HAN) letters * SYLLABLE else letters
                 }
             val best = scores.maxWithOrNull(compareBy<Map.Entry<Script, Int>> { it.value }.thenBy { it.key.mixesHan })
             return best?.takeIf { it.value > (counts[LATIN] ?: 0) }?.key
@@ -118,6 +121,7 @@ enum class Script(
 
         // Kana or Hangul take Han's letters with them from one in this many of the two.
         private const val MIXED_SHARE = 4
+        private const val SYLLABLE = 2
         private const val MIDDLE_DOT = 0x30FB
         private const val LONG_VOWEL = 0x30FC
         private const val SUPPLEMENTARY_BASE = 0x10000
