@@ -72,6 +72,18 @@ class MusicBrainzLabelsTest {
     }
 
     @Test
+    fun `MusicBrainz's genres the wider list added give labels`() {
+        // #1011: genres of MusicBrainz's list that the vocabulary had dropped.
+        val tags = listOf("psychedelic rock", "turkish", "anatolian rock", "synth-pop", "bossa nova")
+        val found = labels().recordingLabels(RecordingTags("mb-rec", tags))
+        assertEquals(listOf("Psychedelic Rock", "Anatolian Rock", "Synth-Pop", "Bossa Nova"), found.map { it.label })
+        // MusicBrainz's own spellings of genres the list had only as Last.fm spells them.
+        val spelt = labels().recordingLabels(RecordingTags("mb-rec", listOf("trip hop", "dark wave")))
+        assertEquals(listOf("Trip Hop", "Dark Wave"), spelt.map { it.label })
+        assertEquals(listOf("triphop", "darkwave"), spelt.map { it.identity })
+    }
+
+    @Test
     fun `an artist MusicBrainz does not know, or whose request failed, gives none`() =
         runTest {
             val labels = labels()
