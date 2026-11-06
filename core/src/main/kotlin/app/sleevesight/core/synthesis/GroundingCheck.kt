@@ -186,17 +186,20 @@ object GroundingCheck {
      * uncited. Initials before a word that usually opens a sentence ([SENTENCE_OPENERS]: `... a hit
      * in the U.S. It ...`) still end one, and so do `Jr.` and `Sr.` ([NAME_SUFFIXES]). One of
      * [NUMBER_ABBREVIATIONS] (`Vol.`, `No.`, `Pt.`, `Op.`) ends none before a numeral, a Roman one
-     * (`Pachamantra Vol. I`) or one in words (`the No. One spot`), and ends one before anything
-     * else (`... the second vol. It ...`); before a digit no stop ends a sentence anyway (`Op. 27
-     * No. 2`). The cost: a sentence that ends in initials before another word (`... toured the
-     * U.S. Billboard named ...`), in one of [ABBREVIATIONS], or in `no.` before the pronoun `I` or
-     * a number in words (`... said no. One year later ...`), is joined to the next, and if it was
-     * uncited, the next one's citation hides that. `etc.`, which ends sentences as often as not, is
+     * (`Pachamantra Vol. I`, `"Pachamantra Vol. II"`, `Vol. II's`) or one in words (`the No. One
+     * spot`), and ends one before anything else (`... the second vol. It ...`); before a digit no
+     * stop ends a sentence anyway (`Op. 27 No. 2`). The cost: a sentence that ends in initials, `Jr.`
+     * or `Sr.` before another word (`... toured the U.S. Billboard named ...`, `... Sammy Davis Jr.
+     * Sinatra ...`), in one of [ABBREVIATIONS], or in one of [NUMBER_ABBREVIATIONS] before a Roman
+     * numeral, the pronoun `I` too, or a number in words (`... said no. One year later ...`, `...
+     * three Vols. Two more followed ...`), is joined to the next, and if it was uncited, the next
+     * one's citation hides that. `etc.`, which ends sentences as often as not, is
      * no abbreviation here: before a capital it ends one.
      *
-     * Nor does a stop end a sentence when all that would follow it is a Roman numeral and its
-     * citations (`... Mk. I [W1].`, #953): a numeral alone is no sentence, and split off it would
-     * take the citations from the words they back.
+     * Nor does a stop end a sentence when all that would follow it is a Roman numeral, perhaps in
+     * emphasis marks or before closing quotes or `)`, and its citations (`... Mk. I [W1].`, `...
+     * Mk. *I* [W1].`; #953): a numeral alone is no sentence, and split off it would take the
+     * citations from the words they back.
      *
      * Another (#423): a `.`, `!` or `?` followed by closing quotes ([CLOSING_QUOTES]: `"`, `”`,
      * `'`, `’`) and then citations ends a sentence, as it does with the citations straight after it
@@ -355,7 +358,11 @@ object GroundingCheck {
         val nextWord = nextWord(t, end)
         // A curly apostrophe reads as a straight one: `It’s` opens a sentence as `It's` does.
         val opens = nextWord.replace('’', '\'') in SENTENCE_OPENERS
-        val numeral = nextWord.trimEnd { it in ".!?" }.let { ROMAN.matches(it) || it in NUMBER_WORDS }
+        // The numeral may close a quoted or bracketed title, or own something (`Vol. II's`).
+        val numeral =
+            nextWord.removeSuffix("'s").removeSuffix("’s").trimEnd { it in NUMERAL_CLOSERS }.let {
+                ROMAN.matches(it) || it in NUMBER_WORDS
+            }
         return bare in ABBREVIATIONS ||
             (bare in NUMBER_ABBREVIATIONS && numeral) ||
             ((INITIALS.matches(word) || bare in NAME_SUFFIXES) && !opens)
@@ -451,19 +458,20 @@ object GroundingCheck {
     private const val OPENERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ\"“("
     private const val CLOSING_QUOTES = "\"”'’"
     private const val CLOSING_MARKS = CLOSING_QUOTES + MarkdownMarks.EMPHASIS
+    private const val NUMERAL_CLOSERS = ".!?)" + CLOSING_MARKS
     private val INITIALS = Regex("(?:[A-Z]\\.)+")
 
     // A Roman numeral from I to XXXIX, as volumes and parts are numbered.
     private const val ROMAN_PATTERN = "(?=[IVX])X{0,3}(?:IX|IV|V?I{0,3})"
     private val ROMAN = Regex(ROMAN_PATTERN)
 
-    // The rest of a paragraph when all of it up to the next sentence's end is a Roman numeral and
-    // its citations, a stop before them, after them or both, or none at the paragraph's end
-    // ([sentenceRanges], #953).
+    // The rest of a paragraph when all of it up to the next sentence's end is a Roman numeral, in
+    // emphasis marks or before closing quotes or `)` if so, and its citations, a stop before them,
+    // after them or both, or none at the paragraph's end ([sentenceRanges], #953).
     private const val CITES = "(?:$JS_WHITESPACE_CLASS*\\[[A-Z]{1,2}[0-9]*\\])+"
     private const val REST = "(?:$JS_WHITESPACE_CLASS[\\s\\S]*)?"
     private val NUMERAL_CITED =
-        Regex("$ROMAN_PATTERN(?:[.!?]?$CITES[.!?]$REST|[.!?]$CITES$REST|$CITES)")
+        Regex("[*_]*$ROMAN_PATTERN[*_\"”'’)]*(?:[.!?]?$CITES[.!?]$REST|[.!?]$CITES$REST|$CITES)")
     private val PARAGRAPH_BREAK = Regex("\\n$JS_WHITESPACE_CLASS*\\n")
     private val CITATION = Regex("\\[([A-Z]{1,2}[0-9]*)\\]")
 

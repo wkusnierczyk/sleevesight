@@ -99,17 +99,37 @@ class GroundingCheckTest {
         assertEquals(0, written.grounded.counts.uncited)
     }
 
-    /** #953: *Pachamantra Vol.* was split off its citations and dimmed. */
+    /** #953: *… Pachamantra Vol.* was split off its citations and dimmed. */
+    @Test
+    fun `a volume before its Roman numeral does not end a sentence, in quotes, brackets or emphasis too`() {
+        val ids = setOf("S1", "P1")
+        for (title in listOf(
+            "Pachamantra Vol. I",
+            "*Pachamantra Vol. I*",
+            "\"Pachamantra Vol. I\"",
+            "“Pachamantra Vol. I”",
+            "Pachamantra (Vol. I)",
+        )) {
+            val reply = "The track first appeared on the release $title [S1] [P1]."
+            assertEquals(listOf(reply), GroundingCheck.splitSentences(reply), title)
+            val written = assertIs<InsightReply.Written>(GroundingCheck.check(reply, ids, allowModel = false))
+            assertEquals(1, written.grounded.counts.ok, title)
+            assertEquals(0, written.grounded.counts.uncited, title)
+        }
+        val owning = "Pachamantra Vol. II's reissue added a track. [S1]"
+        assertEquals(listOf(owning), GroundingCheck.splitSentences(owning))
+    }
+
     @Test
     fun `a volume, number, part or opus before its numeral does not end a sentence`() {
         val reply =
             "The track is credited to Raio with sophie sôfrēē and first appeared on the release " +
-                "*Pachamantra Vol.* I [S1] [P1]. It was reissued on Vol. II with Pt. IV of the suite. [S2] " +
+                "Pachamantra Vol. I [S1] [P1]. It was reissued on Vol. II with Pt. IV of the suite. [S2] " +
                 "It held the No. One spot, as Op. 27 No. 2 did. [W1] It also came out on Vol. 2. [W2]"
         assertEquals(
             listOf(
                 "The track is credited to Raio with sophie sôfrēē and first appeared on the release " +
-                    "*Pachamantra Vol.* I [S1] [P1].",
+                    "Pachamantra Vol. I [S1] [P1].",
                 "It was reissued on Vol. II with Pt. IV of the suite. [S2]",
                 "It held the No. One spot, as Op. 27 No. 2 did. [W1]",
                 "It also came out on Vol. 2. [W2]",
@@ -154,7 +174,9 @@ class GroundingCheckTest {
 
     @Test
     fun `a Roman numeral and its citations alone are no sentence`() {
-        for (tail in listOf("I [W1].", "II. [W1]", "IV [W1] [W2]", "III [W1]. It charted. [W2]")) {
+        val tails =
+            listOf("I [W1].", "II. [W1]", "IV [W1] [W2]", "III [W1]. It charted. [W2]", "*I* [W1].", "I\" [W1].")
+        for (tail in tails) {
             val reply = "It was released as Mk. $tail"
             assertEquals(
                 "It was released as Mk. " + tail.substringBefore(" It "),
