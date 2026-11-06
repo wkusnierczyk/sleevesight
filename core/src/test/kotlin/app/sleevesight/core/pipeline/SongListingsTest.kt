@@ -99,6 +99,15 @@ class SongListingsTest {
     }
 
     @Test
+    fun `moments in prose are not a list of tracks, and lengths with entries or little else are`() {
+        assertFalse(SongListings.isListing(web("At 0:45 the horns enter, and at 2:10 the bass takes over.")))
+        listOf(
+            "Getaway 3:45 Phil's First Tear 4:10",
+            "1. Getaway 3:45 2. Phil's First Tear 4:10",
+        ).forEach { assertTrue(SongListings.isListing(web(it)), it) }
+    }
+
+    @Test
     fun `a web line with no listing host and no listing shape describes the song`() {
         assertFalse(
             SongListings.isListing(web("An instrumental with a heavy Ethio-jazz horn line, cut live in Antwerp.")),

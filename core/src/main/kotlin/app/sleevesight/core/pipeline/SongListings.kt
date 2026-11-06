@@ -16,7 +16,8 @@ import app.sleevesight.core.model.SourceId
  * Such a phrase counts only where little else is said: with [PROSE_WORDS] or more words of prose
  * beside it (lower-case words that are not a listing's own, [METADATA_WORDS]; names, dates and numbers
  * do not count), the line is mixed, and describes the song ("Released on Friday, the song pairs a
- * loping bass line with jagged horns."). A list of tracks is a listing whatever surrounds it.
+ * loping bass line with jagged horns."). A list of tracks, numbered or with little prose beside its
+ * lengths, is a listing whatever surrounds it; lengths in prose are moments in the song.
  * Wikipedia's and Last.fm's text describe, whatever they say; so does a web line with no known
  * listing host and no listing shape. The words are English: a page in another language's words
  * counts as describing the song, unless its host says otherwise.
@@ -44,9 +45,20 @@ object SongListings {
     /** Whether [text] has the shape of a listing: a list of tracks, or its release data and no more. */
     fun readsLikeListing(text: String): Boolean {
         val lower = text.lowercase()
-        return TIMES.findAll(text).count() >= TRACK_LIST_TIMES ||
-            NUMBERED.findAll(text).count() >= TRACK_LIST_NUMBERS ||
-            (LISTING_WORDS.any { it in lower } && proseWords(text) < PROSE_WORDS)
+        val little = proseWords(text) < PROSE_WORDS
+        return isTrackList(text, little) || (little && LISTING_WORDS.any { it in lower })
+    }
+
+    // Whether [text] holds a list of tracks: three numbered entries, or two lengths, with the entries'
+    // numbers or with [little] prose beside them. Lengths alone may be moments in prose ("At 0:45 the
+    // horns enter, and at 2:10 the bass takes over.").
+    private fun isTrackList(
+        text: String,
+        little: Boolean,
+    ): Boolean {
+        val numbered = NUMBERED.findAll(text).count()
+        val timed = TIMES.findAll(text).count() >= TRACK_LIST_TIMES
+        return numbered >= TRACK_LIST_NUMBERS || (timed && (little || numbered >= TRACK_LIST_TIMES))
     }
 
     // How many words of [text] read as prose: in lower case, more than a letter, not a listing's own.
@@ -202,7 +214,7 @@ object SongListings {
     private val NOT_LETTERS = Regex("[^\\p{L}]+")
     private const val PROSE_WORDS = 4
 
-    // Two or more lengths (`3:45`) or three or more numbers (`1. `) in a line: a list of tracks.
+    // Lengths (`3:45`) and entries' numbers (`1. `) in a line, and how many make a list ([isTrackList]).
     private val TIMES = Regex("\\b[0-9]{1,2}:[0-5][0-9]\\b")
     private val NUMBERED = Regex("(?:^|\\s)[0-9]{1,2}[.)]\\s")
     private const val TRACK_LIST_TIMES = 2
