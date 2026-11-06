@@ -74,6 +74,7 @@ Using the app:
 - [Frequently asked questions](https://sleevesight.app/docs/faq/): notification access, Spotify, other players.
 - [Limitations](https://sleevesight.app/docs/limitations/): what it cannot do, and why.
 - [What it costs you](https://sleevesight.app/docs/costs/): what each service charges, and what a track costs.
+- [How it performs](https://sleevesight.app/docs/performance/): battery, data, memory, start-up and size, measured on an example phone.
 - [Privacy policy](https://sleevesight.app/privacy.html).
 
 How it works and how it is made:

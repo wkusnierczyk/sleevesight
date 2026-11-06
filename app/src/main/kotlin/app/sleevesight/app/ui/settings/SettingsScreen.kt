@@ -283,16 +283,13 @@ internal class Clearing(
 internal sealed interface SettingsDialog {
     /**
      * One of [options], each a value with its label; [onSelect] saves the one chosen. The [title]
-     * takes [titleArg], when given, as its one argument (a provider's name). A value in [details]
-     * has a line under its label saying what it does (#546, #550), which a screen reader reads with
-     * the label, as one choice.
+     * takes [titleArg], when given, as its one argument (a provider's name).
      */
     class Choice<T>(
         @StringRes val title: Int,
         val options: List<Pair<T, String>>,
         val selected: T,
         val titleArg: String? = null,
-        val details: Map<T, String> = emptyMap(),
         val onSelect: (T) -> Unit,
     ) : SettingsDialog
 

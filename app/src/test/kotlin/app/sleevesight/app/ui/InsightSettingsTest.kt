@@ -1,18 +1,23 @@
 package app.sleevesight.app.ui
 
 import androidx.activity.compose.setContent
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.isDialog
+import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.unit.toSize
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
@@ -24,9 +29,11 @@ import app.sleevesight.app.now
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.testCipher
+import app.sleevesight.app.ui.settings.DESCRIPTION_TAG
 import app.sleevesight.app.ui.settings.SettingsScreen
 import app.sleevesight.app.ui.settings.SettingsSection
 import app.sleevesight.core.settings.PrepareNextTrack
+import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WriteAutomatically
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -44,10 +51,11 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
- * *Insights* (#444): *Reactive*, one choice, with *Crossfade* under it only while it is *On track
- * skip (auto)*, each mode chosen there told to the pipeline (#625); *Proactive*, a switch;
- * *Don't repeat artist facts* (#407, #546), a switch; and the rows about writing fixed while *Show
- * insights* is off.
+ * *Insights* (#444): *Reactive*, a button group (#947), with *Crossfade* under it only while it is
+ * *Skip*, each mode chosen there told to the pipeline (#625), and its description a table of the
+ * modes (#945); *Saver* right after it, its count *Stop after* a button group (#947); *Proactive*,
+ * a switch; *Don't repeat artist facts* (#407, #546), a switch; the rows in their order; and the
+ * rows about writing fixed while *Show insights* is off.
  */
 @RunWith(RobolectricTestRunner::class)
 class InsightSettingsTest {
@@ -71,9 +79,30 @@ class InsightSettingsTest {
 
     private fun text(id: Int) = app.getString(id)
 
-    private fun inDialog(id: Int) = hasText(text(id)) and hasAnyAncestor(isDialog())
-
     private fun shown(id: Int) = compose.onAllNodesWithText(text(id)).fetchSemanticsNodes().isNotEmpty()
+
+    // A button of a group, by its label.
+    private fun button(label: String) = compose.onNode(hasText(label) and isSelectable())
+
+    private fun button(id: Int) = button(text(id))
+
+    private fun changes(count: Int) = app.resources.getQuantityString(R.plurals.settings_changes, count, count)
+
+    // Where a text in *Reactive*'s description is drawn (the unmerged tree), whether on screen or not.
+    private fun drawn(said: String): Rect {
+        val node =
+            compose
+                .onNode(hasText(said) and hasAnyAncestor(hasTestTag(DESCRIPTION_TAG)), useUnmergedTree = true)
+                .fetchSemanticsNode()
+        return Rect(node.positionInRoot, node.size.toSize())
+    }
+
+    // Where the row titled [id] starts, on screen or not.
+    private fun top(id: Int) =
+        compose
+            .onNodeWithText(text(id))
+            .fetchSemanticsNode()
+            .positionInRoot.y
 
     private fun waitFor(
         what: String,
@@ -109,68 +138,144 @@ class InsightSettingsTest {
     @Test
     fun crossfadeShowsOnlyWhileReactiveIsOnSkip() =
         show {
-            compose.onNodeWithText(text(R.string.settings_write_every_change)).performScrollTo()
+            button(R.string.settings_write_every_change_short).performScrollTo().assertIsSelected()
             assertTrue(!shown(R.string.settings_crossfade))
 
-            compose.onNodeWithText(text(R.string.settings_write_automatically)).performScrollTo().performClick()
-            compose.onNode(inDialog(R.string.settings_write_when_skip)).performClick()
-            waitFor("On track skip stored") { settings.now().writeAutomatically == WriteAutomatically.WHEN_I_SKIP }
+            button(R.string.settings_write_when_skip_short).performScrollTo().performClick()
+            waitFor("Skip stored") { settings.now().writeAutomatically == WriteAutomatically.WHEN_I_SKIP }
             waitFor("Crossfade shown") { shown(R.string.settings_crossfade) }
+            button(R.string.settings_write_when_skip_short).assertIsSelected()
+            compose.onNodeWithText(text(R.string.settings_write_when_skip_detail)).assertExists()
 
-            compose.onNodeWithText(text(R.string.settings_write_automatically)).performScrollTo().performClick()
-            compose.onNode(inDialog(R.string.settings_write_never)).performClick()
-            waitFor("On demand stored") { settings.now().writeAutomatically == WriteAutomatically.NEVER }
+            button(R.string.settings_write_never_short).performScrollTo().performClick()
+            waitFor("Demand stored") { settings.now().writeAutomatically == WriteAutomatically.NEVER }
             waitFor("Crossfade gone") { !shown(R.string.settings_crossfade) }
-            // Under *On demand*, nothing is written away, so *Saver* cannot be changed.
+            // Under *Demand*, nothing is written away, so *Saver* and its count cannot be changed.
             compose.onNodeWithText(text(R.string.settings_pause_auto_write)).performScrollTo().assertIsNotEnabled()
+            button(changes(Settings.DEFAULT_PAUSE_AUTO_WRITE_AFTER)).performScrollTo().assertIsNotEnabled()
         }
 
     @Test
     fun reactivesChoicesAreTheInsightCardsModesInOrderOfHowMuchIsWrittenAutomatically() =
         show {
-            // The description names the insight card's menu, the same setting (#615).
+            val lefts =
+                listOf("Demand", "Skip", "Change").map { name ->
+                    button(name)
+                        .performScrollTo()
+                        .fetchSemanticsNode()
+                        .boundsInRoot.left
+                }
+            assertEquals(lefts.sorted(), lefts)
+            // Under the buttons, what the chosen one, the default, does (#945).
             compose
                 .onNodeWithText(
-                    "Select what triggers writing an insight. The arrow beside Write insight, under Key insights, " +
-                        "sets it too. Choosing an automatic mode starts automatic writing from the next track.",
-                ).performScrollTo()
-            compose.onNodeWithText(text(R.string.settings_write_automatically)).performScrollTo().performClick()
-            val tops =
-                listOf("On demand", "On track skip (auto)", "On track change (auto)").map { name ->
-                    compose
-                        .onNode(hasText(name) and hasAnyAncestor(isDialog()))
-                        .fetchSemanticsNode()
-                        .boundsInRoot.top
-                }
-            assertEquals(tops.sorted(), tops)
-            for (
-            detail in
-            listOf(
-                "Only when you tap a button with the AI mark.",
-                "Writes automatically only when you skip to a track, not when one follows another by itself.",
-                "Writes automatically on every track change.",
-            )
-            ) {
-                compose.onNode(hasText(detail) and hasAnyAncestor(isDialog())).assertExists()
+                    "Writes automatically on every track change: the key insight, and Song, Artist or Album " +
+                        "if left open.",
+                ).assertExists()
+        }
+
+    @Test
+    fun reactivesDescriptionIsATableOfTheModesShowingItsFirstLineFolded() =
+        show {
+            val lead = "What triggers writing an insight."
+            val modes =
+                listOf(
+                    "Demand" to "Only when you tap a button with the AI mark.",
+                    "Skip" to "Automatically when you skip to a track, not when one follows another by itself.",
+                    "Change" to "Automatically on every track change.",
+                )
+            val end = "Skip and Change will begin triggering insights from the next track."
+            // Folded, its first line alone, though a screen reader reads it whole.
+            val description = compose.onNode(hasTestTag(DESCRIPTION_TAG) and hasText(lead)).performScrollTo()
+            val whole = (listOf(lead) + modes.map { (mode, means) -> "$mode: $means" } + end).joinToString(" ")
+            assertEquals(listOf(whole), description.fetchSemanticsNode().config[SemanticsProperties.ContentDescription])
+            assertTrue(compose.onAllNodesWithText(modes.first().second).fetchSemanticsNodes().isEmpty())
+
+            description.performClick()
+            waitFor("unfolded") {
+                compose.onAllNodesWithText(end, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
             }
+            // The modes right-aligned in a column, what each means left-aligned after them.
+            val terms = modes.map { (mode, _) -> drawn(mode) }
+            val meanings = modes.map { (_, means) -> drawn(means) }
+            assertEquals(1, terms.map { it.right }.distinct().size)
+            assertEquals(1, meanings.map { it.left }.distinct().size)
+            assertTrue(meanings.first().left > terms.first().right)
+            val tops = terms.map { it.top }
+            assertEquals(tops.sorted(), tops)
+            assertTrue(drawn(lead).bottom <= tops.first())
+            assertTrue(drawn(end).top >= meanings.last().bottom)
         }
 
     @Test
     fun eachModeChosenIsToldToThePipelineTheOneChosenAlreadyIncluded() =
         show {
-            // The default, On track change (auto), chosen again: still the first action (#625).
+            // The default, Change, chosen again: still the first action (#625).
             val names =
                 mapOf(
-                    WriteAutomatically.ON_EVERY_TRACK_CHANGE to R.string.settings_write_every_change,
-                    WriteAutomatically.NEVER to R.string.settings_write_never,
+                    WriteAutomatically.ON_EVERY_TRACK_CHANGE to R.string.settings_write_every_change_short,
+                    WriteAutomatically.NEVER to R.string.settings_write_never_short,
                 )
             for ((mode, name) in names) {
-                compose.onNodeWithText(text(R.string.settings_write_automatically)).performScrollTo().performClick()
-                compose.onNode(inDialog(name)).performClick()
+                button(name).performScrollTo().performClick()
                 waitFor("$mode stored") { settings.now().writeAutomatically == mode }
             }
+            waitFor("both told") { chosen.size == 2 }
             assertEquals(listOf(WriteAutomatically.ON_EVERY_TRACK_CHANGE, WriteAutomatically.NEVER), chosen)
         }
+
+    @Test
+    fun saverComesRightAfterReactiveAndCrossfade() {
+        runBlocking { settings.update { it.copy(writeAutomatically = WriteAutomatically.WHEN_I_SKIP) } }
+        show {
+            val order =
+                listOf(
+                    R.string.settings_write_insights,
+                    R.string.settings_prepare_next,
+                    R.string.settings_background,
+                    R.string.settings_write_automatically,
+                    R.string.settings_crossfade,
+                    R.string.settings_pause_auto_write,
+                    R.string.settings_pause_auto_write_after,
+                    R.string.settings_artist_facts_once,
+                )
+            val tops = order.map(::top)
+            assertEquals(tops.sorted(), tops)
+            // Neither *Saver* nor *Stop after* is indented: both start where *Reactive* does.
+            val starts =
+                listOf(
+                    R.string.settings_write_automatically,
+                    R.string.settings_pause_auto_write,
+                    R.string.settings_pause_auto_write_after,
+                ).map {
+                    compose
+                        .onNodeWithText(text(it))
+                        .performScrollTo()
+                        .fetchSemanticsNode()
+                        .boundsInRoot.left
+                }
+            assertEquals(1, starts.distinct().size)
+        }
+    }
+
+    @Test
+    fun stopAftersCountsAreAButtonGroupWithAStoredCountOutsideThemOffered() {
+        runBlocking { settings.update { it.copy(pauseAutoWriteAfter = 7) } }
+        show {
+            val lefts =
+                listOf(3, 5, 7, 10).map {
+                    button(changes(it))
+                        .performScrollTo()
+                        .fetchSemanticsNode()
+                        .boundsInRoot.left
+                }
+            assertEquals(lefts.sorted(), lefts)
+            button(changes(7)).assertIsSelected()
+            button(changes(3)).performClick()
+            waitFor("a pause after 3 stored") { settings.now().pauseAutoWriteAfter == 3 }
+            button(changes(3)).assertIsSelected()
+        }
+    }
 
     @Test
     fun proactiveIsASwitchForTheNextTracksEvidence() =
@@ -208,7 +313,7 @@ class InsightSettingsTest {
         runBlocking { settings.update { it.copy(writeInsights = false) } }
         show {
             compose.onNodeWithText(text(R.string.settings_write_insights)).performScrollTo().assertIsOff()
-            compose.onNodeWithText(text(R.string.settings_write_automatically)).performScrollTo().assertIsNotEnabled()
+            for (mode in listOf("Demand", "Skip", "Change")) button(mode).performScrollTo().assertIsNotEnabled()
             compose.onNodeWithText(text(R.string.settings_pause_auto_write)).performScrollTo().assertIsNotEnabled()
             compose.onNodeWithText(text(R.string.settings_artist_facts_once)).performScrollTo().assertIsNotEnabled()
         }

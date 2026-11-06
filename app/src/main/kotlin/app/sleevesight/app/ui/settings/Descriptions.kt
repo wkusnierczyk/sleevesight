@@ -22,16 +22,19 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.platform.ViewConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
@@ -328,6 +331,9 @@ internal const val DESCRIPTION_TAG = "settings_description"
  * ([LocalDescriptionSection], [descriptionId]): its row's name, or a section's or note's own
  * string's name.
  * A search that finds [text] shows it open, the query marked in it ([RowSearch]).
+ *
+ * With [table] (*Reactive*'s, #945), [text] is its [DescriptionTable.text], and it shows as the
+ * table lays it out; folded, its first line alone, though a screen reader still reads it whole.
  */
 @Suppress("LongParameterList") // What it shows and how; all but the first two have defaults.
 @Composable
@@ -338,19 +344,26 @@ internal fun Description(
     color: Color = Color.Unspecified,
     link: TextPart.Linked? = null,
     reach: Dp = 0.dp,
+    table: DescriptionTable? = null,
 ) {
     val shown = LocalDescriptionFolds.current
     if (shown == null) {
-        DescriptionParagraphs(text, modifier, color, link, mark = false)
+        if (table != null) {
+            TableParagraphs(table, modifier, color, mark = false)
+        } else {
+            DescriptionParagraphs(text, modifier, color, link, mark = false)
+        }
         return
     }
     val style = MaterialTheme.typography.bodySmall
-    val line = remember(text) { oneLine(text) }
+    val line = remember(text, table) { table?.lead ?: oneLine(text) }
     // Until laid out, taken not to fit: one that does shows the same either way.
     var width by remember { mutableIntStateOf(0) }
     val measurer = rememberTextMeasurer()
+    // A table never fits one line, its first line shown alone when folded.
     val fits =
-        width > 0 &&
+        table == null &&
+            width > 0 &&
             remember(line, style, width, measurer) {
                 val measured = measurer.measure(line, style, maxLines = 1, constraints = Constraints(maxWidth = width))
                 !measured.hasVisualOverflow
@@ -386,19 +399,41 @@ internal fun Description(
                 .padding(bottom = reach),
         ) {
             CompositionLocalProvider(LocalViewConfiguration provides configuration) {
-                if (shut) {
-                    Text(
-                        searchMarked(line),
-                        style = style,
-                        color = color,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                } else {
-                    DescriptionParagraphs(text, color = color, link = link)
-                }
+                FoldableText(shut, line, text, color, link, table)
             }
         }
+    }
+}
+
+/**
+ * What a [Description] that folds shows: folded ([shut]), [line] cut to one line; else [text]'s
+ * paragraphs, or its [table]. A table's first line, shown alone folded, is read whole by a screen
+ * reader, as any folded description is.
+ */
+@Suppress("LongParameterList") // The description's state and texts, each a value of its own.
+@Composable
+private fun FoldableText(
+    shut: Boolean,
+    line: String,
+    text: String,
+    color: Color,
+    link: TextPart.Linked?,
+    table: DescriptionTable?,
+) {
+    if (shut) {
+        val spoken = if (table != null) Modifier.semantics { contentDescription = oneLine(text) } else Modifier
+        Text(
+            searchMarked(line),
+            modifier = spoken,
+            style = MaterialTheme.typography.bodySmall,
+            color = color,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    } else if (table != null) {
+        TableParagraphs(table, color = color)
+    } else {
+        DescriptionParagraphs(text, color = color, link = link)
     }
 }
 
@@ -447,6 +482,78 @@ private fun DescriptionParagraphs(
                 Text(if (mark) searchMarked(paragraph) else AnnotatedString(paragraph), style = style, color = color)
             }
         }
+    }
+}
+
+/**
+ * A description of a few terms (#945, *Reactive*'s modes): a [lead] line, then the [rows], each a
+ * term and what it means, then an [end] line.
+ */
+internal class DescriptionTable(
+    val lead: String,
+    val rows: List<Pair<String, String>>,
+    val end: String,
+) {
+    /**
+     * Its whole text, as the search finds it and a screen reader reads it folded: a paragraph for
+     * each part, a row as "term: meaning".
+     */
+    val text: String = (listOf(lead) + rows.map { (term, means) -> "$term: $means" } + end).joinToString("\n\n")
+}
+
+/** The room between a [DescriptionTable]'s parts, and between its rows. */
+private val TABLE_GAP = 6.dp
+private val TABLE_ROW_GAP = 4.dp
+
+/** The room between a [DescriptionTable]'s terms and what they mean. */
+private val TERM_GAP = 12.dp
+
+/**
+ * [table] unfolded, in body small: its lead line, then its rows in two columns, each term at the
+ * end of a column as wide as the widest (at most half the width) and what it means at the start of
+ * the rest, then its end line; the search's query marked in each if [mark]. A screen reader reads
+ * the rows in order, each term before what it means.
+ */
+@Composable
+private fun TableParagraphs(
+    table: DescriptionTable,
+    modifier: Modifier = Modifier,
+    color: Color = Color.Unspecified,
+    mark: Boolean = true,
+) {
+    val style = MaterialTheme.typography.bodySmall
+    val marked: @Composable (String) -> AnnotatedString = { if (mark) searchMarked(it) else AnnotatedString(it) }
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(TABLE_GAP)) {
+        Text(marked(table.lead), style = style, color = color)
+        Layout(
+            content = {
+                for ((term, means) in table.rows) {
+                    Text(marked(term), style = style, color = color, textAlign = TextAlign.End)
+                    Text(marked(means), style = style, color = color)
+                }
+            },
+        ) { cells, constraints ->
+            val gap = TERM_GAP.roundToPx()
+            val rowGap = TABLE_ROW_GAP.roundToPx()
+            val terms = cells.filterIndexed { i, _ -> i % 2 == 0 }
+            val meanings = cells.filterIndexed { i, _ -> i % 2 == 1 }
+            val widest = terms.maxOfOrNull { it.maxIntrinsicWidth(Constraints.Infinity) } ?: 0
+            val termWidth = widest.coerceAtMost(constraints.maxWidth / 2)
+            val rest = (constraints.maxWidth - termWidth - gap).coerceAtLeast(0)
+            val placedTerms = terms.map { it.measure(Constraints.fixedWidth(termWidth)) }
+            val placedMeanings = meanings.map { it.measure(Constraints(maxWidth = rest)) }
+            val heights = placedTerms.zip(placedMeanings) { t, m -> maxOf(t.height, m.height) }
+            val height = heights.sum() + rowGap * (heights.size - 1).coerceAtLeast(0)
+            layout(constraints.maxWidth, height) {
+                var y = 0
+                for (i in heights.indices) {
+                    placedTerms[i].placeRelative(0, y)
+                    placedMeanings[i].placeRelative(termWidth + gap, y)
+                    y += heights[i] + rowGap
+                }
+            }
+        }
+        Text(marked(table.end), style = style, color = color)
     }
 }
 
