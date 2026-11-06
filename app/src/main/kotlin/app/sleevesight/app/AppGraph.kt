@@ -716,8 +716,10 @@ class AppGraph internal constructor(
             autoSearches.run(pipeline.state.map { it.track }, latestSettings, pipeline.onScreen, pipeline.liveParts)
         }
         // Every genre of the playing track's table has its definition looked up as soon as the genres
-        // are known, whether a panel is open or not (#786).
-        pipelineScope.launch { genreNotes.lookups.fetchAhead(pipeline.state.map { it.track }) }
+        // are known, whether a panel is open or not (#786), while lookups are allowed (#961).
+        pipelineScope.launch {
+            genreNotes.lookups.fetchAhead(pipeline.state.map { it.track }, pipeline.lookupsAllowed)
+        }
         // A genre whose definition Wikipedia does not have is searched by itself with the setting on
         // (#786), as a lookup ends, or an AI service comes ready.
         pipelineScope.launch {

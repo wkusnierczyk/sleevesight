@@ -68,9 +68,11 @@ interface DefinitionFeed {
  * [scope], marked with [epoch].
  *
  * They are fetched ahead: as soon as the playing track's genres are known, and each time it gains
- * some, every genre of its table is looked up at once, whether any panel is open or not
- * ([fetchAhead], which the app graph runs on the pipeline's track). Each genre has one state
- * ([lookedUp]), shared by every panel and page that shows it: looking, found, not found or failed.
+ * some, every genre of its table is looked up at once, whether any panel is open or not, while
+ * lookups are allowed (on screen, or with *Look up in the background* on; #961), and on return for
+ * the track then playing ([fetchAhead], which the app graph runs on the pipeline's track). Each
+ * genre has one state ([lookedUp]), shared by every panel and page that shows it: looking, found,
+ * not found or failed.
  * Each play of a track asks [definitions] again for every genre of its table, once, whatever its
  * state: it serves what it keeps (also after a restart, with a store) and asks Wikipedia again only
  * past Wikipedia's lifetime, so a definition, or a genre's having none, expires as the source's
@@ -181,11 +183,16 @@ class AppGenreDefinitions(
             }
 
     /**
-     * Fetches ahead ([fetchAhead]) the definitions of each of [tracks] (the pipeline's track), and
-     * again as the settings change (lookups coming on), until cancelled.
+     * Fetches ahead ([fetchAhead]) the definitions of each of [tracks] (the pipeline's track) while
+     * [allowed] (the pipeline's `lookupsAllowed`: on screen, or *Look up in the background* on; #961),
+     * and again as the settings change (lookups coming on) or lookups are allowed again, for the
+     * track then playing, until cancelled.
      */
-    suspend fun fetchAhead(tracks: Flow<TrackState?>) {
-        combine(tracks, settings) { track, _ -> track }.collect(::fetchAhead)
+    suspend fun fetchAhead(
+        tracks: Flow<TrackState?>,
+        allowed: Flow<Boolean>,
+    ) {
+        combine(tracks, settings, allowed) { track, _, ok -> track.takeIf { ok } }.collect(::fetchAhead)
     }
 
     // A batch of lookups: the epoch's mark and the clears as they were when it began, under [lock].
