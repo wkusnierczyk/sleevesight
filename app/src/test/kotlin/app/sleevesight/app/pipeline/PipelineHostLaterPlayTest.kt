@@ -222,6 +222,26 @@ internal class PipelineHostLaterPlayTest : PipelineHostFixture() {
     }
 
     @Test
+    fun `under an automatic mode, the chosen model's own insight kept is served with no read of another's`() =
+        runTest {
+            writtenWithFirstModel(WriteAutomatically.ON_EVERY_TRACK_CHANGE)
+            play("Beta")
+            settle()
+            val read = cache.othersRead
+
+            // Its own card is a hit: another model's is never looked for (#911).
+            play("Alpha")
+            settle()
+            val shown =
+                host.state.value.track
+                    ?.insight as InsightState.Written
+            assertEquals(FIRST_MODEL, shown.writtenBy?.model)
+            assertTrue(shown.cached)
+            assertEquals(read, cache.othersRead)
+            assertEquals(1, provider.requestsFor("Alpha"))
+        }
+
+    @Test
     fun `of several kept, the one written last is shown`() =
         runTest {
             writtenWithFirstModel()

@@ -529,8 +529,9 @@ class AppItemNotes(
             // Not after a *Clear history* that came while the evidence was gathered.
             val key = evidence?.let { insights.key(item, track, it, now) }?.takeIf { current(work) }
             // What the write rewrites (#911, #972): the earlier insight shown in place of the key's own,
-            // or again after a rewrite of it ended without one. Read before the claim, as the row showed it.
-            val replaces = key?.let { replaced(insights, it, ask, track, evidence) }
+            // or again after a rewrite of it ended without one. Read before the claim, as the row showed it;
+            // for a row not yet looked, only once its own is missed ([unlooked]).
+            val replaces = key?.let { replaced(it, track) }
             if (evidence != null && key != null && claim(key, ask, track, evidence)) {
                 write(insights, key, Asked(item, track, evidence, ask, work, now, replaces))
             }
@@ -597,7 +598,8 @@ class AppItemNotes(
 
     // An item asked for: what it is, of which track, from what evidence, how it was asked, and under
     // which settings its evidence was gathered.
-    // [replaces] is what wrote the insight the write rewrites (#911, #972), null for none.
+    // [replaces] is what wrote the insight the write rewrites (#911, #972), null for none; set once the
+    // write misses its own insight, when its row had not looked for the earlier one ([unlooked]).
     @Suppress("LongParameterList") // What was asked, and what it rewrites.
     private class Asked(
         val item: InsightItem,
@@ -606,44 +608,52 @@ class AppItemNotes(
         val ask: ItemAsk,
         val work: CoroutineContext,
         val settings: Settings,
-        val replaces: WrittenBy? = null,
+        var replaces: WrittenBy? = null,
     ) {
         fun with(found: ItemEvidence) = Asked(item, track, found, ask, work, settings, replaces)
     }
 
     // What wrote the insight a write under [key] on [track] rewrites (#911): the earlier insight's, in
     // place of none, of a rewrite (a tap's or an automatic one's, #972) that ended without one, or of
-    // a write that did on an earlier play; null otherwise. A tap's, while the row shows it; an
-    // automatic ask's whether or not the row has looked for it yet (#972): read from the cache then,
-    // and kept as the row's look would keep it, so the row shows it again if the write ends without
-    // an insight. Writing in its place is a rewrite of it, as a tap on *Rewrite insight* is.
-    private suspend fun replaced(
+    // a write that did on an earlier play, while the row shows it; null otherwise. Writing in its place
+    // is a rewrite of it, as a tap on *Rewrite insight* is.
+    private fun replaced(
+        key: CardKey,
+        track: TrackState,
+    ): WrittenBy? {
+        if (!ownless(key, track) || key !in others.value) return null
+        val earlier = earlierFor(key, shown.value, others.value[key], settings.value?.historyLifetime)
+        return (earlier?.state as? InsightState.Written)?.writtenBy
+    }
+
+    // What an automatic write of [key] rewrites when its row has not looked for the earlier insight
+    // (#972): read from the cache, once its own is missed, and kept as the row's look would keep it,
+    // so the row shows it again if the write ends without an insight; null for a tap, which rewrites
+    // only what the row shows ([replaced]).
+    private suspend fun unlooked(
         insights: ItemInsights,
         key: CardKey,
-        ask: ItemAsk,
-        track: TrackState,
-        evidence: ItemEvidence,
+        asked: Asked,
     ): WrittenBy? {
-        val entry = shown.value[key]
-        // In place of none, of a rewrite that ended without one, or of a write on an earlier play that
-        // did ([stale]).
-        val ownless = entry == null || entry.rewrites || stale(entry, track.nowPlaying.play)
-        val looked = key in others.value
-        if (!ownless || (ask == ItemAsk.TAP && !looked)) return null
-        val cached =
-            if (looked) {
-                others.value[key]
-            } else {
-                val other =
-                    insights
-                        .keptByOther(key, evidence)
-                        ?.takeIf { !expired(it.writtenAt) }
-                        ?.let { Entry(it.state, it.writtenAt ?: clock.now(), evidence) }
-                publish(currentCoroutineContext()) { others.update { it.withOther(key, other) } }
-                other
-            }
-        val earlier = earlierFor(key, shown.value, cached, settings.value?.historyLifetime)
+        if (asked.ask == ItemAsk.TAP || key in others.value || !ownless(key, asked.track)) return null
+        val other =
+            insights
+                .keptByOther(key, asked.evidence)
+                ?.takeIf { !expired(it.writtenAt) }
+                ?.let { Entry(it.state, it.writtenAt ?: clock.now(), asked.evidence) }
+        publish(asked.work) { others.update { it.withOther(key, other) } }
+        val earlier = earlierFor(key, shown.value, other, settings.value?.historyLifetime)
         return (earlier?.state as? InsightState.Written)?.writtenBy
+    }
+
+    // Whether [key] has no insight of its own on [track]: none, a rewrite that ended without one, or a
+    // write that did on an earlier play ([stale]).
+    private fun ownless(
+        key: CardKey,
+        track: TrackState,
+    ): Boolean {
+        val entry = shown.value[key]
+        return entry == null || entry.rewrites || stale(entry, track.nowPlaying.play)
     }
 
     // What a Stop cancels an item's call with, told apart from the scope's own cancellation.
@@ -749,11 +759,10 @@ class AppItemNotes(
         val work = currentCoroutineContext()
         val job = work[Job]
         job?.let { jobs[key] = it }
-        // A tap's or an automatic one's (#972): one that ends without an insight shows the earlier
-        // insight again, saying why.
-        val rewrites = firstAsked.replaces != null
         val show: (InsightState, Instant) -> Unit = { state, at ->
-            val entry = Entry(state, at, asked.evidence, rewrites, track.nowPlaying.play)
+            // A tap's or an automatic one's (#972): one that ends without an insight shows the earlier
+            // insight again, saying why.
+            val entry = Entry(state, at, asked.evidence, asked.replaces != null, track.nowPlaying.play)
             publish(work) { shown.update { it.with(key, entry) } }
         }
         val question = Question(track, AiQuestion.Item(item), work)
@@ -897,6 +906,8 @@ class AppItemNotes(
         counted: (QuestionCost) -> Unit,
     ): Next {
         if (showKept(insights, key, asked)) return Next(key, asked, AiOutcome.ANSWERED)
+        // Its own missed: what it rewrites, when its row had not looked yet (#972).
+        if (asked.replaces == null) asked.replaces = unlooked(insights, key, asked)
         // The key an album's or the artist's *Once* search's lines give, claimed beside [key] before
         // they are kept (#935).
         var reserved: CardKey? = null

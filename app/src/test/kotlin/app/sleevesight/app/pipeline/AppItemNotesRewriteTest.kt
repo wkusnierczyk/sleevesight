@@ -183,6 +183,28 @@ class AppItemNotesRewriteTest {
         }
 
     @Test
+    fun `an automatic ask in a new process serves its own insight kept, with no read of another's`() =
+        runTest {
+            written(notes(), track(play = 1))
+            model(OTHER)
+            notes().write(track(play = 2), InsightItem.SONG, ItemAsk.TAP)
+            advanceUntilIdle()
+            assertEquals(2, provider.requests)
+
+            // A new process, its row not yet shown: the other model's own insight is a hit, so the
+            // first model's is never read (#911).
+            mode(WriteAutomatically.ON_EVERY_TRACK_CHANGE)
+            val notes = notes()
+            val later = track(play = 3)
+            val read = cache.othersRead
+            notes.write(later, InsightItem.SONG, ItemAsk.BY_ITSELF)
+            advanceUntilIdle()
+            assertEquals(read, cache.othersRead)
+            assertEquals(2, provider.requests)
+            assertEquals(OTHER, notes.song(later).writtenBy())
+        }
+
+    @Test
     fun `an automatic write that failed, retried on the same play, is a rewrite, saying so`() =
         runTest { retriedOnItsPlay(stopped = false) }
 
