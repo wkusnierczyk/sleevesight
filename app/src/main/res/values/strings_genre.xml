@@ -75,4 +75,19 @@
     <string name="genre_weak_album">, and the album’s tags don’t include it</string>
     <string name="genre_weak_both">, and neither the artist’s nor the album’s tags include it</string>
     <string name="genre_weak_both_artists">, and neither the artists’ nor the album’s tags include it</string>
+    <!-- Under Instrumental's definition when it is weak for a sign that the track is sung (#996),
+         in the same note style as genre_weak_musicbrainz; the genre, in italics, as its chip names
+         it. When MusicBrainz gives the song's work a language: %1$s is the language ("Japanese"),
+         %2$s the genre. Provisional wording. -->
+    <string name="genre_weak_language">MusicBrainz lists this song’s lyrics as %1$s, so it is likely not %2$s.</string>
+    <!-- The same, for a language Sleevesight has no name for (or several languages): %1$s is the
+         genre. Provisional wording. -->
+    <string name="genre_weak_lyrics">MusicBrainz lists lyrics for this song, so it is likely not %1$s.</string>
+    <!-- When MusicBrainz credits someone with vocals on the recording: %1$s is their name as
+         MusicBrainz gives it, %2$s the genre. Provisional wording. -->
+    <string name="genre_weak_vocalist">MusicBrainz credits %1$s with vocals on this track, so it is likely not %2$s.</string>
+    <!-- When the track credits several artists and one of them has no artist's tag of the genre
+         while another artist's or the album's tags give it: %1$s is that artist, as the track
+         credits them, %2$s the genre. Provisional wording. -->
+    <string name="genre_weak_featured">%1$s is credited on this track, so it is likely not %2$s.</string>
 </resources>

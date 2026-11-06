@@ -151,25 +151,25 @@ class TrackGenresChipsTest {
 
     @Test
     fun `why a weak genre is weak names its source and the levels without it`() {
-        val mb = WeakEvidence(musicBrainz = true, artists = 1, album = false)
+        val mb = WeakEvidence.FewVotes(musicBrainz = true, artists = 1, album = false)
         assertEquals(mb, reported().weakEvidence("country"))
         // Backed, or no chip: nothing to say.
         assertNull(reported().weakEvidence("folk"))
         assertNull(reported().weakEvidence("jazz"))
         // Last.fm alone, two artists and the album.
         val lastFm = genres(lastFm = track("soul") + artist("A", "rock") + artist("B", "pop") + album("jazz"))
-        assertEquals(WeakEvidence(musicBrainz = false, artists = 2, album = true), lastFm.weakEvidence("soul"))
+        assertEquals(WeakEvidence.FewVotes(musicBrainz = false, artists = 2, album = true), lastFm.weakEvidence("soul"))
         // The album alone; then no other level.
         assertEquals(
-            WeakEvidence(musicBrainz = true, artists = 0, album = true),
+            WeakEvidence.FewVotes(musicBrainz = true, artists = 0, album = true),
             genres(recording("soul" to 1), album("jazz")).weakEvidence("soul"),
         )
         assertEquals(
-            WeakEvidence(musicBrainz = false, artists = 0, album = false),
+            WeakEvidence.FewVotes(musicBrainz = false, artists = 0, album = false),
             genres(lastFm = track("soul")).weakEvidence("soul"),
         )
         // Given by both sources, one vote: MusicBrainz's contributors tagged it.
         val both = genres(recording("soul" to 1), track("soul"))
-        assertEquals(WeakEvidence(musicBrainz = true, artists = 0, album = false), both.weakEvidence("soul"))
+        assertEquals(WeakEvidence.FewVotes(musicBrainz = true, artists = 0, album = false), both.weakEvidence("soul"))
     }
 }

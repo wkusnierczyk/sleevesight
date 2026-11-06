@@ -52,7 +52,9 @@ class MusicBrainzSource(
      * the recording's tags, by which a track's label leads its folded genres only with two (#799), so
      * a track kept before is asked again rather than shown under the album's labels. 9: a full first
      * page of the search is joined by the recordings released by its earliest fitting date (#906), so
-     * a track kept under a later recording (a live take) is asked again. Without
+     * a track kept under a later recording (a live take) is asked again. 10: and who is credited with
+     * vocals on the recording (#996), against which an artist's Instrumental tag is weighed, so a track
+     * kept before is asked again rather than shown Instrumental unweighed. Without
      * [genres] (*Show genres* off, #444), it keeps no tags, and its results are kept apart ([WITHOUT_GENRES_VERSION]).
      */
     override val extractionVersion: Int = EXTRACTION_VERSION + if (genres) 0 else WITHOUT_GENRES_VERSION
@@ -90,4 +92,4 @@ class MusicBrainzSource(
     }
 }
 
-private const val EXTRACTION_VERSION = 9
+private const val EXTRACTION_VERSION = 10

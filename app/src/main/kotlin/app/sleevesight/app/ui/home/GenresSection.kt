@@ -101,7 +101,9 @@ internal fun genresItem(
  * no *Close*). With no genre and no source still asked (every genre source off, one not reached, none
  * found), *Search with AI* under the lines ([search], #773), whose genres show as chips that unfold
  * their genre as the others do ([AiGenres]), on the genres' page as well. A genre with no definition
- * from Wikipedia offers *Search with AI* for one, from [search] too (#786).
+ * from Wikipedia offers *Search with AI* for one, from [search] too (#786). Lyrics pages *Find the
+ * lyrics* found for the track ([search]'s, #996) drop Instrumental from every row, as MusicBrainz's
+ * lyrics links do ([TrackGenres.withLyricsFound]).
  */
 @Suppress("LongParameterList") // What the panel shows, and each of its ways out.
 @Composable
@@ -117,7 +119,7 @@ internal fun GenresContent(
 ) {
     // The track's genres with the AI's genre list (#762), where one is known: its genres join the
     // chips and the track's row, marked AI.
-    val track = playing?.withAi(aiGenres(playing, notes.notes))
+    val track = withLyricsFound(playing?.withAi(aiGenres(playing, notes.notes)), search)
     val shown = GenresShown.of(track, settings)
     val style = MaterialTheme.typography.bodyLarge
     // The genre a tap opened, kept above the chips and the lines in their place (#772): while a run

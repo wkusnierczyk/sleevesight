@@ -74,7 +74,7 @@ class MusicBrainzTagsTest {
             assertEquals(listOf(ResolvedArtist("Gordon Lightfoot", "mb-a")), result.labelArtists)
             assertTrue(result.genres.isEmpty())
             assertEquals(null, result.recordingTags)
-            assertEquals(9, MusicBrainzSource().extractionVersion)
+            assertEquals(10, MusicBrainzSource().extractionVersion)
         }
 
     @Test

@@ -42,10 +42,14 @@ import app.sleevesight.core.genres.GenreLevel
 import app.sleevesight.core.genres.GenreRow
 import app.sleevesight.core.genres.LabelCredit
 import app.sleevesight.core.genres.LabelSource
+import app.sleevesight.core.genres.Singing
 import app.sleevesight.core.genres.TrackGenres
 import app.sleevesight.core.genres.TrackLabel
+import app.sleevesight.core.lyrics.LyricsLink
+import app.sleevesight.core.lyrics.LyricsSite
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.synthesis.SearchAnswer
 import app.sleevesight.core.synthesis.SearchFacts
 import app.sleevesight.core.synthesis.SearchKind
 import kotlinx.coroutines.flow.Flow
@@ -359,7 +363,56 @@ class GenreWeakScreenTest {
             )
         }
 
+    @Test
+    fun instrumentalsLineNamesTheSignThatTheTrackIsSung() {
+        // Artist A tagged Instrumental and Funk; B credited too, with no tags.
+        val tagged = listOf(artist("A", "instrumental", "funk"))
+        val cases =
+            listOf(
+                Singing(vocalists = listOf("Yurika Hanashima"), languages = listOf("jpn")) to
+                    "MusicBrainz credits Yurika Hanashima with vocals on this track, so it is likely not Instrumental.",
+                Singing(languages = listOf("jpn")) to
+                    "MusicBrainz lists this song’s lyrics as Japanese, so it is likely not Instrumental.",
+                Singing(languages = listOf("mul")) to
+                    "MusicBrainz lists lyrics for this song, so it is likely not Instrumental.",
+                Singing.NONE to "B is credited on this track, so it is likely not Instrumental.",
+            )
+        for ((singing, line) in cases) {
+            show(TrackGenres(tagged, credited = listOf("A", "B"), singing = singing)) {
+                tap(INSTRUMENTAL)
+                assertEquals(line to listOf("Instrumental"), weakLine())
+            }
+        }
+    }
+
+    @Test
+    fun lyricsFindTheLyricsFoundDropInstrumentalFromTheChips() {
+        val found =
+            AiSearch.Answered(
+                SearchAnswer.Lyrics(listOf(LyricsLink(LyricsSite.GENIUS, "https://genius.com/A-song-lyrics"))),
+                "Model",
+            )
+        val lyrics =
+            object : AiSearchFeed by feed {
+                override fun search(
+                    track: TrackState,
+                    kind: SearchKind,
+                    genre: String?,
+                ): Flow<AiSearch> = flowOf(if (kind == SearchKind.LYRICS) found else AiSearch.None)
+            }
+        val genres = TrackGenres(listOf(artist("A", "instrumental", "funk")), credited = listOf("A"))
+        show(genres, content = { GenresContent(it, Settings(), search = PanelSearch(lyrics, it, it.nowPlaying)) }) {
+            assertEquals(0, count(INSTRUMENTAL))
+            assertEquals(1, count(GENRE_PREFIX + "artist:A:funk"))
+        }
+        // Without the answer, the chip is there.
+        show(genres, content = { GenresContent(it, Settings(), search = PanelSearch(feed, it, it.nowPlaying)) }) {
+            assertEquals(1, count(INSTRUMENTAL))
+        }
+    }
+
     private companion object {
         const val COUNTRY = GENRE_PREFIX + "track:country"
+        const val INSTRUMENTAL = GENRE_PREFIX + "artist:A:instrumental"
     }
 }

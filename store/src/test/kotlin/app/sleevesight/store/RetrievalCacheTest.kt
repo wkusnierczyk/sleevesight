@@ -559,6 +559,8 @@ class RetrievalCacheTest {
                     listOf("https://genius.com/Gordon-lightfoot-sundown-lyrics"),
                     listOf("eng"),
                     instrumental = true,
+                    // Those credited with vocals (#996).
+                    vocalists = listOf("Gordon Lightfoot"),
                 ),
         )
     }

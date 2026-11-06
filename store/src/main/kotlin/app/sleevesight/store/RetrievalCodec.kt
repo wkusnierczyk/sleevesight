@@ -46,7 +46,8 @@ internal object RetrievalCodec {
      * (MusicBrainz's extraction version 7), so a track played before is asked again rather than shown
      * as having no lyrics page.
      * The votes on the recording's tags (#799) are an optional field too, made a miss the same way
-     * (MusicBrainz's extraction version 8).
+     * (MusicBrainz's extraction version 8). Those credited with vocals on the recording (#996) are an
+     * optional field too, made a miss the same way (MusicBrainz's extraction version 10).
      */
     const val FORMAT: Int = 7
 
@@ -96,7 +97,7 @@ internal object RetrievalCodec {
                             release = it.release?.let(::releaseJson),
                         )
                     },
-                lyrics = result.lyrics?.let { LyricsJson(it.links, it.languages, it.instrumental) },
+                lyrics = result.lyrics?.let { LyricsJson(it.links, it.languages, it.instrumental, it.vocalists) },
                 trackOnly = result.trackOnly,
                 pages = result.pages,
                 language = result.language,
@@ -141,7 +142,7 @@ internal object RetrievalCodec {
                             release = it.release?.let(::release),
                         )
                     },
-                lyrics = stored.lyrics?.let { WorkLyrics(it.links, it.languages, it.instrumental) },
+                lyrics = stored.lyrics?.let { WorkLyrics(it.links, it.languages, it.instrumental, it.vocalists) },
                 trackOnly = stored.trackOnly,
                 pages = stored.pages,
                 language = stored.language,
@@ -258,6 +259,7 @@ internal object RetrievalCodec {
         val links: List<String>? = emptyList(),
         val languages: List<String> = emptyList(),
         val instrumental: Boolean = false,
+        val vocalists: List<String> = emptyList(),
     )
 
     @Serializable
