@@ -72,6 +72,14 @@ class MusicBrainzLabelsTest {
     }
 
     @Test
+    fun `MusicBrainz's genres the wider list added give labels`() {
+        // #1011: genres of MusicBrainz's list that the vocabulary had dropped.
+        val tags = listOf("psychedelic rock", "turkish", "anatolian rock", "synth-pop", "bossa nova")
+        val found = labels().recordingLabels(RecordingTags("mb-rec", tags))
+        assertEquals(listOf("Psychedelic Rock", "Anatolian Rock", "Synth-Pop", "Bossa Nova"), found.map { it.label })
+    }
+
+    @Test
     fun `an artist MusicBrainz does not know, or whose request failed, gives none`() =
         runTest {
             val labels = labels()

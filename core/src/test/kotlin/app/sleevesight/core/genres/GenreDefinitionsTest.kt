@@ -158,9 +158,10 @@ class GenreDefinitionsTest {
 
     @Test
     fun `the articles the vocabulary names, each for a genre MusicBrainz cannot define`() {
-        // #852, each article's lead checked on 2026-11-02 to say what the tag means. Each tag has no
-        // MusicBrainz genre that fits, or, for *classic rock* and *singer-songwriter*, a genre whose
-        // Wikidata item has no English article (2026-10-27).
+        // #852, each article's lead checked on 2026-11-02 to say what the tag means, and #1011's on
+        // 2026-11-06. Each tag has no MusicBrainz genre that fits, or, for *classic rock* and
+        // *singer-songwriter* (2026-10-27), and *big band*, *vocal jazz* and *orchestral*
+        // (2026-11-06), a genre whose Wikidata item has no English article.
         val named =
             mapOf(
                 "acoustic" to "Acoustic music",
@@ -171,6 +172,10 @@ class GenreDefinitionsTest {
                 "score" to "Film score",
                 "soundtrack" to "Soundtrack",
                 "choral" to "Choir",
+                "big band" to "Big band",
+                "vocal jazz" to "Vocal jazz",
+                "orchestral" to "Orchestra",
+                "world music" to "World music",
             )
 
         fun articleOf(tag: String) = vocabulary.wikipediaArticle(checkNotNull(vocabulary.identity(tag)))
@@ -196,6 +201,9 @@ class GenreDefinitionsTest {
                 "chanson francaise" to "b7864789-29e6-4965-84e4-463baaa869df", // chanson française
                 "rap" to "52faa157-6bad-4d86-a0ab-d4dec7d2513c", // hip hop
                 "neoclassical" to "27f6e0f8-8d02-4f15-ac9f-45c5798978b7", // neoclassical new age
+                // #1011: their own genres have no English article (2026-11-06).
+                "modern classical" to "a190bb32-e0a7-4c56-b142-5cf9cfcfa713", // contemporary classical
+                "contemporary country" to "5f665615-7fb3-49d8-b541-62a7b239edbe", // country
             )
         for ((tag, genre) in nearest) {
             assertEquals(genre, vocabulary.musicBrainzGenre(checkNotNull(vocabulary.identity(tag))), tag)
@@ -217,6 +225,7 @@ class GenreDefinitionsTest {
                 "soundtrack" to "a kind of release in MusicBrainz, not a genre",
                 "score" to "a kind of release in MusicBrainz, not a genre",
                 "choral" to "MusicBrainz has none; choral symphony is one form of it",
+                "world music" to "MusicBrainz has none; a catch-all of regions, not one style",
             )
         val without =
             vocabulary.tags.filter {

@@ -25,6 +25,7 @@ class GenreVocabularyTest {
                 "electronic" to 190,
                 "score" to 262,
                 "jazzblues" to 215,
+                "world" to 295,
             ),
             hues,
         )
@@ -70,6 +71,45 @@ class GenreVocabularyTest {
         assertEquals(labels.map { vocabulary.identity(it.tag) }, labels.map { it.identity })
         assertEquals(listOf(page), labels.map { it.url }.distinct())
         assertEquals(null, vocabulary.labelsFor(listOf("soul")).single().url)
+    }
+
+    @Test
+    fun `the genres "Eros"'s artist is described by are on the list, Turkish psychedelia as Anatolian rock`() {
+        // #1011: islandman's description names neo-psychedelia, Turkish psychedelia and psychedelic
+        // guitar; the old list had none of them.
+        val labels =
+            vocabulary.labelsFor(
+                listOf("Psychedelic Rock", "neo-psychedelia", "Turkish psychedelia", "Anatolian rock", "afrobeat"),
+            )
+        assertEquals(
+            listOf("Psychedelic Rock", "Neo-Psychedelia", "Turkish Psychedelia", "Afrobeat"),
+            labels.map { it.label },
+        )
+        assertEquals(listOf("rock", "rock", "rock", "world"), labels.map { it.family })
+        assertEquals(vocabulary.identity("anatolian rock"), vocabulary.identity("turkish psychedelia"))
+        assertEquals(listOf("World Music"), vocabulary.labelsFor(listOf("world music")).map { it.label })
+    }
+
+    @Test
+    fun `the wider list's spellings of one genre give one label`() {
+        // #1011's synonyms, and spellings that differ only in punctuation and spacing.
+        val folded =
+            listOf(
+                listOf("rock and roll", "rock n roll", "rock 'n' roll"),
+                listOf("chanson francaise", "chanson française"),
+                listOf("psytrance", "psychedelic trance"),
+                listOf("alternative country", "alt-country"),
+                listOf("synth-pop", "synthpop"),
+                listOf("pop punk", "pop-punk"),
+                listOf("neo soul", "neo-soul"),
+            )
+        for (spellings in folded) {
+            assertEquals(1, vocabulary.labelsFor(spellings).size, "$spellings")
+            assertEquals(1, spellings.map { vocabulary.identity(it) }.distinct().size, "$spellings")
+        }
+        val rockAndRoll = vocabulary.labelsFor(listOf("Rock 'n' Roll", "rock and roll"))
+        assertEquals(listOf("Rock 'n' Roll"), rockAndRoll.map { it.label })
+        assertEquals(listOf("IDM", "EBM", "EDM"), vocabulary.labelsFor(listOf("idm", "ebm", "edm")).map { it.label })
     }
 
     @Test
