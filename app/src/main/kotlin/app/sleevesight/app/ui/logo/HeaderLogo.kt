@@ -1,6 +1,7 @@
 package app.sleevesight.app.ui.logo
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -12,9 +13,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
@@ -40,7 +43,9 @@ import androidx.compose.ui.unit.toSize
  *
  * Its record has the header's larger label ([HEADER_LABEL], #848), and turns while [spin] says so
  * (music playing, *Spin the logo while music plays* on), getting up to speed and coming to rest as a
- * turntable does ([recordMotion]); once the intro has ended, from where the intro landed it. In a
+ * turntable does ([recordMotion]); once the intro has ended, from where the intro landed it. The
+ * record is drawn once, in a layer of its own, and the layer turns (#963): a frame of the turn
+ * redraws nothing, neither the record nor the words. In a
  * debug build the bug in its place never turns: while the record would, it crawls ([bugCrawl]),
  * every few seconds up out of [crawlSpace] (the header's box, in the root's pixels; the logo's own
  * box without one), and back in from its bottom to its place, drawn only inside that box.
@@ -79,26 +84,41 @@ internal fun HeaderLogo(
             origin.value = it.positionInRoot()
             intro?.target = Rect(it.positionInRoot(), it.size.toSize())
         }
-    Canvas(place.size(height * (LineBox.width / LineBox.height), height)) {
-        if (!shown) return@Canvas
-        // As the intro's landing draws it ([headerPlace]), so the two meet exactly.
-        val line = linePlace(size)
-        at(line) {
-            drawSleeve(colors)
-            translate(LineShift.x, LineShift.y) {
-                drawSight(colors)
-                // Read as it draws, so the turning redraws the logo without recomposing it.
-                if (bugPath == null) {
-                    drawRecordPlace(colors, null, RecordPose(RecordCentre, degrees = motion.value.degrees))
+    Box(place.size(height * (LineBox.width / LineBox.height), height)) {
+        Canvas(Modifier.matchParentSize()) {
+            if (!shown) return@Canvas
+            // As the intro's landing draws it ([headerPlace]), so the two meet exactly.
+            val line = linePlace(size)
+            at(line) {
+                drawSleeve(colors)
+                translate(LineShift.x, LineShift.y) { drawSight(colors) }
+            }
+            if (bugPath != null) {
+                val box = crawlSpace()?.translate(-origin.value) ?: Rect(Offset.Zero, size)
+                drawCrawlingBug(colors, bugPath, line, box, crawl.value.trip)
+            }
+        }
+        if (bugPath == null) {
+            // The record upright, turned by its layer about its centre: the angle read in the
+            // layer's block, so a frame of the turn changes the layer alone (#963).
+            Canvas(
+                Modifier.matchParentSize().graphicsLayer {
+                    val centre = recordCentre(linePlace(size))
+                    transformOrigin = TransformOrigin(centre.x / size.width, centre.y / size.height)
+                    rotationZ = motion.value.degrees
+                },
+            ) {
+                if (!shown) return@Canvas
+                at(linePlace(size)) {
+                    translate(LineShift.x, LineShift.y) { drawRecordPlace(colors, null, RecordPose(RecordCentre)) }
                 }
             }
         }
-        if (bugPath != null) {
-            val box = crawlSpace()?.translate(-origin.value) ?: Rect(Offset.Zero, size)
-            drawCrawlingBug(colors, bugPath, line, box, crawl.value.trip)
-        }
     }
 }
+
+/** The record's centre in the header logo drawn at [line], in the canvas's pixels. */
+private fun recordCentre(line: Place): Offset = line.at + (RecordCentre + LineShift) * line.scale
 
 /**
  * Draws the bug in the record's place, [trip] of the way through a crawl (none: in its place), the

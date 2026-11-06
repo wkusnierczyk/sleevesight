@@ -42,7 +42,8 @@ import kotlin.math.abs
 /**
  * The header logo's record turning while music plays (#848), on the test's clock: it gets up to
  * speed in 1 s and comes to rest in 2 s, where it stops; it waits for the intro to end; it stands
- * still where it is under *Remove animations* and off screen, and goes on from there; and turning,
+ * still where it is under *Remove animations* and off screen, and goes on from there; it moves 30
+ * times a second, not on every frame (#963); and turning,
  * it is drawn with the header's larger label, light and dark (kept as PNGs when
  * `SLEEVESIGHT_PICTURES` names a directory).
  */
@@ -95,6 +96,21 @@ class HeaderSpinTest {
             assertTrue("speeding up: ${now.speed}", now.speed > 0f && now.speed < LP)
             compose.mainClock.advanceTimeBy(HALF_SECOND + SLACK)
             assertEquals(LP, now.speed, .001f)
+        }
+
+    @Test
+    fun itTurnsInStepsOf30ASecondNotEveryFrame() =
+        show {
+            compose.mainClock.advanceTimeBy(2 * HALF_SECOND + SLACK)
+            // A second of the test clock's 16 ms frames: the record moves on every second or third
+            // of them, not on each (#963).
+            var steps = 0
+            repeat(FRAMES_A_SECOND) {
+                val before = now.degrees
+                compose.mainClock.advanceTimeByFrame()
+                if (now.degrees != before) steps++
+            }
+            assertTrue("steps in a second: $steps", steps in FRAMES_A_SECOND / 4..FRAMES_A_SECOND / 2)
         }
 
     @Test
@@ -268,6 +284,9 @@ class HeaderSpinTest {
         val LP = LogoSpeed.RPM_33.rpm * DEGREES_PER_RPM
         val SINGLE = LogoSpeed.RPM_45.rpm * DEGREES_PER_RPM
         const val HALF_SECOND = 500L
+
+        // The test clock's frames in a second, 16 ms each.
+        const val FRAMES_A_SECOND = 62
 
         // A few frames, for a change to recompose and the motion to start.
         const val FIRST_FRAMES = 100L

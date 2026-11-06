@@ -20,6 +20,7 @@ import app.sleevesight.app.ui.home.playing
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.settings.LogoSpeed
 import app.sleevesight.core.settings.Settings
+import kotlinx.coroutines.delay
 import kotlin.math.abs
 import kotlin.math.sign
 
@@ -105,10 +106,11 @@ internal data class RecordMotion(
  * resting where it stops and starting again from there. It moves only while [running] (the intro
  * over, so the record the intro landed, upright, is where it starts), while the app is on screen
  * ([whileOnScreen]: back on screen, it goes on from where it was, the time away not counted), and while
- * Home is composed. Back after an absence (off screen, or Home shown again) with nothing to turn it,
- * it stands still at once where it is; a stop while it shows coasts to rest. Under *Remove
- * animations* ([animatorDurationScale] 0) it stands still where it is, and starts again from there
- * once animations are back.
+ * Home is composed. It moves in steps of [RECORD_FRAME_MS], 30 a second, not at the screen's rate
+ * (#963): at 33⅓ rpm, 6.7° a step, and a quarter of the frames of a 120 Hz screen. Back after an
+ * absence (off screen, or Home shown again) with nothing to turn it, it stands still at once where
+ * it is; a stop while it shows coasts to rest. Under *Remove animations* ([animatorDurationScale]
+ * 0) it stands still where it is, and starts again from there once animations are back.
  */
 @Composable
 internal fun recordMotion(
@@ -137,7 +139,7 @@ internal fun recordMotion(
             if (away.back && target == 0f) motion.value = motion.value.copy(speed = 0f)
             away.back = false
             if (target > 0f || motion.value.speed > 0f) {
-                eachFrame { seconds ->
+                eachFrame(every = RECORD_FRAME_MS) { seconds ->
                     motion.value = motion.value.after(seconds, target, top)
                     target > 0f || motion.value.speed > 0f
                 }
@@ -166,10 +168,17 @@ internal suspend fun whileOnScreen(
  * Calls [step] with the seconds since the frame before, frame after frame, from the frame after the
  * first, for as long as it returns true. Frames as an infinite animation's, which a test's clock
  * holds back while it waits for idle; a frame long in coming moves things only [MAX_STEP_SECONDS].
+ * With [every], a frame about that many milliseconds after the one before, rather than the next:
+ * it waits [every] less [FRAME_SLACK_MS] before it asks for one, so on a screen of 60, 90 or 120 Hz
+ * the frame it gets is the one due [every] later, and between the two the app draws nothing.
  */
-internal suspend fun eachFrame(step: (Float) -> Boolean) {
+internal suspend fun eachFrame(
+    every: Long = 0L,
+    step: (Float) -> Boolean,
+) {
     var last = withInfiniteAnimationFrameNanos { it }
     do {
+        if (every > 0L) delay(every - FRAME_SLACK_MS)
         val now = withInfiniteAnimationFrameNanos { it }
         val seconds = ((now - last) / NANOS_PER_SECOND).coerceAtMost(MAX_STEP_SECONDS)
         last = now
@@ -181,6 +190,12 @@ private fun wrap(degrees: Float): Float = degrees % FULL_TURN
 /** The time the record takes to get up to speed, and to come to rest from it, as a turntable's. */
 internal const val START_SECONDS: Float = 1f
 internal const val STOP_SECONDS: Float = 2f
+
+/** The time between two steps of the header logo's record's turn (#963): 30 a second. */
+internal const val RECORD_FRAME_MS: Long = 33L
+
+/** How much sooner [eachFrame] asks for a frame than [eachFrame]'s `every` says, for a late wake. */
+private const val FRAME_SLACK_MS = 5L
 
 /** Degrees a second for each revolution a minute. */
 internal const val DEGREES_PER_RPM: Float = 6f
