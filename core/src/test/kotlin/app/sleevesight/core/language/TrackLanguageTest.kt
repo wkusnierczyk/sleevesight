@@ -155,6 +155,22 @@ class TrackLanguageTest {
         }
 
     @Test
+    fun `the lines' hint is the language most lines in a script other than Latin name`() {
+        fun of(vararg texts: String) = TrackLanguage.ofLines(texts.toList()).map { it.code }
+        val english = "“Tum Se Hi” is a song from the 2007 film Jab We Met."
+        val hindi = "यह गीत 2007 की एक फ़िल्म का है।"
+        // Lines in Latin letters count for nothing, a title in Devanagari quoted in one included.
+        assertEquals(listOf("hi"), of(english, english, english, hindi))
+        assertEquals(emptyList(), of(english, "The song “तुम से ही” was released in 2007."))
+        // A shared script names none and counts against: no majority.
+        val russian = "Эта песня вышла в 2007 году."
+        assertEquals(listOf("hi"), of(hindi, hindi, russian))
+        assertEquals(emptyList(), of(hindi, russian))
+        assertEquals(emptyList(), of(hindi, "이 노래는 2007년에 나왔다."))
+        assertEquals(emptyList(), of())
+    }
+
+    @Test
     fun `an unknown code or item is no hint`() {
         assertEquals(emptyList(), TrackLanguage.ofIso3(listOf("xyz", "zxx")))
         assertEquals(listOf("hi"), TrackLanguage.ofItems(listOf("Q99999999", "Q1568", "Q1568")).map { it.code })

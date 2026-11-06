@@ -33,8 +33,9 @@ import kotlin.time.Duration
  * lookup obeys its own source's switch: the language's Wikipedia, with Wikidata's names in it, that
  * of Wikipedia and Wikidata, and the web search in it that of Exa web search.
  *
- * The language is [LanguageDecision]'s: [TrackLanguage]'s from the track's names and what
- * MusicBrainz and Wikidata record, each asked only when the hints before it have not decided, kept
+ * The language is [LanguageDecision]'s: [TrackLanguage]'s from the track's names, what MusicBrainz
+ * and Wikidata record and, last, the script of the English sources' lines about the track (#987),
+ * each asked only when the hints before it have not decided, kept
  * per track in the retrieval cache; English, or none, searches nothing. A track whose English
  * sources all came from the retrieval cache has no resolution, which the later hints and the lookups
  * need: it is made only then, MusicBrainz switched on (its answers held in memory for half an hour
@@ -287,11 +288,17 @@ internal class InLanguage(
         fun ownLines(
             state: TrackState,
             settings: Settings,
-        ): Int =
+        ): Int = trackLines(state, settings).size
+
+        /** The lines [ownLines] counts: those about the track itself of [state]'s English sources switched on. */
+        fun trackLines(
+            state: TrackState,
+            settings: Settings,
+        ): List<EvidenceDraft> =
             state.sources.values
                 .mapNotNull { (it as? SourceState.Done)?.result }
                 .flatMap { it.evidence }
-                .count { settings.isEnabled(it.source) && it.scope in PromptEvidence.TRACK_SCOPES }
+                .filter { settings.isEnabled(it.source) && it.scope in PromptEvidence.TRACK_SCOPES }
     }
 }
 

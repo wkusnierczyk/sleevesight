@@ -49,15 +49,6 @@ import kotlin.time.Duration.Companion.seconds
  * English (synthetic fixtures, no source's real text), show what each source gives before and after.
  */
 class PipelineLanguageTest {
-    /** A track: as played, what the English sources give, and what MusicBrainz and Wikidata record. */
-    private class Regional(
-        val nowPlaying: NowPlaying,
-        val english: Map<SourceId, List<String>>,
-        val resolution: Resolution = Resolution(outcome = Outcome.SongArticle, recordingMbid = "rec"),
-        val wikidata: List<String> = emptyList(),
-        val releases: List<String> = emptyList(),
-    )
-
     private val bollywood =
         Regional(
             nowPlaying("Tum Hi Ho", "Arijit Singh", "Aashiqui 2"),
@@ -108,43 +99,6 @@ class PipelineLanguageTest {
             }
         }
 
-    /**
-     * A lookup in a language, answering one line per scope it is given, after [wait], noting each
-     * query; a release's line about the release [RELEASES] names; unreachable while [down];
-     * provisional when Wikidata's names could not be read, as the real ones are.
-     */
-    private class FakeLanguageAdapter(
-        override val id: SourceId,
-        private val wait: Duration = Duration.ZERO,
-        private val texts: (LanguageQuery) -> List<Pair<Scope, String>>,
-    ) : LanguageAdapter {
-        val queries = mutableListOf<LanguageQuery>()
-        val items = mutableListOf<LanguageItems>()
-        var down = false
-
-        override suspend fun lookup(
-            query: LanguageQuery,
-            items: LanguageItems,
-        ): SourceResult {
-            queries += query
-            this.items += items
-            delay(wait)
-            if (down) return SourceResult(Outcome.Unreachable, emptyList(), Duration.ZERO)
-            val host = "https://${query.language.host}/wiki/"
-            val drafts =
-                texts(query).mapIndexed { i, (scope, text) ->
-                    val about = RELEASES[query.language.code].takeIf { scope == Scope.RELEASE }
-                    EvidenceDraft(id, scope, text, "$host$i", RETRIEVED, about = about, language = query.language.code)
-                }
-            val outcome = if (drafts.isEmpty()) Outcome.None else Outcome.SongArticle
-            return SourceResult(outcome, drafts, Duration.ZERO, provisional = items.unreachable)
-        }
-
-        companion object {
-            val RELEASES = mapOf("hi" to "Aashiqui 2", "ko" to "BE")
-        }
-    }
-
     private val wikipedia =
         FakeLanguageAdapter(SourceId.WIKIPEDIA, wait = 2.seconds) { query ->
             when (query.language.code) {
@@ -164,36 +118,6 @@ class PipelineLanguageTest {
         FakeLanguageAdapter(SourceId.WEB) { query ->
             listOf(Scope.WEB to "${query.track.title} (${query.language.name}).")
         }
-
-    private class FakeSearch(
-        override val wikipedia: LanguageAdapter?,
-        override val web: LanguageAdapter?,
-        private val regional: () -> Regional,
-    ) : LanguageSearch {
-        var workAsked = 0
-        var releasesAsked = 0
-        var itemsAsked = 0
-
-        var workWait = Duration.ZERO
-
-        override suspend fun workLanguages(resolution: Resolution): Lookup<List<String>> {
-            workAsked++
-            delay(workWait)
-            return Lookup.Found(regional().wikidata)
-        }
-
-        override suspend fun releaseLanguages(resolution: Resolution): Lookup<List<String>> {
-            releasesAsked++
-            return Lookup.Found(regional().releases)
-        }
-
-        var namesDown = false
-
-        override suspend fun items(query: LanguageQuery): LanguageItems {
-            itemsAsked++
-            return LanguageItems(song = LocalName("Q1", "तुम ही हो", "तुम ही हो"), unreachable = namesDown)
-        }
-    }
 
     private val search = FakeSearch(wikipedia, web) { playing }
     private val provider = FakeProvider()
@@ -738,8 +662,84 @@ class PipelineLanguageTest {
     }
 }
 
+/** A track: as played, what the English sources give, and what MusicBrainz and Wikidata record. */
+internal class Regional(
+    val nowPlaying: NowPlaying,
+    val english: Map<SourceId, List<String>>,
+    val resolution: Resolution = Resolution(outcome = Outcome.SongArticle, recordingMbid = "rec"),
+    val wikidata: List<String> = emptyList(),
+    val releases: List<String> = emptyList(),
+)
+
+/**
+ * A lookup in a language, answering one line per scope it is given, after [wait], noting each
+ * query; a release's line about the release [RELEASES] names; unreachable while [down];
+ * provisional when Wikidata's names could not be read, as the real ones are.
+ */
+internal class FakeLanguageAdapter(
+    override val id: SourceId,
+    private val wait: Duration = Duration.ZERO,
+    private val texts: (LanguageQuery) -> List<Pair<Scope, String>>,
+) : LanguageAdapter {
+    val queries = mutableListOf<LanguageQuery>()
+    val items = mutableListOf<LanguageItems>()
+    var down = false
+
+    override suspend fun lookup(
+        query: LanguageQuery,
+        items: LanguageItems,
+    ): SourceResult {
+        queries += query
+        this.items += items
+        delay(wait)
+        if (down) return SourceResult(Outcome.Unreachable, emptyList(), Duration.ZERO)
+        val host = "https://${query.language.host}/wiki/"
+        val drafts =
+            texts(query).mapIndexed { i, (scope, text) ->
+                val about = RELEASES[query.language.code].takeIf { scope == Scope.RELEASE }
+                EvidenceDraft(id, scope, text, "$host$i", RETRIEVED, about = about, language = query.language.code)
+            }
+        val outcome = if (drafts.isEmpty()) Outcome.None else Outcome.SongArticle
+        return SourceResult(outcome, drafts, Duration.ZERO, provisional = items.unreachable)
+    }
+
+    companion object {
+        val RELEASES = mapOf("hi" to "Aashiqui 2", "ko" to "BE")
+    }
+}
+
+internal class FakeSearch(
+    override val wikipedia: LanguageAdapter?,
+    override val web: LanguageAdapter?,
+    private val regional: () -> Regional,
+) : LanguageSearch {
+    var workAsked = 0
+    var releasesAsked = 0
+    var itemsAsked = 0
+
+    var workWait = Duration.ZERO
+
+    override suspend fun workLanguages(resolution: Resolution): Lookup<List<String>> {
+        workAsked++
+        delay(workWait)
+        return Lookup.Found(regional().wikidata)
+    }
+
+    override suspend fun releaseLanguages(resolution: Resolution): Lookup<List<String>> {
+        releasesAsked++
+        return Lookup.Found(regional().releases)
+    }
+
+    var namesDown = false
+
+    override suspend fun items(query: LanguageQuery): LanguageItems {
+        itemsAsked++
+        return LanguageItems(song = LocalName("Q1", "तुम ही हो", "तुम ही हो"), unreachable = namesDown)
+    }
+}
+
 /** [MemoryCache], keeping the lookups in a language too, by source, language and track. */
-private class LanguageMemoryCache : PipelineCache by MemoryCache() {
+internal class LanguageMemoryCache : PipelineCache by MemoryCache() {
     private val english = MemoryCache()
     val languageResults = mutableMapOf<Triple<SourceId, String, String>, SourceResult>()
     val decided = mutableMapOf<String, String>()

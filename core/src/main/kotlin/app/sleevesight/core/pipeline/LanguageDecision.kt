@@ -18,9 +18,13 @@ import kotlin.coroutines.cancellation.CancellationException
  * script, and MusicBrainz's lyrics language as the run's resolution has it or, for a track whose
  * sources came from the retrieval cache, as MusicBrainz's kept result has it. Wikidata's language of
  * the work and the releases' need the resolution, which is made only then (MusicBrainz switched on),
- * for a track whose sources all came from the cache. The decision (a language, English, or none) is
- * kept per track in the retrieval cache ([PipelineCache.trackLanguage]) once every hint it asked
- * answered, so a replay asks nothing to decide it again; a look again (#617) decides afresh.
+ * for a track whose sources all came from the cache. Last, the lines the English sources found about
+ * the track, by their script (#987, [TrackLanguage.ofLines]), with no request. The decision (a
+ * language, English, or none) is kept per track in the retrieval cache ([PipelineCache.trackLanguage])
+ * once every hint it asked answered, so a replay asks nothing to decide it again; a look again (#617)
+ * decides afresh. One the recorded hints left to the names and the lines is kept as none, and read
+ * back as what the names and the run's own lines say then: the lines change with the sources'
+ * switches and what they found, and need no request to read again.
  */
 internal class LanguageDecision(
     private val parts: PipelineParts,
@@ -36,6 +40,9 @@ internal class LanguageDecision(
     // Whether every hint the decision reached was asked and answered, so it may be kept: not when a
     // source a hint needs was switched off, could not be asked, or answered only in part.
     private var answered = true
+
+    // Whether the recorded hints left the decision to the names and the lines (#987), so it is kept as none.
+    private var reachedLines = false
 
     /**
      * The resolution the run's lookups are made with, and whether it was made (not unreachable, nor
@@ -65,19 +72,20 @@ internal class LanguageDecision(
             } else {
                 guard.attempt("read language") { trackLanguage(track, input.nowPlaying.duration) }
             }
-        if (kept != null) return Languages.ofCode(kept)
+        if (kept != null) return if (kept.isEmpty()) unrecorded() else Languages.ofCode(kept)
         val decided = decide(search)
         if (answered) {
-            guard.attempt(
-                "write language",
-            ) { keepTrackLanguage(track, input.nowPlaying.duration, decided?.code.orEmpty()) }
+            // Left to the names and the lines, none: the next run reads them again.
+            val code = if (reachedLines) "" else decided?.code.orEmpty()
+            guard.attempt("write language") { keepTrackLanguage(track, input.nowPlaying.duration, code) }
         }
         return decided
     }
 
     // The hints, in turn (`TrackLanguage.find`): MusicBrainz's lyrics language (the run's
     // resolution's, else the one MusicBrainz's kept result holds, a request only when it holds none),
-    // Wikidata's (Wikipedia's switch) and the releases' majority (MusicBrainz's switch). A hint its
+    // Wikidata's (Wikipedia's switch), the releases' majority (MusicBrainz's switch) and the English
+    // sources' lines about the track (no request). A hint its
     // source's switch skips leaves the decision unkept, so switching it on decides again.
     private suspend fun decide(search: LanguageSearch): Language? {
         val kept = (before.sources[SourceId.MUSICBRAINZ] as? SourceState.Done)?.result?.lyrics
@@ -116,9 +124,27 @@ internal class LanguageDecision(
                                 .orEmpty()
                     }
                 },
+                {
+                    reachedLines = true
+                    linesHint()
+                },
             ),
         )
     }
+
+    // The language of a track no recorded hint names a language for (a kept none): the names' and
+    // this run's lines', asking nothing.
+    private suspend fun unrecorded(): Language? =
+        TrackLanguage.find(
+            listOf(track.title) + track.artists,
+            listOf {
+                linesHint()
+            },
+        )
+
+    // The English sources' lines about the track, by their script (#987).
+    private fun linesHint(): List<Language> =
+        TrackLanguage.ofLines(InLanguage.trackLines(before, settings).map { it.text })
 
     // A hint its source's switch skips: none, and the decision not kept.
     private fun skipped(): List<Language> {

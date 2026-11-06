@@ -12,6 +12,9 @@ package app.sleevesight.core.language
  * 2. The recorded languages, in [find]'s order: MusicBrainz's lyrics language for the work, Wikidata's
  *    language of the work (the song's item, and the film's or album's it comes from), and the
  *    language MusicBrainz records for the tracklists of the recording's releases.
+ * 3. The lines the English sources found about the track itself, by their script (#987, [ofLines]):
+ *    a Hindi caption in Devanagari that the English web search found, for a title the player gives
+ *    in Latin letters. Weakest, as a page about a song may quote a line in another language.
  *
  * With a script found, the first recorded language written in it; else the first hint that records a
  * language settles it: its first language that is not English, or, when it records English only, no
@@ -82,4 +85,19 @@ object TrackLanguage {
 
     /** The languages of Wikidata's language [items] (`Q1568`), in their order, once each; unknown ones left out. */
     fun ofItems(items: List<String>): List<Language> = items.mapNotNull(Languages::ofItem).distinct()
+
+    /**
+     * The language the [texts] of the lines about a track name by their script (#987,
+     * [Languages.ofLine]), as one hint: the one more than half of the lines mostly in a script other
+     * than Latin ([Script.mostly]) name; none otherwise. Lines mostly in Latin letters count for
+     * nothing, so one Devanagari caption among English pages names Hindi; a line in a script several
+     * languages share (Han, Cyrillic, Arabic) names none and counts against, so two Devanagari
+     * captions and two Cyrillic lines name nothing.
+     */
+    fun ofLines(texts: List<String>): List<Language> {
+        val scripted = texts.filter { Script.mostly(it) != null }
+        val named = scripted.mapNotNull { Languages.ofLine(it, known = null) }
+        val head = named.distinct().maxByOrNull { language -> named.count { it == language } }
+        return listOfNotNull(head?.takeIf { language -> named.count { it == language } * 2 > scripted.size })
+    }
 }
