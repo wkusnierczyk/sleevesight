@@ -18,9 +18,11 @@ import kotlin.coroutines.cancellation.CancellationException
  * script, and MusicBrainz's lyrics language as the run's resolution has it or, for a track whose
  * sources came from the retrieval cache, as MusicBrainz's kept result has it. Wikidata's language of
  * the work and the releases' need the resolution, which is made only then (MusicBrainz switched on),
- * for a track whose sources all came from the cache. The decision (a language, English, or none) is
- * kept per track in the retrieval cache ([PipelineCache.trackLanguage]) once every hint it asked
- * answered, so a replay asks nothing to decide it again; a look again (#617) decides afresh.
+ * for a track whose sources all came from the cache. Last, the lines the English sources found about
+ * the track, by their script (#987, [TrackLanguage.ofLines]), with no request. The decision (a
+ * language, English, or none) is kept per track in the retrieval cache ([PipelineCache.trackLanguage])
+ * once every hint it asked answered, so a replay asks nothing to decide it again, but for a language
+ * only the lines named; a look again (#617) decides afresh.
  */
 internal class LanguageDecision(
     private val parts: PipelineParts,
@@ -77,7 +79,8 @@ internal class LanguageDecision(
 
     // The hints, in turn (`TrackLanguage.find`): MusicBrainz's lyrics language (the run's
     // resolution's, else the one MusicBrainz's kept result holds, a request only when it holds none),
-    // Wikidata's (Wikipedia's switch) and the releases' majority (MusicBrainz's switch). A hint its
+    // Wikidata's (Wikipedia's switch), the releases' majority (MusicBrainz's switch) and the English
+    // sources' lines about the track (no request). A hint its
     // source's switch skips leaves the decision unkept, so switching it on decides again.
     private suspend fun decide(search: LanguageSearch): Language? {
         val kept = (before.sources[SourceId.MUSICBRAINZ] as? SourceState.Done)?.result?.lyrics
@@ -116,8 +119,19 @@ internal class LanguageDecision(
                                 .orEmpty()
                     }
                 },
+                { linesHint() },
             ),
         )
+    }
+
+    // The English sources' lines about the track, by their script (#987): an answer only once each
+    // source switched on has landed in full. A language they name is not kept: a kept decision is
+    // read by MusicBrainz's and Wikidata's switches alone, and the source of the lines may be off by
+    // the replay, so it is decided afresh then, from the lines that replay has.
+    private fun linesHint(): List<Language> {
+        if (!InLanguage.landedInFull(before, settings)) answered = false
+        val texts = InLanguage.trackLines(before, settings).map { it.text }
+        return TrackLanguage.ofLines(texts).also { if (it.isNotEmpty()) answered = false }
     }
 
     // A hint its source's switch skips: none, and the decision not kept.

@@ -287,11 +287,33 @@ internal class InLanguage(
         fun ownLines(
             state: TrackState,
             settings: Settings,
-        ): Int =
+        ): Int = trackLines(state, settings).size
+
+        /** The lines [ownLines] counts: those about the track itself of [state]'s English sources switched on. */
+        fun trackLines(
+            state: TrackState,
+            settings: Settings,
+        ): List<EvidenceDraft> =
             state.sources.values
                 .mapNotNull { (it as? SourceState.Done)?.result }
                 .flatMap { it.evidence }
-                .count { settings.isEnabled(it.source) && it.scope in PromptEvidence.TRACK_SCOPES }
+                .filter { settings.isEnabled(it.source) && it.scope in PromptEvidence.TRACK_SCOPES }
+
+        /**
+         * Whether each of [state]'s English sources switched on has landed in full: reached, and not
+         * provisional, so its lines are all it has.
+         */
+        fun landedInFull(
+            state: TrackState,
+            settings: Settings,
+        ): Boolean =
+            state.sources
+                .filterKeys { settings.isEnabled(it) }
+                .values
+                .all { landed ->
+                    val result = (landed as? SourceState.Done)?.result
+                    result != null && result.outcome != Outcome.Unreachable && !result.provisional
+                }
     }
 }
 

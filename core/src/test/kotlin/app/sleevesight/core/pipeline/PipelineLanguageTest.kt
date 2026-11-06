@@ -655,6 +655,55 @@ class PipelineLanguageTest {
             assertFalse(pipeline.state.value!!.searchingInLanguage)
         }
 
+    // A title in Latin letters with no recorded language, and two Devanagari captions about it that the
+    // English web search found (#987).
+    private val captioned =
+        Regional(
+            nowPlaying("Tum Se Hi", "Pritam", "Jab We Met"),
+            mapOf(
+                SourceId.MUSICBRAINZ to listOf("“Tum Se Hi” was written by Irshad Kamil."),
+                SourceId.WEB to listOf("यह गीत 2007 की एक फ़िल्म का है।", "मोहित चौहान ने यह गीत गाया।", "A page."),
+            ),
+        )
+
+    @Test
+    fun `lines about the track in a script that names a language are the weakest hint, never kept`() =
+        runTest {
+            settings = settings.copy(trackLanguageSearch = TrackLanguageSearch.ALWAYS)
+            assertEquals("hi", pipeline().play(captioned).inLanguage?.language)
+            assertEquals(1, search.releasesAsked, "asked after the recorded hints")
+            assertTrue(cache.decided.isEmpty(), "a language the lines name is decided afresh")
+            assertEquals("hi", pipeline().play(captioned).inLanguage?.language)
+            assertEquals(2, search.releasesAsked)
+        }
+
+    @Test
+    fun `a recorded language outweighs the lines', English included`() =
+        runTest {
+            settings = settings.copy(trackLanguageSearch = TrackLanguageSearch.ALWAYS)
+            val marathi = Regional(captioned.nowPlaying, captioned.english, releases = listOf("mar"))
+            assertEquals("mr", pipeline().play(marathi).inLanguage?.language)
+            cache.decided.clear()
+            val english = Regional(captioned.nowPlaying, captioned.english, wikidata = listOf("Q1860"))
+            assertNull(pipeline().play(english).inLanguage)
+            assertEquals(listOf("en"), cache.decided.values.toList())
+        }
+
+    @Test
+    fun `no lines in a script that names a language is none, kept unless a source did not land in full`() =
+        runTest {
+            pipeline().play(polish)
+            assertEquals(listOf(""), cache.decided.values.toList())
+            cache.decided.clear()
+            val adapters =
+                englishAdapters +
+                    FakeAdapter(SourceId.LASTFM, verifies = false) { _, _ ->
+                        SourceResult(Outcome.Unreachable, emptyList(), Duration.ZERO)
+                    }
+            assertNull(pipeline(adapters).play(polish).inLanguage)
+            assertTrue(cache.decided.isEmpty(), "a source that may have had lines about the track did not land")
+        }
+
     @Test
     fun `a replay asks nothing to decide the language again, English included`() =
         runTest {
