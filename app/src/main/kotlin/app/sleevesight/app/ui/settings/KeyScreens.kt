@@ -217,20 +217,19 @@ private fun inkCentre(
     text: String,
     style: TextStyle,
 ): Offset {
-    val fonts = LocalFontFamilyResolver.current
     val density = LocalDensity.current
-    return remember(text, style, fonts, density) {
-        val typeface =
-            fonts
-                .resolve(
-                    style.fontFamily,
-                    style.fontWeight ?: FontWeight.Normal,
-                    style.fontStyle ?: FontStyle.Normal,
-                    style.fontSynthesis ?: FontSynthesis.All,
-                ).value as Typeface
+    // Read here, not in remember, so a font that finishes loading measures again.
+    val typeface by
+        LocalFontFamilyResolver.current.resolve(
+            style.fontFamily,
+            style.fontWeight ?: FontWeight.Normal,
+            style.fontStyle ?: FontStyle.Normal,
+            style.fontSynthesis ?: FontSynthesis.All,
+        )
+    return remember(text, style, typeface, density) {
         val paint =
             Paint().apply {
-                this.typeface = typeface
+                this.typeface = typeface as Typeface
                 textSize = with(density) { style.fontSize.toPx() }
                 fontFeatureSettings = style.fontFeatureSettings
             }
