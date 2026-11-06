@@ -9,10 +9,12 @@ import androidx.compose.ui.res.stringResource
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
+import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.genres.DescribedIn
 import app.sleevesight.core.genres.GenreRow
 import app.sleevesight.core.genres.WeakEvidence
 import app.sleevesight.core.genres.describedGenres
+import app.sleevesight.core.genres.describedIn
 import app.sleevesight.core.genres.withDescribed
 import app.sleevesight.core.pipeline.TrackState
 
@@ -37,6 +39,19 @@ internal fun withDescribed(
     val found = remember(vocabulary, lines, artists) { describedGenres(vocabulary, lines.lines, artists) }
     return if (found.isEmpty()) track else track.copy(genres = track.genres.withDescribed(found))
 }
+
+/**
+ * The track the reason for [genre] is asked on, *Why is this …?* (#1000): for a genre whose chip is
+ * an artist's description's, [track] with [lines] (*Sources*' lines, which hold the description it
+ * was read from: #912's artist web lines too) as its evidence, so the reason reads it, cites it by
+ * the ids *Sources* shows, and is keyed by its fingerprint; [track] itself for any other genre, or
+ * with no lines.
+ */
+internal fun reasonedOn(
+    track: TrackState,
+    genre: String,
+    lines: EvidenceSet?,
+): TrackState = if (lines != null && track.genres.describedIn(genre) != null) track.copy(evidence = lines) else track
 
 /**
  * Under the definition of a genre the artist's description names ([where], #1000), before *Why is

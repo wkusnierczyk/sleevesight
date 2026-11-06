@@ -40,10 +40,10 @@ fun describedGenres(
         val artist = artistOf(line, artists) ?: continue
         val named = found.getOrPut(artist) { linkedMapOf() }
         val names = artists.flatMap { occurrences(line.text, it) }
+        val all = vocabulary.namedIn(line.text).filter { (_, range) -> names.none { it.overlaps(range) } }
         val genres =
-            vocabulary.namedIn(line.text).filter { (genre, range) ->
-                names.none { it.first <= range.last && range.first <= it.last } &&
-                    EverydayNames.named(genre.tag, line.text, range)
+            all.filter { (genre, range) ->
+                EverydayNames.named(genre.tag, line.text, range, all.map { it.second })
             }
         for ((genre, range) in genres) {
             if (genre.identity in named) continue
@@ -62,15 +62,16 @@ fun describedGenres(
 /**
  * The genre names that are everyday words too (#1000), which a description's text names as a genre
  * only in a music phrase: "dance floor", "world tour", "a house in Berlin", "country of origin" and
- * "soul of the city" name no genre, "a house producer" and "a soul singer" do. A plain match of the
- * genre list against prose would take every such word for a genre, and the list grows (#1011), so the
- * guard is one list here, by the words, whatever the list holds. A name of several words ("indie
- * rock", matched whole first) and a word that is only a genre ("synthpop", "shoegaze") need no
- * guard. Instrumental is guarded apart: everyday only as "instrumental in" or "to" ("instrumental in
- * founding the label"), and a genre before anything else ("an instrumental electro-acoustic band").
+ * "soul of the city" name no genre; "a house producer", "a soul singer", "an ambient electronic duo"
+ * and "a punk guitarist" do. A plain match of the genre list against prose would take every such
+ * word for a genre, and the list grows (#1011), so the guard is one list here, by the words,
+ * whatever the list holds. A name of several words ("indie rock", matched whole first) and a word
+ * that is only a genre ("synthpop", "shoegaze") need no guard. Instrumental is guarded apart:
+ * everyday only as "instrumental in" or "to" ("instrumental in founding the label"), a genre before
+ * anything else ("an instrumental electro-acoustic band").
  */
 internal object EverydayNames {
-    /** The single words that name a genre only when followed by one of [MUSIC_NOUNS]. */
+    /** The single words that name a genre only in a music phrase ([named]). */
     val WORDS: Set<String> =
         setOf(
             "acoustic",
@@ -105,7 +106,7 @@ internal object EverydayNames {
             "trap",
         )
 
-    /** What makes a music phrase of one of [WORDS] when it follows it, singular or plural. */
+    /** What ends a music phrase after one of [WORDS], singular or plural. */
     val MUSIC_NOUNS: Set<String> =
         setOf(
             "music",
@@ -125,62 +126,89 @@ internal object EverydayNames {
             "song",
             "track",
             "style",
+            "guitarist",
+            "vocalist",
+            "singer-songwriter",
+            "songwriter",
+            "dj",
+            "drummer",
+            "bassist",
+            "pianist",
+            "composer",
+            "rapper",
+            "mc",
+            "ensemble",
+            "orchestra",
+            "collective",
+            "outfit",
+            "sound",
+            "label",
         )
 
     // The words after which Instrumental is the everyday word ("instrumental in", "instrumental to").
     private val NOT_INSTRUMENTAL = setOf("in", "to")
 
-    private val NEXT_WORD = Regex("^\\s+([\\p{L}]+)")
+    // The word after a name, past nothing but spaces: letters, with hyphens inside.
+    private val NEXT_WORD = Regex("^\\s+(\\p{L}+(?:-\\p{L}+)*)")
+
+    // What may stand between two genres of a chain before a noun: spaces, "and", "&" or "/".
+    private val CHAIN_GAP = Regex("\\s+|\\s+and\\s+|\\s*[&/]\\s*")
 
     /**
      * Whether the vocabulary tag [tag], found at [range] of [text], names the genre there: always for
-     * a tag of several words or one not in [WORDS]; for one of [WORDS], only when the word after it,
-     * with nothing but spaces between, is one of [MUSIC_NOUNS] (or its plural); Instrumental, unless
+     * a tag of several words or one not in [WORDS]; for one of [WORDS], only in a music phrase: the
+     * genres [found] in [text] that follow it, past spaces, "and", "&" or "/" ("an ambient electronic
+     * duo", "a jazz and soul singer"), then one of [MUSIC_NOUNS] or its plural. Instrumental, unless
      * the word after it is "in" or "to".
      */
     fun named(
         tag: String,
         text: String,
         range: IntRange,
-    ): Boolean {
-        val next =
-            NEXT_WORD
-                .find(text.substring(range.last + 1))
-                ?.groupValues
-                ?.get(1)
-                ?.lowercase()
-        return when {
-            tag == TrackGenres.INSTRUMENTAL -> next !in NOT_INSTRUMENTAL
+        found: List<IntRange> = emptyList(),
+    ): Boolean =
+        when {
+            tag == TrackGenres.INSTRUMENTAL -> next(text, range.last + 1) !in NOT_INSTRUMENTAL
             tag.any(Char::isWhitespace) || tag !in WORDS -> true
-            else -> next != null && (next in MUSIC_NOUNS || next.removeSuffix("s") in MUSIC_NOUNS)
+            else -> inPhrase(text, range.last + 1, found)
+        }
+
+    // Whether a music noun follows [from] in [text], past the genres of [found] that chain on to it.
+    private fun inPhrase(
+        text: String,
+        from: Int,
+        found: List<IntRange>,
+    ): Boolean {
+        var end = from
+        while (true) {
+            val word = next(text, end)
+            if (word != null && (word in MUSIC_NOUNS || word.removeSuffix("s") in MUSIC_NOUNS)) return true
+            val following = found.firstOrNull { it.first > end && CHAIN_GAP.matches(text.substring(end, it.first)) }
+            end = following?.let { it.last + 1 } ?: return false
         }
     }
+
+    // The word of [text] after [from], past nothing but spaces, in lower case; null for none.
+    private fun next(
+        text: String,
+        from: Int,
+    ): String? =
+        NEXT_WORD
+            .find(text.substring(from))
+            ?.groupValues
+            ?.get(1)
+            ?.lowercase()
 }
+
+// Whether this range and [other] share a character.
+private fun IntRange.overlaps(other: IntRange): Boolean = first <= other.last && other.first <= last
 
 /**
  * These genres with the genres the artists' descriptions name (#1000, [describedGenres]): [found],
- * a row for each artist, kept in [TrackGenres.described]. Of an artist's, those their own tags' row
- * has already are left out, as is Instrumental when lyrics were found ([Singing.dropsInstrumental]);
- * at most [GenreVocabulary.MAX_LABELS] are kept, a row left with none dropped. In place of any before.
+ * a row for each artist, every genre their lines name, in place of any before
+ * ([TrackGenres.descriptions]); [TrackGenres.described] shows them, as the rows and lyrics allow.
  */
-fun TrackGenres.withDescribed(found: List<GenreRow>): TrackGenres {
-    val kept =
-        found.mapNotNull { row ->
-            val own =
-                rows
-                    .filter { it.level == GenreLevel.ARTIST && it.artist == row.artist }
-                    .flatMap { it.labels }
-                    .map { it.genre.identity }
-                    .toSet()
-            val labels =
-                row.labels
-                    .filter { it.genre.identity !in own }
-                    .filter { !singing.dropsInstrumental || it.genre.identity != TrackGenres.INSTRUMENTAL }
-                    .take(GenreVocabulary.MAX_LABELS)
-            labels.takeIf { it.isNotEmpty() }?.let { row.copy(labels = it, described = true) }
-        }
-    return copy(described = kept)
-}
+fun TrackGenres.withDescribed(found: List<GenreRow>): TrackGenres = copy(descriptions = found)
 
 /**
  * Where an artist's description names the genre [identity] (#1000), when its chip is one of the
@@ -267,15 +295,24 @@ fun quoteAround(
     return if (cutTail) shown.trimEnd { it in CUT_PUNCTUATION } + ELLIPSIS else shown
 }
 
-// The span of [text] inside the straight double quotes around [range], when there are such.
+// The span of [text] Last.fm's line quotes from the biography, inside its attribution ("The Last.fm
+// biography of … says: "…"", `LastFmAdapter`), when [range] is in it; null for any other line, whose
+// quotation marks are its own.
 private fun quoted(
     text: String,
     range: IntRange,
 ): Pair<Int, Int>? {
-    val open = text.lastIndexOf('"', range.first)
-    val close = text.indexOf('"', range.last + 1)
-    return if (open >= 0 && close > 0) open + 1 to close else null
+    val quote =
+        LASTFM_BIOGRAPHY
+            .matchEntire(text)
+            ?.groups
+            ?.get(1)
+            ?.range ?: return null
+    return if (range.first >= quote.first && range.last <= quote.last) quote.first to quote.last + 1 else null
 }
+
+// The attribution of a Last.fm biography's line, around the sentence it quotes.
+private val LASTFM_BIOGRAPHY = Regex("The Last\\.fm biography of .+? says: \"(.*)\"", RegexOption.DOT_MATCHES_ALL)
 
 /** The most words a genre's quote keeps on each side of its name ([quoteAround]). */
 const val WORDS_AROUND: Int = 5

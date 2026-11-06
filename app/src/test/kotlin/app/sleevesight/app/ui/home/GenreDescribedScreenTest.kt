@@ -109,6 +109,10 @@ class GenreDescribedScreenTest {
 
     private val cited = mutableListOf<String>()
 
+    // The evidence each reason was subscribed to and asked with, by genre.
+    private val subscribed = mutableMapOf<String, EvidenceSet?>()
+    private val explained = mutableMapOf<String, EvidenceSet?>()
+
     private val notes =
         object : GenreNotes {
             override val vocabulary: GenreVocabulary = this@GenreDescribedScreenTest.vocabulary
@@ -119,12 +123,17 @@ class GenreDescribedScreenTest {
             override fun reason(
                 track: TrackState,
                 genre: String,
-            ): Flow<GenreReason> = flowOf(GenreReason.Offered)
+            ): Flow<GenreReason> {
+                subscribed[genre] = track.evidence
+                return flowOf(GenreReason.Offered)
+            }
 
             override fun explain(
                 track: TrackState,
                 genre: String,
-            ) = Unit
+            ) {
+                explained[genre] = track.evidence
+            }
         }
 
     private fun show(
@@ -282,6 +291,19 @@ class GenreDescribedScreenTest {
             assertEquals("Described 2, $bob’s description · L2", textOf(GENRE_SOURCES_ROW_PREFIX + "3"))
         }
     }
+
+    @Test
+    fun whyOnAGenreTheDescriptionNamesReadsTheLinesItCameFromAndATagsTheTracksEvidence() =
+        show {
+            tap(GENRE_PREFIX + "described:$ISLANDMAN:instrumental")
+            tap(GENRE_WHY_TAG)
+            assertEquals(lines, subscribed["instrumental"])
+            assertEquals(lines, explained["instrumental"])
+            tap(GENRE_PREFIX + "artist:$ISLANDMAN:house")
+            tap(GENRE_WHY_TAG)
+            assertEquals(HomeFixtures.evidence, subscribed["house"])
+            assertEquals(HomeFixtures.evidence, explained["house"])
+        }
 
     @Test
     fun lyricsFoundDropTheDescriptionsInstrumental() =

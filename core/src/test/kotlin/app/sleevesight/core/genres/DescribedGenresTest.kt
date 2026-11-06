@@ -260,6 +260,65 @@ class DescribedGenresTest {
     }
 
     @Test
+    fun `genres that chain before a music noun, and the nouns of musicians, make a music phrase`() {
+        assertEquals(listOf("Ambient", "Electronic"), named("An ambient electronic duo."))
+        assertEquals(listOf("Punk", "Soul"), named("A punk guitarist and soul vocalist."))
+        assertEquals(listOf("Jazz", "Soul"), named("A jazz and soul singer."))
+        assertEquals(listOf("Folk", "Singer-Songwriter"), named("A folk singer-songwriter."))
+        assertEquals(listOf("House"), named("Two house DJs."))
+        // Still not before anything else.
+        assertEquals(listOf("Electronic"), named("An ambient electronic set in a house in Berlin."))
+    }
+
+    @Test
+    fun `a Last fm line is quoted inside its attribution, other quotation marks kept`() {
+        val wrapped = "The Last.fm biography of Trio says: \"They call their style \"jazz\" music.\""
+        val at = wrapped.indexOf("jazz")
+        assertEquals("They call their style \"jazz\" music.", quoteAround(wrapped, at..at + 3))
+        val plain = "They call their style \"jazz\" music."
+        val there = plain.indexOf("jazz")
+        assertEquals(plain, quoteAround(plain, there..there + 3))
+    }
+
+    @Test
+    fun `lyrics found let the next genre into a full described row, and a genre a rebuilt row gains leaves it`() {
+        val line = line("S1", "An instrumental jazz, blues, funk, disco, reggae and ska band.")
+        val found = describedGenres(vocabulary, listOf(line), listOf(ANN))
+        val tags = combineGenres(mapOf(LabelSource.LASTFM to artist(ANN, "rock")), listOf(ANN)).withDescribed(found)
+        assertEquals(listOf("instrumental", "jazz", "blues", "funk", "disco"), tags.described.single().identities())
+        assertEquals(
+            listOf("jazz", "blues", "funk", "disco", "reggae"),
+            tags
+                .withLyricsFound()
+                .described
+                .single()
+                .identities(),
+        )
+        // The artist's five Last.fm tags with Instrumental leave no room for MusicBrainz's Soul; with
+        // lyrics found, Soul takes it, and leaves the described row.
+        val soul = describedGenres(vocabulary, listOf(line("S2", "A soul band.")), listOf(ANN))
+        val full =
+            combineGenres(
+                mapOf(
+                    LabelSource.LASTFM to artist(ANN, "instrumental", "rock", "pop", "punk", "metal"),
+                    LabelSource.MUSICBRAINZ to artist(ANN, "soul"),
+                ),
+                listOf(ANN),
+            ).withDescribed(soul)
+        assertEquals(listOf("soul"), full.described.single().identities())
+        val sung = full.withLyricsFound()
+        assertTrue(
+            sung.rows
+                .single()
+                .labels
+                .any { it.genre.identity == "soul" },
+        )
+        assertTrue(sung.described.isEmpty())
+    }
+
+    private fun GenreRow.identities() = labels.map { it.genre.identity }
+
+    @Test
     fun `a quote is the sentence around the genre, cut where long`() {
         assertEquals("They are a jazz trio.", quoteAround("They are a jazz trio.", 11..14))
         val long = "Formed in 1999. One two three four five six jazz seven eight nine ten eleven twelve. Later."

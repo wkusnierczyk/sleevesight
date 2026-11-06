@@ -125,8 +125,9 @@ data class Singing(
  * [given], the labels each source gave, before they were combined and capped ([combineGenres]), so
  * that lyrics found later combine them again without Instrumental ([withLyricsFound]); and
  * [instrumentalArtists], the artists whose own tags, from any source, include Instrumental, read
- * before the rows' cap ([signOfVocals]'s featured artist). [described] are the rows of the genres
- * the artists' descriptions name (#1000, `withDescribed`), apart from the tags' [rows], so that what
+ * before the rows' cap ([signOfVocals]'s featured artist). [descriptions] are the rows of the genres
+ * the artists' descriptions name (#1000, `withDescribed`; shown as [described]), apart from the
+ * tags' [rows], so that what
  * reads the tags (the prompts' genres, the backing of a weak tag, the AI's genre list) does not take
  * them for tags; [table] and [chips] show them beside the tags.
  */
@@ -139,8 +140,32 @@ data class TrackGenres(
     val singing: Singing = Singing.NONE,
     val given: Map<LabelSource, List<GenreLabel>> = emptyMap(),
     val instrumentalArtists: Set<String> = emptySet(),
-    val described: List<GenreRow> = emptyList(),
+    val descriptions: List<GenreRow> = emptyList(),
 ) {
+    /**
+     * The rows of the genres the artists' descriptions name (#1000), as shown: of each artist's
+     * [descriptions] (every genre their lines name, `describedGenres`), Instrumental left out when
+     * lyrics were found ([Singing.dropsInstrumental]) and those their own tags' row has left out,
+     * then at most [GenreVocabulary.MAX_LABELS], a row left with none dropped. Worked out from the
+     * rows as they are, so a genre a rebuilt row gains, or room Instrumental leaves, shows at once.
+     */
+    val described: List<GenreRow> by lazy {
+        descriptions.mapNotNull { row ->
+            val own =
+                rows
+                    .filter { it.level == GenreLevel.ARTIST && it.artist == row.artist }
+                    .flatMap { it.labels }
+                    .map { it.genre.identity }
+                    .toSet()
+            val labels =
+                row.labels
+                    .filter { !singing.dropsInstrumental || it.genre.identity != INSTRUMENTAL }
+                    .filter { it.genre.identity !in own }
+                    .take(GenreVocabulary.MAX_LABELS)
+            labels.takeIf { it.isNotEmpty() }?.let { row.copy(labels = it, described = true) }
+        }
+    }
+
     /** Whether no row has a label, of the tags or of a description. */
     val isEmpty: Boolean get() = rows.isEmpty() && described.isEmpty()
 
@@ -296,7 +321,7 @@ data class TrackGenres(
             } else {
                 combineGenres(given, credited, sung)
             }
-        val found = combined.copy(singing = sung, described = withoutInstrumental(described))
+        val found = combined.copy(singing = sung, descriptions = descriptions)
         return aiModel?.let { found.withAi(aiListed, it, aiSources) } ?: found
     }
 
@@ -378,7 +403,7 @@ data class TrackGenres(
             singing = singing,
             given = given,
             instrumentalArtists = instrumentalArtists,
-            described = described,
+            descriptions = descriptions,
         )
     }
 

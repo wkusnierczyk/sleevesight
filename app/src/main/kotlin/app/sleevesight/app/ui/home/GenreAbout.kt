@@ -72,10 +72,13 @@ internal fun GenreAbout(
     val modelAllowed = shown.modelAllowed
     val reader = shown.readAloud
     val openSettingsAt = shown.openSettingsAt
+    // The track its reason is asked and read on: for a genre an artist's description names (#1000),
+    // with the lines it was read from, those *Sources* lists.
+    val asked = reasonedOn(track, genre, shown.lines)
     // A new subscription only when what the reason's key is made of changes, not on every state of
     // the track (a source landing, labels joining).
-    val reason by remember(track.normalized, track.evidence?.fingerprint, track.genres, genre, notes) {
-        notes.reason(track, genre)
+    val reason by remember(asked.normalized, asked.evidence?.fingerprint, asked.genres, genre, notes) {
+        notes.reason(asked, genre)
     }.collectAsState(GenreReason.None)
     val named =
         track.genres.everyLabel
@@ -88,7 +91,7 @@ internal fun GenreAbout(
     val why = track.genres.weakEvidence(genre)
     WeakEvidenceNote(why, named, onCite)
     DescribedNote(track.genres.describedIn(genre), why, onCite)
-    val explain = { notes.explain(track, genre) }
+    val explain = { notes.explain(asked, genre) }
     when (val shown = reason) {
         GenreReason.None -> Unit
         GenreReason.Offered -> WhyButton(question, onClick = explain)
@@ -98,13 +101,13 @@ internal fun GenreAbout(
                 readAloudControl(reader, Reading.genreReason(genre)) {
                     // Read aloud follows the reason as the notes give it, whatever screen shows.
                     (shown.state as? InsightState.Written)?.let { written ->
-                        reader?.readGenreReason(track, genre, question, written, notes.reason(track, genre))
+                        reader?.readGenreReason(asked, genre, question, written, notes.reason(asked, genre))
                     }
                 }
             ReasonShown(
                 shown,
                 question,
-                InsightContext(track, true, true, modelAllowed, InsightOffers()),
+                InsightContext(asked, true, true, modelAllowed, InsightOffers()),
                 ReasonActions(onCite, readAloud, explain, afterRetry, openSettingsAt),
             )
         }
