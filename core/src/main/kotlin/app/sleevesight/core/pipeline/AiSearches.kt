@@ -20,6 +20,7 @@ import app.sleevesight.core.synthesis.SearchFacts
 import app.sleevesight.core.synthesis.SearchKind
 import app.sleevesight.core.synthesis.SearchReading
 import app.sleevesight.core.synthesis.WebPrompt
+import app.sleevesight.core.text.DateForm
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
@@ -98,7 +99,8 @@ data class KeptSearch(
  * An answer is the panel's alone: it never enters the evidence, the insight, the track's genre
  * labels, *Sources* or what is read aloud. A cache that throws is a miss, and a keep that fails
  * keeps nothing. Each state comes with its time by [clock], in whole milliseconds, as the cache
- * keeps it, so the screen and the cache count *Keep history for* from the same time.
+ * keeps it, so the screen and the cache count *Keep history for* from the same time. A prose
+ * answer's prompt asks for dates in the form [dates] gives as it is built (#957), which no key holds.
  *
  * *AI web search* (#801, [web], the web search engine, `Settings.aiWebSearch`): the question is
  * asked as [WebQuestions] asks it, *Once* or *Up to 3 times* from web pages, or from the model's
@@ -115,6 +117,7 @@ data class KeptSearch(
  * find, all numbered as the prompt gave them, which are kept with it ([Kept.sources]) so a kept
  * explanation is read against the same pages.
  */
+@Suppress("LongParameterList") // Where answers are asked, kept and read, the time, the web, and the dates' form.
 class AiSearches(
     private val ai: AiAccess?,
     private val cache: PipelineCache,
@@ -122,6 +125,7 @@ class AiSearches(
     private val answers: AiSearchAnswers,
     private val clock: Clock = Clock.System,
     private val web: WebSearcher? = null,
+    private val dates: () -> DateForm = { DateForm.APP },
 ) {
     /**
      * The key of [track]'s search of [kind] under [settings], or null when no AI service is ready;
@@ -266,7 +270,7 @@ class AiSearches(
             }
         show(SearchState.Searching(web = search != AiWebSearch.OFF), now())
         val base = CompletionRequest(key.model, "", maxTokensFor(key.effort), key.effort)
-        val explain = ExplainQuestion.of(kind, facts, track.evidence)
+        val explain = ExplainQuestion.of(kind, facts, track.evidence, dates())
         val reply = questions.ask(explain ?: question(kind, facts), search, asking.limit, base, counted)
         val pages = reply.pages?.map(WebPage::url)
         val kept =
@@ -299,7 +303,7 @@ class AiSearches(
     ): WebQuestion {
         val genres = answers.genreNames
         return object : WebQuestion {
-            override val knowledge: String get() = AiSearchPrompt.build(kind, facts, genres)
+            override val knowledge: String get() = AiSearchPrompt.build(kind, facts, genres, dates())
             override val query: String get() = WebPrompt.query(kind, facts)
 
             override fun once(pages: List<WebPage>): String = WebPrompt.once(kind, facts, pages, genres)

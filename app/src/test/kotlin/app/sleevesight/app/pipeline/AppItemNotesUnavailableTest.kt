@@ -32,14 +32,18 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 
 /**
  * The song's, the artist's and the album's insights while the selected model is found unavailable
  * (#540, #911), through the pipeline's own rebuild: the parts carry no AI access then
  * (`AppPipelineParts`, `ModelCheck.blocks`), and what is kept still shows, the model's own insight
  * first, else another model's, with nothing offered to write; and, after a write refused, what the
- * panel is given to say as the model unavailable (#969).
+ * panel is given to say as the model unavailable (#969). Under Robolectric: the parts write the
+ * prompts' dates with the phone's patterns (`phoneDateForm`, #957), which only Android has.
  */
+@RunWith(RobolectricTestRunner::class)
 class AppItemNotesUnavailableTest {
     private val provider = CountingProvider().apply { reply = { "Gordon Lightfoot wrote it [W1]." } }
     private val cache = CardCache()

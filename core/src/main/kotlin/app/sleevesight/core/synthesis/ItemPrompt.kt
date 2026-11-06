@@ -4,6 +4,7 @@ import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.text.DateForm
 
 /**
  * The prompt for the song's, the artist's and the album's insights under *Key insights* (#522;
@@ -29,7 +30,7 @@ object ItemPrompt {
      * insights written from the old prompt are not reused. Not raised for the rule on a line found in
      * the track's language ([InsightPrompt.TRANSLATION_RULE], #902), as `InsightPrompt.VERSION` was
      * not: the lines' languages are in the evidence fingerprint, part of every insight's key. Nor for
-     * the rule on dates ([InsightPrompt.DATE_RULE], #957), as `InsightPrompt.VERSION` was not.
+     * the rule on dates ([InsightPrompt.dateRule], #957), as `InsightPrompt.VERSION` was not.
      */
     const val VERSION: Int = 1
 
@@ -48,7 +49,7 @@ object ItemPrompt {
 
     /**
      * The built-in style: the key insight's until its version 9 (#767), which this prompt has not
-     * taken up yet. The prompt follows it with the rule on dates ([InsightPrompt.DATE_RULE], #957).
+     * taken up yet. The prompt follows it with the rule on dates ([InsightPrompt.dateRule], #957).
      */
     const val BUILT_IN_STYLE: String =
         "- Write 2 to 4 sentences.\n- Plain conversational English. No hype."
@@ -56,14 +57,16 @@ object ItemPrompt {
     /**
      * The prompt for [subject], beside [nowPlaying], normalized as [normalized], written from
      * [evidence]. With [allowModel] (the *Model's own knowledge* switch), the model may add one
-     * sentence of its own, cited `[AI]`.
+     * sentence of its own, cited `[AI]`. Its dates in [dates]' form ([InsightPrompt.dateRule]).
      */
+    @Suppress("LongParameterList") // What it is about, the data, the switch, and the dates' form.
     fun build(
         subject: Subject,
         nowPlaying: NowPlaying,
         normalized: NormalizedTrack,
         evidence: EvidenceSet,
         allowModel: Boolean,
+        dates: DateForm = DateForm.APP,
     ): String =
         buildString {
             appendLine(task(subject.kind))
@@ -95,7 +98,7 @@ object ItemPrompt {
             appendLine()
             appendLine("STYLE")
             appendLine(BUILT_IN_STYLE)
-            appendLine(InsightPrompt.DATE_RULE)
+            appendLine(InsightPrompt.dateRule(dates))
             appendLine()
             appendLine(InsightPrompt.CONTRACT_HEADING)
             appendLine(subjectRule(subject.kind))

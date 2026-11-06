@@ -9,6 +9,7 @@ import app.sleevesight.core.synthesis.ExplainPrompt
 import app.sleevesight.core.synthesis.InsightPrompt
 import app.sleevesight.core.synthesis.SearchFacts
 import app.sleevesight.core.synthesis.SearchKind
+import app.sleevesight.core.text.DateForm
 
 /**
  * What the song is about, asked with web search (#908, *Explain the song*; [ExplainPrompt]): about
@@ -23,6 +24,8 @@ import app.sleevesight.core.synthesis.SearchKind
 internal class ExplainQuestion(
     private val facts: SearchFacts,
     base: List<WebPage>,
+    // The form the explanation writes its dates in (`InsightPrompt.dateRule`).
+    private val dates: DateForm = DateForm.APP,
 ) : WebQuestion {
     // The pages numbered so far, in their order, by address.
     private val numbered = LinkedHashMap<String, WebPage>().apply { base.forEach { add(it) } }
@@ -31,17 +34,17 @@ internal class ExplainQuestion(
     private val given = numbered.values.toList()
 
     override val knowledge: String
-        get() = ExplainPrompt.knowledge(facts, given)
+        get() = ExplainPrompt.knowledge(facts, given, dates)
 
     override val query: String
         get() = ExplainPrompt.query(facts)
 
     override fun once(pages: List<WebPage>): String {
         pages.forEach { numbered.add(it) }
-        return ExplainPrompt.once(facts, numbered.values.toList())
+        return ExplainPrompt.once(facts, numbered.values.toList(), dates)
     }
 
-    override fun agent(limit: Int): String = ExplainPrompt.agent(facts, given, limit)
+    override fun agent(limit: Int): String = ExplainPrompt.agent(facts, given, limit, dates)
 
     override fun toolResult(pages: List<WebPage>): String {
         // The pages this search added, or gave a passage they lacked, each under its id.
@@ -89,13 +92,15 @@ internal class ExplainQuestion(
 
         /**
          * The question about [facts], from [evidence]'s pages about the song ([pagesOf]), for [kind]
-         * [SearchKind.EXPLAIN]; null for any other kind, which `AiSearches` asks as its own.
+         * [SearchKind.EXPLAIN], its dates in [dates]' form; null for any other kind, which `AiSearches`
+         * asks as its own.
          */
         fun of(
             kind: SearchKind,
             facts: SearchFacts,
             evidence: EvidenceSet?,
-        ): ExplainQuestion? = if (kind == SearchKind.EXPLAIN) ExplainQuestion(facts, pagesOf(evidence)) else null
+            dates: DateForm = DateForm.APP,
+        ): ExplainQuestion? = if (kind == SearchKind.EXPLAIN) ExplainQuestion(facts, pagesOf(evidence), dates) else null
 
         /**
          * [evidence]'s lines about the song (not the artist's, nor the release's) that have a page,
