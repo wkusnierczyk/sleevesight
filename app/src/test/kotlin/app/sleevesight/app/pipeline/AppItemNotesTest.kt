@@ -25,6 +25,7 @@ import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.resolution.NameMatcher
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.SourceSwitch
+import app.sleevesight.core.settings.WriteAutomatically
 import app.sleevesight.core.sources.AlbumFound
 import app.sleevesight.core.sources.AlbumLookup
 import app.sleevesight.core.sources.AlbumQuery
@@ -733,6 +734,47 @@ class AppItemNotesTest {
             advanceUntilIdle()
             assertEquals(2, provider.requests)
             assertTrue(notes.settled(first, InsightItem.SONG) is ItemShown.Shown)
+        }
+
+    @Test
+    fun `under On demand an opening by a tap writes, as the tap's consent, and opening again makes no call`() =
+        runTest {
+            settings.value = Settings(aiProvider = ProviderId.ANTHROPIC, writeAutomatically = WriteAutomatically.NEVER)
+            val notes = notes()
+            val first = track(HomeFixtures.sundown)
+            assertEquals(ItemShown.Offered, notes.settled(first, InsightItem.SONG))
+            notes.write(first, InsightItem.SONG, ItemAsk.OPENED)
+            advanceUntilIdle()
+            assertTrue(notes.settled(first, InsightItem.SONG) is ItemShown.Shown)
+            assertEquals(1, provider.requests)
+            notes.write(first, InsightItem.SONG, ItemAsk.OPENED)
+            advanceUntilIdle()
+            assertEquals(1, provider.requests)
+            // Nothing asks by itself under On demand.
+            notes.write(first, InsightItem.ARTIST, ItemAsk.BY_ITSELF)
+            advanceUntilIdle()
+            assertEquals(1, provider.requests)
+        }
+
+    @Test
+    fun `a write whose row is no longer followed goes on, and its insight is kept and shown when followed again`() =
+        runTest {
+            provider.streaming = 10.seconds
+            val notes = notes()
+            val first = track(HomeFixtures.sundown)
+            // The panel open, then closed while it writes (#948): nothing follows the item meanwhile.
+            val watching = launch { notes.item(first, InsightItem.SONG).collect {} }
+            notes.write(first, InsightItem.SONG, ItemAsk.OPENED)
+            advanceTimeBy(1.seconds)
+            watching.cancel()
+            advanceUntilIdle()
+            assertEquals(1, provider.completed)
+            assertEquals(1, cache.held)
+            // Opened again: the insight kept, with no call.
+            assertTrue(notes.settled(first, InsightItem.SONG) is ItemShown.Shown)
+            notes.write(first, InsightItem.SONG, ItemAsk.OPENED)
+            advanceUntilIdle()
+            assertEquals(1, provider.requests)
         }
 
     @Test

@@ -70,7 +70,7 @@ Google Play, which distributes the app, handles your installation under [Google'
 ## Your choices
 
 - Each source is a switch, and *Show insights* off makes no AI calls at all. *Show genres* off asks no source for genres, and leaves Last.fm's tags and Wikidata's genres out of what goes to the AI service.
-- *Reactive* sets whether an insight is written for every track, only when you skip, or only when you tap *Write insight*.
+- *Reactive* sets whether an insight is written for every track, only when you skip, or only when you tap *Write insight*; the song’s, the artist’s and the album’s insights are written when you open them, and under an automatic mode on each new track while they stay open.
 - *Proactive* off sends nothing about the next track.
 - *Read aloud* hands an insight's text to the phone's text-to-speech engine only when you tap it; *Read new insights aloud*, off by default, does so for each new insight while the app is on screen. Choosing an engine that speaks on the phone, in Android's settings, keeps the text on it.
 - *Report a problem*, and the tester's report button, send nothing by themselves: each shows the report and hands it to your mail app, which handles it as any message you write (some keep a draft in your mail account) and sends it to the developer only if you do. A tester's report leaves out the track changes unless you turn them on, and any part you leave out. *Report button* at *Hide*, or developer mode off, removes the button.

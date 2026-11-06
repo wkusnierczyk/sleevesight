@@ -16,9 +16,10 @@ import app.sleevesight.core.pipeline.InsightItem
  * [item]'s page: its name first ([name], the track's title, its primary artist, or the player's
  * album name, whole, as under the cover), then what its row unfolds under *Expandable boxes*
  * ([ItemContent]). It shows the track playing, so it follows a track change; opening it is a tap
- * ([tapped]) for the track it was opened on only, so under an automatic mode that track's is written
- * at once, and a later track's only as one unfolded at its start is, by itself. With no name for it on
- * the track playing, it says there is nothing to write it from.
+ * ([tapped]) for the track it was opened on only, so that track's is written at once, in every mode
+ * (#948; under *On demand* while [opening] is due), and a later track's only as one unfolded at
+ * its start is, by itself under an automatic mode. With no name for it on the track playing, it says
+ * there is nothing to write it from.
  */
 @Composable
 internal fun ItemPage(
@@ -26,6 +27,7 @@ internal fun ItemPage(
     name: String?,
     context: ItemContext,
     tapped: Boolean,
+    opening: OpeningWrite = OpeningWrite.NONE,
 ) {
     if (name == null) {
         // Nothing to write about on this track (no album it names): said as for no evidence.
@@ -33,7 +35,7 @@ internal fun ItemPage(
         return
     }
     Text(name, Modifier.testTag(ITEM_PAGE_NAME_TAG), style = MaterialTheme.typography.titleLarge)
-    ItemContent(item, context, tapped)
+    ItemContent(item, context, tapped, opening = opening)
 }
 
 /**
