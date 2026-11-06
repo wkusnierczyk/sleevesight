@@ -123,6 +123,20 @@ sealed interface PipelineEvent {
         val cached: Boolean,
     ) : PipelineEvent
 
+    /**
+     * The gather's deadline ([Pipeline.GATHER_DEADLINE], #983) cut the lookups still under way, [after]
+     * they had run that long: [sources]', which land unreachable, those in the track's [language] when
+     * it names one (#902); and MusicBrainz's resolution when [resolution]. Neither, nor a language,
+     * when the search in the track's language was cut while it decided the language.
+     */
+    data class GatherCut(
+        override val key: String,
+        val sources: List<SourceId>,
+        val after: Duration,
+        val resolution: Boolean = false,
+        val language: String? = null,
+    ) : PipelineEvent
+
     /** An adapter threw; [reason] is the exception's type. */
     data class SourceFailed(
         override val key: String,

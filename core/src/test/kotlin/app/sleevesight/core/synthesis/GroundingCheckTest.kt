@@ -99,6 +99,102 @@ class GroundingCheckTest {
         assertEquals(0, written.grounded.counts.uncited)
     }
 
+    /** #953: *… Pachamantra Vol.* was split off its citations and dimmed. */
+    @Test
+    fun `a volume before its Roman numeral does not end a sentence, in quotes, brackets or emphasis too`() {
+        val ids = setOf("S1", "P1")
+        for (title in listOf(
+            "Pachamantra Vol. I",
+            "*Pachamantra Vol. I*",
+            "\"Pachamantra Vol. I\"",
+            "“Pachamantra Vol. I”",
+            "Pachamantra (Vol. I)",
+        )) {
+            val reply = "The track first appeared on the release $title [S1] [P1]."
+            assertEquals(listOf(reply), GroundingCheck.splitSentences(reply), title)
+            val written = assertIs<InsightReply.Written>(GroundingCheck.check(reply, ids, allowModel = false))
+            assertEquals(1, written.grounded.counts.ok, title)
+            assertEquals(0, written.grounded.counts.uncited, title)
+        }
+        val owning = "Pachamantra Vol. II's reissue added a track. [S1]"
+        assertEquals(listOf(owning), GroundingCheck.splitSentences(owning))
+    }
+
+    @Test
+    fun `a volume, number, part or opus before its numeral does not end a sentence`() {
+        val reply =
+            "The track is credited to Raio with sophie sôfrēē and first appeared on the release " +
+                "Pachamantra Vol. I [S1] [P1]. It was reissued on Vol. II with Pt. IV of the suite. [S2] " +
+                "It held the No. One spot, as Op. 27 No. 2 did. [W1] It also came out on Vol. 2. [W2]"
+        assertEquals(
+            listOf(
+                "The track is credited to Raio with sophie sôfrēē and first appeared on the release " +
+                    "Pachamantra Vol. I [S1] [P1].",
+                "It was reissued on Vol. II with Pt. IV of the suite. [S2]",
+                "It held the No. One spot, as Op. 27 No. 2 did. [W1]",
+                "It also came out on Vol. 2. [W2]",
+            ),
+            GroundingCheck.splitSentences(reply),
+        )
+        val written =
+            assertIs<InsightReply.Written>(
+                GroundingCheck.check(reply, setOf("S1", "P1", "S2", "W1", "W2"), allowModel = false),
+            )
+        assertEquals(4, written.grounded.counts.ok)
+        assertEquals(0, written.grounded.counts.uncited)
+    }
+
+    @Test
+    fun `a volume or number that ends a sentence still ends it`() {
+        val reply =
+            "It came out as the second vol. It sold well. [W1] Did it chart? It said no. The label " +
+                "dropped it. [W2] It was the first of three Vols. [W3] Later ones followed."
+        assertEquals(
+            listOf(
+                "It came out as the second vol.",
+                "It sold well. [W1]",
+                "Did it chart?",
+                "It said no.",
+                "The label dropped it. [W2]",
+                "It was the first of three Vols. [W3]",
+                "Later ones followed.",
+            ),
+            GroundingCheck.splitSentences(reply),
+        )
+    }
+
+    @Test
+    fun `Jr and Sr end a sentence only before a word that opens one`() {
+        val reply = "It was written by Sammy Davis Jr. The Hank Williams Jr. Band covered it. [W1]"
+        assertEquals(
+            listOf("It was written by Sammy Davis Jr.", "The Hank Williams Jr. Band covered it. [W1]"),
+            GroundingCheck.splitSentences(reply),
+        )
+    }
+
+    @Test
+    fun `a Roman numeral and its citations alone are no sentence`() {
+        val tails =
+            listOf("I [W1].", "II. [W1]", "IV [W1] [W2]", "III [W1]. It charted. [W2]", "*I* [W1].", "I\" [W1].")
+        for (tail in tails) {
+            val reply = "It was released as Mk. $tail"
+            assertEquals(
+                "It was released as Mk. " + tail.substringBefore(" It "),
+                GroundingCheck.splitSentences(reply).first(),
+                tail,
+            )
+        }
+        // A sentence after a stop that only opens with a numeral is one.
+        assertEquals(
+            listOf("It was released as Mk. [W1]", "I think it charted. [W2]"),
+            GroundingCheck.splitSentences("It was released as Mk. [W1] I think it charted. [W2]"),
+        )
+        assertEquals(
+            listOf("It came out on Mk.", "I [W1] is a single."),
+            GroundingCheck.splitSentences("It came out on Mk. I [W1] is a single."),
+        )
+    }
+
     @Test
     fun `initials before a word that opens a sentence end one, so an uncited sentence shows`() {
         val reply =

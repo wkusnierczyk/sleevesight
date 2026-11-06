@@ -29,6 +29,13 @@ class AiSearchPromptTest {
         )
 
     @Test
+    fun aSearchIsAboutTheNamesKnownNotTheGenresGivenForContext() {
+        // #929: what a page's part must say more than to be kept, the rest page boilerplate.
+        assertEquals(listOf(facts.title, checkNotNull(facts.album)) + facts.artists, facts.names)
+        assertEquals(listOf("shoegaze"), SearchFacts.ofGenre("shoegaze").names)
+    }
+
+    @Test
     fun theSystemPartComesFirstThenTheTrackThenTheQuestion() {
         // What the song is about is asked from web pages only (#908): `ExplainAnswersTest`'s.
         for (kind in SearchKind.entries - SearchKind.EXPLAIN) {

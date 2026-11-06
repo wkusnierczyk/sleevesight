@@ -27,6 +27,7 @@ import app.sleevesight.core.sources.ArtistResults
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.fixtures.BelowSoundtrack
 import app.sleevesight.net.NetClient
+import app.sleevesight.net.NetLog
 import app.sleevesight.store.ArtistKeeping
 import app.sleevesight.store.Caches
 import app.sleevesight.store.StoreArtistResults
@@ -93,8 +94,11 @@ class Cli(
         private val provider = options.provider
         private val providerName = Options.nameOf(provider)
         private val store = FixtureStore(File(options.fixtures, "http"))
+
+        // With `--net-log`, each attempt of each request on standard error, as `:net` words it, redacted.
+        private val netLog = if (options.netLog) NetLog { err.println("net: $it") } else NetLog.NONE
         private val live: NetClient? =
-            if (options.mode == Mode.REPLAY) null else NetClient(HostPolicies.netConfig(APP_VERSION))
+            if (options.mode == Mode.REPLAY) null else NetClient(HostPolicies.netConfig(APP_VERSION), netLog)
         private val replay = ReplayNetClient(store)
         private val recorder =
             if (options.mode == Mode.RECORD) live?.let { RecordingNetClient(it, store, options.record) } else null

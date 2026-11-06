@@ -42,7 +42,7 @@ class AiSearchesWebTest {
         app.sleevesight.core.synthesis
             .AiSearchAnswers(GenreVocabulary.load(JvmResourceReader), JvmAccentFolder)
     private val searches =
-        AiSearches(AiAccess(provider, Secret("k")), cache, JvmHasher, answers, web = { outcome })
+        AiSearches(AiAccess(provider, Secret("k")), cache, JvmHasher, answers, web = { _, _ -> outcome })
     private val settings = Settings(aiProvider = ProviderId.ANTHROPIC)
     private val playing = nowPlaying("Grace", "Jeff Buckley", "Grace")
     private val track = TrackState(playing, Normalizer(JvmAccentFolder).normalize(playing), sources = emptyMap())
@@ -75,6 +75,23 @@ class AiSearchesWebTest {
             assertEquals(SearchWay(automatic = true, web = true, QuestionCost(searches = 1, calls = 1)), last.way)
             // Read back from the cache as it was shown.
             assertEquals(last, searches.kept(key, SearchKind.DATES, track)?.state)
+        }
+
+    @Test
+    fun aSearchCleansItsPagesForTheTracksNamesButLeavesTheLyricsPagesAsTheyCame() =
+        runTest {
+            // #929: a lyrics page whose passage is only its title or its site's words stays, its address the answer.
+            val subjects = mutableListOf<List<String>?>()
+            val made =
+                AiSearches(AiAccess(provider, Secret("k")), cache, JvmHasher, answers, web = { _, subject ->
+                    subjects += subject
+                    outcome
+                })
+            for (kind in listOf(SearchKind.DATES, SearchKind.LYRICS)) {
+                val key = checkNotNull(made.key(track, kind, settings))
+                made.search(key, kind, track, facts, { _, _ -> }, asking = AiSearches.Asking(AiWebSearch.ONCE))
+            }
+            assertEquals(listOf(facts.names, null), subjects)
         }
 
     @Test
@@ -122,7 +139,7 @@ class AiSearchesWebTest {
                         FakeProvider.done("{}")
                     }
                 }
-            val made = AiSearches(AiAccess(loop, Secret("k")), cache, JvmHasher, answers, web = { outcome })
+            val made = AiSearches(AiAccess(loop, Secret("k")), cache, JvmHasher, answers, web = { _, _ -> outcome })
             val key = checkNotNull(made.key(track, SearchKind.DATES, settings))
             val last =
                 made.search(

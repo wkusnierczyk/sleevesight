@@ -25,6 +25,7 @@ object EventLine {
                     e.outcome,
                 )}, ${e.evidence} cited, " +
                     ms(e.latency) + if (e.cached) ", cache hit" else ""
+            is PipelineEvent.GatherCut -> cut(e, ms(e.after))
             is PipelineEvent.SourceFailed -> "failed     ${e.key}: ${e.source.tag} ${e.reason}"
             is PipelineEvent.NotCached -> "not cached ${e.key}: ${e.source.tag}, ${e.reason}"
             is PipelineEvent.CacheFailed -> "cache      ${e.key}: ${e.operation} failed, ${e.reason}"
@@ -147,4 +148,15 @@ private object AskAiLines {
         one: String,
         many: String,
     ): String = "$n ${if (n == 1) one else many}"
+}
+
+// What the gather's deadline cut (#983), [after] how long: the resolution and the sources, or the search
+// in the track's language while it decided the language.
+private fun cut(
+    e: PipelineEvent.GatherCut,
+    after: String,
+): String {
+    val cut = listOfNotNull("resolution".takeIf { e.resolution }) + e.sources.map { it.tag }
+    return "deadline   ${e.key}: ${cut.joinToString(", ").ifEmpty { "language search" }}" +
+        (e.language?.let { " in $it" } ?: "") + " cut after $after"
 }

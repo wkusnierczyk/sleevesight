@@ -114,7 +114,7 @@ class AppAiSearchesTest {
                     hasher = JvmHasher,
                     ai = ai,
                     cache = cache,
-                    webSearch = { WebSearchOutcome.Found(emptyList()) },
+                    webSearch = { _, _ -> WebSearchOutcome.Found(emptyList()) },
                 )
             parts.value = withWeb(AiAccess(provider, Secret("key")))
             assertEquals(AiSearch.Offered, searches().now(SearchKind.EXPLAIN))
