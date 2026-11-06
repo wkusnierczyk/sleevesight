@@ -241,6 +241,8 @@ class ReleaseDatesTest {
         assertEquals("1974", ReleaseDate.yearIn("1974"))
         assertNull(ReleaseDate.yearIn("19"))
         assertNull(ReleaseDate.yearIn("19xx"))
+        assertNull(ReleaseDate.yearIn("0000"))
+        assertNull(ReleaseDate.yearIn("19745-03"))
     }
 
     @Test

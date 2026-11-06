@@ -63,10 +63,14 @@ object GenreReasonPrompt {
      * Not raised for the rule on a line found in the track's language ([InsightPrompt.TRANSLATION_RULE],
      * #902), as `InsightPrompt.VERSION` was not: the lines' languages are in the evidence fingerprint,
      * part of every reason's key.
+     * Nor for the rule on dates ([InsightPrompt.DATE_RULE], #957), as `InsightPrompt.VERSION` was not.
      */
     const val VERSION: Int = 6
 
-    /** The built-in style: shorter than the insight's, since it answers one question. */
+    /**
+     * The built-in style: shorter than the insight's, since it answers one question. The system
+     * prompt follows it with the rule on dates ([InsightPrompt.DATE_RULE], #957).
+     */
     const val BUILT_IN_STYLE: String =
         "- Write 1 to 3 sentences.\n- Plain conversational English. No hype."
 
@@ -175,6 +179,7 @@ object GenreReasonPrompt {
             appendLine()
             appendLine("STYLE")
             appendLine(BUILT_IN_STYLE)
+            appendLine(InsightPrompt.DATE_RULE)
             appendLine()
             appendLine(InsightPrompt.CONTRACT_HEADING)
             appendLine(contract(allowModel))

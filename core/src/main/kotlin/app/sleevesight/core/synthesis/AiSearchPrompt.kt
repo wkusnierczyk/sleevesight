@@ -91,7 +91,8 @@ object AiSearchPrompt {
 
     /**
      * The version of [SearchKind.DEFINITION]'s prompt (#786), its own: a definition is kept by the
-     * genre, not the track, and its prompt changes apart from the track's three.
+     * genre, not the track, and its prompt changes apart from the track's three. Not raised for the
+     * rule on dates ([InsightPrompt.DATE_RULE], #957), as `InsightPrompt.VERSION` was not.
      */
     const val DEFINITION_VERSION: Int = 1
 
@@ -218,6 +219,9 @@ object AiSearchPrompt {
      *   with their domains, as the app checks them), the page of this artist's version where there
      *   is one, and never a URL made up from the title: a link the model has not seen is the likeliest
      *   thing for it to invent, and the app makes no request to check it (#728).
+     * - [SearchKind.DEFINITION]: a short, neutral definition in plain text, its dates in the app's
+     *   form ([InsightPrompt.DATE_RULE], #957), prose as [SearchKind.EXPLAIN]'s ([ExplainPrompt]) is;
+     *   the others are JSON the app reads, their dates partial ISO dates it writes in its own form.
      */
     fun rules(
         kind: SearchKind,
@@ -252,6 +256,7 @@ object AiSearchPrompt {
                     "- definition: two or three sentences, neutral, in the style of the opening of an encyclopedia " +
                         "article about the genre: what it is, where and when it arose, and what marks its sound.",
                     "- Plain text only: no Markdown, no HTML, no lists, no links or web addresses, no line breaks.",
+                    InsightPrompt.DATE_RULE,
                     "- About the genre in general: say nothing about any track, recording, artist or listener.",
                 )
             SearchKind.EXPLAIN -> ExplainPrompt.RULES

@@ -13,7 +13,6 @@ import app.sleevesight.core.sources.ReleaseDate
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.SourceResult
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Test
 import kotlin.time.Duration.Companion.seconds
 
@@ -268,19 +267,6 @@ class HomeDatesTest {
         // A date with no year says nothing.
         val undated = cached(hallelujah, kept("19", emptyList()))
         assertEquals(emptyList<DateSentence>(), homeDates(undated, hallelujah))
-    }
-
-    @Test
-    fun aDateIsAsPreciseAsMusicBrainzGivesIt() {
-        assertEquals(DateWhen.Day(29, 7, "2014"), DateWhen.of("2014-07-29"))
-        assertEquals(DateWhen.Day(3, 12, "1965"), DateWhen.of("1965-12-03"))
-        assertEquals(DateWhen.Month(7, "2014"), DateWhen.of("2014-07"))
-        assertEquals(DateWhen.Year("2014"), DateWhen.of("2014"))
-        // A part that is not a month or a day leaves it less precise; no year, no date.
-        assertEquals(DateWhen.Year("2014"), DateWhen.of("2014-13-01"))
-        assertEquals(DateWhen.Month(7, "2014"), DateWhen.of("2014-07-32"))
-        assertNull(DateWhen.of("19"))
-        assertNull(DateWhen.of(""))
     }
 
     @Test

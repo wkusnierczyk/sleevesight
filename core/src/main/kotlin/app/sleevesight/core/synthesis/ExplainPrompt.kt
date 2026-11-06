@@ -41,7 +41,8 @@ object ExplainPrompt {
     /**
      * The rules of the explanation: the insight's on citations and the evidence, in the app's ids;
      * its length; a page's reading attributed to it ([InsightPrompt.WEB_READING_RULE]); the lyrics
-     * ([LYRICS_RULE]); plain text; and `{}` when no page says what the song is about.
+     * ([LYRICS_RULE]); plain text; dates in the app's form ([InsightPrompt.DATE_RULE], #957); and `{}`
+     * when no page says what the song is about.
      */
     val RULES: List<String> =
         listOf(
@@ -55,6 +56,7 @@ object ExplainPrompt {
                 "version.",
             LYRICS_RULE,
             InsightPrompt.PLAIN_TEXT_RULE + " No links or web addresses.",
+            InsightPrompt.DATE_RULE,
             "- If no page says what the song is about, reply {}.",
         )
 
