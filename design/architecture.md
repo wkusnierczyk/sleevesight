@@ -523,7 +523,7 @@ Each insight is a paid call on the user's key (design, *Caching and offline*), s
 
   | Option | Writes without a tap |
   |---|---|
-  | On demand (once *Now*, and *Manual* before it) | Nothing; insights are written only when the user taps *Write insight* |
+  | On demand (once *Now*, and *Manual* before it) | Nothing; insights are written only when the user taps a button with the AI mark: *Write insight*, or *Song*, *Artist* or *Album*, which write theirs as they open (#948) |
   | On track skip (auto) (once *On track skip*, and *On skip* before it) | Tracks the user moved to: a skip in the player, or any action in Sleevesight |
   | On track change (auto) (the default; once *On track change*) | Every track |
 
