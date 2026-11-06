@@ -46,6 +46,34 @@ class MusicBrainzTracklistTest {
         }
 
     @Test
+    fun `a group's official releases, browsed by status, page after page up to the cap`() =
+        runTest {
+            val page = (1..100).joinToString(",") { """{"id":"o$it","title":"Kind of Blue","status":"Official"}""" }
+            val net = ReplayNetClient.ok("""{"release-count":250,"release-offset":0,"releases":[$page]}""")
+            val releases = assertIs<Lookup.Found<List<MbRelease>>>(MusicBrainzClient(net).officialReleases("g1")).value
+            assertEquals(300, releases.size)
+            assertEquals(listOf("0", "100", "200"), net.sent.map { it.query["offset"] })
+            val request = net.sent.first()
+            assertEquals("https://musicbrainz.org/ws/2/release", request.url)
+            assertEquals("g1", request.query["release-group"])
+            assertEquals("official", request.query["status"])
+            assertEquals("100", request.query["limit"])
+        }
+
+    @Test
+    fun `a group whose official releases fit one page is asked once`() =
+        runTest {
+            val net =
+                ReplayNetClient.ok(
+                    """{"release-count":1,"releases":[{"id":"o1","title":"K","status":"Official"}]}""",
+                )
+            val releases = assertIs<Lookup.Found<List<MbRelease>>>(MusicBrainzClient(net).officialReleases("g1")).value
+            assertEquals(listOf("o1"), releases.map { it.mbid })
+            assertEquals(1, net.sent.size)
+            assertEquals(Lookup.NotFound, MusicBrainzClient(ReplayNetClient.status(404, "{}")).officialReleases("x"))
+        }
+
+    @Test
     fun `an id MusicBrainz does not know is not found`() =
         runTest {
             assertEquals(Lookup.NotFound, MusicBrainzClient(ReplayNetClient.status(404, "{}")).groupReleases("x"))

@@ -57,6 +57,14 @@ interface MusicBrainzLookup {
     suspend fun groupReleases(mbid: String): Lookup<List<MbRelease>> = Lookup.Failed("NotAsked")
 
     /**
+     * The official releases of the release group [mbid] (#984), in no set order, for when none of
+     * the 25 [groupReleases] lists is official: MusicBrainz's browse of the group's releases by
+     * status, page after page, at most [OFFICIAL_PAGES] of [SEARCH_PAGE]. Not found for an id that is
+     * no release group's. A stand-in that does not answer it fails, as [groupReleases].
+     */
+    suspend fun officialReleases(mbid: String): Lookup<List<MbRelease>> = Lookup.Failed("NotAsked")
+
+    /**
      * The release [mbid]'s tracklist (#984): its media, each with its tracks. Not found for an id that
      * is no release's. A stand-in that does not answer it fails, as [groupReleases].
      */
@@ -65,6 +73,12 @@ interface MusicBrainzLookup {
     companion object {
         /** The most recordings a search gives, its one page: MusicBrainz's largest. */
         const val SEARCH_PAGE: Int = 100
+
+        /**
+         * The most pages [officialReleases] asks, each a request under MusicBrainz's one a second:
+         * a group with none of its 25 earliest releases official seldom has many official ones.
+         */
+        const val OFFICIAL_PAGES: Int = 3
     }
 }
 

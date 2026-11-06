@@ -160,6 +160,46 @@ class MusicBrainzClient(
         }
     }
 
+    override suspend fun officialReleases(mbid: String): Lookup<List<MbRelease>> {
+        val releases = mutableListOf<MbRelease>()
+        var answer: Lookup<List<MbRelease>>? = null
+        var page = 0
+        while (answer == null && page < MusicBrainzLookup.OFFICIAL_PAGES) {
+            answer =
+                when (val listed = officialPage(mbid, page)) {
+                    is Lookup.Found -> {
+                        val (count, these) = listed.value
+                        releases += these
+                        if (these.isEmpty() || releases.size >= count) Lookup.Found(releases.toList()) else null
+                    }
+                    Lookup.NotFound -> if (page == 0) Lookup.NotFound else Lookup.Found(releases.toList())
+                    // A later page that fails leaves the earliest unsure: the whole answer fails.
+                    is Lookup.Failed -> listed
+                }
+            page++
+        }
+        return answer ?: Lookup.Found(releases.toList())
+    }
+
+    // The [page]th page of the group [mbid]'s official releases, with how many there are in all.
+    private suspend fun officialPage(
+        mbid: String,
+        page: Int,
+    ): Lookup<Pair<Int, List<MbRelease>>> {
+        val query =
+            mapOf(
+                "release-group" to mbid,
+                "status" to "official",
+                "limit" to "${MusicBrainzLookup.SEARCH_PAGE}",
+                "offset" to "${page * MusicBrainzLookup.SEARCH_PAGE}",
+                "fmt" to "json",
+            )
+        return net.lookup(NetRequest("$BASE/release", query = query)) { response ->
+            val json = parseObject(response.body)
+            (json.int("release-count") ?: 0) to json.array("releases").map(::release)
+        }
+    }
+
     override suspend fun tracklist(mbid: String): Lookup<MbTracklist> {
         val request = NetRequest("$BASE/release/$mbid", query = mapOf("inc" to "recordings", "fmt" to "json"))
         return net.lookup(request) { response ->
