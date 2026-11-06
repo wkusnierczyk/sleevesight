@@ -1,0 +1,7 @@
+What's new in 0.5.0:
+- Tap the cover to flip it and see the album's tracklist.
+- A source that hangs no longer holds the key insight: after 20 s it is written from what arrived.
+- Instrumental no longer shows as a sure genre for a track with vocals.
+- Settings: Reactive and Stop after are rows of buttons, and Saver follows Reactive.
+- A setting that does not apply dims as a whole.
+- AI web searches no longer send the AI service the pages' menus and footers.
