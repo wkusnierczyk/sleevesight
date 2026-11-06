@@ -313,6 +313,9 @@ class AppGraph internal constructor(
             musicBrainzThrough = musicBrainzThrough,
             // Every AI request and its reply in logcat, in debug builds only (#767).
             aiThrough = PromptDump::watching,
+            // What the search in the track's language found about an artist or an album (#939): in
+            // [artistResults] while the switch is on, else in memory for the process.
+            keepsArtists = { artistKeeping.on },
         )
 
     /**
@@ -718,6 +721,9 @@ class AppGraph internal constructor(
         // Every genre of the playing track's table has its definition looked up as soon as the genres
         // are known, whether a panel is open or not (#786).
         pipelineScope.launch { genreNotes.lookups.fetchAhead(pipeline.state.map { it.track }) }
+        // What the search in the track's language found about the artist and the album, kept once the
+        // track's evidence is in, whether or not their insights are opened (#939).
+        pipelineScope.launch { itemNotes.keepAhead(pipeline.state.map { it.track }) }
         // A genre whose definition Wikipedia does not have is searched by itself with the setting on
         // (#786), as a lookup ends, or an AI service comes ready.
         pipelineScope.launch {
@@ -743,6 +749,8 @@ class AppGraph internal constructor(
                 .collect { keeps ->
                     // One that fails is tried again at the next lookup while the switch is off.
                     if (!keeps && !artistKeeping.clear()) Log.w(TAG, "The artist cache could not be cleared")
+                    // The lines in the track's language are kept elsewhere now (#939): gathered again.
+                    itemNotes.artistKeepingChanged()
                 }
         }
         // Expired cache entries are deleted on start, once the first run is acknowledged (the

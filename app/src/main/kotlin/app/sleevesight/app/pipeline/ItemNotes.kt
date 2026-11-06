@@ -25,6 +25,7 @@ import app.sleevesight.core.pipeline.rewriteParts
 import app.sleevesight.core.pipeline.writtenBy
 import app.sleevesight.core.resolution.NameMatcher
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.settings.TrackLanguageSearch
 import app.sleevesight.core.settings.WriteAutomatically
 import app.sleevesight.core.settings.pastKeepHistory
 import kotlinx.coroutines.CoroutineScope
@@ -39,6 +40,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -294,7 +296,10 @@ class AppItemNotes(
     // now (`ItemInsights.ownEvidence`), its entity, the sources switched on, and whether a web search
     // may give it lines (`ItemInsights.searchesWeb`: the artist's, #912, with *AI web search* used and
     // an engine's key; the album's, #935, with web search on and an engine's key), so switching that
-    // on, or giving the key, gathers it again.
+    // on, or giving the key, gathers it again; and whether it takes the lines found in the track's
+    // language, and where those are kept (`ItemInsights.takesInLanguage`, #939: *Search in the track's
+    // language* off or not, and *Keep what sources said about each artist*), so switching either
+    // gathers it again.
     private data class Gathered(
         val item: InsightItem,
         val lookupKey: String,
@@ -302,6 +307,8 @@ class AppItemNotes(
         val entity: CardEntity?,
         val sources: Set<SourceId>,
         val searchesWeb: Boolean,
+        val inLanguage: Boolean,
+        val keepsArtists: Boolean,
     )
 
     // The insights shown, by key, oldest first, at most [KEPT].
@@ -349,7 +356,9 @@ class AppItemNotes(
         track: TrackState,
         item: InsightItem,
     ): Flow<ItemShown> =
-        combine(parts, settings) { made, now -> made to now }
+        // Followed anew when *Keep what sources said about each artist* changes too ([keepings]), whose
+        // turn drops the evidence it shows, or the gathering it waits on, whichever it sees first.
+        combine(parts, settings, keepings) { made, now, keeping -> Triple(made, now, keeping) }
             .distinctUntilChanged()
             .flatMapLatest { (made, now) ->
                 val insights = made?.let(::insightsOf)
@@ -783,13 +792,15 @@ class AppItemNotes(
     ): Deferred<Found?> {
         val gathering =
             inflight.computeIfAbsent(at) {
+                // Where the lines in the track's language are kept, when it began (#939).
+                val keeping = keepings.value
                 val job =
                     scope.async(mark(), start = CoroutineStart.LAZY) {
                         val found =
                             withContext(
                                 io,
                             ) { insights.evidence(item, track, now) }?.let { Found(it, clock.now(), track, now) }
-                        found?.also { keep(at, it, coroutineContext) }
+                        found?.also { keep(at, it, coroutineContext) { at.inLanguage && keeping != keepings.value } }
                     }
                 pending += job
                 job.invokeOnCompletion {
@@ -804,12 +815,14 @@ class AppItemNotes(
     }
 
     // Keeps [found] for [at], last, the oldest dropped past [KEPT], unless a *Clear history* came since
-    // [work] began.
+    // [work] began, or, under the same lock, it is [stale].
     private fun keep(
         at: Gathered,
         found: Found,
         work: CoroutineContext,
+        stale: () -> Boolean = { false },
     ) = publish(work) {
+        if (stale()) return@publish
         gathered.update { kept ->
             val next = LinkedHashMap(kept)
             next.remove(at)
@@ -831,6 +844,8 @@ class AppItemNotes(
         insights.entity(item, track),
         SourceId.entries.filter(now::isEnabled).toSet(),
         insights.searchesWeb(item, now),
+        insights.takesInLanguage(item, now),
+        insights.takesInLanguage(item, now) && now.keepArtistResults,
     )
 
     // [first]'s insight, kept meanwhile (another track of the artist or album wrote it), with no call,
@@ -1371,6 +1386,56 @@ class AppItemNotes(
     }
 
     /**
+     * *Keep what sources said about each artist* changed (#939), which says where the lines in the
+     * track's language are kept: the artist's and the album's evidence gathered with them is dropped,
+     * and a gathering under way keeps nothing, so each is gathered again from where they are kept now.
+     * Without it, switching on and off again would find the evidence gathered before under the same
+     * key, with lines the switch's turn dropped. Each insight shown follows its evidence anew, so one
+     * that took the new settings first is gathered again too.
+     */
+    fun artistKeepingChanged() {
+        synchronized(lock) {
+            keepings.update { it + 1 }
+            gathered.update { kept -> kept.filterKeys { !it.inLanguage } }
+            inflight.keys.removeIf { it.inLanguage }
+        }
+    }
+
+    /**
+     * Keeps what the search in the track's language found about the artist and the album of each of
+     * [tracks] (the pipeline's track) once its evidence is in (#939, `ItemInsights.keepInLanguage`),
+     * under the parts and settings then, whether or not their insights are opened, so the next of
+     * their tracks finds the lines: only while insights are shown (*Show insights*) and an AI service
+     * is ready, since nothing is written from them otherwise, and *Search in the track's language* is
+     * not *Off*. Again when the parts or the settings come, or change in one of those, for the same
+     * track. Until cancelled; nothing kept after a *Clear history* by work begun before it.
+     */
+    suspend fun keepAhead(tracks: Flow<TrackState?>) {
+        combine(tracks, parts, settings) { track, made, now ->
+            val offered = track?.takeIf(ItemInsights::offered)
+            val insights = made?.let(::insightsOf)
+            // Insights shown and an AI service ready: else nothing is written from the lines.
+            val writes = insights?.writes == true && now?.writeInsights == true
+            val inLanguage = now != null && now.trackLanguageSearch != TrackLanguageSearch.OFF
+            val keep =
+                when {
+                    offered == null || insights == null || now == null -> null
+                    writes && inLanguage -> suspend { insights.keepInLanguage(offered, now) }
+                    else -> null
+                }
+            Ahead(listOf(offered?.normalized?.lookupKey, offered?.evidence?.fingerprint, writes, inLanguage), keep)
+        }.distinctUntilChangedBy { it.on }
+            .collect { ahead -> ahead.keep?.let { withContext(io + mark()) { it() } } }
+    }
+
+    // What [keepAhead] keeps on: the track once offered (its key and evidence), whether insights are
+    // written and *Search in the track's language* is on, and the keep then, null for none.
+    private class Ahead(
+        val on: List<Any?>,
+        val keep: (suspend () -> Unit)?,
+    )
+
+    /**
      * Forgets the insights shown and the evidence gathered, for *Clear history* (#547); the cache's
      * are deleted with it. After the epoch's advance: work that checked it before shows its state
      * before this clears it, never after.
@@ -1392,6 +1457,9 @@ class AppItemNotes(
 
     // Guards each insight shown against *Clear history* ([forget]).
     private val lock = Any()
+
+    // How many times *Keep what sources said about each artist* changed ([artistKeepingChanged]), under [lock].
+    private val keepings = MutableStateFlow(0L)
 
     // How many times [forget] ran, under [lock], as `AppGenreNotes` counts them (#791).
     @Volatile
@@ -1433,6 +1501,7 @@ class AppItemNotes(
             made.artistWeb,
             made.webSearch,
             made.dateForm,
+            made.languageLines,
         )
 
     // Whether an insight written at [writtenAt] is past *Keep history for* ([lifetime]; null, for ever).

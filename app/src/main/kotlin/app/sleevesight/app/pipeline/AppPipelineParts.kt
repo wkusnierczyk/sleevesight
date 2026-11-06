@@ -37,9 +37,11 @@ import java.util.Locale
  * under *Key insights* (#522) is gathered by [PipelineWiring.albums], Last.fm's album and its web
  * search with their keys and the engines switched on, as the adapters (#885); the web search for an
  * artist the sources say nothing about by [PipelineWiring.artistWeb], likewise (#912). The search in the
- * track's language (#902) is [PipelineWiring.languageSearch]'s, its web search likewise. The prompts
- * ask for dates in the phone's form ([phoneDateForm], #957), as *Dates* writes them: [phone]'s
- * language and region, read as each prompt is built, so a change of either reaches the next one.
+ * track's language (#902) is [PipelineWiring.languageSearch]'s, its web search likewise; what it found
+ * about the artist and the album is kept by [PipelineWiring.languageLines], one for the process (#939).
+ * The prompts ask for dates in the phone's form ([phoneDateForm], #957), as *Dates* writes them:
+ * [phone]'s language and region, read as each prompt is built, so a change of either reaches the
+ * next one.
  */
 class AppPipelineParts(
     private val wiring: PipelineWiring,
@@ -76,6 +78,7 @@ class AppPipelineParts(
             languageSearch =
                 wiring.languageSearch(keys.sources.web.filterKeys { it in settings.webEngines }, settings.showGenres),
             dateForm = { phoneDateForm(phone()) },
+            languageLines = wiring.languageLines,
         )
     }
 }
