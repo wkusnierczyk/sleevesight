@@ -161,7 +161,7 @@
     <string name="settings_write_when_skip_detail">Writes automatically only when you skip to a track, not when one follows another by itself: the key insight, and Song, Artist or Album if left open.</string>
     <string name="settings_write_never_detail">Only when you tap a button with the AI mark.</string>
     <string name="settings_crossfade">Crossfade</string>
-    <string name="settings_crossfade_summary">The player’s crossfade, for telling your skips from natural ends under “On track skip (auto)”.</string>
+    <string name="settings_crossfade_summary">The player’s crossfade, for telling your skips from natural ends under Skip.</string>
     <string name="settings_crossfade_auto">Autodetect</string>
     <string name="settings_crossfade_seconds">%1$d s</string>
     <string name="settings_prepare_next">Proactive</string>
@@ -176,7 +176,7 @@
     <string name="settings_new_track_unfolded">Unfolded</string>
     <string name="settings_new_track_as_left">As left</string>
     <string name="settings_background">Look up in the background</string>
-    <string name="settings_background_summary">Allows Sleevesight to look up information from sources while it is in the background, for every track played. With Reactive set to On track change (auto) or On track skip (auto), insights are then written, and paid for, whether you read them or not, up to the Stop after limit when Saver is on.</string>
+    <string name="settings_background_summary">Allows Sleevesight to look up information from sources while it is in the background, for every track played. With Reactive set to Skip or Change, insights are then written, and paid for, whether you read them or not, up to the Stop after limit when Saver is on.</string>
     <string name="settings_artist_facts_once">Don’t repeat artist facts</string>
     <!-- %1$s is settings_session_gap, a link to that row; %2$s is settings_section_history (#581). -->
     <string name="settings_artist_facts_once_summary">When you play several tracks by the same artist, each insight would tell the artist’s background again. With this on, an insight leaves out what an earlier one in the same listening session already said about the artist, and focuses on the song when there is enough to say about it. A new session starts after a break in listening, set under %1$s in %2$s.</string>
