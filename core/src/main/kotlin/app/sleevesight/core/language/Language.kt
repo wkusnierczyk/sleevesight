@@ -45,6 +45,9 @@ enum class Script(
      */
     val unspaced: Boolean get() = this == THAI || this == KANA || this == HAN
 
+    // Whether its texts mix Han characters in: kana's (Japanese) and Hangul's (Korean).
+    private val mixesHan: Boolean get() = this == KANA || this == HANGUL
+
     /** Whether this script ends its sentences with a mark; Thai ends them with a space. */
     val stops: Boolean get() = this != THAI
 
@@ -65,6 +68,25 @@ enum class Script(
                 HANGUL in counts -> HANGUL
                 else -> counts.maxByOrNull { it.value }?.key
             }
+        }
+
+        /**
+         * The script [text] is mostly written in, other than Latin (#949): [of]'s, when its letters
+         * outnumber the Latin ones, so a line in English that quotes a title in Devanagari is not
+         * taken for Hindi; null otherwise. Kana and Han count together, as Japanese mixes them, and
+         * Hangul and Han as Korean does.
+         */
+        fun mostly(text: String): Script? {
+            val script = of(text) ?: return null
+            var own = 0
+            var latin = 0
+            forEachCodePoint(text) { point ->
+                when {
+                    point in LATIN -> latin++
+                    point in script || (script.mixesHan && point in HAN) -> own++
+                }
+            }
+            return script.takeIf { own > latin }
         }
 
         private fun forEachCodePoint(
@@ -189,4 +211,19 @@ object Languages {
 
     /** The language Wikidata's item [item] stands for (`Q1568`, Hindi), or null. */
     fun ofItem(item: String): Language? = byItem[item]
+
+    /**
+     * The language a line's [text] is written in, by its script (#949), as [TrackLanguage] reads a
+     * title's: the track's language when [known] and written in that script, else the language the
+     * script names on its own ([Script.own]: Devanagari Hindi, Hangul Korean); none for Latin, a
+     * line mostly in Latin letters ([Script.mostly]), or a script several languages share (Han,
+     * Cyrillic, Arabic) that [known] is not written in.
+     */
+    fun ofLine(
+        text: String,
+        known: Language?,
+    ): Language? {
+        val script = Script.mostly(text) ?: return null
+        return known?.takeIf { script in it.scripts } ?: script.own?.let(::ofCode)
+    }
 }

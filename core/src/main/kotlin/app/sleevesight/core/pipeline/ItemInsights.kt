@@ -254,7 +254,7 @@ class ItemInsights(
         // With what the search in the track's language found (#902), after the English lines, as the run has them.
         val drafts =
             playerLines(track.nowPlaying, clock.now()) + results.flatMap { it.evidence } + track.languageDrafts()
-        return EvidenceSet.of(drafts.filter { settings.isEnabled(it.source) }, hasher)
+        return EvidenceSet.of(drafts.filter { settings.isEnabled(it.source) }, hasher, track.knownLanguage())
     }
 
     /**
@@ -307,7 +307,7 @@ class ItemInsights(
         settings: Settings,
     ): ItemEvidence {
         val query = artistQuery(track)
-        val (english, found) = artistLines(own, track).partition { it.language == null }
+        val (english, found) = artistLines(own, track).partition { it.found == null }
         val subject = query?.let { LanguageSubject.Artist(it.name, it.mbid) }
         val lines = english.map(::draftOf) + inLanguage(subject, found, settings)
         val lookup = artistWeb?.takeIf { lines.isEmpty() && searchesArtist(settings) }
@@ -399,7 +399,7 @@ class ItemInsights(
     ): List<EvidenceLine> {
         val keys = setOf(names.albumKey(album.title), names.albumKey(Edition.strip(album.title))) - ""
         return evidence.lines.filter { line ->
-            line.language != null &&
+            line.found != null &&
                 line.scope == Scope.RELEASE &&
                 line.about?.let { names.albumKey(it) in keys } == true
         }
@@ -832,7 +832,7 @@ class ItemInsights(
         val own = ownEvidence(track, settings)
         if (own == null || settings.trackLanguageSearch == TrackLanguageSearch.OFF) return
         artistQuery(track)?.let { query ->
-            val found = artistLines(own, track).filter { it.language != null }
+            val found = artistLines(own, track).filter { it.found != null }
             keep(lookup, LanguageSubject.Artist(query.name, query.mbid), found.map(::draftOf))
         }
         (entity(InsightItem.ALBUM, track) as? CardEntity.Album)?.let { album ->
@@ -851,17 +851,7 @@ class ItemInsights(
     }
 
     // [line] as a draft, to be numbered again.
-    private fun draftOf(line: EvidenceLine): EvidenceDraft =
-        EvidenceDraft(
-            line.source,
-            line.scope,
-            line.text,
-            line.url,
-            line.retrievedAt,
-            line.aggregate,
-            line.about,
-            line.language,
-        )
+    private fun draftOf(line: EvidenceLine): EvidenceDraft = line.draft()
 
     // Each of [lines]' ids whose line is in [own], the track's evidence, by its id there.
     private fun matching(
@@ -1078,7 +1068,7 @@ class ItemInsights(
                 InsightItem.SONG -> null
             }
         val lines = languageLines
-        val inLanguage = evidence.lines.any { it.language != null }
+        val inLanguage = evidence.lines.any { it.found != null }
         if (subject != null && lines != null && inLanguage) attempt { lines.renew(subject) }
     }
 
