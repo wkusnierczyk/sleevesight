@@ -177,6 +177,7 @@ internal class LibrarySign(
      * Asks LRCLIB when [genres] call for it and the run may ([asks]); true when its answer, or its
      * failure, changed what the run shows.
      */
+    @Suppress("RedundantSuspendModifier") // Detekt does not see `LibraryLookup.ask` as suspending; it is.
     suspend fun ask(genres: TrackGenres): Boolean {
         val asked = lookup?.takeIf { asks && answer == null }
         if (asked == null || !genres.wantsLibrary()) return false
