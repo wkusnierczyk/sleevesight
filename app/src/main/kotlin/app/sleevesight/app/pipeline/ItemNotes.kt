@@ -355,7 +355,9 @@ class AppItemNotes(
         track: TrackState,
         item: InsightItem,
     ): Flow<ItemShown> =
-        combine(parts, settings) { made, now -> made to now }
+        // Followed anew when *Keep what sources said about each artist* changes too ([keepings]), whose
+        // turn drops the evidence it shows, or the gathering it waits on, whichever it sees first.
+        combine(parts, settings, keepings) { made, now, keeping -> Triple(made, now, keeping) }
             .distinctUntilChanged()
             .flatMapLatest { (made, now) ->
                 val insights = made?.let(::insightsOf)
@@ -748,14 +750,14 @@ class AppItemNotes(
         val gathering =
             inflight.computeIfAbsent(at) {
                 // Where the lines in the track's language are kept, when it began (#939).
-                val keeping = keepings
+                val keeping = keepings.value
                 val job =
                     scope.async(mark(), start = CoroutineStart.LAZY) {
                         val found =
                             withContext(
                                 io,
                             ) { insights.evidence(item, track, now) }?.let { Found(it, clock.now(), track, now) }
-                        found?.also { keep(at, it, coroutineContext) { at.inLanguage && keeping != keepings } }
+                        found?.also { keep(at, it, coroutineContext) { at.inLanguage && keeping != keepings.value } }
                     }
                 pending += job
                 job.invokeOnCompletion {
@@ -1342,11 +1344,12 @@ class AppItemNotes(
      * track's language are kept: the artist's and the album's evidence gathered with them is dropped,
      * and a gathering under way keeps nothing, so each is gathered again from where they are kept now.
      * Without it, switching on and off again would find the evidence gathered before under the same
-     * key, with lines the switch's turn dropped.
+     * key, with lines the switch's turn dropped. Each insight shown follows its evidence anew, so one
+     * that took the new settings first is gathered again too.
      */
     fun artistKeepingChanged() {
         synchronized(lock) {
-            keepings++
+            keepings.update { it + 1 }
             gathered.update { kept -> kept.filterKeys { !it.inLanguage } }
             inflight.keys.removeIf { it.inLanguage }
         }
@@ -1410,8 +1413,7 @@ class AppItemNotes(
     private val lock = Any()
 
     // How many times *Keep what sources said about each artist* changed ([artistKeepingChanged]), under [lock].
-    @Volatile
-    private var keepings = 0L
+    private val keepings = MutableStateFlow(0L)
 
     // How many times [forget] ran, under [lock], as `AppGenreNotes` counts them (#791).
     @Volatile

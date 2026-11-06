@@ -110,14 +110,13 @@ class AppLanguageLinesNotesTest {
         )
     }
 
+    private fun ItemShown?.settled(): Boolean =
+        this is ItemShown.Offered || (this as? ItemShown.Shown)?.state is InsightState.Written
+
     private suspend fun AppItemNotes.settled(
         track: TrackState,
         item: InsightItem,
-    ): ItemShown =
-        item(track, item).first {
-            it is ItemShown.Offered ||
-                (it as? ItemShown.Shown)?.state is InsightState.Written
-        }
+    ): ItemShown = item(track, item).first { it.settled() }
 
     private suspend fun AppItemNotes.artistLines(track: TrackState): List<String>? {
         settled(track, InsightItem.ARTIST)
@@ -221,6 +220,27 @@ class AppLanguageLinesNotesTest {
             advanceUntilIdle()
             assertEquals(1, provider.requests)
             assertFalse(korean.text in provider.prompts.single())
+        }
+
+    @Test
+    fun `an artist's insight shown while the switch turns is gathered again, the settings seen before the change`() =
+        runTest {
+            kept.entries[gordon] = listOf(korean)
+            val notes = notes()
+            val track = track(HomeFixtures.sundown)
+            val latest = MutableStateFlow<ItemShown?>(null)
+            val watching = launch { notes.item(track, InsightItem.ARTIST).collect { latest.value = it } }
+            advanceUntilIdle()
+            assertTrue("${latest.value}", latest.value.settled())
+
+            // The panel takes the new settings, and its gathering under them begins, before the app
+            // says where the lines are kept now, as when turning the switch off waits for the clear.
+            settings.value = settings.value?.copy(keepArtistResults = true)
+            runCurrent()
+            notes.artistKeepingChanged()
+            advanceUntilIdle()
+            assertTrue("${latest.value}", latest.value.settled())
+            watching.cancel()
         }
 
     private companion object {
