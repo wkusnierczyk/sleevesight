@@ -191,7 +191,8 @@ class AppItemNotesRewriteTest {
         runTest { retriedOnItsPlay(stopped = true) }
 
     // The first model's insight kept; on a later play under an automatic mode the other model's write
-    // fails, or is [stopped], and shows so (#972); a tap on that play writes it again, as a rewrite.
+    // fails, or is [stopped], and the earlier insight shows again, saying so, as after a tap's rewrite
+    // (#972); a tap on that play writes it again, as a rewrite.
     private suspend fun TestScope.retriedOnItsPlay(stopped: Boolean) {
         written(notes(), track(play = 1))
 
@@ -207,13 +208,14 @@ class AppItemNotesRewriteTest {
             notes.stop(checkNotNull((writing as? ItemShown.Asking)?.key ?: (writing as ItemShown.Shown).key))
         }
         advanceUntilIdle()
-        // The failure shown, as before, not the earlier insight.
-        val ended =
-            notes.item(later, InsightItem.SONG).first {
-                val state = (it as? ItemShown.Shown)?.state
-                state is InsightState.Failed || state == InsightState.Stopped
-            } as ItemShown.Shown
-        assertNull(ended.rewriteWith)
+        // The earlier insight shown again, saying why, as after a tap's rewrite.
+        val ended = notes.song(later) as ItemShown.Shown
+        assertKeptWithRewrite(ended)
+        if (stopped) {
+            assertEquals(PipelineHost.STOPPED, ended.rewriteFailed)
+        } else {
+            assertTrue(ended.rewriteFailed != null && ended.rewriteFailed != PipelineHost.STOPPED)
+        }
 
         provider.error = null
         provider.streaming = Duration.ZERO
@@ -265,13 +267,10 @@ class AppItemNotesRewriteTest {
             notes.song(failing)
             notes.write(failing, InsightItem.SONG, ItemAsk.OPENED)
             advanceUntilIdle()
-            val failed =
-                notes
-                    .item(
-                        failing,
-                        InsightItem.SONG,
-                    ).first { (it as? ItemShown.Shown)?.state is InsightState.Failed }
-            assertNull((failed as ItemShown.Shown).rewriteWith)
+            // A rewrite of the insight kept, as a tap's (#972): it comes back, saying why.
+            val failed = notes.song(failing) as ItemShown.Shown
+            assertKeptWithRewrite(failed)
+            assertTrue(failed.rewriteFailed != null && failed.rewriteFailed != PipelineHost.STOPPED)
             assertEquals(2, provider.requests)
 
             // The next play, under On demand, in the same process: the insight kept, with Rewrite.

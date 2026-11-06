@@ -24,8 +24,9 @@ import kotlin.time.Duration.Companion.seconds
  * or a new process. While the run would not write by itself (*On demand*, or an automatic mode
  * waiting for the user), the insight kept is shown, with *Rewrite insight* offered to write it with
  * the model chosen now, a paid call only on a tap; under an automatic mode that writes by itself, the
- * chosen model writes it anew, a rewrite as the tap's is (#972). The model's own insight, when kept,
- * is always the one shown.
+ * chosen model writes it anew, a rewrite as the tap's is (#972): saying so, or, failed or stopped,
+ * showing the insight kept again, saying why. The model's own insight, when kept, is always the one
+ * shown.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class PipelineHostLaterPlayTest : PipelineHostFixture() {
@@ -160,10 +161,7 @@ internal class PipelineHostLaterPlayTest : PipelineHostFixture() {
             provider.error = AiErrorKind.SERVER
             play("Alpha")
             settle()
-            assertTrue(
-                host.state.value.track
-                    ?.insight is InsightState.Failed,
-            )
+            assertKeptAfterFailure(FIRST_MODEL, stopped = false)
 
             provider.error = null
             tap()
@@ -183,12 +181,10 @@ internal class PipelineHostLaterPlayTest : PipelineHostFixture() {
             provider.error = AiErrorKind.SERVER
             play("Alpha")
             settle()
-            assertTrue(
-                host.state.value.track
-                    ?.insight is InsightState.Failed,
-            )
+            // A rewrite of the insight kept, as a tap's (#972): it comes back, saying why.
+            assertKeptAfterFailure(FIRST_MODEL, stopped = false)
 
-            // The call granted left the ledger written, with no card: the one kept takes its place.
+            // The insight kept is the card paid for: it stays, with Rewrite for the model chosen now.
             provider.error = null
             settings.value = settings.value.withModel(ProviderId.ANTHROPIC, THIRD_MODEL)
             settle()
@@ -207,11 +203,7 @@ internal class PipelineHostLaterPlayTest : PipelineHostFixture() {
             settle()
             host.stop(checkNotNull(host.state.value.stopCall))
             settle()
-            assertEquals(
-                InsightState.Stopped,
-                host.state.value.track
-                    ?.insight,
-            )
+            assertKeptAfterFailure(FIRST_MODEL, stopped = true)
 
             provider.streaming = Duration.ZERO
             settings.value = settings.value.withModel(ProviderId.ANTHROPIC, THIRD_MODEL)
@@ -305,6 +297,19 @@ internal class PipelineHostLaterPlayTest : PipelineHostFixture() {
         runCurrent()
         host = newHost()
         startProcess()
+    }
+
+    // An automatic write in place of the insight [model] wrote, kept, failed or was [stopped] (#972): that
+    // insight is shown again, as the card paid for, saying why, as after a tap's rewrite.
+    private fun assertKeptAfterFailure(
+        model: String,
+        stopped: Boolean,
+    ) {
+        val view = host.state.value
+        val shown = view.track?.insight as InsightState.Written
+        assertEquals(model, shown.writtenBy?.model)
+        assertTrue(view.cardShown)
+        if (stopped) assertEquals(PipelineHost.STOPPED, view.rewriteFailed) else assertTrue(view.rewriteFailed != null)
     }
 
     // The insight [model] wrote, kept, is shown with *Rewrite insight* offered to write it with the model

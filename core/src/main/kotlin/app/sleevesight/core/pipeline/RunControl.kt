@@ -146,11 +146,9 @@ interface RunControl {
     /**
      * What the model call about to be made would replace (#854): the insight kept for the run's
      * track, which the call rewrites (*Rewrite insight*), with what it was written with and whether
-     * the run looked again; null when it keeps none. The call then replaces the insight another AI
-     * service, model or effort kept, if the run found one (#911), a rewrite all the same, whether
-     * written on a tap or by itself (#972); else it writes the track's first insight. The insight
-     * written says what the rewrite changed ([InsightState.Written.rewritten]). By default null: the
-     * CLI and [Pipeline.follow] keep no insight to replace.
+     * the run looked again; null when the call writes the track's first insight. The insight written
+     * says what the rewrite changed ([InsightState.Written.rewritten]). By default null: the CLI and
+     * [Pipeline.follow] keep no insight to replace.
      */
     fun rewriting(): Rewriting? = null
 

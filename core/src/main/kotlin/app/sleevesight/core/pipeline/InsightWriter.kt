@@ -63,8 +63,7 @@ internal class InsightWriter(
     private var whole = false
 
     // What the call under way replaces, as the run's control said when it was granted (#854): the
-    // insight kept for the track, which the call rewrites; else the one another service, model or
-    // effort kept that the run found (#972); null when it writes the first.
+    // insight kept for the track, which the call rewrites; null when it writes the first.
     private var rewriting: Rewriting? = null
 
     /**
@@ -167,12 +166,11 @@ internal class InsightWriter(
         sink.update { it.copy(writesWith = wanted.writtenBy()) }
         if (served(wanted, control)) return
         // None under its own key: the one another service, model or effort wrote, if kept (#911),
-        // which the control shows in its place unless the run writes anew. Either way a call
-        // replaces it, a rewrite of it (#972).
+        // which the control shows in its place unless the run writes anew.
         val other = guard.keptByOther(wanted, evidence, allowModel)
         when {
             control.decide(settings, other, evidence) -> {
-                calls(ai, model, wanted, control, other)
+                calls(ai, model, wanted, control)
             }
 
             else -> {
@@ -185,25 +183,22 @@ internal class InsightWriter(
                 emit(PipelineEvent.InsightWaits(key, WAITS_FOR_TAP))
                 if (control.waitsForTap) {
                     control.awaitTap()
-                    calls(ai, model, wanted, control, other)
+                    calls(ai, model, wanted, control)
                 }
             }
         }
     }
 
     // A call, and another each time one that failed or was stopped is asked for again by a tap.
-    // Each reports its end, however it ends. Each replaces what the control says it does; else
-    // [other], the insight another service, model or effort kept, when the run found one (#972): an
-    // automatic write in its place is a rewrite of it, as a tap on *Rewrite insight* is.
+    // Each reports its end, however it ends.
     private suspend fun calls(
         ai: AiAccess,
         model: String,
         card: CardKey,
         control: RunControl,
-        other: InsightState.Written?,
     ) {
         do {
-            rewriting = control.rewriting() ?: other?.writtenBy?.let(::Rewriting)
+            rewriting = control.rewriting()
             val shown =
                 try {
                     stream(ai, model, card, control)

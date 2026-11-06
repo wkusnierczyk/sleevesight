@@ -967,7 +967,7 @@ fun sameInsightTrack(
  * | the run, its model call under way | StepEnded(MODEL_CALL) | calling = false; then a pending swap, or a run of latest if settled and not held | as for RebuildFinished, or StartRun |
  * | the run | StepEnded(LABELS) | labelled: its requests are over | none |
  * | the run | RunEnded | calling, offered, the steps it waits for and its question cleared; labelled; a kept tap dropped (keepsTap and tapped cleared); then as for StepEnded(MODEL_CALL) | as above |
- * | the run (current or not) | StepRequested(step), InsightAsked(causes, model knowledge, kept) | the step or the question waiting, with the causes its settings write on, and the insight another service, model or effort wrote, if kept (#911); for the ledger's written track (its card not found), answered by offering Write to rewrite it, never by writing; answered by offering Write with no card paid for, that insight kept goes in the ledger, written, as its card, so Write is offered as a rewrite of it | none |
+ * | the run (current or not) | StepRequested(step), InsightAsked(causes, model knowledge, kept) | the step or the question waiting, with the causes its settings write on, and the insight another service, model or effort wrote, if kept (#911); for the ledger's written track (its card not found), answered by offering Write to rewrite it, never by writing; answered by offering Write or by writing (#972) with no card paid for, that insight kept goes in the ledger, written, as its card, so Write is offered as a rewrite of it, or the call is one, shown in its place if it fails or is stopped | none |
  * | current run asking again, not yet decided, a run it replaced (or one before) offering Write, no tap kept yet, allowed, of the tap's key | WriteTapped(key) | the tap kept: it answers the run's question as a tap (one call, the ledger written); first action made | Acted |
  * | current run offering Write, allowed, of the tap's key | WriteTapped(key) | calling (its next call); the ledger written, under the run's key (or kept, if written already: a rewrite); first action made; the latest report no longer tap-only or while-paused | Grant(MODEL_CALL), Acted |
  * | otherwise (a tap for another run's key included) | WriteTapped(key) | unchanged | none |
@@ -1700,7 +1700,7 @@ class PipelineCoordinator(
                     kept = null,
                 )
             val settings = WriteSettings(writesOn, run.allowModel)
-            val kept = run.kept?.takeIf { offered }
+            val kept = run.keptFor(offered, write)
             state = state.copy(ledger = entry(run, write).answered(kept, settings.takeIf { lapsed }))
             effects += CoordinatorEffect.Decide(run.id, write)
         }
@@ -1823,12 +1823,22 @@ private data class Undo(
 
 private fun CoordinatorState.Report.undo(): Undo = Undo(counted, expiredAction, keptTap)
 
+// The insight another service, model or effort kept that the run's question came with (#911), when
+// Write is [offered] beside it or the run writes by itself ([write], #972): either way a call replaces
+// it, a rewrite of it.
+private fun CoordinatorState.Run.keptFor(
+    offered: Boolean,
+    write: Boolean,
+): Card? = kept?.takeIf { offered || write }
+
 // The ledger entry after a run's question was answered, [paused] under its settings when only the
 // first action's expiry kept it from writing (#203). With [kept], the insight another service, model
-// or effort wrote (#911, `Run.kept`) when the run offers Write, and no card paid for: it is the card
-// paid for, so it is shown, and the Write offered beside it is *Rewrite insight*, as for a card written
-// before a settings change. A ledger written by a call that failed or was stopped has no card either,
-// so it takes it too; it stays written, so nothing is written again without a tap.
+// or effort wrote (#911, `Run.kept`) when the run offers Write or writes by itself (#972), and no card
+// paid for: it is the card paid for, so it is shown, and the Write offered beside it is *Rewrite
+// insight*, as for a card written before a settings change; a call made by itself rewrites it, as a
+// tap's does: "Rewritten with …", and shown again, saying why, if the call fails or is stopped. A
+// ledger written by a call that failed or was stopped has no card either, so it takes it too; it
+// stays written, so nothing is written again without a tap.
 private fun CoordinatorState.Ledger.answered(
     kept: Card?,
     paused: WriteSettings?,
