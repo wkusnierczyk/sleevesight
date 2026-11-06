@@ -10,6 +10,7 @@ import app.sleevesight.core.ai.Usage
 import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.lyrics.LibraryLyrics
+import app.sleevesight.core.lyrics.LibraryQuery
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.Outcome
@@ -155,24 +156,20 @@ class MemoryCache : PipelineCache {
         if (result.outcome != Outcome.Unreachable) results[adapter.id to "${track.lookupKey}@$duration"] = result
     }
 
-    /** LRCLIB's answers kept (#997), by track and length. */
-    val library = mutableMapOf<String, LibraryLyrics>()
+    /** LRCLIB's answers kept (#997), by query. */
+    val library = mutableMapOf<LibraryQuery, LibraryLyrics>()
 
-    override suspend fun libraryLyrics(
-        track: NormalizedTrack,
-        duration: Duration?,
-    ): LibraryLyrics? {
+    override suspend fun libraryLyrics(query: LibraryQuery): LibraryLyrics? {
         check(!failing) { "cache down" }
-        return library["${track.lookupKey}@$duration"]
+        return library[query]
     }
 
     override suspend fun keepLibraryLyrics(
-        track: NormalizedTrack,
-        duration: Duration?,
+        query: LibraryQuery,
         answer: LibraryLyrics,
     ) {
         check(!failing) { "cache down" }
-        library["${track.lookupKey}@$duration"] = answer
+        library[query] = answer
     }
 
     override suspend fun card(key: CardKey): String? = cards[key]

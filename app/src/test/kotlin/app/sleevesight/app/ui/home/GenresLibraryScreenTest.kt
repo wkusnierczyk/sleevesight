@@ -15,6 +15,9 @@ import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
+import app.sleevesight.app.pipeline.AiGenreList
+import app.sleevesight.app.pipeline.GenreNotes
+import app.sleevesight.app.pipeline.PanelLibrary
 import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.app.session.PlaybackInfo
 import app.sleevesight.app.session.PlaybackStatus
@@ -32,7 +35,10 @@ import app.sleevesight.core.genres.TrackLabel
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.RunKey
+import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.settings.Settings
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -93,12 +99,39 @@ class GenresLibraryScreenTest {
         )
     }
 
+    // The panel's own LRCLIB lookups (#997's review): the AI's list adds Instrumental to a track whose
+    // sources gave none; LRCLIB, asked for it, could not be reached; *Retry*s counted.
+    private val panelRetries = mutableListOf<TrackState>()
+    private val notes =
+        object : GenreNotes by GenreNotes.None {
+            override fun aiGenres(track: TrackState): Flow<AiGenreList?> =
+                flowOf(
+                    AiGenreList(
+                        listOf(
+                            instrumental.rows
+                                .single()
+                                .labels
+                                .single()
+                                .genre,
+                        ),
+                        "Model",
+                    ),
+                )
+
+            override fun libraryLyrics(track: TrackState): Flow<PanelLibrary?> = flowOf(PanelLibrary.Unreachable)
+
+            override fun retryLibrary(track: TrackState) {
+                panelRetries += track
+            }
+        }
+
     private fun show(
         state: NowPlayingState,
+        genreNotes: GenreNotes = GenreNotes.None,
         block: () -> Unit,
     ) {
         val actions =
-            NowPlayingActions(normalizer::normalize, askAgain = { key, source, shown ->
+            NowPlayingActions(normalizer::normalize, genreNotes = genreNotes, askAgain = { key, source, shown ->
                 retried +=
                     Triple(key, source, shown)
             })
@@ -133,4 +166,31 @@ class GenresLibraryScreenTest {
         show(state(unreachable = false)) {
             compose.onNodeWithText("LRCLIB could not be reached.").assertDoesNotExist()
         }
+
+    @Test
+    fun anAiAddedInstrumentalWhoseLookupFailedSaysSoWithThePanelsRetry() {
+        val track =
+            track(sundown, sources = mapOf(SourceId.MUSICBRAINZ to done(), SourceId.LASTFM to done()))
+                .copy(genres = TrackGenres(listOf(GenreRow(GenreLevel.TRACK, null, listOf(folk)))))
+        val state =
+            NowPlayingState(
+                PipelineView(track, aiReady = true),
+                track.nowPlaying,
+                PlaybackInfo(Settings.SPOTIFY, PlaybackStatus.PLAYING),
+                settings = Settings(),
+            )
+        show(state, notes) {
+            compose.onNodeWithText("LRCLIB could not be reached.").assertExists()
+            compose.onNodeWithTag(RETRY_TAG).performScrollTo().performClick()
+            compose.waitForIdle()
+            assertEquals(1, panelRetries.size)
+            assertEquals(emptyList<Triple<RunKey, SourceId, NowPlaying>>(), retried)
+        }
+    }
+
+    private val folk =
+        TrackLabel(
+            GenreLabel("folk", "family", "Folk", "folk", level = GenreLevel.TRACK),
+            listOf(LabelCredit(LabelSource.LASTFM, "https://example.org/folk")),
+        )
 }

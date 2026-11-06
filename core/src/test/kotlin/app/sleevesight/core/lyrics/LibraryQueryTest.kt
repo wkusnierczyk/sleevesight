@@ -45,4 +45,23 @@ class LibraryQueryTest {
         assertNull(queryOf(playing.copy(duration = 1.hours + 1.seconds)))
         assertEquals(3600, queryOf(playing.copy(duration = 1.hours))?.seconds)
     }
+
+    @Test
+    fun `no query when normalizing removed what tells the mix apart, one when it removed an edition`() {
+        for (title in listOf(
+            "Nasnusa - Instrumental Version",
+            "Nasnusa - Karaoke Version",
+            "Nasnusa - Backing Track Version",
+            "Nasnusa - Live",
+            "Nasnusa - Acoustic Version",
+            "Nasnusa - Club Remix Version",
+            "Nasnusa (felt piano)",
+        )) {
+            assertNull(queryOf(playing.copy(title = title)), title)
+        }
+        assertEquals("Nasnusa", queryOf(playing.copy(title = "Nasnusa - 2024 Remaster"))?.title)
+        assertEquals("Nasnusa", queryOf(playing.copy(title = "Nasnusa - Radio Edit"))?.title)
+        // A word the title keeps is asked with it, so LRCLIB matches that mix itself.
+        assertEquals("Live Forever", queryOf(playing.copy(title = "Live Forever"))?.title)
+    }
 }

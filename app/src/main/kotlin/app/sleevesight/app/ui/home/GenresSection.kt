@@ -120,7 +120,8 @@ internal fun GenresContent(
     // The track's genres with the AI's genre list (#762), where one is known: its genres join the
     // chips and the track's row, marked AI; an Instrumental it added weighed with LRCLIB's answer (#997).
     val joined = playing?.withAi(aiGenres(playing, notes.notes))
-    val track = withLyricsFound(withLibrary(playing, joined, notes.notes), search)
+    val weighed = withLibrary(playing, joined, notes.notes)
+    val track = withLyricsFound(weighed.track, search)
     val shown = GenresShown.of(track, settings)
     val style = MaterialTheme.typography.bodyLarge
     // The genre a tap opened, kept above the chips and the lines in their place (#772): while a run
@@ -168,7 +169,7 @@ internal fun GenresContent(
             afterRetry = toClose,
         )
     }
-    LibraryRetry(shown.libraryUnreachable, retry, toClose)
+    LibraryRetry(shown.libraryUnreachable, weighed.retry, retry, toClose)
     if (shown.none) Text(stringResource(R.string.home_genres_none), style = style)
     GenresSearch(track, shown, search, notes)
 }

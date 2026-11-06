@@ -207,4 +207,42 @@ class PipelineLibraryTest {
             pipeline(library, time = PipelineTime()).prepare(nasnusa, RunControl.Unattended(write = false))
             assertEquals(emptyList(), library.asked)
         }
+
+    @Test
+    fun `of a vocal and an instrumental mix of one length, only the vocal one is asked about`() =
+        runTest {
+            // LRCLIB knows the vocal mix, of the same album and length, as having lyrics.
+            val library = FakeLibrary(Lookup.Found(LibraryLyrics.LYRICS))
+            val cache = MemoryCache()
+            val instrumental =
+                pipeline(library, cache, time = PipelineTime())
+                    .run(nasnusa.copy(title = "Nasnusa - Instrumental Version"), write = false)
+            assertTrue(instrumental.instrumental())
+            assertEquals(emptyList(), library.asked)
+            val vocal = pipeline(library, cache, time = PipelineTime()).run(nasnusa, write = false)
+            assertFalse(vocal.instrumental())
+            assertEquals(1, library.asked.size)
+            // Played again as the instrumental mix: the vocal mix's answer, kept, is not read for it.
+            val again =
+                pipeline(library, cache, time = PipelineTime())
+                    .run(nasnusa.copy(title = "Nasnusa - Instrumental Version"), write = false)
+            assertTrue(again.instrumental())
+        }
+
+    @Test
+    fun `another album is another query, asked again rather than served the first's answer`() =
+        runTest {
+            val library = FakeLibrary(Lookup.NotFound)
+            val cache = MemoryCache()
+            pipeline(library, cache, time = PipelineTime()).run(nasnusa, write = false)
+            library.answer = Lookup.Found(LibraryLyrics.LYRICS)
+            val corrected =
+                pipeline(
+                    library,
+                    cache,
+                    time = PipelineTime(),
+                ).run(nasnusa.copy(album = "Kokoro (Deluxe)"), write = false)
+            assertEquals(listOf("Kokoro", "Kokoro (Deluxe)"), library.asked.map { it.album })
+            assertFalse(corrected.instrumental())
+        }
 }

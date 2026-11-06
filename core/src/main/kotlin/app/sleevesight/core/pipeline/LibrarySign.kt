@@ -11,7 +11,6 @@ import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.resolution.Lookup
 import kotlin.coroutines.cancellation.CancellationException
-import kotlin.time.Duration
 
 /**
  * Whether these genres call for LRCLIB's answer (#997; `design/design.md`, *Genre labels*): a row has
@@ -68,39 +67,42 @@ sealed interface LibraryAnswer {
 
 /**
  * LRCLIB asked about a track (#997), its answer kept with the track's findings in [cache], under the
- * track's retrieval key and the player's length, so a replay asks nothing: a match's answer, lyrics
- * or instrumental, and no match too, as no answer ([LibraryLyrics.NONE]). A failure is not kept. Asked
- * only with the player's length ([LibraryQuery.of]); a cache that fails is told to [emit] and missed.
+ * whole query ([LibraryQuery]: artist, title, album, length in seconds), so a replay asks nothing: a
+ * match's answer, lyrics or instrumental, and no match too, as no answer ([LibraryLyrics.NONE]). A
+ * failure is not kept. Asked only for a track [LibraryQuery.of] gives a query for; a cache that fails
+ * is told to [emit] and missed.
  */
 class LibraryLookup(
     private val library: LyricsLibrary,
     private val cache: PipelineCache,
     private val emit: (PipelineEvent) -> Unit = {},
 ) {
-    /** The answer kept for [track] at [duration], if any; asks nothing. */
+    /** The answer kept for [track] as [nowPlaying] plays it, if any; asks nothing. */
     suspend fun kept(
         track: NormalizedTrack,
-        duration: Duration?,
-    ): LibraryLyrics? = guarded(track, "read ${SourceId.LRCLIB.tag}") { libraryLyrics(track, duration) }
+        nowPlaying: NowPlaying,
+    ): LibraryLyrics? =
+        LibraryQuery.of(track, nowPlaying)?.let { query ->
+            guarded(track, "read ${SourceId.LRCLIB.tag}") { libraryLyrics(query) }
+        }
 
     /**
      * The answer for [track] as [nowPlaying] plays it: the one kept, unless [fresh] (a look again,
-     * #617), else LRCLIB's, kept; null when it cannot be asked (no length from the player).
+     * #617), else LRCLIB's, kept; null when it cannot be asked ([LibraryQuery.of]).
      */
     suspend fun ask(
         track: NormalizedTrack,
         nowPlaying: NowPlaying,
         fresh: Boolean = false,
     ): LibraryAnswer? {
-        val kept = if (fresh) null else kept(track, nowPlaying.duration)
-        return kept?.let { LibraryAnswer.Known(it, cached = true) }
-            ?: LibraryQuery.of(track, nowPlaying)?.let { asked(track, nowPlaying, it) }
+        val query = LibraryQuery.of(track, nowPlaying) ?: return null
+        val kept = if (fresh) null else guarded(track, "read ${SourceId.LRCLIB.tag}") { libraryLyrics(query) }
+        return kept?.let { LibraryAnswer.Known(it, cached = true) } ?: asked(track, query)
     }
 
     // LRCLIB's answer for [query], kept; a 404 kept as no answer, a failure not kept.
     private suspend fun asked(
         track: NormalizedTrack,
-        nowPlaying: NowPlaying,
         query: LibraryQuery,
     ): LibraryAnswer {
         val found = library.lookUp(query)
@@ -110,9 +112,7 @@ class LibraryLookup(
                 Lookup.NotFound -> LibraryLyrics.NONE
                 is Lookup.Failed -> null
             }
-        if (answer != null) {
-            guarded(track, "write ${SourceId.LRCLIB.tag}") { keepLibraryLyrics(track, nowPlaying.duration, answer) }
-        }
+        if (answer != null) guarded(track, "write ${SourceId.LRCLIB.tag}") { keepLibraryLyrics(query, answer) }
         return answer?.let { LibraryAnswer.Known(it, cached = false) }
             ?: LibraryAnswer.Failed((found as? Lookup.Failed)?.reason.orEmpty())
     }
@@ -166,7 +166,7 @@ internal class LibrarySign(
     /** The answer kept for the track, if any, before the genres are assembled; asks nothing. */
     suspend fun readKept() {
         if (fresh || lookup == null) return
-        lookup.kept(track, nowPlaying.duration)?.let { kept ->
+        lookup.kept(track, nowPlaying)?.let { kept ->
             answer = kept
             failed = false
             emit(PipelineEvent.LibraryAnswered(track.lookupKey, kept, cached = true))
