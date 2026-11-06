@@ -97,8 +97,9 @@ internal fun InsightsSection(
         summary = stringResource(R.string.settings_search_with_ai_summary, web),
         checked = settings.searchWithAi,
         summaryLink = settingsLink(web, SettingsTarget.aiWebSearch),
-        onChange = { on: Boolean -> update { it.copy(searchWithAi = on) } }.takeIf { settings.writeInsights },
-    )
+        // With *Show insights* off nothing is written: the setting does not apply.
+        applies = settings.writeInsights,
+    ) { on -> update { it.copy(searchWithAi = on) } }
 
     ReadAloudRows(settings, update)
 }
@@ -135,9 +136,8 @@ private fun ArtistFactsRow(
             ),
         checked = settings.artistFactsOncePerSession,
         summaryLink = settingsLink(gap, SettingsTarget.sessionGap),
-        onChange =
-            { on: Boolean -> update { it.copy(artistFactsOncePerSession = on) } }.takeIf { settings.writeInsights },
-    )
+        applies = settings.writeInsights,
+    ) { on -> update { it.copy(artistFactsOncePerSession = on) } }
 }
 
 /** *Crossfade*'s choices: autodetect, or a fixed 0 to 15 seconds. */
