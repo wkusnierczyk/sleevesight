@@ -8,10 +8,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.LocalSaveableStateRegistry
 import androidx.compose.runtime.saveable.SaveableStateRegistry
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertTouchHeightIsEqualTo
+import androidx.compose.ui.test.assertTouchWidthIsEqualTo
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -20,11 +23,13 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeUp
+import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
+import app.sleevesight.app.pipeline.TracklistKey
 import app.sleevesight.app.session.PlaybackInfo
 import app.sleevesight.app.ui.logo.LocalAnimatorDurationScale
 import app.sleevesight.core.resolution.MbTrack
@@ -110,8 +115,8 @@ class CoverFlipScreenTest {
                             CoverTurn(
                                 album = album,
                                 back = back,
-                                group = "g",
-                                look = { group -> looked += group },
+                                key = TracklistKey("g"),
+                                look = { key -> looked += key.group },
                                 retry = {},
                                 openSources = {},
                                 colors = MaterialTheme.colorScheme,
@@ -195,7 +200,7 @@ class CoverFlipScreenTest {
                 CoverBack.NotFound to R.string.home_tracklist_none,
                 CoverBack.Looking to R.string.home_musicbrainz_looking,
                 CoverBack.Off to R.string.home_musicbrainz_off,
-                CoverBack.Unreachable("g") to R.string.home_musicbrainz_unreachable,
+                CoverBack.Unreachable(TracklistKey("g")) to R.string.home_musicbrainz_unreachable,
             )
         shown(CoverBack.NotFound) {
             cover().performClick()
@@ -272,6 +277,29 @@ class CoverFlipScreenTest {
             assertTrue("$top..$bottom in $list", top >= list.top && bottom <= list.bottom)
         }
     }
+
+    @Test
+    fun anotherAlbumShowsTheCoverAtOnceNotItsBackTurningAway() =
+        shown(kindOfBlue, scale = 1f) {
+            cover().performClick()
+            compose.onNodeWithTag(COVER_BACK_TAG).assertExists()
+            compose.mainClock.autoAdvance = false
+            album = "ok computer"
+            back = CoverBack.Looking
+            // A few frames, far short of the half turn after which the back would give way.
+            Snapshot.sendApplyNotifications()
+            compose.mainClock.advanceTimeBy(FLIP_MS / 10L)
+            compose.onNodeWithTag(COVER_BACK_TAG).assertDoesNotExist()
+            compose.onNodeWithText(text(R.string.home_musicbrainz_looking)).assertDoesNotExist()
+        }
+
+    @Test
+    fun eachDiscDotIsAFullSizeTarget() =
+        shown(twoDiscs) {
+            cover().performClick()
+            compose.onNodeWithContentDescription("Disc 1").assertTouchHeightIsEqualTo(48.dp)
+            compose.onNodeWithContentDescription("Disc 1").assertTouchWidthIsEqualTo(48.dp)
+        }
 
     @Test
     fun withAnimationsTheTurnTakesHalfASecond() =

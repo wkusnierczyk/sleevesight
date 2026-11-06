@@ -17,8 +17,18 @@ class AlbumTracklistsTest {
         val groups: Map<String, Lookup<List<MbRelease>>>,
         val releases: Map<String, MbTracklist>,
         val official: Map<String, Lookup<List<MbRelease>>> = emptyMap(),
+        val recordings: Map<String, Lookup<List<MbRelease>>> = emptyMap(),
     ) : MusicBrainzLookup {
         val asked = mutableListOf<String>()
+
+        override suspend fun recordingReleases(mbid: String): Lookup<MbRecording> {
+            asked += "recording $mbid"
+            return when (val releases = recordings[mbid] ?: Lookup.NotFound) {
+                is Lookup.Found -> Lookup.Found(MbRecording(mbid, "Song", null, emptyList(), null, releases.value, 0))
+                Lookup.NotFound -> Lookup.NotFound
+                is Lookup.Failed -> releases
+            }
+        }
 
         override suspend fun officialReleases(mbid: String): Lookup<List<MbRelease>> {
             asked += "official $mbid"
@@ -48,8 +58,6 @@ class AlbumTracklistsTest {
 
         override suspend fun recording(mbid: String): Lookup<MbRecordingDetail> = Lookup.NotFound
 
-        override suspend fun recordingReleases(mbid: String): Lookup<MbRecording> = Lookup.NotFound
-
         override suspend fun work(mbid: String): Lookup<MbWork> = Lookup.NotFound
 
         override suspend fun searchArtists(name: String): Lookup<MbArtistSearch> = Lookup.NotFound
@@ -59,7 +67,14 @@ class AlbumTracklistsTest {
         mbid: String,
         date: String?,
         status: String?,
-    ) = MbRelease(mbid, "Kind of Blue", date, null, status = status)
+        group: String? = null,
+    ) = MbRelease(
+        mbid,
+        "Kind of Blue",
+        date,
+        group?.let { MbReleaseGroup(it, "Kind of Blue", "Album") },
+        status = status,
+    )
 
     private fun tracks(
         mbid: String,
@@ -161,6 +176,53 @@ class AlbumTracklistsTest {
                     mapOf("group" to Lookup.Failed("Offline")),
                 )
             assertEquals(Lookup.Failed("Offline"), AlbumTracklists(failing).of("group"))
+        }
+
+    @Test
+    fun `a bonus track shows the deluxe release it is on, not the group's earliest`() =
+        runTest {
+            val fake =
+                Fake(
+                    mapOf("group" to Lookup.Found(listOf(release("first", "1959", "Official")))),
+                    mapOf("deluxe" to tracks("deluxe", "So What", "Bonus")),
+                    recordings =
+                        mapOf(
+                            "bonus" to
+                                Lookup.Found(
+                                    listOf(
+                                        release("other album", "1970", "Official", group = "elsewhere"),
+                                        release("bootleg", "1990", "Bootleg", group = "group"),
+                                        release("deluxe reissue", "2009", "Official", group = "group"),
+                                        release("deluxe", "1997", "Official", group = "group"),
+                                    ),
+                                ),
+                        ),
+                )
+            val found = assertIs<Lookup.Found<MbTracklist>>(AlbumTracklists(fake).of("group", "bonus"))
+            assertEquals("deluxe", found.value.releaseMbid)
+            assertEquals(listOf("recording bonus", "release deluxe"), fake.asked)
+        }
+
+    @Test
+    fun `a recording on none of the group's releases, or not known, falls back to the group's`() =
+        runTest {
+            val fake =
+                Fake(
+                    mapOf("group" to Lookup.Found(listOf(release("first", "1959", "Official")))),
+                    mapOf("first" to tracks("first", "So What")),
+                    recordings =
+                        mapOf(
+                            "elsewhere" to Lookup.Found(listOf(release("x", "1970", "Official", group = "other"))),
+                        ),
+                )
+            assertIs<Lookup.Found<MbTracklist>>(AlbumTracklists(fake).of("group", "elsewhere"))
+            assertIs<Lookup.Found<MbTracklist>>(AlbumTracklists(fake).of("group", null))
+            assertEquals(
+                listOf("recording elsewhere", "group group", "release first", "group group", "release first"),
+                fake.asked,
+            )
+            val failing = Fake(emptyMap(), emptyMap(), recordings = mapOf("r" to Lookup.Failed("Offline")))
+            assertEquals(Lookup.Failed("Offline"), AlbumTracklists(failing).of("group", "r"))
         }
 
     @Test

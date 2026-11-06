@@ -1,7 +1,6 @@
 package app.sleevesight.app.ui.home
 
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -22,6 +21,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.LocalContentColor
@@ -33,6 +33,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -57,6 +58,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
+import app.sleevesight.app.pipeline.TracklistKey
 import app.sleevesight.app.ui.logo.animatorDurationScale
 import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.core.model.NowPlaying
@@ -72,7 +74,7 @@ import kotlin.time.Duration.Companion.milliseconds
 /**
  * What the cover's back needs: the [album] it follows ([albumIdentity]: the back stays while it is
  * the same, and the cover shows again when it changes), what the back shows ([back]), the album's
- * [group] to [look] up on a flip (null while MusicBrainz is off or the album is not known), the
+ * tracklist to [look] up on a flip, [key] (null while MusicBrainz is off or the album is not known), the
  * [retry] *Retry* runs when MusicBrainz could not be reached, the way to *Settings → Sources*
  * ([openSources]), and the app's own [colors], since the back takes nothing from the art.
  */
@@ -80,8 +82,8 @@ import kotlin.time.Duration.Companion.milliseconds
 internal class CoverTurn(
     val album: String?,
     val back: CoverBack,
-    val group: String?,
-    val look: (String) -> Unit,
+    val key: TracklistKey?,
+    val look: (TracklistKey) -> Unit,
     val retry: (() -> Unit)?,
     val openSources: () -> Unit,
     val colors: ColorScheme,
@@ -108,9 +110,9 @@ internal fun coverTurn(
     val back = coverBack(track, header, on, states)
     val retry =
         (back as? CoverBack.Unreachable)?.let { unreachable ->
-            val group = unreachable.group
-            if (group != null) {
-                { actions.tracklists.retry(group) }
+            val key = unreachable.key
+            if (key != null) {
+                { actions.tracklists.retry(key) }
             } else {
                 Retries(shown.view, shown.playing, actions.askAgain).of(SourceId.MUSICBRAINZ)
             }
@@ -118,7 +120,7 @@ internal fun coverTurn(
     return CoverTurn(
         album = albumIdentity(header),
         back = back,
-        group = if (on) albumGroup(track, header) else null,
+        key = if (on) tracklistKey(track, header) else null,
         look = actions.tracklists::look,
         retry = retry,
         openSources = { actions.openSettingsAt(SettingsTarget.sources) },
@@ -150,15 +152,20 @@ internal fun FlippingCover(
     LaunchedEffect(album) { if (backOf != album) backOf = null }
     val flipped = backOf == album
     val toggle = { backOf = if (backOf == album) null else album }
-    LaunchedEffect(flipped, turn.group) {
-        if (flipped) turn.group?.let(turn.look)
+    LaunchedEffect(flipped, turn.key) {
+        if (flipped) turn.key?.let(turn.look)
     }
     val still = animatorDurationScale() == 0f
-    val angle by animateFloatAsState(
-        targetValue = if (flipped) HALF_TURN else 0f,
-        animationSpec = if (still) snap() else tween(FLIP_MS),
-        label = "cover turn",
-    )
+    val target = if (flipped) HALF_TURN else 0f
+    val turning = remember { Animatable(target) }
+    // The album the angle is of: on another album the cover shows at once, not the new album's back
+    // as it turns away.
+    var turnedFor by remember { mutableStateOf(album) }
+    LaunchedEffect(target, album) {
+        if (still || turnedFor != album) turning.snapTo(target) else turning.animateTo(target, tween(FLIP_MS))
+        turnedFor = album
+    }
+    val angle = if (turnedFor == album) turning.value else 0f
     val name = stringResource(if (flipped) R.string.home_tracklist else R.string.home_art)
     val action = stringResource(if (flipped) R.string.home_tracklist_show_cover else R.string.home_art_show_tracklist)
     val density = LocalDensity.current.density
@@ -269,7 +276,8 @@ private fun DiscPages(back: CoverBack.Found) {
                 )
             }
         }
-        Row(Modifier.fillMaxWidth().padding(bottom = 4.dp), horizontalArrangement = Arrangement.Center) {
+        // One group of tabs to a screen reader, each dot a 48 dp target around its 7 dp mark.
+        Row(Modifier.fillMaxWidth().selectableGroup(), horizontalArrangement = Arrangement.Center) {
             repeat(count) { page ->
                 val current = page == pager.currentPage
                 val name = stringResource(R.string.home_tracklist_disc, back.discs[page].position)
@@ -400,5 +408,5 @@ private const val LEAD = 2
 private const val SECONDS_PER_MINUTE = 60
 private const val DOT_ALPHA = 0.4f
 private val DOT = 7.dp
-private val DOT_TARGET = 24.dp
+private val DOT_TARGET = 48.dp
 private val NUMBER_WIDTH = 24.dp

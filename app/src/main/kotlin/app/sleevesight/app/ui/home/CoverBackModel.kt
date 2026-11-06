@@ -1,5 +1,6 @@
 package app.sleevesight.app.ui.home
 
+import app.sleevesight.app.pipeline.TracklistKey
 import app.sleevesight.app.pipeline.TracklistState
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.SourceId
@@ -24,10 +25,10 @@ internal sealed interface CoverBack {
 
     /**
      * MusicBrainz could not be reached: "MusicBrainz could not be reached.", with *Retry*, which asks
-     * again for the album's tracklist, [group], or with none, for the track (as *Dates*' *Retry*).
+     * again for the album's tracklist, [key], or with none, for the track (as *Dates*' *Retry*).
      */
     data class Unreachable(
-        val group: String?,
+        val key: TracklistKey?,
     ) : CoverBack
 
     /**
@@ -90,16 +91,26 @@ internal fun albumIdentity(header: NowPlaying): String? =
         ?.let(NAMES::albumKey)
 
 /**
+ * The tracklist to ask for [track] beside [header] (#984): the album's group ([albumGroup]) with the
+ * playing recording ([playingRecording]), whose release in it is shown; null with no group.
+ */
+internal fun tracklistKey(
+    track: TrackState?,
+    header: NowPlaying,
+): TracklistKey? = albumGroup(track, header)?.let { TracklistKey(it, playingRecording(track)) }
+
+/**
  * What the back shows for [track] beside [header] (#984), with [musicBrainzOn] as *Sources* has it,
  * and the tracklists looked up, [states]: MusicBrainz off first; then the track's own MusicBrainz state,
- * as *Dates* reads it ([NoDates.of]), until it is found; then the album's group ([albumGroup]), and its
- * tracklist as looked up, looking until it is asked.
+ * as *Dates* reads it ([NoDates.of]), until it is found; then the album's tracklist as looked up for
+ * the playing recording ([tracklistKey]), looking until it is asked. While a new song of the album is
+ * still looked up, the album's tracklist last found shows, its mark moved, rather than "Looking".
  */
 internal fun coverBack(
     track: TrackState?,
     header: NowPlaying,
     musicBrainzOn: Boolean,
-    states: Map<String, TracklistState>,
+    states: Map<TracklistKey, TracklistState>,
 ): CoverBack =
     if (!musicBrainzOn) {
         CoverBack.Off
@@ -107,24 +118,37 @@ internal fun coverBack(
         when (NoDates.of(track)) {
             NoDates.LOOKING -> CoverBack.Looking
             NoDates.OFF -> CoverBack.Off
-            NoDates.UNREACHABLE -> CoverBack.Unreachable(group = null)
+            NoDates.UNREACHABLE -> CoverBack.Unreachable(key = null)
             NoDates.NOT_FOUND -> CoverBack.NotFound
             NoDates.NO_DATES ->
-                albumGroup(track, header)?.let { group -> tracklistBack(group, states[group], track, header) }
+                tracklistKey(track, header)?.let { key -> tracklistBack(key, stateOf(key, states), track, header) }
                     ?: CoverBack.NotFound
         }
     }
 
-// What the back shows for the album [group] once the track is found: its tracklist as looked up, [state].
+// [key]'s state; while it is still looked up, the album's tracklist found last for another song of it.
+private fun stateOf(
+    key: TracklistKey,
+    states: Map<TracklistKey, TracklistState>,
+): TracklistState? {
+    val state = states[key]
+    return if (state == null || state == TracklistState.Looking) {
+        states.entries.lastOrNull { it.key.group == key.group && it.value is TracklistState.Found }?.value ?: state
+    } else {
+        state
+    }
+}
+
+// What the back shows for the album [key] once the track is found: its tracklist as looked up, [state].
 private fun tracklistBack(
-    group: String,
+    key: TracklistKey,
     state: TracklistState?,
     track: TrackState?,
     header: NowPlaying,
 ): CoverBack =
     when (state) {
         null, TracklistState.Looking -> CoverBack.Looking
-        TracklistState.Failed -> CoverBack.Unreachable(group)
+        TracklistState.Failed -> CoverBack.Unreachable(key)
         TracklistState.NotFound -> CoverBack.NotFound
         is TracklistState.Found -> {
             val discs =
@@ -146,11 +170,15 @@ private fun playingIn(
     track: TrackState?,
     header: NowPlaying,
 ): TrackAt? {
-    val recording = track?.resolution?.recordingMbid ?: keptResult(track)?.recordingTags?.mbid
+    val recording = playingRecording(track)
     val title = NAMES.key(track?.normalized?.title?.ifEmpty { null } ?: header.title)
     return find(discs) { recording != null && it.recordingMbid == recording }
         ?: find(discs) { title.isNotEmpty() && NAMES.key(it.title) == title }
 }
+
+// The playing recording, as resolved, else as kept with MusicBrainz's result; null when not known.
+private fun playingRecording(track: TrackState?): String? =
+    track?.resolution?.recordingMbid ?: keptResult(track)?.recordingTags?.mbid
 
 private fun find(
     discs: List<BackDisc>,

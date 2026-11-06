@@ -1,5 +1,6 @@
 package app.sleevesight.app.ui.home
 
+import app.sleevesight.app.pipeline.TracklistKey
 import app.sleevesight.app.pipeline.TracklistState
 import app.sleevesight.app.ui.home.HomeFixtures.done
 import app.sleevesight.app.ui.home.HomeFixtures.sundown
@@ -25,6 +26,7 @@ import org.junit.Test
  */
 class CoverBackModelTest {
     private val group = "g-sundown"
+    private val key = TracklistKey(group, "rec-sundown")
 
     // [playing] (Sundown), resolved to recording [recording], its album in [group].
     private fun resolved(
@@ -81,17 +83,17 @@ class CoverBackModelTest {
     fun theAlbumsTracklistAsLookedUp() {
         val track = resolved()
         assertEquals(CoverBack.Looking, coverBack(track, sundown, true, emptyMap()))
-        assertEquals(CoverBack.Looking, coverBack(track, sundown, true, mapOf(group to TracklistState.Looking)))
-        val failed = mapOf(group to TracklistState.Failed)
-        assertEquals(CoverBack.Unreachable(group), coverBack(track, sundown, true, failed))
-        assertEquals(CoverBack.NotFound, coverBack(track, sundown, true, mapOf(group to TracklistState.NotFound)))
+        assertEquals(CoverBack.Looking, coverBack(track, sundown, true, mapOf(key to TracklistState.Looking)))
+        val failed = mapOf(key to TracklistState.Failed)
+        assertEquals(CoverBack.Unreachable(key), coverBack(track, sundown, true, failed))
+        assertEquals(CoverBack.NotFound, coverBack(track, sundown, true, mapOf(key to TracklistState.NotFound)))
         assertEquals(CoverBack.NotFound, coverBack(track, sundown.copy(album = "Gord's Gold"), true, emptyMap()))
     }
 
     @Test
     fun thePlayingSongIsFoundByItsRecordingElseItsTitle() {
         val two =
-            mapOf(group to tracklist(listOf("Somewhere USA", "High and Dry"), listOf("Carefree Highway", "Sundown")))
+            mapOf(key to tracklist(listOf("Somewhere USA", "High and Dry"), listOf("Carefree Highway", "Sundown")))
         val byRecording = coverBack(resolved(), sundown, true, two) as CoverBack.Found
         assertEquals(TrackAt(disc = 1, track = 1), byRecording.playing)
         assertEquals(2, byRecording.discs.size)
@@ -104,12 +106,28 @@ class CoverBackModelTest {
 
     @Test
     fun aDiscWithNoTracksIsLeftOutAndNoneLeftIsNotFound() {
-        val one = mapOf(group to tracklist(emptyList(), listOf("Sundown")))
+        val one = mapOf(key to tracklist(emptyList(), listOf("Sundown")))
         val found = coverBack(resolved(), sundown, true, one) as CoverBack.Found
         assertEquals(listOf(2), found.discs.map { it.position })
         assertEquals(2, found.media)
-        val none = mapOf(group to tracklist(emptyList()))
+        val none = mapOf(key to tracklist(emptyList()))
         assertEquals(CoverBack.NotFound, coverBack(resolved(), sundown, true, none))
+    }
+
+    @Test
+    fun theTracklistIsAskedForTheAlbumAndThePlayingRecording() {
+        assertEquals(key, tracklistKey(resolved(), sundown))
+        assertEquals(TracklistKey(group, null), tracklistKey(resolved(recording = null), sundown))
+        assertNull(tracklistKey(resolved(), sundown.copy(album = "Gord's Gold")))
+    }
+
+    @Test
+    fun anotherSongStillLookedUpShowsTheAlbumsTracklistFoundLastItsMarkMoved() {
+        val found = tracklist(listOf("Somewhere USA", "Carefree Highway", "Sundown"))
+        val carefree = HomeFixtures.carefree
+        val next = resolved("rec-carefree highway", carefree)
+        val states = mapOf(key to found, TracklistKey(group, "rec-carefree highway") to TracklistState.Looking)
+        assertEquals(TrackAt(0, 1), (coverBack(next, carefree, true, states) as CoverBack.Found).playing)
     }
 
     @Test
