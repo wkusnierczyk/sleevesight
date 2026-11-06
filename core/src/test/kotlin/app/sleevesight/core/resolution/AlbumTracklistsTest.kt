@@ -123,7 +123,7 @@ class AlbumTracklistsTest {
     @Test
     fun `with none of the 25 listed official, the earliest official release beyond them`() =
         runTest {
-            val listed = (1..25).map { release("unset$it", "1960-01-${"%02d".format(it)}", null) }
+            val listed = (1..25).map { release("unset$it", "1960-01-${it.toString().padStart(2, '0')}", null) }
             val fake =
                 Fake(
                     mapOf("group" to Lookup.Found(listed)),
