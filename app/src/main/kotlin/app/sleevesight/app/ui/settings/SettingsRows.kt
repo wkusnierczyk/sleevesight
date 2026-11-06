@@ -104,12 +104,13 @@ internal fun Hint(
 }
 
 /**
- * A setting that is on or off; the whole row toggles it. [highlight]
- * sets its title in the theme's error colour, for a privacy choice (#420). [below] goes under the
- * title and summary, as a link to the service the switch is for; a link there is a control of its
- * own, apart from the switch, and so is [summaryLink], a link set in the summary where it has the
- * link's text ([sentenceWith]): another setting it names (#581). [leading] goes at the row's start,
- * before the title, [ROW_MARK] a side: a player's icon (#535), a service's badge (#537).
+ * A setting that is on or off; the whole row toggles it. [highlight] sets its title in the theme's
+ * error colour, for a privacy choice (#420). [below] goes under the title and summary, dimmed with
+ * the row where it does not [apply][applies], as a link to the service the switch is for; a link
+ * there is a control of its own, apart from the switch, and so is [summaryLink], a link set in the
+ * summary where it has the link's text ([sentenceWith]): another setting it names (#581).
+ * [leading] goes at the row's start, before the title, [ROW_MARK] a side: a player's icon (#535),
+ * a service's badge (#537).
  *
  * The mark and the switch are centred on the first line of the title (#613), not on the whole row:
  * level with the name however long the summary under it, at any font scale. A row with a name only
@@ -119,7 +120,7 @@ internal fun Hint(
  * own and does not toggle the switch. [note], under it, says why the switch cannot be moved, or
  * what it needs (*Needs your Exa key.*), and always shows in full, read with the switch.
  *
- * As a [ChoiceButtonsRow]'s `enabled` and `applies` (#947, #999): a null [onChange], the setting
+ * As a [ChoiceButtonsRow]'s `disabled` and `applies` (#947, #999): a null [onChange], the setting
  * still applies but something else holds its value (a key missing or no longer readable): only the
  * switch dims, its text, mark, note and [below] staying as they are, since they still say what
  * happens. Where it does not [apply][applies] while another setting is as it is, the whole row
@@ -318,13 +319,14 @@ internal const val ROW_NOTE_TAG = "settings_row_note"
  * while it is the one chosen ([ChoiceDetails]). The buttons stay in one row at any font size
  * (#821). A setting whose choices are many or long, or described one by one, is a
  * [ValueRow] opening a dialog instead (`design/design.md`, *Settings screen*). The summary folds
- * ([Description], #847); the line under the buttons does not. Not [enabled], none
- * can be chosen; a value in [disabled], that one; [below] comes under the line of what the value
- * does, dimmed with the row. A value in [spoken] is read by that in place of its label ([ChoiceButtonGroup]). A
- * [summaryTable], given in place of [summary], is a description laid out as a table
- * ([DescriptionTable], *Reactive*'s, #945). Not [enabled], the setting still applies but another
- * one sets its value: only the buttons dim. Where it does not [apply][applies] while another
- * setting is as it is, the whole row dims, its text too, and none can be chosen (#947).
+ * ([Description], #847); the line under the buttons does not. A value in [disabled] cannot be
+ * chosen, its button dimmed: the setting still applies but another one holds its value (*AI web
+ * search* while Exa web search is off). [below] comes under the line of what the value does,
+ * dimmed with the row where it does not [apply][applies]. A value in [spoken] is read by that in
+ * place of its label ([ChoiceButtonGroup]). A [summaryTable], given in place of [summary], is a
+ * description laid out as a table ([DescriptionTable], *Reactive*'s, #945). Where the setting does
+ * not [apply][applies] while another setting is as it is, the whole row dims, its text too, and
+ * none can be chosen (#947, #999).
  */
 @Suppress("LongParameterList") // What the row shows, each a value of its own, and what a tap does.
 @Composable
@@ -334,7 +336,6 @@ internal fun <T> ChoiceButtonsRow(
     choices: List<Pair<T, String>>,
     selected: T,
     details: Map<T, String> = emptyMap(),
-    enabled: Boolean = true,
     disabled: Set<T> = emptySet(),
     below: (@Composable () -> Unit)? = null,
     spoken: Map<T, String> = emptyMap(),
@@ -362,7 +363,7 @@ internal fun <T> ChoiceButtonsRow(
             Modifier.padding(top = ABOVE_GROUP),
             name = title,
             details = details,
-            enabled = enabled && applies,
+            enabled = applies,
             disabled = disabled,
             spoken = spoken,
         )

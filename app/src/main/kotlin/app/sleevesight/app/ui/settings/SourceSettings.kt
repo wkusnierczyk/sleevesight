@@ -154,7 +154,8 @@ private fun SourceSwitchRow(
             row.url?.let { WebsiteLink(name, it) }
         },
         summaryLink = settingsLink(aiServices, SettingsTarget.aiServices).takeIf { model },
-        applies = usable || !model,
+        // Whole row exactly while its note says no AI service is on; switch only while keys load.
+        applies = !model || !noAiServiceOn(settings, secrets),
         onChange = { on: Boolean -> update { switched(it, row, on) } }.takeIf { usable },
     )
 }

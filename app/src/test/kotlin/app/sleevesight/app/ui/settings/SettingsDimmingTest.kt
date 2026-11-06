@@ -32,9 +32,11 @@ import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretState
 import app.sleevesight.app.ui.theme.SleevesightTheme
+import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.settings.Layout
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.SourceSwitch
+import app.sleevesight.core.settings.WriteAutomatically
 import kotlinx.coroutines.CompletableDeferred
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -118,6 +120,44 @@ class SettingsDimmingTest {
             val knowledge = text(R.string.settings_source_model)
             assertWholeRow(knowledge)
             switch(knowledge).assertIsNotEnabled()
+
+            // An AI service on, its key's state not read yet: no note says why, so only the switch.
+            showing { SourcesSection(Settings(aiProvider = ProviderId.ANTHROPIC), emptyMap()) {} }
+            assertFullColour(knowledge)
+            switch(knowledge).assertIsNotEnabled()
+        }
+
+    /** Shows [content], where the switch rows titled [titles] are dimmed as a whole and fixed. */
+    private fun assertWholeSwitchRows(
+        vararg titles: Int,
+        content: @Composable () -> Unit,
+    ) {
+        showing(content)
+        for (title in titles.map(::text)) {
+            assertWholeRow(title)
+            switch(title).assertIsNotEnabled()
+        }
+    }
+
+    // Each of these passes `applies`; without it, it would dim only its switch.
+    @Test
+    fun theSwitchRowsThatDoNotApplyDimAsAWhole() =
+        show {
+            val insightsOff = Settings(writeInsights = false)
+            val ask = R.string.settings_search_with_ai
+            val saver = R.string.settings_pause_auto_write
+            assertWholeSwitchRows(saver, ask, R.string.settings_artist_facts_once) {
+                InsightsSection(insightsOff, {}, {})
+            }
+            // Insights on, but nothing written automatically.
+            assertWholeSwitchRows(saver) { SaverRows(Settings(writeAutomatically = WriteAutomatically.NEVER)) {} }
+            assertWholeSwitchRows(R.string.settings_lyrics_search) {
+                AppearanceSection(Settings(lyricsLinks = false), {}) { CompletableDeferred(true) }
+            }
+            val noKey = mapOf(SecretId.LASTFM to SecretState.ABSENT)
+            assertWholeSwitchRows(R.string.settings_source_lastfm) {
+                GenresSection(Settings(enabledSources = Settings.DEFAULT_SOURCES + SourceSwitch.LASTFM), noKey) {}
+            }
         }
 
     @Test
