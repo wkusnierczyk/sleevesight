@@ -241,17 +241,15 @@ data class TrackGenres(
 
     // A featured artist that leaves [row]'s Instrumental weak (#996): with several credited, the first
     // other than an artist's row's own whose tags do not include it, before the rows' cap
-    // ([instrumentalArtists], and the rows' own for genres built without it); none on the track's row.
-    private fun featured(row: GenreRow): String? {
-        if (row.level == GenreLevel.TRACK || credited.size < 2) return null
-        val tagged =
-            rows
-                .filter { artist ->
-                    artist.level == GenreLevel.ARTIST && artist.labels.any { it.genre.identity == INSTRUMENTAL }
-                }.mapNotNull { it.artist }
-                .toSet() + instrumentalArtists
-        return credited.firstOrNull { it != row.artist && it !in tagged }
-    }
+    // ([instrumentalArtists], and the rows' own for genres built without it). On the track's row, only
+    // for an Instrumental with fewer than [MIN_VOTES] votes whose every backing row, an artist's or the
+    // album's, has a featured artist ([backedFeatured]): its backing is weak too.
+    private fun featured(row: GenreRow): String? =
+        when {
+            credited.size < 2 -> null
+            row.level == GenreLevel.TRACK -> backedFeatured(row)
+            else -> featuredOff(row)
+        }
 
     /**
      * These genres with lyrics found for the track by *Find the lyrics* (#996): Instrumental dropped
@@ -369,6 +367,31 @@ data class TrackGenres(
          */
         val CASE_FOLDED: Comparator<String> = compareBy { it.lowercase() }
     }
+}
+
+// The featured artist of [track]'s Instrumental backed only by rows the featured rule leaves weak
+// (#996): its votes fewer than [TrackGenres.MIN_VOTES], and each artist's or album's row with it has one.
+private fun TrackGenres.backedFeatured(track: GenreRow): String? {
+    val own = track.labels.firstOrNull { it.genre.identity == TrackGenres.INSTRUMENTAL }
+    val backing =
+        rows.filter { row ->
+            row.level != GenreLevel.TRACK &&
+                row.labels.any { it.genre.identity == TrackGenres.INSTRUMENTAL }
+        }
+    val signs = backing.map { featuredOff(it) }
+    val weakOwn = own != null && (own.votes ?: 0) < TrackGenres.MIN_VOTES
+    return signs.firstOrNull().takeIf { weakOwn && signs.isNotEmpty() && signs.all { it != null } }
+}
+
+// The featured artist of an artist's or the album's [row] (#996, `TrackGenres.featured`).
+private fun TrackGenres.featuredOff(row: GenreRow): String? {
+    val tagged =
+        rows
+            .filter { artist ->
+                artist.level == GenreLevel.ARTIST && artist.labels.any { it.genre.identity == TrackGenres.INSTRUMENTAL }
+            }.mapNotNull { it.artist }
+            .toSet() + instrumentalArtists
+    return credited.firstOrNull { it != row.artist && it !in tagged }
 }
 
 /**

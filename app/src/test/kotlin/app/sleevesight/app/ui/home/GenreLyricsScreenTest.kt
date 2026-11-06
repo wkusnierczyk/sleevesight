@@ -145,6 +145,18 @@ class GenreLyricsScreenTest {
     }
 
     @Test
+    fun searchWithAisInstrumentalAloneOnceLyricsAreFoundShowsNothingFound() {
+        val listed = AiSearch.Answered(SearchAnswer.Genres(listOf(genre("instrumental", GenreLevel.TRACK))), "Model")
+        val genres = feed { _, kind -> flowOf(if (kind == SearchKind.GENRES) listed else AiSearch.None) }
+        val empty = TrackGenres(singing = Singing(lyrics = true))
+        show(mutableStateOf(track().copy(genres = empty, genresAssembled = true)), genres) {
+            assertEquals(0, count(GENRE_PREFIX + "track:instrumental"))
+            assertEquals(1, count(AI_SEARCH_NOTHING_TAG))
+            assertEquals(0, count(AI_SEARCH_BY_TAG))
+        }
+    }
+
+    @Test
     fun theAisInstrumentalOnASungTrackIsWeakAmongTheRowsChipsWithItsLine() {
         val listed = listOf(genre("instrumental", GenreLevel.TRACK), genre("blues", GenreLevel.TRACK))
         // Artist A's Funk; the AI's list adds Instrumental and Blues to the track's row.

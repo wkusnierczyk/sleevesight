@@ -287,6 +287,26 @@ class RetrievalCacheTest {
     }
 
     @Test
+    fun `the vocal credits and a label past the cap round-trip, and an entry kept before them decodes without`() {
+        val result = sample(Outcome.SongArticle, SourceId.MUSICBRAINZ)
+        val decoded = assertNotNull(RetrievalCodec.decode(RetrievalCodec.encode(result)))
+        assertEquals(listOf("Gordon Lightfoot"), decoded.lyrics?.vocalists)
+        assertEquals(listOf(false, false, true), decoded.genres.map { it.beyondCap })
+        // As kept before #996: no vocal credits, no label past the cap.
+        val before =
+            result.copy(
+                lyrics = result.lyrics?.copy(vocalists = emptyList()),
+                genres = result.genres.map { it.copy(beyondCap = false) },
+            )
+        val text = RetrievalCodec.encode(before)
+        assertFalse("vocalists" in text)
+        assertFalse("beyondCap" in text)
+        val old = assertNotNull(RetrievalCodec.decode(text))
+        assertEquals(emptyList(), old.lyrics?.vocalists)
+        assertTrue(old.genres.none { it.beyondCap })
+    }
+
+    @Test
     fun `the votes on the recording's tags round-trip, and an entry kept before them decodes without`() {
         val result = sample(Outcome.SongArticle, SourceId.MUSICBRAINZ)
         val decoded = assertNotNull(RetrievalCodec.decode(RetrievalCodec.encode(result)))

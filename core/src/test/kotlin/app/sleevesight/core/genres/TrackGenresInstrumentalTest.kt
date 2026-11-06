@@ -203,6 +203,33 @@ class TrackGenresInstrumentalTest {
     }
 
     @Test
+    fun `a track's Instrumental of few votes backed only by rows the featured rule weakens is weak too`() {
+        val artists = listOf(ARTIST, FEATURED)
+        // *Nasnusa* with a Last.fm track tag of Instrumental, or a one-vote MusicBrainz one.
+        val lastFm = genres(track("instrumental") + artist(ARTIST, "instrumental", "funk"), artists = artists)
+        assertEquals(
+            GenreLevel.TRACK,
+            lastFm
+                .chips()
+                .first { it.label.genre.identity == "instrumental" }
+                .row.level,
+        )
+        assertEquals(WeakEvidence.Featured(FEATURED), lastFm.weakEvidence("instrumental"))
+        val oneVote = genres(artist(ARTIST, "instrumental"), recording("instrumental" to 1), artists = artists)
+        assertEquals(WeakEvidence.Featured(FEATURED), oneVote.weakEvidence("instrumental"))
+        // Two votes stand on their own; a backing row that is not weak backs it; one artist, no rule.
+        val twoVotes = genres(artist(ARTIST, "instrumental"), recording("instrumental" to 2), artists = artists)
+        assertNull(twoVotes.weakEvidence("instrumental"))
+        val backed =
+            genres(
+                track("instrumental") + artist(ARTIST, "instrumental") + artist(FEATURED, "instrumental"),
+                artists = artists,
+            )
+        assertNull(backed.weakEvidence("instrumental"))
+        assertNull(genres(track("instrumental") + artist(ARTIST, "instrumental")).weakEvidence("instrumental"))
+    }
+
+    @Test
     fun `an artist's Instrumental past their own five tags still counts as theirs`() {
         // One source: B's sixth genre is Instrumental, kept past the cap as the sources keep it.
         val sixth =
