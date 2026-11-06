@@ -211,14 +211,16 @@ private class CitePolicy(
     val label: (String) -> String = { it },
 )
 
-private class CiteStyles(
+/** The citation chips' looks: a line's (a link), the model's knowledge's, a missing line's. */
+internal class CiteStyles(
     val line: SpanStyle,
     val model: SpanStyle,
     val unknown: SpanStyle,
 )
 
+/** The citation chips' looks in the theme's colours, as the insight shows them. */
 @Composable
-private fun citeStyles(): CiteStyles {
+internal fun citeStyles(): CiteStyles {
     val colors = MaterialTheme.colorScheme
 
     fun chip(
@@ -252,7 +254,11 @@ private fun AnnotatedString.Builder.appendSentence(
     }
 }
 
-private fun AnnotatedString.Builder.appendText(
+/**
+ * A run of a sentence's [text], its title in italics and its bold in bold (#555), in [flagged] when
+ * the sentence is dimmed, where a title is set upright (#819). Also *Explain the song*'s (#908).
+ */
+internal fun AnnotatedString.Builder.appendText(
     text: ShownRun.Text,
     flagged: SpanStyle?,
 ) {
@@ -267,8 +273,12 @@ private fun AnnotatedString.Builder.appendText(
     if (style == SpanStyle()) append(text.text) else withStyle(style) { append(text.text) }
 }
 
-// A citation as a chip: a line's scrolls to it; the model's and a missing line's only say what they are.
-private fun AnnotatedString.Builder.appendCite(
+/**
+ * A citation as a chip, shown as [shownAs]: a line's scrolls to it ([onCite] with [id]); the model's
+ * and a missing line's only say what they are. Also *Explain the song*'s (#908), whose chip of a page
+ * opens it.
+ */
+internal fun AnnotatedString.Builder.appendCite(
     id: String,
     shownAs: String,
     kind: CiteKind,

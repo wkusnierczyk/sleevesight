@@ -7,6 +7,8 @@ import app.sleevesight.core.language.Languages
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.text.DateWords
+import app.sleevesight.core.text.EnglishDateWords
 
 /**
  * The prompt for the home insight (`design/design.md`, *Appendix. Prompt contracts*, *Insight*),
@@ -109,11 +111,16 @@ object InsightPrompt {
      * cited as usual ([TRANSLATION_RULE], #902): the lines' languages are in the evidence fingerprint,
      * part of every card's key, so a track that gains such lines is written anew anyway, and raising
      * the version would only pay again for every card kept without them.
+     *
+     * Nor when the style asked for dates in the app's form ([DATE_RULE], #957): a card kept keeps its
+     * dates as written, and raising the version would pay again for every card kept only to change
+     * their form.
      */
     const val VERSION: Int = 10
 
     /**
-     * The system prompt: everything fixed for a listener, the same for every track. With
+     * The system prompt: everything fixed for a listener, the same for every track, the built-in
+     * style with its rule on dates ([DATE_RULE]). With
      * [allowModel] (the *Model's own knowledge* switch), the model may add one sentence of its own,
      * cited `[AI]`. [userStyle] is the user's style for this card (D14), or null for the built-in
      * style alone.
@@ -129,6 +136,7 @@ object InsightPrompt {
             appendLine()
             appendLine("STYLE")
             appendLine(BUILT_IN_STYLE)
+            appendLine(DATE_RULE)
             userStyle?.trim()?.takeIf { it.isNotEmpty() }?.let {
                 appendLine(USER_STYLE)
                 appendLine(it)
@@ -221,6 +229,22 @@ object InsightPrompt {
     const val BUILT_IN_STYLE: String =
         "- Write 2 to 4 sentences, each fact once. If you mention the release, put it after the story.\n" +
             "- Plain conversational English. No hype, no praise words."
+
+    /**
+     * The rule on dates (#957): written in the app's form, as *Dates* and the evidence lines write
+     * them ([DateWords]), with the examples the formatter makes for the answer's language
+     * ([DateWords.examples]): "17 October 2026", "October 2026", "2026" in English
+     * ([EnglishDateWords]) until #290. Without it the model chose its own form ("October 17, 2026")
+     * beside *Dates*' "17 October 2026". With the style, a form a listener's style may change, in
+     * every prompt whose reply is prose that may hold a date: the insight's, the song's, the artist's
+     * and the album's ([ItemPrompt]), the genre reason's ([GenreReasonPrompt]) and a genre's
+     * definition ([AiSearchPrompt.rules]). The reply is shown as the model wrote it: no date in it is
+     * rewritten.
+     */
+    val DATE_RULE: String =
+        EnglishDateWords.examples(DateWords.TEXT_LANGUAGE).let { (day, month, year) ->
+            "- Write dates in the form $day, $month or $year."
+        }
 
     /** What introduces the user's style, after the built-in one ([system]). */
     const val USER_STYLE: String =

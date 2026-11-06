@@ -106,27 +106,13 @@
     <string name="home_dates">Dates</string>
     <!-- The Dates button's action, as a screen reader names it ("Double-tap to show dates"). -->
     <string name="home_dates_show">show dates</string>
-    <!-- In the Dates panel, a date as precisely as it is known, in the sentences below ({when}): a day
-         (the day, the month's name, the year: "on 29 July 2014"), a month ("in July 2014"), a year
-         ("in 2014"). -->
-    <string name="home_dates_on_day">on %1$s %2$s %3$s</string>
-    <string name="home_dates_in_month">in %1$s %2$s</string>
+    <!-- In the Dates panel, a date as precisely as it is known, in the sentences below ({when}): the
+         words around it, the date itself written by the app in its language's own form: a day ("on 29
+         July 2014", the date "29 July 2014"), a month ("in July 2014", the date "July 2014"), a year
+         ("in 2014", the date "2014"). -->
+    <string name="home_dates_on_day">on %1$s</string>
+    <string name="home_dates_in_month">in %1$s</string>
     <string name="home_dates_in_year">in %1$s</string>
-    <!-- The months' names, January first, for the dates above. -->
-    <string-array name="home_dates_months">
-        <item>January</item>
-        <item>February</item>
-        <item>March</item>
-        <item>April</item>
-        <item>May</item>
-        <item>June</item>
-        <item>July</item>
-        <item>August</item>
-        <item>September</item>
-        <item>October</item>
-        <item>November</item>
-        <item>December</item>
-    </string-array>
     <!-- The album's release, of the album's name whose year the album line shows: "This album was
          released on 29 July 2014." The date as above. -->
     <string name="home_dates_album">This album was released %1$s.</string>
@@ -192,6 +178,34 @@
     <string name="home_lyrics_none">MusicBrainz links to no lyrics page for this song.</string>
     <!-- MusicBrainz marks the recording instrumental, or its work as without words: no link, no search. -->
     <string name="home_lyrics_instrumental">MusicBrainz lists this track as instrumental, without lyrics.</string>
+    <!-- Find the lyrics (#908; Ask AI there until then): in the Lyrics panel with no page from MusicBrainz
+         or the track's web search, after the Genius search, the outlined button (with the AI mark, as
+         home_uses_ai reads it) that searches the web for the song's lyrics pages, a paid call; with AI
+         web search off it asks the model's knowledge, as Ask AI does (home_ai_asking, home_ai_nothing).
+         As wide as Explain the song below it, the wider of the two. -->
+    <string name="home_lyrics_find">Find the lyrics</string>
+    <!-- Its action, as a screen reader names it ("Double-tap to search the web for the song’s lyrics page, a paid call"). -->
+    <string name="home_lyrics_find_action">search the web for the song’s lyrics page, a paid call</string>
+    <!-- In its place while the search runs with AI web search on, after the small turning record, with Stop. -->
+    <string name="home_lyrics_finding">Searching the web for the lyrics…</string>
+    <!-- In the answer's place, under the rule, the search having found no page; %1$s is the model. -->
+    <string name="home_lyrics_found_none">%1$s found no lyrics on the web.</string>
+    <!-- Explain the song (#908): last in the Lyrics panel, for every track with lyrics (not instrumental),
+         whether or not a page was found, the outlined button (with the AI mark) that asks the AI service
+         what the song is about, from pages about it, a paid call. Not shown while Exa web search or AI
+         web search is off; never asked by Ask AI automatically. -->
+    <string name="home_lyrics_explain">Explain the song</string>
+    <!-- Its action, as a screen reader names it ("Double-tap to ask your AI service what the song is about, a paid call"). -->
+    <string name="home_lyrics_explain_action">ask your AI service what the song is about, a paid call</string>
+    <!-- In its place while the question runs, after the small turning record, with Stop. -->
+    <string name="home_lyrics_explaining">Reading about the song…</string>
+    <!-- In the answer's place, under the rule, no page saying what the song is about; %1$s is the model. -->
+    <string name="home_lyrics_explain_none">%1$s found nothing to explain the song.</string>
+    <!-- Under the explanation, in the quiet note style, over the pages its sentences cite, each a link
+         after its id ("S1"), opening in the browser; then "by {model}" (home_ai_by). -->
+    <string name="home_lyrics_pages_cited">Pages cited</string>
+    <!-- Said by a screen reader for a citation in the explanation naming no page it was given; %1$s: the id. -->
+    <string name="home_lyrics_cite_unknown">%1$s: no such page</string>
     <!-- Search Genius when there is no link is off: this line, then home_lyrics_search_off_see on its own line. -->
     <string name="home_lyrics_search_off">Genius search is disabled.</string>
     <!-- %1$s is home_settings_appearance_link, a link that opens Settings at Appearance. -->
@@ -200,9 +214,9 @@
          never break, so it stays on one line. -->
     <string name="home_settings_appearance_link">Settings\u00A0→\u00A0Appearance</string>
 
-    <!-- Ask AI (#773, named so by #802; once Search with AI): under the empty state of Dates, Genres or
-         Lyrics (the source off, unreachable, the song not found, nothing found; not while still
-         looking), an outlined button that asks the AI service, a paid call, for what the source did
+    <!-- Ask AI (#773, named so by #802; once Search with AI): under the empty state of Dates or Genres,
+         and under a genre with no definition (the source off, unreachable, the song not found, nothing
+         found; not while still looking; Lyrics has home_lyrics_find instead, #908), an outlined button that asks the AI service, a paid call, for what the source did
          not give, searching the web as AI web search (Settings → Insights) says. -->
     <string name="home_ai_search">Ask AI</string>
     <!-- Its action, as a screen reader names it ("Double-tap to ask your AI service, a paid call"). -->

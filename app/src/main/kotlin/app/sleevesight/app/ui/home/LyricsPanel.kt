@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.logo.Busy
@@ -41,7 +42,8 @@ import app.sleevesight.core.synthesis.SearchKind
  * one per site, or why there is none, then the Genius search, or that it is off. MusicBrainz off
  * links to *Settings → Sources* ([openSources]), the search off to *Settings → Appearance*
  * ([openAppearance]); MusicBrainz not reached shows *Retry* ([retry], [RetryLine]), which hands the
- * focus to the panel's *Close* as it goes. With no page, *Search with AI* under the rest ([search], #773).
+ * focus to the panel's *Close* as it goes. With no page, *Find the lyrics* under the rest ([search],
+ * #773, #908); for every track with lyrics, *Explain the song* last (#908).
  */
 @Composable
 internal fun lyricsItem(
@@ -73,9 +75,12 @@ internal fun homeLyrics(
  * ([NoLinkText]), then the search, or, while it is off, a line saying so with a link to where it is
  * switched on; a track MusicBrainz lists as instrumental has neither. Under any link, that it opens
  * in the browser. With no page from MusicBrainz but the song's pages among the track's web search
- * results (#801), those, each noted so, in the search's place, and nothing more. With no page at
- * all (not while MusicBrainz is asked, nor for an instrumental), *Ask AI* last, after the search or
- * the line saying it is off ([search], #773), whose pages show as MusicBrainz's do ([AiLyrics]).
+ * results (#801), those, each noted so, in the search's place. With no page at all (not while
+ * MusicBrainz is asked, nor for an instrumental), *Find the lyrics* after the search or the line
+ * saying it is off ([search], #773; *Ask AI* until #908), whose pages show as MusicBrainz's do
+ * ([AiLyrics]). Last, for every track with lyrics, a page found or not, *Explain the song* (#908,
+ * [SearchKind.EXPLAIN]), its answer cited as an insight is ([AiExplanation]); the two buttons as wide
+ * as the wider ([aiButtonWidth]).
  */
 @Suppress("LongParameterList") // What the panel shows, and each of its ways out.
 @Composable
@@ -88,18 +93,21 @@ internal fun LyricsPanel(
     search: PanelSearch = PanelSearch(),
 ) {
     val style = MaterialTheme.typography.bodyLarge
+    val width =
+        aiButtonWidth(listOf(stringResource(R.string.home_lyrics_find), stringResource(R.string.home_lyrics_explain)))
     when (links) {
         LyricsLinks.Looking -> Busy(stringResource(R.string.home_musicbrainz_looking), style)
         LyricsLinks.Instrumental -> Text(stringResource(R.string.home_lyrics_instrumental), style = style)
         is LyricsLinks.Links -> {
             for (link in links.links) PageLink(link, search = false)
             Browser()
+            Explain(search, width)
         }
         is LyricsLinks.NoLink -> {
             NoLinkText(links.reason, retry, openSources, afterRetry)
             val genius = links.search
             when {
-                // The song's page among the track's web results (#801): no search, no AI call.
+                // The song's page among the track's web results (#801): no search, no AI call for it.
                 links.web.isNotEmpty() -> {
                     for (link in links.web) {
                         PageLink(
@@ -109,18 +117,35 @@ internal fun LyricsPanel(
                         )
                     }
                     Browser()
-                    return
                 }
-                genius == null -> SearchOff(openAppearance)
                 else -> {
-                    PageLink(genius, search = true)
-                    Browser()
+                    if (genius == null) {
+                        SearchOff(openAppearance)
+                    } else {
+                        PageLink(genius, search = true)
+                        Browser()
+                    }
+                    AiSearchBlock(search, SearchKind.LYRICS, width = width) { answer, _ ->
+                        if (answer is SearchAnswer.Lyrics) AiLyrics(answer.links)
+                    }
                 }
             }
-            AiSearchBlock(search, SearchKind.LYRICS) { answer, _ ->
-                if (answer is SearchAnswer.Lyrics) AiLyrics(answer.links)
-            }
+            Explain(search, width)
         }
+    }
+}
+
+/**
+ * *Explain the song* (#908), last in the panel, at least [width] wide: what the song is about, asked
+ * on a tap only, its answer cited ([AiExplanation]).
+ */
+@Composable
+private fun Explain(
+    search: PanelSearch,
+    width: Dp,
+) {
+    AiSearchBlock(search, SearchKind.EXPLAIN, width = width) { answer, _ ->
+        if (answer is SearchAnswer.Explanation) AiExplanation(answer)
     }
 }
 

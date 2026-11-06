@@ -26,13 +26,26 @@ class AiSearchPromptTest {
 
     @Test
     fun theSystemPartComesFirstThenTheTrackThenTheQuestion() {
-        for (kind in SearchKind.entries) {
+        // What the song is about is asked from web pages only (#908): `ExplainAnswersTest`'s.
+        for (kind in SearchKind.entries - SearchKind.EXPLAIN) {
             val prompt = AiSearchPrompt.build(kind, facts)
             assertEquals(AiSearchPrompt.system(kind) + "\n\n" + AiSearchPrompt.user(kind, facts), prompt)
             // A definition's data is the genre (#786), fenced as the track is.
             val fence = if (kind == SearchKind.DEFINITION) "\n<genre>\n" else "\n<track>\n"
             assertTrue(prompt.indexOf("Reply with one JSON object") < prompt.indexOf(fence))
             assertTrue(prompt.trimEnd().endsWith("?"), "the question last")
+        }
+    }
+
+    @Test
+    fun aDefinitionAndAnExplanationWriteDatesInTheAppsFormTheJsonAnswersAsIsoDates() {
+        // A definition and what the song is about are prose shown as written (#957); the other
+        // answers are JSON the app reads, their dates partial ISO dates it writes in its own form.
+        assertTrue(InsightPrompt.DATE_RULE in AiSearchPrompt.build(SearchKind.DEFINITION, SearchFacts.ofGenre("Blues")))
+        assertTrue(InsightPrompt.DATE_RULE in ExplainPrompt.system(limit = null))
+        assertTrue(InsightPrompt.DATE_RULE in ExplainPrompt.system(limit = 3))
+        for (kind in SearchKind.entries - SearchKind.DEFINITION - SearchKind.EXPLAIN) {
+            assertFalse(InsightPrompt.DATE_RULE in AiSearchPrompt.build(kind, facts), kind.key)
         }
     }
 
@@ -83,7 +96,7 @@ class AiSearchPromptTest {
 
     @Test
     fun eachKindAsksForJsonInItsShapeAndNeverAGuess() {
-        for (kind in SearchKind.entries) {
+        for (kind in SearchKind.entries - SearchKind.EXPLAIN) {
             val system = AiSearchPrompt.system(kind)
             assertTrue(AiSearchPrompt.shape(kind) in system)
             assertTrue("never guess" in system)

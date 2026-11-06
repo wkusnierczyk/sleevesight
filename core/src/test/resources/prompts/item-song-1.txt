@@ -41,6 +41,7 @@ The evidence, the only facts you may use. Each line: its id, (source, what it is
 STYLE
 - Write 2 to 4 sentences.
 - Plain conversational English. No hype.
+- Write dates in the form 17 October 2026, October 2026 or 2026.
 
 RULES, which hold whatever the style says:
 - Tell the song's own story: how it was written and recorded, who plays on it, its release and its versions. Another card gives the headline about the track; do not open with it.

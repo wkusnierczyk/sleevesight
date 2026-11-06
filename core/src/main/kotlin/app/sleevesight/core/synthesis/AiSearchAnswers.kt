@@ -6,6 +6,7 @@ import app.sleevesight.core.genres.GenreVocabulary
 import app.sleevesight.core.lyrics.LyricsLink
 import app.sleevesight.core.lyrics.pages
 import app.sleevesight.core.normalizer.AccentFolder
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -47,7 +48,29 @@ sealed interface SearchAnswer {
     data class Definition(
         val text: String,
     ) : SearchAnswer
+
+    /**
+     * What the song is about (#908), checked as an insight is ([GroundingCheck]): its sentences, each
+     * with its citations and whether a page backs it ([grounded]), at least one backed; and the pages
+     * its sentences cite among those it was given, in the order first cited ([pages]).
+     */
+    data class Explanation(
+        val grounded: GroundedText,
+        val pages: List<CitedPage>,
+    ) : SearchAnswer
 }
+
+/**
+ * A page an explanation (#908) was given, by the id the prompt gave it ([id], `S1`, `S2` …,
+ * `ExplainPrompt.id`), its address ([url]) and its title, where it has one ([title]); kept with the
+ * answer, so a kept explanation is read against the pages it was written from.
+ */
+@Serializable
+data class CitedPage(
+    val id: String,
+    val url: String,
+    val title: String? = null,
+)
 
 /**
  * A release dated [date], with its [title] and [type] where the answer gives them; from the web
@@ -120,6 +143,13 @@ sealed interface SearchReading {
  *   a web address, or markup (Markdown's or HTML's marks, [MARKUP]): it stands in for Wikipedia's
  *   lead, shown as written, so a reply that rambles, links or formats is none.
  *
+ * - **What the song is about** ([SearchKind.EXPLAIN], #908): only from the web, its text checked as
+ *   an insight's is ([GroundingCheck], the model's own knowledge not allowed) against the ids of the
+ *   pages it was given (`sources` given to [read]): a sentence citing nothing, or an id not given, is
+ *   kept, shown dimmed, as an insight shows one, and an id not given is no page; with no sentence a
+ *   page backs, nothing usable. On
+ *   one line, at most [EXPLANATION_MAX] characters, and none with a link or a web address.
+ *
  * **From the web** (#801, `pages` given to [read]): every value names the page it came from, one of
  * the pages the searches found ([sameAddress]: its fragment and a closing `/` aside); a value with
  * none, or another, is dropped, as a value that fails a check is. A date's page is its own
@@ -139,16 +169,21 @@ class AiSearchAnswers(
      * The answer to [kind] in [reply], checked; [artists] are the track's credited artists, which
      * choose between two lyrics pages on one site. With [pages] (#801), the addresses of the pages
      * the web searches found, the answer is one from the web, each value with its page among them.
+     * An explanation ([SearchKind.EXPLAIN], #908) is read against the pages its prompt numbered
+     * ([sources]); none, nothing usable. Its [artists]' names are no web address ("will.i.am").
      */
     fun read(
         kind: SearchKind,
         reply: String,
         artists: List<String> = emptyList(),
         pages: Collection<String>? = null,
+        sources: List<CitedPage>? = null,
     ): SearchReading {
         val answer = objectIn(reply) ?: return SearchReading.Malformed
         val found =
-            if (pages != null) {
+            if (kind == SearchKind.EXPLAIN) {
+                explanationIn(answer, sources.orEmpty(), artists)
+            } else if (pages != null) {
                 fromWeb(kind, answer, artists, pages)
             } else {
                 when (kind) {
@@ -156,6 +191,7 @@ class AiSearchAnswers(
                     SearchKind.GENRES -> genres(answer)
                     SearchKind.LYRICS -> lyrics(answer, artists)
                     SearchKind.DEFINITION -> definition(answer)
+                    SearchKind.EXPLAIN -> null
                 }
             }
         return found?.let(SearchReading::Found) ?: SearchReading.NothingUsable
@@ -180,6 +216,7 @@ class AiSearchAnswers(
                     .takeIf { it.isNotEmpty() }
                     ?.let(SearchAnswer::Lyrics)
             SearchKind.DEFINITION -> definition(answer)
+            SearchKind.EXPLAIN -> null
         }
     }
 
@@ -285,6 +322,12 @@ class AiSearchAnswers(
          * encyclopedia's lead, with room to spare.
          */
         const val DEFINITION_MAX: Int = 600
+
+        /**
+         * The longest explanation kept (#908), in characters: four short sentences and their
+         * citations, with room to spare.
+         */
+        const val EXPLANATION_MAX: Int = 1_000
 
         /** The marks of Markdown or HTML a definition (#786) may not carry. */
         const val MARKUP: String = "<>[]`*#|"
@@ -410,6 +453,53 @@ class AiSearchAnswers(
             }
     }
 }
+
+// The explanation in [answer] (#908), checked against the ids of [sources]: null for none, one too
+// long or with an address, or one no page backs. The track's [artists] are masked, in any case,
+// before the address test, so a name such as "will.i.am" is no address.
+private fun explanationIn(
+    answer: JsonObject,
+    sources: List<CitedPage>,
+    artists: List<String>,
+): SearchAnswer.Explanation? {
+    val text =
+        answer
+            .text("explanation")
+            ?.let(::oneLine)
+            ?.takeIf {
+                it.length <= AiSearchAnswers.EXPLANATION_MAX &&
+                    !EXPLANATION_ADDRESS.containsMatchIn(masked(it, artists))
+            }
+    val byId = sources.associateBy { it.id }
+    val grounded =
+        text?.let { (GroundingCheck.check(it, byId.keys, allowModel = false) as? InsightReply.Written)?.grounded }
+    val sentences = grounded?.paragraphs?.flatten().orEmpty()
+    val pages = sentences.flatMap { it.cites }.distinct().mapNotNull(byId::get)
+    val backed = sentences.any { it.status == SentenceStatus.OK }
+    return if (grounded == null || !backed) null else SearchAnswer.Explanation(grounded, pages)
+}
+
+// [text] with each of [names] (not blank) put as a plain word, matched in any case.
+private fun masked(
+    text: String,
+    names: List<String>,
+): String =
+    names.map(String::trim).filter(String::isNotEmpty).fold(text) { masked, name ->
+        masked.replace(name, "name", ignoreCase = true)
+    }
+
+/**
+ * A link or a web address in an explanation (#908): a scheme (`https://`), `www.`, or a bare domain,
+ * any labels before a top-level domain of two or more lowercase letters (`songfacts.co.uk`,
+ * `Genius.com`). Not a stop before a space (`Vol. 2`, `St. Louis`), initials or abbreviations whose
+ * last part is one letter (`U.S.`, `e.g.`), a number (`3.5`), nor a capital after a stop with no space
+ * (`St.Louis`). A genre's definition keeps its own check ([AiSearchAnswers], `ADDRESS`).
+ */
+private val EXPLANATION_ADDRESS: Regex =
+    run {
+        val label = """[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?"""
+        Regex("""(?i:\b[a-z][a-z0-9+.-]*://|\bwww\.)|\b$label(?:\.$label)*\.[a-z]{2,}\b""")
+    }
 
 // The string at [key], trimmed, when it is one and not blank.
 private fun JsonObject.text(key: String): String? =

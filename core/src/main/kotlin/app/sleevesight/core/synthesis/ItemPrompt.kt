@@ -28,7 +28,8 @@ object ItemPrompt {
      * [CardKind.ARTIST], [CardKind.ALBUM]): raised when its contract or built-in style changes, so
      * insights written from the old prompt are not reused. Not raised for the rule on a line found in
      * the track's language ([InsightPrompt.TRANSLATION_RULE], #902), as `InsightPrompt.VERSION` was
-     * not: the lines' languages are in the evidence fingerprint, part of every insight's key.
+     * not: the lines' languages are in the evidence fingerprint, part of every insight's key. Nor for
+     * the rule on dates ([InsightPrompt.DATE_RULE], #957), as `InsightPrompt.VERSION` was not.
      */
     const val VERSION: Int = 1
 
@@ -47,7 +48,7 @@ object ItemPrompt {
 
     /**
      * The built-in style: the key insight's until its version 9 (#767), which this prompt has not
-     * taken up yet.
+     * taken up yet. The prompt follows it with the rule on dates ([InsightPrompt.DATE_RULE], #957).
      */
     const val BUILT_IN_STYLE: String =
         "- Write 2 to 4 sentences.\n- Plain conversational English. No hype."
@@ -94,6 +95,7 @@ object ItemPrompt {
             appendLine()
             appendLine("STYLE")
             appendLine(BUILT_IN_STYLE)
+            appendLine(InsightPrompt.DATE_RULE)
             appendLine()
             appendLine(InsightPrompt.CONTRACT_HEADING)
             appendLine(subjectRule(subject.kind))

@@ -26,6 +26,12 @@ enum class SearchKind(
      * same for every track that has it ([SearchFacts.genre]).
      */
     DEFINITION("definition"),
+
+    /**
+     * What the song is about (#908), *Explain the song* in the *Lyrics* panel: written from pages
+     * about it ([ExplainPrompt]), every sentence cited, so asked only with *AI web search* on.
+     */
+    EXPLAIN("explain"),
 }
 
 /**
@@ -85,7 +91,8 @@ object AiSearchPrompt {
 
     /**
      * The version of [SearchKind.DEFINITION]'s prompt (#786), its own: a definition is kept by the
-     * genre, not the track, and its prompt changes apart from the track's three.
+     * genre, not the track, and its prompt changes apart from the track's three. Not raised for the
+     * rule on dates ([InsightPrompt.DATE_RULE], #957), as `InsightPrompt.VERSION` was not.
      */
     const val DEFINITION_VERSION: Int = 1
 
@@ -96,9 +103,12 @@ object AiSearchPrompt {
      */
     const val WEB_VERSION: Int = 1
 
+    /** The version of [SearchKind.EXPLAIN]'s prompts (#908, [ExplainPrompt]), their own. */
+    const val EXPLAIN_VERSION: Int = 1
+
     /**
      * The version of [kind]'s prompt, part of its answer's cache key: [VERSION], or
-     * [DEFINITION_VERSION]; with web search ([web]), [WEB_VERSION].
+     * [DEFINITION_VERSION], or [EXPLAIN_VERSION]; with web search ([web]), [WEB_VERSION].
      */
     fun version(
         kind: SearchKind,
@@ -106,6 +116,7 @@ object AiSearchPrompt {
     ): Int =
         when {
             kind == SearchKind.DEFINITION -> DEFINITION_VERSION
+            kind == SearchKind.EXPLAIN -> EXPLAIN_VERSION
             web -> WEB_VERSION
             else -> VERSION
         }
@@ -118,7 +129,12 @@ object AiSearchPrompt {
         kind: SearchKind,
         facts: SearchFacts,
         genres: Collection<String> = emptyList(),
-    ): String = system(kind, genres) + "\n\n" + user(kind, facts)
+    ): String =
+        if (kind == SearchKind.EXPLAIN) {
+            ExplainPrompt.knowledge(facts, emptyList())
+        } else {
+            system(kind, genres) + "\n\n" + user(kind, facts)
+        }
 
     /**
      * What the model is asked to be and to reply, for every track:
@@ -139,7 +155,12 @@ object AiSearchPrompt {
     fun system(
         kind: SearchKind,
         genres: Collection<String> = emptyList(),
-    ): String = if (kind == SearchKind.DEFINITION) DefinitionPrompt.system() else trackSystem(kind, genres)
+    ): String =
+        when (kind) {
+            SearchKind.DEFINITION -> DefinitionPrompt.system()
+            SearchKind.EXPLAIN -> ExplainPrompt.system(limit = null)
+            else -> trackSystem(kind, genres)
+        }
 
     // The system part of the track's three kinds.
     private fun trackSystem(
@@ -181,6 +202,7 @@ object AiSearchPrompt {
             SearchKind.GENRES -> "{\"genres\": [\"…\", \"…\"]}"
             SearchKind.LYRICS -> "{\"lyrics_urls\": [\"https://…\"]}"
             SearchKind.DEFINITION -> "{\"definition\": \"…\"}"
+            SearchKind.EXPLAIN -> ExplainPrompt.SHAPE
         }
 
     /**
@@ -197,6 +219,9 @@ object AiSearchPrompt {
      *   with their domains, as the app checks them), the page of this artist's version where there
      *   is one, and never a URL made up from the title: a link the model has not seen is the likeliest
      *   thing for it to invent, and the app makes no request to check it (#728).
+     * - [SearchKind.DEFINITION]: a short, neutral definition in plain text, its dates in the app's
+     *   form ([InsightPrompt.DATE_RULE], #957), prose as [SearchKind.EXPLAIN]'s ([ExplainPrompt]) is;
+     *   the others are JSON the app reads, their dates partial ISO dates it writes in its own form.
      */
     fun rules(
         kind: SearchKind,
@@ -231,8 +256,10 @@ object AiSearchPrompt {
                     "- definition: two or three sentences, neutral, in the style of the opening of an encyclopedia " +
                         "article about the genre: what it is, where and when it arose, and what marks its sound.",
                     "- Plain text only: no Markdown, no HTML, no lists, no links or web addresses, no line breaks.",
+                    InsightPrompt.DATE_RULE,
                     "- About the genre in general: say nothing about any track, recording, artist or listener.",
                 )
+            SearchKind.EXPLAIN -> ExplainPrompt.RULES
         }
 
     /**
@@ -277,6 +304,7 @@ object AiSearchPrompt {
             SearchKind.GENRES -> "Which genres is this track?"
             SearchKind.LYRICS -> "Where are this song's lyrics pages?"
             SearchKind.DEFINITION -> DefinitionPrompt.QUESTION
+            SearchKind.EXPLAIN -> ExplainPrompt.QUESTION
         }
 }
 
@@ -393,6 +421,7 @@ object WebPrompt {
             SearchKind.GENRES -> "$title$by, song genre"
             SearchKind.LYRICS -> "$title$by lyrics"
             SearchKind.DEFINITION -> InsightPrompt.oneLine(facts.genre.orEmpty()) + " music genre"
+            SearchKind.EXPLAIN -> ExplainPrompt.query(facts)
         }
     }
 
@@ -473,7 +502,7 @@ object WebPrompt {
                     "\"source\": \"https://…\"}}"
             SearchKind.GENRES -> "{\"genres\": [\"…\", \"…\"], \"sources\": [\"https://…\"]}"
             SearchKind.LYRICS -> "{\"lyrics_urls\": [\"https://…\"]}"
-            SearchKind.DEFINITION -> AiSearchPrompt.shape(kind)
+            SearchKind.DEFINITION, SearchKind.EXPLAIN -> AiSearchPrompt.shape(kind)
         }
 
     /**

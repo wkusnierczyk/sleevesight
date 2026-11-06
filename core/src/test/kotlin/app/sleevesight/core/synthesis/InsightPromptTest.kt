@@ -37,8 +37,19 @@ class InsightPromptTest {
         // (#767) the system prompt and the user message, and the redesign, version 10 (#767) the
         // fixes from its blind A/B. Each version's exact prompt is kept in `design/prompts/`. The rule
         // on a line found in the track's language (#902) came without a version: the lines'
-        // languages are in the evidence fingerprint, part of every card's key.
+        // languages are in the evidence fingerprint, part of every card's key. Nor did the rule on
+        // dates (#957): a card kept keeps its dates as written.
         assertEquals(10, InsightPrompt.VERSION)
+    }
+
+    @Test
+    fun `the style asks for dates in the app's form, its examples the formatter's (#957)`() {
+        assertEquals("- Write dates in the form 17 October 2026, October 2026 or 2026.", InsightPrompt.DATE_RULE)
+        for (allowModel in listOf(false, true)) {
+            val system = InsightPrompt.system(allowModel)
+            val style = system.substringAfter("STYLE\n").substringBefore(InsightPrompt.CONTRACT_HEADING)
+            assertTrue(InsightPrompt.DATE_RULE in style, "with the style")
+        }
     }
 
     @Test
