@@ -142,9 +142,14 @@ class AppGenreDefinitions(
      * Fetches ahead (#786) the definitions of [track]'s genres, every genre of its table, under the
      * settings as last read: each once a play of the track, whatever its state, so [GenreDefinitions]
      * serves what it keeps (no request) and asks Wikipedia again past its lifetime; a genre found or
-     * not found keeps showing as it is meanwhile. Nothing while lookups are off.
+     * not found keeps showing as it is meanwhile. Nothing while lookups are off. While they are not
+     * [allowed] (off screen with *Look up in the background* off; #961), a new play is still told
+     * apart, so the track playing on return is asked as the play it is, but nothing is looked up.
      */
-    fun fetchAhead(track: TrackState?) {
+    fun fetchAhead(
+        track: TrackState?,
+        allowed: Boolean = true,
+    ) {
         if (track == null || !lookingUp(settings.value)) return
         val identity = playOf(track)
         val genres = track.genres.all.map { it.genre.identity }
@@ -157,6 +162,7 @@ class AppGenreDefinitions(
                     notFound.clear()
                     changes.update { it + 1 }
                 }
+                if (!allowed) return
                 genres.filter(ahead::add) to Batch(epoch.mark(), clears)
             }
         afterChoice()
@@ -192,7 +198,8 @@ class AppGenreDefinitions(
         tracks: Flow<TrackState?>,
         allowed: Flow<Boolean>,
     ) {
-        combine(tracks, settings, allowed) { track, _, ok -> track.takeIf { ok } }.collect(::fetchAhead)
+        combine(tracks, settings, allowed) { track, _, ok -> track to ok }
+            .collect { (track, ok) -> fetchAhead(track, ok) }
     }
 
     // A batch of lookups: the epoch's mark and the clears as they were when it began, under [lock].

@@ -29,19 +29,27 @@ import org.junit.Test
  * nothing; back on screen, the track then playing is fetched ahead.
  */
 class GenreFetchAheadAllowedTest {
+    private val vocabulary = GenreVocabulary.load(JvmResourceReader)
+
+    // The genres Wikipedia is asked about, and those whose next lookup fails (a failure is not kept,
+    // so a genre's next play asks Wikipedia again).
     private val asked = mutableListOf<String>()
+    private val failing = mutableSetOf<String>()
     private val articles =
         GenreArticles { genre ->
             asked += genre
-            Lookup.Found(GenreDefinition("Rock music is a genre of popular music.", "Rock music", "https://w/Rock"))
+            if (failing.remove(genre)) {
+                Lookup.Failed("offline")
+            } else {
+                Lookup.Found(GenreDefinition("Rock music is a genre of popular music.", "Rock music", "https://w/Rock"))
+            }
         }
-    private val vocabulary = GenreVocabulary.load(JvmResourceReader)
     private val settings = MutableStateFlow<Settings?>(Settings())
 
     // The MusicBrainz genres Wikipedia is asked about for [genres], by their identities.
     private fun ids(vararg genres: String) = genres.map { checkNotNull(vocabulary.musicBrainzGenre(it)) }
 
-    // A track whose artist's genres are [genres].
+    // A track whose artist's genres are [genres], titled after them, so each is a play of its own.
     private fun playing(vararg genres: String): TrackState {
         val labels =
             genres.map { tag ->
@@ -50,7 +58,11 @@ class GenreFetchAheadAllowedTest {
                     listOf(LabelCredit(LabelSource.LASTFM, null)),
                 )
             }
-        return HomeFixtures.track().copy(genres = TrackGenres(listOf(GenreRow(GenreLevel.ARTIST, "A", labels))))
+        val track = HomeFixtures.track()
+        return track.copy(
+            normalized = track.normalized.copy(title = genres.joinToString()),
+            genres = TrackGenres(listOf(GenreRow(GenreLevel.ARTIST, "A", labels))),
+        )
     }
 
     @Test
@@ -59,6 +71,7 @@ class GenreFetchAheadAllowedTest {
             val lookups = AppGenreDefinitions(GenreDefinitions(articles, vocabulary), settings, this)
             val tracks = MutableStateFlow<TrackState?>(playing("rock"))
             val allowed = MutableStateFlow(true)
+            failing += ids("punk")
             val following = launch { lookups.fetchAhead(tracks, allowed) }
             advanceUntilIdle()
             assertEquals(ids("rock"), asked)
@@ -67,7 +80,7 @@ class GenreFetchAheadAllowedTest {
             tracks.value = playing("punk")
             advanceUntilIdle()
             assertEquals(ids("rock"), asked)
-            // Back on screen: the track then playing is fetched ahead, once a play.
+            // Back on screen: the track then playing is fetched ahead, once a play (its lookup fails).
             allowed.value = true
             advanceUntilIdle()
             assertEquals(ids("rock", "punk"), asked)
@@ -75,7 +88,34 @@ class GenreFetchAheadAllowedTest {
             advanceUntilIdle()
             allowed.value = true
             advanceUntilIdle()
-            following.cancel()
             assertEquals(ids("rock", "punk"), asked)
+            // Off screen, another track and then this one again: back on screen, a new play, asked again.
+            allowed.value = false
+            tracks.value = playing("rock")
+            advanceUntilIdle()
+            tracks.value = playing("punk")
+            advanceUntilIdle()
+            allowed.value = true
+            advanceUntilIdle()
+            following.cancel()
+            assertEquals(ids("rock", "punk", "punk"), asked)
+        }
+
+    @Test
+    fun `not allowed from the start, settings coming on ask nothing until lookups are allowed (#961)`() =
+        runTest {
+            val on = checkNotNull(settings.value)
+            settings.value = on.copy(showGenres = false)
+            val lookups = AppGenreDefinitions(GenreDefinitions(articles, vocabulary), settings, this)
+            val allowed = MutableStateFlow(false)
+            val following = launch { lookups.fetchAhead(MutableStateFlow(playing("rock")), allowed) }
+            advanceUntilIdle()
+            settings.value = on
+            advanceUntilIdle()
+            assertEquals(emptyList<String>(), asked)
+            allowed.value = true
+            advanceUntilIdle()
+            following.cancel()
+            assertEquals(ids("rock"), asked)
         }
 }
