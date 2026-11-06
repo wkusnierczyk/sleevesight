@@ -169,8 +169,9 @@ internal suspend fun whileOnScreen(
  * first, for as long as it returns true. Frames as an infinite animation's, which a test's clock
  * holds back while it waits for idle; a frame long in coming moves things only [MAX_STEP_SECONDS].
  * With [every], a frame about that many milliseconds after the one before, rather than the next:
- * it waits [every] less [FRAME_SLACK_MS] before it asks for one, so on a screen of 60, 90 or 120 Hz
- * the frame it gets is the one due [every] later, and between the two the app draws nothing.
+ * it waits [every] less [FRAME_SLACK_MS] before it asks for one, and between the two the app draws
+ * nothing. For [RECORD_FRAME_MS], on a screen of 60, 90 or 120 Hz, a request made 25 to 33 ms after
+ * the frame gets the one due 33 ms after it; waiting 25 ms leaves a late wake the most room.
  */
 internal suspend fun eachFrame(
     every: Long = 0L,
@@ -195,7 +196,7 @@ internal const val STOP_SECONDS: Float = 2f
 internal const val RECORD_FRAME_MS: Long = 33L
 
 /** How much sooner [eachFrame] asks for a frame than [eachFrame]'s `every` says, for a late wake. */
-private const val FRAME_SLACK_MS = 5L
+private const val FRAME_SLACK_MS = 8L
 
 /** Degrees a second for each revolution a minute. */
 internal const val DEGREES_PER_RPM: Float = 6f

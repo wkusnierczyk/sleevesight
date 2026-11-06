@@ -291,7 +291,8 @@ class HeaderSpinTest {
         // A few frames, for a change to recompose and the motion to start.
         const val FIRST_FRAMES = 100L
 
-        // A frame or two more, for the frame the motion starts on.
-        const val SLACK = 50L
+        // A step or two more (a step, 33 ms, is two or three of the test clock's frames), for the
+        // step the motion starts on.
+        const val SLACK = 100L
     }
 }

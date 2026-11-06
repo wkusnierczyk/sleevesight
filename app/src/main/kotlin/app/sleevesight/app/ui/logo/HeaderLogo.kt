@@ -2,28 +2,39 @@ package app.sleevesight.app.ui.logo
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.translate
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.rememberGraphicsLayer
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
+import kotlin.math.ceil
+import kotlin.math.floor
 
 /**
  * The header's logo, on one line (#383): "Sleeve" in ink and "sight" in red, followed by the
@@ -44,8 +55,9 @@ import androidx.compose.ui.unit.toSize
  * Its record has the header's larger label ([HEADER_LABEL], #848), and turns while [spin] says so
  * (music playing, *Spin the logo while music plays* on), getting up to speed and coming to rest as a
  * turntable does ([recordMotion]); once the intro has ended, from where the intro landed it. The
- * record is drawn once, in a layer of its own, and the layer turns (#963): a frame of the turn
- * redraws nothing, neither the record nor the words. In a
+ * record is drawn once, into a layer, in a box of its own just its size, and a step of the turn
+ * draws that layer turned (#963): the words are not drawn again, nor the record, and the screen
+ * redrawn is the record's square. In a
  * debug build the bug in its place never turns: while the record would, it crawls ([bugCrawl]),
  * every few seconds up out of [crawlSpace] (the header's box, in the root's pixels; the logo's own
  * box without one), and back in from its bottom to its place, drawn only inside that box.
@@ -98,27 +110,88 @@ internal fun HeaderLogo(
                 drawCrawlingBug(colors, bugPath, line, box, crawl.value.trip)
             }
         }
-        if (bugPath == null) {
-            // The record upright, turned by its layer about its centre: the angle read in the
-            // layer's block, so a frame of the turn changes the layer alone (#963).
-            Canvas(
-                Modifier.matchParentSize().graphicsLayer {
-                    val centre = recordCentre(linePlace(size))
-                    transformOrigin = TransformOrigin(centre.x / size.width, centre.y / size.height)
-                    rotationZ = motion.value.degrees
-                },
-            ) {
-                if (!shown) return@Canvas
-                at(linePlace(size)) {
-                    translate(LineShift.x, LineShift.y) { drawRecordPlace(colors, null, RecordPose(RecordCentre)) }
-                }
-            }
-        }
+        if (bugPath == null) TurningRecord(colors, { shown }, motion)
     }
 }
 
-/** The record's centre in the header logo drawn at [line], in the canvas's pixels. */
-private fun recordCentre(line: Place): Offset = line.at + (RecordCentre + LineShift) * line.scale
+/**
+ * The header logo's record, in a box of the logo's size ([Modifier.matchParentSize]), placed as
+ * the logo draws it, turned [motion]'s way, and drawn only once [shown] (#963). Its own box is just
+ * its size, so a step redraws only its square: the record is drawn upright into a layer once
+ * (again only for a new size, place or colours), and each step draws that layer turned about the
+ * record's centre. The angle is read as it draws, not as a layer property, which would count as a
+ * change of layout.
+ */
+@Composable
+private fun BoxScope.TurningRecord(
+    colors: LogoColors,
+    shown: () -> Boolean,
+    motion: State<RecordMotion>,
+) {
+    val record = rememberGraphicsLayer()
+    // The record's box in the logo's, and the logo's place, from the last layout.
+    val recordAt = remember { mutableStateOf<RecordBox?>(null) }
+    Spacer(
+        Modifier
+            .matchParentSize()
+            .layout { measurable, constraints ->
+                val box = RecordBox.of(linePlace(Size(constraints.maxWidth.toFloat(), constraints.maxHeight.toFloat())))
+                if (recordAt.value != box) recordAt.value = box
+                val placeable = measurable.measure(Constraints.fixed(box.width, box.height))
+                layout(constraints.maxWidth, constraints.maxHeight) { placeable.place(box.topLeft) }
+            }.drawWithCache {
+                val box = recordAt.value
+                if (box != null && size.minDimension > 0f) {
+                    record.record {
+                        // The logo's own drawing, moved by the box's place: the same pixels.
+                        translate(-box.topLeft.x.toFloat(), -box.topLeft.y.toFloat()) {
+                            at(box.line) {
+                                translate(
+                                    LineShift.x,
+                                    LineShift.y,
+                                ) { drawRecordPlace(colors, null, RecordPose(RecordCentre)) }
+                            }
+                        }
+                    }
+                }
+                onDrawBehind {
+                    if (box == null || !shown() || size.minDimension <= 0f) return@onDrawBehind
+                    rotate(motion.value.degrees, box.centre) { drawLayer(record) }
+                }
+            },
+    )
+}
+
+/**
+ * The record's box in the header logo drawn at [line]: the whole pixels round the record and one
+ * more each way, for its edge's smoothing, at [topLeft] in the logo's box; the record's [centre]
+ * in the box's own pixels.
+ */
+private data class RecordBox(
+    val line: Place,
+    val topLeft: IntOffset,
+    val width: Int,
+    val height: Int,
+    val centre: Offset,
+) {
+    companion object {
+        fun of(line: Place): RecordBox {
+            val centre = line.at + (RecordCentre + LineShift) * line.scale
+            val r = LogoOutlines.RECORD_R * line.scale
+            val left = floor(centre.x - r).toInt() - 1
+            val top = floor(centre.y - r).toInt() - 1
+            val right = ceil(centre.x + r).toInt() + 1
+            val bottom = ceil(centre.y + r).toInt() + 1
+            return RecordBox(
+                line,
+                IntOffset(left, top),
+                (right - left).coerceAtLeast(0),
+                (bottom - top).coerceAtLeast(0),
+                centre - Offset(left.toFloat(), top.toFloat()),
+            )
+        }
+    }
+}
 
 /**
  * Draws the bug in the record's place, [trip] of the way through a crawl (none: in its place), the
