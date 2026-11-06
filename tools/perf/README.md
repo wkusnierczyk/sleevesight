@@ -7,7 +7,8 @@ numbers can be taken again for a later release and compared.
   wakeups, alarms and jobs, its installed size, and the phone's battery, into a new directory. It changes
   nothing on the phone.
 - `report.py <before> <after> [--tracks N]` compares two snapshots.
-- `startup.sh --yes [<runs>]` times cold starts (`am start -W`). It force-stops and opens the app,
+- `startup.sh --yes [<runs>]` times starts (`am start -W`), with the median for each launch state
+  (with notification access granted, every start is warm). It force-stops and opens the app,
   so it changes the phone: run it apart from the listening sessions, only with the phone owner's go-ahead.
 
 The release build from Play is measured, on the phone's own settings, over wireless debugging

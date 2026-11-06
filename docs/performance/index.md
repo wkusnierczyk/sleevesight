@@ -51,7 +51,7 @@ The battery figure for Sleevesight is Android's own estimate of the share used b
 | Nothing playing, screen off, overnight | 451 min | 0.0 mAh | 75 % to 52 % |
 | On screen, *Now playing*, logo spinning | 20 min | 44.6 mAh, of which the screen 38.2 and the processor 5.6 | about 9 % an hour |
 | On screen, *Now playing*, logo still | 6 min | 9.0 mAh, of which the processor 0.0 | |
-| On screen, 10 tracks, insights off | 10 min | 18.6 mAh | |
+| On screen, 9 tracks, insights off | 10 min | 18.6 mAh | |
 | On screen, 10 tracks, insights on | 12 min | 19.2 mAh | |
 | On screen, 10 tracks, insights and *AI web search* on | 11 min | 20.6 mAh | |
 
@@ -59,11 +59,11 @@ On screen, the cost is about 90 to 130 mAh an hour, 2 to 3 % of the battery, nea
 
 ## Data
 
-Bytes sent and received by Sleevesight (`dumpsys netstats`), all over Wi-Fi; on mobile data the amounts are the same. The track runs were 10 new tracks each, skipped on after about a minute, with Sleevesight on screen and the logo still.
+Bytes sent and received by Sleevesight (`dumpsys netstats`), all over Wi-Fi; on mobile data the amounts are the same. The track runs were 10 new tracks each (9 in the first, which began with a track already playing), skipped on after about a minute, with Sleevesight on screen and the logo still.
 
 | Session | Received | Sent | Per track, received / sent |
 |---|---|---|---|
-| 10 tracks, insights off | 637 KB | 151 KB | about 71 / 17 KB |
+| 9 tracks, insights off | 637 KB | 151 KB | about 71 / 17 KB |
 | 10 tracks, insights on | 448 KB | 172 KB | about 45 / 17 KB |
 | 10 tracks, insights and *AI web search* on (*Once*) | 896 KB | 267 KB | about 90 / 27 KB |
 | Screen off, an hour, listening | 1.7 KB | 2.5 KB | |
@@ -72,7 +72,7 @@ Bytes sent and received by Sleevesight (`dumpsys netstats`), all over Wi-Fi; on 
 
 What a track needs varies more with the track than with the settings: a track with a large cover, or one the sources know a lot about, brings in more. The run with insights off happened to have more of those than the run with insights on; the AI calls themselves are text, a few kilobytes each. The web search adds the pages it finds: in this run, about 45 KB a track more.
 
-With *Look up in the background* off, Sleevesight looks nothing up while it is off screen. The 1.7 KB in that hour were genre definitions fetched ahead off screen, which Sleevesight no longer does since 0.4.0.
+With *Look up in the background* off, Sleevesight starts no lookup while it is off screen; one already under way may finish. The 1.7 KB in that hour were genre definitions fetched ahead off screen, which Sleevesight no longer does since 0.4.0.
 
 ## Processor and memory
 

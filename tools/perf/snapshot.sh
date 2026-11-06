@@ -52,7 +52,9 @@ take battery dumpsys battery
 take ps ps -A -o PID,UID,TIME+,RSS,NAME
 take meminfo dumpsys meminfo "$package"
 take batterystats dumpsys batterystats --charged "$package"
-take batterystats-checkin dumpsys batterystats --checkin
+# `-c` (the checkin format) with `--charged`, not `--checkin`: that one hands over a battery period
+# the system saved earlier, and deletes it, rather than the counters now.
+take batterystats-checkin dumpsys batterystats -c --charged
 adb shell dumpsys netstats --poll >/dev/null
 take netstats dumpsys netstats detail
 take alarm dumpsys alarm
