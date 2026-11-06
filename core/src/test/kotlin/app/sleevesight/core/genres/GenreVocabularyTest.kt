@@ -95,7 +95,11 @@ class GenreVocabularyTest {
         // #1011's synonyms, and spellings that differ only in punctuation and spacing.
         val folded =
             listOf(
-                listOf("rock and roll", "rock n roll", "rock 'n' roll"),
+                listOf("rock and roll", "rock n roll", "rock 'n' roll", "rock & roll"),
+                listOf("gothic rock", "goth rock"),
+                listOf("lo-fi", "lofi"),
+                listOf("trip-hop", "trip hop"),
+                listOf("darkwave", "dark wave"),
                 listOf("chanson francaise", "chanson française"),
                 listOf("psytrance", "psychedelic trance"),
                 listOf("alternative country", "alt-country"),
@@ -107,8 +111,10 @@ class GenreVocabularyTest {
             assertEquals(1, vocabulary.labelsFor(spellings).size, "$spellings")
             assertEquals(1, spellings.map { vocabulary.identity(it) }.distinct().size, "$spellings")
         }
-        val rockAndRoll = vocabulary.labelsFor(listOf("Rock 'n' Roll", "rock and roll"))
-        assertEquals(listOf("Rock 'n' Roll"), rockAndRoll.map { it.label })
+        // One label for rock and roll, whichever spelling a source gives.
+        for (spelling in listOf("rock and roll", "Rock n Roll", "rock 'n' roll", "Rock & Roll")) {
+            assertEquals(listOf("Rock 'n' Roll"), vocabulary.labelsFor(listOf(spelling)).map { it.label }, spelling)
+        }
         assertEquals(listOf("IDM", "EBM", "EDM"), vocabulary.labelsFor(listOf("idm", "ebm", "edm")).map { it.label })
     }
 
