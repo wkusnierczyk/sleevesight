@@ -28,6 +28,7 @@ import app.sleevesight.core.sources.ArtistResults
 import app.sleevesight.core.sources.ArtistWebLookup
 import app.sleevesight.core.sources.ItemLanguageLines
 import app.sleevesight.core.sources.LanguageSearch
+import app.sleevesight.core.sources.SongWebLookup
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.WebSearcher
 import app.sleevesight.net.NetClient
@@ -47,7 +48,9 @@ import app.sleevesight.sources.web.ExaAlbumSearch
 import app.sleevesight.sources.web.ExaArtistSearch
 import app.sleevesight.sources.web.ExaLanguageSearch
 import app.sleevesight.sources.web.ExaPageSearch
+import app.sleevesight.sources.web.ExaSongSearch
 import app.sleevesight.sources.web.ExaWebSearch
+import app.sleevesight.sources.web.SongWebSource
 import app.sleevesight.sources.wikidata.WikidataClient
 import app.sleevesight.sources.wikipedia.WikipediaClient
 import app.sleevesight.sources.wikipedia.WikipediaGenres
@@ -72,8 +75,8 @@ import app.sleevesight.sources.wikipedia.WikipediaSource
  * [artists] is the artist cache (#238): what Last.fm, the Wikipedia artist article and MusicBrainz's
  * tags give for an artist is kept there per artist, so a second track by the same artist does not
  * ask for it again. The app's is the cache database's, the CLI's the run's cache, if it has one.
- * [trackOnly] is where what an album's web search found is kept (#885, [TRACK_ONLY_PARTS]), and an
- * artist's (#912): the app's is the same table, kept whatever *Keep what sources said about each
+ * [trackOnly] is where what an album's web search found is kept (#885, [TRACK_ONLY_PARTS]), an
+ * artist's (#912) and a song's (#958): the app's is the same table, kept whatever *Keep what sources said about each
  * artist* says. [keepsArtists] is that switch, as last read (on for the CLI), which says whether what
  * the search in the track's language found about an artist or an album is kept in [artists] or in
  * memory ([languageLines], #939).
@@ -208,6 +211,22 @@ class PipelineWiring internal constructor(
             ArtistWebSource(ExaArtistSearch(net, it, accentFolder), names, kept = trackOnly)
         }
 
+    /**
+     * The web search for a song the sources only list, and what it found, kept per track (#958,
+     * `PipelineParts.songWeb`): Exa's search for the song ([ExaSongSearch]) with its key in [keys]
+     * while Exa is switched on in [settings], asked for Wikidata's names in the track's language, its
+     * lines kept in [trackOnly] ([SongWebSource]); none without that engine and key. Read when the list
+     * is built, as the adapters' keys are ([adapters]).
+     */
+    fun songWeb(
+        keys: SourceKeys,
+        settings: Settings,
+    ): SongWebLookup? =
+        keys.web[WebEngine.EXA]?.takeIf { WebEngine.EXA in settings.webEngines }?.let { key ->
+            val named = languageSearch(emptyMap(), settings.showGenres)
+            SongWebSource(ExaSongSearch(net, key, accentFolder, named::items), kept = trackOnly)
+        }
+
     // What the search in the track's language found about each artist and album: one for the
     // wiring, so what it keeps in memory lasts the process, whatever the parts built since.
     private val languageLinesSource = LanguageLinesSource(Normalizer(accentFolder), artists, keepsArtists, epoch)
@@ -333,11 +352,13 @@ class PipelineWiring internal constructor(
          * The parts of the artist-level table kept whatever *Keep what sources said about each
          * artist* says, which its switching off does not clear (#885): an album's web lines
          * ([AlbumSource.WEB_PART]), paid for and found by the album, and an artist's (#912,
-         * [ArtistWebSource.PART]), paid for and found by the artist's insight, as a track's own web
+         * [ArtistWebSource.PART]), paid for and found by the artist's insight, and a song's (#958,
+         * [SongWebSource.PART]), paid for and found by the song's insight, as a track's own web
          * findings are kept in the retrieval cache (`SourceResult.trackOnly`). *Clear history*
          * clears them.
          */
-        val TRACK_ONLY_PARTS: Set<String> = setOf(AlbumSource.WEB_PART.name, ArtistWebSource.PART.name)
+        val TRACK_ONLY_PARTS: Set<String> =
+            setOf(AlbumSource.WEB_PART.name, ArtistWebSource.PART.name, SongWebSource.PART.name)
     }
 }
 

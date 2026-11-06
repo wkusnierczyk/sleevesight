@@ -162,6 +162,13 @@ interface ItemNotes {
     fun artistEvidence(track: TrackState): Flow<EvidenceSet?> = flowOf(null)
 
     /**
+     * The song's lines gathered for [track]'s song's insight on this track, as they come, the web's
+     * lines for a song the sources only list among them (#958); null until it is gathered: what
+     * *Sources* lists beside the track's, its lines the track has already once.
+     */
+    fun songEvidence(track: TrackState): Flow<EvidenceSet?> = flowOf(null)
+
+    /**
      * Whether [item]'s insight is being written for what it is about on [track] (its entity, #948):
      * asked for, or its reply coming, whichever track asked, so the next track of an artist or album
      * whose insight is under way follows it too. Read with no gathering: a closed row follows it at no
@@ -261,6 +268,10 @@ private sealed interface WebStep {
  * (`ItemInsights.writeSearching`), through the same gates, asked right before it, each search and
  * call counted to [paid]; the row shows the insight asked for until the reply comes whole, then
  * under the key the pages found give it, which the artist's evidence gathered then holds.
+ *
+ * The song's web search (#958), for a song the sources only list (`SongListings`), is made the same
+ * way as the artist's, under the same *AI web search*; its lines, kept per track, are for this song's
+ * insight and *Sources* alone.
  */
 @Suppress(
     "LongParameterList", // Where items come from, where they run, and the time.
@@ -294,9 +305,9 @@ class AppItemNotes(
 
     // What an item's evidence is gathered for: the item, the run's own evidence under the switches
     // now (`ItemInsights.ownEvidence`), its entity, the sources switched on, and whether a web search
-    // may give it lines (`ItemInsights.searchesWeb`: the artist's, #912, with *AI web search* used and
-    // an engine's key; the album's, #935, with web search on and an engine's key), so switching that
-    // on, or giving the key, gathers it again; and whether it takes the lines found in the track's
+    // may give it lines (`ItemInsights.searchesWeb`: the artist's, #912, and the song's, #958, with *AI
+    // web search* used and an engine's key; the album's, #935, with web search on and an engine's key),
+    // so switching that on, or giving the key, gathers it again; and whether it takes the lines found in the track's
     // language, and where those are kept (`ItemInsights.takesInLanguage`, #939: *Search in the track's
     // language* off or not, and *Keep what sources said about each artist*), so switching either
     // gathers it again.
@@ -605,6 +616,9 @@ class AppItemNotes(
     // The artist's lines gathered for [track] and its artist as its card names it now (its entity), the
     // web's for an artist the sources say nothing about among them (#912).
     override fun artistEvidence(track: TrackState): Flow<EvidenceSet?> = gatheredLines(track, InsightItem.ARTIST)
+
+    // The song's lines gathered for [track], the web's for a song the sources only list among them (#958).
+    override fun songEvidence(track: TrackState): Flow<EvidenceSet?> = gatheredLines(track, InsightItem.SONG)
 
     // [item]'s lines gathered for [track], and what it is about as it names it now (its entity).
     private fun gatheredLines(
@@ -1502,6 +1516,7 @@ class AppItemNotes(
             made.webSearch,
             made.dateForm,
             made.languageLines,
+            made.songWeb,
         )
 
     // Whether an insight written at [writtenAt] is past *Keep history for* ([lifetime]; null, for ever).

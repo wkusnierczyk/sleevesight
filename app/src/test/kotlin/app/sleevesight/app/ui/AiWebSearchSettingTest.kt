@@ -98,7 +98,8 @@ class AiWebSearchSettingTest {
         assertEquals("AI web search", text(R.string.settings_ai_web_search))
         assertEquals(
             "Lets your AI service search the web with Exa when it is asked, by a tap on Ask AI or automatically, " +
-                "and when it writes an artist’s insight the other sources have nothing for.",
+                "and when it writes an insight the other sources fall short for: an artist they have nothing on, " +
+                "or a song they only list.",
             text(R.string.settings_ai_web_search_summary),
         )
         assertEquals("Up to 3 times", app.resources.getQuantityString(R.plurals.settings_ai_web_search_up_to, 3, 3))

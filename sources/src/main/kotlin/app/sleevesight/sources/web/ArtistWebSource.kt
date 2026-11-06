@@ -2,16 +2,12 @@ package app.sleevesight.sources.web
 
 import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.model.SourceId
-import app.sleevesight.core.resolution.Lookup
 import app.sleevesight.core.resolution.NameMatcher
 import app.sleevesight.core.sources.ArtistPart
 import app.sleevesight.core.sources.ArtistResults
 import app.sleevesight.core.sources.ArtistWebLookup
 import app.sleevesight.core.sources.ArtistWebQuery
 import app.sleevesight.core.sources.WebPage
-import app.sleevesight.sources.KeptDrafts
-import app.sleevesight.sources.OneSearchAtATime
-import app.sleevesight.sources.lastfm.Lru
 
 /**
  * The web lines about an artist the other sources say nothing about (#912; `design/architecture.md`,
@@ -41,18 +37,11 @@ import app.sleevesight.sources.lastfm.Lru
 class ArtistWebSource(
     private val web: ArtistWebSearch?,
     private val names: NameMatcher,
-    private val kept: ArtistResults = ArtistResults.None,
+    kept: ArtistResults = ArtistResults.None,
 ) : ArtistWebLookup {
-    // The web's lines by artist, while [kept] keeps nothing.
-    private val remembered = Lru<String, List<EvidenceDraft>>(REMEMBERED)
+    private val lines = KeptWebLines(PART, kept)
 
-    // The searches under way, by artist ([keyOf]): one at a time per artist.
-    private val searching = OneSearchAtATime<List<EvidenceDraft>>()
-
-    override suspend fun kept(artist: ArtistWebQuery): List<EvidenceDraft>? {
-        val key = keyOf(artist)
-        return if (kept.persists) kept.get(PART, key)?.let { KeptDrafts.decode(it.value) } else remembered.get(key)
-    }
+    override suspend fun kept(artist: ArtistWebQuery): List<EvidenceDraft>? = lines.kept(keyOf(artist))
 
     override suspend fun search(
         artist: ArtistWebQuery,
@@ -61,69 +50,24 @@ class ArtistWebSource(
         mayPay: () -> Boolean,
     ): List<EvidenceDraft>? =
         web?.let { engine ->
-            try {
-                searching.once(keyOf(artist)) { kept(artist) ?: searched(engine, artist, sent, keeping, mayPay) }
-            } catch (
-                @Suppress("SwallowedException") e: NotPaid,
-            ) {
-                // Its gate closed after the waits: nothing sent, nothing kept; a write waiting for this
-                // one searches, or reads, itself.
-                null
-            }
+            lines.search(keyOf(artist), keeping, mayPay) { engine.search(artist.name, sent) }
         }
 
     override suspend fun keep(
         artist: ArtistWebQuery,
         lines: List<EvidenceDraft>,
-    ) {
-        val key = keyOf(artist)
-        if (kept.persists) kept.keep(PART, key, KeptDrafts.encode(lines)) else remembered.put(key, lines)
-    }
+    ) = this.lines.keep(keyOf(artist), lines)
 
     override fun pageLine(
         artist: ArtistWebQuery,
         page: WebPage,
     ): String? = web?.line(artist.name, page) ?: page.text.takeIf { web == null }
 
-    override suspend fun renew(artist: ArtistWebQuery) {
-        val key = keyOf(artist)
-        if (kept.persists) {
-            kept.get(PART, key)?.let { kept.keep(PART, key, it.value) }
-        } else {
-            remembered.get(key)?.let { remembered.put(key, it) }
-        }
-    }
-
-    // What [engine] finds for [artist], none included, kept; null when it failed, and nothing is kept.
-    // [mayPay] is asked right before the request, with no suspension between; closed, [NotPaid].
-    // [keeping] is given what was found before it is kept.
-    private suspend fun searched(
-        engine: ArtistWebSearch,
-        artist: ArtistWebQuery,
-        sent: () -> Unit,
-        keeping: (List<EvidenceDraft>) -> Unit,
-        mayPay: () -> Boolean,
-    ): List<EvidenceDraft>? {
-        if (!mayPay()) throw NotPaid()
-        val found =
-            when (val answer = engine.search(artist.name, sent)) {
-                is Lookup.Found -> answer.value
-                Lookup.NotFound -> emptyList()
-                is Lookup.Failed -> null
-            }
-        found?.let {
-            keeping(it)
-            keep(artist, it)
-        }
-        return found
-    }
+    override suspend fun renew(artist: ArtistWebQuery) = lines.renew(keyOf(artist))
 
     // The artist's key: its MusicBrainz id, else its name folded, as its card's entity is keyed.
     private fun keyOf(artist: ArtistWebQuery): String =
         artist.mbid?.let { "mb:$it" } ?: "name:${names.key(artist.name)}"
-
-    // A search its caller's gate refused right before the request (#912's review).
-    private class NotPaid : Exception("not paid")
 
     companion object {
         /**
@@ -137,6 +81,6 @@ class ArtistWebSource(
             ArtistPart("artist.web", extraction = 1, encoding = 1, sources = setOf(SourceId.WEB), keptAsHistory = true)
 
         /** The artists whose web lines are kept in memory, without a [kept] that keeps them. */
-        const val REMEMBERED: Int = 256
+        const val REMEMBERED: Int = KeptWebLines.REMEMBERED
     }
 }

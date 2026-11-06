@@ -65,8 +65,9 @@ internal val FINDING_ORDER: List<Scope> = listOf(Scope.SONG, Scope.ORIGINAL_SONG
  * song's), the scopes of [FINDING_ORDER] its lines have, in that order; web search's,
  * [Finding.Pages], with its lines shown or not; with no line of those scopes (its lines not in the
  * evidence shown), the outcome's own scope alone. A lookup that found nothing, of a source that
- * lists the album's own lines (#522), found the album. Null for any other status, which says what
- * it says ([statusText]).
+ * lists the album's own lines (#522), found the album; of web search, with pages about the track the
+ * song's own search found since (#958), those pages. Null for any other status, which says what it
+ * says ([statusText]).
  */
 internal fun finding(
     chip: SourceChip,
@@ -79,6 +80,7 @@ internal fun finding(
     val alone = outcome?.let(FOUND_ALONE::get)
     return when {
         nothing && album -> Finding.Of(listOf(Scope.RELEASE))
+        nothing && chip.source == SourceId.WEB && own.any { it.scope == Scope.WEB } -> Finding.Pages
         alone == null -> null
         chip.source == SourceId.WEB -> Finding.Pages
         else -> {

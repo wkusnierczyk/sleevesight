@@ -86,6 +86,23 @@ class SourcesAlbumTest {
     }
 
     @Test
+    fun theSongsWebLinesJoinWebSearchInTheirLanguageAndTheTracksOwnAreNotListedTwice() {
+        // The song's insight's lines (#958): the track's, the artist's it has, and the pages its search found.
+        val page = draft(SourceId.WEB, "A slow groove.", "https://example.com/a", Scope.WEB)
+        val inHindi = draft(SourceId.WEB, "एक धीमा गीत।", "https://example.com/b", Scope.WEB).copy(language = "hi")
+        val song = track.with(listOf(page, inHindi), JvmHasher)
+        val shown = checkNotNull(withAlbum(track, null, null, song).evidence)
+        assertEquals(listOf("MB1", "W1", "W2", "S1", "S2"), shown.ids)
+        assertEquals("S1", shownId("S1", song, shown))
+        // Under the rows that exist: *Web search*, *Web search in Hindi*; no row of their own.
+        val english = SourceChip(SourceId.WEB, ChipStatus.Pending, setOf(SourceId.WEB))
+        val hindi = SourceChip(SourceId.WEB, ChipStatus.Pending, setOf(SourceId.WEB), "hi")
+        assertEquals(listOf("S1"), english.own(shown.lines).map { it.id })
+        assertEquals(listOf("S2"), hindi.own(shown.lines).map { it.id })
+        assertTrue(shown.lines.all { it.source in setOf(SourceId.MUSICBRAINZ, SourceId.WIKIPEDIA, SourceId.WEB) })
+    }
+
+    @Test
     fun theArtistsLinesTheTrackHasAlreadyAreNotListedTwice() {
         val bio = draft(SourceId.WIKIPEDIA, "It topped the charts.")
         val artist = EvidenceSet.of(listOf(bio), JvmHasher)

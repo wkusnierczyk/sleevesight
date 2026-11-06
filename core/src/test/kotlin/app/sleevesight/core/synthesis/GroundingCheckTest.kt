@@ -11,6 +11,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class GroundingCheckTest {
@@ -477,5 +478,27 @@ class GroundingCheckTest {
         for (reply in held.drop(5)) assertEquals(InsightReply.NoEvidence, GroundingCheck.check(reply, empty, false))
         val shown = listOf("No", "NO single", "NO_EVIDENCES", "NO_EVIDENCE_X", "It is a song")
         for (partial in shown) assertFalse(GroundingCheck.mayBeNoEvidence(partial), partial)
+    }
+
+    @Test
+    fun `the song's plain sentence is a hedge, whole and as written, not a sign of revision`() {
+        val reply = "The sources give only release details for this song. It came out in 1974 [MB1]."
+        val checked = assertIs<InsightReply.Written>(GroundingCheck.check(reply, setOf("MB1"), allowModel = false))
+        assertEquals(
+            listOf(SentenceStatus.HEDGE, SentenceStatus.OK),
+            checked.grounded.paragraphs
+                .flatten()
+                .map { it.status },
+        )
+        assertNull(SelfRevision.of(reply))
+        val other = "The sources give only release details for this track."
+        val reworded = assertIs<InsightReply.Written>(GroundingCheck.check(other, emptySet(), allowModel = false))
+        assertEquals(
+            SentenceStatus.UNCITED,
+            reworded.grounded.paragraphs
+                .single()
+                .single()
+                .status,
+        )
     }
 }

@@ -79,6 +79,7 @@ class AppPipelineParts(
                 wiring.languageSearch(keys.sources.web.filterKeys { it in settings.webEngines }, settings.showGenres),
             dateForm = { phoneDateForm(phone()) },
             languageLines = wiring.languageLines,
+            songWeb = wiring.songWeb(keys.sources, settings),
         )
     }
 }

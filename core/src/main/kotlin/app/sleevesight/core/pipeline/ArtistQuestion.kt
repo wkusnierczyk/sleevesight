@@ -12,6 +12,12 @@ import app.sleevesight.core.synthesis.ItemPrompt
 import app.sleevesight.core.text.DateForm
 import kotlin.time.Instant
 
+/** An item's insight written while the AI service searches the web itself (`ItemInsights.writeSearching`). */
+internal interface ItemWebQuestion : WebQuestion {
+    /** The pages numbered so far, as the item's web lines, in their order. */
+    fun drafts(): List<EvidenceDraft>
+}
+
 /**
  * The artist's insight written while the AI service searches the web for the artist itself (#912,
  * *AI web search* set to *Up to 3 times*), when the sources say nothing about the artist: the
@@ -39,7 +45,7 @@ internal class ArtistQuestion(
     private val line: (WebPage) -> String? = { it.text },
     // The form the insight writes its dates in (`InsightPrompt.dateRule`).
     private val dates: DateForm = DateForm.APP,
-) : WebQuestion {
+) : ItemWebQuestion {
     // The lines of the pages numbered so far, in their order, by address.
     private val numbered = LinkedHashMap<String, EvidenceDraft>()
 
@@ -72,7 +78,7 @@ internal class ArtistQuestion(
     }
 
     /** The pages numbered so far, as the artist's web lines, in their order. */
-    fun drafts(): List<EvidenceDraft> = numbered.values.toList()
+    override fun drafts(): List<EvidenceDraft> = numbered.values.toList()
 
     /** The pages numbered so far, as evidence lines numbered from `S1`, as the tool gave them. */
     fun evidence(): EvidenceSet = EvidenceSet.of(drafts(), hasher)

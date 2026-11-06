@@ -65,4 +65,15 @@ class ItemPromptTest {
             ItemPrompt.build(subject, playing, normalized, FixtureEvidence.of(41), allowModel = true),
         )
     }
+
+    @Test
+    fun `the rule on listings stands in for the rule on a gap only when asked, and the version stays`() {
+        assertEquals(1, ItemPrompt.VERSION)
+        assertTrue(ItemPrompt.GAP_RULE in ItemPrompt.contract(allowModel = false))
+        assertFalse(ItemPrompt.ONLY_LISTINGS_RULE in ItemPrompt.contract(allowModel = false))
+        val listings = ItemPrompt.contract(allowModel = false, onlyListings = true)
+        assertTrue(ItemPrompt.ONLY_LISTINGS_RULE in listings)
+        assertFalse(ItemPrompt.GAP_RULE in listings)
+        assertTrue("The sources give only release details for this song." in ItemPrompt.ONLY_LISTINGS_RULE)
+    }
 }
