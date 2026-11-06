@@ -2,6 +2,7 @@ package app.sleevesight.core.pipeline
 
 import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.Scope
+import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
@@ -18,6 +19,7 @@ import app.sleevesight.core.sources.LanguageSearch
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.SourceResult
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
@@ -162,11 +164,18 @@ class GatherDeadlineTest {
         }
     }
 
+    /** The search in the track's language: Wikidata's language of the work is [work], after [workWait]. */
     private class Search(
         override val wikipedia: LanguageAdapter,
         override val web: LanguageAdapter,
     ) : LanguageSearch {
-        override suspend fun workLanguages(resolution: Resolution): Lookup<List<String>> = Lookup.Found(emptyList())
+        var work: List<String> = emptyList()
+        var workWait: Duration = Duration.ZERO
+
+        override suspend fun workLanguages(resolution: Resolution): Lookup<List<String>> {
+            delay(workWait)
+            return Lookup.Found(work)
+        }
 
         override suspend fun releaseLanguages(resolution: Resolution): Lookup<List<String>> = Lookup.Found(emptyList())
 
@@ -247,5 +256,128 @@ class GatherDeadlineTest {
             assertEquals(19.seconds, testScheduler.currentTime.milliseconds)
             assertEquals(Outcome.SongArticle, state.outcome(SourceId.WEB))
             assertTrue(events.none { it is PipelineEvent.GatherCut })
+        }
+
+    /** An English source answering a line after [wait], or unreachable while [down]. */
+    private class Source(
+        override val id: SourceId,
+    ) : SourceAdapter {
+        var wait: Duration = Duration.ZERO
+        var down = false
+
+        override suspend fun lookup(
+            track: NormalizedTrack,
+            resolution: Deferred<Resolution>,
+        ): SourceResult {
+            delay(wait)
+            if (down) return SourceResult(Outcome.Unreachable, emptyList(), wait)
+            return SourceResult(Outcome.SongArticle, listOf(line(id, "A line from ${id.tag}.")), wait)
+        }
+    }
+
+    /** A control that grants every step at once and writes nothing, keeping what the run gathered. */
+    private class Kept : RunControl by RunControl.Unattended(write = false) {
+        var gathered: Gathered? = null
+
+        override fun gathered(gathered: Gathered) {
+            this.gathered = gathered
+        }
+    }
+
+    private fun TrackState.languageLines(): List<String> =
+        evidence!!.lines.filter { it.language != null }.map { "${it.id} ${it.language}" }
+
+    @Test
+    fun `cut before the language is decided, a look again keeps what the run before found in it`() =
+        runTest {
+            settings = settings.copy(trackLanguageSearch = TrackLanguageSearch.ALWAYS)
+            val web = Source(SourceId.WEB)
+            val search = Search(LanguageLookup(SourceId.WIKIPEDIA, 1.seconds), LanguageLookup(SourceId.WEB, 1.seconds))
+            val pipeline = pipeline(listOf(Source(SourceId.MUSICBRAINZ), web), languageSearch = search)
+            val first = Kept()
+            val before = pipeline.run(tamil, first)
+            assertEquals(listOf("W1 ta", "S2 ta"), before.languageLines())
+
+            // The English lookups spend the whole budget: the language's are cut before it is decided.
+            web.wait = stalled
+            val events = recording(pipeline)
+            val state = pipeline.run(tamil, Kept(), lookAgain = LookAgain(first.gathered!!))
+
+            assertTrue(state.gathered)
+            assertEquals(before.inLanguage, state.inLanguage)
+            assertEquals(listOf("W1 ta", "S2 ta"), state.languageLines())
+            assertEquals(
+                listOf(
+                    PipelineEvent.GatherCut(state.normalized!!.lookupKey, listOf(SourceId.WEB), 20.seconds),
+                    PipelineEvent.GatherCut(
+                        state.normalized!!.lookupKey,
+                        listOf(SourceId.WIKIPEDIA, SourceId.WEB),
+                        Duration.ZERO,
+                        language = "ta",
+                    ),
+                ),
+                events.filterIsInstance<PipelineEvent.GatherCut>(),
+            )
+        }
+
+    @Test
+    fun `cut before the language is decided, a run asking again keeps what the run before found in it`() =
+        runTest {
+            settings = settings.copy(trackLanguageSearch = TrackLanguageSearch.ALWAYS)
+            val web = Source(SourceId.WEB).apply { down = true }
+            val search = Search(LanguageLookup(SourceId.WIKIPEDIA, 1.seconds), LanguageLookup(SourceId.WEB, 1.seconds))
+            val pipeline = pipeline(listOf(Source(SourceId.MUSICBRAINZ), web), languageSearch = search)
+            val first = Kept()
+            val before = pipeline.run(tamil, first)
+            assertEquals(listOf("W1 ta", "S1 ta"), before.languageLines())
+
+            // Back online, the web is asked again and stalls through the whole budget.
+            web.down = false
+            web.wait = stalled
+            val again = Kept()
+            val state = pipeline.run(tamil, again, again = first.gathered!!)
+
+            assertTrue(state.gathered)
+            assertEquals(Outcome.Unreachable, state.outcome(SourceId.WEB))
+            assertEquals(before.inLanguage, state.inLanguage)
+            assertEquals(listOf("W1 ta", "S1 ta"), state.languageLines())
+            assertEquals(emptySet(), again.gathered!!.languageInterrupted)
+        }
+
+    @Test
+    fun `cut while it decides the language with no language before, the search is asked again`() =
+        runTest {
+            settings = settings.copy(trackLanguageSearch = TrackLanguageSearch.ALWAYS)
+            // Latin letters name no language: Wikidata's language of the work does, and stalls.
+            val evidencias = nowPlaying("Evidências", "Chitãozinho & Xororó")
+            val search = Search(LanguageLookup(SourceId.WIKIPEDIA, 1.seconds), LanguageLookup(SourceId.WEB, 1.seconds))
+            search.workWait = stalled
+            val pipeline = pipeline(listOf(Source(SourceId.MUSICBRAINZ), web()), languageSearch = search)
+            val events = recording(pipeline)
+            val first = Kept()
+
+            val cut = pipeline.run(evidencias, first)
+
+            assertEquals(20.seconds, testScheduler.currentTime.milliseconds)
+            assertTrue(cut.gathered)
+            assertEquals(null, cut.inLanguage)
+            val gathered = first.gathered!!
+            assertEquals(setOf(SourceId.WIKIPEDIA, SourceId.WEB), gathered.languageInterrupted)
+            // What back online asks again by, with nothing English unreachable.
+            assertEquals(emptySet(), gathered.unreachable)
+            assertEquals(setOf(SourceId.WIKIPEDIA, SourceId.WEB), gathered.languageRetryable)
+            val line = EventLine.of(events.filterIsInstance<PipelineEvent.GatherCut>().single())
+            assertEquals("deadline   ${cut.normalized!!.lookupKey}: language search cut after 20000 ms", line)
+
+            // Asked again (back online, or a *Retry*), it searches in the language, and is not marked.
+            search.workWait = Duration.ZERO
+            search.work = listOf("Q5146")
+            val again = Kept()
+            val state = pipeline.run(evidencias, again, again = gathered)
+
+            assertEquals("pt", state.inLanguage?.language)
+            assertEquals(listOf("W1 pt", "S2 pt"), state.languageLines())
+            assertEquals(emptySet(), again.gathered!!.languageInterrupted)
+            assertEquals(emptySet(), again.gathered!!.languageRetryable)
         }
 }
