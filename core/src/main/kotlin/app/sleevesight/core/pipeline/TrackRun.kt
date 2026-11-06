@@ -15,7 +15,7 @@ import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.SourceResult
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -121,6 +121,9 @@ internal class TrackRun(
         )
 
     private val guard = CacheGuard(parts.cache, key, onEvent)
+
+    // The gather's deadline (#983), shared with the search in the track's language.
+    private val budget = GatherBudget(time.timeSource)
     private val labels =
         TrackLabels(
             parts.musicBrainzLabels,
@@ -150,7 +153,7 @@ internal class TrackRun(
             withContext(if (looksAgain) FreshLookups else EmptyCoroutineContext) {
                 gather()
                 // In the track's language (#902), before the evidence is assembled: the insight waits for it.
-                InLanguage(parts, input, control, guard, this@TrackRun) { state.value }.search()
+                InLanguage(parts, input, control, guard, budget, this@TrackRun) { state.value }.search()
                 control.gathered(
                     Gathered(state.value.sources, state.value.resolution, inLanguage = state.value.inLanguage),
                 )
@@ -190,7 +193,7 @@ internal class TrackRun(
     }
 
     // What an earlier run kept (#192); then the cache, but for a look again (#617); then the misses
-    // by name in parallel, with resolution alongside (D4).
+    // by name in parallel, with resolution alongside (D4), within the gather's deadline (#983).
     private suspend fun gather() {
         input.again?.let { again ->
             val asked = again.asked.filter { source -> enabled.any { it.id == source } }
@@ -203,12 +206,37 @@ internal class TrackRun(
         val resolution = CompletableDeferred<Resolution>()
         val made = CompletableDeferred<Boolean>()
         try {
-            coroutineScope {
-                resolve(resolution, made)
-                for (adapter in misses) launch { lookup(adapter, resolution, made) }
-            }
+            var resolving: Job? = null
+            budget
+                .within {
+                    resolving = resolve(resolution, made)
+                    for (adapter in misses) launch { lookup(adapter, resolution, made) }
+                }?.let { after -> cut(misses, resolving?.isCancelled == true, after) }
         } finally {
             control.ended(RunStep.LOOKUPS)
+        }
+    }
+
+    // What the gather's deadline cut (#983), [after] it ran: the resolution, when it was still
+    // [resolving], lands unreachable, and so does each source still pending, so a *Retry* (#724) or back online
+    // (#192) asks it again; none of it is kept in the cache. A look again (#617) shows what was found
+    // before, as for one that could not be reached.
+    private fun cut(
+        misses: List<SourceAdapter>,
+        resolving: Boolean,
+        after: Duration,
+    ) {
+        val pending = misses.map { it.id }.filter { state.value.sources[it] == SourceState.Pending }
+        if (pending.isEmpty() && !resolving) return
+        emit(PipelineEvent.GatherCut(key, pending, after, resolution = resolving))
+        if (resolving) {
+            val resolved = Resolution.unreachable(DEADLINE_REACHED).let { input.lookAgain?.resolution(it) ?: it }
+            emit(PipelineEvent.Resolved(key, resolved.outcome, after, resolved.failure))
+            update { it.copy(resolution = resolved) }
+        }
+        for (source in pending) {
+            val landed = SourceState.Done(SourceResult(Outcome.Unreachable, emptyList(), after), cached = false)
+            land(source, input.lookAgain?.kept(source, landed) ?: landed)
         }
     }
 
@@ -220,21 +248,18 @@ internal class TrackRun(
         return true
     }
 
+    // The resolution's request, when it makes one: none when MusicBrainz is off (no resolution, so
+    // none made), or the run before's resolution is used again (only with MusicBrainz on).
     private fun CoroutineScope.resolve(
         resolution: CompletableDeferred<Resolution>,
         made: CompletableDeferred<Boolean>,
-    ) {
-        if (!settings.isEnabled(SourceId.MUSICBRAINZ)) {
-            resolution.complete(Resolution.NONE)
-            made.complete(false)
-            return
+    ): Job? {
+        if (!settings.isEnabled(SourceId.MUSICBRAINZ) || resolvedBefore != null) {
+            resolution.complete(resolvedBefore ?: Resolution.NONE)
+            made.complete(resolvedBefore != null)
+            return null
         }
-        resolvedBefore?.let {
-            resolution.complete(it)
-            made.complete(true)
-            return
-        }
-        launch {
+        return launch {
             val started = time.timeSource.markNow()
             var resolved: Resolution? = null
             try {
@@ -337,7 +362,7 @@ internal class TrackRun(
             parts.adapters.mapNotNull { (state.value.sources[it.id] as? SourceState.Done)?.result }
         // The lines found in the track's language after the English ones (#902), so the English ids stay.
         val drafts =
-            playerLines() +
+            playerLines(nowPlaying, time.clock.now()) +
                 (results.flatMap { it.evidence } + state.value.languageDrafts()).filter {
                     settings.isEnabled(
                         it.source,
@@ -370,9 +395,6 @@ internal class TrackRun(
         return evidence
     }
 
-    // The release the player reports, as the simulator words it (`P` evidence).
-    private fun playerLines(): List<EvidenceDraft> = playerLines(nowPlaying, time.clock.now())
-
     internal companion object {
         val SOURCE_OFF: SourceState =
             SourceState.Done(SourceResult(Outcome.SourceOff, emptyList(), Duration.ZERO), cached = false)
@@ -382,6 +404,9 @@ internal class TrackRun(
         const val PROVISIONAL: String = "a request of its verification failed, so a later lookup may verify it"
 
         const val KEPT_BEFORE: String = "a look again shows lines found before, which keep their own lifetime (#617)"
+
+        /** Why a resolution the gather's deadline cut could not be made (#983, [Resolution.failure]). */
+        const val DEADLINE_REACHED: String = "GatherDeadline"
 
         fun nameOf(e: Throwable): String = e::class.simpleName ?: "Exception"
 

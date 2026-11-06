@@ -12,9 +12,11 @@ import app.sleevesight.core.sources.LanguageAdapter
 import app.sleevesight.core.sources.LanguageItems
 import app.sleevesight.core.sources.LanguageQuery
 import app.sleevesight.core.sources.LanguageSearch
+import app.sleevesight.core.sources.SourceResult
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
+import kotlin.time.Duration
 
 /**
  * A run's search in the track's language (#902; `design/architecture.md`, *Search in the track's
@@ -37,7 +39,9 @@ import kotlin.coroutines.cancellation.CancellationException
  * sources all came from the retrieval cache has no resolution, which the later hints and the lookups
  * need: it is made only then, MusicBrainz switched on (its answers held in memory for half an hour
  * in the app, `RememberedMusicBrainz`). While it decides and looks up, [TrackState.searchingInLanguage]
- * says so, and the track's sources are not yet all landed ([TrackState.gathered]).
+ * says so, and the track's sources are not yet all landed ([TrackState.gathered]). It runs within
+ * what the English lookups left of the gather's deadline ([budget], #983): once that is spent, the
+ * lookups still pending land unreachable, as the English ones do.
  *
  * Each lookup is kept in the retrieval cache under the track's key and the language
  * ([PipelineCache.result]), as the English ones are: not when unreachable or provisional, nor when
@@ -49,11 +53,13 @@ import kotlin.coroutines.cancellation.CancellationException
  * before found in the same language ([LookAgain.keptInLanguage]). Either searches whenever the run
  * before did, but under *Off*, in the language it named when the hints now name none.
  */
+@Suppress("LongParameterList") // The run's parts it shares, each one of the run's own.
 internal class InLanguage(
     private val parts: PipelineParts,
     private val input: RunInput,
     private val control: RunControl,
     private val guard: CacheGuard,
+    private val budget: GatherBudget,
     private val sink: RunSink,
     private val state: () -> TrackState,
 ) {
@@ -66,6 +72,9 @@ internal class InLanguage(
     // again (#617): its language, and each lookup's state.
     private val earlier: InLanguageState? = (input.lookAgain?.before ?: input.again)?.inLanguage
 
+    // The language decided, once it is.
+    private var language: Language? = null
+
     /** Searches in the track's language, when the setting and the switches have it searched. */
     suspend fun search() {
         val search = parts.languageSearch ?: return
@@ -76,7 +85,7 @@ internal class InLanguage(
         try {
             control.await(RunStep.LOOKUPS)
             try {
-                searchIn(search, adapters)
+                budget.within { searchIn(search, adapters) }?.let { after -> cut(adapters, after) }
             } finally {
                 control.ended(RunStep.LOOKUPS)
             }
@@ -111,6 +120,7 @@ internal class InLanguage(
                 ?.takeUnless { it == Languages.ENGLISH }
         sink.emit(PipelineEvent.LanguageFound(key, language?.code))
         if (language == null) return
+        this.language = language
         val pending = adapters.associate { it.id to SourceState.Pending }
         sink.update { it.copy(inLanguage = InLanguageState(language.code, pending)) }
         val kept = keptBefore(adapters, language)
@@ -128,6 +138,23 @@ internal class InLanguage(
             }
         coroutineScope {
             for (adapter in misses) launch { lookup(adapter, query, items, made) }
+        }
+    }
+
+    // What the gather's deadline cut (#983), [after] the search ran: each lookup still pending lands
+    // unreachable, so a later run asks it again, or the language's decision, which leaves none.
+    private fun cut(
+        adapters: List<LanguageAdapter>,
+        after: Duration,
+    ) {
+        val searched = language
+        val pending = adapters.filter { state().inLanguage?.sources?.get(it.id) == SourceState.Pending }
+        if (searched != null && pending.isEmpty()) return
+        sink.emit(PipelineEvent.GatherCut(key, pending.map { it.id }, after, language = searched?.code))
+        if (searched == null) return
+        for (adapter in pending) {
+            val landed = SourceState.Done(SourceResult(Outcome.Unreachable, emptyList(), after), cached = false)
+            land(adapter, searched, input.lookAgain?.keptInLanguage(searched.code, adapter.id, landed) ?: landed)
         }
     }
 
