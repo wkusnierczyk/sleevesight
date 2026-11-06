@@ -719,8 +719,10 @@ class AppGraph internal constructor(
             autoSearches.run(pipeline.state.map { it.track }, latestSettings, pipeline.onScreen, pipeline.liveParts)
         }
         // Every genre of the playing track's table has its definition looked up as soon as the genres
-        // are known, whether a panel is open or not (#786).
-        pipelineScope.launch { genreNotes.lookups.fetchAhead(pipeline.state.map { it.track }) }
+        // are known, whether a panel is open or not (#786), while lookups are allowed (#961).
+        pipelineScope.launch {
+            genreNotes.lookups.fetchAhead(pipeline.state.map { it.track }, pipeline.lookupsAllowed)
+        }
         // What the search in the track's language found about the artist and the album, kept once the
         // track's evidence is in, whether or not their insights are opened (#939).
         pipelineScope.launch { itemNotes.keepAhead(pipeline.state.map { it.track }) }
