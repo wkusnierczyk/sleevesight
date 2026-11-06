@@ -58,7 +58,14 @@ class MusicBrainzLabels(
                 .flatMap { (name, mbid) ->
                     val found = kept.tagsOf(mbid) { tags.artistTags(mbid) }
                     if (found == null) failed = true
-                    vocabulary.labelsFor(found.orEmpty(), artistPage(mbid), GenreLevel.ARTIST, name)
+                    // An Instrumental past the cap too, for a featured artist's (#996).
+                    vocabulary.labelsFor(
+                        found.orEmpty(),
+                        artistPage(mbid),
+                        GenreLevel.ARTIST,
+                        name,
+                        keepBeyondCap = setOf(TrackGenres.INSTRUMENTAL),
+                    )
                 }
         return LabelLookup(labels, failed)
     }

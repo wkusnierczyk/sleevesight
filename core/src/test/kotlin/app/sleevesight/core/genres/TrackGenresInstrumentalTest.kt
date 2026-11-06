@@ -203,6 +203,59 @@ class TrackGenresInstrumentalTest {
     }
 
     @Test
+    fun `an artist's Instrumental past their own five tags still counts as theirs`() {
+        // One source: B's sixth genre is Instrumental, kept past the cap as the sources keep it.
+        val sixth =
+            vocabulary.labelsFor(
+                listOf("jazz", "blues", "soul", "funk", "rock", "instrumental"),
+                level = GenreLevel.ARTIST,
+                artist = FEATURED,
+                keepBeyondCap = setOf(TrackGenres.INSTRUMENTAL),
+            )
+        assertEquals(listOf(false, false, false, false, false, true), sixth.map { it.beyondCap })
+        val one = genres(artist(ARTIST, "instrumental") + sixth, artists = listOf(ARTIST, FEATURED))
+        // On no row, but B's tags include it: A's Instrumental is not weak.
+        assertEquals(
+            5,
+            one.rows
+                .single { it.artist == FEATURED }
+                .labels.size,
+        )
+        assertTrue(one.all.none { it.genre.beyondCap })
+        assertNull(one.weakEvidence("instrumental"))
+        // Without it kept, B is taken for a featured artist without it.
+        val capped = artist(FEATURED, "jazz", "blues", "soul", "funk", "rock", "instrumental")
+        val without = genres(artist(ARTIST, "instrumental") + capped, artists = listOf(ARTIST, FEATURED))
+        assertEquals(WeakEvidence.Featured(FEATURED), without.weakEvidence("instrumental"))
+    }
+
+    @Test
+    fun `the AI's Instrumental is weak with a vocalist or a language, and its other genres as before`() {
+        val listed = vocabulary.labelsFor(listOf("instrumental", "blues"), level = GenreLevel.TRACK)
+        val japanese =
+            genres(
+                artist(ARTIST, "jazz"),
+                singing = Singing(languages = listOf("jpn")),
+            ).withAi(listed, "Model")
+        assertEquals(mapOf("jazz" to false, "blues" to false, "instrumental" to true), japanese.shown())
+        assertEquals(WeakEvidence.Language("jpn", "Japanese"), japanese.weakEvidence("instrumental"))
+        val sung =
+            genres(
+                artist(ARTIST, "jazz"),
+                singing = Singing(vocalists = listOf(FEATURED)),
+            ).withAi(listed, "Model")
+        assertEquals(WeakEvidence.Vocalist(FEATURED), sung.weakEvidence("instrumental"))
+        // A featured artist alone leaves a track's Instrumental, the AI's too, as it is.
+        val featured = genres(artist(ARTIST, "jazz"), artists = listOf(ARTIST, FEATURED)).withAi(listed, "Model")
+        assertEquals(false, featured.shown()["instrumental"])
+        // *Search with AI*'s genres, shown with no row.
+        val empty = TrackGenres(singing = Singing(languages = listOf("jpn")))
+        assertEquals(WeakEvidence.Language("jpn", "Japanese"), empty.aiSignOfVocals("instrumental"))
+        assertNull(empty.aiSignOfVocals("blues"))
+        assertNull(TrackGenres().aiSignOfVocals("instrumental"))
+    }
+
+    @Test
     fun `the recording marked instrumental leaves Instrumental as tagged, whatever else is said`() {
         val marked =
             Singing(instrumental = true, lyrics = true, languages = listOf("jpn"), vocalists = listOf("Someone"))

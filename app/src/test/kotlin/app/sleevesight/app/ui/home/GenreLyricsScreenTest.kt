@@ -7,8 +7,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ActivityScenario
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.pipeline.AiSearch
@@ -42,7 +46,8 @@ import org.robolectric.RobolectricTestRunner
 /**
  * Lyrics found keep Instrumental out of *Genres* (#996): a page *Find the lyrics* found drops its
  * chip, for the track it was found for only; and *Search with AI*'s genres, shown with no source's
- * genre, leave it out once lyrics are found.
+ * genre, leave it out once lyrics are found. The AI's Instrumental on a sung track is weak, with its
+ * line, among the rows' chips and among *Search with AI*'s.
  */
 @RunWith(RobolectricTestRunner::class)
 class GenreLyricsScreenTest {
@@ -123,6 +128,56 @@ class GenreLyricsScreenTest {
     }
 
     private fun count(tag: String) = compose.onAllNodesWithTag(tag, useUnmergedTree = true).fetchSemanticsNodes().size
+
+    private fun described(text: String) =
+        compose.onAllNodes(hasContentDescription(text), useUnmergedTree = true).fetchSemanticsNodes().size
+
+    // The weak genre's line, once its chip, tagged [chip], is tapped.
+    private fun lineUnder(chip: String): String {
+        compose.onNodeWithTag(chip).performClick()
+        compose.waitForIdle()
+        return compose
+            .onNodeWithTag(GENRE_WEAK_TAG)
+            .fetchSemanticsNode()
+            .config[SemanticsProperties.Text]
+            .single()
+            .text
+    }
+
+    @Test
+    fun theAisInstrumentalOnASungTrackIsWeakAmongTheRowsChipsWithItsLine() {
+        val listed = listOf(genre("instrumental", GenreLevel.TRACK), genre("blues", GenreLevel.TRACK))
+        // Artist A's Funk; the AI's list adds Instrumental and Blues to the track's row.
+        val funk = tagged.copy(rows = tagged.rows.map { row -> row.copy(labels = row.labels.drop(1)) })
+        val sung = funk.copy(singing = Singing(languages = listOf("jpn"))).withAi(listed, "Model")
+        show(mutableStateOf(track().copy(genres = sung)), feed { _, _ -> flowOf(AiSearch.None) }) {
+            assertEquals(1, described("Instrumental, from Model, weak evidence"))
+            assertEquals(1, described("Blues, from Model"))
+            assertEquals(
+                "MusicBrainz lists this song’s lyrics as Japanese, so it is likely not Instrumental.",
+                lineUnder(GENRE_PREFIX + "track:instrumental"),
+            )
+        }
+    }
+
+    @Test
+    fun searchWithAisInstrumentalOnASungTrackIsWeakWithItsLine() {
+        val listed =
+            AiSearch.Answered(
+                SearchAnswer.Genres(listOf(genre("instrumental", GenreLevel.TRACK), genre("blues", GenreLevel.TRACK))),
+                "Model",
+            )
+        val genres = feed { _, kind -> flowOf(if (kind == SearchKind.GENRES) listed else AiSearch.None) }
+        val sung = TrackGenres(singing = Singing(vocalists = listOf("Yurika Hanashima")))
+        show(mutableStateOf(track().copy(genres = sung, genresAssembled = true)), genres) {
+            assertEquals(1, described("Instrumental, from Model, weak evidence"))
+            assertEquals(1, described("Blues, from Model"))
+            assertEquals(
+                "MusicBrainz credits Yurika Hanashima with vocals on this track, most likely it is not Instrumental.",
+                lineUnder(GENRE_PREFIX + "track:instrumental"),
+            )
+        }
+    }
 
     @Test
     fun aPageFindTheLyricsFoundDropsInstrumentalsChip() {

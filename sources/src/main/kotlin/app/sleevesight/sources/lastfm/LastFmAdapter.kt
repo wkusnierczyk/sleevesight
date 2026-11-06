@@ -5,6 +5,7 @@ import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.genres.GenreLevel
 import app.sleevesight.core.genres.GenreVocabulary
+import app.sleevesight.core.genres.TrackGenres
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
@@ -216,6 +217,8 @@ class LastFmAdapter(
                             artist.url,
                             GenreLevel.ARTIST,
                             credited,
+                            // An Instrumental past the cap too, for a featured artist's (#996).
+                            keepBeyondCap = setOf(TrackGenres.INSTRUMENTAL),
                         )
                     } else {
                         emptyList()
@@ -306,9 +309,12 @@ class LastFmAdapter(
          * bio verified (#75). 3: without genres, no line of the artist's tags (#545); 1002, the
          * version without genres before it, holds that line and must not be served. 4: the lines of
          * counts and lists are marked `aggregate` (#617), which results kept before lack, so *Look
-         * again* would take a count that changed in them for something new.
+         * again* would take a count that changed in them for something new. 5: an artist's
+         * Instrumental past the labels' cap is kept, on no row (`GenreLabel.beyondCap`, #996), which
+         * results kept before lack, so a featured artist tagged Instrumental would be taken for one
+         * without it. Made afresh from the artist cache's answers ([ANSWERS_VERSION] unchanged).
          */
-        const val EXTRACTION_VERSION: Int = 4
+        const val EXTRACTION_VERSION: Int = 5
 
         /**
          * The extraction version of what the artist cache keeps ([ARTIST_PART],

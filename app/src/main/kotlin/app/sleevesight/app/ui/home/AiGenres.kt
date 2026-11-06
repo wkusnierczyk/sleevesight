@@ -74,7 +74,8 @@ internal fun AiGenres(
     var chosen by rememberSaveable(track.normalized.lookupKey) { mutableStateOf<String?>(null) }
     // Marked AI, as the genres the AI's list adds are (#762, #801), credited to [model].
     val row = GenreRow(GenreLevel.TRACK, null, genres.map { TrackLabel(it, emptyList(), aiModel = model) })
-    val labels = row.labels.map { PlacedLabel(row, it) }
+    // Instrumental on a sung track (#996): weak, as the rows' AI genres are, with its line.
+    val labels = row.labels.map { PlacedLabel(row, it, weak = track.genres.aiSignOfVocals(it.genre.identity) != null) }
     val open = genres.firstOrNull { it.identity == chosen }
     val handoff = rememberFocusHandoff()
     val chips = remember(track.normalized.lookupKey) { mutableMapOf<String, FocusRequester>() }
@@ -88,8 +89,16 @@ internal fun AiGenres(
             PanelRule()
             Box(Modifier.testTag(GENRE_PANEL_TAG)) {
                 // *Retry* under a failed lookup gives way to the loading line: the focus to the chip.
-                GenreDefinitionNote(genre, notes, search) {
-                    labels.firstOrNull { it.label.genre.identity == genre.identity }?.let { handoff.moveTo(chipOf(it)) }
+                // Spaced as a genre's body is ([GenreBody]).
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    GenreDefinitionNote(genre, notes, search) {
+                        labels.firstOrNull { it.label.genre.identity == genre.identity }?.let {
+                            handoff.moveTo(
+                                chipOf(it),
+                            )
+                        }
+                    }
+                    WeakEvidenceNote(track.genres.aiSignOfVocals(genre.identity), genre)
                 }
             }
         }

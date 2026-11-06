@@ -2,13 +2,17 @@ package app.sleevesight.app.ui.home
 
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import app.sleevesight.app.R
@@ -31,19 +35,44 @@ internal fun WeakName(
     selected: Boolean,
 ) {
     val described = stringResource(R.string.genre_weak, label)
-    val colour =
-        if (selected) {
-            LocalContentColor.current.copy(alpha = WEAK_SELECTED)
-        } else {
-            MaterialTheme.colorScheme.onSurfaceVariant
-        }
     Text(
         label,
         modifier = Modifier.semantics { contentDescription = described },
-        color = colour,
-        style = MaterialTheme.typography.labelLarge.copy(fontStyle = FontStyle.Italic, fontWeight = FontWeight.Normal),
+        color = weakColour(selected),
+        style = weakStyle(),
     )
 }
+
+/**
+ * A weak genre's name on its chip that the AI's genre list added (#996: Instrumental on a sung
+ * track), as [WeakName] draws a weak one, with the **AI** mark after it ([AiLabel]); a screen reader
+ * reads it "Instrumental, from Claude Haiku 5.5, weak evidence".
+ */
+@Composable
+internal fun WeakAiName(
+    label: String,
+    model: String,
+    selected: Boolean,
+) {
+    val described = stringResource(R.string.genre_weak, stringResource(R.string.genre_ai_added, label, model))
+    CompositionLocalProvider(LocalContentColor provides weakColour(selected)) {
+        ProvideTextStyle(weakStyle()) { AiLabel(label, described = described) }
+    }
+}
+
+// A weak name's colour on its chip: the notes' colour; [selected], the chip's text colour dimmed.
+@Composable
+private fun weakColour(selected: Boolean): Color =
+    if (selected) {
+        LocalContentColor.current.copy(alpha = WEAK_SELECTED)
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
+// A weak name's style on its chip: the chip's, in italics, at the regular weight.
+@Composable
+private fun weakStyle(): TextStyle =
+    MaterialTheme.typography.labelLarge.copy(fontStyle = FontStyle.Italic, fontWeight = FontWeight.Normal)
 
 // The selected weak chip's text, the chip's text colour at this alpha over the selected fill: dimmed
 // from about 15:1 and 12.6:1 against it, yet above 4.5:1, in Material's baseline light and dark
@@ -63,7 +92,16 @@ internal fun WeakEvidenceNote(
     track: TrackState,
     genre: GenreLabel,
 ) {
-    val why = track.genres.weakEvidence(genre.identity) ?: return
+    WeakEvidenceNote(track.genres.weakEvidence(genre.identity), genre)
+}
+
+/** The line [WeakEvidenceNote] shows for [genre], weak for the reason [why]; nothing for none. */
+@Composable
+internal fun WeakEvidenceNote(
+    why: WeakEvidence?,
+    genre: GenreLabel,
+) {
+    why ?: return
     val line =
         when (why) {
             is WeakEvidence.FewVotes ->

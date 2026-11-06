@@ -526,18 +526,7 @@ class RetrievalCacheTest {
             latency = 412.milliseconds + 7.nanoseconds,
             unverified = listOf(EvidenceDraft(source, Scope.ARTIST, "An unverified line.", null, at)),
             rejections = listOf(Rejection("Sundown", "a disambiguation page", Scope.SONG)),
-            genres =
-                listOf(
-                    GenreLabel(
-                        "folk rock",
-                        "folk",
-                        "Folk Rock",
-                        "folkrock",
-                        "https://www.last.fm/music/Gordon+Lightfoot",
-                        artist = "Gordon Lightfoot",
-                    ),
-                    GenreLabel("folk", "folk", "Folk", "folk"),
-                ),
+            genres = labels,
             labelArtists =
                 listOf(
                     ResolvedArtist("Gordon Lightfoot", "mb-gl"),
@@ -564,6 +553,21 @@ class RetrievalCacheTest {
                 ),
         )
     }
+
+    // The artists' labels; Instrumental past the cap, on no row (#996).
+    private val labels =
+        listOf(
+            GenreLabel(
+                "folk rock",
+                "folk",
+                "Folk Rock",
+                "folkrock",
+                "https://www.last.fm/music/Gordon+Lightfoot",
+                artist = "Gordon Lightfoot",
+            ),
+            GenreLabel("folk", "folk", "Folk", "folk"),
+            GenreLabel("instrumental", "score", "Instrumental", "instrumental", beyondCap = true),
+        )
 
     // The recording's tags, with their votes (#799).
     private val recordingTags =

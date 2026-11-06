@@ -426,7 +426,10 @@ private fun GenreChip(
         val label = placed.label.genre.label
         val model = placed.label.aiModel?.takeIf { placed.label.aiAdded }
         CompositionLocalProvider(LocalContentColor provides content) {
-            if (placed.weak) {
+            if (placed.weak && model != null) {
+                // The AI's Instrumental on a sung track (#996): weak, and still marked AI.
+                WeakAiName(label, model, selected)
+            } else if (placed.weak) {
                 WeakName(label, selected)
             } else if (model == null) {
                 Text(label, style = MaterialTheme.typography.labelLarge)

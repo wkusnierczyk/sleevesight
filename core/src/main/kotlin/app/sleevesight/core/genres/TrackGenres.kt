@@ -173,9 +173,11 @@ data class TrackGenres(
                         (label.votes ?: 0) < MIN_VOTES
                 placed.copy(weak = fewVotes || signOfVocals(placed) != null)
             }
+        // The AI's Instrumental is weighed as a track's (#996): weak with a vocalist or a language.
+        val aiMarked = added.map { it.copy(weak = signOfVocals(it) != null) }
         val byName = compareBy<PlacedLabel, String>(names) { it.label.genre.label }
         val order = byName.thenBy { it.label.genre.identity }
-        return marked.sortedWith(order) + added.sortedWith(order)
+        return marked.sortedWith(order) + aiMarked.sortedWith(order)
     }
 
     /**
@@ -211,15 +213,29 @@ data class TrackGenres(
      * ([Singing.instrumental]), where Instrumental stands as tagged. Lyrics found drop it instead
      * ([Singing.dropsInstrumental], [combineGenres]).
      */
-    private fun signOfVocals(placed: PlacedLabel): WeakEvidence.SignOfVocals? {
-        val weighed = placed.label.genre.identity == INSTRUMENTAL && !singing.instrumental
+    private fun signOfVocals(placed: PlacedLabel): WeakEvidence.SignOfVocals? =
+        signOfVocals(placed.label.genre.identity, placed.row)
+
+    /**
+     * The sign that the track is sung that leaves the genre [identity], the AI's for the track (#762,
+     * #773: *Search with AI*'s genres, shown with no row), at most weak (#996): as for a track's tag,
+     * a vocalist or a language, never a featured artist. Null for any other genre, or with none.
+     */
+    fun aiSignOfVocals(identity: String): WeakEvidence.SignOfVocals? = signOfVocals(identity, null)
+
+    // [signOfVocals] for [identity] on [row]; with none, the track's.
+    private fun signOfVocals(
+        identity: String,
+        row: GenreRow?,
+    ): WeakEvidence.SignOfVocals? {
+        val weighed = identity == INSTRUMENTAL && !singing.instrumental
         val vocalist = singing.vocalists.firstOrNull()
         val language = singing.languages.firstOrNull()
         return when {
             !weighed -> null
             vocalist != null -> WeakEvidence.Vocalist(vocalist)
             language != null -> WeakEvidence.Language(language, Languages.ofIso3(language)?.name)
-            else -> featured(placed.row)?.let { WeakEvidence.Featured(it) }
+            else -> row?.let { featured(it) }?.let { WeakEvidence.Featured(it) }
         }
     }
 
@@ -375,7 +391,14 @@ fun combineGenres(
             bySource
         }
     val labels = given.values.flatten()
-    val named = labels.filter { it.level == GenreLevel.ARTIST }.map { it.artist }.distinct()
+    // A label past its source's cap is on no row; it tells only what the artist's tags include.
+    val shown = given.mapValues { (_, labels) -> labels.filter { !it.beyondCap } }
+    val named =
+        shown.values
+            .flatten()
+            .filter { it.level == GenreLevel.ARTIST }
+            .map { it.artist }
+            .distinct()
     val order = artists.filter { it in named } + named.filter { it !in artists }
     val keys =
         listOf(GenreLevel.TRACK to null) + order.map { GenreLevel.ARTIST to it } + listOf(GenreLevel.ALBUM to null)
@@ -383,7 +406,7 @@ fun combineGenres(
         keys.mapNotNull { (level, artist) ->
             val combined =
                 combineLabels(
-                    given.mapValues { (_, labels) ->
+                    shown.mapValues { (_, labels) ->
                         labels.filter { it.level == level && (level != GenreLevel.ARTIST || it.artist == artist) }
                     },
                 )

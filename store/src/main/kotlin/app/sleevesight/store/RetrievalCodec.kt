@@ -80,7 +80,18 @@ internal object RetrievalCodec {
                 evidence = result.evidence.map(::draftJson),
                 unverified = result.unverified.map(::draftJson),
                 rejections = result.rejections.map { RejectionJson(it.subject, it.reason, it.scope.key) },
-                genres = result.genres.map { GenreJson(it.tag, it.family, it.label, it.identity, it.url, it.artist) },
+                genres =
+                    result.genres.map {
+                        GenreJson(
+                            it.tag,
+                            it.family,
+                            it.label,
+                            it.identity,
+                            it.url,
+                            it.artist,
+                            it.beyondCap,
+                        )
+                    },
                 labelArtists = result.labelArtists.map { LabelArtistJson(it.name, it.mbid) },
                 recordingTags = result.recordingTags?.let { RecordingTagsJson(it.mbid, it.tags, it.votes) },
                 firstReleased = result.firstReleased,
@@ -124,7 +135,16 @@ internal object RetrievalCodec {
                 // Kept results hold the artists' labels only: the track's and album's are asked apart.
                 genres =
                     stored.genres.map {
-                        GenreLabel(it.tag, it.family, it.label, it.identity, it.url, GenreLevel.ARTIST, it.artist)
+                        GenreLabel(
+                            it.tag,
+                            it.family,
+                            it.label,
+                            it.identity,
+                            it.url,
+                            GenreLevel.ARTIST,
+                            it.artist,
+                            beyondCap = it.beyondCap,
+                        )
                     },
                 labelArtists = stored.labelArtists.map { ResolvedArtist(it.name, it.mbid) },
                 recordingTags = stored.recordingTags?.let { RecordingTags(it.mbid, it.tags, it.votes) },
@@ -279,6 +299,8 @@ internal object RetrievalCodec {
         val identity: String,
         val url: String? = null,
         val artist: String? = null,
+        // A label past the cap (#996), on no row; one kept before it decodes without.
+        val beyondCap: Boolean = false,
     )
 
     @Serializable
