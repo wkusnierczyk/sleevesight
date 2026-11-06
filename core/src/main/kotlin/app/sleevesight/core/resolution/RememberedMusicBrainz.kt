@@ -14,7 +14,8 @@ import kotlin.time.TimeSource
  * MusicBrainz's answers, kept in memory for a short time ([lifetime]), so that asking again soon
  * after sends no request (`design/architecture.md`, *Preparing the next track*, D13). Each question
  * is answered by [musicBrainz] once; a search by name, one for the recordings released by a date
- * (#906), a recording, a recording's releases (#724), a work and an artist search are each kept by
+ * (#906), a recording, a recording's releases (#724), a work, an artist search, and a release group's
+ * releases, its official ones and a release's tracklist (#984) are each kept by
  * what was asked, at most [capacity] of each kind, the least recently used dropped first. An answer
  * that could not be obtained ([Lookup.Failed]) is not kept, so the next question asks again; one that
  * MusicBrainz gave, found or not, is.
@@ -55,6 +56,9 @@ class RememberedMusicBrainz(
     private val releases = Memory<String, MbRecording>()
     private val works = Memory<String, MbWork>()
     private val artists = Memory<String, MbArtistSearch>()
+    private val groups = Memory<String, List<MbRelease>>()
+    private val official = Memory<String, List<MbRelease>>()
+    private val tracklists = Memory<String, MbTracklist>()
 
     override suspend fun searchRecordings(
         title: String,
@@ -82,6 +86,15 @@ class RememberedMusicBrainz(
     override suspend fun searchArtists(name: String): Lookup<MbArtistSearch> =
         artists.answer(name) { musicBrainz.searchArtists(name) }
 
+    override suspend fun groupReleases(mbid: String): Lookup<List<MbRelease>> =
+        groups.answer(mbid) { musicBrainz.groupReleases(mbid) }
+
+    override suspend fun officialReleases(mbid: String): Lookup<List<MbRelease>> =
+        official.answer(mbid) { musicBrainz.officialReleases(mbid) }
+
+    override suspend fun tracklist(mbid: String): Lookup<MbTracklist> =
+        tracklists.answer(mbid) { musicBrainz.tracklist(mbid) }
+
     /** Forgets every answer kept, for *Clear history* (#547): the next question asks again. */
     suspend fun forget() {
         searches.forget()
@@ -90,6 +103,9 @@ class RememberedMusicBrainz(
         releases.forget()
         works.forget()
         artists.forget()
+        groups.forget()
+        official.forget()
+        tracklists.forget()
     }
 
     // One kind of question's answers, by what was asked.

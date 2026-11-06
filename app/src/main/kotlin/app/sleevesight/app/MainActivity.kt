@@ -88,6 +88,8 @@ class MainActivity : ComponentActivity() {
             aiSearches = graph.aiSearches,
             // The song's, the artist's and the album's insights under Key insights (#522).
             itemNotes = graph.itemNotes,
+            // The album's tracklist on the back of the cover (#984).
+            tracklists = graph.tracklists,
         )
     }
 
