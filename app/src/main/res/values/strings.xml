@@ -144,9 +144,10 @@
     <string name="settings_write_automatically_summary_end">Skip and Change will begin triggering insights from the next track.</string>
     <string name="settings_pause_auto_write">Saver</string>
     <string name="settings_pause_auto_write_summary">Stops automatic writing after a number of track changes while Sleevesight is not on screen, counted again from each time you open it. Opening Sleevesight resumes it.</string>
-    <!-- Reactive's choices (#625), in order of how much is written automatically; the same names
-         in the insight card's menu beside Write insight (#615). The stored value of On demand is
-         still NEVER. -->
+    <!-- The long names of Reactive's modes (#625), in order of how much is written automatically:
+         the insight card's menu beside Write insight (#615) and the descriptions that name a mode;
+         Reactive's buttons take the short names (settings_write_*_short, #947). The stored value
+         of On demand is still NEVER. -->
     <string name="settings_write_every_change">On track change (auto)</string>
     <string name="settings_write_when_skip">On track skip (auto)</string>
     <string name="settings_write_never">On demand</string>
