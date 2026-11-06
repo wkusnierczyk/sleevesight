@@ -361,7 +361,7 @@ internal fun chipColumnWidth(
     return remember(labels, mark, style, small, ai, density) {
         val widest = labels.maxOfOrNull { measurer.measure(it, style, softWrap = false, maxLines = 1).size.width } ?: 0
         val gap = with(density) { MARK_GAP.roundToPx() }
-        val marked = if (mark) measurer.measure(ai, small, softWrap = false, maxLines = 1).size.width + gap else 0
+        val marked = if (mark) measurer.markWidth(ai, small) + gap else 0
         with(density) { (widest + marked + 2 * CHIP_PADDING.roundToPx()).toDp() }
     }
 }

@@ -16,6 +16,7 @@ import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.platform.JvmResourceReader
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.sources.Resolution
+import app.sleevesight.core.sources.WebSearchOutcome
 import app.sleevesight.core.synthesis.AiSearchAnswers
 import app.sleevesight.core.synthesis.SearchAnswer
 import app.sleevesight.core.synthesis.SearchFacts
@@ -87,6 +88,38 @@ class AppAiSearchesTest {
             assertEquals(1, provider.requests)
             // Each panel its own search.
             assertEquals(AiSearch.Offered, searches.now(SearchKind.DATES))
+        }
+
+    @Test
+    fun `what the song is about is not offered with no web search, and asks nothing`() =
+        runTest {
+            // No web search engine in the parts: as with Exa web search or AI web search off (#908).
+            val searches = searches()
+            assertEquals(AiSearch.None, searches.now(SearchKind.EXPLAIN))
+            assertFalse(searches.ask(track, SearchKind.EXPLAIN, facts))
+            advanceUntilIdle()
+            assertEquals(0, provider.requests)
+            // The lyrics search is still offered, from the model's knowledge.
+            assertEquals(AiSearch.Offered, searches.now(SearchKind.LYRICS))
+        }
+
+    @Test
+    fun `what the song is about is offered with web search, and disabled with no AI service`() =
+        runTest {
+            fun withWeb(ai: AiAccess?) =
+                PipelineParts(
+                    normalizer = Normalizer(JvmAccentFolder),
+                    adapters = emptyList(),
+                    resolver = TrackResolver { _, _ -> Resolution.NONE },
+                    hasher = JvmHasher,
+                    ai = ai,
+                    cache = cache,
+                    webSearch = { WebSearchOutcome.Found(emptyList()) },
+                )
+            parts.value = withWeb(AiAccess(provider, Secret("key")))
+            assertEquals(AiSearch.Offered, searches().now(SearchKind.EXPLAIN))
+            parts.value = withWeb(null)
+            assertEquals(AiSearch.Unready, searches().now(SearchKind.EXPLAIN))
         }
 
     @Test
