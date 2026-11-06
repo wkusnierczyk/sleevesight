@@ -114,4 +114,28 @@ class AppGenreLibraryTest {
             advanceUntilIdle()
             assertEquals(emptyList<LibraryQuery>(), library.asked)
         }
+
+    @Test
+    fun `after a failure, reopening the panel asks nothing in the same play, a new play or Retry does`() =
+        runTest {
+            library.answer = Lookup.Failed("network")
+            val notes = notes()
+            val playing = track.copy(nowPlaying = track.nowPlaying.copy(play = 1))
+            notes.libraryLyrics(playing).first()
+            advanceUntilIdle()
+            assertEquals(1, library.asked.size)
+            // *Genres* closed and opened again, twice: the failure shown, nothing asked.
+            repeat(2) {
+                assertEquals(PanelLibrary.Unreachable, notes.libraryLyrics(playing).first())
+                advanceUntilIdle()
+            }
+            assertEquals(1, library.asked.size)
+            // The next play of the track asks again; so does *Retry*.
+            notes.libraryLyrics(track.copy(nowPlaying = track.nowPlaying.copy(play = 2))).first()
+            advanceUntilIdle()
+            assertEquals(2, library.asked.size)
+            notes.retryLibrary(playing)
+            advanceUntilIdle()
+            assertEquals(3, library.asked.size)
+        }
 }

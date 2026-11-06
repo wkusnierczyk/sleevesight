@@ -315,7 +315,7 @@ class AppGenreNotes private constructor(
         val known = combine(libraries, settings) { all, now -> all[query] to libraryLifetime(now) }
         return combine(parts, settings) { made, now -> made?.takeIf { asksLibrary(it, now) } }
             .distinctUntilChanged()
-            .onEach { made -> made?.takeIf { asksAgain(query) }?.let { askLibrary(it, track, query) } }
+            .onEach { made -> made?.takeIf { asksAgain(query, track) }?.let { askLibrary(it, track, query) } }
             .combine(known) { made, (entry, lifetime) ->
                 entry?.takeIf { made != null && holds(it, lifetime) }?.state
             }.distinctUntilChanged()
@@ -339,14 +339,20 @@ class AppGenreNotes private constructor(
         lifetime: Duration,
     ): Boolean = entry.state is PanelLibrary.Unreachable || clock.now() - entry.writtenAt < lifetime
 
-    // Whether a collection asks for [query] again: nothing held, or no longer ([holds]), a failure, or
-    // an answer read from the retrieval cache, read again (no request), as that cache expires it.
-    private fun asksAgain(query: LibraryQuery): Boolean {
+    // Whether a collection for [track] asks for [query] again: nothing held, or no longer ([holds]); a
+    // failure of another play than [track]'s (one of this play waits for *Retry*, so reopening *Genres*
+    // in an outage sends nothing); or an answer read from the retrieval cache, read again (no
+    // request), as that cache expires it.
+    private fun asksAgain(
+        query: LibraryQuery,
+        track: TrackState,
+    ): Boolean {
         val entry = libraries.value[query]
-        return entry == null ||
-            entry.state is PanelLibrary.Unreachable ||
-            query in fromStore ||
-            !holds(entry, libraryLifetime(settings.value))
+        return when {
+            entry == null -> true
+            entry.state is PanelLibrary.Unreachable -> failedIn[query] != Played(track.nowPlaying.play)
+            else -> query in fromStore || !holds(entry, libraryLifetime(settings.value))
+        }
     }
 
     private fun libraryLifetime(now: Settings?): Duration =
@@ -384,6 +390,7 @@ class AppGenreNotes private constructor(
                         }
                         is LibraryAnswer.Failed -> {
                             events(PipelineEvent.SourceFailed(key, SourceId.LRCLIB, answer.reason))
+                            failedIn[query] = Played(track.nowPlaying.play)
                             PanelLibrary.Unreachable
                         }
                         null -> null
@@ -400,6 +407,14 @@ class AppGenreNotes private constructor(
     private val libraries = MutableStateFlow<Map<LibraryQuery, Entry<PanelLibrary>>>(emptyMap())
     private val libraryAsked: MutableSet<LibraryQuery> = ConcurrentHashMap.newKeySet()
     private val fromStore: MutableSet<LibraryQuery> = ConcurrentHashMap.newKeySet()
+
+    // The play each query's last failure came in (`NowPlaying.play`), so a failure is asked about again
+    // only on *Retry* or in another play; a track no play counted ([Played.play] null) only on *Retry*.
+    private val failedIn = ConcurrentHashMap<LibraryQuery, Played>()
+
+    private data class Played(
+        val play: Long?,
+    )
 
     override fun reason(
         track: TrackState,

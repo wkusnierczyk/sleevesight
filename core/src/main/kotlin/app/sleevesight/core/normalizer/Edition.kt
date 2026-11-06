@@ -97,7 +97,7 @@ object Edition {
         )
 
     /** The words that name another recording or another kind of release, with their inflections. */
-    internal val OTHER_RECORDINGS: Set<String> =
+    private val OTHER_RECORDINGS =
         setOf(
             "live",
             "demo",

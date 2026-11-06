@@ -2,7 +2,6 @@ package app.sleevesight.core.lyrics
 
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
-import app.sleevesight.core.normalizer.Edition
 import app.sleevesight.core.resolution.Lookup
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.NonCancellable
@@ -48,9 +47,9 @@ data class LibraryQuery(
          * The query for [track], played as [nowPlaying] reports it; null without a title, an artist,
          * or the player's length (or one LRCLIB does not take, below a second or over an hour): a
          * match not held to the track's length could be another recording's, and drop a real
-         * Instrumental. Null too when normalizing the title removed what tells one mix from another
-         * ([removedVersion]): "Song - Instrumental Version" is asked for as "Song", whose vocal mix,
-         * of the same album and length, LRCLIB would give.
+         * Instrumental. Null too when normalizing the title removed what may tell one mix from another
+         * ([removedVersion]): "Song - Off Vocal Version" would be asked for as "Song", whose vocal
+         * mix, of the same album and length, LRCLIB would give.
          */
         fun of(
             track: NormalizedTrack,
@@ -58,38 +57,52 @@ data class LibraryQuery(
         ): LibraryQuery? {
             val seconds = nowPlaying.duration?.let(::seconds)?.takeIf { it in 1..MAX_SECONDS }
             val named = track.title.isNotBlank() && track.primary.isNotBlank()
-            return seconds?.takeIf { named && !removedVersion(track, nowPlaying.title) }?.let {
+            return seconds?.takeIf { named && !removedVersion(track) }?.let {
                 LibraryQuery(track.primary, track.title, nowPlaying.album?.trim()?.takeIf(String::isNotEmpty), it)
             }
         }
 
         /**
-         * Whether normalizing [title], the player's, into [track]'s removed a word that names another
-         * recording than the song's own (#997): an instrumental, karaoke or backing track, a remix, a
-         * live or acoustic take and the like (`Edition.OTHER_RECORDINGS`, [VERSION_WORDS]), or a
-         * variant (`NormalizedTrack.variant`: "(felt piano)", "(acoustic)").
+         * Whether normalizing [track]'s title removed what may tell one recording from another (#997):
+         * a variant (`NormalizedTrack.variant`: "(felt piano)", "(acoustic)"), or a dropped suffix
+         * (`NormalizedTrack.dropped`) with a word not among [SAFE_WORDS] or a year. Only the suffixes
+         * known to name the song's own recording pass ("2006 Remaster", "Radio Edit", "Album
+         * Version"); any other ("Off Vocal Version", "No Vocals Version", "Live") may be another
+         * mix, which LRCLIB, asked by the plain title, would take for the vocal one.
          */
-        fun removedVersion(
-            track: NormalizedTrack,
-            title: String,
-        ): Boolean {
-            val kept = words(track.title)
-            return track.variant != null || words(title).any { it !in kept && it in VERSION_WORDS }
-        }
+        fun removedVersion(track: NormalizedTrack): Boolean =
+            track.variant != null ||
+                track.dropped?.let { dropped -> words(dropped).any { it !in SAFE_WORDS && !YEAR.matches(it) } } == true
 
-        /** The words that name another recording: `Edition`'s, and the abbreviations players use. */
-        val VERSION_WORDS: Set<String> =
-            Edition.OTHER_RECORDINGS + setOf("inst", "instr", "backing", "dub", "rmx", "piano", "acapella", "cappella")
+        /**
+         * The words of a dropped suffix that leave the recording the song's own: a remaster, an edit,
+         * the single's or the album's version, mono or stereo, the explicit or the clean one.
+         */
+        val SAFE_WORDS: Set<String> =
+            setOf(
+                "remaster",
+                "remastered",
+                "radio",
+                "edit",
+                "single",
+                "album",
+                "version",
+                "mono",
+                "stereo",
+                "explicit",
+                "clean",
+            )
+
+        private val YEAR = Regex("[0-9]{4}")
 
         // [text]'s words, lowercased: its runs of letters and digits.
-        private fun words(text: String): Set<String> =
+        private fun words(text: String): List<String> =
             text
                 .lowercase()
                 .map { if (it.isLetterOrDigit()) it else ' ' }
                 .joinToString("")
                 .split(' ')
                 .filter { it.isNotEmpty() }
-                .toSet()
 
         /** [duration] rounded to whole seconds, half a second up. */
         fun seconds(duration: Duration): Long = (duration.inWholeMilliseconds + HALF) / MILLIS

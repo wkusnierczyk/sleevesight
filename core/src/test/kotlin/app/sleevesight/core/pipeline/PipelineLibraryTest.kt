@@ -245,4 +245,25 @@ class PipelineLibraryTest {
             assertEquals(listOf("Kokoro", "Kokoro (Deluxe)"), library.asked.map { it.album })
             assertFalse(corrected.instrumental())
         }
+
+    @Test
+    fun `an off-vocal or no-vocals mix is never asked about, nor served the vocal mix's kept answer`() =
+        runTest {
+            val library = FakeLibrary(Lookup.Found(LibraryLyrics.LYRICS))
+            val cache = MemoryCache()
+            // The vocal mix asked about first: its lyrics kept.
+            assertFalse(pipeline(library, cache, time = PipelineTime()).run(nasnusa, write = false).instrumental())
+            assertEquals(1, cache.library.size)
+            for (title in listOf("Nasnusa - Off Vocal Version", "Nasnusa - No Vocals Version")) {
+                val mix =
+                    pipeline(
+                        library,
+                        cache,
+                        time = PipelineTime(),
+                    ).run(nasnusa.copy(title = title), write = false)
+                assertTrue(mix.instrumental(), title)
+                assertNull(mix.genres.singing.library, title)
+            }
+            assertEquals(1, library.asked.size)
+        }
 }

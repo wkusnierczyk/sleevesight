@@ -47,21 +47,39 @@ class LibraryQueryTest {
     }
 
     @Test
-    fun `no query when normalizing removed what tells the mix apart, one when it removed an edition`() {
+    fun `no query when normalizing removed anything but a suffix known to be the song's own recording`() {
         for (title in listOf(
+            "Nasnusa - Off Vocal Version",
+            "Nasnusa - No Vocals Version",
             "Nasnusa - Instrumental Version",
             "Nasnusa - Karaoke Version",
             "Nasnusa - Backing Track Version",
             "Nasnusa - Live",
+            "Nasnusa - Demo",
             "Nasnusa - Acoustic Version",
             "Nasnusa - Club Remix Version",
             "Nasnusa (felt piano)",
         )) {
             assertNull(queryOf(playing.copy(title = title)), title)
         }
-        assertEquals("Nasnusa", queryOf(playing.copy(title = "Nasnusa - 2024 Remaster"))?.title)
-        assertEquals("Nasnusa", queryOf(playing.copy(title = "Nasnusa - Radio Edit"))?.title)
-        // A word the title keeps is asked with it, so LRCLIB matches that mix itself.
+        for (title in listOf(
+            "Nasnusa - 2024 Remaster",
+            "Nasnusa - Remastered 2011",
+            "Nasnusa - Remastered",
+            "Nasnusa - Radio Edit",
+            "Nasnusa - Single Edit",
+            "Nasnusa - Single Version",
+            "Nasnusa - Album Version",
+            "Nasnusa - Mono",
+            "Nasnusa - Stereo Version",
+            "Nasnusa - Explicit Version",
+            "Nasnusa - Clean Version",
+        )) {
+            assertEquals("Nasnusa", queryOf(playing.copy(title = title))?.title, title)
+        }
+        // A word the title keeps is asked with it, so LRCLIB matches that mix itself; a featured
+        // artist moved to the artists, or the work it is from, is no other recording.
         assertEquals("Live Forever", queryOf(playing.copy(title = "Live Forever"))?.title)
+        assertEquals("Nasnusa", queryOf(playing.copy(title = "Nasnusa (feat. Yurika Hanashima)"))?.title)
     }
 }
