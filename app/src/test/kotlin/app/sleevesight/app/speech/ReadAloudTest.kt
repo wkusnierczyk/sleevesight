@@ -1,14 +1,18 @@
 package app.sleevesight.app.speech
 
 import app.sleevesight.app.pipeline.GenreReason
+import app.sleevesight.app.pipeline.ItemShown
 import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.app.ui.home.HomeFixtures.carefree
 import app.sleevesight.app.ui.home.HomeFixtures.sundown
 import app.sleevesight.app.ui.home.HomeFixtures.track
 import app.sleevesight.app.ui.home.HomeFixtures.written
 import app.sleevesight.app.ui.home.SpokenWords
+import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.pipeline.InsightState
+import app.sleevesight.core.pipeline.ItemEvidence
+import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.settings.ReadAloudMusic
 import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.CoroutineScope
@@ -200,6 +204,20 @@ class ReadAloudTest {
         )
         assertEquals(listOf("Why is this folk rock?", "It is folk rock."), speech.spoken.single())
         assertEquals(Reading.genreReason("folk rock"), readAloud.reading.value?.id)
+    }
+
+    @Test
+    fun anItemsInsightReadsThroughAPassingGatheringAndALaterOneStopsIt() {
+        val written = written("It is folk rock [MB1].")
+        val items = MutableStateFlow<ItemShown>(ItemShown.Gathering)
+        readAloud.readItem(shown, "artist", written, items)
+        // A flow followed afresh starts gathering: no other insight.
+        assertEquals(Reading.item("artist"), readAloud.reading.value?.id)
+        items.value = ItemShown.Shown(written, ItemEvidence(EvidenceSet.of(emptyList(), JvmHasher), emptyMap()))
+        assertEquals(Reading.item("artist"), readAloud.reading.value?.id)
+        // Its evidence dropped later (*Clear history*): the reading stops.
+        items.value = ItemShown.Gathering
+        assertNull(readAloud.reading.value)
     }
 
     @Test

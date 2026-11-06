@@ -14,11 +14,13 @@ import app.sleevesight.core.sources.WebSearcher
 import app.sleevesight.core.synthesis.AiSearchAnswers
 import app.sleevesight.core.synthesis.AiSearchPrompt
 import app.sleevesight.core.synthesis.CardKind
+import app.sleevesight.core.synthesis.CitedPage
 import app.sleevesight.core.synthesis.SearchAnswer
 import app.sleevesight.core.synthesis.SearchFacts
 import app.sleevesight.core.synthesis.SearchKind
 import app.sleevesight.core.synthesis.SearchReading
 import app.sleevesight.core.synthesis.WebPrompt
+import app.sleevesight.core.text.DateForm
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
@@ -97,7 +99,8 @@ data class KeptSearch(
  * An answer is the panel's alone: it never enters the evidence, the insight, the track's genre
  * labels, *Sources* or what is read aloud. A cache that throws is a miss, and a keep that fails
  * keeps nothing. Each state comes with its time by [clock], in whole milliseconds, as the cache
- * keeps it, so the screen and the cache count *Keep history for* from the same time.
+ * keeps it, so the screen and the cache count *Keep history for* from the same time. A prose
+ * answer's prompt asks for dates in the form [dates] gives as it is built (#957), which no key holds.
  *
  * *AI web search* (#801, [web], the web search engine, `Settings.aiWebSearch`): the question is
  * asked as [WebQuestions] asks it, *Once* or *Up to 3 times* from web pages, or from the model's
@@ -107,7 +110,14 @@ data class KeptSearch(
  * the web can be searched. It is kept with the addresses of the pages its searches found, which
  * check it again as it is read, and with how it was asked ([SearchWay]: automatically or not, what
  * it cost), in an envelope ([Kept]); a reply kept before #801 is read as it is.
+ *
+ * What the song is about ([SearchKind.EXPLAIN], #908) is asked only from the web: not offered at
+ * all ([offered]) while *AI web search* is off as used, and no key then. It is asked as
+ * [ExplainQuestion] asks it, from the track's evidence about the song and the pages its searches
+ * find, all numbered as the prompt gave them, which are kept with it ([Kept.sources]) so a kept
+ * explanation is read against the same pages.
  */
+@Suppress("LongParameterList") // Where answers are asked, kept and read, the time, the web, and the dates' form.
 class AiSearches(
     private val ai: AiAccess?,
     private val cache: PipelineCache,
@@ -115,6 +125,7 @@ class AiSearches(
     private val answers: AiSearchAnswers,
     private val clock: Clock = Clock.System,
     private val web: WebSearcher? = null,
+    private val dates: () -> DateForm = { DateForm.APP },
 ) {
     /**
      * The key of [track]'s search of [kind] under [settings], or null when no AI service is ready;
@@ -129,13 +140,18 @@ class AiSearches(
         val access = ai?.takeIf { settings.writeInsights }
         val model = access?.let { settings.model(it.provider.id) }
         val aboutGenre = kind == SearchKind.DEFINITION
-        val noGenre = aboutGenre && genre == null
-        if (access == null || model == null || noGenre) return null
         val fromWeb = used(kind, settings) != AiWebSearch.OFF
+        // A definition with no genre, or what the song is about with no web search (#908): no question.
+        val unasked = (aboutGenre && genre == null) || (kind == SearchKind.EXPLAIN && !fromWeb)
+        if (access == null || model == null || unasked) return null
         return CardKey(
             kind = CardKind.SEARCH,
-            track = if (aboutGenre) GENRE_ENTITY else track.normalized,
-            duration = if (aboutGenre) null else track.nowPlaying.duration,
+            entity =
+                CardEntity.Track(
+                    track = if (aboutGenre) GENRE_ENTITY else track.normalized,
+                    duration = if (aboutGenre) null else track.nowPlaying.duration,
+                    subject = subject(track, kind, genre),
+                ),
             evidenceFingerprint = NO_FINGERPRINT,
             promptVersion = AiSearchPrompt.version(kind, fromWeb),
             styleHash = styleHash(hasher),
@@ -144,9 +160,19 @@ class AiSearches(
             // From the model's own knowledge, whatever *Model's own knowledge* says, unless from the web.
             modelKnowledge = !fromWeb,
             effort = settings.effort(access.provider.id),
-            subject = subject(track, kind, genre),
         )
     }
+
+    /**
+     * Whether a question of [kind] is offered at all under [settings], an AI service ready or not:
+     * all but [SearchKind.EXPLAIN] (#908), which only with a web search engine ([web]) and *AI web
+     * search* on as used (`Settings.aiWebSearchUsed`: off while Exa web search is). With no AI
+     * service ready it is offered disabled, as the others are.
+     */
+    fun offered(
+        kind: SearchKind,
+        settings: Settings,
+    ): Boolean = kind != SearchKind.EXPLAIN || (web != null && settings.aiWebSearchUsed != AiWebSearch.OFF)
 
     /**
      * How a question of [kind] searches the web under [settings] (#801): *AI web search* as used
@@ -205,7 +231,7 @@ class AiSearches(
                 // A search that found no page: nothing found, no call made.
                 SearchReading.NothingUsable
             } else {
-                answers.read(kind, kept.reply, track.normalized.artists, kept.pages)
+                answers.read(kind, kept.reply, track.normalized.artists, kept.pages, kept.sources)
             }
         return reading to way
     }
@@ -244,9 +270,11 @@ class AiSearches(
             }
         show(SearchState.Searching(web = search != AiWebSearch.OFF), now())
         val base = CompletionRequest(key.model, "", maxTokensFor(key.effort), key.effort)
-        val reply = questions.ask(question(kind, facts), search, asking.limit, base, counted)
+        val explain = ExplainQuestion.of(kind, facts, track.evidence, dates())
+        val reply = questions.ask(explain ?: question(kind, facts), search, asking.limit, base, counted)
         val pages = reply.pages?.map(WebPage::url)
-        val kept = Kept(reply.text, pages, asking.automatic, reply.cost.searches, reply.cost.calls)
+        val kept =
+            Kept(reply.text, pages, asking.automatic, reply.cost.searches, reply.cost.calls, explain?.sources)
         val end = reply.end
         val reading =
             when {
@@ -275,7 +303,7 @@ class AiSearches(
     ): WebQuestion {
         val genres = answers.genreNames
         return object : WebQuestion {
-            override val knowledge: String get() = AiSearchPrompt.build(kind, facts, genres)
+            override val knowledge: String get() = AiSearchPrompt.build(kind, facts, genres, dates())
             override val query: String get() = WebPrompt.query(kind, facts)
 
             override fun once(pages: List<WebPage>): String = WebPrompt.once(kind, facts, pages, genres)
@@ -310,10 +338,13 @@ class AiSearches(
     /**
      * What a question keeps in the synthesis cache (#801): its [reply]; with web search, the
      * addresses of the [pages] its searches found (none found: an empty list; from the model's
-     * knowledge: null); whether it started by itself ([automatic]); and what it cost ([searches],
-     * [calls]). Kept as JSON marked [MARK]; a text without the mark is a reply kept before #801,
+     * knowledge: null); whether it started by itself ([automatic]); what it cost ([searches],
+     * [calls]); and, for what the song is about (#908), the pages its prompt numbered, which its
+     * citations name ([sources]; null for any other). Kept as JSON marked [MARK]; a text without the
+     * mark is a reply kept before #801,
      * from the model's knowledge, by a tap or not, which reads as one asked by a tap.
      */
+    @Suppress("LongParameterList") // One for each thing kept, and the mark.
     @Serializable
     internal class Kept(
         val reply: String,
@@ -321,6 +352,7 @@ class AiSearches(
         val automatic: Boolean = false,
         val searches: Int = 0,
         val calls: Int = 0,
+        val sources: List<CitedPage>? = null,
         @SerialName(MARK) val mark: Int = 1,
     ) {
         fun text(): String = KEPT_JSON.encodeToString(serializer(), this)
@@ -374,7 +406,7 @@ class AiSearches(
         ): String =
             when (kind) {
                 SearchKind.DATES -> kind.key + "\n" + albums.albumKey(track.nowPlaying.album.orEmpty())
-                SearchKind.GENRES, SearchKind.LYRICS -> kind.key
+                SearchKind.GENRES, SearchKind.LYRICS, SearchKind.EXPLAIN -> kind.key
                 SearchKind.DEFINITION -> kind.key + "\n" + genre.orEmpty()
             }
 

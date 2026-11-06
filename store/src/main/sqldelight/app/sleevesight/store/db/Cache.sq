@@ -64,7 +64,9 @@ CREATE TABLE artist_result (
 CREATE INDEX artist_result_used_at ON artist_result (used_at, size_bytes);
 
 -- A written insight or card, by the full synthesis key (R2, D14), the reasoning effort included
--- (`low`, `medium`, `high` or `default`).
+-- (`low`, `medium`, `high` or `default`). `rewritten` (version 3, #854): what the rewrite that wrote
+-- it changed (`RewritePart.encode`: its parts' keys, a space between), null for one written the
+-- first time.
 CREATE TABLE synthesis (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     kind TEXT NOT NULL,
@@ -80,6 +82,7 @@ CREATE TABLE synthesis (
     written_at INTEGER NOT NULL,
     used_at INTEGER NOT NULL,
     size_bytes INTEGER NOT NULL,
+    rewritten TEXT,
     UNIQUE (kind, entity_key, evidence_fingerprint, prompt_version, style_hash, provider, model, model_knowledge, effort)
 );
 
@@ -229,6 +232,11 @@ DELETE FROM artist_result WHERE id = :id;
 artistResultPurgeSource:
 DELETE FROM artist_result WHERE instr(sources, ' ' || :tag || ' ') > 0 AND stored_at <= :storedAtOrBefore;
 
+-- Rows with exactly these sources stored at or before the cutoff: the parts kept as long as the
+-- cards (#885), whose sources column is `ArtistResultCache.HISTORY`.
+artistResultPurgeSources:
+DELETE FROM artist_result WHERE sources = :sources AND stored_at <= :storedAtOrBefore;
+
 -- Each row's sources, for purging the rows that hold a source the app no longer has.
 artistResultSources:
 SELECT id, stored_at, sources FROM artist_result;
@@ -237,10 +245,14 @@ SELECT id, stored_at, sources FROM artist_result;
 artistResultDeleteAll:
 DELETE FROM artist_result;
 
+-- Every artist-level result but those of the parts named, kept whatever that switch says (#885).
+artistResultDeleteAllBut:
+DELETE FROM artist_result WHERE part NOT IN ?;
+
 -- Synthesis
 
 synthesisGet:
-SELECT id, text, written_at
+SELECT id, text, written_at, rewritten
 FROM synthesis
 WHERE kind = :kind
   AND entity_key = :entityKey
@@ -251,6 +263,21 @@ WHERE kind = :kind
   AND model = :model
   AND model_knowledge = :modelKnowledge
   AND effort = :effort;
+
+-- The insights and cards kept for the same subject, evidence, prompt, style and model knowledge as a
+-- key, written with another AI service, model or effort than its own (#911), the most recently
+-- written first.
+synthesisOthers:
+SELECT id, text, written_at, rewritten, provider, model, effort
+FROM synthesis
+WHERE kind = :kind
+  AND entity_key = :entityKey
+  AND evidence_fingerprint = :evidenceFingerprint
+  AND prompt_version = :promptVersion
+  AND style_hash = :styleHash
+  AND model_knowledge = :modelKnowledge
+  AND (provider != :provider OR model != :model OR effort != :effort)
+ORDER BY written_at DESC, id DESC;
 
 synthesisRemoveKey:
 DELETE FROM synthesis
@@ -267,9 +294,9 @@ WHERE kind = :kind
 synthesisInsert:
 INSERT INTO synthesis (
     kind, entity_key, evidence_fingerprint, prompt_version, style_hash, provider, model, model_knowledge, effort,
-    text, written_at, used_at, size_bytes
+    text, written_at, used_at, size_bytes, rewritten
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 synthesisTouch:
 UPDATE synthesis SET used_at = :usedAt WHERE id = :id;

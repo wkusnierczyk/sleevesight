@@ -89,7 +89,7 @@ class PageLinksTest {
     ): TrackLabel {
         val shown = tag.replaceFirstChar(Char::uppercase)
         val genre = GenreLabel(tag, "family", shown, tag, level = level, artist = artist)
-        // A track's label with the votes to lead the folded chips (#799), as the tests' chips are the track's.
+        // A track's label with the votes to be backed (#799, #875): no chip here is weak.
         val votes = TrackGenres.MIN_VOTES.takeIf { level == GenreLevel.TRACK }
         return TrackLabel(genre, listOf(LabelCredit(LabelSource.LASTFM, "https://example.org/$tag")), votes)
     }
@@ -234,11 +234,13 @@ class PageLinksTest {
             compose.waitForIdle()
             onGenres()
             assertEquals(genresPage, route())
-            compose.onNodeWithTag(GENRE_PANEL_HEADING_TAG).assertTextEquals("Folk")
+            // Every genre's panel (#875), Folk's first.
+            compose.onAllNodesWithTag(GENRE_PANEL_HEADING_TAG)[0].assertTextEquals("Folk")
             compose
-                .onNodeWithTag(
+                .onAllNodesWithTag(
                     GENRES_ROW_PREFIX + "1",
-                ).assert(hasText(app.getString(R.string.home_genres_artist_row)))
+                )[0]
+                .assert(hasText(app.getString(R.string.home_genres_artist_row)))
             backArrow()
             onHome()
             assertEquals(scrolled, top(link))
@@ -267,15 +269,15 @@ class PageLinksTest {
                 assertEquals(name.hashCode(), nav.currentDestination?.id)
                 assertEquals(name, nav.currentDestination?.route)
             }
-            // Every genre's panel (#772): here, the one.
-            compose.onNodeWithTag(GENRE_PANEL_HEADING_TAG).assertTextEquals("Folk")
+            // Every genre's panel (#772, #875): Folk's first.
+            compose.onAllNodesWithTag(GENRE_PANEL_HEADING_TAG)[0].assertTextEquals("Folk")
 
             // A back stack saved with the page on it is restored into a new controller.
             lateinit var saved: Bundle
             compose.runOnUiThread { saved = nav.saveState()!! }
             drawGraph(restored = saved)
             compose.runOnUiThread { assertEquals(name, nav.currentDestination?.route) }
-            compose.onNodeWithTag(GENRE_PANEL_HEADING_TAG).assertTextEquals("Folk")
+            compose.onAllNodesWithTag(GENRE_PANEL_HEADING_TAG)[0].assertTextEquals("Folk")
             backArrow()
             onHome()
         }
@@ -308,19 +310,19 @@ class PageLinksTest {
         show(TrackGenres(listOf(artistRow("Ike Turner", "soul"), artistRow("Tina Turner", "soul", "funk")))) {
             open(link)
             onGenres()
-            // The shared genre once, in the chips' order: a panel each for soul and funk.
+            // The shared genre once, in the chips' order (#875: alphabetical): a panel each for funk and soul.
             val headings = compose.onAllNodesWithTag(GENRE_PANEL_HEADING_TAG)
-            headings[0].assertTextEquals("Soul")
-            headings[1].assertTextEquals("Funk")
+            headings[0].assertTextEquals("Funk")
+            headings[1].assertTextEquals("Soul")
             assertEquals(2, headings.fetchSemanticsNodes().size)
-            // In soul's, a row per artist, each with its own label of the genre, both marked.
+            // In soul's, the second, a row per artist, each with its own label of the genre, both marked.
             // Their sources name them (#786), the rows' tags as each gave them.
-            compose.onAllNodesWithTag(GENRES_ROW_PREFIX + "0")[0].assert(hasText("Soul")).assert(hasText("Funk").not())
-            compose.onAllNodesWithTag(GENRES_ROW_PREFIX + "1")[0].assert(hasText("Funk"))
-            assertEquals("Artist, Soul, selected", compose.onAllNodesWithTag(GENRES_ROW_PREFIX + "0")[0].reading())
+            compose.onAllNodesWithTag(GENRES_ROW_PREFIX + "0")[1].assert(hasText("Soul")).assert(hasText("Funk").not())
+            compose.onAllNodesWithTag(GENRES_ROW_PREFIX + "1")[1].assert(hasText("Funk"))
+            assertEquals("Artist, Soul, selected", compose.onAllNodesWithTag(GENRES_ROW_PREFIX + "0")[1].reading())
             assertEquals(
                 "Artist, Soul, selected, Funk",
-                compose.onAllNodesWithTag(GENRES_ROW_PREFIX + "1")[0].reading(),
+                compose.onAllNodesWithTag(GENRES_ROW_PREFIX + "1")[1].reading(),
             )
             compose
                 .onAllNodesWithTag(

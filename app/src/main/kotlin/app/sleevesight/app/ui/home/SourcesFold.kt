@@ -11,6 +11,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import app.sleevesight.app.session.TrackIdentity
 import app.sleevesight.core.model.NowPlaying
+import app.sleevesight.core.settings.NewTrackFold
 
 /**
  * How far the *Sources* list under an insight is unfolded (#269): [Folded], some screenfuls of
@@ -96,8 +97,8 @@ internal class FoldMemory(
 
     companion object {
         /**
-         * Saved as plain values: the fold, and of its track what [TrackIdentity.playsOn] reads (the
-         * player, the media id, the queue item, the title and the artists).
+         * Saved as plain values: the fold, and of its track what [TrackIdentity.playsOn] reads by
+         * its fields (the player, the media id, the title, the artists and the album).
          */
         val Saver: Saver<FoldMemory, Any> =
             listSaver(
@@ -128,29 +129,38 @@ internal class FoldMemory(
 }
 
 /**
- * Of [track], what [TrackIdentity.playsOn] reads (the player, the media id, the queue item, the title
- * and the artists), as plain values a saver keeps; [restoredTrack] reads them back.
+ * Of [track], what [TrackIdentity.playsOn] reads by its fields (the player, the media id, the
+ * title, the artists and the album), as plain values a saver keeps; [restoredTrack] reads them
+ * back. Not its play ([NowPlaying.play]): the session layer counts plays afresh in each process, so
+ * a number saved before the process died could name another play; restored untagged, the track is
+ * matched by its fields.
  */
 internal fun savedTrack(track: NowPlaying?): List<Any?> =
-    listOf(track?.player, track?.mediaId, track?.queueItemId, track?.title, track?.artists)
+    listOf(track?.player, track?.mediaId, track?.title, track?.artists, track?.album)
 
-/** The track [savedTrack] kept in [saved], or null when it kept none. */
+/**
+ * The track [savedTrack] kept in [saved], or null when it kept none. A state saved by an earlier
+ * version (`[player, media id, queue item, title, artists]`, its third value a queue item, not a
+ * title) is read too, with no album.
+ */
 internal fun restoredTrack(saved: List<Any?>): NowPlaying? =
     (saved[0] as String?)?.let { player ->
+        val current = saved[2] is String
         NowPlaying(
-            title = saved[3] as String,
-            artists = saved[4] as String,
+            title = (if (current) saved[2] else saved[3]) as String,
+            artists = (if (current) saved[3] else saved[4]) as String,
             player = player,
+            album = if (current) saved[4] as String? else null,
             mediaId = saved[1] as String?,
-            queueItemId = saved[2] as Long?,
         )
     }
 
 /**
  * The fold of the list shown beside [playing]: as it is kept while [playing] plays on the track
- * last shown ([TrackIdentity.playsOn]); for a new track, [start] (folded on Home), or with [keep]
- * (*Keep Sources as you left them*) as it was left ([Fold.forNextTrack]); [keep] is null until the
- * settings are read, and a new track shows [start] until then. Worked out as it is read, so a new
+ * last shown ([TrackIdentity.playsOn]); for a new track, as [onNewTrack] says (*Sources on a new
+ * track*, #522): [start] (folded on Home) for *Folded*, its first screenful for *Unfolded*, and as
+ * it was left ([Fold.forNextTrack]) for *As left*; [onNewTrack] is null until the settings
+ * are read, and a new track shows [start] until then. Worked out as it is read, so a new
  * track never shows the last one's fold for a frame; [follow] then keeps it as the new track's, so
  * a track played again after others starts afresh too. On a page of its own (#447) the list starts
  * at its first screenful, and is never kept.
@@ -158,7 +168,7 @@ internal fun restoredTrack(saved: List<Any?>): NowPlaying? =
 internal class SourcesFold(
     private val memory: FoldMemory,
     private val playing: NowPlaying,
-    private val keep: Boolean?,
+    private val onNewTrack: NewTrackFold?,
     private val start: Fold = Fold.Folded,
 ) {
     val fold: Fold
@@ -167,7 +177,8 @@ internal class SourcesFold(
             val track = memory.track
             return when {
                 track != null && TrackIdentity.playsOn(track, playing) -> set
-                keep == true -> set.forNextTrack()
+                onNewTrack == NewTrackFold.AS_LEFT -> set.forNextTrack()
+                onNewTrack == NewTrackFold.UNFOLDED -> Fold.Pages(1)
                 else -> start
             }
         }
@@ -187,12 +198,21 @@ internal class SourcesFold(
     fun reach(index: Int) = set(fold.reaching(index))
 
     /**
+     * Unfolds far enough to show the line at [index], not by the listener's own action: a citation
+     * followed as its line moves (#522), which changes nothing that is announced.
+     */
+    fun follow(index: Int) {
+        memory.fold = fold.reaching(index)
+        memory.track = playing
+    }
+
+    /**
      * On a new track, keeps the fold it shows as its own, untouched; not until the settings are
-     * read ([keep] null), so a fold kept for the next track is not lost to the folded default.
+     * read ([onNewTrack] null), so a fold kept for the next track is not lost to the folded default.
      */
     fun follow() {
         val track = memory.track
-        if (keep == null || (track != null && TrackIdentity.playsOn(track, playing))) return
+        if (onNewTrack == null || (track != null && TrackIdentity.playsOn(track, playing))) return
         memory.fold = fold
         memory.track = playing
         memory.touched = false
@@ -207,17 +227,17 @@ internal class SourcesFold(
 internal fun rememberFoldMemory(): FoldMemory = rememberSaveable(saver = FoldMemory.Saver) { FoldMemory() }
 
 /**
- * The fold of the *Sources* list beside [playing], from [memory], a new track's [start] unless
- * [keep]; a new track's is kept as its own.
+ * The fold of the *Sources* list beside [playing], from [memory], a new track's as [onNewTrack]
+ * says; a new track's is kept as its own.
  */
 @Composable
 internal fun sourcesFold(
     memory: FoldMemory,
     playing: NowPlaying,
-    keep: Boolean?,
+    onNewTrack: NewTrackFold?,
     start: Fold = Fold.Folded,
 ): SourcesFold {
-    val fold = SourcesFold(memory, playing, keep, start)
+    val fold = SourcesFold(memory, playing, onNewTrack, start)
     SideEffect { fold.follow() }
     return fold
 }

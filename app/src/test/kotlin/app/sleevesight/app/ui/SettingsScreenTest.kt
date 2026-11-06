@@ -174,16 +174,6 @@ class SettingsScreenTest {
         }
 
     @Test
-    fun keepingTheSourcesAsLeftIsASwitchOffByDefault() =
-        show {
-            compose.openSection(SettingsSection.APPEARANCE)
-            val row = compose.onNodeWithText(text(R.string.settings_keep_sources)).performScrollTo()
-            row.assertIsOff()
-            row.performClick()
-            waitFor("keep sources stored on") { current().keepSourcesUnfolded }
-        }
-
-    @Test
     fun aSwitchThatCannotBeSavedKeepsItsStoredValueAndSaysSo() {
         val flaky = FlakyDataStore(stores.open("flaky-settings"))
         val store = SettingsStore(flaky)
@@ -254,8 +244,8 @@ class SettingsScreenTest {
             compose.onNodeWithText(text(R.string.settings_save)).performClick()
 
             waitFor("the Last.fm key stored") { runBlocking { secrets.get(SecretId.LASTFM) }?.reveal() == "lastfm-key" }
-            waitForText(text(R.string.settings_key_saved))
-            compose.onNodeWithText(text(R.string.settings_key_saved)).performScrollTo().assertIsDisplayed()
+            // The summary follows the save (#763); `KeyDialogEnableTest` checks it, and the row after it.
+            waitForText(text(R.string.key_screen_done))
             assertEquals(0, compose.onAllNodesWithSubstring("lastfm-key").size)
         }
 

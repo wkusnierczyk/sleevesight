@@ -13,6 +13,16 @@
   "method": "GET",
   "url": "https://musicbrainz.org/ws/2/recording/1c5ee6b9-d209-4763-aab8-2524e6b0d14b",
   "query": {
+   "inc": "releases+release-groups",
+   "fmt": "json"
+  },
+  "status": 200,
+  "file": "recording-1c5ee6b9-d209-4763-aab8-2524e6b0d14b-2.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://musicbrainz.org/ws/2/recording/1c5ee6b9-d209-4763-aab8-2524e6b0d14b",
+  "query": {
    "inc": "artist-credits+work-rels+artist-rels+url-rels+tags",
    "fmt": "json"
   },
@@ -58,6 +68,16 @@
   },
   "status": 200,
   "file": "recording-51b75c9a-8990-42d6-ad81-228d65805070.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://musicbrainz.org/ws/2/recording/55557e4c-ad06-4611-b415-5365356b0392",
+  "query": {
+   "inc": "releases+release-groups",
+   "fmt": "json"
+  },
+  "status": 200,
+  "file": "recording-55557e4c-ad06-4611-b415-5365356b0392-2.json"
  },
  {
   "method": "GET",
@@ -128,6 +148,16 @@
   },
   "status": 200,
   "file": "recording-f331113d-43b8-4d60-af11-9461520f4554.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://musicbrainz.org/ws/2/recording/ffe4a448-1b9f-4458-a8ce-7402f5a28130",
+  "query": {
+   "inc": "artist-credits+work-rels+artist-rels+url-rels+tags",
+   "fmt": "json"
+  },
+  "status": 200,
+  "file": "recording-ffe4a448-1b9f-4458-a8ce-7402f5a28130.json"
  },
  {
   "method": "GET",
@@ -249,6 +279,17 @@
   },
   "status": 200,
   "file": "recording-recording-new-york-groove-and-artist-ace-frehley.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://musicbrainz.org/ws/2/recording",
+  "query": {
+   "query": "recording:\"Roll Over Beethoven\" AND artist:\"Chuck Berry\" AND firstreleasedate:[* TO 1956-05]",
+   "limit": "100",
+   "fmt": "json"
+  },
+  "status": 200,
+  "file": "recording-recording-roll-over-beethoven-and-artist-chuck-berry-and-firstreleasedate-to-1956-05.json"
  },
  {
   "method": "GET",

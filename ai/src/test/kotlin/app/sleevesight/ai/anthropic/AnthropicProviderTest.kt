@@ -140,6 +140,27 @@ class AnthropicProviderTest {
         }
 
     @Test
+    fun `a system prompt goes in system, the prompt staying the user's message`() =
+        runTest {
+            val net = ReplayNetClient { ok(recorded("anthropic/messages-stream.sse")) }
+            provider(net).stream(request.copy(system = "You narrate.\nBriefly."), key).toList()
+
+            assertEquals(
+                Json.parseToJsonElement(
+                    """{"model":"claude-haiku-5-5","max_tokens":256,"stream":true,""" +
+                        """"system":"You narrate.\nBriefly.",""" +
+                        """"messages":[{"role":"user","content":"Say hello in three words."}]}""",
+                ),
+                Json.parseToJsonElement(
+                    net.requests
+                        .single()
+                        .body!!
+                        .text,
+                ),
+            )
+        }
+
+    @Test
     fun `an effort goes in output_config, and none leaves the model's default`() =
         runTest {
             val net = ReplayNetClient { ok(recorded("anthropic/messages-stream.sse")) }

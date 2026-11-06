@@ -76,7 +76,8 @@ internal fun PlayerRow(
 ) {
     val context = LocalContext.current
     val name = remember(player) { actions.playerLabel(player) }
-    val state = stateText(playback.status.takeIf { playback.player == player } ?: PlaybackStatus.NONE)
+    // As the header logo's record goes by it, so it turns while this says *Playing* (#848).
+    val state = stateText(playbackStatus(player, playback))
     val open = stringResource(R.string.home_open_player, name)
     val none = stringResource(R.string.home_player_no_screen, name)
     Row(
@@ -275,7 +276,7 @@ private fun albumLine(
  * [line], a format given [ALBUM_MARK] in the album's place, with [album] there in italics: the mark
  * says where the format puts it, whatever the album and the rest hold. A format that leaves the
  * album out is shown as it is, rather than failing. For the album line and the *Dates* panel's
- * sentences (#724).
+ * sentences (#724), and the same for a weak genre's line, its genre in italics (#875).
  */
 internal fun withAlbum(
     line: String,

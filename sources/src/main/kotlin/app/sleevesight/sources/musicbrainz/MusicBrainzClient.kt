@@ -47,12 +47,26 @@ class MusicBrainzClient(
     private val net: NetClient,
     private val tags: () -> Boolean = { true },
 ) : MusicBrainzLookup,
-    ArtistTags {
+    ArtistTags,
+    ReleaseGroups {
     override suspend fun searchRecordings(
         title: String,
         artist: String,
-    ): Lookup<List<MbRecording>> {
-        val query = "recording:${phrase(title)} AND artist:${phrase(artist)}"
+    ): Lookup<List<MbRecording>> = search("recording:${phrase(title)} AND artist:${phrase(artist)}")
+
+    override suspend fun searchRecordingsBefore(
+        title: String,
+        artist: String,
+        date: String,
+    ): Lookup<List<MbRecording>> =
+        // Only a date as MusicBrainz writes one reaches the query; anything else is not asked.
+        if (DATE.matches(date)) {
+            search("recording:${phrase(title)} AND artist:${phrase(artist)} AND firstreleasedate:[* TO $date]")
+        } else {
+            Lookup.Failed("InvalidDate")
+        }
+
+    private suspend fun search(query: String): Lookup<List<MbRecording>> {
         val request =
             NetRequest(
                 "$BASE/recording",
@@ -100,6 +114,31 @@ class MusicBrainzClient(
                 tags = tags.map { it.first },
                 tagVotes = tags.toMap(),
             )
+        }
+    }
+
+    override suspend fun releaseGroup(mbid: String): Lookup<MbAlbum> {
+        val request = NetRequest("$BASE/release-group/$mbid", query = mapOf("inc" to ALBUM_INC, "fmt" to "json"))
+        return net.lookup(request) { response ->
+            val json = parseObject(response.body)
+            MbAlbum(
+                mbid = json.required("id"),
+                title = json.required("title"),
+                primaryType = json.string("primary-type")?.ifEmpty { null },
+                secondaryTypes = json.array("secondary-types").mapNotNull { (it as? JsonPrimitive)?.content },
+                firstReleaseDate = json.string("first-release-date")?.ifEmpty { null },
+                credit = credits(json).joinToString("") { it.name + it.joinPhrase },
+                wikidataIds = wikidataIds(json.array("relations")),
+                releaseIds = json.array("releases").mapNotNull { it.string("id")?.ifEmpty { null } },
+            )
+        }
+    }
+
+    override suspend fun groupOfRelease(mbid: String): Lookup<String> {
+        val request = NetRequest("$BASE/release/$mbid", query = mapOf("inc" to "release-groups", "fmt" to "json"))
+        return net.lookup(request) { response ->
+            parseObject(response.body).obj("release-group")?.string("id")?.ifEmpty { null }
+                ?: throw MissingField("release-group")
         }
     }
 
@@ -181,8 +220,13 @@ class MusicBrainzClient(
          * MusicBrainz's maximum. A much-recorded song has dozens of recordings by the same artist,
          * and the search ranks the original far down, differently from one request to the next:
          * with 50, Chuck Berry's 1956 "Roll Over Beethoven" was sometimes not among them (#78).
+         * With more than that, it may still be missing, and a search for the recordings released by
+         * the first page's earliest date adds it ([searchRecordingsBefore], #906).
          */
-        const val SEARCH_LIMIT: Int = 100
+        const val SEARCH_LIMIT: Int = MusicBrainzLookup.SEARCH_PAGE
+
+        // A date as MusicBrainz writes one: a year, a month or a day.
+        private val DATE = Regex("^[0-9]{4}(-[0-9]{2}){0,2}$")
 
         /** With `tags`, for the track's genre labels (#439), which only [MbRecordingDetail.tags] holds. */
         const val RECORDING_INC: String = "artist-credits+work-rels+artist-rels+url-rels+tags"
@@ -191,6 +235,12 @@ class MusicBrainzClient(
         const val RECORDING_INC_WITHOUT_TAGS: String = "artist-credits+work-rels+artist-rels+url-rels"
 
         const val WORK_INC: String = "artist-rels+url-rels+recording-rels+artist-credits"
+
+        /**
+         * An album's release group (#522): its credit, its Wikidata item among its URL relationships,
+         * and its releases (#885), which Last.fm's album is checked against (`AlbumSource`).
+         */
+        const val ALBUM_INC: String = "artist-credits+url-rels+releases"
 
         /**
          * A cover's original's releases, each with its release group (#724). MusicBrainz lists at
@@ -221,6 +271,7 @@ class MusicBrainzClient(
                                 release.obj("release-group")?.let {
                                     MbReleaseGroup(it.required("id"), it.required("title"), it.string("primary-type"))
                                 },
+                            language = release.obj("text-representation").string("language")?.ifEmpty { null },
                         )
                     },
                 score = json.int("score") ?: 0,
@@ -297,3 +348,42 @@ class MusicBrainzClient(
 internal class MissingField(
     field: String,
 ) : IllegalStateException("missing field $field")
+
+/**
+ * MusicBrainz's release groups, looked up by id (#522): what an album's insight is written from
+ * first (`AlbumSource`). Apart from `MusicBrainzLookup`, which resolution uses.
+ */
+interface ReleaseGroups {
+    /** The release group [mbid], with its artist credit and its Wikidata item; not found for a release's own id. */
+    suspend fun releaseGroup(mbid: String): Lookup<MbAlbum>
+
+    /**
+     * The id of the release group the release [mbid] belongs to (#885: Last.fm's album checked
+     * against the album's group when the group's releases are not all listed); not found for an id
+     * that is not a release's.
+     */
+    suspend fun groupOfRelease(mbid: String): Lookup<String>
+}
+
+/**
+ * A release group as an album's insight reads it (#522): its [title], its primary type (`Album`,
+ * `EP`, `Single`) and secondary types (`Live`, `Compilation`), the date its first release came out,
+ * its artist credit as written ([credit]), the Wikidata items it links ([wikidataIds]), and the ids
+ * of its releases ([releaseIds], #885), at most [LINKED_LIMIT], the most a lookup lists. Core data,
+ * CC0.
+ */
+data class MbAlbum(
+    val mbid: String,
+    val title: String,
+    val primaryType: String?,
+    val secondaryTypes: List<String>,
+    val firstReleaseDate: String?,
+    val credit: String,
+    val wikidataIds: List<String>,
+    val releaseIds: List<String> = emptyList(),
+) {
+    companion object {
+        /** The most linked entities a MusicBrainz lookup lists: a group's releases past it are left out. */
+        const val LINKED_LIMIT: Int = 25
+    }
+}

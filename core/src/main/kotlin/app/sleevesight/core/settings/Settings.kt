@@ -79,6 +79,11 @@ import kotlin.time.Duration.Companion.seconds
  *   AI* or automatically, searches the web with Exa ([AiWebSearch]); *Once* by default. It needs Exa
  *   web search on ([aiWebSearchOn]); with it off, the questions are asked as with *Off*, and this
  *   choice is kept for when it is on again.
+ * @property trackLanguageSearch *Search in the track's language* (#902): whether a track sung in a
+ *   language other than English is also looked up on Wikipedia and searched on the web in that
+ *   language ([TrackLanguageSearch]); *If needed* by default. Each search keeps its own source's switch
+ *   (Wikipedia and Wikidata; Exa web search), and the language is named only by what is written or
+ *   recorded (`TrackLanguage`).
  * @property cacheLifetimes the retrieval cache lifetime per source (D9). A source with none (the
  *   pseudo-sources, which retrieve nothing) is not cached.
  * @property keepArtistResults *Keep what sources said about each artist* (#420): whether what the
@@ -110,14 +115,20 @@ import kotlin.time.Duration.Companion.seconds
  *   keeps them for ever. See [DEFAULT_HISTORY_LIFETIME].
  * @property sessionGap *New session idle trigger*: how long a break in listening, from
  *   when the last track was last heard, ends a listening session. See [DEFAULT_SESSION_GAP].
- * @property keepSourcesUnfolded *Keep Sources as you left them* (#269): whether the *Sources* list
- *   under an insight keeps, for the next track, how it was left: folded, a screenful, or all its
- *   lines. Off by default: each new track's list starts folded, as the first one did, since a
- *   long list makes the screen hard to scan, and unfolding it to check one insight's sources says
- *   nothing about the next. On, a list shown past its first screenful but not in full comes back
- *   at its first screenful. The fold is kept through a rotation and when Android restores the
+ * @property sourcesOnNewTrack *Sources on a new track* (#269; a choice since #522, which was the
+ *   switch *Keep Sources as you left them*): how the *Sources* list under an insight starts on each
+ *   new track: folded, unfolded at its first screenful, or as it was left on the track before
+ *   (folded, a screenful, or all its lines; one shown past its first screenful but not in full
+ *   comes back at its first screenful). Folded by default, as the first track's list starts, since
+ *   a long list makes the screen hard to scan, and unfolding it to check one insight's sources says
+ *   nothing about the next. The fold is kept through a rotation and when Android restores the
  *   screen it closed, not when the app is started afresh. Only under *Expandable boxes* ([layout]):
  *   under *Separate pages* each page opens fresh.
+ * @property itemsOnNewTrack *Song, Artist and Album on a new track* (#522): how the song's, the
+ *   artist's and the album's insights under *Key insights* start on each new track: folded,
+ *   unfolded, or as they were left on the track before. Folded by default, so Home stays short and
+ *   the key insight comes first. With *Reactive* set to an automatic mode, an insight that starts
+ *   unfolded is written, unless its artist or album has one already. Only under *Expandable boxes*.
  * @property lyricsLinks *Lyrics links* (#728): whether Home shows a *Lyrics* button for the playing
  *   track, opening into links to its lyrics on the lyrics sites its MusicBrainz work links to, or,
  *   when it links to none, a search on Genius ([lyricsSearch]). On by default: a link sends nothing
@@ -156,6 +167,17 @@ import kotlin.time.Duration.Companion.seconds
  *   tester's screenshots show what other users will not see ([marksDeveloperItems]). On by
  *   default, and back on with developer mode off, as every developer option goes back to its
  *   default.
+ * @property foldDescriptions *Foldable descriptions* (#847), under *Appearance*: whether the
+ *   settings' descriptions show on one line, a tap showing the rest and another folding it. On by
+ *   default; off, every description shows in full and nothing folds, as before #847.
+ * @property descriptionsOnReturn *Descriptions on return* (#847), under *Appearance*, used only
+ *   while [foldDescriptions] is on: how the descriptions show when the settings, or one of their
+ *   sections, open again. See [DescriptionsOnReturn]; *As left* by default.
+ * @property unfoldedDescriptions the settings' descriptions left unfolded (#847), each by its
+ *   section's name and its row's name as shown (or its own string's name), oldest change first,
+ *   which [DescriptionsOnReturn.AS_LEFT] opens them by, across restarts too; at most
+ *   [UNFOLDED_DESCRIPTIONS_LIMIT], the oldest going first. None by default: the first visit starts
+ *   folded.
  * @property theme *Theme* (#444): light or dark as the system is, or always one of them.
  * @property themeButton *Theme button* (#636): whether Home's header shows, beside the cogwheel, a
  *   button that shows [theme] and opens a menu of the three themes (#771). On by default: two taps,
@@ -166,6 +188,11 @@ import kotlin.time.Duration.Companion.seconds
  *   while it is not open (not a return to it), plays one of the logo's intros before showing its
  *   screen. On by default: it is a few seconds, and a tap, Back or any key ends it; it never plays
  *   while the phone's *Remove animations* is on. Off, for someone who would rather not wait.
+ * @property spinLogo *Spin the logo while music plays* (#848): whether the record in Home's header
+ *   logo turns while the player line says *Playing*, speeding up and coming to rest as a turntable
+ *   does. On by default; it stands still while the phone's *Remove animations* is on either way.
+ * @property logoSpeed *Logo speed* (#848): how fast the logo's record turns while [spinLogo] has it
+ *   turn, an LP's 33⅓ rpm (the default) or a single's 45 rpm. See [LogoSpeed].
  * @property dismissed what the user dismissed for good (#759): each message or panel whose
  *   *Dismiss* was tapped ([Dismissable]), not shown again until *Restore dismissed messages*, under
  *   *Appearance*, brings them all back. None by default: the guide to Home (#627) shows for someone
@@ -194,13 +221,15 @@ data class Settings(
     val readNewInsightsAloud: Boolean = false,
     val searchWithAi: Boolean = false,
     val aiWebSearch: AiWebSearch = AiWebSearch.ONCE,
+    val trackLanguageSearch: TrackLanguageSearch = TrackLanguageSearch.IF_NEEDED,
     val cacheLifetimes: Map<SourceId, Duration> = DEFAULT_CACHE_LIFETIMES,
     val keepArtistResults: Boolean = false,
     val artistCacheLifetime: Duration = DEFAULT_ARTIST_CACHE_LIFETIME,
     val cacheSizeLimit: Long = DEFAULT_CACHE_SIZE_LIMIT,
     val historyLifetime: Duration? = DEFAULT_HISTORY_LIFETIME,
     val sessionGap: Duration = DEFAULT_SESSION_GAP,
-    val keepSourcesUnfolded: Boolean = false,
+    val sourcesOnNewTrack: NewTrackFold = NewTrackFold.FOLDED,
+    val itemsOnNewTrack: NewTrackFold = NewTrackFold.FOLDED,
     val lyricsLinks: Boolean = true,
     val lyricsSearch: Boolean = true,
     val showPhoneName: Boolean = false,
@@ -210,10 +239,15 @@ data class Settings(
     val reportButton: ReportButton = ReportButton.HIDE,
     val linkStyle: LinkStyle = LinkStyle.UNDERLINE,
     val markDeveloperItems: Boolean = true,
+    val foldDescriptions: Boolean = true,
+    val descriptionsOnReturn: DescriptionsOnReturn = DescriptionsOnReturn.AS_LEFT,
+    val unfoldedDescriptions: List<String> = emptyList(),
     val theme: ThemeChoice = ThemeChoice.SYSTEM,
     val themeButton: Boolean = true,
     val font: FontChoice = FontChoice.APP_FONT,
     val introAtStart: Boolean = true,
+    val spinLogo: Boolean = true,
+    val logoSpeed: LogoSpeed = LogoSpeed.RPM_33,
     val dismissed: Set<Dismissable> = emptySet(),
 ) {
     init {
@@ -332,6 +366,9 @@ data class Settings(
 
     companion object {
         const val SPOTIFY: String = "com.spotify.music"
+
+        /** The most descriptions kept as left unfolded ([unfoldedDescriptions], #847). */
+        const val UNFOLDED_DESCRIPTIONS_LIMIT: Int = 200
 
         /**
          * The packages whose media sessions are phone calls (#435): Android's telecom service, the
@@ -591,6 +628,26 @@ enum class AiWebSearch {
 }
 
 /**
+ * *Search in the track's language* (#902, [Settings.trackLanguageSearch]): when a track sung in a
+ * language other than English is also looked up in that language, on its Wikipedia and with a web
+ * search in it, beside the English lookups. The insight waits for it, so it is written once.
+ */
+enum class TrackLanguageSearch {
+    /** English only. */
+    OFF,
+
+    /**
+     * Only when the English sources say little about the track itself: fewer lines about the song,
+     * its original or the web than `PromptEvidence.ENOUGH_OF_ITS_OWN`. With Exa on, one more Exa
+     * call for such a track.
+     */
+    IF_NEEDED,
+
+    /** For every track with a language other than English. With Exa on, one more Exa call for each. */
+    ALWAYS,
+}
+
+/**
  * The web search engines (D11), each a switch under *Web search*. The list is fixed, not edited by
  * the user: an engine needs an adapter, a filter for its results and its terms settled before it
  * ships (#80 for Exa), so an engine joins the list with its adapter. Exa is the first.
@@ -616,6 +673,38 @@ enum class FontChoice {
     /** The font chosen in the phone's own settings, for someone who prefers it everywhere. */
     SYSTEM_FONT,
 }
+
+/**
+ * *Descriptions on return* (#847): how the settings' descriptions show when the settings open again,
+ * or one of their sections opens again within a visit.
+ */
+enum class DescriptionsOnReturn {
+    /** Every description folded again. */
+    FOLDED,
+
+    /** Every description in full; a tap still folds it. */
+    UNFOLDED,
+
+    /** Each as it was left, across restarts too (`Settings.unfoldedDescriptions`); the default. */
+    AS_LEFT,
+}
+
+/**
+ * *Logo speed* (#848): how fast the record in Home's header logo turns while music plays, in
+ * revolutions a minute ([rpm]), as a record player's two speeds.
+ */
+enum class LogoSpeed(
+    val rpm: Float,
+) {
+    /** A long-playing record's (12 inch), 33⅓ rpm, one turn in 1.8 s, the default. */
+    RPM_33(LP_RPM),
+
+    /** A single's (7 inch), 45 rpm, one turn in 1⅓ s. */
+    RPM_45(SINGLE_RPM),
+}
+
+private const val LP_RPM = 100f / 3
+private const val SINGLE_RPM = 45f
 
 /** *Theme* (#444): whether the app is light or dark. */
 enum class ThemeChoice {
@@ -688,6 +777,33 @@ enum class Layout {
      * setting, and everything a track has on one screen.
      */
     EXPANDABLE_BOXES,
+}
+
+/**
+ * How a box of Home's starts on each new track, under *Expandable boxes* (#522): *Sources on a new
+ * track* ([Settings.sourcesOnNewTrack]) and *Song, Artist and Album on a new track*
+ * ([Settings.itemsOnNewTrack]). Shown as *Folded*, *Unfolded* and *As left*.
+ *
+ * @property key the choice as the settings store it. It is fixed, not the constant's name, so
+ *   renaming a constant does not lose what was chosen.
+ */
+enum class NewTrackFold(
+    val key: String,
+) {
+    /** Folded on each new track. */
+    FOLDED("folded"),
+
+    /** Unfolded on each new track. */
+    UNFOLDED("unfolded"),
+
+    /** As it was left on the track before. */
+    AS_LEFT("as_left"),
+    ;
+
+    companion object {
+        /** The choice stored as [key], or null for none of them. */
+        fun of(key: String?): NewTrackFold? = entries.firstOrNull { it.key == key }
+    }
 }
 
 /**

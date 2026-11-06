@@ -92,6 +92,8 @@ class WikipediaSourceTest {
             assertEquals(asked.evidence, result.evidence)
             val artistLines = first.evidence.filter { it.scope == Scope.ARTIST }
             assertTrue(artistLines.isNotEmpty())
+            // Each says which artist it is about, kept or not, for the artist's insight (#522).
+            assertTrue(result.evidence.all { it.about == "Gordon Lightfoot" })
             assertEquals(artistLines, result.evidence)
             // Kept until a week after `at`, so the retrieval cache keeps the result no longer.
             assertEquals(at + 7.days, result.freshUntil)
@@ -348,6 +350,53 @@ class WikipediaSourceTest {
                 "Prince is a musician. His hits include \"1999\" and \"Kiss\". He died in 2016.",
             )
         for (paragraph in dropped) assertEquals(emptyList(), WikipediaSource.split(paragraph), paragraph)
+    }
+
+    @Test
+    fun `brackets a dropped pronunciation leaves empty go, with the space before them`() {
+        val bulat = "known professionally as Basia Bulat, is a Canadian folk singer-songwriter."
+        for (empty in listOf("()", "( )", "(; )", "(, )", "(,)", "( ; )")) {
+            val line = "known professionally as Basia Bulat $empty, is a Canadian folk singer-songwriter."
+            assertEquals(bulat, WikipediaSource.tidy(line), empty)
+        }
+        assertEquals("Foo is a song.", WikipediaSource.tidy("Foo () is a song."))
+    }
+
+    @Test
+    fun `a lead's sentences come without the empty brackets`() {
+        val lead =
+            "Barbara Josephine Bulat (born April 13, 1984), known professionally as Basia Bulat (), is a " +
+                "Canadian folk singer-songwriter."
+        assertEquals(
+            listOf(
+                "Barbara Josephine Bulat (born April 13, 1984), known professionally as Basia Bulat, is a " +
+                    "Canadian folk singer-songwriter.",
+            ),
+            WikipediaSource.sentences(lead, listOf("Basia Bulat"), RecordedTracks.names),
+        )
+    }
+
+    @Test
+    fun `empty brackets that open a paragraph are a title, and kept`() {
+        // Sigur Rós's third album is called "( )".
+        val line = "( ) (sometimes referred to as the Untitled album) is the third studio album by Sigur Rós."
+        assertEquals(line, WikipediaSource.tidy(line))
+    }
+
+    @Test
+    fun `brackets with content are left as they are`() {
+        val kept =
+            listOf(
+                "Paul Daniel \"Ace\" Frehley (FRAY-lee; April 27, 1951 – October 16, 2025) was an American musician.",
+                "\"Why?\" (1984) is a song by Bronski Beat.",
+                "Abbey Road (album) is the eleventh studio album.",
+            )
+        for (line in kept) assertEquals(line, WikipediaSource.tidy(line))
+        // The pronunciation's leading punctuation goes; the rest of the brackets stays.
+        assertEquals(
+            "Ace Frehley (FRAY-lee; April 27, 1951) was a guitarist.",
+            WikipediaSource.tidy("Ace Frehley (, FRAY-lee; April 27, 1951) was a guitarist."),
+        )
     }
 
     @Test

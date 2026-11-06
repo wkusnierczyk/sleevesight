@@ -37,6 +37,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -63,8 +64,10 @@ import com.google.zxing.qrcode.QRCodeReader
 // scanner, whose ML Kit reports usage to Google.
 
 /**
- * The camera's view for a QR scan, filling the space it is given, until a QR code is read: then it
- * calls `onScanned` once with the code's text. The settings screen takes it as a parameter, so its
+ * The camera's view for a QR scan, filling the space it is given, reading QR codes: it calls
+ * `onScanned` with each code's text, once, not again for the code last heard (#765), so a screen
+ * that refuses a code can keep the view and read the next; a screen that takes one code ignores any
+ * that come before it goes, as the key dialog does. The settings screen takes it as a parameter, so its
  * tests scan without a camera. Where it is shown, the key settings' guided screens (one key's
  * field, *Type on a computer*, *Load keys*), says what to do and offers *Cancel*.
  */
@@ -218,19 +221,39 @@ private const val DIM_ALPHA = 0.6f
 
 /**
  * Where to hold the code (#446): a rounded square in the middle of the camera's picture, the
- * picture around it dimmed. Not blurred: the picture is a `SurfaceView`'s, drawn by the system
- * apart from the app's views, which neither `RenderEffect` nor Compose's `blur` reaches. A screen
- * reader reads it as what it is for.
+ * picture around it dimmed, with a mark at each of its four corners (#765), in [color]: white while
+ * the camera reads, the success colour on *Load keys* once a code is read. Not blurred: the picture
+ * is a `SurfaceView`'s, drawn by the system apart from the app's views, which neither `RenderEffect`
+ * nor Compose's `blur` reaches. A screen reader reads it as what it is for.
  */
 @Composable
-internal fun ScanFrame(modifier: Modifier = Modifier) {
+internal fun ScanFrame(
+    modifier: Modifier = Modifier,
+    color: Color = Color.White,
+) {
     val description = stringResource(R.string.scan_view)
     Canvas(modifier = modifier.semantics { contentDescription = description }) {
         val frame = scanFrame(size)
         val radius = CornerRadius(FRAME_CORNER.toPx())
         val hole = Path().apply { addRoundRect(RoundRect(frame, radius)) }
         clipPath(hole, ClipOp.Difference) { drawRect(Color.Black.copy(alpha = DIM_ALPHA)) }
-        drawRoundRect(Color.White, frame.topLeft, frame.size, radius, style = Stroke(FRAME_STROKE.toPx()))
+        // Each corner of the square's outline, the rest of its sides left out.
+        val mark = minOf(CORNER_MARK.toPx(), frame.width / 2)
+        val corners =
+            listOf(
+                Rect(frame.left, frame.top, frame.left + mark, frame.top + mark),
+                Rect(frame.right - mark, frame.top, frame.right, frame.top + mark),
+                Rect(frame.left, frame.bottom - mark, frame.left + mark, frame.bottom),
+                Rect(frame.right - mark, frame.bottom - mark, frame.right, frame.bottom),
+            )
+        val stroke = FRAME_STROKE.toPx()
+        for (corner in corners) {
+            // Wider by the stroke, which straddles the outline.
+            val clip = corner.inflate(stroke)
+            clipRect(clip.left, clip.top, clip.right, clip.bottom) {
+                drawRoundRect(color, frame.topLeft, frame.size, radius, style = Stroke(stroke))
+            }
+        }
     }
 }
 
@@ -241,4 +264,7 @@ internal fun scanFrame(picture: Size): Rect {
 }
 
 private val FRAME_CORNER = 20.dp
+
+/** How far along each side a corner's mark reaches, from the corner (#765). */
+private val CORNER_MARK = 32.dp
 private val FRAME_STROKE = 3.dp

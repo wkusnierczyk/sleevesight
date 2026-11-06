@@ -17,7 +17,9 @@ import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.CardKey
 import app.sleevesight.core.pipeline.ClearEpoch
 import app.sleevesight.core.pipeline.KeptCard
+import app.sleevesight.core.pipeline.OtherCard
 import app.sleevesight.core.pipeline.PipelineCache
+import app.sleevesight.core.pipeline.RewritePart
 import app.sleevesight.core.settings.pastKeepHistory
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.SourceAdapter
@@ -149,6 +151,9 @@ internal class CardCache(
 
     // When each card was kept, by [clock]; none without one, as a cache that does not say.
     private val keptAt = mutableMapOf<CardKey, Instant>()
+
+    // What the rewrite that wrote each card changed (#854), as the store keeps it.
+    private val rewritten = mutableMapOf<CardKey, Set<RewritePart>>()
     private val results = mutableMapOf<Triple<SourceId, String, Long?>, SourceResult>()
     var keepsResults = false
 
@@ -199,7 +204,7 @@ internal class CardCache(
             cards.remove(key)
             keptAt.remove(key)
         }
-        val kept = cards[key]?.let { KeptCard(it, at) }
+        val kept = cards[key]?.let { KeptCard(it, at, rewritten[key].orEmpty()) }
         if (kept != null) {
             readHeld?.let {
                 heldReads++
@@ -207,6 +212,19 @@ internal class CardCache(
             }
         }
         return kept
+    }
+
+    /** How many times another service's, model's or effort's cards were read ([keptByOthers], #911). */
+    var othersRead = 0
+
+    // As the store finds them (#911): the cards of [key]'s kind, subject, evidence, prompt, style and
+    // model knowledge kept under another service, model or effort, the most recently kept first.
+    override suspend fun keptByOthers(key: CardKey): List<OtherCard> {
+        othersRead++
+        return cards.keys
+            .filter { it != key && it.copy(provider = key.provider, model = key.model, effort = key.effort) == key }
+            .mapNotNull { other -> keptCard(other)?.let { OtherCard(other, it) } }
+            .sortedByDescending { it.card.writtenAt }
     }
 
     override suspend fun keep(
@@ -227,7 +245,18 @@ internal class CardCache(
         epoch.ifCurrent(currentCoroutineContext()) {
             cards[key] = text
             keptAt[key] = writtenAt
+            rewritten.remove(key)
         }
+    }
+
+    override suspend fun keep(
+        key: CardKey,
+        text: String,
+        writtenAt: Instant,
+        rewritten: Set<RewritePart>,
+    ) {
+        keep(key, text, writtenAt)
+        epoch.ifCurrent(currentCoroutineContext()) { if (rewritten.isNotEmpty()) this.rewritten[key] = rewritten }
     }
 }
 

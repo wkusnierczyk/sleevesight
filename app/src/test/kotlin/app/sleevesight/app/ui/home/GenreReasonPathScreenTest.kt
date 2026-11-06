@@ -132,7 +132,7 @@ class GenreReasonPathScreenTest {
                     }
                 }
             }
-            compose.onNodeWithTag(ROCK_CHIP).performClick()
+            compose.onNodeWithTag(ROCK_CHIP).unfold()
             compose.waitForIdle()
             block()
         }
@@ -273,7 +273,7 @@ class GenreReasonPathScreenTest {
                 }
             }
             // Folk, the album's, leads the chips; no second chip, no copy on the track's row.
-            compose.onNodeWithTag(GENRE_PREFIX + "album:folk").performClick()
+            compose.onNodeWithTag(GENRE_PREFIX + "album:folk").unfold()
             compose.waitForIdle()
             assertEquals(0, count(GENRE_PREFIX + "track:folk"))
             compose.onNodeWithTag(GENRES_ROW_PREFIX + "0").assertContentDescriptionEquals("Track, Rock")

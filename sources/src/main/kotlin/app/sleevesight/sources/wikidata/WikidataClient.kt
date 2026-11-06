@@ -1,5 +1,6 @@
 package app.sleevesight.sources.wikidata
 
+import app.sleevesight.core.language.Language
 import app.sleevesight.core.resolution.Lookup
 import app.sleevesight.core.resolution.WdEntity
 import app.sleevesight.core.resolution.WikidataLookup
@@ -35,6 +36,44 @@ class WikidataClient(
                     json.obj("claims")?.mapValues { (_, claims) -> values(claims as? JsonArray) }.orEmpty(),
             )
         }
+
+    /**
+     * The items [ids] with their labels and sitelinks in English and [language] (#902): `languages`
+     * `en|<label>`, `sitefilter` `enwiki|<sitelink>`, so an answer holds only the two.
+     */
+    override suspend fun entities(
+        ids: List<String>,
+        language: Language,
+    ): Lookup<Map<String, WdEntity>> {
+        val languages = listOf(ENGLISH, language.label).distinct()
+        val sites = listOf(ENGLISH_WIKI, language.sitelink).distinct()
+        return getEntities(ids, "claims|sitelinks|labels", languages, sites) { id, json ->
+            val labels =
+                languages.mapNotNull { code ->
+                    json
+                        .obj("labels")
+                        .obj(code)
+                        .string("value")
+                        ?.let { code to it }
+                }
+            val sitelinks =
+                sites.mapNotNull { site ->
+                    json
+                        .obj("sitelinks")
+                        .obj(site)
+                        .string("title")
+                        ?.let { site to it }
+                }
+            WdEntity(
+                id = id,
+                label = label(json),
+                enwiki = json.obj("sitelinks").obj(ENGLISH_WIKI).string("title"),
+                claims = json.obj("claims")?.mapValues { (_, claims) -> values(claims as? JsonArray) }.orEmpty(),
+                labels = labels.toMap(),
+                sitelinks = sitelinks.toMap(),
+            )
+        }
+    }
 
     override suspend fun labels(ids: List<String>): Lookup<Map<String, String>> =
         when (val found = getEntities(ids, "labels") { _, json -> label(json) }) {
@@ -84,6 +123,8 @@ class WikidataClient(
     private suspend fun <T> getEntities(
         ids: List<String>,
         props: String,
+        languages: List<String> = listOf(ENGLISH),
+        sites: List<String> = listOf(ENGLISH_WIKI),
         read: (String, JsonElement) -> T,
     ): Lookup<Map<String, T>> {
         val query =
@@ -91,8 +132,8 @@ class WikidataClient(
                 "action" to "wbgetentities",
                 "ids" to ids.distinct().take(MAX_IDS).joinToString("|"),
                 "props" to props,
-                "languages" to "en",
-                "sitefilter" to "enwiki",
+                "languages" to languages.joinToString("|"),
+                "sitefilter" to sites.joinToString("|"),
                 "format" to "json",
             )
         return net.lookup(NetRequest(API, query = query)) { response ->
@@ -108,6 +149,8 @@ class WikidataClient(
         const val API: String = "https://www.wikidata.org/w/api.php"
 
         private const val MAX_IDS = 50
+        private const val ENGLISH = "en"
+        private const val ENGLISH_WIKI = "enwiki"
 
         private const val YEAR = 9
         private const val MONTH = 10

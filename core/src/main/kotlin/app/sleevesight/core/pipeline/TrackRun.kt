@@ -23,6 +23,7 @@ import kotlinx.coroutines.withContext
 import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Duration
+import kotlin.time.Instant
 
 /**
  * What one run is about: the track as the player reports it and normalized, and its settings;
@@ -148,7 +149,11 @@ internal class TrackRun(
             publish(state.value)
             withContext(if (looksAgain) FreshLookups else EmptyCoroutineContext) {
                 gather()
-                control.gathered(Gathered(state.value.sources, state.value.resolution))
+                // In the track's language (#902), before the evidence is assembled: the insight waits for it.
+                InLanguage(parts, input, control, guard, this@TrackRun) { state.value }.search()
+                control.gathered(
+                    Gathered(state.value.sources, state.value.resolution, inLanguage = state.value.inLanguage),
+                )
                 // Published as asked for with the assembled genres, before they may start (#772): a
                 // panel says it is still looking.
                 val later = labels.later(state.value)
@@ -330,8 +335,14 @@ internal class TrackRun(
     private fun assemble(): EvidenceSet {
         val results =
             parts.adapters.mapNotNull { (state.value.sources[it.id] as? SourceState.Done)?.result }
+        // The lines found in the track's language after the English ones (#902), so the English ids stay.
         val drafts =
-            playerLines() + results.flatMap { it.evidence }.filter { settings.isEnabled(it.source) }
+            playerLines() +
+                (results.flatMap { it.evidence } + state.value.languageDrafts()).filter {
+                    settings.isEnabled(
+                        it.source,
+                    )
+                }
         val evidence = EvidenceSet.of(drafts, parts.hasher)
         // The genres and how their later requests stand, in one update with the evidence (#772).
         update {
@@ -360,16 +371,7 @@ internal class TrackRun(
     }
 
     // The release the player reports, as the simulator words it (`P` evidence).
-    private fun playerLines(): List<EvidenceDraft> =
-        listOfNotNull(nowPlaying.album?.trim()?.takeIf { it.isNotEmpty() }).map { album ->
-            EvidenceDraft(
-                source = SourceId.PLAYER,
-                scope = Scope.RELEASE,
-                text = "This recording is on the release \"$album\".",
-                url = null,
-                retrievedAt = time.clock.now(),
-            )
-        }
+    private fun playerLines(): List<EvidenceDraft> = playerLines(nowPlaying, time.clock.now())
 
     internal companion object {
         val SOURCE_OFF: SourceState =
@@ -414,3 +416,22 @@ internal class CacheGuard(
             null
         }
 }
+
+/**
+ * The release [nowPlaying]'s player reports, as the simulator words it (`P` evidence), retrieved
+ * [at]: what a run assembles first (`TrackRun`), and what the song's, the artist's and the album's
+ * insights rebuild the run's evidence with (`ItemInsights.ownEvidence`, #522).
+ */
+internal fun playerLines(
+    nowPlaying: NowPlaying,
+    at: Instant,
+): List<EvidenceDraft> =
+    listOfNotNull(nowPlaying.album?.trim()?.takeIf { it.isNotEmpty() }).map { album ->
+        EvidenceDraft(
+            source = SourceId.PLAYER,
+            scope = Scope.RELEASE,
+            text = "This recording is on the release \"$album\".",
+            url = null,
+            retrievedAt = at,
+        )
+    }

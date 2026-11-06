@@ -197,16 +197,23 @@ class BusyDialogTest {
         val code = "sleevesight-keys:v1\nlastfm=$lastFmKey"
         show(scanner = { onScanned -> LaunchedEffect(Unit) { onScanned(code) } }) {
             compose.onNodeWithText(text(R.string.settings_scan_keys)).performScrollTo().performClick()
-            // Past the words that seal a code (#590): these codes are clear ones.
+            // Past the intro and the words that seal a code (#590, #765): these codes are clear
+            // ones, read at once on the camera's step, whose *Next* goes on to the keys to save.
+            compose.onNodeWithText(text(R.string.load_keys_start)).performClick()
             compose.onNodeWithText(text(R.string.load_keys_next)).performClick()
-            waitForText(text(R.string.setup_title))
+            waitForText(text(R.string.load_keys_read_title))
+            compose.onNodeWithText(text(R.string.load_keys_next)).performClick()
+            waitForText(text(R.string.load_keys_save_question_one))
+            // ③'s *Next* saves nothing; ④'s *Complete* saves the key.
+            compose.onNodeWithText(text(R.string.load_keys_next)).performClick()
+            waitForText(text(R.string.load_keys_enable_question))
             val before = flaky.writes.get()
             flaky.writeGate = gate
 
-            tapTwiceInOneFrame(text(R.string.settings_save))
+            tapTwiceInOneFrame(text(R.string.load_keys_complete))
             waitFor("the save's write started") { flaky.writes.get() == before + 1 }
 
-            assertEquals(1, release(hasText(text(R.string.setup_title)), before))
+            assertEquals(1, release(hasText(text(R.string.load_keys_enable_question)), before))
             assertEquals(lastFmKey, runBlocking { secrets.get(SecretId.LASTFM) }?.reveal())
         }
     }

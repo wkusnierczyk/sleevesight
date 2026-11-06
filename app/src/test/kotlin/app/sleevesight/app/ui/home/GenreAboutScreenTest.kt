@@ -176,7 +176,7 @@ class GenreAboutScreenTest {
                     }
                 }
             }
-            compose.onNodeWithTag(GENRE_PREFIX + "artist:Miles Davis:jazz").performClick()
+            compose.onNodeWithTag(GENRE_PREFIX + "artist:Miles Davis:jazz").unfold()
             compose.waitForIdle()
             block()
         }
@@ -509,7 +509,7 @@ class GenreAboutScreenTest {
             // The chips are in *Genres*' panel (#772).
             compose.onNodeWithTag(GENRES_CHIP_TAG).performScrollTo().performClick()
             compose.waitForIdle()
-            compose.onNodeWithTag(GENRE_PREFIX + "artist:Miles Davis:jazz").performScrollTo().performClick()
+            compose.onNodeWithTag(GENRE_PREFIX + "artist:Miles Davis:jazz").performScrollTo().unfold()
             compose.waitForIdle()
             compose.onNodeWithTag(GENRE_DEFINITION_TAG).assertExists()
             compose.onNodeWithTag(GENRE_WHY_TAG).assertExists()

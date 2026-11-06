@@ -1,0 +1,5 @@
+What's new in 0.3.0:
+- When the sources say nothing about an artist, the artist's insight is written from a web search, as AI web search says.
+- A track sung in another language is also looked up in that language; the insight says which citations it translated.
+- The welcome screen says more simply what goes to which source.
+- An Exa key added later reaches the album's web search too.

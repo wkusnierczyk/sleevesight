@@ -55,6 +55,8 @@ class MainActivity : ComponentActivity() {
             nowPlaying = graph.sessions.nowPlaying,
             playback = graph.sessions.playback,
             art = graph.sessions.art,
+            // An ad playing in place of a track (#880): Home's neutral ad state.
+            ad = graph.sessions.ad,
             settings = graph.latestSettings,
             normalizer = Normalizer(JvmAccentFolder),
             playerLabel = graph::playerLabel,
@@ -84,6 +86,8 @@ class MainActivity : ComponentActivity() {
             readAloud = graph.readAloud,
             // *Search with AI* under the empty Dates, Genres and Lyrics (#773).
             aiSearches = graph.aiSearches,
+            // The song's, the artist's and the album's insights under Key insights (#522).
+            itemNotes = graph.itemNotes,
         )
     }
 
@@ -179,6 +183,8 @@ class MainActivity : ComponentActivity() {
                                 },
                                 testerReport = testerReport,
                                 themeButton = themeButton,
+                                // The header logo's record turning while music plays (#848).
+                                logoSpin = graph.logoSpin,
                             )
                         }
                         intro?.let { LogoIntroOverlay(it) }

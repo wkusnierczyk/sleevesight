@@ -517,6 +517,25 @@ class PipelineCoordinatorBackOnlineTest {
                 // return came before its lookups, so it asks nothing again.
                 assertEquals(emptyList<String>(), askedAgain)
             },
+            Case(
+                "only the search in the language failed, English finding nothing: asked again, written once it finds",
+                mapOf("Zero" to 1, "A" to 1),
+                listOf("Zero", "A", "A"),
+            ) {
+                acted()
+                inLanguage = true
+                englishFinds = false
+                languageDown = true
+                play("A")
+                settle()
+                assertTrue(offersWriteFor("A").not())
+                send(CoordinatorEvent.NetworkChanged(false))
+                languageDown = false
+                send(CoordinatorEvent.NetworkChanged(true))
+                settle()
+                assertEquals(listOf("A"), askedAgain)
+                assertEquals(setOf(SourceId.WEB), carried.single().languageRetryable)
+            },
         )
 
     @Test
@@ -538,6 +557,25 @@ class PipelineCoordinatorBackOnlineTest {
             assertEquals(listOf("A"), askedAgain)
             assertEquals(listOf("B"), preparationsCancelled)
             assertEquals(listOf("B", "B"), preparations)
+        }
+    }
+
+    @Test
+    fun `a return between the English lookups and those in the track's language still asks the English again`() {
+        val world = started()
+        with(world) {
+            acted()
+            inLanguage = true
+            lookupMs = 2_000
+            network(online = false)
+            play("A")
+            advance(1_000)
+            // A's English lookups are granted, offline; those in its language are not yet.
+            assertEquals("run A", grants.last())
+            network(online = true)
+            settle()
+            assertEquals(listOf("A"), askedAgain)
+            assertEquals(setOf(SourceId.WEB), carried.single().unreachable)
         }
     }
 }

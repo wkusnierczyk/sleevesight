@@ -9,10 +9,21 @@ package app.sleevesight.core.resolution
  * which resolution passes on without reading (`architecture.md`, *MusicBrainz tags and genres*).
  */
 interface MusicBrainzLookup {
-    /** Recordings matching [title] by [artist], as MusicBrainz's search ranks them. */
+    /** Recordings matching [title] by [artist], as MusicBrainz's search ranks them: at most [SEARCH_PAGE]. */
     suspend fun searchRecordings(
         title: String,
         artist: String,
+    ): Lookup<List<MbRecording>>
+
+    /**
+     * Recordings matching [title] by [artist] first released on or before [date] (as MusicBrainz writes
+     * dates, `1973`, `1973-01` or `1973-01-05`), at most [SEARCH_PAGE] (#906): the ones that could be
+     * earlier than a full first page's.
+     */
+    suspend fun searchRecordingsBefore(
+        title: String,
+        artist: String,
+        date: String,
     ): Lookup<List<MbRecording>>
 
     /** The recording [mbid], with its work, artist and URL relationships, and its tags. */
@@ -35,6 +46,11 @@ interface MusicBrainzLookup {
      * exact name first.
      */
     suspend fun searchArtists(name: String): Lookup<MbArtistSearch>
+
+    companion object {
+        /** The most recordings a search gives, its one page: MusicBrainz's largest. */
+        const val SEARCH_PAGE: Int = 100
+    }
 }
 
 /**
@@ -73,12 +89,17 @@ data class MbReleaseGroup(
     val primaryType: String?,
 )
 
-/** A release a recording appears on. [date] is null when MusicBrainz has none. */
+/**
+ * A release a recording appears on. [date] is null when MusicBrainz has none. [language] is the
+ * language MusicBrainz records for its tracklist (ISO 639-3, `text-representation`), a hint of the
+ * track's language (#902); null when it records none, or the answer carries none (a search's).
+ */
 data class MbRelease(
     val mbid: String,
     val title: String,
     val date: String?,
     val releaseGroup: MbReleaseGroup?,
+    val language: String? = null,
 )
 
 /**

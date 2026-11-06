@@ -12,6 +12,7 @@ import app.sleevesight.core.sources.ReleaseDate
 import app.sleevesight.core.sources.SourceResult
 import app.sleevesight.core.synthesis.ReleaseType
 import app.sleevesight.core.synthesis.SearchAnswer
+import app.sleevesight.core.text.DateWhen
 
 // The dates the home screen shows (#556, #724): the year after the album, and the *Dates* panel's
 // sentences, or why it has none, worked out from what the pipeline publishes, as plain functions.
@@ -79,9 +80,9 @@ internal sealed interface DateSentence {
     ) : DateSentence
 
     /**
-     * "The song was originally recorded {when} by {artist}, and released on {album}.", on the
-     * single or EP [kind] names; with no [title] known, "The song was originally recorded {when} by
-     * {artist}.": a cover's original, recorded on [date].
+     * "The song was originally recorded by {artist} {when}, and released on {album}.", on the
+     * single or EP [kind] names; with no [title] known, "The song was originally recorded by {artist}
+     * {when}.": a cover's original, recorded on [date].
      */
     data class Original(
         val date: String,
@@ -171,48 +172,6 @@ internal enum class NoDates {
                         else -> NO_DATES
                     }
             }
-    }
-}
-
-/**
- * A date as precisely as MusicBrainz gives it (#724): a [Day], a [Month] or a [Year], said "on 29
- * July 2014", "in July 2014", "in 2014". A part that is not a day or a month leaves the date less
- * precise; no year, no date.
- */
-internal sealed interface DateWhen {
-    val year: String
-
-    data class Day(
-        val day: Int,
-        val month: Int,
-        override val year: String,
-    ) : DateWhen
-
-    data class Month(
-        val month: Int,
-        override val year: String,
-    ) : DateWhen
-
-    data class Year(
-        override val year: String,
-    ) : DateWhen
-
-    companion object {
-        /** [date] (`2014`, `2014-07`, `2014-07-29`), or null when it has no year. */
-        fun of(date: String): DateWhen? {
-            val year = ReleaseDate.yearIn(date) ?: return null
-            val parts = date.split('-')
-            val month = parts.getOrNull(1)?.toIntOrNull()?.takeIf { it in 1..MONTHS }
-            val day = parts.getOrNull(2)?.toIntOrNull()?.takeIf { it in 1..DAYS }
-            return when {
-                month == null -> Year(year)
-                day == null -> Month(month, year)
-                else -> Day(day, month, year)
-            }
-        }
-
-        private const val MONTHS = 12
-        private const val DAYS = 31
     }
 }
 

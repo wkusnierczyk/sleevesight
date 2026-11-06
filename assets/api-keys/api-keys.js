@@ -1,13 +1,14 @@
-// The API keys page (#436): the keys from a keys file the user chooses or drops, or pasted in their
-// fields, each checked against its service's form as the app checks it, and the ones that pass
-// drawn as a setup code for the app's *Load keys*, sealed with the five words the phone shows
-// (#590), unless sealing is turned off. The keys and the words are kept only in the fields; nothing
-// is stored or sent.
+// The API keys page (#436, #764): the five words the phone's *Load keys* shows, typed in five
+// boxes, three letters each; the keys from a keys file the user chooses or drops, or pasted in their
+// fields, each checked against its service's form as the app checks it; and the ones that pass drawn
+// as a setup code for *Load keys*, sealed with the words (#590), unless the code is made without
+// them. The words and the keys are masked, each with an eye that shows its action (open while hidden,
+// slashed while shown). They are kept only in the fields; nothing is stored or sent.
 
 import { qrSvg } from '../keyboard/qr-svg.js';
 import { BAD_CHARACTERS, SERVICES, check, ending, readFile, write } from './keys.js';
 import { codeDrawer } from './draw.js';
-import { COUNT, PREFIX_LETTERS, readWords, seal, tokens } from './seal.js';
+import { COUNT, PREFIX_LETTERS, complete, seal } from './seal.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -32,18 +33,29 @@ const FORMS = {
 // where the browser cannot mask a text field.
 const MASKS = CSS.supports('-webkit-text-security', 'disc');
 
+/** The word boxes, in order. */
+const boxes = Array.from({ length: COUNT }, (_, i) => $(`w${i}`));
+
 const inputs = new Map();
 const messages = new Map();
+const eyes = new Map();
+
+// Whether the words are shown, and which keys are.
+let wordsShown = false;
+const shown = new Set();
 
 // Counts the files read and the clears, so that a file still being read when another is chosen,
 // or when *Clear* is chosen, is dropped once read rather than fill the fields.
 let generation = 0;
 
-// What `#holds` last said, so a live region is not rebuilt, and read out again, at each keystroke.
+// What the code's state last said, so a live region is not rebuilt, and read out again, at each
+// keystroke.
 let held = null;
 
-// Whether the code on screen is a clear one, about which the page warns until it is gone.
-let clearShown = false;
+const labelOf = (code) => SERVICES.find((s) => s.code === code).label;
+
+/** What a word box keeps of [text]: lower-case letters, three at most. */
+const keep = (text) => text.toLowerCase().replace(/[^a-z]/g, '').slice(0, PREFIX_LETTERS);
 
 // Draws the code (`draw.js`): the one on screen goes as soon as what it holds changes, so a clear
 // code never stays while a sealed one is made, nor after sealing fails.
@@ -56,87 +68,163 @@ const drawer = codeDrawer({
     code.style.width = `${side * MODULE_PX}px`;
     code.replaceChildren(svg);
     code.hidden = false;
-    clearShown = !sealed;
-    warn();
+    $('ph').hidden = true;
+    $('warn').hidden = sealed;
     describe(sealed);
   },
   hide: () => {
     const code = $('code');
     code.hidden = true;
     code.replaceChildren();
-    clearShown = false;
-    warn();
+    $('warn').hidden = true;
   },
   failed: () => {
     held = null;
-    $('holds').textContent = 'No code: it could not be sealed, as this browser lacks the cryptography it needs.';
+    const ph = $('ph');
+    ph.hidden = false;
+    const line = document.createElement('span');
+    line.className = 'error';
+    line.textContent = 'No code: it could not be sealed, as this browser lacks the cryptography it needs.';
+    ph.replaceChildren(line);
+    $('holds').replaceChildren();
   },
 });
 
-// Warns that the code is the keys themselves while sealing is off, or a clear code is still shown.
-function warn() {
-  $('unsealed').hidden = $('seal').checked && !clearShown;
-}
-
-const NUMBERS = ['no', 'one', 'two', 'three', 'four', 'five'];
-
 /**
- * The words typed: the five words once they are all there, and what to say of them: how many so
- * far, or which one is not one of the list's, or that there are too many. The last word still being
- * typed, under three letters, is not yet wrong.
+ * The words typed: the five words once they are all there, what the line under the boxes says of
+ * them (how many so far, or which one is not one of the list's), and each box's state: empty, still
+ * being typed (under three letters), a word, or none.
  */
 function wordsTyped() {
-  const text = $('words').value;
-  const typed = tokens(text);
-  const words = readWords(text);
-  const typing = typed.length > 0 && !/[\s,]$/.test(text) && typed.at(-1).length < PREFIX_LETTERS;
-  const wrong = words.findIndex((word, i) => word === null && !(typing && i === words.length - 1));
-  if (wrong >= 0) return { words: null, said: `Word ${wrong + 1} is not one of the phone’s words: check it.`, error: true };
-  if (words.length > COUNT) return { words: null, said: `More than ${NUMBERS[COUNT]} words: the phone shows ${NUMBERS[COUNT]}.`, error: true };
-  const done = words.filter((word) => word !== null);
-  if (done.length === COUNT) return { words: done, said: 'Five words, which seal the code.', error: false };
-  return { words: null, said: typed.length === 0 ? '' : `${done.length} of ${COUNT} words.`, error: false };
+  const states = boxes.map((box) => {
+    const typed = box.value;
+    if (typed === '') return 'empty';
+    if (complete(typed) !== null) return 'ok';
+    return typed.length < PREFIX_LETTERS ? 'typing' : 'bad';
+  });
+  const wrong = states.indexOf('bad');
+  const done = states.filter((state) => state === 'ok').length;
+  if (wrong >= 0) return { words: null, said: `Word ${wrong + 1} is not one of the phone’s words: check it.`, error: true, states };
+  if (done === COUNT) return { words: boxes.map((box) => complete(box.value)), said: 'Five words, which seal the code.', error: false, states };
+  return { words: null, said: states.every((state) => state === 'empty') ? '' : `${done} of ${COUNT} words.`, error: false, states };
 }
 
-// Says [said] of the words, in the error colour for an [error], only when it changes, so the live
-// region is not read out again at each keystroke.
-function reportWords(said, error) {
-  const line = $('words-report');
-  if (line.textContent !== said) line.textContent = said;
-  line.className = error ? 'error' : 'ok';
+// Under each box: the whole word once its letters match (only the tick while the words are hidden),
+// *not a word*, or the box's name. The box is described by it only when it says more than its name.
+function markBoxes(states) {
+  states.forEach((state, i) => {
+    $(`wb${i}`).className = `wbox${state === 'ok' ? ' okw' : state === 'bad' ? ' bad' : ''}`;
+    const said = state === 'ok'
+      ? (wordsShown ? `✓ ${complete(boxes[i].value)}` : '✓')
+      : state === 'bad' ? '✗ not a word' : `Word ${i + 1}`;
+    const mark = $(`wm${i}`);
+    if (mark.textContent !== said) mark.textContent = said;
+    if (state === 'ok' || state === 'bad') boxes[i].setAttribute('aria-describedby', `wm${i}`);
+    else boxes[i].removeAttribute('aria-describedby');
+  });
 }
+
+// Copies of the words' eye, one in each key field.
+const EYE = $('showwords').innerHTML;
 
 function buildFields() {
-  for (const { code, label } of SERVICES) {
+  for (const { code, label, variables } of SERVICES) {
     const field = document.createElement('div');
     field.className = 'field';
     const name = document.createElement('label');
-    name.htmlFor = `key-${code}`;
+    name.htmlFor = `k-${code}`;
     name.textContent = label;
+    const wrap = document.createElement('div');
+    wrap.className = 'kwrap';
     const input = document.createElement('input');
-    input.id = `key-${code}`;
-    input.type = MASKS ? 'text' : 'password';
-    if (MASKS) input.className = 'masked';
+    input.id = `k-${code}`;
+    input.type = 'text';
     for (const [attribute, value] of [['autocomplete', 'off'], ['autocapitalize', 'off'], ['spellcheck', 'false']]) {
       input.setAttribute(attribute, value);
     }
-    input.setAttribute('aria-describedby', `message-${code}`);
+    input.setAttribute('aria-describedby', `m-${code}`);
     input.addEventListener('input', update);
+    const eye = document.createElement('button');
+    eye.type = 'button';
+    eye.className = 'eye';
+    eye.id = `e-${code}`;
+    const named = `Show the ${label} key`;
+    eye.setAttribute('aria-pressed', 'false');
+    eye.setAttribute('aria-label', named);
+    eye.title = named;
+    eye.innerHTML = EYE;
+    eye.addEventListener('click', () => {
+      if (shown.has(code)) shown.delete(code);
+      else shown.add(code);
+      mask();
+    });
+    wrap.append(input, eye);
     const message = document.createElement('p');
-    message.id = `message-${code}`;
-    field.append(name, input, message);
+    message.className = 'fmsg';
+    message.id = `m-${code}`;
+    field.append(name, wrap, message);
     $('fields').append(field);
     inputs.set(code, input);
     messages.set(code, message);
+    eyes.set(code, eye);
+
+    // The keys file's names for it, in the folded example.
+    const row = document.createElement('tr');
+    const service = document.createElement('td');
+    service.textContent = label;
+    const names = document.createElement('td');
+    variables.forEach((variable, i) => {
+      if (i > 0) names.append(document.createElement('br'));
+      const text = document.createElement('code');
+      text.textContent = variable;
+      names.append(text);
+    });
+    row.append(service, names);
+    $('names').append(row);
   }
 }
 
-function labelOf(code) {
-  return SERVICES.find((s) => s.code === code).label;
+function setMasked(input, visible) {
+  if (MASKS) input.classList.toggle('masked', !visible);
+  else input.type = visible ? 'text' : 'password';
+}
+
+// Masks or shows the words and each key as asked, and sets the eyes and the button under the keys
+// to match.
+function mask() {
+  for (const box of boxes) setMasked(box, wordsShown);
+  $('showwords').setAttribute('aria-pressed', String(wordsShown));
+  // The label stays the toggle's name; the tooltip names what a press does now, as the eye does.
+  $('showwords').title = wordsShown ? 'Hide the words' : 'Show the words';
+  for (const [code, input] of inputs) {
+    setMasked(input, shown.has(code));
+    const eye = eyes.get(code);
+    eye.setAttribute('aria-pressed', String(shown.has(code)));
+    eye.title = (shown.has(code) ? 'Hide' : 'Show') + eye.title.slice(4);
+  }
+  $('showkeys').textContent = shown.size > 0 ? 'Hide all keys' : 'Show all keys';
+  markBoxes(wordsTyped().states);
+}
+
+// The empty code box: what the code waits for, ticked as each comes.
+function waitingFor(items) {
+  const title = document.createElement('div');
+  title.textContent = 'The code appears here once it has';
+  const list = document.createElement('ul');
+  for (const [got, text] of items) {
+    const item = document.createElement('li');
+    if (got) item.className = 'got';
+    const tick = document.createElement('span');
+    tick.className = 'tick';
+    tick.textContent = got ? '✓' : '○';
+    item.append(tick, text);
+    list.append(item);
+  }
+  return [title, list];
 }
 
 // Checks each field, says what is wrong with each key refused, and draws the code of the others,
-// sealed with the words, unless sealing is off.
+// sealed with the words, unless the code is made without them.
 function update() {
   const keys = new Map();
   const refused = [];
@@ -148,37 +236,58 @@ function update() {
       message.textContent = '';
     } else if (problem === null) {
       keys.set(code, value);
-      message.textContent = `In the code, ending ${ending(value)}.`;
-      message.className = 'ok';
+      message.textContent = `✓ In the code, ending ${ending(value)}.`;
+      message.className = 'fmsg ok';
     } else {
       refused.push(code);
       message.textContent =
         `Not in the code: ${problem === BAD_CHARACTERS ? 'it holds a space or a character no such key has.' : FORMS[code]}`;
-      message.className = 'error';
+      message.className = 'fmsg error';
     }
     inputs.get(code).setAttribute('aria-invalid', problem === null ? 'false' : 'true');
   }
-  const sealing = $('seal').checked;
-  $('words').disabled = !sealing;
-  $('show-words').disabled = !sealing;
-  warn();
-  const typed = sealing ? wordsTyped() : { words: null, said: '', error: false };
-  reportWords(typed.said, typed.error);
+
+  const sealing = !$('nosealbox').checked;
+  $('st1').classList.toggle('off', !sealing);
+  for (const box of boxes) box.disabled = !sealing;
+  $('showwords').disabled = !sealing;
+  const typed = wordsTyped();
+  markBoxes(typed.states);
+  const said = sealing ? typed.said : 'Not needed: the code is made without the words.';
+  const line = $('wr');
+  if (line.textContent !== said) line.textContent = said;
+  line.className = `line ${sealing && typed.error ? 'error' : sealing && typed.words !== null ? 'ok' : 'muted'}`;
+  const wordsDone = sealing && typed.words !== null;
+  $('st1').classList.toggle('done', wordsDone);
+  $('n1').textContent = wordsDone ? '✓' : '1';
+  $('st2').classList.toggle('done', keys.size > 0);
+  $('n2').textContent = keys.size > 0 ? '✓' : '2';
+
   const waiting = sealing && typed.words === null;
-  const said = JSON.stringify([[...keys].map(([name, value]) => [name, ending(value)]), refused, sealing, waiting]);
-  const changed = said !== held;
-  held = said;
+  const state = JSON.stringify([[...keys].map(([name, value]) => [name, ending(value)]), refused, sealing, waiting]);
+  const changed = state !== held;
+  held = state;
   const holds = $('holds');
+  const ph = $('ph');
   if (keys.size === 0 || waiting) {
     drawer.clear();
     if (!changed) return;
-    if (keys.size === 0) {
-      holds.textContent = refused.length === 0 ? 'No key yet.' : 'No code: no key has its service’s form.';
-    } else {
-      holds.textContent = `No code yet: type the ${NUMBERS[COUNT]} words the phone shows, above.`;
+    holds.replaceChildren();
+    ph.hidden = false;
+    if (keys.size === 0 && refused.length > 0 && !waiting) {
+      const none = document.createElement('span');
+      none.className = 'error';
+      none.textContent = 'No code: no key has its service’s form.';
+      ph.replaceChildren(none);
+      return;
     }
+    const items = [];
+    if (sealing) items.push([typed.words !== null, 'the phone’s five words']);
+    items.push([keys.size > 0, 'at least one key']);
+    ph.replaceChildren(...waitingFor(items));
     return;
   }
+
   const text = write(keys);
   const words = sealing ? typed.words : null;
   // What the code holds, said once it shows: as a sealed code only once a sealed one is drawn.
@@ -189,14 +298,14 @@ function update() {
       item.textContent = `${labelOf(name)}, ending ${ending(value)}`;
       list.append(item);
     }
-    const lines = [document.createTextNode(sealed ? 'The code, sealed with the phone’s words, holds:' : 'The code holds:'), list];
+    const lines = [document.createTextNode(sealed ? 'Sealed with the phone’s words. It holds:' : 'Not sealed. It holds:'), list];
     if (refused.length > 0) {
       const left = document.createElement('p');
       left.className = 'error';
       left.textContent = `Left out, not of its service’s form: ${refused.map(labelOf).join(', ')}.`;
       lines.push(left);
     }
-    holds.replaceChildren(...lines);
+    $('holds').replaceChildren(...lines);
   };
   if (drawer.holds(text, words)) {
     // The same code: the latest description kept for one still being sealed, and said again of
@@ -205,16 +314,25 @@ function update() {
     if (changed && !$('code').hidden) describe(words !== null);
     return;
   }
-  if (words !== null) holds.textContent = 'Sealing the code with the phone’s words…';
+  if (words !== null) {
+    ph.hidden = false;
+    const sealingNow = document.createElement('div');
+    const spinner = document.createElement('span');
+    spinner.className = 'spin';
+    spinner.setAttribute('aria-hidden', 'true');
+    sealingNow.append(spinner, 'Sealing the code with the phone’s words…');
+    ph.replaceChildren(sealingNow);
+    holds.replaceChildren();
+  }
   drawer.draw(text, words, describe);
 }
 
 // Sets the file report at once. The same report again (the same file read twice) ends in a
 // no-break space, or loses it, so that it is still a change, which the live region announces.
 function report(text, error = false) {
-  const line = $('file-report');
+  const line = $('fr');
   line.className = error ? 'report error' : 'report';
-  line.textContent = text !== '' && line.textContent === text ? `${text}\u00a0` : text;
+  line.textContent = text !== '' && line.textContent === text ? `${text} ` : text;
 }
 
 // Fills the fields with the keys in [file], in place of what they held, and says what was left out.
@@ -254,45 +372,127 @@ async function load(file) {
   update();
 }
 
+// Empties the words, the keys, the file report and the code, hides everything again, and seals the
+// code with the words again.
 function clear() {
   generation++;
+  for (const box of boxes) box.value = '';
   for (const input of inputs.values()) input.value = '';
   $('file').value = '';
   report('');
-  $('show').checked = false;
-  show(false);
-  $('words').value = '';
-  $('show-words').checked = false;
-  showWords(false);
-  $('seal').checked = true;
+  wordsShown = false;
+  shown.clear();
+  $('nosealbox').checked = false;
+  mask();
   drawer.clear();
   update();
 }
 
-function mask(input, shown) {
-  if (MASKS) input.classList.toggle('masked', !shown);
-  else input.type = shown ? 'text' : 'password';
-}
-
-function show(shown) {
-  for (const input of inputs.values()) mask(input, shown);
-}
-
-function showWords(shown) {
-  mask($('words'), shown);
-}
-
-function buildWords() {
-  const input = $('words');
-  for (const [attribute, value] of [['autocomplete', 'off'], ['autocapitalize', 'off'], ['spellcheck', 'false']]) {
-    input.setAttribute(attribute, value);
-  }
-  showWords(false);
-  input.addEventListener('input', update);
+// The word boxes: three letters each, lower case, nothing but letters. A space or a comma moves to
+// the next box, as Tab does; Backspace in an empty box goes back. Several words pasted fill this box
+// and the ones after it, as do words typed with a separator on a keyboard that sends no key events
+// (Android's).
+function wireBoxes() {
+  // Going back keeps the caret at the end, so Backspace goes on deleting.
+  let backing = false;
+  const back = (i) => {
+    const previous = boxes[i - 1];
+    backing = true;
+    previous.focus();
+    backing = false;
+    previous.setSelectionRange(previous.value.length, previous.value.length);
+  };
+  boxes.forEach((box, i) => {
+    // Coming into a box selects its letters, so typing replaces them (a box holds only three, and
+    // the phone's words change with *New words*). The click that focused it keeps the selection.
+    let clicked = false;
+    box.addEventListener('mousedown', () => {
+      clicked = document.activeElement !== box;
+    });
+    box.addEventListener('focus', () => {
+      if (!backing) box.select();
+    });
+    box.addEventListener('mouseup', (event) => {
+      if (clicked) event.preventDefault();
+      clicked = false;
+    });
+    // Words pasted replace the boxes from this one on, rather than joining what the box already
+    // holds.
+    box.addEventListener('paste', (event) => {
+      const words = (event.clipboardData?.getData('text') ?? '').split(/[\s,]+/).map(keep).filter((w) => w !== '');
+      if (words.length === 0) return;
+      event.preventDefault();
+      let j = i;
+      for (const word of words) {
+        if (j >= COUNT) break;
+        boxes[j].value = word;
+        j++;
+      }
+      boxes[Math.min(j, COUNT - 1)].focus();
+      update();
+    });
+    // A keyboard that deletes through input events alone: Backspace in an empty box still goes back.
+    // (A Backspace key event already went back and cancelled this one.)
+    box.addEventListener('beforeinput', (event) => {
+      if (event.inputType === 'deleteContentBackward' && box.value === '' && i > 0) {
+        event.preventDefault();
+        back(i);
+      }
+    });
+    box.addEventListener('input', () => {
+      const parts = box.value.split(/[\s,]+/);
+      if (parts.length > 1) {
+        const words = parts.map(keep);
+        if (words.length === 2 && words[1] === '') {
+          box.value = words[0];
+          if (i < COUNT - 1) boxes[i + 1].focus();
+        } else {
+          // Nothing but separators and dropped characters leaves the box empty.
+          box.value = '';
+          let j = i;
+          for (const word of words.filter((w) => w !== '')) {
+            if (j >= COUNT) break;
+            boxes[j].value = word;
+            j++;
+          }
+          boxes[Math.min(j, COUNT - 1)].focus();
+        }
+      } else {
+        const kept = keep(box.value);
+        if (kept !== box.value) {
+          const at = Math.min(box.selectionStart ?? kept.length, kept.length);
+          box.value = kept;
+          box.setSelectionRange(at, at);
+        }
+      }
+      update();
+    });
+    box.addEventListener('keydown', (event) => {
+      if (event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
+      if (event.key === 'Backspace' && box.value === '' && i > 0) {
+        event.preventDefault();
+        back(i);
+      } else if (event.key === ' ' || event.key === ',') {
+        event.preventDefault();
+        if (i < COUNT - 1) boxes[i + 1].focus();
+      }
+    });
+  });
 }
 
 buildFields();
-buildWords();
+wireBoxes();
+$('showwords').addEventListener('click', () => {
+  wordsShown = !wordsShown;
+  mask();
+});
+$('showkeys').addEventListener('click', () => {
+  const hide = shown.size > 0;
+  shown.clear();
+  if (!hide) for (const { code } of SERVICES) shown.add(code);
+  mask();
+});
+$('nosealbox').addEventListener('change', update);
 $('file').addEventListener('change', () => {
   const [file] = $('file').files;
   // Emptied, so the same file chosen again is read again.
@@ -323,8 +523,6 @@ window.addEventListener('drop', holdFile);
 // page is hidden (also into the back-forward cache, which `beforeunload` does not see).
 window.addEventListener('beforeunload', clear);
 window.addEventListener('pagehide', clear);
-$('show').addEventListener('change', () => show($('show').checked));
-$('show-words').addEventListener('change', () => showWords($('show-words').checked));
-$('seal').addEventListener('change', update);
 $('clear').addEventListener('click', clear);
+mask();
 update();

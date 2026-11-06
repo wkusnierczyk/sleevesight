@@ -1,0 +1,8 @@
+---
+---
+/* The documentation pages' type and the site's header and footer (`_layouts/docs.html`,
+   `_includes/site-header-style.html`) as a style sheet, for a page whose policy admits no inline
+   style: the API keys page (`api-keys.html`, #764). Built by the site from the same includes, so it
+   stays in step with them. */
+{% include docs-style.css %}
+{% include site-header-style.css %}

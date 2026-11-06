@@ -4,6 +4,7 @@ import app.sleevesight.core.ai.ReasoningEffort
 import app.sleevesight.core.evidence.Hasher
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.ProviderId
+import app.sleevesight.core.sources.LanguageAdapter
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.SourceResult
 import app.sleevesight.core.synthesis.CardKind
@@ -18,6 +19,7 @@ import kotlin.time.Instant
  *
  * An implementation may throw; the pipeline then goes on as if it had missed, and logs it.
  */
+@Suppress("TooManyFunctions") // A read and a keep for each kind of entry the pipeline keeps.
 interface PipelineCache {
     /**
      * What [adapter] gave for [track], played at [duration] (the player's length, or null), if kept
@@ -40,15 +42,62 @@ interface PipelineCache {
         result: SourceResult,
     )
 
+    /**
+     * What [adapter], a lookup in the track's language (#902), gave for [track] at [duration] in
+     * [language] (`Language.code`), if kept and current: kept apart from the English lookups' results,
+     * under a key that holds the language. By default none, where the cache keeps no such results.
+     */
+    suspend fun result(
+        adapter: LanguageAdapter,
+        language: String,
+        track: NormalizedTrack,
+        duration: Duration?,
+    ): SourceResult? = null
+
+    /** Keeps what [adapter] gave for [track] at [duration] in [language]; by default nothing. */
+    suspend fun keep(
+        adapter: LanguageAdapter,
+        language: String,
+        track: NormalizedTrack,
+        duration: Duration?,
+        result: SourceResult,
+    ) = Unit
+
+    /**
+     * The language the search in the track's language decided [track] at [duration] is sung in
+     * (#902): a language's code, `en`, or empty for none found; null when none is kept. By default
+     * none.
+     */
+    suspend fun trackLanguage(
+        track: NormalizedTrack,
+        duration: Duration?,
+    ): String? = null
+
+    /** Keeps [code], the language decided for [track] at [duration] ([trackLanguage]); by default nothing. */
+    suspend fun keepTrackLanguage(
+        track: NormalizedTrack,
+        duration: Duration?,
+        code: String,
+    ) = Unit
+
     /** The card written for [key], if kept. */
     suspend fun card(key: CardKey): String?
 
     /**
      * The card written for [key], if kept, with when it was written, where the cache knows it (a
-     * genre's reason, #523, is shown no longer than *Keep history for* after it); by default [card]'s,
-     * with no time.
+     * genre's reason, #523, is shown no longer than *Keep history for* after it), and what its rewrite
+     * changed (#854); by default [card]'s, with no time and no rewrite.
      */
     suspend fun keptCard(key: CardKey): KeptCard? = card(key)?.let { KeptCard(it, null) }
+
+    /**
+     * The cards kept for what [key]'s card is about, from the same evidence, prompt, style and model
+     * knowledge, but written with another AI service, model or reasoning effort (#911), the most
+     * recently written first, each with the key it is kept under; never [key]'s own. What a play
+     * whose model has written none shows in place of it, with *Rewrite insight* beside it, rather
+     * than nothing. By default none, where the cache cannot say.
+     */
+    suspend fun keptByOthers(key: CardKey): List<OtherCard> = emptyList()
 
     /** Keeps the card [text], written for [key]. */
     suspend fun keep(
@@ -66,6 +115,18 @@ interface PipelineCache {
         text: String,
         writtenAt: Instant,
     ) = keep(key, text)
+
+    /**
+     * Keeps the card [text], written for [key] at [writtenAt] by a rewrite that changed [rewritten]
+     * (#854), so a later play says what it changed; by default as [keep] without them, where the
+     * cache keeps none.
+     */
+    suspend fun keep(
+        key: CardKey,
+        text: String,
+        writtenAt: Instant,
+        rewritten: Set<RewritePart>,
+    ) = keep(key, text, writtenAt)
 
     /** A cache that keeps nothing. */
     object None : PipelineCache {
@@ -91,31 +152,44 @@ interface PipelineCache {
     }
 }
 
-/** A card kept: its [text], and when it was written ([writtenAt]), null where the cache does not say. */
+/**
+ * A card kept: its [text], when it was written ([writtenAt]), null where the cache does not say, and
+ * what the rewrite that wrote it changed ([rewritten], #854), none for one written the first time.
+ */
 data class KeptCard(
     val text: String,
     val writtenAt: Instant?,
+    val rewritten: Set<RewritePart> = emptySet(),
 )
 
 /**
- * What a written card depends on (R2, D14): the synthesis cache key, with the track itself as the
- * entity, which the store turns into its own key (the retrieval key, which tells apart tracks the
- * lookup key alone does not).
+ * A card kept under [key], written with another AI service, model or reasoning effort than the key
+ * asked for (#911, [PipelineCache.keptByOthers]).
+ */
+data class OtherCard(
+    val key: CardKey,
+    val card: KeptCard,
+)
+
+/**
+ * What a written card depends on (R2, D14): the synthesis cache key, with what the card is about,
+ * its [entity], which the store turns into its own key (for a track, the retrieval key, which tells
+ * apart tracks the lookup key alone does not; for an artist or album, its MusicBrainz id or its
+ * folded name, #240).
  *
- * @property evidenceFingerprint the fingerprint of the evidence the card was written from.
+ * @property entity what the card is about: an [CardEntity.Artist] for [CardKind.ARTIST], an
+ *   [CardEntity.Album] for [CardKind.ALBUM], and a [CardEntity.Track] for every other kind.
+ * @property evidenceFingerprint the fingerprint of the evidence the card was written from: for an
+ *   artist or album card, of the evidence gathered for the artist or album, not the track, so it is
+ *   the same whichever of its tracks is playing.
  * @property promptVersion the card's prompt template version.
  * @property styleHash a hash of the user's style the card used (D14), SHA-256 in hex.
- * @property duration the player's length for the track, part of its entity key.
  * @property modelKnowledge whether the model's own knowledge was allowed.
  * @property effort the reasoning effort asked for, null for the provider's default.
- * @property subject what the card is about besides the track, null for none: for a genre's reason
- *   ([CardKind.GENRE], #523), the genre's identity (`GenreLabel.identity`), so each genre of a
- *   track keeps its own.
  */
 data class CardKey(
     val kind: CardKind,
-    val track: NormalizedTrack,
-    val duration: Duration?,
+    val entity: CardEntity,
     val evidenceFingerprint: String,
     val promptVersion: Int,
     val styleHash: String,
@@ -123,8 +197,27 @@ data class CardKey(
     val model: String,
     val modelKnowledge: Boolean,
     val effort: ReasoningEffort?,
-    val subject: String? = null,
-)
+) {
+    init {
+        val expected =
+            when (kind) {
+                CardKind.ARTIST -> entity is CardEntity.Artist
+                CardKind.ALBUM -> entity is CardEntity.Album
+                else -> entity is CardEntity.Track
+            }
+        require(expected) { "A ${kind.key} card is not about ${entity::class.simpleName}" }
+    }
+
+    /** What a track's card is about besides the track ([CardEntity.Track.subject]); null for any other. */
+    val subject: String? get() = (entity as? CardEntity.Track)?.subject
+
+    /** This track's card's key about [subject] instead ([CardEntity.Track.subject]). */
+    fun about(subject: String?): CardKey {
+        val track = entity as? CardEntity.Track
+        requireNotNull(track) { "A ${kind.key} card has no subject" }
+        return copy(entity = track.copy(subject = subject))
+    }
+}
 
 /**
  * The hash of a card's user style (D14), SHA-256 in hex, as [CardKey.styleHash] keeps it. D14's style

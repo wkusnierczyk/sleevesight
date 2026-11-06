@@ -1,6 +1,10 @@
 package app.sleevesight.core.synthesis
 
 import app.sleevesight.core.lyrics.LyricsSite
+import app.sleevesight.core.text.APP_DATE_RULE
+import app.sleevesight.core.text.DateForm
+import app.sleevesight.core.text.US_DATES
+import app.sleevesight.core.text.US_DATE_RULE
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -26,13 +30,40 @@ class AiSearchPromptTest {
 
     @Test
     fun theSystemPartComesFirstThenTheTrackThenTheQuestion() {
-        for (kind in SearchKind.entries) {
+        // What the song is about is asked from web pages only (#908): `ExplainAnswersTest`'s.
+        for (kind in SearchKind.entries - SearchKind.EXPLAIN) {
             val prompt = AiSearchPrompt.build(kind, facts)
             assertEquals(AiSearchPrompt.system(kind) + "\n\n" + AiSearchPrompt.user(kind, facts), prompt)
             // A definition's data is the genre (#786), fenced as the track is.
             val fence = if (kind == SearchKind.DEFINITION) "\n<genre>\n" else "\n<track>\n"
             assertTrue(prompt.indexOf("Reply with one JSON object") < prompt.indexOf(fence))
             assertTrue(prompt.trimEnd().endsWith("?"), "the question last")
+        }
+    }
+
+    @Test
+    fun aDefinitionAndAnExplanationWriteDatesInTheAppsFormTheJsonAnswersAsIsoDates() {
+        // A definition and what the song is about are prose shown as written (#957); the other
+        // answers are JSON the app reads, their dates partial ISO dates it writes in its own form.
+        val blues = SearchFacts.ofGenre("Blues")
+        assertTrue(APP_DATE_RULE in AiSearchPrompt.build(SearchKind.DEFINITION, blues))
+        assertTrue(APP_DATE_RULE in ExplainPrompt.system(limit = null))
+        assertTrue(APP_DATE_RULE in ExplainPrompt.system(limit = 3))
+        assertTrue(APP_DATE_RULE in AiSearchPrompt.build(SearchKind.EXPLAIN, facts))
+        // On a US phone, its form (#957), and only it.
+        for (prompt in listOf(
+            AiSearchPrompt.build(SearchKind.DEFINITION, blues, dates = US_DATES),
+            AiSearchPrompt.build(SearchKind.EXPLAIN, facts, dates = US_DATES),
+            ExplainPrompt.once(facts, emptyList(), US_DATES),
+            ExplainPrompt.agent(facts, emptyList(), 3, US_DATES),
+        )) {
+            assertTrue(US_DATE_RULE in prompt)
+            assertFalse(APP_DATE_RULE in prompt)
+        }
+        for (kind in SearchKind.entries - SearchKind.DEFINITION - SearchKind.EXPLAIN) {
+            for (dates in listOf(DateForm.APP, US_DATES)) {
+                assertFalse("Write dates" in AiSearchPrompt.build(kind, facts, dates = dates), kind.key)
+            }
         }
     }
 
@@ -83,7 +114,7 @@ class AiSearchPromptTest {
 
     @Test
     fun eachKindAsksForJsonInItsShapeAndNeverAGuess() {
-        for (kind in SearchKind.entries) {
+        for (kind in SearchKind.entries - SearchKind.EXPLAIN) {
             val system = AiSearchPrompt.system(kind)
             assertTrue(AiSearchPrompt.shape(kind) in system)
             assertTrue("never guess" in system)

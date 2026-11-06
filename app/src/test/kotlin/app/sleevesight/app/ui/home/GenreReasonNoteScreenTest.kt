@@ -10,7 +10,6 @@ import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
@@ -20,6 +19,7 @@ import app.sleevesight.app.pipeline.DefinitionState
 import app.sleevesight.app.pipeline.GenreNotes
 import app.sleevesight.app.pipeline.GenreReason
 import app.sleevesight.core.evidence.EvidenceDraft
+import app.sleevesight.core.evidence.EvidenceLine
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.genres.GenreLabel
@@ -85,8 +85,10 @@ class GenreReasonNoteScreenTest {
                 ),
         )
 
-    private fun written(reply: String) =
-        InsightState.Written((GroundingCheck.check(reply, EVIDENCE, false) as InsightReply.Written).grounded, false)
+    private fun written(
+        reply: String,
+        evidence: EvidenceSet = EVIDENCE,
+    ) = InsightState.Written((GroundingCheck.check(reply, evidence, false) as InsightReply.Written).grounded, false)
 
     private class Notes(
         private val reason: GenreReason,
@@ -106,6 +108,7 @@ class GenreReasonNoteScreenTest {
 
     private fun show(
         reason: InsightState.Written,
+        track: TrackState = this.track,
         block: () -> Unit,
     ) {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
@@ -116,13 +119,14 @@ class GenreReasonNoteScreenTest {
                     }
                 }
             }
-            compose.onNodeWithTag(GENRE_PREFIX + "artist:$ARTIST:alternative").performClick()
+            compose.onNodeWithTag(GENRE_PREFIX + "artist:$ARTIST:alternative").unfold()
             compose.waitForIdle()
             block()
         }
     }
 
-    private fun note(count: Int) = app.resources.getQuantityString(R.plurals.home_note_unbacked, count, count)
+    // One text for any number of dimmed sentences (#854).
+    private val note get() = app.getString(R.string.home_note_unbacked)
 
     @Test
     fun theCaseOfTheIssueWithEverySentenceCitedHasNoNote() {
@@ -147,18 +151,40 @@ class GenreReasonNoteScreenTest {
                     "this track's instruments or sound.",
             ),
         ) {
-            assertEquals("The dimmed sentence is not backed by the sources.", note(1))
-            compose.onNodeWithText(note(1)).assertExists()
+            assertEquals("Dimmed text is not backed by the sources.", note)
+            compose.onNodeWithText(note).assertExists()
         }
 
     @Test
-    fun twoDimmedSentencesAreCountedInThePlural() =
+    fun twoDimmedSentencesGetTheSameNote() =
         show(written("$REPLY It feels alternative. It is loud.")) {
-            assertEquals("The 2 dimmed sentences are not backed by the sources.", note(2))
-            compose.onNodeWithText(note(2)).assertExists()
+            assertEquals("Dimmed text is not backed by the sources.", note)
+            compose.onNodeWithText(note).assertExists()
         }
 
+    @Test
+    fun aReasonCitingALineFoundInHindiSaysItTranslatedIt() {
+        // #902: the artist's line on Hindi Wikipedia, W2 after the English one.
+        val hindi =
+            EvidenceDraft(
+                SourceId.WIKIPEDIA,
+                Scope.ARTIST,
+                "मचेई मालेनचुक एक पोलिश गायक हैं।",
+                null,
+                AT,
+                language = "hi",
+            )
+        val evidence = EvidenceSet.of(EVIDENCE.lines.map(::draftOf) + hindi, JvmHasher)
+        val reason = written("He is a Polish singer [W2]. He wrote “Fajnie” himself [MB1].", evidence)
+        show(reason, track.copy(evidence = evidence)) {
+            compose.onNodeWithText("Translated from Hindi: W2.").assertExists()
+        }
+    }
+
     private companion object {
+        fun draftOf(line: EvidenceLine) =
+            EvidenceDraft(line.source, line.scope, line.text, line.url, line.retrievedAt, line.aggregate)
+
         const val ARTIST = "Maciej Maleńczuk"
         val AT: Instant = Instant.parse("2026-10-27T00:00:00Z")
 

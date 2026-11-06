@@ -2,7 +2,9 @@ package app.sleevesight.cli
 
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.normalizer.Normalizer
+import app.sleevesight.core.pipeline.CardEntity
 import app.sleevesight.core.pipeline.CardKey
+import app.sleevesight.core.pipeline.KeptCard
 import app.sleevesight.core.pipeline.PipelineCache
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.synthesis.CardKind
@@ -15,8 +17,7 @@ class FreshCardsTest {
     private val key =
         CardKey(
             kind = CardKind.INSIGHT,
-            track = Normalizer(JvmAccentFolder).normalize(Cli.nowPlaying(1)),
-            duration = null,
+            entity = CardEntity.Track(Normalizer(JvmAccentFolder).normalize(Cli.nowPlaying(1)), null),
             evidenceFingerprint = "f",
             promptVersion = 5,
             styleHash = "s",
@@ -33,6 +34,9 @@ class FreshCardsTest {
             object : PipelineCache by PipelineCache.None {
                 override suspend fun card(key: CardKey): String? = kept[key]
 
+                // As the store does, on its own rather than through [card].
+                override suspend fun keptCard(key: CardKey): KeptCard? = kept[key]?.let { KeptCard(it, null) }
+
                 override suspend fun keep(
                     key: CardKey,
                     text: String,
@@ -45,6 +49,7 @@ class FreshCardsTest {
             fresh.keep(key, "An insight [MB1].")
             assertEquals("An insight [MB1].", stored.card(key))
             assertNull(fresh.card(key))
+            assertNull(fresh.keptCard(key))
         }
     }
 }

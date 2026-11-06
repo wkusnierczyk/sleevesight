@@ -8,7 +8,7 @@
 # use or licence, the credits or the build tools changes this page by hand.
 title: Dependencies
 permalink: /docs/dependencies/
-docs_version: 0.1.15
+docs_version: 0.1.18
 nav:
   - id: licences-and-gpl-30
     label: Licences
@@ -149,7 +149,7 @@ The app's credits screen lists each source with what the app takes from it and i
 | MusicBrainz | Recordings, releases, artists, credits and dates | Core data under [CC0](https://creativecommons.org/publicdomain/zero/1.0/); the web service is free for non-commercial use |
 | MusicBrainz tags | Genre labels from the track's and the artists' tags; used for labels only, never sent to the AI service | Supplementary data under [CC BY-NC-SA 3.0](https://creativecommons.org/licenses/by-nc-sa/3.0/), credited to the MusicBrainz contributors |
 | Wikipedia | Sentences from articles; in a genre's panel, the first two sentences of the genre's article | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/), by the Wikipedia contributors |
-| Wikidata | Facts on songs and artists; the way from a genre to its Wikipedia article | [CC0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| Wikidata | Facts on songs, albums and artists; the way from a genre to its Wikipedia article | [CC0](https://creativecommons.org/publicdomain/zero/1.0/) |
 | Last.fm | Artist bios; listeners, tags, genre labels and similar artists | Bios under CC BY-SA, by Last.fm users; the rest under Last.fm's API terms. Needs the user's own key |
 | Exa | Web search results | Exa's terms of service. Needs the user's own key |
 

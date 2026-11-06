@@ -1,22 +1,34 @@
 package app.sleevesight.wiring
 
 import app.sleevesight.core.Secret
+import app.sleevesight.core.evidence.EvidenceDraft
+import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmResourceReader
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WebEngine
+import app.sleevesight.core.sources.ArtistPart
+import app.sleevesight.core.sources.ArtistResults
+import app.sleevesight.core.sources.KeptPart
+import app.sleevesight.core.sources.LanguageSubject
 import app.sleevesight.core.sources.WITHOUT_GENRES_VERSION
 import app.sleevesight.net.NetClient
 import app.sleevesight.net.NetRequest
 import app.sleevesight.net.NetResponse
 import app.sleevesight.net.NetResult
+import app.sleevesight.sources.language.LanguageLinesSource
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertSame
+import kotlin.test.assertTrue
+import kotlin.time.Instant
 
 class PipelineWiringTest {
     /** Answers every request with [response], and keeps the URLs asked and the times it was closed. */
@@ -72,6 +84,67 @@ class PipelineWiringTest {
             ids(keyed, Settings(webEngines = emptySet())),
         )
     }
+
+    @Test
+    fun `the artist's web search is built only with Exa switched on and its key, its lines spared by the clear`() {
+        val keyed = SourceKeys(web = mapOf(WebEngine.EXA to exa))
+        assertNotNull(wiring.artistWeb(keyed, Settings()))
+        assertNull(wiring.artistWeb(keyed, Settings(webEngines = emptySet())))
+        assertNull(wiring.artistWeb(SourceKeys(), Settings()))
+        assertEquals(setOf("album.web", "artist.web"), PipelineWiring.TRACK_ONLY_PARTS)
+    }
+
+    // The artist cache in a map, by part name and key, kept for ever.
+    private class Table : ArtistResults {
+        val entries = mutableMapOf<Pair<String, String>, String>()
+
+        override suspend fun get(
+            part: ArtistPart,
+            key: String,
+        ): KeptPart? = entries[part.name to key]?.let { KeptPart(it, Instant.DISTANT_FUTURE) }
+
+        override suspend fun keep(
+            part: ArtistPart,
+            key: String,
+            value: String,
+        ) {
+            entries[part.name to key] = value
+        }
+    }
+
+    @Test
+    fun `the lines in the track's language are one for the wiring, in the artist cache while it is kept`() =
+        runTest {
+            val table = Table()
+            var keeps = false
+            val wiring =
+                PipelineWiring(net, JvmAccentFolder, JvmResourceReader, artists = table, keepsArtists = { keeps })
+            assertSame(wiring.languageLines, wiring.languageLines)
+            val bts = LanguageSubject.Artist("BTS", "mb-bts")
+            val line =
+                EvidenceDraft(
+                    SourceId.WIKIPEDIA,
+                    Scope.ARTIST,
+                    "방탄소년단은 그룹이다.",
+                    null,
+                    Instant.DISTANT_PAST,
+                    language = "ko",
+                )
+
+            // Off: in memory, which Clear history forgets.
+            wiring.languageLines.keep(bts, "ko", listOf(line))
+            assertEquals(listOf(line), wiring.languageLines.kept(bts))
+            assertTrue(table.entries.isEmpty())
+            wiring.forgetRemembered()
+            assertTrue(wiring.languageLines.kept(bts).isEmpty())
+
+            // On: in the artist cache, which the switch's clear does not spare.
+            keeps = true
+            wiring.languageLines.keep(bts, "ko", listOf(line))
+            assertEquals(setOf("artist.language" to "mb:mb-bts"), table.entries.keys)
+            assertFalse(LanguageLinesSource.ARTIST_PART.name in PipelineWiring.TRACK_ONLY_PARTS)
+            assertFalse(LanguageLinesSource.ALBUM_PART.name in PipelineWiring.TRACK_ONLY_PARTS)
+        }
 
     @Test
     fun `with Show genres off the MusicBrainz, Wikipedia and Last fm adapters are built without genres`() {

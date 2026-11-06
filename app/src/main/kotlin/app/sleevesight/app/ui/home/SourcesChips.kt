@@ -8,9 +8,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,6 +29,7 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -71,9 +75,12 @@ internal fun SourcesChip(
 /**
  * A chip on Home that opens a panel in its place, or a page, drawn as a genre chip is
  * ([ChipFrame]): *Sources*' ([SourcesChip], #623) and *Dates*' (#724). Named [name], tagged [tag]; a
- * screen reader reads it as a button, named [name], a [heading] when it is one, collapsed while
- * [collapsed] (its panel opens in its place, so it is only ever collapsed), its action named
- * [action] when given. [modifier] goes on the chip's outside: a focus requester.
+ * screen reader reads it as a button, named [description] ([name] unless given: the song's row's
+ * "Song, Paper Boats", #894), a [heading] when it is one, collapsed while [collapsed] (its panel
+ * opens in its place, so it is only ever collapsed), its action named [action] when given. With
+ * [width], it is that wide, its name centred in it (the rows of the song, the artist and the album,
+ * #894), with the **AI** mark after it when [ai] (#948, [AiLabel]; [description] then says "uses AI").
+ * [modifier] goes on the chip's outside: a focus requester.
  */
 @Suppress("LongParameterList") // What the chip says and is, each its own.
 @Composable
@@ -84,23 +91,45 @@ internal fun PanelChip(
     action: String? = null,
     collapsed: Boolean = true,
     heading: Boolean = false,
+    description: String = name,
+    width: Dp? = null,
+    ai: Boolean = false,
     onClick: () -> Unit,
 ) {
     val folded = stringResource(R.string.home_fold_collapsed)
     val (fill, content) = chipColours(marked = false)
     ChipFrame(
         fill,
-        modifier = modifier.testTag(tag),
+        modifier = modifier.testTag(tag).then(width?.let { Modifier.width(it) } ?: Modifier),
         action =
             Modifier
                 .clickable(role = Role.Button, onClickLabel = action, onClick = onClick)
                 .clearAndSetSemantics {
                     if (heading) heading()
-                    contentDescription = name
+                    contentDescription = description
                     if (collapsed) stateDescription = folded
                 },
     ) {
-        Text(name, style = MaterialTheme.typography.labelLarge, color = content)
+        if (width == null) {
+            Text(name, style = MaterialTheme.typography.labelLarge, color = content)
+        } else if (ai) {
+            // The mark after the name, centred with it; read in [description], with the rest.
+            Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                CompositionLocalProvider(LocalContentColor provides content) {
+                    ProvideTextStyle(MaterialTheme.typography.labelLarge) { AiLabel(name, described = description) }
+                }
+            }
+        } else {
+            Text(
+                name,
+                style = MaterialTheme.typography.labelLarge,
+                color = content,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                softWrap = false,
+                modifier = Modifier.weight(1f),
+            )
+        }
     }
 }
 
@@ -118,7 +147,7 @@ internal fun Notes(
     val settings = stringResource(R.string.home_source_note_settings)
     val sentences =
         notes.map { note ->
-            val name = chipName(note.source)
+            val name = rowName(note.source, note.language)
             when (note) {
                 is SourceNote.NeedsKey -> stringResource(R.string.home_source_note_key, name, settings)
                 is SourceNote.Unreachable -> stringResource(R.string.home_source_note_unreachable, name)
@@ -153,7 +182,9 @@ internal fun Notes(
  * matched to its source. On the left, right-aligned in a column as wide as the widest, a chip with
  * the letter the source's lines and citations use (`SourceId.tag`, the one place it is set); on the
  * right, the source's name on one line and what it found on the next ([statusText]: from the
- * scopes of its own [lines], *Found the track and the artist*, #768). The chip
+ * scopes of its own [lines], *Found the track and the artist*, #768). A lookup in the track's
+ * language has a row of its own after its source's (#902: *Wikipedia in Hindi*), from its own lines;
+ * its letter shows and hides its source's lines with the source's own row's. The chip
  * shows, at a glance, what a tap does to its source's [lines] ([focus]): filled while they show,
  * outlined while they are hidden, a tap showing them again (unfolded to by [fold]); dimmed for a
  * source that gave none, with nothing to show or hide, and no button. The rows sit close, the
@@ -188,7 +219,7 @@ private fun Table(
     focus: LineFocus,
     fold: SourcesFold,
 ) {
-    val width = letterColumnWidth(rows.map { it.source.tag })
+    val width = chipColumnWidth(rows.map { it.source.tag })
     Column(
         modifier = Modifier.testTag(SOURCES_TABLE_TAG),
         verticalArrangement = Arrangement.spacedBy(ROW_GAP),
@@ -196,7 +227,7 @@ private fun Table(
         for (row in rows) {
             val state =
                 when {
-                    lines.none { it.source in row.filters } -> LetterState.DIMMED
+                    row.own(lines).isEmpty() -> LetterState.DIMMED
                     row.filters.none { it in focus.hidden } -> LetterState.SHOWN
                     else -> LetterState.HIDDEN
                 }
@@ -224,7 +255,7 @@ private fun SourceRow(
     details: Boolean,
     onToggle: () -> Unit,
 ) {
-    val name = chipName(chip.source)
+    val name = rowName(chip.source, chip.language)
     val filters = state != LetterState.DIMMED
     // At least [ROW_HEIGHT] tall, the chip centred: with [ROW_GAP], each chip's 48 dp touch area
     // ends where the next row's begins, so a touch between two chips goes to the nearer.
@@ -233,7 +264,7 @@ private fun SourceRow(
         verticalAlignment = Alignment.CenterVertically,
         modifier =
             Modifier
-                .testTag(ROW_PREFIX + chip.source.tag)
+                .testTag(ROW_PREFIX + chip.key)
                 .heightIn(min = ROW_HEIGHT),
     ) {
         Box(Modifier.width(width), contentAlignment = Alignment.CenterEnd) {
@@ -255,7 +286,7 @@ private fun SourceRow(
             val colors = MaterialTheme.colorScheme
             val status = statusText(chip, lines, details)
             val style = MaterialTheme.typography.bodySmall
-            val tag = Modifier.testTag(STATUS_PREFIX + chip.source.tag)
+            val tag = Modifier.testTag(STATUS_PREFIX + chip.key)
             val color = if (details && chip.status.wentWrong) colors.error else colors.onSurfaceVariant
             // A lookup under way with the turning record before its *Looking…* (#785); the status the
             // same node, and the row as tall, once it ends.
@@ -298,7 +329,7 @@ private fun LetterChip(
         }
     CompactChipFrame(
         look.fill,
-        modifier = Modifier.testTag(CHIP_PREFIX + chip.source.tag).then(outline),
+        modifier = Modifier.testTag(CHIP_PREFIX + chip.key).then(outline),
         action = action,
     ) {
         Text(
@@ -312,17 +343,26 @@ private fun LetterChip(
 }
 
 /**
- * The letters' column: as wide as the widest of [tags] as [LetterChip] draws them, its text and
- * [CHIP_PADDING] at each side, each side rounded as it is laid out.
+ * A column of chips as wide as the widest of [labels] as a chip draws them ([LetterChip], [PanelChip]):
+ * its text, on one line, with the **AI** mark after it as [AiLabel] sets it when [mark] (#948), and
+ * [CHIP_PADDING] at each side, each side rounded as it is laid out. The letters' column of *Sources*'
+ * table (#662); the buttons of the song's, the artist's and the album's rows (#894).
  */
 @Composable
-private fun letterColumnWidth(tags: List<String>): Dp {
+internal fun chipColumnWidth(
+    labels: List<String>,
+    mark: Boolean = false,
+): Dp {
     val measurer = rememberTextMeasurer()
     val style = MaterialTheme.typography.labelLarge
+    val small = MaterialTheme.typography.labelSmall
+    val ai = stringResource(R.string.home_ai_mark)
     val density = LocalDensity.current
-    return remember(tags, style, density) {
-        val widest = tags.maxOfOrNull { measurer.measure(it, style).size.width } ?: 0
-        with(density) { (widest + 2 * CHIP_PADDING.roundToPx()).toDp() }
+    return remember(labels, mark, style, small, ai, density) {
+        val widest = labels.maxOfOrNull { measurer.measure(it, style, softWrap = false, maxLines = 1).size.width } ?: 0
+        val gap = with(density) { MARK_GAP.roundToPx() }
+        val marked = if (mark) measurer.markWidth(ai, small) + gap else 0
+        with(density) { (widest + marked + 2 * CHIP_PADDING.roundToPx()).toDp() }
     }
 }
 
@@ -341,13 +381,13 @@ const val SOURCES_CHIP_TAG: String = "sources-chip"
 /** The test tag of the note of what needs the listener. */
 const val SOURCES_NOTE_TAG: String = "sources-note"
 
-/** The test tag of a source's chip, before its tag (`MB`, `W`). */
+/** The test tag of a source's chip, before its tag (`MB`, `W`; `W:hi` in the track's language, #902). */
 const val CHIP_PREFIX: String = "chip:"
 
-/** The test tag of what a source's row says it found, before its tag (`MB`, `W`). */
+/** The test tag of what a source's row says it found, before its tag (`MB`, `W`; `W:hi`, #902). */
 const val STATUS_PREFIX: String = "source-status:"
 
-/** The test tag of a source's row of the table, before its tag (`MB`, `W`). */
+/** The test tag of a source's row of the table, before its tag (`MB`, `W`; `W:hi`, #902). */
 const val ROW_PREFIX: String = "source-row:"
 
 /** The test tag of *Sources*' table of the sources. */

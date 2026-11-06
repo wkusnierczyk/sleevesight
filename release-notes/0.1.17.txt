@@ -1,0 +1,7 @@
+What's new in 0.1.17:
+- The logo's record turns while music plays (Settings → Appearance).
+- Setting descriptions fold to one line; a tap shows the rest.
+- Load keys also switches on the services of the keys it saves.
+- A rewritten insight says what it was rewritten with.
+- Acoustic and other genres show a definition from Wikipedia.
+- Why is this …? no longer argues against the genre.

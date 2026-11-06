@@ -146,7 +146,7 @@ class InsightSettingsTest {
             for (
             detail in
             listOf(
-                "Only when you tap Write insight.",
+                "Only when you tap a button with the AI mark.",
                 "Writes automatically only when you skip to a track, not when one follows another by itself.",
                 "Writes automatically on every track change.",
             )

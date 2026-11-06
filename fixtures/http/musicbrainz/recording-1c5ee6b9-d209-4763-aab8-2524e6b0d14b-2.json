@@ -1,0 +1,58 @@
+{
+ "id": "1c5ee6b9-d209-4763-aab8-2524e6b0d14b",
+ "disambiguation": "",
+ "length": 148667,
+ "video": false,
+ "title": "THE VEIL BETWEEN WORLDS",
+ "first-release-date": "2022-07-22",
+ "releases": [
+  {
+   "date": "2022-07-22",
+   "release-events": [
+    {
+     "area": {
+      "type": null,
+      "sort-name": "[Worldwide]",
+      "id": "525d4e18-3d00-31b9-a58b-a146a916de8f",
+      "name": "[Worldwide]",
+      "disambiguation": "",
+      "iso-3166-1-codes": [
+       "XW"
+      ],
+      "type-id": null
+     },
+     "date": "2022-07-22"
+    }
+   ],
+   "text-representation": {
+    "script": "Latn",
+    "language": "eng"
+   },
+   "status": "Official",
+   "id": "2bafe2f3-1604-47e6-8bb6-ff8d80fa2c4c",
+   "country": "XW",
+   "quality": "normal",
+   "barcode": "197046149678",
+   "release-group": {
+    "id": "2d640ce8-8e57-4e1e-8e96-4d853e3930cb",
+    "title": "YOU ARE NOT MY MOTHER",
+    "secondary-type-ids": [
+     "22a628ad-c082-3c4f-b1b6-d41665107b88"
+    ],
+    "releases": [],
+    "secondary-types": [
+     "Soundtrack"
+    ],
+    "first-release-date": "2022-07-22",
+    "disambiguation": "",
+    "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+    "primary-type": "Album"
+   },
+   "disambiguation": "",
+   "title": "YOU ARE NOT MY MOTHER",
+   "packaging": "None",
+   "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+   "packaging-id": "119eba76-b343-3e02-a292-f0f00644bb9b"
+  }
+ ]
+}

@@ -35,6 +35,7 @@ import app.sleevesight.app.MainActivity
 import app.sleevesight.app.pipeline.CallId
 import app.sleevesight.app.pipeline.PipelineHost
 import app.sleevesight.app.pipeline.PipelineView
+import app.sleevesight.app.pipeline.RewriteOffer
 import app.sleevesight.app.pipeline.RunId
 import app.sleevesight.app.pipeline.UnavailableModel
 import app.sleevesight.app.session.PlaybackInfo
@@ -46,8 +47,11 @@ import app.sleevesight.app.ui.home.HomeFixtures.written
 import app.sleevesight.app.ui.report.REPORT_TAG
 import app.sleevesight.app.ui.settings.SettingsSection
 import app.sleevesight.app.ui.settings.SettingsTarget
+import app.sleevesight.core.ai.ReasoningEffort
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.pipeline.InsightState
+import app.sleevesight.core.pipeline.RewritePart
+import app.sleevesight.core.pipeline.WrittenBy
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WriteAutomatically
 import kotlinx.coroutines.CompletableDeferred
@@ -256,7 +260,15 @@ class WriteSplitButtonScreenTest {
         for (mode in WriteAutomatically.entries) {
             settings.value = Settings(writeAutomatically = mode)
             for (waiting in listOf(false, true)) {
-                view.value = PipelineView(kept, aiReady = true, rewrite = true, cardShown = true, waiting = waiting)
+                view.value =
+                    PipelineView(
+                        kept,
+                        aiReady = true,
+                        rewrite = true,
+                        rewriteWith = WITH,
+                        cardShown = true,
+                        waiting = waiting,
+                    )
                 show {
                     leading(WRITE_TAG).assertTextEquals("Rewrite insight").assertIsEnabled()
                     assertEquals(0, count(NO_ACTION_TAG))
@@ -274,9 +286,16 @@ class WriteSplitButtonScreenTest {
         val kept = track(insight = written("It is a song [MB1]."))
         val lines =
             listOf(
-                PipelineView(kept, aiReady = true, rewrite = true, cardShown = true) to
+                PipelineView(kept, aiReady = true, rewrite = true, rewriteWith = WITH, cardShown = true) to
                     "As written previously. $REWRITE_OFFERED",
-                PipelineView(kept, aiReady = true, rewrite = true, cardShown = true, rewriteFailed = "offline") to
+                PipelineView(
+                    kept,
+                    aiReady = true,
+                    rewrite = true,
+                    rewriteWith = WITH,
+                    cardShown = true,
+                    rewriteFailed = "offline",
+                ) to
                     "As written previously. Rewriting failed: no connection. $REWRITE_OFFERED",
                 PipelineView(kept, aiReady = true, cardShown = true, rewriteFailed = PipelineHost.STOPPED) to
                     "As written previously. Rewriting stopped.",
@@ -296,7 +315,7 @@ class WriteSplitButtonScreenTest {
     @Test
     fun rewriteIsNotOfferedWhileTheModelIsFoundUnavailable() {
         val kept = track(insight = written("It is a song [MB1].", cached = true))
-        view.value = PipelineView(kept, aiReady = true, rewrite = true, cardShown = true)
+        view.value = PipelineView(kept, aiReady = true, rewrite = true, rewriteWith = WITH, cardShown = true)
         unavailable.value = UnavailableModel(ProviderId.ANTHROPIC, "claude-gone")
         show {
             leading(NO_ACTION_TAG).assertTextEquals("Write insight").assertIsNotEnabled()
@@ -322,7 +341,15 @@ class WriteSplitButtonScreenTest {
                 PipelineHost.STOPPED to "Rewriting stopped.",
             )
         for ((why, line) in said) {
-            view.value = PipelineView(kept, aiReady = true, rewrite = true, cardShown = true, rewriteFailed = why)
+            view.value =
+                PipelineView(
+                    kept,
+                    aiReady = true,
+                    rewrite = true,
+                    rewriteWith = WITH,
+                    cardShown = true,
+                    rewriteFailed = why,
+                )
             show {
                 compose.onNodeWithText("It is a song", substring = true).assertExists()
                 says("As written previously. $line $REWRITE_OFFERED")
@@ -551,8 +578,15 @@ class WriteSplitButtonScreenTest {
     }
 
     private companion object {
-        // What follows *As written previously.* with *Rewrite insight* offered (#671).
-        const val REWRITE_OFFERED = "Tap Rewrite insight to write it with the updated source or model settings."
+        // What follows *As written previously.* with *Rewrite insight* offered (#671), naming what a
+        // rewrite would use (#854): another model, [WITH].
+        const val REWRITE_OFFERED =
+            "Tap Rewrite insight to have AI rewrite the insight with " + "Claude Haiku 5.5 high effort."
+        val WITH =
+            RewriteOffer(
+                setOf(RewritePart.MODEL),
+                WrittenBy(5, ProviderId.ANTHROPIC, "claude-haiku-5-5", ReasoningEffort.HIGH),
+            )
 
         // In order of how much is written automatically (#625).
         val WRITING_ORDER =

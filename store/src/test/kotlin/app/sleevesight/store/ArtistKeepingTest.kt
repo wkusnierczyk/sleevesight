@@ -244,6 +244,49 @@ class ArtistKeepingTest {
     }
 
     @Test
+    fun `clearing spares the parts kept whatever the switch says`() =
+        runBlocking {
+            val always = StoreArtistResults({ fixture.caches }, EmptyCoroutineContext, ArtistKeeping.ALWAYS)
+            val spared = ArtistPart("album.web", 1, 1, setOf(SourceId.WEB))
+            keeps = true
+            artists.keep(PART, "gordon lightfoot", "Bio.")
+            keeps = false
+            always.keep(spared, "sundown", "[]")
+            val sparing =
+                ArtistKeeping.over({ fixture.caches }, EmptyCoroutineContext, setOf(spared.name)) { keeps }
+
+            assertTrue(sparing.clear())
+
+            assertEquals(1, stats().artistResults.entries)
+            assertNotNull(always.get(spared, "sundown"))
+        }
+
+    @Test
+    fun `an artist's web lines are spared with an album's, and Clear history deletes them`() =
+        runBlocking {
+            // As `PipelineWiring.TRACK_ONLY_PARTS` names them (#885, #912): kept as long as the cards.
+            val always = StoreArtistResults({ fixture.caches }, EmptyCoroutineContext, ArtistKeeping.ALWAYS)
+            val album = ArtistPart("album.web", 3, 1, setOf(SourceId.WEB), keptAsHistory = true)
+            val artist = ArtistPart("artist.web", 1, 1, setOf(SourceId.WEB), keptAsHistory = true)
+            keeps = true
+            artists.keep(PART, "shashwat sachdev", "Bio.")
+            keeps = false
+            always.keep(album, "dhurandhar", "[]")
+            always.keep(artist, "mb:mb-sachdev", "[]")
+            val sparing =
+                ArtistKeeping.over({ fixture.caches }, EmptyCoroutineContext, setOf(album.name, artist.name)) { keeps }
+
+            assertTrue(sparing.clear())
+
+            assertEquals(2, stats().artistResults.entries)
+            assertNotNull(always.get(artist, "mb:mb-sachdev"))
+            // *Clear history* deletes them with everything else.
+            fixture.caches.clearAll()
+            assertEquals(0, stats().artistResults.entries)
+            assertNull(always.get(artist, "mb:mb-sachdev"))
+        }
+
+    @Test
     fun `a clear that failed is tried again by an artist-cache read while off`() =
         runBlocking {
             keeps = true

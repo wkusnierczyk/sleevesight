@@ -73,10 +73,10 @@ class WebQuestionsTest {
             val web = Searches { WebSearchOutcome.Found(listOf(page)) }
             val counted = mutableListOf<QuestionCost>()
             val reply =
-                WebQuestions(AiAccess(provider, Secret("k")), web).ask(question, AiWebSearch.OFF, 3, base) {
+                WebQuestions(AiAccess(provider, Secret("k")), web).ask(question, AiWebSearch.OFF, 3, base, counted = {
                     counted +=
                         it
-                }
+                })
             assertEquals(listOf("KNOWLEDGE"), provider.requests.map { it.prompt })
             assertTrue(
                 provider.requests
@@ -88,6 +88,37 @@ class WebQuestionsTest {
             assertNull(reply.pages)
             assertEquals(QuestionCost(searches = 0, calls = 1), reply.cost)
             assertEquals(listOf(QuestionCost.CALL), counted)
+        }
+
+    @Test
+    fun aQuestionsSystemPromptGoesWithEveryCallAndTheLoopsWithEachTurn() =
+        runTest {
+            // #767: a genre's reason sends its rules as the system prompt, the search's in the loop's.
+            val withSystem =
+                object : WebQuestion by question {
+                    override val system = "SYSTEM"
+
+                    override fun agentSystem(limit: Int) = "SYSTEM $limit"
+                }
+            val web = Searches { WebSearchOutcome.Found(listOf(page)) }
+            val systems = mutableListOf<String?>()
+            for (way in listOf(AiWebSearch.OFF, AiWebSearch.ONCE)) {
+                val provider = FakeProvider { FakeProvider.done("{}") }
+                WebQuestions(AiAccess(provider, Secret("k")), web).ask(withSystem, way, 2, base)
+                systems += provider.requests.map { it.system }
+            }
+            assertEquals(listOf<String?>("SYSTEM", "SYSTEM"), systems)
+            val loop =
+                FakeProvider(usesTools = true) { request ->
+                    if (request.toolsAllowed) toolTurn("grace") else FakeProvider.done("{}")
+                }
+            WebQuestions(AiAccess(loop, Secret("k")), web).ask(withSystem, AiWebSearch.UP_TO, 2, base)
+            assertEquals(listOf<String?>("SYSTEM 2", "SYSTEM 2", "SYSTEM 2"), loop.requests.map { it.system })
+            // A question with none keeps the request's own.
+            val plain = FakeProvider { FakeProvider.done("{}") }
+            val withBase = base.copy(system = "BASE")
+            WebQuestions(AiAccess(plain, Secret("k")), web).ask(question, AiWebSearch.OFF, 2, withBase)
+            assertEquals(listOf<String?>("BASE"), plain.requests.map { it.system })
         }
 
     @Test
@@ -106,10 +137,10 @@ class WebQuestionsTest {
             val web = Searches { WebSearchOutcome.Found(listOf(page, other, page)) }
             val counted = mutableListOf<QuestionCost>()
             val reply =
-                WebQuestions(AiAccess(provider, Secret("k")), web).ask(question, AiWebSearch.ONCE, 3, base) {
+                WebQuestions(AiAccess(provider, Secret("k")), web).ask(question, AiWebSearch.ONCE, 3, base, counted = {
                     counted +=
                         it
-                }
+                })
             assertEquals(listOf(question.query), web.queries)
             // Each page once.
             assertEquals(listOf("ONCE ${page.url}, ${other.url}"), provider.requests.map { it.prompt })
@@ -159,10 +190,10 @@ class WebQuestionsTest {
             val web = Searches { WebSearchOutcome.Found(listOf(page)) }
             val counted = mutableListOf<QuestionCost>()
             val reply =
-                WebQuestions(AiAccess(provider, Secret("k")), web).ask(question, AiWebSearch.UP_TO, 2, base) {
+                WebQuestions(AiAccess(provider, Secret("k")), web).ask(question, AiWebSearch.UP_TO, 2, base, counted = {
                     counted +=
                         it
-                }
+                })
             assertEquals(listOf("grace release 0", "grace release 1"), web.queries)
             assertEquals(3, provider.requests.size)
             assertEquals(listOf(true, true, false), provider.requests.map { it.toolsAllowed })
@@ -302,5 +333,48 @@ class WebQuestionsTest {
             runCurrent()
             assertEquals(1, web.searched)
             assertEquals(1, provider.requests.size)
+        }
+
+    @Test
+    fun aGateThatClosesWhileACallIsUnderWayStopsTheLoopBeforeItsNextSearchOrCall() =
+        runTest {
+            // #912's review: the gate is asked right before each search and each call.
+            var open = true
+            val provider =
+                FakeProvider(usesTools = true) { request ->
+                    // The app left, or web search switched off, while the first call streams.
+                    open = false
+                    if (request.toolsAllowed) toolTurn("grace") else FakeProvider.done("{}")
+                }
+            val web = Searches { WebSearchOutcome.Found(listOf(page)) }
+            val counted = mutableListOf<QuestionCost>()
+            val reply =
+                WebQuestions(AiAccess(provider, Secret("k")), web)
+                    .ask(question, AiWebSearch.UP_TO, 3, base, { counted += it }) { open }
+            assertTrue(reply.refused)
+            assertTrue(web.queries.isEmpty())
+            assertEquals(1, provider.requests.size)
+            assertEquals(listOf(QuestionCost.CALL), counted)
+
+            // Closed from the start: nothing at all, whatever the way.
+            for (way in AiWebSearch.entries) {
+                val none = FakeProvider(usesTools = true) { FakeProvider.done("{}") }
+                val closed = WebQuestions(AiAccess(none, Secret("k")), web).ask(question, way, 3, base) { false }
+                assertTrue(closed.refused)
+                assertTrue(none.requests.isEmpty())
+            }
+            assertTrue(web.queries.isEmpty())
+
+            // *Once*: closed after its search, no call.
+            var once = true
+            val onceWeb = Searches { WebSearchOutcome.Found(listOf(page)).also { once = false } }
+            val onceProvider = FakeProvider { FakeProvider.done("{}") }
+            val searched =
+                WebQuestions(AiAccess(onceProvider, Secret("k")), onceWeb).ask(question, AiWebSearch.ONCE, 3, base) {
+                    once
+                }
+            assertTrue(searched.refused)
+            assertEquals(1, onceWeb.queries.size)
+            assertTrue(onceProvider.requests.isEmpty())
         }
 }

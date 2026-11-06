@@ -19,7 +19,7 @@
     <string name="first_run_no_audio">Sleevesight receives no audio.</string>
 
     <string name="first_run_leaves_title">What leaves the phone, and to whom</string>
-    <string name="first_run_to_sources">To the sources you switch on, such as MusicBrainz and Wikipedia: the title and artists of the playing track, cleaned of tags such as “2006 Remaster”. For genre labels, Last.fm gets the album name. While the “Proactive” setting is on, as it is by default, the title and artists of the next track in the player’s queue also go to MusicBrainz if the service is enabled.</string>
+    <string name="first_run_to_sources">To the sources you enable (MusicBrainz, Wikipedia and Wikidata, Last.fm, Exa web search): the title, artists and album of the playing track, as names or identifiers, cleaned of tags such as “2006 Remaster”. Exa may also get searches about the track, its album or its artist, some written by your AI service. MusicBrainz may also get the title and artists of the next track in the queue.</string>
     <string name="first_run_to_ai">To the AI service you choose: the title, artists and album, and what the sources found. This is for the playing track only: the next one in the queue is looked up ahead in the sources, but no AI insight is written for it until it plays.</string>
     <string name="first_run_api_keys">Your API keys: each only to the service it belongs to, with each request to it. Always encrypted.</string>
     <string name="first_run_to_art_host">To the server a cover’s web address names, when a player gives the cover only as a web address: a request for the cover image. The address itself may identify the album or episode.</string>
@@ -58,6 +58,9 @@
     <string name="settings_ai_provider_anthropic">Anthropic</string>
     <string name="settings_ai_provider_openai">OpenAI</string>
     <string name="settings_ai_provider_google">Google</string>
+    <!-- The AI service that needs no key, not offered under AI services yet: named on Load keys and
+         in the key dialog when it is the AI service on (#763). -->
+    <string name="settings_ai_provider_ollama">Ollama</string>
     <string name="settings_ai_model_of">%1$s model</string>
     <string name="settings_ai_model_default">%1$s (default)</string>
     <string name="settings_ai_effort_of">%1$s reasoning effort</string>
@@ -143,7 +146,7 @@
     <!-- Reactive's choices, each described under its name in the choice dialog (#546). -->
     <string name="settings_write_every_change_detail">Writes automatically on every track change.</string>
     <string name="settings_write_when_skip_detail">Writes automatically only when you skip to a track, not when one follows another by itself.</string>
-    <string name="settings_write_never_detail">Only when you tap Write insight.</string>
+    <string name="settings_write_never_detail">Only when you tap a button with the AI mark.</string>
     <string name="settings_crossfade">Crossfade</string>
     <string name="settings_crossfade_summary">The player’s crossfade, for telling your skips from natural ends under “On track skip (auto)”.</string>
     <string name="settings_crossfade_auto">Autodetect</string>
@@ -151,8 +154,14 @@
     <string name="settings_prepare_next">Proactive</string>
     <string name="settings_prepare_next_summary">Looks up the next track in the player’s queue ahead, so its sources come sooner when it plays. No insight is written ahead, and nothing is paid for.</string>
 
-    <string name="settings_keep_sources">Keep Sources as you left them</string>
-    <string name="settings_keep_sources_summary">Keeps the sources under each track’s insight folded or unfolded as you left them on the track before. When disabled, each new track’s sources start folded. Applies with Expandable boxes.</string>
+    <string name="settings_sources_on_new_track">Sources on a new track</string>
+    <string name="settings_sources_on_new_track_summary">How the sources under each track’s insight start on each new track. Applies with Expandable boxes.</string>
+    <string name="settings_items_on_new_track">Song, Artist and Album on a new track</string>
+    <string name="settings_items_on_new_track_summary">How the song’s, the artist’s and the album’s insights under Key insights start on each new track. With Reactive set to an automatic mode, an insight that starts unfolded is written unless its artist or album has one already. Applies with Expandable boxes.</string>
+    <!-- The choices of both (#522). -->
+    <string name="settings_new_track_folded">Folded</string>
+    <string name="settings_new_track_unfolded">Unfolded</string>
+    <string name="settings_new_track_as_left">As left</string>
     <string name="settings_background">Look up in the background</string>
     <string name="settings_background_summary">Allows Sleevesight to look up information from sources while it is in the background, for every track played. With Reactive set to On track change (auto) or On track skip (auto), insights are then written, and paid for, whether you read them or not, up to the Stop after limit when Saver is on.</string>
     <string name="settings_artist_facts_once">Don’t repeat artist facts</string>
@@ -167,7 +176,7 @@
     <string name="settings_section_history">History</string>
     <string name="settings_keep_history">Keep history for</string>
     <string name="settings_keep_history_forever">Forever</string>
-    <string name="settings_keep_history_summary">How long Sleevesight keeps, on this phone, the list of tracks you played, the track changes recorded to learn your skips, and the insights and genre explanations written for them, counted from when each was played or written. Anything older is no longer shown and is deleted. A shorter time applies at once.</string>
+    <string name="settings_keep_history_summary">How long Sleevesight keeps, on this phone, the list of tracks you played, the track changes recorded to learn your skips, and the insights and genre explanations written for them, with the web pages an album’s insight was written from, counted from when each was played or written. Anything older is no longer shown and is deleted. A shorter time applies at once.</string>
     <string name="settings_session_gap">New session idle trigger</string>
     <string name="settings_session_gap_summary">A track that starts after a longer break begins a new listening session, counted from when the last track was heard. Earlier sessions stay in your history, for as long as “Keep history for” is set. Within a session, each artist fact is told once, unless “Don’t repeat artist facts” is off. A change applies from the next track that starts.</string>
     <string name="settings_clear_history">Clear history</string>
@@ -184,6 +193,16 @@
     <string name="settings_font_summary">The app’s own font, Roboto, looks the same on every phone. The system font is the one chosen in your phone’s settings.</string>
     <string name="settings_intro">Logo intro at start</string>
     <string name="settings_intro_summary">When you open Sleevesight while it is not already open, its logo plays a few seconds of animation first; a tap, Back or any key skips it. It never plays while your phone’s Remove animations or TalkBack is on.</string>
+    <string name="settings_spin_logo">Spin the logo while music plays</string>
+    <string name="settings_spin_logo_summary">The record in the logo at the top of Home turns while your player is playing, and comes to rest when it pauses or stops. It stands still while your phone’s Remove animations is on.</string>
+    <string name="settings_logo_speed">Logo speed</string>
+    <string name="settings_logo_speed_summary">How fast the logo’s record turns while music plays.</string>
+    <string name="settings_logo_speed_33">33⅓ rpm</string>
+    <!-- How a screen reader says settings_logo_speed_33 (#848): the fraction in words. -->
+    <string name="settings_logo_speed_33_spoken">33 and a third rpm</string>
+    <string name="settings_logo_speed_45">45 rpm</string>
+    <string name="settings_logo_speed_33_detail">As a long-playing record (12 inch).</string>
+    <string name="settings_logo_speed_45_detail">As a single (7 inch).</string>
     <!-- Last under Appearance (#759): a row with a button that brings back everything dismissed for good. -->
     <string name="settings_restore_dismissed">Restore dismissed messages</string>
     <string name="settings_restore_dismissed_summary">Shows again the guides and notes you dismissed.</string>
@@ -195,43 +214,24 @@
     <string name="settings_section_keys">Secrets</string>
     <string name="settings_scan_keys">Load keys</string>
     <string name="settings_scan_keys_value">Save several API keys at once from one QR code.</string>
-    <!-- Under Load keys (#541): %1$s is the address of the page that makes the code, a link; %2$s
-         is settings_scan_keys_docs, a link to the documentation. -->
+    <!-- Under Load keys (#541): %1$s is the address of the page that makes the code, as plain text
+         (#765); %2$s is settings_scan_keys_docs, a link to the documentation. -->
     <string name="settings_scan_keys_more">Make the QR code on a computer, at %1$s: the page sends your keys nowhere. More in %2$s.</string>
     <string name="settings_scan_keys_docs">the guide to loading keys</string>
     <string name="settings_key_scan">Scan QR code</string>
     <string name="settings_key_scan_empty">The QR code holds nothing.</string>
     <string name="settings_key_scan_characters">The QR code holds a space or a character no such key has: it is not this key.</string>
     <string name="settings_key_scan_shape">The QR code does not hold a key of this service’s form.</string>
-    <string name="settings_key_scan_setup">This QR code holds keys other than this one: use “Load keys”, in Settings under Secrets, which shows what it holds.</string>
-    <!-- A setup code scanned into one key's field (#541) that cannot fill it. -->
-    <string name="settings_key_scan_setup_more">This QR code holds more than this key, and Sleevesight cannot read the rest. “Load keys”, in Settings under Secrets, shows what it holds.</string>
-    <string name="settings_key_scan_setup_none">This QR code holds no key this version of Sleevesight can read. “Load keys”, in Settings under Secrets, shows what it holds.</string>
-    <string name="settings_key_scan_setup_sealed">This QR code is sealed with words: read it with “Load keys”, in Settings under Secrets, which shows them. For this field, make a code without them: on the page, turn off “Seal the code with the phone’s words”.</string>
+    <!-- A setup code scanned into one key's field (#541) that cannot fill it: one with other keys,
+         or keys this version cannot read, and a sealed one, each with Open Load keys (#765). -->
+    <string name="settings_key_scan_setup">This code holds other keys than this one. Load keys shows them all, and saves those you choose.</string>
+    <string name="settings_key_scan_setup_sealed">This code is sealed with words, which only Load keys can open. Read it there, or make a code of this key without the words.</string>
+    <string name="settings_key_open_load_keys">Open Load keys</string>
     <string name="settings_key_scan_setup_newer">This QR code is of a later version than this app reads. Update Sleevesight, then scan it again.</string>
     <string name="settings_key_scan_duplicate">The QR code holds this key on two lines, so which one to use cannot be told.</string>
     <string name="settings_key_scan_setup_empty">This setup code holds no keys.</string>
-    <string name="setup_title">Save these keys?</string>
     <string name="setup_explained">Each is stored encrypted on this phone, and sent only to its own service.</string>
-    <!-- What a screen reader says of a row of the table of the keys read (#542). -->
-    <string name="setup_new">%1$s, ending %2$s: new</string>
-    <string name="setup_replaces">%1$s, ending %2$s: replaces the saved key</string>
-    <string name="setup_refused">%1$s: not saved. %2$s</string>
-    <string name="setup_refused_empty">It is empty.</string>
-    <string name="setup_refused_characters">It holds a space or a character no such key has.</string>
-    <string name="setup_refused_shape">It is not a key of this service’s form.</string>
-    <string name="setup_refused_duplicate">The code names it twice.</string>
-    <string name="setup_unknown">Not known to this version, not saved: %1$s</string>
-    <plurals name="setup_unreadable">
-        <item quantity="one">%d line could not be read.</item>
-        <item quantity="other">%d lines could not be read.</item>
-    </plurals>
-    <string name="setup_nothing">Nothing in this code can be saved.</string>
     <string name="setup_failed">Not saved: %1$s. The phone’s key store or storage failed. Try again.</string>
-    <string name="setup_not_a_setup_title">Not a setup code</string>
-    <string name="setup_not_a_setup">This QR code is not a Sleevesight setup code. One is made on a computer at sleevesight.app/api-keys: never with an online QR generator, which would receive the keys.</string>
-    <string name="setup_unsupported_title">A newer setup code</string>
-    <string name="setup_unsupported">This setup code is of a later version (%1$s) than this app reads. Update Sleevesight, then scan it again.</string>
     <string name="setup_scan_again">Scan again</string>
     <string name="settings_key_type">Type on a computer</string>
     <string name="keyboard_not_code">This QR code is not a keyboard code. On a computer, open sleevesight.app/keyboard.html and scan the code it shows.</string>
@@ -335,9 +335,9 @@
     <string name="credits_wikipedia">Wikipedia</string>
     <string name="credits_wikipedia_text">Sentences from articles, by Wikipedia contributors.</string>
     <string name="credits_wikidata">Wikidata</string>
-    <string name="credits_wikidata_text">Facts on songs and artists, from Wikidata.</string>
+    <string name="credits_wikidata_text">Facts on songs, albums and artists, from Wikidata.</string>
     <string name="credits_lastfm">Last.fm</string>
-    <string name="credits_lastfm_text">Artist bios by Last.fm users, under CC BY-SA; listeners, tags, genre labels and similar artists under Last.fm’s API terms.</string>
+    <string name="credits_lastfm_text">Artist bios and album summaries by Last.fm users, under CC BY-SA; listeners, tags, genre labels and similar artists under Last.fm’s API terms.</string>
     <string name="credits_exa">Exa</string>
     <string name="credits_exa_text">Web search results, under Exa’s terms of service.</string>
     <string name="credits_roboto">Roboto</string>

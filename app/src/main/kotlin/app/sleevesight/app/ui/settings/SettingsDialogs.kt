@@ -16,6 +16,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -88,19 +89,28 @@ internal fun <T> ChoiceDialog(
 /**
  * Enters, replaces or removes the key [id]. The saved key is never shown, and what is typed lives
  * only in this dialog's memory: not in saved instance state, which the system may keep on disk.
- * Spaces around the key, as a paste often brings, are dropped. [onSave] says whether it succeeded:
- * the dialog closes only then, and otherwise says why and keeps what was typed; only a key the key
- * store could not seal suggests *Purge keys*, which cannot cure a file that cannot be written.
+ * Spaces around the key, as a paste often brings, are dropped. Under the field, whether the key is
+ * saved as new or replaces the one stored ([state]), and what saving it switches on ([offer],
+ * #763): *Enable {service}*, ticked; for an AI key while another AI service is on, that service and
+ * *Switch the AI service to {service}*, unticked; for the key of the AI service on, that it is
+ * already enabled; the offer shown holds while a save runs, as the settings it is read from change
+ * under it. [onSave] saves the key with the choices the checkbox makes ([EnableOffer.choices]), and
+ * says whether it succeeded: only then does the dialog end, calling [onSaved] with the key's last
+ * characters (the summary then replaces the dialog); otherwise it says why and keeps what was
+ * typed; only a key the key store could not seal suggests *Purge keys*, which cannot cure a file
+ * that cannot be written.
  * While it runs, the dialog cannot be cancelled or dismissed: it ends as the result says. *Remove*
  * asks first, with the key row's own confirmation ([ConfirmDialog], #543), which runs [onRemove]
  * and says there if it failed; once the key is removed, both close.
  *
  * *Scan QR code* reads the key from a QR code with [scanner] (#268) and fills the field with it, as
  * if typed, once it has the service's shape ([KeyShape]); otherwise it says why and leaves the
- * field as it was. A setup code of this key alone fills it too (#541); one with other keys is
- * pointed to *Load keys*; a keyboard session's code starts that session, as *Type on a computer*
- * would. Each icon's scan is a guided screen of its own ([KeyScanScreen]), as *Load keys* is. The window is secure
- * (`FLAG_SECURE`), so no screenshot or screen recording shows what is typed or scanned.
+ * field as it was. A setup code of this key alone fills it too (#541); one with other keys, and a
+ * sealed one, are pointed to *Load keys*, with *Open Load keys* (#765), which closes the dialog
+ * unsaved and calls [onOpenLoadKeys]; a keyboard session's code starts that session, as *Type on a
+ * computer* would. Each icon's scan is a guided screen of its own ([KeyScanScreen]), as *Load
+ * keys* is. The window is secure (`FLAG_SECURE`), so no screenshot or screen recording shows what
+ * is typed or scanned.
  *
  * *Type on a computer* (#394) scans the code `sleevesight.app/keyboard.html` shows, then runs that
  * session with [keyboard]: the field follows what is typed on the computer, unchecked, as typing
@@ -139,11 +149,14 @@ internal fun <T> ChoiceDialog(
 internal fun KeyDialog(
     id: SecretId,
     state: SecretState,
-    onSave: suspend (String) -> SaveResult,
+    offer: EnableOffer,
+    onSave: suspend (String, Map<SecretId, Boolean>) -> SaveResult,
+    onSaved: (String) -> Unit,
     onRemove: suspend () -> Boolean,
     scanner: QrScanner,
     keyboard: ComputerKeyboard,
     showPhoneName: Boolean,
+    onOpenLoadKeys: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     // What the field holds, whether it shows it, and whether a scan put it there (#432, #702).
@@ -151,34 +164,52 @@ internal fun KeyDialog(
     var busy by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf<Int?>(null) }
     var scanning by remember { mutableStateOf<ScanFor?>(null) }
+    // The offer shown: it follows [offer], which changes once the keys' states are read, but not
+    // while a save runs, which writes the settings it is read from.
+    var offered by remember { mutableStateOf(offer) }
+    LaunchedEffect(offer, busy) { if (!busy) offered = offer }
+    // Its default follows the offer shown.
+    var ticked by remember(offered) { mutableStateOf(offered == EnableOffer.Enable) }
     var session by remember { mutableStateOf<KeyboardSession?>(null) }
     val ledger = SessionLedger.of(LocalContext.current)
     val scope = rememberCoroutineScope()
     val value = field.value.trim()
     val autofill = LocalAutofillManager.current
 
-    // Ends the autofill session unsaved before the field goes, which would otherwise commit it. The
-    // effect after the dialog cancels as well; this makes the order certain on the dialog's own way out.
-    fun close() {
+    // Ends the autofill session unsaved before the field goes, which would otherwise commit it, and
+    // then the dialog, [then]: dismissed, or *Load keys* in its place (#765). The effect after the
+    // dialog cancels as well; this makes the order certain on the dialog's own ways out.
+    fun close(then: () -> Unit = onDismiss) {
         autofill?.cancel()
-        onDismiss()
+        then()
     }
 
-    // Runs [action], which returns what to say of its failure, or null when it succeeded.
-    fun run(action: suspend () -> Int?) {
+    // Saves what the field holds; once saved, ends the autofill session, as [close] does, and the
+    // summary follows; otherwise says why.
+    fun save() {
         // `enabled` takes effect only after a recomposition, so two taps in one frame both reach here.
         if (busy) return
         busy = true
         failed = null
+        val saving = value
+        // The choice as it is at the tap, saved with the key, whatever happens to the dialog meanwhile.
+        val choices = offered.choices(id, ticked)
         scope.launch {
-            val failure = action()
+            val failure = saveFailure(onSave(saving, choices))
             busy = false
-            if (failure == null) close() else failed = failure
+            if (failure == null) {
+                autofill?.cancel()
+                onSaved(endingOf(saving))
+            } else {
+                failed = failure
+            }
         }
     }
 
     scanning?.let { purpose ->
         KeyScanScreen(purpose, scanner, onDismiss = { scanning = null }) { text ->
+            // The first code only: the camera may report another before the screen goes (#765).
+            if (scanning == null) return@KeyScanScreen
             scanning = null
             val result = scanned(purpose, id, text.trim(), ledger)
             failed = result.failed
@@ -202,9 +233,11 @@ internal fun KeyDialog(
         title = { Text(stringResource(keyName(id))) },
         text = {
             CancelAutofillOnDestroy(autofill)
-            KeyEntry(id, field, failed, busy, running) {
+            KeyEntry(id, field, failed, busy, running, onScan = {
                 failed = null
                 scanning = it
+            }, onOpenLoadKeys = { close(onOpenLoadKeys) }) {
+                EnableChoice(id, state != SecretState.ABSENT, offered, ticked, enabled = !busy) { ticked = it }
             }
         },
         // All three in the one slot: Material's dialog puts its dismissal next to its confirmation,
@@ -218,7 +251,7 @@ internal fun KeyDialog(
                 onCancel = ::close,
                 onRemove = onRemove,
                 onRemoved = ::close,
-                onSave = { run { saveFailure(onSave(value)) } },
+                onSave = ::save,
             )
         },
     )
@@ -252,8 +285,10 @@ private fun CancelAutofillOnDestroy(autofill: AutofillManager?) {
  * The key dialog's body, scrolling where the screen is short: who gets the key [id], an AI
  * service's terms, the agreement in bold (#543), with a link to them (#409), the [field], masked
  * unless it is shown, with its icons ([KeyFieldIcons]), the [keyboard] session when one runs, and
- * what [failed], if anything; the eye is not there while the field holds a scanned key, and is off
- * while [busy], and the scans while [busy] or while a session runs.
+ * what is [below] it (whether the key is new, and what saving it switches on, #763), and
+ * what [failed], if anything, with *Open Load keys* ([onOpenLoadKeys], #765) when it points there
+ * ([opensLoadKeys]); the eye is not there while the field holds a scanned key, and is off while
+ * [busy], and the scans while [busy] or while a session runs.
  */
 @Suppress("LongParameterList") // What the body shows, and what it hears.
 @Composable
@@ -264,6 +299,8 @@ private fun KeyEntry(
     busy: Boolean,
     keyboard: (@Composable () -> Unit)?,
     onScan: (ScanFor) -> Unit,
+    onOpenLoadKeys: () -> Unit,
+    below: @Composable () -> Unit,
 ) {
     // Hides the key when the app is left or the screen locks.
     OnStop { field.show(false) }
@@ -299,6 +336,7 @@ private fun KeyEntry(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false),
             modifier = Modifier.fillMaxWidth().semantics { contentType = ContentType.Password },
         )
+        below()
         keyboard?.invoke()
         failed?.let {
             Text(
@@ -306,6 +344,11 @@ private fun KeyEntry(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.error,
             )
+            if (opensLoadKeys(it)) {
+                TextButton(onClick = onOpenLoadKeys, enabled = !busy) {
+                    Text(stringResource(R.string.settings_key_open_load_keys))
+                }
+            }
         }
     }
 }

@@ -84,11 +84,14 @@ class ScannedKeyTest {
                     KeyDialog(
                         id = SecretId.ANTHROPIC,
                         state = SecretState.ABSENT,
-                        onSave = { SaveResult.SAVED },
+                        offer = EnableOffer.Enable,
+                        onSave = { _, _ -> SaveResult.SAVED },
+                        onSaved = { },
                         onRemove = { true },
                         scanner = scanner,
                         keyboard = keyboard,
                         showPhoneName = false,
+                        onOpenLoadKeys = {},
                         onDismiss = {},
                     )
                 }
@@ -276,11 +279,14 @@ class ScannedKeyTest {
                     KeyDialog(
                         id = SecretId.ANTHROPIC,
                         state = SecretState.ABSENT,
-                        onSave = { key -> SaveResult.SAVED.also { saved = key } },
+                        offer = EnableOffer.Enable,
+                        onSave = { key, _ -> SaveResult.SAVED.also { saved = key } },
+                        onSaved = { },
                         onRemove = { true },
                         scanner = scanner,
                         keyboard = { _, _, _, _ -> },
                         showPhoneName = false,
+                        onOpenLoadKeys = {},
                         onDismiss = {},
                     )
                 }

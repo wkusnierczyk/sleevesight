@@ -128,7 +128,7 @@ class AppGenreListsTest {
             assertTrue(GenreListPrompt.QUESTION in provider.prompts[0])
             assertFalse("punk" in provider.prompts[0].lowercase())
             assertFalse("rock" in provider.prompts[0].lowercase())
-            assertTrue("\"Punk\"" in provider.prompts[1])
+            assertTrue("<genre>\nPunk\n</genre>" in provider.prompts[1])
             // The list joins the genres; a tap on punk again, or on blues, the AI's, asks no list again.
             val list = checkNotNull(notes.aiGenres(track).first())
             assertEquals(listOf("punk", "blues"), list.genres.map { it.identity })
@@ -141,7 +141,7 @@ class AppGenreListsTest {
             notes.explain(withList, "blues")
             advanceUntilIdle()
             assertEquals(3, provider.requests)
-            assertTrue("\"Blues\"" in provider.prompts[2])
+            assertTrue("<genre>\nBlues\n</genre>" in provider.prompts[2])
         }
 
     @Test

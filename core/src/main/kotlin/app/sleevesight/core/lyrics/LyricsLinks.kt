@@ -191,14 +191,16 @@ fun lyricsLinks(
  * The lyrics pages among [track]'s web search results (#801, *Ask AI*'s first step, at no cost):
  * each result's address that is a song's page ([webSongPage], #824), chosen as MusicBrainz's are
  * ([pages]). The results are those the web search source kept as about the recording
- * ([SourceId.WEB]'s evidence), so the page is this song's, by the filter's check.
+ * ([SourceId.WEB]'s evidence, and the results it kept whose text was all page boilerplate,
+ * `SourceResult.pages`, #905), so the page is this song's, by the filter's check.
  */
 fun webPages(
     track: TrackState,
     accentFolder: AccentFolder,
 ): List<LyricsLink> {
-    val results = (track.sources[SourceId.WEB] as? SourceState.Done)?.result?.evidence.orEmpty()
-    return pages(results.mapNotNull { it.url }.filter(::webSongPage), track.normalized.artists, accentFolder)
+    val result = (track.sources[SourceId.WEB] as? SourceState.Done)?.result
+    val addresses = result?.evidence.orEmpty().mapNotNull { it.url } + result?.pages.orEmpty()
+    return pages(addresses.filter(::webSongPage), track.normalized.artists, accentFolder)
 }
 
 /**

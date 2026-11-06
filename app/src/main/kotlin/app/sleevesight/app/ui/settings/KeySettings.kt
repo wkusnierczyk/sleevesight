@@ -3,10 +3,15 @@ package app.sleevesight.app.ui.settings
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -120,26 +125,29 @@ internal fun SecretsSection(
 }
 
 /**
- * Under *Load keys* (#541): where its QR code is made, [API_KEYS_URL], and the documentation's guide
- * to loading keys, [LOAD_KEYS_DOCS_URL], each a link. Apart from the row, which opens the screen, so
- * that each link is a target of its own.
+ * Under *Load keys* (#541): where its QR code is made, [API_KEYS_URL], in full as plain text that
+ * can be selected (#765: a link would open it on the phone, not the computer), and the
+ * documentation's guide to loading keys, [LOAD_KEYS_DOCS_URL], a link. Apart from the row, which
+ * opens the screen, so that the link is a target of its own.
  */
 @Composable
 private fun LoadKeysMore() {
     // With *Load keys*, whose row it explains (#649).
     if (!shownInSearch(stringResource(R.string.settings_scan_keys))) return
+    // The address written in, and the guide's place left for its link, as the first.
     val parts =
         linkedParts(
-            stringResource(R.string.settings_scan_keys_more),
-            TextPart.Link(shownAddress(API_KEYS_URL), API_KEYS_URL),
+            stringResource(R.string.settings_scan_keys_more, API_KEYS_URL, "%1\$s"),
             TextPart.Link(stringResource(R.string.settings_scan_keys_docs), LOAD_KEYS_DOCS_URL),
         )
-    LinkedText(
-        parts,
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurface,
-        modifier = Modifier.padding(bottom = 8.dp),
-    )
+    SelectionContainer {
+        LinkedText(
+            parts,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(bottom = 8.dp),
+        )
+    }
 }
 
 /**
@@ -151,35 +159,89 @@ private fun LoadKeysMore() {
  * with [showPhoneName] (#433). *Load keys* shows what a setup code holds, and saves nothing until
  * the user confirms it there; *Purge keys* lists the keys it deletes, reading each one's last
  * characters from [store].
+ *
+ * A key saved switches its service on only as the user chooses after the save (#763), in the key
+ * dialog or on *Load keys*, from the [settings] as they are: [applyChoices] writes the choices to
+ * the stored settings, after the key dialog's key in the same work in [saves], and the summary
+ * says what was saved and switched on or off as written, or that the choices could not be, with
+ * *Try again*. A link on *Load
+ * keys* to a section of the settings calls [onOpen]. The key dialog's *Open Load keys* (#765), after
+ * a scan of a code it cannot take, closes it unsaved and calls [onOpenLoadKeys].
  */
-@Suppress("LongParameterList") // The dialog, the keys, where they are saved, and what the screen hears.
+@Suppress("LongParameterList", "LongMethod") // The dialog, the keys, where they are saved, and what the screen hears.
 @Composable
 internal fun KeyDialogs(
     shown: SettingsDialog.Keys,
     secrets: Map<SecretId, SecretState>,
+    settings: Settings,
+    applyChoices: suspend (Map<SecretId, Boolean>) -> Applied?,
     store: SecretStore,
     saves: CoroutineScope,
     scanner: QrScanner,
     keyboard: ComputerKeyboard,
     showPhoneName: Boolean,
     onSealFailed: (Boolean) -> Unit,
+    onOpen: (SettingsTarget) -> Unit,
+    onOpenLoadKeys: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     when (shown) {
         is SettingsDialog.Key -> {
+            val id = shown.id
+            val state = secrets[id] ?: SecretState.ABSENT
+            // What the save wrote, once it has: the choices and the settings as written.
+            var written by remember(shown) { mutableStateOf<KeyWrite?>(null) }
+            var summary by remember(shown) { mutableStateOf<SavedKey?>(null) }
+            var busy by remember(shown) { mutableStateOf(false) }
+            val done = summary
+            val write = written
+            if (done != null && write != null) {
+                KeyScreen(keyName(id), busy = busy, onDismiss = onDismiss) {
+                    SummaryStep(
+                        keys = listOf(done),
+                        secrets = write.secrets,
+                        first = write.applied,
+                        retry = { saves.async { applyChoices(write.choices) }.await() },
+                        onBusy = { busy = it },
+                        onDone = onDismiss,
+                    )
+                }
+                return
+            }
+            val offer = enableOffer(id, settings, secrets)
             KeyDialog(
-                id = shown.id,
-                state = secrets[shown.id] ?: SecretState.ABSENT,
-                onSave = { value ->
+                id = id,
+                state = state,
+                offer = offer,
+                onSave = { value, choices ->
+                    val before = secrets
+                    val snapshot = settings
+                    // The key and then its choices, in one piece of work that outlives the dialog,
+                    // so a rotation during the save still switches the service on.
                     saves
                         .async {
-                            store.set(shown.id, Secret(value)).also { onSealFailed(it == SaveResult.NOT_SEALED) }
+                            val result = store.set(id, Secret(value)).also { onSealFailed(it == SaveResult.NOT_SEALED) }
+                            if (result == SaveResult.SAVED) {
+                                val applied =
+                                    if (choices.isEmpty()) {
+                                        Applied(
+                                            snapshot,
+                                            snapshot,
+                                        )
+                                    } else {
+                                        applyChoices(choices)
+                                    }
+                                written = KeyWrite(choices, before, applied)
+                            }
+                            result
                         }.await()
                 },
-                onRemove = { saves.async { store.clear(shown.id) }.await() },
+                onSaved = { ending -> summary = SavedKey(id, ending, replaced = state != SecretState.ABSENT) },
+                onRemove = { saves.async { store.clear(id) }.await() },
                 scanner = scanner,
                 keyboard = keyboard,
                 showPhoneName = showPhoneName,
+                onOpenLoadKeys = onOpenLoadKeys,
                 onDismiss = onDismiss,
             )
         }
@@ -187,8 +249,15 @@ internal fun KeyDialogs(
         SettingsDialog.LoadKeys -> {
             LoadKeysScreen(
                 secrets = secrets,
+                settings = settings,
                 scanner = scanner,
-                onSave = { keys -> saves.async { saveAll(store, keys, onSealFailed) }.await() },
+                // The keys and then the choices, in one piece of work that outlives the screen, so
+                // a rotation during the save still switches the services on (#765).
+                onComplete = { keys, choices ->
+                    saves.async { complete(store, keys, onSealFailed) { applyChoices(choices) } }.await()
+                },
+                onApply = { choices -> saves.async { applyChoices(choices) }.await() },
+                onOpen = onOpen,
                 onDismiss = onDismiss,
             )
         }
@@ -226,6 +295,20 @@ private suspend fun saveAll(
     return results.filter { it.second != SaveResult.SAVED }.map { it.first }
 }
 
+/**
+ * *Load keys*' *Complete* (#765): saves [keys] to [store] ([saveAll]), and, once every one is saved,
+ * writes the choices with [apply]; what it did, as [Completed] has it.
+ */
+private suspend fun complete(
+    store: SecretStore,
+    keys: Map<SecretId, Secret>,
+    onSealFailed: (Boolean) -> Unit,
+    apply: suspend () -> Applied?,
+): Completed {
+    val unsaved = if (keys.isEmpty()) emptyList() else saveAll(store, keys, onSealFailed)
+    return Completed(unsaved, if (unsaved.isEmpty()) apply() else null)
+}
+
 /** What removing the key [id] says, from its row or its dialog. */
 @Composable
 internal fun removeKeyConfirmation(id: SecretId): Confirmation =
@@ -236,3 +319,13 @@ internal fun removeKeyConfirmation(id: SecretId): Confirmation =
         named = stringResource(R.string.settings_key_remove, stringResource(keyName(id))),
         failed = stringResource(R.string.settings_key_remove_failed),
     )
+
+/**
+ * What the key dialog's save wrote besides the key: its [choices], with the keys stored before
+ * ([secrets]), as written ([applied]), or null when they could not be.
+ */
+private class KeyWrite(
+    val choices: Map<SecretId, Boolean>,
+    val secrets: Map<SecretId, SecretState>,
+    val applied: Applied?,
+)

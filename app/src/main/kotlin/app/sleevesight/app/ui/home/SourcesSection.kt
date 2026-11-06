@@ -42,7 +42,7 @@ import app.sleevesight.app.ui.theme.handoffTarget
 import app.sleevesight.app.ui.theme.rememberFocusHandoff
 import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.EvidenceLine
-import app.sleevesight.core.evidence.Scope
+import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.TrackState
 
@@ -111,7 +111,7 @@ internal fun SourcesSection(
     if (folded) {
         SourcesChip(opensPage = false, modifier = Modifier.handoffTarget(handoff, chip)) {
             // Every entry hidden by the chips: unfolding shows their lines, not an empty list.
-            if (entriesOf(shown.track, focus.hidden, shown.details).isEmpty()) focus.showAll()
+            if (entriesOf(shown.track, shown.lines.evidence, focus.hidden, shown.details).isEmpty()) focus.showAll()
             fold.set(Fold.Pages(1))
             handoff.moveTo(close)
         }
@@ -135,14 +135,18 @@ internal fun SourcesSection(
 /**
  * What *Sources* shows of a [track]: its [chips] (every source's, the table without those that are
  * off unless with grounding [details]), whether the insight shown is the card kept from before
- * ([cardKept]), and whether the phone is [offline] with a source unreachable.
+ * ([cardKept]), and whether the phone is [offline] with a source unreachable. Its lines are [lines]:
+ * the track's evidence, with the album's own lines once its insight gathered them (#522,
+ * [SourcesLines]), which the chips show and hide as the track's.
  */
+@Suppress("LongParameterList") // What the section shows, each its own.
 internal class SourcesShown(
     val track: TrackState?,
     val chips: List<SourceChip>,
     val cardKept: Boolean,
     val offline: Boolean = false,
     val details: Boolean = false,
+    val lines: SourcesLines = SourcesLines(track?.evidence),
 )
 
 /**
@@ -161,16 +165,17 @@ internal fun SourcesBody(
     val track = shown.track
     val details = shown.details
     val hidden = focus.hidden
-    val lines = track?.evidence?.lines.orEmpty()
+    val shownLines = shown.lines
+    val lines = shownLines.evidence?.lines.orEmpty()
     val unverified = track?.let(::unverifiedLines).orEmpty()
-    val entries = entriesOf(track, hidden, details)
+    val entries = entriesOf(track, shownLines.evidence, hidden, details)
     // The lines the chips hide: with every entry hidden, the count still shows.
     val filtered = lines.count { it.source in hidden }
     Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         // Of every line, hidden ones too, so the column does not move when a chip hides some.
         val tagWidth = tagColumnWidth(lines.map { it.id } + unverified.map { it.source.tag })
         val chips = shown.chips
-        SourceTable(tableRows(chips, track?.evidence, details), details, lines, focus, fold)
+        SourceTable(tableRows(chips, shownLines.evidence, details), details, lines, focus, fold)
         Notes(sourceNotes(chips, shown.offline), openSettings)
         if (shown.offline) Small(stringResource(R.string.home_sources_offline))
         if (lines.isEmpty()) {
@@ -190,21 +195,23 @@ internal fun SourcesBody(
         FoldStatus(fold, count, total, filtered)
         if (count == 0) return@Column
         if (shown.cardKept && lines.isNotEmpty()) Small(stringResource(R.string.home_evidence_cited))
-        Entries(entries.take(count), tagWidth, focus)
+        Entries(entries.take(count), tagWidth, focus, shownLines.album)
         FoldControls(fold, count, total)
     }
 }
 
 /**
- * The list's entries for [track]: its evidence lines but those of the [hidden] sources, its
- * unverified lines, and with grounding [details] the matches rejected.
+ * The list's entries for [track]: the lines shown ([evidence], its own with its album's, #522) but
+ * those of the [hidden] sources, its unverified lines, and with grounding [details] the matches
+ * rejected.
  */
 private fun entriesOf(
     track: TrackState?,
+    evidence: EvidenceSet?,
     hidden: Set<SourceId>,
     details: Boolean,
 ): List<Entry> {
-    val lines = track?.evidence?.lines.orEmpty()
+    val lines = evidence?.lines.orEmpty()
     val unverified = track?.let(::unverifiedLines).orEmpty()
     val rejected = if (details) track?.let(::rejectedMatches).orEmpty() else emptyList()
     return lines.filter { it.source !in hidden }.map(Entry::Line) +
@@ -249,6 +256,7 @@ private fun Entries(
     entries: List<Entry>,
     tagWidth: Dp,
     focus: LineFocus,
+    album: Set<String>,
 ) {
     val rejected = entries.indexOfFirst { it is Entry.Rejected }.takeIf { it >= 0 } ?: entries.size
     // The rows at [indices], each under its kind's heading when the one before is of another kind.
@@ -261,7 +269,7 @@ private fun Entries(
                     is Entry.Line -> {
                         val line = entry.line
                         val flashed = focus.flash?.let { it.flashes && it.id == line.id } == true
-                        EvidenceRow(line, tagWidth, flashed, focus.requesters[line.id])
+                        EvidenceRow(line, tagWidth, flashed, focus.requesters[line.id], line.id in album)
                     }
 
                     is Entry.Unverified -> {
@@ -272,7 +280,7 @@ private fun Entries(
                     is Entry.Rejected -> {
                         if (previous !is Entry.Rejected) Small(stringResource(R.string.home_rejected_title))
                         val match = entry.match
-                        val name = sourceName(match.source)
+                        val name = rejectedName(match)
                         val reason = match.reason
                         Small(
                             match.subject?.let { stringResource(R.string.home_rejected_subject, name, it, reason) }
@@ -289,7 +297,10 @@ private fun Entries(
 
 /**
  * One evidence line: its id, its text, and its scope with a link to where it was found; flashed
- * when a citation points at it.
+ * when a citation points at it. A line found in the track's language (#902, `EvidenceLine.language`)
+ * shows its text as found, set in that language's locale (a span over the whole text, so a screen
+ * reader is given the language too, not only the drawing), and says the language after the host:
+ * *release · hi.wikipedia.org · in Hindi*.
  */
 @Composable
 private fun EvidenceRow(
@@ -297,6 +308,7 @@ private fun EvidenceRow(
     tagWidth: Dp,
     flashed: Boolean,
     requester: BringIntoViewRequester?,
+    album: Boolean,
 ) {
     val colors = MaterialTheme.colorScheme
     val background by animateColorAsState(if (flashed) colors.tertiaryContainer else Color.Transparent, label = "flash")
@@ -313,8 +325,9 @@ private fun EvidenceRow(
     ) {
         Tag(line.id, tagWidth)
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(line.text, style = MaterialTheme.typography.bodySmall)
-            Where(line.scope, line.url)
+            Text(inLanguage(line.text, line.language), style = MaterialTheme.typography.bodySmall)
+            val language = line.language?.let { stringResource(R.string.home_source_line_in, languageName(it)) }
+            Where(if (album) stringResource(R.string.home_scope_album) else scopeText(line.scope), line.url, language)
         }
     }
 }
@@ -358,16 +371,24 @@ private fun Tag(
     }
 }
 
-/** A line's scope, and the host it was found on, linked; the link opens in the browser. */
+/**
+ * What a line is about ([scope], in words: "artist", or "album" for the album's own line, #522), and
+ * the host it was found on, linked; the link opens in the browser. Then, for a line found in the
+ * track's language, [language]: "in Hindi" (#902).
+ */
 @Composable
 private fun Where(
-    scope: Scope,
+    scope: String,
     url: String?,
+    language: String? = null,
 ) {
     val host = hostOf(url)
     val parts =
-        listOf(TextPart.Words(scopeText(scope))) +
-            if (url != null && host != null) listOf(TextPart.Words(" · "), TextPart.Link(host, url)) else emptyList()
+        buildList<TextPart> {
+            add(TextPart.Words(scope))
+            if (url != null && host != null) addAll(listOf(TextPart.Words(" · "), TextPart.Link(host, url)))
+            language?.let { add(TextPart.Words(" · $it")) }
+        }
     LinkedText(parts, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
@@ -381,7 +402,7 @@ private fun UnverifiedRow(
         Tag(line.source.tag, tagWidth)
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(line.text, style = MaterialTheme.typography.bodySmall)
-            Where(line.scope, line.url)
+            Where(scopeText(line.scope), line.url)
         }
     }
 }

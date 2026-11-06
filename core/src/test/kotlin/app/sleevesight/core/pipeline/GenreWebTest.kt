@@ -214,6 +214,29 @@ class GenreWebTest {
         }
 
     @Test
+    fun `path A asks again with web search when the evidence's reply disputes the genre (#853)`() =
+        runTest {
+            val provider =
+                FakeProvider { request ->
+                    if ("[S2]" in request.prompt) {
+                        FakeProvider.done("It is filed under folk for its slow ballads [S2].")
+                    } else {
+                        FakeProvider.done("She is a singer-songwriter [W1]. Folk is not the right label [W1].")
+                    }
+                }
+            val reasons = GenreReasons(AiAccess(provider, Secret("k")), cache, JvmHasher, web = web)
+            val key = checkNotNull(reasons.key(track, "folk", settings))
+            val shown = mutableListOf<InsightState>()
+            val state =
+                reasons.write(key, track, "Folk", AiSearches.Asking(AiWebSearch.ONCE), { counted += it }) { state, _ ->
+                    shown += state
+                }
+            assertIs<InsightState.Written>(state)
+            assertEquals(2, provider.requests.size)
+            assertFalse(InsightState.NoEvidence in shown, "the dispute is never shown as the answer")
+        }
+
+    @Test
     fun `path A's loop numbers the pages of each search as evidence lines`() =
         runTest {
             val provider =
@@ -235,7 +258,9 @@ class GenreWebTest {
             val state = reasons.write(key, track, "Folk", AiSearches.Asking(AiWebSearch.UP_TO, 2)) { _, _ -> }
             assertIs<InsightState.Written>(state)
             val loop = provider.requests[1]
-            assertTrue("numbered from [S2] on" in loop.prompt)
+            // The search's instructions are in the system prompt (#767), sent on every turn of the loop.
+            assertTrue("numbered on after the evidence's web lines" in loop.system.orEmpty())
+            assertEquals(loop.system, provider.requests[2].system)
             val result =
                 provider.requests[2]
                     .exchanges
@@ -258,7 +283,7 @@ class GenreWebTest {
             assertEquals(InsightState.Failed(AiSearches.WEB_SEARCH_FAILED), state)
             // Nothing under the reason's key; the evidence alone's "no" under the key without the web part.
             assertNull(cache.cards[key])
-            assertEquals(setOf(key.copy(subject = "folk")), cache.cards.keys)
+            assertEquals(setOf(key.about("folk")), cache.cards.keys)
         }
 
     @Test
@@ -289,7 +314,7 @@ class GenreWebTest {
             assertIs<InsightState.Written>(reasons.write(key, track, "Folk") { _, _ -> })
             assertEquals(1, queries.size)
             // The evidence alone's "no" under the key without the web part, the reason under its own.
-            assertEquals(InsightState.NoEvidence, reasons.kept(key.copy(subject = "folk"), track)?.state)
+            assertEquals(InsightState.NoEvidence, reasons.kept(key.about("folk"), track)?.state)
             assertIs<InsightState.Written>(reasons.kept(key, track)?.state)
         }
 

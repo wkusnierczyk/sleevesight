@@ -106,7 +106,9 @@ class KeyDialogButtonsTest {
                             KeyDialog(
                                 id = id,
                                 state = state,
-                                onSave = { SaveResult.SAVED },
+                                offer = EnableOffer.Enable,
+                                onSave = { _, _ -> SaveResult.SAVED },
+                                onSaved = { shown.dismissed++ },
                                 onRemove = {
                                     shown.removed++
                                     removes
@@ -114,6 +116,7 @@ class KeyDialogButtonsTest {
                                 scanner = scanner,
                                 keyboard = keyboard,
                                 showPhoneName = false,
+                                onOpenLoadKeys = {},
                                 onDismiss = { shown.dismissed++ },
                             )
                         }

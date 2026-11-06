@@ -4,7 +4,6 @@ package app.sleevesight.app.ui.settings
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -28,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.Measured
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -38,7 +38,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.ui.theme.ChoiceButtonGroup
-import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.app.ui.theme.plainSwitchColors
 import kotlin.math.roundToInt
@@ -50,6 +49,9 @@ private val NESTED = 16.dp
 
 /** The gap between what starts a row ([ROW_MARK]) and its title. */
 private val LEADING_GAP = 16.dp
+
+/** A [Hint]'s padding above and below it. */
+private val HINT_PADDING = 4.dp
 
 /**
  * Where a row under a badged row starts (#537): at the badged row's name, past its badge and the
@@ -76,19 +78,29 @@ private class FirstLine {
 }
 
 /**
- * A line of explanation in a section, [text]. As a sub-heading over rows, [over] names them by
+ * A line of explanation in a section, [text], folded to one line as a row's description is
+ * ([Description], #847). As a sub-heading over rows, [over] names them by
  * title: a search that shows only some rows shows it while any of them shows (#649); with none, it
  * is not a setting of its own, and such a search leaves it out. A blank line in [text] starts a
- * paragraph ([Paragraphs], #758).
+ * paragraph ([Paragraphs], #758). Not [foldable], a line saying a state rather than a description
+ * (*No players yet*, #874), it shows in full.
  */
 @Composable
 internal fun Hint(
     @StringRes text: Int,
     over: List<String> = emptyList(),
+    foldable: Boolean = true,
 ) {
     val search = LocalRowSearch.current
     if (search?.filtering == true && over.none { search.shows(it) }) return
-    Paragraphs(stringResource(text), modifier = Modifier.padding(vertical = 4.dp))
+    if (!foldable) {
+        Paragraphs(stringResource(text), Modifier.padding(vertical = HINT_PADDING))
+        return
+    }
+    // Folded to one line as a row's description is (#847), known by its string's name.
+    val key = LocalResources.current.getResourceEntryName(text)
+    // Its tap reaches into its own padding below it, not into the row after it (#874).
+    Description(key, stringResource(text), Modifier.padding(vertical = HINT_PADDING), reach = HINT_PADDING)
 }
 
 /**
@@ -102,6 +114,10 @@ internal fun Hint(
  * The mark and the switch are centred on the first line of the title (#613), not on the whole row:
  * level with the name however long the summary under it, at any font scale. A row with a name only
  * looks as when they were centred on the row.
+ *
+ * The summary folds to one line, a tap on it unfolding it ([Description], #847); that tap is its
+ * own and does not toggle the switch. [note], under it, says why the switch cannot be moved, or
+ * what it needs (*Needs your Exa key.*), and always shows in full, read with the switch.
  */
 @Suppress("LongParameterList") // Each sets one aspect of the row; all but the first three have defaults.
 @Composable
@@ -114,6 +130,7 @@ internal fun SwitchRow(
     leading: (@Composable () -> Unit)? = null,
     below: (@Composable () -> Unit)? = null,
     summaryLink: TextPart.Linked? = null,
+    note: String? = null,
     onChange: ((Boolean) -> Unit)?,
 ) {
     if (!shownInSearch(title)) return
@@ -146,7 +163,10 @@ internal fun SwitchRow(
             )
         },
     ) {
-        summary?.let { Summary(it, summaryLink, color) }
+        // Its tap reaches into the row's padding where nothing comes under it (#874).
+        val reach = if (note == null && below == null) TAP_BELOW else 0.dp
+        summary?.let { Description(title, it, color = color, link = summaryLink, reach = reach) }
+        note?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = color) }
         below?.invoke()
     }
 }
@@ -183,7 +203,7 @@ internal fun ButtonRow(
             ) { Text(label) }
         },
     ) {
-        Summary(summary, null, color)
+        Description(title, summary, color = color, reach = TAP_BELOW)
     }
 }
 
@@ -227,37 +247,12 @@ private fun MarkedRow(
 }
 
 /**
- * A row's [summary], in [color], with [link] set in it where it has the link's text; without one, a
- * paragraph for each part a blank line starts ([Paragraphs]: *Search with AI*'s, #773).
- */
-@Composable
-private fun Summary(
-    summary: String,
-    link: TextPart.Linked?,
-    color: Color,
-) {
-    if (link == null) {
-        Paragraphs(summary, color = color)
-    } else {
-        // Paragraphs as [Paragraphs] sets them, the link in the one that has it (#802's two).
-        val style = MaterialTheme.typography.bodySmall
-        Column(verticalArrangement = Arrangement.spacedBy(PARAGRAPH_GAP)) {
-            for (paragraph in paragraphsOf(summary)) {
-                if (link.text in paragraph) {
-                    LinkedText(sentenceWith(paragraph, link), style = style, color = color)
-                } else {
-                    Text(paragraph, style = style, color = color)
-                }
-            }
-        }
-    }
-}
-
-/**
  * A setting with a value, which [onClick] opens a dialog to change; null [onClick] is disabled.
  * [indent] nests it under the row above; [underBadge] starts it at the name of the badged row above
  * ([UNDER_BADGE]) instead. [leading] goes at the row's start, before the title, [ROW_MARK] a side,
- * centred on the title's first line as a [SwitchRow]'s is: a source's badge (#670).
+ * centred on the title's first line as a [SwitchRow]'s is: a source's badge (#670). The summary
+ * folds ([Description], #847); [note], under it, says the setting's state (a model found
+ * unavailable), or what the value chosen does (*Stop after*, #874), and always shows in full.
  */
 @Suppress("LongParameterList") // Each sets one aspect of the row; all but the title, value and action have defaults.
 @Composable
@@ -265,6 +260,7 @@ internal fun ValueRow(
     title: String,
     value: String,
     summary: String? = null,
+    note: String? = null,
     indent: Boolean = false,
     underBadge: Boolean = false,
     leading: (@Composable () -> Unit)? = null,
@@ -289,9 +285,21 @@ internal fun ValueRow(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.primary.copy(alpha = alpha),
         )
-        summary?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = color) }
+        // Its tap reaches into the row's padding where no note comes under it (#874).
+        summary?.let { Description(title, it, color = color, reach = if (note == null) TAP_BELOW else 0.dp) }
+        note?.let {
+            Text(
+                it,
+                style = MaterialTheme.typography.bodySmall,
+                color = color,
+                modifier = Modifier.testTag(ROW_NOTE_TAG),
+            )
+        }
     }
 }
+
+/** The test tag of a [ValueRow]'s [note][ValueRow] (#847). */
+internal const val ROW_NOTE_TAG = "settings_row_note"
 
 /**
  * A setting with a few short choices (#637): [title], then [summary], then its [choices] as a
@@ -300,9 +308,10 @@ internal fun ValueRow(
  * value in [details] is read with its button, and has a line under the group saying what it does
  * while it is the one chosen ([ChoiceDetails]). The buttons stay in one row at any font size
  * (#821). A setting whose choices are many or long, or described one by one, is a
- * [ValueRow] opening a dialog instead (`design/design.md`, *Settings screen*). Not [enabled], none
+ * [ValueRow] opening a dialog instead (`design/design.md`, *Settings screen*). The summary folds
+ * ([Description], #847); the line under the buttons does not. Not [enabled], none
  * can be chosen; a value in [disabled], that one; [below] comes under the line of what the value
- * does.
+ * does. A value in [spoken] is read by that in place of its label ([ChoiceButtonGroup]).
  */
 @Suppress("LongParameterList") // What the row shows, each a value of its own, and what a tap does.
 @Composable
@@ -315,6 +324,7 @@ internal fun <T> ChoiceButtonsRow(
     enabled: Boolean = true,
     disabled: Set<T> = emptySet(),
     below: (@Composable () -> Unit)? = null,
+    spoken: Map<T, String> = emptyMap(),
     onSelect: (T) -> Unit,
 ) {
     if (!shownInSearch(title)) return
@@ -326,21 +336,26 @@ internal fun <T> ChoiceButtonsRow(
             color = color,
             modifier = Modifier.testTag(ROW_TITLE_TAG),
         )
-        summary?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = color) }
+        // Its tap reaches no further than the buttons' room above them, which is theirs (#874).
+        summary?.let { Description(title, it, color = color, reach = ABOVE_GROUP) }
         ChoiceButtonGroup(
             choices,
             selected,
             onSelect,
-            Modifier.padding(top = 4.dp),
+            Modifier.padding(top = ABOVE_GROUP),
             name = title,
             details = details,
             enabled = enabled,
             disabled = disabled,
+            spoken = spoken,
         )
         ChoiceDetails(choices, selected, details)
         below?.invoke()
     }
 }
+
+/** The room above a [ChoiceButtonsRow]'s buttons, under its description. */
+internal val ABOVE_GROUP = 4.dp
 
 /**
  * Under a [ChoiceButtonsRow]'s buttons, what the [selected] value does, from [details], announced

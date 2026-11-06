@@ -83,6 +83,24 @@ class RetrievalCacheTest {
     }
 
     @Test
+    fun `an artist line keeps the artist it is about`() {
+        val at = Instant.parse("2026-10-27T12:00:00Z")
+        val line = EvidenceDraft(SourceId.LASTFM, Scope.ARTIST, "X is a band.", null, at, about = "X")
+        assertTrue(
+            retrieval.put(SourceId.LASTFM, key, 1, SourceResult(Outcome.ArtistArticle, listOf(line), 10.milliseconds)),
+        )
+
+        assertEquals(
+            listOf("X"),
+            retrieval
+                .get(SourceId.LASTFM, key, 1)
+                ?.result
+                ?.evidence
+                ?.map { it.about },
+        )
+    }
+
+    @Test
     fun `every outcome a source can give round-trips`() {
         val outcomes =
             listOf(
@@ -281,6 +299,16 @@ class RetrievalCacheTest {
             RecordingTags("mb-sundown", listOf("folk rock")),
             assertNotNull(RetrievalCodec.decode(old)).recordingTags,
         )
+    }
+
+    @Test
+    fun `web search's addresses without a line round-trip, and an entry kept before them has none`() {
+        val genius = "https://genius.com/Gordon-lightfoot-sundown-lyrics"
+        val result = sample(Outcome.None, SourceId.WEB).copy(pages = listOf(genius))
+        assertEquals(listOf(genius), assertNotNull(RetrievalCodec.decode(RetrievalCodec.encode(result))).pages)
+        // As web search's result was kept before #905.
+        val old = """{"outcome":"none","latency":"PT0.4S","trackOnly":true}"""
+        assertEquals(emptyList(), assertNotNull(RetrievalCodec.decode(old)).pages)
     }
 
     @Test

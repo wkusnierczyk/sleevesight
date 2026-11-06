@@ -2,6 +2,7 @@ package app.sleevesight.store
 
 import app.sleevesight.core.ai.ReasoningEffort
 import app.sleevesight.core.model.ProviderId
+import app.sleevesight.core.pipeline.RewritePart
 import app.sleevesight.core.synthesis.CardKind
 import kotlin.test.AfterTest
 import kotlin.test.Test
@@ -63,6 +64,39 @@ class SynthesisCacheTest {
 
         assertNotNull(synthesis.get(key.copy()))
         changed.forEach { (part, other) -> assertNull(synthesis.get(other), part) }
+    }
+
+    @Test
+    fun `the cards another service, model or effort wrote come back newest first, never the key's own`() {
+        val at = Instant.parse("2026-10-14T11:00:00Z")
+        synthesis.put(key, "own")
+        val sonnet = key.copy(model = "claude-sonnet-5-5")
+        val openAi = key.copy(provider = ProviderId.OPENAI, model = "gpt-6", effort = null)
+        synthesis.put(sonnet, "by Sonnet", at, setOf(RewritePart.MODEL))
+        synthesis.put(openAi, "by GPT", at + 1.days)
+        // Not the same card otherwise: another track, other evidence, the model's knowledge switched.
+        synthesis.put(key.copy(model = "m", entityKey = "gordon lightfoot"), "other track")
+        synthesis.put(key.copy(model = "m", evidenceFingerprint = "9f2d"), "other evidence")
+        synthesis.put(key.copy(model = "m", modelKnowledge = true), "other knowledge")
+
+        assertEquals(
+            listOf(
+                openAi to CachedSynthesis("by GPT", at + 1.days),
+                sonnet to CachedSynthesis("by Sonnet", at, setOf(RewritePart.MODEL)),
+            ),
+            synthesis.others(key),
+        )
+        // From another model's key, the key's own is among them.
+        val models = synthesis.others(key.copy(model = "x")).map { it.first.model }
+        assertEquals(setOf("claude-haiku-5-5", "claude-sonnet-5-5", "gpt-6"), models.toSet())
+    }
+
+    @Test
+    fun `a card another model wrote past Keep history for is not found`() {
+        fixture.settings = fixture.settings.copy(historyLifetime = 7.days)
+        synthesis.put(key.copy(model = "claude-sonnet-5-5"), "by Sonnet", fixture.clock.now - 8.days)
+
+        assertEquals(emptyList(), synthesis.others(key))
     }
 
     @Test
@@ -151,6 +185,27 @@ class SynthesisCacheTest {
         fixture.clock.advance(3650.days)
         fixture.caches.purgeExpired()
         assertNotNull(synthesis.get(reason))
+    }
+
+    @Test
+    fun `what a rewrite changed comes back with its card, and a card written the first time has none`() {
+        val writtenAt = Instant.parse("2026-10-14T11:00:00Z")
+        val parts = setOf(RewritePart.MODEL, RewritePart.NEW_FINDINGS)
+        synthesis.put(key, "rewritten", writtenAt, parts)
+        val first = key.copy(model = "claude-opus-5-5")
+        synthesis.put(first, "first", writtenAt)
+
+        assertEquals(CachedSynthesis("rewritten", writtenAt, parts), synthesis.get(key))
+        assertEquals(emptySet(), synthesis.get(first)?.rewritten)
+        assertEquals(fixture.caches.countedStats(), fixture.caches.stats(), "the parts count in the row's size")
+    }
+
+    @Test
+    fun `a card rewritten again under the same key keeps only the latest change`() {
+        synthesis.put(key, "first", rewritten = setOf(RewritePart.UPDATED_SOURCES))
+        synthesis.put(key, "second", rewritten = setOf(RewritePart.KNOWLEDGE_ON))
+
+        assertEquals(setOf(RewritePart.KNOWLEDGE_ON), synthesis.get(key)?.rewritten)
     }
 
     @Test

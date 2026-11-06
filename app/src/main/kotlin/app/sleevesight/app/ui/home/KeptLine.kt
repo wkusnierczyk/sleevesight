@@ -21,7 +21,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
 import app.sleevesight.app.R
-import app.sleevesight.app.speech.insightLocale
+import app.sleevesight.app.ui.dateLocale
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.DecimalStyle
@@ -34,9 +34,10 @@ import kotlin.time.toJavaInstant
  * Under an AI answer kept from before (#851: one written before this play of the track, served from
  * what was kept), after its credit lines: "Kept from before: written today at 13:04." for one written
  * today, else "Kept from before: written on 31 October.", with the year when it is not this year; the
- * time and date in English, as the line is, in the phone's own variety of it where it is set to one
- * (`insightLocale`, as an insight and *Read aloud*), and as the phone's 24-hour setting says. In the
- * quiet style of the grounding note, not the credit's italics. Read by a screen reader as shown.
+ * time and date in English, as the line is, in the form the phone's language and region give
+ * (`dateLocale`, as *Dates*: "October 31" on a phone set to US English, #957), and as the phone's
+ * 24-hour setting says. In the quiet style of the grounding note, not the credit's italics. Read by
+ * a screen reader as shown.
  *
  * Read again, by the clock and in the time zone [LocalWallClock] gives, every minute while it is
  * shown (so a line left on screen past midnight no longer says today) and when the time, the date,
@@ -113,9 +114,9 @@ internal sealed interface Written {
 
 /**
  * When [writtenAt] was, seen at [now] in [zone]: today, its time, 24-hour or not ([hours24]); else
- * its day and month, and its year when it is not [now]'s; in English, as the line is, in the
- * [phone]'s variety of it where it is set to one ([insightLocale]: "31 October" in Britain,
- * "October 31" in the US and elsewhere), its order and digits.
+ * its day and month, and its year when it is not [now]'s; in English, as the line is, in the form
+ * the [phone]'s language and region give ([dateLocale], #957: "October 31" on a phone set to US
+ * English, "31 October" in Britain, and in English on a German phone), its order and digits.
  */
 internal fun writtenWhen(
     writtenAt: Instant,
@@ -124,7 +125,7 @@ internal fun writtenWhen(
     phone: Locale,
     hours24: Boolean,
 ): Written {
-    val locale = insightLocale(phone)
+    val locale = dateLocale(phone)
     val written = writtenAt.toJavaInstant().atZone(zone)
     val today = now.toJavaInstant().atZone(zone)
 

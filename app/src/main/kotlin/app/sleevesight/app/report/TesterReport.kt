@@ -419,6 +419,7 @@ internal val SETTING_LINES: List<Pair<String, (Settings) -> String>> =
         "artistFactsOncePerSession" to { onOff(it.artistFactsOncePerSession) },
         "searchWithAi" to { onOff(it.searchWithAi) },
         "aiWebSearch" to { it.aiWebSearch.name },
+        "trackLanguageSearch" to { it.trackLanguageSearch.name },
         "readAloudMusic" to { it.readAloudMusic.name },
         "readTrackLineFirst" to { onOff(it.readTrackLineFirst) },
         "readNewInsightsAloud" to { onOff(it.readNewInsightsAloud) },
@@ -428,7 +429,8 @@ internal val SETTING_LINES: List<Pair<String, (Settings) -> String>> =
         "cacheSizeLimit" to { "${it.cacheSizeLimit} bytes" },
         "historyLifetime" to { s -> s.historyLifetime?.toString() ?: "forever" },
         "sessionGap" to { it.sessionGap.toString() },
-        "keepSourcesUnfolded" to { onOff(it.keepSourcesUnfolded) },
+        "sourcesOnNewTrack" to { it.sourcesOnNewTrack.key },
+        "itemsOnNewTrack" to { it.itemsOnNewTrack.key },
         "showPhoneName" to { onOff(it.showPhoneName) },
         "showDiagnostics" to { onOff(it.showDiagnostics) },
         "showGroundingDetails" to { onOff(it.showGroundingDetails) },
@@ -440,6 +442,15 @@ internal val SETTING_LINES: List<Pair<String, (Settings) -> String>> =
         "themeButton" to { onOff(it.themeButton) },
         "font" to { it.font.name },
         "introAtStart" to { onOff(it.introAtStart) },
+        "spinLogo" to { onOff(it.spinLogo) },
+        "logoSpeed" to { it.logoSpeed.name },
+        "foldDescriptions" to { onOff(it.foldDescriptions) },
+        "descriptionsOnReturn" to { it.descriptionsOnReturn.name },
+        "unfoldedDescriptions" to { s ->
+            s.unfoldedDescriptions
+                .joinToString()
+                .ifEmpty { NONE }
+        },
         "lyricsLinks" to { onOff(it.lyricsLinks) },
         "lyricsSearch" to { onOff(it.lyricsSearch) },
         "dismissed" to { s ->

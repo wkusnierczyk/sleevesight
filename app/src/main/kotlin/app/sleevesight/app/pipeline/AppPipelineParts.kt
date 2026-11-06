@@ -2,6 +2,7 @@ package app.sleevesight.app.pipeline
 
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretStore
+import app.sleevesight.app.ui.phoneDateForm
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.pipeline.AiAccess
@@ -17,6 +18,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
+import java.util.Locale
 
 /**
  * The pipeline's stages in the app, for [PipelineHost]: the adapters, the resolver, MusicBrainz's
@@ -31,27 +33,38 @@ import kotlinx.coroutines.flow.flow
  * found unavailable (#540), which no other model replaces until the user chooses one; and each call
  * through the client is watched for a model the service does not know or refuses
  * ([ModelCheck.watching]). [sessionFacts], the artist facts the listening session's insights cited
- * (#239), is one for the process, passed to every build.
+ * (#239), is one for the process, passed to every build. The album's evidence for its insight
+ * under *Key insights* (#522) is gathered by [PipelineWiring.albums], Last.fm's album and its web
+ * search with their keys and the engines switched on, as the adapters (#885); the web search for an
+ * artist the sources say nothing about by [PipelineWiring.artistWeb], likewise (#912). The search in the
+ * track's language (#902) is [PipelineWiring.languageSearch]'s, its web search likewise; what it found
+ * about the artist and the album is kept by [PipelineWiring.languageLines], one for the process (#939).
+ * The prompts ask for dates in the phone's form ([phoneDateForm], #957), as *Dates* writes them:
+ * [phone]'s language and region, read as each prompt is built, so a change of either reaches the
+ * next one.
  */
 class AppPipelineParts(
     private val wiring: PipelineWiring,
     private val normalizer: Normalizer,
     private val sessionFacts: SessionFacts = SessionFacts.None,
     private val models: ModelCheck? = null,
+    private val phone: () -> Locale = Locale::getDefault,
     private val cache: () -> PipelineCache,
 ) : (PipelineKeys, Settings) -> PipelineParts {
     override fun invoke(
         keys: PipelineKeys,
         settings: Settings,
-    ): PipelineParts =
-        PipelineParts(
+    ): PipelineParts {
+        // The selected model found unavailable (#540): no AI access, and the pipeline told why (#911).
+        val blocked = models?.blocks(settings) == true
+        return PipelineParts(
             normalizer = normalizer,
             adapters = wiring.adapters(keys.sources, settings),
             resolver = wiring.resolver,
             hasher = JvmHasher,
             ai =
                 settings.aiProvider
-                    ?.takeUnless { models?.blocks(settings) == true }
+                    ?.takeUnless { blocked }
                     ?.let { wiring.aiProviders[it] }
                     ?.let { p -> keys.ai?.let { AiAccess(models?.watching(p) ?: p, it) } },
             cache = cache(),
@@ -59,7 +72,15 @@ class AppPipelineParts(
             lastFmLabels = keys.sources.lastFm?.let(wiring::lastFmLabels),
             sessionFacts = sessionFacts,
             webSearch = wiring.webSearcher(keys.sources.web.filterKeys { it in settings.webEngines }),
+            albums = wiring.albums(keys.sources, settings),
+            modelUnavailable = blocked,
+            artistWeb = wiring.artistWeb(keys.sources, settings),
+            languageSearch =
+                wiring.languageSearch(keys.sources.web.filterKeys { it in settings.webEngines }, settings.showGenres),
+            dateForm = { phoneDateForm(phone()) },
+            languageLines = wiring.languageLines,
         )
+    }
 }
 
 /**

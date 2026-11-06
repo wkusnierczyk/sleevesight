@@ -76,20 +76,30 @@ class Caches(
             deleted += queries.retrievalPurgeFormat(RetrievalCodec.FORMAT.toLong()).value
             deleted += queries.artistPurge((now - current.artistCacheLifetime).toEpochMilliseconds()).value
             SynthesisCache.lifetimeOf(current)?.let { lifetime ->
-                deleted += queries.synthesisPurge((now - lifetime).toEpochMilliseconds()).value
+                val cutoff = (now - lifetime).toEpochMilliseconds()
+                deleted += queries.synthesisPurge(cutoff).value
+                // The artist-level parts kept as long as the cards (#885).
+                deleted += queries.artistResultPurgeSources(ArtistResultCache.HISTORY, cutoff).value
             }
             deleted + enforceLimit()
         }
 
     /**
      * Deletes everything kept about artists, for *Keep what sources said about each artist* switched
-     * off (#420): the artist-level results, the artist resolutions, and every retrieval entry not
-     * marked as about the track alone ([RetrievalCodec.aboutArtists]), those in an older encoding,
-     * which cannot say so, included. Returns how many entries it deleted.
+     * off (#420): the artist-level results but those of the parts named in [spared] (kept whatever
+     * the switch says, as an album's web lines are, #885), the artist resolutions, and every
+     * retrieval entry not marked as about the track alone ([RetrievalCodec.aboutArtists]), those in
+     * an older encoding, which cannot say so, included. Returns how many entries it deleted.
      */
-    fun clearArtists(): Long =
+    fun clearArtists(spared: Set<String> = emptySet()): Long =
         queries.transactionWithResult {
-            queries.artistResultDeleteAll().value + queries.artistDeleteAll().value +
+            val results =
+                if (spared.isEmpty()) {
+                    queries.artistResultDeleteAll().value
+                } else {
+                    queries.artistResultDeleteAllBut(spared).value
+                }
+            results + queries.artistDeleteAll().value +
                 queries.retrievalPurgeFormat(RetrievalCodec.FORMAT.toLong()).value +
                 queries.retrievalDeleteAboutArtists(RetrievalCodec.TRACK_ONLY_MARKER).value
         }
@@ -111,7 +121,8 @@ class Caches(
     private fun purgeUnknownSources(): Long {
         val known = SourceId.entries.map { it.tag }.toSet()
 
-        fun unknown(sources: String) = sources.split(' ').any { it.isNotEmpty() && it !in known }
+        fun unknown(sources: String) =
+            sources.split(' ').any { it.isNotEmpty() && it !in known && it != ArtistResultCache.HISTORY_TAG }
         val retrieval =
             queries
                 .retrievalSources()

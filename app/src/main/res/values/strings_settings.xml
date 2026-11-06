@@ -11,6 +11,22 @@
         <item quantity="other">%d sections match</item>
     </plurals>
     <string name="settings_section_expanded">expanded</string>
+    <!-- A setting's description folded to one line (#847): its state, and what a tap on it does, for a screen reader. -->
+    <string name="settings_description_collapsed">collapsed</string>
+    <string name="settings_description_expanded">expanded</string>
+    <string name="settings_description_expand">Expand</string>
+    <string name="settings_description_collapse">Collapse</string>
+    <!-- Appearance (#847): whether the settings' descriptions fold to one line, and how they show when Settings or a section opens again; each choice's line says what it does. -->
+    <string name="settings_fold_descriptions">Foldable descriptions</string>
+    <string name="settings_fold_descriptions_summary">Shows each setting’s description on one line; a tap shows the rest, another folds it.</string>
+    <string name="settings_descriptions_on_return">Descriptions on return</string>
+    <string name="settings_descriptions_on_return_summary">How the descriptions show when you come back to Settings.</string>
+    <string name="settings_descriptions_folded">Folded</string>
+    <string name="settings_descriptions_folded_detail">Every description is folded again.</string>
+    <string name="settings_descriptions_unfolded">Unfolded</string>
+    <string name="settings_descriptions_unfolded_detail">Every description shows in full; a tap folds it.</string>
+    <string name="settings_descriptions_as_left">As left</string>
+    <string name="settings_descriptions_as_left_detail">Each description stays folded or unfolded as you left it.</string>
     <string name="settings_players_short">Music apps Sleevesight follows</string>
     <string name="settings_players_long">Sleevesight reads what a player says it is playing (track, artist, album). It does not receive the audio or your other notifications. Android grants this with notification access. To find your music players, Sleevesight looks at apps that report what they play (playing or paused) and checks whether it is music (a track with a title and an artist); it stops checking an app for music once it has found some, until Sleevesight starts afresh (not each time you open it). A new player is added to this list switched off. Sleevesight does not follow a player that is off: it does not track what the player plays, and keeps or sends none of it.\n\nSwitch on the players you want Sleevesight to follow.</string>
     <string name="settings_players_none">No players yet. A music app appears here, switched off, once you play music in it.</string>
@@ -59,6 +75,16 @@
     <string name="settings_source_wikipedia_summary">Articles on songs, albums and artists, and the facts behind them.</string>
     <string name="settings_source_lastfm_summary">Listeners’ tags and artist biographies.</string>
     <string name="settings_engine_exa_summary">Searches the web for articles about the track.</string>
+    <!-- Search in the track's language (#902): after Exa web search, a button group Off | If needed |
+         Always, with what the chosen one does under it. -->
+    <string name="settings_track_language">Search in the track’s language</string>
+    <string name="settings_track_language_summary">When a track is sung in a language other than English, also looks it up on Wikipedia and searches the web in that language. The insight translates what they give and says which citations it translated.</string>
+    <string name="settings_track_language_off">Off</string>
+    <string name="settings_track_language_if_needed">If needed</string>
+    <string name="settings_track_language_always">Always</string>
+    <string name="settings_track_language_off_detail">Looks up every track in English only.</string>
+    <string name="settings_track_language_if_needed_detail">Searches in the track’s language only when the English sources say little about the track itself. With Exa on, one more Exa API call for such a track.</string>
+    <string name="settings_track_language_always_detail">Searches in the track’s language for every track that has one other than English. With Exa on, one more Exa API call for each such track.</string>
     <!-- Under a service that needs a key it lacks; the argument names the service, as Last.fm or Anthropic. -->
     <string name="settings_needs_key">Needs your %1$s key, in Secrets.</string>
     <!-- Under each service that needs a key (#539): %1$s is the key's name ("Anthropic API key"), a link to its row in Secrets. -->
@@ -138,41 +164,59 @@
     <string name="settings_layout">Layout</string>
     <string name="settings_layout_boxes">Boxes</string>
     <string name="settings_layout_pages">Pages</string>
-    <string name="settings_layout_summary">How Sources and the genres open: in place on the home screen, as expandable boxes, or each on a page of its own, with a back arrow.</string>
+    <string name="settings_layout_summary">How Sources, the genres, and the song’s, the artist’s and the album’s insights open: in place on the home screen, as expandable boxes, or each on a page of its own, with a back arrow.</string>
 
-    <!-- Load keys and Purge keys (#446): the screens that replace their dialogs. Load keys starts
-         with five words, which seal the setup code (#590). -->
-    <string name="load_keys_words_intro">These words seal your keys: the QR code made with them opens only with them, so a photo or a screenshot of the code alone gives nothing away.</string>
-    <string name="load_keys_open">1. On your computer, open the API keys page:</string>
-    <string name="load_keys_type">2. Type these words there. The first three letters of each are enough.</string>
-    <!-- Under the words; the argument is how many minutes they last. -->
-    <plurals name="load_keys_words_expire">
-        <item quantity="one">This phone takes one QR code made with them, within %1$d minute; it forgets them when you leave this screen.</item>
-        <item quantity="other">This phone takes one QR code made with them, within %1$d minutes; it forgets them when you leave this screen.</item>
-    </plurals>
-    <string name="load_keys_words_expired">These words have expired. Show new words, and type those on the computer.</string>
+    <!-- Load keys and Purge keys (#446): the screens that replace their dialogs. Load keys (#765):
+         an intro, then four numbered steps, the words (#590), the QR code, the keys to save and the
+         services to enable (#763), then a summary. -->
+    <string name="load_keys_intro_open">On a computer, or another device that has your keys, open the API keys page:</string>
+    <string name="load_keys_intro_start">Tap Start to proceed.</string>
+    <string name="load_keys_start">Start</string>
+    <!-- What a screen reader says of a numbered step's title: %1$d is its number, %2$s its title. -->
+    <string name="load_keys_step">Step %1$d: %2$s</string>
+    <string name="load_keys_words_title">Encryption words</string>
+    <string name="load_keys_words_secret">The following five words are a unique one-time secret, used to encrypt your API keys in a QR code. Only this phone can read keys from the code.</string>
+    <string name="load_keys_words_give">Provide these words to the QR generator page; the first three letters are enough. See instructions given there.</string>
+    <!-- Under the words; %1$s is the time they have left, as 4:52, counting down. -->
+    <string name="load_keys_words_within">Use these words within %1$s. When expired, new words are generated automatically.</string>
+    <string name="load_keys_words_forget">The phone forgets the words once you leave this screen.</string>
+    <string name="load_keys_words_next">Once done, tap Next to proceed.</string>
     <string name="load_keys_new_words">New words</string>
     <string name="load_keys_next">Next</string>
-    <string name="load_keys_show_words">Show the words</string>
-    <string name="load_keys_make">3. Then give the page your keys, and it draws the QR code, as its instructions explain:</string>
-    <!-- What a screen reader says of the link to the instructions; the argument is their address. -->
-    <string name="load_keys_instructions_of">Open the instructions at %1$s</string>
-    <string name="load_keys_read_code">4. Read the QR code with the camera.</string>
-    <!-- The key field's Scan QR code, whose code is the step after making it. -->
-    <string name="load_keys_read">2. Read the QR code with the camera.</string>
+    <string name="load_keys_previous">Previous</string>
+    <string name="load_keys_scan_title">QR Code</string>
+    <string name="load_keys_scan_how">Use your phone’s camera to scan the QR code provided by the QR code generator page. The phone will read the QR code and decrypt your API keys using the five words from step 1.</string>
+    <string name="load_keys_scan_next">Once scanned, tap Next to proceed.</string>
+    <!-- Over the camera's view while a sealed code is opened. -->
     <string name="load_keys_opening">Opening the code…</string>
+    <!-- Under the camera's view: a code read, in a panel of the success colour; a code of version 1,
+         made without the words, in a warning panel under it; a code refused, in an error panel. -->
+    <string name="load_keys_read_title">QR code read</string>
+    <string name="load_keys_read_done">Your keys were decrypted.</string>
+    <string name="load_keys_clear_title">This code was not sealed with words</string>
+    <string name="load_keys_clear">Anyone who saw it can read these keys. Clear it from the computer’s screen.</string>
     <string name="load_keys_wrong_words_title">The words don’t match this code</string>
-    <string name="load_keys_wrong_words">The QR code was sealed with other words. Check the words typed on the computer against the ones this phone shows, and scan the code again.</string>
-    <string name="load_keys_expired_title">The words have expired</string>
-    <string name="load_keys_expired">Show new words, type them on the computer, and scan the new QR code it draws.</string>
-    <string name="load_keys_used_title">These words were used</string>
-    <string name="load_keys_used">They have already opened a QR code. Show new words, type them on the computer, and scan the new QR code it draws.</string>
-    <string name="load_keys_damaged_title">A damaged sealed code</string>
-    <string name="load_keys_damaged">This sealed QR code cannot be read. Make it again on the computer, and scan it again.</string>
-    <!-- Over what a setup code of version 1, made without the words, holds. -->
+    <string name="load_keys_wrong_words">It was made with other words. Tap Previous to see this phone’s words, check them against the page, and scan the new code.</string>
+    <string name="load_keys_expired_title">The words had expired</string>
+    <string name="load_keys_expired">New words have been drawn since. Tap Previous for them, type them on the page, and scan the new code it draws.</string>
+    <string name="load_keys_used_title">These words were already used</string>
+    <string name="load_keys_used">They open only one code. Tap Previous for new words, type them on the page, and scan the new code it draws.</string>
+    <string name="load_keys_damaged_title">This code can’t be opened</string>
+    <string name="load_keys_damaged">It is damaged, or was only partly read. Make it again on the page, and scan it again.</string>
+    <string name="load_keys_not_a_setup_title">Not a Sleevesight setup code</string>
+    <string name="load_keys_not_a_setup">Make one on the API keys page: never with an online QR generator, which would receive your keys.</string>
+    <string name="load_keys_newer_title">A code of a newer version</string>
+    <string name="load_keys_newer">This code was made for a newer Sleevesight. Update the app, then scan it again.</string>
+    <!-- Over what a setup code of version 1, made without the words, holds, on the keys to save. -->
     <string name="load_keys_clear_code">This QR code was not sealed with words: anyone who saw it can read these keys. Clear it from the computer’s screen.</string>
-    <!-- The guided screens of the key field's icons (#541), laid out as Load keys is. Scan QR code: -->
-    <string name="key_scan_make">1. Generate a QR code of this one key on your computer, as the instructions explain:</string>
+    <string name="load_keys_keys_title">Keys to save</string>
+    <string name="load_keys_enable_title">Services to enable</string>
+    <string name="load_keys_complete">Complete</string>
+    <string name="load_keys_summary_title">Summary</string>
+    <!-- The guided screens of the key field's icons (#541). Scan QR code (#765): -->
+    <string name="key_scan_open">1. On a computer, open the API keys page, and make a code of this one key under “A code without the words, for a single key”:</string>
+    <string name="key_scan_point">2. Point the camera at the code.</string>
+    <string name="key_scan_any">Any QR code that holds only this key works too.</string>
     <!-- Type on a computer: what it is, then its steps. -->
     <string name="keyboard_explained">Type the key on a computer’s keyboard instead of the phone’s. A page on the computer sends what you type to this phone over Bluetooth, encrypted, and it appears in the key’s field. The computer needs Bluetooth, and Chrome or Edge.</string>
     <string name="keyboard_open">1. On the computer, open the keyboard page:</string>
@@ -180,14 +224,61 @@
     <string name="keyboard_page_of">Open the keyboard page at %1$s</string>
     <string name="keyboard_scan">2. Read the QR code the page shows with the camera.</string>
     <string name="keyboard_connect">3. Then, on the page, choose “Connect” and pick this phone.</string>
-    <string name="load_keys_found">Keys read</string>
-    <string name="load_keys_problems">Problems</string>
-    <string name="load_keys_save_these">Save these</string>
-    <string name="load_keys_nothing_title">Nothing to save</string>
     <string name="load_keys_saved_title">Keys saved</string>
-    <!-- The note under a key read from the code, in the table of the keys read. -->
-    <string name="load_keys_new">New</string>
-    <string name="load_keys_replaces">Replaces the saved key</string>
+    <!-- Load keys after a code is read (#763): the keys to save, then the services to enable, then
+         the summary. The heading over the keys read: several, one, or none. -->
+    <string name="load_keys_save_question">Which of the following successfully scanned keys do you want to save?</string>
+    <string name="load_keys_save_question_one">Do you want to save this key?</string>
+    <string name="load_keys_save_none">No keys to save</string>
+    <!-- The tables' headers: the key, its group, its last four characters, its checkbox; on the
+         services to enable, its checkbox or radio; on the summary, whether it was new, and each
+         service's state. -->
+    <string name="key_table_key">Key</string>
+    <string name="key_table_group">Group</string>
+    <string name="key_table_save">Save</string>
+    <string name="key_table_enable">Enable</string>
+    <string name="key_table_saved">Saved</string>
+    <string name="key_table_service">Service</string>
+    <string name="key_table_state">State</string>
+    <!-- A key's group, in its column, dimmed. -->
+    <string name="key_group_ai">AI</string>
+    <string name="key_group_music">Music</string>
+    <string name="key_group_search">Search</string>
+    <!-- Under a key's name, on the keys to save and in the key dialog, under its field. -->
+    <string name="key_save_as_new">Save as new</string>
+    <string name="key_replace_existing">Replace existing</string>
+    <string name="load_keys_only_selected">Only the selected keys will be saved</string>
+    <!-- Over the list of the keys that did not scan, in the error colour. An entry is a key's name and
+         ending (key_ending), its name alone, or how many names this version does not know. -->
+    <string name="load_keys_not_scanned">The following keys did not scan correctly:</string>
+    <plurals name="load_keys_unknown_keys">
+        <item quantity="one">%d unknown key</item>
+        <item quantity="other">%d unknown keys</item>
+    </plurals>
+    <!-- What a screen reader says of a row of the tables: its parts, as Anthropic, AI. -->
+    <string name="key_row_parts">%1$s, %2$s</string>
+    <string name="load_keys_enable_question">Which services do you want to enable?</string>
+    <!-- The line across the services' table over the AI services whose keys were saved before. -->
+    <string name="load_keys_configured">Already configured</string>
+    <!-- On the services to enable and in the key dialog; %1$s is the AI service on. -->
+    <string name="key_current_ai">Your current AI service is %1$s.</string>
+    <string name="load_keys_one_ai">Only one AI service can be enabled at a time.</string>
+    <!-- Under the services' table: %1$s is settings_section_sources, %2$s settings_section_labels,
+         %3$s settings_section_ai, each a link to that section (#581). -->
+    <string name="load_keys_where">You can find more details about these services in %1$s, %2$s and %3$s. You can also switch them on or off there.</string>
+    <string name="load_keys_saved_title_one">Key saved</string>
+    <string name="key_saved_new">New</string>
+    <string name="key_saved_replaced">Replaced</string>
+    <string name="load_keys_services_configured">Services configured</string>
+    <!-- In place of the services' table when the choices could not be written, with its button. -->
+    <string name="load_keys_services_failed">The services could not be switched: the phone’s storage failed. Try again.</string>
+    <string name="load_keys_try_again">Try again</string>
+    <string name="key_service_enabled">Enabled</string>
+    <string name="key_service_disabled">Disabled</string>
+    <!-- The key dialog, under its field (#763); %1$s is the service, as Exa web search. -->
+    <string name="key_enable">Enable %1$s</string>
+    <string name="key_switch_ai">Switch the AI service to %1$s</string>
+    <string name="key_already_enabled">%1$s is already enabled.</string>
     <!-- The key screens' table of keys (#542): its headers, the service of a Gemini key, and the note
          under a key that cannot be read. -->
     <string name="key_table_name">API Key</string>
@@ -232,7 +323,7 @@
     <string name="settings_search_with_ai_summary">When Dates, Genres or Lyrics has nothing from its sources, asks your AI service, searching the web as set under %1$s.\n\nEach question is a paid AI service call; with web search, also Exa API calls</string>
     <!-- Insights → AI web search (#801), before Ask AI automatically: how a question to the AI service searches the web with Exa; a button group of three, one row always. -->
     <string name="settings_ai_web_search">AI web search</string>
-    <string name="settings_ai_web_search_summary">Lets your AI service search the web with Exa when it is asked, by a tap on Ask AI or automatically.</string>
+    <string name="settings_ai_web_search_summary">Lets your AI service search the web with Exa when it is asked, by a tap on Ask AI or automatically, and when it writes an artist’s insight the other sources have nothing for.</string>
     <string name="settings_ai_web_search_off">Off</string>
     <string name="settings_ai_web_search_once">Once</string>
     <!-- %1$d is the limit, Settings.AI_WEB_SEARCH_LIMIT (3). -->

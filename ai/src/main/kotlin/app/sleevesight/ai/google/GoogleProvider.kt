@@ -58,6 +58,10 @@ import kotlin.time.Instant
  * its default says: for those, the effort chosen in the settings has no effect. Thoughts are not
  * asked for (`includeThoughts`), and a thought part that comes all the same is skipped.
  *
+ * [CompletionRequest.system], when given, is the request's `systemInstruction` (#767), a content of
+ * one text part with no role; for a Gemma model, which refuses it, the system prompt opens the
+ * user's content instead ([takesSystemInstruction]).
+ *
  * The stream's text becomes [CompletionEvent.Delta]s, and its end [CompletionEvent.Done], with the
  * usage and the stop reason, or [CompletionEvent.Error] ([ContentStream]). The request is a `POST`,
  * so `:net` never repeats it once it may have been acted on: a paid call is never sent twice.
@@ -195,12 +199,20 @@ class GoogleProvider(
         key: Secret,
     ): NetRequest {
         val level = request.effort?.let { thinkingLevel(request.model, it) }
+        val instruction = takesSystemInstruction(request.model)
+        // A model that takes no systemInstruction gets the system prompt before the user's content.
+        val text = request.system?.takeUnless { instruction }?.let { "$it\n\n${request.prompt}" } ?: request.prompt
         val body =
             buildJsonObject {
+                request.system?.takeIf { instruction }?.let { system ->
+                    putJsonObject("systemInstruction") {
+                        putJsonArray("parts") { addJsonObject { put("text", system) } }
+                    }
+                }
                 putJsonArray("contents") {
                     addJsonObject {
                         put("role", "user")
-                        putJsonArray("parts") { addJsonObject { put("text", request.prompt) } }
+                        putJsonArray("parts") { addJsonObject { put("text", text) } }
                     }
                 }
                 putJsonObject("generationConfig") {
@@ -278,6 +290,13 @@ class GoogleProvider(
                 ?.toIntOrNull()
                 ?.let { it >= FIRST_LEVELLED } ?: false
 
+        /**
+         * Whether [model] takes `systemInstruction` (#767): every model but Gemma's (`gemma-…`), which
+         * the API refuses it for with a 400 ("Developer instruction is not enabled"). The model list
+         * offers Gemma, so a Gemma model gets the system prompt at the start of the user's content.
+         */
+        fun takesSystemInstruction(model: String): Boolean = !model.startsWith(GEMMA_PREFIX)
+
         /** Whether [model] takes `thinkingLevel` at `minimal` ([MINIMAL_MODELS]). */
         fun takesMinimal(model: String): Boolean = MINIMAL_MODELS.any { model == it || model.startsWith("$it-") }
 
@@ -296,6 +315,8 @@ class GoogleProvider(
             }
 
         private const val FIRST_LEVELLED = 3
+
+        private const val GEMMA_PREFIX = "gemma-"
 
         /** `gemini-<major>[.<minor>]-…`; the major version is the group. */
         private val GEMINI_VERSION = Regex("gemini-(\\d+)(?:\\.\\d+)?-.+")

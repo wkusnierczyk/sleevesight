@@ -10,6 +10,7 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.settings.Crossfade
 import app.sleevesight.core.settings.Dismissable
+import app.sleevesight.core.settings.NewTrackFold
 import app.sleevesight.core.settings.ReportButton
 import app.sleevesight.core.settings.Settings
 import kotlin.time.Duration
@@ -67,6 +68,7 @@ internal object SettingsCodec {
     private val ARTIST_FACTS_ONCE = booleanPreferencesKey("insights.artist_facts_once")
     private val SEARCH_WITH_AI = booleanPreferencesKey("insights.search_with_ai")
     private val AI_WEB_SEARCH = stringPreferencesKey("insights.ai_web_search")
+    private val TRACK_LANGUAGE_SEARCH = stringPreferencesKey("sources.track_language_search")
     private val READ_ALOUD_MUSIC = stringPreferencesKey("read_aloud.music")
     private val READ_TRACK_LINE = booleanPreferencesKey("read_aloud.track_line_first")
     private val READ_NEW_INSIGHTS = booleanPreferencesKey("read_aloud.new_insights")
@@ -75,7 +77,12 @@ internal object SettingsCodec {
     private val CACHE_SIZE_LIMIT = longPreferencesKey("cache.size_limit")
     private val HISTORY_LIFETIME_MS = longPreferencesKey("history.lifetime_ms")
     private val SESSION_GAP_MS = longPreferencesKey("history.session_gap_ms")
+
+    // *Keep Sources as you left them*, the switch *Sources on a new track* was before #522: read only
+    // while the choice is not stored, on as *As left*, off as *Folded*; removed once it is.
     private val KEEP_SOURCES_UNFOLDED = booleanPreferencesKey("home.keep_sources_unfolded")
+    private val SOURCES_ON_NEW_TRACK = stringPreferencesKey("home.sources_on_new_track")
+    private val ITEMS_ON_NEW_TRACK = stringPreferencesKey("home.items_on_new_track")
     private val SHOW_PHONE_NAME = booleanPreferencesKey("keyboard.show_phone_name")
     private val DIAGNOSTICS = booleanPreferencesKey("developer.diagnostics")
     private val DEVELOPER_MODE = booleanPreferencesKey("developer.mode")
@@ -86,6 +93,18 @@ internal object SettingsCodec {
     private val THEME_BUTTON = booleanPreferencesKey("display.theme_button")
     private val FONT = stringPreferencesKey("display.font")
     private val INTRO = booleanPreferencesKey("display.intro")
+    private val SPIN_LOGO = booleanPreferencesKey("display.spin_logo")
+    private val LOGO_SPEED = stringPreferencesKey("display.logo_speed")
+    private val FOLD_DESCRIPTIONS = booleanPreferencesKey("display.fold_descriptions")
+    private val DESCRIPTIONS_ON_RETURN = stringPreferencesKey("display.descriptions_on_return")
+
+    // In order, oldest change first: one text, the ids apart by [UNFOLDED_SEPARATOR]. A key of its
+    // own, not the first build's set under `display.unfolded_descriptions`, which reads as another
+    // type.
+    private val UNFOLDED_DESCRIPTIONS = stringPreferencesKey("display.descriptions_unfolded")
+
+    /** What parts the ids of [UNFOLDED_DESCRIPTIONS]: the unit separator, never in a row's name. */
+    private const val UNFOLDED_SEPARATOR = '\u001F'
     private val LYRICS_LINKS = booleanPreferencesKey("display.lyrics_links")
     private val LYRICS_SEARCH = booleanPreferencesKey("display.lyrics_search")
 
@@ -119,6 +138,7 @@ internal object SettingsCodec {
             artistFactsOncePerSession = prefs[ARTIST_FACTS_ONCE] ?: defaults.artistFactsOncePerSession,
             searchWithAi = prefs[SEARCH_WITH_AI] ?: defaults.searchWithAi,
             aiWebSearch = enumOf(prefs[AI_WEB_SEARCH]) ?: defaults.aiWebSearch,
+            trackLanguageSearch = enumOf(prefs[TRACK_LANGUAGE_SEARCH]) ?: defaults.trackLanguageSearch,
             readAloudMusic = enumOf(prefs[READ_ALOUD_MUSIC]) ?: defaults.readAloudMusic,
             readTrackLineFirst = prefs[READ_TRACK_LINE] ?: defaults.readTrackLineFirst,
             readNewInsightsAloud = prefs[READ_NEW_INSIGHTS] ?: defaults.readNewInsightsAloud,
@@ -133,7 +153,8 @@ internal object SettingsCodec {
                     else -> stored?.takeIf { it > 0 }?.milliseconds ?: defaults.historyLifetime
                 },
             sessionGap = prefs[SESSION_GAP_MS]?.takeIf { it > 0 }?.milliseconds ?: defaults.sessionGap,
-            keepSourcesUnfolded = prefs[KEEP_SOURCES_UNFOLDED] ?: defaults.keepSourcesUnfolded,
+            sourcesOnNewTrack = newTrackFoldOf(prefs[SOURCES_ON_NEW_TRACK], prefs[KEEP_SOURCES_UNFOLDED], defaults),
+            itemsOnNewTrack = NewTrackFold.of(prefs[ITEMS_ON_NEW_TRACK]) ?: defaults.itemsOnNewTrack,
             lyricsLinks = prefs[LYRICS_LINKS] ?: defaults.lyricsLinks,
             lyricsSearch = prefs[LYRICS_SEARCH] ?: defaults.lyricsSearch,
             showPhoneName = prefs[SHOW_PHONE_NAME] ?: defaults.showPhoneName,
@@ -147,6 +168,13 @@ internal object SettingsCodec {
             themeButton = prefs[THEME_BUTTON] ?: defaults.themeButton,
             font = enumOf(prefs[FONT]) ?: defaults.font,
             introAtStart = prefs[INTRO] ?: defaults.introAtStart,
+            spinLogo = prefs[SPIN_LOGO] ?: defaults.spinLogo,
+            logoSpeed = enumOf(prefs[LOGO_SPEED]) ?: defaults.logoSpeed,
+            foldDescriptions = prefs[FOLD_DESCRIPTIONS] ?: defaults.foldDescriptions,
+            descriptionsOnReturn = enumOf(prefs[DESCRIPTIONS_ON_RETURN]) ?: defaults.descriptionsOnReturn,
+            unfoldedDescriptions =
+                prefs[UNFOLDED_DESCRIPTIONS]?.split(UNFOLDED_SEPARATOR)?.filter { it.isNotEmpty() }
+                    ?: defaults.unfoldedDescriptions,
             dismissed = dismissedOf(prefs),
         )
 
@@ -224,6 +252,9 @@ internal object SettingsCodec {
         if (moved { it.aiWebSearch }) {
             prefs.put(AI_WEB_SEARCH, settings.aiWebSearch.name, defaults.aiWebSearch.name)
         }
+        if (moved { it.trackLanguageSearch }) {
+            prefs.put(TRACK_LANGUAGE_SEARCH, settings.trackLanguageSearch.name, defaults.trackLanguageSearch.name)
+        }
         if (moved { it.readAloudMusic }) {
             prefs.put(READ_ALOUD_MUSIC, settings.readAloudMusic.name, defaults.readAloudMusic.name)
         }
@@ -262,8 +293,13 @@ internal object SettingsCodec {
         if (moved { it.sessionGap }) {
             prefs.put(SESSION_GAP_MS, settings.sessionGap.inWholeMilliseconds, defaults.sessionGap.inWholeMilliseconds)
         }
-        if (moved { it.keepSourcesUnfolded }) {
-            prefs.put(KEEP_SOURCES_UNFOLDED, settings.keepSourcesUnfolded, defaults.keepSourcesUnfolded)
+        if (moved { it.sourcesOnNewTrack }) {
+            prefs.put(SOURCES_ON_NEW_TRACK, settings.sourcesOnNewTrack.key, defaults.sourcesOnNewTrack.key)
+            // The switch it was, now read as this: never again once this is stored.
+            prefs.remove(KEEP_SOURCES_UNFOLDED)
+        }
+        if (moved { it.itemsOnNewTrack }) {
+            prefs.put(ITEMS_ON_NEW_TRACK, settings.itemsOnNewTrack.key, defaults.itemsOnNewTrack.key)
         }
         if (moved { it.lyricsLinks }) prefs.put(LYRICS_LINKS, settings.lyricsLinks, defaults.lyricsLinks)
         if (moved { it.lyricsSearch }) prefs.put(LYRICS_SEARCH, settings.lyricsSearch, defaults.lyricsSearch)
@@ -297,6 +333,21 @@ internal object SettingsCodec {
         if (moved { it.themeButton }) prefs.put(THEME_BUTTON, settings.themeButton, defaults.themeButton)
         if (moved { it.font }) prefs.put(FONT, settings.font.name, defaults.font.name)
         if (moved { it.introAtStart }) prefs.put(INTRO, settings.introAtStart, defaults.introAtStart)
+        if (moved { it.spinLogo }) prefs.put(SPIN_LOGO, settings.spinLogo, defaults.spinLogo)
+        if (moved { it.logoSpeed }) prefs.put(LOGO_SPEED, settings.logoSpeed.name, defaults.logoSpeed.name)
+        if (moved { it.foldDescriptions }) {
+            prefs.put(FOLD_DESCRIPTIONS, settings.foldDescriptions, defaults.foldDescriptions)
+        }
+        if (moved { it.descriptionsOnReturn }) {
+            prefs.put(DESCRIPTIONS_ON_RETURN, settings.descriptionsOnReturn.name, defaults.descriptionsOnReturn.name)
+        }
+        if (moved { it.unfoldedDescriptions }) {
+            prefs.put(
+                UNFOLDED_DESCRIPTIONS,
+                settings.unfoldedDescriptions.joinToString(UNFOLDED_SEPARATOR.toString()),
+                defaults.unfoldedDescriptions.joinToString(UNFOLDED_SEPARATOR.toString()),
+            )
+        }
         // The names a later version stored stay, as with a set of switches, but for a set left
         // empty: nothing is dismissed then, a later version's items included, as after *Restore
         // dismissed messages*. The guide's old switch goes: left off, it would read as the guide
@@ -477,3 +528,16 @@ internal fun <T : Any> MutablePreferences.put(
 ) {
     if (value == null || value == default) remove(key) else set(key, value)
 }
+
+/**
+ * *Sources on a new track* as [stored], else as the switch it was ([switch], *Keep Sources as you
+ * left them*, #522: on, *As left*; off, *Folded*), else as [defaults] have it.
+ */
+private fun newTrackFoldOf(
+    stored: String?,
+    switch: Boolean?,
+    defaults: Settings,
+): NewTrackFold =
+    NewTrackFold.of(stored)
+        ?: switch?.let { on -> if (on) NewTrackFold.AS_LEFT else NewTrackFold.FOLDED }
+        ?: defaults.sourcesOnNewTrack

@@ -23,13 +23,17 @@ data class WpPage(
 )
 
 /**
- * The English Wikipedia action API (`https://en.wikipedia.org/w/api.php`), keyless, through the one
- * [NetClient], whose User-Agent names the app and a contact as Wikimedia's policy asks. Article
- * text is CC BY-SA 4.0: what the adapter takes from it is attributed (D1).
+ * A Wikipedia's action API, the English one's (`https://en.wikipedia.org/w/api.php`) unless [wiki]
+ * names another's subdomain (`hi`, for the search in the track's language, #902), keyless, through
+ * the one [NetClient], whose User-Agent names the app and a contact as Wikimedia's policy asks.
+ * Article text is CC BY-SA 4.0: what the adapter takes from it is attributed (D1).
  */
 class WikipediaClient(
     private val net: NetClient,
+    wiki: String = ENGLISH,
 ) {
+    private val api = apiOf(wiki)
+
     /**
      * The articles [titles] lead to, by each title asked, following Wikipedia's normalization and
      * redirects; a title with no article maps to null. One request for at most 50 titles.
@@ -46,7 +50,7 @@ class WikipediaClient(
                 "format" to "json",
                 "formatversion" to "2",
             )
-        return net.lookup(NetRequest(API, query = query)) { response ->
+        return net.lookup(NetRequest(api, query = query)) { response ->
             val json = parseWikimedia(response.body).obj("query")
             val moves =
                 (json.array("normalized") + json.array("redirects")).associate {
@@ -80,7 +84,7 @@ class WikipediaClient(
                 "format" to "json",
                 "formatversion" to "2",
             )
-        return net.lookup(NetRequest(API, query = query)) { response ->
+        return net.lookup(NetRequest(api, query = query)) { response ->
             parseWikimedia(response.body)
                 .obj("query")
                 .array("pages")
@@ -91,6 +95,12 @@ class WikipediaClient(
 
     companion object {
         const val API: String = "https://en.wikipedia.org/w/api.php"
+
+        /** English Wikipedia's subdomain, the default. */
+        const val ENGLISH: String = "en"
+
+        /** The action API of the Wikipedia at subdomain [wiki]: [API] for `en`. */
+        fun apiOf(wiki: String): String = "https://$wiki.wikipedia.org/w/api.php"
 
         private const val MAX_TITLES = 50
 
@@ -114,11 +124,15 @@ class WikipediaClient(
 }
 
 /**
- * The address of the English Wikipedia article [title]: spaces as underscores, and the title
- * percent-encoded as UTF-8 apart from the characters Wikipedia's own links leave as they are, so
- * a `?`, `#` or `%` in a title stays part of the path (`Why%3F_(Bronski_Beat_song)`).
+ * The address of the article [title] on the Wikipedia at subdomain [wiki], English's by default:
+ * spaces as underscores, and the title percent-encoded as UTF-8 apart from the characters
+ * Wikipedia's own links leave as they are, so a `?`, `#` or `%` in a title stays part of the path
+ * (`Why%3F_(Bronski_Beat_song)`), and a title in another script is all percent-encoded.
  */
-fun articleUrl(title: String): String {
+fun articleUrl(
+    title: String,
+    wiki: String = WikipediaClient.ENGLISH,
+): String {
     val path = StringBuilder()
     for (byte in title.replace(' ', '_').encodeToByteArray()) {
         val c = byte.toInt() and BYTE
@@ -128,7 +142,7 @@ fun articleUrl(title: String): String {
             path.append('%').append(HEX[c shr NIBBLE]).append(HEX[c and LOW_NIBBLE])
         }
     }
-    return "https://en.wikipedia.org/wiki/$path"
+    return "https://$wiki.wikipedia.org/wiki/$path"
 }
 
 private const val PATH_SAFE = "-._~_()',:!*;@\$/"

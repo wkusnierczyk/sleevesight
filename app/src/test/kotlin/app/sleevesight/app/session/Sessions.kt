@@ -7,6 +7,7 @@ import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.MediaSession
 import android.media.session.PlaybackState
+import app.sleevesight.core.model.NowPlaying
 import org.robolectric.shadows.PlaybackInfoBuilder
 
 /** Builders and fakes for the session-layer tests. */
@@ -47,6 +48,12 @@ internal object Sessions {
                 year?.let { putLong(MediaMetadata.METADATA_KEY_YEAR, it) }
                 date?.let { putString(MediaMetadata.METADATA_KEY_DATE, it) }
             }.build()
+
+    /** [metadata] with the advertisement flag ([AdDetection.KEY_ADVERTISEMENT]) set to [flag], as an ad's (#880). */
+    fun advertised(
+        metadata: MediaMetadata = metadata(),
+        flag: Long = 1,
+    ): MediaMetadata = MediaMetadata.Builder(metadata).putLong(AdDetection.KEY_ADVERTISEMENT, flag).build()
 
     fun state(
         state: Int = PlaybackState.STATE_PLAYING,
@@ -232,3 +239,9 @@ internal class FakeActiveSessions(
         listener?.invoke(active)
     }
 }
+
+/** This report without the session layer's play tag ([NowPlaying.play]), to compare with a report built by hand. */
+internal fun NowPlaying?.untagged(): NowPlaying? = this?.copy(play = null)
+
+/** These reports without their play tags ([untagged]). */
+internal fun List<NowPlaying?>.untagged(): List<NowPlaying?> = map { it.untagged() }

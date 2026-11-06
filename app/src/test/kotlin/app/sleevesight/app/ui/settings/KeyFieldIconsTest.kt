@@ -98,11 +98,14 @@ class KeyFieldIconsTest {
                         KeyDialog(
                             id = SecretId.ANTHROPIC,
                             state = SecretState.ABSENT,
-                            onSave = { saving.await() },
+                            offer = EnableOffer.Enable,
+                            onSave = { _, _ -> saving.await() },
+                            onSaved = { shown.open = false },
                             onRemove = { true },
                             scanner = scanner,
                             keyboard = keyboard,
                             showPhoneName = false,
+                            onOpenLoadKeys = {},
                             onDismiss = { shown.open = false },
                         )
                     }

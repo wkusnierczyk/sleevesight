@@ -57,6 +57,7 @@ internal fun LinkedText(
     style: TextStyle,
     modifier: Modifier = Modifier,
     color: Color = Color.Unspecified,
+    marks: List<AnnotatedString.Range<SpanStyle>> = emptyList(),
 ) {
     val ink = color.takeOrElse { style.color.takeOrElse { LocalContentColor.current } }
     val styles = linkStyles(ink)
@@ -73,6 +74,8 @@ internal fun LinkedText(
                 }
                 if (part is TextPart.Linked) links += start until length
             }
+            // Over the whole text, the links' parts too (a search's marks, #847).
+            for (mark in marks) addStyle(mark.item, mark.start, mark.end)
         }
     MarkedText(text, links, style, ink, color, modifier)
 }

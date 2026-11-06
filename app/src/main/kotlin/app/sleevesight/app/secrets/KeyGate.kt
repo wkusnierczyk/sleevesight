@@ -9,8 +9,8 @@ import java.io.IOException
 /**
  * [Settings] with every service whose key is [missing] switched off (#667): the AI service
  * ([Settings.aiProvider], [SecretId.forProvider]), a source ([SecretId.forSource]) and a web search
- * engine ([SecretId.forEngine]). Nothing is switched on: a service whose key is saved keeps its
- * switch as it was. The same settings when nothing changes.
+ * engine ([SecretId.forEngine]). Nothing is switched on here: a service whose key is saved keeps
+ * its switch as it was. The same settings when nothing changes.
  */
 internal fun Settings.keylessOff(missing: Set<SecretId>): Settings {
     fun lacks(id: SecretId?) = id != null && id in missing
@@ -51,8 +51,11 @@ internal suspend fun SettingsStore.servicesOff(ids: Set<SecretId>): Boolean =
  * whenever the keys change (one saved, removed, or every one purged) or the settings do, each
  * service switched on whose key has no entry is switched off and saved so ([keylessOff]). Settings
  * from an earlier version, which let a service be on with no key, come up off at the first start
- * with this; a key removed switches its service off; a key saved switches nothing on, so its
- * service stays off until it is switched on.
+ * with this; a key removed switches its service off. A key saved switches nothing on by itself: its
+ * service is switched on only by the user's choice after the save (#763), on *Load keys*' services
+ * to enable or in the key dialog (*Enable {service}*, *Switch the AI service to {service}*), which
+ * write the settings once the key is saved; without that choice it stays as it was, off if it had
+ * no key.
  *
  * A rule on the stored settings, not one applied as they are read: read-time, the stored switch
  * would stay on, and saving the key would switch the service back on by itself. Not a DataStore

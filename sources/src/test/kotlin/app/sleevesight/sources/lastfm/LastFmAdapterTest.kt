@@ -97,6 +97,8 @@ class LastFmAdapterTest {
             assertTrue(lookup.result.evidence.all { it.retrievedAt == now })
             // The counts and lists are marked, for Look again's comparison (#617); the bio is not.
             assertEquals(listOf(false, false, false, true, true, true), lookup.result.evidence.map { it.aggregate })
+            // Each says which artist it is about, as credited, for the artist's insight (#522).
+            assertTrue(lookup.result.evidence.all { it.about == "Gordon Lightfoot" })
         }
 
     @Test
@@ -717,6 +719,12 @@ class LastFmAdapterTest {
         override suspend fun searchRecordings(
             title: String,
             artist: String,
+        ): Lookup<List<MbRecording>> = error("unexpected recording search")
+
+        override suspend fun searchRecordingsBefore(
+            title: String,
+            artist: String,
+            date: String,
         ): Lookup<List<MbRecording>> = error("unexpected recording search")
 
         override suspend fun recording(mbid: String): Lookup<MbRecordingDetail> = error("unexpected recording")

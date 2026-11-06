@@ -36,6 +36,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.util.Locale
 
 /** The app's pipeline stages from the wiring and the saved keys (#51). Nothing here sends a request. */
 class AppPipelinePartsTest {
@@ -52,6 +53,19 @@ class AppPipelinePartsTest {
     fun close() {
         stores.close()
         wiring.close()
+    }
+
+    @Test
+    fun thePromptsAskForDatesInThePhonesFormReadAsEachPromptIsBuilt() {
+        // The phone's language and region as each prompt is built (#957), not as the parts were.
+        var phone = Locale.US
+        val made = AppPipelineParts(wiring, Normalizer(JvmAccentFolder), phone = { phone }) { PipelineCache.None }
+        val dateForm = made(PipelineKeys(), Settings()).dateForm
+        assertEquals("en-US", dateForm().language)
+        phone = Locale.UK
+        assertEquals("en-GB", dateForm().language)
+        phone = Locale.GERMANY
+        assertEquals("en-DE", dateForm().language)
     }
 
     @Test
@@ -131,6 +145,7 @@ class AppPipelinePartsTest {
         val anthropic = Settings(aiProvider = ProviderId.ANTHROPIC)
         val keys = PipelineKeys(ai = Secret("ai"))
         assertEquals(ProviderId.ANTHROPIC, checked(keys, anthropic).ai?.provider?.id)
+        assertFalse(checked(keys, anthropic).modelUnavailable)
 
         val model = checkNotNull(anthropic.model(ProviderId.ANTHROPIC))
         runBlocking {
@@ -139,6 +154,8 @@ class AppPipelinePartsTest {
             check.ticket()
         }
         assertNull("its model unavailable", checked(keys, anthropic).ai)
+        // And the pipeline told why, so the insight kept still shows (#911).
+        assertTrue(checked(keys, anthropic).modelUnavailable)
         // Another model chosen, or another service, is not held back by it.
         val other = anthropic.withModel(ProviderId.ANTHROPIC, "claude-opus-5-5")
         assertEquals(ProviderId.ANTHROPIC, checked(keys, other).ai?.provider?.id)

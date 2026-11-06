@@ -1,5 +1,5 @@
 {
-  "about": "Sleevesight genre vocabulary: the tags that become genre labels, by family, with the family hue (design/design.md, Genre labels). First taken from GENRE_FAMILIES in design/simulator.html. labels overrides the default label, the tag in title case. synonyms groups spellings of one genre beyond punctuation and spacing, which give one label. musicbrainz gives each tag the MusicBrainz genre (CC0) through which its definition is found: the genre's Wikidata item and its English Wikipedia article give the definition a genre's panel shows (#523). A tag whose name, folded to its letters and digits, is one of MusicBrainz's genres has that genre (matched against MusicBrainz's genre list on 2026-10-27); a tag that is not one, or whose genre has no English article, has the nearest genre that has one, where one fits (#663, checked 2026-10-27): alternative and indie are alternative rock and indie rock, as Last.fm's listeners use them; goth and gothic are gothic rock; metal is heavy metal; punk is punk rock; chanson francaise is chanson française; rap is hip hop; neoclassical is neoclassical new age, the contemporary piano and strings Last.fm's listeners tag so. The tags left without one are listed, each with why, in GenreDefinitionsTest.",
+  "about": "Sleevesight genre vocabulary: the tags that become genre labels, by family, with the family hue (design/design.md, Genre labels). First taken from GENRE_FAMILIES in design/simulator.html. labels overrides the default label, the tag in title case. synonyms groups spellings of one genre beyond punctuation and spacing, which give one label. musicbrainz gives each tag the MusicBrainz genre (CC0) through which its definition is found: the genre's Wikidata item and its English Wikipedia article give the definition a genre's panel shows (#523). A tag whose name, folded to its letters and digits, is one of MusicBrainz's genres has that genre (matched against MusicBrainz's genre list on 2026-10-27); a tag that is not one, or whose genre has no English article, has the nearest genre that has one, where one fits (#663, checked 2026-10-27): alternative and indie are alternative rock and indie rock, as Last.fm's listeners use them; goth and gothic are gothic rock; metal is heavy metal; punk is punk rock; chanson francaise is chanson française; rap is hip hop; neoclassical is neoclassical new age, the contemporary piano and strings Last.fm's listeners tag so. wikipedia gives a tag its English Wikipedia article by title, for a tag with no MusicBrainz genre that fits or whose genre has no English article, where an article says what the tag means (#852, checked 2026-11-02): acoustic is Acoustic music, score Film score, choral Choir; a tag with one is defined by it, not through MusicBrainz. The tags left without either are listed, each with why, in GenreDefinitionsTest.",
   "families": [
     { "id": "folk", "hue": 135, "tags": ["folk", "singer-songwriter", "celtic", "acoustic", "country", "country folk", "indie folk", "folk rock", "celtic rock"] },
     { "id": "rock", "hue": 8, "tags": ["rock", "classic rock", "alternative", "alternative rock", "indie", "indie rock", "hard rock", "heavy metal", "metal", "garage rock", "stoner rock", "punk", "punk rock", "post-punk", "new wave", "gothic", "goth", "britpop", "surf rock", "surf", "british invasion", "blues rock", "rock francais"] },
@@ -82,6 +82,16 @@
     "neoclassical": "27f6e0f8-8d02-4f15-ac9f-45c5798978b7",
     "jazz": "a715278f-1580-409f-8078-4ffbc800e08b",
     "blues": "fe12b346-a10e-450f-bf81-fa20894b5ea2"
+  },
+  "wikipedia": {
+    "acoustic": "Acoustic music",
+    "british invasion": "British Invasion",
+    "rock francais": "Rock music in France",
+    "classic rock": "Classic rock",
+    "singer-songwriter": "Singer-songwriter",
+    "score": "Film score",
+    "soundtrack": "Soundtrack",
+    "choral": "Choir"
   },
   "labels": { "uk garage": "UK Garage", "rnb": "RnB" },
   "synonyms": [["r&b", "rnb"]]

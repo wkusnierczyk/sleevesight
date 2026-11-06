@@ -22,6 +22,7 @@ import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.app.ui.theme.linkedParts
+import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.pipeline.AiSearches
 import app.sleevesight.core.pipeline.GenreLists
 import app.sleevesight.core.pipeline.InsightState
@@ -111,20 +112,23 @@ internal fun enableParts(
 }
 
 // What a reason shown does: where a citation goes ([onCite]), its *Read aloud* ([readAloud], null for
-// none), asking again ([again]: a failed call's *Retry*), and where the focus goes as *Retry* gives
-// way to the loading line ([afterRetry]).
+// none), asking again ([again]: a failed call's *Retry*), where the focus goes as *Retry* gives
+// way to the loading line ([afterRetry]), and where the could-not line's links open ([openSettingsAt]).
 internal class ReasonActions(
     val onCite: (String) -> Unit,
     val readAloud: ReadAloudControl?,
     val again: () -> Unit,
     val afterRetry: () -> Unit,
+    val openSettingsAt: (SettingsTarget) -> Unit,
 )
 
 // The reason asked for ([shown]), under the [question] (#523, #762): while the AI service is asked
 // and nothing is written yet, "Looking for an explanation…" in the button's place; written, its text,
-// then "by {model}", the grounding note and, kept from before, when it was written (#851), with
-// *Read aloud* at the end of those rows; the AI could not explain it, the
-// button disabled with why under it; a failed call, why, in the error colour, with *Retry*.
+// then "by {model}" ("by {model}, with web search" for one from web pages, #695), the grounding note
+// and, kept from before, when it was written (#851), with *Read aloud* at the end of those rows; one
+// that cites no source, only the model's own knowledge, says so first, under the question (#695);
+// the AI could not explain it, the button disabled with why under it, and what to switch on that
+// could ([GenreReason.Shown.couldHelp]); a failed call, why, in the error colour, with *Retry*.
 @Composable
 internal fun ReasonShown(
     shown: GenreReason.Shown,
@@ -150,19 +154,25 @@ internal fun ReasonShown(
 
         is InsightState.Written ->
             Answer(question) {
+                // Read from its citations, not its words (#695): no sentence cites a source or a page.
+                if (state.grounded.fromModelAlone) {
+                    QuietNote(stringResource(R.string.genre_why_from_model), Modifier.testTag(GENRE_WHY_FROM_MODEL_TAG))
+                }
+                // A reason asked again with web search cites the pages it found too (#801).
+                val evidence = state.searched ?: context.track?.evidence
                 for (paragraph in state.grounded.paragraphs) {
-                    // A reason asked again with web search cites the pages it found too (#801).
-                    CheckedProse(paragraph, state.grounded, state.searched ?: context.track?.evidence, actions.onCite)
+                    CheckedProse(paragraph, state.grounded, evidence, actions.onCite)
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    ReasonCredits(shown, state, Modifier.weight(1f))
+                    ReasonCredits(shown, state, evidence, Modifier.weight(1f))
                     actions.readAloud?.let { ReadAloudButton(it, GENRE_READ_ALOUD_TAG) }
                 }
                 if (!state.complete) QuietNote(stringResource(R.string.genre_why_incomplete))
             }
 
-        // The AI could not explain it from the evidence (#762): as when its list does not have it.
-        InsightState.NoEvidence -> ReasonUnavailable(question, Unavailability.NOT_LISTED) {}
+        // The AI could not explain it (#762): as when its list does not have it, then what is off
+        // that could (#695).
+        InsightState.NoEvidence -> NotFound(question, shown.couldHelp, actions.openSettingsAt)
 
         is InsightState.Failed ->
             RetryLine(
@@ -187,18 +197,40 @@ internal fun ReasonShown(
     }
 }
 
-// Under a written reason ([state]): "by {model}", the grounding note, and, kept from before, when it
-// was written (#851).
+// Under a written reason ([state]): "by {model}", the grounding note, which of its citations of
+// [evidence] it translated from the track's language (#902), and, kept from before, when it was
+// written (#851).
 @Composable
 private fun ReasonCredits(
     shown: GenreReason.Shown,
     state: InsightState.Written,
+    evidence: EvidenceSet?,
     modifier: Modifier,
 ) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        shown.model?.let { SearchCredit(stringResource(R.string.genre_why_by, it)) }
+        // "with web search" for a reason from web pages (#695): asked again with them, and citing one.
+        val fromWeb = state.searched != null && state.grounded.citesSource
+        val by = if (fromWeb) R.string.genre_why_by_web else R.string.genre_why_by
+        shown.model?.let { SearchCredit(stringResource(by, it)) }
         GroundingLine(state.grounded, details = false)
+        TranslatedLine(state.grounded, evidence)
         shown.keptAt?.let { KeptLine(it) }
+    }
+}
+
+// *Why is this …?* disabled once the AI could not explain it (#762), "AI could not find an
+// explanation." under it, then "Enable {what}." naming what is off and could explain it
+// ([couldHelp], #695), each linked to where it is set ([openSettingsAt]); no such line with both on.
+@Composable
+private fun NotFound(
+    question: String,
+    couldHelp: List<GenreListMode>,
+    openSettingsAt: (SettingsTarget) -> Unit,
+) {
+    Column(Modifier.testTag(GENRE_WHY_UNAVAILABLE_TAG), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        WhyButton(question, enabled = false) {}
+        QuietNote(stringResource(R.string.genre_why_not_found))
+        if (couldHelp.isNotEmpty()) QuietLinks(enableParts(couldHelp, openSettingsAt))
     }
 }
 
@@ -245,3 +277,6 @@ private fun QuietLinks(parts: List<TextPart>) =
 const val GENRE_WHY_UNAVAILABLE_TAG: String = "genre-panel:why-unavailable"
 const val GENRE_WHY_LOOKING_TAG: String = "genre-panel:why-looking"
 const val GENRE_WHY_FAILED_TAG: String = "genre-panel:why-failed"
+
+/** The test tag of the line above a reason that cites no source, only the model's knowledge (#695). */
+const val GENRE_WHY_FROM_MODEL_TAG: String = "genre-panel:why-from-model"

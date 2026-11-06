@@ -89,7 +89,8 @@ private const val DISABLED_CONTAINER_ALPHA = 0.12f
  * (as the dialogs read a choice with its description, #550). The buttons stay in one row at any
  * font size (#821, [groupShares]): where the labels do not fit it on one line, as at a large font
  * size, each wraps in its button, between its words. A value in [disabled] cannot be chosen, and
- * is dimmed, while the others can.
+ * is dimmed, while the others can. A value in [spoken] is read by that in place of its label, for a
+ * label a screen reader would not say as meant ("33⅓ rpm" as "33 and a third rpm", #848).
  */
 @Suppress("LongParameterList") // What the group shows and says, each a value of its own, and what a tap does.
 @Composable
@@ -102,10 +103,12 @@ internal fun <T> ChoiceButtonGroup(
     details: Map<T, String> = emptyMap(),
     enabled: Boolean = true,
     disabled: Set<T> = emptySet(),
+    spoken: Map<T, String> = emptyMap(),
 ) {
     val buttons =
         choices.map { (value, label) ->
-            val read = listOfNotNull(name?.let { "$it: $label" } ?: label, details[value]).joinToString(". ")
+            val said = spoken[value] ?: label
+            val read = listOfNotNull(name?.let { "$it: $said" } ?: said, details[value]).joinToString(". ")
             GroupButton(
                 label,
                 enabled && value !in disabled,

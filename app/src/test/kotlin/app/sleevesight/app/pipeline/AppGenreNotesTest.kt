@@ -33,6 +33,7 @@ import app.sleevesight.core.sources.WebSearchOutcome
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.TestScope
@@ -141,8 +142,8 @@ class AppGenreNotesTest {
     @Test
     fun `a genre with no article is not found, so its panel can say so`() =
         runTest {
-            // *British invasion* is not one of MusicBrainz's genres (#663).
-            assertEquals(DefinitionState.NotFound, notes().definition("britishinvasion").first { it.answered() })
+            // *Pop vocal group* has no MusicBrainz genre and no article named in the vocabulary (#663, #852).
+            assertEquals(DefinitionState.NotFound, notes().definition("popvocalgroup").first { it.answered() })
             assertEquals(0, articles.asked.size)
         }
 
@@ -531,7 +532,7 @@ class AppGenreNotesTest {
             settings.value = on.copy(showGenres = false)
             val notes = notes()
             val tracks = MutableStateFlow<TrackState?>(playing("rock"))
-            val following = launch { notes.lookups.fetchAhead(tracks) }
+            val following = launch { notes.lookups.fetchAhead(tracks, flowOf(true)) }
             advanceUntilIdle()
             assertEquals(emptyList<String>(), articles.asked)
             settings.value = on

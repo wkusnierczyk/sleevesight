@@ -7,6 +7,7 @@ import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.pipeline.AiOutcome
 import app.sleevesight.core.pipeline.AiQuestion
 import app.sleevesight.core.pipeline.AiSearches
+import app.sleevesight.core.pipeline.CardEntity
 import app.sleevesight.core.pipeline.CardKey
 import app.sleevesight.core.pipeline.ClearEpoch
 import app.sleevesight.core.pipeline.PipelineEvent
@@ -47,7 +48,8 @@ import kotlin.time.Instant
 sealed interface AiSearch {
     /**
      * Not offered: no searches here (previews, tests), before the pipeline and the settings are in,
-     * or with *Show insights* off, which stops every AI call (as *Why is this …?* is not offered then).
+     * or with *Show insights* off, which stops every AI call (as *Why is this …?* is not offered then);
+     * what the song is about (#908) also while *AI web search* is off as used (`AiSearches.offered`).
      */
     data object None : AiSearch
 
@@ -189,6 +191,9 @@ interface AiSearchFeed {
  * back to [deferred] with its kind and genre, once it is no longer under way (so a start at once is
  * not taken for it), to start later as if it had not been tried (off screen, on return). A tap is
  * gated by none of these: not the app's visibility, the setting, nor a genre's definition.
+ * A track the session layer took back ([withdraw]: an ad told late, #880) asks nothing either way:
+ * its searches under way are cancelled, showing and keeping nothing, and one that reaches its call
+ * after asks nothing and is not handed back.
  * Each search, and each read of the cache, is marked with [epoch] and the count of clears, and after
  * *Clear history* ([forget]) nothing it finds is shown or kept: a state is shown only under the lock
  * [forget] clears under ([ShownSearches.publish]), so one that passed the check cannot land after the
@@ -253,6 +258,12 @@ class AppAiSearches(
     private val looked: MutableSet<CardKey> = ConcurrentHashMap.newKeySet()
     private val asking = ConcurrentHashMap<CardKey, Job>()
 
+    // The track each search under way was asked for, and the last track taken back (#880).
+    private val askedFor = ConcurrentHashMap<CardKey, NowPlaying>()
+
+    @Volatile
+    private var gone: NowPlaying? = null
+
     // The searches asked whose answer has settled, which *Stop* no longer cancels, and those stopped
     // before they settled, whose answer is neither shown nor kept: one or the other, under [lock].
     private val lock = Any()
@@ -295,10 +306,12 @@ class AppAiSearches(
         val offers =
             combine(parts, settings) { made, now ->
                 val searches = made?.searches(answers, clock)
-                if (now == null || searches == null || !now.writeInsights) {
+                // Not offered at all: *Show insights* off, or what the song is about with no web search (#908).
+                val ready = now?.takeIf { it.writeInsights && searches?.offered(kind, it) == true }
+                if (ready == null || searches == null) {
                     Offer(null, known = false)
                 } else {
-                    Offer(searches.key(track, kind, now, genre), known = true)
+                    Offer(searches.key(track, kind, ready, genre), known = true)
                 }
             }
         return offers
@@ -348,7 +361,11 @@ class AppAiSearches(
                     stopped.remove(key)
                     settled.remove(key)
                 }
-                job.invokeOnCompletion { asking.remove(key, job) }
+                askedFor[key] = track.nowPlaying
+                job.invokeOnCompletion {
+                    asking.remove(key, job)
+                    askedFor.remove(key, track.nowPlaying)
+                }
                 job.start()
             } else {
                 // Another ask got there first (a tap and an automatic one at once): this one never runs.
@@ -378,6 +395,22 @@ class AppAiSearches(
             shown.removeSearching(key)
         }
     }
+
+    /**
+     * The session layer took [track] back (#880: an ad, told only after it was published as a track):
+     * its searches under way are cancelled, nothing of them shown or kept, and none asks its call
+     * after this.
+     */
+    fun withdraw(track: NowPlaying) {
+        gone = track
+        askedFor.filterValues { sameInsightTrack(it, track) }.keys.forEach { key ->
+            asking.remove(key)?.cancel()
+            shown.removeSearching(key)
+        }
+    }
+
+    // Whether [track] is the one the session layer took back last ([withdraw]).
+    private fun isGone(track: TrackState): Boolean = gone?.let { sameInsightTrack(it, track.nowPlaying) } == true
 
     // Whether [key]'s search may be asked: not shown, shown as failed, or past *Keep history for*.
     private fun open(key: CardKey): Boolean {
@@ -432,10 +465,11 @@ class AppAiSearches(
                     shown.current(work, epoch)
                 }
                 publish(kept.state, kept.writtenAt ?: clock.now(), false)
-            } else if (gated) {
+            } else if (gated || isGone(track)) {
                 log(PipelineEvent.AiNotAsked(track.lookupKey, question))
                 work[Job]?.let { asking.remove(key, it) }
-                deferred(track, kind, asked.genre)
+                // A track taken back is not tried again.
+                if (!isGone(track)) deferred(track, kind, asked.genre)
             } else if (shown.current(work, epoch)) {
                 // Not paid for once a *Clear history* came since it started, whose clear it may have
                 // missed (a tap during `forget`): it would show nothing, and stay under way meanwhile.
@@ -585,12 +619,10 @@ class AppAiSearches(
     // *Dates* the album), whatever the AI service, model or effort. For a genre's definition (#786),
     // whose key has no track, the genre: a stop is its "no" whatever the track.
     private data class Declined(
-        val track: NormalizedTrack,
-        val duration: Duration?,
-        val subject: String?,
+        val entity: CardEntity,
     ) {
         companion object {
-            fun of(key: CardKey) = Declined(key.track, key.duration, key.subject)
+            fun of(key: CardKey) = Declined(key.entity)
         }
     }
 
@@ -702,11 +734,11 @@ internal class ShownSearches {
 }
 
 // The searches these parts make, their answers read by [answers], their times by [clock], searching
-// the web with their engine (#801).
+// the web with their engine (#801), their prompts' dates in the parts' form (#957).
 private fun PipelineParts.searches(
     answers: AiSearchAnswers,
     clock: Clock,
-): AiSearches = AiSearches(ai, cache, hasher, answers, clock, webSearch)
+): AiSearches = AiSearches(ai, cache, hasher, answers, clock, webSearch, dateForm)
 
 // A kept answer of [key], in [state], written at [writtenAt], served for [track] (#851).
 private fun keptServed(

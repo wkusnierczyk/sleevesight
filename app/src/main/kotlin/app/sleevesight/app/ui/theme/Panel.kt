@@ -13,9 +13,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
@@ -25,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
+import kotlin.math.roundToInt
 
 // A panel that opens in a chip's place (#558, #623, #649): the frame a genre's panel and *Sources*'
 // share on Home, and each section of the settings.
@@ -36,6 +42,13 @@ import app.sleevesight.app.R
  * a rule, [content], its items [spacing] apart. [headingFrame] wraps the heading's row, the title
  * and *Close*: in the settings, where a link to the section lands. [modifier] goes on the outside.
  * Tagged [tag] for tests, its heading `<tag>:heading` and its *Close* `<tag>:close`.
+ *
+ * With [subtitle] (the name of the song, the artist or the album, under its kind, #894), it is drawn
+ * under the title, quieter, whole on as many lines as it needs, and read with the title as one
+ * heading; *Close*, and before it [actions] (an item's *Read aloud*, #894), stay centred on the
+ * title's line, not on the two: [actions] is handed the modifier that centres it there, for the
+ * outside of one layout of its own (the row reads it from its direct child). Without a
+ * subtitle, the heading is as it always was, and [actions] is not drawn.
  */
 @Suppress("LongParameterList") // What the panel shows, and where its users hook into it.
 @Composable
@@ -46,6 +59,8 @@ internal fun Panel(
     modifier: Modifier = Modifier,
     closeModifier: Modifier = Modifier,
     spacing: Dp = 10.dp,
+    subtitle: String? = null,
+    actions: @Composable (centred: Modifier) -> Unit = {},
     headingFrame: @Composable (@Composable () -> Unit) -> Unit = { it() },
     content: @Composable ColumnScope.() -> Unit,
 ) {
@@ -62,29 +77,85 @@ internal fun Panel(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         headingFrame {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier =
-                        Modifier
-                            .weight(1f)
-                            .padding(vertical = 10.dp)
-                            .testTag("$tag:heading")
-                            .semantics { heading() },
-                )
-                onClose?.let {
-                    TextButton(onClick = it, modifier = closeModifier.testTag("$tag:close")) {
-                        Text(stringResource(R.string.page_close), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
+            if (subtitle == null) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        modifier =
+                            Modifier
+                                .weight(1f)
+                                .padding(vertical = 10.dp)
+                                .testTag("$tag:heading")
+                                .semantics { heading() },
+                    )
+                    onClose?.let { PanelClose(tag, closeModifier, it) }
                 }
+            } else {
+                SubtitledHeading(title, subtitle, tag, closeModifier, onClose, actions)
             }
         }
         Column(modifier = Modifier.padding(end = 8.dp), verticalArrangement = Arrangement.spacedBy(spacing)) {
             PanelRule()
             content()
         }
+    }
+}
+
+// A heading of [title] with [subtitle] under it, read as one heading, [actions] and *Close* each
+// centred on the title's line ([Panel]).
+@Suppress("LongParameterList") // What the heading shows, and its controls.
+@Composable
+private fun SubtitledHeading(
+    title: AnnotatedString,
+    subtitle: String,
+    tag: String,
+    closeModifier: Modifier,
+    onClose: (() -> Unit)?,
+    actions: @Composable (centred: Modifier) -> Unit,
+) {
+    // Each control's middle on the title's first line's: the title's top padding and the middle of its
+    // first line as laid out (a large font scales the line by its own curve, not the style's height).
+    val padding = with(LocalDensity.current) { HEADING_PADDING.roundToPx() }
+    var lineMiddle by remember { mutableIntStateOf(0) }
+    Row {
+        val centred = Modifier.alignBy { it.measuredHeight / 2 }
+        Column(
+            Modifier
+                .weight(1f)
+                .alignBy { padding + lineMiddle }
+                .padding(vertical = HEADING_PADDING)
+                .testTag("$tag:heading")
+                .semantics(mergeDescendants = true) { heading() },
+        ) {
+            Text(
+                title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                onTextLayout = { lineMiddle = ((it.getLineTop(0) + it.getLineBottom(0)) / 2).roundToInt() },
+            )
+            Text(
+                subtitle,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.testTag("$tag:subtitle"),
+            )
+        }
+        actions(centred)
+        onClose?.let { PanelClose(tag, closeModifier.then(centred), it) }
+    }
+}
+
+// A panel's *Close*, tagged `<tag>:close`, under [modifier] (a focus requester, an alignment).
+@Composable
+private fun PanelClose(
+    tag: String,
+    modifier: Modifier,
+    onClose: () -> Unit,
+) {
+    TextButton(onClick = onClose, modifier = modifier.testTag("$tag:close")) {
+        Text(stringResource(R.string.page_close), color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -97,6 +168,9 @@ internal fun Panel(
 internal fun PanelRule(modifier: Modifier = Modifier) {
     HorizontalDivider(modifier, color = MaterialTheme.colorScheme.onSurface.copy(alpha = RULE))
 }
+
+// Above and below a panel's title.
+private val HEADING_PADDING = 10.dp
 
 private const val PANEL_FILL = 0.05f
 private const val RULE = 0.12f

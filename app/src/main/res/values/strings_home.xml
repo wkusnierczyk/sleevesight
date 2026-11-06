@@ -95,32 +95,24 @@
     <!-- The album, then the year of the release being played: "Rubber Soul, 1965". -->
     <string name="home_album_year">%1$s, %2$s</string>
 
+    <!-- While the player plays an ad (#880): in place of the title, the player's name as the player
+         row names it; under it a line; then, where Key insights would be, the note. -->
+    <string name="home_ad_title">Ad playing on %1$s</string>
+    <string name="home_ad_next">The next track shows when the ad ends.</string>
+    <string name="home_ad_note">An ad is playing. Sleevesight looks nothing up for ads and writes no insight.</string>
+
     <!-- The dates under the album (#724): a button that opens in place into a panel of that title,
          with Close (page_close) at its top right. -->
     <string name="home_dates">Dates</string>
     <!-- The Dates button's action, as a screen reader names it ("Double-tap to show dates"). -->
     <string name="home_dates_show">show dates</string>
-    <!-- In the Dates panel, a date as precisely as it is known, in the sentences below ({when}): a day
-         (the day, the month's name, the year: "on 29 July 2014"), a month ("in July 2014"), a year
-         ("in 2014"). -->
-    <string name="home_dates_on_day">on %1$s %2$s %3$s</string>
-    <string name="home_dates_in_month">in %1$s %2$s</string>
+    <!-- In the Dates panel, a date as precisely as it is known, in the sentences below ({when}): the
+         words around it, the date itself written by the app in its language's own form: a day ("on 29
+         July 2014", the date "29 July 2014"), a month ("in July 2014", the date "July 2014"), a year
+         ("in 2014", the date "2014"). -->
+    <string name="home_dates_on_day">on %1$s</string>
+    <string name="home_dates_in_month">in %1$s</string>
     <string name="home_dates_in_year">in %1$s</string>
-    <!-- The months' names, January first, for the dates above. -->
-    <string-array name="home_dates_months">
-        <item>January</item>
-        <item>February</item>
-        <item>March</item>
-        <item>April</item>
-        <item>May</item>
-        <item>June</item>
-        <item>July</item>
-        <item>August</item>
-        <item>September</item>
-        <item>October</item>
-        <item>November</item>
-        <item>December</item>
-    </string-array>
     <!-- The album's release, of the album's name whose year the album line shows: "This album was
          released on 29 July 2014." The date as above. -->
     <string name="home_dates_album">This album was released %1$s.</string>
@@ -135,13 +127,13 @@
     <!-- The track's first release with its title not known: the date alone, as above. -->
     <string name="home_dates_first_when">This track was first released %1$s.</string>
     <!-- For a cover, who recorded the song first and when (the date as above), and the release it
-         first came out on (in italics): "The song was originally recorded in June 1984 by Leonard
-         Cohen, and released on Various Positions."; a single's or an EP's named as such. -->
-    <string name="home_dates_original">The song was originally recorded %1$s by %2$s, and released on %3$s.</string>
-    <string name="home_dates_original_single">The song was originally recorded %1$s by %2$s, and released on the single %3$s.</string>
-    <string name="home_dates_original_ep">The song was originally recorded %1$s by %2$s, and released on the EP %3$s.</string>
+         first came out on (in italics): "The song was originally recorded by Leonard Cohen in June
+         1984, and released on Various Positions."; a single's or an EP's named as such. -->
+    <string name="home_dates_original">The song was originally recorded by %2$s %1$s, and released on %3$s.</string>
+    <string name="home_dates_original_single">The song was originally recorded by %2$s %1$s, and released on the single %3$s.</string>
+    <string name="home_dates_original_ep">The song was originally recorded by %2$s %1$s, and released on the EP %3$s.</string>
     <!-- The same, the release it first came out on not known. -->
-    <string name="home_dates_original_unreleased">The song was originally recorded %1$s by %2$s.</string>
+    <string name="home_dates_original_unreleased">The song was originally recorded by %2$s %1$s.</string>
     <!-- A panel on Home that has nothing from MusicBrainz to show says why (#724: Dates; Lyrics, #728, as
          well), one of these at a time. MusicBrainz is still being asked, or asked again after Retry. -->
     <string name="home_musicbrainz_looking">Looking on MusicBrainz…</string>
@@ -186,6 +178,34 @@
     <string name="home_lyrics_none">MusicBrainz links to no lyrics page for this song.</string>
     <!-- MusicBrainz marks the recording instrumental, or its work as without words: no link, no search. -->
     <string name="home_lyrics_instrumental">MusicBrainz lists this track as instrumental, without lyrics.</string>
+    <!-- Find the lyrics (#908; Ask AI there until then): in the Lyrics panel with no page from MusicBrainz
+         or the track's web search, after the Genius search, the outlined button (with the AI mark, as
+         home_uses_ai reads it) that searches the web for the song's lyrics pages, a paid call; with AI
+         web search off it asks the model's knowledge, as Ask AI does (home_ai_asking, home_ai_nothing).
+         As wide as Explain the song below it, the wider of the two. -->
+    <string name="home_lyrics_find">Find the lyrics</string>
+    <!-- Its action, as a screen reader names it ("Double-tap to search the web for the song’s lyrics page, a paid call"). -->
+    <string name="home_lyrics_find_action">search the web for the song’s lyrics page, a paid call</string>
+    <!-- In its place while the search runs with AI web search on, after the small turning record, with Stop. -->
+    <string name="home_lyrics_finding">Searching the web for the lyrics…</string>
+    <!-- In the answer's place, under the rule, the search having found no page; %1$s is the model. -->
+    <string name="home_lyrics_found_none">%1$s found no lyrics on the web.</string>
+    <!-- Explain the song (#908): last in the Lyrics panel, for every track with lyrics (not instrumental),
+         whether or not a page was found, the outlined button (with the AI mark) that asks the AI service
+         what the song is about, from pages about it, a paid call. Not shown while Exa web search or AI
+         web search is off; never asked by Ask AI automatically. -->
+    <string name="home_lyrics_explain">Explain the song</string>
+    <!-- Its action, as a screen reader names it ("Double-tap to ask your AI service what the song is about, a paid call"). -->
+    <string name="home_lyrics_explain_action">ask your AI service what the song is about, a paid call</string>
+    <!-- In its place while the question runs, after the small turning record, with Stop. -->
+    <string name="home_lyrics_explaining">Reading about the song…</string>
+    <!-- In the answer's place, under the rule, no page saying what the song is about; %1$s is the model. -->
+    <string name="home_lyrics_explain_none">%1$s found nothing to explain the song.</string>
+    <!-- Under the explanation, in the quiet note style, over the pages its sentences cite, each a link
+         after its id ("S1"), opening in the browser; then "by {model}" (home_ai_by). -->
+    <string name="home_lyrics_pages_cited">Pages cited</string>
+    <!-- Said by a screen reader for a citation in the explanation naming no page it was given; %1$s: the id. -->
+    <string name="home_lyrics_cite_unknown">%1$s: no such page</string>
     <!-- Search Genius when there is no link is off: this line, then home_lyrics_search_off_see on its own line. -->
     <string name="home_lyrics_search_off">Genius search is disabled.</string>
     <!-- %1$s is home_settings_appearance_link, a link that opens Settings at Appearance. -->
@@ -194,9 +214,9 @@
          never break, so it stays on one line. -->
     <string name="home_settings_appearance_link">Settings\u00A0→\u00A0Appearance</string>
 
-    <!-- Ask AI (#773, named so by #802; once Search with AI): under the empty state of Dates, Genres or
-         Lyrics (the source off, unreachable, the song not found, nothing found; not while still
-         looking), an outlined button that asks the AI service, a paid call, for what the source did
+    <!-- Ask AI (#773, named so by #802; once Search with AI): under the empty state of Dates or Genres,
+         and under a genre with no definition (the source off, unreachable, the song not found, nothing
+         found; not while still looking; Lyrics has home_lyrics_find instead, #908), an outlined button that asks the AI service, a paid call, for what the source did
          not give, searching the web as AI web search (Settings → Insights) says. -->
     <string name="home_ai_search">Ask AI</string>
     <!-- Its action, as a screen reader names it ("Double-tap to ask your AI service, a paid call"). -->
@@ -303,6 +323,30 @@
     <string name="home_genre_tags_credit">MusicBrainz tags by contributors</string>
     <string name="home_genre_tags_licence">CC BY-NC-SA 3.0</string>
 
+    <!-- The song's, the artist's and the album's insights under Key insights (#522): each row's
+         button and its panel's title (#894), the name beside it the playing track's title, its
+         primary artist, the player's album name; and each one's page title. -->
+    <string name="home_item_song">Song</string>
+    <string name="home_item_artist">Artist</string>
+    <string name="home_item_album">Album</string>
+    <!-- A row's button's action under Expandable boxes, as a screen reader names it (#894): "Song,
+         Paper Boats. Button. Double-tap to show the song's insight"; under Separate pages,
+         home_page_open. -->
+    <string name="home_item_show_song">show the song’s insight</string>
+    <string name="home_item_show_artist">show the artist’s insight</string>
+    <string name="home_item_show_album">show the album’s insight</string>
+    <!-- A row of the song, the artist or the album as a screen reader reads it while its insight is
+         written with its panel or page closed (#948): "Song, Paper Boats, uses AI, writing"; %1$s:
+         the row as read otherwise, "Song, Paper Boats, uses AI". -->
+    <string name="home_item_writing">%1$s, writing</string>
+    <!-- An item with nothing written under On demand, above its Write insight. -->
+    <string name="home_item_tap_write">Tap Write insight to have it written from the sources.</string>
+    <!-- An item the sources give nothing to write from: no call is made. -->
+    <string name="home_item_no_evidence_song">The sources give nothing to write the song’s insight from.</string>
+    <string name="home_item_no_evidence_artist">The sources give nothing to write the artist’s insight from.</string>
+    <string name="home_item_no_evidence_album">The sources give nothing to write the album’s insight from.</string>
+    <!-- An item whose call failed, beside its Retry; %1$s: why. -->
+    <string name="home_item_failed">The insight could not be written: %1$s.</string>
     <!-- The insight. -->
     <string name="home_insight_title">Key insights</string>
     <!-- The insight card's split button (#615): its arrow opens the menu of Reactive's modes, the same
@@ -354,23 +398,49 @@
     <string name="home_insight_incomplete">The reply stopped early, so this is incomplete, and it was not kept.</string>
     <!-- The first line of a written insight's footer (#671), for an insight not written in this run but
          earlier: on an earlier play of the track, or before a Look again, a settings change or a
-         rewrite that failed. What follows from it goes on the same line, after it: what Look again
-         found, a rewrite that failed or was stopped, and Rewrite insight offered. Nothing for an
-         insight just written. -->
+         rewrite that failed. What follows from it goes on the same line, after it: a rewrite that
+         failed or was stopped, what Look again found, and Rewrite insight offered
+         (home_rewrite_offer). Nothing for an insight just written. For an insight written by Rewrite
+         insight, or by an automatic write in place of another model's (#972), home_rewritten_with
+         in its place (#854), never both. -->
     <string name="home_written_before">As written previously.</string>
-    <!-- After "As written previously.", with Rewrite insight offered (#615, #625, #671). -->
-    <string name="home_rewrite_offered">Tap Rewrite insight to write it with the updated source or model settings.</string>
+    <!-- In place of "As written previously." (#854), for an insight written by Rewrite insight, or
+         by an automatic write in place of another model's (#972), on the play it was rewritten and
+         every later one while it is the one kept; what follows goes after it as after "As written
+         previously.". %1$s: what the rewrite used that the insight it replaced did not, its parts
+         (home_rewrite_part_*, home_rewrite_model_effort) joined with ", " and a last
+         home_rewrite_and. -->
+    <string name="home_rewritten_with">Rewritten with %1$s.</string>
+    <!-- After "As written previously." or home_rewritten_with, with Rewrite insight offered (#615,
+         #625, #671, #854). %1$s: what a rewrite would use now that the insight shown did not, built as
+         in home_rewritten_with. No cost is said: the button carries the AI mark. -->
+    <string name="home_rewrite_offer">Tap Rewrite insight to have AI rewrite the insight with %1$s.</string>
+    <!-- The parts of home_rewritten_with and home_rewrite_offer (#854), in this order: what Look
+         again found new; the evidence changed otherwise (a source's key, a source or the web search
+         switched on or off, or a source answering otherwise); the AI service, model or effort (home_rewrite_model_effort: %1$s the
+         model as AI services lists it, %2$s the effort level as Settings names it, in lower case; the
+         model alone with the service's default effort); AI service knowledge; the prompt's version,
+         after an app update. -->
+    <string name="home_rewrite_part_new_findings">new findings from sources</string>
+    <string name="home_rewrite_part_updated_sources">updated sources</string>
+    <string name="home_rewrite_model_effort">%1$s %2$s effort</string>
+    <string name="home_rewrite_part_knowledge_on">AI service knowledge switched on</string>
+    <string name="home_rewrite_part_knowledge_off">AI service knowledge switched off</string>
+    <string name="home_rewrite_part_instructions">the updated app’s instructions</string>
+    <!-- The last two parts of home_rewritten_with and home_rewrite_offer: %1$s the parts before the
+         last, joined with ", ", %2$s the last. -->
+    <string name="home_rewrite_and">%1$s and %2$s</string>
     <!-- After "As written previously.", which says the insight shown is the one written earlier (#671). -->
     <string name="home_rewrite_failed">Rewriting failed: %1$s.</string>
     <string name="home_rewrite_stopped">Rewriting stopped.</string>
     <!-- Look again (#617): the first item of the menu beside Write insight, on a written insight; it
-         makes no AI call, so it has no AI mark. Then what is said after "As written previously."
-         (#671) while it looks the sources up (with Exa web search on, or not), once it found
-         something new (with Rewrite insight offered), and once it found nothing new. -->
+         makes no AI call, so it has no AI mark. Then what is said while it looks the sources up (with
+         Exa web search on, or not), on a line of its own (#785), and after "As written previously."
+         (#671) once it found nothing new. Once it found something new, home_rewrite_offer says so
+         (#854). -->
     <string name="home_look_again">Look again</string>
     <string name="home_look_again_looking_web">Looking every source up again, the web search included: a paid search on your Exa key.</string>
     <string name="home_look_again_looking">Looking every source up again.</string>
-    <string name="home_look_again_something_new">New findings from sources: tap Rewrite insight to use them, a paid call.</string>
     <string name="home_look_again_nothing_new">No update from sources.</string>
     <string name="home_stop">Stop writing</string>
     <string name="home_insight_stopped">Stopped before the reply ended, so nothing was kept.</string>
@@ -378,12 +448,15 @@
     <string name="home_insight_retry">Tap Write insight to try again, as a new call.</string>
     <!-- The note under an insight and under a genre's reason (#437): only for sentences the sources do
          not back, which are dimmed (uncited, or citing missing evidence; #819), naming the mark
-         (#664). A genre's reason kept from before says so in a line of its own (home_ai_kept_today,
-         #851), an insight in its footer ("As written previously.", #671). -->
-    <plurals name="home_note_unbacked">
-        <item quantity="one">The dimmed sentence is not backed by the sources.</item>
-        <item quantity="other">The %d dimmed sentences are not backed by the sources.</item>
-    </plurals>
+         (#664); one text for any number of them (#854). A genre's reason kept from before says so in
+         a line of its own (home_ai_kept_today, #851), an insight in its footer ("As written
+         previously.", #671). -->
+    <string name="home_note_unbacked">Dimmed text is not backed by the sources.</string>
+    <!-- Under an insight, a song's, an artist's or an album's insight and a genre's reason that cite lines
+         found in the track's language (#902), after the note above: one line per language. %1$s is the
+         language's name ("Hindi"), %2$s the citations, joined as home_source_finding_comma and
+         home_source_finding_and join a list ("W2 and S1"). -->
+    <string name="home_note_translated">Translated from %1$s: %2$s.</string>
     <!-- The grounding check's counts in full, under Show grounding details (a developer setting). -->
     <plurals name="home_meta_grounded">
         <item quantity="one">%1$d of %2$d sentence grounded</item>
@@ -440,10 +513,12 @@
     <string name="home_sources_title">Sources</string>
     <!-- What a source found, under its name in the Sources table; "(kept)" and "Match rejected" only under Show grounding details. -->
     <string name="home_source_pending">Looking…</string>
-    <!-- What a source found (#768): "Found" and the list of what its own lines are about, in this order: the track, the original song, the artist; e.g. "Found the track, the original song and the artist". -->
+    <!-- What a source found (#768): "Found" and the list of what its own lines are about, in this order: the track, the original song, the album, the artist; e.g. "Found the track, the original song and the artist". -->
     <string name="home_source_found">Found %1$s</string>
     <string name="home_source_finding_track">the track</string>
     <string name="home_source_finding_original_song">the original song</string>
+    <!-- The album's own lines, found for the album's insight (#522): "Found the track, the album and the artist". -->
+    <string name="home_source_finding_album">the album</string>
     <string name="home_source_finding_artist">the artist</string>
     <!-- The list's joins: the last item after the others ("the track and the artist"), and the others before it, one after another ("the track, the original song"). -->
     <string name="home_source_finding_and">%1$s and %2$s</string>
@@ -500,10 +575,18 @@
     <string name="home_scope_artist">artist</string>
     <string name="home_scope_original_song">original song</string>
     <string name="home_scope_release">release</string>
+    <!-- An album's own line in Sources, found for the album's insight (#522): "album · en.wikipedia.org". -->
+    <string name="home_scope_album">album</string>
     <string name="home_scope_web">web</string>
     <string name="home_source_name_wikidata">Wikidata</string>
     <string name="home_source_name_discogs">Discogs</string>
     <string name="home_source_name_web">Web search</string>
+    <!-- The rows of the Sources table for the lookups in the track's language (#902), after Wikipedia's and
+         Web search's; %1$s is the language's name ("Hindi"). -->
+    <string name="home_source_wikipedia_in">Wikipedia in %1$s</string>
+    <string name="home_source_web_in">Web search in %1$s</string>
+    <!-- After a line's host, for a line found in the track's language (#902): "release · hi.wikipedia.org · in Hindi". -->
+    <string name="home_source_line_in">in %1$s</string>
     <string name="home_source_name_player">the player</string>
     <!-- Chips' names under Sources, beside their letters, where they differ from the settings' names. -->
     <string name="home_source_chip_wikipedia">Wikipedia</string>

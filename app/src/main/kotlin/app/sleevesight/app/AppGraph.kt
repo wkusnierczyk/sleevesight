@@ -24,12 +24,14 @@ import app.sleevesight.app.history.HistoryRecorder
 import app.sleevesight.app.history.HistoryRetention
 import app.sleevesight.app.pipeline.AppAiSearches
 import app.sleevesight.app.pipeline.AppGenreNotes
+import app.sleevesight.app.pipeline.AppItemNotes
 import app.sleevesight.app.pipeline.AppPipelineParts
 import app.sleevesight.app.pipeline.AskAiWired
 import app.sleevesight.app.pipeline.AutoSearches
 import app.sleevesight.app.pipeline.ModelCheck
 import app.sleevesight.app.pipeline.PipelineHost
 import app.sleevesight.app.pipeline.Plays
+import app.sleevesight.app.pipeline.PromptDump
 import app.sleevesight.app.pipeline.UnavailableModel
 import app.sleevesight.app.pipeline.afterAcknowledged
 import app.sleevesight.app.pipeline.online
@@ -69,6 +71,7 @@ import app.sleevesight.app.speech.SystemSpeech
 import app.sleevesight.app.speech.screenReaderOn
 import app.sleevesight.app.ui.home.GuideHiding
 import app.sleevesight.app.ui.home.SpokenWords
+import app.sleevesight.app.ui.logo.LogoSpin
 import app.sleevesight.core.ai.AiProvider
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.normalizer.Normalizer
@@ -77,6 +80,7 @@ import app.sleevesight.core.pipeline.ListeningSessionFacts
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmResourceReader
 import app.sleevesight.core.resolution.MusicBrainzLookup
+import app.sleevesight.core.resolution.NameMatcher
 import app.sleevesight.core.settings.Crossfade
 import app.sleevesight.core.settings.FontChoice
 import app.sleevesight.core.settings.LinkStyle
@@ -92,6 +96,7 @@ import app.sleevesight.store.StoreArtistResults
 import app.sleevesight.store.StorePipelineCache
 import app.sleevesight.store.db.CacheDatabase
 import app.sleevesight.store.history.HistoryDatabase
+import app.sleevesight.wiring.PipelineWiring
 import app.sleevesight.wiring.appPipelineWiring
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -263,10 +268,13 @@ class AppGraph internal constructor(
 
     /**
      * *Keep what sources said about each artist* (#420), as last read (off until the first read),
-     * for the artist-level cache and the retrieval cache alike.
+     * for the artist-level cache and the retrieval cache alike. Its clear spares the parts of the
+     * artist-level table kept whatever it says ([PipelineWiring.TRACK_ONLY_PARTS], #885, #912).
      */
     private val artistKeeping =
-        ArtistKeeping.over({ caches }, Dispatchers.IO) { latestSettings.value?.keepArtistResults == true }
+        ArtistKeeping.over({ caches }, Dispatchers.IO, PipelineWiring.TRACK_ONLY_PARTS) {
+            latestSettings.value?.keepArtistResults == true
+        }
 
     /**
      * *Clear history*'s boundary (#547): each run and preparation is marked with it as it starts,
@@ -296,10 +304,18 @@ class AppGraph internal constructor(
             JvmAccentFolder,
             JvmResourceReader,
             artistResults,
+            // An album's web search's lines (#885), kept whatever *Keep what sources said about each
+            // artist* says, as a track's own web findings are.
+            trackOnly = StoreArtistResults({ caches }, Dispatchers.IO, ArtistKeeping.ALWAYS, clearEpoch),
             // *Show genres* (#444) as last read: on until the first read, which comes before any lookup.
             genres = { latestSettings.value?.showGenres != false },
             epoch = clearEpoch,
             musicBrainzThrough = musicBrainzThrough,
+            // Every AI request and its reply in logcat, in debug builds only (#767).
+            aiThrough = PromptDump::watching,
+            // What the search in the track's language found about an artist or an album (#939): in
+            // [artistResults] while the switch is on, else in memory for the process.
+            keepsArtists = { artistKeeping.on },
         )
 
     /**
@@ -415,6 +431,15 @@ class AppGraph internal constructor(
         )
 
     /**
+     * What turns the record in Home's header logo (#848): whether the player line says *Playing*
+     * and *Spin the logo while music plays* is on, and *Logo speed*.
+     */
+    val logoSpin: StateFlow<LogoSpin> =
+        combine(sessions.nowPlaying, sessions.playback, latestSettings, LogoSpin::of)
+            .distinctUntilChanged()
+            .stateIn(mainScope, SharingStarted.Eagerly, LogoSpin.STILL)
+
+    /**
      * The session history and the record of track changes (D15), in a database of their own under
      * the app's `databases/`, which the backup and transfer rules exclude. Cleared together by
      * `SessionHistory.clear`.
@@ -502,8 +527,14 @@ class AppGraph internal constructor(
             // The type only: a message could quote a response or a request.
             onFailure = { Log.e(TAG, "The pipeline stopped: ${it::class.simpleName}") },
             onAction = userActions::acted,
-            // The next item in the shown player's queue, prepared ahead (D13).
-            next = combine(sessions.nowPlaying, sessions.queue, NextInQueue::of),
+            // The next item in the shown player's queue, prepared ahead (D13); during an ad, the one
+            // after it (#880).
+            next =
+                combine(sessions.nowPlaying, sessions.ad, sessions.queue) { playing, ad, queue ->
+                    NextInQueue.of(playing, queue) ?: NextInQueue.afterAd(ad, queue)
+                },
+            // An ad told only once its queue came, published as a track first (#880): taken back.
+            withdrawn = sessions.withdrawn,
             // Back online, the playing track's unreachable sources are asked again (#192).
             online = appContext.getSystemService(ConnectivityManager::class.java).online(),
             epoch = clearEpoch,
@@ -542,6 +573,27 @@ class AppGraph internal constructor(
             events = { diagnostics.log.record(it) },
             // A reason written before this play of the track is kept from before (#851).
             plays = plays.current,
+        )
+
+    /**
+     * The song's, the artist's and the album's insights under *Key insights* (#522): written with the
+     * live pipeline's AI service, from the evidence for each (the album's gathered by its wiring),
+     * kept in its synthesis cache, in the pipeline's scope, marked with [clearEpoch].
+     */
+    val itemNotes: AppItemNotes =
+        AppItemNotes(
+            parts = pipeline.liveParts,
+            settings = latestSettings,
+            scope = pipelineScope,
+            names = NameMatcher(JvmAccentFolder),
+            epoch = clearEpoch,
+            io = Dispatchers.IO,
+            modelName = ListedModelNames(appContext)::of,
+            // Counted with *Ask AI*'s for the tester report, as the genres' reasons are.
+            paid = { aiSearches.counted(it) },
+            events = { diagnostics.log.record(it) },
+            // The coordinator's gates, asked right before each call.
+            gate = pipeline::itemCallAllowed,
         )
 
     /**
@@ -658,6 +710,8 @@ class AppGraph internal constructor(
         // Each play of the track shown, from the session layer's reports as they come (not the
         // pipeline's debounced runs), so an AI answer written before it shows as kept (#851).
         mainScope.launch { plays.run(sessions.nowPlaying) }
+        // An ad told late (#880): *Ask AI*'s searches for it, under way or to come, ask nothing.
+        pipelineScope.launch { sessions.withdrawn.filterNotNull().collect(aiSearches::withdraw) }
         // *Search with AI*, the setting (#773): a panel's search starts as soon as its source has
         // nothing, open or not, for the playing track, while the app is on screen; again once an AI
         // service is ready.
@@ -665,8 +719,13 @@ class AppGraph internal constructor(
             autoSearches.run(pipeline.state.map { it.track }, latestSettings, pipeline.onScreen, pipeline.liveParts)
         }
         // Every genre of the playing track's table has its definition looked up as soon as the genres
-        // are known, whether a panel is open or not (#786).
-        pipelineScope.launch { genreNotes.lookups.fetchAhead(pipeline.state.map { it.track }) }
+        // are known, whether a panel is open or not (#786), while lookups are allowed (#961).
+        pipelineScope.launch {
+            genreNotes.lookups.fetchAhead(pipeline.state.map { it.track }, pipeline.lookupsAllowed)
+        }
+        // What the search in the track's language found about the artist and the album, kept once the
+        // track's evidence is in, whether or not their insights are opened (#939).
+        pipelineScope.launch { itemNotes.keepAhead(pipeline.state.map { it.track }) }
         // A genre whose definition Wikipedia does not have is searched by itself with the setting on
         // (#786), as a lookup ends, or an AI service comes ready.
         pipelineScope.launch {
@@ -692,6 +751,8 @@ class AppGraph internal constructor(
                 .collect { keeps ->
                     // One that fails is tried again at the next lookup while the switch is off.
                     if (!keeps && !artistKeeping.clear()) Log.w(TAG, "The artist cache could not be cleared")
+                    // The lines in the track's language are kept elsewhere now (#939): gathered again.
+                    itemNotes.artistKeepingChanged()
                 }
         }
         // Expired cache entries are deleted on start, once the first run is acknowledged (the
@@ -740,6 +801,7 @@ class AppGraph internal constructor(
         if (!cleared) Log.w(TAG, "The caches could not be cleared")
         wiring.forgetRemembered()
         genreNotes.forget()
+        itemNotes.forget()
         aiSearches.forget()
         sessionFacts.forget()
         sessions.forgetLastChange()

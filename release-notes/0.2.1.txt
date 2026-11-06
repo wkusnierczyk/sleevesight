@@ -1,0 +1,6 @@
+What's new in 0.2.1:
+- Spotify Free ads are no longer taken for songs: nothing is looked up or written for them.
+- Much-recorded songs get the original recording's date and credits, not a later live take's.
+- Web search lines lose page clutter; insights written from them are written again.
+- After a change of AI model, the earlier insight stays shown, with Rewrite insight.
+- Back from Credits, Diagnostics or What leaves the device, descriptions fold as set.

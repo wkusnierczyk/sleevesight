@@ -31,18 +31,23 @@ import kotlin.time.TimeSource
 /**
  * Web search through Exa, the first provider (D11; `design/design.md`, *Web search provider (D11)*), on the
  * user's own key. One evidence line per kept result: Exa's highlight for it, verbatim apart from
- * whitespace and cut to at most [LINE_CHARACTERS] at a word boundary ([cut]), with the result's URL
- * (architecture, *Source adapters*).
+ * whitespace and the parts that are only page boilerplate ([WebBoilerplate], #905), cut to at most
+ * [LINE_CHARACTERS] at a word boundary ([cut]), with the result's URL (architecture, *Source
+ * adapters*). A result whose every part is boilerplate, or names only the track in a page's words,
+ * gives no line.
  *
  * The query names the song and its credited artists ([ExaSearchRequest.of]); the results are then
  * kept or dropped by [RecordingFilter], at most [MAX_LINES] in Exa's order. The filter judges the
- * line as cut, so a result is never kept for words the line then leaves out. The adapter does not
- * wait for [Resolution]: a web result has no id to verify against, so the filter is its only check.
+ * snippet as cut, so a result is never kept for words the cut leaves out; it judges it before the
+ * boilerplate parts go, since a part naming only the song and the artist shows what the page is
+ * about. The adapter does not wait for [Resolution]: a web result has no id to verify against, so
+ * the filter is its only check.
  * A kept result's line goes in [SourceResult.evidence] and may be cited, as a line about the track
  * (scope web), never checked against the ids MusicBrainz resolves.
  *
- * Outcomes: [Outcome.SongArticle] when a result is kept; [Outcome.Rejected] when results came back
- * and none passed the filter; [Outcome.None] when none came back, or when the track cannot be
+ * Outcomes: [Outcome.SongArticle] when a result is kept with a line; [Outcome.Rejected] when results
+ * came back and none passed the filter; [Outcome.None] when none came back, when those that passed
+ * were all page boilerplate (their addresses in [SourceResult.pages]), or when the track cannot be
  * checked ([RecordingFilter.canCheck]: no credited artist, or a title or artist that folds to
  * nothing, such as "!!!"), since then no result could pass and nothing is sent; [Outcome.Unreachable]
  * for a network error or any answer other than a 2xx (a wrong key, exhausted credits, a bad
@@ -73,30 +78,29 @@ class ExaWebSearch(
         val fetched = net.fetch(request(track), ::parse)
         val retrievedAt = clock.now()
         val outcome: Outcome
-        val evidence: List<EvidenceDraft>
+        var found = WebLines(emptyList(), emptyList())
         when (fetched) {
             is NetResult.Failure -> {
                 outcome = Outcome.Unreachable
-                evidence = emptyList()
             }
 
             is NetResult.Success -> {
                 val response = fetched.value
                 if (response == null) {
                     outcome = Outcome.Unreachable
-                    evidence = emptyList()
                 } else {
-                    evidence = linesFor(track, response, retrievedAt)
+                    found = linesFor(track, response, retrievedAt)
                     outcome =
                         when {
-                            evidence.isNotEmpty() -> Outcome.SongArticle
-                            response.results.isEmpty() -> Outcome.None
+                            found.lines.isNotEmpty() -> Outcome.SongArticle
+                            // About the recording, but only page boilerplate: nothing found, not a rejection.
+                            response.results.isEmpty() || found.emptied.isNotEmpty() -> Outcome.None
                             else -> Outcome.Rejected(REJECTED)
                         }
                 }
             }
         }
-        return result(outcome, evidence, start)
+        return result(outcome, found.lines, start, found.emptied)
     }
 
     /**
@@ -109,33 +113,23 @@ class ExaWebSearch(
         outcome: Outcome,
         evidence: List<EvidenceDraft>,
         start: TimeMark,
-    ): SourceResult = SourceResult(outcome, evidence, start.elapsedNow(), trackOnly = true)
+        pages: List<String> = emptyList(),
+    ): SourceResult = SourceResult(outcome, evidence, start.elapsedNow(), trackOnly = true, pages = pages)
 
     /** The search request for [track]: the key in a header, through [NetSecrets] only. */
-    internal fun request(track: NormalizedTrack): NetRequest =
-        NetRequest(
-            url = ENDPOINT,
-            method = NetMethod.POST,
-            secrets = NetSecrets(headers = mapOf(KEY_HEADER to key.reveal())),
-            body = NetBody(JSON.encodeToString(ExaSearchRequest.of(track)), "application/json"),
-        )
+    internal fun request(track: NormalizedTrack): NetRequest = request(ExaSearchRequest.of(track), key)
 
     private fun linesFor(
         track: NormalizedTrack,
         response: ExaSearchResponse,
         retrievedAt: Instant,
-    ): List<EvidenceDraft> {
-        val seen = mutableSetOf<String>()
-        return response.results
-            .asSequence()
-            .mapNotNull { result ->
-                val snippet = snippetOf(result)
-                if (snippet.isEmpty() || !seen.add(result.url)) return@mapNotNull null
-                if (!filter.isAbout(track, result.title, snippet, result.url)) return@mapNotNull null
-                EvidenceDraft(SourceId.WEB, Scope.WEB, snippet, result.url, retrievedAt)
-            }.take(MAX_LINES)
-            .toList()
-    }
+    ): WebLines =
+        lines(response, retrievedAt, subjectOf(track), filter::fold) { result, snippet ->
+            filter.isAbout(track, result.title, snippet, result.url)
+        }
+
+    // The names a part of a line must say more than: the track's title, its work and its artists.
+    private fun subjectOf(track: NormalizedTrack): List<String> = listOfNotNull(track.title, track.from) + track.artists
 
     companion object {
         const val HOST: String = "api.exa.ai"
@@ -160,11 +154,14 @@ class ExaWebSearch(
             }
 
         /**
-         * [extractionVersion]. 2: each line cut to [LINE_CHARACTERS] and judged as cut (#634), so a
-         * result kept before, with a line up to ten times as long or kept for words past the cut,
-         * is missed instead of served.
+         * [extractionVersion]: raised when what the adapter makes of Exa's results changes. 2: each
+         * line cut to [LINE_CHARACTERS] and judged as cut (#634), so a result kept before, with a
+         * line up to ten times as long or kept for words past the cut, is missed instead of served.
+         * 3: the parts that are only page boilerplate left out before the cut ([WebBoilerplate],
+         * #905), so a line kept before, with a video site's footer or a store's rights line as a
+         * part of it, is looked up again.
          */
-        const val EXTRACTION_VERSION: Int = 2
+        const val EXTRACTION_VERSION: Int = 3
 
         // Unicode's White_Space, listed (no-break spaces, line and paragraph separators, NEL): a
         // JVM `\s` is ASCII only, and `(?U)` is not portable (D2). [cut] then finds every word
@@ -189,14 +186,29 @@ class ExaWebSearch(
         internal fun snippetOf(
             result: ExaResult,
             max: Int = LINE_CHARACTERS,
+            clean: (String) -> String = { it },
         ): String =
             cut(
-                result.highlights
-                    .map { it.replace(WHITESPACE, " ").trim() }
-                    .filter { it.isNotEmpty() }
-                    .joinToString(SEPARATOR),
+                clean(
+                    result.highlights
+                        .map { it.replace(WHITESPACE, " ").trim() }
+                        .filter { it.isNotEmpty() }
+                        .joinToString(SEPARATOR),
+                ),
                 max,
             )
+
+        /**
+         * A source's line for [result]: its highlights joined as [snippetOf] joins them, without
+         * the parts that are only its site's boilerplate, for the [subject] ([WebBoilerplate.clean],
+         * #905), then [cut] to [LINE_CHARACTERS], so the room those parts took goes to the page's
+         * own text. Empty when no part is left.
+         */
+        internal fun lineOf(
+            result: ExaResult,
+            subject: List<String>,
+            fold: (String) -> String,
+        ): String = snippetOf(result) { WebBoilerplate.clean(it, result.url, subject, fold) }
 
         /**
          * [text] (whitespace already collapsed) as it comes when it has at most [max] characters;
@@ -316,11 +328,68 @@ class ExaWebSearch(
             )
         private val REGIONAL_INDICATORS = 0x1F1E6..0x1F1FF
 
+        /** The search request carrying [body], on [key]: the key in a header, through [NetSecrets] only. */
+        internal fun request(
+            body: ExaSearchRequest,
+            key: Secret,
+        ): NetRequest =
+            NetRequest(
+                url = ENDPOINT,
+                method = NetMethod.POST,
+                secrets = NetSecrets(headers = mapOf(KEY_HEADER to key.reveal())),
+                body = NetBody(JSON.encodeToString(body), "application/json"),
+            )
+
+        /**
+         * The web lines of [response]'s results, once per address, in Exa's order, at most
+         * [MAX_LINES]: for the track's search, the album's (`ExaAlbumSearch`, #885) and the artist's
+         * (`ExaArtistSearch`, #912). [about]
+         * judges each result on its snippet as it came, cut ([snippetOf], #634), before any part
+         * goes: a part naming only the song and the artist, which goes as boilerplate, is the
+         * surest sign of what the page is about. A kept result's line is [lineOf] it, for the
+         * [subject] (the track's title, its work and its artists, the album and its artist, or the artist;
+         * folded by [fold]); a kept result with no line left is in [WebLines.emptied].
+         */
+        internal fun lines(
+            response: ExaSearchResponse,
+            retrievedAt: Instant,
+            subject: List<String>,
+            fold: (String) -> String,
+            about: (ExaResult, String) -> Boolean,
+        ): WebLines {
+            val seen = mutableSetOf<String>()
+            val lines = mutableListOf<EvidenceDraft>()
+            val emptied = mutableListOf<String>()
+            for (result in response.results) {
+                if (lines.size == MAX_LINES) break
+                val snippet = snippetOf(result)
+                if (snippet.isNotEmpty() && seen.add(result.url) && about(result, snippet)) {
+                    val line = lineOf(result, subject, fold)
+                    if (line.isEmpty()) {
+                        emptied += result.url
+                    } else {
+                        lines += EvidenceDraft(SourceId.WEB, Scope.WEB, line, result.url, retrievedAt)
+                    }
+                }
+            }
+            return WebLines(lines, emptied)
+        }
+
         /** A 2xx body read as a search response; null for any other status, which has no results. */
         internal fun parse(response: NetResponse): ExaSearchResponse? =
             if (response.isSuccess) JSON.decodeFromString<ExaSearchResponse>(response.body) else null
     }
 }
+
+/**
+ * What a search's results give ([ExaWebSearch.lines], #905): the web [lines], and the addresses of
+ * the results kept as about the subject whose text was all page boilerplate, [emptied], which give
+ * no line but are still the subject's pages (`SourceResult.pages`: a lyrics page's link).
+ */
+internal data class WebLines(
+    val lines: List<EvidenceDraft>,
+    val emptied: List<String>,
+)
 
 /**
  * The body of Exa's `POST /search` (https://exa.ai/docs/reference/search), as the adapter sends it.
@@ -380,6 +449,34 @@ internal data class ExaSearchRequest(
                     ),
             )
         }
+
+        /**
+         * The query for an [album] by [artist] (#885, `ExaAlbumSearch`): `"<album>" by <artist>,
+         * album`, as [of] words a song's, nothing of the track playing, with highlights steered by
+         * the album's title and the artist.
+         */
+        fun ofAlbum(
+            album: String,
+            artist: String,
+        ): ExaSearchRequest =
+            ExaSearchRequest(
+                query = "\"$album\" by $artist, album",
+                contents = ExaContents(ExaHighlights("$album $artist", HIGHLIGHT_CHARACTERS)),
+            )
+
+        /**
+         * The query for an [artist] the other sources say nothing about (#912, `ExaArtistSearch`):
+         * `"<artist>", music artist`, the name quoted to keep a name of common words together, and
+         * "music artist" for a person and a band alike, nothing of the track playing; highlights
+         * steered toward the artist's biography. Compared live (2026-11-05) on a composer the sources
+         * missed (Shashwat Sachdev) and a band named in common words (The National): the artist's own
+         * pages, an encyclopedia's, a store's and a magazine's came first, each naming the artist.
+         */
+        fun ofArtist(artist: String): ExaSearchRequest =
+            ExaSearchRequest(
+                query = "\"$artist\", music artist",
+                contents = ExaContents(ExaHighlights("$artist biography", HIGHLIGHT_CHARACTERS)),
+            )
 
         /** What the request asks Exa for, and what the adapter cuts a line to ([ExaWebSearch.cut]). */
         const val HIGHLIGHT_CHARACTERS: Int = 300

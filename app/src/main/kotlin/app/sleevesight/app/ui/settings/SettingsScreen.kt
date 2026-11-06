@@ -11,7 +11,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -28,6 +30,8 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.ModelCheck
 import app.sleevesight.app.pipeline.UnavailableMark
@@ -115,6 +119,8 @@ fun SettingsScreen(
     val secrets by secretStore.states.collectAsState(initial = emptyMap())
     val scope = rememberCoroutineScope()
     var dialog by remember { mutableStateOf<SettingsDialog?>(null) }
+    // Where a link on *Load keys* leads (#763), once it has closed: landed on as any link's target.
+    var jump by remember { mutableStateOf<SettingsTarget?>(null) }
     // Whether the key store could not seal the last key saved: as with an unreadable key, *Purge
     // keys* says why to use it. Not a file that could not be written, which a purge would not cure.
     var sealFailed by remember { mutableStateOf(false) }
@@ -162,7 +168,9 @@ fun SettingsScreen(
                             dismissals,
                             restoreDismissed,
                         )
-                    SettingsContent(current, keys, navigation, unavailable, landOn, update) { dialog = it }
+                    SettingsContent(current, keys, navigation, unavailable, landOn, jump, { jump = null }, update) {
+                        dialog = it
+                    }
                 }
             }
         }
@@ -180,12 +188,17 @@ fun SettingsScreen(
             KeyDialogs(
                 shown,
                 secrets,
+                settings.orDefaults(),
+                { choices -> settingsStore.applyChoices(choices) },
                 secretStore,
                 saves,
                 scanner,
                 keyboard,
                 showPhoneName = settings?.showPhoneName ?: false,
                 onSealFailed = { sealFailed = it },
+                onOpen = { jump = it },
+                // The key dialog goes unsaved, and *Load keys* opens in its place (#765).
+                onOpenLoadKeys = { dialog = SettingsDialog.LoadKeys },
                 onDismiss = close,
             )
         }
@@ -226,6 +239,9 @@ private val NONE_UNAVAILABLE: StateFlow<Map<ProviderId, UnavailableMark>> = Muta
 
 /** Saves a change to the settings. */
 internal typealias Update = ((Settings) -> Settings) -> Unit
+
+/** These settings, or the defaults before they are read. */
+private fun Settings?.orDefaults(): Settings = this ?: Settings()
 
 /**
  * Saves each change to the store in [saves], which outlives the screen ([saving]: only an I/O error
@@ -333,7 +349,29 @@ private class Navigation(
     val chooseMode: ((WriteAutomatically) -> Unit)?,
     val dismissals: Dismissals,
     val restoreDismissed: () -> Deferred<Boolean>,
-)
+) {
+    /** These ways out, [leave] called before each that opens a page coming back to the settings (#874). */
+    fun leaving(leave: () -> Unit): Navigation =
+        Navigation(
+            players,
+            modelName,
+            openCredits = {
+                leave()
+                openCredits()
+            },
+            openDiagnostics = {
+                leave()
+                openDiagnostics()
+            },
+            openWhatLeaves = {
+                leave()
+                openWhatLeaves()
+            },
+            chooseMode,
+            dismissals,
+            restoreDismissed,
+        )
+}
 
 /**
  * The saved keys' states, and whether *Purge keys* says why to use it: a saved key cannot be read,
@@ -385,7 +423,11 @@ private fun Notices(
 
 /**
  * The settings' sections, all closed at first, and the links between them ([SettingsNavigator]);
- * opened at [landOn], if any, once per visit (a rotation does not land again).
+ * opened at [landOn], if any, once per visit (a rotation does not land again), and at [jump], a
+ * link's target from a key screen over them (#763), which [onJumped] then clears. Their
+ * descriptions fold to one line ([DescriptionFolds], #847) while *Foldable descriptions* is on,
+ * showing on each return as *Descriptions on return* has them, back from a page the settings opened
+ * too (#874).
  */
 @Suppress("LongParameterList") // What the sections show and change.
 @Composable
@@ -395,12 +437,40 @@ private fun SettingsContent(
     navigation: Navigation,
     unavailable: Map<ProviderId, String>,
     landOn: SettingsTarget?,
+    jump: SettingsTarget?,
+    onJumped: () -> Unit,
     update: Update,
     open: (SettingsDialog) -> Unit,
 ) {
     val folds = rememberSectionFolds()
+    val mode = settings.descriptionsOnReturn
+    val descriptions = rememberDescriptionFolds(mode)
+    val descriptionsShown =
+        remember(descriptions, settings.foldDescriptions, settings.unfoldedDescriptions) {
+            FoldsShown(descriptions, settings.unfoldedDescriptions.toSet()) { id, unfolded ->
+                update {
+                    it.copy(
+                        unfoldedDescriptions = unfoldedIds(it.unfoldedDescriptions, id, unfolded),
+                    )
+                }
+            }.takeIf { settings.foldDescriptions }
+        }
+    // A section opened within the visit shows its descriptions as *Descriptions on return* has it then,
+    // until it is opened again: a change of the choice waits for the next return.
+    SideEffect { folds.onOpen = { descriptions.reopen(it, mode) } }
+    // On screen again, back from a page they were left for, though never taken down (Android's back
+    // while the page still opens): *Descriptions on return* applies as on restoring them (#874).
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { descriptions.comeBack(mode) }
+    // A search's own folds and unfolds go with it: cleared, it leaves each as before it (#847).
+    LaunchedEffect(folds.searching) { if (!folds.searching) descriptions.endSearch() }
     ProvideSettingsNavigator(folds) {
         val navigator = LocalSettingsNavigator.current
+        LaunchedEffect(navigator, jump) {
+            jump?.let {
+                navigator?.go(it)
+                onJumped()
+            }
+        }
         var opened by rememberSaveable { mutableStateOf(false) }
         LaunchedEffect(navigator) {
             if (!opened) {
@@ -426,7 +496,11 @@ private fun SettingsContent(
                 null
             }
         found?.let { SearchAnnouncement(folds.query, it.size) }
-        SettingsColumn(settings, keys, navigation, unavailable, Found(listed, found), folds, update, open)
+        CompositionLocalProvider(LocalDescriptionFolds provides descriptionsShown) {
+            // Left for a page, the descriptions show on the way back as on opening the settings (#874).
+            val leaving = navigation.leaving(descriptions::leave)
+            SettingsColumn(settings, keys, leaving, unavailable, Found(listed, found), folds, update, open)
+        }
     }
 }
 

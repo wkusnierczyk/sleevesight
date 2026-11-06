@@ -118,10 +118,16 @@ class MusicBrainzResolutionTest {
     fun `a much-recorded song - Chuck Berry's 1956 Roll Over Beethoven, far down the 100 results`() =
         runTest {
             val resolution = resolve(55)
-            assertEquals("5f574686-4d14-4207-aa72-cc8c8549e264", resolution.recordingMbid)
+            // MusicBrainz has two recordings of the May 1956 single; the first page holds one, the search
+            // for those released by May 1956 both (#906), and the one closer to the player's length wins.
+            assertEquals("ffe4a448-1b9f-4458-a8ce-7402f5a28130", resolution.recordingMbid)
             assertEquals("1956-05", resolution.firstReleaseDate)
             assertEquals("Roll Over Beethoven / Drifting Heart", resolution.firstRelease?.title)
             assertEquals("100", net.sent.first().query["limit"])
+            assertEquals(
+                "recording:\"Roll Over Beethoven\" AND artist:\"Chuck Berry\" AND firstreleasedate:[* TO 1956-05]",
+                net.sent.filter { it.url == "${MusicBrainzClient.BASE}/recording" }[1].query["query"],
+            )
         }
 
     @Test

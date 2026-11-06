@@ -15,13 +15,18 @@ import app.sleevesight.core.pipeline.Pipeline
 import app.sleevesight.core.pipeline.PipelineEvent
 import app.sleevesight.core.pipeline.PipelineParts
 import app.sleevesight.core.pipeline.PipelineTime
+import app.sleevesight.core.pipeline.RewritePart
+import app.sleevesight.core.pipeline.Rewriting
 import app.sleevesight.core.pipeline.RunControl
 import app.sleevesight.core.pipeline.RunKey
 import app.sleevesight.core.pipeline.RunStep
 import app.sleevesight.core.pipeline.TrackChange
 import app.sleevesight.core.pipeline.TrackState
+import app.sleevesight.core.pipeline.WrittenBy
+import app.sleevesight.core.pipeline.rewriteParts
 import app.sleevesight.core.settings.PrepareNextTrack
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.settings.SourceSwitch
 import app.sleevesight.core.settings.WebEngine
 import app.sleevesight.core.settings.WriteAutomatically
 import app.sleevesight.core.settings.pastKeepHistory
@@ -47,6 +52,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -77,8 +83,11 @@ import kotlin.time.Instant
  * @property aiReady whether an insight can be written: an AI service is chosen, it has a client,
  *   and its key is saved and readable.
  * @property rewrite whether Write is offered beside the written insight shown, to write it again: a
- *   rebuild changed its card's key (new evidence, another service, model or effort), so its run
- *   found no card. The card paid for (the ledger's, with the evidence it cites) is shown whenever
+ *   rebuild changed its card's key (new evidence, another service, model or effort, *AI service
+ *   knowledge* switched), so its run
+ *   found no card; or the track's run, not writing by itself, found none under its key but one
+ *   another service, model or effort wrote for the same track and evidence (#911), shown as the card
+ *   paid for. The card paid for (the ledger's, with the evidence it cites) is shown whenever
  *   the track's run has no insight of its own, offered or not ([cardShown]); this says only whether
  *   Write is offered beside it. The card shows beside the run's own source states, with the
  *   evidence it cites.
@@ -115,12 +124,20 @@ import kotlin.time.Instant
  *   written only on a tap: it came to play before the first action or while it was paused, or a
  *   mode was chosen while it played ([CoordinatorState.waitsForTap], `Report.tapOnly`, #625). The
  *   insight card then does not say that it writes automatically.
+ * @property writesItself whether the track playing would be written by itself now, by the
+ *   coordinator's rules alone ([CoordinatorState.writesItself]): the song's, the artist's and the
+ *   album's rows and pages (#522) ask again by themselves when it turns true (a tap on *Write* after
+ *   *Saver*, a first action), the gate (`itemCallAllowed`) staying the authority.
  * @property lookAgainKey the key of the run *Look again* is offered for (#617), which a tap carries
  *   back ([PipelineHost.lookAgain]): the card paid for is shown, citing evidence, its run's sources
  *   have landed and no call is under way ([CoordinatorState.lookAgainKey]); null otherwise.
  * @property lookingAgain whether a look again is looking the sources up ([CoordinatorState.lookingAgain]).
  * @property somethingNew whether the last look again found something new, and *Rewrite insight* is
  *   offered for it ([CoordinatorState.foundSomethingNew]): a tap writes it, a paid call.
+ * @property rewriteWith what *Rewrite insight* would change, while it is offered ([rewrite], #854):
+ *   what a call of the track's run would write with (`TrackState.writesWith`) against what the
+ *   insight shown was written with, and what the last look again found new; null while it is not
+ *   offered, and when nothing a footer names would change.
  * @property nothingNew whether the last look again found nothing new, so nothing is offered for it
  *   ([CoordinatorState.foundNothingNew]).
  * @property askAgainKey the key of the run whose unreachable sources [askable] a tap on *Retry*
@@ -142,12 +159,23 @@ data class PipelineView(
     val lapsed: Boolean = false,
     val followed: Boolean = false,
     val waiting: Boolean = false,
+    val writesItself: Boolean = false,
     val lookAgainKey: RunKey? = null,
     val lookingAgain: Boolean = false,
     val nothingNew: Boolean = false,
     val somethingNew: Boolean = false,
+    val rewriteWith: RewriteOffer? = null,
     val askAgainKey: RunKey? = null,
     val askable: Set<SourceId> = emptySet(),
+)
+
+/**
+ * What *Rewrite insight* would change (#854): the [parts] a rewrite would use that the insight shown
+ * did not, and what it would write with ([with]), whose model and effort name [RewritePart.MODEL].
+ */
+data class RewriteOffer(
+    val parts: Set<RewritePart>,
+    val with: WrittenBy,
 )
 
 /**
@@ -171,7 +199,8 @@ class PipelineKeys(
  * Nothing is read, built or sent before [acknowledged]: the session layer's reports ([changes]: each
  * track with why it came to play, D5), the settings and the keys are collected only after it. A
  * rebuild follows a key saved, replaced or removed ([keyChanges]), a web engine switched, another
- * AI service chosen, or another model or reasoning effort for the one switched on (#849); no
+ * AI service chosen, another model or reasoning effort for the one switched on (#849), or a source
+ * switched on or off under *Sources*, *AI service knowledge* among them (#857); no
  * pipeline is built until the keys' first read succeeds. A pipeline that cannot be built is reported
  * to [onFailure] and none runs until the next rebuild; a run that fails (a bug: the stages map their
  * failures to outcomes) is reported and ends, and the next track runs.
@@ -224,6 +253,7 @@ class PipelineHost(
     private val online: Flow<Boolean> = emptyFlow(),
     private val epoch: ClearEpoch = ClearEpoch(),
     private val clock: Clock = Clock.System,
+    private val withdrawn: Flow<NowPlaying?> = emptyFlow(),
 ) {
     private val queue = Channel<CoordinatorEvent>(Channel.UNLIMITED)
 
@@ -236,6 +266,7 @@ class PipelineHost(
     // The clears the view was last published for, and the track state shown before the last of
     // them, which is never shown again (#547).
     private var viewClears = 0L
+    private var viewWithdrawals = 0L
     private var forgotten: TrackState? = null
 
     // One per process, never recreated or persisted: its `acted` starting false is what makes a
@@ -310,6 +341,20 @@ class PipelineHost(
      * AI*'s automatic searches start only then (#773, `AutoSearches`).
      */
     val onScreen: Flow<Boolean> = snapshot.map { it.visible }.distinctUntilChanged()
+
+    /**
+     * Whether the song's, the artist's or the album's insight (#522) may make its call now, asked
+     * right before it, as [ask] came: requests allowed (D6: the first run acknowledged, and the app on
+     * screen or *Look up in the background* on); for one asked by itself ([ItemAsk.BY_ITSELF], a row
+     * unfolded at a new track's start, or a page left open as the track changes), the app on screen
+     * too, and the coordinator's own rules for the track's automatic writing
+     * ([CoordinatorState.writesItself]: the first action, *Saver*'s expiry, *On track skip (auto)*),
+     * whatever the key insight came to.
+     */
+    fun itemCallAllowed(ask: ItemAsk): Boolean {
+        val now = snapshot.value
+        return now.allowed && (ask != ItemAsk.BY_ITSELF || (now.visible && now.writesItself))
+    }
 
     /** An activity started (`MainActivity.onStart`). */
     fun activityStarted() {
@@ -435,8 +480,9 @@ class PipelineHost(
                 }
             }
             launch {
-                // What the parts are built with, and what of the AI service the card's key holds
-                // besides (#849), so that the track under way runs again and finds its card or not.
+                // What the parts are built with, and what of the AI service and the sources the
+                // card's key holds besides (#849, #857), so that the track under way runs again and
+                // finds its card or not.
                 val inputs = latest.map(::BuildInputs).distinctUntilChanged()
                 combine(keyChanges, inputs) { _, _ -> }.collect { queue.send(CoordinatorEvent.RebuildRequested) }
             }
@@ -448,6 +494,10 @@ class PipelineHost(
             }
             launch {
                 online.distinctUntilChanged().collect { queue.send(CoordinatorEvent.NetworkChanged(it)) }
+            }
+            launch {
+                // An ad told late (#880): its report taken back, its run cancelled.
+                withdrawn.filterNotNull().collect { queue.send(CoordinatorEvent.Withdrawn(it)) }
             }
             launch {
                 changes.collect { change ->
@@ -471,7 +521,14 @@ class PipelineHost(
                 built.values.forEach { (pipeline, _) -> pipeline.forget() }
                 failed.value = null
             }
+            val withdrawals = coordinator.state.withdrawals
             val effects = coordinator.on(event)
+            // A run of an ad told late cancelled (#880): what it showed goes, and nothing it still
+            // publishes shows, before the view hears of it.
+            if (coordinator.state.withdrawals != withdrawals) {
+                live.value?.pipeline?.forget()
+                built.values.forEach { (pipeline, _) -> pipeline.forget() }
+            }
             snapshot.value = coordinator.state
             effects.forEach { perform(it, scope) }
             if (event == CoordinatorEvent.Cleared) forgetting.poll()?.complete(Unit)
@@ -683,9 +740,30 @@ class PipelineHost(
             call(number).stopped.complete(Unit)
         }
 
-        override suspend fun decide(settings: Settings): Boolean {
+        override suspend fun decide(settings: Settings): Boolean = ask(settings, null)
+
+        // With the insight another service, model or effort wrote (#911), which the coordinator makes
+        // the card paid for when it offers Write.
+        override suspend fun decide(
+            settings: Settings,
+            kept: InsightState.Written?,
+            evidence: EvidenceSet,
+        ): Boolean = ask(settings, kept?.let { Card(it, evidence) })
+
+        // Whether the coordinator took [kept] as the card paid for of this run's track (#911): read
+        // once its answer came, so the state seen holds the decision.
+        override fun shows(kept: InsightState.Written): Boolean {
+            val state = snapshot.value
+            val run = state.run?.takeIf { it.id == id } ?: return false
+            return state.written(run.nowPlaying)?.card?.insight === kept
+        }
+
+        private suspend fun ask(
+            settings: Settings,
+            kept: Card?,
+        ): Boolean {
             val decides = WriteSettings.of(settings)
-            queue.send(CoordinatorEvent.InsightAsked(id, decides.writesOn, decides.allowModel))
+            queue.send(CoordinatorEvent.InsightAsked(id, decides.writesOn, decides.allowModel, kept))
             return decision.await().also { write -> if (write) made++ }
         }
 
@@ -714,6 +792,17 @@ class PipelineHost(
 
         override fun gathered(gathered: Gathered) {
             queue.trySend(CoordinatorEvent.SourcesGathered(id, gathered))
+        }
+
+        // The card the coordinator's ledger keeps for this run's track, which a call granted now
+        // replaces (#854), with what the run's look again found; read once the call is granted, so
+        // the state seen holds the grant.
+        override fun rewriting(): Rewriting? {
+            val state = snapshot.value
+            val run = state.run?.takeIf { it.id == id }
+            val ledger = run?.let { state.written(it.nowPlaying) }
+            val replaced = ledger?.card?.insight?.writtenBy
+            return replaced?.let { Rewriting(it, run.lookedAgain, ledger.foundNew) }
         }
 
         override fun labelsFailed(sources: Set<SourceId>) {
@@ -748,9 +837,11 @@ class PipelineHost(
             // A clear since the view was published (#547): nothing shown before it is shown again,
             // not the track shown, nor a state the pipeline published before it that this has not
             // yet seen replaced.
-            val fresh = owner.clears == viewClears
+            // So too an ad told late whose run had started (#880).
+            val fresh = owner.clears == viewClears && owner.withdrawals == viewWithdrawals
             if (!fresh) {
                 viewClears = owner.clears
+                viewWithdrawals = owner.withdrawals
                 forgotten = track
             }
             val own = track?.takeUnless { it === forgotten }
@@ -766,9 +857,10 @@ class PipelineHost(
             val insight = shown.track?.insight
             // The card paid for past *Keep history for* (#643) is not shown, so nothing is offered for it.
             val cardPast = cardPast(shown, owner, lifetime)
+            val rewrite = owner.rewrites() && insight is InsightState.Written
             PipelineView(
                 track = shown.track,
-                rewrite = owner.rewrites() && insight is InsightState.Written,
+                rewrite = rewrite,
                 cardShown = shown.cardShown,
                 needsKey = needsKey(current?.parts, now),
                 aiReady = current?.parts?.let { it.ai != null } ?: view.value.aiReady,
@@ -780,10 +872,12 @@ class PipelineHost(
                 lapsed = owner.lapsed,
                 followed = owner.followed,
                 waiting = owner.waitsForTap,
+                writesItself = owner.writesItself,
                 lookAgainKey = owner.lookAgainKey.takeUnless { cardPast },
                 lookingAgain = owner.lookingAgain,
                 nothingNew = owner.foundNothingNew && !cardPast,
                 somethingNew = owner.foundSomethingNew,
+                rewriteWith = if (rewrite) rewriteOffer(shown.track, owner) else null,
                 askAgainKey = owner.askAgainKey,
                 askable = owner.askable,
             )
@@ -828,6 +922,21 @@ class PipelineHost(
                 else -> null
             }?.takeIf { card != null }
         return Shown(header(if (card != null) withCard(own, card) else own, owner), failure, cardShown = card != null)
+    }
+
+    // What *Rewrite insight* beside the insight [track] shows would change (#854): what its run would
+    // write with against what that insight was written with, and what the current run's look again
+    // found; null when nothing would.
+    private fun rewriteOffer(
+        track: TrackState?,
+        owner: CoordinatorState,
+    ): RewriteOffer? {
+        val replaced = (track?.insight as? Written)?.writtenBy
+        val with = track?.writesWith
+        if (replaced == null || with == null) return null
+        val found = owner.written(track.nowPlaying)?.foundNew
+        val parts = rewriteParts(replaced, with, owner.current?.lookedAgain, found)
+        return if (parts.isEmpty()) null else RewriteOffer(parts, with)
     }
 
     private fun needsKey(
@@ -942,16 +1051,19 @@ class PipelineHost(
     }
 
     // The settings a change of which rebuilds the pipeline: what the parts are built with (the web
-    // engines, the AI service, and *Show genres*, #444, whose adapters ask for tags or not), and the
+    // engines, the AI service, and *Show genres*, #444, whose adapters ask for tags or not), the
     // switched-on service's model and reasoning effort (#849), which a card's key holds as it holds
-    // the service: a run of the track under way then finds its card under the key it was written
-    // with, or offers *Rewrite insight* beside it.
+    // the service, and the *Sources* switches, *AI service knowledge* among them (#857), which the
+    // key holds as the evidence it fingerprints and as `modelKnowledge`: a run of the track under
+    // way then looks up a source switched on, drops the lines of one switched off, and finds its
+    // card under the key it was written with, or offers *Rewrite insight* beside it.
     private data class BuildInputs(
         val webEngines: Set<WebEngine>,
         val aiProvider: ProviderId?,
         val showGenres: Boolean,
         val model: String?,
         val effort: ReasoningEffort?,
+        val enabledSources: Set<SourceSwitch>,
     ) {
         constructor(settings: Settings) : this(
             settings.webEngines,
@@ -959,6 +1071,7 @@ class PipelineHost(
             settings.showGenres,
             settings.model,
             settings.effort,
+            settings.enabledSources,
         )
     }
 

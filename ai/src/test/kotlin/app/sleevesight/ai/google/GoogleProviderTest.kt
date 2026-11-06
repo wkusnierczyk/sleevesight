@@ -177,6 +177,39 @@ class GoogleProviderTest {
         }
 
     @Test
+    fun `a system prompt goes in systemInstruction, the prompt staying the user's content`() =
+        runTest {
+            val (_, net) = events(request.copy(system = "You narrate.\nBriefly.")) { ok(recorded(stream)) }
+
+            assertEquals(
+                Json.parseToJsonElement(
+                    """{"systemInstruction":{"parts":[{"text":"You narrate.\nBriefly."}]},""" +
+                        """"contents":[{"role":"user","parts":[{"text":"Say hello in three words."}]}],""" +
+                        """"generationConfig":{"maxOutputTokens":256}}""",
+                ),
+                body(net),
+            )
+        }
+
+    @Test
+    fun `a Gemma model takes no systemInstruction, so the system prompt opens the user's content`() =
+        runTest {
+            val gemma = request.copy(model = "gemma-3-27b-it", system = "You narrate.")
+            val (_, net) = events(gemma) { ok(recorded(stream)) }
+
+            assertEquals(
+                Json.parseToJsonElement(
+                    """{"contents":[{"role":"user",""" +
+                        """"parts":[{"text":"You narrate.\n\nSay hello in three words."}]}],""" +
+                        """"generationConfig":{"maxOutputTokens":256}}""",
+                ),
+                body(net),
+            )
+            assertTrue(GoogleProvider.takesSystemInstruction("gemini-2.5-flash"))
+            assertFalse(GoogleProvider.takesSystemInstruction("gemma-3-27b-it"))
+        }
+
+    @Test
     fun `an effort goes in thinkingConfig, and none leaves the model's default`() =
         runTest {
             for (effort in ReasoningEffort.entries) {

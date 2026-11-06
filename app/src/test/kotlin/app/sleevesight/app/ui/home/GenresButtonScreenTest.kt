@@ -14,6 +14,7 @@ import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
@@ -150,11 +151,12 @@ class GenresButtonScreenTest {
 
     private fun count(tag: String) = compose.onAllNodesWithTag(tag).fetchSemanticsNodes().size
 
+    // Where [tag]'s node starts, scrolled out of sight or not (#875: an open genre makes the panel tall).
     private fun top(tag: String) =
         compose
             .onNodeWithTag(tag)
             .fetchSemanticsNode()
-            .boundsInRoot.top
+            .positionInRoot.y
 
     // Opens the panel, and checks it holds [line] and no chip.
     private fun opensTo(line: String) {
@@ -208,7 +210,8 @@ class GenresButtonScreenTest {
                 .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
             assertEquals(1, count(FOLK))
             assertEquals(1, count(BALLAD))
-            assertEquals(0, count(GENRE_PANEL_TAG))
+            // Open on its first genre (#875): every chip here is weak, so the first of them.
+            unfolded(BALLAD)
 
             tap(GENRES_PANEL_CLOSE_TAG)
             assertEquals(1, count(GENRES_CHIP_TAG))
@@ -375,7 +378,7 @@ class GenresButtonScreenTest {
         }
 
     @Test
-    fun aNewTrackStartsWithNoGenreOpen() =
+    fun aNewTrackOpensOnItsFirstGenreNotTheOneOpenBefore() =
         show {
             tap(GENRES_CHIP_TAG)
             tap(FOLK)
@@ -383,11 +386,12 @@ class GenresButtonScreenTest {
             compose.waitForIdle()
             tap(GENRES_CHIP_TAG)
             assertEquals(1, count(FOLK))
-            assertEquals(0, count(GENRE_PANEL_TAG))
+            unfolded(BALLAD)
+            compose.onNodeWithTag(FOLK).assertIsNotSelected()
         }
 
     @Test
-    fun thePanelsCloseFoldsTheGenreOpenInItToo() =
+    fun thePanelsCloseFoldsTheGenreOpenInItTooAndItReopensOnItsFirstGenre() =
         show {
             tap(GENRES_CHIP_TAG)
             tap(FOLK)
@@ -395,7 +399,8 @@ class GenresButtonScreenTest {
             tap(GENRES_PANEL_CLOSE_TAG)
             assertEquals(0, count(GENRE_PANEL_TAG))
             tap(GENRES_CHIP_TAG)
-            assertEquals(0, count(GENRE_PANEL_TAG))
+            unfolded(BALLAD)
+            compose.onNodeWithTag(FOLK).assertIsNotSelected()
         }
 
     @Test
@@ -476,7 +481,7 @@ class GenresButtonScreenTest {
             assertEquals(1, count(FOLK))
             val looking = compose.onNodeWithText("Looking on Last.fm…")
             looking.assertExists()
-            assertTrue(top(FOLK) < looking.fetchSemanticsNode().boundsInRoot.top)
+            assertTrue(top(FOLK) < looking.fetchSemanticsNode().positionInRoot.y)
         }
 
     @Test
@@ -601,7 +606,7 @@ class GenresButtonScreenTest {
                     compose
                         .onNodeWithText(line)
                         .fetchSemanticsNode()
-                        .boundsInRoot.top,
+                        .positionInRoot.y,
             )
             compose
                 .onNodeWithTag(RETRY_TAG)

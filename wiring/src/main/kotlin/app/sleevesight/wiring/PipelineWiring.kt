@@ -22,16 +22,29 @@ import app.sleevesight.core.resolution.RecordingResolver
 import app.sleevesight.core.resolution.RememberedMusicBrainz
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WebEngine
+import app.sleevesight.core.sources.AlbumLookup
 import app.sleevesight.core.sources.ArtistResults
+import app.sleevesight.core.sources.ArtistWebLookup
+import app.sleevesight.core.sources.ItemLanguageLines
+import app.sleevesight.core.sources.LanguageSearch
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.WebSearcher
 import app.sleevesight.net.NetClient
+import app.sleevesight.sources.album.AlbumSource
 import app.sleevesight.sources.art.ArtFetcher
 import app.sleevesight.sources.art.ArtResult
+import app.sleevesight.sources.language.LanguageLinesSource
+import app.sleevesight.sources.language.LanguageSources
+import app.sleevesight.sources.language.LanguageWikipedia
 import app.sleevesight.sources.lastfm.LastFmAdapter
+import app.sleevesight.sources.lastfm.LastFmAlbums
 import app.sleevesight.sources.lastfm.LastFmTags
 import app.sleevesight.sources.musicbrainz.MusicBrainzClient
 import app.sleevesight.sources.musicbrainz.MusicBrainzSource
+import app.sleevesight.sources.web.ArtistWebSource
+import app.sleevesight.sources.web.ExaAlbumSearch
+import app.sleevesight.sources.web.ExaArtistSearch
+import app.sleevesight.sources.web.ExaLanguageSearch
 import app.sleevesight.sources.web.ExaPageSearch
 import app.sleevesight.sources.web.ExaWebSearch
 import app.sleevesight.sources.wikidata.WikidataClient
@@ -58,14 +71,22 @@ import app.sleevesight.sources.wikipedia.WikipediaSource
  * [artists] is the artist cache (#238): what Last.fm, the Wikipedia artist article and MusicBrainz's
  * tags give for an artist is kept there per artist, so a second track by the same artist does not
  * ask for it again. The app's is the cache database's, the CLI's the run's cache, if it has one.
+ * [trackOnly] is where what an album's web search found is kept (#885, [TRACK_ONLY_PARTS]), and an
+ * artist's (#912): the app's is the same table, kept whatever *Keep what sources said about each
+ * artist* says. [keepsArtists] is that switch, as last read (on for the CLI), which says whether what
+ * the search in the track's language found about an artist or an album is kept in [artists] or in
+ * memory ([languageLines], #939).
  *
  * [genres] says whether genre information is asked for at all (*Show genres*, #444), read at each
  * MusicBrainz recording's lookup, whose tags are asked for only then; the adapters take it from
  * the settings they are built with ([adapters]).
  *
  * [epoch] is *Clear history*'s boundary (#547): an answer MusicBrainz gives to work started before
- * it is not remembered. [musicBrainzThrough] stands between the remembered answers and
- * MusicBrainz's client: the app's tests put a stand-in there, so they ask nothing of the network.
+ * it is not remembered, nor a line in the track's language ([languageLines]). [musicBrainzThrough]
+ * stands between the remembered answers and MusicBrainz's client: the app's tests put a stand-in
+ * there, so they ask nothing of the network.
+ * [aiThrough] wraps each AI service's client ([aiProviders]): the app's debug builds log every
+ * request through it (`PromptDump`, #767).
  *
  * [close] closes the client when the wiring made it ([ownsNet], [appPipelineWiring]'s), and does
  * nothing otherwise: the CLI closes its own. The app closes it only from `Application.onTerminate`,
@@ -83,9 +104,12 @@ class PipelineWiring internal constructor(
     rememberMusicBrainz: Boolean = false,
     private val ownsNet: Boolean = false,
     private val artists: ArtistResults = ArtistResults.None,
+    private val trackOnly: ArtistResults = artists,
     genres: () -> Boolean = { true },
     epoch: ClearEpoch = ClearEpoch(),
     musicBrainzThrough: (MusicBrainzLookup) -> MusicBrainzLookup = { it },
+    aiThrough: (AiProvider) -> AiProvider = { it },
+    keepsArtists: () -> Boolean = { true },
 ) : AutoCloseable {
     private val names = NameMatcher(accentFolder)
 
@@ -138,11 +162,65 @@ class PipelineWiring internal constructor(
         GenreDefinitions(WikipediaGenres(WikidataClient(net), WikipediaClient(net)), vocabulary, kept = kept)
 
     /**
+     * The evidence for an album's insight under *Key insights* (#522, `PipelineParts.albums`): the
+     * album's MusicBrainz release group, its Wikidata item and its English Wikipedia article, and,
+     * with their keys in [keys] (#885), Last.fm's album and a web search for it through the engines
+     * switched on in [settings] ([AlbumSource]), kept per album in the artist cache, the web
+     * search's in [trackOnly]. Read when the list is built, as the adapters' keys are ([adapters]).
+     */
+    fun albums(
+        keys: SourceKeys,
+        settings: Settings,
+    ): AlbumLookup =
+        AlbumSource(
+            MusicBrainzClient(net),
+            WikidataClient(net),
+            WikipediaClient(net),
+            names,
+            kept = artists,
+            lastFm = keys.lastFm?.let { LastFmAlbums(net, it) },
+            web =
+                keys.web[WebEngine.EXA]?.takeIf { WebEngine.EXA in settings.webEngines }?.let {
+                    ExaAlbumSearch(net, it, accentFolder)
+                },
+            webKept = trackOnly,
+        )
+
+    /**
+     * The web search for an artist the sources say nothing about, and what it found, kept per artist
+     * (#912, `PipelineParts.artistWeb`): Exa's search for the artist ([ExaArtistSearch]) with its key
+     * in [keys] while Exa is switched on in [settings], its lines kept in [trackOnly]
+     * ([ArtistWebSource]); none without that engine and key, as *AI web search* then makes no search.
+     * Read when the list is built, as the adapters' keys are ([adapters]).
+     */
+    fun artistWeb(
+        keys: SourceKeys,
+        settings: Settings,
+    ): ArtistWebLookup? =
+        keys.web[WebEngine.EXA]?.takeIf { WebEngine.EXA in settings.webEngines }?.let {
+            ArtistWebSource(ExaArtistSearch(net, it, accentFolder), names, kept = trackOnly)
+        }
+
+    // What the search in the track's language found about each artist and album: one for the
+    // wiring, so what it keeps in memory lasts the process, whatever the parts built since.
+    private val languageLinesSource = LanguageLinesSource(Normalizer(accentFolder), artists, keepsArtists, epoch)
+
+    /**
+     * What the search in the track's language found about an artist or an album, kept per artist and
+     * per album (#939, `PipelineParts.languageLines`): in [artists] while *Keep what sources said about
+     * each artist* is on ([keepsArtists]), else in memory for the process ([LanguageLinesSource]). One
+     * for the wiring, so each build of the parts shares it.
+     */
+    val languageLines: ItemLanguageLines get() = languageLinesSource
+
+    /**
      * Forgets MusicBrainz's answers kept in memory ([RememberedMusicBrainz]), for *Clear history*
-     * (#547); nothing to forget without [rememberMusicBrainz].
+     * (#547), nothing to forget without [rememberMusicBrainz]; and the lines in the track's language
+     * kept in memory ([languageLines], #939).
      */
     suspend fun forgetRemembered() {
         (musicBrainz as? RememberedMusicBrainz)?.forget()
+        languageLinesSource.forget()
     }
 
     /** The AI services with a client, by service. */
@@ -152,7 +230,7 @@ class PipelineWiring internal constructor(
             ProviderId.ANTHROPIC to AnthropicProvider(net, HostPolicies.RETRY),
             ProviderId.OPENAI to OpenAiProvider(net, HostPolicies.RETRY),
             ProviderId.GOOGLE to GoogleProvider(net, HostPolicies.RETRY),
-        )
+        ).mapValues { aiThrough(it.value) }
 
     /**
      * The adapters for `PipelineParts.adapters`: MusicBrainz and Wikipedia (with Wikidata), which
@@ -206,6 +284,27 @@ class PipelineWiring internal constructor(
         engines[WebEngine.EXA]?.let { ExaWebSearch(net, it, accentFolder) }
 
     /**
+     * The search in the track's language (#902, `PipelineParts.languageSearch`): the language's
+     * Wikipedia, with Wikidata's names in it and its identity check, and the web search in it through
+     * the [engines] given, each with its key ([ExaLanguageSearch]), or none without one. The
+     * pipeline reads *Search in the track's language* and each source's switch for each track.
+     * Wikidata's genres only with [genres], as [wikipedia]'s.
+     */
+    fun languageSearch(
+        engines: Map<WebEngine, Secret>,
+        genres: Boolean = true,
+    ): LanguageSearch {
+        val check = IdentityCheck(WikidataClient(net), names, genres)
+        return LanguageSources(
+            WikidataClient(net),
+            check,
+            musicBrainz,
+            wikipedia = LanguageWikipedia(net, check),
+            web = engines[WebEngine.EXA]?.let { ExaLanguageSearch(net, it, accentFolder) },
+        )
+    }
+
+    /**
      * *AI web search*'s searches (#801, `PipelineParts.webSearch`) through the [engines] given, each
      * with its key, or null for none: Exa's ([ExaPageSearch]), the only engine (D11).
      */
@@ -220,6 +319,18 @@ class PipelineWiring internal constructor(
 
     override fun close() {
         if (ownsNet) net.close()
+    }
+
+    companion object {
+        /**
+         * The parts of the artist-level table kept whatever *Keep what sources said about each
+         * artist* says, which its switching off does not clear (#885): an album's web lines
+         * ([AlbumSource.WEB_PART]), paid for and found by the album, and an artist's (#912,
+         * [ArtistWebSource.PART]), paid for and found by the artist's insight, as a track's own web
+         * findings are kept in the retrieval cache (`SourceResult.trackOnly`). *Clear history*
+         * clears them.
+         */
+        val TRACK_ONLY_PARTS: Set<String> = setOf(AlbumSource.WEB_PART.name, ArtistWebSource.PART.name)
     }
 }
 

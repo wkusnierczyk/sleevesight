@@ -27,13 +27,22 @@ data class GenreDefinition(
  */
 fun interface GenreArticles {
     suspend fun definition(musicBrainzGenre: String): Lookup<GenreDefinition>
+
+    /**
+     * The article [title] itself, for a genre the vocabulary names one for
+     * ([GenreVocabulary.wikipediaArticle], #852): its lead, as [definition] quotes it. Not found
+     * when there is no such article or its lead gives no sentence; failed when the request failed.
+     * None by default, for fakes that only answer [definition].
+     */
+    suspend fun article(title: String): Lookup<GenreDefinition> = Lookup.NotFound
 }
 
 /**
  * The definitions a genre's panel shows (#523; `design/design.md`, *Genre labels*): a genre's own,
  * the same for every track, so each is found once and kept per genre, by its MusicBrainz genre
- * ([GenreVocabulary.musicBrainzGenre]). A genre that is not one of MusicBrainz's has none, nor one
- * whose genre has no English article, and its panel says so; *Why is this …?* is offered either way.
+ * ([GenreVocabulary.musicBrainzGenre]), or, for a genre the vocabulary names an article for
+ * ([GenreVocabulary.wikipediaArticle], #852), by that article. A genre with neither has none, nor
+ * one whose article is not found, and its panel says so; *Why is this …?* is offered either way.
  *
  * Kept in [kept], the artist-level cache's table (#238), under [PART], for Wikipedia's lifetime
  * (*How long each source's findings are kept*, D9), whatever *Keep what sources said about each
@@ -55,14 +64,17 @@ class GenreDefinitions(
 
     /**
      * The definition of the genre [identity] stands for ([GenreLabel.identity]), kept or looked up:
-     * not found when it has none (it is not one of MusicBrainz's genres, or its genre has no English
-     * article), which its panel says (#663); failed when the lookup failed, and nothing is kept.
+     * from the article the vocabulary names for it, else through its MusicBrainz genre; not found
+     * when it has none (neither, or no article is found), which its panel says (#663); failed when
+     * the lookup failed, and nothing is kept.
      */
     suspend fun lookup(identity: String): Lookup<GenreDefinition> {
-        val genre = vocabulary.musicBrainzGenre(identity) ?: return Lookup.NotFound
+        val title = vocabulary.wikipediaArticle(identity)
+        val genre = vocabulary.musicBrainzGenre(identity)
+        val key = title?.let { ARTICLE + it } ?: genre ?: return Lookup.NotFound
         val found =
-            kept.tagsOf(genre) {
-                when (val answer = articles.definition(genre)) {
+            kept.tagsOf(key) {
+                when (val answer = title?.let { articles.article(it) } ?: articles.definition(checkNotNull(genre))) {
                     is Lookup.Found -> answer.value.let { Lookup.Found(listOf(it.text, it.title, it.url)) }
                     Lookup.NotFound -> Lookup.NotFound
                     is Lookup.Failed -> answer
@@ -77,10 +89,12 @@ class GenreDefinitions(
 
     companion object {
         /**
-         * A genre's definition in the artist-level cache, by its MusicBrainz genre: a JSON array of
-         * its text, the article's title and its address, or an empty one for a genre with no article.
+         * A genre's definition in the artist-level cache, by its MusicBrainz genre, or by [ARTICLE]
+         * and the title of the article the vocabulary names for it: a JSON array of its text, the
+         * article's title and its address, or an empty one for a genre with no article. Extraction 2
+         * (#850): brackets a dropped pronunciation left empty are removed (`WikipediaSource.tidy`).
          */
-        val PART: ArtistPart = ArtistPart("wikipedia.genre", 1, 1, setOf(SourceId.WIKIPEDIA))
+        val PART: ArtistPart = ArtistPart("wikipedia.genre", 2, 1, setOf(SourceId.WIKIPEDIA))
 
         /** In memory, without a store: Wikipedia's default lifetime. */
         val DEFAULT_LIFETIME: Duration = Settings.DEFAULT_CACHE_LIFETIMES.getValue(SourceId.WIKIPEDIA)
@@ -89,6 +103,9 @@ class GenreDefinitions(
         const val DEFAULT_CAPACITY: Int = 200
 
         private const val FIELDS = 3
+
+        /** Before an article's title, in a key, so it is never taken for a MusicBrainz genre's id. */
+        internal const val ARTICLE: String = "enwiki:"
 
         /** Why a lookup failed: the request's own reason is not kept past it. */
         const val FAILED: String = "lookup failed"

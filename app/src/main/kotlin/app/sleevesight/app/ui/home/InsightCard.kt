@@ -24,14 +24,16 @@ import app.sleevesight.app.ui.report.ReportAction
 import app.sleevesight.core.pipeline.InsightState
 
 /**
- * *Key insights*: the insight in each of its states (architecture, *Errors and empty
- * states*). Model prose is plain text: its only interactive parts are the citation chips, built
- * from the evidence ids the app assigned, each scrolling to its line. Write, Rewrite and Stop go
- * to the pipeline as taps; whether a tap writes or stops is the pipeline's to say. Under a written
- * insight, its footer ([Footer], #671), each part on its own line: *As written previously.* with what
- * follows from it, for an insight written earlier; [GroundingLine], a note, or with
- * [groundingDetails] (*Show grounding details*, #437) the grounding check's counts in full; and
- * *Report a problem* (#390), which hands the insight and its track to [InsightActions.onReport].
+ * *Key insights*: the insight in each of its states (architecture, *Errors and empty states*).
+ * Model prose is plain text: its only interactive parts are the citation chips, built from the
+ * evidence ids the app assigned, each scrolling to its line. Write, Rewrite and Stop go to the
+ * pipeline as taps; whether a tap writes or stops is the pipeline's to say. Under a written
+ * insight, its footer ([Footer], #671), each part on its own line: *As written previously.* with
+ * what follows from it, for an insight written earlier, or *Rewritten with …* for one *Rewrite
+ * insight* wrote (#854), or an automatic write in place of another model's (#972); [GroundingLine],
+ * a note, or with [groundingDetails] (*Show grounding details*, #437) the grounding check's counts
+ * in full; and *Report a problem* (#390), which hands the insight and its track to
+ * [InsightActions.onReport].
  *
  * No container of its own (#609): the heading and the text sit on Home's background with the rest.
  * At the card's end, in every state, the split button (#615, [WriteSplitButton]): the card's action
@@ -128,7 +130,8 @@ private fun InsightBody(
     groundingDetails: Boolean,
 ) {
     // A model found unavailable (#540): said in place of why nothing is written, or of the failure
-    // it caused; the split button offers no Write, which would fail again.
+    // it caused; the split button offers no Write, which would fail again. With an insight, it is
+    // said under it, last in its footer (#911).
     val unavailable = context.unavailable
     if (unavailable != null && withoutInsight(insight)) {
         ModelUnavailable(unavailable, actions.onSettings)
@@ -196,15 +199,21 @@ private fun Written(
 /**
  * The footer under a written insight (#671): each part on its own line, at the start, top to
  * bottom, so each wraps on its own at a large font size and a screen reader reads them in order:
- * - *As written previously.* ([writtenBefore]), with what follows from it on the same line;
+ * - *As written previously.*, or for an insight a rewrite wrote (*Rewrite insight*, #854, or an
+ *   automatic write in place of another model's, #972), *Rewritten with …* ([writtenBefore]), with
+ *   what follows from it on the same line;
  * - while *Look again* looks the sources up, what it is doing ([lookingAgainLine]), with the turning
  *   record before it (#785);
  * - the grounding line ([GroundingLine]): the note on the dimmed sentences, or, with
  *   [groundingDetails] (developer mode, inside its mark), the grounding check's counts. The note
  *   stays where the counts are, which take its place in developer mode: under the line about the
  *   insight's history and above *Report a problem*, the action it leads to;
+ * - which citations it translated from the track's language ([TranslatedLine], #902);
  * - that the reply stopped early, for an incomplete insight;
- * - *Report a problem* ([ReportAction]), in the theme's error colour.
+ * - *Report a problem* ([ReportAction]), in the theme's error colour;
+ * - while the model is found unavailable (#540), that it is ([ModelUnavailable]), with its link to the
+ *   settings (#911): last, just above the split button, whose Write it leaves disabled, and in place
+ *   of what *Rewrite insight* would use, which is not offered then.
  */
 @Composable
 private fun Footer(
@@ -225,8 +234,11 @@ private fun Footer(
         }
         // Not *Kept from before.*: the line above says so.
         GroundingLine(insight.grounded, details = groundingDetails)
+        TranslatedLine(insight.grounded, context.track?.evidence, insight.held)
         if (!insight.complete) Quiet(stringResource(R.string.home_insight_incomplete))
         context.track?.let { track -> ReportAction { actions.onReport(track, insight) } }
+        // Last, just above the split button's disabled Write, which it explains (#911).
+        context.unavailable?.let { ModelUnavailable(it, actions.onSettings) }
     }
 }
 
@@ -234,12 +246,17 @@ private fun Footer(
  * The footer's first line (#671): *As written previously.* for an insight not written in this run
  * but earlier, on an earlier play of the track (from the cache, or the card paid for shown in place
  * of an insight the run lacks, #606), or before a *Look again*, a settings change or a rewrite that
- * failed; then, on the same line, what follows from it, in the order it happened: that a rewrite
- * failed or was stopped, what *Look again* found (#617, [lookAgainLine]), and that *Rewrite insight*
- * writes it with the updated settings, while offered (#615, #625; not for what a look again found,
- * whose own words say what *Rewrite insight* uses). What *Look again* is looking up is not on this
- * line but on its own under it (#785, [lookingAgainLine]); while it looks ([lookingAgain]), the line
- * shows all the same. Null for an insight just written, with nothing to follow.
+ * failed. For an insight a rewrite wrote (*Rewrite insight*, or an automatic write in place of the
+ * insight another model kept, #972), *Rewritten with …* in its place, never both
+ * ([rewrittenLine], #854): on the play it was rewritten, though just written, and on every later
+ * one while it is the one kept. Then, on the same line, what follows from it, in the order it
+ * happened: that a rewrite failed or was stopped (not that the service refused the model while it is
+ * found unavailable, which the footer's last line says, #969: [rewriteFailureShown]), that *Look
+ * again* found nothing new (#617, [lookAgainLine]), and, while *Rewrite insight* is offered (#615,
+ * #625), what it would rewrite the insight with ([rewriteOfferLine], #854), what a look again found
+ * new included. What *Look again* is looking up is not on this line but on its own under it (#785,
+ * [lookingAgainLine]); while it looks ([lookingAgain]), the line shows all the same. Null for an
+ * insight written the first time just now, with nothing to follow.
  */
 @Composable
 private fun writtenBefore(
@@ -250,20 +267,24 @@ private fun writtenBefore(
     val after =
         buildList {
             // In the order things happened: a rewrite that failed, then what a later look again found.
-            context.rewriteFailed?.let { add(rewriteFailure(it)) }
+            // Not a model refused while the note under the footer says it is unavailable (#969).
+            rewriteFailureShown(context.rewriteFailed, context.unavailable)?.let { add(rewriteFailure(it)) }
             lookAgainLine(context)?.let { add(stringResource(it)) }
-            if (offersRewrite(context) && !context.offers.somethingNew) {
-                add(stringResource(R.string.home_rewrite_offered))
-            }
+            rewriteOfferLine(context)?.let { add(it) }
         }
-    val kept = insight.cached || context.cardShown
-    if (!kept && after.isEmpty() && !lookingAgain) return null
-    return (listOf(stringResource(R.string.home_written_before)) + after).joinToString(" ")
+    val rewritten = rewrittenLine(insight)
+    // Kept from before, or rewritten: said on its own; else only with something to follow.
+    val said = insight.cached || context.cardShown || rewritten != null
+    if (!said && after.isEmpty() && !lookingAgain) return null
+    return (listOf(rewritten ?: stringResource(R.string.home_written_before)) + after).joinToString(" ")
 }
 
-// Why the card's rewrite ended without an insight: stopped, or failed and why.
+/**
+ * Why a rewrite ended without an insight (#854): stopped ([PipelineHost.STOPPED]), or failed and why;
+ * said after *As written previously.*, by the key insight's footer and by the items' (#911).
+ */
 @Composable
-private fun rewriteFailure(why: String): String =
+internal fun rewriteFailure(why: String): String =
     if (why == PipelineHost.STOPPED) {
         stringResource(R.string.home_rewrite_stopped)
     } else {

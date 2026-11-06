@@ -57,6 +57,7 @@ import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.platform.JvmHasher
+import app.sleevesight.core.settings.NewTrackFold
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.sources.Rejection
 import app.sleevesight.core.synthesis.GroundingCheck
@@ -405,7 +406,7 @@ class SourcesFoldScreenTest {
 
     @Test
     fun aNewTrackKeepsTheFoldAsLeftWithTheSettingOnAtItsFirstScreenful() {
-        val keep = Settings(keepSourcesUnfolded = true)
+        val keep = Settings(sourcesOnNewTrack = NewTrackFold.AS_LEFT)
         show(state(long(20), keep)) { current ->
             open()
             tap(FOLD_MORE_TAG)
@@ -512,7 +513,7 @@ class SourcesFoldScreenTest {
 
     @Test
     fun withTheSettingOnATrackPlayedAgainAfterOthersComesBackAtItsFirstScreenful() {
-        val keep = Settings(keepSourcesUnfolded = true)
+        val keep = Settings(sourcesOnNewTrack = NewTrackFold.AS_LEFT)
         show(state(long(20), keep)) { current ->
             open()
             tap(FOLD_MORE_TAG)
@@ -535,7 +536,7 @@ class SourcesFoldScreenTest {
 
     @Test
     fun theFoldOutlivesAWhileWithNothingPlaying() {
-        val keep = Settings(keepSourcesUnfolded = true)
+        val keep = Settings(sourcesOnNewTrack = NewTrackFold.AS_LEFT)
         show(state(long(20), keep)) { current ->
             open()
             current.value = NowPlayingState(PipelineView(), playing = null, settings = keep)
@@ -548,7 +549,7 @@ class SourcesFoldScreenTest {
 
     @Test
     fun howMuchShowsIsAnnouncedOnlyOnceTheFoldWasChangedOnTheTrack() {
-        val keep = Settings(keepSourcesUnfolded = true)
+        val keep = Settings(sourcesOnNewTrack = NewTrackFold.AS_LEFT)
         show(state(long(20), keep)) { current ->
             open()
             assertTrue(announced())
@@ -622,7 +623,7 @@ class SourcesFoldScreenTest {
 
     @Test
     fun aTrackChangeWhileTheSettingsAreUnreadFoldsTheListWhenTheyKeepNone() {
-        val keep = Settings(keepSourcesUnfolded = true)
+        val keep = Settings(sourcesOnNewTrack = NewTrackFold.AS_LEFT)
         show(state(long(20), keep)) { current ->
             open()
             tap(FOLD_MORE_TAG)
@@ -640,7 +641,7 @@ class SourcesFoldScreenTest {
 
     @Test
     fun aTrackChangeWhileTheSettingsAreUnreadKeepsTheFoldTheyKeep() {
-        val keep = Settings(keepSourcesUnfolded = true)
+        val keep = Settings(sourcesOnNewTrack = NewTrackFold.AS_LEFT)
         show(state(long(20), keep)) { current ->
             open()
             tap(FOLD_MORE_TAG)

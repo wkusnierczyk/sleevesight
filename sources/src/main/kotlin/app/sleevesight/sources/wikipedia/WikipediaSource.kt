@@ -102,7 +102,12 @@ class WikipediaSource(
             if (part.unreachable) findings.unreachable = true
         }
         findings.artistFound = parts.any { it.accepted }
-        val evidence = songLines?.drafts.orEmpty() + parts.flatMap { it.lines }
+        // Each artist's lines say which artist they are about (#522), as the track credits it.
+        val artistLines =
+            credits.zip(parts).flatMap { (artist, part) ->
+                part.lines.map { it.copy(about = artist.name) }
+            }
+        val evidence = songLines?.drafts.orEmpty() + artistLines
         return SourceResult(
             findings.outcome(),
             evidence,
@@ -318,7 +323,7 @@ class WikipediaSource(
             }
         val subjects =
             listOfNotNull(accepted.item.label, track.title.takeIf { accepted.scope != Scope.ARTIST })
-        val sentences = lead?.let { sentences(it, subjects) }.orEmpty()
+        val sentences = lead?.let { sentences(it, subjects, names) }.orEmpty()
         val quoted =
             sentences.map {
                 EvidenceDraft(SourceId.WIKIPEDIA, accepted.scope, it, title?.let(::articleUrl), retrievedAt)
@@ -326,26 +331,31 @@ class WikipediaSource(
         return Lines(quoted + WikidataEvidence.lines(accepted, retrievedAt), unreachable)
     }
 
-    // The lead's sentences that name one of [subjects], short enough to quote, at most MAX_SENTENCES.
-    private fun sentences(
-        lead: String,
-        subjects: List<String>,
-    ): List<String> {
-        val keys = subjects.map { " ${names.key(it)} " }.filter { it.isNotBlank() }
-        // The lead's first sentence defines the subject, often under a fuller name ("Gordon Meredith
-        // Lightfoot Jr."), so it is taken whether or not it names the subject as the label does.
-        // Only the first piece of the first paragraph is exempt: if the splitter drops it, no other
-        // sentence takes its place unchecked.
-        val paragraphs = lead.split('\n').map { tidy(it) }.filter { it.isNotEmpty() }
-        val first = paragraphs.firstOrNull()?.let { LastFmBio.split(it).firstOrNull() }
-        return paragraphs
-            .flatMap { split(it) }
-            .filter { sentence -> sentence == first || keys.any { it in " ${names.key(sentence)} " } }
-            .filter { it.length <= MAX_SENTENCE_LENGTH }
-            .take(MAX_SENTENCES)
-    }
-
     companion object {
+        /**
+         * The lead's sentences that name one of [subjects], as [names] reads names, short enough to
+         * quote, at most [MAX_SENTENCES]; the first sentence whether or not it names one. For an
+         * album's article too (#522, `AlbumSource`).
+         */
+        internal fun sentences(
+            lead: String,
+            subjects: List<String>,
+            names: NameMatcher,
+        ): List<String> {
+            val keys = subjects.map { " ${names.key(it)} " }.filter { it.isNotBlank() }
+            // The lead's first sentence defines the subject, often under a fuller name ("Gordon Meredith
+            // Lightfoot Jr."), so it is taken whether or not it names the subject as the label does.
+            // Only the first piece of the first paragraph is exempt: if the splitter drops it, no other
+            // sentence takes its place unchecked.
+            val paragraphs = lead.split('\n').map { tidy(it) }.filter { it.isNotEmpty() }
+            val first = paragraphs.firstOrNull()?.let { LastFmBio.split(it).firstOrNull() }
+            return paragraphs
+                .flatMap { split(it) }
+                .filter { sentence -> sentence == first || keys.any { it in " ${names.key(sentence)} " } }
+                .filter { it.length <= MAX_SENTENCE_LENGTH }
+                .take(MAX_SENTENCES)
+        }
+
         /**
          * A resolved artist's article in the artist cache (#238), by its MusicBrainz id and the name
          * as credited, a space between ([StoredArtist]): its Wikipedia sentences and Wikidata lines,
@@ -359,9 +369,9 @@ class WikipediaSource(
          * [extractionVersion]: raised when what the adapter makes of the articles changes, or the
          * resolution it checks them against. 2: a joint credit resolves on MusicBrainz (#661), so a
          * result kept against the earlier resolution's miss is looked up again; [ARTIST_PART] goes
-         * with it.
+         * with it. 3: brackets a dropped pronunciation leaves empty are removed ([tidy], #850).
          */
-        const val EXTRACTION_VERSION: Int = 2
+        const val EXTRACTION_VERSION: Int = 3
 
         private val json = Json { encodeDefaults = false }
 
@@ -372,8 +382,12 @@ class WikipediaSource(
         const val MAX_SENTENCE_LENGTH: Int = 300
 
         // The plain-text extract drops pronunciations and leaves their punctuation behind:
-        // `Frehley (, FRAY-lee; April 27, 1951 – …)`. Only that, and doubled spaces, are tidied.
+        // `Frehley (, FRAY-lee; April 27, 1951 – …)`, or brackets with nothing left in them:
+        // `Basia Bulat (), is`. Only those, and doubled spaces, are tidied. Empty brackets that open a
+        // paragraph are kept: they are a title there, as Sigur Rós's album `( )`, whose article opens
+        // with it. Mid-sentence, such a title would go with them, a known limit.
         private val ORPHANED_PUNCTUATION = Regex("\\(\\s*[,;]\\s*")
+        private val EMPTY_BRACKETS = Regex("(?<=\\S)\\s*\\([\\s,;]*\\)")
         private val SPACES = Regex(" {2,}")
 
         /**
@@ -412,9 +426,16 @@ class WikipediaSource(
         private fun balanced(text: String): Boolean =
             text.count { it == '"' } % 2 == 0 && text.count { it == '“' } == text.count { it == '”' }
 
-        /** [paragraph] with the punctuation a dropped pronunciation leaves, and doubled spaces, tidied. */
+        /**
+         * [paragraph] with the punctuation a dropped pronunciation leaves, brackets it leaves empty
+         * (with the space before them), and doubled spaces, tidied.
+         */
         internal fun tidy(paragraph: String): String =
-            paragraph.replace(ORPHANED_PUNCTUATION, "(").replace(SPACES, " ").trim()
+            paragraph
+                .replace(ORPHANED_PUNCTUATION, "(")
+                .replace(EMPTY_BRACKETS, "")
+                .replace(SPACES, " ")
+                .trim()
 
         private val SMALL_WORDS =
             setOf(

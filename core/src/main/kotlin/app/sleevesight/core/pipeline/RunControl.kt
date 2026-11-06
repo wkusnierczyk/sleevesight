@@ -43,6 +43,28 @@ interface RunControl {
      */
     suspend fun decide(settings: Settings): Boolean
 
+    /**
+     * As [decide], with [kept] (#911): the insight kept for the run's track and [evidence] that
+     * another AI service, model or effort wrote, the most recently written, read only once no card
+     * is kept under the run's own key, so it never stands in for one; null for none. When the answer
+     * is false (Write offered), the control may show it as the track's insight paid for, with
+     * *Rewrite insight* offered beside it, so a play whose model has written none shows the one kept
+     * rather than nothing; when true, the call writes anew and it is not shown. By default [decide],
+     * [kept] not shown: the CLI and [Pipeline.follow] show nothing in its place.
+     */
+    suspend fun decide(
+        settings: Settings,
+        kept: InsightState.Written?,
+        evidence: EvidenceSet,
+    ): Boolean = decide(settings)
+
+    /**
+     * Whether [kept], given to [decide] and answered false, is shown as the track's insight (#911):
+     * the run then tells its artist facts to the listening session (#239), as for a card from the
+     * cache; one left out tells nothing. By default false, as [decide] shows none.
+     */
+    fun shows(kept: InsightState.Written): Boolean = false
+
     /** Whether a run that offers Write waits for a tap ([awaitTap]); if not, it ends offering it. */
     val waitsForTap: Boolean
 
@@ -120,6 +142,15 @@ interface RunControl {
         card: InsightState.Written,
         evidence: EvidenceSet,
     ) = Unit
+
+    /**
+     * What the model call about to be made would replace (#854): the insight kept for the run's
+     * track, which the call rewrites (*Rewrite insight*), with what it was written with and whether
+     * the run looked again; null when the call writes the track's first insight. The insight written
+     * says what the rewrite changed ([InsightState.Written.rewritten]). By default null: the CLI and
+     * [Pipeline.follow] keep no insight to replace.
+     */
+    fun rewriting(): Rewriting? = null
 
     /** Grants every step at once and writes when [write]: [Pipeline.run] for the CLI. */
     class Unattended(

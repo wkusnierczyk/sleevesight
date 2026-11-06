@@ -65,7 +65,8 @@ class SessionHistory(
         at: Instant,
         sessionGap: Duration,
         sameTrack: (NowPlaying) -> Boolean,
-    ): PlayedTrack = queries.transactionWithResult { start(track.copy(artUri = null), at, sessionGap, sameTrack) }
+    ): PlayedTrack =
+        queries.transactionWithResult { start(track.copy(artUri = null, play = null), at, sessionGap, sameTrack) }
 
     /**
      * [track], the last row's, plays on without a break, updated (rule 2); [sameTrack] says
@@ -79,10 +80,10 @@ class SessionHistory(
         sameTrack: (NowPlaying) -> Boolean,
     ): PlayedTrack =
         queries.transactionWithResult {
-            val kept = track.copy(artUri = null)
+            val kept = track.copy(artUri = null, play = null)
             val last = queries.last()
             if (last != null && sameTrack(last.track)) {
-                queries.playing(last, kept)
+                queries.playing(last, kept.filledFrom(last.track))
             } else {
                 start(kept, at, sessionGap, sameTrack)
             }
@@ -97,7 +98,7 @@ class SessionHistory(
         val last = queries.last() ?: return queries.insert(kept, at, session = 1)
         val withinGap = at - last.heardUntil <= sessionGap
         return when {
-            withinGap && sameTrack(last.track) -> queries.resumed(last, kept, at)
+            withinGap && sameTrack(last.track) -> queries.resumed(last, kept.filledFrom(last.track), at)
             withinGap -> queries.insert(kept, at, last.session)
             else -> queries.insert(kept, at, last.session + 1)
         }
@@ -120,9 +121,9 @@ class SessionHistory(
     /** The tracks of listening session [number], in the order they played. */
     fun session(number: Long): List<PlayedTrack> = queries.playedInSession(number).executeAsList().map(::playedTrack)
 
-    /** Records [change], with the playback states before it in the order they came. */
-    fun changed(change: TrackChangeRecord) {
-        queries.transaction {
+    /** Records [change], with the playback states before it in the order they came; returns its id. */
+    fun changed(change: TrackChangeRecord): Long =
+        queries.transactionWithResult {
             queries.trackChangeInsert(
                 player = change.player,
                 changed_at = change.changedAt.toEpochMilliseconds(),
@@ -146,6 +147,20 @@ class SessionHistory(
                     speed = state.speed.toDouble(),
                 )
             }
+            id
+        }
+
+    /**
+     * Deletes, in one transaction, the row [played] and the change [change] (either null for none),
+     * written for what turned out not to be a track (#880: an ad told only after it was recorded).
+     */
+    fun withdraw(
+        played: Long?,
+        change: Long?,
+    ) {
+        queries.transaction {
+            played?.let(queries::playedDelete)
+            change?.let(queries::trackChangeDelete)
         }
     }
 
@@ -229,6 +244,14 @@ class SessionHistory(
         queries.clear()
     }
 }
+
+/**
+ * This report of the track [row] holds, with the artists and album it leaves out kept from [row]:
+ * a later report (after a pause, or a restart, which forgets the play) never takes from a row what
+ * it learned.
+ */
+private fun NowPlaying.filledFrom(row: NowPlaying): NowPlaying =
+    copy(artists = artists.ifEmpty { row.artists }, album = album ?: row.album)
 
 private fun HistoryQueries.last(): PlayedTrack? = lastPlayed().executeAsOneOrNull()?.let(::playedTrack)
 

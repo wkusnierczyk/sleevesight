@@ -3,11 +3,13 @@ package app.sleevesight.app.ui.home
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.res.stringArrayResource
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.logo.Busy
+import app.sleevesight.app.ui.phoneDateForm
 import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
@@ -15,6 +17,7 @@ import app.sleevesight.app.ui.theme.linkedParts
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.synthesis.SearchAnswer
 import app.sleevesight.core.synthesis.SearchKind
+import app.sleevesight.core.text.DateWhen
 
 // The *Dates* panel under the album (#724): each date known about the album, the track and the song,
 // said in full.
@@ -153,17 +156,20 @@ internal fun dateText(sentence: DateSentence): AnnotatedString =
 
 /**
  * [date] as precisely as it is known ([DateWhen]): "on 29 July 2014" (the day without a leading
- * zero), "in July 2014", "in 2014"; as given when it has no year, which [homeDates] never gives.
+ * zero), "in July 2014", "in 2014"; as given when it has no year, which [homeDates] never gives. The
+ * date in English in the phone's form ([phoneDateForm], #957: "on July 29, 2014" on a phone set to US
+ * English), as the prompts ask the AI to write it, read again when the phone's language or region
+ * changes; the words around it from the resources.
  */
 @Composable
 internal fun whenText(date: String): String {
-    val months = stringArrayResource(R.array.home_dates_months)
-    return when (val known = DateWhen.of(date)) {
-        is DateWhen.Day ->
-            stringResource(R.string.home_dates_on_day, known.day.toString(), months[known.month - 1], known.year)
-        is DateWhen.Month -> stringResource(R.string.home_dates_in_month, months[known.month - 1], known.year)
-        is DateWhen.Year -> stringResource(R.string.home_dates_in_year, known.year)
-        null -> date
+    val known = DateWhen.of(date) ?: return date
+    val phone = LocalConfiguration.current.locales[0]
+    val words = remember(phone) { phoneDateForm(phone) }.format(known)
+    return when (known) {
+        is DateWhen.Day -> stringResource(R.string.home_dates_on_day, words)
+        is DateWhen.Month -> stringResource(R.string.home_dates_in_month, words)
+        is DateWhen.Year -> stringResource(R.string.home_dates_in_year, words)
     }
 }
 

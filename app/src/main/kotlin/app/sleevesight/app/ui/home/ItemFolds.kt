@@ -1,0 +1,208 @@
+package app.sleevesight.app.ui.home
+
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.res.stringResource
+import app.sleevesight.app.R
+import app.sleevesight.app.session.TrackIdentity
+import app.sleevesight.core.model.NowPlaying
+import app.sleevesight.core.pipeline.InsightItem
+import app.sleevesight.core.settings.NewTrackFold
+
+// The song's, the artist's and the album's insights under *Key insights* (#522): a row each, under
+// the key insight and before *Sources*, unfolding in place under *Expandable boxes* or opening a page
+// of its own under *Separate pages*.
+
+/** An item's row: the [item], and the [name] it goes by on the track playing. */
+internal class ItemRow(
+    val item: InsightItem,
+    val name: String,
+)
+
+/**
+ * The rows of [header], the track shown: the song by its title, the artist by the primary artist
+ * ([primary], as the normalizer reads the artists), the album by the player's album name; no row for
+ * one with no name (an album the player does not name, a blank title).
+ */
+internal fun itemRows(
+    header: NowPlaying,
+    primary: String,
+): List<ItemRow> =
+    listOfNotNull(
+        header.title.takeIf { it.isNotBlank() }?.let { ItemRow(InsightItem.SONG, it) },
+        primary.takeIf { it.isNotBlank() }?.let { ItemRow(InsightItem.ARTIST, it) },
+        header.album
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+            ?.let { ItemRow(InsightItem.ALBUM, it) },
+    )
+
+/** An item's kind, as its row and its page's title name it. */
+@Composable
+internal fun itemKind(item: InsightItem): String =
+    stringResource(
+        when (item) {
+            InsightItem.SONG -> R.string.home_item_song
+            InsightItem.ARTIST -> R.string.home_item_artist
+            InsightItem.ALBUM -> R.string.home_item_album
+        },
+    )
+
+/** The action of [item]'s button as a screen reader names it under *Expandable boxes* (#894). */
+internal fun itemShowAction(item: InsightItem): Int =
+    when (item) {
+        InsightItem.SONG -> R.string.home_item_show_song
+        InsightItem.ARTIST -> R.string.home_item_show_artist
+        InsightItem.ALBUM -> R.string.home_item_show_album
+    }
+
+/**
+ * Which rows are unfolded, kept across recompositions and a recreated screen, as *Sources*' fold is
+ * ([FoldMemory]): the items [open] on the track last shown, [track], and those a tap opened on it
+ * ([tapped], not saved), which write at once under an automatic mode whatever held the track's own
+ * writing back; of those, the ones whose tap's write is still to be asked for ([due], #948, saved
+ * with the track it is of, so a recreated screen still writes it once, and never on another track),
+ * once their state is known; and the rows whose name a tap showed whole ([whole], #894, not
+ * saved).
+ */
+@Stable
+internal class ItemFoldMemory(
+    open: Set<InsightItem> = emptySet(),
+    track: NowPlaying? = null,
+    due: Set<InsightItem> = emptySet(),
+) {
+    var open: Set<InsightItem> by mutableStateOf(open)
+    var track: NowPlaying? by mutableStateOf(track)
+    var tapped: Set<InsightItem> by mutableStateOf(emptySet())
+    var due: Set<InsightItem> by mutableStateOf(due)
+    var whole: Set<InsightItem> by mutableStateOf(emptySet())
+
+    companion object {
+        /**
+         * Saved as plain values: the items open, by name, the track as [savedTrack] keeps it, then the
+         * items whose tap's write is due on it (#948), last, so a state saved before them, which ends
+         * with the track, restores with none due.
+         */
+        val Saver: Saver<ItemFoldMemory, Any> =
+            listSaver(
+                save = { memory ->
+                    listOf<Any?>(names(memory.open)) + savedTrack(memory.track) + names(memory.due)
+                },
+                restore = { saved ->
+                    val due = (saved.getOrNull(DUE_AT) as? String).orEmpty()
+                    ItemFoldMemory(items(saved[0] as String), restoredTrack(saved.drop(1)), items(due))
+                },
+            )
+
+        // Where the items due are saved: after the items open and the track's five values.
+        private const val DUE_AT = 6
+
+        private fun names(items: Set<InsightItem>): String = items.joinToString(",") { it.name }
+
+        private fun items(names: String): Set<InsightItem> =
+            names
+                .split(',')
+                .mapNotNull { name -> InsightItem.entries.firstOrNull { it.name == name } }
+                .toSet()
+    }
+}
+
+/** The rows' memory, remembered above whatever comes and goes with the track, as *Sources*' is. */
+@Composable
+internal fun rememberItemFoldMemory(): ItemFoldMemory =
+    rememberSaveable(saver = ItemFoldMemory.Saver) {
+        ItemFoldMemory()
+    }
+
+/**
+ * Which rows are unfolded beside [playing]: as kept while it plays on the track last shown; for a
+ * new track, as [start] says (*Song, Artist and Album on a new track*): none, all, or as they were
+ * left; none while the settings are not read ([start] null). Worked out as it is read, so a new
+ * track never shows the last one's for a frame; [follow] then keeps them as the new track's.
+ */
+internal class ItemFolds(
+    private val memory: ItemFoldMemory,
+    private val playing: NowPlaying,
+    private val start: NewTrackFold?,
+) {
+    private val same: Boolean get() = memory.track?.let { TrackIdentity.playsOn(it, playing) } == true
+
+    /** The items unfolded. */
+    val open: Set<InsightItem>
+        get() =
+            when {
+                same -> memory.open
+                start == NewTrackFold.AS_LEFT -> memory.open
+                start == NewTrackFold.UNFOLDED -> InsightItem.entries.toSet()
+                else -> emptySet()
+            }
+
+    /** Whether [item]'s name is shown whole in its row, on the track playing (#894); a new track's are clipped. */
+    fun whole(item: InsightItem): Boolean = same && item in memory.whole
+
+    /** A tap on [item]'s name in its row (#894): shown whole, or clipped again. */
+    fun toggleWhole(item: InsightItem) {
+        val now = if (same) memory.whole else emptySet()
+        keep()
+        memory.whole = if (item in now) now - item else now + item
+    }
+
+    /** Whether [item] was opened by a tap on the track playing. */
+    fun tapped(item: InsightItem): Boolean = same && item in memory.tapped
+
+    /**
+     * The write of [item]'s opening by a tap on the track playing (#948): due until its state is known,
+     * and only while it stays open; then taken, not asked again.
+     */
+    fun opening(item: InsightItem): OpeningWrite =
+        if (same && item in memory.due) OpeningWrite(due = true) { memory.due -= item } else OpeningWrite.NONE
+
+    /** A tap on [item]'s row: unfolded, its write due (#948), or folded. */
+    fun toggle(item: InsightItem) {
+        val now = open
+        val opening = item !in now
+        keep()
+        memory.open = if (opening) now + item else now - item
+        memory.tapped = if (opening) memory.tapped + item else memory.tapped - item
+        memory.due = if (opening) memory.due + item else memory.due - item
+    }
+
+    /** On a new track, keeps the rows it shows as its own; not until the settings are read. */
+    fun follow() {
+        if (start == null || same) return
+        keep()
+    }
+
+    // The rows as shown, kept as the track playing's: a new track's start with no taps, no writes due,
+    // and every name clipped.
+    private fun keep() {
+        if (same) return
+        memory.open = open
+        memory.tapped = emptySet()
+        memory.due = emptySet()
+        memory.whole = emptySet()
+        memory.track = playing
+    }
+}
+
+/**
+ * The rows' folds beside [playing], from [memory], a new track's as [start] says; a new track's are
+ * kept as its own.
+ */
+@Composable
+internal fun itemFolds(
+    memory: ItemFoldMemory,
+    playing: NowPlaying,
+    start: NewTrackFold?,
+): ItemFolds {
+    val folds = ItemFolds(memory, playing, start)
+    SideEffect { folds.follow() }
+    return folds
+}

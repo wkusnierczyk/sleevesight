@@ -97,7 +97,7 @@ private val SOURCE_ROWS: List<SourceRow> =
  * while no AI service can be used ([aiServiceUsable]), its switch shows the value stored, dimmed,
  * and cannot be moved (#846). A web search engine's row is on while web search is on with that
  * engine ([Settings.isEnabled] needs both): switching it on turns both on, and off turns the engine
- * off.
+ * off. After the web search engines, *Search in the track’s language* ([TrackLanguageRow], #902).
  */
 @Composable
 internal fun SourcesSection(
@@ -106,44 +106,55 @@ internal fun SourcesSection(
     update: Update,
 ) {
     for (row in SOURCE_ROWS) {
-        val key =
-            when (row) {
-                is SourceRow.Source -> SecretId.forSource(row.switch)
-                is SourceRow.Engine -> SecretId.forEngine(row.engine)
-            }
-        val model = row is SourceRow.Source && row.switch == SourceSwitch.MODEL
-        // With no key saved, the switch is off and cannot be moved (#667); stored on with none, as
-        // before the keys' gate ([app.sleevesight.app.secrets.KeyGate]) writes it off, it shows off.
-        // With no AI service to use, *AI service knowledge* cannot be moved either (#846); unlike a
-        // keyed source's, its switch shows the value stored, which nothing here writes.
-        val usable = if (model) aiServiceUsable(settings, secrets) else key == null || keySaved(secrets[key])
-        val checked = row.on(settings) && (key == null || secrets[key] != SecretState.ABSENT)
-        val name = stringResource(row.name)
-        val aiServices = stringResource(R.string.settings_section_ai)
-        val summary =
-            if (model) {
-                // With no AI service on, it says so: there is no model to ask (#538, #581).
-                lines(
-                    stringResource(row.summary, aiServices),
-                    stringResource(R.string.settings_source_model_no_service)
-                        .takeIf { noAiServiceOn(settings, secrets) },
-                )
-            } else {
-                lines(stringResource(row.summary), key?.let { keyNote(it, secrets, linked = true) })
-            }
-        SwitchRow(
-            title = name,
-            summary = summary,
-            checked = checked,
-            leading = { ServiceBadge(row.badge) },
-            below = {
-                key?.let { KeyLink(it, secrets[it]) }
-                row.url?.let { WebsiteLink(name, it) }
-            },
-            summaryLink = settingsLink(aiServices, SettingsTarget.aiServices).takeIf { model },
-            onChange = { on: Boolean -> update { switched(it, row, on) } }.takeIf { usable },
-        )
+        SourceSwitchRow(row, settings, secrets, update)
+        if (row is SourceRow.Engine && row.engine == WebEngine.EXA) TrackLanguageRow(settings, update)
     }
+}
+
+/** One of *Sources*' rows of [SOURCE_ROWS], as [SourcesSection] says. */
+@Composable
+private fun SourceSwitchRow(
+    row: SourceRow,
+    settings: Settings,
+    secrets: Map<SecretId, SecretState>,
+    update: Update,
+) {
+    val key =
+        when (row) {
+            is SourceRow.Source -> SecretId.forSource(row.switch)
+            is SourceRow.Engine -> SecretId.forEngine(row.engine)
+        }
+    val model = row is SourceRow.Source && row.switch == SourceSwitch.MODEL
+    // With no key saved, the switch is off and cannot be moved (#667); stored on with none, as
+    // before the keys' gate ([app.sleevesight.app.secrets.KeyGate]) writes it off, it shows off.
+    // With no AI service to use, *AI service knowledge* cannot be moved either (#846); unlike a
+    // keyed source's, its switch shows the value stored, which nothing here writes.
+    val usable = if (model) aiServiceUsable(settings, secrets) else key == null || keySaved(secrets[key])
+    val checked = row.on(settings) && (key == null || secrets[key] != SecretState.ABSENT)
+    val name = stringResource(row.name)
+    val aiServices = stringResource(R.string.settings_section_ai)
+    val summary = if (model) stringResource(row.summary, aiServices) else stringResource(row.summary)
+    // What the switch needs, under the description, in full: not folded as it is (#847). With no
+    // AI service on, *AI service knowledge* says so: there is no model to ask (#538, #581).
+    val note =
+        if (model) {
+            stringResource(R.string.settings_source_model_no_service).takeIf { noAiServiceOn(settings, secrets) }
+        } else {
+            key?.let { keyNote(it, secrets, linked = true) }
+        }
+    SwitchRow(
+        title = name,
+        summary = summary,
+        note = note,
+        checked = checked,
+        leading = { ServiceBadge(row.badge) },
+        below = {
+            key?.let { KeyLink(it, secrets[it]) }
+            row.url?.let { WebsiteLink(name, it) }
+        },
+        summaryLink = settingsLink(aiServices, SettingsTarget.aiServices).takeIf { model },
+        onChange = { on: Boolean -> update { switched(it, row, on) } }.takeIf { usable },
+    )
 }
 
 /** [settings] with [row] switched [on]. */
@@ -182,12 +193,6 @@ internal fun WebsiteLink(
         onClick = rememberOpenUrl(url),
     )
 }
-
-/** [first], and [second] on a line of its own when there is one. */
-internal fun lines(
-    first: String,
-    second: String?,
-): String = if (second == null) first else "$first\n$second"
 
 /**
  * What a row that needs the key [id] says of it, where the key is not saved and readable: that it
@@ -243,7 +248,9 @@ internal fun GenresSection(
         val name = stringResource(labelSourceName(source))
         SwitchRow(
             title = name,
-            summary = lines(stringResource(labelSourceSummary(source)), why),
+            summary = stringResource(labelSourceSummary(source)),
+            // Why the switch cannot be moved, in full: not folded as the description is (#847).
+            note = why,
             checked = offered && source in settings.labelSources,
             indent = true,
             leading = { ServiceBadge(source.source.tag) },
@@ -281,12 +288,17 @@ private fun labelSourcePage(source: LabelSource): String =
         LabelSource.MUSICBRAINZ -> "https://musicbrainz.org/doc/Folksonomy_Tagging"
     }
 
-/** *Sources*' rows as the settings' search finds them (#649): each by its name and what it is. */
+/**
+ * *Sources*' rows as the settings' search finds them (#649): each by its name and what it is; *Search
+ * in the track’s language* (#902) also by its choices and what each does.
+ */
 @Composable
 internal fun sourceIndexRows(): List<IndexedRow> {
     val aiServices = stringResource(R.string.settings_section_ai)
-    return SOURCE_ROWS.map { source ->
-        // *AI service knowledge*'s description names *AI services*.
-        indexRow(stringResource(source.name), stringResource(source.summary, aiServices))
-    }
+    val sources =
+        SOURCE_ROWS.map { source ->
+            // *AI service knowledge*'s description names *AI services*.
+            indexRow(stringResource(source.name), stringResource(source.summary, aiServices))
+        }
+    return sources + trackLanguageIndexRow()
 }

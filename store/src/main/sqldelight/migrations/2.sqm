@@ -1,0 +1,3 @@
+-- Version 2 to 3 (#854): what the rewrite that wrote a card changed, kept with it, so a later play
+-- says it too. The rows of version 2 are kept as they are, with none: written the first time.
+ALTER TABLE synthesis ADD COLUMN rewritten TEXT;

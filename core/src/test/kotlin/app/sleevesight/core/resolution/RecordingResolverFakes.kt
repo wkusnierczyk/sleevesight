@@ -31,10 +31,28 @@ internal class FakeMusicBrainz(
     /** The recordings whose releases were looked up, in order. */
     val releasesAsked = mutableListOf<String>()
 
+    /** The search for the recordings released by a date (#906), whatever the date. */
+    var before: Lookup<List<MbRecording>> = Lookup.NotFound
+
+    /** Answers to the searches by date, in order, before [before]. */
+    val beforeAnswers = mutableListOf<Lookup<List<MbRecording>>>()
+
+    /** The dates searched by, in order. */
+    val beforeAsked = mutableListOf<String>()
+
     override suspend fun searchRecordings(
         title: String,
         artist: String,
     ) = search
+
+    override suspend fun searchRecordingsBefore(
+        title: String,
+        artist: String,
+        date: String,
+    ): Lookup<List<MbRecording>> {
+        beforeAsked += date
+        return beforeAnswers.removeFirstOrNull() ?: before
+    }
 
     override suspend fun recording(mbid: String): Lookup<MbRecordingDetail> =
         recordingFailure?.let { Lookup.Failed(it) } ?: recordings[mbid]?.let { Lookup.Found(it) } ?: Lookup.NotFound

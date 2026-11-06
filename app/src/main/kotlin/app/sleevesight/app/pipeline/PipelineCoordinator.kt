@@ -74,6 +74,15 @@ sealed interface CoordinatorEvent {
         val cause: ChangeCause = ChangeCause.NATURAL_END,
     ) : CoordinatorEvent
 
+    /**
+     * The session layer took back [nowPlaying], published as a track before it was told to be an ad
+     * (#880: the queue that names it one came after its metadata and state had settled). Its report
+     * gets no run, and a run of it already started is cancelled.
+     */
+    data class Withdrawn(
+        val nowPlaying: NowPlaying,
+    ) : CoordinatorEvent
+
     /** The debounce of report [report] passed. */
     data class Settled(
         val report: Long,
@@ -190,12 +199,16 @@ sealed interface CoordinatorEvent {
      * that *Reactive* writes on, once the user has acted, under the run's
      * settings (`AutoWrite.causes`: none while *Show insights* is off or under *On demand*), and
      * [allowModel] whether its settings allow the model's own knowledge (#192: a run that asks
-     * again writes without a tap only under the settings the track was decided under).
+     * again writes without a tap only under the settings the track was decided under). [kept] is
+     * the insight kept for its track and evidence by another AI service, model or effort (#911,
+     * `RunControl.decide`), null for none: when the answer offers Write, it goes in the ledger as the
+     * card paid for, so it is shown, with *Rewrite insight* offered beside it.
      */
     data class InsightAsked(
         val run: RunId,
         val writesOn: Set<ChangeCause>,
         val allowModel: Boolean = false,
+        val kept: Card? = null,
     ) : CoordinatorEvent
 
     /**
@@ -427,7 +440,9 @@ sealed interface CoordinatorEffect {
  * returns, from offline to online, so a run knows whether the network came back after its lookups
  * were granted (#192). [clears] counts *Clear history*'s clears (#547), and [cleared] is the track
  * playing at the last one, which gets no run (nor a rebuild's) until a report of another insight
- * track settles: no lookup, and no paid call, follows the clear on its own.
+ * track settles: no lookup, and no paid call, follows the clear on its own. [cleared] holds an ad
+ * told late the same way ([CoordinatorEvent.Withdrawn], #880), and [withdrawals] counts the runs of
+ * such ads cancelled, so the host forgets what they showed.
  */
 data class CoordinatorState(
     val acknowledged: Boolean = false,
@@ -455,6 +470,7 @@ data class CoordinatorState(
     val returns: Long = 0,
     val clears: Long = 0,
     val cleared: NowPlaying? = null,
+    val withdrawals: Long = 0,
 ) {
     /**
      * The insight ledger: one entry, for the current insight track ([sameInsightTrack]), saying
@@ -487,9 +503,16 @@ data class CoordinatorState(
      * without it. [paused] (#203) is the settings of a decision that offered Write, or found nothing
      * to narrate, only because the first action had expired: a run of the key asking again under
      * the same settings, with the latest report's cause still one they write on, says so too
-     * ([Run.lapsed]). It never decides a write. A lapsed Decide sets it; a decision for nothing to
+     * ([Run.lapsed]). It never decides a write. A lapsed Decide sets it, unless it takes the insight another service, model or effort kept
+     * (#911, [Run.kept]), which writes the ledger instead; a decision for nothing to
      * narrate sets it as [wouldWrite] is set, with the first action expired in place of made, and a
      * run of the key asking again keeps it under the same settings; any other decision drops it.
+     * [foundNew] (#854) is the fingerprint of the evidence a look again (#617) found something new
+     * in, compared with [card]: set when that run's evidence is assembled, dropped with the card it
+     * was compared with (a card written or shown in its place) and with the entry. While it is set, a
+     * rewrite used new findings, whichever run makes it (one that replaced the look again's for a
+     * settings change too), and updated sources besides when it writes from other evidence
+     * (`Rewriting.foundIn`, `rewriteParts`).
      */
     data class Ledger(
         val track: NowPlaying,
@@ -499,22 +522,31 @@ data class CoordinatorState(
         val card: Card? = null,
         val wouldWrite: WouldWrite? = null,
         val paused: WriteSettings? = null,
+        val foundNew: String? = null,
     )
 
     /**
      * What a decision for nothing to narrate that would have written leaves (#192): the
      * [settings] it was made under, and the sources [unreachable] then, against which a run that
-     * asks again measures new evidence, however many replacements came between.
+     * asks again measures new evidence, however many replacements came between; and, apart, the
+     * lookups in the track's language unreachable or provisional then ([inLanguage], #902,
+     * `Gathered.languageRetryable`).
      */
     data class WouldWrite(
         val settings: WriteSettings,
         val unreachable: Set<SourceId>,
+        val inLanguage: Set<SourceId> = emptySet(),
     ) {
-        /** Whether [gathered] holds lines from a source unreachable when the decision was made. */
+        /**
+         * Whether [gathered] holds lines from a source unreachable when the decision was made, or
+         * from a lookup in the track's language that failed then.
+         */
         fun brought(gathered: Gathered?): Boolean =
-            unreachable.any { source ->
-                (gathered?.sources?.get(source) as? SourceState.Done)?.result?.evidence?.isNotEmpty() == true
-            }
+            unreachable.any { source -> lines(gathered?.sources?.get(source)) } ||
+                inLanguage.any { source -> lines(gathered?.inLanguage?.sources?.get(source)) }
+
+        private fun lines(state: SourceState?): Boolean =
+            (state as? SourceState.Done)?.result?.evidence?.isNotEmpty() == true
     }
 
     /**
@@ -527,7 +559,10 @@ data class CoordinatorState(
      * card says so once opening Sleevesight has resumed it. [follows] when it followed another
      * insight track reported before, not the first report of the process. A report of the insight
      * track reported before keeps all three; an action in Sleevesight, or a tap on the Write
-     * offered for it, clears the first two.
+     * offered for it, clears the first two. [counted] when it counted one more track change away
+     * (#203), and [expiredAction] when that count expired the first action, with [keptTap] the kept
+     * tap of the run then current that the expiry dropped: what its withdrawal (an ad told late,
+     * #880) undoes. A report of the same insight track keeps all three.
      */
     data class Report(
         val seq: Long,
@@ -538,6 +573,16 @@ data class CoordinatorState(
         val tapOnly: Boolean = false,
         val whilePaused: Boolean = false,
         val follows: Boolean = false,
+        val counted: Boolean = false,
+        val expiredAction: Boolean = false,
+        val keptTap: KeptTap? = null,
+    )
+
+    /** The kept tap of run [run] ([Run.keepsTap], [Run.tapped]), as it stood before an expiry dropped it. */
+    data class KeptTap(
+        val run: RunId,
+        val keepsTap: Boolean,
+        val tapped: Boolean,
     )
 
     /**
@@ -553,7 +598,9 @@ data class CoordinatorState(
      * holds no report and is never current again, and its reports to the ledger are ignored, so
      * it cannot bring its track back; a report of its track that returns gets a run, and a
      * decision, of its own. [gathered] is what its sources ended with, once every one has landed;
-     * [lookedUp] the network's [returns] when its lookups were granted; [again] whether it asks
+     * [lookedUp] the network's [returns] when its lookups were first granted (its second grant, for
+     * the search in the track's language, #902, leaves it, so a return between the two still asks
+     * the English sources again); [again] whether it asks
      * again the sources its run before found unreachable (#192). [keepsTap] while such a run has not
      * decided and a run it replaced, itself or one before it, offered Write: a tap shown for that
      * run is kept ([tapped]), through further replacements, and answers its question as a tap.
@@ -564,6 +611,8 @@ data class CoordinatorState(
      * (*On track skip (auto)*, #625), the first action made. [lookAgain] on a run started by a tap
      * on *Look again* (#617) ([LookingAgain]). [retried] on a run started by a tap on *Retry*
      * (#724), and on every run replacing it: free, so it never writes unasked, only on a tap.
+     * [evidence] the fingerprint of its evidence, once assembled (#854). [kept] is the insight its
+     * question came with, kept by another AI service, model or effort (#911), until it is answered.
      */
     data class Run(
         val id: RunId,
@@ -586,7 +635,18 @@ data class CoordinatorState(
         val followed: Boolean = false,
         val lookAgain: LookingAgain? = null,
         val retried: Boolean = false,
-    )
+        val evidence: String? = null,
+        val kept: Card? = null,
+    ) {
+        /**
+         * What its look again (#617) found, as what a rewrite of it changed counts it (#854,
+         * `rewriteParts`): something new (true), nothing new (false), or no look again (null); and
+         * null too when it found nothing new but the evidence had changed against the card before it
+         * looked ([LookingAgain.changed]), so that change is still named, "updated sources".
+         */
+        val lookedAgain: Boolean?
+            get() = lookAgain?.let { if (it.foundNew == false && it.changed) null else it.foundNew }
+    }
 
     /**
      * What a run started by a tap on *Look again* (#617) compares: [shown], the evidence the card
@@ -594,7 +654,9 @@ data class CoordinatorState(
      * a line that says what none of [shown]'s says (`EvidenceSet.bringsNewSince`: order, spacing,
      * case, typography and lines missing never count); null before. [rewriting] whether the run it
      * replaced offered *Rewrite insight* for a settings change since the card was written (not for
-     * what an earlier look again found). A look
+     * what an earlier look again found). [changed] whether the evidence of the run it replaced was
+     * already not the card's (a source switched off, a key removed; #854): a look again that finds
+     * nothing new does not undo that, as missing lines never count as new. A look
      * again never writes: when it found something new, its question is answered by offering
      * *Rewrite insight*, the paid call made only on a tap of its own (`WriteTapped`); when not, it
      * offers it only if [rewriting].
@@ -603,6 +665,7 @@ data class CoordinatorState(
         val shown: EvidenceSet,
         val foundNew: Boolean? = null,
         val rewriting: Boolean = false,
+        val changed: Boolean = false,
     )
 
     /**
@@ -633,14 +696,12 @@ data class CoordinatorState(
      * track the ledger has written, and so is the run: a new length, album or artists of a
      * written track starts no run, so the insight paid for stays. An orphaned run holds nothing,
      * not even a report of its own key: a report of the run's key but another insight track
-     * (another player on the same release, or another media id or queue item with the same title,
-     * artists, album and length) is a track change, as [sameInsightTrack] judges it, so once it
-     * settles the run is replaced, a call under way is cut off, and the new track decides afresh
-     * (D5): written again where the mode and the first action allow, otherwise Write is offered.
-     * The coordinator follows the session layer's identity rather than a rule of its own (#255).
-     * #297 takes the queue slot out of identity for players that send no track id; the media id
-     * still decides when both reports send one, so another player on the same release, or another
-     * media id with the same metadata, stays a track change.
+     * (another player on the same release, or another media id with the same title, artists,
+     * album and length) is a track change, as [sameInsightTrack] judges it, so once it settles the
+     * run is replaced, a call under way is cut off, and the new track decides afresh (D5): written
+     * again where the mode and the first action allow, otherwise Write is offered. The coordinator
+     * follows the session layer's identity rather than a rule of its own (#255): since #297 the
+     * queue slot decides nothing, so the same track from another slot holds the run.
      */
     fun holds(
         run: Run,
@@ -665,7 +726,8 @@ data class CoordinatorState(
     /**
      * Whether the playing track's run asks its unreachable sources again now (back online, #192):
      * requests are allowed, the phone is online, and the current run has no model call under way
-     * (what it costs is not lost), its sources have landed with some unreachable, and the network
+     * (what it costs is not lost), its sources have landed with some unreachable (those searched in the
+     * track's language too, #902), and the network
      * came back after its lookups were granted. Once per return: the run that asks again has its
      * lookups granted after it.
      */
@@ -675,7 +737,7 @@ data class CoordinatorState(
             return allowed &&
                 online &&
                 !run.calling &&
-                run.gathered?.unreachable?.isNotEmpty() == true &&
+                run.gathered?.let { it.unreachable.isNotEmpty() || it.languageRetryable.isNotEmpty() } == true &&
                 run.lookedUp?.let { it < returns } == true
         }
 
@@ -766,6 +828,21 @@ data class CoordinatorState(
      * only on a tap ([Report.tapOnly], #625).
      */
     val waitsForTap: Boolean get() = !acted || expired || latest?.tapOnly == true
+
+    /**
+     * Whether the track playing would be written by itself now, by the rules alone, whatever its
+     * key insight came to (written, served from the cache, nothing to narrate, not decided yet): an
+     * automatic mode ([automatic]), the first action made and not expired by *Saver* ([waitsForTap]),
+     * the track not one that came to play while *Saver* had paused writing ([Report.whilePaused]), and
+     * the latest report's cause one the mode writes on (*On track skip (auto)* not on a natural end,
+     * [modeWrites]). What the song's, the artist's and the album's insights (#522) ask before a call
+     * they make by themselves (`PipelineHost.itemCallAllowed`).
+     */
+    val writesItself: Boolean
+        get() {
+            val report = latest
+            return automatic && !waitsForTap && report != null && !report.whilePaused && modeWrites(report.cause)
+        }
 }
 
 /** The same insight track: [TrackIdentity.playsOn], the session history's rule for a track that plays on. */
@@ -818,7 +895,12 @@ fun sameInsightTrack(
  * app keeps the first action) and that first action has not expired, the track came to play after it, and no mode was chosen while it played (#625: [CoordinatorState.Report.tapOnly]), and the ledger has not decided
  * this key (a rebuild's run of it again is not a track change, D5); else offer Write, marking the
  * run lapsed when only the expiry kept it from writing ([CoordinatorState.Run.lapsed]), so the
- * view says why. The ledger then records the decision. A model call that fails or is stopped
+ * view says why. The ledger then records the decision; one that offers Write for a track the ledger
+ * has no card for, its question asked with the insight another AI service, model or effort wrote for
+ * the same track and evidence (#911, `InsightAsked.kept`), records it written, with that insight as
+ * its card: it is shown, and the Write offered is a rewrite of it, as after a settings change. A
+ * decision to write leaves it out: the track is written anew, as for any track its model has not
+ * written. A model call that fails or is stopped
  * (#163) leaves the ledger written, as every call granted does, so nothing writes the track again
  * without a tap: its run offers Write again, and a tap on it is a new paid call. Then the next track's preparation (D13,
  * *Evidence*), while requests
@@ -866,6 +948,8 @@ fun sameInsightTrack(
  * | any | ModeChoiceSettled(choice, stored) | of the latest choice, with the store read: mode = the narrower of mode and stored; else unchanged (#625) | none |
  * | any | Reported(key, cause) | latest = the report, with its cause; of another insight track: tap-only when the first action is not made after it (as below), while-paused when it is expired, follows when a report came before; of the same insight track: as the report before; never tap-only or while-paused for an action in Sleevesight; the run current only if it holds it; first action made if the cause is an action in Sleevesight; a preparation cancelled unless the report is of the insight track reported before | CancelPreparation (if one is cancelled), StartTimer |
  * | none visible (no activity started or restarting) | Reported(key, cause), of another insight track than the report before (or the first), not an action in Sleevesight | as above; one more track change away; past the pause's count (the change after that many), with the first action made: the first action expired (acted false), until the user acts again, and a tap kept for the run dropped (keepsTap and tapped cleared); with *Off*, never | as above |
+ * | latest of this track | Withdrawn(track) (#880: an ad told late) | the track held as a clear holds it (no run, nor a rebuild's, until a report of another insight track settles); a run of it cancelled, counted in withdrawals; the ledger emptied if of it; its count away undone, and a first action it expired made again, with the kept tap that expiry dropped given back to its run if still in progress; all three as of the track's first report, kept through its reports since | CancelRun (if a run of it) |
+ * | otherwise | Withdrawn | unchanged | none |
  * | latest not this report | Settled | unchanged | none |
  * | any | Settled, of another insight track than the ledger's | latest settled; the ledger emptied; then as below | as below |
  * | a run of another insight track in progress | Settled | latest settled; the run orphaned (it holds nothing, its ledger reports are ignored); then as below | as below |
@@ -883,7 +967,7 @@ fun sameInsightTrack(
  * | the run, its model call under way | StepEnded(MODEL_CALL) | calling = false; then a pending swap, or a run of latest if settled and not held | as for RebuildFinished, or StartRun |
  * | the run | StepEnded(LABELS) | labelled: its requests are over | none |
  * | the run | RunEnded | calling, offered, the steps it waits for and its question cleared; labelled; a kept tap dropped (keepsTap and tapped cleared); then as for StepEnded(MODEL_CALL) | as above |
- * | the run (current or not) | StepRequested(step), InsightAsked(causes, model knowledge) | the step or the question waiting, with the causes its settings write on; for the ledger's written track (its card not found), answered by offering Write to rewrite it, never by writing | none |
+ * | the run (current or not) | StepRequested(step), InsightAsked(causes, model knowledge, kept) | the step or the question waiting, with the causes its settings write on, and the insight another service, model or effort wrote, if kept (#911); for the ledger's written track (its card not found), answered by offering Write to rewrite it, never by writing; answered by offering Write or by writing (#972) with no card paid for, that insight kept goes in the ledger, written, as its card, so Write is offered as a rewrite of it, or the call is one, shown in its place if it fails or is stopped | none |
  * | current run asking again, not yet decided, a run it replaced (or one before) offering Write, no tap kept yet, allowed, of the tap's key | WriteTapped(key) | the tap kept: it answers the run's question as a tap (one call, the ledger written); first action made | Acted |
  * | current run offering Write, allowed, of the tap's key | WriteTapped(key) | calling (its next call); the ledger written, under the run's key (or kept, if written already: a rewrite); first action made; the latest report no longer tap-only or while-paused | Grant(MODEL_CALL), Acted |
  * | otherwise (a tap for another run's key included) | WriteTapped(key) | unchanged | none |
@@ -946,7 +1030,7 @@ class PipelineCoordinator(
 
     private fun onAcknowledged(event: CoordinatorEvent) {
         when (event) {
-            is CoordinatorEvent.Reported -> reported(event)
+            is CoordinatorEvent.Reported, is CoordinatorEvent.Withdrawn -> fromSession(event)
             is CoordinatorEvent.Settled -> settled(event.report)
             CoordinatorEvent.RebuildRequested -> rebuild()
             CoordinatorEvent.Cleared -> cleared()
@@ -966,6 +1050,14 @@ class PipelineCoordinator(
     }
 
     // A tap on the screen: Write, *Look again* (#617), *Retry* (#724), Stop.
+    // What the session layer reports: a track, or a track taken back, an ad told late (#880).
+    private fun fromSession(event: CoordinatorEvent) {
+        if (event is CoordinatorEvent.Reported) return reported(event)
+        val (next, cancelled) = state.withdrawn((event as CoordinatorEvent.Withdrawn).nowPlaying)
+        cancelled?.let { effects += CoordinatorEffect.CancelRun(it) }
+        state = next
+    }
+
     private fun onTap(event: CoordinatorEvent) {
         when (event) {
             is CoordinatorEvent.WriteTapped -> tapped(event.key)
@@ -995,7 +1087,7 @@ class PipelineCoordinator(
         when (event) {
             is CoordinatorEvent.StepRequested -> requested(event.run, event.step)
             is CoordinatorEvent.InsightAsked -> {
-                ofRun(event.run) { it.copy(insight = event.writesOn, allowModel = event.allowModel) }
+                ofRun(event.run) { it.copy(insight = event.writesOn, allowModel = event.allowModel, kept = event.kept) }
             }
             is CoordinatorEvent.RetryAsked -> ofRun(event.run) { it.copy(offered = true) }
             is CoordinatorEvent.StepEnded -> stepEnded(event.run, event.step)
@@ -1013,8 +1105,10 @@ class PipelineCoordinator(
                 ofRun(event.run) { run ->
                     run.copy(
                         lookAgain = run.lookAgain?.let { it.copy(foundNew = event.evidence.bringsNewSince(it.shown)) },
+                        evidence = event.evidence.fingerprint,
                     )
                 }
+                foundNew(event.run, event.evidence.fingerprint)
             }
             else -> Unit
         }
@@ -1077,11 +1171,13 @@ class PipelineCoordinator(
     // A track change reported while no activity is started (#203): one more away, and past the
     // count *Saver* names, the first action, if made, expires. A tap kept
     // for the run (#192) goes with it: it was made before, and must not pay after.
-    private fun counted() {
+    // One more track change away; whether it expired the first action.
+    private fun counted(): Boolean {
         val away = state.away + 1
         val expires = state.acted && state.pauseAfter?.let { away > it } == true
         state = state.copy(away = away, acted = state.acted && !expires, expired = state.expired || expires)
         if (expires) state = state.copy(run = state.run?.copy(keepsTap = false, tapped = false))
+        return expires
     }
 
     // A return of the network, from offline to online, is counted (#192).
@@ -1103,10 +1199,8 @@ class PipelineCoordinator(
         if (another) cancelPreparation()
         val seq = (earlier?.seq ?: 0) + 1
         state = state.copy(latest = CoordinatorState.Report(seq, event.key, event.nowPlaying, event.cause))
-        when {
-            event.cause == ChangeCause.USER_ACTION -> act()
-            another && !state.visible -> counted()
-        }
+        val undo = countAway(another, event.cause == ChangeCause.USER_ACTION, earlier)
+        if (event.cause == ChangeCause.USER_ACTION) act()
         // A track that came to play before the first action, or while it was expired, is written
         // only on a tap, once an action or the app's opening has started or resumed automatic
         // writing too (#625); the same track reported again keeps that, and an action in
@@ -1115,8 +1209,25 @@ class PipelineCoordinator(
         val tapOnly = !user && if (another) !state.acted else earlier?.tapOnly == true
         val whilePaused = !user && if (another) state.expired else earlier?.whilePaused == true
         val follows = if (another) earlier != null else earlier?.follows == true
-        state = state.copy(latest = state.latest?.copy(tapOnly = tapOnly, whilePaused = whilePaused, follows = follows))
+        val flagged = state.latest?.copy(tapOnly = tapOnly, whilePaused = whilePaused, follows = follows)
+        state =
+            state.copy(latest = flagged?.copy(counted = undo.counted, expiredAction = undo.expired, keptTap = undo.tap))
         effects += CoordinatorEffect.StartTimer(seq)
+    }
+
+    // A report of another insight track counts one more change away while no activity is started
+    // (not an action in Sleevesight, a [user] one); returns what its withdrawal (#880) undoes: that
+    // count, an expiry of the first action it caused, and the kept tap the expiry dropped. A report
+    // of the same insight track keeps what [earlier] would undo.
+    private fun countAway(
+        another: Boolean,
+        user: Boolean,
+        earlier: CoordinatorState.Report?,
+    ): Undo {
+        if (!another || user || state.visible) return if (another) Undo() else earlier?.undo() ?: Undo()
+        val tap = state.run?.let { CoordinatorState.KeptTap(it.id, it.keepsTap, it.tapped) }
+        val expires = counted()
+        return Undo(counted = true, expired = expires, tap = tap.takeIf { expires })
     }
 
     // A settled report of another insight track empties the ledger; one of its track updates the
@@ -1333,6 +1444,7 @@ class PipelineCoordinator(
                         shown,
                         rewriting =
                             run.lookAgain?.rewriting ?: state.rewrites(),
+                        changed = run.lookAgain?.changed ?: (run.evidence != null && run.evidence != shown.fingerprint),
                     ),
             )
         state = state.copy(runs = id.value, run = looking)
@@ -1472,14 +1584,27 @@ class PipelineCoordinator(
         val before = state.ledger?.takeIf { sameInsightTrack(it.track, run.nowPlaying) }
         val recorded = entry(run, written)
         val kept = if (card != null && (replaces || recorded.card == null)) card else recorded.card
+        // What a look again found new was compared with the card replaced, not with this one (#854).
+        val found = recorded.foundNew.takeIf { kept === recorded.card }
         val would = nothingToNarrate?.let { wouldWrite(run, before, recorded, it) }
         val paused = nothingToNarrate?.let { pausedFor(run, before, recorded, it) }
         // The run has decided: a tap kept for it has nothing left to answer.
         state =
             state.copy(
-                ledger = recorded.copy(card = kept, wouldWrite = would, paused = paused),
+                ledger = recorded.copy(card = kept, wouldWrite = would, paused = paused, foundNew = found),
                 run = run.copy(keepsTap = false, tapped = false),
             )
+    }
+
+    // A look again of [id] that found something new (#617): the ledger keeps the fingerprint of the
+    // evidence it found it in (#854), so a rewrite from that evidence names it, made by whatever run.
+    private fun foundNew(
+        id: RunId,
+        fingerprint: String,
+    ) {
+        val run = state.run?.takeIf { it.id == id && !it.orphaned && it.lookAgain?.foundNew == true } ?: return
+        val ledger = state.written(run.nowPlaying) ?: return
+        state = state.copy(ledger = ledger.copy(foundNew = fingerprint))
     }
 
     // What a decision with no call for nothing to narrate, under [settings], leaves in the ledger
@@ -1501,9 +1626,10 @@ class PipelineCoordinator(
                 stands() &&
                 state.current?.id == run.id
         val unreachable = run.gathered?.unreachable.orEmpty()
+        val inLanguage = run.gathered?.languageRetryable.orEmpty()
         return when {
             recorded.written -> null
-            first -> CoordinatorState.WouldWrite(settings, unreachable).takeIf { writes }
+            first -> CoordinatorState.WouldWrite(settings, unreachable, inLanguage).takeIf { writes }
             else -> before?.wouldWrite?.takeIf { run.again && it.settings == settings }
         }
     }
@@ -1549,7 +1675,7 @@ class PipelineCoordinator(
         val run = state.current ?: return
         if (!state.allowed) return
         run.asked.forEach { effects += CoordinatorEffect.Grant(run.id, it) }
-        val lookedUp = if (RunStep.LOOKUPS in run.asked) state.returns else run.lookedUp
+        val lookedUp = if (RunStep.LOOKUPS in run.asked) run.lookedUp ?: state.returns else run.lookedUp
         var next = run.copy(asked = emptySet(), lookedUp = lookedUp)
         val writesOn = run.insight
         if (writesOn != null) {
@@ -1560,20 +1686,22 @@ class PipelineCoordinator(
             val followed = own && !write && !lapsed && followed(writesOn)
             // For a written track, the question comes only when its card is not found (a rebuild
             // changed the card's key): Write is offered beside the card paid for, to rewrite it.
+            val offered = !write && offers(run)
             next =
                 next.copy(
                     insight = null,
-                    offered = !write && offers(run),
+                    offered = offered,
                     calling = write,
                     calls = next.calls + if (write) 1 else 0,
                     keepsTap = false,
                     tapped = false,
                     lapsed = lapsed,
                     followed = followed,
+                    kept = null,
                 )
-            val decided = entry(run, write)
             val settings = WriteSettings(writesOn, run.allowModel)
-            state = state.copy(ledger = if (lapsed) decided.copy(paused = settings) else decided)
+            val kept = run.keptFor(offered, write)
+            state = state.copy(ledger = entry(run, write).answered(kept, settings.takeIf { lapsed }))
             effects += CoordinatorEffect.Decide(run.id, write)
         }
         state = state.copy(run = next)
@@ -1660,3 +1788,63 @@ class PipelineCoordinator(
         return writes && (!decided || asWouldHave)
     }
 }
+
+/**
+ * An ad told late ([CoordinatorEvent.Withdrawn], #880): the latest report, of [track], is held as a
+ * clear holds its track, so it gets no run; a run of it already started is cancelled (its id
+ * returned, for `CancelRun`) before any further grant, and the ledger it began is emptied; what its
+ * report did to *Saver*'s count is undone. Unchanged when the latest report is of another track.
+ */
+internal fun CoordinatorState.withdrawn(track: NowPlaying): Pair<CoordinatorState, RunId?> {
+    val report = latest?.takeIf { sameInsightTrack(it.nowPlaying, track) } ?: return this to null
+    val cancelled = run?.takeIf { sameInsightTrack(it.nowPlaying, track) }
+    val undone = report.expiredAction
+    // The kept tap the expiry dropped, given back to its run if that run is still the one in progress.
+    val tap = report.keptTap
+    val kept = tap?.let { t -> run?.takeIf { it.id == t.run }?.copy(keepsTap = t.keepsTap, tapped = t.tapped) }
+    return copy(
+        run = if (cancelled != null) null else kept ?: run,
+        ledger = ledger?.takeUnless { sameInsightTrack(it.track, track) },
+        cleared = track,
+        withdrawals = withdrawals + if (cancelled != null) 1 else 0,
+        away = if (report.counted) (away - 1).coerceAtLeast(0) else away,
+        acted = acted || undone,
+        expired = expired && !undone,
+        latest = report.copy(counted = false, expiredAction = false, keptTap = null),
+    ) to cancelled?.id
+}
+
+/** What a report's withdrawal undoes ([CoordinatorState.Report.counted] and the rest, #880). */
+private data class Undo(
+    val counted: Boolean = false,
+    val expired: Boolean = false,
+    val tap: CoordinatorState.KeptTap? = null,
+)
+
+private fun CoordinatorState.Report.undo(): Undo = Undo(counted, expiredAction, keptTap)
+
+// The insight another service, model or effort kept that the run's question came with (#911), when
+// Write is [offered] beside it or the run writes by itself ([write], #972): either way a call replaces
+// it, a rewrite of it.
+private fun CoordinatorState.Run.keptFor(
+    offered: Boolean,
+    write: Boolean,
+): Card? = kept?.takeIf { offered || write }
+
+// The ledger entry after a run's question was answered, [paused] under its settings when only the
+// first action's expiry kept it from writing (#203). With [kept], the insight another service, model
+// or effort wrote (#911, `Run.kept`) when the run offers Write or writes by itself (#972), and no card
+// paid for: it is the card paid for, so it is shown, and the Write offered beside it is *Rewrite
+// insight*, as for a card written before a settings change; a call made by itself rewrites it, as a
+// tap's does: "Rewritten with …", and shown again, saying why, if the call fails or is stopped. A
+// ledger written by a call that failed or was stopped has no card either, so it takes it too; it
+// stays written, so nothing is written again without a tap.
+private fun CoordinatorState.Ledger.answered(
+    kept: Card?,
+    paused: WriteSettings?,
+): CoordinatorState.Ledger =
+    when {
+        kept != null && card == null -> copy(written = true, card = kept)
+        paused != null -> copy(paused = paused)
+        else -> this
+    }

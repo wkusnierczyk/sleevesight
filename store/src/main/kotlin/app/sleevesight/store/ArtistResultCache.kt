@@ -15,6 +15,11 @@ import kotlin.time.Instant
  * with the retrieval and synthesis entries. The key is the caller's (a MusicBrainz id, or a name
  * the adapter folded); the cache does not normalize it, and the value is the adapter's encoding,
  * which it does not read.
+ *
+ * A part kept as history ([ArtistPart.keptAsHistory], #885) lives instead for *Keep history for*,
+ * as the cards do ([SynthesisCache.lifetimeOf], for ever with *Forever*), whatever its sources'
+ * lifetimes: its rows carry [HISTORY] in place of their sources, which no source's purge matches,
+ * and [Caches.purgeExpired] deletes them as it deletes the cards.
  */
 class ArtistResultCache internal constructor(
     private val context: CacheContext,
@@ -29,8 +34,13 @@ class ArtistResultCache internal constructor(
     ): KeptPart? {
         val row = context.queries.artistResultGet(part.name, key).executeAsOneOrNull() ?: return null
         val now = context.clock.now()
-        val lifetime = shortestLifetime(sourceTags(row.sources), context.settings())
-        val freshUntil = lifetime?.let { Instant.fromEpochMilliseconds(row.stored_at) + it }
+        val stored = Instant.fromEpochMilliseconds(row.stored_at)
+        val freshUntil =
+            if (row.sources == HISTORY) {
+                SynthesisCache.lifetimeOf(context.settings())?.let { stored + it } ?: Instant.DISTANT_FUTURE
+            } else {
+                shortestLifetime(sourceTags(row.sources), context.settings())?.let { stored + it }
+            }
         val current = freshUntil != null && row.version == part.version.toLong() && now < freshUntil
         if (current) {
             context.queries.artistResultTouch(now.toEpochMilliseconds(), row.id)
@@ -43,8 +53,8 @@ class ArtistResultCache internal constructor(
 
     /**
      * Keeps [value] for [key] under [part], replacing what was kept, and evicts down to the size
-     * limit. Returns whether it was kept: not when one of the part's sources has no lifetime, nor
-     * when the entry alone is larger than the limit.
+     * limit. Returns whether it was kept: not when one of the part's sources has no lifetime (but for
+     * a part kept as history), nor when the entry alone is larger than the limit.
      */
     fun put(
         part: ArtistPart,
@@ -52,9 +62,11 @@ class ArtistResultCache internal constructor(
         value: String,
     ): Boolean {
         val sources = part.sources.sortedBy { it.ordinal }
-        val sourcesColumn = sources.joinToString(" ", prefix = " ", postfix = " ") { it.tag }
+        val sourcesColumn =
+            if (part.keptAsHistory) HISTORY else sources.joinToString(" ", prefix = " ", postfix = " ") { it.tag }
         val size = part.name.utf8Size() + key.utf8Size() + sourcesColumn.utf8Size() + value.utf8Size()
-        val keep = shortestLifetime(sources, context.settings()) != null && context.fits(size)
+        val lives = part.keptAsHistory || shortestLifetime(sources, context.settings()) != null
+        val keep = lives && context.fits(size)
         if (keep) {
             val now = context.clock.now().toEpochMilliseconds()
             context.queries.transaction {
@@ -73,5 +85,13 @@ class ArtistResultCache internal constructor(
             }
         }
         return keep
+    }
+
+    internal companion object {
+        /** The sources column of a part kept as history: a word no source's tag is, between spaces. */
+        const val HISTORY: String = " history "
+
+        /** [HISTORY]'s word, which [Caches.purgeExpired] does not take for an unknown source. */
+        const val HISTORY_TAG: String = "history"
     }
 }

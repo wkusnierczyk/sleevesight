@@ -1,5 +1,6 @@
 package app.sleevesight.app.ui.home
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -9,11 +10,15 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -27,6 +32,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.AiSearch
@@ -46,15 +52,17 @@ import app.sleevesight.core.synthesis.SearchAnswer
 import app.sleevesight.core.synthesis.SearchFacts
 import app.sleevesight.core.synthesis.SearchKind
 
-// *Search with AI* under the empty state of Home's *Dates*, *Genres* and *Lyrics* (#773): its button,
-// its call under way with *Stop*, and what it found, under a rule, credited to the model.
+// *Search with AI* under the empty state of Home's *Dates*, *Genres* and *Lyrics* (#773; in *Lyrics*
+// *Find the lyrics*, and *Explain the song* for every track with lyrics, #908): its button, its call
+// under way with *Stop*, and what it found, under a rule, credited to the model.
 
 /**
  * *Search with AI* of [kind] under a panel's empty state ([search], #773; `design/design.md`,
  * *Search with AI*), in the panel's column, as [search]'s feed gives it for its track:
  *
  * - offered: an outlined button, as *Why is this …?*, with no AI mark (the plain label was picked),
- *   which a screen reader names "ask your AI service, a paid call"; disabled with no AI service or
+ *   which a screen reader names "ask your AI service, a paid call" (in *Lyrics*, its own label and
+ *   action, with the AI mark, #908); disabled with no AI service or
  *   model ready, a screen reader adding why; none at all with *Show insights* off, as *Why is this
  *   …?* has none then;
  * - under way: the turning record, then "Searching the web with AI…", or with *AI web search* off
@@ -75,14 +83,20 @@ import app.sleevesight.core.synthesis.SearchKind
  *
  * Of [SearchKind.DEFINITION] (#786), the search is [genre]'s, by its identity, and asks about its name
  * alone ([SearchFacts.ofGenre]), whatever the track.
+ *
+ * In the *Lyrics* panel (#908) its texts are its own ([SearchTexts.of]): [SearchKind.LYRICS] is *Find
+ * the lyrics*, [SearchKind.EXPLAIN] *Explain the song*, each with the AI mark ([AiLabel]), at least
+ * [width] wide, so the panel's two buttons are as wide as the wider ([aiButtonWidth]).
  */
 @Composable
 internal fun AiSearchBlock(
     search: PanelSearch,
     kind: SearchKind,
     genre: GenreLabel? = null,
+    width: Dp = Dp.Unspecified,
     answer: @Composable (SearchAnswer, String) -> Unit,
 ) {
+    val texts = SearchTexts.of(kind)
     val track = search.track ?: return
     val feed = search.feed
     val about = genre?.identity
@@ -108,21 +122,21 @@ internal fun AiSearchBlock(
     val searchButton = Modifier.handoffTarget(handoff, button)
     when (val shown = state) {
         AiSearch.None -> Unit
-        AiSearch.Unready -> SearchButton(enabled = false, searchButton) {}
-        AiSearch.Offered -> SearchButton(enabled = true, searchButton, ask)
+        AiSearch.Unready -> SearchButton(texts, enabled = false, searchButton.widthIn(min = width)) {}
+        AiSearch.Offered -> SearchButton(texts, enabled = true, searchButton.widthIn(min = width), ask)
         is AiSearch.Searching ->
-            SearchingLine(shown.web, Modifier.handoffTarget(handoff, stop)) {
+            SearchingLine(texts, shown.web, Modifier.handoffTarget(handoff, stop)) {
                 feed.stop(track, kind, about)
                 handoff.moveTo(button)
             }
-        is AiSearch.Answered -> Answered(shown, answer)
-        is AiSearch.NothingFound -> NothingFound(shown)
+        is AiSearch.Answered -> Answered(texts, shown, answer)
+        is AiSearch.NothingFound -> NothingFound(texts, shown)
         is AiSearch.Failed ->
             RetryLine(
                 askFailedText(shown.reason),
                 source = "",
                 onRetry = { feed.ask(track, kind, facts(), genre = about) },
-                modifier = Modifier.testTag(AI_SEARCH_FAILED_TAG),
+                modifier = Modifier.testTag(texts.tag(AI_SEARCH_FAILED_TAG)),
                 afterRetry = { handoff.moveTo(stop) },
                 action = stringResource(R.string.home_ai_retry_action),
                 color = MaterialTheme.colorScheme.error,
@@ -135,14 +149,15 @@ internal fun AiSearchBlock(
 // from it is (#801); and, kept from before, when it was written (#851).
 @Composable
 private fun Answered(
+    texts: SearchTexts,
     shown: AiSearch.Answered,
     answer: @Composable (SearchAnswer, String) -> Unit,
 ) {
-    PanelRule(Modifier.testTag(AI_SEARCH_RULE_TAG))
+    PanelRule(Modifier.testTag(texts.tag(AI_SEARCH_RULE_TAG)))
     answer(shown.answer, shown.model)
-    SearchCredit(stringResource(R.string.home_ai_by, shown.model), Modifier.testTag(AI_SEARCH_BY_TAG))
+    SearchCredit(stringResource(R.string.home_ai_by, shown.model), Modifier.testTag(texts.tag(AI_SEARCH_BY_TAG)))
     if (!shown.way.web) {
-        SearchCredit(stringResource(R.string.home_cite_model), Modifier.testTag(AI_SEARCH_KNOWLEDGE_TAG))
+        SearchCredit(stringResource(R.string.home_cite_model), Modifier.testTag(texts.tag(AI_SEARCH_KNOWLEDGE_TAG)))
     }
     shown.keptAt?.let { KeptLine(it) }
 }
@@ -151,13 +166,15 @@ private fun Answered(
 // automatically: " for a question asked by itself (#801, #802); kept from before, when it was
 // written (#851).
 @Composable
-private fun NothingFound(shown: AiSearch.NothingFound) {
-    PanelRule(Modifier.testTag(AI_SEARCH_RULE_TAG))
-    val nothing =
-        stringResource(if (shown.way.web) R.string.home_ai_nothing_web else R.string.home_ai_nothing, shown.model)
+private fun NothingFound(
+    texts: SearchTexts,
+    shown: AiSearch.NothingFound,
+) {
+    PanelRule(Modifier.testTag(texts.tag(AI_SEARCH_RULE_TAG)))
+    val nothing = stringResource(if (shown.way.web) texts.nothingWeb else R.string.home_ai_nothing, shown.model)
     QuietLine(
         if (shown.way.automatic) stringResource(R.string.home_ai_nothing_auto, nothing) else nothing,
-        Modifier.testTag(AI_SEARCH_NOTHING_TAG),
+        Modifier.testTag(texts.tag(AI_SEARCH_NOTHING_TAG)),
     )
     shown.keptAt?.let { KeptLine(it) }
 }
@@ -181,12 +198,71 @@ internal fun SearchCredit(
 }
 
 /**
+ * What a search's button and lines say (#908): its button's [label], with the AI mark when [marked]
+ * (#624), and its [action] for a screen reader; while it runs on the web, [searching]; when it found
+ * nothing there, [nothingWeb]. From the model's knowledge the lines are *Ask AI*'s whatever the kind.
+ */
+private class SearchTexts(
+    @StringRes val label: Int,
+    val marked: Boolean,
+    @StringRes val action: Int,
+    @StringRes val searching: Int,
+    @StringRes val nothingWeb: Int,
+    private val explain: Boolean = false,
+) {
+    /** The test tag [base] for this search: [explainTag]'s for *Explain the song*, so the panel's two stand apart. */
+    fun tag(base: String): String = if (explain) explainTag(base) else base
+
+    companion object {
+        private val ASK =
+            SearchTexts(
+                R.string.home_ai_search,
+                marked = false,
+                R.string.home_ai_search_action,
+                R.string.home_ai_searching,
+                R.string.home_ai_nothing_web,
+            )
+
+        // *Find the lyrics* (#908): a search, named so.
+        private val FIND =
+            SearchTexts(
+                R.string.home_lyrics_find,
+                marked = true,
+                R.string.home_lyrics_find_action,
+                R.string.home_lyrics_finding,
+                R.string.home_lyrics_found_none,
+            )
+
+        // *Explain the song* (#908): an answer, from the web only.
+        private val EXPLAIN =
+            SearchTexts(
+                R.string.home_lyrics_explain,
+                marked = true,
+                R.string.home_lyrics_explain_action,
+                R.string.home_lyrics_explaining,
+                R.string.home_lyrics_explain_none,
+                explain = true,
+            )
+
+        /** [kind]'s texts: *Ask AI*'s for *Dates*, *Genres* and a genre's definition; the *Lyrics* panel's own. */
+        fun of(kind: SearchKind): SearchTexts =
+            when (kind) {
+                SearchKind.LYRICS -> FIND
+                SearchKind.EXPLAIN -> EXPLAIN
+                SearchKind.DATES, SearchKind.GENRES, SearchKind.DEFINITION -> ASK
+            }
+    }
+}
+
+/**
  * *Search with AI*: outlined, as tall as *Why is this …?* and answering a tap across 48 dp, its action
  * named for a screen reader, which a Material `OutlinedButton` cannot be given; disabled ([enabled]
- * false), dimmed, a screen reader adding that no AI service is enabled.
+ * false), dimmed, a screen reader adding that no AI service is enabled. Its label is [texts]', with
+ * the AI mark where they say (#908), which a screen reader reads as "{label}, uses AI".
  */
 @Composable
 private fun SearchButton(
+    texts: SearchTexts,
     enabled: Boolean,
     modifier: Modifier,
     onClick: () -> Unit,
@@ -200,7 +276,7 @@ private fun SearchButton(
         contentAlignment = Alignment.Center,
         modifier =
             modifier
-                .testTag(AI_SEARCH_TAG)
+                .testTag(texts.tag(AI_SEARCH_TAG))
                 .minimumInteractiveComponentSize()
                 .heightIn(min = HEIGHT)
                 .clip(shape)
@@ -208,20 +284,28 @@ private fun SearchButton(
                 .clickable(
                     enabled = enabled,
                     role = Role.Button,
-                    onClickLabel = stringResource(R.string.home_ai_search_action),
+                    onClickLabel = stringResource(texts.action),
                     onClick = onClick,
                 ).let { if (enabled) it else it.semantics { stateDescription = unready } }
                 .padding(PADDING),
     ) {
-        Text(stringResource(R.string.home_ai_search), style = MaterialTheme.typography.labelLarge, color = ink)
+        val label = stringResource(texts.label)
+        if (texts.marked) {
+            ProvideTextStyle(MaterialTheme.typography.labelLarge) {
+                CompositionLocalProvider(LocalContentColor provides ink) { AiLabel(label) }
+            }
+        } else {
+            Text(label, style = MaterialTheme.typography.labelLarge, color = ink)
+        }
     }
 }
 
-// The turning record and "Searching the web with AI…" ([web]), or "Asking AI…", in the quiet style
-// ([Busy]), with *Stop* (under [stopModifier]) at the right of the line, centred on it, as *Retry*
-// is beside its line.
+// The turning record and [texts]' line on the web ([web]: "Searching the web with AI…"), or "Asking
+// AI…", in the quiet style ([Busy]), with *Stop* (under [stopModifier]) at the right of the line,
+// centred on it, as *Retry* is beside its line.
 @Composable
 private fun SearchingLine(
+    texts: SearchTexts,
     web: Boolean,
     stopModifier: Modifier,
     onStop: () -> Unit,
@@ -232,16 +316,16 @@ private fun SearchingLine(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Busy(
-            stringResource(if (web) R.string.home_ai_searching else R.string.home_ai_asking),
+            stringResource(if (web) texts.searching else R.string.home_ai_asking),
             MaterialTheme.typography.bodySmall,
             Modifier.weight(1f),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textModifier = Modifier.testTag(AI_SEARCHING_TAG),
+            textModifier = Modifier.testTag(texts.tag(AI_SEARCHING_TAG)),
         )
         LineButton(
             stringResource(R.string.home_ai_stop),
             stringResource(R.string.home_ai_stop_action),
-            stopModifier.testTag(AI_SEARCH_STOP_TAG),
+            stopModifier.testTag(texts.tag(AI_SEARCH_STOP_TAG)),
             onClick = onStop,
         )
     }
@@ -347,5 +431,6 @@ const val AI_SEARCH_FAILED_TAG: String = "ai-search:failed"
 private val HEIGHT = 32.dp
 private val CORNER = 16.dp
 private val PADDING = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+
 private const val DISABLED = 0.38f
 private const val DISABLED_EDGE = 0.12f

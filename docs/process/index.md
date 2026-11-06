@@ -12,7 +12,7 @@
 # links its paragraph on the labels by its id, `#footer-labels` (#743), so keep the id.
 title: Process
 permalink: /docs/process/
-docs_version: 0.1.15
+docs_version: 0.1.18
 nav:
   - id: how-it-is-built
     label: How it is built
@@ -140,6 +140,8 @@ Since 28 October 2026 this is a gate, not an option: every change to what a user
 
 The tests run on recorded responses, with no network and no keys. Where a change touches the AI services or the prompt, it is also run live through the pipeline's command-line tool (the README's [*Pipeline CLI*](https://github.com/wkusnierczyk/sleevesight#pipeline-cli)), against the real sources and AI service, and on a phone where the change is on screen.
 
+A change to a prompt is also tried on real listening, live on the phone ([*Try prompts live on the phone*](#try-prompts-live-on-the-phone)).
+
 **Why.** A required check holds every change to the same bar, documents included. The structural checks hold the design's constraints, such as which permissions the app may ask for, in code rather than in review comments. Live runs catch what recorded responses cannot: a model's answer, or a source that has changed.
 
 **Example.** [PR #398](https://github.com/wkusnierczyk/sleevesight/pull/398), which stops insights from repeating an artist's facts on every track of an album, was checked on a set of regression tracks run live.
@@ -202,7 +204,7 @@ The details, with the one-time setup outside the repository, are in [`design/rel
 
 ## Lessons learned
 
-What the project learned along the way: which practices paid off, which cost more than they returned, and what changed because of them. Each lesson says what happened, what changed, and links an example. The figures are a snapshot of the project's own records, dated in the text.
+What the project learned along the way: which practices paid off, which cost more than they returned, and what changed because of them. Each lesson says what happened, what was done about it, and what was learned, with links to examples. The figures are a snapshot of the project's own records, dated in the text.
 
 ### Simulate every visible change before building it
 
@@ -298,3 +300,18 @@ Only 318 of the 619 loops ever reached a clean round. After the first round, the
 The lesson: set the number of rounds in advance, with an exception for a must-fix, and let go of what is still asked for at the limit, or collect it in one cleanup issue after the release, so that it holds up the release no more than it should.
 
 **Example.** The findings left open by release 0.1.6's pull requests, fixed together in one pull request for the next release ([PR #647](https://github.com/wkusnierczyk/sleevesight/pull/647)).
+
+### Try prompts live on the phone
+
+{% comment %}
+  From the phone round of the key-insights prompt's redesign, 4 November 2026 (#767, its comment
+  "Phone round (2026-11-04): observations"): ten insights captured on a debug build (`PromptDump`,
+  logcat tag `SleevesightPrompt`, read over `adb`), each sent again through the CLI's `prompt`
+  command as prompt version 8 and eight variants, twice each.
+{% endcomment %}
+
+**What happened.** The insights were correct but often not interesting enough. Where little was documented about a track, they filled the card with remarks about the sources themselves.
+
+**What was done.** A debug build of the app logged every prompt it sent and every reply, while the phone played music as usual. On the laptop, each logged prompt was sent again in several rewordings through the command-line tool, so the results for each track came back within a minute, on exactly the evidence the app had built.
+
+**What was learned.** Real listening showed what the recorded test cases had not. Much of the filler came from the evidence, not the prompt: web search results holding a page's footer or navigation, which no rewording kept the model from writing about ([#905](https://github.com/wkusnierczyk/sleevesight/issues/905)). And the opening mattered most: an insight that starts with the song's own story, rather than its release, reads better on every model tried, and the new prompt starts that way ([PR #913](https://github.com/wkusnierczyk/sleevesight/pull/913)). A live session finds the problems; a blind comparison on the regression tracks then measures the fix.

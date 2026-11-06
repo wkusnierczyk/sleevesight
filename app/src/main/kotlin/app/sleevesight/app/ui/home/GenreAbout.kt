@@ -38,7 +38,8 @@ import app.sleevesight.core.synthesis.SearchKind
  * What the genre [genre] is and why [track] has it, as [shown]'s notes give them (#523; `design/design.md`,
  * *Genre labels*), at the top of the genre's panel, in this order: the definition, from Wikipedia,
  * in each of its states ([GenreDefinitionNote], #786: looking, found with its credit, failed with
- * *Retry*, or none with *Search with AI* from [search]; nothing with Wikipedia off); then *Why is
+ * *Retry*, or none with *Search with AI* from [search]; nothing with Wikipedia off); for a genre of
+ * weak evidence, why it is weak ([WeakEvidenceNote], #875); then *Why is
  * this …?*, a button carrying the **AI** mark ([AiLabel]), or, once asked for, the reason, under the
  * question as a heading, checked and cited as the insight is: its citations chips that go to their
  * lines ([PanelNotes.onCite]), its grounding note under it. No button with *Show insights* off, no
@@ -48,10 +49,13 @@ import app.sleevesight.core.synthesis.SearchKind
  * place; the reason under it is credited "by {model}". Disabled, with why under it ([ReasonUnavailable]):
  * with no AI service ready, a link to *Settings → AI services*; for a genre only MusicBrainz gives,
  * when the AI's genre list cannot run, what to switch on, linked; when the AI could not explain it
- * (the list does not have it, or the evidence cannot support it), "AI could not find an
- * explanation.". A reason still being written reads its `[AI]` as the settings allow it
- * ([PanelNotes.modelAllowed]). A written reason has *Read aloud* (#325, [ReadAloudButton]) at the
- * end of its credit's row, which reads the question, then the reason ([PanelNotes.readAloud]).
+ * (the list does not have it, or nothing the reason was asked with explains it), "AI could not find
+ * an explanation.", and, for the reason, what was off that could have, linked (#695). A reason that
+ * cites no source, only the model's own knowledge, says so under the question; one from web pages
+ * is credited "by {model}, with web search" (#695). A reason still being written reads its `[AI]`
+ * as the settings allow it ([PanelNotes.modelAllowed]). A written reason has *Read aloud* (#325,
+ * [ReadAloudButton]) at the end of its credit's row, which reads the question, then the reason
+ * ([PanelNotes.readAloud]).
  */
 @Composable
 internal fun GenreAbout(
@@ -77,6 +81,8 @@ internal fun GenreAbout(
             ?.genre ?: return
     val question = stringResource(R.string.genre_why, inSentence(named.label))
     GenreDefinitionNote(named, notes, search, afterRetry)
+    // Why its evidence is weak, for a weak genre (#875), under the definition.
+    WeakEvidenceNote(track, named)
     val explain = { notes.explain(track, genre) }
     when (val shown = reason) {
         GenreReason.None -> Unit
@@ -94,7 +100,7 @@ internal fun GenreAbout(
                 shown,
                 question,
                 InsightContext(track, true, true, modelAllowed, InsightOffers()),
-                ReasonActions(onCite, readAloud, explain, afterRetry),
+                ReasonActions(onCite, readAloud, explain, afterRetry, openSettingsAt),
             )
         }
     }

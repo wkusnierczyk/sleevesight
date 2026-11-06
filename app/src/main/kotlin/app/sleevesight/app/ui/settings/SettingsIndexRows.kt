@@ -203,9 +203,24 @@ internal fun appearanceRows(): List<IndexedRow> =
         ),
         choices(R.string.settings_font, R.string.settings_font_summary, fonts().map { it.second }),
         choices(R.string.settings_layout, R.string.settings_layout_summary, layouts().map { it.second }),
+        choices(
+            R.string.settings_sources_on_new_track,
+            R.string.settings_sources_on_new_track_summary,
+            newTrackFolds().map { it.second },
+        ),
+        choices(
+            R.string.settings_items_on_new_track,
+            R.string.settings_items_on_new_track_summary,
+            newTrackFolds().map { it.second },
+        ),
         indexRow(
-            stringResource(R.string.settings_keep_sources),
-            stringResource(R.string.settings_keep_sources_summary),
+            stringResource(R.string.settings_fold_descriptions),
+            stringResource(R.string.settings_fold_descriptions_summary),
+        ),
+        choices(
+            R.string.settings_descriptions_on_return,
+            R.string.settings_descriptions_on_return_summary,
+            descriptionsOnReturn().map { it.second } + descriptionsOnReturnDetails().values,
         ),
         indexRow(
             stringResource(R.string.settings_lyrics_links),
@@ -213,6 +228,15 @@ internal fun appearanceRows(): List<IndexedRow> =
         ),
         indexRow(stringResource(R.string.settings_lyrics_search)),
         indexRow(stringResource(R.string.settings_intro), stringResource(R.string.settings_intro_summary)),
+        indexRow(stringResource(R.string.settings_spin_logo), stringResource(R.string.settings_spin_logo_summary)),
+        indexRow(
+            stringResource(R.string.settings_logo_speed),
+            stringResource(R.string.settings_logo_speed_summary),
+            stringResource(R.string.settings_logo_speed_33),
+            stringResource(R.string.settings_logo_speed_33_detail),
+            stringResource(R.string.settings_logo_speed_45),
+            stringResource(R.string.settings_logo_speed_45_detail),
+        ),
         indexRow(
             stringResource(R.string.settings_restore_dismissed),
             stringResource(R.string.settings_restore_dismissed_summary),
