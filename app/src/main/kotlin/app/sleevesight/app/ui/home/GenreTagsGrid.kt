@@ -50,11 +50,14 @@ import app.sleevesight.core.pipeline.TrackState
  * column lines up across both parts: "Genre tags", a heading, then a row per level with tags, in
  * [GenreLevel] order, its name on the left, right-aligned (*Track*, *Artist*, *Album*; with several
  * credited artists *Artist 1*, *Artist 2*, … by their place in the credit, rather than their names),
- * its tags as chips on the right, [genre] marked wherever it shows ([Cell]); then "Tag sources", a
+ * its tags as chips on the right, [genre] marked wherever it shows ([Cell]); after an artist's row,
+ * the genres their description names, *Described* (#1000; *Described 1*, *Described 2*, … as their
+ * artist's row is numbered; `TrackGenres.table`); then "Tag sources", a
  * heading, and the same rows, each with the sources that gave any of its tags, each named and linked
  * to the row's page there ([sourceParts]), an artist's name on its own line above them with several
- * artists; then, in the right column, once, when MusicBrainz gave any tag, its credit and its
- * licence, linked (D12).
+ * artists; a *Described* row with whose description it is and the citations of its lines, each a
+ * link that opens its line in *Sources* ([onCite]); then, in the right column, once, when
+ * MusicBrainz gave any tag, its credit and its licence, linked (D12).
  *
  * The first column is as wide as its widest name, measured in the names' style at the current font
  * size, so it holds at large font sizes. Each row is one item to a screen reader. A row of tags has
@@ -67,8 +70,9 @@ import app.sleevesight.core.pipeline.TrackState
 internal fun TagsGrid(
     track: TrackState,
     genre: String,
+    onCite: (String) -> Unit = {},
 ) {
-    val rows = track.genres.rows
+    val rows = track.genres.table
     val credit = track.normalized.artists
     val several = credit.size > 1
     val names = rowNames(rows, several, credit)
@@ -79,18 +83,19 @@ internal fun TagsGrid(
         GridHeading(stringResource(R.string.home_genre_tags))
         val selected = stringResource(R.string.home_genre_tag_selected)
         val added = stringResource(R.string.genre_ai_added)
+        val described = stringResource(R.string.genre_described)
         rows.forEachIndexed { index, row ->
-            val reading = tagsReading(names[index], row, genre, selected, added)
+            val reading = tagsReading(names[index], row, genre, selected, added, described)
             val tagged = Modifier.testTag(GENRES_ROW_PREFIX + index).semantics { contentDescription = reading }
             GridRow(names[index], column, nameStyle, tagged, CHIP_INSET) { Cells(row, genre) }
         }
         GridHeading(stringResource(R.string.home_genre_tag_sources))
         rows.forEachIndexed { index, row ->
-            val parts = sourceParts(row)
+            val parts = sourceParts(row, onCite)
             if (parts.isEmpty()) return@forEachIndexed
             GridRow(names[index], column, nameStyle, Modifier.testTag(GENRE_SOURCES_ROW_PREFIX + index)) {
                 Column {
-                    row.artist?.takeIf { several && row.level == GenreLevel.ARTIST }?.let { artist ->
+                    row.artist?.takeIf { several && row.level == GenreLevel.ARTIST && !row.described }?.let { artist ->
                         Text(artist, style = nameStyle, color = MaterialTheme.colorScheme.onSurface)
                     }
                     LinkedText(parts, style = nameStyle, color = muted)
@@ -117,26 +122,32 @@ internal fun TagsGrid(
  * How a screen reader reads a row of tags (#786): its [name], then its tags in order, [genre]'s as
  * [selected] words it ("Rock, selected"), all one item: "Track, Rock, selected, Pop". A tag the AI's
  * genre list added (#762) reads with the model's name, as [added] words it ("Blues, from Claude
- * Haiku 5.5").
+ * Haiku 5.5"). A genre an artist's description names (#1000) reads as [described] words it
+ * ("Instrumental, from the artist’s description").
  */
+@Suppress("LongParameterList") // The row and its name, the genre marked, and each way a tag is worded.
 internal fun tagsReading(
     name: String,
     row: GenreRow,
     genre: String,
     selected: String,
     added: String = "%1\$s",
+    described: String = "%1\$s",
 ): String =
     (
         listOf(name) +
             row.labels.map { label ->
-                val named = label.aiModel?.takeIf { label.aiAdded }?.let { added.format(label.genre.label, it) }
+                val named =
+                    label.aiModel?.takeIf { label.aiAdded }?.let { added.format(label.genre.label, it) }
+                        ?: label.describedIn?.let { described.format(label.genre.label) }
                 (named ?: label.genre.label).let { if (label.genre.identity == genre) selected.format(it) else it }
             }
     ).joinToString(", ")
 
 // Each row's name: *Track*, *Album*, *Artist*, or with [several] credited artists *Artist 1*, *Artist
 // 2*, … by the artist's place in [credit], as the rows name it, whether or not the artists before it
-// have tags; one the credit does not name takes the next number past it.
+// have tags; one the credit does not name takes the next number past it. An artist's described row
+// (#1000) is *Described*, or *Described 1*, … numbered as the artist's row.
 @Composable
 private fun rowNames(
     rows: List<GenreRow>,
@@ -144,6 +155,7 @@ private fun rowNames(
     credit: List<String>,
 ): List<String> {
     var past = credit.size
+    val numbers = mutableMapOf<String?, Int>()
     return rows.map { row ->
         when (row.level) {
             GenreLevel.TRACK -> stringResource(R.string.home_genres_track)
@@ -151,9 +163,15 @@ private fun rowNames(
             GenreLevel.ARTIST ->
                 if (several) {
                     val place = credit.indexOf(row.artist) + 1
-                    stringResource(R.string.home_genre_artist_n, if (place > 0) place else ++past)
+                    val number = numbers.getOrPut(row.artist) { if (place > 0) place else ++past }
+                    stringResource(
+                        if (row.described) R.string.home_genre_described_n else R.string.home_genre_artist_n,
+                        number,
+                    )
                 } else {
-                    stringResource(R.string.home_genres_artist_row)
+                    stringResource(
+                        if (row.described) R.string.home_genres_described_row else R.string.home_genres_artist_row,
+                    )
                 }
         }
     }
@@ -280,7 +298,11 @@ private fun Cell(
 // for it alone, drawn too small to see ([HIDDEN_COMMA]): the row reads as one item with its links, so
 // it takes no description of its own.
 @Composable
-private fun sourceParts(row: GenreRow): List<TextPart> {
+private fun sourceParts(
+    row: GenreRow,
+    onCite: (String) -> Unit,
+): List<TextPart> {
+    if (row.described) return describedParts(row, onCite)
     val credits = row.labels.flatMap { it.credits }
     val model = row.labels.firstNotNullOfOrNull { it.aiModel }
     val mark = stringResource(R.string.home_ai_mark)

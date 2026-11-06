@@ -119,6 +119,12 @@ fun TrackState.withAi(list: AiGenreList?): TrackState =
  */
 interface GenreNotes : DefinitionFeed {
     /**
+     * The genre list (`genre-vocabulary.json`) the names in an artist's description are matched
+     * against (#1000, `describedGenres`); null for none, and no genre is read from the text.
+     */
+    val vocabulary: GenreVocabulary? get() = null
+
+    /**
      * The AI's genre list for [track] (#762), as it changes: null while none is known (not asked, or
      * not under the settings now).
      */
@@ -195,7 +201,7 @@ interface GenreNotes : DefinitionFeed {
 class AppGenreNotes private constructor(
     /** The definitions (#786): fetched ahead ([AppGenreDefinitions.fetchAhead]), their states. */
     val lookups: AppGenreDefinitions,
-    private val vocabulary: GenreVocabulary,
+    override val vocabulary: GenreVocabulary,
     private val parts: StateFlow<PipelineParts?>,
     private val settings: StateFlow<Settings?>,
     private val scope: CoroutineScope,

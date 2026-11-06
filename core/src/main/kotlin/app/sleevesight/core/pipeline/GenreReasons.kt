@@ -144,7 +144,7 @@ class GenreReasons(
     ): ReasonPath {
         val key = key(track, genre, settings, listed)
         return when {
-            !offered(track, settings) || track.genres.all.none { it.genre.identity == genre } -> ReasonPath.None
+            !offered(track, settings) || track.genres.everyLabel.none { it.genre.identity == genre } -> ReasonPath.None
             key != null -> ReasonPath.Reason(key)
             ready(track, settings) == null -> ReasonPath.NoService
             listed != null -> ReasonPath.NotListed
@@ -512,7 +512,7 @@ class GenreReasons(
     ): Set<String> {
         val genre = alone(key).subject ?: return emptySet()
         val label =
-            track.genres.all
+            track.genres.everyLabel
                 .firstOrNull { it.genre.identity == genre }
                 ?.genre
                 ?.label
@@ -579,18 +579,21 @@ class GenreReasons(
         /**
          * Whether [track]'s genre [genre] may reach a prompt: a source other than MusicBrainz gives it,
          * on some row, or the AI's genre list does (`TrackLabel.aiModel`, #762: [track]'s genres with
-         * the list, `TrackGenres.withAi`). D12: MusicBrainz's tags, CC BY-NC-SA 3.0, never reach a prompt.
+         * the list, `TrackGenres.withAi`), or an artist's description names it (#1000,
+         * `TrackGenres.described`: the lines the prompt reads anyway), as the question's genre alone.
+         * D12: MusicBrainz's tags, CC BY-NC-SA 3.0, never reach a prompt.
          */
         fun prompted(
             track: TrackState,
             genre: String,
         ): Boolean =
-            track.genres.rows
-                .flatMap { it.labels }
-                .any { label ->
-                    label.genre.identity == genre &&
-                        (label.aiModel != null || label.credits.any { it.source != LabelSource.MUSICBRAINZ })
-                }
+            track.genres.described.any { row -> row.labels.any { it.genre.identity == genre } } ||
+                track.genres.rows
+                    .flatMap { it.labels }
+                    .any { label ->
+                        label.genre.identity == genre &&
+                            (label.aiModel != null || label.credits.any { it.source != LabelSource.MUSICBRAINZ })
+                    }
 
         /**
          * Whether *Why is this …?* is offered at all for [track] under [settings]: *Show insights* on
