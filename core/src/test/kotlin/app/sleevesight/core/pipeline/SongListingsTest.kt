@@ -80,6 +80,25 @@ class SongListingsTest {
     }
 
     @Test
+    fun `a listing's phrase in mixed prose does not make it a listing`() {
+        listOf(
+            "Released on Friday, the song pairs a loping bass line with jagged horns.",
+            "Release date: March 13, 2024. The song pairs a loping bass line with jagged horns.",
+            "Listen to how the horns answer the bass in its second half.",
+        ).forEach { assertFalse(SongListings.isListing(web(it)), it) }
+    }
+
+    @Test
+    fun `metadata alone stays a listing, however long, and a list of tracks whatever surrounds it`() {
+        listOf(
+            "Phil's First Tear is a song by Kolonel Djafaar, released on April 5, 2024, on the album Getaway.",
+            "Label: Batov Records. Release date: March 13, 2024. Recorded in Antwerp, Belgium.",
+            "Listen on Spotify, Apple Music and Deezer.",
+            "A warm record with a fine loping groove: 1. Getaway 3:45 2. Phil's First Tear 4:10",
+        ).forEach { assertTrue(SongListings.isListing(web(it)), it) }
+    }
+
+    @Test
     fun `a web line with no listing host and no listing shape describes the song`() {
         assertFalse(
             SongListings.isListing(web("An instrumental with a heavy Ethio-jazz horn line, cut live in Antwerp.")),

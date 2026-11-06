@@ -373,21 +373,30 @@ class SongWebInsightsTest {
         }
 
     @Test
-    fun `an artist with no description gives its tags, and no count or list of similar artists`() =
+    fun `an artist's tags and counts never reach the song's insight, so reordered tags keep its key`() =
         runTest {
-            val tags = aggregate("Last.fm listeners tag Kolonel Djafaar as: afrobeat, ethio-jazz.")
-            val listeners = aggregate("Last.fm counts 900 listeners for Kolonel Djafaar.")
+            fun tags(list: String) = aggregate("Last.fm listeners tag Kolonel Djafaar as: $list.")
             val items = items(plain)
             val off = webOn(AiWebSearch.OFF)
-            val evidence =
-                checkNotNull(items.evidence(InsightItem.SONG, track(artist = listOf(listeners, tags)), off))
-            assertEquals(
-                listOf(tags.text),
-                evidence.evidence.lines
-                    .filter { it.scope == Scope.ARTIST }
-                    .map { it.text },
-            )
+            val listeners = aggregate("Last.fm counts 900 listeners for Kolonel Djafaar.")
+            val one = track(artist = listOf(listeners, tags("afrobeat, ethio-jazz")))
+            val two = track(artist = listOf(listeners, tags("ethio-jazz, afrobeat")))
+            val first = checkNotNull(items.evidence(InsightItem.SONG, one, off))
+            val second = checkNotNull(items.evidence(InsightItem.SONG, two, off))
+            assertTrue(first.onlyListings)
+            assertTrue(first.evidence.lines.none { it.scope == Scope.ARTIST })
+            assertEquals(items.key(InsightItem.SONG, one, first, off), items.key(InsightItem.SONG, two, second, off))
         }
+
+    @Test
+    fun `withoutCiting takes out the sentences that cite an id, and leaves a reply with none as it came`() {
+        val reply = "One  [S1]. Two [W1].\n\nThree [S1][W1].\nFour [S2]."
+        assertEquals("One [S1].\n\nFour [S2].", withoutCiting(reply, setOf("W1")))
+        assertEquals(reply, withoutCiting(reply, setOf("W9")))
+        assertEquals(reply, withoutCiting(reply, emptySet()))
+        assertEquals("", withoutCiting("Two [W1].", setOf("W1")))
+        assertEquals(GroundingCheck.NO_EVIDENCE, withoutCiting(GroundingCheck.NO_EVIDENCE, setOf("W1")))
+    }
 
     @Test
     fun `while a source that may describe the song could not be asked, no search is due, nor the fixed sentence`() =
@@ -486,6 +495,63 @@ class SongWebInsightsTest {
             val again = checkNotNull(items.evidence(InsightItem.SONG, first, upTo))
             assertEquals(result.key, items.key(InsightItem.SONG, first, again, upTo))
             assertFalse(items.searchesItself(InsightItem.SONG, again, upTo))
+        }
+
+    // [reply] written under *Up to 3 times* for the track, its search finding [PAGE], a description.
+    private suspend fun writtenFromDescription(reply: String): Pair<ItemInsights, SearchedWrite> {
+        val items = items(searching(reply), Searches { WebSearchOutcome.Found(listOf(PAGE)) })
+        val upTo = webOn(AiWebSearch.UP_TO)
+        val evidence = checkNotNull(items.evidence(InsightItem.SONG, track(), upTo))
+        val key = checkNotNull(items.key(InsightItem.SONG, track(), evidence, upTo))
+        return items to checkNotNull(items.writeSearching(key, InsightItem.SONG, track(), upTo, evidence))
+    }
+
+    private fun artistId(): String =
+        checkNotNull(track().evidence)
+            .lines
+            .single { it.scope == Scope.ARTIST }
+            .id
+
+    @Test
+    fun `up to 3 times, a description found, a sentence citing the artist's line goes, fresh and kept`() =
+        runTest {
+            val reply = "Its horns are heavy [S1]. The band plays Afrobeat [${artistId()}]. It is slow [S1]."
+            val (items, result) = writtenFromDescription(reply)
+            assertFalse(result.evidence.onlyListings)
+            val fresh = assertIs<InsightState.Written>(result.state)
+            assertEquals("Its horns are heavy [S1]. It is slow [S1].", fresh.grounded.text)
+            assertEquals(0, fresh.grounded.counts.unknown)
+            assertEquals("Its horns are heavy [S1]. It is slow [S1].", cache.cards[result.key])
+            val kept = assertIs<InsightState.Written>(checkNotNull(items.kept(result.key, result.evidence)).state)
+            assertEquals(0, kept.grounded.counts.unknown)
+            assertEquals(fresh.grounded.text, kept.grounded.text)
+        }
+
+    @Test
+    fun `up to 3 times, a description found, nothing left once they go, the write fails and the pages stay`() =
+        runTest {
+            val (_, result) = writtenFromDescription("The band plays Afrobeat [${artistId()}].")
+            assertIs<InsightState.Failed>(result.state)
+            assertTrue(cache.cards.isEmpty())
+            assertEquals(
+                listOf(PAGE.url),
+                songWeb.kept.values
+                    .flatten()
+                    .map { it.url },
+            )
+        }
+
+    @Test
+    fun `up to 3 times, no description found, the artist's sentence stays`() =
+        runTest {
+            val reply = "${GroundingCheck.ONLY_RELEASE_SENTENCE} The band plays Afrobeat [${artistId()}]."
+            val items = items(searching(reply), Searches { WebSearchOutcome.Found(emptyList()) })
+            val upTo = webOn(AiWebSearch.UP_TO)
+            val evidence = checkNotNull(items.evidence(InsightItem.SONG, track(), upTo))
+            val key = checkNotNull(items.key(InsightItem.SONG, track(), evidence, upTo))
+            val result = checkNotNull(items.writeSearching(key, InsightItem.SONG, track(), upTo, evidence))
+            assertEquals(reply, assertIs<InsightState.Written>(result.state).grounded.text)
+            assertEquals(reply, cache.cards[result.key])
         }
 
     @Test

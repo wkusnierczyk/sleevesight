@@ -13,6 +13,10 @@ import app.sleevesight.core.model.SourceId
  * Wikidata's templated lines, the player's), counts what many listeners did
  * ([EvidenceLine.aggregate]), comes from a streaming, shop or chart site ([LISTING_HOSTS],
  * [LISTING_NAMES]), or reads like one ([LISTING_WORDS]: a track list, "released on", "listen on").
+ * Such a phrase counts only where little else is said: with [PROSE_WORDS] or more words of prose
+ * beside it (lower-case words that are not a listing's own, [METADATA_WORDS]; names, dates and numbers
+ * do not count), the line is mixed, and describes the song ("Released on Friday, the song pairs a
+ * loping bass line with jagged horns."). A list of tracks is a listing whatever surrounds it.
  * Wikipedia's and Last.fm's text describe, whatever they say; so does a web line with no known
  * listing host and no listing shape. The words are English: a page in another language's words
  * counts as describing the song, unless its host says otherwise.
@@ -37,13 +41,19 @@ object SongListings {
         return LISTING_HOSTS.any { host == it || host.endsWith(".$it") } || labels.any { it in LISTING_NAMES }
     }
 
-    /** Whether [text] has the shape of a listing: its release data, or a list of tracks, and no more. */
+    /** Whether [text] has the shape of a listing: a list of tracks, or its release data and no more. */
     fun readsLikeListing(text: String): Boolean {
         val lower = text.lowercase()
-        return LISTING_WORDS.any { it in lower } ||
-            TIMES.findAll(text).count() >= TRACK_LIST_TIMES ||
-            NUMBERED.findAll(text).count() >= TRACK_LIST_NUMBERS
+        return TIMES.findAll(text).count() >= TRACK_LIST_TIMES ||
+            NUMBERED.findAll(text).count() >= TRACK_LIST_NUMBERS ||
+            (LISTING_WORDS.any { it in lower } && proseWords(text) < PROSE_WORDS)
     }
+
+    // How many words of [text] read as prose: in lower case, more than a letter, not a listing's own.
+    private fun proseWords(text: String): Int =
+        text
+            .split(NOT_LETTERS)
+            .count { word -> word.length > 1 && word.all(Char::isLowerCase) && word !in METADATA_WORDS }
 
     // The host of [url], lower case, without a leading `www.`; null for none.
     private fun hostOf(url: String): String? =
@@ -139,6 +149,58 @@ object SongListings {
             "upc:",
             "℗",
         )
+
+    // The words a listing's own sentences are made of, and the few that join them.
+    private val METADATA_WORDS =
+        setOf(
+            "add",
+            "album",
+            "an",
+            "and",
+            "as",
+            "at",
+            "available",
+            "buy",
+            "by",
+            "cart",
+            "catalog",
+            "catalogue",
+            "date",
+            "download",
+            "first",
+            "for",
+            "from",
+            "in",
+            "is",
+            "it",
+            "label",
+            "library",
+            "list",
+            "listen",
+            "listing",
+            "music",
+            "now",
+            "number",
+            "of",
+            "on",
+            "or",
+            "part",
+            "playlist",
+            "recorded",
+            "release",
+            "released",
+            "single",
+            "song",
+            "stream",
+            "streaming",
+            "the",
+            "to",
+            "track",
+            "tracklist",
+            "was",
+        )
+    private val NOT_LETTERS = Regex("[^\\p{L}]+")
+    private const val PROSE_WORDS = 4
 
     // Two or more lengths (`3:45`) or three or more numbers (`1. `) in a line: a list of tracks.
     private val TIMES = Regex("\\b[0-9]{1,2}:[0-5][0-9]\\b")

@@ -319,8 +319,10 @@ class ItemInsights(
 
     // The song's evidence from the run's [own], with the web's [pages] after its lines (each line
     // keeping its id; a page one of them quotes not twice), those [settings] switch on. While the
-    // song's own lines still only list it, with the artist's lines ([artistForSong]), each keeping its
-    // id; so only then does the card's key read those, and [webDue] whether a search is due then.
+    // song's own lines still only list it, with the artist's description ([artistLines]: not the counts
+    // and lists of what many listeners did, tags among them, whose numbers and order change from one
+    // lookup to the next), each keeping its id; so only then does the card's key read those, and
+    // [webDue] whether a search is due then.
     @Suppress("LongParameterList") // The lines, what they are about, and what is added to them.
     private fun songWith(
         own: EvidenceSet,
@@ -334,21 +336,10 @@ class ItemInsights(
         val all = own.with(pages.filter { settings.isEnabled(it.source) && it.url !in quoted }, hasher)
         val song = all.without(hasher) { it.scope == Scope.ARTIST }
         if (!SongListings.listingOnly(song.lines)) return ItemEvidence(song, matching(song.lines, shown))
-        val artist = artistForSong(all, track).mapTo(mutableSetOf()) { it.id }
+        val artist = artistLines(all, track).mapTo(mutableSetOf()) { it.id }
         val set = all.without(hasher) { it.scope == Scope.ARTIST && it.id !in artist }
         return ItemEvidence(set, matching(set.lines, shown), webDue = webDue, onlyListings = true)
     }
-
-    // The artist's lines the song's insight may tell of the artist's sound from (#958): its description,
-    // as the artist's insight's lines ([artistLines]); with none, its tags, Last.fm's (`LastFmAdapter`),
-    // those of the counts and lists left out of those lines that say something of its sound.
-    private fun artistForSong(
-        all: EvidenceSet,
-        track: TrackState,
-    ): List<EvidenceLine> =
-        artistLines(all, track).ifEmpty {
-            aboutPrimary(all.lines.filter { it.scope == Scope.ARTIST && it.aggregate && TAGGED in it.text }, track)
-        }
 
     // [track]'s song as its web search is asked for and kept by (#958), in its language when one is
     // known, [settings] allowing, with this play's resolution for Wikidata's names in it.
@@ -705,6 +696,10 @@ class ItemInsights(
      * [evidence], which has the lines that list it and the artist's ([SongQuestion]): each search's pages
      * about the song are numbered after the track's own lines, and kept for the track
      * ([SongWebLookup.keep]); its evidence then is what they give ([songWith]), a card's key with it.
+     * When a description was found, that evidence no longer has the artist's lines the model was given:
+     * a sentence citing one is taken out before the reply is read and kept
+     * ([withoutCiting]), with no further call. With nothing left, the write fails as for
+     * an empty reply, no card is kept, the pages are, and *Retry* writes it from them, with no search.
      */
     @Suppress("LongParameterList") // The insight, what it is about and from, and where its cost goes.
     suspend fun writeSearching(
@@ -840,6 +835,10 @@ class ItemInsights(
         val found =
             if (searched) webEvidence(asked.item, asked.track, asked.settings, asked.evidence, drafts) else null
         val lines = (found ?: asked.evidence).evidence
+        // The lines the model was given that the evidence no longer has (#958: the artist's, once a
+        // description was found): a sentence citing one goes, before the reply is read and kept.
+        val gone = asked.evidence.evidence.ids - lines.ids.toSet()
+        val text = withoutCiting(reply.text, gone.toSet())
         // Written by [first]'s service, model and effort, from the lines found.
         val key =
             first.copy(
@@ -848,14 +847,14 @@ class ItemInsights(
             )
         if (!gates.reserve(key)) return null
         val rewritten = asked.rewriting?.let { rewriteParts(it, key.writtenBy()) }.orEmpty()
-        val read = outcome(reply.end, reply.text, key, lines, null, rewritten)
+        val read = outcome(reply.end, text, key, lines, null, rewritten)
         val nothing = !searched && read is Reply.Read && read.kept && read.state == InsightState.NoEvidence
         if (searched || nothing) attempt { searching.keep(drafts) }
         // With "found nothing" kept, the artist's evidence has no search due.
         val none =
             if (nothing) webEvidence(asked.item, asked.track, asked.settings, asked.evidence, emptyList()) else null
         val evidence = found ?: none ?: asked.evidence
-        return SearchedWrite(evidence, key, kept(read, key, reply.text, rewritten, asked))
+        return SearchedWrite(evidence, key, kept(read, key, text, rewritten, asked))
     }
 
     // The state [read], [key]'s reply [text] as read, comes to (a reply that revised itself away
@@ -943,14 +942,7 @@ class ItemInsights(
         // Not the counts and lists of what many listeners did (Last.fm's listeners, tags, similar
         // artists: `EvidenceLine.aggregate`), whose numbers and order change from one lookup to the
         // next: in the artist's fingerprint, they would key the same artist anew on each.
-        return aboutPrimary(own.lines.filter { it.scope == Scope.ARTIST && !it.aggregate }, track)
-    }
-
-    // Of artist-level [lines], those about [track]'s primary artist, as [artistLines] says.
-    private fun aboutPrimary(
-        lines: List<EvidenceLine>,
-        track: TrackState,
-    ): List<EvidenceLine> {
+        val lines = own.lines.filter { it.scope == Scope.ARTIST && !it.aggregate }
         val primary = track.normalized.primary
         if (track.normalized.artists.size <= 1) return lines
         val key = " ${names.key(primary)} "
@@ -1454,9 +1446,6 @@ private val ARTIST_SOURCES = setOf(SourceId.MUSICBRAINZ, SourceId.WIKIPEDIA, Sou
 // The sources whose answer says whether the song's lines only list it (#958): those that may describe
 // it, and the web's, which also makes its search.
 private val SONG_SOURCES = ARTIST_SOURCES + SourceId.WEB
-
-// The words Last.fm's line of an artist's tags says them with (`LastFmAdapter`), among its counts and lists.
-private const val TAGGED = "listeners tag "
 
 // Whether a source [settings] switch on of [sources] (by default, those the artist's lines come from,
 // and MusicBrainz) ended on [track] unreachable (the network, the source), or failed in a way its

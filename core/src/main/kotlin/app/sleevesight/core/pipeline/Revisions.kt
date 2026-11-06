@@ -30,6 +30,30 @@ internal fun readReply(
 }
 
 /**
+ * [reply] without the sentences that cite any of [ids] (#958: lines the model was given that the
+ * evidence it is kept with no longer has), so what is shown and kept reads as written from that
+ * evidence: as it came when none does, or it is `NO_EVIDENCE`; empty when no sentence is left.
+ */
+internal fun withoutCiting(
+    reply: String,
+    ids: Set<String>,
+): String {
+    val paragraphs =
+        (GroundingCheck.check(reply, ids, allowModel = true) as? InsightReply.Written)?.grounded?.paragraphs
+    if (paragraphs == null || paragraphs.flatten().none { sentence -> sentence.cites.any { it in ids } }) {
+        return reply
+    }
+    return paragraphs
+        .map { paragraph -> paragraph.filter { sentence -> sentence.cites.none { it in ids } } }
+        .filter { it.isNotEmpty() }
+        .joinToString("\n\n") { paragraph ->
+            paragraph.drop(1).fold(paragraph.first().text) { text, sentence ->
+                text + (if (sentence.afterLineBreak) "\n" else " ") + sentence.text
+            }
+        }
+}
+
+/**
  * Whether a sign read while the reply streams stops what the card shows (#798): an aside, the first
  * person or talk of the evidence; not a repeated opening, whose second occurrence is what is kept.
  */
