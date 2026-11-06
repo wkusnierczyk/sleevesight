@@ -37,6 +37,7 @@ for ((i = 1; i <= runs; i++)); do
   fi
   sleep 3
 done
+(( ${#totals[@]} )) || { echo "no run was a cold or a warm start" >&2; exit 1; }
 for state in COLD WARM; do
   printf '%s\n' "${totals[@]}" | awk -v s="$state" '$1 == s { print $2 }' | sort -n |
     awk -v s="$state" '{ v[NR] = $1 } END { if (!NR) exit;
