@@ -25,6 +25,7 @@ import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.SourceResult
 import app.sleevesight.core.sources.WorkLyrics
+import app.sleevesight.core.testing.MemoryLanguageLines
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
@@ -558,24 +559,83 @@ class PipelineLanguageTest {
         }
 
     @Test
-    fun `under If needed the artist's and the album's insights take no line found in the language`() =
+    fun `under If needed the artist's and the album's insights take the lines found in the language too`() =
         runTest {
-            // Only the thin tracks are searched then: with their lines, the artist's and the album's
-            // fingerprints would change from one of their tracks to the next.
             val deluxe = Regional(nowPlaying("잠시", "BTS", "BE (Deluxe Edition)"), kpop.english)
             val state = pipeline().play(deluxe)
             assertEquals("ko", state.inLanguage?.language)
             val items = ItemInsights(null, cache, JvmHasher, NameMatcher(JvmAccentFolder))
-            assertTrue(items.evidence(InsightItem.ALBUM, state, settings)!!.evidence.isEmpty())
-            assertTrue(items.evidence(InsightItem.ARTIST, state, settings)!!.evidence.isEmpty())
-            // The song's keeps them, the artist's line aside.
+            val album = items.evidence(InsightItem.ALBUM, state, settings)!!.evidence
+            assertEquals(listOf("《BE》는 방탄소년단의 앨범이다."), album.lines.map { it.text })
+            val artist = items.evidence(InsightItem.ARTIST, state, settings)!!.evidence
+            assertEquals(listOf("방탄소년단은 대한민국의 그룹이다."), artist.lines.map { it.text })
+            // Under Off, none: the song's keeps them, the artist's line aside.
+            val off = settings.copy(trackLanguageSearch = TrackLanguageSearch.OFF)
+            assertTrue(items.evidence(InsightItem.ALBUM, state, off)!!.evidence.isEmpty())
+            assertTrue(items.evidence(InsightItem.ARTIST, state, off)!!.evidence.isEmpty())
             assertEquals(
                 2,
-                items.evidence(InsightItem.SONG, state, settings)!!.evidence.lines.count {
-                    it.language ==
-                        "ko"
-                },
+                items
+                    .evidence(InsightItem.SONG, state, off)!!
+                    .evidence.lines
+                    .count { it.language == "ko" },
             )
+        }
+
+    @Test
+    fun `an album's two tracks, one searched and one not, share its and its artist's keys once lines are kept`() =
+        runTest {
+            // The issue's case (#939): under If needed, only the thin track is searched in the language.
+            val searched = Regional(nowPlaying("잠시", "BTS", "BE"), kpop.english)
+            val four = (1..4).map { "Fact $it about “Life Goes On”." }
+            val notSearched = Regional(nowPlaying("Life Goes On", "BTS", "BE"), mapOf(SourceId.MUSICBRAINZ to four))
+            val kept = MemoryLanguageLines()
+            val items =
+                ItemInsights(
+                    AiAccess(provider, Secret("sk-test")),
+                    cache,
+                    JvmHasher,
+                    NameMatcher(JvmAccentFolder),
+                    languageLines = kept,
+                )
+
+            suspend fun keyOf(
+                item: InsightItem,
+                state: TrackState,
+            ): CardKey = items.key(item, state, items.evidence(item, state, settings)!!, settings)!!
+
+            // Before any is kept, the track not searched has the key of no lines in the language.
+            val off = settings.copy(trackLanguageSearch = TrackLanguageSearch.OFF)
+            val plain = pipeline().play(notSearched)
+            assertNull(plain.inLanguage)
+            val none =
+                ItemInsights(AiAccess(provider, Secret("sk-test")), cache, JvmHasher, NameMatcher(JvmAccentFolder))
+            val noLines =
+                InsightItem.entries.associateWith { item ->
+                    none.key(item, plain, none.evidence(item, plain, off)!!, off)
+                }
+            assertEquals(noLines[InsightItem.ALBUM], keyOf(InsightItem.ALBUM, plain))
+            assertEquals(noLines[InsightItem.ARTIST], keyOf(InsightItem.ARTIST, plain))
+
+            val thin = pipeline().play(searched)
+            assertEquals("ko", thin.inLanguage?.language)
+            val album = keyOf(InsightItem.ALBUM, thin)
+            val artist = keyOf(InsightItem.ARTIST, thin)
+            assertTrue(album != noLines[InsightItem.ALBUM] && artist != noLines[InsightItem.ARTIST])
+
+            // Kept, so the track not searched now gives the same keys, and so does the searched one again.
+            val again = pipeline().play(notSearched)
+            assertEquals(album, keyOf(InsightItem.ALBUM, again))
+            assertEquals(artist, keyOf(InsightItem.ARTIST, again))
+            assertEquals(album, keyOf(InsightItem.ALBUM, thin))
+            assertEquals(artist, keyOf(InsightItem.ARTIST, thin))
+            val lines = items.evidence(InsightItem.ALBUM, again, settings)!!.evidence.lines
+            assertEquals(listOf("《BE》는 방탄소년단의 앨범이다." to "ko"), lines.map { it.text to it.language })
+            // A source switched off leaves its kept lines out; Off leaves them all out.
+            val noWikipedia = settings.copy(enabledSources = settings.enabledSources - SourceSwitch.WIKIPEDIA)
+            assertTrue(items.evidence(InsightItem.ALBUM, again, noWikipedia)!!.evidence.isEmpty())
+            val offEvidence = items.evidence(InsightItem.ALBUM, again, off)!!
+            assertEquals(noLines[InsightItem.ALBUM], items.key(InsightItem.ALBUM, again, offEvidence, off))
         }
 
     @Test

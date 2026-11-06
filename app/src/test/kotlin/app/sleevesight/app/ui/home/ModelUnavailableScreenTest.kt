@@ -44,7 +44,8 @@ import org.robolectric.RobolectricTestRunner
 /**
  * The insight card while the switched-on AI service's model is found unavailable (#540): it says
  * so, and asks for another model or service, with a link to the settings, and offers no Write; in
- * place of why nothing is written, or with an insight, last in its footer (#911).
+ * place of why nothing is written, or with an insight, last in its footer (#911), in place of why a
+ * rewrite the service refused the model for failed (#969).
  */
 @RunWith(RobolectricTestRunner::class)
 class ModelUnavailableScreenTest {
@@ -61,11 +62,21 @@ class ModelUnavailableScreenTest {
         insight: InsightState,
         unavailable: UnavailableModel?,
         settings: Settings = Settings(aiProvider = ProviderId.ANTHROPIC),
+        rewriteFailed: String? = null,
         block: () -> Unit,
     ) {
+        // A rewrite that failed shows the card paid for in its place, as the pipeline gives it.
+        val view =
+            PipelineView(
+                track(insight = insight),
+                aiReady = false,
+                retry = true,
+                cardShown = rewriteFailed != null,
+                rewriteFailed = rewriteFailed,
+            )
         val state =
             NowPlayingState(
-                PipelineView(track(insight = insight), aiReady = false, retry = true),
+                view,
                 sundown,
                 PlaybackInfo(Settings.SPOTIFY, PlaybackStatus.PLAYING),
                 settings = settings,
@@ -106,12 +117,63 @@ class ModelUnavailableScreenTest {
             assertEquals(0, settingsOpened)
         }
 
+    // The words of a model the service refused (`failureText`), and the start of the line that gives them.
+    private val refusals =
+        listOf(R.string.home_failure_model_not_found, R.string.home_failure_model_refused).map(app::getString)
+    private val rewritingFailed = app.getString(R.string.home_rewrite_failed, "").substringBefore(':')
+
+    private fun assertNoRefusalSaid() {
+        for (words in refusals + rewritingFailed) {
+            compose.onAllNodesWithText(words, substring = true).assertCountEquals(0)
+        }
+    }
+
     @Test
     fun theCallItFailedSaysSoTooWithNoWriteToTryAgain() =
         show(InsightState.Failed("model_not_found"), haiku) {
             compose.onNodeWithTag(MODEL_UNAVAILABLE_TAG).performScrollTo().assertTextEquals(said)
             assertEquals(0, count(WRITE_TAG))
+            // Said as the model unavailable, not as the call's reason (#969).
+            assertNoRefusalSaid()
         }
+
+    @Test
+    fun aRewriteTheServiceRefusedTheModelForIsSaidAsTheModelUnavailableLastInTheFooter() {
+        // The insight kept, shown again after its rewrite was refused, as the model not known or not
+        // allowed: the footer's first line says it is kept, its last that the model is unavailable,
+        // and nothing gives the refusal's reason (#969).
+        for (reason in listOf("model_not_found", "model_refused")) {
+            show(written("It is a song [MB1].", cached = true), haiku, rewriteFailed = reason) {
+                val previously =
+                    compose
+                        .onNodeWithText(app.getString(R.string.home_written_before))
+                        .performScrollTo()
+                        .assertTextEquals(app.getString(R.string.home_written_before))
+                val report = compose.onNodeWithTag(REPORT_TAG)
+                val line = compose.onNodeWithTag(MODEL_UNAVAILABLE_TAG).assertTextEquals(said)
+                val write = compose.onNodeWithTag(NO_ACTION_TAG).assertIsNotEnabled()
+                val tops = listOf(previously, report, line, write).map { it.fetchSemanticsNode().positionInRoot.y }
+                assertEquals("top to bottom, in this order", tops.sorted(), tops)
+                assertNoRefusalSaid()
+            }
+        }
+    }
+
+    @Test
+    fun aRewriteThatFailedOtherwiseStillSaysWhyAndWithoutTheNoteSoDoesARefusal() {
+        val failed = { why: Int -> app.getString(R.string.home_rewrite_failed, app.getString(why)) }
+        val previously = app.getString(R.string.home_written_before)
+        // Offline, with the model found unavailable: not what the note says, so said as before.
+        show(written("It is a song [MB1].", cached = true), haiku, rewriteFailed = "offline") {
+            compose.onNodeWithText("$previously ${failed(R.string.home_failure_offline)}").performScrollTo()
+            compose.onNodeWithTag(MODEL_UNAVAILABLE_TAG).assertTextEquals(said)
+        }
+        // A refusal with the model not (yet) found unavailable: no note, so the reason is said, as before.
+        show(written("It is a song [MB1].", cached = true), null, rewriteFailed = "model_not_found") {
+            compose.onNodeWithText("$previously ${failed(R.string.home_failure_model_not_found)}").performScrollTo()
+            assertEquals(0, count(MODEL_UNAVAILABLE_TAG))
+        }
+    }
 
     @Test
     fun withAnInsightItIsSaidLastInTheFooterAboveTheDisabledWrite() =

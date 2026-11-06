@@ -25,6 +25,7 @@ import app.sleevesight.core.pipeline.rewriteParts
 import app.sleevesight.core.pipeline.writtenBy
 import app.sleevesight.core.resolution.NameMatcher
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.settings.TrackLanguageSearch
 import app.sleevesight.core.settings.WriteAutomatically
 import app.sleevesight.core.settings.pastKeepHistory
 import kotlinx.coroutines.CoroutineScope
@@ -39,6 +40,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -278,9 +280,10 @@ class AppItemNotes(
     private val events: (PipelineEvent) -> Unit = {},
     private val gate: (ItemAsk) -> Boolean = { true },
 ) : ItemNotes {
-    // An insight shown, and when it was written; [rewrites] when the write that showed it rewrites
-    // the insight another service, model or effort wrote (#911), and [play] the play
-    // ([NowPlaying.play]) it was written on, null where none was counted or it came from the cache.
+    // An insight shown, and when it was written; [rewrites] when the write that showed it, a tap's or
+    // an automatic one's (#972), rewrites the insight another service, model or effort wrote (#911),
+    // and [play] the play ([NowPlaying.play]) it was written on, null where none was counted or it
+    // came from the cache.
     private class Entry(
         val state: InsightState,
         val writtenAt: Instant,
@@ -293,7 +296,10 @@ class AppItemNotes(
     // now (`ItemInsights.ownEvidence`), its entity, the sources switched on, and whether a web search
     // may give it lines (`ItemInsights.searchesWeb`: the artist's, #912, with *AI web search* used and
     // an engine's key; the album's, #935, with web search on and an engine's key), so switching that
-    // on, or giving the key, gathers it again.
+    // on, or giving the key, gathers it again; and whether it takes the lines found in the track's
+    // language, and where those are kept (`ItemInsights.takesInLanguage`, #939: *Search in the track's
+    // language* off or not, and *Keep what sources said about each artist*), so switching either
+    // gathers it again.
     private data class Gathered(
         val item: InsightItem,
         val lookupKey: String,
@@ -301,6 +307,8 @@ class AppItemNotes(
         val entity: CardEntity?,
         val sources: Set<SourceId>,
         val searchesWeb: Boolean,
+        val inLanguage: Boolean,
+        val keepsArtists: Boolean,
     )
 
     // The insights shown, by key, oldest first, at most [KEPT].
@@ -348,7 +356,9 @@ class AppItemNotes(
         track: TrackState,
         item: InsightItem,
     ): Flow<ItemShown> =
-        combine(parts, settings) { made, now -> made to now }
+        // Followed anew when *Keep what sources said about each artist* changes too ([keepings]), whose
+        // turn drops the evidence it shows, or the gathering it waits on, whichever it sees first.
+        combine(parts, settings, keepings) { made, now, keeping -> Triple(made, now, keeping) }
             .distinctUntilChanged()
             .flatMapLatest { (made, now) ->
                 val insights = made?.let(::insightsOf)
@@ -568,9 +578,10 @@ class AppItemNotes(
             val evidence = evidenceOf(insights, track, item, now)
             // Not after a *Clear history* that came while the evidence was gathered.
             val key = evidence?.let { insights.key(item, track, it, now) }?.takeIf { current(work) }
-            // What a tap rewrites (#911): the earlier insight shown in place of the key's own, or again
-            // after a rewrite of it ended without one. Read before the claim, as the row showed it.
-            val replaces = key?.let { replaced(it, ask, track) }
+            // What the write rewrites (#911, #972): the earlier insight shown in place of the key's own,
+            // or again after a rewrite of it ended without one. Read before the claim, as the row showed it;
+            // for a row not yet looked, only once its own is missed ([unlooked]).
+            val replaces = key?.let { replaced(it, track) }
             if (evidence != null && key != null && claim(key, ask, track, evidence)) {
                 write(insights, key, Asked(item, track, evidence, ask, work, now, replaces))
             }
@@ -649,7 +660,8 @@ class AppItemNotes(
 
     // An item asked for: what it is, of which track, from what evidence, how it was asked, and under
     // which settings its evidence was gathered.
-    // [replaces] is what wrote the insight a tap rewrites (#911), null for none.
+    // [replaces] is what wrote the insight the write rewrites (#911, #972), null for none; given once the
+    // write misses its own insight, when its row had not looked for the earlier one ([unlooked]).
     @Suppress("LongParameterList") // What was asked, and what it rewrites.
     private class Asked(
         val item: InsightItem,
@@ -661,33 +673,73 @@ class AppItemNotes(
         val replaces: WrittenBy? = null,
     ) {
         fun with(found: ItemEvidence) = Asked(item, track, found, ask, work, settings, replaces)
+
+        // As asked, rewriting what [by] wrote, unless it rewrites something already.
+        fun replacing(by: WrittenBy?) =
+            if (by == null || replaces != null) this else Asked(item, track, evidence, ask, work, settings, by)
     }
 
-    // What wrote the insight a tap under [key] on [track] rewrites (#911): the earlier insight's, while
-    // the row shows it, in place of none, of a rewrite that ended without one, or of a write that did
-    // on an earlier play; null otherwise, and for any ask but a tap.
+    // What wrote the insight a write under [key] on [track] rewrites (#911): the earlier insight's, in
+    // place of none, of a rewrite (a tap's or an automatic one's, #972) that ended without one, or of
+    // a write that did on an earlier play, while the row shows it; null otherwise. Writing in its place
+    // is a rewrite of it, as a tap on *Rewrite insight* is.
     private fun replaced(
         key: CardKey,
-        ask: ItemAsk,
         track: TrackState,
-    ): WrittenBy? {
-        if (ask != ItemAsk.TAP) return null
-        return (shownEarlier(key, track)?.state as? InsightState.Written)?.writtenBy
-    }
+    ): WrittenBy? = (shownEarlier(key, track)?.state as? InsightState.Written)?.writtenBy
 
     // The insight another service, model or effort wrote that [key]'s row on [track] shows in place of
-    // its own (#911), as the row shows it: the earlier one once its own was looked for, in place of
-    // none, of a rewrite that ended without one, or of a write on an earlier play that did ([stale]);
-    // null for none.
+    // its own (#911), as the row shows it: the earlier one once its own was looked for, where it has
+    // none of its own ([ownless]); null for none.
     private fun shownEarlier(
         key: CardKey,
         track: TrackState,
     ): Entry? {
-        val entry = shown.value[key]
-        val showsEarlier =
-            key in others.value && (entry == null || entry.rewrites || stale(entry, track.nowPlaying.play))
-        if (!showsEarlier) return null
+        if (!ownless(key, track) || key !in others.value) return null
         return earlierFor(key, shown.value, others.value[key], settings.value?.historyLifetime)
+    }
+
+    // What an automatic write of [key] rewrites when its row has not looked for the earlier insight
+    // (#972): read from the cache, once its own is missed, and kept as the row's look would keep it,
+    // so the row shows it again if the write ends without an insight; null for a tap, which rewrites
+    // only what the row shows ([replaced]).
+    private suspend fun unlooked(
+        insights: ItemInsights,
+        key: CardKey,
+        asked: Asked,
+    ): WrittenBy? {
+        if (asked.ask == ItemAsk.TAP || key in others.value || !ownless(key, asked.track)) return null
+        val other = lookOther(insights, key, asked.evidence, asked.work)
+        val earlier = earlierFor(key, shown.value, other, settings.value?.historyLifetime)
+        return (earlier?.state as? InsightState.Written)?.writtenBy
+    }
+
+    // The insight another service, model or effort wrote for what [key]'s is about, from [evidence],
+    // kept and within *Keep history for* (#911), kept in [others] for [key] as the row shows it, while
+    // no *Clear history* came since [work] started; null for none.
+    private suspend fun lookOther(
+        insights: ItemInsights,
+        key: CardKey,
+        evidence: ItemEvidence,
+        work: CoroutineContext,
+    ): Entry? {
+        val other =
+            insights
+                .keptByOther(key, evidence)
+                ?.takeIf { !expired(it.writtenAt) }
+                ?.let { Entry(it.state, it.writtenAt ?: clock.now(), evidence) }
+        publish(work) { others.update { it.withOther(key, other) } }
+        return other
+    }
+
+    // Whether [key] has no insight of its own on [track]: none, a rewrite that ended without one, or a
+    // write that did on an earlier play ([stale]).
+    private fun ownless(
+        key: CardKey,
+        track: TrackState,
+    ): Boolean {
+        val entry = shown.value[key]
+        return entry == null || entry.rewrites || stale(entry, track.nowPlaying.play)
     }
 
     // Whether [ask] is a tap's opening under *On demand* (#948) of a row that shows the insight another
@@ -740,13 +792,15 @@ class AppItemNotes(
     ): Deferred<Found?> {
         val gathering =
             inflight.computeIfAbsent(at) {
+                // Where the lines in the track's language are kept, when it began (#939).
+                val keeping = keepings.value
                 val job =
                     scope.async(mark(), start = CoroutineStart.LAZY) {
                         val found =
                             withContext(
                                 io,
                             ) { insights.evidence(item, track, now) }?.let { Found(it, clock.now(), track, now) }
-                        found?.also { keep(at, it, coroutineContext) }
+                        found?.also { keep(at, it, coroutineContext) { at.inLanguage && keeping != keepings.value } }
                     }
                 pending += job
                 job.invokeOnCompletion {
@@ -761,12 +815,14 @@ class AppItemNotes(
     }
 
     // Keeps [found] for [at], last, the oldest dropped past [KEPT], unless a *Clear history* came since
-    // [work] began.
+    // [work] began, or, under the same lock, it is [stale].
     private fun keep(
         at: Gathered,
         found: Found,
         work: CoroutineContext,
+        stale: () -> Boolean = { false },
     ) = publish(work) {
+        if (stale()) return@publish
         gathered.update { kept ->
             val next = LinkedHashMap(kept)
             next.remove(at)
@@ -788,6 +844,8 @@ class AppItemNotes(
         insights.entity(item, track),
         SourceId.entries.filter(now::isEnabled).toSet(),
         insights.searchesWeb(item, now),
+        insights.takesInLanguage(item, now),
+        insights.takesInLanguage(item, now) && now.keepArtistResults,
     )
 
     // [first]'s insight, kept meanwhile (another track of the artist or album wrote it), with no call,
@@ -805,15 +863,24 @@ class AppItemNotes(
         val work = currentCoroutineContext()
         val job = work[Job]
         job?.let { jobs[key] = it }
-        val rewrites = firstAsked.replaces != null
         val show: (InsightState, Instant) -> Unit = { state, at ->
-            val entry = Entry(state, at, asked.evidence, rewrites, track.nowPlaying.play)
+            // A tap's or an automatic one's (#972): one that ends without an insight shows the earlier
+            // insight again, saying why.
+            val entry = Entry(state, at, asked.evidence, asked.replaces != null, track.nowPlaying.play)
             publish(work) { shown.update { it.with(key, entry) } }
         }
         val question = Question(track, AiQuestion.Item(item), work)
         val counted: (QuestionCost) -> Unit = { more -> question.count(more, key) }
         try {
-            val next = toWrite(insights, key, asked, job, counted)
+            val next =
+                if (showKept(insights, key, asked)) {
+                    Next(key, asked, AiOutcome.ANSWERED)
+                } else {
+                    // Its own missed: what it rewrites, when its row had not looked yet (#972), which
+                    // [show] and every key the write moves to then see.
+                    asked = asked.replacing(unlooked(insights, key, asked))
+                    toWrite(insights, key, asked, job, counted)
+                }
             key = next.key
             asked = next.asked
             finish(insights, first, next, Writing(question, counted, show))
@@ -937,10 +1004,10 @@ class AppItemNotes(
         }
     }
 
-    // What [key]'s write goes on with: [key] and [asked], or, after an album's or an artist's web
-    // search (#885, #912, [searched]), the key and evidence it then has, the claim moved to it;
-    // [Next.ended] when nothing is left to write, as its question ended: answered, kept under [key]
-    // and shown, stopped, the next key's written by another already, failed, the artist's search
+    // What [key]'s write goes on with, its own insight not kept ([write] serves that first): [key] and
+    // [asked], or, after an album's or an artist's web search (#885, #912, [searched]), the key and
+    // evidence it then has, the claim moved to it; [Next.ended] when nothing is left to write, as its
+    // question ended: stopped, the next key's written by another already, failed, the artist's search
     // failing with nothing else to write from, or written while the AI service searched
     // ([searchingWrite]).
     private suspend fun toWrite(
@@ -950,7 +1017,6 @@ class AppItemNotes(
         job: Job?,
         counted: (QuestionCost) -> Unit,
     ): Next {
-        if (showKept(insights, key, asked)) return Next(key, asked, AiOutcome.ANSWERED)
         // The key an album's or the artist's *Once* search's lines give, claimed beside [key] before
         // they are kept (#935).
         var reserved: CardKey? = null
@@ -1252,12 +1318,7 @@ class AppItemNotes(
             val kept =
                 insights.kept(key, evidence)?.takeIf { !expired(it.writtenAt) && !beforeSearch(it.state, evidence) }
             if (kept == null) {
-                val other =
-                    insights
-                        .keptByOther(key, evidence)
-                        ?.takeIf { !expired(it.writtenAt) }
-                        ?.let { Entry(it.state, it.writtenAt ?: clock.now(), evidence) }
-                publish(work) { others.update { it.withOther(key, other) } }
+                lookOther(insights, key, evidence, work)
                 return@tracked
             }
             val entry = Entry(kept.state, kept.writtenAt ?: clock.now(), evidence)
@@ -1325,6 +1386,56 @@ class AppItemNotes(
     }
 
     /**
+     * *Keep what sources said about each artist* changed (#939), which says where the lines in the
+     * track's language are kept: the artist's and the album's evidence gathered with them is dropped,
+     * and a gathering under way keeps nothing, so each is gathered again from where they are kept now.
+     * Without it, switching on and off again would find the evidence gathered before under the same
+     * key, with lines the switch's turn dropped. Each insight shown follows its evidence anew, so one
+     * that took the new settings first is gathered again too.
+     */
+    fun artistKeepingChanged() {
+        synchronized(lock) {
+            keepings.update { it + 1 }
+            gathered.update { kept -> kept.filterKeys { !it.inLanguage } }
+            inflight.keys.removeIf { it.inLanguage }
+        }
+    }
+
+    /**
+     * Keeps what the search in the track's language found about the artist and the album of each of
+     * [tracks] (the pipeline's track) once its evidence is in (#939, `ItemInsights.keepInLanguage`),
+     * under the parts and settings then, whether or not their insights are opened, so the next of
+     * their tracks finds the lines: only while insights are shown (*Show insights*) and an AI service
+     * is ready, since nothing is written from them otherwise, and *Search in the track's language* is
+     * not *Off*. Again when the parts or the settings come, or change in one of those, for the same
+     * track. Until cancelled; nothing kept after a *Clear history* by work begun before it.
+     */
+    suspend fun keepAhead(tracks: Flow<TrackState?>) {
+        combine(tracks, parts, settings) { track, made, now ->
+            val offered = track?.takeIf(ItemInsights::offered)
+            val insights = made?.let(::insightsOf)
+            // Insights shown and an AI service ready: else nothing is written from the lines.
+            val writes = insights?.writes == true && now?.writeInsights == true
+            val inLanguage = now != null && now.trackLanguageSearch != TrackLanguageSearch.OFF
+            val keep =
+                when {
+                    offered == null || insights == null || now == null -> null
+                    writes && inLanguage -> suspend { insights.keepInLanguage(offered, now) }
+                    else -> null
+                }
+            Ahead(listOf(offered?.normalized?.lookupKey, offered?.evidence?.fingerprint, writes, inLanguage), keep)
+        }.distinctUntilChangedBy { it.on }
+            .collect { ahead -> ahead.keep?.let { withContext(io + mark()) { it() } } }
+    }
+
+    // What [keepAhead] keeps on: the track once offered (its key and evidence), whether insights are
+    // written and *Search in the track's language* is on, and the keep then, null for none.
+    private class Ahead(
+        val on: List<Any?>,
+        val keep: (suspend () -> Unit)?,
+    )
+
+    /**
      * Forgets the insights shown and the evidence gathered, for *Clear history* (#547); the cache's
      * are deleted with it. After the epoch's advance: work that checked it before shows its state
      * before this clears it, never after.
@@ -1346,6 +1457,9 @@ class AppItemNotes(
 
     // Guards each insight shown against *Clear history* ([forget]).
     private val lock = Any()
+
+    // How many times *Keep what sources said about each artist* changed ([artistKeepingChanged]), under [lock].
+    private val keepings = MutableStateFlow(0L)
 
     // How many times [forget] ran, under [lock], as `AppGenreNotes` counts them (#791).
     @Volatile
@@ -1386,6 +1500,8 @@ class AppItemNotes(
             made.modelUnavailable,
             made.artistWeb,
             made.webSearch,
+            made.dateForm,
+            made.languageLines,
         )
 
     // Whether an insight written at [writtenAt] is past *Keep history for* ([lifetime]; null, for ever).

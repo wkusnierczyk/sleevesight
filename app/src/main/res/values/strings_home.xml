@@ -127,13 +127,13 @@
     <!-- The track's first release with its title not known: the date alone, as above. -->
     <string name="home_dates_first_when">This track was first released %1$s.</string>
     <!-- For a cover, who recorded the song first and when (the date as above), and the release it
-         first came out on (in italics): "The song was originally recorded in June 1984 by Leonard
-         Cohen, and released on Various Positions."; a single's or an EP's named as such. -->
-    <string name="home_dates_original">The song was originally recorded %1$s by %2$s, and released on %3$s.</string>
-    <string name="home_dates_original_single">The song was originally recorded %1$s by %2$s, and released on the single %3$s.</string>
-    <string name="home_dates_original_ep">The song was originally recorded %1$s by %2$s, and released on the EP %3$s.</string>
+         first came out on (in italics): "The song was originally recorded by Leonard Cohen in June
+         1984, and released on Various Positions."; a single's or an EP's named as such. -->
+    <string name="home_dates_original">The song was originally recorded by %2$s %1$s, and released on %3$s.</string>
+    <string name="home_dates_original_single">The song was originally recorded by %2$s %1$s, and released on the single %3$s.</string>
+    <string name="home_dates_original_ep">The song was originally recorded by %2$s %1$s, and released on the EP %3$s.</string>
     <!-- The same, the release it first came out on not known. -->
-    <string name="home_dates_original_unreleased">The song was originally recorded %1$s by %2$s.</string>
+    <string name="home_dates_original_unreleased">The song was originally recorded by %2$s %1$s.</string>
     <!-- A panel on Home that has nothing from MusicBrainz to show says why (#724: Dates; Lyrics, #728, as
          well), one of these at a time. MusicBrainz is still being asked, or asked again after Retry. -->
     <string name="home_musicbrainz_looking">Looking on MusicBrainz…</string>
@@ -401,13 +401,15 @@
          rewrite that failed. What follows from it goes on the same line, after it: a rewrite that
          failed or was stopped, what Look again found, and Rewrite insight offered
          (home_rewrite_offer). Nothing for an insight just written. For an insight written by Rewrite
-         insight, home_rewritten_with in its place (#854), never both. -->
+         insight, or by an automatic write in place of another model's (#972), home_rewritten_with
+         in its place (#854), never both. -->
     <string name="home_written_before">As written previously.</string>
-    <!-- In place of "As written previously." (#854), for an insight written by Rewrite insight, on
-         the play it was rewritten and every later one while it is the one kept; what follows goes
-         after it as after "As written previously.". %1$s: what the rewrite used that the insight it
-         replaced did not, its parts (home_rewrite_part_*, home_rewrite_model_effort) joined with
-         ", " and a last home_rewrite_and. -->
+    <!-- In place of "As written previously." (#854), for an insight written by Rewrite insight, or
+         by an automatic write in place of another model's (#972), on the play it was rewritten and
+         every later one while it is the one kept; what follows goes after it as after "As written
+         previously.". %1$s: what the rewrite used that the insight it replaced did not, its parts
+         (home_rewrite_part_*, home_rewrite_model_effort) joined with ", " and a last
+         home_rewrite_and. -->
     <string name="home_rewritten_with">Rewritten with %1$s.</string>
     <!-- After "As written previously." or home_rewritten_with, with Rewrite insight offered (#615,
          #625, #671, #854). %1$s: what a rewrite would use now that the insight shown did not, built as

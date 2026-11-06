@@ -7,6 +7,9 @@ import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmHasher
+import app.sleevesight.core.text.APP_DATE_RULE
+import app.sleevesight.core.text.US_DATES
+import app.sleevesight.core.text.US_DATE_RULE
 import app.sleevesight.fixtures.Fixtures
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -43,12 +46,17 @@ class InsightPromptTest {
     }
 
     @Test
-    fun `the style asks for dates in the app's form, its examples the formatter's (#957)`() {
-        assertEquals("- Write dates in the form 17 October 2026, October 2026 or 2026.", InsightPrompt.DATE_RULE)
+    fun `the style asks for dates in the form given, its examples the formatter's (#957)`() {
+        assertEquals(APP_DATE_RULE, InsightPrompt.dateRule())
+        assertEquals(US_DATE_RULE, InsightPrompt.dateRule(US_DATES))
         for (allowModel in listOf(false, true)) {
-            val system = InsightPrompt.system(allowModel)
-            val style = system.substringAfter("STYLE\n").substringBefore(InsightPrompt.CONTRACT_HEADING)
-            assertTrue(InsightPrompt.DATE_RULE in style, "with the style")
+            val style = { system: String ->
+                system.substringAfter("STYLE\n").substringBefore(InsightPrompt.CONTRACT_HEADING)
+            }
+            assertTrue(APP_DATE_RULE in style(InsightPrompt.system(allowModel)), "the app's form with no phone")
+            val us = style(InsightPrompt.system(allowModel, dates = US_DATES))
+            assertTrue(US_DATE_RULE in us, "a US phone's form")
+            assertFalse(APP_DATE_RULE in us, "one form")
         }
     }
 

@@ -14,10 +14,10 @@ import app.sleevesight.core.pipeline.WrittenBy
 // What the insight's footer says of a rewrite (#854): what one used, and what one would use.
 
 /**
- * "Rewritten with {what}." for an insight written by *Rewrite insight* (#854), in place of *As
- * written previously.*: what the rewrite used that the insight it replaced did not
- * ([InsightState.Written.rewritten]), the model by the one that wrote it. Null for an insight
- * written the first time.
+ * "Rewritten with {what}." for an insight written by *Rewrite insight* (#854), or by an automatic
+ * write in place of the insight another model kept (#972), in place of *As written previously.*:
+ * what the rewrite used that the insight it replaced did not ([InsightState.Written.rewritten]),
+ * the model by the one that wrote it. Null for an insight written the first time.
  */
 @Composable
 internal fun rewrittenLine(insight: InsightState.Written): String? =

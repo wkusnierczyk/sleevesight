@@ -214,13 +214,18 @@ internal class CardCache(
         return kept
     }
 
+    /** How many times another service's, model's or effort's cards were read ([keptByOthers], #911). */
+    var othersRead = 0
+
     // As the store finds them (#911): the cards of [key]'s kind, subject, evidence, prompt, style and
     // model knowledge kept under another service, model or effort, the most recently kept first.
-    override suspend fun keptByOthers(key: CardKey): List<OtherCard> =
-        cards.keys
+    override suspend fun keptByOthers(key: CardKey): List<OtherCard> {
+        othersRead++
+        return cards.keys
             .filter { it != key && it.copy(provider = key.provider, model = key.model, effort = key.effort) == key }
             .mapNotNull { other -> keptCard(other)?.let { OtherCard(other, it) } }
             .sortedByDescending { it.card.writtenAt }
+    }
 
     override suspend fun keep(
         key: CardKey,

@@ -13,20 +13,25 @@ import kotlin.time.Instant
 
 /**
  * Evidence lines as the artist-level table keeps them (#522, #885, #912): an album's lines
- * (`AlbumSource`), and the web's lines for an album or an artist (`ArtistWebSource`), each its
- * source, scope, text, address and time. The encoding is the parts' encoding 1: changing it takes a
- * new `ArtistPart.encoding`.
+ * (`AlbumSource`), the web's lines for an album or an artist (`ArtistWebSource`), and the lines an
+ * artist's or an album's search in the track's language found (`LanguageLinesSource`, #939), each its
+ * source, scope, text, address and time, and, only when set, what it is about and its language: a
+ * line with neither is encoded as before they were kept. The encoding is the parts' encoding 1:
+ * changing it takes a new `ArtistPart.encoding`.
  */
 internal object KeptDrafts {
     private val json = Json { encodeDefaults = false }
 
     @Serializable
+    @Suppress("LongParameterList") // One for each of the line's fields kept.
     private class KeptLine(
         val s: String,
         val c: String,
         val t: String,
         val u: String? = null,
         val a: Long,
+        val b: String? = null,
+        val l: String? = null,
     )
 
     /** [drafts], encoded. */
@@ -39,6 +44,8 @@ internal object KeptDrafts {
                     it.text,
                     it.url,
                     it.retrievedAt.toEpochMilliseconds(),
+                    it.about,
+                    it.language,
                 )
             },
         )
@@ -53,6 +60,8 @@ internal object KeptDrafts {
                     line.t,
                     line.u,
                     Instant.fromEpochMilliseconds(line.a),
+                    about = line.b,
+                    language = line.l,
                 )
             }
         } catch (

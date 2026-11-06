@@ -12,10 +12,12 @@ import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.sources.AlbumLookup
 import app.sleevesight.core.sources.ArtistWebLookup
+import app.sleevesight.core.sources.ItemLanguageLines
 import app.sleevesight.core.sources.LanguageSearch
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.WebSearcher
+import app.sleevesight.core.text.DateForm
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
@@ -70,9 +72,14 @@ class AiAccess(
  * web for an artist the sources say nothing about, and keeps what it found (#912, [ItemInsights]),
  * on the user's web search key, or none (no engine switched on with its key, the CLI).
  * [languageSearch] looks the track up in the language it is sung in, when not English (#902,
- * [LanguageSearch]), or none (no such search).
+ * [LanguageSearch]), or none (no such search). [languageLines] keeps what that search found about
+ * the artist and the album, per artist and per album, for their insights on their other tracks
+ * (#939, [ItemInsights]), or none (the CLI), when they take only what their track's own search found.
+ * [dateForm] gives the form the prompts ask for dates in (#957, `InsightPrompt.dateRule`), read as
+ * each prompt is built: in the app, the phone's own form in English, as *Dates* writes them;
+ * elsewhere the app's ([DateForm.APP]).
  */
-@Suppress("LongParameterList") // Thirteen independent stages, and why one is missing; the last ten are optional.
+@Suppress("LongParameterList") // Independent stages, and why one is missing; all but the first four are optional.
 class PipelineParts(
     val normalizer: Normalizer,
     val adapters: List<SourceAdapter>,
@@ -88,6 +95,8 @@ class PipelineParts(
     val modelUnavailable: Boolean = false,
     val artistWeb: ArtistWebLookup? = null,
     val languageSearch: LanguageSearch? = null,
+    val dateForm: () -> DateForm = { DateForm.APP },
+    val languageLines: ItemLanguageLines? = null,
 ) {
     init {
         require(adapters.map { it.id }.distinct().size == adapters.size) { "One adapter per source" }

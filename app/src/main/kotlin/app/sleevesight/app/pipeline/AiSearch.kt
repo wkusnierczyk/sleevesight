@@ -734,11 +734,11 @@ internal class ShownSearches {
 }
 
 // The searches these parts make, their answers read by [answers], their times by [clock], searching
-// the web with their engine (#801).
+// the web with their engine (#801), their prompts' dates in the parts' form (#957).
 private fun PipelineParts.searches(
     answers: AiSearchAnswers,
     clock: Clock,
-): AiSearches = AiSearches(ai, cache, hasher, answers, clock, webSearch)
+): AiSearches = AiSearches(ai, cache, hasher, answers, clock, webSearch, dateForm)
 
 // A kept answer of [key], in [state], written at [writtenAt], served for [track] (#851).
 private fun keptServed(

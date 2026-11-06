@@ -1,0 +1,5 @@
+What's new in 0.3.1:
+- In Lyrics, Find the lyrics searches for them, and Explain the song says what the song is about, from web pages about it, each sentence citing its page.
+- Insights write dates as Dates does, in the form of the phone's language and region.
+- After a change of AI model, an insight written again says "Rewritten with …"; if the rewrite fails, the earlier insight stays.
+- With the AI model unavailable, the note under a kept insight says so, not that the rewrite failed.

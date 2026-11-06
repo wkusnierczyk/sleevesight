@@ -32,13 +32,18 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 
 /**
  * The song's, the artist's and the album's insights while the selected model is found unavailable
  * (#540, #911), through the pipeline's own rebuild: the parts carry no AI access then
  * (`AppPipelineParts`, `ModelCheck.blocks`), and what is kept still shows, the model's own insight
- * first, else another model's, with nothing offered to write.
+ * first, else another model's, with nothing offered to write; and, after a write refused, what the
+ * panel is given to say as the model unavailable (#969). Under Robolectric: the parts write the
+ * prompts' dates with the phone's patterns (`phoneDateForm`, #957), which only Android has.
  */
+@RunWith(RobolectricTestRunner::class)
 class AppItemNotesUnavailableTest {
     private val provider = CountingProvider().apply { reply = { "Gordon Lightfoot wrote it [W1]." } }
     private val cache = CardCache()
@@ -82,14 +87,15 @@ class AppItemNotesUnavailableTest {
         settings.value = settings.value?.withModel(ProviderId.ANTHROPIC, id)
     }
 
-    private fun track(): TrackState {
+    private fun track(play: Long? = null): TrackState {
         val drafts =
             listOf(
                 HomeFixtures.draft(SourceId.MUSICBRAINZ, "Sundown was recorded in Toronto."),
                 HomeFixtures.draft(SourceId.WIKIPEDIA, "Gordon Lightfoot was a Canadian singer.", scope = Scope.ARTIST),
             )
         val sources = drafts.groupBy { it.source }.mapValues { (_, lines) -> HomeFixtures.done(evidence = lines) }
-        return HomeFixtures.track(sources = sources, evidence = EvidenceSet.of(drafts, JvmHasher))
+        val playing = HomeFixtures.sundown.copy(play = play)
+        return HomeFixtures.track(playing, sources = sources, evidence = EvidenceSet.of(drafts, JvmHasher))
     }
 
     private suspend fun AppItemNotes.song(track: TrackState): ItemShown =
@@ -141,6 +147,70 @@ class AppItemNotesUnavailableTest {
             val again = AppItemNotes(parts, settings, this, NameMatcher(JvmAccentFolder)).song(first)
             assertEquals(FIRST, again.writtenBy())
             assertFalse((again as ItemShown.Shown).canWrite)
+        }
+
+    // The insight the first model wrote kept, the other model chosen, and the song's next write refused
+    // as a model the service does not know ([ask] on [later]), heard, and the parts built again (#969).
+    private suspend fun TestScope.refusedOn(
+        notes: AppItemNotes,
+        built: Built,
+        later: TrackState,
+        ask: ItemAsk,
+    ): ItemShown.Shown {
+        // Shown first, as the panel shows it before it asks: the first model's insight, with Rewrite.
+        assertEquals(FIRST, notes.song(later).writtenBy())
+        provider.error = AiErrorKind.MODEL_NOT_FOUND
+        notes.write(later, InsightItem.SONG, ask)
+        advanceUntilIdle()
+        built.heard()
+        built.rebuild()
+        return notes.item(later, InsightItem.SONG).first {
+            it is ItemShown.Shown && it.state !is InsightState.Writing
+        } as ItemShown.Shown
+    }
+
+    @Test
+    fun `under On demand, a rewrite refused keeps why beside the insight kept, which the note says instead`() =
+        runTest {
+            val built = built()
+            built.rebuild()
+            val notes = AppItemNotes(parts, settings, this, NameMatcher(JvmAccentFolder))
+            val playing = track(play = 1)
+            notes.write(playing, InsightItem.SONG, ItemAsk.TAP)
+            advanceUntilIdle()
+            model(OTHER)
+            built.rebuild()
+
+            // What the panel is given on this play (#969): the insight kept, nothing to tap, and why the
+            // rewrite failed, which the panel leaves out while it says the model is unavailable.
+            val shown = refusedOn(notes, built, playing, ItemAsk.TAP)
+            assertEquals(FIRST, shown.writtenBy())
+            assertFalse(shown.canWrite)
+            assertEquals(MODEL_NOT_FOUND, shown.rewriteFailed)
+            assertEquals(2, provider.requests)
+        }
+
+    @Test
+    fun `automatically, a write anew refused on a later play shows the insight kept, as a refused rewrite does`() =
+        runTest {
+            settings.value = settings.value?.copy(writeAutomatically = WriteAutomatically.ON_EVERY_TRACK_CHANGE)
+            val built = built()
+            built.rebuild()
+            val notes = AppItemNotes(parts, settings, this, NameMatcher(JvmAccentFolder))
+            notes.write(track(play = 1), InsightItem.SONG, ItemAsk.TAP)
+            advanceUntilIdle()
+            model(OTHER)
+            built.rebuild()
+
+            // A later play: its row unfolded at the track's start writes anew, by itself, and is refused.
+            // A rewrite of the insight kept (#972), so the panel is given that insight again, as after a
+            // refused tap (#975): nothing to tap, and why it failed, which it leaves out while it says the
+            // model is unavailable.
+            val shown = refusedOn(notes, built, track(play = 2), ItemAsk.BY_ITSELF)
+            assertEquals(FIRST, shown.writtenBy())
+            assertFalse(shown.canWrite)
+            assertEquals(MODEL_NOT_FOUND, shown.rewriteFailed)
+            assertEquals(2, provider.requests)
         }
 
     @Test
@@ -221,5 +291,6 @@ class AppItemNotesUnavailableTest {
     private companion object {
         const val FIRST = "model-first"
         const val OTHER = "model-other"
+        const val MODEL_NOT_FOUND = "model_not_found"
     }
 }
