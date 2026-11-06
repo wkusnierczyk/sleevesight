@@ -7,14 +7,11 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextReplacement
@@ -47,10 +44,8 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
- * The per-choice descriptions (#546, #550): *Reactive*'s choices each show a line in its dialog
- * saying what they do, in the same radio button as the choice's name, so a screen reader, which
- * reads the merged node, reads the description with its choice. *Report button*'s choices are a
- * button group in its row (#637): each radio button is read with the setting's name and its
+ * The per-choice descriptions (#546, #550): *Reactive*'s and *Report button*'s choices are button
+ * groups in their rows (#637, #947): each radio button is read with the setting's name and its
  * description, the chosen one's description shows under the buttons and is announced as it
  * changes, and a search for another one's description shows that one too.
  */
@@ -91,28 +86,27 @@ class ChoiceDetailsSettingsTest {
         }
     }
 
-    // One radio button in the dialog holding both the choice's name and its description: the node
-    // a screen reader focuses and reads (the merged tree, as TalkBack sees it).
-    private fun assertDescribed(choices: List<Pair<Int, Int>>) {
-        val radio = SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.RadioButton)
-        for ((label, detail) in choices) {
-            compose
-                .onNode(hasText(text(label)) and hasText(text(detail)) and radio and hasAnyAncestor(isDialog()))
-                .assertIsDisplayed()
-        }
-    }
-
     @Test
     fun reactiveChoicesAreEachDescribedAndReadWithTheirName() =
         show(SettingsSection.INSIGHTS) {
-            compose.onNodeWithText(text(R.string.settings_write_automatically)).performScrollTo().performClick()
-            assertDescribed(
+            val radio = SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.RadioButton)
+            val choices =
                 listOf(
-                    R.string.settings_write_every_change to R.string.settings_write_every_change_detail,
-                    R.string.settings_write_when_skip to R.string.settings_write_when_skip_detail,
-                    R.string.settings_write_never to R.string.settings_write_never_detail,
-                ),
-            )
+                    R.string.settings_write_never_short to R.string.settings_write_never_detail,
+                    R.string.settings_write_when_skip_short to R.string.settings_write_when_skip_detail,
+                    R.string.settings_write_every_change_short to R.string.settings_write_every_change_detail,
+                )
+            // Each radio button read as "Reactive: <mode>. <what it does>" (#947).
+            for ((label, detail) in choices) {
+                val read =
+                    compose
+                        .onNode(hasText(text(label)) and radio)
+                        .performScrollTo()
+                        .fetchSemanticsNode()
+                        .config[SemanticsProperties.ContentDescription]
+                val name = text(R.string.settings_write_automatically)
+                assertEquals(listOf("$name: ${text(label)}. ${text(detail)}"), read)
+            }
         }
 
     @Test

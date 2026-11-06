@@ -80,11 +80,12 @@ internal fun genreRows(): List<IndexedRow> =
 
 @Composable
 internal fun insightRows(settings: Settings): List<IndexedRow> {
-    val modes = WRITING_MODES.map { it.mode to stringResource(it.name) }
+    // As the rows show them, in their order (#947).
+    val modes = WRITING_MODES.map { it.mode to stringResource(it.short) }
     val reactive =
         choiceRow(
             stringResource(R.string.settings_write_automatically),
-            stringResource(R.string.settings_write_automatically_summary),
+            reactiveDescription().text,
             modes.first { it.first == settings.writeAutomatically }.second,
             modes.map { it.second } + WRITING_MODES.map { stringResource(it.detail) },
         )
@@ -100,15 +101,6 @@ internal fun insightRows(settings: Settings): List<IndexedRow> {
         } else {
             null
         }
-    val saverCount =
-        settings.pauseAutoWriteAfter?.let { count ->
-            choiceRow(
-                stringResource(R.string.settings_pause_auto_write_after),
-                null,
-                pauseLabel(count),
-                saverCounts(count).map { it.second },
-            )
-        }
     val gap = stringResource(R.string.settings_session_gap)
     val history = stringResource(R.string.settings_section_history)
     return listOfNotNull(
@@ -116,23 +108,18 @@ internal fun insightRows(settings: Settings): List<IndexedRow> {
             stringResource(R.string.settings_write_insights),
             stringResource(R.string.settings_write_insights_summary),
         ),
-        reactive,
-        crossfade,
         indexRow(
             stringResource(R.string.settings_prepare_next),
             stringResource(R.string.settings_prepare_next_summary),
         ),
-        indexRow(
-            stringResource(R.string.settings_pause_auto_write),
-            stringResource(R.string.settings_pause_auto_write_summary),
-        ),
-        saverCount,
         indexRow(stringResource(R.string.settings_background), stringResource(R.string.settings_background_summary)),
+        reactive,
+        crossfade,
+    ) + saverIndexRows(settings) +
         indexRow(
             stringResource(R.string.settings_artist_facts_once),
             stringResource(R.string.settings_artist_facts_once_summary, gap, history),
-        ),
-    ) + aiWebSearchIndexRows(settings) +
+        ) + aiWebSearchIndexRows(settings) +
         indexRow(
             stringResource(R.string.settings_search_with_ai),
             stringResource(R.string.settings_search_with_ai_summary, stringResource(R.string.settings_ai_web_search)),
