@@ -309,7 +309,7 @@ class PipelineWiring internal constructor(
      * with its key, or null for none: Exa's ([ExaPageSearch]), the only engine (D11).
      */
     fun webSearcher(engines: Map<WebEngine, Secret>): WebSearcher? =
-        engines[WebEngine.EXA]?.let { ExaPageSearch(net, it) }
+        engines[WebEngine.EXA]?.let { ExaPageSearch(net, it, accentFolder) }
 
     /**
      * The image at [uri], an `https` address, as served, or null for no art, a plain `http` address

@@ -49,6 +49,10 @@ internal class ArtistQuestion(
     override val query: String
         get() = "\"${InsightPrompt.oneLine(subject.name)}\", music artist"
 
+    // The artist's pages are cleaned again for their lines ([line]); here, for the artist's name.
+    override val subjectNames: List<String>
+        get() = listOf(subject.name)
+
     override fun once(pages: List<WebPage>): String {
         about(pages).forEach { numbered.putIfAbsent(checkNotNull(it.url), it) }
         return prompt(evidence())

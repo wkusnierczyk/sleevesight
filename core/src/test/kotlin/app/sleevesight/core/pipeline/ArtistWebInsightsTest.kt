@@ -113,7 +113,10 @@ class ArtistWebInsightsTest {
     ) : WebSearcher {
         val queries = mutableListOf<String>()
 
-        override suspend fun search(query: String): WebSearchOutcome {
+        override suspend fun search(
+            query: String,
+            subject: List<String>,
+        ): WebSearchOutcome {
             queries += query
             return answer(query)
         }

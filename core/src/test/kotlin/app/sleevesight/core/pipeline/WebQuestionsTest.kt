@@ -48,9 +48,14 @@ class WebQuestionsTest {
         private val answer: (String) -> WebSearchOutcome,
     ) : WebSearcher {
         val queries = mutableListOf<String>()
+        val subjects = mutableListOf<List<String>>()
 
-        override suspend fun search(query: String): WebSearchOutcome {
+        override suspend fun search(
+            query: String,
+            subject: List<String>,
+        ): WebSearchOutcome {
             queries += query
+            subjects += subject
             return answer(query)
         }
     }
@@ -119,6 +124,30 @@ class WebQuestionsTest {
             val withBase = base.copy(system = "BASE")
             WebQuestions(AiAccess(plain, Secret("k")), web).ask(question, AiWebSearch.OFF, 2, withBase)
             assertEquals(listOf<String?>("BASE"), plain.requests.map { it.system })
+        }
+
+    @Test
+    fun everySearchIsToldTheQuestionsNamesForItsPagesBoilerplate() =
+        runTest {
+            // #929: the engine cleans each page's passage of boilerplate for the names the question is about.
+            val named =
+                object : WebQuestion by question {
+                    override val subjectNames = listOf("Grace", "Jeff Buckley")
+                }
+            val web = Searches { WebSearchOutcome.Found(listOf(page)) }
+            WebQuestions(AiAccess(FakeProvider { FakeProvider.done("{}") }, Secret("k")), web)
+                .ask(named, AiWebSearch.ONCE, 2, base)
+            val loop =
+                FakeProvider(usesTools = true) { request ->
+                    if (request.toolsAllowed) toolTurn("grace", "grace 1994") else FakeProvider.done("{}")
+                }
+            WebQuestions(AiAccess(loop, Secret("k")), web).ask(named, AiWebSearch.UP_TO, 2, base)
+            assertEquals(List(3) { listOf("Grace", "Jeff Buckley") }, web.subjects)
+            // A question that names none cleans only what is boilerplate whatever the subject.
+            val plain = Searches { WebSearchOutcome.Found(listOf(page)) }
+            WebQuestions(AiAccess(FakeProvider { FakeProvider.done("{}") }, Secret("k")), plain)
+                .ask(question, AiWebSearch.ONCE, 2, base)
+            assertEquals(listOf(emptyList<String>()), plain.subjects)
         }
 
     @Test
@@ -317,7 +346,10 @@ class WebQuestionsTest {
                 object : WebSearcher {
                     var searched = 0
 
-                    override suspend fun search(query: String): WebSearchOutcome {
+                    override suspend fun search(
+                        query: String,
+                        subject: List<String>,
+                    ): WebSearchOutcome {
                         searched++
                         held.await()
                         return WebSearchOutcome.Found(listOf(page))

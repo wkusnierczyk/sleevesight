@@ -305,6 +305,7 @@ class AiSearches(
         return object : WebQuestion {
             override val knowledge: String get() = AiSearchPrompt.build(kind, facts, genres, dates())
             override val query: String get() = WebPrompt.query(kind, facts)
+            override val subjectNames: List<String> get() = facts.names
 
             override fun once(pages: List<WebPage>): String = WebPrompt.once(kind, facts, pages, genres)
 
