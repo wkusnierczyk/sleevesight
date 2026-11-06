@@ -33,6 +33,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.text
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -151,7 +152,16 @@ internal fun KeyScreenTitle(
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        val number = style.copy(fontSize = style.fontSize * STEP_NUMBER_SCALE, fontFeatureSettings = "tnum")
+        // The number's line as tall as its size, centred and trimmed: the title's line height would
+        // make it taller than the circle, and the digit would sit low in it (#1012).
+        val size = style.fontSize * STEP_NUMBER_SCALE
+        val number =
+            style.copy(
+                fontSize = size,
+                lineHeight = size,
+                lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.Both),
+                fontFeatureSettings = "tnum",
+            )
         // The circle as wide as the number's size and a half again, as the page's.
         val side = with(LocalDensity.current) { (number.fontSize * STEP_CIRCLE_SCALE).toDp() }
         Box(
