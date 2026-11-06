@@ -127,18 +127,18 @@ class DatesScreenTest {
                     ("This track was first released on 3 December 1965." to null),
                 DateSentence.Original("1984-06", "Leonard Cohen", "Various Positions", null) to
                     (
-                        "The song was originally recorded in June 1984 by Leonard Cohen, " +
+                        "The song was originally recorded by Leonard Cohen in June 1984, " +
                             "and released on Various Positions." to "Various Positions"
                     ),
                 DateSentence.Original("1968", "B. J. Thomas", hooked, ReleaseKind.SINGLE) to
                     (
-                        "The song was originally recorded in 1968 by B. J. Thomas, " +
+                        "The song was originally recorded by B. J. Thomas in 1968, " +
                             "and released on the single $hooked." to hooked
                     ),
                 DateSentence.Original("1990", "Someone", "Four", ReleaseKind.EP) to
-                    ("The song was originally recorded in 1990 by Someone, and released on the EP Four." to "Four"),
+                    ("The song was originally recorded by Someone in 1990, and released on the EP Four." to "Four"),
                 DateSentence.Original("1993", "Nine Inch Nails", null, null) to
-                    ("The song was originally recorded in 1993 by Nine Inch Nails." to null),
+                    ("The song was originally recorded by Nine Inch Nails in 1993." to null),
             )
         said(cases.map { it.first }) {
             for ((_, expected) in cases) {
@@ -159,7 +159,7 @@ class DatesScreenTest {
         ) {
             compose.onNodeWithText("This track was first released on 9 July 2014.").assertExists()
             compose.onNodeWithText("This album was released in July 2014.").assertExists()
-            compose.onNodeWithText("The song was originally recorded in 2014 by Someone.").assertExists()
+            compose.onNodeWithText("The song was originally recorded by Someone in 2014.").assertExists()
         }
 
     // The sentences of a day, a month and a year, as the panel says them on the phone of the test's
@@ -174,15 +174,23 @@ class DatesScreenTest {
         ) {
             compose.onNodeWithText("This track was first released on $day.").assertExists()
             compose.onNodeWithText("This album was released in October 2026.").assertExists()
-            compose.onNodeWithText("The song was originally recorded in 2026 by Someone.").assertExists()
+            compose.onNodeWithText("The song was originally recorded by Someone in 2026.").assertExists()
         }
 
     @Test
     @Config(qualifiers = "en-rUS-w411dp-h891dp-420dpi")
     fun onAUsPhoneTheMonthComesFirst() {
         saysDatesIn("October 17, 2026")
-        said(listOf(DateSentence.Album("2014-07-09"))) {
+        said(
+            listOf(
+                DateSentence.Album("2014-07-09"),
+                DateSentence.Original("2026-10-17", "Someone", "Four", null),
+            ),
+        ) {
             compose.onNodeWithText("This album was released on July 9, 2014.").assertExists()
+            // The artist before the date, so a month-first date needs no comma after its year.
+            val cover = "The song was originally recorded by Someone on October 17, 2026, and released on Four."
+            compose.onNodeWithText(cover).assertExists()
         }
     }
 
