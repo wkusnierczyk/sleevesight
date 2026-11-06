@@ -7,6 +7,7 @@ import app.sleevesight.core.pipeline.ClearEpoch
 import app.sleevesight.core.resolution.MusicBrainzLookup
 import app.sleevesight.core.sources.ArtistResults
 import app.sleevesight.net.NetClient
+import app.sleevesight.net.NetLog
 
 /**
  * The app's wiring, on the process's one client, which this creates from [HostPolicies.netConfig]
@@ -22,7 +23,9 @@ import app.sleevesight.net.NetClient
  * [aiThrough] what wraps each AI service's client, the debug builds' log of requests ([PipelineWiring]).
  * [keepsArtists] is *Keep what sources said about each artist*, as last read, which says whether what
  * the search in the track's language found about an artist or an album is kept in [artists] or in
- * memory (#939, [PipelineWiring.languageLines]).
+ * memory (#939, [PipelineWiring.languageLines]). [netLog] takes the client's log, a line for each
+ * attempt of each request, redacted (`:net`'s `Redaction`): the debug builds' log of requests; by
+ * default nowhere.
  *
  * Its parameters and result are `:core` types and plain values, so `:app` calls it without `:net`
  * on its compile classpath. Kept apart from [pipelineWiringOn], which takes a `:net` type: no
@@ -40,9 +43,10 @@ fun appPipelineWiring(
     musicBrainzThrough: (MusicBrainzLookup) -> MusicBrainzLookup = { it },
     aiThrough: (AiProvider) -> AiProvider = { it },
     keepsArtists: () -> Boolean = { true },
+    netLog: (String) -> Unit = {},
 ): PipelineWiring =
     PipelineWiring(
-        NetClient(HostPolicies.netConfig(appVersion)),
+        NetClient(HostPolicies.netConfig(appVersion), NetLog(netLog)),
         accentFolder,
         resources,
         rememberMusicBrainz = true,
