@@ -90,6 +90,36 @@
     <!-- Album art, progress and key data. -->
     <string name="home_art">Album art</string>
     <string name="home_progress">Playback position</string>
+    <!-- A tap on the album art turns it over to show the album's tracklist on its back (#984). The
+         art's action, as a screen reader names it ("Double-tap to show tracklist"). -->
+    <string name="home_art_show_tracklist">show tracklist</string>
+    <!-- The back of the album art, as a screen reader names it: the album's tracklist. -->
+    <string name="home_tracklist">Tracklist</string>
+    <!-- The back's action, as a screen reader names it ("Double-tap to show cover"): a tap anywhere
+         on it turns it back to the art. -->
+    <string name="home_tracklist_show_cover">show cover</string>
+    <!-- On the back, a disc's heading, above its tracks, on an album of several discs; and a dot
+         under the discs' pages that shows that disc, as a screen reader names it. -->
+    <string name="home_tracklist_disc">Disc %1$d</string>
+    <!-- The disc's heading as a screen reader reads it: "Disc 2 of 2". -->
+    <string name="home_tracklist_disc_of">Disc %1$d of %2$d</string>
+    <!-- After a track, as a screen reader reads it, the track playing: "3, Blue in Green, 5 minutes
+         37 seconds, playing". -->
+    <string name="home_tracklist_playing">playing</string>
+    <!-- A track's length as a screen reader reads it, the minutes then the seconds: "5 minutes 37
+         seconds"; a track under a minute has the seconds alone, one on the minute the minutes alone. -->
+    <plurals name="home_tracklist_minutes">
+        <item quantity="one">%1$d minute</item>
+        <item quantity="other">%1$d minutes</item>
+    </plurals>
+    <plurals name="home_tracklist_seconds">
+        <item quantity="one">%1$d second</item>
+        <item quantity="other">%1$d seconds</item>
+    </plurals>
+    <!-- On the back, in place of the tracklist: MusicBrainz found the song, and has no tracklist of
+         the album the player names (no release of it, or none that lists its tracks). The other
+         reasons are home_musicbrainz_looking and those after it. -->
+    <string name="home_tracklist_none">MusicBrainz has no tracklist for this album.</string>
     <string name="home_title_from">From %1$s</string>
     <string name="home_album_none">Album not reported</string>
     <!-- The album, then the year of the release being played: "Rubber Soul, 1965". -->

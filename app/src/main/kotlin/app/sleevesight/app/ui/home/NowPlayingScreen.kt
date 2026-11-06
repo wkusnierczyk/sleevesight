@@ -22,6 +22,7 @@ import app.sleevesight.app.pipeline.CallId
 import app.sleevesight.app.pipeline.GenreNotes
 import app.sleevesight.app.pipeline.ItemNotes
 import app.sleevesight.app.pipeline.PipelineView
+import app.sleevesight.app.pipeline.TracklistFeed
 import app.sleevesight.app.pipeline.UnavailableModel
 import app.sleevesight.app.report.MailHandoff
 import app.sleevesight.app.report.PhoneMail
@@ -85,6 +86,7 @@ import kotlinx.coroutines.flow.StateFlow
  * @property aiSearches *Search with AI* under the empty state of *Dates*, *Genres* and *Lyrics*
  *   (#773): each panel's search, a paid call, and its *Stop*.
  * @property itemNotes the song's, the artist's and the album's insights under *Key insights* (#522).
+ * @property tracklists the albums' tracklists, on the back of the cover (#984).
  * @property ad the ad the player plays in place of a track (#880), which Home shows as such
  *   ([AdHome]); null while it plays none.
  */
@@ -115,6 +117,7 @@ class HomeFeed(
     val aiSearches: AiSearchFeed = AiSearchFeed.None,
     val itemNotes: ItemNotes = ItemNotes.None,
     val ad: StateFlow<AdPlaying?> = MutableStateFlow(null),
+    val tracklists: TracklistFeed = TracklistFeed.None,
 )
 
 /**
@@ -191,6 +194,7 @@ private fun HomeFeed.actions(
     askAgain = askAgain,
     aiSearches = aiSearches,
     itemNotes = itemNotes,
+    tracklists = tracklists,
 )
 
 /**
@@ -226,7 +230,8 @@ internal class NowPlayingState(
  * reason, aloud (#325); null shows no *Read aloud*. [askAgain] takes a tap on *Retry* beside a
  * source that could not be reached (#724), as [write] takes one on Write. [aiSearches] gives *Search
  * with AI* under the empty *Dates*, *Genres* and *Lyrics* (#773). [itemNotes] gives the song's, the
- * artist's and the album's insights under *Key insights* (#522).
+ * artist's and the album's insights under *Key insights* (#522). [tracklists] gives the albums'
+ * tracklists on the back of the cover (#984).
  */
 @Suppress("LongParameterList") // Each of the screen's ways out, on its own.
 internal class NowPlayingActions(
@@ -250,6 +255,7 @@ internal class NowPlayingActions(
     val askAgain: (RunKey, SourceId, NowPlaying) -> Unit = { _, _, _ -> },
     val aiSearches: AiSearchFeed = AiSearchFeed.None,
     val itemNotes: ItemNotes = ItemNotes.None,
+    val tracklists: TracklistFeed = TracklistFeed.None,
 )
 
 /**
@@ -317,7 +323,7 @@ internal fun NowPlayingContent(
     ArtTheme(state.art) {
         Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             PlayerRow(playing.player, state.playback, actions)
-            ArtAndProgress(state.art, state.playback, header.duration)
+            ArtAndProgress(state.art, state.playback, header.duration, coverTurn(shown, header, settings, actions))
             val notes =
                 PanelNotes(actions.genreNotes, cite, shown.modelAllowed, actions.readAloud, actions.openSettingsAt)
             val genresPage = { actions.openPage(HomePage.Genres) }.takeIf { pages }
