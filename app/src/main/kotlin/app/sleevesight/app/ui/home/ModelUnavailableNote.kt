@@ -13,6 +13,7 @@ import app.sleevesight.app.settings.ListedModelNames
 import app.sleevesight.app.ui.settings.providerName
 import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
+import app.sleevesight.core.ai.AiErrorKind
 import app.sleevesight.core.pipeline.InsightState
 
 // The insight card's note of a selected model found unavailable (#540).
@@ -24,6 +25,22 @@ internal fun withoutInsight(insight: InsightState): Boolean =
         is InsightState.Failed, InsightState.Stopped -> true
         else -> false
     }
+
+/**
+ * Why a rewrite ended without an insight ([reason]), as a footer says it after *As written previously.*
+ * (`rewriteFailure`), unless the service refused the model (`model_not_found`, `model_refused`) while
+ * it is found unavailable ([unavailable], #969): the note under the insight ([ModelUnavailable]) says
+ * that then, and points to *AI services*, where the reason alone read as though the app made the
+ * model up. Null for none to say.
+ */
+internal fun rewriteFailureShown(
+    reason: String?,
+    unavailable: UnavailableModel?,
+): String? = reason?.takeUnless { unavailable != null && it in MODEL_REFUSALS }
+
+// The failure labels of a model the service does not know or refuses (`AiErrorKind`'s, in lower case).
+private val MODEL_REFUSALS: Set<String> =
+    setOf(AiErrorKind.MODEL_NOT_FOUND, AiErrorKind.MODEL_REFUSED).map { it.name.lowercase() }.toSet()
 
 /**
  * The switched-on service's model is found unavailable (#540): "The currently selected Anthropic

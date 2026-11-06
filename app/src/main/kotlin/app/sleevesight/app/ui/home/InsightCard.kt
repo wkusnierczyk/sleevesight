@@ -247,12 +247,13 @@ private fun Footer(
  * failed. For an insight *Rewrite insight* wrote, *Rewritten with …* in its place, never both
  * ([rewrittenLine], #854): on the play it was rewritten, though just written, and on every later
  * one while it is the one kept. Then, on the same line, what follows from it, in the order it
- * happened: that a rewrite failed or was stopped, that *Look again* found nothing new (#617,
- * [lookAgainLine]), and, while *Rewrite insight* is offered (#615, #625), what it would rewrite the
- * insight with ([rewriteOfferLine], #854), what a look again found new included. What *Look again*
- * is looking up is not on this line but on its own under it (#785, [lookingAgainLine]); while it
- * looks ([lookingAgain]), the line shows all the same. Null for an insight written the first time
- * just now, with nothing to follow.
+ * happened: that a rewrite failed or was stopped (not that the service refused the model while it is
+ * found unavailable, which the footer's last line says, #969: [rewriteFailureShown]), that *Look
+ * again* found nothing new (#617, [lookAgainLine]), and, while *Rewrite insight* is offered (#615,
+ * #625), what it would rewrite the insight with ([rewriteOfferLine], #854), what a look again found
+ * new included. What *Look again* is looking up is not on this line but on its own under it (#785,
+ * [lookingAgainLine]); while it looks ([lookingAgain]), the line shows all the same. Null for an
+ * insight written the first time just now, with nothing to follow.
  */
 @Composable
 private fun writtenBefore(
@@ -263,7 +264,8 @@ private fun writtenBefore(
     val after =
         buildList {
             // In the order things happened: a rewrite that failed, then what a later look again found.
-            context.rewriteFailed?.let { add(rewriteFailure(it)) }
+            // Not a model refused while the note under the footer says it is unavailable (#969).
+            rewriteFailureShown(context.rewriteFailed, context.unavailable)?.let { add(rewriteFailure(it)) }
             lookAgainLine(context)?.let { add(stringResource(it)) }
             rewriteOfferLine(context)?.let { add(it) }
         }
