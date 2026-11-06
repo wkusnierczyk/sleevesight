@@ -39,7 +39,8 @@ import kotlin.time.Duration.Companion.seconds
  * insight's: the insight another model wrote, kept, is shown with *Rewrite insight* when the item's
  * model has written none, and a tap rewrites it, saying so; a rewrite stopped or failed shows it
  * again. On the play where the model changed it stays in every mode; on a later play an automatic
- * mode writes the item anew. The model's own insight, when kept, is always the one shown.
+ * mode writes the item anew, a rewrite as the tap's is (#972). The model's own insight, when kept, is
+ * always the one shown.
  */
 class AppItemNotesRewriteTest {
     private val provider = CountingProvider().apply { reply = { "Gordon Lightfoot wrote it [W1]." } }
@@ -138,10 +139,15 @@ class AppItemNotesRewriteTest {
         }
 
     @Test
-    fun `under an automatic mode, an item opened on a later play is written anew`() =
+    fun `under an automatic mode, an item opened on a later play is rewritten, saying so`() =
         runTest {
             val notes = notes()
             written(notes, track(play = 1))
+            // A first write, with nothing kept: not a rewrite.
+            assertEquals(
+                emptySet<RewritePart>(),
+                ((notes.song(track(play = 1)) as ItemShown.Shown).state as InsightState.Written).rewritten,
+            )
 
             mode(WriteAutomatically.ON_EVERY_TRACK_CHANGE)
             model(OTHER)
@@ -151,8 +157,27 @@ class AppItemNotesRewriteTest {
             val shown = notes.song(later) as ItemShown.Shown
             assertEquals(OTHER, shown.writtenBy())
             assertNull(shown.rewriteWith)
-            // Written anew, as for any item its model has not written: not a rewrite.
-            assertEquals(emptySet<RewritePart>(), (shown.state as InsightState.Written).rewritten)
+            // It replaced the insight kept from the first model, as a tap on Rewrite does (#972).
+            assertEquals(setOf(RewritePart.MODEL), (shown.state as InsightState.Written).rewritten)
+            assertEquals(2, provider.requests)
+        }
+
+    @Test
+    fun `under an automatic mode, an item written by itself on a later play is rewritten, saying so`() =
+        runTest {
+            written(notes(), track(play = 1))
+
+            // A new process, its row not yet shown: the write by itself still finds the insight kept.
+            mode(WriteAutomatically.ON_EVERY_TRACK_CHANGE)
+            model(OTHER)
+            val notes = notes()
+            val later = track(play = 2)
+            notes.write(later, InsightItem.SONG, ItemAsk.BY_ITSELF)
+            advanceUntilIdle()
+            val shown = notes.song(later) as ItemShown.Shown
+            assertEquals(OTHER, shown.writtenBy())
+            assertNull(shown.rewriteWith)
+            assertEquals(setOf(RewritePart.MODEL), (shown.state as InsightState.Written).rewritten)
             assertEquals(2, provider.requests)
         }
 

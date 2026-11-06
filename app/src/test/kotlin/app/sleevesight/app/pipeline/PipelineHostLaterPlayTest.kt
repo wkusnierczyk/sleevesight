@@ -24,7 +24,8 @@ import kotlin.time.Duration.Companion.seconds
  * or a new process. While the run would not write by itself (*On demand*, or an automatic mode
  * waiting for the user), the insight kept is shown, with *Rewrite insight* offered to write it with
  * the model chosen now, a paid call only on a tap; under an automatic mode that writes by itself, the
- * chosen model writes it anew. The model's own insight, when kept, is always the one shown.
+ * chosen model writes it anew, a rewrite as the tap's is (#972). The model's own insight, when kept,
+ * is always the one shown.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class PipelineHostLaterPlayTest : PipelineHostFixture() {
@@ -121,12 +122,20 @@ internal class PipelineHostLaterPlayTest : PipelineHostFixture() {
         }
 
     @Test
-    fun `under an automatic mode that writes by itself, the chosen model writes it anew`() =
+    fun `under an automatic mode that writes by itself, the chosen model rewrites it, saying so`() =
         runTest {
             writtenWithFirstModel(WriteAutomatically.ON_EVERY_TRACK_CHANGE)
             play("Beta")
             settle()
             assertEquals("written by itself, the first action made", 1, provider.requestsFor("Beta"))
+            // A first write, with nothing kept: not a rewrite.
+            assertEquals(
+                emptySet<RewritePart>(),
+                (
+                    host.state.value.track
+                        ?.insight as InsightState.Written
+                ).rewritten,
+            )
             settings.value = settings.value.withModel(ProviderId.ANTHROPIC, OTHER_MODEL)
             settle()
 
@@ -138,8 +147,9 @@ internal class PipelineHostLaterPlayTest : PipelineHostFixture() {
                 host.state.value.track
                     ?.insight as InsightState.Written
             assertEquals(OTHER_MODEL, written.writtenBy?.model)
-            // Written anew, as for any track the model has not written: not a rewrite.
-            assertEquals(emptySet<RewritePart>(), written.rewritten)
+            // It replaced the insight kept from the first model, as a tap on Rewrite does (#972):
+            // "Rewritten with" the model, and nothing more offered.
+            assertEquals(setOf(RewritePart.MODEL), written.rewritten)
             assertFalse(host.state.value.rewrite)
         }
 

@@ -1,7 +1,8 @@
 package app.sleevesight.core.pipeline
 
 /**
- * One thing a rewrite (*Rewrite insight*, #854) used that the insight it replaced did not, which the
+ * One thing a rewrite (*Rewrite insight*, #854; or a write by itself in place of the insight another
+ * model kept, #972) used that the insight it replaced did not, which the
  * footer names ("Rewritten with …", and the offer, "Tap Rewrite insight to have AI rewrite the
  * insight with …"), in the order of the entries. [key] is how the synthesis cache keeps it, with the
  * card: never renamed, since a card kept under an old key would lose the part.

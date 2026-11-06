@@ -78,7 +78,8 @@ internal class ItemContext(
  * ([ItemContext.automatic], [tapped]), *Writing…* with the turning record meanwhile. The insight
  * another AI service, model or effort wrote, shown in place of none (#911), says so ("As written
  * previously.", with what *Rewrite insight* would rewrite it with), and *Rewrite insight*, with the
- * **AI** mark, rewrites it; one a rewrite wrote says "Rewritten with …". With the model found
+ * **AI** mark, rewrites it; one a rewrite wrote, on a tap or an automatic write in its place (#972),
+ * says "Rewritten with …". With the model found
  * unavailable (#540), that is said under a written insight too, last, and *Rewrite insight* is
  * *Write insight*, disabled.
  *

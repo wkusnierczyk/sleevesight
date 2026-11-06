@@ -38,7 +38,8 @@ import kotlin.time.Duration.Companion.seconds
  * the same play and on a later one, under each *Reactive* mode: a write that failed or was stopped is
  * written again on its play only on a tap, the earlier model's insight shown with *Rewrite insight*
  * and why; on a later play it counts as none: shown with *Rewrite insight* under *On demand*, written
- * anew under an automatic mode. One written is shown, whatever the play or the mode, with no call.
+ * anew under an automatic mode, a rewrite of it (#972). One written is shown, whatever the play or
+ * the mode, with no call.
  */
 class AppItemNotesPlaysTest {
     private enum class Outcome { FAILED, STOPPED, WRITTEN }
@@ -161,10 +162,10 @@ class AppItemNotesPlaysTest {
             }
 
             later && automatic -> {
-                // Written anew, as for an item the model has not written: not a rewrite.
+                // Written anew in place of the earlier insight: a rewrite of it, saying so (#972).
                 assertEquals(case, calls + 1, world.provider.requests)
                 assertEquals(case, OTHER, shown.writtenBy())
-                assertEquals(case, emptySet<RewritePart>(), (shown.state as InsightState.Written).rewritten)
+                assertEquals(case, setOf(RewritePart.MODEL), (shown.state as InsightState.Written).rewritten)
             }
 
             else -> {

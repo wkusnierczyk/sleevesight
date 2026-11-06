@@ -58,7 +58,8 @@ private fun rewrites(
  * (`writtenBefore`): for the insight another AI service, model or effort wrote, shown in place of none
  * ([ItemShown.Shown.rewriteWith]), *As written previously.*, then that a rewrite of it stopped or failed
  * ([ItemShown.Shown.rewriteFailed]), then, while it can be tapped ([rewrites]), what *Rewrite
- * insight* would rewrite it with; for one a rewrite wrote, *Rewritten with …*; else none: an item's own
+ * insight* would rewrite it with; for one a rewrite wrote, on a tap or by itself in its place (#972),
+ * *Rewritten with …*; else none: an item's own
  * insight, kept or just written, says nothing of its history.
  */
 @Composable
