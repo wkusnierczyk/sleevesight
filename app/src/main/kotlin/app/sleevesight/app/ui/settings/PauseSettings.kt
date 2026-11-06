@@ -10,16 +10,16 @@ import app.sleevesight.core.settings.WriteAutomatically
 /**
  * *Saver* (#203, #444): a switch, on while automatic writing pauses after a number of track
  * changes while Sleevesight is not on screen (`pauseAutoWriteAfter`), and under it, while on, that
- * number, *n*; a value stored that is not among the choices is offered too. Switched on, it pauses
- * after the default number ([Settings.DEFAULT_PAUSE_AUTO_WRITE_AFTER]). Fixed while nothing is
- * written automatically (*Show insights* off, or *Reactive* under *On demand*). What the number
- * chosen does shows under it in full, not folded (#874).
+ * number, *n*, *Stop after*, a button group of the counts ([saverCounts], #947); a value stored
+ * that is not among the choices is offered too. Switched on, it pauses after the default number
+ * ([Settings.DEFAULT_PAUSE_AUTO_WRITE_AFTER]). Fixed while nothing is written automatically (*Show
+ * insights* off, or *Reactive* under *Demand*). What the number chosen does shows under the
+ * buttons in full, not folded (#874), and is read with each.
  */
 @Composable
 internal fun SaverRows(
     settings: Settings,
     update: Update,
-    open: (SettingsDialog) -> Unit,
 ) {
     val writes = settings.writeInsights && settings.writeAutomatically != WriteAutomatically.NEVER
     val count = settings.pauseAutoWriteAfter
@@ -34,22 +34,42 @@ internal fun SaverRows(
     )
     if (count == null) return
     val options = saverCounts(count)
-    ValueRow(
+    ChoiceButtonsRow(
         title = stringResource(R.string.settings_pause_auto_write_after),
-        value = pauseLabel(count),
-        // What the count chosen does, in full as the line under a button group is (#874).
-        note = pauseSummary(count, settings.lookUpInBackground),
-        indent = true,
-        onClick =
-            {
-                open(
-                    SettingsDialog.Choice(R.string.settings_pause_auto_write_after, options, count) { n ->
-                        update { it.copy(pauseAutoWriteAfter = n) }
-                    },
-                )
-            }.takeIf { writes },
-    )
+        summary = null,
+        choices = options,
+        selected = count,
+        details = pauseSummaries(options.map { it.first }, settings.lookUpInBackground),
+        enabled = writes,
+    ) { n -> update { it.copy(pauseAutoWriteAfter = n) } }
 }
+
+/** *Saver* and, while it is on, *Stop after*, as the settings' search finds them (#649). */
+@Composable
+internal fun saverIndexRows(settings: Settings): List<IndexedRow> {
+    val saver =
+        indexRow(
+            stringResource(R.string.settings_pause_auto_write),
+            stringResource(R.string.settings_pause_auto_write_summary),
+        )
+    val count = settings.pauseAutoWriteAfter ?: return listOf(saver)
+    val options = saverCounts(count)
+    val stopAfter =
+        choiceRow(
+            stringResource(R.string.settings_pause_auto_write_after),
+            null,
+            pauseLabel(count),
+            options.map { it.second } + pauseSummaries(options.map { it.first }, settings.lookUpInBackground).values,
+        )
+    return listOf(saver, stopAfter)
+}
+
+/** What each of [counts] does while chosen ([pauseSummary]), by count. */
+@Composable
+private fun pauseSummaries(
+    counts: List<Int>,
+    background: Boolean,
+): Map<Int, String> = counts.associateWith { pauseSummary(it, background) }
 
 /**
  * What the count chosen, [count], does. With *Look up in the background* off ([background] false),
@@ -74,6 +94,6 @@ private fun pauseSummary(
 internal fun saverCounts(count: Int): List<Pair<Int, String>> =
     (Settings.PAUSE_AUTO_WRITE_CHOICES + count).distinct().sorted().map { it to pauseLabel(it) }
 
-/** A choice of *Saver*'s count: [count] track changes away. */
+/** A choice of *Saver*'s count, as its button names it: [count] changes (#947). */
 @Composable
-internal fun pauseLabel(count: Int): String = pluralStringResource(R.plurals.settings_track_changes_away, count, count)
+private fun pauseLabel(count: Int): String = pluralStringResource(R.plurals.settings_changes, count, count)
