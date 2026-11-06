@@ -8,6 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
@@ -19,6 +20,8 @@ import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
+import app.sleevesight.app.pipeline.AiSearch
+import app.sleevesight.app.pipeline.AiSearchFeed
 import app.sleevesight.app.pipeline.DefinitionState
 import app.sleevesight.app.pipeline.GenreNotes
 import app.sleevesight.app.pipeline.GenreReason
@@ -39,6 +42,9 @@ import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.platform.JvmResourceReader
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.synthesis.SearchAnswer
+import app.sleevesight.core.synthesis.SearchFacts
+import app.sleevesight.core.synthesis.SearchKind
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
@@ -136,10 +142,13 @@ class GenreDescribedScreenTest {
             }
         }
 
+    @Suppress("LongParameterList") // The genres, the track, its lines and Sources', the search, and what to check.
     private fun show(
         genres: TrackGenres = tags,
         playing: NowPlaying = eros,
         evidence: EvidenceSet = lines,
+        own: EvidenceSet = HomeFixtures.evidence,
+        search: AiSearchFeed = AiSearchFeed.None,
         block: () -> Unit,
     ) {
         val shown = PanelNotes(notes, { cited += it }, lines = evidence)
@@ -147,7 +156,8 @@ class GenreDescribedScreenTest {
             scenario.onActivity {
                 it.setContent {
                     Column(Modifier.verticalScroll(rememberScrollState())) {
-                        GenresContent(track(playing).copy(genres = genres), Settings(), shown)
+                        val track = track(playing, evidence = own).copy(genres = genres)
+                        GenresContent(track, Settings(), shown, search = PanelSearch(search, track, playing))
                     }
                 }
             }
@@ -213,17 +223,19 @@ class GenreDescribedScreenTest {
             tap(instrumental)
             // The hint's line in place of "Named in…", its citation a link to the line in *Sources*.
             assertEquals(text(R.string.genre_weak_hint, quote) + " S8", textOf(GENRE_WEAK_TAG))
+            // Its citation read as the insights' are.
+            assertEquals(text(R.string.genre_weak_hint, quote) + " (Source S8)", description(GENRE_WEAK_TAG))
             assertEquals(0, compose.onAllNodesWithTag(GENRE_DESCRIBED_TAG).fetchSemanticsNodes().size)
             compose.onNodeWithTag(GENRE_WEAK_TAG).performFirstLinkClick {
                 (it.item as? LinkAnnotation.Clickable)?.tag == GENRE_CITE_PREFIX + "S8"
             }
             assertEquals(listOf("S8"), cited)
             compose.onNodeWithTag(GENRE_WHY_TAG).fetchSemanticsNode()
-            // Its own row after the artist's, read "Described, Instrumental, from the artist’s
-            // description, selected", its sources the description and the citation.
+            // Its own row after the artist's, read "Described, Instrumental, selected": the row's name
+            // says where it is from. Its sources, the description and the citation.
             assertEquals("Artist, Ambient, Electronic, House", compose.onNodeWithTag(GENRES_ROW_PREFIX + "0").reading())
             assertEquals(
-                "Described, Instrumental, from the artist’s description, selected",
+                "Described, Instrumental, selected",
                 compose.onNodeWithTag(GENRES_ROW_PREFIX + "1").reading(),
             )
             assertEquals("Described, islandman’s description · S8", textOf(GENRE_SOURCES_ROW_PREFIX + "1"))
@@ -281,9 +293,9 @@ class GenreDescribedScreenTest {
             assertEquals(
                 listOf(
                     "Artist 1, Rock",
-                    "Described 1, Blues, from the artist’s description",
+                    "Described 1, Blues",
                     "Artist 2, Pop",
-                    "Described 2, Soul, from the artist’s description",
+                    "Described 2, Soul",
                 ),
                 (0..3).map { compose.onNodeWithTag(GENRES_ROW_PREFIX + it).reading()?.replace(", selected", "") },
             )
@@ -304,6 +316,67 @@ class GenreDescribedScreenTest {
             assertEquals(HomeFixtures.evidence, subscribed["house"])
             assertEquals(HomeFixtures.evidence, explained["house"])
         }
+
+    @Test
+    fun aGenreReadFromTheTracksOwnLinesIsAskedOnTheTracksEvidenceWhateverSourcesAdds() {
+        val bio = draft(SourceId.LASTFM, "The Last.fm biography of islandman says: \"They also play jazz.\"")
+        val own = EvidenceSet.of(listOf(bio), JvmHasher)
+        // *Sources* with the album's lines joined (#522): the track's ids kept, the fingerprint not.
+        val album = EvidenceDraft(SourceId.WIKIPEDIA, Scope.RELEASE, "Island5 is an album.", null, at)
+        val sources = own.with(listOf(album), JvmHasher)
+        show(evidence = sources, own = own) {
+            tap(GENRE_PREFIX + "described:$ISLANDMAN:jazz")
+            tap(GENRE_WHY_TAG)
+            assertEquals(own, subscribed["jazz"])
+            assertEquals(own, explained["jazz"])
+        }
+    }
+
+    @Test
+    fun searchWithAiStillShowsUnderTheDescribedGenresOfATrackWithNoTags() {
+        val bio = EvidenceSet.of(listOf(draft(SourceId.LASTFM, "They also play jazz.", about = ISLANDMAN)), JvmHasher)
+        val blues = vocabulary.labelsFor(listOf("blues"), level = GenreLevel.TRACK)
+        val answered =
+            object : AiSearchFeed {
+                override fun search(
+                    track: TrackState,
+                    kind: SearchKind,
+                    genre: String?,
+                ): Flow<AiSearch> =
+                    flowOf(
+                        if (kind ==
+                            SearchKind.GENRES
+                        ) {
+                            AiSearch.Answered(SearchAnswer.Genres(blues), "Model")
+                        } else {
+                            AiSearch.None
+                        },
+                    )
+
+                override fun ask(
+                    track: TrackState,
+                    kind: SearchKind,
+                    facts: SearchFacts,
+                    automatic: Boolean,
+                    genre: String?,
+                ) = false
+
+                override fun stop(
+                    track: TrackState,
+                    kind: SearchKind,
+                    genre: String?,
+                ) = Unit
+            }
+        show(TrackGenres(), evidence = bio, search = answered) {
+            assertEquals(
+                1,
+                compose.onAllNodesWithTag(GENRE_PREFIX + "described:$ISLANDMAN:jazz").fetchSemanticsNodes().size,
+            )
+            assertTrue(compose.onAllNodes(hasText("Blues"), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty())
+            // No "None found." beside the chips.
+            assertEquals(0, compose.onAllNodes(hasText(text(R.string.home_genres_none))).fetchSemanticsNodes().size)
+        }
+    }
 
     @Test
     fun lyricsFoundDropTheDescriptionsInstrumental() =

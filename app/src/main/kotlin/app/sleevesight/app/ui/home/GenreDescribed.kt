@@ -6,6 +6,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
@@ -17,6 +21,8 @@ import app.sleevesight.core.genres.describedGenres
 import app.sleevesight.core.genres.describedIn
 import app.sleevesight.core.genres.withDescribed
 import app.sleevesight.core.pipeline.TrackState
+import app.sleevesight.core.platform.JvmAccentFolder
+import app.sleevesight.core.resolution.NameMatcher
 
 // The genres an artist's description names (#1000; `design/design.md`, *Genre labels*): read from the
 // lines *Sources* lists, beside the tags, and the line under such a genre's definition.
@@ -36,22 +42,28 @@ internal fun withDescribed(
     val lines = notes.lines ?: track?.evidence
     if (track == null || vocabulary == null || lines == null) return track
     val artists = track.normalized.artists
-    val found = remember(vocabulary, lines, artists) { describedGenres(vocabulary, lines.lines, artists) }
+    val found = remember(vocabulary, lines, artists) { describedGenres(vocabulary, lines.lines, artists, NAMES) }
     return if (found.isEmpty()) track else track.copy(genres = track.genres.withDescribed(found))
 }
 
 /**
- * The track the reason for [genre] is asked on, *Why is this …?* (#1000): for a genre whose chip is
- * an artist's description's, [track] with [lines] (*Sources*' lines, which hold the description it
- * was read from: #912's artist web lines too) as its evidence, so the reason reads it, cites it by
- * the ids *Sources* shows, and is keyed by its fingerprint; [track] itself for any other genre, or
- * with no lines.
+ * The track the reason for [genre] is asked on, *Why is this …?* (#1000): [track] itself, keyed by
+ * its own evidence as any genre's reason, when that evidence holds the line the genre was read from
+ * (a Last.fm biography, a Wikipedia article), or for a genre no description gives; for one read from
+ * a line only *Sources* lists (#912's artist web lines), [track] with [lines], *Sources*' lines, as
+ * its evidence, so the reason reads it, cites it by the ids *Sources* shows, and is keyed by their
+ * fingerprint. With no lines, [track].
  */
 internal fun reasonedOn(
     track: TrackState,
     genre: String,
     lines: EvidenceSet?,
-): TrackState = if (lines != null && track.genres.describedIn(genre) != null) track.copy(evidence = lines) else track
+): TrackState {
+    val where = track.genres.describedIn(genre)
+    if (lines == null || where == null) return track
+    val own = track.evidence?.get(where.line)
+    return if (own != null && own.text == lines[where.line]?.text) track else track.copy(evidence = lines)
+}
 
 /**
  * Under the definition of a genre the artist's description names ([where], #1000), before *Why is
@@ -81,10 +93,22 @@ internal fun CitedNote(
     onCite: (String) -> Unit,
     tag: String,
 ) {
+    // Read as the insights' citations are, "Source S8", the link offered as an action too.
+    val cite = stringResource(R.string.home_cite, line)
     LinkedText(
         listOf(TextPart.Words("$text "), citation(line, onCite)),
         style = MaterialTheme.typography.bodySmall,
-        modifier = Modifier.testTag(tag),
+        modifier =
+            Modifier.testTag(tag).semantics {
+                contentDescription = "$text ($cite)"
+                customActions =
+                    listOf(
+                        CustomAccessibilityAction(cite) {
+                            onCite(line)
+                            true
+                        },
+                    )
+            },
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 }
@@ -106,6 +130,9 @@ internal fun describedParts(
     val lines = row.labels.mapNotNull { it.describedIn?.line }.distinct()
     return lines.fold(listOf<TextPart>(whose)) { parts, line -> parts + TextPart.Words(" · ") + citation(line, onCite) }
 }
+
+// How a line's artist is matched to the credit, as the item insights match them.
+private val NAMES = NameMatcher(JvmAccentFolder)
 
 /** The test tag of the line under a genre the artist's description names (#1000). */
 const val GENRE_DESCRIBED_TAG: String = "genre-panel:described"

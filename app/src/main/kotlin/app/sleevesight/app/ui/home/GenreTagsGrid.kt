@@ -139,7 +139,8 @@ internal fun tagsReading(
             row.labels.map { label ->
                 val named =
                     label.aiModel?.takeIf { label.aiAdded }?.let { added.format(label.genre.label, it) }
-                        ?: label.describedIn?.let { described.format(label.genre.label) }
+                        // On a *Described* row, its name says it already.
+                        ?: label.describedIn?.takeIf { !row.described }?.let { described.format(label.genre.label) }
                 (named ?: label.genre.label).let { if (label.genre.identity == genre) selected.format(it) else it }
             }
     ).joinToString(", ")

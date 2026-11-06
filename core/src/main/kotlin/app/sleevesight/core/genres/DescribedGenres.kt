@@ -3,6 +3,7 @@ package app.sleevesight.core.genres
 import app.sleevesight.core.evidence.EvidenceLine
 import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.resolution.NameMatcher
 
 /**
  * Where an artist's description names a genre (#1000): the [line] it is first found in, by the id
@@ -23,7 +24,8 @@ data class DescribedIn(
  * genre once, in the order its lines name them, citing the first line it is found in
  * ([TrackLabel.describedIn]); its labels are of [GenreLevel.ARTIST], for that artist, credited to no
  * label source. The artist's own names in a line name no genre ("Soul II Soul", the band
- * *Electronic*). A line is the artist's its adapter says it is about ([EvidenceLine.about]); one that
+ * *Electronic*). A line is the artist's its adapter says it is about ([EvidenceLine.about], by [names]; the
+ * one credited artist when it names none of them); one that
  * does not say is the artist's when the track credits one, or, with several, a web page's is the
  * primary artist's (the artist's web search, #912, looks up the primary alone) and another's the
  * first credited artist it names. A genre name that is an everyday word counts only in a music
@@ -33,14 +35,15 @@ fun describedGenres(
     vocabulary: GenreVocabulary,
     lines: List<EvidenceLine>,
     artists: List<String>,
+    names: NameMatcher? = null,
 ): List<GenreRow> {
     val found = linkedMapOf<String, LinkedHashMap<String, TrackLabel>>()
     val describing = lines.filter { it.scope == Scope.ARTIST && !it.aggregate && it.source in DESCRIBING }
     for (line in describing) {
-        val artist = artistOf(line, artists) ?: continue
+        val artist = artistOf(line, artists, names) ?: continue
         val named = found.getOrPut(artist) { linkedMapOf() }
-        val names = artists.flatMap { occurrences(line.text, it) }
-        val all = vocabulary.namedIn(line.text).filter { (_, range) -> names.none { it.overlaps(range) } }
+        val credited = artists.flatMap { occurrences(line.text, it) }
+        val all = vocabulary.namedIn(line.text).filter { (_, range) -> credited.none { it.overlaps(range) } }
         val genres =
             all.filter { (genre, range) ->
                 EverydayNames.named(genre.tag, line.text, range, all.map { it.second })
@@ -139,26 +142,66 @@ internal object EverydayNames {
             "vocalist",
             "singer-songwriter",
             "songwriter",
-            "dj",
+            "DJ",
             "drummer",
             "bassist",
             "pianist",
             "composer",
             "rapper",
-            "mc",
+            "MC",
             "ensemble",
             "orchestra",
             "collective",
             "outfit",
             "sound",
             "label",
+            "star",
+            "hit",
+            "single",
+            "icon",
         )
 
-    // The words after which Instrumental is the everyday word ("instrumental in", "instrumental to").
-    private val NOT_INSTRUMENTAL = setOf("in", "to")
+    /**
+     * The names of several words that are everyday phrases too ("part of a new wave of British jazz"),
+     * which name a genre only in a music phrase, as [WORDS] do, or capitalised ("New Wave").
+     */
+    val PHRASES: Set<String> = setOf("new wave", "new age")
+
+    // The words after which Instrumental is the everyday word, or a part of the work rather than the
+    // act ("instrumental in", "an instrumental role", "two instrumental tracks"), singular or plural.
+    private val NOT_INSTRUMENTAL =
+        setOf(
+            "in",
+            "to",
+            "role",
+            "part",
+            "figure",
+            "force",
+            "factor",
+            "for",
+            "track",
+            "version",
+            "piece",
+            "break",
+            "interlude",
+            "intro",
+            "outro",
+            "section",
+            "passage",
+            "solo",
+            "song",
+            "single",
+            "b-side",
+        )
+
+    // "an instrumental" (or "a"), the noun: a piece without vocals, not the act.
+    private val AN_INSTRUMENTAL = Regex("(?i)(?:^|\\s)an?\\s+$")
 
     // The word after a name, past nothing but spaces: letters, with hyphens inside.
     private val NEXT_WORD = Regex("^\\s+(\\p{L}+(?:-\\p{L}+)*)")
+
+    // Text past a name that is no word: punctuation, or its end.
+    private val NO_WORD_NEXT = Regex("^\\s*(?:[^\\s\\p{L}\\p{N}].*)?$", RegexOption.DOT_MATCHES_ALL)
 
     // What may stand between two genres of a chain before a noun: spaces, "and", "&" or "/", or a
     // comma, with "and" or "&" after it or not ("a folk, soul and pop band", "folk, soul, and pop").
@@ -166,10 +209,12 @@ internal object EverydayNames {
 
     /**
      * Whether the vocabulary tag [tag], found at [range] of [text], names the genre there: always for
-     * a tag of several words or one not in [WORDS]; for one of [WORDS], only in a music phrase: the
-     * genres [found] in [text] that follow it, past spaces, "and", "&", "/" or commas ("an ambient electronic
-     * duo", "a jazz and soul singer"), then one of [MUSIC_NOUNS] or its plural. Instrumental, unless
-     * the word after it is "in" or "to".
+     * a tag of several words or one not in [WORDS] or [PHRASES]; for one of [WORDS], only in a music
+     * phrase: the genres [found] in [text] that follow it, past spaces, "and", "&", "/" or commas ("an
+     * ambient electronic duo", "a jazz and soul singer"), then one of [MUSIC_NOUNS] or its plural, as
+     * written ("Sub Pop Records", a name, is none); for one of [PHRASES], the same, or capitalised.
+     * Instrumental, unless the word after it is one of the everyday or the work's ("instrumental in",
+     * "an instrumental version"), or it is the noun ("their single was an instrumental.").
      */
     fun named(
         tag: String,
@@ -178,10 +223,27 @@ internal object EverydayNames {
         found: List<IntRange> = emptyList(),
     ): Boolean =
         when {
-            tag == TrackGenres.INSTRUMENTAL -> next(text, range.last + 1) !in NOT_INSTRUMENTAL
+            tag == TrackGenres.INSTRUMENTAL -> instrumental(text, range)
+            tag in PHRASES -> capitalised(text.substring(range)) || inPhrase(text, range.last + 1, found)
             tag.any(Char::isWhitespace) || tag !in WORDS -> true
             else -> inPhrase(text, range.last + 1, found)
         }
+
+    // Whether Instrumental at [range] of [text] names the genre: not before an everyday or a work's
+    // word, and not the noun, "an instrumental" before punctuation or the end.
+    private fun instrumental(
+        text: String,
+        range: IntRange,
+    ): Boolean {
+        val word = next(text, range.last + 1)?.lowercase()
+        val noun =
+            AN_INSTRUMENTAL.containsMatchIn(text.substring(0, range.first)) &&
+                NO_WORD_NEXT.matches(text.substring(range.last + 1))
+        return !noun && (word == null || (word !in NOT_INSTRUMENTAL && word.removeSuffix("s") !in NOT_INSTRUMENTAL))
+    }
+
+    // Whether every word of [name] starts with a capital ("New Wave").
+    private fun capitalised(name: String): Boolean = name.split(' ').all { it.firstOrNull()?.isUpperCase() == true }
 
     // Whether a music noun follows [from] in [text], past the genres of [found] that chain on to it.
     private fun inPhrase(
@@ -198,7 +260,7 @@ internal object EverydayNames {
         }
     }
 
-    // The word of [text] after [from], past nothing but spaces, in lower case; null for none.
+    // The word of [text] after [from], past nothing but spaces, as written; null for none.
     private fun next(
         text: String,
         from: Int,
@@ -207,7 +269,6 @@ internal object EverydayNames {
             .find(text.substring(from))
             ?.groupValues
             ?.get(1)
-            ?.lowercase()
 }
 
 // Whether this range and [other] share a character.
@@ -234,8 +295,12 @@ val DESCRIBING: Set<SourceId> = setOf(SourceId.LASTFM, SourceId.WIKIPEDIA, Sourc
 private fun artistOf(
     line: EvidenceLine,
     artists: List<String>,
+    names: NameMatcher?,
 ): String? {
-    line.about?.let { about -> return artists.firstOrNull { it.equals(about, ignoreCase = true) } }
+    line.about?.let { about ->
+        val same = { artist: String -> names?.sameName(artist, about) ?: artist.equals(about, ignoreCase = true) }
+        return artists.firstOrNull(same) ?: artists.singleOrNull()
+    }
     return when {
         artists.size == 1 -> artists.single()
         line.source == SourceId.WEB -> artists.firstOrNull()

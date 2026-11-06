@@ -137,11 +137,9 @@ class GenreVocabulary(
             }.toList()
     }
 
-    // Each tag by its spelling (letters and digits, case aside), the first tag of a spelling in the
-    // vocabulary's order, for [namedIn]; and the most words a tag has.
-    private val bySpelling: Map<String, String> by lazy {
-        buildMap { for (tag in familyOf.keys) putIfAbsent(spelling(tag), tag) }
-    }
+    // The tags of each spelling (letters and digits, case aside), in the vocabulary's order, for
+    // [namedIn]; and the most words a tag has.
+    private val bySpelling: Map<String, List<String>> by lazy { familyOf.keys.groupBy { spelling(it) } }
     private val mostWords: Int by lazy { familyOf.keys.maxOfOrNull { TAG_WORD.findAll(it).count() } ?: 0 }
 
     /**
@@ -150,9 +148,10 @@ class GenreVocabulary(
      * name of several words whole, the longest name first where names overlap ("indie rock", not
      * "indie" and "rock"). A word is letters and digits, with hyphens, apostrophes or `&` inside it:
      * "post-punk" and "R&B" are one word each, so "electro-acoustic" names no *Acoustic* and
-     * "folklore" no *Folk*. The words of a name of several are spaced (or joined by a spaced `&`, or
-     * spaced with apostrophes beside them: "rock 'n' roll"),
-     * so "hip hop", "hip-hop" and "Hiphop" all name *Hip-Hop*. Each with the [IntRange] of [text] it spans.
+     * "folklore" no *Folk*. A run of several words names only a tag of several words itself ("dance
+     * hall" names no *Dancehall*, "high life" no *Highlife*). The words of a name of several are
+     * spaced (or joined by a spaced `&`, or spaced with apostrophes beside them: "rock 'n' roll"), so
+     * "hip hop", "hip-hop" and "Hiphop" all name *Hip-Hop*. Each with the [IntRange] of [text] it spans.
      */
     fun namedIn(text: String): List<Pair<GenreLabel, IntRange>> {
         val words = NAME_WORD.findAll(text).toList()
@@ -164,7 +163,11 @@ class GenreVocabulary(
                     val run = words.subList(at, at + count)
                     val spaced =
                         run.zipWithNext().all { (a, b) -> GAP.matches(text.substring(a.range.last + 1, b.range.first)) }
-                    bySpelling[run.joinToString("") { spelling(key(it.value)) }]?.takeIf { spaced }?.let { count to it }
+                    // A run of several words names only a tag of several words ("hip hop", not
+                    // "dance hall" for Dancehall); one word, any tag of its spelling.
+                    val tags = bySpelling[run.joinToString("") { spelling(key(it.value)) }].orEmpty()
+                    val tag = tags.firstOrNull { count == 1 || TAG_WORD.findAll(it).count() > 1 }
+                    tag?.takeIf { spaced }?.let { count to it }
                 }
             if (span == null) {
                 at++

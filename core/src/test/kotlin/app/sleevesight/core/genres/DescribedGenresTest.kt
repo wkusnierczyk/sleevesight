@@ -9,6 +9,7 @@ import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.pipeline.nowPlaying
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmResourceReader
+import app.sleevesight.core.resolution.NameMatcher
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -292,6 +293,59 @@ class DescribedGenresTest {
     }
 
     @Test
+    fun `Instrumental names the act, not a role, a part of the work or the noun`() {
+        for (prose in listOf(
+            "They played an instrumental role in the scene.",
+            "The album's two instrumental tracks.",
+            "An instrumental version followed.",
+            "After an instrumental break.",
+            "Their debut single was an instrumental.",
+            "He was instrumental in founding the label.",
+        )) {
+            assertEquals(emptyList(), named(prose), prose)
+        }
+        assertEquals(listOf("Instrumental"), named("An instrumental band."))
+        assertEquals(listOf("Instrumental"), named("They make instrumental music."))
+        assertEquals(listOf("Instrumental"), named("An instrumental electro-acoustic, neo-psychedelic band."))
+    }
+
+    @Test
+    fun `a run of several words names only a tag of several words, and new wave is guarded`() {
+        assertEquals(emptyList(), named("A dance hall in Kingston."))
+        assertEquals(emptyList(), named("Living the high life."))
+        assertEquals(emptyList(), named("They like to chill out."))
+        assertEquals(listOf(vocabulary.identity("synth-pop")), namedIdentities("A synth pop duo."))
+        assertEquals(listOf("Jazz"), named("Part of a new wave of British jazz."))
+        assertEquals(emptyList(), named("A new age of touring."))
+        assertEquals(listOf(vocabulary.identity("new wave")), namedIdentities("A new wave band."))
+        assertEquals(listOf(vocabulary.identity("new wave")), namedIdentities("Pioneers of New Wave."))
+    }
+
+    @Test
+    fun `a music noun counts as written, not in a capitalised name, and stars and hits are music`() {
+        assertEquals(emptyList(), named("Signed to Sub Pop Records."))
+        assertEquals(listOf("Pop"), named("A pop star."))
+        assertEquals(listOf("Pop"), named("Their pop hits."))
+        assertEquals(listOf("Dance"), named("A dance single."))
+        assertEquals(listOf("House"), named("Two house DJs."))
+    }
+
+    @Test
+    fun `a line's artist is matched as the credit names them, else the one credited`() {
+        val names = NameMatcher(JvmAccentFolder)
+        val accented = line("L1", "A soul singer.", SourceId.LASTFM, about = "Beyonce")
+        assertEquals("Beyoncé", describedGenres(vocabulary, listOf(accented), listOf("Beyoncé"), names).single().artist)
+        val other = line("L2", "A soul singer.", SourceId.LASTFM, about = "Someone Else")
+        assertEquals(ANN, describedGenres(vocabulary, listOf(other), listOf(ANN), names).single().artist)
+        assertTrue(describedGenres(vocabulary, listOf(other), listOf(ANN, BOB), names).isEmpty())
+    }
+
+    private fun namedIdentities(text: String) =
+        describedGenres(vocabulary, listOf(line("S1", text)), listOf(ISLANDMAN)).flatMap { row ->
+            row.labels.map { it.genre.identity }
+        }
+
+    @Test
     fun `every tag of the list names itself as written`() {
         for (tag in vocabulary.tags) {
             val found = vocabulary.namedIn(tag)
@@ -320,7 +374,6 @@ class DescribedGenresTest {
         assertEquals(listOf("Punk", "Soul"), named("A punk guitarist and soul vocalist."))
         assertEquals(listOf("Jazz", "Soul"), named("A jazz and soul singer."))
         assertEquals(listOf("Folk", "Singer-Songwriter"), named("A folk singer-songwriter."))
-        assertEquals(listOf("House"), named("Two house DJs."))
         // Still not before anything else.
         assertEquals(listOf("Electronic"), named("An ambient electronic set in a house in Berlin."))
     }
