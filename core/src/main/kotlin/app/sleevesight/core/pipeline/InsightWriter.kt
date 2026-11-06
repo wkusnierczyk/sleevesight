@@ -56,7 +56,8 @@ internal class InsightWriter(
     private val allowModel = settings.isEnabled(SourceId.MODEL)
 
     // The rules, sent as the system prompt; the track and its evidence are each call's user message (#767).
-    private val system = InsightPrompt.system(allowModel)
+    // Its dates in the form the parts give now (#957), which the card's key does not hold.
+    private val system = InsightPrompt.system(allowModel, dates = parts.dateForm())
 
     // Whether the run fell back to the whole evidence (#239), after `NO_EVIDENCE` to a prompt that
     // left lines out: every later call of the run, a tapped Retry too, goes straight to it.

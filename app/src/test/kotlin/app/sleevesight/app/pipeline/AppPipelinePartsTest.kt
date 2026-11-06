@@ -36,6 +36,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.util.Locale
 
 /** The app's pipeline stages from the wiring and the saved keys (#51). Nothing here sends a request. */
 class AppPipelinePartsTest {
@@ -52,6 +53,19 @@ class AppPipelinePartsTest {
     fun close() {
         stores.close()
         wiring.close()
+    }
+
+    @Test
+    fun thePromptsAskForDatesInThePhonesFormReadAsEachPromptIsBuilt() {
+        // The phone's language and region as each prompt is built (#957), not as the parts were.
+        var phone = Locale.US
+        val made = AppPipelineParts(wiring, Normalizer(JvmAccentFolder), phone = { phone }) { PipelineCache.None }
+        val dateForm = made(PipelineKeys(), Settings()).dateForm
+        assertEquals("en-US", dateForm().language)
+        phone = Locale.UK
+        assertEquals("en-GB", dateForm().language)
+        phone = Locale.GERMANY
+        assertEquals("en-DE", dateForm().language)
     }
 
     @Test

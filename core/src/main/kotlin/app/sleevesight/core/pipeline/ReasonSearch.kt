@@ -8,6 +8,7 @@ import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.sources.WebPage
 import app.sleevesight.core.synthesis.GenreReasonPrompt
 import app.sleevesight.core.synthesis.InsightPrompt
+import app.sleevesight.core.text.DateForm
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -26,6 +27,7 @@ import kotlin.time.Instant
  * ([GenreReasonPrompt.user]), under its system prompt ([system], with the search's instructions for
  * *Up to 3 times*, [agentSystem]), sent on every call of the question (#767).
  */
+@Suppress("LongParameterList") // What it asks about, the evidence, the switch, the hash, the time, the dates' form.
 internal class ReasonQuestion(
     private val track: TrackState,
     private val label: String,
@@ -33,12 +35,14 @@ internal class ReasonQuestion(
     private val allowModel: Boolean,
     private val hasher: Hasher,
     private val at: Instant,
+    // The form the reason writes its dates in (`InsightPrompt.dateRule`).
+    private val dates: DateForm = DateForm.APP,
 ) : WebQuestion {
     // The pages numbered so far, in their order, by address.
     private val numbered = LinkedHashMap<String, WebPage>()
 
     override val system: String
-        get() = GenreReasonPrompt.system(allowModel)
+        get() = GenreReasonPrompt.system(allowModel, dates)
 
     override val knowledge: String
         get() = GenreReasonPrompt.user(track.nowPlaying, track.normalized, base, label)

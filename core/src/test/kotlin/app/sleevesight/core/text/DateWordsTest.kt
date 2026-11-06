@@ -35,21 +35,29 @@ class DateWordsTest {
 
     @Test
     fun `the app's English form, whatever the language asked for`() {
-        for (language in listOf(DateWords.TEXT_LANGUAGE, "en-US", "de")) {
+        for (language in listOf(DateWords.APP_LANGUAGE, "en-US", "de")) {
             assertEquals("29 July 2014", EnglishDateWords.format("2014-07-29", language))
             assertEquals("9 July 2014", EnglishDateWords.format("2014-07-09", language))
             assertEquals("July 2014", EnglishDateWords.format("2014-07", language))
             assertEquals("2014", EnglishDateWords.format("2014", language))
         }
-        assertEquals("25 March 0965", EnglishDateWords.format("0965-03-25", DateWords.TEXT_LANGUAGE))
-        assertNull(EnglishDateWords.format("19", DateWords.TEXT_LANGUAGE))
+        assertEquals("25 March 0965", EnglishDateWords.format("0965-03-25", DateWords.APP_LANGUAGE))
+        assertNull(EnglishDateWords.format("19", DateWords.APP_LANGUAGE))
     }
 
     @Test
     fun `the examples are of 17 October 2026, at each precision`() {
         assertEquals(
             listOf("17 October 2026", "October 2026", "2026"),
-            EnglishDateWords.examples(DateWords.TEXT_LANGUAGE),
+            EnglishDateWords.examples(DateWords.APP_LANGUAGE),
         )
+    }
+
+    @Test
+    fun `a form writes its dates and examples in its language, the app's where no phone gives one`() {
+        assertEquals(listOf("17 October 2026", "October 2026", "2026"), DateForm.APP.examples)
+        assertEquals("29 July 2014", DateForm.APP.format(DateWhen.Day(29, 7, "2014")))
+        assertEquals(listOf("October 17, 2026", "October 2026", "2026"), US_DATES.examples)
+        assertEquals("July 29, 2014", US_DATES.format(DateWhen.Day(29, 7, "2014")))
     }
 }

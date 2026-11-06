@@ -16,6 +16,7 @@ import app.sleevesight.core.synthesis.GenreDispute
 import app.sleevesight.core.synthesis.GenreReasonPrompt
 import app.sleevesight.core.synthesis.GroundingCheck
 import app.sleevesight.core.synthesis.InsightReply
+import app.sleevesight.core.text.DateForm
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Clock
 import kotlin.time.Instant
@@ -75,7 +76,7 @@ sealed interface ReasonPath {
  * A cache that throws is a miss, and a write that fails keeps nothing; neither stops the reason.
  * Each state written comes with its time by [clock]; a reply kept is kept with the time it is shown
  * with, so the screen and the cache count *Keep history for* from the same time, as the insight's
- * (#643).
+ * (#643). The prompt asks for dates in the form [dates] gives as it is built (#957), which no key holds.
  */
 @Suppress("TooManyFunctions") // Each step of a reason: its key, its path, its calls with and without the web.
 class GenreReasons(
@@ -84,6 +85,7 @@ class GenreReasons(
     private val hasher: Hasher,
     private val clock: Clock = Clock.System,
     private val web: WebSearcher? = null,
+    private val dates: () -> DateForm = { DateForm.APP },
 ) {
     /**
      * The key of [genre]'s reason for [track] under [settings] ([GenreLabel.identity]), or null when
@@ -301,7 +303,7 @@ class GenreReasons(
                 prompt,
                 CompletionRequest.maxTokensFor(key.effort),
                 key.effort,
-                system = GenreReasonPrompt.system(key.modelKnowledge),
+                system = GenreReasonPrompt.system(key.modelKnowledge, dates()),
             )
         counted(QuestionCost.CALL)
         val shows: (String) -> Boolean =
@@ -332,7 +334,7 @@ class GenreReasons(
         show: (InsightState, Instant) -> Unit,
     ): InsightState {
         val access = checkNotNull(ai)
-        val question = ReasonQuestion(track, label, evidence, key.modelKnowledge, hasher, now())
+        val question = ReasonQuestion(track, label, evidence, key.modelKnowledge, hasher, now(), dates())
         show(InsightState.Writing(""), now())
         val base = CompletionRequest(key.model, "", CompletionRequest.maxTokensFor(key.effort), key.effort)
         val reply = WebQuestions(access, web).ask(question, asking.search, asking.limit, base, counted)

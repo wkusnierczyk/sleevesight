@@ -40,6 +40,7 @@ import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.app.session.PlaybackInfo
 import app.sleevesight.app.session.PlaybackStatus
+import app.sleevesight.app.ui.PHONE_DATE_WORDS
 import app.sleevesight.app.ui.home.HomeFixtures.carefree
 import app.sleevesight.app.ui.home.HomeFixtures.done
 import app.sleevesight.app.ui.home.HomeFixtures.normalizer
@@ -72,10 +73,11 @@ import org.robolectric.annotation.Config
  * precisely as it is known; with none, why, and *Retry* where MusicBrainz could not be reached; the
  * button, shown for every track, opening the panel in its place and *Close* folding it back, a new
  * track closing it, the focus handed between them, and what a screen reader hears. Which sentences
- * are said is `HomeDatesTest`'s.
+ * are said is `HomeDatesTest`'s. On a British phone unless a test sets another (#957: the dates in
+ * the phone's form).
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(qualifiers = "w411dp-h891dp-420dpi")
+@Config(qualifiers = "en-rGB-w411dp-h891dp-420dpi")
 class DatesScreenTest {
     @get:Rule
     val compose = createEmptyComposeRule()
@@ -160,18 +162,64 @@ class DatesScreenTest {
             compose.onNodeWithText("The song was originally recorded in 2014 by Someone.").assertExists()
         }
 
+    // The sentences of a day, a month and a year, as the panel says them on the phone of the test's
+    // locale (#957): [day] the first release's date, 17 October 2026.
+    private fun saysDatesIn(day: String) =
+        said(
+            listOf(
+                DateSentence.First("2026-10-17", null, null),
+                DateSentence.Album("2026-10"),
+                DateSentence.Original("2026", "Someone", null, null),
+            ),
+        ) {
+            compose.onNodeWithText("This track was first released on $day.").assertExists()
+            compose.onNodeWithText("This album was released in October 2026.").assertExists()
+            compose.onNodeWithText("The song was originally recorded in 2026 by Someone.").assertExists()
+        }
+
+    @Test
+    @Config(qualifiers = "en-rUS-w411dp-h891dp-420dpi")
+    fun onAUsPhoneTheMonthComesFirst() {
+        saysDatesIn("October 17, 2026")
+        said(listOf(DateSentence.Album("2014-07-09"))) {
+            compose.onNodeWithText("This album was released on July 9, 2014.").assertExists()
+        }
+    }
+
+    @Test
+    @Config(qualifiers = "en-rCA-w411dp-h891dp-420dpi")
+    fun onACanadianPhoneTheMonthComesFirst() = saysDatesIn("October 17, 2026")
+
+    @Test
+    fun onABritishPhoneTheDayComesFirst() = saysDatesIn("17 October 2026")
+
+    @Test
+    @Config(qualifiers = "de-rCH-w411dp-h891dp-420dpi")
+    fun onASwissPhoneInGermanTheDatesAreInSwissEnglish() = saysDatesIn("17 October 2026")
+
+    @Test
+    @Config(qualifiers = "pl-rPL-w411dp-h891dp-420dpi")
+    fun onAPhoneWhoseRegionHasNoEnglishTheDatesAreInInternationalEnglish() = saysDatesIn("17 October 2026")
+
     @Test
     fun thePhonesPatternsWriteTheDatesAsCoreDoes() {
-        // The phone's patterns (`DateFormat.getBestDateTimePattern`) give the app's English form, the
-        // one the evidence lines and the prompts' examples have (#957), a year before 1000 and a day
-        // the month does not have included, and another language its own.
+        // The phone's patterns (`DateFormat.getBestDateTimePattern`) in British and in international
+        // English give the app's own form, the one the evidence lines have (#957), a year before 1000
+        // and a day the month does not have included; in US English the month first; and another
+        // language its own.
         for (date in listOf("2014-07-29", "2014-07-09", "2014-07", "2014", "0965-03-25", "1974-02-30")) {
-            assertEquals(
-                date,
-                EnglishDateWords.format(date, DateWords.TEXT_LANGUAGE),
-                PHONE_DATE_WORDS.format(date, DateWords.TEXT_LANGUAGE),
-            )
+            for (language in listOf(DateWords.APP_LANGUAGE, "en-001")) {
+                assertEquals(
+                    "$date in $language",
+                    EnglishDateWords.format(date, DateWords.APP_LANGUAGE),
+                    PHONE_DATE_WORDS.format(date, language),
+                )
+            }
         }
+        assertEquals("March 25, 0965", PHONE_DATE_WORDS.format("0965-03-25", "en-US"))
+        assertEquals("February 30, 1974", PHONE_DATE_WORDS.format("1974-02-30", "en-US"))
+        assertEquals("July 2014", PHONE_DATE_WORDS.format("2014-07", "en-US"))
+        assertEquals("2014", PHONE_DATE_WORDS.format("2014", "en-US"))
         assertEquals("29 lipca 2014", PHONE_DATE_WORDS.format("2014-07-29", "pl"))
         assertEquals("lipiec 2014", PHONE_DATE_WORDS.format("2014-07", "pl"))
         // Each precision with its own pattern: none left with another's endings.
