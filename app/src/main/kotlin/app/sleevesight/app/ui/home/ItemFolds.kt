@@ -67,32 +67,50 @@ internal fun itemShowAction(item: InsightItem): Int =
  * Which rows are unfolded, kept across recompositions and a recreated screen, as *Sources*' fold is
  * ([FoldMemory]): the items [open] on the track last shown, [track], and those a tap opened on it
  * ([tapped], not saved), which write at once under an automatic mode whatever held the track's own
- * writing back; and the rows whose name a tap showed whole ([whole], #894, not saved).
+ * writing back; of those, the ones whose tap's write is still to be asked for ([due], #948, saved
+ * with the track it is of, so a recreated screen still writes it once, and never on another track),
+ * once their state is known; and the rows whose name a tap showed whole ([whole], #894, not
+ * saved).
  */
 @Stable
 internal class ItemFoldMemory(
     open: Set<InsightItem> = emptySet(),
     track: NowPlaying? = null,
+    due: Set<InsightItem> = emptySet(),
 ) {
     var open: Set<InsightItem> by mutableStateOf(open)
     var track: NowPlaying? by mutableStateOf(track)
     var tapped: Set<InsightItem> by mutableStateOf(emptySet())
+    var due: Set<InsightItem> by mutableStateOf(due)
     var whole: Set<InsightItem> by mutableStateOf(emptySet())
 
     companion object {
-        /** Saved as plain values: the items open, by name, and the track as [savedTrack] keeps it. */
+        /**
+         * Saved as plain values: the items open, by name, the track as [savedTrack] keeps it, then the
+         * items whose tap's write is due on it (#948), last, so a state saved before them, which ends
+         * with the track, restores with none due.
+         */
         val Saver: Saver<ItemFoldMemory, Any> =
             listSaver(
-                save = { memory -> listOf<Any?>(memory.open.joinToString(",") { it.name }) + savedTrack(memory.track) },
+                save = { memory ->
+                    listOf<Any?>(names(memory.open)) + savedTrack(memory.track) + names(memory.due)
+                },
                 restore = { saved ->
-                    val open =
-                        (saved[0] as String)
-                            .split(',')
-                            .mapNotNull { name -> InsightItem.entries.firstOrNull { it.name == name } }
-                            .toSet()
-                    ItemFoldMemory(open, restoredTrack(saved.drop(1)))
+                    val due = (saved.getOrNull(DUE_AT) as? String).orEmpty()
+                    ItemFoldMemory(items(saved[0] as String), restoredTrack(saved.drop(1)), items(due))
                 },
             )
+
+        // Where the items due are saved: after the items open and the track's five values.
+        private const val DUE_AT = 6
+
+        private fun names(items: Set<InsightItem>): String = items.joinToString(",") { it.name }
+
+        private fun items(names: String): Set<InsightItem> =
+            names
+                .split(',')
+                .mapNotNull { name -> InsightItem.entries.firstOrNull { it.name == name } }
+                .toSet()
     }
 }
 
@@ -132,31 +150,43 @@ internal class ItemFolds(
     /** A tap on [item]'s name in its row (#894): shown whole, or clipped again. */
     fun toggleWhole(item: InsightItem) {
         val now = if (same) memory.whole else emptySet()
-        memory.open = open
-        memory.tapped = if (same) memory.tapped else emptySet()
+        keep()
         memory.whole = if (item in now) now - item else now + item
-        memory.track = playing
     }
 
     /** Whether [item] was opened by a tap on the track playing. */
     fun tapped(item: InsightItem): Boolean = same && item in memory.tapped
 
-    /** A tap on [item]'s row: unfolded, or folded. */
+    /**
+     * The write of [item]'s opening by a tap on the track playing (#948): due until its state is known,
+     * and only while it stays open; then taken, not asked again.
+     */
+    fun opening(item: InsightItem): OpeningWrite =
+        if (same && item in memory.due) OpeningWrite(due = true) { memory.due -= item } else OpeningWrite.NONE
+
+    /** A tap on [item]'s row: unfolded, its write due (#948), or folded. */
     fun toggle(item: InsightItem) {
         val now = open
         val opening = item !in now
-        val tapped = if (same) memory.tapped else emptySet()
+        keep()
         memory.open = if (opening) now + item else now - item
-        memory.tapped = if (opening) tapped + item else tapped - item
-        if (!same) memory.whole = emptySet()
-        memory.track = playing
+        memory.tapped = if (opening) memory.tapped + item else memory.tapped - item
+        memory.due = if (opening) memory.due + item else memory.due - item
     }
 
     /** On a new track, keeps the rows it shows as its own; not until the settings are read. */
     fun follow() {
         if (start == null || same) return
+        keep()
+    }
+
+    // The rows as shown, kept as the track playing's: a new track's start with no taps, no writes due,
+    // and every name clipped.
+    private fun keep() {
+        if (same) return
         memory.open = open
         memory.tapped = emptySet()
+        memory.due = emptySet()
         memory.whole = emptySet()
         memory.track = playing
     }

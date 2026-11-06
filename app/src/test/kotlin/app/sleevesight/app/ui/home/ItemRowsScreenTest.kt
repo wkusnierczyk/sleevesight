@@ -29,7 +29,6 @@ import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.pipeline.ItemAsk
-import app.sleevesight.app.pipeline.ItemNotes
 import app.sleevesight.app.pipeline.ItemShown
 import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.app.session.PlaybackInfo
@@ -43,10 +42,7 @@ import app.sleevesight.app.ui.home.HomeFixtures.written
 import app.sleevesight.app.ui.report.REPORT_TAG
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.evidence.Scope
-import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
-import app.sleevesight.core.pipeline.CardEntity
-import app.sleevesight.core.pipeline.CardKey
 import app.sleevesight.core.pipeline.InsightItem
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.ItemEvidence
@@ -56,11 +52,8 @@ import app.sleevesight.core.settings.Layout
 import app.sleevesight.core.settings.NewTrackFold
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WriteAutomatically
-import app.sleevesight.core.synthesis.CardKind
 import app.sleevesight.core.synthesis.GroundingCheck
 import app.sleevesight.core.synthesis.InsightReply
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -72,7 +65,7 @@ import org.robolectric.RobolectricTestRunner
 /**
  * The song's, the artist's and the album's rows under *Key insights* (#522): folded by default, each
  * button opening its panel in place under *Expandable boxes* (#894), several at once, or its page
- * under *Separate pages*; written on a tap under *On demand*, at once under an automatic mode.
+ * under *Separate pages*; its tap writes what it opens, in every mode (#948).
  */
 @RunWith(RobolectricTestRunner::class)
 class ItemRowsScreenTest {
@@ -86,67 +79,7 @@ class ItemRowsScreenTest {
     private val onDemand = Settings(writeAutomatically = WriteAutomatically.NEVER)
     private val automatic = Settings(writeAutomatically = WriteAutomatically.ON_EVERY_TRACK_CHANGE)
 
-    // Each item's state, as the test sets it; the writes asked for.
-    private class Notes : ItemNotes {
-        val shown = MutableStateFlow<Map<InsightItem, ItemShown>>(emptyMap())
-        val writes = mutableListOf<InsightItem>()
-
-        override fun item(
-            track: TrackState,
-            item: InsightItem,
-        ): Flow<ItemShown> = shown.map { it[item] ?: ItemShown.Offered }.also { followed += item }
-
-        val asks = mutableListOf<ItemAsk>()
-        val stops = mutableListOf<CardKey>()
-
-        // The items followed, each time a flow of one is asked for.
-        val followed = mutableListOf<InsightItem>()
-
-        // Whether a write is taken up (asking, until its call), or refused by the gates (offered again).
-        var takenUp = true
-
-        // The album's own lines, once gathered (#522).
-        val album = MutableStateFlow<EvidenceSet?>(null)
-
-        override fun albumEvidence(track: TrackState): Flow<EvidenceSet?> = album
-
-        // The artist's lines, once gathered: its web lines for an artist the sources miss (#912).
-        val artist = MutableStateFlow<EvidenceSet?>(null)
-
-        override fun artistEvidence(track: TrackState): Flow<EvidenceSet?> = artist
-
-        override fun write(
-            track: TrackState,
-            item: InsightItem,
-            ask: ItemAsk,
-        ) {
-            writes += item
-            asks += ask
-            if (takenUp) shown.value = shown.value + (item to ItemShown.Asking(KEY))
-        }
-
-        override fun stop(key: CardKey) {
-            stops += key
-        }
-    }
-
-    private val notes = Notes()
-
-    private companion object {
-        // A card's key, as the notes would carry it.
-        val KEY =
-            CardKey(
-                CardKind.SONG,
-                CardEntity.Track(normalizer.normalize(HomeFixtures.sundown), null),
-                "f",
-                1,
-                "s",
-                ProviderId.ANTHROPIC,
-                "m",
-                false,
-                null,
-            )
-    }
+    private val notes = FakeItemNotes()
 
     private val opened = mutableListOf<HomePage>()
 
@@ -191,30 +124,15 @@ class ItemRowsScreenTest {
         show(state(onDemand)) {
             compose.onAllNodesWithTag(ITEM_ROWS_TAG).assertCountEquals(1)
             val artist = row(InsightItem.ARTIST).performScrollTo().fetchSemanticsNode()
-            assertEquals("Artist, Gordon Lightfoot", artist.config[SemanticsProperties.ContentDescription].single())
+            assertEquals(
+                "Artist, Gordon Lightfoot, uses AI",
+                artist.config[SemanticsProperties.ContentDescription].single(),
+            )
             assertTrue(SemanticsProperties.StateDescription !in artist.config)
             assertEquals(text(R.string.home_item_show_artist), artist.config[SemanticsActions.OnClick].label)
-            row(InsightItem.SONG).assertExistsWith("Song, Sundown")
-            row(InsightItem.ALBUM).assertExistsWith("Album, Sundown")
+            row(InsightItem.SONG).assertExistsWith("Song, Sundown, uses AI")
+            row(InsightItem.ALBUM).assertExistsWith("Album, Sundown, uses AI")
             compose.onAllNodesWithText(text(R.string.home_item_tap_write)).assertCountEquals(0)
-        }
-
-    @Test
-    fun underOnDemandAnUnfoldedRowOffersWriteInsightWithTheAiMarkAndATapWrites() =
-        show(state(onDemand)) {
-            row(InsightItem.ARTIST).performScrollTo().performClick()
-            compose.onNodeWithText(text(R.string.home_item_tap_write)).assertExists()
-            val button = compose.onNodeWithTag(itemWriteTag(InsightItem.ARTIST)).fetchSemanticsNode()
-            assertEquals(
-                app.getString(R.string.home_uses_ai, text(R.string.home_write)),
-                button.config[SemanticsProperties.ContentDescription].single(),
-            )
-            assertTrue(notes.writes.isEmpty())
-            compose.onNodeWithTag(itemWriteTag(InsightItem.ARTIST)).performScrollTo().performClick()
-            assertEquals(listOf(InsightItem.ARTIST), notes.writes)
-            // Open in its row's place: the row and its button hidden meanwhile.
-            row(InsightItem.ARTIST).assertDoesNotExist()
-            compose.onNodeWithTag(itemPanelTag(InsightItem.ARTIST)).assertExists()
         }
 
     @Test
@@ -273,14 +191,18 @@ class ItemRowsScreenTest {
     @Test
     fun aNewTrackStartsTheRowsAsTheSettingSays() {
         show(state(onDemand.copy(itemsOnNewTrack = NewTrackFold.UNFOLDED))) { current ->
-            // Unfolded on the first track, and on the next.
+            // Unfolded on the first track, and on the next: not by a tap, so nothing written.
             compose.onAllNodesWithText(text(R.string.home_item_tap_write)).assertCountEquals(3)
             current.value = state(onDemand, track(carefree))
             compose.waitForIdle()
             compose.onAllNodesWithText(text(R.string.home_item_tap_write)).assertCountEquals(0)
+            assertTrue(notes.writes.isEmpty())
         }
         show(state(onDemand.copy(itemsOnNewTrack = NewTrackFold.AS_LEFT))) { current ->
             row(InsightItem.SONG).performScrollTo().performClick()
+            compose.waitForIdle()
+            // Written on its tap; nothing yet on the next track.
+            notes.shown.value = emptyMap()
             current.value = state(onDemand.copy(itemsOnNewTrack = NewTrackFold.AS_LEFT), track(carefree))
             compose.waitForIdle()
             compose.onAllNodesWithText(text(R.string.home_item_tap_write)).assertCountEquals(1)
@@ -377,7 +299,7 @@ class ItemRowsScreenTest {
                     ItemShown.Shown(
                         InsightState.Writing("", model = "m"),
                         ItemEvidence(evidence, emptyMap()),
-                        key = KEY,
+                        key = ITEM_KEY,
                     ),
                 InsightItem.ARTIST to ItemShown.Shown(InsightState.Stopped, ItemEvidence(evidence, emptyMap())),
             )
@@ -385,7 +307,7 @@ class ItemRowsScreenTest {
             row(InsightItem.SONG).performScrollTo().performClick()
             compose.onNodeWithText(text(R.string.home_insight_writing_stop)).assertExists()
             compose.onNodeWithTag(itemStopTag(InsightItem.SONG)).performScrollTo().performClick()
-            assertEquals(listOf(KEY), notes.stops)
+            assertEquals(listOf(ITEM_KEY), notes.stops)
 
             row(InsightItem.ARTIST).performScrollTo().performClick()
             compose.onNodeWithText(text(R.string.home_insight_stopped)).assertExists()

@@ -148,9 +148,9 @@ class ItemButtonsScreenTest {
         show(state(onDemand)) {
             val actions =
                 mapOf(
-                    InsightItem.SONG to ("Song, Sundown" to R.string.home_item_show_song),
-                    InsightItem.ARTIST to ("Artist, Gordon Lightfoot" to R.string.home_item_show_artist),
-                    InsightItem.ALBUM to ("Album, Sundown" to R.string.home_item_show_album),
+                    InsightItem.SONG to ("Song, Sundown, uses AI" to R.string.home_item_show_song),
+                    InsightItem.ARTIST to ("Artist, Gordon Lightfoot, uses AI" to R.string.home_item_show_artist),
+                    InsightItem.ALBUM to ("Album, Sundown, uses AI" to R.string.home_item_show_album),
                 )
             assertEquals("show the song’s insight", app.getString(R.string.home_item_show_song))
             for ((item, said) in actions) {
