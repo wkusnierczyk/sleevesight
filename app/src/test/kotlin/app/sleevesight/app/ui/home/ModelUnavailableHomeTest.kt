@@ -361,9 +361,8 @@ internal class ModelUnavailableHomeTest : PipelineHostFixture() {
         home(WriteAutomatically.NEVER) {
             play("Alpha", play = 1)
             waitFor { count(itemRowTag(InsightItem.SONG)) == 1 }
+            // The row opened by a tap writes at once, in every mode (#948).
             songRow().performClick()
-            waitFor { count(itemWriteTag(InsightItem.SONG)) == 1 }
-            songWrite().performClick()
             waitFor { provider.completed == 1 }
             model(OTHER)
             waitFor { songWriteSays(R.string.home_rewrite) }

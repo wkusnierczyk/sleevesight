@@ -16,6 +16,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextMeasurer
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
@@ -124,13 +126,26 @@ internal fun aiButtonWidth(labels: List<String>): Dp {
     val mark = stringResource(R.string.home_ai_mark)
     return remember(labels, typography, density, mark) {
         val widest = labels.maxOfOrNull { label -> measurer.measure(label, typography.labelLarge).size.width }
-        val markWidth = measurer.measure(mark, typography.labelSmall).size.width
+        val markWidth = measurer.markWidth(mark, typography.labelSmall)
         widest?.let { with(density) { (it + markWidth).toDp() } + MARK_SPACE + PADDING_SIDES } ?: Dp.Unspecified
     }
 }
 
-/** The room between the label and the mark, as between a source chip's letter and its name. */
-private val MARK_GAP = 4.dp
+/**
+ * The room between the label and the mark, as between a source chip's letter and its name; a column
+ * of chips with the mark keeps it ([chipColumnWidth], #948).
+ */
+internal val MARK_GAP = 4.dp
+
+/**
+ * How wide the **AI** mark [mark] is drawn after a label, in [small] as [AiLabel] sets it, in pixels:
+ * what a column of buttons as wide as the widest adds to its widest label, with the gap before it
+ * ([aiButtonWidth], #908; [chipColumnWidth], #948).
+ */
+internal fun TextMeasurer.markWidth(
+    mark: String,
+    small: TextStyle,
+): Int = measure(mark, small).size.width
 
 // [MARK_GAP] with a pixel's rounding to spare, and a search button's padding at its two sides.
 private val MARK_SPACE = MARK_GAP + 1.dp

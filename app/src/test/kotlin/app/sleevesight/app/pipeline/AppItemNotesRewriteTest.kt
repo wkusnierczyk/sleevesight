@@ -22,8 +22,10 @@ import app.sleevesight.core.resolution.NameMatcher
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WriteAutomatically
 import app.sleevesight.core.sources.Resolution
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -66,9 +68,11 @@ class AppItemNotesRewriteTest {
     // A new instance is a new process: nothing in memory, the cache kept.
     private fun TestScope.notes() = AppItemNotes(parts, settings, this, NameMatcher(JvmAccentFolder))
 
-    // Sundown on its [play]th play, with a song line of its own and the artist's line.
-    private fun track(play: Long? = null): TrackState {
-        val playing: NowPlaying = HomeFixtures.sundown.copy(play = play)
+    // Sundown (or [playing]) on its [play]th play, with a song line of its own and the artist's line.
+    private fun track(
+        play: Long? = null,
+        playing: NowPlaying = HomeFixtures.sundown.copy(play = play),
+    ): TrackState {
         val drafts =
             listOf(
                 HomeFixtures.draft(SourceId.MUSICBRAINZ, "Sundown was recorded in Toronto."),
@@ -127,6 +131,52 @@ class AppItemNotesRewriteTest {
             // Kept with what it changed: a new process says it too.
             val later = notes().song(first) as ItemShown.Shown
             assertEquals(setOf(RewritePart.MODEL), (later.state as InsightState.Written).rewritten)
+        }
+
+    @Test
+    fun `under On demand, a row whose cache is still read is not offered, and an opening meanwhile writes nothing`() =
+        runTest {
+            written(notes(), track(play = 1))
+
+            model(OTHER)
+            // A slow cache: the other model's insight is found only once it is let through (#948).
+            val held = CompletableDeferred<Unit>()
+            cache.readHeld = held
+            val notes = notes()
+            val playing = track(play = 2)
+            val seen = mutableListOf<ItemShown>()
+            val watching = launch { notes.item(playing, InsightItem.SONG).collect { seen += it } }
+            advanceUntilIdle()
+            assertEquals(ItemShown.Gathering, seen.last())
+            assertTrue(seen.toString(), ItemShown.Offered !in seen)
+            // A tap's opening under On demand while it reads: no call.
+            notes.write(playing, InsightItem.SONG, ItemAsk.OPENED)
+            advanceUntilIdle()
+            held.complete(Unit)
+            advanceUntilIdle()
+            assertEquals(1, provider.requests)
+            assertTrue(ItemShown.Offered !in seen)
+            assertKeptWithRewrite(seen.last() as ItemShown.Shown)
+            watching.cancel()
+        }
+
+    @Test
+    fun `an item's write under way is followed for what it is about, on the next track of the artist too`() =
+        runTest {
+            provider.streaming = 10.seconds
+            val notes = notes()
+            val first = track()
+            val next = track(playing = HomeFixtures.carefree)
+            assertEquals(false, notes.writes(first, InsightItem.ARTIST).first())
+            notes.write(first, InsightItem.ARTIST, ItemAsk.TAP)
+            advanceTimeBy(1.seconds)
+            assertEquals(true, notes.writes(first, InsightItem.ARTIST).first())
+            // The same artist on the next track; not that track's song, nor the artist's album.
+            assertEquals(true, notes.writes(next, InsightItem.ARTIST).first())
+            assertEquals(false, notes.writes(next, InsightItem.SONG).first())
+            assertEquals(false, notes.writes(first, InsightItem.ALBUM).first())
+            advanceUntilIdle()
+            assertEquals(false, notes.writes(next, InsightItem.ARTIST).first())
         }
 
     @Test
