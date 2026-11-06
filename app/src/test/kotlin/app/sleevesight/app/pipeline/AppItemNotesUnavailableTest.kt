@@ -191,7 +191,7 @@ class AppItemNotesUnavailableTest {
         }
 
     @Test
-    fun `automatically, a write anew refused on a later play is the failure the note replaces`() =
+    fun `automatically, a write anew refused on a later play shows the insight kept, as a refused rewrite does`() =
         runTest {
             settings.value = settings.value?.copy(writeAutomatically = WriteAutomatically.ON_EVERY_TRACK_CHANGE)
             val built = built()
@@ -203,11 +203,13 @@ class AppItemNotesUnavailableTest {
             built.rebuild()
 
             // A later play: its row unfolded at the track's start writes anew, by itself, and is refused.
-            // Not a rewrite: the write failed, which the panel says as the model unavailable, in its place.
+            // A rewrite of the insight kept (#972), so the panel is given that insight again, as after a
+            // refused tap (#975): nothing to tap, and why it failed, which it leaves out while it says the
+            // model is unavailable.
             val shown = refusedOn(notes, built, track(play = 2), ItemAsk.BY_ITSELF)
-            assertEquals(InsightState.Failed(MODEL_NOT_FOUND), shown.state)
-            assertNull(shown.rewriteFailed)
+            assertEquals(FIRST, shown.writtenBy())
             assertFalse(shown.canWrite)
+            assertEquals(MODEL_NOT_FOUND, shown.rewriteFailed)
             assertEquals(2, provider.requests)
         }
 

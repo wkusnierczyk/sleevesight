@@ -8,6 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteraction
+import androidx.compose.ui.test.SemanticsNodeInteractionCollection
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -267,11 +268,10 @@ internal class ModelUnavailableHomeTest : PipelineHostFixture() {
 
     // The key insight kept, its footer ended by the note, above the disabled Write insight.
     private fun assertKeyFooterEndsWithTheNote() {
-        val history = compose.onNodeWithText(previously).performScrollTo().assertTextEquals(previously)
-        val report = compose.onNodeWithTag(REPORT_TAG)
         // The key insight's: the first, above the song's when it has one.
-        val notes = compose.onAllNodesWithTag(MODEL_UNAVAILABLE_TAG)
-        val note = (0 until notes.fetchSemanticsNodes().size).map { notes[it] }.minBy(::top).assertTextEquals(said)
+        val history = topmost(compose.onAllNodesWithText(previously)).performScrollTo().assertTextEquals(previously)
+        val report = topmost(compose.onAllNodesWithTag(REPORT_TAG))
+        val note = topmost(compose.onAllNodesWithTag(MODEL_UNAVAILABLE_TAG)).assertTextEquals(said)
         val write = compose.onNodeWithTag(NO_ACTION_TAG).assertIsNotEnabled()
         write.assertTextContains(app.getString(R.string.home_write))
         assertEquals(0, count(WRITE_TAG))
@@ -281,6 +281,12 @@ internal class ModelUnavailableHomeTest : PipelineHostFixture() {
         assertNoRefusalSaid()
         assertNoteLinks(note)
     }
+
+    private fun topmost(nodes: SemanticsNodeInteractionCollection) =
+        (0 until nodes.fetchSemanticsNodes().size).map { nodes[it] }.minBy(::top)
+
+    private fun lowest(nodes: SemanticsNodeInteractionCollection) =
+        (0 until nodes.fetchSemanticsNodes().size).map { nodes[it] }.maxBy(::top)
 
     private fun shown(text: String) = compose.onAllNodesWithText(text).fetchSemanticsNodes().size
 
@@ -383,7 +389,7 @@ internal class ModelUnavailableHomeTest : PipelineHostFixture() {
         }
 
     @Test
-    fun underAnAutomaticModeAWriteAnewRefusedOnALaterPlayIsTheSongsNoteAlone() =
+    fun underAnAutomaticModeAWriteAnewRefusedOnALaterPlayEndsTheSongsFooterWithTheNote() =
         // *On track skip (auto)*: the key insight waits on a track that followed by itself, and the
         // song's row opened by a tap writes at once.
         home(WriteAutomatically.WHEN_I_SKIP) {
@@ -405,19 +411,21 @@ internal class ModelUnavailableHomeTest : PipelineHostFixture() {
                     host.state.value.cardShown
             }
 
-            // A later play: the row opened writes anew, and is refused. What happens today (#969; #975
-            // asks whether it should): the song's row says only that the model is unavailable, in place
-            // of the failure; the key insight kept ends with the note.
+            // A later play: the row opened writes anew, and is refused (#975). The song's insight kept,
+            // "As written previously." alone, the note last, above a disabled *Write insight*, as after
+            // a refused *Rewrite insight*; the key insight kept ends with the note too.
             provider.error = AiErrorKind.MODEL_NOT_FOUND
             songRow().performClick()
-            waitFor { refused() && count(MODEL_UNAVAILABLE_TAG) == 2 }
-            assertEquals(0, count(itemWriteTag(InsightItem.SONG)))
+            waitFor { refused() && shown(previously) == 2 && count(MODEL_UNAVAILABLE_TAG) == 2 }
             assertEquals(0, count(ITEM_FAILED_TAG))
+            val button = songWrite().assertIsNotEnabled().assertTextContains(app.getString(R.string.home_write))
+            val history = lowest(compose.onAllNodesWithText(previously)).assertTextEquals(previously)
+            val report = lowest(compose.onAllNodesWithTag(REPORT_TAG))
+            val song = lowest(compose.onAllNodesWithTag(MODEL_UNAVAILABLE_TAG)).assertTextEquals(said)
+            val tops = listOf(history, report, song, button).map(::top)
+            assertEquals("top to bottom, in this order", tops.sorted(), tops)
+            assertNothingBetween(top(song), top(button))
             assertNoRefusalSaid()
-            val notes = compose.onAllNodesWithTag(MODEL_UNAVAILABLE_TAG)
-            val song = (0 until 2).map { notes[it] }.maxBy(::top)
-            song.assertTextEquals(said)
-            assertEquals(lastNote(), top(song))
             assertNoteLinks(song)
             assertEquals(3, provider.requests)
             opened.clear()

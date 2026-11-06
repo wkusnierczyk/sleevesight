@@ -183,7 +183,7 @@ internal class PipelineHostUnavailableTest : PipelineHostFixture() {
         }
 
     @Test
-    fun `automatically, a write anew refused on a later play fails until the rebuild shows the insight kept`() =
+    fun `automatically, a rewrite refused on a later play shows the insight kept with why until the rebuild`() =
         runTest {
             model(FIRST)
             startProcess()
@@ -196,11 +196,14 @@ internal class PipelineHostUnavailableTest : PipelineHostFixture() {
             model(OTHER)
             settle()
 
-            // A later play of the track, written anew by itself and refused: the failure, which the card
-            // says as the model unavailable in its place, until the rebuild shows the insight kept (#969).
+            // A later play of the track, written anew by itself and refused: a rewrite of the insight
+            // kept, as a tap's (#972), so that insight again, with why, which the card leaves out while
+            // it says the model is unavailable (#969), until the rebuild shows it alone.
             val reading = refusedBeforeTheRebuild(OTHER) { play("Alpha") }
-            assertEquals(InsightState.Failed(MODEL_NOT_FOUND), shown())
-            assertNull(host.state.value.rewriteFailed)
+            assertEquals(FIRST, writtenBy())
+            assertTrue(host.state.value.cardShown)
+            assertEquals(MODEL_NOT_FOUND, host.state.value.rewriteFailed)
+            assertNothingOffered()
 
             reading.complete(Unit)
             settle()
