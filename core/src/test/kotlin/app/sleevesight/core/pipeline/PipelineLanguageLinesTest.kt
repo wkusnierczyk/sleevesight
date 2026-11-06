@@ -119,6 +119,28 @@ class PipelineLanguageLinesTest {
         }
 
     @Test
+    fun `under If needed a thin track named only by its lines is searched in their language`() =
+        runTest {
+            val thin = Regional(captioned.nowPlaying, captioned.english - SourceId.MUSICBRAINZ)
+            assertEquals("hi", pipeline().play(thin).inLanguage?.language)
+        }
+
+    @Test
+    fun `a title in a shared script takes the lines' language written in it, kept as none and read again`() =
+        runTest {
+            settings = settings.copy(trackLanguageSearch = TrackLanguageSearch.ALWAYS)
+            val anime =
+                Regional(
+                    nowPlaying("夜空", "Hoshino"),
+                    mapOf(SourceId.WEB to listOf("これは2020年に出た歌です。", "夜空はアニメの曲です。")),
+                )
+            assertEquals("ja", pipeline().play(anime).inLanguage?.language)
+            assertEquals(listOf(""), cache.decided.values.toList())
+            assertEquals("ja", pipeline().play(anime).inLanguage?.language)
+            assertEquals(1, search.releasesAsked, "a replay asks nothing")
+        }
+
+    @Test
     fun `a recorded language outweighs the lines', English included`() =
         runTest {
             settings = settings.copy(trackLanguageSearch = TrackLanguageSearch.ALWAYS)
