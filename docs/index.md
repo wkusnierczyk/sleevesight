@@ -28,6 +28,7 @@ Sleevesight is an Android app that shows short, sourced insights about the song 
 - **[Frequently asked questions]({{ '/docs/faq/' | relative_url }})**: why the app needs notification access and what it reads with it, why it does not sign in to Spotify instead, other music services, Spotify Connect, and why it does not listen through the microphone.
 - **[Limitations]({{ '/docs/limitations/' | relative_url }})**: what Sleevesight cannot do, and why: whether each limit is Android's, a service's rules or a choice, and where one is planned to change.
 - **[What it costs you]({{ '/docs/costs/' | relative_url }})**: Sleevesight charges nothing; what each service you switch on charges, its free tier, and what a track costs.
+- **[How it performs]({{ '/docs/performance/' | relative_url }})**: what Sleevesight costs the phone while you listen: battery, data, processor time, memory, start-up and storage, measured on an example phone.
 - **[Privacy policy]({{ '/privacy.html' | relative_url }})**: what leaves the phone, to whom, and where Sleevesight stands under the GDPR and the EU AI Act.
 
 ## How it works
