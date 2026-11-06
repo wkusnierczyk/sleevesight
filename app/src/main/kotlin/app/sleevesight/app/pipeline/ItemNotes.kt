@@ -265,12 +265,15 @@ class AppItemNotes(
     // An insight shown, and when it was written; [rewrites] when the write that showed it, a tap's,
     // rewrites the insight another service, model or effort wrote (#911), and [play] the play
     // ([NowPlaying.play]) it was written on, null where none was counted or it came from the cache.
+    // [replaces] is what wrote the insight that write replaced, a tap's or an automatic one's (#972),
+    // so a write again after it failed or was stopped on its play is a rewrite too.
     private class Entry(
         val state: InsightState,
         val writtenAt: Instant,
         val evidence: ItemEvidence,
         val rewrites: Boolean = false,
         val play: Long? = null,
+        val replaces: WrittenBy? = null,
     )
 
     // What an item's evidence is gathered for: the item, the run's own evidence under the switches
@@ -612,9 +615,10 @@ class AppItemNotes(
 
     // What wrote the insight a write under [key] on [track] rewrites (#911): the earlier insight's, in
     // place of none, of a rewrite that ended without one, or of a write that did on an earlier play;
-    // null otherwise. A tap's, while the row shows it; an automatic ask's whether or not the row has
-    // looked for it yet, read from the cache then (#972): writing in its place is a rewrite of it, as a
-    // tap on *Rewrite insight* is.
+    // what a write that failed or was stopped on this play replaced, written again (#972); null
+    // otherwise. A tap's, while the row shows it; an automatic ask's whether or not the row has looked
+    // for it yet, read from the cache then (#972): writing in its place is a rewrite of it, as a tap on
+    // *Rewrite insight* is.
     private suspend fun replaced(
         insights: ItemInsights,
         key: CardKey,
@@ -627,7 +631,8 @@ class AppItemNotes(
         // did ([stale]).
         val ownless = entry == null || entry.rewrites || stale(entry, track.nowPlaying.play)
         val looked = key in others.value
-        if (!ownless || (ask == ItemAsk.TAP && !looked)) return null
+        val again = entry?.replaces?.takeIf { !ownless && failure(entry.state) != null }
+        if (!ownless || (ask == ItemAsk.TAP && !looked)) return again
         val cached =
             if (looked) {
                 others.value[key]
@@ -744,7 +749,7 @@ class AppItemNotes(
         // Only a tap's: an automatic write that ends without an insight shows why, as before (#972).
         val rewrites = firstAsked.replaces != null && firstAsked.ask == ItemAsk.TAP
         val show: (InsightState, Instant) -> Unit = { state, at ->
-            val entry = Entry(state, at, asked.evidence, rewrites, track.nowPlaying.play)
+            val entry = Entry(state, at, asked.evidence, rewrites, track.nowPlaying.play, firstAsked.replaces)
             publish(work) { shown.update { it.with(key, entry) } }
         }
         val question = Question(track, AiQuestion.Item(item), work)

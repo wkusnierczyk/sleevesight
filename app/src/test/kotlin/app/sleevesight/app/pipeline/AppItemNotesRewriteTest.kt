@@ -32,6 +32,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
 /**
@@ -180,6 +181,49 @@ class AppItemNotesRewriteTest {
             assertEquals(setOf(RewritePart.MODEL), (shown.state as InsightState.Written).rewritten)
             assertEquals(2, provider.requests)
         }
+
+    @Test
+    fun `an automatic write that failed, retried on the same play, is a rewrite, saying so`() =
+        runTest { retriedOnItsPlay(stopped = false) }
+
+    @Test
+    fun `an automatic write that was stopped, retried on the same play, is a rewrite, saying so`() =
+        runTest { retriedOnItsPlay(stopped = true) }
+
+    // The first model's insight kept; on a later play under an automatic mode the other model's write
+    // fails, or is [stopped], and shows so (#972); a tap on that play writes it again, as a rewrite.
+    private suspend fun TestScope.retriedOnItsPlay(stopped: Boolean) {
+        written(notes(), track(play = 1))
+
+        mode(WriteAutomatically.ON_EVERY_TRACK_CHANGE)
+        model(OTHER)
+        if (stopped) provider.streaming = 10.seconds else provider.error = AiErrorKind.SERVER
+        val notes = notes()
+        val later = track(play = 2)
+        notes.write(later, InsightItem.SONG, ItemAsk.OPENED)
+        if (stopped) {
+            advanceTimeBy(1.seconds)
+            val writing = notes.item(later, InsightItem.SONG).first { it is ItemShown.Shown || it is ItemShown.Asking }
+            notes.stop(checkNotNull((writing as? ItemShown.Asking)?.key ?: (writing as ItemShown.Shown).key))
+        }
+        advanceUntilIdle()
+        // The failure shown, as before, not the earlier insight.
+        val ended =
+            notes.item(later, InsightItem.SONG).first {
+                val state = (it as? ItemShown.Shown)?.state
+                state is InsightState.Failed || state == InsightState.Stopped
+            } as ItemShown.Shown
+        assertNull(ended.rewriteWith)
+
+        provider.error = null
+        provider.streaming = Duration.ZERO
+        notes.write(later, InsightItem.SONG, ItemAsk.TAP)
+        advanceUntilIdle()
+        val shown = notes.song(later) as ItemShown.Shown
+        assertEquals(OTHER, shown.writtenBy())
+        assertEquals(setOf(RewritePart.MODEL), (shown.state as InsightState.Written).rewritten)
+        assertEquals(3, provider.requests)
+    }
 
     @Test
     fun `on the play the model changed while its row showed an insight, no automatic write replaces it`() =

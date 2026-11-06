@@ -154,6 +154,29 @@ internal class PipelineHostLaterPlayTest : PipelineHostFixture() {
         }
 
     @Test
+    fun `an automatic write that failed, retried on the same play, is a rewrite, saying so`() =
+        runTest {
+            anotherModelWrites()
+            provider.error = AiErrorKind.SERVER
+            play("Alpha")
+            settle()
+            assertTrue(
+                host.state.value.track
+                    ?.insight is InsightState.Failed,
+            )
+
+            provider.error = null
+            tap()
+            settle()
+            assertEquals(3, provider.requestsFor("Alpha"))
+            val written =
+                host.state.value.track
+                    ?.insight as InsightState.Written
+            assertEquals(OTHER_MODEL, written.writtenBy?.model)
+            assertEquals(setOf(RewritePart.MODEL), written.rewritten)
+        }
+
+    @Test
     fun `after an automatic write fails, another model chosen shows the insight kept with Rewrite`() =
         runTest {
             anotherModelWrites()
