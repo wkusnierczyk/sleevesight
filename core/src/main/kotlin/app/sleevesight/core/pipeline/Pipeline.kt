@@ -36,6 +36,7 @@ import kotlinx.coroutines.flow.update
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeSource
 
 /**
@@ -287,6 +288,14 @@ class Pipeline(
 
         /** Events kept for a slow collector before the oldest are dropped. */
         const val EVENT_BUFFER: Int = 256
+
+        /**
+         * How long a run's lookups may run in all, its sources' and the search in the track's language
+         * together, before those still under way are cut and land unreachable ([GatherBudget], #983): a
+         * gather takes about 2 s, and one stalled request, with its timeouts and retries, could hold the
+         * card for minutes.
+         */
+        val GATHER_DEADLINE: Duration = 20.seconds
     }
 }
 

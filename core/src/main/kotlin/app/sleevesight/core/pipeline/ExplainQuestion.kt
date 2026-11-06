@@ -39,6 +39,9 @@ internal class ExplainQuestion(
     override val query: String
         get() = ExplainPrompt.query(facts)
 
+    override val subjectNames: List<String>
+        get() = facts.names
+
     override fun once(pages: List<WebPage>): String {
         pages.forEach { numbered.add(it) }
         return ExplainPrompt.once(facts, numbered.values.toList(), dates)

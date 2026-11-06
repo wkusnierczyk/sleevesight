@@ -227,7 +227,7 @@ class AppGenreNotesTest {
                     hasher = JvmHasher,
                     ai = AiAccess(provider, Secret("key")),
                     cache = cache,
-                    webSearch = { query ->
+                    webSearch = { query, _ ->
                         searched += query
                         WebSearchOutcome.Failed
                     },

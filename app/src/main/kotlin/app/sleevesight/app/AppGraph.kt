@@ -30,6 +30,7 @@ import app.sleevesight.app.pipeline.AppPipelineParts
 import app.sleevesight.app.pipeline.AskAiWired
 import app.sleevesight.app.pipeline.AutoSearches
 import app.sleevesight.app.pipeline.ModelCheck
+import app.sleevesight.app.pipeline.NetDump
 import app.sleevesight.app.pipeline.PipelineHost
 import app.sleevesight.app.pipeline.Plays
 import app.sleevesight.app.pipeline.PromptDump
@@ -318,6 +319,8 @@ class AppGraph internal constructor(
             // What the search in the track's language found about an artist or an album (#939): in
             // [artistResults] while the switch is on, else in memory for the process.
             keepsArtists = { artistKeeping.on },
+            // Every network request, its status and time in logcat, in debug builds only.
+            netLog = NetDump.line,
         )
 
     /**

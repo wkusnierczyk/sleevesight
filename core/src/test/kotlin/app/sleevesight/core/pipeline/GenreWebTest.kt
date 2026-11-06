@@ -53,7 +53,7 @@ class GenreWebTest {
     private var outcome: WebSearchOutcome = WebSearchOutcome.Found(listOf(tags, page))
     private val queries = mutableListOf<String>()
     private val web =
-        WebSearcher { query ->
+        WebSearcher { query, _ ->
             queries += query
             outcome
         }

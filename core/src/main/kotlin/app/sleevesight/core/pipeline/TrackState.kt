@@ -136,6 +136,9 @@ sealed interface SourceState {
  * asks those requests again alone ([labelsAsked]), its lookup kept. [inLanguage] is the search in
  * the track's language as it ended (#902), when the run made one: a later run in the same language
  * asks again its lookups [languageAsked] and keeps the others, as for the English ones.
+ * [languageInterrupted] are the lookups of a search in the track's language that the gather's
+ * deadline cut before a language was decided (#983), with [inLanguage] then null: none was asked,
+ * and a later run asks them again as those [languageRetryable].
  */
 data class Gathered(
     val sources: Map<SourceId, SourceState>,
@@ -143,6 +146,7 @@ data class Gathered(
     val only: Set<SourceId>? = null,
     val labelsFailed: Set<SourceId> = emptySet(),
     val inLanguage: InLanguageState? = null,
+    val languageInterrupted: Set<SourceId> = emptySet(),
 ) {
     /** The sources that ended `Unreachable`: a network or source error. */
     val unreachable: Set<SourceId>
@@ -176,8 +180,8 @@ data class Gathered(
 
     /**
      * The lookups in the track's language (#902, [inLanguage]) that ended `Unreachable`, or shown but
-     * not kept, a lookup for a part of them having failed ([SourceResult.provisional]), by source:
-     * those a later run asks again.
+     * not kept, a lookup for a part of them having failed ([SourceResult.provisional]), and those
+     * [languageInterrupted] (#983), by source: those a later run asks again.
      */
     val languageRetryable: Set<SourceId>
         get() =
@@ -187,7 +191,7 @@ data class Gathered(
                     (state as? SourceState.Done)?.result?.let { it.outcome == Outcome.Unreachable || it.provisional } ==
                         true
                 }?.keys
-                .orEmpty()
+                .orEmpty() + languageInterrupted
 
     /** Of [languageRetryable], those a run started with it asks again: all, or with [only], those it names. */
     val languageAsked: Set<SourceId>
