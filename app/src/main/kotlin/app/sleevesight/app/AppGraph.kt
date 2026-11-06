@@ -22,6 +22,7 @@ import app.sleevesight.app.diagnostics.Diagnostics
 import app.sleevesight.app.diagnostics.DiagnosticsLog
 import app.sleevesight.app.history.HistoryRecorder
 import app.sleevesight.app.history.HistoryRetention
+import app.sleevesight.app.pipeline.AlbumTracklistFeed
 import app.sleevesight.app.pipeline.AppAiSearches
 import app.sleevesight.app.pipeline.AppGenreNotes
 import app.sleevesight.app.pipeline.AppItemNotes
@@ -75,6 +76,7 @@ import app.sleevesight.app.ui.home.SpokenWords
 import app.sleevesight.app.ui.logo.LogoSpin
 import app.sleevesight.core.ai.AiProvider
 import app.sleevesight.core.model.ProviderId
+import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.pipeline.ClearEpoch
 import app.sleevesight.core.pipeline.ListeningSessionFacts
@@ -544,6 +546,20 @@ class AppGraph internal constructor(
         )
 
     /**
+     * The albums' tracklists on the back of Home's cover (#984), looked up on a flip through the
+     * wiring's remembered MusicBrainz answers, in the pipeline's scope, while lookups are allowed and
+     * MusicBrainz is on, marked with [clearEpoch].
+     */
+    val tracklists: AlbumTracklistFeed =
+        AlbumTracklistFeed(
+            lookup = { key -> wiring.tracklists.of(key.group, key.recording) },
+            scope = pipelineScope,
+            musicBrainzOn = { latestSettings.value?.isEnabled(SourceId.MUSICBRAINZ) == true },
+            allowed = pipeline.lookupsAllowed,
+            epoch = clearEpoch,
+        )
+
+    /**
      * When the play of the track shown began, as the session layer reports the tracks (#851): an AI
      * answer written before it is shown as kept from before.
      */
@@ -790,7 +806,8 @@ class AppGraph internal constructor(
      * results, the insights and cards written, the genres' reasons and definitions among them), in
      * one transaction and in turn with what is written about artists ([ArtistKeeping.clearWith]);
      * MusicBrainz's answers held in memory; the genres' reasons and definitions, and the AI
-     * searches shown ([AppGenreNotes.forget], #786 too, [AppAiSearches.forget]); the
+     * searches shown ([AppGenreNotes.forget], #786 too, [AppAiSearches.forget]); the albums'
+     * tracklists shown ([AlbumTracklistFeed.forget], #984); the
      * artist facts the listening session cited; the session layer's last change, which names the
      * track before; and the diagnostics' steps, which name the tracks. The API keys and the settings stay.
      * Returns whether the caches were cleared; the rest cannot fail.
@@ -805,6 +822,7 @@ class AppGraph internal constructor(
         wiring.forgetRemembered()
         genreNotes.forget()
         itemNotes.forget()
+        tracklists.forget()
         aiSearches.forget()
         sessionFacts.forget()
         sessions.forgetLastChange()
