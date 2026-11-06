@@ -30,6 +30,8 @@ Sleevesight is free and open-source software, under the [GNU General Public Lice
 
 What you may pay for is the writing of insights, by the AI service you choose, and the Exa web search, if you give it a key. The other sources cost nothing.
 
+What Sleevesight costs the phone itself, in battery, data and memory, is on [How it performs]({{ '/docs/performance/' | relative_url }}).
+
 ## The services and their prices
 
 Prices as checked on 26 October 2026, on each service's own pricing page, linked in the table. Prices change, and the service's page is authoritative. Prices are in US dollars, before any tax, and *1M tokens* is a million tokens: a token is a few characters of text, about three quarters of a word in English.
