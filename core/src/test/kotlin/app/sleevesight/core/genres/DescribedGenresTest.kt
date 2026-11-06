@@ -72,23 +72,26 @@ class DescribedGenresTest {
         val row = genres.described.single()
         assertEquals(ISLANDMAN, row.artist)
         assertTrue(row.described)
-        // Electronic is one of the artist's tags already: not on the described row.
-        assertEquals(listOf("Instrumental"), row.labels.map { it.genre.label })
+        // Electronic is one of the artist's tags already: not on the described row. "Turkish
+        // psychedelia" is Anatolian Rock's synonym (#1011): that genre, as the line spells it;
+        // "neo-psychedelic" is no Neo-Psychedelia, nor "psychedelic guitar" Psychedelic.
+        assertEquals(listOf("Instrumental", "Turkish Psychedelia"), row.labels.map { it.genre.label })
+        val turkish = row.labels.last()
+        assertEquals(vocabulary.identity("anatolian rock"), turkish.genre.identity)
         val chips = genres.chips()
-        assertEquals(listOf("Ambient", "Electronic", "House", "Instrumental"), chips.map { it.label.genre.label })
-        assertEquals(listOf(false, false, false, true), chips.map { it.weak })
+        assertEquals(
+            listOf("Ambient", "Electronic", "House", "Instrumental", "Turkish Psychedelia"),
+            chips.map { it.label.genre.label },
+        )
+        assertEquals(listOf(false, false, false, true, false), chips.map { it.weak })
         val hint = assertIs<WeakEvidence.ArtistHint>(genres.weakEvidence(TrackGenres.INSTRUMENTAL))
         val quote = "Islandman is described as an instrumental electro-acoustic, neo-psychedelic band from Turkey…"
         assertEquals(DescribedIn("S8", quote), hint.where)
         assertEquals(DescribedIn("S8", quote), genres.describedIn(TrackGenres.INSTRUMENTAL))
         // In the table, right after the artist's tags.
         assertEquals(listOf(false, true), genres.table.map { it.described })
-        assertEquals(
-            TrackGenres.INSTRUMENTAL,
-            genres.everyLabel
-                .last()
-                .genre.identity,
-        )
+        val every = genres.everyLabel.map { it.genre.identity }
+        assertEquals(listOf(TrackGenres.INSTRUMENTAL, "anatolianrock"), every.takeLast(2))
     }
 
     @Test
@@ -98,17 +101,21 @@ class DescribedGenresTest {
             eros(Singing(instrumental = true))
                 .chips()
                 .filter {
-                    it.label.describedIn != null
+                    it.label.genre.identity == TrackGenres.INSTRUMENTAL
                 }.map { it.weak },
         )
         assertNull(eros(Singing(instrumental = true)).weakEvidence(TrackGenres.INSTRUMENTAL))
         assertIs<WeakEvidence.Vocalist>(
             eros(Singing(vocalists = listOf("Someone"))).weakEvidence(TrackGenres.INSTRUMENTAL),
         )
-        assertTrue(eros(Singing(lyrics = true)).described.isEmpty())
+        val instrumental = { genres: TrackGenres -> genres.described.flatMap { it.labels }.map { it.genre.identity } }
+        assertEquals(listOf("anatolianrock"), instrumental(eros(Singing(lyrics = true))))
         val found = eros().withLyricsFound()
-        assertTrue(found.described.isEmpty())
-        assertEquals(listOf("Ambient", "Electronic", "House"), found.chips().map { it.label.genre.label })
+        assertEquals(listOf("anatolianrock"), instrumental(found))
+        assertEquals(
+            listOf("Ambient", "Electronic", "House", "Turkish Psychedelia"),
+            found.chips().map { it.label.genre.label },
+        )
     }
 
     @Test
@@ -257,6 +264,31 @@ class DescribedGenresTest {
         assertEquals(listOf("Indie Rock", "Jazz"), named("Indie rock, then jazz."))
         // Instrumental, but for "instrumental in" or "to".
         assertEquals(listOf("Instrumental"), named("An instrumental electro-acoustic, neo-psychedelic band."))
+    }
+
+    @Test
+    fun `the everyday words of the wider list name a genre only in a music phrase`() {
+        val phrases =
+            listOf(
+                "the dance floor" to "a dance act",
+                "the noise of the city" to "a noise band",
+                "a drone over the stage" to "a drone musician",
+                "in full swing" to "a swing band",
+                "Latin lyrics" to "a Latin singer",
+                "the Sydney Opera House" to "an opera singer",
+                "an industrial town" to "an industrial band",
+                "psychedelic posters" to "a psychedelic band",
+                "the gospel truth" to "a gospel singer",
+                "an electro-acoustic guitar" to "an electro producer",
+                "they fell into a trance" to "a trance DJ",
+            )
+        for ((prose, music) in phrases) {
+            assertEquals(emptyList(), named("$prose."), prose)
+            assertEquals(1, named("$music.").size, music)
+        }
+        // Only a spelling the list has: "neo-psychedelic" is no Neo-Psychedelia, "neo-psychedelia" is.
+        assertEquals(emptyList(), named("A neo-psychedelic act."))
+        assertEquals(1, named("Their neo-psychedelia.").size)
     }
 
     @Test
