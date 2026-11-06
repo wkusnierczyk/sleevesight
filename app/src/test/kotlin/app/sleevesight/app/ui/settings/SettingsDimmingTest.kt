@@ -9,9 +9,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.SemanticsNodeInteraction
+import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isSelectable
@@ -31,10 +37,14 @@ import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.SourceSwitch
 import kotlinx.coroutines.CompletableDeferred
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
+import kotlin.math.abs
 
 /**
  * Settings dimmed by the rule of #947, as #999 brought every row to it: a setting that does not
@@ -186,7 +196,72 @@ class SettingsDimmingTest {
             buttons(text(R.string.settings_logo_speed_33)).single().assertIsEnabled()
         }
 
+    /** *Open website ↗* under the row of the service [name]. */
+    private fun website(name: String) =
+        compose.onNode(hasContentDescription(app.getString(R.string.settings_open_website_of, name)))
+
+    /** The link to the Last.fm key under its row, as [sentence] says it. */
+    private fun keyLink(sentence: Int) =
+        compose.onNode(
+            hasText(app.getString(sentence, text(R.string.settings_key_name_lastfm))),
+            useUnmergedTree = true,
+        )
+
+    /**
+     * How far from the background [node]'s inkiest pixel is drawn, in its most changed colour
+     * channel: what an alpha scales, as it blends in these channels.
+     */
+    private fun ink(node: SemanticsNodeInteraction): Float {
+        val pixels = node.captureToImage().toPixelMap()
+        val background = pixels[0, 0]
+        var most = 0f
+        for (x in 0 until pixels.width) {
+            for (y in 0 until pixels.height) most = maxOf(most, distance(pixels[x, y], background))
+        }
+        return most
+    }
+
+    private fun distance(
+        a: Color,
+        b: Color,
+    ) = maxOf(abs(a.red - b.red), abs(a.green - b.green), abs(a.blue - b.blue))
+
+    // Drawn, for the links' pixels. *Open website ↗* stayed at full colour under a genre label
+    // source's row dimmed as a whole.
+    @Test
+    @Config(qualifiers = "w411dp-h891dp-420dpi")
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun theLinksUnderARowDimWithItOnlyWhereItDoesNotApply() =
+        show {
+            val musicbrainz = text(R.string.settings_source_musicbrainz)
+            showing { GenresSection(Settings(), emptyMap()) {} }
+            val full = ink(website(musicbrainz))
+            showing { GenresSection(Settings(showGenres = false), emptyMap()) {} }
+            val dimmed = ink(website(musicbrainz))
+            assertTrue("dimmed with the row: $dimmed against $full", dimmed < full * HALF)
+            website(musicbrainz).assertHasClickAction().assertIsEnabled()
+
+            // Switch only: Last.fm with no key, its links as under a row that is not dimmed.
+            val lastfm = text(R.string.settings_source_lastfm)
+            val saved = mapOf(SecretId.LASTFM to SecretState.SAVED, SecretId.EXA to SecretState.SAVED)
+            showing { SourcesSection(Settings(), saved) {} }
+            val keyFull = ink(keyLink(R.string.settings_update_key))
+            val websiteFull = ink(website(lastfm))
+            val noKeys = mapOf(SecretId.LASTFM to SecretState.ABSENT, SecretId.EXA to SecretState.ABSENT)
+            showing { SourcesSection(Settings(), noKeys) {} }
+            val keyNoKey = ink(keyLink(R.string.settings_set_key))
+            assertEquals("the key's link at full colour", keyFull, keyNoKey, keyFull * NEAR)
+            assertEquals("the website's link at full colour", websiteFull, ink(website(lastfm)), websiteFull * NEAR)
+            website(lastfm).assertHasClickAction().assertIsEnabled()
+        }
+
     private companion object {
+        /** Under this share of the ink of a link at full colour, a link is dimmed. */
+        const val HALF = 0.5f
+
+        /** How near a link's ink is to another's at the same colour. */
+        const val NEAR = 0.1f
+
         /** A dimmed row's alpha, as `SettingsRows`' `DISABLED_ALPHA`. */
         const val DIMMED = 0.38f
         const val TOLERANCE = 0.01f

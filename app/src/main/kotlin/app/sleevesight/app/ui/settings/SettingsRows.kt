@@ -121,9 +121,10 @@ internal fun Hint(
  *
  * As a [ChoiceButtonsRow]'s `enabled` and `applies` (#947, #999): a null [onChange], the setting
  * still applies but something else holds its value (a key missing or no longer readable): only the
- * switch dims, its text, mark and note staying as they are, since they still say what happens.
- * Where it does not [apply][applies] while another setting is as it is, the whole row dims, its
- * text and mark too, and it cannot be changed. Either way a screen reader reads it as disabled.
+ * switch dims, its text, mark, note and [below] staying as they are, since they still say what
+ * happens. Where it does not [apply][applies] while another setting is as it is, the whole row
+ * dims, its text, mark and [below] too (a link there still works), and it cannot be changed.
+ * Either way a screen reader reads it as disabled.
  */
 @Suppress("LongParameterList") // Each sets one aspect of the row; all but the first three have defaults.
 @Composable
@@ -174,7 +175,8 @@ internal fun SwitchRow(
         val reach = if (note == null && below == null) TAP_BELOW else 0.dp
         summary?.let { Description(title, it, color = color, link = summaryLink, reach = reach) }
         note?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = color) }
-        below?.invoke()
+        // Dimmed with the row where the setting does not apply (#999); a link in it still works.
+        below?.let { Column(Modifier.alpha(alpha)) { it() } }
     }
 }
 
