@@ -127,8 +127,9 @@ private fun SourceSwitchRow(
     val model = row is SourceRow.Source && row.switch == SourceSwitch.MODEL
     // With no key saved, the switch is off and cannot be moved (#667); stored on with none, as
     // before the keys' gate ([app.sleevesight.app.secrets.KeyGate]) writes it off, it shows off.
-    // With no AI service to use, *AI service knowledge* cannot be moved either (#846); unlike a
-    // keyed source's, its switch shows the value stored, which nothing here writes.
+    // The source still applies, its key missing: only the switch dims (#999). With no AI service
+    // to use, *AI service knowledge* cannot be moved either (#846), and does not apply: the whole
+    // row dims; unlike a keyed source's, its switch shows the value stored, which nothing here writes.
     val usable = if (model) aiServiceUsable(settings, secrets) else key == null || keySaved(secrets[key])
     val checked = row.on(settings) && (key == null || secrets[key] != SecretState.ABSENT)
     val name = stringResource(row.name)
@@ -153,6 +154,7 @@ private fun SourceSwitchRow(
             row.url?.let { WebsiteLink(name, it) }
         },
         summaryLink = settingsLink(aiServices, SettingsTarget.aiServices).takeIf { model },
+        applies = usable || !model,
         onChange = { on: Boolean -> update { switched(it, row, on) } }.takeIf { usable },
     )
 }
@@ -222,6 +224,9 @@ internal fun keyNote(
  * labels only while *Show genres* is on and the source is on under *Sources*, and Last.fm only
  * with its key saved and readable, so until then its switch shows off and cannot be moved, and says
  * why: a key saved but no longer readable ([SecretState.UNREADABLE]) is told apart from no key.
+ * With *Show genres* off, the source off, or no Last.fm key, a source's labels do not apply and its
+ * row dims as a whole; with the key saved but unreadable they still do, and only the switch dims
+ * (#999).
  */
 @Composable
 internal fun GenresSection(
@@ -245,6 +250,10 @@ internal fun GenresSection(
             }
         // Last.fm's switch is offered only with its key saved, so not before the keys' states are read.
         val offered = why == null && (source != LabelSource.LASTFM || secrets[SecretId.LASTFM] == SecretState.SAVED)
+        val applies =
+            settings.showGenres &&
+                settings.isEnabled(source.source) &&
+                (source != LabelSource.LASTFM || secrets[SecretId.LASTFM] != SecretState.ABSENT)
         val name = stringResource(labelSourceName(source))
         SwitchRow(
             title = name,
@@ -255,6 +264,7 @@ internal fun GenresSection(
             indent = true,
             leading = { ServiceBadge(source.source.tag) },
             below = { WebsiteLink(name, labelSourcePage(source)) },
+            applies = applies,
             onChange =
                 { on: Boolean ->
                     update { it.copy(labelSources = if (on) it.labelSources + source else it.labelSources - source) }

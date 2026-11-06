@@ -19,8 +19,8 @@ import app.sleevesight.core.settings.Settings
  * `Settings.AI_WEB_SEARCH_LIMIT` times, fixed and said in its text, with no setting of its own. It
  * needs Exa web search on (`Settings.aiWebSearchOn`): while it is off, *Off* shows chosen and the
  * others cannot be chosen, the choice saved kept for when it is on again, and two lines under the
- * group say so, the second a link to *Settings → Sources*. A paid call, as *Ask AI automatically* is: not to be
- * changed while *Show insights* is off.
+ * group say so, the second a link to *Settings → Sources*. A paid call, as *Ask AI automatically* is: it
+ * does not apply while *Show insights* is off, and its row dims as a whole (#999).
  */
 @Composable
 internal fun AiWebSearchRows(
@@ -49,7 +49,9 @@ internal fun AiWebSearchRows(
             choices = choices,
             selected = settings.aiWebSearchUsed,
             details = details,
-            enabled = settings.writeInsights,
+            // With *Show insights* off nothing is written: the setting does not apply (#999). While
+            // Exa web search is off it still does, held at *Off*: only *Once* and *Up to* dim.
+            applies = settings.writeInsights,
             disabled = if (exa) emptySet() else setOf(AiWebSearch.ONCE, AiWebSearch.UP_TO),
             below = if (exa) null else ({ ExaOffLines() }),
         ) { chosen ->

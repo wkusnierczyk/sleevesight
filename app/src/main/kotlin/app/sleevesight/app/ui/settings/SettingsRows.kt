@@ -104,7 +104,7 @@ internal fun Hint(
 }
 
 /**
- * A setting that is on or off; the whole row toggles it. A null [onChange] is disabled. [highlight]
+ * A setting that is on or off; the whole row toggles it. [highlight]
  * sets its title in the theme's error colour, for a privacy choice (#420). [below] goes under the
  * title and summary, as a link to the service the switch is for; a link there is a control of its
  * own, apart from the switch, and so is [summaryLink], a link set in the summary where it has the
@@ -118,6 +118,12 @@ internal fun Hint(
  * The summary folds to one line, a tap on it unfolding it ([Description], #847); that tap is its
  * own and does not toggle the switch. [note], under it, says why the switch cannot be moved, or
  * what it needs (*Needs your Exa key.*), and always shows in full, read with the switch.
+ *
+ * As a [ChoiceButtonsRow]'s `enabled` and `applies` (#947, #999): a null [onChange], the setting
+ * still applies but something else holds its value (a key missing or no longer readable): only the
+ * switch dims, its text, mark and note staying as they are, since they still say what happens.
+ * Where it does not [apply][applies] while another setting is as it is, the whole row dims, its
+ * text and mark too, and it cannot be changed. Either way a screen reader reads it as disabled.
  */
 @Suppress("LongParameterList") // Each sets one aspect of the row; all but the first three have defaults.
 @Composable
@@ -131,11 +137,12 @@ internal fun SwitchRow(
     below: (@Composable () -> Unit)? = null,
     summaryLink: TextPart.Linked? = null,
     note: String? = null,
+    applies: Boolean = true,
     onChange: ((Boolean) -> Unit)?,
 ) {
     if (!shownInSearch(title)) return
-    val enabled = onChange != null
-    val alpha = if (enabled) 1f else DISABLED_ALPHA
+    val enabled = onChange != null && applies
+    val alpha = if (applies) 1f else DISABLED_ALPHA
     val color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha)
     val titleColor = if (highlight) MaterialTheme.colorScheme.error.copy(alpha = alpha) else color
     MarkedRow(
@@ -311,7 +318,7 @@ internal const val ROW_NOTE_TAG = "settings_row_note"
  * [ValueRow] opening a dialog instead (`design/design.md`, *Settings screen*). The summary folds
  * ([Description], #847); the line under the buttons does not. Not [enabled], none
  * can be chosen; a value in [disabled], that one; [below] comes under the line of what the value
- * does. A value in [spoken] is read by that in place of its label ([ChoiceButtonGroup]). A
+ * does, dimmed with the row. A value in [spoken] is read by that in place of its label ([ChoiceButtonGroup]). A
  * [summaryTable], given in place of [summary], is a description laid out as a table
  * ([DescriptionTable], *Reactive*'s, #945). Not [enabled], the setting still applies but another
  * one sets its value: only the buttons dim. Where it does not [apply][applies] while another
@@ -358,7 +365,8 @@ internal fun <T> ChoiceButtonsRow(
             spoken = spoken,
         )
         ChoiceDetails(choices, selected, details, alpha)
-        below?.invoke()
+        // Dimmed with the row where the setting does not apply; a link in it still works.
+        below?.let { Column(Modifier.alpha(alpha)) { it() } }
     }
 }
 

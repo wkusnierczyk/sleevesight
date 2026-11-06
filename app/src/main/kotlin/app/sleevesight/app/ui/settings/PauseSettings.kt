@@ -27,11 +27,9 @@ internal fun SaverRows(
         title = stringResource(R.string.settings_pause_auto_write),
         summary = stringResource(R.string.settings_pause_auto_write_summary),
         checked = count != null,
-        onChange =
-            { on: Boolean ->
-                update { it.copy(pauseAutoWriteAfter = if (on) Settings.DEFAULT_PAUSE_AUTO_WRITE_AFTER else null) }
-            }.takeIf { writes },
-    )
+        // Nothing is written automatically: *Saver* does not apply.
+        applies = writes,
+    ) { on -> update { it.copy(pauseAutoWriteAfter = if (on) Settings.DEFAULT_PAUSE_AUTO_WRITE_AFTER else null) } }
     if (count == null) return
     val options = saverCounts(count)
     ChoiceButtonsRow(

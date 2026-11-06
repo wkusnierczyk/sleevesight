@@ -94,8 +94,8 @@ internal fun AppearanceSection(
 /**
  * *Foldable descriptions* (#847), on by default: whether the settings' descriptions show on one line
  * ([Description]); then *Descriptions on return*, *Folded*, *Unfolded* or *As left* (the default)
- * as a button group, with a line on what the one chosen does ([DescriptionFolds]), dimmed and
- * keeping its value while the switch is off.
+ * as a button group, with a line on what the one chosen does ([DescriptionFolds]), dimmed as a
+ * whole, as not applying, and keeping its value while the switch is off (#999).
  */
 @Composable
 private fun DescriptionRows(
@@ -113,7 +113,8 @@ private fun DescriptionRows(
         choices = descriptionsOnReturn(),
         selected = settings.descriptionsOnReturn,
         details = descriptionsOnReturnDetails(),
-        enabled = settings.foldDescriptions,
+        // Nothing folds: the setting does not apply (#999).
+        applies = settings.foldDescriptions,
     ) { choice -> update { it.copy(descriptionsOnReturn = choice) } }
 }
 
@@ -156,15 +157,17 @@ private fun LyricsRows(
             summary = null,
             checked = settings.lyricsSearch,
             indent = true,
-            onChange = if (settings.lyricsLinks) ({ on -> update { it.copy(lyricsSearch = on) } }) else null,
-        )
+            // With no lyrics links there is nothing to search for: the setting does not apply.
+            applies = settings.lyricsLinks,
+        ) { on -> update { it.copy(lyricsSearch = on) } }
     }
 }
 
 /**
  * *Spin the logo while music plays* (#848), on by default, and under it *Logo speed*, 33⅓ rpm or
  * 45 rpm as a button group, with a line on the record each speed is; the speed keeps its value but
- * is dimmed and cannot be changed while the switch is off. A screen reader says "33⅓ rpm" in words.
+ * does not apply while the switch is off, so its row dims as a whole and cannot be changed (#999).
+ * A screen reader says "33⅓ rpm" in words.
  */
 @Composable
 private fun LogoSpinRows(
@@ -186,7 +189,8 @@ private fun LogoSpinRows(
                 LogoSpeed.RPM_33 to stringResource(R.string.settings_logo_speed_33_detail),
                 LogoSpeed.RPM_45 to stringResource(R.string.settings_logo_speed_45_detail),
             ),
-        enabled = settings.spinLogo,
+        // The logo does not spin: its speed does not apply (#999).
+        applies = settings.spinLogo,
         spoken = mapOf(LogoSpeed.RPM_33 to stringResource(R.string.settings_logo_speed_33_spoken)),
     ) { speed -> if (settings.spinLogo) update { it.copy(logoSpeed = speed) } }
 }
