@@ -175,7 +175,7 @@ class MusicBrainzClient(
                                     val recording = track.obj("recording")
                                     MbTrack(
                                         position = track.int("position") ?: (j + 1),
-                                        title = track.string("title") ?: recording?.string("title") ?: "",
+                                        title = (track.string("title") ?: recording?.string("title")).orEmpty(),
                                         lengthMs = track.long("length") ?: recording?.long("length"),
                                         recordingMbid = recording?.string("id")?.ifEmpty { null },
                                     )
