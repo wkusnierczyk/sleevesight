@@ -19,6 +19,8 @@ import androidx.compose.ui.unit.Density
 import androidx.test.core.app.ActivityScenario
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
+import app.sleevesight.app.ui.theme.typographyOf
+import app.sleevesight.core.settings.FontChoice
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -28,9 +30,9 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * A *Load keys* step's number sits in the middle of its circle (#1012), at the default font size
- * and a large one: drawn in colours apart (circle red, number blue, title black), the number's ink
- * is centred in the circle's to within a pixel.
+ * A *Load keys* step's number sits in the middle of its circle (#1012), for each step, in either
+ * *Font*, at the default font size and a large one: drawn in colours apart (circle red, number
+ * blue, title black), the number's ink is centred in the circle's to within a pixel.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w411dp-h891dp-420dpi")
@@ -45,14 +47,24 @@ class KeyScreenTitleTest {
     fun numberCentredInCircleAtLargeFont() = assertCentred(fontScale = 2f)
 
     private fun assertCentred(fontScale: Float) {
+        for (font in FontChoice.entries) {
+            for (step in 1..STEPS) assertCentred(fontScale, font, step)
+        }
+    }
+
+    private fun assertCentred(
+        fontScale: Float,
+        font: FontChoice,
+        step: Int,
+    ) {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 activity.setContent {
                     val density = LocalDensity.current
                     CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale)) {
-                        MaterialTheme(colorScheme = COLOURS) {
+                        MaterialTheme(colorScheme = COLOURS, typography = typographyOf(font)) {
                             Box(Modifier.background(Color.White).testTag(TAG)) {
-                                KeyScreenTitle(R.string.load_keys_keys_title, step = 3)
+                                KeyScreenTitle(R.string.load_keys_keys_title, step = step)
                             }
                         }
                     }
@@ -61,8 +73,9 @@ class KeyScreenTitleTest {
             val image = compose.onNodeWithTag(TAG).captureToImage().asAndroidBitmap()
             val circle = ink(image) { r, g, b -> r > 200 && g < 120 && b < 120 }
             val number = ink(image, circle) { r, g, b -> b > 150 && r < 120 && g < 120 }
-            assertEquals("horizontal centre", centre(circle[0], circle[2]), centre(number[0], number[2]), 1.0)
-            assertEquals("vertical centre", centre(circle[1], circle[3]), centre(number[1], number[3]), 1.0)
+            val case = "step $step, $font, font scale $fontScale"
+            assertEquals("$case: horizontal centre", centre(circle[0], circle[2]), centre(number[0], number[2]), 1.0)
+            assertEquals("$case: vertical centre", centre(circle[1], circle[3]), centre(number[1], number[3]), 1.0)
         }
     }
 
@@ -94,6 +107,9 @@ class KeyScreenTitleTest {
 
     private companion object {
         const val TAG = "title"
+
+        /** *Load keys*' steps. */
+        const val STEPS = 4
         val COLOURS =
             lightColorScheme(
                 surface = Color.White,

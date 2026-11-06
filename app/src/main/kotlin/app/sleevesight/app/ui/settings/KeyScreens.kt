@@ -1,5 +1,9 @@
 package app.sleevesight.app.ui.settings
 
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.RectF
+import android.graphics.Typeface
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -21,9 +25,17 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.center
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFontFamilyResolver
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -32,9 +44,14 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.text
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontSynthesis
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.toSize
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.SecureFlagPolicy
@@ -168,9 +185,58 @@ internal fun KeyScreenTitle(
             modifier = Modifier.size(side).border(2.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
             contentAlignment = Alignment.Center,
         ) {
-            Text(step.toString(), style = number, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            // Centred by its ink, not its text box: a digit's side bearings differ (Roboto's 1 sits
+            // left of its box's middle), so the box's centre is not the glyph's (#1012).
+            val digits = step.toString()
+            val ink = inkCentre(digits, number)
+            var shift by remember { mutableStateOf(Offset.Zero) }
+            Text(
+                digits,
+                style = number,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                onTextLayout = { layout ->
+                    shift = layout.size.toSize().center - Offset(ink.x, layout.firstBaseline + ink.y)
+                },
+                modifier =
+                    Modifier.graphicsLayer {
+                        translationX = shift.x
+                        translationY = shift.y
+                    },
+            )
         }
         Text(name, style = style)
+    }
+}
+
+/**
+ * The centre of [text]'s ink in [style], in pixels from the start of its baseline: the glyphs'
+ * outlines, which a text layout does not give (its paths are selection boxes).
+ */
+@Composable
+private fun inkCentre(
+    text: String,
+    style: TextStyle,
+): Offset {
+    val fonts = LocalFontFamilyResolver.current
+    val density = LocalDensity.current
+    return remember(text, style, fonts, density) {
+        val typeface =
+            fonts
+                .resolve(
+                    style.fontFamily,
+                    style.fontWeight ?: FontWeight.Normal,
+                    style.fontStyle ?: FontStyle.Normal,
+                    style.fontSynthesis ?: FontSynthesis.All,
+                ).value as Typeface
+        val paint =
+            Paint().apply {
+                this.typeface = typeface
+                textSize = with(density) { style.fontSize.toPx() }
+                fontFeatureSettings = style.fontFeatureSettings
+            }
+        val bounds = RectF()
+        Path().apply { paint.getTextPath(text, 0, text.length, 0f, 0f, this) }.computeBounds(bounds, true)
+        Offset(bounds.centerX(), bounds.centerY())
     }
 }
 
