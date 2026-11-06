@@ -47,6 +47,21 @@ interface MusicBrainzLookup {
      */
     suspend fun searchArtists(name: String): Lookup<MbArtistSearch>
 
+    /**
+     * The releases of the release group [mbid], for the tracklist on the back of Home's cover (#984):
+     * at most 25, the earliest first, as MusicBrainz lists them on the group's lookup, each with its
+     * date and status. Not found for an id that is no release group's (a release's own,
+     * `ReleaseDate.group`). A stand-in that does not answer it fails, so a tracklist is said to be out
+     * of reach, never wrong.
+     */
+    suspend fun groupReleases(mbid: String): Lookup<List<MbRelease>> = Lookup.Failed("NotAsked")
+
+    /**
+     * The release [mbid]'s tracklist (#984): its media, each with its tracks. Not found for an id that
+     * is no release's. A stand-in that does not answer it fails, as [groupReleases].
+     */
+    suspend fun tracklist(mbid: String): Lookup<MbTracklist> = Lookup.Failed("NotAsked")
+
     companion object {
         /** The most recordings a search gives, its one page: MusicBrainz's largest. */
         const val SEARCH_PAGE: Int = 100
@@ -93,6 +108,8 @@ data class MbReleaseGroup(
  * A release a recording appears on. [date] is null when MusicBrainz has none. [language] is the
  * language MusicBrainz records for its tracklist (ISO 639-3, `text-representation`), a hint of the
  * track's language (#902); null when it records none, or the answer carries none (a search's).
+ * [status] is MusicBrainz's (`Official`, `Promotion`, `Bootleg`), for the release whose tracklist
+ * Home shows (#984); null when it records none.
  */
 data class MbRelease(
     val mbid: String,
@@ -100,6 +117,33 @@ data class MbRelease(
     val date: String?,
     val releaseGroup: MbReleaseGroup?,
     val language: String? = null,
+    val status: String? = null,
+)
+
+/**
+ * A release's tracklist (#984): its [media] (discs, sides of a set, as MusicBrainz counts them) in
+ * their order, each with its tracks. Core data, CC0.
+ */
+data class MbTracklist(
+    val releaseMbid: String,
+    val media: List<MbMedium>,
+)
+
+/** One medium of a release: its [position] in the release, from 1, and its [tracks] in order. */
+data class MbMedium(
+    val position: Int,
+    val tracks: List<MbTrack>,
+)
+
+/**
+ * A track on a medium: its [position] on it, from 1; its [title] as the release credits it; its
+ * length, null when MusicBrainz has none; and the recording it is, by id.
+ */
+data class MbTrack(
+    val position: Int,
+    val title: String,
+    val lengthMs: Long?,
+    val recordingMbid: String?,
 )
 
 /**

@@ -6,11 +6,14 @@ import app.sleevesight.core.resolution.MbArtist
 import app.sleevesight.core.resolution.MbArtistRelation
 import app.sleevesight.core.resolution.MbArtistSearch
 import app.sleevesight.core.resolution.MbCredit
+import app.sleevesight.core.resolution.MbMedium
 import app.sleevesight.core.resolution.MbPerformance
 import app.sleevesight.core.resolution.MbRecording
 import app.sleevesight.core.resolution.MbRecordingDetail
 import app.sleevesight.core.resolution.MbRelease
 import app.sleevesight.core.resolution.MbReleaseGroup
+import app.sleevesight.core.resolution.MbTrack
+import app.sleevesight.core.resolution.MbTracklist
 import app.sleevesight.core.resolution.MbWork
 import app.sleevesight.core.resolution.MbWorkLink
 import app.sleevesight.core.resolution.MusicBrainzLookup
@@ -43,6 +46,7 @@ import kotlinx.serialization.json.JsonPrimitive
  * [tags] says, at each recording's lookup, whether its tags are asked for: not while *Show genres*
  * is off (#444), when no genre information is asked for from any source.
  */
+@Suppress("TooManyFunctions") // One for each question its three interfaces ask MusicBrainz.
 class MusicBrainzClient(
     private val net: NetClient,
     private val tags: () -> Boolean = { true },
@@ -147,6 +151,41 @@ class MusicBrainzClient(
         return net.lookup(request) { response -> recording(parseObject(response.body)) }
     }
 
+    override suspend fun groupReleases(mbid: String): Lookup<List<MbRelease>> {
+        val request = NetRequest("$BASE/release-group/$mbid", query = mapOf("inc" to "releases", "fmt" to "json"))
+        return net.lookup(request) { response ->
+            val json = parseObject(response.body)
+            json.required("id")
+            json.array("releases").map(::release)
+        }
+    }
+
+    override suspend fun tracklist(mbid: String): Lookup<MbTracklist> {
+        val request = NetRequest("$BASE/release/$mbid", query = mapOf("inc" to "recordings", "fmt" to "json"))
+        return net.lookup(request) { response ->
+            val json = parseObject(response.body)
+            MbTracklist(
+                releaseMbid = json.required("id"),
+                media =
+                    json.array("media").mapIndexed { i, medium ->
+                        MbMedium(
+                            position = medium.int("position") ?: (i + 1),
+                            tracks =
+                                medium.array("tracks").mapIndexed { j, track ->
+                                    val recording = track.obj("recording")
+                                    MbTrack(
+                                        position = track.int("position") ?: (j + 1),
+                                        title = track.string("title") ?: recording?.string("title") ?: "",
+                                        lengthMs = track.long("length") ?: recording?.long("length"),
+                                        recordingMbid = recording?.string("id")?.ifEmpty { null },
+                                    )
+                                },
+                        )
+                    },
+            )
+        }
+    }
+
     override suspend fun work(mbid: String): Lookup<MbWork> {
         val request = NetRequest("$BASE/work/$mbid", query = mapOf("inc" to WORK_INC, "fmt" to "json"))
         return net.lookup(request) { response ->
@@ -206,6 +245,7 @@ class MusicBrainzClient(
         }
     }
 
+    @Suppress("TooManyFunctions") // A parser for each part of MusicBrainz's answers the client reads.
     companion object {
         const val BASE: String = "https://musicbrainz.org/ws/2"
 
@@ -261,20 +301,23 @@ class MusicBrainzClient(
                 lengthMs = json.long("length"),
                 credits = credits(json),
                 firstReleaseDate = json.string("first-release-date")?.ifEmpty { null },
-                releases =
-                    json.array("releases").map { release ->
-                        MbRelease(
-                            mbid = release.required("id"),
-                            title = release.required("title"),
-                            date = release.string("date")?.ifEmpty { null },
-                            releaseGroup =
-                                release.obj("release-group")?.let {
-                                    MbReleaseGroup(it.required("id"), it.required("title"), it.string("primary-type"))
-                                },
-                            language = release.obj("text-representation").string("language")?.ifEmpty { null },
-                        )
-                    },
+                releases = json.array("releases").map(::release),
                 score = json.int("score") ?: 0,
+            )
+
+        // A release as a recording's releases or a release group's list it: with its group where
+        // the answer embeds it, and its status (#984).
+        private fun release(release: JsonElement): MbRelease =
+            MbRelease(
+                mbid = release.required("id"),
+                title = release.required("title"),
+                date = release.string("date")?.ifEmpty { null },
+                releaseGroup =
+                    release.obj("release-group")?.let {
+                        MbReleaseGroup(it.required("id"), it.required("title"), it.string("primary-type"))
+                    },
+                language = release.obj("text-representation").string("language")?.ifEmpty { null },
+                status = release.string("status")?.ifEmpty { null },
             )
 
         // An entity's tags, each with its net votes (#799), most voted first, ties by name, those

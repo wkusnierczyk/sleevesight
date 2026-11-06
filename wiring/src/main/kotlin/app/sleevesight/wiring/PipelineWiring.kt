@@ -15,6 +15,7 @@ import app.sleevesight.core.normalizer.AccentFolder
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.pipeline.ClearEpoch
 import app.sleevesight.core.pipeline.TrackResolver
+import app.sleevesight.core.resolution.AlbumTracklists
 import app.sleevesight.core.resolution.IdentityCheck
 import app.sleevesight.core.resolution.MusicBrainzLookup
 import app.sleevesight.core.resolution.NameMatcher
@@ -126,6 +127,12 @@ class PipelineWiring internal constructor(
      */
     val genreVocabulary: GenreVocabulary get() = vocabulary
     private val artFetcher = ArtFetcher(net)
+
+    /**
+     * Albums' tracklists (#984), for the back of Home's cover: asked through the same MusicBrainz
+     * answers as resolution, so kept with them for a while, and under the client's one rate limit.
+     */
+    val tracklists: AlbumTracklists by lazy { AlbumTracklists(musicBrainz) }
 
     /** Resolution over MusicBrainz (`RecordingResolver`), for `PipelineParts.resolver`. */
     val resolver: TrackResolver =
