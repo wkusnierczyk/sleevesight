@@ -1,5 +1,7 @@
 package app.sleevesight.core.evidence
 
+import app.sleevesight.core.language.Language
+import app.sleevesight.core.language.Languages
 import app.sleevesight.core.model.SourceId
 
 /**
@@ -28,6 +30,8 @@ import app.sleevesight.core.model.SourceId
 class EvidenceSet private constructor(
     val lines: List<EvidenceLine>,
     val fingerprint: String,
+    // The track's language its lines' scripts were read with ([of]), for the lines [with] adds.
+    private val known: Language?,
 ) {
     private val byId: Map<String, EvidenceLine> = lines.associateBy { it.id }
 
@@ -71,25 +75,21 @@ class EvidenceSet private constructor(
         leaveOut: (EvidenceLine) -> Boolean,
     ): EvidenceSet {
         val kept = lines.filterNot(leaveOut)
-        return if (kept.size == lines.size) this else EvidenceSet(kept, fingerprint(kept, hasher))
+        return if (kept.size == lines.size) this else EvidenceSet(kept, fingerprint(kept, hasher), known)
     }
 
     /**
      * This set with [more] lines after its own, fingerprinted with [hasher]: each line of this set
      * keeps its id, and a source's new lines are numbered after its own (#801: the pages a genre's
      * reason found on the web are `S6`, `S7` after the track's `S1` to `S5`). This set itself with
-     * none.
+     * none. The lines added are read by their script with this set's track language (#949).
      */
     fun with(
         more: List<EvidenceDraft>,
         hasher: Hasher,
     ): EvidenceSet {
         if (more.isEmpty()) return this
-        val drafts =
-            lines.map {
-                EvidenceDraft(it.source, it.scope, it.text, it.url, it.retrievedAt, it.aggregate, it.about, it.language)
-            }
-        return of(drafts + more, hasher)
+        return of(lines.map { it.draft() } + more, hasher, known)
     }
 
     override fun equals(other: Any?): Boolean = other is EvidenceSet && lines == other.lines
@@ -99,13 +99,21 @@ class EvidenceSet private constructor(
     override fun toString(): String = "EvidenceSet(${ids.joinToString()}, fingerprint=$fingerprint)"
 
     companion object {
-        /** Assigns ids to [drafts] and fingerprints the result with [hasher]. */
+        /**
+         * Assigns ids to [drafts] and fingerprints the result with [hasher]. A draft with no language
+         * whose script names one gets it, marked [EvidenceDraft.scripted] (#949: a page in Hindi that
+         * the English web search found is marked as Hindi too): [Languages.ofLine], with the track's
+         * language [known] when given, else the one the search in it found the drafts' lines in.
+         */
         fun of(
             drafts: List<EvidenceDraft>,
             hasher: Hasher,
+            known: Language? = null,
         ): EvidenceSet {
+            val language = known ?: drafts.firstNotNullOfOrNull { it.found }?.let(Languages::ofCode)
             val lines =
                 drafts
+                    .map { it.scriptedIn(language) }
                     .sortedBy { sourceRank(it.source) }
                     .groupBy { it.source }
                     .flatMap { (source, ofSource) ->
@@ -120,10 +128,11 @@ class EvidenceSet private constructor(
                                 aggregate = draft.aggregate,
                                 about = draft.about,
                                 language = draft.language,
+                                scripted = draft.scripted,
                             )
                         }
                     }
-            return EvidenceSet(lines, fingerprint(lines, hasher))
+            return EvidenceSet(lines, fingerprint(lines, hasher), language)
         }
 
         /**
@@ -142,6 +151,12 @@ class EvidenceSet private constructor(
                 SourceId.MODEL,
                 SourceId.PLAYER,
             )
+
+        // [this], with the language its script names when it has none.
+        private fun EvidenceDraft.scriptedIn(known: Language?): EvidenceDraft {
+            val written = if (language == null) Languages.ofLine(text, known) else null
+            return written?.let { copy(language = it.code, scripted = true) } ?: this
+        }
 
         private fun sourceRank(source: SourceId): Int =
             SOURCE_ORDER.indexOf(source).also { require(it >= 0) { "$source is not in EvidenceSet.SOURCE_ORDER" } }

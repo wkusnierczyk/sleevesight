@@ -4,6 +4,7 @@ import app.sleevesight.core.Secret
 import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.evidence.Scope
+import app.sleevesight.core.language.Languages
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.ProviderId
@@ -478,6 +479,38 @@ class ItemInsightsTest {
         text: String,
         language: String,
     ): EvidenceDraft = about(line(SourceId.WIKIPEDIA, text, Scope.ARTIST), "Gordon Lightfoot").copy(language = language)
+
+    private fun untagged(draft: EvidenceDraft) =
+        if (draft.scripted) draft.copy(language = null, scripted = false) else draft
+
+    @Test
+    fun `an artist's line read as another language by its script is the same on a track searched and one not`() =
+        runTest {
+            // Gordon's line in Devanagari from the English sources (#949): Marathi on a track searched in
+            // Marathi, Hindi on one not; the artist's evidence reads it alike on both.
+            val line = about(line(SourceId.WIKIPEDIA, "गॉर्डन लाइटफुट गायक होते.", Scope.ARTIST), "Gordon Lightfoot")
+            val songLines = listOf(line(SourceId.MUSICBRAINZ, "It runs three minutes."))
+            val plain = track("Sundown", songLines, extraArtistLines = listOf(line))
+            val marathi = Languages.ofCode("mr")
+            val searched =
+                plain.copy(
+                    inLanguage = InLanguageState("mr", emptyMap()),
+                    // As the run assembles it with the language known: the lines untagged, read again.
+                    evidence = EvidenceSet.of(plain.evidence!!.lines.map { untagged(it.draft()) }, JvmHasher, marathi),
+                )
+            val text = line.text
+            assertEquals(
+                "mr",
+                searched.evidence!!
+                    .lines
+                    .single { it.text == text }
+                    .language,
+            )
+            val one = checkNotNull(items.evidence(InsightItem.ARTIST, plain, settings)).evidence
+            val other = checkNotNull(items.evidence(InsightItem.ARTIST, searched, settings)).evidence
+            assertEquals(one.fingerprint, other.fingerprint)
+            assertEquals("hi", other.lines.single { it.text == text }.language)
+        }
 
     @Test
     fun `the artist's lines in the track's language are kept per artist, the first found in each language`() =

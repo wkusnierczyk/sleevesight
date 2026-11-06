@@ -45,6 +45,9 @@ enum class Script(
      */
     val unspaced: Boolean get() = this == THAI || this == KANA || this == HAN
 
+    // Whether its texts mix Han characters in: kana's (Japanese) and Hangul's (Korean).
+    private val mixesHan: Boolean get() = this == KANA || this == HANGUL
+
     /** Whether this script ends its sentences with a mark; Thai ends them with a space. */
     val stops: Boolean get() = this != THAI
 
@@ -65,6 +68,34 @@ enum class Script(
                 HANGUL in counts -> HANGUL
                 else -> counts.maxByOrNull { it.value }?.key
             }
+        }
+
+        /**
+         * The script most of [text]'s letters are in, other than Latin (#949), when they outnumber
+         * the Latin ones, so a line in English that quotes a title in Devanagari is not taken for
+         * Hindi; null otherwise. Kana and Han count together, as Japanese mixes them, and Hangul and
+         * Han as Korean does, so a Korean line quoting a Japanese title is Korean; but only when kana
+         * or Hangul are at least a [MIXED_SHARE] of them, so a Chinese line quoting a Japanese title
+         * stays Han. The katakana middle dot and long-vowel mark, which Chinese names use too, are no
+         * kana. A kana, Hangul or Han character, a syllable or a word, weighs [SYLLABLE] Latin letters,
+         * so a Korean caption quoting an English title is Korean. On a tie, kana or Hangul before Han
+         * alone.
+         */
+        fun mostly(text: String): Script? {
+            val counts = mutableMapOf<Script, Int>()
+            forEachCodePoint(text) { point ->
+                if (point != MIDDLE_DOT && point != LONG_VOWEL) {
+                    entries.firstOrNull { point in it }?.let { counts[it] = (counts[it] ?: 0) + 1 }
+                }
+            }
+            val han = counts[HAN] ?: 0
+            val scores =
+                counts.filterKeys { it != LATIN }.mapValues { (script, n) ->
+                    val letters = if (script.mixesHan && n * MIXED_SHARE >= n + han) n + han else n
+                    if (script.mixesHan || script == HAN) letters * SYLLABLE else letters
+                }
+            val best = scores.maxWithOrNull(compareBy<Map.Entry<Script, Int>> { it.value }.thenBy { it.key.mixesHan })
+            return best?.takeIf { it.value > (counts[LATIN] ?: 0) }?.key
         }
 
         private fun forEachCodePoint(
@@ -88,6 +119,11 @@ enum class Script(
             }
         }
 
+        // Kana or Hangul take Han's letters with them from one in this many of the two.
+        private const val MIXED_SHARE = 4
+        private const val SYLLABLE = 2
+        private const val MIDDLE_DOT = 0x30FB
+        private const val LONG_VOWEL = 0x30FC
         private const val SUPPLEMENTARY_BASE = 0x10000
         private const val SURROGATE_BITS = 10
     }
@@ -189,4 +225,19 @@ object Languages {
 
     /** The language Wikidata's item [item] stands for (`Q1568`, Hindi), or null. */
     fun ofItem(item: String): Language? = byItem[item]
+
+    /**
+     * The language a line's [text] is written in, by its script (#949), as [TrackLanguage] reads a
+     * title's: the track's language when [known] and written in that script, else the language the
+     * script names on its own ([Script.own]: Devanagari Hindi, Hangul Korean); none for Latin, a
+     * line mostly in Latin letters ([Script.mostly]), or a script several languages share (Han,
+     * Cyrillic, Arabic) that [known] is not written in.
+     */
+    fun ofLine(
+        text: String,
+        known: Language?,
+    ): Language? {
+        val script = Script.mostly(text) ?: return null
+        return known?.takeIf { script in it.scripts } ?: script.own?.let(::ofCode)
+    }
 }
