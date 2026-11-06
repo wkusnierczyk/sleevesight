@@ -1,8 +1,8 @@
 ---
 # How it performs (#626), at `/docs/performance/`: what Sleevesight costs the phone (battery, data,
 # CPU, memory, start-up, size), measured on one phone with the Play build. Every figure is from
-# `tools/perf/` (snapshots before and after a session, read over wireless debugging), dated and
-# with its settings, so it can be taken again and compared. Linked from the docs index, the costs
+# `tools/perf/` (snapshots before and after a session, read over wireless debugging), with its
+# settings, so it can be taken again and compared. Linked from the docs index, the costs
 # page and the README. A change that makes the app do more in the background, on screen or per
 # track (a new source, an animation, a poll) changes these figures: take them again then.
 title: How it performs
@@ -36,7 +36,7 @@ What Sleevesight costs your phone while you listen: battery, data, processor tim
 - **Nothing playing**: nothing at all. Overnight, for seven and a half hours, it made no network call, used 8.5 seconds of processor time, and the system put no battery on it.
 - **On screen**: the screen is most of the cost, about 2 to 3 % of the battery an hour. The spinning logo adds a constant load on the processor while music plays; [*Spin the logo while music plays*]({{ '/docs/tutorials/settings/#appearance' | relative_url }}) off removes it.
 - **Data**: under 100 KB a track, in and out together under 120 KB, insights and web search included. At about 17 tracks an hour, that is about 2 MB an hour.
-- **Memory**: 80 to 100 MB at rest, up to about 170 MB while an insight is written.
+- **Memory**: 80 to 120 MB with the screen off, up to about 170 MB on screen while insights are written.
 - **Start-up**: it opens in about 70 milliseconds.
 - **Size**: about 13 MB installed, and it did not grow over a day's listening.
 
@@ -51,9 +51,9 @@ The battery figure for Sleevesight is Android's own estimate of the share used b
 | Nothing playing, screen off, overnight | 451 min | 0.0 mAh | 75 % to 52 % |
 | On screen, *Now playing*, logo spinning | 20 min | 44.6 mAh, of which the screen 38.2 and the processor 5.6 | about 9 % an hour |
 | On screen, *Now playing*, logo still | 6 min | 9.0 mAh, of which the processor 0.0 | |
-| On screen, 9 tracks, insights off | 10 min | 18.6 mAh | |
-| On screen, 10 tracks, insights on | 12 min | 19.2 mAh | |
-| On screen, 10 tracks, insights and *AI web search* on | 11 min | 20.6 mAh | |
+| On screen, logo still, 9 tracks, insights off | 10 min | 18.6 mAh | |
+| On screen, logo still, 10 tracks, insights on | 12 min | 19.2 mAh | |
+| On screen, logo still, 10 tracks, insights and *AI web search* on | 11 min | 20.6 mAh | |
 
 On screen, the cost is about 90 to 130 mAh an hour, 2 to 3 % of the battery, nearly all of it the screen's; writing insights and searching the web add little to it. Off screen, Sleevesight waits for the next track and does little else, so on a long drive it is the screen that matters, not the app.
 
@@ -81,12 +81,13 @@ Processor time is the time the app's process ran, on any core (`ps`); memory is 
 | Session | Processor time | Memory |
 |---|---|---|
 | Screen off, listening, an hour | 6.6 s | 86 MB |
+| Screen off, listening, *Look up in the background* on | 8.2 s in 98 min | 118 MB |
 | Nothing playing, overnight | 8.5 s in 7.5 hours | 84 MB |
 | On screen, logo spinning | 18 s a minute, about 30 % of one core | 159 MB |
 | On screen, logo still | 0.6 s a minute | 160 MB |
-| A track, insights off | 0.7 s | 98 MB |
-| A track, insights on | 2.4 s | 166 MB while writing, 79 MB after |
-| A track, insights and *AI web search* on | 3.8 s | 151 MB while writing |
+| A track on screen, logo still, insights off | 0.7 s | 98 MB |
+| A track on screen, logo still, insights on | 2.4 s | 166 MB while writing, 79 MB after |
+| A track on screen, logo still, insights and *AI web search* on | 3.8 s | 151 MB while writing, 167 MB after |
 
 The spinning logo is nearly all of the processor time on screen: a known cost, [#963](https://github.com/wkusnierczyk/sleevesight/issues/963), to be brought down. Until then, turn *Spin the logo while music plays* off under [Appearance]({{ '/docs/tutorials/settings/#appearance' | relative_url }}) to save it.
 

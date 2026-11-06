@@ -4,8 +4,8 @@ The method behind the docs page *How it performs* (`docs/performance/`, #626), k
 numbers can be taken again for a later release and compared.
 
 - `snapshot.sh <dir> [<label>]` reads the app's memory, CPU time, network bytes, battery use,
-  wakeups, alarms and jobs, its installed size, and the phone's battery, into a new directory. It changes
-  nothing on the phone.
+  wakeups, alarms and jobs, its installed size, and the phone's battery, into a new directory. It
+  only reads, apart from `dumpsys netstats --poll`, which makes the system count the bytes so far.
 - `report.py <before> <after> [--tracks N]` compares two snapshots.
 - `startup.sh --yes [<runs>]` times starts (`am start -W`), with the median for each launch state
   (with notification access granted, every start is warm). It force-stops and opens the app,
@@ -17,8 +17,9 @@ The release build from Play is measured, on the phone's own settings, over wirel
 
 ## Sessions
 
-Each session is a snapshot before, the listening by hand, and a snapshot after; the date, the
-version, the Android version and the settings go on the page with its figures.
+Each session is a snapshot before, the listening by hand, and a snapshot after; the version, the
+Android version and the settings go on the page with its figures, and the date stays with the
+snapshots (their directory names).
 
 1. **Screen off, one hour**: default settings with one AI service switched on (its default model),
    Exa off, music from the usual player, Sleevesight in the background or left on top when the
