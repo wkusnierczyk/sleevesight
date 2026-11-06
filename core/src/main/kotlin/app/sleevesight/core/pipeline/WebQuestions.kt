@@ -35,6 +35,13 @@ interface WebQuestion {
     /** *Once*'s search, in words. */
     val query: String
 
+    /**
+     * The names the question is about, which every search's pages are cleaned of page boilerplate
+     * for ([WebSearcher.search]); none, the default, cleans only what is boilerplate whatever the
+     * subject; null leaves the pages as they came.
+     */
+    val subjectNames: List<String>? get() = emptyList()
+
     /** *Once*'s prompt, with the [pages] its search found. */
     fun once(pages: List<WebPage>): String
 
@@ -185,7 +192,7 @@ class WebQuestions(
         paying: Paying,
     ): WebReply {
         paying.counted(QuestionCost.SEARCH)
-        val found = checkNotNull(web).search(question.query)
+        val found = checkNotNull(web).search(question.query, question.subjectNames)
         val pages = (found as? WebSearchOutcome.Found)?.pages.orEmpty().let(::usable)
         return when {
             found !is WebSearchOutcome.Found || pages.isEmpty() ->
@@ -303,7 +310,7 @@ class WebQuestions(
             }
             else -> {
                 paying.counted(QuestionCost.SEARCH)
-                val found = engine.search(query)
+                val found = engine.search(query, question.subjectNames)
                 val kept = (found as? WebSearchOutcome.Found)?.pages?.let(::usable).orEmpty()
                 kept.forEach { pages.putIfAbsent(it.url, it) }
                 val result =

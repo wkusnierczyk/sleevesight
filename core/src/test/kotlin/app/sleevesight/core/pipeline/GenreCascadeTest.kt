@@ -51,7 +51,7 @@ class GenreCascadeTest {
     private var outcome: WebSearchOutcome = WebSearchOutcome.Found(listOf(page))
     private val queries = mutableListOf<String>()
     private val web =
-        WebSearcher { query ->
+        WebSearcher { query, _ ->
             queries += query
             outcome
         }

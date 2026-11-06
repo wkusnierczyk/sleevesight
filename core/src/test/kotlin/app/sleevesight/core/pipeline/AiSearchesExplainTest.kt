@@ -48,7 +48,8 @@ class AiSearchesExplainTest {
         FakeProvider { FakeProvider.done("""{"explanation": "It is about loss. [S2] The oak lasts. [S1]"}""") }
     private val cache = MemoryCache()
     private val answers = AiSearchAnswers(GenreVocabulary.load(JvmResourceReader), JvmAccentFolder)
-    private val searches = AiSearches(AiAccess(provider, Secret("k")), cache, JvmHasher, answers, web = { outcome })
+    private val searches =
+        AiSearches(AiAccess(provider, Secret("k")), cache, JvmHasher, answers, web = { _, _ -> outcome })
     private val settings = Settings(aiProvider = ProviderId.ANTHROPIC)
     private val at = Instant.parse("2026-11-01T10:00:00Z")
     private val wikipedia = "https://en.wikipedia.org/wiki/The_Black_Oak"
@@ -93,7 +94,7 @@ class AiSearchesExplainTest {
         val noEngine = AiSearches(AiAccess(provider, Secret("k")), cache, JvmHasher, answers)
         assertFalse(noEngine.offered(SearchKind.EXPLAIN, settings))
         // No AI service: offered, disabled (no key), as the others are.
-        val noAi = AiSearches(null, cache, JvmHasher, answers, web = { outcome })
+        val noAi = AiSearches(null, cache, JvmHasher, answers, web = { _, _ -> outcome })
         assertTrue(noAi.offered(SearchKind.EXPLAIN, settings))
         assertNull(noAi.key(track, SearchKind.EXPLAIN, settings))
     }
@@ -155,7 +156,7 @@ class AiSearchesExplainTest {
                         FakeProvider.done("""{"explanation": "It is about loss. [S2]"}""")
                     }
                 }
-            val made = AiSearches(AiAccess(loop, Secret("k")), cache, JvmHasher, answers, web = { outcome })
+            val made = AiSearches(AiAccess(loop, Secret("k")), cache, JvmHasher, answers, web = { _, _ -> outcome })
             val key = checkNotNull(made.key(track, SearchKind.EXPLAIN, settings))
             val last =
                 made.search(

@@ -49,6 +49,9 @@ internal class ArtistQuestion(
     override val query: String
         get() = "\"${InsightPrompt.oneLine(subject.name)}\", music artist"
 
+    // No names ([WebQuestion.subjectNames]): a page is judged by the artist's name in its passage as it
+    // came, a part naming only the artist included, before [line] cleans it for the artist (#905).
+
     override fun once(pages: List<WebPage>): String {
         about(pages).forEach { numbered.putIfAbsent(checkNotNull(it.url), it) }
         return prompt(evidence())

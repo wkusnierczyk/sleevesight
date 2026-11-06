@@ -63,6 +63,13 @@ data class SearchFacts(
     val genres: List<String> = emptyList(),
     val genre: String? = null,
 ) {
+    /**
+     * The names a search about these facts is about, for cleaning its pages of boilerplate
+     * (`WebQuestion.subjectNames`, #929): the title, the album, the genre and the artists, those known.
+     */
+    val names: List<String>
+        get() = (listOfNotNull(title, album, genre) + artists).filter { it.isNotBlank() }
+
     companion object {
         /** What a search of [SearchKind.DEFINITION] gives the model (#786): the genre [name] alone. */
         fun ofGenre(name: String): SearchFacts = SearchFacts(title = "", artists = emptyList(), genre = name)
