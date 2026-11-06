@@ -216,7 +216,9 @@ internal fun KeyScreenTitle(
  * The centre of [text]'s ink in [style], in pixels from the start of its baseline, from the glyphs'
  * outlines, which a text layout does not give (its paths are selection boxes). Down, the middle of
  * the outline; across, where the ink's weight balances, as the eye centres a glyph: a 1's flag
- * reaches left of its stem, and centring the outline put the stem right of the middle (#1012).
+ * reaches left of its stem, and centring the outline put the stem right of the middle (#1012). The
+ * 3 and the 4 move too, under 2 px left at the default font size (the 3's open side, the 4's
+ * stem), and were checked on a phone as centred.
  */
 @Composable
 private fun rememberInkCentre(

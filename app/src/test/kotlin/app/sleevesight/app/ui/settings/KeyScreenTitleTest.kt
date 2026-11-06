@@ -75,7 +75,8 @@ class KeyScreenTitleTest {
             val circle = ink(image) { r, g, b -> r > 200 && g < 120 && b < 120 }
             val number = ink(image, circle) { r, g, b -> b > 150 && r < 120 && g < 120 }
             val case = "step $step, $font, font scale $fontScale"
-            assertEquals("$case: horizontal centre", centre(circle[0], circle[2]), balanceAcross(image, number), 1.0)
+            val across = balanceAcross(image, number, circle)
+            assertEquals("$case: horizontal centre", centre(circle[0], circle[2]), across, 1.0)
             assertEquals("$case: vertical centre", centre(circle[1], circle[3]), centre(number[1], number[3]), 1.0)
         }
     }
@@ -102,24 +103,27 @@ class KeyScreenTitleTest {
     }
 
     /**
-     * Where the number's blue ink within [area] balances across: each pixel's column weighed by how
-     * blue it is over the white (its blue less its red), which leaves out the red circle's.
+     * Where the number's blue ink around [number] balances across, as a pixel index as [centre]
+     * gives: each pixel's column weighed by how blue it is over the white (its blue less its red,
+     * none for the red circle or the black title). [number] is widened by a pixel each way, within
+     * [circle], so the faint anti-aliased edges count too.
      */
     private fun balanceAcross(
         image: Bitmap,
-        area: IntArray,
+        number: IntArray,
+        circle: IntArray,
     ): Double {
         var weight = 0.0
         var moment = 0.0
-        for (y in area[1]..area[3]) {
-            for (x in area[0]..area[2]) {
+        for (y in maxOf(number[1] - 1, circle[1])..minOf(number[3] + 1, circle[3])) {
+            for (x in maxOf(number[0] - 1, circle[0])..minOf(number[2] + 1, circle[2])) {
                 val p = image.getPixel(x, y)
                 val blue = ((p and 0xFF) - (p shr 16 and 0xFF)).coerceAtLeast(0)
                 weight += blue
-                moment += blue * (x + 0.5)
+                moment += blue * x
             }
         }
-        return moment / weight - 0.5
+        return moment / weight
     }
 
     private fun centre(
