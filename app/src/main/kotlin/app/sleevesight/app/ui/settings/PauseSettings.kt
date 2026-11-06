@@ -40,7 +40,8 @@ internal fun SaverRows(
         choices = options,
         selected = count,
         details = pauseSummaries(options.map { it.first }, settings.lookUpInBackground),
-        enabled = writes,
+        // Nothing is written automatically: the count does not apply.
+        applies = writes,
     ) { n -> update { it.copy(pauseAutoWriteAfter = n) } }
 }
 

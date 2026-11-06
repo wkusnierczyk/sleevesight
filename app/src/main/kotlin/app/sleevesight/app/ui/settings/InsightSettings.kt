@@ -72,7 +72,8 @@ internal fun InsightsSection(
             choices = WRITING_MODES.map { it.mode to stringResource(it.short) },
             selected = settings.writeAutomatically,
             details = WRITING_MODES.associate { it.mode to stringResource(it.detail) },
-            enabled = settings.writeInsights,
+            // With *Show insights* off nothing is written: the setting does not apply.
+            applies = settings.writeInsights,
         ) { mode ->
             if (chooseMode != null) {
                 chooseMode(mode)
