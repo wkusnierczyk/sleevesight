@@ -55,12 +55,12 @@ private fun rewrites(
 
 /**
  * The history line under an item's insight (#911), as the key insight's footer's first line says it
- * (`writtenBefore`): for the insight another AI service, model or effort wrote, shown in place of none
- * ([ItemShown.Shown.rewriteWith]), *As written previously.*, then that a rewrite of it stopped or failed
- * ([ItemShown.Shown.rewriteFailed]), then, while it can be tapped ([rewrites]), what *Rewrite
- * insight* would rewrite it with; for one a rewrite wrote, on a tap or by itself in its place (#972),
- * *Rewritten with …*; else none: an item's own
- * insight, kept or just written, says nothing of its history.
+ * (`writtenBefore`): for the insight another AI service, model or effort wrote, shown in place of
+ * none ([ItemShown.Shown.rewriteWith]), *As written previously.*, then that a rewrite of it stopped
+ * or failed ([ItemShown.Shown.rewriteFailed]), then, while it can be tapped ([rewrites]), what
+ * *Rewrite insight* would rewrite it with; for one a rewrite wrote, on a tap or by itself in its
+ * place (#972), *Rewritten with …*; else none: an item's own insight, kept or just written, says
+ * nothing of its history.
  */
 @Composable
 private fun itemHistory(

@@ -320,7 +320,8 @@ internal class PipelineHostLaterPlayTest : PipelineHostFixture() {
     }
 
     // An automatic write in place of the insight [model] wrote, kept, failed or was [stopped] (#972): that
-    // insight is shown again, as the card paid for, saying why, as after a tap's rewrite.
+    // insight is shown again, as the card paid for, saying why, as after a tap's rewrite, with a write
+    // still offered: *Rewrite insight* for the model chosen now once stopped, *Retry* once failed.
     private fun assertKeptAfterFailure(
         model: String,
         stopped: Boolean,
@@ -329,7 +330,15 @@ internal class PipelineHostLaterPlayTest : PipelineHostFixture() {
         val shown = view.track?.insight as InsightState.Written
         assertEquals(model, shown.writtenBy?.model)
         assertTrue(view.cardShown)
-        if (stopped) assertEquals(PipelineHost.STOPPED, view.rewriteFailed) else assertTrue(view.rewriteFailed != null)
+        assertTrue("a write offered", view.writeKey != null)
+        if (stopped) {
+            assertEquals(PipelineHost.STOPPED, view.rewriteFailed)
+            assertTrue(view.rewrite)
+            assertEquals(setOf(RewritePart.MODEL), view.rewriteWith?.parts)
+            assertEquals(settings.value.model, view.rewriteWith?.with?.model)
+        } else {
+            assertTrue(view.rewriteFailed != null)
+        }
     }
 
     // The insight [model] wrote, kept, is shown with *Rewrite insight* offered to write it with the model

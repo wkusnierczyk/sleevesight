@@ -598,7 +598,7 @@ class AppItemNotes(
 
     // An item asked for: what it is, of which track, from what evidence, how it was asked, and under
     // which settings its evidence was gathered.
-    // [replaces] is what wrote the insight the write rewrites (#911, #972), null for none; set once the
+    // [replaces] is what wrote the insight the write rewrites (#911, #972), null for none; given once the
     // write misses its own insight, when its row had not looked for the earlier one ([unlooked]).
     @Suppress("LongParameterList") // What was asked, and what it rewrites.
     private class Asked(
@@ -608,9 +608,13 @@ class AppItemNotes(
         val ask: ItemAsk,
         val work: CoroutineContext,
         val settings: Settings,
-        var replaces: WrittenBy? = null,
+        val replaces: WrittenBy? = null,
     ) {
         fun with(found: ItemEvidence) = Asked(item, track, found, ask, work, settings, replaces)
+
+        // As asked, rewriting what [by] wrote, unless it rewrites something already.
+        fun replacing(by: WrittenBy?) =
+            if (by == null || replaces != null) this else Asked(item, track, evidence, ask, work, settings, by)
     }
 
     // What wrote the insight a write under [key] on [track] rewrites (#911): the earlier insight's, in
@@ -636,14 +640,27 @@ class AppItemNotes(
         asked: Asked,
     ): WrittenBy? {
         if (asked.ask == ItemAsk.TAP || key in others.value || !ownless(key, asked.track)) return null
-        val other =
-            insights
-                .keptByOther(key, asked.evidence)
-                ?.takeIf { !expired(it.writtenAt) }
-                ?.let { Entry(it.state, it.writtenAt ?: clock.now(), asked.evidence) }
-        publish(asked.work) { others.update { it.withOther(key, other) } }
+        val other = lookOther(insights, key, asked.evidence, asked.work)
         val earlier = earlierFor(key, shown.value, other, settings.value?.historyLifetime)
         return (earlier?.state as? InsightState.Written)?.writtenBy
+    }
+
+    // The insight another service, model or effort wrote for what [key]'s is about, from [evidence],
+    // kept and within *Keep history for* (#911), kept in [others] for [key] as the row shows it, while
+    // no *Clear history* came since [work] started; null for none.
+    private suspend fun lookOther(
+        insights: ItemInsights,
+        key: CardKey,
+        evidence: ItemEvidence,
+        work: CoroutineContext,
+    ): Entry? {
+        val other =
+            insights
+                .keptByOther(key, evidence)
+                ?.takeIf { !expired(it.writtenAt) }
+                ?.let { Entry(it.state, it.writtenAt ?: clock.now(), evidence) }
+        publish(work) { others.update { it.withOther(key, other) } }
+        return other
     }
 
     // Whether [key] has no insight of its own on [track]: none, a rewrite that ended without one, or a
@@ -768,7 +785,15 @@ class AppItemNotes(
         val question = Question(track, AiQuestion.Item(item), work)
         val counted: (QuestionCost) -> Unit = { more -> question.count(more, key) }
         try {
-            val next = toWrite(insights, key, asked, job, counted)
+            val next =
+                if (showKept(insights, key, asked)) {
+                    Next(key, asked, AiOutcome.ANSWERED)
+                } else {
+                    // Its own missed: what it rewrites, when its row had not looked yet (#972), which
+                    // [show] and every key the write moves to then see.
+                    asked = asked.replacing(unlooked(insights, key, asked))
+                    toWrite(insights, key, asked, job, counted)
+                }
             key = next.key
             asked = next.asked
             finish(insights, first, next, Writing(question, counted, show))
@@ -892,10 +917,10 @@ class AppItemNotes(
         }
     }
 
-    // What [key]'s write goes on with: [key] and [asked], or, after an album's or an artist's web
-    // search (#885, #912, [searched]), the key and evidence it then has, the claim moved to it;
-    // [Next.ended] when nothing is left to write, as its question ended: answered, kept under [key]
-    // and shown, stopped, the next key's written by another already, failed, the artist's search
+    // What [key]'s write goes on with, its own insight not kept ([write] serves that first): [key] and
+    // [asked], or, after an album's or an artist's web search (#885, #912, [searched]), the key and
+    // evidence it then has, the claim moved to it; [Next.ended] when nothing is left to write, as its
+    // question ended: stopped, the next key's written by another already, failed, the artist's search
     // failing with nothing else to write from, or written while the AI service searched
     // ([searchingWrite]).
     private suspend fun toWrite(
@@ -905,9 +930,6 @@ class AppItemNotes(
         job: Job?,
         counted: (QuestionCost) -> Unit,
     ): Next {
-        if (showKept(insights, key, asked)) return Next(key, asked, AiOutcome.ANSWERED)
-        // Its own missed: what it rewrites, when its row had not looked yet (#972).
-        if (asked.replaces == null) asked.replaces = unlooked(insights, key, asked)
         // The key an album's or the artist's *Once* search's lines give, claimed beside [key] before
         // they are kept (#935).
         var reserved: CardKey? = null
@@ -1208,12 +1230,7 @@ class AppItemNotes(
             val kept =
                 insights.kept(key, evidence)?.takeIf { !expired(it.writtenAt) && !beforeSearch(it.state, evidence) }
             if (kept == null) {
-                val other =
-                    insights
-                        .keptByOther(key, evidence)
-                        ?.takeIf { !expired(it.writtenAt) }
-                        ?.let { Entry(it.state, it.writtenAt ?: clock.now(), evidence) }
-                publish(work) { others.update { it.withOther(key, other) } }
+                lookOther(insights, key, evidence, work)
                 return@tracked
             }
             val entry = Entry(kept.state, kept.writtenAt ?: clock.now(), evidence)

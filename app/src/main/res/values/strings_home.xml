@@ -401,10 +401,11 @@
          in its place (#854), never both. -->
     <string name="home_written_before">As written previously.</string>
     <!-- In place of "As written previously." (#854), for an insight written by Rewrite insight, or
-         by an automatic write in place of another model's (#972), on the play it was rewritten and every later one while it is the one kept; what follows goes
-         after it as after "As written previously.". %1$s: what the rewrite used that the insight it
-         replaced did not, its parts (home_rewrite_part_*, home_rewrite_model_effort) joined with
-         ", " and a last home_rewrite_and. -->
+         by an automatic write in place of another model's (#972), on the play it was rewritten and
+         every later one while it is the one kept; what follows goes after it as after "As written
+         previously.". %1$s: what the rewrite used that the insight it replaced did not, its parts
+         (home_rewrite_part_*, home_rewrite_model_effort) joined with ", " and a last
+         home_rewrite_and. -->
     <string name="home_rewritten_with">Rewritten with %1$s.</string>
     <!-- After "As written previously." or home_rewritten_with, with Rewrite insight offered (#615,
          #625, #671, #854). %1$s: what a rewrite would use now that the insight shown did not, built as

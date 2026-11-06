@@ -24,15 +24,16 @@ import app.sleevesight.app.ui.report.ReportAction
 import app.sleevesight.core.pipeline.InsightState
 
 /**
- * *Key insights*: the insight in each of its states (architecture, *Errors and empty
- * states*). Model prose is plain text: its only interactive parts are the citation chips, built
- * from the evidence ids the app assigned, each scrolling to its line. Write, Rewrite and Stop go
- * to the pipeline as taps; whether a tap writes or stops is the pipeline's to say. Under a written
- * insight, its footer ([Footer], #671), each part on its own line: *As written previously.* with what
- * follows from it, for an insight written earlier, or *Rewritten with …* for one *Rewrite insight*
- * wrote (#854), or an automatic write in place of another model's (#972); [GroundingLine], a note, or with
- * [groundingDetails] (*Show grounding details*, #437) the grounding check's counts in full; and
- * *Report a problem* (#390), which hands the insight and its track to [InsightActions.onReport].
+ * *Key insights*: the insight in each of its states (architecture, *Errors and empty states*).
+ * Model prose is plain text: its only interactive parts are the citation chips, built from the
+ * evidence ids the app assigned, each scrolling to its line. Write, Rewrite and Stop go to the
+ * pipeline as taps; whether a tap writes or stops is the pipeline's to say. Under a written
+ * insight, its footer ([Footer], #671), each part on its own line: *As written previously.* with
+ * what follows from it, for an insight written earlier, or *Rewritten with …* for one *Rewrite
+ * insight* wrote (#854), or an automatic write in place of another model's (#972); [GroundingLine],
+ * a note, or with [groundingDetails] (*Show grounding details*, #437) the grounding check's counts
+ * in full; and *Report a problem* (#390), which hands the insight and its track to
+ * [InsightActions.onReport].
  *
  * No container of its own (#609): the heading and the text sit on Home's background with the rest.
  * At the card's end, in every state, the split button (#615, [WriteSplitButton]): the card's action
