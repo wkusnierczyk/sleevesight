@@ -110,7 +110,11 @@ data class Singing(
  * order. A genre found on several levels is on each of their rows. [aiListed] are the genres of
  * the AI's genre list for the track (#762, [withAi]), in its order, by [aiModel], none before it.
  * [credited] are the track's credited artists, in credit order, those with no tags too, and
- * [singing] what MusicBrainz says of whether it is sung (#996), against which Instrumental is weighed.
+ * [singing] what MusicBrainz says of whether it is sung (#996), against which Instrumental is weighed;
+ * [given], the labels each source gave, before they were combined and capped ([combineGenres]), so
+ * that lyrics found later combine them again without Instrumental ([withLyricsFound]); and
+ * [instrumentalArtists], the artists whose own tags, from any source, include Instrumental, read
+ * before the rows' cap ([signOfVocals]'s featured artist).
  */
 data class TrackGenres(
     val rows: List<GenreRow> = emptyList(),
@@ -119,6 +123,8 @@ data class TrackGenres(
     val aiSources: List<String> = emptyList(),
     val credited: List<String> = emptyList(),
     val singing: Singing = Singing.NONE,
+    val given: Map<LabelSource, List<GenreLabel>> = emptyMap(),
+    val instrumentalArtists: Set<String> = emptySet(),
 ) {
     /** Whether no row has a label. */
     val isEmpty: Boolean get() = rows.isEmpty()
@@ -218,7 +224,8 @@ data class TrackGenres(
     }
 
     // A featured artist that leaves [row]'s Instrumental weak (#996): with several credited, the first
-    // other than an artist's row's own whose tags do not include it; none on the track's row.
+    // other than an artist's row's own whose tags do not include it, before the rows' cap
+    // ([instrumentalArtists], and the rows' own for genres built without it); none on the track's row.
     private fun featured(row: GenreRow): String? {
         if (row.level == GenreLevel.TRACK || credited.size < 2) return null
         val tagged =
@@ -226,7 +233,7 @@ data class TrackGenres(
                 .filter { artist ->
                     artist.level == GenreLevel.ARTIST && artist.labels.any { it.genre.identity == INSTRUMENTAL }
                 }.mapNotNull { it.artist }
-                .toSet()
+                .toSet() + instrumentalArtists
         return credited.firstOrNull { it != row.artist && it !in tagged }
     }
 
@@ -236,17 +243,26 @@ data class TrackGenres(
      * with no label dropped too; unchanged with the recording marked instrumental.
      */
     fun withLyricsFound(): TrackGenres {
-        if (singing.instrumental) return this
+        if (singing.instrumental || singing.lyrics) return this
         val sung = singing.copy(lyrics = true)
-        return copy(
-            rows = withoutInstrumental(rows),
-            aiListed =
-                aiListed.filter {
-                    it.identity != INSTRUMENTAL
-                },
-            singing = sung,
-        )
+        // Combined again without it, so a label it kept out of a full row takes its room; genres built
+        // without the sources' labels (previews, tests) lose it from their rows alone.
+        val combined =
+            if (given.isEmpty()) {
+                copy(rows = withoutInstrumental(rows), aiListed = emptyList(), aiModel = null, aiSources = emptyList())
+            } else {
+                combineGenres(given, credited, sung)
+            }
+        val found = combined.copy(singing = sung)
+        return aiModel?.let { found.withAi(aiListed, it, aiSources) } ?: found
     }
+
+    /**
+     * Of [genres], an AI's genre list for the track (#762, #773), those any row may show: all but
+     * Instrumental when lyrics were found ([Singing.dropsInstrumental], #996).
+     */
+    fun aiShown(genres: List<GenreLabel>): List<GenreLabel> =
+        if (singing.dropsInstrumental) genres.filter { it.identity != INSTRUMENTAL } else genres
 
     /**
      * These genres with the AI's genre list for the track (#762, `GenreLists`): [genres], listed by
@@ -264,7 +280,7 @@ data class TrackGenres(
         sources: List<String> = emptyList(),
     ): TrackGenres {
         // Lyrics found (#996): Instrumental is on no row, the AI's track row included.
-        val listing = if (singing.dropsInstrumental) genres.filter { it.identity != INSTRUMENTAL } else genres
+        val listing = aiShown(genres)
         if (genres.isEmpty()) return this
         val listed = listing.map { it.identity }.toSet()
         val have = all.map { it.genre.identity }.toSet()
@@ -291,6 +307,8 @@ data class TrackGenres(
             aiSources = sources,
             credited = credited,
             singing = singing,
+            given = given,
+            instrumentalArtists = instrumentalArtists,
         )
     }
 
@@ -371,5 +389,16 @@ fun combineGenres(
                 )
             combined.takeIf { it.isNotEmpty() }?.let { GenreRow(level, artist, it) }
         }
-    return TrackGenres(rows, credited = artists, singing = singing)
+    val instrumental =
+        labels
+            .filter { it.level == GenreLevel.ARTIST && it.identity == TrackGenres.INSTRUMENTAL }
+            .mapNotNull { it.artist }
+            .toSet()
+    return TrackGenres(
+        rows,
+        credited = artists,
+        singing = singing,
+        given = bySource,
+        instrumentalArtists = instrumental,
+    )
 }

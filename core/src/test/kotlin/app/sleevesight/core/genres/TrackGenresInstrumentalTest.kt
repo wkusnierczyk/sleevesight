@@ -155,6 +155,54 @@ class TrackGenresInstrumentalTest {
     }
 
     @Test
+    fun `a featured artist's Instrumental beyond their row's cap still counts as theirs`() {
+        // B's Last.fm tags fill B's row; MusicBrainz's Instrumental for B is left out of it.
+        val lastFm = artist(ARTIST, "instrumental") + artist(FEATURED, "jazz", "blues", "soul", "funk", "rock")
+        val both = genres(lastFm, artist(FEATURED, "instrumental"), artists = listOf(ARTIST, FEATURED))
+        assertTrue(
+            both.rows
+                .single { it.artist == FEATURED }
+                .labels
+                .none { it.genre.identity == "instrumental" },
+        )
+        assertEquals(false, both.shown()["instrumental"])
+        assertNull(both.weakEvidence("instrumental"))
+    }
+
+    @Test
+    fun `lyrics Find the lyrics found combine the labels again, so another takes Instrumental's room`() {
+        // The track's row full with Instrumental; MusicBrainz's Rock and the AI's Blues left out.
+        val full = genres(track("instrumental", "jazz", "soul", "funk", "country"), recording("rock" to 2))
+        val listed = vocabulary.labelsFor(listOf("blues"), level = GenreLevel.TRACK)
+        val shown = full.withAi(listed, "Model")
+        assertEquals(
+            5,
+            shown.rows
+                .single()
+                .labels.size,
+        )
+        val found = shown.withLyricsFound()
+        assertEquals(
+            listOf("jazz", "soul", "funk", "country", "rock"),
+            found.rows
+                .single()
+                .labels
+                .map { it.genre.identity },
+        )
+        // With the AI's list after the sources' labels, as before; applied twice, the same.
+        assertEquals(found, found.withLyricsFound())
+        val room = genres(track("instrumental", "jazz"), singing = Singing()).withAi(listed, "Model").withLyricsFound()
+        assertEquals(
+            listOf("jazz", "blues"),
+            room.rows
+                .single()
+                .labels
+                .map { it.genre.identity },
+        )
+        assertEquals("Model", room.aiModel)
+    }
+
+    @Test
     fun `the recording marked instrumental leaves Instrumental as tagged, whatever else is said`() {
         val marked =
             Singing(instrumental = true, lyrics = true, languages = listOf("jpn"), vocalists = listOf("Someone"))

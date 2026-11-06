@@ -46,7 +46,8 @@ internal fun GenresSearch(
     if (track != null && !track.genres.isEmpty || shown.looking.isNotEmpty()) return
     AiSearchBlock(search, SearchKind.GENRES) { answer, model ->
         if (answer is SearchAnswer.Genres && track != null) {
-            AiGenres(track, answer.genres, notes.notes, search, model)
+            // With lyrics found, never Instrumental (#996), as in the rows.
+            AiGenres(track, track.genres.aiShown(answer.genres), notes.notes, search, model)
             // From the web (#801): the pages that give them, under the chips.
             for (source in answer.sources) FromSite(source)
         }

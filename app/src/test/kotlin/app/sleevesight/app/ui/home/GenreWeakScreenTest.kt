@@ -45,11 +45,8 @@ import app.sleevesight.core.genres.LabelSource
 import app.sleevesight.core.genres.Singing
 import app.sleevesight.core.genres.TrackGenres
 import app.sleevesight.core.genres.TrackLabel
-import app.sleevesight.core.lyrics.LyricsLink
-import app.sleevesight.core.lyrics.LyricsSite
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.settings.Settings
-import app.sleevesight.core.synthesis.SearchAnswer
 import app.sleevesight.core.synthesis.SearchFacts
 import app.sleevesight.core.synthesis.SearchKind
 import kotlinx.coroutines.flow.Flow
@@ -392,32 +389,6 @@ class GenreWeakScreenTest {
                 tap(INSTRUMENTAL)
                 assertEquals(line, weakLine())
             }
-        }
-    }
-
-    @Test
-    fun lyricsFindTheLyricsFoundDropInstrumentalFromTheChips() {
-        val found =
-            AiSearch.Answered(
-                SearchAnswer.Lyrics(listOf(LyricsLink(LyricsSite.GENIUS, "https://genius.com/A-song-lyrics"))),
-                "Model",
-            )
-        val lyrics =
-            object : AiSearchFeed by feed {
-                override fun search(
-                    track: TrackState,
-                    kind: SearchKind,
-                    genre: String?,
-                ): Flow<AiSearch> = flowOf(if (kind == SearchKind.LYRICS) found else AiSearch.None)
-            }
-        val genres = TrackGenres(listOf(artist("A", "instrumental", "funk")), credited = listOf("A"))
-        show(genres, content = { GenresContent(it, Settings(), search = PanelSearch(lyrics, it, it.nowPlaying)) }) {
-            assertEquals(0, count(INSTRUMENTAL))
-            assertEquals(1, count(GENRE_PREFIX + "artist:A:funk"))
-        }
-        // Without the answer, the chip is there.
-        show(genres, content = { GenresContent(it, Settings(), search = PanelSearch(feed, it, it.nowPlaying)) }) {
-            assertEquals(1, count(INSTRUMENTAL))
         }
     }
 
