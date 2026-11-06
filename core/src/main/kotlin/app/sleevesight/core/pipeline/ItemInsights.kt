@@ -850,8 +850,11 @@ class ItemInsights(
         return ItemEvidence(set, matching(set.lines, own))
     }
 
-    // [line] as a draft, to be numbered again.
-    private fun draftOf(line: EvidenceLine): EvidenceDraft = line.draft()
+    // [line] as a draft, to be numbered again; without a language read from its script (#949), which
+    // the item's own set reads again from its own lines, so it is the same on each of the item's
+    // tracks, whether or not the track was searched in its language.
+    private fun draftOf(line: EvidenceLine): EvidenceDraft =
+        line.draft().let { if (it.scripted) it.copy(language = null, scripted = false) else it }
 
     // Each of [lines]' ids whose line is in [own], the track's evidence, by its id there.
     private fun matching(

@@ -92,7 +92,12 @@ class ScriptedLanguageTest {
         assertEquals("ko", set(web("이 노래는 영화의 주제가입니다")).lines.single().language)
         // A Korean line quoting a Japanese title is Korean, and Japanese mostly in Han is Japanese.
         assertEquals("ko", set(web("이 노래는 일본 영화 君の名は의 주제가를 한국어로 부른 곡이다.")).lines.single().language)
-        assertEquals("ja", set(web("映画君の名主題歌")).lines.single().language)
+        assertEquals("ja", set(web("映画の主題歌として作られた")).lines.single().language)
+        // A Chinese line quoting a Japanese title, or a name with the katakana middle dot, stays Han.
+        val quoting = web("《残酷な天使のテーゼ》是新世纪福音战士的主题曲")
+        assertNull(set(quoting).lines.single().language)
+        assertEquals("zh", set(quoting, known = "zh").lines.single().language)
+        assertEquals("zh", set(web("约翰・列侬是披头士成员"), known = "zh").lines.single().language)
     }
 
     @Test
