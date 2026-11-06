@@ -1,0 +1,6 @@
+What's new in 0.4.0:
+- Song, Artist and Album carry the AI mark and write their insight when opened, in every mode.
+- Artist and album insights use what the search in the track's language found, alike on each track.
+- A source line in another script, such as Hindi, is marked with its language and translated.
+- A sentence naming a Vol. or Part is no longer dimmed as unbacked.
+- With Look up in the background off, genre definitions wait until the app is on screen.
