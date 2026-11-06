@@ -90,6 +90,18 @@ class ScriptedLanguageTest {
         // Kana is Japanese, whatever Han stands beside it; Hangul Korean.
         assertEquals("ja", set(web("この曲は映画の主題歌です")).lines.single().language)
         assertEquals("ko", set(web("이 노래는 영화의 주제가입니다")).lines.single().language)
+        // A Korean line quoting a Japanese title is Korean, and Japanese mostly in Han is Japanese.
+        assertEquals("ko", set(web("이 노래는 일본 영화 君の名は의 주제가를 한국어로 부른 곡이다.")).lines.single().language)
+        assertEquals("ja", set(web("映画君の名主題歌")).lines.single().language)
+    }
+
+    @Test
+    fun `lines added to a set are read with its track's language, though the search found none`() {
+        val base = set(web("A page."), web("Another page."), known = "ru")
+        val more = base.with(listOf(web("Это песня")), JvmHasher)
+        assertEquals(listOf(null, null, "ru"), more.lines.map { it.language })
+        val fewer = base.without(JvmHasher) { it.id == "S2" }.with(listOf(web("Это песня")), JvmHasher)
+        assertEquals(listOf(null, "ru"), fewer.lines.map { it.language })
     }
 
     @Test

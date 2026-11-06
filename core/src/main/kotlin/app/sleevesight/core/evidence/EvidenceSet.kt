@@ -30,6 +30,8 @@ import app.sleevesight.core.model.SourceId
 class EvidenceSet private constructor(
     val lines: List<EvidenceLine>,
     val fingerprint: String,
+    // The track's language its lines' scripts were read with ([of]), for the lines [with] adds.
+    private val known: Language?,
 ) {
     private val byId: Map<String, EvidenceLine> = lines.associateBy { it.id }
 
@@ -73,21 +75,21 @@ class EvidenceSet private constructor(
         leaveOut: (EvidenceLine) -> Boolean,
     ): EvidenceSet {
         val kept = lines.filterNot(leaveOut)
-        return if (kept.size == lines.size) this else EvidenceSet(kept, fingerprint(kept, hasher))
+        return if (kept.size == lines.size) this else EvidenceSet(kept, fingerprint(kept, hasher), known)
     }
 
     /**
      * This set with [more] lines after its own, fingerprinted with [hasher]: each line of this set
      * keeps its id, and a source's new lines are numbered after its own (#801: the pages a genre's
      * reason found on the web are `S6`, `S7` after the track's `S1` to `S5`). This set itself with
-     * none.
+     * none. The lines added are read by their script with this set's track language (#949).
      */
     fun with(
         more: List<EvidenceDraft>,
         hasher: Hasher,
     ): EvidenceSet {
         if (more.isEmpty()) return this
-        return of(lines.map { it.draft() } + more, hasher)
+        return of(lines.map { it.draft() } + more, hasher, known)
     }
 
     override fun equals(other: Any?): Boolean = other is EvidenceSet && lines == other.lines
@@ -130,7 +132,7 @@ class EvidenceSet private constructor(
                             )
                         }
                     }
-            return EvidenceSet(lines, fingerprint(lines, hasher))
+            return EvidenceSet(lines, fingerprint(lines, hasher), language)
         }
 
         /**

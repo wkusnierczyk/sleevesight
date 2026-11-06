@@ -71,22 +71,22 @@ enum class Script(
         }
 
         /**
-         * The script [text] is mostly written in, other than Latin (#949): [of]'s, when its letters
-         * outnumber the Latin ones, so a line in English that quotes a title in Devanagari is not
-         * taken for Hindi; null otherwise. Kana and Han count together, as Japanese mixes them, and
-         * Hangul and Han as Korean does.
+         * The script most of [text]'s letters are in, other than Latin (#949), when they outnumber
+         * the Latin ones, so a line in English that quotes a title in Devanagari is not taken for
+         * Hindi; null otherwise. Kana and Han count together, as Japanese mixes them, and Hangul and
+         * Han as Korean does, so a Korean line quoting a Japanese title is Korean; on a tie, kana or
+         * Hangul before Han alone.
          */
         fun mostly(text: String): Script? {
-            val script = of(text) ?: return null
-            var own = 0
-            var latin = 0
+            val counts = mutableMapOf<Script, Int>()
             forEachCodePoint(text) { point ->
-                when {
-                    point in LATIN -> latin++
-                    point in script || (script.mixesHan && point in HAN) -> own++
-                }
+                entries.firstOrNull { point in it }?.let { counts[it] = (counts[it] ?: 0) + 1 }
             }
-            return script.takeIf { own > latin }
+            val han = counts[HAN] ?: 0
+            val scores =
+                counts.filterKeys { it != LATIN }.mapValues { (script, n) -> if (script.mixesHan) n + han else n }
+            val best = scores.maxWithOrNull(compareBy<Map.Entry<Script, Int>> { it.value }.thenBy { it.key.mixesHan })
+            return best?.takeIf { it.value > (counts[LATIN] ?: 0) }?.key
         }
 
         private fun forEachCodePoint(
