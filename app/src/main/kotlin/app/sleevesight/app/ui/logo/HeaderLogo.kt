@@ -12,6 +12,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
@@ -22,6 +23,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.rememberGraphicsLayer
@@ -55,9 +57,9 @@ import kotlin.math.floor
  * Its record has the header's larger label ([HEADER_LABEL], #848), and turns while [spin] says so
  * (music playing, *Spin the logo while music plays* on), getting up to speed and coming to rest as a
  * turntable does ([recordMotion]); once the intro has ended, from where the intro landed it. The
- * record is drawn once, into a layer, in a box of its own just its size, and a step of the turn
- * draws that layer turned (#963): the words are not drawn again, nor the record, and the screen
- * redrawn is the record's square. In a
+ * record is drawn once, into a layer, in a box of its own just its size with a layer of its own,
+ * and a step of the turn redraws only that box's layer, drawing the record's turned (#963): the
+ * words are not drawn again, nor the record, and the screen redrawn is the record's square. In a
  * debug build the bug in its place never turns: while the record would, it crawls ([bugCrawl]),
  * every few seconds up out of [crawlSpace] (the header's box, in the root's pixels; the logo's own
  * box without one), and back in from its bottom to its place, drawn only inside that box.
@@ -117,10 +119,10 @@ internal fun HeaderLogo(
 /**
  * The header logo's record, in a box of the logo's size ([Modifier.matchParentSize]), placed as
  * the logo draws it, turned [motion]'s way, and drawn only once [shown] (#963). Its own box is just
- * its size, so a step redraws only its square: the record is drawn upright into a layer once
- * (again only for a new size, place or colours), and each step draws that layer turned about the
- * record's centre. The angle is read as it draws, not as a layer property, which would count as a
- * change of layout.
+ * its size, with a layer of its own, so a step redraws only that layer and only its square: the
+ * record is drawn upright into another layer once (again only for a new size, place or colours),
+ * and each step draws that one turned about the record's centre. The angle is read as it draws,
+ * not as a layer property, which would count as a change of layout.
  */
 @Composable
 private fun BoxScope.TurningRecord(
@@ -136,10 +138,15 @@ private fun BoxScope.TurningRecord(
             .matchParentSize()
             .layout { measurable, constraints ->
                 val box = RecordBox.of(linePlace(Size(constraints.maxWidth.toFloat(), constraints.maxHeight.toFloat())))
-                if (recordAt.value != box) recordAt.value = box
+                // Compared unobserved, so its own write asks for no second measure.
+                if (Snapshot.withoutReadObservation { recordAt.value } != box) recordAt.value = box
                 val placeable = measurable.measure(Constraints.fixed(box.width, box.height))
                 layout(constraints.maxWidth, constraints.maxHeight) { placeable.place(box.topLeft) }
-            }.drawWithCache {
+            }
+            // A layer of its own, whose properties never change: a step redraws this layer alone,
+            // not the nearest one above it (Home's whole screen), and no layout changes.
+            .graphicsLayer()
+            .drawWithCache {
                 val box = recordAt.value
                 if (box != null && size.minDimension > 0f) {
                     record.record {
