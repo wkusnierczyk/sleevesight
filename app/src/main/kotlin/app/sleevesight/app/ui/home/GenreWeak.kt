@@ -76,7 +76,7 @@ internal fun WeakEvidenceNote(
             is WeakEvidence.Language ->
                 why.name?.let { stringResource(R.string.genre_weak_language, it, ALBUM_MARK) }
                     ?: stringResource(R.string.genre_weak_lyrics, ALBUM_MARK)
-            is WeakEvidence.Featured -> stringResource(R.string.genre_weak_featured, why.name, ALBUM_MARK)
+            is WeakEvidence.Featured -> stringResource(R.string.genre_weak_featured, why.name)
         }
     Text(
         withAlbum(line, genre.label),

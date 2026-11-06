@@ -365,22 +365,32 @@ class GenreWeakScreenTest {
 
     @Test
     fun instrumentalsLineNamesTheSignThatTheTrackIsSung() {
-        // Artist A tagged Instrumental and Funk; B credited too, with no tags.
+        // Artist A tagged Instrumental and Funk; B credited too, with no tags. The featured artist's
+        // line names no genre, so it has no italics.
         val tagged = listOf(artist("A", "instrumental", "funk"))
         val cases =
             listOf(
                 Singing(vocalists = listOf("Yurika Hanashima"), languages = listOf("jpn")) to
-                    "MusicBrainz credits Yurika Hanashima with vocals on this track, so it is likely not Instrumental.",
+                    (
+                        "MusicBrainz credits Yurika Hanashima with vocals on this track, " +
+                            "most likely it is not Instrumental." to listOf("Instrumental")
+                    ),
                 Singing(languages = listOf("jpn")) to
-                    "MusicBrainz lists this song’s lyrics as Japanese, so it is likely not Instrumental.",
+                    (
+                        "MusicBrainz lists this song’s lyrics as Japanese, so it is likely not Instrumental." to
+                            listOf("Instrumental")
+                    ),
                 Singing(languages = listOf("mul")) to
-                    "MusicBrainz lists lyrics for this song, so it is likely not Instrumental.",
-                Singing.NONE to "B is credited on this track, so it is likely not Instrumental.",
+                    (
+                        "MusicBrainz lists lyrics for this song, so it is likely not Instrumental." to
+                            listOf("Instrumental")
+                    ),
+                Singing.NONE to ("This track also credits B and may feature vocals." to emptyList()),
             )
         for ((singing, line) in cases) {
             show(TrackGenres(tagged, credited = listOf("A", "B"), singing = singing)) {
                 tap(INSTRUMENTAL)
-                assertEquals(line to listOf("Instrumental"), weakLine())
+                assertEquals(line, weakLine())
             }
         }
     }
