@@ -18,6 +18,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.isNotEnabled
 import androidx.compose.ui.test.isOn
+import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -499,9 +500,9 @@ class SettingsScreenTest {
             // On by default, after 5, with nothing written away while *Look up in the background* is off.
             compose.onNodeWithText(text(R.string.settings_pause_auto_write)).performScrollTo().assertIsOn()
             compose.onNodeWithText(pauseSummary(5, background = false)).performScrollTo().assertIsDisplayed()
-            compose.onNodeWithText(text(R.string.settings_pause_auto_write_after)).performScrollTo().performClick()
-            val ten = app.resources.getQuantityString(R.plurals.settings_track_changes_away, 10, 10)
-            compose.onNodeWithText(ten).performClick()
+            // *Stop after*, a button group of the counts (#947).
+            val ten = app.resources.getQuantityString(R.plurals.settings_changes, 10, 10)
+            compose.onNode(hasText(ten) and isSelectable()).performScrollTo().performClick()
             waitFor("a pause after 10 track changes stored") { current().pauseAutoWriteAfter == 10 }
             compose.onNodeWithText(pauseSummary(10, background = false)).performScrollTo().assertIsDisplayed()
 

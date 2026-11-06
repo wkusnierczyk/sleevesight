@@ -311,7 +311,11 @@ internal const val ROW_NOTE_TAG = "settings_row_note"
  * [ValueRow] opening a dialog instead (`design/design.md`, *Settings screen*). The summary folds
  * ([Description], #847); the line under the buttons does not. Not [enabled], none
  * can be chosen; a value in [disabled], that one; [below] comes under the line of what the value
- * does. A value in [spoken] is read by that in place of its label ([ChoiceButtonGroup]).
+ * does. A value in [spoken] is read by that in place of its label ([ChoiceButtonGroup]). A
+ * [summaryTable], given in place of [summary], is a description laid out as a table
+ * ([DescriptionTable], *Reactive*'s, #945). Not [enabled], the setting still applies but another
+ * one sets its value: only the buttons dim. Where it does not [apply][applies] while another
+ * setting is as it is, the whole row dims, its text too, and none can be chosen (#947).
  */
 @Suppress("LongParameterList") // What the row shows, each a value of its own, and what a tap does.
 @Composable
@@ -325,10 +329,13 @@ internal fun <T> ChoiceButtonsRow(
     disabled: Set<T> = emptySet(),
     below: (@Composable () -> Unit)? = null,
     spoken: Map<T, String> = emptyMap(),
+    summaryTable: DescriptionTable? = null,
+    applies: Boolean = true,
     onSelect: (T) -> Unit,
 ) {
     if (!shownInSearch(title)) return
-    val color = MaterialTheme.colorScheme.onSurface
+    val alpha = if (applies) 1f else DISABLED_ALPHA
+    val color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha)
     Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 8.dp)) {
         Text(
             searchMarked(title),
@@ -338,6 +345,7 @@ internal fun <T> ChoiceButtonsRow(
         )
         // Its tap reaches no further than the buttons' room above them, which is theirs (#874).
         summary?.let { Description(title, it, color = color, reach = ABOVE_GROUP) }
+        summaryTable?.let { Description(title, it.text, color = color, reach = ABOVE_GROUP, table = it) }
         ChoiceButtonGroup(
             choices,
             selected,
@@ -345,11 +353,11 @@ internal fun <T> ChoiceButtonsRow(
             Modifier.padding(top = ABOVE_GROUP),
             name = title,
             details = details,
-            enabled = enabled,
+            enabled = enabled && applies,
             disabled = disabled,
             spoken = spoken,
         )
-        ChoiceDetails(choices, selected, details)
+        ChoiceDetails(choices, selected, details, alpha)
         below?.invoke()
     }
 }
@@ -368,9 +376,10 @@ private fun <T> ChoiceDetails(
     choices: List<Pair<T, String>>,
     selected: T,
     details: Map<T, String>,
+    alpha: Float,
 ) {
     val style = MaterialTheme.typography.bodySmall
-    val color = MaterialTheme.colorScheme.onSurfaceVariant
+    val color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha)
     details[selected]?.let {
         Text(it, style = style, color = color, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
     }
@@ -390,8 +399,8 @@ private fun <T> ChoiceDetails(
 
 /**
  * One option in a dialog's list; the whole row selects it. [detail], when given, goes under the
- * label, smaller and muted: a model's id under its name, or what a choice does (#546, #550). The row
- * is one selectable node, so a screen reader reads the detail with its label.
+ * label, smaller and muted: a model's id under its name. The row is one selectable node, so a
+ * screen reader reads the detail with its label.
  */
 @Composable
 internal fun RadioRow(
