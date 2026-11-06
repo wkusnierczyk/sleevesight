@@ -47,6 +47,7 @@ data class Options(
     val keysFile: File,
     val repeat: Int = 1,
     val artistFactsOncePerSession: Boolean = true,
+    val netLog: Boolean = false,
 ) {
     companion object {
         val USAGE: String =
@@ -87,6 +88,9 @@ data class Options(
                                   repeat artist facts" off does (default: once a pass);
                                   every insight is written afresh, none read from the cache. For
                                   live: the recorded replies answer the default prompts
+              --net-log           print each network request to standard error, a line per attempt:
+                                  the request, redacted, its status or error, its time and its
+                                  attempt (live and record; replay sends none)
               --record <list>     sources to record: musicbrainz, wikidata, wikipedia, and the AI
                                   services anthropic, google (default: musicbrainz,wikidata,wikipedia)
               --keys <file>       the keys file (default: ~/.config/sleevesight/keys.env); its names
@@ -158,6 +162,7 @@ data class Options(
                 keysFile = values["--keys"]?.let(::File) ?: Keys.DEFAULT_FILE,
                 repeat = repeat,
                 artistFactsOncePerSession = "--artist-facts-every-track" !in switches,
+                netLog = "--net-log" in switches,
             )
         }
 
@@ -225,7 +230,7 @@ data class Options(
             return values to switches
         }
 
-        private val SWITCHES = setOf("--no-web", "--no-insights", "--artist-facts-every-track")
+        private val SWITCHES = setOf("--no-web", "--no-insights", "--artist-facts-every-track", "--net-log")
 
         private val VALUED =
             setOf(

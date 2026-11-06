@@ -6,21 +6,55 @@ import app.sleevesight.core.ai.BreakoffCause
 import app.sleevesight.core.ai.Usage
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.ProviderId
+import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.synthesis.GroundingCounts
 import app.sleevesight.core.synthesis.SearchKind
 import app.sleevesight.core.synthesis.SelfRevision
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
 /**
  * The diagnostics lines of MusicBrainz's resolution name why it could not be asked (#191); the
  * grounding line, whether a self-correction was taken out (#597); a failed call's, how its reply broke
  * off (#665); a reply that revised itself, its sign (#798); an *Ask AI* question, what it asked, how,
- * and how it ended, and a kept answer served, when it was written (#851).
+ * and how it ended, and a kept answer served, when it was written (#851); the gather's deadline, what
+ * it cut (#983).
  */
 class EventLineTest {
+    @Test
+    fun `the gather's deadline's line names what it cut and after how long (#983)`() {
+        assertEquals(
+            "deadline   a|song: resolution, MB, W cut after 20000 ms",
+            EventLine.of(
+                PipelineEvent.GatherCut(
+                    "a|song",
+                    listOf(SourceId.MUSICBRAINZ, SourceId.WIKIPEDIA),
+                    20.seconds,
+                    resolution = true,
+                ),
+            ),
+        )
+        assertEquals(
+            "deadline   a|song: W, S in hi cut after 1500 ms",
+            EventLine.of(
+                PipelineEvent.GatherCut(
+                    "a|song",
+                    listOf(SourceId.WIKIPEDIA, SourceId.WEB),
+                    1500.milliseconds,
+                    language = "hi",
+                ),
+            ),
+        )
+        assertEquals(
+            "deadline   a|song: language search cut after 0 ms",
+            EventLine.of(PipelineEvent.GatherCut("a|song", emptyList(), Duration.ZERO)),
+        )
+    }
+
     @Test
     fun `an Ask AI question's lines say what it asked, how, by which model, and how it ended (#851)`() {
         val definition = AiQuestion.Search(SearchKind.DEFINITION, "singer-songwriter")
