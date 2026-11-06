@@ -46,9 +46,9 @@
   // Each splash's svg in the words' units: its viewBox's left, top, width and height. C's is a square of
   // 256 centred on the record, with room for the words' sweep (119.5 from the record's centre at the
   // farthest); D's is the tile, 144 across, with room for its corners as it turns; F's is a square of
-  // 188 centred on the dot, with room for the record's path; G's and H's are the header's box, the
-  // mark's ink, since nothing in them leaves it; I's is the mark's ink widened to the right, to 183.79,
-  // past where "Sleeve" starts (183.26 at the farthest), so it is centred on the record horizontally,
+  // 188 centred on the dot, with room for the record's path; G's and H's are the stacked mark's ink,
+  // since nothing in them leaves it before the flight; I's is the mark's ink widened to the right, to
+  // 183.79, past where "Sleeve" starts (183.26 at the farthest), so it is centred on the record horizontally,
   // and the record stays still midway across the window; R1's and R2's are the brand sheet's reveals.
   var boxes = {c: [-54.9, -113.84, 256, 256], d: [-72, -72, 144, 144], f: [-94, -94, 188, 188],
                g: [-37.59, -37.26, 128.27, 69], h: [-37.59, -37.26, 128.27, 69],
@@ -56,10 +56,11 @@
                r1: [-56.4, -45.76, 166, 86], r2: [-119.5, -82.76, 292, 160]};
   function start() {
     // The splash is centred in the window, at most 300/144 px to the unit (D's tile 300 px across), less
-    // where the window is too small for it. The header's logo is the words' ink box, from -37.59, -37.26
-    // and 69 tall, so the splash lands where the header's logo sits in it.
+    // where the window is too small for it. The header's logo is the one-line logo's ink box, from
+    // -37.59, -37.26 (where the stacked mark's starts too) and 35.16 tall, so the splash lands where
+    // the header's "Sleeve" sits in it, and "sight" and the record move onto the line (`sl-line`).
     v = root.getAttribute('data-logo');
-    var b = boxes[v], m = mark.getBoundingClientRect(), u = m.height / 69,
+    var b = boxes[v], m = mark.getBoundingClientRect(), u = m.height / 35.16,
         k = v === 'd' ? Math.min(300, innerWidth * .62, innerHeight * .45) / 144
                       : Math.min(300 / 144, innerWidth * .95 / b[2], innerHeight * .9 / b[3]),
         w = b[2] * k, h = b[3] * k, x = (innerWidth - w) / 2, y = (innerHeight - h) / 2;
