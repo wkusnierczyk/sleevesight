@@ -60,9 +60,10 @@ import org.robolectric.RobolectricTestRunner
  * The song's, the artist's and the album's buttons as AI buttons (#948): each carries the **AI** mark
  * while *Show insights* is on, and a tap that opens one writes what it opens, in every mode, *On
  * demand* included, once, where nothing is written; a written, stopped or failed one opens as it is.
- * A panel left open at a new track offers *Write insight* under *On demand*, and says why an automatic
- * mode held it back. A panel closed while it writes lets the call go on, its row showing the turning
- * record meanwhile; under *Separate pages* the button shows its page's write the same way.
+ * A panel left open at a new track with nothing written offers *Write insight* with the plain line,
+ * in every mode and whatever held it back. A panel closed while it writes lets the call go on, its
+ * row showing the turning record meanwhile; under *Separate pages* the button shows its page's
+ * write the same way.
  */
 @RunWith(RobolectricTestRunner::class)
 class ItemTapWritesScreenTest {
