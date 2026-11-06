@@ -50,6 +50,18 @@ class LastFmLabelsTest {
         }
 
     @Test
+    fun `Last fm's tags for genres the wider list added give labels, as Last fm spells them`() =
+        runTest {
+            // #1011: Last.fm's listeners' spellings of genres the vocabulary had dropped.
+            album = Lookup.Found(listOf("Psychedelic Rock", "70s", "synthpop", "Rock n Roll", "World Music"))
+            val labels = LastFmLabels(tags, vocabulary).albumLabels("Gordon Lightfoot", "Sundown")
+            assertEquals(
+                listOf("Psychedelic Rock", "Synthpop", "Rock 'n' Roll", "World Music"),
+                labels.map { it.label },
+            )
+        }
+
+    @Test
     fun `an album's tags are kept, in the artist cache when there is one, a failure is not`() =
         runTest {
             album = Lookup.Failed("Offline")
