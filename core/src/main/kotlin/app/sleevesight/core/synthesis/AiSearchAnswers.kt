@@ -162,8 +162,12 @@ class AiSearchAnswers(
     internal val accentFolder: AccentFolder,
     private val clock: Clock = Clock.System,
 ) {
-    /** The names of the app's fixed genre list, which a search of [SearchKind.GENRES] chooses from. */
-    val genreNames: Collection<String> get() = vocabulary.tags
+    /**
+     * The names of the app's fixed genre list, which a search of [SearchKind.GENRES] chooses from:
+     * one per genre ([GenreVocabulary.identity]), its first tag, since the reply is read through the
+     * vocabulary, which folds the other spellings anyway (#1011: `rock n roll`, `synthpop`).
+     */
+    val genreNames: Collection<String> get() = vocabulary.tags.distinctBy { vocabulary.identity(it) }
 
     /**
      * The answer to [kind] in [reply], checked; [artists] are the track's credited artists, which

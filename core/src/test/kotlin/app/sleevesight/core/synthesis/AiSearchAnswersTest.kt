@@ -8,6 +8,7 @@ import app.sleevesight.core.platform.JvmResourceReader
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import kotlin.time.Clock
 import kotlin.time.Instant
 
@@ -22,7 +23,19 @@ class AiSearchAnswersTest {
         object : Clock {
             override fun now(): Instant = today
         }
-    private val answers = AiSearchAnswers(GenreVocabulary.load(JvmResourceReader), JvmAccentFolder, clock)
+    private val vocabulary = GenreVocabulary.load(JvmResourceReader)
+    private val answers = AiSearchAnswers(vocabulary, JvmAccentFolder, clock)
+
+    @Test
+    fun theGenresSearchIsGivenOneNamePerGenre() {
+        // #1011: the reply is read through the vocabulary, so a genre's other spellings add only length.
+        val names = answers.genreNames
+        assertEquals(names.size, names.map { vocabulary.identity(it) }.distinct().size)
+        val genres = vocabulary.tags.map { vocabulary.identity(it) }.toSet()
+        assertEquals(genres, names.map { vocabulary.identity(it) }.toSet())
+        assertTrue("anatolian rock" in names && "turkish psychedelia" !in names)
+        assertTrue("rock and roll" in names && "rock n roll" !in names && "synthpop" !in names)
+    }
 
     private fun dates(reply: String): SearchAnswer.Dates? =
         (answers.read(SearchKind.DATES, reply) as? SearchReading.Found)?.answer as? SearchAnswer.Dates
