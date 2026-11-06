@@ -10,9 +10,10 @@ Usage, from the repository root:
 
 Prints, for the time between the two: the phone's battery level and whether it was plugged in;
 the battery use the system attributes to the app; the app's CPU time; the bytes it sent and
-received, by network; and, from the second snapshot, its memory (PSS) and its size on disk. With
---tracks, the CPU time and the bytes are also given per track. A figure that cannot be read from a
-snapshot is printed as "not found", never as zero.
+received, by network; and, from the second snapshot, its memory (PSS) and its installed size (the
+data and caches are read by hand, from the phone's app info screen). With --tracks, the CPU time
+and the bytes are also given per track. A figure that cannot be read from a snapshot is printed as
+"not found", never as zero.
 """
 
 import argparse
@@ -92,23 +93,6 @@ def net_bytes(snapshot, uid):
     return totals
 
 
-def disk(snapshot, package):
-    """Install, data and cache sizes as diskstats last counted them (it counts about once a day)."""
-    text = read(snapshot, "diskstats")
-    names = re.search(r"^Package Names: \[(.*)\]", text, re.M)
-    if not names:
-        return None
-    index = [n.strip().strip('"') for n in names.group(1).split(",")].index(package) \
-        if package in names.group(1) else None
-    if index is None:
-        return None
-    sizes = {}
-    for key in ("App Sizes", "App Data Sizes", "Cache Sizes"):
-        row = re.search(rf"^{key}: \[(.*)\]", text, re.M)
-        sizes[key] = int(row.group(1).split(",")[index]) if row else None
-    return sizes
-
-
 def human(n):
     for unit in ("B", "KB", "MB", "GB"):
         if abs(n) < 1024 or unit == "GB":
@@ -151,10 +135,16 @@ def main(argv):
         print("app CPU time: not found (the app is not running)")
     else:
         restarted = [pid for pid in c1 if pid not in c0]
+        gone = [pid for pid in c0 if pid not in c1]
         used = sum(c1[pid] - c0.get(pid, 0) for pid in c1)
-        line = f"app CPU time: {used:.1f} s"
-        if tracks:
-            line += f", {used / tracks:.2f} s per track"
+        if gone:
+            # A process that ended took its CPU time with it: what is left is a lower bound only.
+            line = (f"app CPU time: incomplete, at least {used:.1f} s (process(es) {', '.join(gone)}"
+                    " ended in between, their time since the first snapshot not counted)")
+        else:
+            line = f"app CPU time: {used:.1f} s"
+            if tracks:
+                line += f", {used / tracks:.2f} s per track"
         if restarted:
             line += f"  (process(es) {', '.join(restarted)} started in between: counted from 0)"
         print(line)
@@ -177,10 +167,6 @@ def main(argv):
 
     apk = sum(int(line.split()[0]) for line in read(after, "apk").splitlines() if line.strip())
     print(f"installed APKs: {human(apk)}")
-    sizes = disk(after, package)
-    print("diskstats (its last daily count): "
-          + (", ".join(f"{k} {human(v)}" for k, v in sizes.items() if v is not None)
-             if sizes else "not found"))
 
 
 if __name__ == "__main__":

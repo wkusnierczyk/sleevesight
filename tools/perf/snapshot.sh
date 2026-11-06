@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Takes one snapshot of what Sleevesight costs the phone (#626; the page *How it performs*,
 # `docs/performance/`): its memory, CPU time, network bytes, battery use, wakeups, alarms and jobs,
-# its size on disk, and the phone's battery, as the raw `dumpsys`, `ps` and `stat` output, one file
+# its installed size, and the phone's battery, as the raw `dumpsys`, `ps` and `stat` output, one file
 # each, in a new directory. Two snapshots, before and after a listening session, are compared by
 # `report.py`. Everything here only reads: nothing is installed, started, stopped, reset or changed
 # on the phone, apart from `dumpsys netstats --poll`, which makes the system count the bytes so far
@@ -57,9 +57,9 @@ adb shell dumpsys netstats --poll >/dev/null
 take netstats dumpsys netstats detail
 take alarm dumpsys alarm
 take jobs dumpsys jobscheduler "$package"
-take diskstats dumpsys diskstats
-# The installed APKs' sizes; the data and caches are in diskstats (as of its last daily count) and
-# on the phone's own app info screen.
+# The installed APKs' sizes. The data and caches are read by hand from the phone's app info screen:
+# `dumpsys diskstats` would give them too, but it writes a small file to time the disk, so it is
+# left out.
 # shellcheck disable=SC2016 # expanded by the phone's shell, not here
 adb shell 'for f in $(pm path '"$package"' | sed s/^package://); do stat -c "%s %n" "$f"; done' \
   >"$out/apk.txt"

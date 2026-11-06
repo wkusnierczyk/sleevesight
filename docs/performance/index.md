@@ -55,7 +55,7 @@ The battery figure for Sleevesight is Android's own estimate of the share used b
 | On screen, 10 tracks, insights on | 12 min | 19.2 mAh | |
 | On screen, 10 tracks, insights and *AI web search* on | 11 min | 20.6 mAh | |
 
-On screen, the cost is about 110 to 130 mAh an hour, 2 to 3 % of the battery, nearly all of it the screen's; writing insights and searching the web add little to it. Off screen, Sleevesight waits for the next track and does little else, so on a long drive it is the screen that matters, not the app.
+On screen, the cost is about 90 to 130 mAh an hour, 2 to 3 % of the battery, nearly all of it the screen's; writing insights and searching the web add little to it. Off screen, Sleevesight waits for the next track and does little else, so on a long drive it is the screen that matters, not the app.
 
 ## Data
 

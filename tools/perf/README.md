@@ -4,7 +4,7 @@ The method behind the docs page *How it performs* (`docs/performance/`, #626), k
 numbers can be taken again for a later release and compared.
 
 - `snapshot.sh <dir> [<label>]` reads the app's memory, CPU time, network bytes, battery use,
-  wakeups, alarms and jobs, its size, and the phone's battery, into a new directory. It changes
+  wakeups, alarms and jobs, its installed size, and the phone's battery, into a new directory. It changes
   nothing on the phone.
 - `report.py <before> <after> [--tracks N]` compares two snapshots.
 - `startup.sh --yes [<runs>]` times cold starts (`am start -W`). It force-stops and opens the app,
