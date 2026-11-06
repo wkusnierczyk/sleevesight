@@ -112,11 +112,11 @@ class ArtistWebInsightsTest {
         private val answer: (String) -> WebSearchOutcome,
     ) : WebSearcher {
         val queries = mutableListOf<String>()
-        val subjects = mutableListOf<List<String>>()
+        val subjects = mutableListOf<List<String>?>()
 
         override suspend fun search(
             query: String,
-            subject: List<String>,
+            subject: List<String>?,
         ): WebSearchOutcome {
             queries += query
             subjects += subject
@@ -342,7 +342,7 @@ class ArtistWebInsightsTest {
             val (first, result) = writtenSearching(provider, engine, track()) { counted += it }
             assertEquals(listOf("Shashwat Sachdev composer"), engine.queries)
             // No names (#929's review): the page is judged by the artist's name as it came, then cleaned.
-            assertEquals(listOf(emptyList<String>()), engine.subjects)
+            assertEquals(listOf<List<String>?>(emptyList()), engine.subjects)
             assertEquals(QuestionCost(searches = 1, calls = 2), counted.fold(QuestionCost(), QuestionCost::plus))
             // The page that names the artist, numbered S1, given to the model and kept; not the other.
             val tool =

@@ -38,9 +38,9 @@ interface WebQuestion {
     /**
      * The names the question is about, which every search's pages are cleaned of page boilerplate
      * for ([WebSearcher.search]); none, the default, cleans only what is boilerplate whatever the
-     * subject.
+     * subject; null leaves the pages as they came.
      */
-    val subjectNames: List<String> get() = emptyList()
+    val subjectNames: List<String>? get() = emptyList()
 
     /** *Once*'s prompt, with the [pages] its search found. */
     fun once(pages: List<WebPage>): String

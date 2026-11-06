@@ -44,7 +44,7 @@ class ExaPageSearch(
 
     override suspend fun search(
         query: String,
-        subject: List<String>,
+        subject: List<String>?,
     ): WebSearchOutcome =
         when (val fetched = net.fetch(request(query), ExaWebSearch::parse)) {
             is NetResult.Failure -> WebSearchOutcome.Failed
@@ -62,16 +62,17 @@ class ExaPageSearch(
             body = NetBody(ExaWebSearch.JSON.encodeToString(ExaPageRequest.of(query)), "application/json"),
         )
 
-    // Each result with a highlight not all boilerplate for [subject], once per address, in Exa's order.
+    // Each result with a highlight not all boilerplate for [subject] (null: not cleaned), once per
+    // address, in Exa's order.
     private fun pagesOf(
         response: ExaSearchResponse,
-        subject: List<String>,
+        subject: List<String>?,
     ): List<WebPage> {
         val seen = mutableSetOf<String>()
         return response.results.mapNotNull { result ->
             val text =
                 ExaWebSearch.snippetOf(result, PAGE_CHARACTERS) {
-                    WebBoilerplate.clean(it, result.url, subject, filter::fold)
+                    subject?.let { names -> WebBoilerplate.clean(it, result.url, names, filter::fold) } ?: it
                 }
             WebPage(result.url, result.title, text).takeIf {
                 text.isNotEmpty() && !isMusicBrainzPage(result.url) && seen.add(result.url)

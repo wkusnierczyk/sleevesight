@@ -48,11 +48,11 @@ class WebQuestionsTest {
         private val answer: (String) -> WebSearchOutcome,
     ) : WebSearcher {
         val queries = mutableListOf<String>()
-        val subjects = mutableListOf<List<String>>()
+        val subjects = mutableListOf<List<String>?>()
 
         override suspend fun search(
             query: String,
-            subject: List<String>,
+            subject: List<String>?,
         ): WebSearchOutcome {
             queries += query
             subjects += subject
@@ -142,12 +142,12 @@ class WebQuestionsTest {
                     if (request.toolsAllowed) toolTurn("grace", "grace 1994") else FakeProvider.done("{}")
                 }
             WebQuestions(AiAccess(loop, Secret("k")), web).ask(named, AiWebSearch.UP_TO, 2, base)
-            assertEquals(List(3) { listOf("Grace", "Jeff Buckley") }, web.subjects)
+            assertEquals(List<List<String>?>(3) { listOf("Grace", "Jeff Buckley") }, web.subjects)
             // A question that names none cleans only what is boilerplate whatever the subject.
             val plain = Searches { WebSearchOutcome.Found(listOf(page)) }
             WebQuestions(AiAccess(FakeProvider { FakeProvider.done("{}") }, Secret("k")), plain)
                 .ask(question, AiWebSearch.ONCE, 2, base)
-            assertEquals(listOf(emptyList<String>()), plain.subjects)
+            assertEquals(listOf<List<String>?>(emptyList()), plain.subjects)
         }
 
     @Test
@@ -348,7 +348,7 @@ class WebQuestionsTest {
 
                     override suspend fun search(
                         query: String,
-                        subject: List<String>,
+                        subject: List<String>?,
                     ): WebSearchOutcome {
                         searched++
                         held.await()

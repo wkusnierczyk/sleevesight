@@ -29,14 +29,14 @@ class ExaPageSearchTest {
     // A search of [body] for [subject], with the test key.
     private suspend fun search(
         body: String,
-        subject: List<String> = sundown,
+        subject: List<String>? = sundown,
     ): WebSearchOutcome =
         ExaPageSearch(ReplayNetClient.ok(body), Secret("exa-key"), JvmAccentFolder).search("q", subject)
 
     // The pages found in [body] for [subject].
     private suspend fun pagesIn(
         body: String,
-        subject: List<String> = sundown,
+        subject: List<String>? = sundown,
     ): List<WebPage> = assertIs<WebSearchOutcome.Found>(search(body, subject)).pages
 
     // A response of one page at [url] with [highlights].
@@ -152,6 +152,14 @@ class ExaPageSearchTest {
             val title = "Gordon Lightfoot – Sundown Lyrics | Genius Lyrics"
             assertEquals(emptyList(), pagesIn(one(genius, title)))
             assertEquals(listOf(genius), pagesIn(one(genius, title), subject = emptyList()).map { it.url })
+        }
+
+    @Test
+    fun `with null for names, a page is kept as it came, as the lyrics pages are`() =
+        runTest {
+            val genius = "https://genius.com/Gordon-lightfoot-sundown-lyrics"
+            assertEquals(emptyList(), pagesIn(one(genius, "Genius Lyrics"), subject = emptyList()))
+            assertEquals(listOf("Genius Lyrics"), pagesIn(one(genius, "Genius Lyrics"), subject = null).map { it.text })
         }
 
     @Test

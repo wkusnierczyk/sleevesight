@@ -48,11 +48,12 @@ const val MUSICBRAINZ_HOST: String = "musicbrainz.org"
  * which the app builds (*Once*) or the model writes (*Up to 3 times*), about [subject]: the names the
  * question is about (the track's title, its album and its artists; a genre's name), which a part of a
  * page's passage must say more than to be kept, the rest page boilerplate (#929, as the web search
- * source's lines, #905). Exa's is `ExaPageSearch`, in `:sources`, on the user's key.
+ * source's lines, #905); null for pages kept as they came, not cleaned. Exa's is `ExaPageSearch`,
+ * in `:sources`, on the user's key.
  */
 fun interface WebSearcher {
     suspend fun search(
         query: String,
-        subject: List<String>,
+        subject: List<String>?,
     ): WebSearchOutcome
 }

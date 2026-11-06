@@ -78,10 +78,10 @@ class AiSearchesWebTest {
         }
 
     @Test
-    fun aSearchCleansItsPagesForTheTracksNamesButTheLyricsPagesForNone() =
+    fun aSearchCleansItsPagesForTheTracksNamesButLeavesTheLyricsPagesAsTheyCame() =
         runTest {
-            // #929: a lyrics page whose passage is only its title must stay, its address the answer.
-            val subjects = mutableListOf<List<String>>()
+            // #929: a lyrics page whose passage is only its title or its site's words stays, its address the answer.
+            val subjects = mutableListOf<List<String>?>()
             val made =
                 AiSearches(AiAccess(provider, Secret("k")), cache, JvmHasher, answers, web = { _, subject ->
                     subjects += subject
@@ -91,7 +91,7 @@ class AiSearchesWebTest {
                 val key = checkNotNull(made.key(track, kind, settings))
                 made.search(key, kind, track, facts, { _, _ -> }, asking = AiSearches.Asking(AiWebSearch.ONCE))
             }
-            assertEquals(listOf(facts.names, emptyList()), subjects)
+            assertEquals(listOf(facts.names, null), subjects)
         }
 
     @Test

@@ -162,7 +162,7 @@ class AppArtistWebNotesTest {
 
         override suspend fun search(
             query: String,
-            subject: List<String>,
+            subject: List<String>?,
         ): WebSearchOutcome {
             searches++
             return if (failing) WebSearchOutcome.Failed else WebSearchOutcome.Found(listOf(PAGE))
