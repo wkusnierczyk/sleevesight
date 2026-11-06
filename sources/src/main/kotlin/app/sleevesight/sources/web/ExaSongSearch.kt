@@ -13,6 +13,7 @@ import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.SongWebQuery
 import app.sleevesight.core.sources.WebPage
 import app.sleevesight.net.NetClient
+import app.sleevesight.net.NetRequest
 import app.sleevesight.net.NetResult
 import app.sleevesight.net.fetch
 import kotlin.coroutines.cancellation.CancellationException
@@ -76,31 +77,31 @@ class ExaSongSearch(
         return when {
             !filter.canCheck(native) && !filter.canCheck(song.track) -> Lookup.Found(emptyList())
             !mayPay() -> Lookup.Failed(NOT_PAID)
-            else -> searched(song, native, sent)
+            else -> {
+                val request = requestFor(song, native)
+                sent()
+                when (val fetched = net.fetch(request, ExaWebSearch::parse)) {
+                    is NetResult.Failure -> Lookup.Failed(UNREACHABLE)
+                    is NetResult.Success ->
+                        fetched.value?.let { Lookup.Found(linesOf(song, native, it)) } ?: Lookup.Failed(REFUSED)
+                }
+            }
         }
     }
 
-    // The one request, told to [sent], and what it found.
-    private suspend fun searched(
+    // The one request for [song], the body of it as [native] names the track.
+    private fun requestFor(
         song: SongWebQuery,
         native: NormalizedTrack,
-        sent: () -> Unit,
-    ): Lookup<List<EvidenceDraft>> {
-        val track = song.track
+    ): NetRequest {
         val language = song.language
         val body =
             if (language == null) {
-                ExaSearchRequest.ofSongReview(track.title, track.primary)
+                ExaSearchRequest.ofSongReview(song.track.title, song.track.primary)
             } else {
                 ExaSearchRequest.ofSongInLanguage(native.title, native.primary, language.song)
             }
-        val request = ExaWebSearch.request(body, key)
-        sent()
-        return when (val fetched = net.fetch(request, ExaWebSearch::parse)) {
-            is NetResult.Failure -> Lookup.Failed(UNREACHABLE)
-            is NetResult.Success ->
-                fetched.value?.let { Lookup.Found(linesOf(song, native, it)) } ?: Lookup.Failed(REFUSED)
-        }
+        return ExaWebSearch.request(body, key)
     }
 
     override suspend fun pageLines(song: SongWebQuery): (WebPage, Instant) -> EvidenceDraft? {
