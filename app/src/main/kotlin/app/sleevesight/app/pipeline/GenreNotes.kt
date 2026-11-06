@@ -472,7 +472,8 @@ class AppGenreNotes private constructor(
             ?.label ?: genre
     }
 
-    private fun reasonsOf(made: PipelineParts) = GenreReasons(made.ai, made.cache, made.hasher, clock, made.webSearch)
+    private fun reasonsOf(made: PipelineParts) =
+        GenreReasons(made.ai, made.cache, made.hasher, clock, made.webSearch, made.dateForm)
 
     private fun listsOf(made: PipelineParts) =
         GenreLists(made.ai, made.cache, made.hasher, vocabulary, clock, made.webSearch)

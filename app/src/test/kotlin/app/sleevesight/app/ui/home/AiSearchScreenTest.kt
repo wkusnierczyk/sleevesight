@@ -415,7 +415,7 @@ class AiSearchScreenTest {
                 listOf(
                     "This album was released in January 1974.",
                     "This track was first released on the single Sundown in November 1973.",
-                    "The song was originally recorded in 1972 by Someone, and released on the EP First.",
+                    "The song was originally recorded by Someone in 1972, and released on the EP First.",
                 )
             for (sentence in sentences) assertTrue(sentence, boundsOf(sentence).top >= rule.bottom)
             compose.onNodeWithTag(AI_SEARCH_BY_TAG).assertTextEquals("by Claude Haiku 5.5")

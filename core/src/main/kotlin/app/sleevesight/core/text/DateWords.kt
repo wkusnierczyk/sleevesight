@@ -56,16 +56,17 @@ sealed interface DateWhen {
 }
 
 /**
- * Dates in words, one form wherever the app writes one (#957): *Dates*' sentences, the evidence lines
- * the model reads (`EvidenceText.date`), and the form the prompts ask the model to write dates in
- * (`InsightPrompt.DATE_RULE`), each date at the precision it has ([DateWhen]), in a language given by
- * its BCP 47 tag. Portable, as `:core`'s code is (D2): [EnglishDateWords] writes the app's English
- * form with no platform's help, for the evidence lines and the prompts; `JvmDateWords` writes any
- * language with the platform's patterns, on the phone those the app passes from
- * `DateFormat.getBestDateTimePattern`. With the English patterns the two agree.
+ * Dates in words (#957): *Dates*' sentences, the evidence lines the model reads (`EvidenceText.date`),
+ * and the form the prompts ask the model to write dates in (`InsightPrompt.dateRule`), each date at
+ * the precision it has ([DateWhen]), in a language given by its BCP 47 tag. Portable, as `:core`'s
+ * code is (D2): [EnglishDateWords] writes the app's own form with no platform's help, for the
+ * evidence lines and wherever no phone gives a form (the CLI); `JvmDateWords` writes any language
+ * with the platform's patterns, on the phone those the app passes from
+ * `DateFormat.getBestDateTimePattern`, in the form the phone's settings give ([DateForm]). With the
+ * app's English patterns the two agree.
  */
 fun interface DateWords {
-    /** [date] in [language]'s form: "29 July 2014", "July 2014", "2014" in [TEXT_LANGUAGE]. */
+    /** [date] in [language]'s form: "29 July 2014", "July 2014", "2014" in [APP_LANGUAGE]. */
     fun format(
         date: DateWhen,
         language: String,
@@ -79,7 +80,7 @@ fun interface DateWords {
 
     /**
      * The date [EXAMPLE] in [language]'s form, at each precision, the day first: "17 October 2026",
-     * "October 2026", "2026" in English, the examples the prompts give (`InsightPrompt.DATE_RULE`).
+     * "October 2026", "2026" in the app's form, the examples the prompts give (`InsightPrompt.dateRule`).
      */
     fun examples(language: String): List<String> =
         listOf(
@@ -90,15 +91,38 @@ fun interface DateWords {
 
     companion object {
         /**
-         * The language the app writes its dates in while its text is English only: British English,
-         * whose form, "17 October 2026", *Dates* has always had, whatever the phone's own variety of
-         * English or its language. Not the phone's: the dates sit in English sentences. #290 replaces
-         * it with the text's language.
+         * The language of the app's own form of a date: British English, "17 October 2026", the form
+         * *Dates* had before it followed the phone. The evidence lines are always in it, whatever the
+         * phone (`EvidenceText.date`), and so are the dates where no phone gives a form ([DateForm.APP]).
          */
-        const val TEXT_LANGUAGE: String = "en-GB"
+        const val APP_LANGUAGE: String = "en-GB"
 
         /** The date the prompts' examples are of ([examples]). */
         val EXAMPLE: DateWhen.Day = DateWhen.Day(day = 17, month = 10, year = "2026")
+    }
+}
+
+/**
+ * The form the app writes dates in (#957): [words] in [language], on the phone the phone's own
+ * patterns in English as the phone's language and region give it (the app's `dateLocale`):
+ * "October 17, 2026" on a phone set to US English, "17 October 2026" on a British one. *Dates*'
+ * sentences and the examples the prompts give (`InsightPrompt.dateRule`) are in it; the evidence
+ * lines are not, so no card's key depends on the phone. While the text is English only the language
+ * is English; #290 brings the text's.
+ */
+class DateForm(
+    val words: DateWords,
+    val language: String,
+) {
+    /** [date] in this form ([DateWords.format]). */
+    fun format(date: DateWhen): String = words.format(date, language)
+
+    /** The prompts' examples in this form ([DateWords.examples]): "17 October 2026", "October 2026", "2026". */
+    val examples: List<String> get() = words.examples(language)
+
+    companion object {
+        /** The app's own form ([EnglishDateWords] in [DateWords.APP_LANGUAGE]), where no phone gives one. */
+        val APP: DateForm = DateForm(EnglishDateWords, DateWords.APP_LANGUAGE)
     }
 }
 

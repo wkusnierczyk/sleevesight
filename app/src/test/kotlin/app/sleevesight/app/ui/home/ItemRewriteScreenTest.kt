@@ -10,6 +10,7 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
@@ -40,6 +41,7 @@ import app.sleevesight.app.ui.home.HomeFixtures.written
 import app.sleevesight.app.ui.report.REPORT_TAG
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.pipeline.InsightItem
+import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.ItemEvidence
 import app.sleevesight.core.pipeline.RewritePart
 import app.sleevesight.core.pipeline.TrackState
@@ -59,7 +61,8 @@ import org.robolectric.RobolectricTestRunner
  * insight's: the insight kept, "As written previously." with what *Rewrite insight* would rewrite it
  * with, and *Rewrite insight*, read "Rewrite insight, uses AI"; a rewrite stopped or failed says so
  * after *As written previously.*; one a rewrite wrote says "Rewritten with …"; a model found
- * unavailable is said last, above a disabled *Write insight*.
+ * unavailable is said last, above a disabled *Write insight*, in place of why a rewrite or a write the
+ * service refused the model for failed (#969).
  */
 @RunWith(RobolectricTestRunner::class)
 class ItemRewriteScreenTest {
@@ -232,6 +235,53 @@ class ItemRewriteScreenTest {
                 )
             assertEquals(tops.sorted(), tops)
         }
+
+    // The words of a model the service refused, and the starts of the lines that give a failure's reason.
+    private fun assertNoRefusalSaid() {
+        val words =
+            listOf(R.string.home_failure_model_not_found, R.string.home_failure_model_refused).map(::text) +
+                app.getString(R.string.home_rewrite_failed, "").substringBefore(':') +
+                app.getString(R.string.home_item_failed, "").substringBefore(':')
+        for (said in words) compose.onAllNodesWithText(said, substring = true).assertCountEquals(0)
+    }
+
+    // The song's note that the model is unavailable: the last of the card's, under the key insight's.
+    private fun itemNote() =
+        compose
+            .onAllNodesWithTag(MODEL_UNAVAILABLE_TAG)
+            .fetchSemanticsNodes()
+            .maxBy { it.positionInRoot.y }
+
+    @Test
+    fun aRewriteTheServiceRefusedTheModelForIsSaidAsTheModelUnavailableNotWhy() {
+        for (reason in listOf("model_not_found", "model_refused")) {
+            show(earlierShown(reason).copy(canWrite = false), UnavailableModel(ProviderId.ANTHROPIC, OTHER)) {
+                // *As written previously.* alone; last, the model unavailable, above a disabled Write insight.
+                val history = compose.onNodeWithText(written).performScrollTo().assertTextEquals(written)
+                val report = compose.onNodeWithTag(REPORT_TAG)
+                val button = rewriteButton().assertIsNotEnabled().assertTextContains(text(R.string.home_write))
+                val tops =
+                    listOf(
+                        history.fetchSemanticsNode().positionInRoot.y,
+                        report.fetchSemanticsNode().positionInRoot.y,
+                        itemNote().positionInRoot.y,
+                        button.fetchSemanticsNode().positionInRoot.y,
+                    )
+                assertEquals(tops.sorted(), tops)
+                assertNoRefusalSaid()
+            }
+        }
+    }
+
+    @Test
+    fun aWriteTheServiceRefusedTheModelForIsSaidAsTheModelUnavailableInItsPlace() {
+        val failed = ItemShown.Shown(InsightState.Failed("model_not_found"), ItemEvidence(evidence, emptyMap()), OTHER)
+        show(failed.copy(canWrite = false), UnavailableModel(ProviderId.ANTHROPIC, OTHER)) {
+            assertEquals(2, compose.onAllNodesWithTag(MODEL_UNAVAILABLE_TAG).fetchSemanticsNodes().size)
+            compose.onNodeWithTag(ITEM_FAILED_TAG).assertDoesNotExist()
+            assertNoRefusalSaid()
+        }
+    }
 
     private companion object {
         const val FIRST = "model-first"

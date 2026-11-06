@@ -8,6 +8,9 @@ import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmHasher
+import app.sleevesight.core.text.APP_DATE_RULE
+import app.sleevesight.core.text.US_DATES
+import app.sleevesight.core.text.US_DATE_RULE
 import app.sleevesight.fixtures.Fixtures
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -198,14 +201,15 @@ class GenreReasonPromptTest {
     }
 
     @Test
-    fun `it asks for dates in the app's form, with the style (#957)`() {
+    fun `it asks for dates in the form given, with the style (#957)`() {
         for (allowModel in listOf(false, true)) {
-            val style =
-                GenreReasonPrompt
-                    .system(allowModel)
-                    .substringAfter("STYLE\n")
-                    .substringBefore(InsightPrompt.CONTRACT_HEADING)
-            assertTrue(InsightPrompt.DATE_RULE in style)
+            val style = { system: String ->
+                system.substringAfter("STYLE\n").substringBefore(InsightPrompt.CONTRACT_HEADING)
+            }
+            assertTrue(APP_DATE_RULE in style(GenreReasonPrompt.system(allowModel)))
+            val us = GenreReasonPrompt.system(allowModel, US_DATES)
+            assertTrue(US_DATE_RULE in style(us))
+            assertFalse(APP_DATE_RULE in us)
         }
     }
 

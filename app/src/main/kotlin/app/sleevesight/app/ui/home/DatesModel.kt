@@ -80,9 +80,9 @@ internal sealed interface DateSentence {
     ) : DateSentence
 
     /**
-     * "The song was originally recorded {when} by {artist}, and released on {album}.", on the
-     * single or EP [kind] names; with no [title] known, "The song was originally recorded {when} by
-     * {artist}.": a cover's original, recorded on [date].
+     * "The song was originally recorded by {artist} {when}, and released on {album}.", on the
+     * single or EP [kind] names; with no [title] known, "The song was originally recorded by {artist}
+     * {when}.": a cover's original, recorded on [date].
      */
     data class Original(
         val date: String,

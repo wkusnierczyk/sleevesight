@@ -7,8 +7,8 @@ import app.sleevesight.core.language.Languages
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.text.DateForm
 import app.sleevesight.core.text.DateWords
-import app.sleevesight.core.text.EnglishDateWords
 
 /**
  * The prompt for the home insight (`design/design.md`, *Appendix. Prompt contracts*, *Insight*),
@@ -50,6 +50,7 @@ import app.sleevesight.core.text.EnglishDateWords
  * Google's, and a warm cache would save a fraction of a cent a call (#399; the design's *No cached
  * prefix*).
  */
+@Suppress("TooManyFunctions") // The two messages, their blocks, and the rule on dates in the form given.
 object InsightPrompt {
     /**
      * The version of this prompt's template, part of the synthesis cache key: raised when the
@@ -112,15 +113,16 @@ object InsightPrompt {
      * part of every card's key, so a track that gains such lines is written anew anyway, and raising
      * the version would only pay again for every card kept without them.
      *
-     * Nor when the style asked for dates in the app's form ([DATE_RULE], #957): a card kept keeps its
-     * dates as written, and raising the version would pay again for every card kept only to change
-     * their form.
+     * Nor when the style asked for dates in the app's form ([dateRule], #957), or in the phone's: a
+     * card kept keeps its dates as written, and raising the version would pay again for every card
+     * kept only to change their form. The rule's form is no part of the card's key, so a card is read
+     * as written whatever form the phone now asks for.
      */
     const val VERSION: Int = 10
 
     /**
      * The system prompt: everything fixed for a listener, the same for every track, the built-in
-     * style with its rule on dates ([DATE_RULE]). With
+     * style with its rule on dates in [dates]' form ([dateRule]). With
      * [allowModel] (the *Model's own knowledge* switch), the model may add one sentence of its own,
      * cited `[AI]`. [userStyle] is the user's style for this card (D14), or null for the built-in
      * style alone.
@@ -128,6 +130,7 @@ object InsightPrompt {
     fun system(
         allowModel: Boolean,
         userStyle: String? = null,
+        dates: DateForm = DateForm.APP,
     ): String =
         buildString {
             appendLine(ROLE)
@@ -136,7 +139,7 @@ object InsightPrompt {
             appendLine()
             appendLine("STYLE")
             appendLine(BUILT_IN_STYLE)
-            appendLine(DATE_RULE)
+            appendLine(dateRule(dates))
             userStyle?.trim()?.takeIf { it.isNotEmpty() }?.let {
                 appendLine(USER_STYLE)
                 appendLine(it)
@@ -231,20 +234,20 @@ object InsightPrompt {
             "- Plain conversational English. No hype, no praise words."
 
     /**
-     * The rule on dates (#957): written in the app's form, as *Dates* and the evidence lines write
-     * them ([DateWords]), with the examples the formatter makes for the answer's language
-     * ([DateWords.examples]): "17 October 2026", "October 2026", "2026" in English
-     * ([EnglishDateWords]) until #290. Without it the model chose its own form ("October 17, 2026")
-     * beside *Dates*' "17 October 2026". With the style, a form a listener's style may change, in
-     * every prompt whose reply is prose that may hold a date: the insight's, the song's, the artist's
-     * and the album's ([ItemPrompt]), the genre reason's ([GenreReasonPrompt]) and a genre's
-     * definition ([AiSearchPrompt.rules]). The reply is shown as the model wrote it: no date in it is
-     * rewritten.
+     * The rule on dates (#957): written in [dates]' form, as *Dates* writes them ([DateForm]), with the
+     * examples it makes ([DateForm.examples]): on the phone, its own form in English, "October 17,
+     * 2026", "October 2026", "2026" on a phone set to US English; elsewhere the app's, "17 October
+     * 2026" ([DateForm.APP]). Without it the model chose its own form ("October 17, 2026") beside
+     * *Dates*' "17 October 2026". The evidence lines stay in the app's form whatever the phone
+     * ([DateWords.APP_LANGUAGE]): the model reads one form and is told the one to write. With the
+     * style, a form a listener's style may change, in every prompt whose reply is prose that may hold
+     * a date: the insight's, the song's, the artist's and the album's ([ItemPrompt]), the genre
+     * reason's ([GenreReasonPrompt]), a genre's definition ([AiSearchPrompt.rules]) and what the song
+     * is about ([ExplainPrompt]). The reply is shown as the model wrote it: no date in it is
+     * rewritten. No prompt's version, and no card's key, holds the form.
      */
-    val DATE_RULE: String =
-        EnglishDateWords.examples(DateWords.TEXT_LANGUAGE).let { (day, month, year) ->
-            "- Write dates in the form $day, $month or $year."
-        }
+    fun dateRule(dates: DateForm = DateForm.APP): String =
+        dates.examples.let { (day, month, year) -> "- Write dates in the form $day, $month or $year." }
 
     /** What introduces the user's style, after the built-in one ([system]). */
     const val USER_STYLE: String =

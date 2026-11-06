@@ -1357,6 +1357,7 @@ class AppItemNotes(
             made.modelUnavailable,
             made.artistWeb,
             made.webSearch,
+            made.dateForm,
         )
 
     // Whether an insight written at [writtenAt] is past *Keep history for* ([lifetime]; null, for ever).

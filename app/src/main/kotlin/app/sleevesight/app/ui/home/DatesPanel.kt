@@ -1,23 +1,23 @@
 package app.sleevesight.app.ui.home
 
-import android.text.format.DateFormat
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.logo.Busy
+import app.sleevesight.app.ui.phoneDateForm
 import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.app.ui.theme.linkedParts
 import app.sleevesight.core.model.SourceId
-import app.sleevesight.core.platform.JvmDateWords
 import app.sleevesight.core.synthesis.SearchAnswer
 import app.sleevesight.core.synthesis.SearchKind
 import app.sleevesight.core.text.DateWhen
-import app.sleevesight.core.text.DateWords
 
 // The *Dates* panel under the album (#724): each date known about the album, the track and the song,
 // said in full.
@@ -157,23 +157,21 @@ internal fun dateText(sentence: DateSentence): AnnotatedString =
 /**
  * [date] as precisely as it is known ([DateWhen]): "on 29 July 2014" (the day without a leading
  * zero), "in July 2014", "in 2014"; as given when it has no year, which [homeDates] never gives. The
- * date in the app's form ([PHONE_DATE_WORDS] in [DateWords.TEXT_LANGUAGE], #957), as the evidence
- * lines write it and the prompts ask the AI to; the words around it from the resources.
+ * date in English in the phone's form ([phoneDateForm], #957: "on July 29, 2014" on a phone set to US
+ * English), as the prompts ask the AI to write it, read again when the phone's language or region
+ * changes; the words around it from the resources.
  */
 @Composable
 internal fun whenText(date: String): String {
     val known = DateWhen.of(date) ?: return date
-    val words = PHONE_DATE_WORDS.format(known, DateWords.TEXT_LANGUAGE)
+    val phone = LocalConfiguration.current.locales[0]
+    val words = remember(phone) { phoneDateForm(phone) }.format(known)
     return when (known) {
         is DateWhen.Day -> stringResource(R.string.home_dates_on_day, words)
         is DateWhen.Month -> stringResource(R.string.home_dates_in_month, words)
         is DateWhen.Year -> stringResource(R.string.home_dates_in_year, words)
     }
 }
-
-/** Dates in words with the phone's own pattern for each locale and skeleton (#957). */
-internal val PHONE_DATE_WORDS: DateWords =
-    JvmDateWords { skeleton, locale -> DateFormat.getBestDateTimePattern(locale, skeleton) }
 
 /** The test tags of *Dates*' button and its panel (#724), the panel's heading and *Close* as [Panel] makes them. */
 const val DATES_CHIP_TAG: String = "dates-chip"

@@ -9,6 +9,7 @@ import app.sleevesight.core.resolution.NameMatcher
 import app.sleevesight.core.sources.WebPage
 import app.sleevesight.core.synthesis.InsightPrompt
 import app.sleevesight.core.synthesis.ItemPrompt
+import app.sleevesight.core.text.DateForm
 import kotlin.time.Instant
 
 /**
@@ -27,7 +28,7 @@ import kotlin.time.Instant
  * insight never lets it do (`ItemInsights.searchesItself`: a service with no tools makes the app's
  * own search, `ArtistWebLookup.search`); it is still answered, as the other questions are.
  */
-@Suppress("LongParameterList") // What it asks about, how names are read, a page's line, and the time.
+@Suppress("LongParameterList") // What it asks about, how names are read, a page's line, the time and the dates' form.
 internal class ArtistQuestion(
     private val subject: ItemPrompt.Subject,
     private val track: TrackState,
@@ -36,6 +37,8 @@ internal class ArtistQuestion(
     private val hasher: Hasher,
     private val at: Instant,
     private val line: (WebPage) -> String? = { it.text },
+    // The form the insight writes its dates in (`InsightPrompt.dateRule`).
+    private val dates: DateForm = DateForm.APP,
 ) : WebQuestion {
     // The lines of the pages numbered so far, in their order, by address.
     private val numbered = LinkedHashMap<String, EvidenceDraft>()
@@ -73,7 +76,7 @@ internal class ArtistQuestion(
 
     // The artist's prompt from [evidence].
     private fun prompt(evidence: EvidenceSet): String =
-        ItemPrompt.build(subject, track.nowPlaying, track.normalized, evidence, allowModel)
+        ItemPrompt.build(subject, track.nowPlaying, track.normalized, evidence, allowModel, dates)
 
     // Of [pages], the lines of those that name the artist and give one ([line]), at most [PAGES_PER_SEARCH].
     private fun about(pages: List<WebPage>): List<EvidenceDraft> =

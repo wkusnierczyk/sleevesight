@@ -1,6 +1,10 @@
 package app.sleevesight.core.synthesis
 
 import app.sleevesight.core.lyrics.LyricsSite
+import app.sleevesight.core.text.APP_DATE_RULE
+import app.sleevesight.core.text.DateForm
+import app.sleevesight.core.text.US_DATES
+import app.sleevesight.core.text.US_DATE_RULE
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -41,11 +45,25 @@ class AiSearchPromptTest {
     fun aDefinitionAndAnExplanationWriteDatesInTheAppsFormTheJsonAnswersAsIsoDates() {
         // A definition and what the song is about are prose shown as written (#957); the other
         // answers are JSON the app reads, their dates partial ISO dates it writes in its own form.
-        assertTrue(InsightPrompt.DATE_RULE in AiSearchPrompt.build(SearchKind.DEFINITION, SearchFacts.ofGenre("Blues")))
-        assertTrue(InsightPrompt.DATE_RULE in ExplainPrompt.system(limit = null))
-        assertTrue(InsightPrompt.DATE_RULE in ExplainPrompt.system(limit = 3))
+        val blues = SearchFacts.ofGenre("Blues")
+        assertTrue(APP_DATE_RULE in AiSearchPrompt.build(SearchKind.DEFINITION, blues))
+        assertTrue(APP_DATE_RULE in ExplainPrompt.system(limit = null))
+        assertTrue(APP_DATE_RULE in ExplainPrompt.system(limit = 3))
+        assertTrue(APP_DATE_RULE in AiSearchPrompt.build(SearchKind.EXPLAIN, facts))
+        // On a US phone, its form (#957), and only it.
+        for (prompt in listOf(
+            AiSearchPrompt.build(SearchKind.DEFINITION, blues, dates = US_DATES),
+            AiSearchPrompt.build(SearchKind.EXPLAIN, facts, dates = US_DATES),
+            ExplainPrompt.once(facts, emptyList(), US_DATES),
+            ExplainPrompt.agent(facts, emptyList(), 3, US_DATES),
+        )) {
+            assertTrue(US_DATE_RULE in prompt)
+            assertFalse(APP_DATE_RULE in prompt)
+        }
         for (kind in SearchKind.entries - SearchKind.DEFINITION - SearchKind.EXPLAIN) {
-            assertFalse(InsightPrompt.DATE_RULE in AiSearchPrompt.build(kind, facts), kind.key)
+            for (dates in listOf(DateForm.APP, US_DATES)) {
+                assertFalse("Write dates" in AiSearchPrompt.build(kind, facts, dates = dates), kind.key)
+            }
         }
     }
 
