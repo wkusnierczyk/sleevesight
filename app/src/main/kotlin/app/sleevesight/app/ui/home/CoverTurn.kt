@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
@@ -142,7 +143,13 @@ internal fun FlippingCover(
     turn: CoverTurn,
     front: @Composable () -> Unit,
 ) {
-    var flipped by rememberSaveable(turn.album) { mutableStateOf(false) }
+    // The album whose back shows, saved with it, so a back restored after another album has come
+    // (the process gone meanwhile) is not shown on it; null for the cover.
+    val album = turn.album.orEmpty()
+    var backOf by rememberSaveable { mutableStateOf<String?>(null) }
+    LaunchedEffect(album) { if (backOf != album) backOf = null }
+    val flipped = backOf == album
+    val toggle = { backOf = if (backOf == album) null else album }
     LaunchedEffect(flipped, turn.group) {
         if (flipped) turn.group?.let(turn.look)
     }
@@ -163,12 +170,12 @@ internal fun FlippingCover(
                 cameraDistance = CAMERA_DISTANCE * density
             }.clip(shape)
             // A tap, not a press that scrolls or swipes, and not one a button on the back takes.
-            .pointerInput(Unit) { detectTapGestures { flipped = !flipped } }
+            .pointerInput(album) { detectTapGestures { toggle() } }
             .semantics {
                 contentDescription = name
                 role = Role.Button
                 onClick(action) {
-                    flipped = !flipped
+                    toggle()
                     true
                 }
             },
@@ -225,8 +232,9 @@ private fun Why(content: @Composable () -> Unit) {
 
 /**
  * The discs of an album of several, a page each, swiped sideways, opening on the playing song's and
- * going to it when the song moves to another; each page's heading ("Disc 2", read "Disc 2 of 2")
- * fixed above its scrolling tracks; under them a dot per disc, which shows that disc.
+ * going to it when the song moves to another; each page's heading ("Disc 2", read "Disc 2 of 2"),
+ * by the disc's number in the release, fixed above its scrolling tracks; under them a dot per disc,
+ * which shows that disc.
  */
 @Composable
 private fun DiscPages(back: CoverBack.Found) {
@@ -242,9 +250,10 @@ private fun DiscPages(back: CoverBack.Found) {
     Column(Modifier.fillMaxSize()) {
         HorizontalPager(pager, Modifier.weight(1f).fillMaxWidth()) { page ->
             Column(Modifier.fillMaxSize()) {
-                val of = stringResource(R.string.home_tracklist_disc_of, page + 1, count)
+                val disc = back.discs[page].position
+                val of = stringResource(R.string.home_tracklist_disc_of, disc, back.media)
                 Text(
-                    stringResource(R.string.home_tracklist_disc, page + 1),
+                    stringResource(R.string.home_tracklist_disc, disc),
                     style = MaterialTheme.typography.labelLarge,
                     color = colors.onSurfaceVariant,
                     modifier =
@@ -263,7 +272,7 @@ private fun DiscPages(back: CoverBack.Found) {
         Row(Modifier.fillMaxWidth().padding(bottom = 4.dp), horizontalArrangement = Arrangement.Center) {
             repeat(count) { page ->
                 val current = page == pager.currentPage
-                val name = stringResource(R.string.home_tracklist_disc, page + 1)
+                val name = stringResource(R.string.home_tracklist_disc, back.discs[page].position)
                 Box(
                     Modifier
                         .size(DOT_TARGET)
@@ -282,8 +291,8 @@ private fun DiscPages(back: CoverBack.Found) {
 }
 
 /**
- * A disc's [tracks], a list that scrolls, opening with the [playing] one in view, two tracks above
- * it, and brought into view when the song moves to another of them.
+ * A disc's [tracks], a list that scrolls, opening with the [playing] one in view, and brought into
+ * view when the song moves to another of them: the whole row, with up to two tracks above it as fit.
  */
 @Composable
 private fun DiscTracks(
@@ -293,17 +302,24 @@ private fun DiscTracks(
 ) {
     val list = rememberLazyListState(initialFirstVisibleItemIndex = ((playing ?: 0) - LEAD).coerceAtLeast(0))
     LaunchedEffect(playing) {
-        if (playing != null) {
-            val info = list.layoutInfo
-            val shown =
-                info.visibleItemsInfo.any {
-                    it.index == playing && it.offset >= 0 && it.offset + it.size <= info.viewportEndOffset
-                }
-            if (!shown) list.scrollToItem((playing - LEAD).coerceAtLeast(0))
+        if (playing != null && !list.wholly(playing)) {
+            // Fewer tracks above it until the row fits (each scroll measures the list again).
+            for (lead in LEAD downTo 0) {
+                list.scrollToItem((playing - lead).coerceAtLeast(0))
+                if (list.wholly(playing)) break
+            }
         }
     }
     LazyColumn(modifier.testTag(TRACKLIST_TAG), state = list, contentPadding = PaddingValues(vertical = 6.dp)) {
         itemsIndexed(tracks) { i, track -> TrackRow(track, i == playing) }
+    }
+}
+
+// Whether the row [index] is laid out wholly inside the list's viewport.
+private fun LazyListState.wholly(index: Int): Boolean {
+    val info = layoutInfo
+    return info.visibleItemsInfo.any {
+        it.index == index && it.offset >= info.viewportStartOffset && it.offset + it.size <= info.viewportEndOffset
     }
 }
 

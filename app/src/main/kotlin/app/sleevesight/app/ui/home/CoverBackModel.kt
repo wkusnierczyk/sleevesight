@@ -36,15 +36,23 @@ internal sealed interface CoverBack {
      */
     data object NotFound : CoverBack
 
-    /** The album's [discs], each with its tracks, and the track [playing] among them, when found. */
+    /**
+     * The album's [discs], each with its tracks, and the track [playing] among them, when found; of
+     * [media] in the release, those with no track left out.
+     */
     data class Found(
         val discs: List<BackDisc>,
         val playing: TrackAt?,
+        val media: Int = discs.size,
     ) : CoverBack
 }
 
-/** A disc of the album, one with tracks: its [tracks] in order. */
+/**
+ * A disc of the album, one with tracks: its [position] in the release, as MusicBrainz numbers its
+ * media (a disc with no track left out keeps the others' numbers), and its [tracks] in order.
+ */
 internal data class BackDisc(
+    val position: Int,
     val tracks: List<MbTrack>,
 )
 
@@ -122,8 +130,9 @@ private fun tracklistBack(
             val discs =
                 state.tracklist.media
                     .filter { it.tracks.isNotEmpty() }
-                    .map { BackDisc(it.tracks) }
-            if (discs.isEmpty()) CoverBack.NotFound else CoverBack.Found(discs, playingIn(discs, track, header))
+                    .map { BackDisc(it.position, it.tracks) }
+            val media = state.tracklist.media.size
+            if (discs.isEmpty()) CoverBack.NotFound else CoverBack.Found(discs, playingIn(discs, track, header), media)
         }
     }
 

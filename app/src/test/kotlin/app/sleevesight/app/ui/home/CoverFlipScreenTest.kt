@@ -5,11 +5,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.LocalSaveableStateRegistry
+import androidx.compose.runtime.saveable.SaveableStateRegistry
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -26,11 +29,13 @@ import app.sleevesight.app.session.PlaybackInfo
 import app.sleevesight.app.ui.logo.LocalAnimatorDurationScale
 import app.sleevesight.core.resolution.MbTrack
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 
 /**
  * The cover that turns over to show the album's tracklist (#984): a tap turns it, asking for the
@@ -51,8 +56,10 @@ class CoverFlipScreenTest {
 
     private val looked = mutableListOf<String>()
 
-    private fun disc(vararg titles: String) =
-        BackDisc(titles.mapIndexed { i, title -> MbTrack(i + 1, title, (300 + i) * 1000L, "rec-$i") })
+    private fun disc(
+        vararg titles: String,
+        position: Int = 1,
+    ) = BackDisc(position, titles.mapIndexed { i, title -> MbTrack(i + 1, title, (300 + i) * 1000L, "rec-$i") })
 
     private val kindOfBlue =
         CoverBack.Found(
@@ -62,12 +69,27 @@ class CoverFlipScreenTest {
 
     private val twoDiscs =
         CoverBack.Found(
-            listOf(disc(*Array(17) { "One $it" }), disc(*Array(13) { "Two $it" })),
+            listOf(disc(*Array(17) { "One $it" }), disc(*Array(13) { "Two $it" }, position = 2)),
             TrackAt(1, 5),
         )
 
     private var album by mutableStateOf<String?>("kind of blue")
     private var back by mutableStateOf<CoverBack>(CoverBack.Looking)
+
+    // The screen's saved state, as an activity keeps it ([restore]), as `DatesScreenTest` does.
+    private var emitted by mutableStateOf(true)
+    private var registry by mutableStateOf(SaveableStateRegistry(null) { true })
+
+    // The state saved, the screen gone, and [meanwhile] done before it comes back from what was saved.
+    private fun restore(meanwhile: () -> Unit = {}) {
+        val saved = registry.performSave()
+        emitted = false
+        compose.waitForIdle()
+        meanwhile()
+        registry = SaveableStateRegistry(saved) { true }
+        emitted = true
+        compose.waitForIdle()
+    }
 
     // The art and its back alone, the animations as [scale] sets them.
     private fun shown(
@@ -79,7 +101,11 @@ class CoverFlipScreenTest {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity {
                 it.setContent {
-                    CompositionLocalProvider(LocalAnimatorDurationScale provides scale) {
+                    if (!emitted) return@setContent
+                    CompositionLocalProvider(
+                        LocalAnimatorDurationScale provides scale,
+                        LocalSaveableStateRegistry provides registry,
+                    ) {
                         val turn =
                             CoverTurn(
                                 album = album,
@@ -192,6 +218,60 @@ class CoverFlipScreenTest {
             compose.onNodeWithTag(COVER_BACK_TAG).assertDoesNotExist()
             assertEquals(text(R.string.home_art), description())
         }
+
+    @Test
+    fun aTouchStillTurnsTheCoverAfterAnotherAlbum() =
+        shown(kindOfBlue) {
+            cover().performTouchInput { click() }
+            compose.onNodeWithTag(COVER_BACK_TAG).assertExists()
+            album = "ok computer"
+            compose.waitForIdle()
+            compose.onNodeWithTag(COVER_BACK_TAG).assertDoesNotExist()
+            cover().performTouchInput { click() }
+            compose.onNodeWithTag(COVER_BACK_TAG).assertExists()
+            cover().performTouchInput { click() }
+            compose.onNodeWithTag(COVER_BACK_TAG).assertDoesNotExist()
+        }
+
+    @Test
+    fun theBackIsRestoredForItsAlbumOnlyNotForAnotherPlayingMeanwhile() =
+        shown(kindOfBlue) {
+            cover().performClick()
+            restore()
+            compose.onNodeWithTag(COVER_BACK_TAG).assertExists()
+            restore { album = "ok computer" }
+            compose.onNodeWithTag(COVER_BACK_TAG).assertDoesNotExist()
+            assertEquals(text(R.string.home_art), description())
+        }
+
+    @Test
+    fun discsAreNumberedAsTheReleaseNumbersThemADiscWithNoTracksLeftOut() =
+        shown(twoDiscs.copy(discs = listOf(twoDiscs.discs[0], twoDiscs.discs[1].copy(position = 3)), media = 3)) {
+            cover().performClick()
+            compose.onNodeWithText("Disc 3", useUnmergedTree = true).assertExists()
+            compose.onNodeWithContentDescription("Disc 3 of 3").assertExists()
+            compose.onNodeWithContentDescription("Disc 1").performClick()
+            compose.onNodeWithContentDescription("Disc 1 of 3").assertExists()
+        }
+
+    // Titles of many lines, as a large font wraps long ones: two rows above the playing one leave no
+    // room for it. Native graphics, so the text is measured and wraps.
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun theWholePlayingRowIsInViewBelowTitlesOfManyLines() {
+        val long = "A title long enough to wrap over many lines, as a large font wraps long ones. ".repeat(6).trim()
+        val titles = Array(12) { "$long $it" }
+        shown(CoverBack.Found(listOf(disc(*titles)), TrackAt(0, 9))) {
+            cover().performClick()
+            compose.waitForIdle()
+            val list = compose.onNodeWithTag(TRACKLIST_TAG).fetchSemanticsNode().boundsInRoot
+            // Unclipped: the row where it is laid out, not the part of it the list shows.
+            val row = compose.onNodeWithContentDescription("10, $long 9", substring = true).fetchSemanticsNode()
+            val top = row.positionInRoot.y
+            val bottom = top + row.size.height
+            assertTrue("$top..$bottom in $list", top >= list.top && bottom <= list.bottom)
+        }
+    }
 
     @Test
     fun withAnimationsTheTurnTakesHalfASecond() =

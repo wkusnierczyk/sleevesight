@@ -105,7 +105,9 @@ class CoverBackModelTest {
     @Test
     fun aDiscWithNoTracksIsLeftOutAndNoneLeftIsNotFound() {
         val one = mapOf(group to tracklist(emptyList(), listOf("Sundown")))
-        assertEquals(1, (coverBack(resolved(), sundown, true, one) as CoverBack.Found).discs.size)
+        val found = coverBack(resolved(), sundown, true, one) as CoverBack.Found
+        assertEquals(listOf(2), found.discs.map { it.position })
+        assertEquals(2, found.media)
         val none = mapOf(group to tracklist(emptyList()))
         assertEquals(CoverBack.NotFound, coverBack(resolved(), sundown, true, none))
     }
