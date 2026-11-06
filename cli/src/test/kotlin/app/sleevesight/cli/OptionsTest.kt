@@ -100,6 +100,13 @@ class OptionsTest {
     }
 
     @Test
+    fun `the network log is printed only with --net-log`() {
+        assertFalse(Options.parse(listOf("live")).netLog)
+        assertTrue(Options.parse(listOf("live", "--net-log")).netLog)
+        assertTrue("--net-log" in Options.USAGE)
+    }
+
+    @Test
     fun `the AI service is Anthropic unless given, and OpenAI only for live`() {
         assertEquals(ProviderId.ANTHROPIC, Options.parse(listOf("replay")).provider)
         assertEquals(ProviderId.OPENAI, Options.parse(listOf("live", "--provider", "openai")).provider)

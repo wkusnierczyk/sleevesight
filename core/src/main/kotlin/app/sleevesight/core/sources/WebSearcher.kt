@@ -45,9 +45,15 @@ const val MUSICBRAINZ_HOST: String = "musicbrainz.org"
 /**
  * A web search engine a question to the AI service searches with (*AI web search*, #801;
  * `design/design.md`, *Ask AI*): each [search] is one paid search for [query], a query in words,
- * which the app builds (*Once*) or the model writes (*Up to 3 times*). Exa's is
- * `ExaPageSearch`, in `:sources`, on the user's key.
+ * which the app builds (*Once*) or the model writes (*Up to 3 times*), about [subject]: the names the
+ * question is about (the track's title, its album and its artists; a genre's name), which a part of a
+ * page's passage must say more than to be kept, the rest page boilerplate (#929, as the web search
+ * source's lines, #905); null for pages kept as they came, not cleaned. Exa's is `ExaPageSearch`,
+ * in `:sources`, on the user's key.
  */
 fun interface WebSearcher {
-    suspend fun search(query: String): WebSearchOutcome
+    suspend fun search(
+        query: String,
+        subject: List<String>?,
+    ): WebSearchOutcome
 }

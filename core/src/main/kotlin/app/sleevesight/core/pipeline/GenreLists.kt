@@ -186,6 +186,7 @@ class GenreLists(
                         SearchKind.GENRES,
                         SearchFacts(track.normalized.title, track.normalized.artists),
                     )
+            override val subjectNames: List<String> get() = track.normalized.subjectNames
 
             override fun once(pages: List<WebPage>): String =
                 GenreListPrompt.buildWeb(track.nowPlaying, track.normalized, pages, limit = 0)

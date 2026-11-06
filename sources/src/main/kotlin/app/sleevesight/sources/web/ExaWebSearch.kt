@@ -124,12 +124,9 @@ class ExaWebSearch(
         response: ExaSearchResponse,
         retrievedAt: Instant,
     ): WebLines =
-        lines(response, retrievedAt, subjectOf(track), filter::fold) { result, snippet ->
+        lines(response, retrievedAt, track.subjectNames, filter::fold) { result, snippet ->
             filter.isAbout(track, result.title, snippet, result.url)
         }
-
-    // The names a part of a line must say more than: the track's title, its work and its artists.
-    private fun subjectOf(track: NormalizedTrack): List<String> = listOfNotNull(track.title, track.from) + track.artists
 
     companion object {
         const val HOST: String = "api.exa.ai"
