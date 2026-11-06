@@ -405,9 +405,9 @@ internal class ModelUnavailableHomeTest : PipelineHostFixture() {
                     host.state.value.cardShown
             }
 
-            // A later play: the row opened writes anew, and is refused. What happens today (#969): the
-            // song's row says only that the model is unavailable, in place of the failure; the key
-            // insight kept ends with the note.
+            // A later play: the row opened writes anew, and is refused. What happens today (#969; #975
+            // asks whether it should): the song's row says only that the model is unavailable, in place
+            // of the failure; the key insight kept ends with the note.
             provider.error = AiErrorKind.MODEL_NOT_FOUND
             songRow().performClick()
             waitFor { refused() && count(MODEL_UNAVAILABLE_TAG) == 2 }
