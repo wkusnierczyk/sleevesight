@@ -48,7 +48,9 @@ internal object RetrievalCodec {
      * as having no lyrics page.
      * The votes on the recording's tags (#799) are an optional field too, made a miss the same way
      * (MusicBrainz's extraction version 8). Those credited with vocals on the recording (#996) are an
-     * optional field too, made a miss the same way (MusicBrainz's extraction version 10).
+     * optional field too, made a miss the same way (MusicBrainz's extraction version 10). The work's
+     * writing credits (#998: its lyricists, and whether it credits composers alone) are optional
+     * fields too, made a miss the same way (MusicBrainz's extraction version 11).
      */
     const val FORMAT: Int = 7
 
@@ -109,7 +111,17 @@ internal object RetrievalCodec {
                             release = it.release?.let(::releaseJson),
                         )
                     },
-                lyrics = result.lyrics?.let { LyricsJson(it.links, it.languages, it.instrumental, it.vocalists) },
+                lyrics =
+                    result.lyrics?.let {
+                        LyricsJson(
+                            it.links,
+                            it.languages,
+                            it.instrumental,
+                            it.vocalists,
+                            it.lyricists,
+                            it.composersOnly,
+                        )
+                    },
                 trackOnly = result.trackOnly,
                 pages = result.pages,
                 language = result.language,
@@ -164,7 +176,7 @@ internal object RetrievalCodec {
                             release = it.release?.let(::release),
                         )
                     },
-                lyrics = stored.lyrics?.let { WorkLyrics(it.links, it.languages, it.instrumental, it.vocalists) },
+                lyrics = stored.lyrics?.let(::lyrics),
                 trackOnly = stored.trackOnly,
                 pages = stored.pages,
                 language = stored.language,
@@ -174,6 +186,16 @@ internal object RetrievalCodec {
             // `SerializationException` is one too.
             null
         }
+
+    private fun lyrics(stored: LyricsJson): WorkLyrics =
+        WorkLyrics(
+            stored.links,
+            stored.languages,
+            stored.instrumental,
+            stored.vocalists,
+            stored.lyricists,
+            stored.composersOnly,
+        )
 
     private fun outcomeKey(outcome: Outcome): String =
         when (outcome) {
@@ -285,6 +307,9 @@ internal object RetrievalCodec {
         val languages: List<String> = emptyList(),
         val instrumental: Boolean = false,
         val vocalists: List<String> = emptyList(),
+        // The work's writing credits (#998); an entry kept before them decodes without.
+        val lyricists: List<String> = emptyList(),
+        val composersOnly: Boolean = false,
     )
 
     @Serializable

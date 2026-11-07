@@ -66,6 +66,14 @@ sealed interface WeakEvidence {
     ) : SignOfVocals
 
     /**
+     * MusicBrainz credits [name] with the words of the song's work (`lyricist`, #998): a sign of vocals
+     * weighed as [Vocalist] is, weak with its line, the check of the track's vocals still wanted.
+     */
+    data class Lyricist(
+        val name: String,
+    ) : SignOfVocals
+
+    /**
      * MusicBrainz gives the song's work a language, [code] (ISO 639-3, not `zxx`), named [name] in
      * English where Sleevesight knows it ([Languages]); null for one it does not, or `mul`.
      */
@@ -102,6 +110,10 @@ sealed interface WeakEvidence {
  * at most weak, on every row. [library] is LRCLIB's answer (#997), when it was asked: lyrics drop
  * Instrumental as lyrics links do, and its instrumental mark keeps it as MusicBrainz's does
  * ([marked]). Where the two disagree, the mark wins: a wrong match must not drop a real Instrumental.
+ * The song's work's writing credits (#998): the [lyricists], a sign as the vocalists are; and whether
+ * it credits composers alone ([composersOnly]), a hint that the track is instrumental, which only
+ * starts the check of its vocals. [checked] is that check's answer (#998, [VocalsAnswer]), when it was
+ * applied: instrumental lifts what left Instrumental weak ([lifted]); vocals drop it, as lyrics do.
  */
 data class Singing(
     val instrumental: Boolean = false,
@@ -109,6 +121,9 @@ data class Singing(
     val languages: List<String> = emptyList(),
     val vocalists: List<String> = emptyList(),
     val library: LibraryLyrics? = null,
+    val lyricists: List<String> = emptyList(),
+    val composersOnly: Boolean = false,
+    val checked: VocalsAnswer? = null,
 ) {
     /**
      * Whether the track is marked instrumental: by MusicBrainz ([instrumental]) or by LRCLIB
@@ -117,10 +132,24 @@ data class Singing(
     val marked: Boolean get() = instrumental || library == LibraryLyrics.INSTRUMENTAL
 
     /**
-     * Whether Instrumental is dropped from every row: lyrics found ([lyrics], or LRCLIB's, #997), the
-     * track not [marked] instrumental.
+     * Whether what would leave Instrumental weak is lifted: the track [marked] instrumental, or the
+     * check of its vocals found it described as instrumental (#998, [checked]).
      */
-    val dropsInstrumental: Boolean get() = (lyrics || library == LibraryLyrics.LYRICS) && !marked
+    val lifted: Boolean get() = marked || checked == VocalsAnswer.INSTRUMENTAL
+
+    /**
+     * Whether the work's composers alone hint that the track is instrumental (#998): [composersOnly],
+     * with no free sign that it is sung, no vocal credit ([vocalists]) and no language of its work
+     * ([languages]). What starts the check of its vocals, LRCLIB first, with no Instrumental on any row.
+     */
+    val composersHint: Boolean get() = composersOnly && vocalists.isEmpty() && languages.isEmpty()
+
+    /**
+     * Whether Instrumental is dropped from every row: lyrics found ([lyrics], or LRCLIB's, #997), or
+     * vocals the check of them found (#998, [checked]), the track not [marked] instrumental.
+     */
+    val dropsInstrumental: Boolean
+        get() = (lyrics || library == LibraryLyrics.LYRICS || checked == VocalsAnswer.VOCALS) && !marked
 
     companion object {
         /** Nothing known: Instrumental stands as tagged. */
@@ -202,8 +231,9 @@ data class TrackGenres(
      * MusicBrainz's; Last.fm's weights are no votes, so a tag only Last.fm gives the track is weak):
      * one contributor's tag on the recording is not backed by the album's and the artists'. With no
      * other level, the same rule: only a tag with [MIN_VOTES] is backed. Instrumental is weak, on
-     * any row, when the track shows a sign of being sung ([signOfVocals], #996). The rows keep their
-     * cap, [GenreVocabulary.MAX_LABELS]; the chips have none of their own.
+     * any row, when the track shows a sign of being sung ([signOfVocals], #996); found instrumental by
+     * the check of its vocals (#998, [Singing.checked]), it is weak for neither its signs nor its
+     * votes. The rows keep their cap, [GenreVocabulary.MAX_LABELS]; the chips have none of their own.
      *
      * The genres the artists' descriptions name ([described], #1000) follow the sources' tags, before
      * the AI's, in the same order of names, each placed on its artist's described row: only those no
@@ -226,10 +256,13 @@ data class TrackGenres(
         val marked =
             sources.map { placed ->
                 val label = placed.label
+                // Instrumental the check of the track's vocals found so (#998) is not weak for its votes.
+                val confirmed = label.genre.identity == INSTRUMENTAL && singing.checked == VocalsAnswer.INSTRUMENTAL
                 val fewVotes =
                     placed.row.level == GenreLevel.TRACK &&
                         label.genre.identity !in others &&
-                        (label.votes ?: 0) < MIN_VOTES
+                        (label.votes ?: 0) < MIN_VOTES &&
+                        !confirmed
                 placed.copy(weak = fewVotes || signOfVocals(placed) != null)
             }
         // The AI's Instrumental is weighed as a track's (#996): weak with a vocalist or a language.
@@ -276,8 +309,10 @@ data class TrackGenres(
      * credits with vocals on the recording; else a language MusicBrainz gives its work; else, placed
      * on an artist's or the album's row, a featured artist: with several credited, one ([credited],
      * other than the row's own) whose tags, from any source, do not include Instrumental, or who has
-     * none. Null for any other genre, with none of them, or with the track marked instrumental
-     * ([Singing.marked]: by MusicBrainz, or by LRCLIB, #997), where Instrumental stands as tagged.
+     * none; after a vocalist, a lyricist MusicBrainz credits on the song's work (#998). Null for any
+     * other genre, with none of them, or with the track marked instrumental ([Singing.marked]: by
+     * MusicBrainz, or by LRCLIB, #997) or found so by the check of its vocals (#998,
+     * [Singing.lifted]), where Instrumental stands as tagged.
      * Lyrics found drop it instead ([Singing.dropsInstrumental], [combineGenres]).
      */
     private fun signOfVocals(placed: PlacedLabel): WeakEvidence.SignOfVocals? =
@@ -286,7 +321,7 @@ data class TrackGenres(
     /**
      * The sign that the track is sung that leaves the genre [identity], the AI's for the track (#762,
      * #773: *Search with AI*'s genres, shown with no row), at most weak (#996): as for a track's tag,
-     * a vocalist or a language, never a featured artist. Null for any other genre, or with none.
+     * a vocalist, a lyricist (#998) or a language, never a featured artist. Null for any other genre, or with none.
      */
     fun aiSignOfVocals(identity: String): WeakEvidence.SignOfVocals? = signOfVocals(identity, null)
 
@@ -295,12 +330,14 @@ data class TrackGenres(
         identity: String,
         row: GenreRow?,
     ): WeakEvidence.SignOfVocals? {
-        val weighed = identity == INSTRUMENTAL && !singing.marked
+        val weighed = identity == INSTRUMENTAL && !singing.lifted
         val vocalist = singing.vocalists.firstOrNull()
+        val lyricist = singing.lyricists.firstOrNull()
         val language = singing.languages.firstOrNull()
         return when {
             !weighed -> null
             vocalist != null -> WeakEvidence.Vocalist(vocalist)
+            lyricist != null -> WeakEvidence.Lyricist(lyricist)
             language != null -> WeakEvidence.Language(language, Languages.ofIso3(language)?.name)
             else -> row?.let { featured(it) }?.let { WeakEvidence.Featured(it) }
         }
@@ -474,12 +511,12 @@ data class TrackGenres(
 /**
  * The artist's hint that leaves [placed], Instrumental from an artist's description alone (#1000,
  * #998), weak: no source says so of the track. Null for any other chip, or with the track marked
- * instrumental ([Singing.marked]: by MusicBrainz, or by LRCLIB, #997), which says so. #998's check of
- * the track's vocals lifts it or drops the genre here.
+ * instrumental ([Singing.marked]: by MusicBrainz, or by LRCLIB, #997), which says so, or found so by
+ * #998's check of the track's vocals ([Singing.lifted]); vocals it found drop the genre instead.
  */
 private fun TrackGenres.artistHint(placed: PlacedLabel): WeakEvidence.ArtistHint? {
     val where = placed.label.describedIn
-    return if (where != null && placed.label.genre.identity == TrackGenres.INSTRUMENTAL && !singing.marked) {
+    return if (where != null && placed.label.genre.identity == TrackGenres.INSTRUMENTAL && !singing.lifted) {
         WeakEvidence.ArtistHint(where)
     } else {
         null

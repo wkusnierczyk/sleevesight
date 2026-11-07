@@ -1,8 +1,7 @@
 package app.sleevesight.core.pipeline
 
-import app.sleevesight.core.genres.Singing
 import app.sleevesight.core.genres.TrackGenres
-import app.sleevesight.core.genres.combineGenres
+import app.sleevesight.core.genres.withoutInstrumental
 import app.sleevesight.core.lyrics.LibraryLyrics
 import app.sleevesight.core.lyrics.LibraryQuery
 import app.sleevesight.core.lyrics.LyricsLibrary
@@ -14,15 +13,27 @@ import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Whether these genres call for LRCLIB's answer (#997; `design/design.md`, *Genre labels*): a row has
- * Instrumental ([TrackGenres.INSTRUMENTAL]: a source's tag, or a genre the AI's list added), and
- * nothing settles it already: no answer from LRCLIB yet, and the track not marked instrumental by
- * MusicBrainz, where Instrumental stands whatever LRCLIB says. Lyrics MusicBrainz lists leave no row
- * with Instrumental, so they call for none either.
+ * Instrumental ([TrackGenres.INSTRUMENTAL]: a source's tag, or a genre the AI's list added), or an
+ * artist's description names it (#998: the artist's hint, a row of [TrackGenres.described], which only
+ * the panel reads), or the song's work credits composers alone (#998's hint, `Singing.composersHint`,
+ * with no row of it: LRCLIB answers before the paid check of the track's vocals, and may settle it for
+ * free); and nothing
+ * settles it already: no answer from LRCLIB yet, and the track not marked instrumental by MusicBrainz,
+ * where Instrumental stands whatever LRCLIB says. Lyrics MusicBrainz lists leave no row with
+ * Instrumental, and settle the hint, so they call for none either.
  */
-fun TrackGenres.wantsLibrary(): Boolean =
-    singing.library == null &&
-        !singing.instrumental &&
-        rows.any { row -> row.labels.any { it.genre.identity == TrackGenres.INSTRUMENTAL } }
+fun TrackGenres.wantsLibrary(): Boolean {
+    val hinted = singing.composersHint && !singing.lyrics
+    return singing.library == null && !singing.instrumental && (showsInstrumental() || hinted)
+}
+
+/**
+ * Whether a row of these genres shows Instrumental: a source's tag, the AI's, or one an artist's
+ * description names (#1000). LRCLIB's failure is said only then (#998's review): asked for the
+ * composers' hint alone, nothing in *Genres* would tell what it was asked about.
+ */
+fun TrackGenres.showsInstrumental(): Boolean =
+    (rows + described).any { row -> row.labels.any { it.genre.identity == TrackGenres.INSTRUMENTAL } }
 
 /**
  * These genres weighed with LRCLIB's [answer] (#997, [app.sleevesight.core.genres.Singing.library]):
@@ -37,18 +48,6 @@ fun TrackGenres.withLibrary(answer: LibraryLyrics?): TrackGenres {
         !weighed.dropsInstrumental -> copy(singing = weighed)
         else -> withoutInstrumental(weighed)
     }
-}
-
-// These genres without Instrumental, combined again with [weighed], and the AI's list after them.
-private fun TrackGenres.withoutInstrumental(weighed: Singing): TrackGenres {
-    val combined =
-        if (given.isEmpty()) {
-            copy(rows = TrackGenres.withoutInstrumental(rows))
-        } else {
-            combineGenres(given, credited, weighed)
-        }
-    val found = combined.copy(singing = weighed, descriptions = descriptions)
-    return aiModel?.let { found.withAi(aiListed, it, aiSources) } ?: found
 }
 
 /** What came of asking LRCLIB for a track (#997, [LibraryLookup.ask]). */

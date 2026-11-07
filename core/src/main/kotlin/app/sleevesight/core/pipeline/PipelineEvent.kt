@@ -331,6 +331,9 @@ sealed interface AiQuestion {
     /** The AI's genre list for the track, asked before *Why is this …?* for a genre only MusicBrainz gives (#762). */
     data object GenreList : AiQuestion
 
+    /** The check of whether the track has vocals, for its Instrumental in doubt (#998). */
+    data object Vocals : AiQuestion
+
     /** The song's, the artist's or the album's insight under *Key insights* (#522), as [item] says. */
     data class Item(
         val item: InsightItem,

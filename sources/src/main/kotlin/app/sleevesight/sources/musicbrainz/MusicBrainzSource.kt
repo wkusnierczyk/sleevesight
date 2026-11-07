@@ -54,7 +54,9 @@ class MusicBrainzSource(
      * page of the search is joined by the recordings released by its earliest fitting date (#906), so
      * a track kept under a later recording (a live take) is asked again. 10: and who is credited with
      * vocals on the recording (#996), against which an artist's Instrumental tag is weighed, so a track
-     * kept before is asked again rather than shown Instrumental unweighed. Without
+     * kept before is asked again rather than shown Instrumental unweighed. 11: and the work's writing
+     * credits (#998), a lyricist a sign the track is sung and composers alone a hint it is not, so a
+     * track kept before is asked again. Without
      * [genres] (*Show genres* off, #444), it keeps no tags, and its results are kept apart ([WITHOUT_GENRES_VERSION]).
      */
     override val extractionVersion: Int = EXTRACTION_VERSION + if (genres) 0 else WITHOUT_GENRES_VERSION
@@ -92,4 +94,4 @@ class MusicBrainzSource(
     }
 }
 
-private const val EXTRACTION_VERSION = 10
+private const val EXTRACTION_VERSION = 11

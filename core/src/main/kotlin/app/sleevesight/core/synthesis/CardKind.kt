@@ -31,4 +31,11 @@ enum class CardKind(
      * model's reply, kept to be read and checked again (`GenreLists`), as long as a reason is.
      */
     GENRE_LIST("genre_list"),
+
+    /**
+     * The check of a track's vocals (#998), asked when its Instrumental is in doubt: the model's reply
+     * with the pages it rests on, kept to be read and checked again (`VocalsChecks`), as long as a
+     * reason is.
+     */
+    VOCALS("vocals"),
 }

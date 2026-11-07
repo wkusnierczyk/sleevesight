@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -18,6 +19,7 @@ import app.sleevesight.app.pipeline.AiGenreList
 import app.sleevesight.app.pipeline.AiSearch
 import app.sleevesight.app.pipeline.AiSearchFeed
 import app.sleevesight.app.pipeline.GenreNotes
+import app.sleevesight.app.pipeline.PanelLibrary
 import app.sleevesight.app.ui.theme.PanelRule
 import app.sleevesight.app.ui.theme.handoffTarget
 import app.sleevesight.app.ui.theme.rememberFocusHandoff
@@ -27,10 +29,13 @@ import app.sleevesight.core.genres.GenreRow
 import app.sleevesight.core.genres.PlacedLabel
 import app.sleevesight.core.genres.TrackGenres
 import app.sleevesight.core.genres.TrackLabel
+import app.sleevesight.core.pipeline.LaterLabels
 import app.sleevesight.core.pipeline.TrackState
+import app.sleevesight.core.pipeline.withLibrary
 import app.sleevesight.core.synthesis.SearchAnswer
 import app.sleevesight.core.synthesis.SearchKind
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 
 // The genres *Search with AI* named under an empty *Genres* (#773): chips as the panel's, each unfolding
@@ -50,15 +55,67 @@ internal fun GenresSearch(
 ) {
     // Under the genres an artist's description names too (#1000): they are no source's tags.
     if (track != null && track.genres.rows.isNotEmpty() || shown.looking.isNotEmpty()) return
+    // An Instrumental among them weighed with LRCLIB's answer (#997, #998), as the rows' is.
+    val weighed = withSearchLibrary(track, search, notes.notes)
     // With lyrics found, never Instrumental (#996), as in the rows; with no other genre, nothing found.
-    val drops = track?.genres?.singing?.dropsInstrumental == true
+    val drops =
+        weighed.track
+            ?.genres
+            ?.singing
+            ?.dropsInstrumental == true
     val feed = remember(search.feed, drops) { if (drops) LyricsFoundFeed(search.feed) else search.feed }
     AiSearchBlock(PanelSearch(feed, search.track, search.header), SearchKind.GENRES) { answer, model ->
-        if (answer is SearchAnswer.Genres && track != null) {
-            AiGenres(track, answer.genres, notes.notes, search, model)
+        val asked = weighed.track
+        if (answer is SearchAnswer.Genres && asked != null) {
+            AiGenres(asked, answer.genres, notes.notes, search, model)
             // From the web (#801): the pages that give them, under the chips.
             for (source in answer.sources) FromSite(source)
         }
+    }
+    // One LRCLIB line at most: the panel's own, unless *Genres* says it already.
+    weighed.retry?.takeIf { !shown.libraryUnreachable }?.let { again -> LibraryRetry(true, again, { null }, {}) }
+}
+
+/**
+ * [track], with the genres *Search with AI* found under an empty *Genres* (#773, read only from
+ * [search]'s feed: subscribing asks nothing) holding Instrumental, weighed with LRCLIB's answer for it
+ * (#997; #998: "a genre your AI service added"), which [notes] ask once the run's labels are in, as
+ * for the AI's genre list ([GenreNotes.libraryLyrics]): lyrics drop it, its mark lifts what left it
+ * weak; not reached, with the panel's *Retry*. Else [track].
+ */
+@Composable
+private fun withSearchLibrary(
+    track: TrackState?,
+    search: PanelSearch,
+    notes: GenreNotes,
+): LibraryWeighed {
+    val feed = search.feed
+    val state =
+        key(feed, track?.normalized, track?.nowPlaying?.duration, track?.nowPlaying?.album) {
+            remember { track?.let { feed.answered(it, SearchKind.GENRES) } ?: flowOf(AiSearch.None) }
+                .collectAsState(AiSearch.None)
+                .value
+        }
+    val genres = ((state as? AiSearch.Answered)?.answer as? SearchAnswer.Genres)?.genres.orEmpty()
+    val singing = track?.genres?.singing
+    val asks =
+        track != null &&
+            singing?.library == null &&
+            singing?.instrumental != true &&
+            track.gathered &&
+            track.genresAssembled &&
+            LaterLabels.ASKING !in track.laterLabels.values &&
+            genres.any { it.identity == TrackGenres.INSTRUMENTAL }
+    val answer =
+        key(notes, track?.normalized, track?.nowPlaying?.duration, track?.nowPlaying?.album, asks) {
+            remember { track?.takeIf { asks }?.let(notes::libraryLyrics) ?: flowOf(null) }
+                .collectAsState(null)
+                .value
+        }
+    return when {
+        track == null || answer == null -> LibraryWeighed(track)
+        answer is PanelLibrary.Answered -> LibraryWeighed(track.copy(genres = track.genres.withLibrary(answer.lyrics)))
+        else -> LibraryWeighed(track.copy(libraryUnreachable = true)) { notes.retryLibrary(track) }
     }
 }
 

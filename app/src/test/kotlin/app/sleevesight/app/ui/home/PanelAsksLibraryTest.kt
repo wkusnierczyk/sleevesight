@@ -1,5 +1,6 @@
 package app.sleevesight.app.ui.home
 
+import app.sleevesight.core.genres.DescribedIn
 import app.sleevesight.core.genres.GenreLabel
 import app.sleevesight.core.genres.GenreLevel
 import app.sleevesight.core.genres.GenreRow
@@ -7,6 +8,7 @@ import app.sleevesight.core.genres.LabelCredit
 import app.sleevesight.core.genres.LabelSource
 import app.sleevesight.core.genres.TrackGenres
 import app.sleevesight.core.genres.TrackLabel
+import app.sleevesight.core.genres.withDescribed
 import app.sleevesight.core.pipeline.LaterLabels
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -50,5 +52,24 @@ class PanelAsksLibraryTest {
         // No Instrumental at all, or no track.
         assertFalse(panelAsksLibrary(playing, playing))
         assertFalse(panelAsksLibrary(null, joined))
+    }
+
+    @Test
+    fun anInstrumentalOnlyTheArtistsDescriptionNamesIsAskedAboutToo() {
+        // #998: the artist's hint, a described row the run never has.
+        val hint =
+            GenreRow(
+                GenreLevel.ARTIST,
+                "A",
+                listOf(
+                    TrackLabel(
+                        GenreLabel("instrumental", "family", "Instrumental", "instrumental", artist = "A"),
+                        emptyList(),
+                        describedIn = DescribedIn("S8", "an instrumental band"),
+                    ),
+                ),
+            )
+        val described = playing.copy(genres = playing.genres.withDescribed(listOf(hint)))
+        assertTrue(panelAsksLibrary(playing, described))
     }
 }

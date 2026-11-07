@@ -307,6 +307,21 @@ class RetrievalCacheTest {
     }
 
     @Test
+    fun `the work's writing credits round-trip, and an entry kept before them decodes without`() {
+        val result = sample(Outcome.SongArticle, SourceId.MUSICBRAINZ)
+        val decoded = assertNotNull(RetrievalCodec.decode(RetrievalCodec.encode(result)))
+        assertEquals(listOf("Gordon Lightfoot"), decoded.lyrics?.lyricists)
+        val alone = result.copy(lyrics = result.lyrics?.copy(lyricists = emptyList(), composersOnly = true))
+        assertEquals(true, RetrievalCodec.decode(RetrievalCodec.encode(alone))?.lyrics?.composersOnly)
+        // As kept before #998: no writing credits.
+        val text = RetrievalCodec.encode(result.copy(lyrics = result.lyrics?.copy(lyricists = emptyList())))
+        assertFalse("lyricists" in text || "composersOnly" in text)
+        val old = assertNotNull(RetrievalCodec.decode(text)).lyrics
+        assertEquals(emptyList(), old?.lyricists)
+        assertEquals(false, old?.composersOnly)
+    }
+
+    @Test
     fun `the votes on the recording's tags round-trip, and an entry kept before them decodes without`() {
         val result = sample(Outcome.SongArticle, SourceId.MUSICBRAINZ)
         val decoded = assertNotNull(RetrievalCodec.decode(RetrievalCodec.encode(result)))
@@ -570,6 +585,8 @@ class RetrievalCacheTest {
                     instrumental = true,
                     // Those credited with vocals (#996).
                     vocalists = listOf("Gordon Lightfoot"),
+                    // The work's writing credits (#998).
+                    lyricists = listOf("Gordon Lightfoot"),
                 ),
         )
     }
