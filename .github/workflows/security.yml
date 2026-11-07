@@ -1,0 +1,56 @@
+name: Security scan
+
+# Known vulnerabilities in the locked dependencies (#217; listed on the site's security page,
+# `docs/security/`). Dependabot's alerts read only GitHub's dependency graph, which holds none of the
+# Gradle libraries until #235 submits it, so OSV-Scanner reads the lockfiles itself. On every pull
+# request and push that changes a lockfile, and weekly, so an advisory published against an
+# unchanged lockfile is caught too. Not a required check: a new advisory should not block unrelated
+# work, only be seen and fixed.
+on:
+  pull_request:
+    paths:
+      - "**/gradle.lockfile"
+      - "settings-gradle.lockfile"
+      - ".github/workflows/security.yml"
+  push:
+    branches: [main, "dev-*"]
+    paths:
+      - "**/gradle.lockfile"
+      - "settings-gradle.lockfile"
+      - ".github/workflows/security.yml"
+  schedule:
+    # Mondays at 05:23 UTC.
+    - cron: "23 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  osv:
+    name: OSV scan of the lockfiles
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      # The release's own binary, checked against its SHA-256 (from the release's
+      # `osv-scanner_SHA256SUMS`), as the pre-commit hook checks ktlint's jar.
+      OSV_VERSION: v2.7.0
+      OSV_SHA256: 160c6253e2922e9e0a6a9771c5c4c40a4b3c6090b34a3cdd5e80c96cc2e4218b
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: OSV-Scanner
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/osv-scanner" \
+            "https://github.com/google/osv-scanner/releases/download/$OSV_VERSION/osv-scanner_linux_amd64"
+          echo "$OSV_SHA256  $RUNNER_TEMP/osv-scanner" | sha256sum --check --strict
+          chmod +x "$RUNNER_TEMP/osv-scanner"
+          # Every module's lockfile and the settings' one, each named as a Gradle lockfile, since
+          # `settings-gradle.lockfile` is not a name the scanner knows. The build logic's plugins are
+          # not locked (B2), so the scan does not see them.
+          lockfiles=()
+          while IFS= read -r file; do lockfiles+=(--lockfile "gradle.lockfile:$file"); done \
+            < <(git ls-files '*gradle.lockfile')
+          "$RUNNER_TEMP/osv-scanner" scan source "${lockfiles[@]}"

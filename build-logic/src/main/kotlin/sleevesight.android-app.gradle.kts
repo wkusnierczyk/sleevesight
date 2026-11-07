@@ -44,6 +44,31 @@ extensions.configure<ApplicationExtension> {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+    // Android lint's security checks fail the build instead of warning (#217; listed on the site's
+    // security page, `docs/security/`), so a change that weakens TLS, exports a component or launches
+    // an unchecked intent stops in CI. None is raised today.
+    lint {
+        error +=
+            setOf(
+                "AddJavascriptInterface",
+                "AllowAllHostnameVerifier",
+                "BadHostnameVerifier",
+                "ExportedContentProvider",
+                "ExportedReceiver",
+                "ExportedService",
+                "GetInstance",
+                "InsecureBaseConfiguration",
+                "SecureRandom",
+                "SetJavaScriptEnabled",
+                "SSLCertificateSocketFactoryCreateSocket",
+                "SSLCertificateSocketFactoryGetInsecure",
+                "TrustAllX509TrustManager",
+                "UnsafeImplicitIntentLaunch",
+                "UnsafeIntentLaunch",
+                "WorldReadableFiles",
+                "WorldWriteableFiles",
+            )
+    }
     // Without the key, the release build is unsigned: `./gradlew build` assembles it anywhere, and
     // only the release workflow, which has the key, produces a bundle Google Play takes.
     val upload = UploadSigning.from { providers.environmentVariable(it).orNull }
