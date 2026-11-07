@@ -53,8 +53,9 @@ internal fun GenresSearch(
     search: PanelSearch,
     notes: PanelNotes,
 ) {
-    // Under the genres an artist's description names too (#1000): they are no source's tags.
-    if (track != null && track.genres.rows.isNotEmpty() || shown.looking.isNotEmpty()) return
+    // Under the genres an artist's description names too (#1000), and LRCLIB's Instrumental alone
+    // (#1024): they are no source's tags.
+    if (track != null && track.genres.hasTags || shown.looking.isNotEmpty()) return
     // An Instrumental among them weighed with LRCLIB's answer (#997, #998), as the rows' is.
     val weighed = withSearchLibrary(track, search, notes.notes)
     // With lyrics found, never Instrumental (#996), as in the rows; with no other genre, nothing found.

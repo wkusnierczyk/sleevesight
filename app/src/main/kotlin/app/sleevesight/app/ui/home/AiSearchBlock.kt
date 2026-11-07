@@ -392,7 +392,8 @@ internal fun searchFacts(
  * The panels on Home whose *Search with AI* (#773) would show for [track] under [settings], for the
  * setting to start by itself (`AutoSearches`): none until every source has answered and no panel is
  * still looking (MusicBrainz, the genres gathered and assembled, the label requests after the
- * evidence answered); then *Dates* with no date, *Genres* with no genre (while *Show genres* is on)
+ * evidence answered); then *Dates* with no date, *Genres* with no tag (while *Show genres* is on;
+ * LRCLIB's Instrumental alone is none, #1024, `TrackGenres.hasTags`)
  * and *Lyrics* with no page (while *Lyrics links* is on; not for an instrumental, nor with a page
  * among the track's web search results, #801), as each panel
  * tells its empty states ([NoDates], [GenresShown], [homeLyrics]), beside the header the pipeline's
@@ -407,7 +408,8 @@ internal fun emptyPanels(
     if (!track.gathered || genresLooking || NoDates.of(track) == NoDates.LOOKING) return emptySet()
     return buildSet {
         if (homeDates(track, track.nowPlaying).isEmpty()) add(SearchKind.DATES)
-        if (settings.showGenres && track.genres.isEmpty) add(SearchKind.GENRES)
+        // LRCLIB's Instrumental alone is no tag (#1024): the search may still find the track's genres.
+        if (settings.showGenres && !track.genres.hasTags) add(SearchKind.GENRES)
         val lyrics = homeLyrics(track, settings.lyricsSearch)
         if (settings.lyricsLinks && lyrics is LyricsLinks.NoLink && lyrics.web.isEmpty()) {
             add(SearchKind.LYRICS)

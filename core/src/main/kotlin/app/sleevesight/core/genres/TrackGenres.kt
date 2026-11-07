@@ -211,6 +211,14 @@ data class TrackGenres(
     /** Whether no row has a label, of the tags or of a description. */
     val isEmpty: Boolean get() = rows.isEmpty() && described.isEmpty()
 
+    /**
+     * Whether a row has a source's tag or a genre the AI's list added: a label other than one a
+     * source's mark gave (#1024, [TrackLabel.markedBy]: LRCLIB's Instrumental). What *Search with AI*
+     * for the genres reads (#773): a track whose only genre is the mark's still has none of its tags,
+     * so the search stays offered, as under the genres an artist's description names (#1000).
+     */
+    val hasTags: Boolean get() = rows.any { row -> row.labels.any { it.markedBy == null } }
+
     /** The levels that have labels, in [GenreLevel] order. */
     val levels: List<GenreLevel> get() = rows.map { it.level }.distinct()
 

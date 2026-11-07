@@ -44,7 +44,7 @@ class LibraryMarkTest {
     fun `composers alone and LRCLIB's instrumental mark add Instrumental on the track's row, credited to LRCLIB`() {
         val hinted = bite()
         assertTrue(hinted.wantsLibrary())
-        val marked = hinted.withLibrary(LibraryLyrics.INSTRUMENTAL, instrumental)
+        val marked = hinted.withLibrary(LibraryLyrics.INSTRUMENTAL).withLibraryMark(instrumental)
         val track = marked.rows.first()
         assertEquals(GenreLevel.TRACK, track.level)
         val label = track.labels.single()
@@ -73,7 +73,7 @@ class LibraryMarkTest {
 
     @Test
     fun `the AI's genre list naming it too credits the model beside LRCLIB, and marks it AI no more`() {
-        val marked = bite().withLibrary(LibraryLyrics.INSTRUMENTAL, instrumental)
+        val marked = bite().withLibrary(LibraryLyrics.INSTRUMENTAL).withLibraryMark(instrumental)
         val listed = vocabulary.labelsFor(listOf("instrumental", "jazz"), level = GenreLevel.TRACK)
         val label = marked.withAi(listed, MODEL).instrumentals().single()
         assertEquals(MODEL, label.aiModel)
@@ -83,8 +83,14 @@ class LibraryMarkTest {
 
     @Test
     fun `lyrics or no match from LRCLIB add nothing`() {
-        assertTrue(bite().withLibrary(LibraryLyrics.LYRICS, instrumental).instrumentals().isEmpty())
-        val none = bite().withLibrary(LibraryLyrics.NONE, instrumental)
+        assertTrue(
+            bite()
+                .withLibrary(LibraryLyrics.LYRICS)
+                .withLibraryMark(instrumental)
+                .instrumentals()
+                .isEmpty(),
+        )
+        val none = bite().withLibrary(LibraryLyrics.NONE).withLibraryMark(instrumental)
         assertTrue(none.instrumentals().isEmpty())
         // No match leaves the paid check to settle it.
         assertTrue(none.wantsVocalsCheck())
@@ -95,10 +101,20 @@ class LibraryMarkTest {
         for (sung in listOf(Singing(vocalists = listOf("Ana")), Singing(languages = listOf("heb")))) {
             val genres = bite(sung.copy(composersOnly = true))
             assertFalse(genres.wantsLibrary(), "$sung")
-            assertTrue(genres.withLibrary(LibraryLyrics.INSTRUMENTAL, instrumental).instrumentals().isEmpty())
+            assertTrue(
+                genres
+                    .withLibrary(LibraryLyrics.INSTRUMENTAL)
+                    .withLibraryMark(instrumental)
+                    .instrumentals()
+                    .isEmpty(),
+            )
         }
         // Nor without composers alone, nor with MusicBrainz's lyrics links (a free sign that drops it).
-        assertTrue(bite(Singing()).withLibrary(LibraryLyrics.INSTRUMENTAL, instrumental).instrumentals().isEmpty())
+        assertTrue(
+            bite(
+                Singing(),
+            ).withLibrary(LibraryLyrics.INSTRUMENTAL).withLibraryMark(instrumental).instrumentals().isEmpty(),
+        )
         val linked = bite(Singing(composersOnly = true, lyrics = true, library = LibraryLyrics.INSTRUMENTAL))
         assertTrue(linked.withLibraryMark(instrumental).instrumentals().isEmpty())
     }
@@ -113,12 +129,53 @@ class LibraryMarkTest {
             )
         // The featured artist leaves it weak until the mark lifts it.
         assertTrue(tagged.chips().single { it.label.genre.identity == TrackGenres.INSTRUMENTAL }.weak)
-        val marked = tagged.withLibrary(LibraryLyrics.INSTRUMENTAL, instrumental)
+        val marked = tagged.withLibrary(LibraryLyrics.INSTRUMENTAL).withLibraryMark(instrumental)
         val label = marked.instrumentals().single()
         assertEquals(GenreLevel.ARTIST, label.genre.level)
         assertNull(label.markedBy)
         assertTrue(marked.rows.none { it.level == GenreLevel.TRACK })
         assertFalse(marked.chips().single { it.label.genre.identity == TrackGenres.INSTRUMENTAL }.weak)
+    }
+
+    @Test
+    fun `a later label bringing Instrumental replaces the mark's, so one Instrumental shows, the tag's`() {
+        // A replay: the kept answer is read before the genres are assembled, so the mark's comes first.
+        val kept = Singing(composersOnly = true, library = LibraryLyrics.INSTRUMENTAL)
+        val before =
+            combineGenres(mapOf(LabelSource.LASTFM to artist(ARTIST, "jazz")), listOf(ARTIST), kept)
+                .withLibraryMark(instrumental)
+        assertEquals(SourceId.LRCLIB, before.instrumentals().single().markedBy)
+        // Then Last.fm's track tags land with Instrumental: the genres are combined again, and marked.
+        val track = vocabulary.labelsFor(listOf("instrumental"), level = GenreLevel.TRACK)
+        val after =
+            combineGenres(mapOf(LabelSource.LASTFM to artist(ARTIST, "jazz") + track), listOf(ARTIST), kept)
+                .withLibraryMark(instrumental)
+        val label = after.instrumentals().single()
+        assertNull(label.markedBy)
+        assertEquals(listOf(LabelSource.LASTFM), label.credits.map { it.source })
+        assertEquals(1, after.chips().count { it.label.genre.identity == TrackGenres.INSTRUMENTAL })
+    }
+
+    @Test
+    fun `lyrics Find the lyrics finds after the mark leave its Instrumental, as the mark wins`() {
+        val marked = bite().withLibrary(LibraryLyrics.INSTRUMENTAL).withLibraryMark(instrumental)
+        val found = marked.withLyricsFound()
+        assertSame(marked, found)
+        assertEquals(SourceId.LRCLIB, found.instrumentals().single().markedBy)
+    }
+
+    @Test
+    fun `the mark's Instrumental alone is no tag, for Search with AI, though the genres are not empty`() {
+        val alone =
+            combineGenres(
+                emptyMap(),
+                listOf(ARTIST),
+                Singing(composersOnly = true, library = LibraryLyrics.INSTRUMENTAL),
+            ).withLibraryMark(instrumental)
+        assertFalse(alone.isEmpty)
+        assertFalse(alone.hasTags)
+        assertTrue(bite().withLibrary(LibraryLyrics.INSTRUMENTAL).withLibraryMark(instrumental).hasTags)
+        assertFalse(TrackGenres().hasTags)
     }
 
     private companion object {

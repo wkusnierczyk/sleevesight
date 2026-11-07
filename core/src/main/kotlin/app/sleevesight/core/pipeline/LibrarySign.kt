@@ -43,18 +43,16 @@ fun TrackGenres.showsInstrumental(): Boolean =
 /**
  * These genres weighed with LRCLIB's [answer] (#997, [app.sleevesight.core.genres.Singing.library]):
  * lyrics drop Instrumental from every row, combined again without it, as MusicBrainz's lyrics links
- * do; its instrumental mark lifts what left Instrumental weak, and where the work's composers alone
- * asked it, adds [instrumental], the vocabulary's label of it, credited to LRCLIB (#1024,
- * [withLibraryMark]); no match leaves them as they were. Itself with no answer, or one already weighed.
+ * do; its instrumental mark lifts what left Instrumental weak; no match leaves them as they were.
+ * Itself with no answer, or one already weighed. What the panel's own answer does (#997): it asks
+ * only about an Instrumental already on a row, so the mark adds none there ([withLibraryMark] is the
+ * run's, #1024).
  */
-fun TrackGenres.withLibrary(
-    answer: LibraryLyrics?,
-    instrumental: GenreLabel? = null,
-): TrackGenres {
+fun TrackGenres.withLibrary(answer: LibraryLyrics?): TrackGenres {
     val weighed = answer?.takeIf { singing.library == null }?.let { singing.copy(library = it) }
     return when {
         weighed == null -> this
-        !weighed.dropsInstrumental -> copy(singing = weighed).withLibraryMark(instrumental)
+        !weighed.dropsInstrumental -> copy(singing = weighed)
         else -> withoutInstrumental(weighed)
     }
 }
@@ -70,7 +68,11 @@ fun TrackGenres.withLibrary(
  * track's vocals is settled by the mark already. Not added with Instrumental on any row (the mark
  * lifts it there, and it is not added twice), with lyrics MusicBrainz lists (a free sign that drops
  * it wins), or the recording marked instrumental by MusicBrainz, which LRCLIB is not asked about:
- * itself then, and with no [instrumental]. Applied twice, the same.
+ * itself then, and with no [instrumental]. Applied twice, the same. The run applies it
+ * ([TrackLabels]), whose genres hold only the tags' rows: an Instrumental an artist's description
+ * names (#1000), which only the panel adds, does not stop it, and then sits on the *Described* row
+ * beside the mark's on the *Track* row, its chip the mark's (another level's genre stays on a
+ * described row; a tag's chip wins).
  */
 fun TrackGenres.withLibraryMark(instrumental: GenreLabel?): TrackGenres {
     val track = rows.firstOrNull { it.level == GenreLevel.TRACK }
