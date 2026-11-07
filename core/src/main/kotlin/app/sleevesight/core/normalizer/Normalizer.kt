@@ -197,18 +197,20 @@ class Normalizer(
         // JavaScript's `\s`.
         const val S = JS_WHITESPACE_CLASS
 
-        // A character that is not JavaScript's `\s`, and one that is neither that nor `-`.
+        // A character that is not JavaScript's `\s`, and one that is neither that nor a dash: `-`, the
+        // hyphens and dashes U+2010 to U+2015, or the minus sign U+2212.
         val NOT_S = "[^" + S.removeSurrounding("[", "]") + "]"
-        val WORD_START = "[^" + S.removeSurrounding("[", "]") + "-]"
+        val NOT_DASH = "[^" + S.removeSurrounding("[", "]") + "\\u2010-\\u2015\\u2212-]"
 
         val SUFFIX =
             Regex(
                 "$S+-$S+((?:[0-9]{4}$S+)?${ci("remaster")}(?:${ci("ed")})?(?:$S+[0-9]{4})?|" +
                     "${ci("demo")}|${ci("live")}|${ci("mono")}|" +
                     // Any edit (#1060): "Radio Edit", "Promo 7" Edit", "Edit": the word `edit` last and
-                    // on its own, after words none of which starts with `-`, so a second " - " part
-                    // ("2011 Remaster - Radio Edit") is not taken with it.
-                    "(?:$WORD_START$NOT_S*$S+)*${ci("edit")}|" +
+                    // on its own, after words none of which starts or ends with a dash, so a second
+                    // part ("2011 Remaster - Radio Edit", "Part 2 – Radio Edit", "Part 2- Radio Edit")
+                    // is not taken with it.
+                    "(?:$NOT_DASH(?:$NOT_S*$NOT_DASH)?$S+)*${ci("edit")}|" +
                     // The simulator's `[\w' ]*\bversion`: the word boundary means the `[\w' ]*` part is
                     // empty (preceded by whitespace) or ends with a quote or a space.
                     "(?:[A-Za-z0-9_' ]*[' ])?${ci("version")})$",

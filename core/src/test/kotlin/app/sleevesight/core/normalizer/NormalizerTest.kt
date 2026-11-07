@@ -51,9 +51,19 @@ class NormalizerTest {
             "Song - Edits",
             "Song - Edit Me",
             "Song - Re-Edit",
+            // A dash other than " - " before the edit: no word starts or ends with one, and only
+            // " - " separates the suffix, so nothing is dropped.
+            "Song - Part 2 \u2013 Radio Edit",
+            "Song - Live \u2014 Edit",
+            "Song - Part 2 \u2212 Edit",
+            "Song - Part 2 \u2010 Edit",
+            "Song - Part 2- Radio Edit",
+            "Song - Part 2 -Radio Edit",
         )) {
             assertEquals(title, normalizer.normalize(title, "A").title, title)
         }
+        // A dash within a word is the word's.
+        assertEquals("Song", normalizer.normalize("Song - Re-Recorded Edit", "A").title)
         // Only the last " - " part goes: the one before it is the title's, as with "Radio Edit".
         assertEquals("Song - 2011 Remaster", normalizer.normalize("Song - 2011 Remaster - Radio Edit", "A").title)
         assertEquals("Song - Part 2", normalizer.normalize("Song - Part 2 - Edit", "A").title)
