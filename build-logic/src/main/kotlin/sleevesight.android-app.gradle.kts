@@ -18,6 +18,7 @@ import sleevesight.checks.CheckDependencyPage
 import sleevesight.checks.CheckManifest
 import sleevesight.checks.CheckModuleGraph
 import sleevesight.checks.ListLibraryLicences
+import sleevesight.checks.SecurityLint
 import sleevesight.checks.networkModules
 import sleevesight.release.UploadSigning
 
@@ -44,30 +45,9 @@ extensions.configure<ApplicationExtension> {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    // Android lint's security checks fail the build instead of warning (#217; listed on the site's
-    // security page, `docs/security/`), so a change that weakens TLS, exports a component or launches
-    // an unchecked intent stops in CI. None is raised today.
+    // Android lint's security checks fail the build (`SecurityLint`).
     lint {
-        error +=
-            setOf(
-                "AddJavascriptInterface",
-                "AllowAllHostnameVerifier",
-                "BadHostnameVerifier",
-                "ExportedContentProvider",
-                "ExportedReceiver",
-                "ExportedService",
-                "GetInstance",
-                "InsecureBaseConfiguration",
-                "SecureRandom",
-                "SetJavaScriptEnabled",
-                "SSLCertificateSocketFactoryCreateSocket",
-                "SSLCertificateSocketFactoryGetInsecure",
-                "TrustAllX509TrustManager",
-                "UnsafeImplicitIntentLaunch",
-                "UnsafeIntentLaunch",
-                "WorldReadableFiles",
-                "WorldWriteableFiles",
-            )
+        error += SecurityLint.checks
     }
     // Without the key, the release build is unsigned: `./gradlew build` assembles it anywhere, and
     // only the release workflow, which has the key, produces a bundle Google Play takes.

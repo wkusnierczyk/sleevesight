@@ -20,7 +20,7 @@ release notes.
   and the keyboard page.
 - The build and release workflows in this repository.
 
-Out of scope: the services Sleevesight calls (MusicBrainz, Wikipedia, Last.fm, LRCLIB, Exa, the AI
+Out of scope: the services Sleevesight calls (MusicBrainz, Wikipedia, Wikidata, Last.fm, LRCLIB, Exa, the AI
 services), and attacks that need a rooted phone or a debug build.
 
 ## Security checks

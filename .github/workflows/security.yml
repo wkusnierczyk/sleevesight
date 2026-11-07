@@ -9,14 +9,12 @@ name: Security scan
 on:
   pull_request:
     paths:
-      - "**/gradle.lockfile"
-      - "settings-gradle.lockfile"
+      - "**/*gradle.lockfile"
       - ".github/workflows/security.yml"
   push:
     branches: [main, "dev-*"]
     paths:
-      - "**/gradle.lockfile"
-      - "settings-gradle.lockfile"
+      - "**/*gradle.lockfile"
       - ".github/workflows/security.yml"
   schedule:
     # Mondays at 05:23 UTC.
