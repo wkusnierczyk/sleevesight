@@ -40,6 +40,7 @@ import app.sleevesight.app.pipeline.online
 import app.sleevesight.app.pipeline.pipelineKeys
 import app.sleevesight.app.pipeline.rebuilds
 import app.sleevesight.app.pipeline.shown
+import app.sleevesight.app.pipeline.vocalsWanted
 import app.sleevesight.app.secrets.AndroidKeystoreKey
 import app.sleevesight.app.secrets.KeyGate
 import app.sleevesight.app.secrets.SecretCipher
@@ -593,8 +594,9 @@ class AppGraph internal constructor(
             // A reason written before this play of the track is kept from before (#851).
             plays = plays.current,
             // The check of a track's vocals started by itself (#998), under *Ask AI automatically*'s
-            // gates: the setting on and the app on screen.
-            automaticOpen = { autoSearches.open() },
+            // gates (the setting on and the app on screen), and handed back when they closed.
+            automaticOpen = { autoVocals.open() },
+            releaseAutomatic = { autoVocals.release(it, Unit) },
         )
 
     /**
@@ -652,6 +654,20 @@ class AppGraph internal constructor(
     private val autoSearches: AutoSearches<SearchKind> get() = askAi.panels
 
     private val autoDefinitions: AutoSearches<String> get() = askAi.definitions
+
+    /**
+     * *Ask AI automatically*'s check of the track's vocals (#998): follows the genres *Genres* composes,
+     * once settled ([AppGenreNotes.settledTracks]), and starts the check where they call for it
+     * ([vocalsWanted]), while the app is on screen; one whose gates closed before its call is handed
+     * back ([AppGenreNotes]' `releaseAutomatic`) and starts again once they open.
+     */
+    private val autoVocals: AutoSearches<Unit> by lazy {
+        AutoSearches(
+            { track, settings -> if (vocalsWanted(track, settings)) setOf(Unit) else emptySet() },
+        ) { track, _ ->
+            genreNotes.checkVocals(track)
+        }
+    }
 
     /**
      * *Reactive*'s mode chosen, in the insight card's menu or in the settings (#615, #625): saved in
@@ -739,6 +755,12 @@ class AppGraph internal constructor(
         // service is ready.
         pipelineScope.launch {
             autoSearches.run(pipeline.state.map { it.track }, latestSettings, pipeline.onScreen, pipeline.liveParts)
+        }
+        // The check of the track's vocals (#998), by itself with the setting on, as soon as the genres
+        // *Genres* composes are settled and call for it, while the app is on screen; again once it is
+        // back, for one whose gates closed.
+        pipelineScope.launch {
+            autoVocals.run(genreNotes.settledTracks, latestSettings, pipeline.onScreen, pipeline.liveParts)
         }
         // Every genre of the playing track's table has its definition looked up as soon as the genres
         // are known, whether a panel is open or not (#786), while lookups are allowed (#961).

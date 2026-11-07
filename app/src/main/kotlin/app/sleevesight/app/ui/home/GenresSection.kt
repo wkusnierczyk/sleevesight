@@ -122,10 +122,10 @@ internal fun GenresContent(
     // The track's genres with the AI's genre list (#762), where one is known: its genres join the
     // chips and the track's row, marked AI; an Instrumental it added weighed with LRCLIB's answer (#997).
     // The genres the artists' descriptions name (#1000), beside the tags, before the AI's list's; the
-    // check of the track's vocals (#998) weighed in, and started by itself once they call for it.
+    // check of the track's vocals (#998) weighed in; told to the notes, for the check and a tap held.
     val composed = composedGenres(playing, notes, search)
     val track = composed.track
-    VocalsDue(playing, track, settings, notes.notes)
+    GenresSettled(playing, track, settings, notes.notes)
     val shown = GenresShown.of(track, settings)
     val style = MaterialTheme.typography.bodyLarge
     // The genre a tap opened, kept above the chips and the lines in their place (#772): while a run

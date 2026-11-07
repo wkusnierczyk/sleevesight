@@ -7,6 +7,7 @@ import app.sleevesight.core.genres.GenreDefinition
 import app.sleevesight.core.genres.GenreDefinitions
 import app.sleevesight.core.genres.TrackGenres
 import app.sleevesight.core.genres.VocalsAnswer
+import app.sleevesight.core.lyrics.LibraryLyrics
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.pipeline.AiAccess
@@ -15,13 +16,17 @@ import app.sleevesight.core.pipeline.PipelineEvent
 import app.sleevesight.core.pipeline.PipelineParts
 import app.sleevesight.core.pipeline.QuestionCost
 import app.sleevesight.core.pipeline.TrackResolver
+import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.pipeline.VocalsState
+import app.sleevesight.core.pipeline.withLibrary
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.resolution.Lookup
+import app.sleevesight.core.settings.AiWebSearch
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.WebSearchOutcome
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.TestScope
@@ -34,20 +39,24 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * The check of a track's vocals in the app (#998): started by itself with *Ask AI automatically* on
- * (once a play, only while its gates are open), or by a tap on *Why is this instrumental?*, which then
- * writes the reason; its searches and calls counted under *AI web search*; its answer kept per track,
- * so a replay asks nothing.
+ * The check of a track's vocals in the app (#998): started by itself with *Ask AI automatically* on,
+ * by its owner (`AutoSearches`, as `AppGraph` wires it), which follows the genres once settled and
+ * starts it again once the app is back on screen; or by a tap on *Why is this instrumental?*, held
+ * until the free steps are done, then the reason, none after vocals; its searches and calls counted
+ * under *AI web search*; its answer kept per track, so a replay asks nothing.
  */
 class AppGenreVocalsTest {
     private val clock = MovedClock()
     private val cache = CardCache(clock = clock)
     private val queries = mutableListOf<String>()
 
-    // The check answers vocals, citing the page found; any call after it is a reason.
     // What the check answers.
     private var said = "vocals"
 
+    // While set, a search waits for it: the app may leave meanwhile.
+    private var searching: CompletableDeferred<Unit>? = null
+
+    // The check answers [said], citing the page found; any call after it is a reason.
     private val provider =
         CountingProvider().apply {
             reply = { n ->
@@ -69,6 +78,7 @@ class AppGenreVocalsTest {
                 cache = cache,
                 webSearch = { query, _ ->
                     queries += query
+                    searching?.await()
                     WebSearchOutcome.Found(listOf(VocalsFixtures.page))
                 },
             ),
@@ -85,9 +95,15 @@ class AppGenreVocalsTest {
 
     private val paid = mutableListOf<QuestionCost>()
     private val events = mutableListOf<PipelineEvent>()
-    private var open = true
 
-    private fun TestScope.notes() =
+    // The check's owner, as `AppGraph` wires it, and the notes it starts the check through.
+    private lateinit var notes: AppGenreNotes
+    private val auto =
+        AutoSearches<Unit>({ track, now -> if (vocalsWanted(track, now)) setOf(Unit) else emptySet() }) { track, _ ->
+            notes.checkVocals(track)
+        }
+
+    private fun TestScope.notes(): AppGenreNotes =
         AppGenreNotes(
             definitions,
             parts,
@@ -96,17 +112,27 @@ class AppGenreVocalsTest {
             clock = clock,
             paid = { paid += it },
             events = { events += it },
-            automaticOpen = { open },
-        )
+            automaticOpen = { auto.open() },
+            releaseAutomatic = { auto.release(it, Unit) },
+        ).also { notes = it }
 
     private val track = VocalsFixtures.nasnusa
 
+    // The genres settled, followed by the owner, on screen or not.
+    private fun follow(
+        genres: TrackState = track,
+        onScreen: Boolean = true,
+    ) {
+        notes.genresShown(genres, settled = true)
+        auto.follow(notes.settledTracks.value, settings.value, onScreen)
+    }
+
     @Test
-    fun `with Ask AI automatically on, the check runs by itself, once a play, counted under AI web search`() =
+    fun `with Ask AI automatically on, the check runs by itself, once, counted under AI web search`() =
         runTest {
-            val notes = notes()
-            notes.checkVocals(track)
-            notes.checkVocals(track)
+            notes()
+            follow()
+            follow()
             advanceUntilIdle()
             assertEquals(1, provider.requests)
             assertEquals(1, queries.size)
@@ -121,19 +147,46 @@ class AppGenreVocalsTest {
         }
 
     @Test
-    fun `it does not run by itself with the setting off, its gate closed, or genres that do not call for it`() =
+    fun `it does not run by itself with the setting off, off screen, with AI web search off, or no sign`() =
         runTest {
-            val notes = notes()
+            notes()
             settings.value = settings.value?.copy(searchWithAi = false)
-            notes.checkVocals(track)
+            follow()
             settings.value = settings.value?.copy(searchWithAi = true)
-            open = false
-            notes.checkVocals(track)
-            open = true
-            notes.checkVocals(VocalsFixtures.biteNoSign)
+            follow(onScreen = false)
+            follow(VocalsFixtures.biteNoSign)
+            settings.value = settings.value?.copy(aiWebSearch = AiWebSearch.OFF)
+            follow()
             advanceUntilIdle()
             assertEquals(0, provider.requests)
             assertTrue(queries.isEmpty())
+            // Composers alone call for it.
+            settings.value = settings.value?.copy(aiWebSearch = AiWebSearch.ONCE)
+            assertTrue(vocalsWanted(VocalsFixtures.bite, checkNotNull(settings.value)))
+        }
+
+    @Test
+    fun `leaving during the search stops it before its call, and coming back on the same play asks again`() =
+        runTest {
+            notes()
+            searching = CompletableDeferred()
+            follow()
+            advanceUntilIdle()
+            assertEquals(1, queries.size)
+            // The app leaves while Exa answers: the call is not made.
+            follow(onScreen = false)
+            checkNotNull(searching).complete(Unit)
+            advanceUntilIdle()
+            assertEquals(0, provider.requests)
+            assertNull(notes.vocals(track).first())
+            // Back on screen, the same play: the check starts again, and answers.
+            searching = null
+            follow()
+            advanceUntilIdle()
+            assertEquals(2, queries.size)
+            assertEquals(1, provider.requests)
+            val shown = notes.vocals(track).first { it != null }
+            assertEquals(VocalsAnswer.VOCALS, (shown?.state as VocalsState.Checked).answer)
         }
 
     @Test
@@ -141,7 +194,8 @@ class AppGenreVocalsTest {
         runTest {
             said = "instrumental"
             settings.value = settings.value?.copy(searchWithAi = false)
-            val notes = notes()
+            notes()
+            notes.genresShown(track, settled = true)
             notes.explain(track, TrackGenres.INSTRUMENTAL)
             advanceUntilIdle()
             assertEquals(2, provider.requests)
@@ -157,7 +211,8 @@ class AppGenreVocalsTest {
     fun `a tap whose check finds vocals writes no reason, then or on a second tap`() =
         runTest {
             settings.value = settings.value?.copy(searchWithAi = false)
-            val notes = notes()
+            notes()
+            notes.genresShown(track, settled = true)
             notes.explain(track, TrackGenres.INSTRUMENTAL)
             advanceUntilIdle()
             assertEquals(1, provider.requests)
@@ -169,9 +224,46 @@ class AppGenreVocalsTest {
         }
 
     @Test
+    fun `a tap while LRCLIB is held back waits, and its lyrics then settle it with nothing paid`() =
+        runTest {
+            settings.value = settings.value?.copy(searchWithAi = false)
+            notes()
+            val before = VocalsFixtures.nasnusaBeforeLibrary
+            notes.genresShown(before, settled = false)
+            notes.explain(before, TrackGenres.INSTRUMENTAL)
+            advanceUntilIdle()
+            assertEquals(0, provider.requests)
+            assertTrue(queries.isEmpty())
+            // Held, it shows as the check.
+            assertEquals(VocalsState.Checking, notes.vocals(before).first { it != null }?.state)
+            // LRCLIB answers with lyrics: Instrumental is gone, nothing to check or explain.
+            notes.genresShown(before.copy(genres = before.genres.withLibrary(LibraryLyrics.LYRICS)), settled = true)
+            advanceUntilIdle()
+            assertEquals(0, provider.requests)
+            assertTrue(queries.isEmpty())
+        }
+
+    @Test
+    fun `a tap while LRCLIB is held back, which then finds nothing, checks then`() =
+        runTest {
+            settings.value = settings.value?.copy(searchWithAi = false)
+            notes()
+            val before = VocalsFixtures.nasnusaBeforeLibrary
+            notes.genresShown(before, settled = false)
+            notes.explain(before, TrackGenres.INSTRUMENTAL)
+            advanceUntilIdle()
+            assertEquals(0, provider.requests)
+            notes.genresShown(before.copy(genres = before.genres.withLibrary(LibraryLyrics.NONE)), settled = true)
+            advanceUntilIdle()
+            assertEquals(1, queries.size)
+            assertEquals(1, provider.requests)
+        }
+
+    @Test
     fun `the answer is kept per track, so a replay asks nothing`() =
         runTest {
-            notes().apply { checkVocals(track) }
+            notes()
+            follow()
             advanceUntilIdle()
             assertEquals(1, provider.requests)
             // The next play, in a new process: the answer is read from the cache, not asked.
@@ -180,7 +272,7 @@ class AppGenreVocalsTest {
             val shown = again.vocals(replay).first { it != null }
             assertEquals(VocalsAnswer.VOCALS, (shown?.state as VocalsState.Checked).answer)
             assertFalse(shown.tapped)
-            again.checkVocals(replay)
+            follow(replay)
             again.explain(replay, TrackGenres.INSTRUMENTAL)
             advanceUntilIdle()
             // Nothing: the check is kept, and a track found sung gets no reason.
@@ -191,9 +283,9 @@ class AppGenreVocalsTest {
     @Test
     fun `with AI web search off there is no check`() =
         runTest {
-            settings.value = settings.value?.copy(aiWebSearch = app.sleevesight.core.settings.AiWebSearch.OFF)
-            val notes = notes()
-            notes.checkVocals(track)
+            settings.value = settings.value?.copy(aiWebSearch = AiWebSearch.OFF)
+            notes()
+            assertFalse(notes.checkVocals(track))
             advanceUntilIdle()
             assertEquals(0, provider.requests)
             assertNull(notes.vocals(track).first())

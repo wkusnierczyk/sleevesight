@@ -27,6 +27,7 @@ import app.sleevesight.core.genres.Singing
 import app.sleevesight.core.genres.TrackGenres
 import app.sleevesight.core.genres.VocalsAnswer
 import app.sleevesight.core.genres.combineGenres
+import app.sleevesight.core.genres.wantsVocalsCheck
 import app.sleevesight.core.lyrics.LibraryLyrics
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.pipeline.TrackState
@@ -40,6 +41,7 @@ import app.sleevesight.core.synthesis.SearchKind
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -59,17 +61,37 @@ class GenreVocalsScreenTest {
     @get:Rule
     val compose = createEmptyComposeRule()
 
-    private val checked = mutableListOf<TrackState>()
+    // The genres told to the notes, and whether settled, last first.
+    private val reported = mutableListOf<Pair<TrackState, Boolean>>()
     private val explained = mutableListOf<String>()
 
     private fun notes(shown: VocalsShown?) =
-        VocalsFixtures.Notes(shown, onCheck = { checked += it }, onExplain = { explained += it })
+        VocalsFixtures.Notes(shown, onShown = { track, settled -> reported += track to settled }, onExplain = {
+            explained +=
+                it
+        })
 
     private fun show(
         shown: VocalsShown?,
         playing: TrackState = VocalsFixtures.nasnusa,
         settings: Settings = Settings(),
         open: String? = VocalsFixtures.INSTRUMENTAL_CHIP,
+        block: () -> Unit,
+    ) = launch(shown, playing, settings, open, panel = true, block)
+
+    // Home's line alone, *Genres* not open: [settings], [VocalsFixtures.nasnusa].
+    private fun homeOnly(
+        settings: Settings,
+        block: () -> Unit,
+    ) = launch(null, VocalsFixtures.nasnusa, settings, open = null, panel = false, block)
+
+    @Suppress("LongParameterList") // [show]'s, and whether *Genres*' content is composed too.
+    private fun launch(
+        shown: VocalsShown?,
+        playing: TrackState,
+        settings: Settings,
+        open: String?,
+        panel: Boolean,
         block: () -> Unit,
     ) {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
@@ -78,7 +100,7 @@ class GenreVocalsScreenTest {
                     Column(Modifier.verticalScroll(rememberScrollState())) {
                         val notes = PanelNotes(notes(shown))
                         AutoVocalsCheck(playing, settings, notes, PanelSearch())
-                        GenresContent(playing, settings, notes = notes)
+                        if (panel) GenresContent(playing, settings, notes = notes)
                     }
                 }
             }
@@ -169,37 +191,38 @@ class GenreVocalsScreenTest {
         }
 
     @Test
-    fun withAskAiAutomaticallyOnTheCheckStartsByItselfForAWeakInstrumental() =
+    fun theGenresAreToldSettledOnceTheFreeStepsAreDone() =
         show(null, settings = Settings(searchWithAi = true), open = null) {
-            assertTrue(checked.isNotEmpty())
-            assertEquals("Nasnusa", checked.first().nowPlaying.title)
+            val (track, settled) = reported.last()
+            assertEquals("Nasnusa", track.nowPlaying.title)
+            assertTrue(settled)
+            // As composed: Instrumental weak, calling for the check, which its owner starts.
+            assertTrue(track.genres.wantsVocalsCheck())
         }
 
     @Test
-    fun theCheckDoesNotStartByItselfWithTheSettingOffAiWebSearchOffOrNoSign() {
-        show(null, open = null) { assertTrue(checked.isEmpty()) }
-        show(null, settings = Settings(searchWithAi = true, aiWebSearch = AiWebSearch.OFF), open = null) {
-            assertTrue(checked.isEmpty())
-        }
-        show(null, playing = VocalsFixtures.biteNoSign, settings = Settings(searchWithAi = true), open = null) {
-            assertTrue(checked.isEmpty())
-        }
-        // LRCLIB not yet answered: it comes first.
+    fun theGenresAreToldNotSettledWhileLrclibMayStillAnswer() =
         show(
             null,
             playing = VocalsFixtures.nasnusaBeforeLibrary,
             settings = Settings(searchWithAi = true),
             open = null,
         ) {
-            assertTrue(checked.isEmpty())
+            assertFalse(reported.last().second)
         }
-    }
 
     @Test
-    fun theComposersAloneStartTheCheckByItself() =
-        show(null, playing = VocalsFixtures.bite, settings = Settings(searchWithAi = true), open = null) {
-            assertTrue(checked.isNotEmpty())
+    fun withTheSettingOffHomeDoesNotComposeTheGenresForTheCheck() {
+        homeOnly(Settings(searchWithAi = false)) {
+            assertTrue(reported.isEmpty())
         }
+        homeOnly(Settings(searchWithAi = true, aiWebSearch = AiWebSearch.OFF)) {
+            assertTrue(reported.isEmpty())
+        }
+        homeOnly(Settings(searchWithAi = true)) {
+            assertTrue(reported.isNotEmpty())
+        }
+    }
 
     @Test
     fun anInstrumentalSearchWithAiFoundUnderAnEmptyGenresIsAskedOfLrclib() {
@@ -324,7 +347,7 @@ internal object VocalsFixtures {
 
     class Notes(
         private val shown: VocalsShown?,
-        private val onCheck: (TrackState) -> Unit = {},
+        private val onShown: (TrackState, Boolean) -> Unit = { _, _ -> },
         private val onExplain: (String) -> Unit = {},
     ) : GenreNotes {
         override val vocabulary: GenreVocabulary = VocalsFixtures.vocabulary
@@ -343,6 +366,9 @@ internal object VocalsFixtures {
 
         override fun vocals(track: TrackState): Flow<VocalsShown?> = flowOf(shown)
 
-        override fun checkVocals(track: TrackState) = onCheck(track)
+        override fun genresShown(
+            track: TrackState,
+            settled: Boolean,
+        ) = onShown(track, settled)
     }
 }

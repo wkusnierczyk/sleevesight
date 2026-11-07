@@ -26,7 +26,6 @@ import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.genres.GenreLabel
 import app.sleevesight.core.genres.VocalsAnswer
-import app.sleevesight.core.genres.wantsVocalsCheck
 import app.sleevesight.core.lyrics.LibraryQuery
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.LaterLabels
@@ -44,10 +43,11 @@ import kotlin.time.Instant
 // genres, what starts it by itself, and its lines under Instrumental's definition.
 
 /**
- * *Ask AI automatically*'s check of the track's vocals (#998), on Home whether *Genres* is open or
- * not: [playing]'s genres composed as the panel composes them ([composedGenres]), and the check
- * started ([VocalsDue]) as soon as they are gathered and call for it. Nothing with the setting off,
- * or *AI web search* off as used.
+ * What *Ask AI automatically*'s check of the track's vocals follows (#998), on Home whether *Genres* is
+ * open or not: [playing]'s genres composed as the panel composes them ([composedGenres]), told to the
+ * notes as they change ([GenresSettled]). The check is started, and started again once its gates open,
+ * by its owner (`AutoSearches`, in `AppGraph`), not here. Nothing with the setting off, or *AI web
+ * search* off as used.
  */
 @Composable
 internal fun AutoVocalsCheck(
@@ -57,34 +57,31 @@ internal fun AutoVocalsCheck(
     search: PanelSearch,
 ) {
     if (settings?.searchWithAi != true || settings.aiWebSearchUsed == AiWebSearch.OFF) return
-    VocalsDue(playing, composedGenres(playing, notes, search).track, settings, notes.notes)
+    GenresSettled(playing, composedGenres(playing, notes, search).track, settings, notes.notes)
 }
 
 /**
- * Starts the check of [composed]'s vocals by itself ([GenreNotes.checkVocals], #998), [playing] as the
- * run has it: with *Ask AI automatically* and *AI web search* on in [settings], once the genres are
- * gathered (the run's labels in, none still asked), LRCLIB done with them ([libraryPending]: it comes
- * first, and its answer may settle it for free), and they call for it (`TrackGenres.wantsVocalsCheck`).
+ * Tells [notes] [composed], [playing]'s genres as *Genres* composes them, and whether the free steps
+ * are done with them ([GenreNotes.genresShown], #998): the run's labels in, none still asked, and
+ * LRCLIB done with them ([libraryPending]: it comes first, and its answer may settle it for free).
  */
 @Composable
-internal fun VocalsDue(
+internal fun GenresSettled(
     playing: TrackState?,
     composed: TrackState?,
     settings: Settings?,
     notes: GenreNotes,
 ) {
-    val due =
-        settings?.searchWithAi == true &&
-            settings.aiWebSearchUsed != AiWebSearch.OFF &&
+    val settled =
+        settings != null &&
             playing != null &&
             composed != null &&
             playing.gathered &&
             playing.genresAssembled &&
             LaterLabels.ASKING !in playing.laterLabels.values &&
-            !libraryPending(composed, settings) &&
-            composed.genres.wantsVocalsCheck()
-    LaunchedEffect(due, composed?.normalized, composed?.nowPlaying?.play) {
-        if (due && composed != null) notes.checkVocals(composed)
+            !libraryPending(composed, settings)
+    LaunchedEffect(composed, settled) {
+        if (composed != null) notes.genresShown(composed, settled)
     }
 }
 
