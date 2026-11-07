@@ -63,7 +63,7 @@ class AskAiKeptTest {
                             "A",
                             listOf(
                                 TrackLabel(
-                                    GenreLabel("rock", "rock", "Rock", "rock", null, GenreLevel.ARTIST, "A"),
+                                    GenreLabel("rock", "Rock", "rock", null, GenreLevel.ARTIST, "A"),
                                     listOf(LabelCredit(LabelSource.LASTFM, null)),
                                 ),
                             ),

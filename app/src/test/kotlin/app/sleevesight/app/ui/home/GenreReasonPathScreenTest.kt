@@ -80,7 +80,7 @@ class GenreReasonPathScreenTest {
                             null,
                             listOf(
                                 TrackLabel(
-                                    GenreLabel("rock", "rock", "Rock", "rock", level = GenreLevel.TRACK),
+                                    GenreLabel("rock", "Rock", "rock", level = GenreLevel.TRACK),
                                     listOf(LabelCredit(LabelSource.MUSICBRAINZ, "https://musicbrainz.org/recording/1")),
                                 ),
                             ),
@@ -89,7 +89,7 @@ class GenreReasonPathScreenTest {
                 ),
         )
 
-    private val blues = GenreLabel("blues", "jazzblues", "Blues", "blues", level = GenreLevel.TRACK)
+    private val blues = GenreLabel("blues", "Blues", "blues", level = GenreLevel.TRACK)
 
     private inner class Notes(
         start: GenreReason,
@@ -250,7 +250,7 @@ class GenreReasonPathScreenTest {
 
     @Test
     fun aListedGenreOnlyTheAlbumHasCreditsTheModelAmongTheAlbumRowsSources() {
-        val folk = GenreLabel("folk", "folk", "Folk", "folk", level = GenreLevel.ALBUM)
+        val folk = GenreLabel("folk", "Folk", "folk", level = GenreLevel.ALBUM)
         val withAlbum =
             playing.copy(
                 genres =

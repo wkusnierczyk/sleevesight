@@ -79,7 +79,7 @@ class GenresScreenTest {
         source: LabelSource = LabelSource.LASTFM,
     ): TrackLabel {
         val shown = tag.split(' ').joinToString(" ") { it.replaceFirstChar(Char::uppercase) }
-        val genre = GenreLabel(tag, "family", shown, tag.replace(" ", ""), level = level, artist = artist)
+        val genre = GenreLabel(tag, shown, tag.replace(" ", ""), level = level, artist = artist)
         // A track's label with the votes to be backed (#799, #875): no chip here is weak.
         val votes = TrackGenres.MIN_VOTES.takeIf { level == GenreLevel.TRACK }
         return TrackLabel(genre, listOf(LabelCredit(source, "https://example.org/$tag")), votes)
@@ -359,7 +359,7 @@ class GenresScreenTest {
         val folk = label("folk", GenreLevel.ARTIST, "Gordon Lightfoot", LabelSource.MUSICBRAINZ)
         val both =
             TrackLabel(
-                GenreLabel("pop", "family", "Pop", "pop", level = GenreLevel.ARTIST, artist = "Gordon Lightfoot"),
+                GenreLabel("pop", "Pop", "pop", level = GenreLevel.ARTIST, artist = "Gordon Lightfoot"),
                 listOf(
                     LabelCredit(LabelSource.LASTFM, "https://www.last.fm/music/Gordon+Lightfoot"),
                     LabelCredit(LabelSource.MUSICBRAINZ, "https://musicbrainz.org/artist/gl"),

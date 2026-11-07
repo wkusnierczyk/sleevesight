@@ -184,7 +184,7 @@ internal object CascadeFixtures {
                             null,
                             listOf(
                                 TrackLabel(
-                                    GenreLabel("rock", "rock", "Rock", "rock", level = GenreLevel.TRACK),
+                                    GenreLabel("rock", "Rock", "rock", level = GenreLevel.TRACK),
                                     listOf(LabelCredit(LabelSource.LASTFM, "https://www.last.fm/tag/rock")),
                                 ),
                             ),

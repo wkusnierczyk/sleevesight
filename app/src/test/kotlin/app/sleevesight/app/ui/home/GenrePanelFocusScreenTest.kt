@@ -102,7 +102,7 @@ class GenrePanelFocusScreenTest {
     ): TrackLabel {
         val shown = tag.replaceFirstChar(Char::uppercase)
         return TrackLabel(
-            GenreLabel(tag, "family", shown, tag, level = level, artist = artist),
+            GenreLabel(tag, shown, tag, level = level, artist = artist),
             listOf(LabelCredit(LabelSource.LASTFM, "https://example.org/$tag")),
             votes,
         )

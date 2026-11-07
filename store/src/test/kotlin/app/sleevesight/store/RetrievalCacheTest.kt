@@ -596,14 +596,13 @@ class RetrievalCacheTest {
         listOf(
             GenreLabel(
                 "folk rock",
-                "folk",
                 "Folk Rock",
                 "folkrock",
                 "https://www.last.fm/music/Gordon+Lightfoot",
                 artist = "Gordon Lightfoot",
             ),
-            GenreLabel("folk", "folk", "Folk", "folk"),
-            GenreLabel("instrumental", "score", "Instrumental", "instrumental", beyondCap = true),
+            GenreLabel("folk", "Folk", "folk"),
+            GenreLabel("instrumental", "Instrumental", "instrumental", beyondCap = true),
         )
 
     // The recording's tags, with their votes (#799).

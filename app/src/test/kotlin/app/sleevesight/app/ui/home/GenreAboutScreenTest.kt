@@ -95,7 +95,7 @@ class GenreAboutScreenTest {
 
     private fun label(source: LabelSource = LabelSource.LASTFM) =
         TrackLabel(
-            GenreLabel("jazz", "jazzblues", "Jazz", "jazz", level = GenreLevel.ARTIST, artist = "Miles Davis"),
+            GenreLabel("jazz", "Jazz", "jazz", level = GenreLevel.ARTIST, artist = "Miles Davis"),
             listOf(LabelCredit(source, "https://example.org/jazz")),
         )
 
@@ -291,7 +291,6 @@ class GenreAboutScreenTest {
             TrackLabel(
                 GenreLabel(
                     "modal jazz",
-                    "jazzblues",
                     "Modal Jazz",
                     "modaljazz",
                     level = GenreLevel.ARTIST,
