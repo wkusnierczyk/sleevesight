@@ -126,14 +126,15 @@ internal class TrackRun(
     private val budget = GatherBudget(time.timeSource)
 
     // LRCLIB, asked whether the track has lyrics when a genre is Instrumental (#997): with its switch
-    // on; by a *Retry* only when it names LRCLIB, or by any other run that asks again.
+    // on; by a *Retry* when it names LRCLIB or the genres before it never called for LRCLIB (an
+    // Instrumental the *Retry* brought), and by any other run that asks again.
     private val library =
         LibrarySign(
             parts.lyricsLibrary
                 ?.takeIf { settings.isEnabled(SourceId.LRCLIB) }
                 ?.let { LibraryLookup(it, parts.cache, onEvent) },
             input,
-            asks = input.again?.only?.let { SourceId.LRCLIB in it } ?: true,
+            asks = input.again?.only?.let { SourceId.LRCLIB in it || !input.before.genres.wantsLibrary() } ?: true,
             fresh = looksAgain,
             keptFailed = input.before.kept?.libraryFailed == true,
             emit = onEvent,
@@ -192,7 +193,10 @@ internal class TrackRun(
                         labels.addLater(later)
                         // Once every label is in, LRCLIB, when a genre is Instrumental (#997).
                         if (library.ask(state.value.genres)) {
-                            update { it.copy(genres = labels.of(it), libraryUnreachable = library.failed) }
+                            update {
+                                val genres = labels.of(it)
+                                it.copy(genres = genres, libraryUnreachable = library.unreachable(genres))
+                            }
                         }
                         // Those that failed, a *Retry* may ask again (#772).
                         labels.failedSources.takeIf { it.isNotEmpty() }?.let(control::labelsFailed)
@@ -399,14 +403,15 @@ internal class TrackRun(
         val evidence = EvidenceSet.of(drafts, parts.hasher, state.value.knownLanguage())
         // The genres and how their later requests stand, in one update with the evidence (#772).
         update {
+            val genres = labels.of(it)
             it.copy(
                 evidence = evidence,
-                genres = labels.of(it),
+                genres = genres,
                 laterLabels = labels.states(),
                 laterFound = labels.found,
                 laterAnswered = labels.answered,
                 genresAssembled = true,
-                libraryUnreachable = library.failed,
+                libraryUnreachable = library.unreachable(genres),
             )
         }
         emit(

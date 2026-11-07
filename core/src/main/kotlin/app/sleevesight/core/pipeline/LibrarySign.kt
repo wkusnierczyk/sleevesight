@@ -138,8 +138,10 @@ class LibraryLookup(
  * One run's LRCLIB answer (#997): the one kept, read before the genres are assembled ([readKept], no
  * request), so a replay shows them weighed from the start; else asked once the genres are in, with
  * the labels after the evidence ([ask]), when they call for it ([wantsLibrary]). [lookup] is null with
- * LRCLIB off or not built. A *Retry* that does not name LRCLIB ([asks] false) asks it nothing, and
- * keeps what the run before ended with ([keptFailed]) while nothing is kept; a look again ([fresh])
+ * LRCLIB off or not built. A *Retry* that does not name LRCLIB, of a track whose genres before it
+ * called for LRCLIB already ([asks] false), asks it nothing, and keeps what the run before ended with
+ * ([keptFailed]) while nothing is kept; one whose genres before it did not, so LRCLIB was never asked,
+ * asks as any run does (an Instrumental the *Retry* brought); a look again ([fresh])
  * reads nothing kept and asks afresh. [input] is the run's: its track, as played.
  */
 internal class LibrarySign(
@@ -158,10 +160,16 @@ internal class LibrarySign(
     var answer: LibraryLyrics? = null
         private set
 
-    /** Whether asking LRCLIB failed, so a *Retry* may ask it again. */
+    /**
+     * Whether asking LRCLIB failed, so a *Retry* may ask it again; shown only while the genres call
+     * for it ([unreachable]).
+     */
     @Volatile
     var failed: Boolean = keptFailed && lookup != null
         private set
+
+    /** Whether [genres] show LRCLIB as not reached: it [failed], and they still call for it. */
+    fun unreachable(genres: TrackGenres): Boolean = failed && genres.wantsLibrary()
 
     /** The answer kept for the track, if any, before the genres are assembled; asks nothing. */
     suspend fun readKept() {
@@ -180,8 +188,18 @@ internal class LibrarySign(
     @Suppress("RedundantSuspendModifier") // Detekt does not see `LibraryLookup.ask` as suspending; it is.
     suspend fun ask(genres: TrackGenres): Boolean {
         val asked = lookup?.takeIf { asks && answer == null }
-        if (asked == null || !genres.wantsLibrary()) return false
-        return when (val found = asked.ask(track, nowPlaying, fresh)) {
+        return when {
+            // Genres that no longer call for LRCLIB (a *Retry* brought MusicBrainz's mark or its lyrics
+            // links) leave a failure kept from before with nothing to ask: no longer shown, nor retryable.
+            !genres.wantsLibrary() -> failed.also { failed = false }
+            asked == null -> false
+            else -> landed(asked.ask(track, nowPlaying, fresh))
+        }
+    }
+
+    // What [found] changes: an answer, or a failure, both shown; nothing when it could not be asked.
+    private fun landed(found: LibraryAnswer?): Boolean =
+        when (found) {
             null -> false
             is LibraryAnswer.Known -> {
                 answer = found.lyrics
@@ -195,5 +213,4 @@ internal class LibrarySign(
                 true
             }
         }
-    }
 }

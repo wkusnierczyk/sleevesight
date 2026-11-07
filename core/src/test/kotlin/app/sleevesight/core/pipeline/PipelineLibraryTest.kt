@@ -266,4 +266,81 @@ class PipelineLibraryTest {
             }
             assertEquals(1, library.asked.size)
         }
+
+    // Last.fm unreachable at first, then answering with [tags] for Sababa 5: as a *Retry* finds it.
+    private fun flakyLastFm(vararg tags: String): Pair<FakeAdapter, () -> Unit> {
+        var reachable = false
+        val adapter =
+            FakeAdapter(SourceId.LASTFM) { _, _ ->
+                if (reachable) {
+                    SourceResult(
+                        Outcome.ArtistArticle,
+                        listOf(line(SourceId.LASTFM, "Sababa 5 has 1 listener.")),
+                        Duration.ZERO,
+                        genres = vocabulary.labelsFor(tags.toList(), artist = "Sababa 5"),
+                    )
+                } else {
+                    SourceResult(Outcome.Unreachable, emptyList(), Duration.ZERO)
+                }
+            }
+        return adapter to { reachable = true }
+    }
+
+    @Test
+    fun `a Retry of another source that brings Instrumental asks LRCLIB once`() =
+        runTest {
+            val library = FakeLibrary(Lookup.Found(LibraryLyrics.LYRICS))
+            val (lastFm, reach) = flakyLastFm("instrumental", "funk")
+            val pipeline = pipeline(library, adapter = lastFm, time = PipelineTime())
+            val first = pipeline.run(nasnusa, RunControl.Unattended(write = false))
+            assertTrue(first.genres.isEmpty)
+            assertEquals(emptyList(), library.asked)
+            reach()
+            val before = Gathered(first.sources, first.resolution)
+            val retried =
+                pipeline.run(
+                    nasnusa,
+                    RunControl.Unattended(write = false),
+                    again = before.asking(setOf(SourceId.LASTFM)),
+                )
+            assertEquals(1, library.asked.size)
+            assertFalse(retried.instrumental())
+            assertEquals(listOf("funk"), retried.genres.all.map { it.genre.identity })
+        }
+
+    @Test
+    fun `a failure kept from before is not shown once the genres no longer call for LRCLIB`() =
+        runTest {
+            val library = FakeLibrary(Lookup.Failed("network"))
+            var tags = listOf("instrumental", "funk")
+            val lastFm =
+                FakeAdapter(SourceId.LASTFM) { _, _ ->
+                    SourceResult(
+                        Outcome.ArtistArticle,
+                        listOf(line(SourceId.LASTFM, "Sababa 5 has 1 listener.")),
+                        Duration.ZERO,
+                        genres = vocabulary.labelsFor(tags, artist = "Sababa 5"),
+                        provisional = true,
+                    )
+                }
+            val pipeline = pipeline(library, adapter = lastFm, time = PipelineTime())
+            val failed = mutableListOf<Set<SourceId>>()
+            val reporting =
+                object : RunControl by RunControl.Unattended(write = false) {
+                    override fun labelsFailed(sources: Set<SourceId>) {
+                        failed += sources
+                    }
+                }
+            val first = pipeline.run(nasnusa, reporting)
+            assertTrue(first.libraryUnreachable)
+            assertEquals(listOf(setOf(SourceId.LRCLIB)), failed)
+            // A *Retry* of Last.fm, whose tags now leave Instrumental out: nothing left to ask LRCLIB.
+            tags = listOf("funk", "soul")
+            val before = Gathered(first.sources, first.resolution, labelsFailed = failed.single())
+            failed.clear()
+            val retried = pipeline.run(nasnusa, reporting, again = before.asking(setOf(SourceId.LASTFM)))
+            assertFalse(retried.libraryUnreachable)
+            assertTrue(failed.none { SourceId.LRCLIB in it })
+            assertEquals(1, library.asked.size)
+        }
 }

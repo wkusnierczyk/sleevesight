@@ -48,6 +48,7 @@ internal val SHOWN_LIFETIMES =
         SourceId.WIKIDATA to R.string.settings_cache_wikidata,
         SourceId.WIKIPEDIA to R.string.settings_cache_wikipedia,
         SourceId.LASTFM to R.string.settings_source_lastfm,
+        SourceId.LRCLIB to R.string.settings_source_lrclib,
         SourceId.WEB to R.string.settings_cache_web,
     )
 

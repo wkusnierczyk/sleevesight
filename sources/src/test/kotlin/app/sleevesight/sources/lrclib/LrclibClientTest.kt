@@ -60,6 +60,7 @@ class LrclibClientTest {
             LrclibClient(net).lookUp(query)
             val sent = net.sent.single()
             assertEquals("https://lrclib.net/api/get", sent.url)
+            assertEquals(LrclibClient.REQUEST_TIMEOUT, sent.timeout)
             assertEquals(
                 mapOf(
                     "track_name" to "Nasnusa",

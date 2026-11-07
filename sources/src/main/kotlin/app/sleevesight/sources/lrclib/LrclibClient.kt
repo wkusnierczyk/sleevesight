@@ -12,6 +12,7 @@ import app.sleevesight.sources.parseObject
 import app.sleevesight.sources.string
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
 /**
@@ -24,6 +25,15 @@ import kotlin.time.Duration.Companion.seconds
  * LRCLIB asks clients to name themselves, their version and a homepage in the User-Agent, and to
  * honour a 429's `Retry-After` with jitter: [HOST_POLICY], which `:wiring`'s list of host policies
  * registers under [HOST], gives both.
+ *
+ * `/api/get`, not `/api/get-cached`: `/api/get` is the endpoint LRCLIB's documentation describes
+ * (lrclib.net/docs, read 2026-11-07), with a 404 for a track it does not know, which "can be picked up
+ * by the background lyrics fetching service" for a later request, so a miss does not wait on that
+ * fetch. `/api/get-cached`, which keeps to LRCLIB's own database, is not in the documentation now.
+ * Checked live on 2026-11-07, one request each: a request with no `album_name` is answered (200, the
+ * record found), so a track the player names no album for is asked without one; a miss is a 404 from
+ * both endpoints in about 0.1 s. Should `/api/get` ever wait on an outside lookup, [REQUEST_TIMEOUT]
+ * bounds it, and the request comes after the evidence, so the insight never waits for it.
  */
 class LrclibClient(
     private val net: NetClient,
@@ -44,6 +54,12 @@ class LrclibClient(
         val HOST_POLICY: HostPolicy =
             HostPolicy(minInterval = 1.seconds, contact = "https://sleevesight.app", retryJitter = 1.seconds)
 
+        /**
+         * How long one request may take, in place of the client's minute: a lookup of the record
+         * answers in well under a second, and the Instrumental chip stays as it was meanwhile.
+         */
+        val REQUEST_TIMEOUT: Duration = 10.seconds
+
         /** The request for [query]: its title, artist, album if any, and length in seconds. */
         internal fun request(query: LibraryQuery): NetRequest =
             NetRequest(
@@ -55,6 +71,7 @@ class LrclibClient(
                         query.album?.let { "album_name" to it },
                         "duration" to query.seconds.toString(),
                     ).toMap(),
+                timeout = REQUEST_TIMEOUT,
             )
 
         /** What a record says of the track: its instrumental mark first, then whether it has lyrics. */
