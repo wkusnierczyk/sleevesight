@@ -233,7 +233,9 @@ data class TrackGenres(
      * other level, the same rule: only a tag with [MIN_VOTES] is backed. Instrumental is weak, on
      * any row, when the track shows a sign of being sung ([signOfVocals], #996); found instrumental by
      * the check of its vocals (#998, [Singing.checked]), it is weak for neither its signs nor its
-     * votes. The rows keep their cap, [GenreVocabulary.MAX_LABELS]; the chips have none of their own.
+     * votes, nor is the Instrumental LRCLIB's mark adds ([TrackLabel.markedBy], #1024,
+     * `withLibraryMark`), a source's chip with no votes. The rows keep their cap,
+     * [GenreVocabulary.MAX_LABELS]; the chips have none of their own.
      *
      * The genres the artists' descriptions name ([described], #1000) follow the sources' tags, before
      * the AI's, in the same order of names, each placed on its artist's described row: only those no
@@ -256,8 +258,10 @@ data class TrackGenres(
         val marked =
             sources.map { placed ->
                 val label = placed.label
-                // Instrumental the check of the track's vocals found so (#998) is not weak for its votes.
-                val confirmed = label.genre.identity == INSTRUMENTAL && singing.checked == VocalsAnswer.INSTRUMENTAL
+                // Instrumental the check of the track's vocals found so (#998) is not weak for its votes, nor
+                // one a source's mark gave (#1024: LRCLIB's), which has none.
+                val checked = label.genre.identity == INSTRUMENTAL && singing.checked == VocalsAnswer.INSTRUMENTAL
+                val confirmed = checked || label.markedBy != null
                 val fewVotes =
                     placed.row.level == GenreLevel.TRACK &&
                         label.genre.identity !in others &&
@@ -507,6 +511,13 @@ data class TrackGenres(
         val CASE_FOLDED: Comparator<String> = compareBy { it.lowercase() }
     }
 }
+
+/**
+ * This vocabulary's label of Instrumental ([TrackGenres.INSTRUMENTAL]) as a track's: what the check of
+ * the track's vocals (#998) and LRCLIB's instrumental mark (#1024) add where no row has it.
+ */
+fun GenreVocabulary.instrumental(): GenreLabel? =
+    labelsFor(listOf(TrackGenres.INSTRUMENTAL), level = GenreLevel.TRACK).firstOrNull()
 
 /**
  * The artist's hint that leaves [placed], Instrumental from an artist's description alone (#1000,

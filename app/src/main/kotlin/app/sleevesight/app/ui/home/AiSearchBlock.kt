@@ -353,8 +353,9 @@ private fun searchFailureText(reason: String): String =
  * title and credited artists as cleaned for the sources (as *Lyrics*' Genius search uses them), the
  * album as the player reports it, and what the sources gave the other panels: the album's year as
  * Home shows it ([headerYears]), MusicBrainz's recording when it accepted one, its first release
- * ([firstReleaseOf]), and the genres a source other than MusicBrainz gives (D12: MusicBrainz's tags
- * never reach a prompt). The prompt leaves out the genres when it asks for them.
+ * ([firstReleaseOf]), and the genres a source other than MusicBrainz gives, LRCLIB's mark's
+ * Instrumental among them (#1024) (D12: MusicBrainz's tags never reach a prompt). The prompt leaves
+ * out the genres when it asks for them.
  */
 internal fun searchFacts(
     track: TrackState,
@@ -371,8 +372,9 @@ internal fun searchFacts(
     val genres =
         track.genres.rows
             .flatMap { it.labels }
-            .filter { label -> label.credits.any { it.source != LabelSource.MUSICBRAINZ } }
-            .map { it.genre.label }
+            .filter { label ->
+                label.markedBy != null || label.credits.any { it.source != LabelSource.MUSICBRAINZ }
+            }.map { it.genre.label }
             .distinct()
     return SearchFacts(
         title = track.normalized.title,

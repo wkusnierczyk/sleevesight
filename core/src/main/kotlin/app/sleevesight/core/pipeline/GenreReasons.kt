@@ -579,7 +579,8 @@ class GenreReasons(
         /**
          * Whether [track]'s genre [genre] may reach a prompt: a source other than MusicBrainz gives it,
          * on some row, or the AI's genre list does (`TrackLabel.aiModel`, #762: [track]'s genres with
-         * the list, `TrackGenres.withAi`), or an artist's description names it (#1000,
+         * the list, `TrackGenres.withAi`), or a source's mark gave it (#1024: LRCLIB's Instrumental,
+         * `TrackLabel.markedBy`), or an artist's description names it (#1000,
          * `TrackGenres.described`: the lines the prompt reads anyway), as the question's genre alone.
          * D12: MusicBrainz's tags, CC BY-NC-SA 3.0, never reach a prompt.
          */
@@ -592,7 +593,11 @@ class GenreReasons(
                     .flatMap { it.labels }
                     .any { label ->
                         label.genre.identity == genre &&
-                            (label.aiModel != null || label.credits.any { it.source != LabelSource.MUSICBRAINZ })
+                            (
+                                label.aiModel != null ||
+                                    label.markedBy != null ||
+                                    label.credits.any { it.source != LabelSource.MUSICBRAINZ }
+                            )
                     }
 
         /**

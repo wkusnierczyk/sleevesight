@@ -217,6 +217,7 @@ class Cli(
                             lastFmLabels = lastFmLabels,
                             // LRCLIB (#997) live only: the recorded fixtures hold none of its answers.
                             lyricsLibrary = wiring.lyricsLibrary.takeIf { options.mode == Mode.LIVE },
+                            vocabulary = wiring.genreVocabulary,
                             sessionFacts = ListeningSessionFacts { pass.toLong() },
                             // In the track's language (#902), as the app: the core default, *If needed*.
                             languageSearch =

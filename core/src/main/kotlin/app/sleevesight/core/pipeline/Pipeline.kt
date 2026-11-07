@@ -3,6 +3,7 @@ package app.sleevesight.core.pipeline
 import app.sleevesight.core.Secret
 import app.sleevesight.core.ai.AiProvider
 import app.sleevesight.core.evidence.Hasher
+import app.sleevesight.core.genres.GenreVocabulary
 import app.sleevesight.core.genres.LastFmLabels
 import app.sleevesight.core.genres.MusicBrainzLabels
 import app.sleevesight.core.genres.TrackGenres
@@ -82,7 +83,9 @@ class AiAccess(
  * [dateForm] gives the form the prompts ask for dates in (#957, `InsightPrompt.dateRule`), read as
  * each prompt is built: in the app, the phone's own form in English, as *Dates* writes them;
  * elsewhere the app's ([DateForm.APP]). [lyricsLibrary] is LRCLIB (#997), asked whether the track has
- * lyrics when one of its genres is Instrumental ([LibrarySign]), or none (no such sign).
+ * lyrics when one of its genres is Instrumental ([LibrarySign]), or none (no such sign). [vocabulary] is
+ * the genre list, for the Instrumental LRCLIB's mark adds where the work's composers alone asked it
+ * (#1024, [withLibraryMark]); without it, none is added.
  */
 @Suppress("LongParameterList") // Independent stages, and why one is missing; all but the first four are optional.
 class PipelineParts(
@@ -104,6 +107,7 @@ class PipelineParts(
     val languageLines: ItemLanguageLines? = null,
     val songWeb: SongWebLookup? = null,
     val lyricsLibrary: LyricsLibrary? = null,
+    val vocabulary: GenreVocabulary? = null,
 ) {
     init {
         require(adapters.map { it.id }.distinct().size == adapters.size) { "One adapter per source" }

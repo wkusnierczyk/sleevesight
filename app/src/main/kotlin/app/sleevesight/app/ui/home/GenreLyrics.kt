@@ -10,6 +10,7 @@ import app.sleevesight.app.pipeline.AiSearch
 import app.sleevesight.app.pipeline.AiSearchFeed
 import app.sleevesight.app.pipeline.GenreNotes
 import app.sleevesight.app.pipeline.PanelLibrary
+import app.sleevesight.core.genres.instrumental
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.LaterLabels
 import app.sleevesight.core.pipeline.TrackState
@@ -92,7 +93,8 @@ internal fun withLibrary(
         joined == null || answer == null -> LibraryWeighed(joined)
         answer is PanelLibrary.Answered ->
             LibraryWeighed(
-                joined.copy(genres = joined.genres.withLibrary(answer.lyrics)),
+                // Its mark adds Instrumental where the work's composers alone asked it (#1024), as the run's.
+                joined.copy(genres = joined.genres.withLibrary(answer.lyrics, notes.vocabulary?.instrumental())),
             )
         else -> LibraryWeighed(joined.copy(libraryUnreachable = true)) { notes.retryLibrary(joined) }
     }

@@ -54,7 +54,10 @@ data class LabelCredit(
  * the AI model whose genre list for the track has it (#762, [TrackGenres.withAi]), null where none
  * does. A label with no credits but the model's was added by the AI ([aiAdded]). [describedIn], for
  * a genre an artist's description names (#1000, [describedGenres]), where: such a label has no
- * credits either, and is no tag.
+ * credits either, and is no tag. [markedBy], for a genre a source that gives no tags marks the track
+ * with (#1024: LRCLIB's instrumental mark, `TrackGenres.withLibraryMark`), that source: such a label
+ * has no credits and no votes, and is a source's genre all the same, credited to it under *Tag
+ * sources*, never marked AI.
  */
 data class TrackLabel(
     val genre: GenreLabel,
@@ -62,12 +65,14 @@ data class TrackLabel(
     val votes: Int? = genre.votes,
     val aiModel: String? = null,
     val describedIn: DescribedIn? = null,
+    val markedBy: SourceId? = null,
 ) {
     /**
      * Whether the AI's genre list added it (#762): no source's tags give it, only the list of
-     * [aiModel], so it shows marked **AI**, credited to the model.
+     * [aiModel], so it shows marked **AI**, credited to the model; not one a source's mark gave
+     * ([markedBy], #1024), which the list only credits to the model too.
      */
-    val aiAdded: Boolean get() = aiModel != null && credits.isEmpty() && describedIn == null
+    val aiAdded: Boolean get() = aiModel != null && credits.isEmpty() && describedIn == null && markedBy == null
 
     /**
      * Whether it may open AI-written genre card content: an artist's label (as before the track's

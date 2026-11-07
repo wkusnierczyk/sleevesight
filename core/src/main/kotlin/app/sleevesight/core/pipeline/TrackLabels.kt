@@ -29,7 +29,9 @@ import kotlin.coroutines.cancellation.CancellationException
  * part of it, so the insight neither waits for them nor sees them, come the rest ([addLater]):
  * MusicBrainz's artist labels, from the tags of the artists its result names ([musicBrainz]), and
  * Last.fm's track and album labels ([lastFm], with the user's key). Their Instrumental is weighed
- * with LRCLIB's answer too, once known ([library], #997).
+ * with LRCLIB's answer too, once known ([library], #997); where the work's composers alone asked it,
+ * LRCLIB's instrumental mark adds [instrumental], the vocabulary's label of it (#1024,
+ * [withLibraryMark]), none without the vocabulary.
  */
 @Suppress("LongParameterList") // The label sources, the run's settings and key, where it reports, and what it keeps.
 internal class TrackLabels(
@@ -42,6 +44,7 @@ internal class TrackLabels(
     kept: LaterKept? = null,
     private val asking: Set<SourceId>? = null,
     private val library: LibrarySign? = null,
+    private val instrumental: GenreLabel? = null,
 ) {
     // The sources all of whose requests the run before answered: only those a *Retry* may keep.
     private val keptAnswered: Set<LabelSource> = kept?.answered.orEmpty()
@@ -75,7 +78,7 @@ internal class TrackLabels(
             },
             current.normalized.artists,
             singing(current.done(SourceId.MUSICBRAINZ)?.lyrics).copy(library = library?.answer),
-        )
+        ).withLibraryMark(instrumental)
     }
 
     // What MusicBrainz's [lyrics] say of whether the track is sung (#996): marked instrumental (or only
