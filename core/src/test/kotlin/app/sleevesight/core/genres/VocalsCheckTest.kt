@@ -207,6 +207,18 @@ class VocalsCheckTest {
     }
 
     @Test
+    fun `composers alone hint at nothing with a vocal credit or a language of the work`() {
+        for (sung in listOf(
+            Singing(composersOnly = true, vocalists = listOf("Ana")),
+            Singing(composersOnly = true, languages = listOf("heb")),
+        )) {
+            assertFalse(bite(sung).wantsVocalsCheck())
+            assertFalse(bite(sung).wantsLibrary())
+        }
+        assertTrue(bite(Singing(composersOnly = true)).wantsLibrary())
+    }
+
+    @Test
     fun `unknown keeps the weak mark and its line`() {
         val unknown = nasnusa().withVocals(VocalsAnswer.UNKNOWN, MODEL)
         assertEquals(true, unknown.chip(TrackGenres.INSTRUMENTAL)?.weak)

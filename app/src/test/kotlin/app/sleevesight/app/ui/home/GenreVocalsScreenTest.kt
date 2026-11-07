@@ -276,6 +276,17 @@ class GenreVocalsScreenTest {
     }
 
     @Test
+    fun lrclibNotReachedForTheComposersHintAloneSaysNothing() {
+        show(null, playing = VocalsFixtures.bite.copy(libraryUnreachable = true), open = null) {
+            compose.onNodeWithText("LRCLIB could not be reached.").assertDoesNotExist()
+        }
+        // With an Instrumental shown, it says so, once.
+        show(null, playing = VocalsFixtures.nasnusaBeforeLibrary.copy(libraryUnreachable = true), open = null) {
+            compose.onNodeWithText("LRCLIB could not be reached.").assertExists()
+        }
+    }
+
+    @Test
     fun aTapOnWhyIsThisInstrumentalAsksTheNotes() =
         show(null) {
             compose.onNodeWithTag(GENRE_WHY_TAG).performScrollTo().performClick()

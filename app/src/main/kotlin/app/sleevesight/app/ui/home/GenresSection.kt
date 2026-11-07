@@ -51,6 +51,7 @@ import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.LaterLabels
 import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.pipeline.TrackState
+import app.sleevesight.core.pipeline.showsInstrumental
 import app.sleevesight.core.settings.Settings
 
 /**
@@ -244,7 +245,8 @@ internal data class GenresShown(
                 looking,
                 unreachable,
                 none = empty && looking.isEmpty() && unreachable.isEmpty(),
-                libraryUnreachable = track.libraryUnreachable,
+                // Said only while an Instrumental is shown (#998's review): not for the composers' hint.
+                libraryUnreachable = track.libraryUnreachable && track.genres.showsInstrumental(),
             )
         }
 

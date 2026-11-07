@@ -871,13 +871,21 @@ class AppGenreNotes private constructor(
         track: TrackState,
         genre: String,
     ) {
-        // Instrumental before the free steps are done with the genres (#998's review): the tap is held,
-        // and looked at again once they are ([genresShown]), a free sign perhaps settling it.
-        if (genre == TrackGenres.INSTRUMENTAL && !settledFor(track)) {
+        // Instrumental in doubt before the free steps are done with the genres (#998's review), a check
+        // possible: the tap is held, and looked at again once they are ([genresShown]), a free sign
+        // perhaps settling it. With no check possible or wanted, the reason at once, as before.
+        if (genre == TrackGenres.INSTRUMENTAL && !settledFor(track) && checkPossible(track)) {
             held.update { it + (heldKey(track) to genre) }
         } else {
             explainSettled(track, genre)
         }
+    }
+
+    // Whether a check of [track]'s vocals could run for it now: wanted, with a key under the settings.
+    private fun checkPossible(track: TrackState): Boolean {
+        val made = parts.value
+        val now = settings.value
+        return made != null && now != null && track.genres.wantsVocalsCheck() && checksOf(made).key(track, now) != null
     }
 
     // [explain] once the free steps are done with [track]'s genres, or for a genre they do not weigh.
@@ -897,11 +905,29 @@ class AppGenreNotes private constructor(
         if (check != null) {
             scope.launch(mark()) {
                 check.join()
-                if (current(coroutineContext) && !foundVocals(key)) explainNow(track, genre)
+                when {
+                    !current(coroutineContext) || foundVocals(key) -> Unit
+                    // Refused (a free sign, *AI web search* off, another AI service meanwhile): the
+                    // genres last shown for its play looked at again before a reason (#998's review).
+                    key !in checks.value -> afterRefused(track, genre)
+                    else -> explainNow(track, genre)
+                }
             }
         } else if (key == null || !foundVocals(key)) {
             explainNow(track, genre)
         }
+    }
+
+    // After a tapped check refused before its call: the reason for [genre], on the genres last shown for
+    // [track]'s play, while they still show it and no free sign has settled it since; no new check.
+    private fun afterRefused(
+        track: TrackState,
+        genre: String,
+    ) {
+        val fresh = settled.value?.takeIf { samePlay(it, track) } ?: track
+        val run = playing()?.takeIf { samePlay(it, track) } ?: fresh
+        val shows = fresh.genres.everyLabel.any { it.genre.identity == genre }
+        if (shows && !settledSince(run, track)) explainNow(fresh, genre)
     }
 
     // Whether [key]'s check, known, found vocals on the track (#998): no reason for its Instrumental.
@@ -1355,6 +1381,7 @@ class AppGenreNotes private constructor(
             val oldest = next.keys.first()
             next.remove(oldest)
             looked.remove(oldest)
+            tappedIn.remove(oldest)
         }
         return next
     }

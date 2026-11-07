@@ -142,8 +142,9 @@ class VocalsChecks(
         val checked =
             when {
                 asked.refused || asked.searchFailed -> null
-                // No page found: no call, and nothing says either.
-                end == null -> VocalsState.Checked(VocalsAnswer.UNKNOWN, key.model)
+                // No page found: no call, and nothing says either. A call whose stream ended with no end
+                // is a failure, below, not an answer.
+                end == null && asked.cost.calls == 0 -> VocalsState.Checked(VocalsAnswer.UNKNOWN, key.model)
                 else -> done?.let { read(asked.text, key, pages) }
             }
         val state =

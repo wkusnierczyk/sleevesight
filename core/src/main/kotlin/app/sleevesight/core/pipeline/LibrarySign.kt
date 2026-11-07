@@ -15,17 +15,25 @@ import kotlin.coroutines.cancellation.CancellationException
  * Whether these genres call for LRCLIB's answer (#997; `design/design.md`, *Genre labels*): a row has
  * Instrumental ([TrackGenres.INSTRUMENTAL]: a source's tag, or a genre the AI's list added), or an
  * artist's description names it (#998: the artist's hint, a row of [TrackGenres.described], which only
- * the panel reads), or the song's work credits composers alone (#998's hint, with no row of it: LRCLIB
- * answers before the paid check of the track's vocals, and may settle it for free); and nothing
+ * the panel reads), or the song's work credits composers alone (#998's hint, `Singing.composersHint`,
+ * with no row of it: LRCLIB answers before the paid check of the track's vocals, and may settle it for
+ * free); and nothing
  * settles it already: no answer from LRCLIB yet, and the track not marked instrumental by MusicBrainz,
  * where Instrumental stands whatever LRCLIB says. Lyrics MusicBrainz lists leave no row with
  * Instrumental, and settle the hint, so they call for none either.
  */
 fun TrackGenres.wantsLibrary(): Boolean {
-    val tagged = (rows + described).any { row -> row.labels.any { it.genre.identity == TrackGenres.INSTRUMENTAL } }
-    val hinted = singing.composersOnly && !singing.lyrics
-    return singing.library == null && !singing.instrumental && (tagged || hinted)
+    val hinted = singing.composersHint && !singing.lyrics
+    return singing.library == null && !singing.instrumental && (showsInstrumental() || hinted)
 }
+
+/**
+ * Whether a row of these genres shows Instrumental: a source's tag, the AI's, or one an artist's
+ * description names (#1000). LRCLIB's failure is said only then (#998's review): asked for the
+ * composers' hint alone, nothing in *Genres* would tell what it was asked about.
+ */
+fun TrackGenres.showsInstrumental(): Boolean =
+    (rows + described).any { row -> row.labels.any { it.genre.identity == TrackGenres.INSTRUMENTAL } }
 
 /**
  * These genres weighed with LRCLIB's [answer] (#997, [app.sleevesight.core.genres.Singing.library]):

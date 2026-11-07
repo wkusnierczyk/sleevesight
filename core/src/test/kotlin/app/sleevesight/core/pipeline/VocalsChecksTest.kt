@@ -184,6 +184,17 @@ class VocalsChecksTest {
         }
 
     @Test
+    fun `a call whose stream ends with no end is a failure, not a kept unknown`() =
+        runTest {
+            val provider = FakeProvider { listOf(CompletionEvent.Delta("{\"answer\": ")) }
+            val checks = checks(provider)
+            val key = checkNotNull(checks.key(track, settings))
+            val end = checks.ask(key, track, AiSearches.Asking(AiWebSearch.ONCE)) { _, _ -> }
+            assertIs<VocalsState.Failed>(end)
+            assertNull(checks.kept(key))
+        }
+
+    @Test
     fun `a gate closed before the paid steps asks nothing and keeps nothing`() =
         runTest {
             val provider = FakeProvider { answer("vocals") }

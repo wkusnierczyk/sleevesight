@@ -72,7 +72,8 @@ internal fun GenresSearch(
             for (source in answer.sources) FromSite(source)
         }
     }
-    weighed.retry?.let { again -> LibraryRetry(true, again, { null }, {}) }
+    // One LRCLIB line at most: the panel's own, unless *Genres* says it already.
+    weighed.retry?.takeIf { !shown.libraryUnreachable }?.let { again -> LibraryRetry(true, again, { null }, {}) }
 }
 
 /**

@@ -343,6 +343,52 @@ class AppGenreVocalsTest {
         }
 
     @Test
+    fun `with no check possible a tap writes the reason at once, settled or not`() =
+        runTest {
+            settings.value = settings.value?.copy(aiWebSearch = AiWebSearch.OFF, searchWithAi = false)
+            notes()
+            val before = VocalsFixtures.nasnusaBeforeLibrary
+            notes.genresShown(before, settled = false)
+            notes.explain(before, TrackGenres.INSTRUMENTAL)
+            advanceUntilIdle()
+            assertEquals(1, provider.requests)
+            assertTrue(queries.isEmpty())
+            assertFalse("Does this track have vocals?" in provider.prompts.single())
+        }
+
+    @Test
+    fun `a tapped check stopped by lyrics Find the lyrics found writes no reason`() =
+        runTest {
+            settings.value = settings.value?.copy(searchWithAi = false)
+            notes()
+            searching = CompletableDeferred()
+            notes.genresShown(track, settled = true)
+            notes.explain(track, TrackGenres.INSTRUMENTAL)
+            advanceUntilIdle()
+            assertEquals(1, queries.size)
+            notes.genresShown(track.copy(genres = track.genres.withLyricsFound()), settled = true)
+            checkNotNull(searching).complete(Unit)
+            advanceUntilIdle()
+            assertEquals(0, provider.requests)
+        }
+
+    @Test
+    fun `a tapped check stopped by AI web search switched off writes the reason after all`() =
+        runTest {
+            settings.value = settings.value?.copy(searchWithAi = false)
+            notes()
+            searching = CompletableDeferred()
+            notes.genresShown(track, settled = true)
+            notes.explain(track, TrackGenres.INSTRUMENTAL)
+            advanceUntilIdle()
+            settings.value = settings.value?.copy(aiWebSearch = AiWebSearch.OFF)
+            checkNotNull(searching).complete(Unit)
+            advanceUntilIdle()
+            assertEquals(1, provider.requests)
+            assertFalse("Does this track have vocals?" in provider.prompts.single())
+        }
+
+    @Test
     fun `a tap while LRCLIB is held back, which then finds nothing, checks then`() =
         runTest {
             settings.value = settings.value?.copy(searchWithAi = false)

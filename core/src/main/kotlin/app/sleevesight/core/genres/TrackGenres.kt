@@ -138,6 +138,13 @@ data class Singing(
     val lifted: Boolean get() = marked || checked == VocalsAnswer.INSTRUMENTAL
 
     /**
+     * Whether the work's composers alone hint that the track is instrumental (#998): [composersOnly],
+     * with no free sign that it is sung, no vocal credit ([vocalists]) and no language of its work
+     * ([languages]). What starts the check of its vocals, LRCLIB first, with no Instrumental on any row.
+     */
+    val composersHint: Boolean get() = composersOnly && vocalists.isEmpty() && languages.isEmpty()
+
+    /**
      * Whether Instrumental is dropped from every row: lyrics found ([lyrics], or LRCLIB's, #997), or
      * vocals the check of them found (#998, [checked]), the track not [marked] instrumental.
      */
@@ -314,7 +321,7 @@ data class TrackGenres(
     /**
      * The sign that the track is sung that leaves the genre [identity], the AI's for the track (#762,
      * #773: *Search with AI*'s genres, shown with no row), at most weak (#996): as for a track's tag,
-     * a vocalist or a language, never a featured artist. Null for any other genre, or with none.
+     * a vocalist, a lyricist (#998) or a language, never a featured artist. Null for any other genre, or with none.
      */
     fun aiSignOfVocals(identity: String): WeakEvidence.SignOfVocals? = signOfVocals(identity, null)
 

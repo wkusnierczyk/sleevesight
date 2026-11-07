@@ -29,7 +29,8 @@ enum class VocalsAnswer(
  * labels*): Instrumental in doubt, and no free sign settling it. Its chip weak with a sign of vocals
  * ([WeakEvidence.SignOfVocals]: a vocalist, a lyricist of the work, its language, a featured artist),
  * or weak as the artist's hint (#1000, [WeakEvidence.ArtistHint]); or no row with Instrumental while
- * the song's work credits composers alone ([Singing.composersOnly]). Not with the track marked
+ * the song's work credits composers alone and nothing says it is sung ([Singing.composersHint]: no
+ * vocal credit, no language of the work). Not with the track marked
  * instrumental, lyrics found, the check applied already ([Singing.checked]), or Instrumental weak only
  * for its few votes. With nothing that
  * suggests Instrumental, never: not every track is checked.
@@ -43,7 +44,7 @@ fun TrackGenres.wantsVocalsCheck(): Boolean {
             else -> false
         }
     } else {
-        singing.composersOnly
+        singing.composersHint
     }
 }
 
