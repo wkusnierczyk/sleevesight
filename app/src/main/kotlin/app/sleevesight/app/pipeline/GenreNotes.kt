@@ -4,6 +4,8 @@ import app.sleevesight.core.ai.ModelNames
 import app.sleevesight.core.genres.GenreDefinitions
 import app.sleevesight.core.genres.GenreLabel
 import app.sleevesight.core.genres.GenreVocabulary
+import app.sleevesight.core.lyrics.LibraryLyrics
+import app.sleevesight.core.lyrics.LibraryQuery
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.AiOutcome
 import app.sleevesight.core.pipeline.AiQuestion
@@ -14,6 +16,8 @@ import app.sleevesight.core.pipeline.GenreListState
 import app.sleevesight.core.pipeline.GenreLists
 import app.sleevesight.core.pipeline.GenreReasons
 import app.sleevesight.core.pipeline.InsightState
+import app.sleevesight.core.pipeline.LibraryAnswer
+import app.sleevesight.core.pipeline.LibraryLookup
 import app.sleevesight.core.pipeline.PipelineEvent
 import app.sleevesight.core.pipeline.PipelineParts
 import app.sleevesight.core.pipeline.QuestionCost
@@ -102,6 +106,18 @@ data class AiGenreList(
     val sources: List<String> = emptyList(),
 )
 
+/**
+ * LRCLIB's answer for an Instrumental the AI's genre list added (#997, [GenreNotes.libraryLyrics]):
+ * [Answered] with what it said, or [Unreachable], which the panel shows with *Retry*.
+ */
+sealed interface PanelLibrary {
+    data class Answered(
+        val lyrics: LibraryLyrics,
+    ) : PanelLibrary
+
+    data object Unreachable : PanelLibrary
+}
+
 /** [this] with [list]'s genres in its track's row (`TrackGenres.withAi`); itself for none. */
 fun TrackState.withAi(list: AiGenreList?): TrackState =
     if (list == null ||
@@ -129,6 +145,17 @@ interface GenreNotes : DefinitionFeed {
      * not under the settings now).
      */
     fun aiGenres(track: TrackState): Flow<AiGenreList?> = flowOf(null)
+
+    /**
+     * LRCLIB's answer for [track] (#997), for an Instrumental the AI's genre list added, which the
+     * run never saw: its answer, or that it could not be reached ([PanelLibrary]); null while none is
+     * known. Read, or asked, at each collection, with LRCLIB on under *Sources*; the panel collects
+     * it only when its genres call for it and the run's labels are in (`panelAsksLibrary`).
+     */
+    fun libraryLyrics(track: TrackState): Flow<PanelLibrary?> = flowOf(null)
+
+    /** *Retry* of LRCLIB for [track]'s Instrumental the AI's list added (#997): asked again. */
+    fun retryLibrary(track: TrackState) = Unit
 
     /** [track]'s reason for [genre], as it changes. */
     fun reason(
@@ -288,6 +315,112 @@ class AppGenreNotes private constructor(
                         )
                     }?.let { AiGenreList(it.genres, modelName(it.model), it.sources) }
             }.distinctUntilChanged()
+
+    override fun libraryLyrics(track: TrackState): Flow<PanelLibrary?> {
+        val query = LibraryQuery.of(track.normalized, track.nowPlaying) ?: return flowOf(null)
+        val known = combine(libraries, settings) { all, now -> all[query] to libraryLifetime(now) }
+        return combine(parts, settings) { made, now -> made?.takeIf { asksLibrary(it, now) } }
+            .distinctUntilChanged()
+            .onEach { made -> made?.takeIf { asksAgain(query, track) }?.let { askLibrary(it, track, query) } }
+            .combine(known) { made, (entry, lifetime) ->
+                entry?.takeIf { made != null && holds(it, lifetime) }?.state
+            }.distinctUntilChanged()
+    }
+
+    override fun retryLibrary(track: TrackState) {
+        val query = LibraryQuery.of(track.normalized, track.nowPlaying) ?: return
+        parts.value?.takeIf { asksLibrary(it, settings.value) }?.let { askLibrary(it, track, query) }
+    }
+
+    // Whether LRCLIB can be asked with [made] under [now]: built, and on under *Sources*.
+    private fun asksLibrary(
+        made: PipelineParts,
+        now: Settings?,
+    ): Boolean = made.lyricsLibrary != null && now?.isEnabled(SourceId.LRCLIB) == true
+
+    // Whether [entry] still holds (#997's review): an answer within LRCLIB's lifetime ([lifetime]) of
+    // when it was had, as the retrieval cache keeps it no longer; a failure until asked again.
+    private fun holds(
+        entry: Entry<PanelLibrary>,
+        lifetime: Duration,
+    ): Boolean = entry.state is PanelLibrary.Unreachable || clock.now() - entry.writtenAt < lifetime
+
+    // Whether a collection for [track] asks for [query] again: nothing held, or no longer ([holds]); a
+    // failure of another play than [track]'s (one of this play waits for *Retry*, so reopening *Genres*
+    // in an outage sends nothing); or an answer read from the retrieval cache, read again (no
+    // request), as that cache expires it.
+    private fun asksAgain(
+        query: LibraryQuery,
+        track: TrackState,
+    ): Boolean {
+        val entry = libraries.value[query]
+        return when {
+            entry == null -> true
+            entry.state is PanelLibrary.Unreachable -> failedIn[query] != Played(track.nowPlaying.play)
+            else -> query in fromStore || !holds(entry, libraryLifetime(settings.value))
+        }
+    }
+
+    private fun libraryLifetime(now: Settings?): Duration =
+        now?.cacheLifetimes?.get(SourceId.LRCLIB) ?: Settings.DEFAULT_CACHE_LIFETIMES.getValue(SourceId.LRCLIB)
+
+    // LRCLIB asked for [track] (#997), at a collection that asks again ([asksAgain]) and at *Retry*, one
+    // at a time per query: the
+    // answer kept in the retrieval cache, which expires it, else LRCLIB's own (shared with the run's
+    // request in flight, `SharedLyricsLibrary`); shown, with when it was had, unless a *Clear
+    // history* came since. A failure is shown as such, and asked again at the next collection or *Retry*.
+    private fun askLibrary(
+        made: PipelineParts,
+        track: TrackState,
+        query: LibraryQuery,
+    ) {
+        val library = made.lyricsLibrary ?: return
+        if (!libraryAsked.add(query)) return
+        scope.launch(mark()) {
+            val work = coroutineContext
+            try {
+                val key = track.normalized.lookupKey
+                val state =
+                    when (
+                        val answer =
+                            LibraryLookup(
+                                library,
+                                made.cache,
+                                events,
+                            ).ask(track.normalized, track.nowPlaying)
+                    ) {
+                        is LibraryAnswer.Known -> {
+                            events(PipelineEvent.LibraryAnswered(key, answer.lyrics, answer.cached))
+                            if (answer.cached) fromStore += query else fromStore -= query
+                            PanelLibrary.Answered(answer.lyrics)
+                        }
+                        is LibraryAnswer.Failed -> {
+                            events(PipelineEvent.SourceFailed(key, SourceId.LRCLIB, answer.reason))
+                            failedIn[query] = Played(track.nowPlaying.play)
+                            PanelLibrary.Unreachable
+                        }
+                        null -> null
+                    }
+                state?.let { publish(work) { libraries.update { it + (query to Entry(state, clock.now())) } } }
+            } finally {
+                libraryAsked.remove(query)
+            }
+        }
+    }
+
+    // LRCLIB's answers for the AI's Instrumental (#997), by query, with when each was had, and those
+    // being asked.
+    private val libraries = MutableStateFlow<Map<LibraryQuery, Entry<PanelLibrary>>>(emptyMap())
+    private val libraryAsked: MutableSet<LibraryQuery> = ConcurrentHashMap.newKeySet()
+    private val fromStore: MutableSet<LibraryQuery> = ConcurrentHashMap.newKeySet()
+
+    // The play each query's last failure came in (`NowPlaying.play`), so a failure is asked about again
+    // only on *Retry* or in another play; a track no play counted ([Played.play] null) only on *Retry*.
+    private val failedIn = ConcurrentHashMap<LibraryQuery, Played>()
+
+    private data class Played(
+        val play: Long?,
+    )
 
     override fun reason(
         track: TrackState,
@@ -725,6 +858,7 @@ class AppGenreNotes private constructor(
             waiting.value = emptyMap()
             looked.clear()
             told.clear()
+            libraries.value = emptyMap()
         }
         lookups.forget()
     }

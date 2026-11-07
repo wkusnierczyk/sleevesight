@@ -4,6 +4,7 @@ import app.sleevesight.ai.anthropic.AnthropicProvider
 import app.sleevesight.ai.google.GoogleProvider
 import app.sleevesight.ai.openai.OpenAiProvider
 import app.sleevesight.net.NetConfig
+import app.sleevesight.sources.lrclib.LrclibClient
 import app.sleevesight.sources.web.ExaWebSearch
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -12,7 +13,7 @@ import kotlin.test.assertSame
 class HostPoliciesTest {
     /**
      * Each policy an adapter or provider states, under its host: `:net`'s defaults (MusicBrainz's),
-     * Exa's, Anthropic's, OpenAI's and Google's. No registry of them exists to read this from, so it
+     * Exa's, LRCLIB's (#997), Anthropic's, OpenAI's and Google's. No registry of them exists to read this from, so it
      * is a second copy of [HostPolicies.ALL], kept by review like the list itself: a new adapter's
      * policy is added to both. What this test checks on its own is that the configuration for each
      * version carries the list whole, with the version, and that each policy applies to the host its
@@ -21,6 +22,7 @@ class HostPoliciesTest {
     private val stated =
         NetConfig.DEFAULT_HOSTS +
             (ExaWebSearch.HOST to ExaWebSearch.HOST_POLICY) +
+            (LrclibClient.HOST to LrclibClient.HOST_POLICY) +
             (AnthropicProvider.HOST to AnthropicProvider.HOST_POLICY) +
             (OpenAiProvider.HOST to OpenAiProvider.HOST_POLICY) +
             (GoogleProvider.HOST to GoogleProvider.HOST_POLICY)
@@ -43,6 +45,9 @@ class HostPoliciesTest {
         val config = HostPolicies.netConfig("0.0")
         val exaHost = ExaWebSearch.ENDPOINT.removePrefix("https://").substringBefore('/')
         assertEquals(ExaWebSearch.HOST, config.domainFor(exaHost))
+        val lrclibHost = LrclibClient.ENDPOINT.removePrefix("https://").substringBefore('/')
+        assertEquals(LrclibClient.HOST, config.domainFor(lrclibHost))
+        assertEquals("Sleevesight/0.0 ( https://sleevesight.app )", config.userAgent(config.hosts[lrclibHost]))
         val anthropicHost = AnthropicProvider.BASE_URL.removePrefix("https://").substringBefore('/')
         assertEquals(AnthropicProvider.HOST, config.domainFor(anthropicHost))
         val openAiHost = OpenAiProvider.BASE_URL.removePrefix("https://").substringBefore('/')

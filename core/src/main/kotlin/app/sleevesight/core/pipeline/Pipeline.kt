@@ -6,6 +6,7 @@ import app.sleevesight.core.evidence.Hasher
 import app.sleevesight.core.genres.LastFmLabels
 import app.sleevesight.core.genres.MusicBrainzLabels
 import app.sleevesight.core.genres.TrackGenres
+import app.sleevesight.core.lyrics.LyricsLibrary
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.normalizer.Normalizer
@@ -78,7 +79,8 @@ class AiAccess(
  * (#939, [ItemInsights]), or none (the CLI), when they take only what their track's own search found.
  * [dateForm] gives the form the prompts ask for dates in (#957, `InsightPrompt.dateRule`), read as
  * each prompt is built: in the app, the phone's own form in English, as *Dates* writes them;
- * elsewhere the app's ([DateForm.APP]).
+ * elsewhere the app's ([DateForm.APP]). [lyricsLibrary] is LRCLIB (#997), asked whether the track has
+ * lyrics when one of its genres is Instrumental ([LibrarySign]), or none (no such sign).
  */
 @Suppress("LongParameterList") // Independent stages, and why one is missing; all but the first four are optional.
 class PipelineParts(
@@ -98,6 +100,7 @@ class PipelineParts(
     val languageSearch: LanguageSearch? = null,
     val dateForm: () -> DateForm = { DateForm.APP },
     val languageLines: ItemLanguageLines? = null,
+    val lyricsLibrary: LyricsLibrary? = null,
 ) {
     init {
         require(adapters.map { it.id }.distinct().size == adapters.size) { "One adapter per source" }
@@ -264,7 +267,7 @@ class Pipeline(
         val laterKept =
             shown.state.value
                 ?.takeIf { again?.only != null && it.normalized.lookupKey == track.lookupKey }
-                ?.let { TrackLabels.LaterKept(it.laterFound, it.laterLabels, it.laterAnswered) }
+                ?.let { TrackLabels.LaterKept(it.laterFound, it.laterLabels, it.laterAnswered, it.libraryUnreachable) }
         return TrackRun(
             parts = parts,
             time = time,

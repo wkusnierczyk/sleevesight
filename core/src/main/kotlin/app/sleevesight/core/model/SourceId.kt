@@ -8,6 +8,7 @@ package app.sleevesight.core.model
  * one unverified claim, cited `[AI]` (`[M]` until 0.1.8, #668: `citationId`).
  * [WIKIDATA] is separate from [WIKIPEDIA] because its lines are templated from structured data
  * and its retrieval cache lifetime differs (D9); both sit behind the user's one Wikipedia switch.
+ * [LRCLIB] gives no lines at all: only whether the track has lyrics (#997).
  */
 enum class SourceId(
     val tag: String,
@@ -16,6 +17,12 @@ enum class SourceId(
     WIKIPEDIA("W"),
     WIKIDATA("WD"),
     LASTFM("L"),
+
+    /**
+     * LRCLIB (#997), an open lyrics library: whether the track has lyrics, a sign for its genre
+     * Instrumental. It gives no evidence line, so no citation carries its tag.
+     */
+    LRCLIB("LR"),
     DISCOGS("D"),
 
     /** Web search, `S` for *Search* (`G` until 0.1.12, #769: [LEGACY_WEB_TAG]). */

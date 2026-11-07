@@ -3,7 +3,6 @@ package app.sleevesight.net
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.plugins.HttpTimeout
-import io.ktor.client.plugins.UserAgent
 import io.ktor.client.plugins.timeout
 import io.ktor.client.request.header
 import io.ktor.client.request.prepareRequest
@@ -25,13 +24,15 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.io.IOException
 import kotlinx.io.readByteArray
+import kotlin.random.Random
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.TimeSource
 
 /**
  * [NetClient] over Ktor. [engine] is OkHttp in the app and the CLI, `MockEngine` in tests, and is
- * closed with the client; [timeSource] and [clock] are virtual in tests.
+ * closed with the client; [timeSource] and [clock] are virtual in tests, and [random], the jitter's
+ * (`HostPolicy.retryJitter`), seeded.
  */
 internal class KtorNetClient(
     private val config: NetConfig,
@@ -39,6 +40,7 @@ internal class KtorNetClient(
     private val log: NetLog,
     private val timeSource: TimeSource.WithComparableMarks = TimeSource.Monotonic,
     private val clock: Clock = Clock.System,
+    private val random: Random = Random.Default,
 ) : NetClient {
     private val http =
         HttpClient(engine) {
@@ -46,7 +48,6 @@ internal class KtorNetClient(
             // Ktor's redirects forward key headers other than Authorization to any host, and skip
             // the rate limits; `send` follows redirects itself.
             followRedirects = false
-            install(UserAgent) { agent = config.userAgent }
             install(HttpTimeout) {
                 connectTimeoutMillis = config.timeouts.connect.inWholeMilliseconds
                 socketTimeoutMillis = config.timeouts.socket.inWholeMilliseconds
@@ -144,7 +145,8 @@ internal class KtorNetClient(
                     log.log("$description -> stopped by caller in $elapsed ms (attempt $attempt)")
                     throw e
                 }
-            val wait = retryWait(request, outcome, attempt)
+            val limited = (outcome as? Attempt.Failed)?.error is NetError.RateLimited
+            val wait = retryWait(request, outcome, attempt)?.let { it + policy.jitter(limited, random) }
             log.log(logLine(description, outcome, started.elapsedNow(), attempt, wait))
             if (wait == null) return outcome.result
             delay(wait)
@@ -188,6 +190,8 @@ internal class KtorNetClient(
                 .prepareRequest {
                     url(url)
                     method = if (request.method == NetMethod.POST) HttpMethod.Post else HttpMethod.Get
+                    // The host's own User-Agent (#997, `HostPolicy.contact`), so not Ktor's plugin.
+                    header(HttpHeaders.UserAgent, config.userAgent(policy))
                     (request.headers + request.secrets.headers).forEach { (name, value) -> header(name, value) }
                     request.body?.let { body ->
                         // Validated before, so the media type parses.
@@ -360,3 +364,12 @@ private fun headersOf(response: HttpResponse): Map<String, List<String>> =
         .entries()
         .filterNot { it.key.equals(ORIGINAL_RETRY_AFTER, ignoreCase = true) }
         .associate { it.key to it.value }
+
+// A random wait of up to the host's jitter before retrying a 429 ([rateLimited]; #997, `HostPolicy.retryJitter`).
+private fun HostPolicy?.jitter(
+    rateLimited: Boolean,
+    random: Random,
+): Duration {
+    val most = this?.retryJitter ?: Duration.ZERO
+    return if (rateLimited && most.isPositive()) most * random.nextDouble() else Duration.ZERO
+}

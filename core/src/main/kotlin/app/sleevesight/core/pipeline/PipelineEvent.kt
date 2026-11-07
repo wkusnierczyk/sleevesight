@@ -4,6 +4,7 @@ import app.sleevesight.core.ai.AiErrorKind
 import app.sleevesight.core.ai.Breakoff
 import app.sleevesight.core.ai.StopReason
 import app.sleevesight.core.ai.Usage
+import app.sleevesight.core.lyrics.LibraryLyrics
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.Outcome
@@ -135,6 +136,16 @@ sealed interface PipelineEvent {
         val after: Duration,
         val resolution: Boolean = false,
         val language: String? = null,
+    ) : PipelineEvent
+
+    /**
+     * LRCLIB answered whether the track has lyrics (#997, [LibrarySign]): [answer], from the retrieval
+     * cache when [cached]. Its failure is a [SourceFailed] of `LR`.
+     */
+    data class LibraryAnswered(
+        override val key: String,
+        val answer: LibraryLyrics,
+        val cached: Boolean,
     ) : PipelineEvent
 
     /** An adapter threw; [reason] is the exception's type. */

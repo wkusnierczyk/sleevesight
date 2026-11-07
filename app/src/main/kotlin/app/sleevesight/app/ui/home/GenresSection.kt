@@ -119,10 +119,12 @@ internal fun GenresContent(
     search: PanelSearch = PanelSearch(),
 ) {
     // The track's genres with the AI's genre list (#762), where one is known: its genres join the
-    // chips and the track's row, marked AI.
+    // chips and the track's row, marked AI; an Instrumental it added weighed with LRCLIB's answer (#997).
     // The genres the artists' descriptions name (#1000), beside the tags, before the AI's list's.
     val described = withDescribed(playing, notes)
-    val track = withLyricsFound(described?.withAi(aiGenres(described, notes.notes)), search)
+    val joined = described?.withAi(aiGenres(described, notes.notes))
+    val weighed = withLibrary(described, joined, notes.notes)
+    val track = withLyricsFound(weighed.track, search)
     val shown = GenresShown.of(track, settings)
     val style = MaterialTheme.typography.bodyLarge
     // The genre a tap opened, kept above the chips and the lines in their place (#772): while a run
@@ -170,6 +172,7 @@ internal fun GenresContent(
             afterRetry = toClose,
         )
     }
+    LibraryRetry(shown.libraryUnreachable, weighed.retry, retry, toClose)
     if (shown.none) Text(stringResource(R.string.home_genres_none), style = style)
     GenresSearch(track, shown, search, notes)
 }
@@ -185,13 +188,15 @@ private fun sourcesNamed(sources: List<LabelSource>): String {
  * What *Genres*' panel says besides its chips (#772), for a track and the settings: the label
  * sources still being asked while the genres are gathered, by name ([looking]); those that could
  * not be reached, each with *Retry* ([unreachable]); with every genre source off and no genre, where
- * its link leads ([off]); and whether it says none were found ([none]).
+ * its link leads ([off]); whether it says none were found ([none]); and whether LRCLIB, asked about
+ * the track's Instrumental, could not be reached, with *Retry* ([libraryUnreachable], #997).
  */
 internal data class GenresShown(
     val looking: List<LabelSource> = emptyList(),
     val unreachable: List<LabelSource> = emptyList(),
     val off: SettingsTarget? = null,
     val none: Boolean = false,
+    val libraryUnreachable: Boolean = false,
 ) {
     companion object {
         /**
@@ -234,7 +239,12 @@ internal data class GenresShown(
             val later = track.laterLabels
             val looking = on.filter { later[it] == LaterLabels.ASKING }
             val unreachable = on.filter { unreachable(track.sources[it.source]) || later[it] == LaterLabels.FAILED }
-            return GenresShown(looking, unreachable, none = empty && looking.isEmpty() && unreachable.isEmpty())
+            return GenresShown(
+                looking,
+                unreachable,
+                none = empty && looking.isEmpty() && unreachable.isEmpty(),
+                libraryUnreachable = track.libraryUnreachable,
+            )
         }
 
         // Whether a source's lookup ended unreachable, or failed: *Retry* asks it again.

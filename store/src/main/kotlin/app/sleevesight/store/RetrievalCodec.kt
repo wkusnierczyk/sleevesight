@@ -5,6 +5,7 @@ import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.genres.GenreLabel
 import app.sleevesight.core.genres.GenreLevel
 import app.sleevesight.core.genres.RecordingTags
+import app.sleevesight.core.lyrics.LibraryLyrics
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.sources.FirstRelease
@@ -112,6 +113,7 @@ internal object RetrievalCodec {
                 trackOnly = result.trackOnly,
                 pages = result.pages,
                 language = result.language,
+                library = result.library?.name,
             ),
         )
 
@@ -166,6 +168,7 @@ internal object RetrievalCodec {
                 trackOnly = stored.trackOnly,
                 pages = stored.pages,
                 language = stored.language,
+                library = stored.library?.let { name -> LibraryLyrics.entries.firstOrNull { it.name == name } },
             )
         } catch (_: IllegalArgumentException) {
             // `SerializationException` is one too.
@@ -250,6 +253,8 @@ internal object RetrievalCodec {
         val pages: List<String> = emptyList(),
         // The decided language of a track (#902, `SourceResult.language`), on that decision's entry only.
         val language: String? = null,
+        // LRCLIB's answer for a track (#997, `SourceResult.library`), on that answer's entry only.
+        val library: String? = null,
     )
 
     // A first release (#724): of the recording, or of a cover's original.

@@ -481,6 +481,7 @@ object InsightPrompt {
             SourceId.WIKIPEDIA -> "Wikipedia"
             SourceId.WIKIDATA -> "Wikidata"
             SourceId.LASTFM -> "Last.fm"
+            SourceId.LRCLIB -> "LRCLIB"
             SourceId.DISCOGS -> "Discogs"
             SourceId.WEB -> "Web search"
             SourceId.MODEL -> "model knowledge"

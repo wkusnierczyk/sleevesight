@@ -499,7 +499,9 @@ data class Settings(
 
         /**
          * D9: MusicBrainz and Wikidata 30 days, Wikipedia and Last.fm 7 days, web search 1 day.
-         * Discogs: 30 days, as for MusicBrainz (D9; owner, 2026-10-13).
+         * Discogs: 30 days, as for MusicBrainz (D9; owner, 2026-10-13). LRCLIB (#997): 7 days, as for
+         * Last.fm: its library is its users', and a track it did not know (kept as no answer) may be
+         * added to it.
          */
         val DEFAULT_CACHE_LIFETIMES: Map<SourceId, Duration> =
             mapOf(
@@ -508,6 +510,7 @@ data class Settings(
                 SourceId.DISCOGS to STABLE_DAYS.days,
                 SourceId.WIKIPEDIA to ARTICLE_DAYS.days,
                 SourceId.LASTFM to ARTICLE_DAYS.days,
+                SourceId.LRCLIB to ARTICLE_DAYS.days,
                 SourceId.WEB to WEB_DAYS.days,
             )
 
@@ -597,6 +600,7 @@ enum class SourceSwitch(
     MUSICBRAINZ(setOf(SourceId.MUSICBRAINZ)),
     WIKIPEDIA(setOf(SourceId.WIKIPEDIA, SourceId.WIKIDATA)),
     LASTFM(setOf(SourceId.LASTFM)),
+    LRCLIB(setOf(SourceId.LRCLIB)),
     DISCOGS(setOf(SourceId.DISCOGS)),
     WEB(setOf(SourceId.WEB)),
     MODEL(setOf(SourceId.MODEL)),

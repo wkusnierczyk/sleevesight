@@ -6,13 +6,15 @@ import app.sleevesight.ai.openai.OpenAiProvider
 import app.sleevesight.net.HostPolicy
 import app.sleevesight.net.NetConfig
 import app.sleevesight.net.RetryPolicy
+import app.sleevesight.sources.lrclib.LrclibClient
 import app.sleevesight.sources.web.ExaWebSearch
 
 /**
  * The one list of host policies (architecture, *Networking*): each adapter's and provider's own
  * rate limit, under its host. A host's limit is in force only once it is in `NetConfig.hosts`, so an
  * adapter or provider with a stated limit adds its policy here, and both processes get it through
- * [netConfig]. `:net`'s defaults hold MusicBrainz's; Exa's is the web search adapter's; Anthropic's,
+ * [netConfig]. `:net`'s defaults hold MusicBrainz's; Exa's is the web search adapter's; LRCLIB's
+ * (#997) its own User-Agent contact and a 429's jitter besides its interval; Anthropic's,
  * OpenAI's and Google's have no interval, only their 429 passed on (`AnthropicProvider.HOST_POLICY`,
  * `OpenAiProvider.HOST_POLICY`, `GoogleProvider.HOST_POLICY`). The other hosts state no figure for a client
  * ([NetConfig.DEFAULT_HOSTS] says why).
@@ -28,6 +30,7 @@ object HostPolicies {
     val ALL: Map<String, HostPolicy> =
         NetConfig.DEFAULT_HOSTS +
             (ExaWebSearch.HOST to ExaWebSearch.HOST_POLICY) +
+            (LrclibClient.HOST to LrclibClient.HOST_POLICY) +
             (AnthropicProvider.HOST to AnthropicProvider.HOST_POLICY) +
             (OpenAiProvider.HOST to OpenAiProvider.HOST_POLICY) +
             (GoogleProvider.HOST to GoogleProvider.HOST_POLICY)
