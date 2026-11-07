@@ -40,6 +40,7 @@ Sleevesight is an Android app that shows short, sourced insights about the song 
 ## How it is made
 
 - **[Process]({{ '/docs/process/' | relative_url }})**: how the app is built, reviewed, tested and released.
+- **[Security checks]({{ '/docs/security/' | relative_url }})**: what the app and its code are checked for, how, and the result for the latest release.
 - **[Testing Sleevesight]({{ '/docs/tester/alpha/' | relative_url }})**: the brief for testers in the closed test on Google Play.
 
 The design documents behind these pages are in the repository, under [`design/`](https://github.com/wkusnierczyk/sleevesight/tree/main/design).
