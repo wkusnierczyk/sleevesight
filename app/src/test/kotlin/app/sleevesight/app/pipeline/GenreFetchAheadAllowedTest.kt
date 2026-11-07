@@ -54,7 +54,7 @@ class GenreFetchAheadAllowedTest {
         val labels =
             genres.map { tag ->
                 TrackLabel(
-                    GenreLabel(tag, "rock", tag.replaceFirstChar(Char::uppercase), tag, null, GenreLevel.ARTIST, "A"),
+                    GenreLabel(tag, tag.replaceFirstChar(Char::uppercase), tag, null, GenreLevel.ARTIST, "A"),
                     listOf(LabelCredit(LabelSource.LASTFM, null)),
                 )
             }

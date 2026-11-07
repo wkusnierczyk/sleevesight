@@ -58,7 +58,7 @@ class GenreLyricsScreenTest {
         tag: String,
         level: GenreLevel,
         artist: String? = null,
-    ) = GenreLabel(tag, "family", tag.replaceFirstChar(Char::uppercase), tag, level = level, artist = artist)
+    ) = GenreLabel(tag, tag.replaceFirstChar(Char::uppercase), tag, level = level, artist = artist)
 
     // Artist A tagged Instrumental and Funk.
     private val tagged =

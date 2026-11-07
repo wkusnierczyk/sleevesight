@@ -87,7 +87,7 @@ class GenresButtonScreenTest {
 
     private fun label(tag: String): TrackLabel {
         val shown = tag.replaceFirstChar(Char::uppercase)
-        val genre = GenreLabel(tag, "family", shown, tag, level = GenreLevel.TRACK)
+        val genre = GenreLabel(tag, shown, tag, level = GenreLevel.TRACK)
         return TrackLabel(genre, listOf(LabelCredit(LabelSource.LASTFM, "https://example.org/$tag")))
     }
 

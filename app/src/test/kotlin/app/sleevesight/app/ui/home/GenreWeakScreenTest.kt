@@ -82,7 +82,7 @@ class GenreWeakScreenTest {
         votes: Int? = null,
     ): TrackLabel {
         val shown = tag.split(' ').joinToString(" ") { it.replaceFirstChar(Char::uppercase) }
-        val genre = GenreLabel(tag, "family", shown, tag.replace(" ", ""), level = level, artist = artist)
+        val genre = GenreLabel(tag, shown, tag.replace(" ", ""), level = level, artist = artist)
         return TrackLabel(genre, listOf(LabelCredit(source, "https://example.org/$tag")), votes)
     }
 
@@ -245,7 +245,7 @@ class GenreWeakScreenTest {
         // Every source's genre weak, and one the AI's list added: the first weak one.
         val weak =
             TrackGenres(listOf(trackRow(lastFm("soul"), oneVote("rock")))).withAi(
-                listOf(GenreLabel("ambient", "family", "Ambient", "ambient", level = GenreLevel.TRACK)),
+                listOf(GenreLabel("ambient", "Ambient", "ambient", level = GenreLevel.TRACK)),
                 "Claude Haiku 5.5",
             )
         show(weak) {

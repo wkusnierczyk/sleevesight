@@ -120,7 +120,7 @@ class LayoutPagesTest {
         artist: String? = null,
     ): TrackLabel {
         val shown = tag.split(' ').joinToString(" ") { it.replaceFirstChar(Char::uppercase) }
-        val genre = GenreLabel(tag, "family", shown, tag.replace(" ", ""), level = level, artist = artist)
+        val genre = GenreLabel(tag, shown, tag.replace(" ", ""), level = level, artist = artist)
         // A track's label with the votes to be backed (#799, #875): no chip here is weak.
         val votes = TrackGenres.MIN_VOTES.takeIf { level == GenreLevel.TRACK }
         return TrackLabel(genre, listOf(LabelCredit(LabelSource.LASTFM, "https://example.org/$tag")), votes)

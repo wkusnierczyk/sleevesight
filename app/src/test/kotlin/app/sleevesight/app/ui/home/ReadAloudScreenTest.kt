@@ -264,7 +264,7 @@ class ReadAloudScreenTest {
     fun aGenresWrittenReasonHasReadAloudWhichReadsItsQuestionThenTheReason() {
         val label =
             TrackLabel(
-                GenreLabel("jazz", "jazzblues", "Jazz", "jazz", level = GenreLevel.ARTIST, artist = "Gordon Lightfoot"),
+                GenreLabel("jazz", "Jazz", "jazz", level = GenreLevel.ARTIST, artist = "Gordon Lightfoot"),
                 listOf(LabelCredit(LabelSource.LASTFM, "https://example.org/jazz")),
             )
         val playing =
@@ -291,7 +291,7 @@ class ReadAloudScreenTest {
     fun aGenresReasonOfferedAgainWhileItIsReadStopsTheReading() {
         val label =
             TrackLabel(
-                GenreLabel("jazz", "jazzblues", "Jazz", "jazz", level = GenreLevel.ARTIST, artist = "Gordon Lightfoot"),
+                GenreLabel("jazz", "Jazz", "jazz", level = GenreLevel.ARTIST, artist = "Gordon Lightfoot"),
                 listOf(LabelCredit(LabelSource.LASTFM, "https://example.org/jazz")),
             )
         val playing =
