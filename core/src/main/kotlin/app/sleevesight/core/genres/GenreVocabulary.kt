@@ -137,7 +137,61 @@ class GenreVocabulary(
             }.toList()
     }
 
+    // The tags of each spelling (letters and digits, case aside), in the vocabulary's order, for
+    // [namedIn]; and the most words a tag has.
+    private val bySpelling: Map<String, List<String>> by lazy { familyOf.keys.groupBy { spelling(it) } }
+    private val mostWords: Int by lazy { familyOf.keys.maxOfOrNull { TAG_WORD.findAll(it).count() } ?: 0 }
+
+    /**
+     * The genres [text] names (#1000), in its order: each run of words whose spelling ([identity]'s
+     * folding: case, punctuation and spacing aside) is a vocabulary tag's, on word boundaries, a
+     * name of several words whole, the longest name first where names overlap ("indie rock", not
+     * "indie" and "rock"). A word is letters and digits, with hyphens, apostrophes or `&` inside it:
+     * "post-punk" and "R&B" are one word each, so "electro-acoustic" names no *Acoustic* and
+     * "folklore" no *Folk*. A run of several words names only a tag of several words itself ("dance
+     * hall" names no *Dancehall*, "high life" no *Highlife*). The words of a name of several are
+     * spaced (or joined by a spaced `&`, or spaced with apostrophes beside them: "rock 'n' roll"), so
+     * "hip hop", "hip-hop" and "Hiphop" all name *Hip-Hop*. Each with the [IntRange] of [text] it spans.
+     */
+    fun namedIn(text: String): List<Pair<GenreLabel, IntRange>> {
+        val words = NAME_WORD.findAll(text).toList()
+        val found = mutableListOf<Pair<GenreLabel, IntRange>>()
+        var at = 0
+        while (at < words.size) {
+            val span =
+                (minOf(mostWords, words.size - at) downTo 1).firstNotNullOfOrNull { count ->
+                    val run = words.subList(at, at + count)
+                    val spaced =
+                        run.zipWithNext().all { (a, b) -> GAP.matches(text.substring(a.range.last + 1, b.range.first)) }
+                    // A run of several words names only a tag of several words ("hip hop", not
+                    // "dance hall" for Dancehall); one word, any tag of its spelling.
+                    val tags = bySpelling[run.joinToString("") { spelling(key(it.value)) }].orEmpty()
+                    val tag = tags.firstOrNull { count == 1 || TAG_WORD.findAll(it).count() > 1 }
+                    tag?.takeIf { spaced }?.let { count to it }
+                }
+            if (span == null) {
+                at++
+            } else {
+                val (count, tag) = span
+                val range = words[at].range.first..words[at + count - 1].range.last
+                labelsFor(listOf(tag)).firstOrNull()?.let { found += it to range }
+                at += count
+            }
+        }
+        return found
+    }
+
     companion object {
+        // A word of a tag, for counting them.
+        private val TAG_WORD = Regex("[\\p{L}\\p{N}]+")
+
+        // A word of text as [namedIn] reads it: letters and digits, with hyphens, apostrophes or `&` inside.
+        private val NAME_WORD = Regex("[\\p{L}\\p{N}]+(?:[-‐‑'’&][\\p{L}\\p{N}]+)*")
+
+        // What may stand between the words of one name in text: spaces, with apostrophes beside them
+        // ("rock 'n' roll", straight or curly), or a spaced `&` ("R & B").
+        private val GAP = Regex("[\\s'‘’]*\\s[\\s'‘’]*|\\s*&\\s*")
+
         /** The vocabulary's path among `:core`'s resources. */
         const val RESOURCE: String = "sleevesight/genre-vocabulary.json"
 

@@ -48,7 +48,8 @@ internal fun GenresSearch(
     search: PanelSearch,
     notes: PanelNotes,
 ) {
-    if (track != null && !track.genres.isEmpty || shown.looking.isNotEmpty()) return
+    // Under the genres an artist's description names too (#1000): they are no source's tags.
+    if (track != null && track.genres.rows.isNotEmpty() || shown.looking.isNotEmpty()) return
     // With lyrics found, never Instrumental (#996), as in the rows; with no other genre, nothing found.
     val drops = track?.genres?.singing?.dropsInstrumental == true
     val feed = remember(search.feed, drops) { if (drops) LyricsFoundFeed(search.feed) else search.feed }

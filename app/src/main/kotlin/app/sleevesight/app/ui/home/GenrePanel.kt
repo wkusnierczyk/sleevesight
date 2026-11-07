@@ -10,6 +10,7 @@ import app.sleevesight.app.pipeline.GenreNotes
 import app.sleevesight.app.speech.ReadAloud
 import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.app.ui.theme.Panel
+import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.pipeline.TrackState
 
 // A genre's body (#558, #786): what it is and why the track has it, then its tags and where they come
@@ -29,7 +30,7 @@ internal fun GenrePanel(
     afterRetry: () -> Unit = {},
 ) {
     val name =
-        track.genres.all
+        track.genres.everyLabel
             .firstOrNull { it.genre.identity == genre }
             ?.genre
             ?.label ?: return
@@ -56,11 +57,11 @@ internal fun GenreBody(
     afterRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    if (track.genres.all.none { it.genre.identity == genre }) return
+    if (track.genres.everyLabel.none { it.genre.identity == genre }) return
     Column(modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         // What the genre is, and *Why is this …?* (#523), above the tags.
         GenreAbout(track, genre, notes, search, afterRetry)
-        TagsGrid(track, genre)
+        TagsGrid(track, genre, notes.onCite)
     }
 }
 
@@ -70,15 +71,28 @@ internal fun GenreBody(
  * its line; under *Separate pages*, *Sources*' page at it); whether the model's own knowledge is
  * allowed now ([modelAllowed]); what reads a written reason aloud ([readAloud], #325), null for
  * no *Read aloud*; and where a link under a disabled *Why is this …?* opens the settings
- * ([openSettingsAt], #762).
+ * ([openSettingsAt], #762); and the lines *Sources* lists ([lines]: the track's evidence, with the
+ * album's and the artist's web lines, `SourcesLines`), whose artists' descriptions name genres
+ * (#1000, `describedGenres`), cited by the ids *Sources* shows; null for none.
  */
+@Suppress("LongParameterList") // Where the notes come from, where their links go, and what they read.
 internal class PanelNotes(
     val notes: GenreNotes = GenreNotes.None,
     val onCite: (String) -> Unit = {},
     val modelAllowed: Boolean = false,
     val readAloud: ReadAloud? = null,
     val openSettingsAt: (SettingsTarget) -> Unit = {},
+    val lines: EvidenceSet? = null,
 )
+
+// What a genre's panel on Home reads (#523): a citation unfolds *Sources* to its line ([cite]); the
+// genres an artist's description names come from [lines], *Sources*' own (#1000).
+internal fun panelNotes(
+    actions: NowPlayingActions,
+    cite: (String) -> Unit,
+    modelAllowed: Boolean,
+    lines: EvidenceSet?,
+) = PanelNotes(actions.genreNotes, cite, modelAllowed, actions.readAloud, actions.openSettingsAt, lines)
 
 /** The test tags of the genre's panel on the genres' page and its heading, as [Panel] makes them. */
 const val GENRE_PANEL_TAG: String = "genre-panel"
