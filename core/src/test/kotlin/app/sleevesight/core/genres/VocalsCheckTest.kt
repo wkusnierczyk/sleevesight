@@ -144,6 +144,51 @@ class VocalsCheckTest {
     }
 
     @Test
+    fun `free lyrics win over an instrumental answer kept from before, from MusicBrainz or LRCLIB`() {
+        for (sung in listOf(
+            Singing(composersOnly = true, lyrics = true),
+            Singing(composersOnly = true, library = LibraryLyrics.LYRICS),
+        )) {
+            val checked = bite(sung).withVocals(VocalsAnswer.INSTRUMENTAL, MODEL, instrumental)
+            assertTrue(checked.everyLabel.none { it.genre.identity == TrackGenres.INSTRUMENTAL })
+            assertNull(checked.singing.checked)
+        }
+        // A tagged Instrumental, lyrics found: it stays dropped.
+        val tagged =
+            nasnusa(
+                Singing(library = LibraryLyrics.LYRICS),
+            ).withVocals(VocalsAnswer.INSTRUMENTAL, MODEL, instrumental)
+        assertNull(tagged.chip(TrackGenres.INSTRUMENTAL))
+    }
+
+    @Test
+    fun `instrumental confirmed lifts a one-vote track tag's weak mark too`() {
+        val oneVote =
+            combineGenres(
+                mapOf(
+                    LabelSource.MUSICBRAINZ to
+                        vocabulary.labelsFor(
+                            listOf("instrumental"),
+                            level = GenreLevel.TRACK,
+                            votes =
+                                mapOf(
+                                    "instrumental" to 1,
+                                ),
+                        ),
+                ),
+                listOf(HAZAN),
+                Singing(languages = listOf("eng")),
+            )
+        assertEquals(true, oneVote.chip(TrackGenres.INSTRUMENTAL)?.weak)
+        assertTrue(oneVote.wantsVocalsCheck())
+        val confirmed = oneVote.withVocals(VocalsAnswer.INSTRUMENTAL, MODEL, instrumental)
+        assertEquals(false, confirmed.chip(TrackGenres.INSTRUMENTAL)?.weak)
+        assertNull(confirmed.weakEvidence(TrackGenres.INSTRUMENTAL))
+        // Unknown leaves it weak, for its votes as for its sign.
+        assertEquals(true, oneVote.withVocals(VocalsAnswer.UNKNOWN, MODEL).chip(TrackGenres.INSTRUMENTAL)?.weak)
+    }
+
+    @Test
     fun `unknown keeps the weak mark and its line`() {
         val unknown = nasnusa().withVocals(VocalsAnswer.UNKNOWN, MODEL)
         assertEquals(true, unknown.chip(TrackGenres.INSTRUMENTAL)?.weak)

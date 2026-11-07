@@ -60,7 +60,8 @@ fun TrackGenres.wantsVocalsCheck(): Boolean {
  *   answer's line) the genres as they are.
  * - [VocalsAnswer.UNKNOWN]: as they are, the answer kept, so the check is not wanted again.
  *
- * Itself once the check is applied, or with the track marked instrumental, where Instrumental stands.
+ * Itself once the check is applied, with the track marked instrumental, where Instrumental stands, or
+ * with lyrics found ([Singing.dropsInstrumental]), which drop it whatever an answer kept from before says.
  */
 fun TrackGenres.withVocals(
     answer: VocalsAnswer,
@@ -68,7 +69,9 @@ fun TrackGenres.withVocals(
     instrumental: GenreLabel? = null,
     drops: Boolean = true,
 ): TrackGenres {
-    if (singing.checked != null || singing.marked) return this
+    // Free signs win (#998's review): lyrics found (MusicBrainz's, LRCLIB's) drop Instrumental whatever
+    // a kept answer says, and the recording marked instrumental stands as tagged.
+    if (singing.checked != null || singing.marked || singing.dropsInstrumental) return this
     val weighed = singing.copy(checked = answer)
     return when (answer) {
         VocalsAnswer.UNKNOWN -> copy(singing = weighed)

@@ -224,8 +224,9 @@ data class TrackGenres(
      * MusicBrainz's; Last.fm's weights are no votes, so a tag only Last.fm gives the track is weak):
      * one contributor's tag on the recording is not backed by the album's and the artists'. With no
      * other level, the same rule: only a tag with [MIN_VOTES] is backed. Instrumental is weak, on
-     * any row, when the track shows a sign of being sung ([signOfVocals], #996). The rows keep their
-     * cap, [GenreVocabulary.MAX_LABELS]; the chips have none of their own.
+     * any row, when the track shows a sign of being sung ([signOfVocals], #996); found instrumental by
+     * the check of its vocals (#998, [Singing.checked]), it is weak for neither its signs nor its
+     * votes. The rows keep their cap, [GenreVocabulary.MAX_LABELS]; the chips have none of their own.
      *
      * The genres the artists' descriptions name ([described], #1000) follow the sources' tags, before
      * the AI's, in the same order of names, each placed on its artist's described row: only those no
@@ -248,10 +249,13 @@ data class TrackGenres(
         val marked =
             sources.map { placed ->
                 val label = placed.label
+                // Instrumental the check of the track's vocals found so (#998) is not weak for its votes.
+                val confirmed = label.genre.identity == INSTRUMENTAL && singing.checked == VocalsAnswer.INSTRUMENTAL
                 val fewVotes =
                     placed.row.level == GenreLevel.TRACK &&
                         label.genre.identity !in others &&
-                        (label.votes ?: 0) < MIN_VOTES
+                        (label.votes ?: 0) < MIN_VOTES &&
+                        !confirmed
                 placed.copy(weak = fewVotes || signOfVocals(placed) != null)
             }
         // The AI's Instrumental is weighed as a track's (#996): weak with a vocalist or a language.
