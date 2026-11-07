@@ -266,12 +266,20 @@ data class ResolvedWork(
  * @property vocalists the artists MusicBrainz credits with a `vocal` relationship on the recording
  *   (#996), by MusicBrainz's names, in its order, once each: a sign the track is sung, against which
  *   an artist's Instrumental tag is weighed (`TrackGenres.chips`).
+ * @property lyricists the artists MusicBrainz credits with a `lyricist` relationship on the work the
+ *   resolution looks up (#998), by MusicBrainz's names, in its order, once each: someone wrote its
+ *   words, so a sign the track is sung, as a vocal credit is.
+ * @property composersOnly whether that work credits composers (`composer`) and no one with its words
+ *   (no `lyricist`, `librettist` or `writer`, which covers both): a hint the track may be
+ *   instrumental (#998), too weak to add Instrumental alone.
  */
 data class WorkLyrics(
     val links: List<String>? = emptyList(),
     val languages: List<String> = emptyList(),
     val instrumental: Boolean = false,
     val vocalists: List<String> = emptyList(),
+    val lyricists: List<String> = emptyList(),
+    val composersOnly: Boolean = false,
 ) {
     companion object {
         /** Nothing known of the lyrics: links not known, no language, not instrumental. */

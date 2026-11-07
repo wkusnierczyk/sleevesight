@@ -27,14 +27,16 @@ import app.sleevesight.core.pipeline.TrackState
  * A weak genre's name on its chip (#875): in the notes' colour and in italics, as an unbacked
  * sentence in an insight (#819), at the regular weight; while [selected], in italics, dimmed on the
  * selected fill: the chip's text colour at [WEAK_SELECTED] over it. A screen reader reads it "Country,
- * weak evidence".
+ * weak evidence", or, for a genre an artist's description names ([spoken], #1000: "Instrumental,
+ * from the artist’s description"), that, then "weak evidence".
  */
 @Composable
 internal fun WeakName(
     label: String,
     selected: Boolean,
+    spoken: String = label,
 ) {
-    val described = stringResource(R.string.genre_weak, label)
+    val described = stringResource(R.string.genre_weak, spoken)
     Text(
         label,
         modifier = Modifier.semantics { contentDescription = described },
@@ -84,15 +86,19 @@ private const val WEAK_SELECTED = 0.72f
  * (or what stands in its place) and before *Why is this …?*, in the panel's quiet note style, the
  * genre in italics as its chip names it: "Few MusicBrainz contributors tagged this track *Country*,
  * and the artist's tags don't include it."; for Instrumental on a track with signs of vocals (#996),
- * the sign: the vocalist MusicBrainz credits, the language of the lyrics, or the featured artist.
+ * the sign: the vocalist MusicBrainz credits, the lyricist of its work (#998), the language of the
+ * lyrics, or the featured artist;
+ * for Instrumental only the artist's description gives (#1000, #998's artist hint), what it says,
+ * quoted, and the citation of its line, a link to it in *Sources* ([onCite]).
  * Nothing for a genre that is not weak.
  */
 @Composable
 internal fun WeakEvidenceNote(
     track: TrackState,
     genre: GenreLabel,
+    onCite: (String) -> Unit = {},
 ) {
-    WeakEvidenceNote(track.genres.weakEvidence(genre.identity), genre)
+    WeakEvidenceNote(track.genres.weakEvidence(genre.identity), genre, onCite)
 }
 
 /** The line [WeakEvidenceNote] shows for [genre], weak for the reason [why]; nothing for none. */
@@ -100,8 +106,22 @@ internal fun WeakEvidenceNote(
 internal fun WeakEvidenceNote(
     why: WeakEvidence?,
     genre: GenreLabel,
+    onCite: (String) -> Unit = {},
 ) {
-    why ?: return
+    when (why) {
+        null -> Unit
+        is WeakEvidence.ArtistHint ->
+            CitedNote(stringResource(R.string.genre_weak_hint, why.where.quote), why.where.line, onCite, GENRE_WEAK_TAG)
+        else -> WeakLine(why, genre)
+    }
+}
+
+// The line of [WeakEvidenceNote] for a weak [genre] whose reason [why] cites no line.
+@Composable
+private fun WeakLine(
+    why: WeakEvidence,
+    genre: GenreLabel,
+) {
     val line =
         when (why) {
             is WeakEvidence.FewVotes ->
@@ -111,10 +131,13 @@ internal fun WeakEvidenceNote(
                     othersClause(why)?.let { stringResource(it) }.orEmpty(),
                 )
             is WeakEvidence.Vocalist -> stringResource(R.string.genre_weak_vocalist, why.name, ALBUM_MARK)
+            is WeakEvidence.Lyricist -> stringResource(R.string.genre_weak_lyricist, why.name, ALBUM_MARK)
             is WeakEvidence.Language ->
                 why.name?.let { stringResource(R.string.genre_weak_language, it, ALBUM_MARK) }
                     ?: stringResource(R.string.genre_weak_lyrics, ALBUM_MARK)
             is WeakEvidence.Featured -> stringResource(R.string.genre_weak_featured, why.name)
+            // [WeakEvidenceNote]'s, with its citation.
+            is WeakEvidence.ArtistHint -> return
         }
     Text(
         withAlbum(line, genre.label),

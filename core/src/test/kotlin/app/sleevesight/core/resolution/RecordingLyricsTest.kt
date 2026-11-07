@@ -142,4 +142,35 @@ class RecordingLyricsTest {
                 resolve(musicBrainz, track("Song", "Act")).lyrics.vocalists,
             )
         }
+
+    // The work's lyrics as [work] gives them, with [relations] for its writing credits (#998).
+    private suspend fun credited(vararg relations: MbArtistRelation): WorkLyrics {
+        val work = MbWork("w", "Song", relations.toList(), emptyList(), emptyList())
+        val musicBrainz =
+            FakeMusicBrainz(
+                Lookup.Found(search),
+                mapOf("ours" to detail(MbWorkLink("w", "Song", cover = false))),
+                mapOf("w" to work),
+            )
+        return resolve(musicBrainz, track("Song", "Act")).lyrics
+    }
+
+    @Test
+    fun `the work's lyricists, once each, and whether it credits composers alone`() =
+        runTest {
+            val composer = MbArtistRelation("composer", "mb-s", "Shay Hazan", emptyList())
+            val lyricist = MbArtistRelation("lyricist", "mb-y", "Yurika Hanashima", emptyList())
+            val writer = MbArtistRelation("writer", "mb-w", "Writer", emptyList())
+            val alone = credited(composer)
+            assertTrue(alone.composersOnly)
+            assertEquals(emptyList<String>(), alone.lyricists)
+            val words = credited(composer, lyricist, lyricist)
+            assertFalse(words.composersOnly)
+            assertEquals(listOf("Yurika Hanashima"), words.lyricists)
+            // A writer covers words and music: it settles nothing either way.
+            val written = credited(composer, writer)
+            assertFalse(written.composersOnly)
+            assertEquals(emptyList<String>(), written.lyricists)
+            assertFalse(credited().composersOnly)
+        }
 }

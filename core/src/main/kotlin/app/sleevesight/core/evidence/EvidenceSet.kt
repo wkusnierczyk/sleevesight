@@ -150,6 +150,7 @@ class EvidenceSet private constructor(
                 SourceId.WEB,
                 SourceId.MODEL,
                 SourceId.PLAYER,
+                SourceId.LRCLIB,
             )
 
         // [this], with the language its script names when it has none.

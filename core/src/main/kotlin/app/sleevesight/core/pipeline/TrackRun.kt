@@ -124,6 +124,21 @@ internal class TrackRun(
 
     // The gather's deadline (#983), shared with the search in the track's language.
     private val budget = GatherBudget(time.timeSource)
+
+    // LRCLIB, asked whether the track has lyrics when a genre is Instrumental (#997): with its switch
+    // on; by a *Retry* when it names LRCLIB or the genres before it never called for LRCLIB (an
+    // Instrumental the *Retry* brought), and by any other run that asks again.
+    private val library =
+        LibrarySign(
+            parts.lyricsLibrary
+                ?.takeIf { settings.isEnabled(SourceId.LRCLIB) }
+                ?.let { LibraryLookup(it, parts.cache, onEvent) },
+            input,
+            asks = input.again?.only?.let { SourceId.LRCLIB in it || !input.before.genres.wantsLibrary() } ?: true,
+            fresh = looksAgain,
+            keptFailed = input.before.kept?.libraryFailed == true,
+            emit = onEvent,
+        )
     private val labels =
         TrackLabels(
             parts.musicBrainzLabels,
@@ -135,6 +150,7 @@ internal class TrackRun(
             input.before.kept,
             // A *Retry* asks the label requests of the sources it asks again only (#772).
             asking = input.again?.takeIf { it.only != null }?.let { it.asked + it.labelsAsked },
+            library = library,
         )
 
     /**
@@ -163,6 +179,9 @@ internal class TrackRun(
                         languageInterrupted = interrupted,
                     ),
                 )
+                // LRCLIB's answer kept from before (#997), no request: the genres are weighed with it
+                // as they are assembled.
+                library.readKept()
                 // Published as asked for with the assembled genres, before they may start (#772): a
                 // panel says it is still looking.
                 val later = labels.later(state.value)
@@ -172,6 +191,13 @@ internal class TrackRun(
                     control.await(RunStep.LABELS)
                     try {
                         labels.addLater(later)
+                        // Once every label is in, LRCLIB, when a genre is Instrumental (#997).
+                        if (library.ask(state.value.genres)) {
+                            update {
+                                val genres = labels.of(it)
+                                it.copy(genres = genres, libraryUnreachable = library.unreachable(genres))
+                            }
+                        }
                         // Those that failed, a *Retry* may ask again (#772).
                         labels.failedSources.takeIf { it.isNotEmpty() }?.let(control::labelsFailed)
                     } finally {
@@ -377,13 +403,15 @@ internal class TrackRun(
         val evidence = EvidenceSet.of(drafts, parts.hasher, state.value.knownLanguage())
         // The genres and how their later requests stand, in one update with the evidence (#772).
         update {
+            val genres = labels.of(it)
             it.copy(
                 evidence = evidence,
-                genres = labels.of(it),
+                genres = genres,
                 laterLabels = labels.states(),
                 laterFound = labels.found,
                 laterAnswered = labels.answered,
                 genresAssembled = true,
+                libraryUnreachable = library.unreachable(genres),
             )
         }
         emit(

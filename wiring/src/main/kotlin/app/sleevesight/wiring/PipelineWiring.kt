@@ -10,6 +10,8 @@ import app.sleevesight.core.genres.GenreDefinitions
 import app.sleevesight.core.genres.GenreVocabulary
 import app.sleevesight.core.genres.LastFmLabels
 import app.sleevesight.core.genres.MusicBrainzLabels
+import app.sleevesight.core.lyrics.LyricsLibrary
+import app.sleevesight.core.lyrics.SharedLyricsLibrary
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.normalizer.AccentFolder
 import app.sleevesight.core.normalizer.Normalizer
@@ -41,6 +43,7 @@ import app.sleevesight.sources.language.LanguageWikipedia
 import app.sleevesight.sources.lastfm.LastFmAdapter
 import app.sleevesight.sources.lastfm.LastFmAlbums
 import app.sleevesight.sources.lastfm.LastFmTags
+import app.sleevesight.sources.lrclib.LrclibClient
 import app.sleevesight.sources.musicbrainz.MusicBrainzClient
 import app.sleevesight.sources.musicbrainz.MusicBrainzSource
 import app.sleevesight.sources.web.ArtistWebSource
@@ -160,6 +163,13 @@ class PipelineWiring internal constructor(
      */
     fun lastFmLabels(key: Secret): LastFmLabels =
         LastFmLabels(LastFmTags(net, key), vocabulary, Normalizer(accentFolder)::foldForKey, artists = artists)
+
+    /**
+     * LRCLIB (#997), for `PipelineParts.lyricsLibrary`: whether a track has lyrics, asked when one of
+     * its genres is Instrumental. Its answers are kept with the track's findings, by the pipeline. One
+     * for the wiring, so the run and the *Genres* panel share a request in flight ([SharedLyricsLibrary]).
+     */
+    val lyricsLibrary: LyricsLibrary by lazy { SharedLyricsLibrary(LrclibClient(net)) }
 
     /**
      * The genres' definitions a genre's panel shows (#523): each genre's English Wikipedia article,

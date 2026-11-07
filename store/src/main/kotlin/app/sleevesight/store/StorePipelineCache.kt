@@ -1,5 +1,7 @@
 package app.sleevesight.store
 
+import app.sleevesight.core.lyrics.LibraryLyrics
+import app.sleevesight.core.lyrics.LibraryQuery
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
@@ -130,6 +132,35 @@ class StorePipelineCache(
         }
     }
 
+    override suspend fun libraryLyrics(query: LibraryQuery): LibraryLyrics? =
+        withContext(io) {
+            caches.retrieval
+                .get(SourceId.LRCLIB, libraryKey(query), LIBRARY_VERSION)
+                ?.result
+                ?.library
+        }
+
+    override suspend fun keepLibraryLyrics(
+        query: LibraryQuery,
+        answer: LibraryLyrics,
+    ) {
+        val work = currentCoroutineContext()
+        // About the track alone, so kept whatever *Keep what sources said about each artist* says.
+        val result = SourceResult(Outcome.None, emptyList(), Duration.ZERO, trackOnly = true, library = answer)
+        epoch.ifCurrent(work) {
+            withContext(io) { caches.retrieval.put(SourceId.LRCLIB, libraryKey(query), LIBRARY_VERSION, result) }
+        }
+    }
+
+    // The retrieval key of LRCLIB's answer (#997): the whole query, its names folded as the retrieval
+    // key folds them and length-prefixed, so no two blur, and its length in seconds, as asked; after a
+    // marker no lookup's key starts with.
+    private fun libraryKey(query: LibraryQuery): String =
+        LIBRARY +
+            listOf(query.artist, query.title, query.album.orEmpty()).joinToString("") { name ->
+                caches.retrieval.foldName(name).let { "${it.length}:$it" }
+            } + query.seconds
+
     // The retrieval key of the language decided for a track (#902): the track's, then a line break
     // and a marker no lookup's key has.
     private fun decisionKey(
@@ -223,6 +254,10 @@ class StorePipelineCache(
         const val BY_NAME = "name:"
         const val LANGUAGE = "language:"
         const val DECISION = "decided-language"
+        const val LIBRARY = "lrclib:"
+
+        // 2 since the key is the whole query (#997's review): 1 left the album out and cut the length.
+        const val LIBRARY_VERSION = 2
 
         // The decision is kept as MusicBrainz's, for the shortest lifetime of the sources its hints
         // come from (MusicBrainz and Wikidata), at a version of its own.

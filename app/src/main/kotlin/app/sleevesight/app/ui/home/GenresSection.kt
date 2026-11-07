@@ -27,12 +27,12 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.GenreNotes
-import app.sleevesight.app.pipeline.withAi
 import app.sleevesight.app.ui.logo.Busy
 import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.app.ui.theme.ChipFrame
@@ -51,6 +51,7 @@ import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.LaterLabels
 import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.pipeline.TrackState
+import app.sleevesight.core.pipeline.showsInstrumental
 import app.sleevesight.core.settings.Settings
 
 /**
@@ -75,6 +76,8 @@ internal fun genresItem(
     search: PanelSearch = PanelSearch(),
 ): InPlaceItem? {
     if (settings?.showGenres != true) return null
+    // The check of the track's vocals started by itself (#998), whether the panel is open or not.
+    AutoVocalsCheck(track, settings, notes, search)
     return InPlaceItem(
         id = InPlace.GENRES,
         name = stringResource(R.string.home_genres),
@@ -118,8 +121,12 @@ internal fun GenresContent(
     search: PanelSearch = PanelSearch(),
 ) {
     // The track's genres with the AI's genre list (#762), where one is known: its genres join the
-    // chips and the track's row, marked AI.
-    val track = withLyricsFound(playing?.withAi(aiGenres(playing, notes.notes)), search)
+    // chips and the track's row, marked AI; an Instrumental it added weighed with LRCLIB's answer (#997).
+    // The genres the artists' descriptions name (#1000), beside the tags, before the AI's list's; the
+    // check of the track's vocals (#998) weighed in; told to the notes, for the check and a tap held.
+    val composed = composedGenres(playing, notes, search)
+    val track = composed.track
+    GenresSettled(playing, track, settings, notes.notes)
     val shown = GenresShown.of(track, settings)
     val style = MaterialTheme.typography.bodyLarge
     // The genre a tap opened, kept above the chips and the lines in their place (#772): while a run
@@ -167,6 +174,7 @@ internal fun GenresContent(
             afterRetry = toClose,
         )
     }
+    LibraryRetry(shown.libraryUnreachable, composed.libraryRetry, retry, toClose)
     if (shown.none) Text(stringResource(R.string.home_genres_none), style = style)
     GenresSearch(track, shown, search, notes)
 }
@@ -182,13 +190,15 @@ private fun sourcesNamed(sources: List<LabelSource>): String {
  * What *Genres*' panel says besides its chips (#772), for a track and the settings: the label
  * sources still being asked while the genres are gathered, by name ([looking]); those that could
  * not be reached, each with *Retry* ([unreachable]); with every genre source off and no genre, where
- * its link leads ([off]); and whether it says none were found ([none]).
+ * its link leads ([off]); whether it says none were found ([none]); and whether LRCLIB, asked about
+ * the track's Instrumental, could not be reached, with *Retry* ([libraryUnreachable], #997).
  */
 internal data class GenresShown(
     val looking: List<LabelSource> = emptyList(),
     val unreachable: List<LabelSource> = emptyList(),
     val off: SettingsTarget? = null,
     val none: Boolean = false,
+    val libraryUnreachable: Boolean = false,
 ) {
     companion object {
         /**
@@ -231,7 +241,13 @@ internal data class GenresShown(
             val later = track.laterLabels
             val looking = on.filter { later[it] == LaterLabels.ASKING }
             val unreachable = on.filter { unreachable(track.sources[it.source]) || later[it] == LaterLabels.FAILED }
-            return GenresShown(looking, unreachable, none = empty && looking.isEmpty() && unreachable.isEmpty())
+            return GenresShown(
+                looking,
+                unreachable,
+                none = empty && looking.isEmpty() && unreachable.isEmpty(),
+                // Said only while an Instrumental is shown (#998's review): not for the composers' hint.
+                libraryUnreachable = track.libraryUnreachable && track.genres.showsInstrumental(),
+            )
         }
 
         // Whether a source's lookup ended unreachable, or failed: *Retry* asks it again.
@@ -425,14 +441,20 @@ private fun GenreChip(
     ) {
         val label = placed.label.genre.label
         val model = placed.label.aiModel?.takeIf { placed.label.aiAdded }
+        // A genre the artist's description names (#1000), read "Instrumental, from the artist’s description".
+        val spoken = if (placed.label.describedIn != null) stringResource(R.string.genre_described, label) else label
         CompositionLocalProvider(LocalContentColor provides content) {
             if (placed.weak && model != null) {
                 // The AI's Instrumental on a sung track (#996): weak, and still marked AI.
                 WeakAiName(label, model, selected)
             } else if (placed.weak) {
-                WeakName(label, selected)
+                WeakName(label, selected, spoken)
             } else if (model == null) {
-                Text(label, style = MaterialTheme.typography.labelLarge)
+                Text(
+                    label,
+                    modifier = Modifier.semantics { if (spoken != label) contentDescription = spoken },
+                    style = MaterialTheme.typography.labelLarge,
+                )
             } else {
                 // Added by the AI's genre list (#762): marked AI, read "Blues, from Claude Haiku 5.5".
                 ProvideTextStyle(MaterialTheme.typography.labelLarge) {
@@ -443,8 +465,8 @@ private fun GenreChip(
     }
 }
 
-// Whether any row has [genre].
-private fun TrackGenres.has(genre: String): Boolean = all.any { it.genre.identity == genre }
+// Whether any row has [genre], of the tags or of a description (#1000).
+private fun TrackGenres.has(genre: String): Boolean = everyLabel.any { it.genre.identity == genre }
 
 /** The test tags of *Genres*' button and its panel (#772), the panel's heading and *Close* as [Panel] makes them. */
 const val GENRES_CHIP_TAG: String = "genres-chip"
@@ -457,8 +479,8 @@ const val GENRES_PAGE_LINK_TAG: String = "genres-page-link"
 
 /**
  * The test tag of a chip in *Genres*' panel, before its level (`track`, `artist`,
- * `album`), a colon, for an artist's the artist and a colon, and its identity:
- * `genre:artist:The Beatles:rock`.
+ * `album`; `described` for a genre an artist's description names, #1000), a colon, for an artist's
+ * the artist and a colon, and its identity: `genre:artist:The Beatles:rock`.
  */
 const val GENRE_PREFIX: String = "genre:"
 
@@ -474,7 +496,12 @@ internal fun tagOf(
         placed.row.artist
             ?.let { "$it:" }
             .orEmpty()
-    return prefix +
-        placed.row.level.name
-            .lowercase() + ":" + artist + placed.label.genre.identity
+    val level =
+        if (placed.row.described) {
+            "described"
+        } else {
+            placed.row.level.name
+                .lowercase()
+        }
+    return prefix + level + ":" + artist + placed.label.genre.identity
 }

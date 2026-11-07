@@ -4,6 +4,7 @@ import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.genres.GenreLabel
 import app.sleevesight.core.genres.RecordingTags
+import app.sleevesight.core.lyrics.LibraryLyrics
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
@@ -147,6 +148,9 @@ val SourceAdapter.tag: String get() = id.tag
  * [language] is the language the search in the track's language decided the track is sung in
  * (#902): a language's code, `en`, or empty for none, on the result the retrieval cache keeps that
  * decision in (`PipelineCache.trackLanguage`) only; null on every lookup's result.
+ *
+ * [library] is LRCLIB's answer for the track (#997), on the result the retrieval cache keeps it in
+ * (`PipelineCache.libraryLyrics`) only; null on every other.
  */
 data class SourceResult(
     val outcome: Outcome,
@@ -167,6 +171,7 @@ data class SourceResult(
     val trackOnly: Boolean = false,
     val pages: List<String> = emptyList(),
     val language: String? = null,
+    val library: LibraryLyrics? = null,
 )
 
 /**

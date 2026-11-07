@@ -5,6 +5,7 @@ import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.genres.GenreLabel
 import app.sleevesight.core.genres.GenreLevel
 import app.sleevesight.core.genres.RecordingTags
+import app.sleevesight.core.lyrics.LibraryLyrics
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.sources.FirstRelease
@@ -47,7 +48,9 @@ internal object RetrievalCodec {
      * as having no lyrics page.
      * The votes on the recording's tags (#799) are an optional field too, made a miss the same way
      * (MusicBrainz's extraction version 8). Those credited with vocals on the recording (#996) are an
-     * optional field too, made a miss the same way (MusicBrainz's extraction version 10).
+     * optional field too, made a miss the same way (MusicBrainz's extraction version 10). The work's
+     * writing credits (#998: its lyricists, and whether it credits composers alone) are optional
+     * fields too, made a miss the same way (MusicBrainz's extraction version 11).
      */
     const val FORMAT: Int = 7
 
@@ -108,10 +111,21 @@ internal object RetrievalCodec {
                             release = it.release?.let(::releaseJson),
                         )
                     },
-                lyrics = result.lyrics?.let { LyricsJson(it.links, it.languages, it.instrumental, it.vocalists) },
+                lyrics =
+                    result.lyrics?.let {
+                        LyricsJson(
+                            it.links,
+                            it.languages,
+                            it.instrumental,
+                            it.vocalists,
+                            it.lyricists,
+                            it.composersOnly,
+                        )
+                    },
                 trackOnly = result.trackOnly,
                 pages = result.pages,
                 language = result.language,
+                library = result.library?.name,
             ),
         )
 
@@ -162,15 +176,26 @@ internal object RetrievalCodec {
                             release = it.release?.let(::release),
                         )
                     },
-                lyrics = stored.lyrics?.let { WorkLyrics(it.links, it.languages, it.instrumental, it.vocalists) },
+                lyrics = stored.lyrics?.let(::lyrics),
                 trackOnly = stored.trackOnly,
                 pages = stored.pages,
                 language = stored.language,
+                library = stored.library?.let { name -> LibraryLyrics.entries.firstOrNull { it.name == name } },
             )
         } catch (_: IllegalArgumentException) {
             // `SerializationException` is one too.
             null
         }
+
+    private fun lyrics(stored: LyricsJson): WorkLyrics =
+        WorkLyrics(
+            stored.links,
+            stored.languages,
+            stored.instrumental,
+            stored.vocalists,
+            stored.lyricists,
+            stored.composersOnly,
+        )
 
     private fun outcomeKey(outcome: Outcome): String =
         when (outcome) {
@@ -250,6 +275,8 @@ internal object RetrievalCodec {
         val pages: List<String> = emptyList(),
         // The decided language of a track (#902, `SourceResult.language`), on that decision's entry only.
         val language: String? = null,
+        // LRCLIB's answer for a track (#997, `SourceResult.library`), on that answer's entry only.
+        val library: String? = null,
     )
 
     // A first release (#724): of the recording, or of a cover's original.
@@ -280,6 +307,9 @@ internal object RetrievalCodec {
         val languages: List<String> = emptyList(),
         val instrumental: Boolean = false,
         val vocalists: List<String> = emptyList(),
+        // The work's writing credits (#998); an entry kept before them decodes without.
+        val lyricists: List<String> = emptyList(),
+        val composersOnly: Boolean = false,
     )
 
     @Serializable

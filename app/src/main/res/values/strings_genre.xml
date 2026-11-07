@@ -86,8 +86,33 @@
     <!-- When MusicBrainz credits someone with vocals on the recording: %1$s is their name as
          MusicBrainz gives it, %2$s the genre. -->
     <string name="genre_weak_vocalist">MusicBrainz credits %1$s with vocals on this track, most likely it is not %2$s.</string>
+    <!-- When MusicBrainz credits someone with the words of the song's work (a lyricist, #998): %1$s is
+         their name as MusicBrainz gives it, %2$s the genre. -->
+    <string name="genre_weak_lyricist">MusicBrainz credits %1$s with the lyrics of this song, most likely it is not %2$s.</string>
     <!-- When the track credits several artists and one of them has no artist's tag of the genre
          while another artist's or the album's tags give it: %1$s is that artist, as the track
          credits them. It does not name the genre. -->
     <string name="genre_weak_featured">This track also credits %1$s and may feature vocals.</string>
+    <!-- How a screen reader reads a genre the artist's description names (#1000), as a chip and in
+         its Described row of Genre tags: %1$s is the genre ("Instrumental, from the artist’s
+         description"). -->
+    <string name="genre_described">%1$s, from the artist’s description</string>
+    <!-- Under the definition of a genre the artist's description names (#1000), before Why is this
+         …?, in the panel's quiet note style, the citation of the line after it: %1$s is the line's
+         sentence that names the genre, cut to the words around it, "…" where cut. -->
+    <string name="genre_described_named">Named in the artist’s description: “%1$s”</string>
+    <!-- In its place for Instrumental only the artist's description gives (#1000, #998's artist
+         hint), shown as a weak genre: %1$s is the line's sentence, as above. -->
+    <string name="genre_weak_hint">The artist’s description calls them instrumental, but no source says so of this track: “%1$s”</string>
+    <!-- Under Instrumental's definition while the check of the track's vocals runs (#998), after the
+         small turning record, in the panel's quiet note style. -->
+    <string name="genre_vocals_checking">Checking whether this track has vocals…</string>
+    <!-- Under Instrumental's definition once the check of the track's vocals (#998) found a page that
+         describes it as instrumental, the page's citation after it; then genre_why_by_web. -->
+    <string name="genre_vocals_instrumental">Web search found this track described as instrumental.</string>
+    <!-- The same once it found vocals, after a tap on Why is this instrumental?: the chip stays weak
+         until the genres are built again. %1$s is the genre, in italics, as its chip names it. -->
+    <string name="genre_vocals_found">Web search found vocals on this track, so it is not %1$s.</string>
+    <!-- The same once no page said either, after a tap. -->
+    <string name="genre_vocals_unknown">Web search found nothing on whether this track has vocals.</string>
 </resources>

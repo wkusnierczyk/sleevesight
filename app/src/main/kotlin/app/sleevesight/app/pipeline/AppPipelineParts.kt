@@ -80,6 +80,7 @@ class AppPipelineParts(
             dateForm = { phoneDateForm(phone()) },
             languageLines = wiring.languageLines,
             songWeb = wiring.songWeb(keys.sources, settings),
+            lyricsLibrary = wiring.lyricsLibrary,
         )
     }
 }

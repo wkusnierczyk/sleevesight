@@ -675,8 +675,10 @@ class RecordingResolver(
 // What MusicBrainz says of the lyrics (#728): the lyrics pages of the work [lookup] found (only the
 // first work is looked up; none without a work, or when MusicBrainz has no such work; not known when
 // the lookup failed), the languages of every work the recording performs, and whether its
-// performance of any of them is marked instrumental; and who is credited with vocals on the recording
-// (#996): a `vocal` relationship, with or without an attribute (`lead vocals`, `background vocals`).
+// performance of any of them is marked instrumental; who is credited with vocals on the recording
+// (#996): a `vocal` relationship, with or without an attribute (`lead vocals`, `background vocals`);
+// and the work's writing credits (#998): who wrote its words (`lyricist`), and whether it credits
+// composers alone (no `lyricist`, `librettist` or `writer`, a `writer` covering words and music).
 private fun lyricsOf(
     detail: MbRecordingDetail,
     lookup: Lookup<MbWork>?,
@@ -696,8 +698,22 @@ private fun lyricsOf(
                 .filter { it.type == "vocal" }
                 .map { it.artistName }
                 .distinct(),
+        lyricists =
+            work
+                ?.artistRelations
+                .orEmpty()
+                .filter { it.type == "lyricist" }
+                .map { it.artistName }
+                .distinct(),
+        composersOnly =
+            work?.artistRelations.orEmpty().map { it.type }.toSet().let { types ->
+                "composer" in types && types.none { it in WORDS_TYPES }
+            },
     )
 }
+
+// The work's relationships that credit its words (#998): a `writer` covers both words and music.
+private val WORDS_TYPES = setOf("lyricist", "librettist", "writer")
 
 // A full first page may not hold the earliest recording of a title the artist recorded more often
 // than a page holds: *Dream On* by Aerosmith has some 170, most of them live and most scoring alike,

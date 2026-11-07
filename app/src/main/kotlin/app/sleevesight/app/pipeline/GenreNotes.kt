@@ -4,6 +4,11 @@ import app.sleevesight.core.ai.ModelNames
 import app.sleevesight.core.genres.GenreDefinitions
 import app.sleevesight.core.genres.GenreLabel
 import app.sleevesight.core.genres.GenreVocabulary
+import app.sleevesight.core.genres.TrackGenres
+import app.sleevesight.core.genres.VocalsAnswer
+import app.sleevesight.core.genres.wantsVocalsCheck
+import app.sleevesight.core.lyrics.LibraryLyrics
+import app.sleevesight.core.lyrics.LibraryQuery
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.AiOutcome
 import app.sleevesight.core.pipeline.AiQuestion
@@ -14,16 +19,22 @@ import app.sleevesight.core.pipeline.GenreListState
 import app.sleevesight.core.pipeline.GenreLists
 import app.sleevesight.core.pipeline.GenreReasons
 import app.sleevesight.core.pipeline.InsightState
+import app.sleevesight.core.pipeline.LibraryAnswer
+import app.sleevesight.core.pipeline.LibraryLookup
 import app.sleevesight.core.pipeline.PipelineEvent
 import app.sleevesight.core.pipeline.PipelineParts
 import app.sleevesight.core.pipeline.QuestionCost
 import app.sleevesight.core.pipeline.ReasonPath
 import app.sleevesight.core.pipeline.TrackState
+import app.sleevesight.core.pipeline.VocalsChecks
+import app.sleevesight.core.pipeline.VocalsState
 import app.sleevesight.core.settings.AiWebSearch
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.pastKeepHistory
 import app.sleevesight.core.synthesis.GenreListMode
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.Flow
@@ -102,6 +113,56 @@ data class AiGenreList(
     val sources: List<String> = emptyList(),
 )
 
+/**
+ * LRCLIB's answer for an Instrumental the AI's genre list added (#997, [GenreNotes.libraryLyrics]):
+ * [Answered] with what it said, or [Unreachable], which the panel shows with *Retry*.
+ */
+sealed interface PanelLibrary {
+    data class Answered(
+        val lyrics: LibraryLyrics,
+    ) : PanelLibrary
+
+    data object Unreachable : PanelLibrary
+}
+
+/**
+ * Whether [a] and [b] are the same play of the same recording (#998): the track and its length, the
+ * album as the check's key has it (`VocalsChecks.subject`), and the play (`NowPlaying.play`). What the
+ * check of the track's vocals started by itself, and each of its paid steps, is matched against.
+ */
+fun samePlay(
+    a: TrackState,
+    b: TrackState,
+): Boolean =
+    a.normalized == b.normalized &&
+        a.nowPlaying.duration == b.nowPlaying.duration &&
+        VocalsChecks.subject(a) == VocalsChecks.subject(b) &&
+        a.nowPlaying.play == b.nowPlaying.play
+
+/**
+ * Whether [track]'s genres, settled (`AppGenreNotes.settledTracks`), call for *Ask AI automatically*'s
+ * check of the track's vocals under [settings] (#998): *AI web search* on as used, and Instrumental in
+ * doubt (`TrackGenres.wantsVocalsCheck`). *Ask AI automatically* and the app on screen are
+ * `AutoSearches`' own gates.
+ */
+fun vocalsWanted(
+    track: TrackState,
+    settings: Settings,
+): Boolean = settings.aiWebSearchUsed != AiWebSearch.OFF && track.genres.wantsVocalsCheck()
+
+/**
+ * The check of a track's vocals (#998, [GenreNotes.vocals]), as the panel shows it: its [state], by
+ * [model] (its name, as the AI settings show it); [tapped] when a tap on *Why is this instrumental?*
+ * asked it on this play of the track, so an answer of vocals leaves the chip weak with its line until
+ * the genres are built again (the next play), where one asked by itself, or kept from before, drops
+ * Instrumental at once.
+ */
+data class VocalsShown(
+    val state: VocalsState,
+    val model: String,
+    val tapped: Boolean = false,
+)
+
 /** [this] with [list]'s genres in its track's row (`TrackGenres.withAi`); itself for none. */
 fun TrackState.withAi(list: AiGenreList?): TrackState =
     if (list == null ||
@@ -119,10 +180,45 @@ fun TrackState.withAi(list: AiGenreList?): TrackState =
  */
 interface GenreNotes : DefinitionFeed {
     /**
+     * The genre list (`genre-vocabulary.json`) the names in an artist's description are matched
+     * against (#1000, `describedGenres`); null for none, and no genre is read from the text.
+     */
+    val vocabulary: GenreVocabulary? get() = null
+
+    /**
      * The AI's genre list for [track] (#762), as it changes: null while none is known (not asked, or
      * not under the settings now).
      */
     fun aiGenres(track: TrackState): Flow<AiGenreList?> = flowOf(null)
+
+    /**
+     * LRCLIB's answer for [track] (#997), for an Instrumental the AI's genre list added, which the
+     * run never saw: its answer, or that it could not be reached ([PanelLibrary]); null while none is
+     * known. Read, or asked, at each collection, with LRCLIB on under *Sources*; the panel collects
+     * it only when its genres call for it and the run's labels are in (`panelAsksLibrary`).
+     */
+    fun libraryLyrics(track: TrackState): Flow<PanelLibrary?> = flowOf(null)
+
+    /** *Retry* of LRCLIB for [track]'s Instrumental the AI's list added (#997): asked again. */
+    fun retryLibrary(track: TrackState) = Unit
+
+    /**
+     * The check of [track]'s vocals (#998), as it changes: null while none is known (not asked, or no
+     * check possible under the settings now: *AI web search* off, no AI service).
+     */
+    fun vocals(track: TrackState): Flow<VocalsShown?> = flowOf(null)
+
+    /**
+     * [track]'s genres as *Genres* composes them (#998: the artists' descriptions, the AI's genre list,
+     * the panel's LRCLIB answer and the check's), [settled] once the free steps are done with them (the
+     * run's labels in, none still asked, LRCLIB answered or not to be asked): what the check of the
+     * track's vocals started by itself follows (`AutoSearches`, in `AppGraph`), and what a tap on *Why
+     * is this instrumental?* made before then waits for, held, so a free sign may settle it first.
+     */
+    fun genresShown(
+        track: TrackState,
+        settled: Boolean,
+    ) = Unit
 
     /** [track]'s reason for [genre], as it changes. */
     fun reason(
@@ -132,7 +228,9 @@ interface GenreNotes : DefinitionFeed {
 
     /**
      * A tap on *Why is this …?* or its *Retry*: [track]'s reason for [genre] is written, unless it is
-     * under way; for a genre only MusicBrainz gives, the AI's genre list is asked first (#762).
+     * under way; for a genre only MusicBrainz gives, the AI's genre list is asked first (#762); for
+     * Instrumental in doubt, the check of the track's vocals first (#998), whose answer heads the
+     * reason; one that found vocals writes none.
      */
     fun explain(
         track: TrackState,
@@ -191,11 +289,12 @@ interface GenreNotes : DefinitionFeed {
 @Suppress(
     "LongParameterList", // Where definitions, reasons and lists come from, where they run, and the time.
     "TooManyFunctions", // Each step of both paths, and its cache.
+    "LargeClass", // Those steps, with LRCLIB's lookups (#997) and the check of the track's vocals (#998).
 )
 class AppGenreNotes private constructor(
     /** The definitions (#786): fetched ahead ([AppGenreDefinitions.fetchAhead]), their states. */
     val lookups: AppGenreDefinitions,
-    private val vocabulary: GenreVocabulary,
+    override val vocabulary: GenreVocabulary,
     private val parts: StateFlow<PipelineParts?>,
     private val settings: StateFlow<Settings?>,
     private val scope: CoroutineScope,
@@ -205,12 +304,20 @@ class AppGenreNotes private constructor(
     private val paid: (QuestionCost) -> Unit,
     private val events: (PipelineEvent) -> Unit,
     private val plays: StateFlow<Play?>,
+    private val automaticOpen: () -> Boolean,
+    private val releaseAutomatic: (TrackState) -> Unit,
+    private val playing: () -> TrackState?,
 ) : GenreNotes,
     DefinitionFeed by lookups {
     /**
      * Definitions from [definitions] while *Show genres* and Wikipedia under *Sources* are on, off the
      * main thread ([io]), in [scope], marked with [epoch] ([AppGenreDefinitions]); reasons and the AI's
-     * genre lists as above, read against [definitions]' vocabulary.
+     * genre lists as above, read against [definitions]' vocabulary; the check of a track's vocals
+     * (#998) started by itself ([checkVocals], by `AppGraph`'s `AutoSearches`) only while
+     * [automaticOpen] says so (*Ask AI automatically* on and the app on screen), asked again right
+     * before each of its searches and calls, with the AI service, the free signs and, for one started
+     * by itself, the play of the track [playing] (the pipeline's) as they are then; one whose gate
+     * closed before a paid step handed back to [releaseAutomatic], to start again once it opens.
      */
     @Suppress("LongParameterList") // As the class's.
     constructor(
@@ -225,6 +332,9 @@ class AppGenreNotes private constructor(
         paid: (QuestionCost) -> Unit = {},
         events: (PipelineEvent) -> Unit = {},
         plays: StateFlow<Play?> = MutableStateFlow(null),
+        automaticOpen: () -> Boolean = { true },
+        releaseAutomatic: (TrackState) -> Unit = {},
+        playing: () -> TrackState? = { null },
     ) : this(
         AppGenreDefinitions(definitions, settings, scope, epoch, io),
         definitions.vocabulary,
@@ -237,6 +347,9 @@ class AppGenreNotes private constructor(
         paid,
         events,
         plays,
+        automaticOpen,
+        releaseAutomatic,
+        playing,
     )
 
     // A reason shown, or a list, and when it was written.
@@ -282,6 +395,353 @@ class AppGenreNotes private constructor(
                         )
                     }?.let { AiGenreList(it.genres, modelName(it.model), it.sources) }
             }.distinctUntilChanged()
+
+    override fun libraryLyrics(track: TrackState): Flow<PanelLibrary?> {
+        val query = LibraryQuery.of(track.normalized, track.nowPlaying) ?: return flowOf(null)
+        val known = combine(libraries, settings) { all, now -> all[query] to libraryLifetime(now) }
+        return combine(parts, settings) { made, now -> made?.takeIf { asksLibrary(it, now) } }
+            .distinctUntilChanged()
+            .onEach { made -> made?.takeIf { asksAgain(query, track) }?.let { askLibrary(it, track, query) } }
+            .combine(known) { made, (entry, lifetime) ->
+                entry?.takeIf { made != null && holds(it, lifetime) }?.state
+            }.distinctUntilChanged()
+    }
+
+    override fun retryLibrary(track: TrackState) {
+        val query = LibraryQuery.of(track.normalized, track.nowPlaying) ?: return
+        parts.value?.takeIf { asksLibrary(it, settings.value) }?.let { askLibrary(it, track, query) }
+    }
+
+    // Whether LRCLIB can be asked with [made] under [now]: built, and on under *Sources*.
+    private fun asksLibrary(
+        made: PipelineParts,
+        now: Settings?,
+    ): Boolean = made.lyricsLibrary != null && now?.isEnabled(SourceId.LRCLIB) == true
+
+    // Whether [entry] still holds (#997's review): an answer within LRCLIB's lifetime ([lifetime]) of
+    // when it was had, as the retrieval cache keeps it no longer; a failure until asked again.
+    private fun holds(
+        entry: Entry<PanelLibrary>,
+        lifetime: Duration,
+    ): Boolean = entry.state is PanelLibrary.Unreachable || clock.now() - entry.writtenAt < lifetime
+
+    // Whether a collection for [track] asks for [query] again: nothing held, or no longer ([holds]); a
+    // failure of another play than [track]'s (one of this play waits for *Retry*, so reopening *Genres*
+    // in an outage sends nothing); or an answer read from the retrieval cache, read again (no
+    // request), as that cache expires it.
+    private fun asksAgain(
+        query: LibraryQuery,
+        track: TrackState,
+    ): Boolean {
+        val entry = libraries.value[query]
+        return when {
+            entry == null -> true
+            entry.state is PanelLibrary.Unreachable -> failedIn[query] != Played(track.nowPlaying.play)
+            else -> query in fromStore || !holds(entry, libraryLifetime(settings.value))
+        }
+    }
+
+    private fun libraryLifetime(now: Settings?): Duration =
+        now?.cacheLifetimes?.get(SourceId.LRCLIB) ?: Settings.DEFAULT_CACHE_LIFETIMES.getValue(SourceId.LRCLIB)
+
+    // LRCLIB asked for [track] (#997), at a collection that asks again ([asksAgain]) and at *Retry*, one
+    // at a time per query: the
+    // answer kept in the retrieval cache, which expires it, else LRCLIB's own (shared with the run's
+    // request in flight, `SharedLyricsLibrary`); shown, with when it was had, unless a *Clear
+    // history* came since. A failure is shown as such, and asked again at the next collection or *Retry*.
+    private fun askLibrary(
+        made: PipelineParts,
+        track: TrackState,
+        query: LibraryQuery,
+    ) {
+        val library = made.lyricsLibrary ?: return
+        if (!libraryAsked.add(query)) return
+        scope.launch(mark()) {
+            val work = coroutineContext
+            try {
+                val key = track.normalized.lookupKey
+                val state =
+                    when (
+                        val answer =
+                            LibraryLookup(
+                                library,
+                                made.cache,
+                                events,
+                            ).ask(track.normalized, track.nowPlaying)
+                    ) {
+                        is LibraryAnswer.Known -> {
+                            events(PipelineEvent.LibraryAnswered(key, answer.lyrics, answer.cached))
+                            if (answer.cached) fromStore += query else fromStore -= query
+                            PanelLibrary.Answered(answer.lyrics)
+                        }
+                        is LibraryAnswer.Failed -> {
+                            events(PipelineEvent.SourceFailed(key, SourceId.LRCLIB, answer.reason))
+                            failedIn[query] = Played(track.nowPlaying.play)
+                            PanelLibrary.Unreachable
+                        }
+                        null -> null
+                    }
+                state?.let { publish(work) { libraries.update { it + (query to Entry(state, clock.now())) } } }
+            } finally {
+                libraryAsked.remove(query)
+            }
+        }
+    }
+
+    // LRCLIB's answers for the AI's Instrumental (#997), by query, with when each was had, and those
+    // being asked.
+    private val libraries = MutableStateFlow<Map<LibraryQuery, Entry<PanelLibrary>>>(emptyMap())
+    private val libraryAsked: MutableSet<LibraryQuery> = ConcurrentHashMap.newKeySet()
+    private val fromStore: MutableSet<LibraryQuery> = ConcurrentHashMap.newKeySet()
+
+    // The play each query's last failure came in (`NowPlaying.play`), so a failure is asked about again
+    // only on *Retry* or in another play; a track no play counted ([Played.play] null) only on *Retry*.
+    private val failedIn = ConcurrentHashMap<LibraryQuery, Played>()
+
+    private data class Played(
+        val play: Long?,
+    )
+
+    // The checks of tracks' vocals (#998), by key, oldest first, at most [KEPT]; the play each was
+    // asked by a tap in ([tappedIn]); those under way ([checking]); the genres shown last once settled
+    // ([settled]); and the taps on *Why is this instrumental?* held until they are, by track and play.
+    private val checks = MutableStateFlow<Map<CardKey, Entry<VocalsState>>>(emptyMap())
+    private val tappedIn = ConcurrentHashMap<CardKey, Played>()
+    private val checking = ConcurrentHashMap<CardKey, Job>()
+    private val settled = MutableStateFlow<TrackState?>(null)
+    private val held = MutableStateFlow<Map<Any, String>>(emptyMap())
+
+    /**
+     * The playing track's genres as *Genres* composes them, once the free steps are done with them
+     * ([genresShown]); null before, and while they are not: what *Ask AI automatically*'s check of the
+     * track's vocals follows (#998).
+     */
+    val settledTracks: StateFlow<TrackState?> get() = settled
+
+    override fun genresShown(
+        track: TrackState,
+        settled: Boolean,
+    ) {
+        this.settled.value = track.takeIf { settled }
+        val genre = held.value[heldKey(track)]?.takeIf { settled }
+        if (genre != null) {
+            held.update { it - heldKey(track) }
+            // Looked at again, as the genres now are: a free sign may have settled it.
+            explain(track, genre)
+        }
+    }
+
+    // A held tap's track: the same recording on the same play.
+    private fun heldKey(track: TrackState): Any =
+        Triple(track.normalized, track.nowPlaying.duration, track.nowPlaying.play)
+
+    // Whether [track]'s genres were shown settled last ([genresShown]).
+    private fun settledFor(track: TrackState): Boolean = settled.value?.let { heldKey(it) == heldKey(track) } == true
+
+    override fun vocals(track: TrackState): Flow<VocalsShown?> =
+        combine(parts, settings) { made, now ->
+            if (made == null ||
+                now == null
+            ) {
+                null
+            } else {
+                checksOf(made).key(track, now)
+            }
+        }.distinctUntilChanged()
+            .onEach { key -> key?.let { lookCheck(it, track) } }
+            .combine(
+                combine(checks, settings, held) { known, now, taps -> Triple(known, now?.historyLifetime, taps) },
+            ) { key, (known, lifetime, taps) ->
+                key?.let { asked ->
+                    // A tap held until the free steps are done (#998's review) shows as the check.
+                    val waiting =
+                        (
+                            heldKey(
+                                track,
+                            ) in taps
+                        ).takeIf { it }?.let { Entry<VocalsState>(VocalsState.Checking, clock.now()) }
+                    (waiting ?: known[asked]?.takeIf { !expired(it.writtenAt, lifetime) })?.let { entry ->
+                        VocalsShown(
+                            entry.state,
+                            modelName(asked.model),
+                            tapped = waiting != null || tappedIn[asked] == Played(track.nowPlaying.play),
+                        )
+                    }
+                }
+            }.distinctUntilChanged()
+
+    /**
+     * The check of [track]'s vocals started by itself (#998, *Ask AI automatically*), its genres settled
+     * and calling for it (`vocalsWanted`, as `AutoSearches` asks): started, or known, or under way;
+     * whether that is settled, false with no check possible (no AI service ready, *AI web search* off).
+     */
+    fun checkVocals(track: TrackState): Boolean {
+        val made = parts.value
+        val now = settings.value
+        // A report left from another play (#998's review): nothing for it.
+        val current = playing()?.let { samePlay(it, track) } != false
+        val key = if (made == null || now == null || !current) null else checksOf(made).key(track, now)
+        if (made != null && key != null) startCheck(made, key, track, automatic = true)
+        return key != null
+    }
+
+    // [key]'s check for [track], or the one under way; null when one is known already, not failed nor
+    // past *Keep history for*. Asked by itself when [automatic] (*Ask AI automatically*), else by a tap.
+    private fun startCheck(
+        made: PipelineParts,
+        key: CardKey,
+        track: TrackState,
+        automatic: Boolean,
+    ): Job? {
+        val under = checking[key]
+        if (under != null || !openCheck(key)) return under
+        val job =
+            scope.launch(mark(), start = CoroutineStart.LAZY) {
+                var refused = false
+                try {
+                    refused = check(made, key, track, automatic)
+                } finally {
+                    checking.remove(key)
+                }
+                // Its gate closed before a paid step (the app left): started by itself, handed back, to
+                // start again once it opens, now that it is no longer under way. One refused for what
+                // changed meanwhile (the AI service, a free sign, the play) is not: it is settled.
+                if (automatic && refused && !automaticOpen()) releaseAutomatic(track)
+            }
+        val raced = checking.putIfAbsent(key, job)
+        return raced?.also { job.cancel() } ?: job.also { it.start() }
+    }
+
+    // Whether [key]'s check may be asked: not known, failed, or past *Keep history for*.
+    private fun openCheck(key: CardKey): Boolean {
+        val entry = checks.value[key]
+        return entry == null || entry.state is VocalsState.Failed || expired(entry.writtenAt)
+    }
+
+    // [key]'s check for [track]: kept meanwhile, with no call, or asked, each state shown while no
+    // *Clear history* came since it started. One whose gate closed before a paid step shows nothing,
+    // and says so (true).
+    private suspend fun check(
+        made: PipelineParts,
+        key: CardKey,
+        track: TrackState,
+        automatic: Boolean,
+    ): Boolean {
+        val work = currentCoroutineContext()
+        val show: (VocalsState, Instant) -> Unit = { state, at ->
+            publish(work) {
+                val refused = state is VocalsState.Failed && state.reason == VocalsChecks.REFUSED
+                checks.update { if (refused) it - key else it.with(key, Entry(state, at)) }
+            }
+        }
+        val asker = checksOf(made)
+        val asked = Asked(work, track, key, AiQuestion.Vocals, automatic)
+        var refused = false
+        try {
+            val kept = asker.kept(key)?.takeIf { !expired(it.writtenAt) }
+            if (kept != null) {
+                synchronized(lock) {
+                    if (current(work)) {
+                        tellKept(track, key, kept(track, key, AiQuestion.Vocals, kept.writtenAt, automatic))
+                    }
+                }
+                show(kept.state, kept.writtenAt ?: clock.now())
+            } else {
+                // Asked by a tap on this play: an answer of vocals leaves the chip weak until the next play.
+                if (!automatic) tappedIn[key] = Played(track.nowPlaying.play)
+                asked.start()
+                val end =
+                    asker.ask(
+                        key,
+                        track,
+                        asking(automatic),
+                        asked.counted,
+                        mayPay = { mayCheck(key, track, automatic) },
+                        show = show,
+                    )
+                refused = end is VocalsState.Failed && end.reason == VocalsChecks.REFUSED
+                asked.end(if (refused) AiOutcome.STOPPED else outcomeOf(end), (end as? VocalsState.Failed)?.reason)
+            }
+        } catch (e: CancellationException) {
+            asked.end(AiOutcome.STOPPED)
+            throw e
+        } catch (
+            // A bug, not the network, which the check maps to a state: shown as failed.
+            @Suppress("TooGenericExceptionCaught") e: Exception,
+        ) {
+            val reason = e::class.simpleName ?: FAILED
+            asked.end(AiOutcome.FAILED, reason)
+            show(VocalsState.Failed(reason), clock.now())
+        }
+        return refused
+    }
+
+    // How a check that ended in [end] ended, for the log (#851).
+    private fun outcomeOf(end: VocalsState): AiOutcome =
+        if (end is VocalsState.Checked) AiOutcome.ANSWERED else AiOutcome.FAILED
+
+    // Whether a check may make its next search or call (#998): *Show insights* and *AI web search* still
+    // on as used; started by itself, *Ask AI automatically* too, with the app on screen ([automaticOpen]).
+    //
+    // Each against the state as it is now, not as it was when the check started (#998's review): the
+    // AI service and its key the same (the key worked out again from the live parts and the settings is
+    // [key], the service switched on its own); the playing track ([playing], the pipeline's) the same
+    // play, for one started by itself; and no free sign come since, in the track's genres as the run
+    // holds them (MusicBrainz's lyrics or mark, LRCLIB's) or as *Genres* last showed them (*Find the
+    // lyrics*, the panel's LRCLIB answer: [genresShown]).
+    private fun mayCheck(
+        key: CardKey,
+        track: TrackState,
+        automatic: Boolean,
+    ): Boolean {
+        val now = settings.value
+        val made = parts.value
+        val playingNow = playing()
+        val run = playingNow?.takeIf { samePlay(it, track) }
+        val against = run ?: track
+        val current = !automatic || (automaticOpen() && (playingNow == null || run != null))
+        val same =
+            now != null &&
+                made != null &&
+                now.writeInsights &&
+                now.aiWebSearchUsed != AiWebSearch.OFF &&
+                now.aiProvider == key.provider &&
+                checksOf(made).key(against, now) == key
+        return current && same && !settledSince(against, track)
+    }
+
+    // Whether a free sign settled [track]'s Instrumental since its check started: in [against], its
+    // genres as the run holds them now (MusicBrainz's lyrics or mark, LRCLIB's), or in those *Genres*
+    // last showed for its play (*Find the lyrics*, the panel's LRCLIB answer).
+    private fun settledSince(
+        against: TrackState,
+        track: TrackState,
+    ): Boolean {
+        val shown = settled.value?.takeIf { samePlay(it, track) }
+        return against.genres.singing.let { it.lifted || it.dropsInstrumental } ||
+            shown?.genres?.wantsVocalsCheck() == false
+    }
+
+    // [key]'s check kept in the synthesis cache, read once, unless one is known already.
+    private fun lookCheck(
+        key: CardKey,
+        track: TrackState,
+    ) {
+        if (key in checks.value || !looked.add(key)) return
+        val made = parts.value ?: return
+        scope.launch(mark()) {
+            val work = coroutineContext
+            val kept = checksOf(made).kept(key)?.takeIf { !expired(it.writtenAt) }
+            if (kept != null) {
+                val entry = Entry<VocalsState>(kept.state, kept.writtenAt ?: clock.now())
+                publish(work) {
+                    var added = false
+                    checks.update { (if (key in it) it else it.with(key, entry)).also { next -> added = next !== it } }
+                    if (added) tellKept(track, key, kept(track, key, AiQuestion.Vocals, kept.writtenAt))
+                }
+            }
+        }
+    }
 
     override fun reason(
         track: TrackState,
@@ -411,6 +871,74 @@ class AppGenreNotes private constructor(
         track: TrackState,
         genre: String,
     ) {
+        // Instrumental in doubt before the free steps are done with the genres (#998's review), a check
+        // possible: the tap is held, and looked at again once they are ([genresShown]), a free sign
+        // perhaps settling it. With no check possible or wanted, the reason at once, as before.
+        if (genre == TrackGenres.INSTRUMENTAL && !settledFor(track) && checkPossible(track)) {
+            held.update { it + (heldKey(track) to genre) }
+        } else {
+            explainSettled(track, genre)
+        }
+    }
+
+    // Whether a check of [track]'s vocals could run for it now: wanted, with a key under the settings.
+    private fun checkPossible(track: TrackState): Boolean {
+        val made = parts.value
+        val now = settings.value
+        return made != null && now != null && track.genres.wantsVocalsCheck() && checksOf(made).key(track, now) != null
+    }
+
+    // [explain] once the free steps are done with [track]'s genres, or for a genre they do not weigh.
+    private fun explainSettled(
+        track: TrackState,
+        genre: String,
+    ) {
+        val made = parts.value ?: return
+        val now = settings.value ?: return
+        // Instrumental in doubt (#998): the check of the track's vocals first, or the one under way;
+        // the reason once it has answered, unless it found vocals, which a reason would contradict.
+        val key =
+            checksOf(made)
+                .key(track, now)
+                ?.takeIf { genre == TrackGenres.INSTRUMENTAL && track.genres.wantsVocalsCheck() }
+        val check = key?.let { startCheck(made, it, track, automatic = false) }
+        if (check != null) {
+            scope.launch(mark()) {
+                check.join()
+                when {
+                    !current(coroutineContext) || foundVocals(key) -> Unit
+                    // Refused (a free sign, *AI web search* off, another AI service meanwhile): the
+                    // genres last shown for its play looked at again before a reason (#998's review).
+                    key !in checks.value -> afterRefused(track, genre)
+                    else -> explainNow(track, genre)
+                }
+            }
+        } else if (key == null || !foundVocals(key)) {
+            explainNow(track, genre)
+        }
+    }
+
+    // After a tapped check refused before its call: the reason for [genre], on the genres last shown for
+    // [track]'s play, while they still show it and no free sign has settled it since; no new check.
+    private fun afterRefused(
+        track: TrackState,
+        genre: String,
+    ) {
+        val fresh = settled.value?.takeIf { samePlay(it, track) } ?: track
+        val run = playing()?.takeIf { samePlay(it, track) } ?: fresh
+        val shows = fresh.genres.everyLabel.any { it.genre.identity == genre }
+        if (shows && !settledSince(run, track)) explainNow(fresh, genre)
+    }
+
+    // Whether [key]'s check, known, found vocals on the track (#998): no reason for its Instrumental.
+    private fun foundVocals(key: CardKey): Boolean =
+        (checks.value[key]?.state as? VocalsState.Checked)?.answer == VocalsAnswer.VOCALS
+
+    // [explain]'s reason, or the AI's genre list before it.
+    private fun explainNow(
+        track: TrackState,
+        genre: String,
+    ) {
         val made = parts.value ?: return
         val now = settings.value ?: return
         when (val path = path(made, now, lists.value, track, genre)) {
@@ -454,7 +982,8 @@ class AppGenreNotes private constructor(
         lifetime: Duration?,
     ): GenreListState.Listed? = known[key]?.takeIf { !expired(it.writtenAt, lifetime) }?.state as? GenreListState.Listed
 
-    // [genre]'s label, as the chip shows it, with the AI's list known for [track].
+    // [genre]'s label, as the chip shows it, with the AI's list known for [track]: one an artist's
+    // description names too (#1000).
     private fun label(
         track: TrackState,
         genre: String,
@@ -467,7 +996,7 @@ class AppGenreNotes private constructor(
             } else {
                 listsOf(made).key(track, now)?.let { listed(it, lists.value, now.historyLifetime) }
             }
-        return (track.genres.all.map { it.genre } + list?.genres.orEmpty())
+        return (track.genres.everyLabel.map { it.genre } + list?.genres.orEmpty())
             .firstOrNull { it.identity == genre }
             ?.label ?: genre
     }
@@ -478,8 +1007,11 @@ class AppGenreNotes private constructor(
     private fun listsOf(made: PipelineParts) =
         GenreLists(made.ai, made.cache, made.hasher, vocabulary, clock, made.webSearch)
 
-    // How a reason or a list searches the web (#801), as the settings last read say; by a tap.
-    private fun asking(): AiSearches.Asking = AiSearches.Asking.of(settings.value, automatic = false)
+    private fun checksOf(made: PipelineParts) = VocalsChecks(made.ai, made.cache, made.hasher, clock, made.webSearch)
+
+    // How a reason, a list or a check searches the web (#801), as the settings last read say; by a tap
+    // unless [automatic].
+    private fun asking(automatic: Boolean = false): AiSearches.Asking = AiSearches.Asking.of(settings.value, automatic)
 
     // Whether [key]'s reason may be asked for: not shown, shown as failed, or past *Keep history for*.
     private fun open(key: CardKey): Boolean {
@@ -553,6 +1085,7 @@ class AppGenreNotes private constructor(
         private val track: TrackState,
         private val key: CardKey,
         private val question: AiQuestion,
+        private val automatic: Boolean = false,
     ) {
         private var started: Instant? = null
         private var cost = QuestionCost()
@@ -563,7 +1096,7 @@ class AppGenreNotes private constructor(
         }
 
         fun start() {
-            note(work, PipelineEvent.AiAsked(track.normalized.lookupKey, question, false, key.provider, key.model))
+            note(work, PipelineEvent.AiAsked(track.normalized.lookupKey, question, automatic, key.provider, key.model))
             started = clock.now()
         }
 
@@ -586,13 +1119,14 @@ class AppGenreNotes private constructor(
         key: CardKey,
         question: AiQuestion,
         writtenAt: Instant?,
+        automatic: Boolean = false,
     ) = PipelineEvent.AiKept(
         track.normalized.lookupKey,
         question,
         key.provider,
         key.model,
         writtenAt,
-        automatic = false,
+        automatic = automatic,
     )
 
     // The kept reasons and lists told to the log as served, by key and track as the sources name it,
@@ -718,6 +1252,10 @@ class AppGenreNotes private constructor(
             waiting.value = emptyMap()
             looked.clear()
             told.clear()
+            libraries.value = emptyMap()
+            checks.value = emptyMap()
+            tappedIn.clear()
+            held.value = emptyMap()
         }
         lookups.forget()
     }
@@ -843,6 +1381,7 @@ class AppGenreNotes private constructor(
             val oldest = next.keys.first()
             next.remove(oldest)
             looked.remove(oldest)
+            tappedIn.remove(oldest)
         }
         return next
     }

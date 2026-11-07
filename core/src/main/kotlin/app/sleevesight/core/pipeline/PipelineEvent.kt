@@ -4,6 +4,7 @@ import app.sleevesight.core.ai.AiErrorKind
 import app.sleevesight.core.ai.Breakoff
 import app.sleevesight.core.ai.StopReason
 import app.sleevesight.core.ai.Usage
+import app.sleevesight.core.lyrics.LibraryLyrics
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.Outcome
@@ -135,6 +136,16 @@ sealed interface PipelineEvent {
         val after: Duration,
         val resolution: Boolean = false,
         val language: String? = null,
+    ) : PipelineEvent
+
+    /**
+     * LRCLIB answered whether the track has lyrics (#997, [LibrarySign]): [answer], from the retrieval
+     * cache when [cached]. Its failure is a [SourceFailed] of `LR`.
+     */
+    data class LibraryAnswered(
+        override val key: String,
+        val answer: LibraryLyrics,
+        val cached: Boolean,
     ) : PipelineEvent
 
     /** An adapter threw; [reason] is the exception's type. */
@@ -319,6 +330,9 @@ sealed interface AiQuestion {
 
     /** The AI's genre list for the track, asked before *Why is this …?* for a genre only MusicBrainz gives (#762). */
     data object GenreList : AiQuestion
+
+    /** The check of whether the track has vocals, for its Instrumental in doubt (#998). */
+    data object Vocals : AiQuestion
 
     /** The song's, the artist's or the album's insight under *Key insights* (#522), as [item] says. */
     data class Item(

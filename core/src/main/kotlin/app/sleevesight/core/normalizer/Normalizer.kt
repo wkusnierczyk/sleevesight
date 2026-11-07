@@ -43,10 +43,12 @@ class Normalizer(
         var t = title.trimJs()
         var from: String? = null
         var variant: String? = null
+        var dropped: String? = null
         val credited = splitArtists(artists).toMutableList()
 
         SUFFIX.find(t)?.let { m ->
             notes += "drop \"${m.groupValues[1]}\""
+            dropped = m.groupValues[1]
             t = t.substring(0, m.range.first)
         }
         FEATURING.find(t)?.let { m ->
@@ -76,6 +78,7 @@ class Normalizer(
             variant = variant,
             notes = notes,
             lookupKey = lookupKey(primary, t),
+            dropped = dropped,
         )
     }
 

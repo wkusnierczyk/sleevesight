@@ -74,6 +74,12 @@ private val SOURCE_ROWS: List<SourceRow> =
             R.string.settings_source_lastfm_summary,
             "https://www.last.fm/",
         ),
+        SourceRow.Source(
+            SourceSwitch.LRCLIB,
+            R.string.settings_source_lrclib,
+            R.string.settings_source_lrclib_summary,
+            "https://lrclib.net/",
+        ),
         SourceRow.Engine(
             WebEngine.EXA,
             R.string.settings_engine_exa,
