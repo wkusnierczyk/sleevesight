@@ -221,10 +221,10 @@ class ItemInsightsTest {
     @Test
     fun `the song's insight is written from the track's evidence without its artist lines, keeping their ids`() =
         runTest {
-            val track = track("Sundown", listOf(line(SourceId.MUSICBRAINZ, "Sundown was produced by Lenny Waronker.")))
+            val track = track("Sundown", listOf(line(SourceId.LASTFM, "Sundown was produced by Lenny Waronker.")))
             val evidence = checkNotNull(items.evidence(InsightItem.SONG, track, settings))
-            assertEquals(listOf("MB1", "P1"), evidence.evidence.ids)
-            assertEquals(mapOf("MB1" to "MB1", "P1" to "P1"), evidence.trackIds)
+            assertEquals(listOf("L1", "P1"), evidence.evidence.ids)
+            assertEquals(mapOf("L1" to "L1", "P1" to "P1"), evidence.trackIds)
             val key = checkNotNull(items.key(InsightItem.SONG, track, evidence, settings))
             assertEquals(CardEntity.Track(track.normalized, 200.seconds), key.entity)
             assertEquals(ItemPrompt.VERSION, key.promptVersion)
@@ -315,7 +315,7 @@ class ItemInsightsTest {
     @Test
     fun `an item is written from the run's own evidence under the switches now, not an earlier card's`() =
         runTest {
-            val run = track("Sundown", listOf(line(SourceId.MUSICBRAINZ, "Sundown was produced by Lenny Waronker.")))
+            val run = track("Sundown", listOf(line(SourceId.LASTFM, "Sundown was produced by Lenny Waronker.")))
             // As Home shows the track beside an earlier card (`PipelineHost.withCard`): its evidence,
             // with a line the run does not have.
             val card =

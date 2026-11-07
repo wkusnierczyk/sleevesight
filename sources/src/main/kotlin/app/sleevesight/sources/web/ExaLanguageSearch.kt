@@ -104,15 +104,16 @@ class ExaLanguageSearch(
                 filter.isAbout(track, result.title, snippet, result.url)
         }
     }
+}
 
-    private companion object {
-        // The line marked with [language] when its text is written in it, as far as its letters tell.
-        fun EvidenceDraft.marked(language: Language): EvidenceDraft {
-            val scripts = language.scripts - Script.LATIN
-            val inIt = scripts.isEmpty() || Script.of(text) in scripts
-            return if (inIt) copy(language = language.code) else this
-        }
-    }
+/**
+ * [this] line marked with [language] when its text is written in it, as far as its letters tell: always
+ * for a language written in Latin letters, which cannot be told from English by its letters.
+ */
+internal fun EvidenceDraft.marked(language: Language): EvidenceDraft {
+    val scripts = language.scripts - Script.LATIN
+    val inIt = scripts.isEmpty() || Script.of(text) in scripts
+    return if (inIt) copy(language = language.code) else this
 }
 
 /** The web search's query in the track's language (#902, [ExaLanguageSearch]). */

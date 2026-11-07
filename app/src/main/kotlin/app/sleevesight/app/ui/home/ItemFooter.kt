@@ -1,6 +1,7 @@
 package app.sleevesight.app.ui.home
 
 import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -9,6 +10,7 @@ import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.ItemAsk
 import app.sleevesight.app.pipeline.ItemShown
 import app.sleevesight.app.ui.report.ReportAction
+import app.sleevesight.core.pipeline.AiSearches
 import app.sleevesight.core.pipeline.InsightItem
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.TrackState
@@ -41,6 +43,20 @@ internal fun WrittenFooter(
     if (!state.complete) ItemQuiet(stringResource(R.string.home_insight_incomplete))
     ReportAction { context.onReport(track.copy(evidence = shown.evidence.evidence), state, item) }
     context.unavailable?.let { ModelUnavailable(it, context.onModelSettings) }
+    // A web search due for this insight failed (#958): beside it, as the whole line, with *Retry*.
+    if (shown.rewriteWith == null && shown.rewriteFailed == AiSearches.WEB_SEARCH_FAILED) {
+        RetryLine(
+            stringResource(R.string.home_ai_web_search_failed),
+            source = "",
+            onRetry = { context.notes.write(track, item, ItemAsk.TAP) }.takeIf { rewrites(shown, context) },
+            modifier = Modifier.testTag(ITEM_FAILED_TAG),
+            action = stringResource(R.string.home_ai_retry_action),
+            color = MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.bodyMedium,
+            outlined = true,
+            ai = true,
+        )
+    }
     if (shown.rewriteWith != null) {
         RewriteButton(item, enabled = rewrites(shown, context)) { context.notes.write(track, item, ItemAsk.TAP) }
     }

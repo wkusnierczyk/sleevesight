@@ -26,6 +26,8 @@ import app.sleevesight.core.sources.ItemLanguageLines
 import app.sleevesight.core.sources.LanguageSubject
 import app.sleevesight.core.sources.ReleaseDate
 import app.sleevesight.core.sources.ResolvedArtist
+import app.sleevesight.core.sources.SongWebLookup
+import app.sleevesight.core.sources.SongWebQuery
 import app.sleevesight.core.sources.SourceResult
 import app.sleevesight.core.sources.WebPage
 import app.sleevesight.core.sources.WebSearcher
@@ -55,14 +57,19 @@ enum class InsightItem(
  * The evidence an item is written from ([ItemInsights.evidence]): [evidence], and of its ids those
  * that are lines of the track's own evidence, by the track's id ([trackIds]), so a citation opens
  * *Sources* at its line. [unreachable] when a source of the album's could not be asked. [webDue]
- * when a web search is due before its insight is written: the album's (#885), or the artist's,
- * whose sources say nothing about the artist (#912) ([ItemInsights.search], [ItemInsights.writeSearching]).
+ * when a web search is due before its insight is written: the album's (#885), the artist's, whose
+ * sources say nothing about the artist (#912), or the song's, whose sources only list it (#958)
+ * ([ItemInsights.search], [ItemInsights.writeSearching]). [onlyListings] when it is the song's, and
+ * none of its own lines describes it as they stand (`SongListings`, #958): its prompt says how to
+ * write that ([ItemPrompt.ONLY_LISTINGS_RULE]), its [evidence] holds the artist's lines for it, and
+ * its card has a prompt version of its own ([ItemPrompt.ONLY_LISTINGS_VERSION]).
  */
 class ItemEvidence(
     val evidence: EvidenceSet,
     val trackIds: Map<String, String>,
     val unreachable: Boolean = false,
     val webDue: Boolean = false,
+    val onlyListings: Boolean = false,
 )
 
 /**
@@ -87,8 +94,8 @@ sealed interface ItemSearch {
 }
 
 /**
- * The artist's insight written while the AI service searched the web for the artist (#912,
- * [ItemInsights.writeSearching]): the artist's [evidence] then, the pages found among it, the [key]
+ * The artist's insight (#912), or the song's (#958), written while the AI service searched the web
+ * ([ItemInsights.writeSearching]): the item's [evidence] then, the pages found among it, the [key]
  * the insight is kept under (its fingerprint theirs), and its last [state].
  */
 class SearchedWrite(
@@ -123,7 +130,11 @@ data class KeptItem(
  * cache ([cache]) under its own kind ([InsightItem.kind]) and entity ([CardEntity], #240):
  *
  * - **the song's** ([InsightItem.SONG]): about the track ([CardEntity.Track]), from the track's
- *   evidence less its artist-level lines ([Scope.ARTIST]), each keeping the track's id;
+ *   evidence less its artist-level lines ([Scope.ARTIST]), each keeping the track's id. When the
+ *   song's own lines only list it (`SongListings`, #958) and *AI web search* is used, what a web search
+ *   for the song found joins them ([songWeb]), made only on the way to a write, as the artist's is. When
+ *   they still only list it, its prompt says so ([ItemEvidence.onlyListings]), and the artist's lines
+ *   are among them;
  * - **the artist's** ([InsightItem.ARTIST]): about the track's primary artist ([CardEntity.Artist]),
  *   by its MusicBrainz id when the resolution has one, else by the name the player gives; from the
  *   artist-level lines of the track's evidence (#238: Last.fm's, the artist's Wikipedia article and
@@ -186,6 +197,7 @@ class ItemInsights(
     private val web: WebSearcher? = null,
     private val dates: () -> DateForm = { DateForm.APP },
     private val languageLines: ItemLanguageLines? = null,
+    private val songWeb: SongWebLookup? = null,
 ) {
     /**
      * The name [item] goes by on [track]'s row: the title the player gives, the primary artist, or
@@ -277,20 +289,73 @@ class ItemInsights(
         val album = entity(item, track) as? CardEntity.Album
         return when {
             own == null || shown == null -> null
-            item == InsightItem.SONG -> songEvidence(own, shown)
+            item == InsightItem.SONG -> songEvidence(own, shown, track, settings)
             item == InsightItem.ARTIST -> artistEvidence(own, shown, track, settings)
             album == null -> null
             else -> albumEvidence(album, shown, settings, own)
         }
     }
 
-    // The run's [own] evidence less its artist-level lines, each keeping its id, mapped to the lines [shown].
-    private fun songEvidence(
+    // The run's [own] evidence less its artist-level lines, each keeping its id, mapped to the lines
+    // [shown]. When the song's own lines only list it (#958): with what a web search for it kept, a
+    // search due while none is, under *AI web search* used; as it was while a source that may describe
+    // it could not be asked ([unanswered]), with nothing kept, whose lines say nothing yet.
+    private suspend fun songEvidence(
         own: EvidenceSet,
         shown: EvidenceSet,
+        track: TrackState,
+        settings: Settings,
     ): ItemEvidence {
         val song = own.without(hasher) { it.scope == Scope.ARTIST }
-        return ItemEvidence(song, matching(song.lines, shown))
+        if (!SongListings.listingOnly(song.lines)) return ItemEvidence(song, matching(song.lines, shown))
+        val lookup = songWeb?.takeIf { usesWebSearch(settings) }
+        val kept = lookup?.let { attempt { it.kept(songQuery(track, settings)) } }
+        return if (kept == null && unanswered(track, settings, SONG_SOURCES)) {
+            ItemEvidence(song, matching(song.lines, shown))
+        } else {
+            songWith(own, shown, track, settings, kept.orEmpty(), webDue = lookup != null && kept == null)
+        }
+    }
+
+    // The song's evidence from the run's [own], with the web's [pages] after its lines (each line
+    // keeping its id; a page one of them quotes not twice), those [settings] switch on. While the
+    // song's own lines still only list it, with the artist's description ([artistLines]: not the counts
+    // and lists of what many listeners did, tags among them, whose numbers and order change from one
+    // lookup to the next), each keeping its id; so only then does the card's key read those, and
+    // [webDue] whether a search is due then.
+    @Suppress("LongParameterList") // The lines, what they are about, and what is added to them.
+    private fun songWith(
+        own: EvidenceSet,
+        shown: EvidenceSet,
+        track: TrackState,
+        settings: Settings,
+        pages: List<EvidenceDraft>,
+        webDue: Boolean = false,
+    ): ItemEvidence {
+        val quoted = own.lines.filter { it.source == SourceId.WEB }.mapNotNullTo(mutableSetOf()) { it.url }
+        val all = own.with(pages.filter { settings.isEnabled(it.source) && it.url !in quoted }, hasher)
+        val song = all.without(hasher) { it.scope == Scope.ARTIST }
+        if (!SongListings.listingOnly(song.lines)) return ItemEvidence(song, matching(song.lines, shown))
+        val artist = artistLines(all, track).mapTo(mutableSetOf()) { it.id }
+        val set = all.without(hasher) { it.scope == Scope.ARTIST && it.id !in artist }
+        // No line at all, not even the release: nothing to write from, and nothing for the plain sentence
+        // to be true of; no call, whatever is known of the artist.
+        return if (song.isEmpty()) {
+            ItemEvidence(song, emptyMap(), webDue = webDue)
+        } else {
+            ItemEvidence(set, matching(set.lines, shown), webDue = webDue, onlyListings = true)
+        }
+    }
+
+    // [track]'s song as its web search is asked for and kept by (#958), in its language when one is
+    // known, [settings] allowing, with this play's resolution for Wikidata's names in it.
+    private fun songQuery(
+        track: TrackState,
+        settings: Settings,
+    ): SongWebQuery {
+        val language = track.knownLanguage()?.takeUnless { settings.trackLanguageSearch == TrackLanguageSearch.OFF }
+        val resolution = track.resolution?.takeIf { settings.isEnabled(SourceId.WIKIDATA) }
+        return SongWebQuery(track.normalized, language, resolution)
     }
 
     // The artist-level lines of the run's [own] evidence, numbered on their own, those in the track's
@@ -310,7 +375,7 @@ class ItemInsights(
         val (english, found) = artistLines(own, track).partition { it.found == null }
         val subject = query?.let { LanguageSubject.Artist(it.name, it.mbid) }
         val lines = english.map(::draftOf) + inLanguage(subject, found, settings)
-        val lookup = artistWeb?.takeIf { lines.isEmpty() && searchesArtist(settings) }
+        val lookup = artistWeb?.takeIf { lines.isEmpty() && usesWebSearch(settings) }
         return when {
             lookup == null || query == null -> numbered(lines, shown)
             unanswered(track, settings) ->
@@ -326,31 +391,32 @@ class ItemInsights(
     /**
      * Whether [item]'s evidence under [settings] may hold the web's lines a search for it keeps, or
      * call for one: the artist's (#912), with *AI web search* used and a lookup to keep and search
-     * them ([artistWeb], an engine's key); the album's (#935), with web search switched on and an
-     * album lookup that can search ([AlbumLookup.searchesWeb], an engine's key). Its evidence is
-     * gathered again when this changes.
+     * them ([artistWeb], an engine's key); the song's likewise (#958, [songWeb]); the album's (#935),
+     * with web search switched on and an album lookup that can search ([AlbumLookup.searchesWeb], an
+     * engine's key). Its evidence is gathered again when this changes.
      */
     fun searchesWeb(
         item: InsightItem,
         settings: Settings,
     ): Boolean =
         when (item) {
-            InsightItem.ARTIST -> artistWeb != null && searchesArtist(settings)
+            InsightItem.ARTIST -> artistWeb != null && usesWebSearch(settings)
             InsightItem.ALBUM -> albums?.searchesWeb == true && settings.isEnabled(SourceId.WEB)
-            InsightItem.SONG -> false
+            InsightItem.SONG -> songWeb != null && usesWebSearch(settings)
         }
 
-    // Whether the artist may be searched for under [settings] (#912): *AI web search* used, which
-    // needs *Exa web search* on.
-    private fun searchesArtist(settings: Settings): Boolean = settings.aiWebSearchUsed != AiWebSearch.OFF
+    // Whether the artist (#912) or the song (#958) may be searched for under [settings]: *AI web
+    // search* used, which needs *Exa web search* on.
+    private fun usesWebSearch(settings: Settings): Boolean = settings.aiWebSearchUsed != AiWebSearch.OFF
 
-    // How the artist's search is made under [settings] (#912): [AiWebSearch.UP_TO] by the AI service
-    // itself, while it writes, with a service whose client takes tools and the engine it searches
-    // with ([WebQuestions.used]); else [AiWebSearch.ONCE], the app's own search; [AiWebSearch.OFF] for none.
-    private fun artistWay(settings: Settings): AiWebSearch {
+    // How the artist's or the song's search is made under [settings] (#912, #958): [AiWebSearch.UP_TO] by
+    // the AI service itself, while it writes, with a service whose client takes tools and the engine
+    // it searches with ([WebQuestions.used]); else [AiWebSearch.ONCE], the app's own search;
+    // [AiWebSearch.OFF] for none.
+    private fun webWay(settings: Settings): AiWebSearch {
         val access = ai
         return when {
-            !searchesArtist(settings) -> AiWebSearch.OFF
+            !usesWebSearch(settings) -> AiWebSearch.OFF
             access != null && WebQuestions(access, web).used(settings.aiWebSearchUsed) == AiWebSearch.UP_TO ->
                 AiWebSearch.UP_TO
             else -> AiWebSearch.ONCE
@@ -449,6 +515,7 @@ class ItemInsights(
      *   times* with a service whose client takes no tools), the app's own search for the artist
      *   ([ArtistWebLookup.search]), [ItemSearch.Failed] when it fails, which keeps nothing. Under *Up
      *   to 3 times*, [ItemSearch.None]: the AI service searches itself while it writes ([writeSearching]).
+     * - **The song's** (#958): as the artist's, through [SongWebLookup].
      *
      * Either way, [mayPay] is asked after the lookup's waits (its kept lines read, another write's
      * search), right before the request: closed, none is sent, and [ItemSearch.Refused] (#912's
@@ -468,7 +535,7 @@ class ItemInsights(
             !evidence.webDue -> ItemSearch.None
             item == InsightItem.ALBUM -> albumSearch(track, settings, evidence, sent, WriteGates(mayPay, reserve))
             item == InsightItem.ARTIST -> artistSearch(track, settings, evidence, sent, WriteGates(mayPay, reserve))
-            else -> ItemSearch.None
+            else -> songSearch(track, settings, evidence, sent, WriteGates(mayPay, reserve))
         }
 
     // The album's web search for a write (#885), as [search] says: made only while [gates]' `mayPay`,
@@ -511,12 +578,12 @@ class ItemInsights(
         gates: WriteGates,
     ): (List<EvidenceDraft>) -> Unit =
         { lines ->
-            withWeb(track, settings, evidence, lines)?.let { key(item, track, it, settings) }?.let { gates.reserve(it) }
+            webEvidence(item, track, settings, evidence, lines)
+                ?.let { key(item, track, it, settings) }
+                ?.let { gates.reserve(it) }
         }
 
-    // The artist's web lines for a write (#912), as [search] says: kept, or *Once*'s search, made only
-    // while [gates]' `mayPay`, asked right before its request, says so; [ItemSearch.Refused] when it
-    // did not; the key its pages give reserved before they are kept (#935), as the album's.
+    // The artist's web lines for a write (#912), as [search] says.
     private suspend fun artistSearch(
         track: TrackState,
         settings: Settings,
@@ -526,22 +593,60 @@ class ItemInsights(
     ): ItemSearch {
         val lookup = artistWeb
         val query = artistQuery(track)
-        val way = artistWay(settings)
-        if (lookup == null || query == null || way == AiWebSearch.OFF) return ItemSearch.None
+        if (lookup == null || query == null) return ItemSearch.None
+        val ways = WebWays({ lookup.kept(query) }) { keeping, mayPay -> lookup.search(query, sent, keeping, mayPay) }
+        return keptOrSearched(InsightItem.ARTIST, track, settings, evidence, gates, ways)
+    }
+
+    // The song's web lines for a write (#958), as [search] says.
+    private suspend fun songSearch(
+        track: TrackState,
+        settings: Settings,
+        evidence: ItemEvidence,
+        sent: () -> Unit,
+        gates: WriteGates,
+    ): ItemSearch {
+        val lookup = songWeb ?: return ItemSearch.None
+        val query = songQuery(track, settings)
+        val ways = WebWays({ lookup.kept(query) }) { keeping, mayPay -> lookup.search(query, sent, keeping, mayPay) }
+        return keptOrSearched(InsightItem.SONG, track, settings, evidence, gates, ways)
+    }
+
+    // Where an item's web lines come from: those [kept], or a [search] of the app's.
+    private class WebWays(
+        val kept: suspend () -> List<EvidenceDraft>?,
+        val search: suspend ((List<EvidenceDraft>) -> Unit, () -> Boolean) -> List<EvidenceDraft>?,
+    )
+
+    // [item]'s web lines for a write: kept, or *Once*'s search, made only while [gates]' `mayPay`, asked
+    // right before its request, says so; [ItemSearch.Refused] when it did not; the key its pages give
+    // reserved before they are kept (#935), as the album's.
+    @Suppress("LongParameterList") // The item, what it is searched for from and under, and how.
+    private suspend fun keptOrSearched(
+        item: InsightItem,
+        track: TrackState,
+        settings: Settings,
+        evidence: ItemEvidence,
+        gates: WriteGates,
+        ways: WebWays,
+    ): ItemSearch {
+        val way = webWay(settings)
+        if (way == AiWebSearch.OFF) return ItemSearch.None
         var refused = false
-        val kept = attempt { lookup.kept(query) }
+        val kept = attempt { ways.kept() }
         val found =
             when {
                 kept != null -> kept
                 // The AI service searches itself while it writes ([writeSearching]).
                 way == AiWebSearch.UP_TO -> null
                 else -> {
-                    val keeping = reserving(InsightItem.ARTIST, track, settings, evidence, gates)
-                    attempt { lookup.search(query, sent, keeping) { gates.mayPay().also { if (!it) refused = true } } }
+                    val keeping = reserving(item, track, settings, evidence, gates)
+                    attempt { ways.search(keeping) { gates.mayPay().also { if (!it) refused = true } } }
                 }
             }
         return when {
-            found != null -> withWeb(track, settings, evidence, found)?.let(ItemSearch::Found) ?: ItemSearch.None
+            found != null ->
+                webEvidence(item, track, settings, evidence, found)?.let(ItemSearch::Found) ?: ItemSearch.None
             way == AiWebSearch.UP_TO -> ItemSearch.None
             refused -> ItemSearch.Refused
             else -> ItemSearch.Failed
@@ -551,14 +656,21 @@ class ItemInsights(
     /**
      * Whether [item]'s insight, from [evidence] under [settings], is written while the AI service
      * searches the web itself ([writeSearching], #912): the artist's, its search due, with *AI web
-     * search* set to *Up to 3 times*, a service whose client takes tools, and the engine to search with.
+     * search* set to *Up to 3 times*, a service whose client takes tools, and the engine to search
+     * with; the song's likewise (#958).
      */
     fun searchesItself(
         item: InsightItem,
         evidence: ItemEvidence,
         settings: Settings,
     ): Boolean =
-        item == InsightItem.ARTIST && evidence.webDue && artistWeb != null && artistWay(settings) == AiWebSearch.UP_TO
+        evidence.webDue &&
+            webWay(settings) == AiWebSearch.UP_TO &&
+            when (item) {
+                InsightItem.ARTIST -> artistWeb != null
+                InsightItem.SONG -> songWeb != null
+                InsightItem.ALBUM -> false
+            }
 
     /**
      * The artist's insight on [track], [first]'s, written while the AI service searches the web for
@@ -585,6 +697,16 @@ class ItemInsights(
      * (another write of that key under way), nothing is kept, and the write ends with null.
      *
      * Null too when it does not apply ([searchesItself] false, or no entity).
+     *
+     * The song's (#958) is written the same way, its prompt the song's with its rule on listings, from
+     * [evidence], which has the lines that list it and the artist's ([SongQuestion]): each search's pages
+     * about the song are numbered after the track's own lines, and kept for the track
+     * ([SongWebLookup.keep]); its evidence then is what they give ([songWith]), a card's key with it.
+     * When a description was found, that evidence no longer has the artist's lines the model was given:
+     * a sentence citing one, and the plain sentence, are taken out before the reply is read and kept
+     * ([withoutCiting]), with no further call. With nothing left, the write fails as for
+     * an empty reply, no card is kept, the pages are, and *Retry* writes it from them, with no search.
+     * A complete reply with no search made keeps "found nothing" for the song, so no search stays due.
      */
     @Suppress("LongParameterList") // The insight, what it is about and from, and where its cost goes.
     suspend fun writeSearching(
@@ -597,14 +719,8 @@ class ItemInsights(
         rewriting: WrittenBy? = null,
         gates: WriteGates = WriteGates(),
     ): SearchedWrite? {
-        val searching =
-            Searching
-                .of(ai, web, artistWeb, artistQuery(track), name(item, track))
-                ?.takeIf { searchesItself(item, evidence, settings) }
-                ?: return null
-        val subject = ItemPrompt.Subject(item.kind, searching.name)
-        val line = { page: WebPage -> searching.lookup.pageLine(searching.query, page) }
-        val question = ArtistQuestion(subject, track, first.modelKnowledge, names, hasher, now(), line, dates())
+        val searching = searching(first, item, track, settings, evidence) ?: return null
+        val question = searching.question
         val base = CompletionRequest(first.model, "", CompletionRequest.maxTokensFor(first.effort), first.effort)
         val questions = WebQuestions(searching.access, searching.engine)
         val reply =
@@ -617,36 +733,83 @@ class ItemInsights(
                     first,
                     Asked(item, track, settings, evidence, rewriting),
                     searching,
-                    question,
                     reply,
                     gates,
                 )
         }
     }
 
-    // What [writeSearching] asks with: the AI service, the engine its searches go to, where the pages
-    // are kept, the artist they are kept for, and the name the insight goes by.
+    // What [writeSearching] asks with: the AI service, the engine its searches go to, the question, and
+    // where the pages it numbered are kept.
     private class Searching(
         val access: AiAccess,
         val engine: WebSearcher,
-        val lookup: ArtistWebLookup,
-        val query: ArtistWebQuery,
-        val name: String,
-    ) {
-        companion object {
-            fun of(
-                access: AiAccess?,
-                engine: WebSearcher?,
-                lookup: ArtistWebLookup?,
-                query: ArtistWebQuery?,
-                name: String?,
-            ): Searching? =
-                if (access == null || engine == null || lookup == null) {
-                    null
-                } else {
-                    query?.let { artist -> name?.let { Searching(access, engine, lookup, artist, it) } }
-                }
-        }
+        val question: ItemWebQuestion,
+        val keep: suspend (List<EvidenceDraft>) -> Unit,
+    )
+
+    // What [writeSearching] asks with for [item] on [track], when it applies ([searchesItself]).
+    @Suppress("LongParameterList") // The key, the item, what it is about and from.
+    private suspend fun searching(
+        first: CardKey,
+        item: InsightItem,
+        track: TrackState,
+        settings: Settings,
+        evidence: ItemEvidence,
+    ): Searching? {
+        val access = ai?.takeIf { searchesItself(item, evidence, settings) }
+        val engine = web
+        val name = name(item, track)
+        if (access == null || engine == null || name == null) return null
+        val subject = ItemPrompt.Subject(item.kind, name)
+        return when (item) {
+            InsightItem.ARTIST -> artistQuestion(subject, first, track)
+            else -> songQuestion(subject, first, track, settings, evidence)
+        }?.let { (question, keep) -> Searching(access, engine, question, keep) }
+    }
+
+    // The artist's question (#912), and where its pages are kept.
+    private fun artistQuestion(
+        subject: ItemPrompt.Subject,
+        first: CardKey,
+        track: TrackState,
+    ): Pair<ItemWebQuestion, suspend (List<EvidenceDraft>) -> Unit>? {
+        val lookup = artistWeb
+        val query = artistQuery(track)
+        if (lookup == null || query == null) return null
+        val line = { page: WebPage -> lookup.pageLine(query, page) }
+        val question = ArtistQuestion(subject, track, first.modelKnowledge, names, hasher, now(), line, dates())
+        return question to { lookup.keep(query, it) }
+    }
+
+    // The song's question (#958), and where its pages are kept.
+    @Suppress("LongParameterList") // What it is about, its key, and what it is from.
+    private suspend fun songQuestion(
+        subject: ItemPrompt.Subject,
+        first: CardKey,
+        track: TrackState,
+        settings: Settings,
+        evidence: ItemEvidence,
+    ): Pair<ItemWebQuestion, suspend (List<EvidenceDraft>) -> Unit>? {
+        val lookup = songWeb
+        val own = ownEvidence(track, settings)
+        if (lookup == null || own == null) return null
+        val query = songQuery(track, settings)
+        val at = now()
+        val lines = lookup.pageLines(query)
+        val question =
+            SongQuestion(
+                subject,
+                track,
+                first.modelKnowledge,
+                evidence,
+                own,
+                hasher,
+                query.language?.name,
+                { page -> lines(page, at) },
+                dates(),
+            )
+        return question to { lookup.keep(query, it) }
     }
 
     // What [writeSearching] was asked to write: the item on its track, under its settings, from its
@@ -671,26 +834,54 @@ class ItemInsights(
         first: CardKey,
         asked: Asked,
         searching: Searching,
-        question: ArtistQuestion,
         reply: WebReply,
         gates: WriteGates,
     ): SearchedWrite? {
-        val drafts = question.drafts()
+        val drafts = searching.question.drafts()
         val searched = reply.cost.searches > 0
-        val found = if (searched) withWeb(asked.track, asked.settings, asked.evidence, drafts) else null
+        val found =
+            if (searched) webEvidence(asked.item, asked.track, asked.settings, asked.evidence, drafts) else null
         val lines = (found ?: asked.evidence).evidence
+        // The lines the model was given that the evidence no longer has (#958: the artist's, once a
+        // description was found): a sentence citing one goes, before the reply is read and kept.
+        val text = withoutGone(reply.text, asked.evidence, found ?: asked.evidence)
         // Written by [first]'s service, model and effort, from the lines found.
-        val key = first.copy(evidenceFingerprint = lines.fingerprint)
+        val key =
+            first.copy(
+                evidenceFingerprint = lines.fingerprint,
+                promptVersion = promptVersion(found ?: asked.evidence),
+            )
         if (!gates.reserve(key)) return null
         val rewritten = asked.rewriting?.let { rewriteParts(it, key.writtenBy()) }.orEmpty()
-        val read = outcome(reply.end, reply.text, key, lines, null, rewritten)
-        val nothing = !searched && read is Reply.Read && read.kept && read.state == InsightState.NoEvidence
-        if (searched || nothing) attempt { searching.lookup.keep(searching.query, drafts) }
-        // With "found nothing" kept, the artist's evidence has no search due.
-        val none = if (nothing) withWeb(asked.track, asked.settings, asked.evidence, emptyList()) else null
+        val read = outcome(reply.end, text, key, lines, null, rewritten)
+        val nothing = !searched && foundNothing(asked.item, read)
+        if (searched || nothing) attempt { searching.keep(drafts) }
+        // With "found nothing" kept, the item's evidence has no search due.
+        val none =
+            if (nothing) webEvidence(asked.item, asked.track, asked.settings, asked.evidence, emptyList()) else null
         val evidence = found ?: none ?: asked.evidence
-        return SearchedWrite(evidence, key, kept(read, key, reply.text, rewritten, asked))
+        return SearchedWrite(evidence, key, kept(read, key, text, rewritten, asked))
     }
+
+    // [text] as written from [now], the lines it was asked from having been [was] (#958): without the
+    // sentences citing a line gone, nor the plain sentence once a line is read as describing the song.
+    private fun withoutGone(
+        text: String,
+        was: ItemEvidence,
+        now: ItemEvidence,
+    ): String {
+        val gone = was.evidence.ids.toSet() - now.evidence.ids.toSet()
+        return withoutCiting(text, gone, was.onlyListings && !now.onlyListings)
+    }
+
+    // Whether [read], a reply with no search made, keeps "found nothing" for [item]: a complete one of
+    // `NO_EVIDENCE`; for the song, any complete one (#958), whose card has the key it would have with
+    // none kept, so a search left due would have that card set aside, and written and paid for, at
+    // every play.
+    private fun foundNothing(
+        item: InsightItem,
+        read: Reply,
+    ): Boolean = read is Reply.Read && read.kept && (read.state == InsightState.NoEvidence || item == InsightItem.SONG)
 
     // The state [read], [key]'s reply [text] as read, comes to (a reply that revised itself away
     // fails), kept when complete, with the item's web lines kept again, at the time it is shown with.
@@ -736,6 +927,22 @@ class ItemInsights(
                 .filter { it.source == SourceId.WEB }
                 .map(::draftOf),
         )
+
+    // [item]'s [evidence] on [track] with the web's [lines]: as the song's own is made ([songWith]), the
+    // others' [withWeb].
+    @Suppress("LongParameterList") // The item, what it is from and under, and what is added.
+    private fun webEvidence(
+        item: InsightItem,
+        track: TrackState,
+        settings: Settings,
+        evidence: ItemEvidence,
+        lines: List<EvidenceDraft>,
+    ): ItemEvidence? {
+        if (item != InsightItem.SONG) return withWeb(track, settings, evidence, lines)
+        val own = ownEvidence(track, settings)
+        val shown = track.evidence
+        return if (own == null || shown == null) null else songWith(own, shown, track, settings, lines)
+    }
 
     // [evidence] on [track] with the web's [lines], those [settings] switch on.
     private fun withWeb(
@@ -924,7 +1131,7 @@ class ItemInsights(
                 kind = item.kind,
                 entity = entity,
                 evidenceFingerprint = evidence.evidence.fingerprint,
-                promptVersion = ItemPrompt.VERSION,
+                promptVersion = promptVersion(evidence),
                 styleHash = styleHash(hasher),
                 provider = provider,
                 model = model,
@@ -933,6 +1140,10 @@ class ItemInsights(
             )
         }
     }
+
+    // The version of the prompt a card from [evidence] is written with, part of its key.
+    private fun promptVersion(evidence: ItemEvidence): Int =
+        if (evidence.onlyListings) ItemPrompt.ONLY_LISTINGS_VERSION else ItemPrompt.VERSION
 
     /** Whether an insight may be written now: an AI service ready (none while its model is unavailable, #540). */
     val writes: Boolean get() = ai != null
@@ -982,7 +1193,8 @@ class ItemInsights(
      * [InsightState.NoEvidence]. A complete reply is kept in the cache, `NO_EVIDENCE` too, so the same
      * item asks nothing again, with the one time it is shown with, and, for the album's, its web lines
      * kept again with it ([AlbumLookup.renewWeb]), and for the artist's, the artist's
-     * ([ArtistWebLookup.renew]); a reply cut off (a Stop cancels
+     * ([ArtistWebLookup.renew]), and for the song's, the song's ([SongWebLookup.renew]); a reply cut
+     * off (a Stop cancels
      * the call) is neither shown nor kept. A reply that revises itself where it would show (#798) is
      * cut to what follows the revision when that is usable; else asked for once more, a second call,
      * and with nothing usable then either, it fails, as the key insight's does. While it streams, the
@@ -1010,7 +1222,16 @@ class ItemInsights(
             return InsightState.NoEvidence.also { show(it, now()) }
         }
         val subject = ItemPrompt.Subject(item.kind, checkNotNull(name(item, track)))
-        val prompt = ItemPrompt.build(subject, track.nowPlaying, track.normalized, lines, key.modelKnowledge, dates())
+        val prompt =
+            ItemPrompt.build(
+                subject,
+                track.nowPlaying,
+                track.normalized,
+                lines,
+                key.modelKnowledge,
+                dates(),
+                evidence.onlyListings,
+            )
         val request = CompletionRequest(key.model, prompt, CompletionRequest.maxTokensFor(key.effort), key.effort)
         var billed: Usage? = null
         var calls = 0
@@ -1050,7 +1271,8 @@ class ItemInsights(
     // The album's or the artist's web lines kept again from now with [item]'s card on [track] written
     // from them (#885, [AlbumLookup.renewWeb]; #912, [ArtistWebLookup.renew]), and its lines in the
     // track's language (#939, [ItemLanguageLines.renew]) when the card's [evidence] holds some, so they
-    // last as long as this card, the last one kept; nothing for the song's, or when none are kept.
+    // last as long as this card, the last one kept; the song's web lines likewise (#958); nothing when
+    // none are kept.
     private suspend fun renewWeb(
         item: InsightItem,
         track: TrackState,
@@ -1064,15 +1286,23 @@ class ItemInsights(
         val artist = artistWeb
         val query = artistQuery(track)
         if (item == InsightItem.ARTIST && artist != null && query != null) attempt { artist.renew(query) }
+        if (item == InsightItem.SONG) songWeb?.let { attempt { it.renew(SongWebQuery(track.normalized)) } }
         val subject =
             when (item) {
                 InsightItem.ARTIST -> query?.let { LanguageSubject.Artist(it.name, it.mbid) }
                 InsightItem.ALBUM -> album?.let { LanguageSubject.Album(it.title, it.artist, it.group) }
                 InsightItem.SONG -> null
             }
+        if (subject != null) renewInLanguage(subject, evidence)
+    }
+
+    // [subject]'s lines in the track's language kept again (#939) when [evidence] holds some.
+    private suspend fun renewInLanguage(
+        subject: LanguageSubject,
+        evidence: EvidenceSet,
+    ) {
         val lines = languageLines
-        val inLanguage = evidence.lines.any { it.found != null }
-        if (subject != null && lines != null && inLanguage) attempt { lines.renew(subject) }
+        if (lines != null && evidence.lines.any { it.found != null }) attempt { lines.renew(subject) }
     }
 
     // One call of [request]: its text, each piece shown as it comes while it may not be `NO_EVIDENCE`
@@ -1239,13 +1469,19 @@ class ItemInsights(
 // lines, and MusicBrainz, whose resolution names the artist they look up.
 private val ARTIST_SOURCES = setOf(SourceId.MUSICBRAINZ, SourceId.WIKIPEDIA, SourceId.LASTFM)
 
-// Whether a source [settings] switch on that the artist's lines come from, or MusicBrainz, ended on
-// [track] unreachable (the network, the source), or failed in a way its adapter did not map.
+// The sources whose answer says whether the song's lines only list it (#958): those that may describe
+// it, and the web's, which also makes its search.
+private val SONG_SOURCES = ARTIST_SOURCES + SourceId.WEB
+
+// Whether a source [settings] switch on of [sources] (by default, those the artist's lines come from,
+// and MusicBrainz) ended on [track] unreachable (the network, the source), or failed in a way its
+// adapter did not map.
 private fun unanswered(
     track: TrackState,
     settings: Settings,
+    sources: Set<SourceId> = ARTIST_SOURCES,
 ): Boolean =
-    ARTIST_SOURCES.any { source ->
+    sources.any { source ->
         settings.isEnabled(source) &&
             when (val state = track.sources[source]) {
                 is SourceState.Failed -> true

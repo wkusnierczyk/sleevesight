@@ -16,6 +16,7 @@ import app.sleevesight.core.sources.ArtistWebLookup
 import app.sleevesight.core.sources.ItemLanguageLines
 import app.sleevesight.core.sources.LanguageSearch
 import app.sleevesight.core.sources.Resolution
+import app.sleevesight.core.sources.SongWebLookup
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.WebSearcher
 import app.sleevesight.core.text.DateForm
@@ -72,7 +73,8 @@ class AiAccess(
  * is no [ai] because the selected service's model is found unavailable (#540): nothing is written,
  * but the key insight kept is still read and shown (#911, `InsightWriter`). [artistWeb] searches the
  * web for an artist the sources say nothing about, and keeps what it found (#912, [ItemInsights]),
- * on the user's web search key, or none (no engine switched on with its key, the CLI).
+ * on the user's web search key, or none (no engine switched on with its key, the CLI). [songWeb]
+ * likewise for a song the sources only list (#958).
  * [languageSearch] looks the track up in the language it is sung in, when not English (#902,
  * [LanguageSearch]), or none (no such search). [languageLines] keeps what that search found about
  * the artist and the album, per artist and per album, for their insights on their other tracks
@@ -100,6 +102,7 @@ class PipelineParts(
     val languageSearch: LanguageSearch? = null,
     val dateForm: () -> DateForm = { DateForm.APP },
     val languageLines: ItemLanguageLines? = null,
+    val songWeb: SongWebLookup? = null,
     val lyricsLibrary: LyricsLibrary? = null,
 ) {
     init {

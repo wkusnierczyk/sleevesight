@@ -43,6 +43,7 @@ import app.sleevesight.app.ui.report.REPORT_TAG
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.pipeline.AiSearches
 import app.sleevesight.core.pipeline.InsightItem
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.ItemEvidence
@@ -263,6 +264,34 @@ class ItemRowsScreenTest {
             compose.onNodeWithText(text(R.string.home_item_tap_write)).assertExists()
             compose.onNodeWithTag(itemWriteTag(InsightItem.ARTIST)).performScrollTo().performClick()
             assertEquals(listOf(ItemAsk.OPENED, ItemAsk.TAP), notes.asks)
+        }
+    }
+
+    @Test
+    fun aKeptInsightWhoseSearchFailedShowsTheFailureBesideItWithRetry() {
+        val grounded =
+            (
+                GroundingCheck.check(
+                    "It came out in 1974 [MB1].",
+                    evidence,
+                    false,
+                ) as InsightReply.Written
+            ).grounded
+        notes.shown.value =
+            mapOf(
+                InsightItem.SONG to
+                    ItemShown.Shown(
+                        InsightState.Written(grounded, cached = true),
+                        ItemEvidence(evidence, emptyMap()),
+                        rewriteFailed = AiSearches.WEB_SEARCH_FAILED,
+                    ),
+            )
+        show(state(onDemand)) {
+            row(InsightItem.SONG).performScrollTo().performClick()
+            compose.onNodeWithText("It came out in 1974", substring = true).performScrollTo().assertExists()
+            compose.onNodeWithTag(ITEM_FAILED_TAG).performScrollTo().assertExists()
+            compose.onNodeWithTag(RETRY_TAG).performScrollTo().performClick()
+            assertEquals(listOf(ItemAsk.TAP), notes.asks)
         }
     }
 

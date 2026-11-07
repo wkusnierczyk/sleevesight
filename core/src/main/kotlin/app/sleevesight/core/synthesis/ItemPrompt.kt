@@ -34,6 +34,14 @@ object ItemPrompt {
      */
     const val VERSION: Int = 1
 
+    /**
+     * The version of the song's prompt when its own lines only list it (#958,
+     * [ONLY_LISTINGS_RULE]), part of that card's key in place of [VERSION]: so an insight written
+     * before from those same lines, with no plain sentence, is not found under it and is written
+     * afresh, once, when next asked for; and no other insight's key changes.
+     */
+    const val ONLY_LISTINGS_VERSION: Int = 2
+
     /** What an insight is about: the [kind] of card, and the [name] it goes by (the title, the artist, the album). */
     class Subject(
         val kind: CardKind,
@@ -57,9 +65,11 @@ object ItemPrompt {
     /**
      * The prompt for [subject], beside [nowPlaying], normalized as [normalized], written from
      * [evidence]. With [allowModel] (the *Model's own knowledge* switch), the model may add one
-     * sentence of its own, cited `[AI]`. Its dates in [dates]' form ([InsightPrompt.dateRule]).
+     * sentence of its own, cited `[AI]`. Its dates in [dates]' form ([InsightPrompt.dateRule]). With
+     * [onlyListings], the song's when its own lines only list it (#958), the rule on a gap is
+     * [ONLY_LISTINGS_RULE].
      */
-    @Suppress("LongParameterList") // What it is about, the data, the switch, and the dates' form.
+    @Suppress("LongParameterList") // What it is about, the data, the switch, the dates' form, and the gap's rule.
     fun build(
         subject: Subject,
         nowPlaying: NowPlaying,
@@ -67,6 +77,7 @@ object ItemPrompt {
         evidence: EvidenceSet,
         allowModel: Boolean,
         dates: DateForm = DateForm.APP,
+        onlyListings: Boolean = false,
     ): String =
         buildString {
             appendLine(task(subject.kind))
@@ -102,7 +113,7 @@ object ItemPrompt {
             appendLine()
             appendLine(InsightPrompt.CONTRACT_HEADING)
             appendLine(subjectRule(subject.kind))
-            appendLine(contract(allowModel))
+            appendLine(contract(allowModel, onlyListings))
             appendLine()
             append(REPLY)
         }
@@ -130,6 +141,27 @@ object ItemPrompt {
             "back as evidence lines, in the same format, numbered from [${SourceId.WEB.tag}1]: cite them as " +
             "evidence lines, and use only what they say. Reply ${GroundingCheck.NO_EVIDENCE} only if what the " +
             "searches find says nothing about the artist either.\n\n" + REPLY
+
+    /**
+     * [prompt], the song's when its own lines only list it ([build] with `onlyListings`), for *AI web
+     * search* set to *Up to 3 times* (#958): before its last line, the model is told to search the web
+     * for what the song sounds like and how it was made with [WebPrompt.TOOL], at most [limit] times,
+     * in the track's language too when there is one ([language], its English name); each search's
+     * pages about the song come back as evidence lines (`SongQuestion.toolResult`), which it cites and
+     * keeps to as the others.
+     */
+    fun withSongSearch(
+        prompt: String,
+        limit: Int,
+        language: String?,
+    ): String {
+        val inLanguage = language?.let { " The song is in $it: search in $it." }.orEmpty()
+        return prompt.removeSuffix(REPLY) +
+            "The evidence does not describe this song: search the web for what it sounds like and how it was made " +
+            "with the ${WebPrompt.TOOL_NAME} tool, at most $limit times.$inLanguage Each search's pages about " +
+            "the song come back as evidence lines, in the same format, numbered on from those above: cite " +
+            "them as evidence lines, and use only what they say.\n\n" + REPLY
+    }
 
     // The task: what the card is about.
     private fun task(kind: CardKind): String =
@@ -179,9 +211,13 @@ object ItemPrompt {
     /**
      * The fixed rules: the key insight's as they were until its version 9 (#767), word for word, so
      * this prompt and its [VERSION] stand while the insight's own move on ([InsightPrompt.rules]).
-     * Bringing these three insights to version 9's structure is a change of its own.
+     * Bringing these three insights to version 9's structure is a change of its own. With
+     * [onlyListings], [ONLY_LISTINGS_RULE] in place of [GAP_RULE] (#958).
      */
-    fun contract(allowModel: Boolean): String =
+    fun contract(
+        allowModel: Boolean,
+        onlyListings: Boolean = false,
+    ): String =
         listOf(
             InsightPrompt.CITATION_RULE,
             InsightPrompt.EVIDENCE_RULE,
@@ -191,7 +227,7 @@ object ItemPrompt {
             InsightPrompt.ARTIST_RULE,
             InsightPrompt.SAME_NAME_RULE,
             InsightPrompt.WEB_GENRE_RULE,
-            GAP_RULE,
+            if (onlyListings) ONLY_LISTINGS_RULE else GAP_RULE,
             if (allowModel) InsightPrompt.MODEL_RULE else InsightPrompt.NO_MODEL_RULE,
             InsightPrompt.PLAIN_TEXT_RULE,
             InsightPrompt.NO_EVIDENCE_RULE,
@@ -204,4 +240,23 @@ object ItemPrompt {
     const val GAP_RULE: String =
         "- If the evidence supports fewer sentences than the style asks for, write fewer; a short insight " +
             "is enough. Do not say what the evidence leaves out. Write no sentence without a citation."
+
+    /**
+     * The song's rule on a gap when its own lines only list it, as the app reads them
+     * (`SongListings`, #958), in place of [GAP_RULE], which stands for every other insight: the model
+     * opens with the fixed sentence ([GroundingCheck.ONLY_RELEASE_SENTENCE], which the check reads as
+     * a stated gap, so it is not dimmed) only if it finds no line that describes the song; then at most
+     * one sentence on the artist's sound, named as the artist's, cited; then the release, cited. Earlier
+     * attempts at a stated gap went badly in free wording ([InsightPrompt.GAP_RULE]'s history); these are
+     * fixed words for one case the app decides, with what the listener gets for them after.
+     */
+    const val ONLY_LISTINGS_RULE: String =
+        "- If no line of the evidence describes the song itself (what it sounds like, what it is about, " +
+            "how it was made), begin with exactly this sentence, with no citation: " +
+            "${GroundingCheck.ONLY_RELEASE_SENTENCE} Then, if there is an \"artist\" line, write at most one " +
+            "sentence on the artist's sound, naming the artist, saying it is the artist's and not a claim " +
+            "about this song, and citing that line. Then give the release details, cited. Write no other " +
+            "sentence without a citation, and say nothing else about what the evidence leaves out. If a " +
+            "line does describe the song, write from it as usual, without that sentence or the \"artist\" " +
+            "lines; a short insight is enough."
 }

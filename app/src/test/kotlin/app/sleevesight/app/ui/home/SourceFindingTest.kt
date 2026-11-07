@@ -135,6 +135,19 @@ class SourceFindingTest {
     }
 
     @Test
+    fun webSearchThatFoundNothingWithPagesTheSongsOwnSearchFoundSaysItFoundPagesNoNewRowOrStatus() {
+        // The song's own search (#958) found them after the track's search found nothing.
+        val web = chip(SourceId.WEB, outcome = Outcome.None)
+        assertEquals("Found pages about the track", said(web, lines(line(SourceId.WEB, Scope.WEB))))
+        val inHindi = SourceChip(SourceId.WEB, ChipStatus.Done(Outcome.None, false), setOf(SourceId.WEB), "hi")
+        val found = draft(SourceId.WEB, "एक धीमा गीत।", scope = Scope.WEB).copy(language = "hi")
+        assertEquals("Found pages about the track", said(inHindi, lines(found)))
+        assertEquals("Nothing found", said(web, emptyList()))
+        // Not on the artist's web lines (#912), nor another source's.
+        assertEquals(said(web, emptyList()), said(web, lines(line(SourceId.WEB, Scope.ARTIST))))
+    }
+
+    @Test
     fun withNoLinesOfThoseScopesTheOutcomeAloneInTheSameWords() {
         val none = emptyList<EvidenceLine>()
         assertEquals("Found the track", said(chip(outcome = Outcome.SongArticle), none))

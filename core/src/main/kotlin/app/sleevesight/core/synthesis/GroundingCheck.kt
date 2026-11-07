@@ -143,6 +143,13 @@ object GroundingCheck {
      */
     const val GAP_SENTENCE: String = "Little else is documented."
 
+    /**
+     * The sentence the song's insight opens with when its sources only list the song (#958,
+     * [ItemPrompt.ONLY_LISTINGS_RULE]): a stated gap, uncited on purpose, so a hedge, as the whole
+     * sentence, as written; not dimmed, and whatever else the reply holds, or does not, it is written.
+     */
+    const val ONLY_RELEASE_SENTENCE: String = "The sources give only release details for this song."
+
     /** The reply that says there is no usable evidence. */
     const val NO_EVIDENCE: String = "NO_EVIDENCE"
 
@@ -270,7 +277,8 @@ object GroundingCheck {
             when {
                 bad -> SentenceStatus.UNKNOWN
                 cites.isNotEmpty() -> if (MODEL_ID in cites) SentenceStatus.MODEL else SentenceStatus.OK
-                sentence.trimJs() == GAP_SENTENCE || HEDGE.containsMatchIn(sentence.asciiLowercase()) ->
+                sentence.trimJs().let { it == GAP_SENTENCE || it == ONLY_RELEASE_SENTENCE } ||
+                    HEDGE.containsMatchIn(sentence.asciiLowercase()) ->
                     SentenceStatus.HEDGE
                 else -> SentenceStatus.UNCITED
             }

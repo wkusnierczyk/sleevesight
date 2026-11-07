@@ -91,7 +91,7 @@ class PipelineWiringTest {
         assertNotNull(wiring.artistWeb(keyed, Settings()))
         assertNull(wiring.artistWeb(keyed, Settings(webEngines = emptySet())))
         assertNull(wiring.artistWeb(SourceKeys(), Settings()))
-        assertEquals(setOf("album.web", "artist.web"), PipelineWiring.TRACK_ONLY_PARTS)
+        assertEquals(setOf("album.web", "artist.web", "song.web"), PipelineWiring.TRACK_ONLY_PARTS)
     }
 
     // The artist cache in a map, by part name and key, kept for ever.

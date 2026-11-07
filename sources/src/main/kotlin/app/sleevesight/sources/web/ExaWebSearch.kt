@@ -7,6 +7,7 @@ import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.AccentFolder
+import app.sleevesight.core.pipeline.songReviewQuery
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.SourceResult
@@ -473,6 +474,39 @@ internal data class ExaSearchRequest(
             ExaSearchRequest(
                 query = "\"$artist\", music artist",
                 contents = ExaContents(ExaHighlights("$artist biography", HIGHLIGHT_CHARACTERS)),
+            )
+
+        /**
+         * The query for a song the other sources only list (#958, `ExaSongSearch`): `"<title>"
+         * <artist> review interview`, the first artist's name only, the words that find a page on the
+         * song rather than a shop's or a streaming service's (as `songReviewQuery`, the words the
+         * insight's question would use); highlights steered to its sound and making.
+         */
+        fun ofSongReview(
+            title: String,
+            artist: String,
+        ): ExaSearchRequest =
+            ExaSearchRequest(
+                query = songReviewQuery(title, artist),
+                contents =
+                    ExaContents(
+                        ExaHighlights("$title $artist sound recording production review", HIGHLIGHT_CHARACTERS),
+                    ),
+            )
+
+        /**
+         * [ofSongReview] in the track's language (#958): `"<title>" <artist>, <word for a song>`, the
+         * [title] and [artist] in its script, highlights steered by those names, as
+         * [ExaLanguageQuery.of]'s are.
+         */
+        fun ofSongInLanguage(
+            title: String,
+            artist: String,
+            song: String,
+        ): ExaSearchRequest =
+            ExaSearchRequest(
+                query = "\"$title\" $artist, $song",
+                contents = ExaContents(ExaHighlights("$title $artist", HIGHLIGHT_CHARACTERS)),
             )
 
         /** What the request asks Exa for, and what the adapter cuts a line to ([ExaWebSearch.cut]). */

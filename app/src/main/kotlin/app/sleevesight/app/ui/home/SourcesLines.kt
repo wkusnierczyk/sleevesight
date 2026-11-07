@@ -28,18 +28,20 @@ internal class SourcesLines(
 
 /**
  * [evidence], the track's, with [album]'s lines (#522) and [artist]'s, the artist's insight's (its web
- * lines for an artist the sources say nothing about, #912), mixed in by source and numbered on from
- * the track's; a line the track, or the album, has already (its source, scope and words) once. The
- * artist's lines say "artist" as their scope does. Not the key insight's evidence: a list to read.
+ * lines for an artist the sources say nothing about, #912), and [song]'s, the song's insight's (its web
+ * lines for a song the sources only list, #958), mixed in by source and numbered on from the track's; a
+ * line the track, or the album, has already (its source, scope and words) once. The artist's lines say
+ * "artist" as their scope does. Not the key insight's evidence: a list to read.
  */
 internal fun withAlbum(
     evidence: EvidenceSet?,
     album: EvidenceSet?,
     artist: EvidenceSet? = null,
+    song: EvidenceSet? = null,
 ): SourcesLines {
     val seen = evidence?.lines.orEmpty().mapTo(mutableSetOf()) { Triple(it.source, it.scope, it.text) }
     val more =
-        listOfNotNull(album, artist)
+        listOfNotNull(album, artist, song)
             .flatMap { it.lines }
             .filter { seen.add(Triple(it.source, it.scope, it.text)) }
             // A language read from the line's script by the item's set is read again with the track's (#949).
@@ -60,8 +62,8 @@ internal fun withAlbum(
 }
 
 /**
- * What *Sources* lists for [track]: its evidence, with its album's lines, and its artist's web lines
- * (#912), once [notes] gathered them.
+ * What *Sources* lists for [track]: its evidence, with its album's lines, its artist's web lines
+ * (#912) and its song's (#958), once [notes] gathered them.
  */
 @Composable
 internal fun sourcesLines(
@@ -75,8 +77,11 @@ internal fun sourcesLines(
     val artist by remember(notes, track?.normalized, track?.resolution, track?.sources) {
         track?.let(notes::artistEvidence) ?: flowOf(null)
     }.collectAsState(null)
+    val song by remember(notes, track?.normalized, track?.resolution, track?.sources) {
+        track?.let(notes::songEvidence) ?: flowOf(null)
+    }.collectAsState(null)
     val evidence = track?.evidence
-    return remember(evidence, album, artist) { withAlbum(evidence, album, artist) }
+    return remember(evidence, album, artist, song) { withAlbum(evidence, album, artist, song) }
 }
 
 /**
