@@ -2,6 +2,14 @@ package app.sleevesight.app.pipeline
 
 import app.sleevesight.app.ui.home.HomeFixtures
 import app.sleevesight.core.Secret
+import app.sleevesight.core.ai.AiProvider
+import app.sleevesight.core.ai.CompletionEvent
+import app.sleevesight.core.ai.CompletionRequest
+import app.sleevesight.core.ai.ModelList
+import app.sleevesight.core.ai.StopReason
+import app.sleevesight.core.ai.ToolCall
+import app.sleevesight.core.ai.ToolTurn
+import app.sleevesight.core.ai.Usage
 import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.evidence.Scope
@@ -28,14 +36,21 @@ import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.SongWebLookup
 import app.sleevesight.core.sources.SongWebQuery
 import app.sleevesight.core.sources.WebPage
+import app.sleevesight.core.sources.WebSearchOutcome
+import app.sleevesight.core.sources.WebSearcher
 import app.sleevesight.core.synthesis.GroundingCheck
 import app.sleevesight.core.synthesis.SentenceStatus
+import app.sleevesight.core.synthesis.WebPrompt
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.time.Instant
@@ -95,18 +110,58 @@ class AppSongWebNotesTest {
         override suspend fun renew(song: SongWebQuery) = Unit
     }
 
-    private fun parts(provider: CountingProvider) =
-        MutableStateFlow<PipelineParts?>(
-            PipelineParts(
-                normalizer = Normalizer(JvmAccentFolder),
-                adapters = emptyList(),
-                resolver = TrackResolver { _, _ -> Resolution.NONE },
-                hasher = JvmHasher,
-                ai = AiAccess(provider, Secret("key")),
-                cache = cache,
-                songWeb = songWeb,
-            ),
-        )
+    // A service that takes tools: searches once when [searching], then replies [text], stopping as [stop].
+    private class Tooled(
+        val searching: Boolean,
+        val stop: StopReason = StopReason.END,
+        var text: String = "It came out in 1974 [MB1].",
+    ) : AiProvider {
+        override val id: ProviderId = ProviderId.ANTHROPIC
+        override val usesTools: Boolean = true
+        var requests = 0
+
+        override suspend fun models(key: Secret): ModelList = ModelList.Listed(emptyList())
+
+        override fun stream(
+            request: CompletionRequest,
+            key: Secret,
+        ): Flow<CompletionEvent> =
+            flow {
+                requests++
+                val toSearch = request.tools.isNotEmpty() && request.toolsAllowed && request.exchanges.isEmpty()
+                if (searching && toSearch) {
+                    val call = ToolCall("c1", WebPrompt.TOOL_NAME, """{"query":"Sundown"}""")
+                    emit(CompletionEvent.ToolUse(ToolTurn(listOf(call), "[]")))
+                    emit(CompletionEvent.Done(USAGE, StopReason.TOOL_USE))
+                } else {
+                    emit(CompletionEvent.Delta(text))
+                    emit(CompletionEvent.Done(USAGE, stop))
+                }
+            }
+    }
+
+    private object FailingSearches : WebSearcher {
+        override suspend fun search(
+            query: String,
+            subject: List<String>?,
+        ): WebSearchOutcome = WebSearchOutcome.Failed
+    }
+
+    private fun parts(
+        provider: AiProvider,
+        web: WebSearcher? = null,
+    ) = MutableStateFlow<PipelineParts?>(
+        PipelineParts(
+            normalizer = Normalizer(JvmAccentFolder),
+            adapters = emptyList(),
+            resolver = TrackResolver { _, _ -> Resolution.NONE },
+            hasher = JvmHasher,
+            ai = AiAccess(provider, Secret("key")),
+            cache = cache,
+            webSearch = web,
+            songWeb = songWeb,
+        ),
+    )
 
     private fun TestScope.notes(parts: MutableStateFlow<PipelineParts?>) =
         AppItemNotes(
@@ -294,6 +349,100 @@ class AppSongWebNotesTest {
             assertEquals(1, provider.requests)
         }
 
+    private suspend fun AppItemNotes.shownCard(): ItemShown.Shown {
+        val shown = item(track(), InsightItem.SONG).first { it is ItemShown.Shown } as ItemShown.Shown
+        assertTrue(shown.state.toString(), shown.state is InsightState.Written)
+        return shown
+    }
+
+    @Test
+    fun `a reply cut off with a search due is shown with its note, and not written again`() =
+        runTest {
+            settings.value = settings.value?.copy(aiWebSearch = AiWebSearch.UP_TO)
+            val provider = Tooled(searching = false, stop = StopReason.MAX_TOKENS)
+            val notes = notes(parts(provider, FailingSearches))
+            notes.write(track(), InsightItem.SONG)
+            advanceUntilIdle()
+            assertEquals(1, provider.requests)
+            assertFalse((notes.shownCard().state as InsightState.Written).complete)
+            assertTrue(songWeb.kept.isEmpty())
+            notes.write(track(), InsightItem.SONG, ItemAsk.OPENED)
+            advanceUntilIdle()
+            assertEquals(1, provider.requests)
+        }
+
+    @Test
+    fun `once, a failed search leaves the kept card shown with the failure beside it, and Off the card alone`() =
+        runTest {
+            songWeb.found = null
+            val provider = CountingProvider()
+            val notes = plainThenOnce(provider)
+            notes.write(track(), InsightItem.SONG)
+            advanceUntilIdle()
+            assertEquals(1, songWeb.searches)
+            assertEquals(1, provider.requests)
+            assertEquals(AiSearches.WEB_SEARCH_FAILED, notes.shownCard().rewriteFailed)
+            assertTrue(songWeb.kept.isEmpty())
+
+            // No repeat by itself on this play.
+            notes.write(track(), InsightItem.SONG, ItemAsk.OPENED)
+            advanceUntilIdle()
+            assertEquals(1, songWeb.searches)
+
+            // Searched no more: the card alone, no failure, no call.
+            settings.value = settings.value?.copy(aiWebSearch = AiWebSearch.OFF)
+            advanceUntilIdle()
+            assertNull(notes.shownCard().rewriteFailed)
+            assertEquals(1, provider.requests)
+
+            // Back on, and *Retry*: searched again, and written from what it found.
+            settings.value = settings.value?.copy(aiWebSearch = AiWebSearch.ONCE)
+            advanceUntilIdle()
+            songWeb.found = listOf(WEB_LINE)
+            provider.reply = { "A slow groove [S1]." }
+            notes.write(track(), InsightItem.SONG, ItemAsk.TAP)
+            advanceUntilIdle()
+            assertEquals(2, songWeb.searches)
+            assertEquals(2, provider.requests)
+            assertNull(notes.shownCard().rewriteFailed)
+        }
+
+    @Test
+    fun `up to 3 times, a failed write leaves the kept card as it was, with the failure beside it`() =
+        runTest {
+            settings.value = settings.value?.copy(aiWebSearch = AiWebSearch.OFF)
+            val provider = Tooled(searching = true, text = "${GroundingCheck.ONLY_RELEASE_SENTENCE} It came [MB1].")
+            val notes = notes(parts(provider, FailingSearches))
+            notes.write(track(), InsightItem.SONG)
+            advanceUntilIdle()
+            assertEquals(1, provider.requests)
+            val card = (notes.shownCard().state as InsightState.Written).grounded.text
+
+            settings.value = settings.value?.copy(aiWebSearch = AiWebSearch.UP_TO)
+            advanceUntilIdle()
+            provider.text = "A different reply [MB1]."
+            notes.write(track(), InsightItem.SONG)
+            advanceUntilIdle()
+            val shown = notes.shownCard()
+            assertEquals(AiSearches.WEB_SEARCH_FAILED, shown.rewriteFailed)
+            assertEquals(card, (shown.state as InsightState.Written).grounded.text)
+            assertTrue(songWeb.kept.isEmpty())
+        }
+
+    @Test
+    fun `a card held back at a restart shows once the search is turned off, with no call`() =
+        runTest {
+            val provider = CountingProvider()
+            val made = parts(provider)
+            plainThenOnce(provider)
+            val restarted = notes(made)
+            assertEquals(ItemShown.Offered, restarted.settled(track()))
+            settings.value = settings.value?.copy(aiWebSearch = AiWebSearch.OFF)
+            advanceUntilIdle()
+            assertNull(restarted.shownCard().rewriteFailed)
+            assertEquals(1, provider.requests)
+        }
+
     @Test
     fun `a closed gate before the search makes neither search nor call, and it is offered again`() =
         runTest {
@@ -309,6 +458,8 @@ class AppSongWebNotesTest {
         }
 
     private companion object {
+        val USAGE = Usage(1, 1)
+
         const val ARTIST_TEXT = "Gordon Lightfoot was a Canadian folk singer."
 
         val WEB_LINE =

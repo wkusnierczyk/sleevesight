@@ -15,6 +15,7 @@ import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.ItemEvidence
 import app.sleevesight.core.pipeline.ItemInsights
 import app.sleevesight.core.pipeline.ItemSearch
+import app.sleevesight.core.pipeline.KeptItem
 import app.sleevesight.core.pipeline.PipelineEvent
 import app.sleevesight.core.pipeline.PipelineParts
 import app.sleevesight.core.pipeline.QuestionCost
@@ -301,6 +302,8 @@ class AppItemNotes(
         val evidence: ItemEvidence,
         val rewrites: Boolean = false,
         val play: Long? = null,
+        // Why the web search due for this kept insight just failed (#958), which it is shown beside.
+        val failedSearch: String? = null,
     )
 
     // What an item's evidence is gathered for: the item, the run's own evidence under the switches
@@ -410,7 +413,7 @@ class AppItemNotes(
                             // Only once its own was looked for and not found (#911).
                             val earlier = if (key in kept) earlierFor(key, entries, kept[key], lifetime) else null
                             val play = track.nowPlaying.play
-                            val own = entries[key]?.takeUnless { beforeSearch(it.state, evidence) }
+                            val own = entries[key]?.takeUnless { setAside(it, evidence) }
                             val now = Now(key in asked, key in read, play)
                             val shown = shownFor(key, evidence, own, earlier, lifetime, now)
                             if (insights.writes) shown else unwritable(shown)
@@ -442,13 +445,18 @@ class AppItemNotes(
         when {
             entry == null -> shownNone(key, evidence, earlier, now)
             expired(entry.writtenAt, lifetime) -> ItemShown.Offered.also { drop(key) }
+            entry.failedSearch != null && now.asked -> ItemShown.Asking(key)
             stale(entry, now.play) -> shownStale(key, evidence, entry, earlier, now.asked)
             // A rewrite that ended without an insight (#911): the earlier one again, saying why.
             entry.rewrites && earlier != null && failure(entry.state) != null ->
                 shownEarlier(key, evidence, earlier, failure(entry.state))
             // The insight's evidence numbered as when it was written, but mapped to this track's lines:
             // an artist's or album's insight kept from another track cites the same ids (#522).
-            else -> ItemShown.Shown(entry.state, evidence, modelName(key.model), key)
+            // The search's failure only while one is still due (#958).
+            else -> {
+                val failed = entry.failedSearch?.takeIf { evidence.webDue }
+                ItemShown.Shown(entry.state, evidence, modelName(key.model), key, rewriteFailed = failed)
+            }
         }
 
     // [key] with none of its own: being written; else [earlier], another model's insight, with *Rewrite
@@ -527,13 +535,23 @@ class AppItemNotes(
     // Whether [state], kept or shown, is one that found nothing to write from before a web search for
     // its item was due ([evidence] now has one due, #912: *AI web search* switched on, or a key given,
     // since), so it stands for none, and the item is offered. So too an insight that says the sources
-    // only list the song (#958): same lines, same key, written while no search could be made.
+    // only list the song (#958): same lines, same key, written complete while no search could be made;
+    // not one cut off, just paid for, which is shown with its note and written again only on a tap.
     private fun beforeSearch(
         state: InsightState,
         evidence: ItemEvidence,
     ): Boolean =
         evidence.webDue &&
-            (state == InsightState.NoEvidence || (evidence.onlyListings && state is InsightState.Written))
+            (
+                state == InsightState.NoEvidence ||
+                    (evidence.onlyListings && state is InsightState.Written && state.complete)
+            )
+
+    // Whether [entry] stands for none ([beforeSearch]): not a kept insight its due search failed beside (#958).
+    private fun setAside(
+        entry: Entry,
+        evidence: ItemEvidence,
+    ): Boolean = entry.failedSearch == null && beforeSearch(entry.state, evidence)
 
     // The insight another service, model or effort wrote for what [key]'s is about, from the same
     // evidence (#911): the most recently written of those shown ([entries]) and the one found in the
@@ -886,6 +904,12 @@ class AppItemNotes(
             val entry = Entry(state, at, asked.evidence, asked.replaces != null, track.nowPlaying.play)
             publish(work) { shown.update { it.with(key, entry) } }
         }
+        // A kept insight its due search failed beside (#958).
+        val beside: (KeptItem, String?) -> Unit = { card, failed ->
+            val at = card.writtenAt ?: clock.now()
+            val entry = Entry(card.state, at, asked.evidence, play = track.nowPlaying.play, failedSearch = failed)
+            publish(work) { shown.update { it.with(key, entry) } }
+        }
         val question = Question(track, AiQuestion.Item(item), work)
         val counted: (QuestionCost) -> Unit = { more -> question.count(more, key) }
         try {
@@ -900,7 +924,7 @@ class AppItemNotes(
                 }
             key = next.key
             asked = next.asked
-            finish(insights, first, next, Writing(question, counted, show))
+            finish(insights, first, next, Writing(question, counted, show, beside))
         } catch (e: StopAsked) {
             // Stopped by the user (*Stop writing*): said so, offered again on a tap; nothing was kept.
             question.end(AiOutcome.STOPPED)
@@ -927,6 +951,7 @@ class AppItemNotes(
         val question: Question,
         val counted: (QuestionCost) -> Unit,
         val show: (InsightState, Instant) -> Unit,
+        val beside: (KeptItem, String?) -> Unit,
     )
 
     // [next]'s write, [first]'s as [toWrite] left it: kept (under the key a search gave too), or
@@ -946,7 +971,7 @@ class AppItemNotes(
         val again = key != first || asked.evidence.onlyListings
         val settled = next.ended ?: AiOutcome.ANSWERED.takeIf { again && showKept(insights, key, asked) }
         if (settled != null) {
-            next.shown?.let { writing.show(it, (it as? InsightState.Written)?.writtenAt ?: clock.now()) }
+            showEnded(insights, next, writing)
             question.end(settled, (next.shown as? InsightState.Failed)?.reason)
             return
         }
@@ -967,6 +992,27 @@ class AppItemNotes(
                 )
             }
         if (last == null) question.notAsked() else question.end(outcomeOf(last), (last as? InsightState.Failed)?.reason)
+    }
+
+    // What [next], a write that ended on the way, shows: its state; for a web search that failed where a
+    // kept insight was set aside for it (#958), that insight, with the failure beside it, the search still due.
+    private suspend fun showEnded(
+        insights: ItemInsights,
+        next: Next,
+        writing: Writing,
+    ) {
+        val state = next.shown
+        val failed = (state as? InsightState.Failed)?.reason?.takeIf { it == AiSearches.WEB_SEARCH_FAILED }
+        val card =
+            failed?.let { insights.kept(next.key, next.asked.evidence) }?.takeIf {
+                !expired(it.writtenAt) &&
+                    it.state is InsightState.Written &&
+                    beforeSearch(it.state, next.asked.evidence)
+            }
+        when {
+            card != null -> writing.beside(card, failed)
+            state != null -> writing.show(state, (state as? InsightState.Written)?.writtenAt ?: clock.now())
+        }
     }
 
     // An item's question on [track], for the diagnostics (#851) and [paid], in [work]: asked at its
@@ -1334,9 +1380,11 @@ class AppItemNotes(
         reading.update { it + key }
         tracked {
             val work = coroutineContext
-            val kept =
-                insights.kept(key, evidence)?.takeIf { !expired(it.writtenAt) && !beforeSearch(it.state, evidence) }
+            val read = insights.kept(key, evidence)?.takeIf { !expired(it.writtenAt) }
+            val kept = read?.takeIf { !beforeSearch(it.state, evidence) }
             if (kept == null) {
+                // One held back is read again once its evidence changes, no search due then (#958).
+                if (read != null) looked.remove(key)
                 lookOther(insights, key, evidence, work)
                 return@tracked
             }
@@ -1399,9 +1447,11 @@ class AppItemNotes(
         track: TrackState,
         evidence: ItemEvidence,
     ): Boolean {
-        val entry = shown.value[key]?.takeUnless { beforeSearch(it.state, evidence) }
+        val entry = shown.value[key]?.takeUnless { setAside(it, evidence) }
+        val play = track.nowPlaying.play
+        val retried = entry?.failedSearch != null && (ask == ItemAsk.TAP || entry.play != play)
         val again = ask == ItemAsk.TAP && (entry?.state is InsightState.Failed || entry?.state == InsightState.Stopped)
-        return entry == null || again || expired(entry.writtenAt) || stale(entry, track.nowPlaying.play)
+        return entry == null || again || retried || expired(entry.writtenAt) || stale(entry, play)
     }
 
     /**
