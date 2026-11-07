@@ -38,7 +38,7 @@ What Sleevesight costs your phone while you listen: battery, data, processor tim
 - **Data**: under 100 KB a track, in and out together under 120 KB, insights and web search included. At about 17 tracks an hour, that is about 2 MB an hour.
 - **Memory**: 80 to 120 MB with the screen off, up to about 170 MB on screen while insights are written.
 - **Start-up**: it opens in about 70 milliseconds.
-- **Size**: about 13 MB installed, and it did not grow over a day's listening.
+- **Size**: about 13.5 MB installed, and its history did not grow over two days' listening.
 
 ## Battery
 
@@ -95,14 +95,15 @@ The spinning logo is nearly all of the processor time on screen: a known cost, [
 
 **Start-up.** Sleevesight opens to its first frame in 70 milliseconds, the median of 10 starts (63 to 87 ms; `am start -W`). With notification access granted, Android keeps Sleevesight's process running to pass it the music, and starts it again within half a second if it is stopped, so opening the app never starts it from nothing: these are the starts you get in use.
 
-**Size.** From the phone's app info screen, before the first session (0.3.0) and after a day's listening (0.3.1, to which Google Play had updated it):
+**Size.** From the phone's app info screen, before the first session (0.3.0), after a day's listening (0.3.1, to which Google Play had updated it) and after two days (0.5.0):
 
 | | App | Data | Cache | Total |
 |---|---|---|---|---|
 | Before | 12.24 MB | 451 KB | 524 KB | 13.22 MB |
 | After a day | 12.27 MB | 438 KB | 524 KB | 13.24 MB |
+| After two days | 12.58 MB | 225 KB | 758 KB | 13.57 MB |
 
-The history and the caches did not grow: what Sleevesight keeps is text, and it drops each kind after the time set under [History]({{ '/docs/tutorials/settings/#history' | relative_url }}).
+The history did not grow: what Sleevesight keeps is text, and it drops each kind after the time set under [History]({{ '/docs/tutorials/settings/#history' | relative_url }}). The app grew by 0.3 MB with the updates to 0.5.0, and the cache by about 230 KB; Sleevesight puts nothing in the cache itself, and Android clears it when space runs low.
 
 ## Taking the numbers again
 
