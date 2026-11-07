@@ -1,13 +1,17 @@
 # Dependabot (#236): security updates (a repository setting) and weekly version updates, for the
-# Gradle build (with the dependency graph #235 submits) and the workflows' actions. Its pull requests
-# can target only `main`, which takes work only through a release branch, so they are notices, never
-# merged as they stand: an agent carries each bump into the open release branch, with the lockfiles
-# written again (`--write-locks`), and Dependabot closes its PR once `main` has the new version.
+# Gradle build (with the dependency graph #235 submits) and the workflows' actions. `target-branch`
+# takes one fixed branch, and the release branch is new each release (security updates go to `main`
+# regardless), so its pull requests target `main`, which takes work only through a release branch.
+# They are notices, never merged as they stand: an agent carries each bump into the open release
+# branch, with the lockfiles written again (`--write-locks`), and Dependabot closes its PR once
+# `main` has the new version. Being notices, they carry no milestone; the PR that carries the bump
+# does. The root directory covers `build-logic` too: Dependabot follows `includeBuild`, and the
+# build logic takes its versions from the root's catalog.
 # The prefix's trailing space keeps Dependabot from adding a colon after it.
 version: 2
 updates:
   - package-ecosystem: gradle
-    directories: ["/", "/build-logic"]
+    directory: /
     schedule:
       interval: weekly
       day: monday
