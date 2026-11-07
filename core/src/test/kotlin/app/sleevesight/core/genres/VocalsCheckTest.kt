@@ -17,7 +17,7 @@ import kotlin.time.Instant
  * The check of a track's vocals (#998): which genres call for it (a weak Instrumental with a sign of
  * vocals, the artist's hint, or no Instrumental where the work credits composers alone; never with a
  * free sign settling it, nor on every track), and what each answer does to the rows and chips; and the
- * work's lyricist credit, a free sign of its own.
+ * work's lyricist credit, a sign of vocals as a vocal credit is.
  */
 class VocalsCheckTest {
     private val vocabulary = GenreVocabulary.load(JvmResourceReader)
@@ -75,12 +75,11 @@ class VocalsCheckTest {
                 listOf(SABABA),
             ).wantsVocalsCheck(),
         )
-        // Lyrics found (MusicBrainz's links, LRCLIB's), the recording marked instrumental, a lyricist.
+        // Lyrics found (MusicBrainz's links, LRCLIB's), the recording marked instrumental.
         assertFalse(nasnusa(Singing(lyrics = true)).wantsVocalsCheck())
         assertFalse(nasnusa(Singing(library = LibraryLyrics.LYRICS)).wantsVocalsCheck())
         assertFalse(nasnusa(Singing(instrumental = true)).wantsVocalsCheck())
         assertFalse(nasnusa(Singing(library = LibraryLyrics.INSTRUMENTAL)).wantsVocalsCheck())
-        assertFalse(nasnusa(Singing(lyricists = listOf("Yurika Hanashima"))).wantsVocalsCheck())
         assertFalse(eros(Singing(instrumental = true)).wantsVocalsCheck())
         assertFalse(bite(Singing(composersOnly = true, lyrics = true)).wantsVocalsCheck())
         // A track's Instrumental with one vote, weak for that alone.
@@ -159,6 +158,16 @@ class VocalsCheckTest {
     @Test
     fun `a lyricist credited on the work leaves Instrumental weak, named after a vocalist`() {
         val credited = nasnusa(Singing(lyricists = listOf("Yurika Hanashima")))
+        // A weak sign, as a vocal credit: the check is still wanted, with no other sign too.
+        assertTrue(credited.wantsVocalsCheck())
+        val alone =
+            combineGenres(
+                mapOf(LabelSource.LASTFM to artist(SABABA, "instrumental")),
+                listOf(SABABA),
+                Singing(lyricists = listOf("Ben")),
+            )
+        assertIs<WeakEvidence.Lyricist>(alone.weakEvidence(TrackGenres.INSTRUMENTAL))
+        assertTrue(alone.wantsVocalsCheck())
         assertEquals(true, credited.chip(TrackGenres.INSTRUMENTAL)?.weak)
         assertEquals(WeakEvidence.Lyricist("Yurika Hanashima"), credited.weakEvidence(TrackGenres.INSTRUMENTAL))
         val both = nasnusa(Singing(vocalists = listOf("Ana"), lyricists = listOf("Ben")))

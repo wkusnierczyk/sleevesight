@@ -45,11 +45,14 @@ class AppGenreVocalsTest {
     private val queries = mutableListOf<String>()
 
     // The check answers vocals, citing the page found; any call after it is a reason.
+    // What the check answers.
+    private var said = "vocals"
+
     private val provider =
         CountingProvider().apply {
             reply = { n ->
                 if (n == 1) {
-                    """{"answer": "vocals", "source": "${VocalsFixtures.page.url}"}"""
+                    """{"answer": "$said", "source": "${VocalsFixtures.page.url}"}"""
                 } else {
                     "It is tagged so [MB1]."
                 }
@@ -136,6 +139,7 @@ class AppGenreVocalsTest {
     @Test
     fun `a tap runs the check first, then the reason, and the answer is the tap's on this play`() =
         runTest {
+            said = "instrumental"
             settings.value = settings.value?.copy(searchWithAi = false)
             val notes = notes()
             notes.explain(track, TrackGenres.INSTRUMENTAL)
@@ -147,6 +151,21 @@ class AppGenreVocalsTest {
             assertTrue(shown?.tapped == true)
             assertEquals(AiQuestion.Vocals, events.filterIsInstance<PipelineEvent.AiAsked>().first().question)
             assertFalse(events.filterIsInstance<PipelineEvent.AiAsked>().first().automatic)
+        }
+
+    @Test
+    fun `a tap whose check finds vocals writes no reason, then or on a second tap`() =
+        runTest {
+            settings.value = settings.value?.copy(searchWithAi = false)
+            val notes = notes()
+            notes.explain(track, TrackGenres.INSTRUMENTAL)
+            advanceUntilIdle()
+            assertEquals(1, provider.requests)
+            assertTrue(notes.vocals(track).first { it != null }?.tapped == true)
+            notes.explain(track, TrackGenres.INSTRUMENTAL)
+            advanceUntilIdle()
+            assertEquals(1, provider.requests)
+            assertTrue(events.filterIsInstance<PipelineEvent.AiAsked>().none { it.question != AiQuestion.Vocals })
         }
 
     @Test
@@ -164,8 +183,8 @@ class AppGenreVocalsTest {
             again.checkVocals(replay)
             again.explain(replay, TrackGenres.INSTRUMENTAL)
             advanceUntilIdle()
-            // The reason alone.
-            assertEquals(2, provider.requests)
+            // Nothing: the check is kept, and a track found sung gets no reason.
+            assertEquals(1, provider.requests)
             assertEquals(1, queries.size)
         }
 

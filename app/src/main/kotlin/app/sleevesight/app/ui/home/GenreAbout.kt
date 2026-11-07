@@ -97,8 +97,9 @@ internal fun GenreAbout(
     if (!answersWeak(vocals)) WeakEvidenceNote(why, named, onCite)
     DescribedNote(track.genres.describedIn(genre), why, onCite)
     VocalsNote(vocals, named, shown.lines ?: track.evidence, onCite)
-    // While the check runs, no *Why is this …?*: a tap runs it, then the reason.
-    if (vocals?.state == VocalsState.Checking) return
+    // While the check runs, no *Why is this …?*: a tap runs it, then the reason. Once a tap's check
+    // found vocals, none for the play either: an explanation of the genre would contradict it.
+    if (vocals?.state == VocalsState.Checking || vocalsTapped(vocals)) return
     val explain = { notes.explain(asked, genre) }
     when (val shown = reason) {
         GenreReason.None -> Unit

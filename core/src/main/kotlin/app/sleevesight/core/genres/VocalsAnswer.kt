@@ -27,17 +27,15 @@ enum class VocalsAnswer(
 /**
  * Whether these genres call for the check of the track's vocals (#998; `design/design.md`, *Genre
  * labels*): Instrumental in doubt, and no free sign settling it. Its chip weak with a sign of vocals
- * ([WeakEvidence.SignOfVocals]: a vocalist, the work's language, a featured artist), or weak as the
- * artist's hint (#1000, [WeakEvidence.ArtistHint]); or no row with Instrumental while the song's work
- * credits composers alone ([Singing.composersOnly]). Not with the track marked instrumental, lyrics
- * found, a lyricist credited (a free sign that settles it: weak, with its line), the check applied
- * already ([Singing.checked]), or Instrumental weak only for its few votes. With nothing that
+ * ([WeakEvidence.SignOfVocals]: a vocalist, a lyricist of the work, its language, a featured artist),
+ * or weak as the artist's hint (#1000, [WeakEvidence.ArtistHint]); or no row with Instrumental while
+ * the song's work credits composers alone ([Singing.composersOnly]). Not with the track marked
+ * instrumental, lyrics found, the check applied already ([Singing.checked]), or Instrumental weak only
+ * for its few votes. With nothing that
  * suggests Instrumental, never: not every track is checked.
  */
 fun TrackGenres.wantsVocalsCheck(): Boolean {
-    val settled =
-        singing.lifted || singing.dropsInstrumental || singing.checked != null || singing.lyricists.isNotEmpty()
-    if (settled) return false
+    if (singing.lifted || singing.dropsInstrumental || singing.checked != null) return false
     val tagged = everyLabel.any { it.genre.identity == TrackGenres.INSTRUMENTAL }
     return if (tagged) {
         when (weakEvidence(TrackGenres.INSTRUMENTAL)) {

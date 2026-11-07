@@ -5,6 +5,7 @@ import app.sleevesight.core.genres.GenreDefinitions
 import app.sleevesight.core.genres.GenreLabel
 import app.sleevesight.core.genres.GenreVocabulary
 import app.sleevesight.core.genres.TrackGenres
+import app.sleevesight.core.genres.VocalsAnswer
 import app.sleevesight.core.genres.wantsVocalsCheck
 import app.sleevesight.core.lyrics.LibraryLyrics
 import app.sleevesight.core.lyrics.LibraryQuery
@@ -197,7 +198,8 @@ interface GenreNotes : DefinitionFeed {
     /**
      * A tap on *Why is this …?* or its *Retry*: [track]'s reason for [genre] is written, unless it is
      * under way; for a genre only MusicBrainz gives, the AI's genre list is asked first (#762); for
-     * Instrumental in doubt, the check of the track's vocals first (#998), whose answer heads the reason.
+     * Instrumental in doubt, the check of the track's vocals first (#998), whose answer heads the
+     * reason; one that found vocals writes none.
      */
     fun explain(
         track: TrackState,
@@ -750,21 +752,25 @@ class AppGenreNotes private constructor(
         val made = parts.value ?: return
         val now = settings.value ?: return
         // Instrumental in doubt (#998): the check of the track's vocals first, or the one under way;
-        // the reason once it has answered, whatever it answered.
-        val check =
+        // the reason once it has answered, unless it found vocals, which a reason would contradict.
+        val key =
             checksOf(made)
                 .key(track, now)
                 ?.takeIf { genre == TrackGenres.INSTRUMENTAL && track.genres.wantsVocalsCheck() }
-                ?.let { startCheck(made, it, track, automatic = false) }
+        val check = key?.let { startCheck(made, it, track, automatic = false) }
         if (check != null) {
             scope.launch(mark()) {
                 check.join()
-                if (current(coroutineContext)) explainNow(track, genre)
+                if (current(coroutineContext) && !foundVocals(key)) explainNow(track, genre)
             }
-        } else {
+        } else if (key == null || !foundVocals(key)) {
             explainNow(track, genre)
         }
     }
+
+    // Whether [key]'s check, known, found vocals on the track (#998): no reason for its Instrumental.
+    private fun foundVocals(key: CardKey): Boolean =
+        (checks.value[key]?.state as? VocalsState.Checked)?.answer == VocalsAnswer.VOCALS
 
     // [explain]'s reason, or the AI's genre list before it.
     private fun explainNow(

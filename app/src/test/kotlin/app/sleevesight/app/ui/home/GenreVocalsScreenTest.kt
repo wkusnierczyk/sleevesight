@@ -123,6 +123,8 @@ class GenreVocalsScreenTest {
                     "This track also credits Yurika Hanashima and may feature vocals.",
                 ).assertDoesNotExist()
             compose.onNodeWithText("by ${VocalsFixtures.MODEL}, with web search").assertExists()
+            // No reason for a genre the check found wrong: the button is gone for the play.
+            compose.onNodeWithTag(GENRE_WHY_TAG).assertDoesNotExist()
         }
 
     @Test
@@ -144,6 +146,8 @@ class GenreVocalsScreenTest {
                     "This track also credits Yurika Hanashima and may feature vocals.",
                 ).assertDoesNotExist()
             compose.onNodeWithContentDescription("Instrumental, weak evidence").assertExists()
+            // The reason follows.
+            compose.onNodeWithTag(GENRE_WHY_TAG).assertExists()
         }
         show(VocalsFixtures.answered(VocalsAnswer.UNKNOWN, page = null)) {
             compose.onNodeWithText("This track also credits Yurika Hanashima and may feature vocals.").assertExists()

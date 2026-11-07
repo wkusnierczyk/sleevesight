@@ -161,6 +161,13 @@ internal fun answersWeak(shown: VocalsShown?): Boolean {
     return shown?.tapped == true && (answer == VocalsAnswer.VOCALS || answer == VocalsAnswer.UNKNOWN)
 }
 
+/**
+ * Whether [shown], the check of the track's vocals asked by a tap on this play, found vocals (#998):
+ * *Why is this instrumental?* is then gone for the play, and no reason written.
+ */
+internal fun vocalsTapped(shown: VocalsShown?): Boolean =
+    shown?.tapped == true && (shown.state as? VocalsState.Checked)?.answer == VocalsAnswer.VOCALS
+
 // [format] with [genre] in italics where it has [ALBUM_MARK].
 private fun genreParts(
     format: String,

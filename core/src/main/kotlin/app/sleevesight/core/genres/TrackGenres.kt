@@ -66,8 +66,8 @@ sealed interface WeakEvidence {
     ) : SignOfVocals
 
     /**
-     * MusicBrainz credits [name] with the words of the song's work (`lyricist`, #998): a free sign that
-     * settles the check of the track's vocals without a paid call, as [Vocalist] is weighed.
+     * MusicBrainz credits [name] with the words of the song's work (`lyricist`, #998): a sign of vocals
+     * weighed as [Vocalist] is, weak with its line, the check of the track's vocals still wanted.
      */
     data class Lyricist(
         val name: String,
