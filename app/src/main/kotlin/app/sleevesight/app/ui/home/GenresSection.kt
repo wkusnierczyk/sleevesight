@@ -27,6 +27,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -119,8 +120,10 @@ internal fun GenresContent(
 ) {
     // The track's genres with the AI's genre list (#762), where one is known: its genres join the
     // chips and the track's row, marked AI; an Instrumental it added weighed with LRCLIB's answer (#997).
-    val joined = playing?.withAi(aiGenres(playing, notes.notes))
-    val weighed = withLibrary(playing, joined, notes.notes)
+    // The genres the artists' descriptions name (#1000), beside the tags, before the AI's list's.
+    val described = withDescribed(playing, notes)
+    val joined = described?.withAi(aiGenres(described, notes.notes))
+    val weighed = withLibrary(described, joined, notes.notes)
     val track = withLyricsFound(weighed.track, search)
     val shown = GenresShown.of(track, settings)
     val style = MaterialTheme.typography.bodyLarge
@@ -435,14 +438,20 @@ private fun GenreChip(
     ) {
         val label = placed.label.genre.label
         val model = placed.label.aiModel?.takeIf { placed.label.aiAdded }
+        // A genre the artist's description names (#1000), read "Instrumental, from the artist’s description".
+        val spoken = if (placed.label.describedIn != null) stringResource(R.string.genre_described, label) else label
         CompositionLocalProvider(LocalContentColor provides content) {
             if (placed.weak && model != null) {
                 // The AI's Instrumental on a sung track (#996): weak, and still marked AI.
                 WeakAiName(label, model, selected)
             } else if (placed.weak) {
-                WeakName(label, selected)
+                WeakName(label, selected, spoken)
             } else if (model == null) {
-                Text(label, style = MaterialTheme.typography.labelLarge)
+                Text(
+                    label,
+                    modifier = Modifier.semantics { if (spoken != label) contentDescription = spoken },
+                    style = MaterialTheme.typography.labelLarge,
+                )
             } else {
                 // Added by the AI's genre list (#762): marked AI, read "Blues, from Claude Haiku 5.5".
                 ProvideTextStyle(MaterialTheme.typography.labelLarge) {
@@ -453,8 +462,8 @@ private fun GenreChip(
     }
 }
 
-// Whether any row has [genre].
-private fun TrackGenres.has(genre: String): Boolean = all.any { it.genre.identity == genre }
+// Whether any row has [genre], of the tags or of a description (#1000).
+private fun TrackGenres.has(genre: String): Boolean = everyLabel.any { it.genre.identity == genre }
 
 /** The test tags of *Genres*' button and its panel (#772), the panel's heading and *Close* as [Panel] makes them. */
 const val GENRES_CHIP_TAG: String = "genres-chip"
@@ -467,8 +476,8 @@ const val GENRES_PAGE_LINK_TAG: String = "genres-page-link"
 
 /**
  * The test tag of a chip in *Genres*' panel, before its level (`track`, `artist`,
- * `album`), a colon, for an artist's the artist and a colon, and its identity:
- * `genre:artist:The Beatles:rock`.
+ * `album`; `described` for a genre an artist's description names, #1000), a colon, for an artist's
+ * the artist and a colon, and its identity: `genre:artist:The Beatles:rock`.
  */
 const val GENRE_PREFIX: String = "genre:"
 
@@ -484,7 +493,12 @@ internal fun tagOf(
         placed.row.artist
             ?.let { "$it:" }
             .orEmpty()
-    return prefix +
-        placed.row.level.name
-            .lowercase() + ":" + artist + placed.label.genre.identity
+    val level =
+        if (placed.row.described) {
+            "described"
+        } else {
+            placed.row.level.name
+                .lowercase()
+        }
+    return prefix + level + ":" + artist + placed.label.genre.identity
 }

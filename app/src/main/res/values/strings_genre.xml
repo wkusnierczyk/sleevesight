@@ -90,4 +90,15 @@
          while another artist's or the album's tags give it: %1$s is that artist, as the track
          credits them. It does not name the genre. -->
     <string name="genre_weak_featured">This track also credits %1$s and may feature vocals.</string>
+    <!-- How a screen reader reads a genre the artist's description names (#1000), as a chip and in
+         its Described row of Genre tags: %1$s is the genre ("Instrumental, from the artist’s
+         description"). -->
+    <string name="genre_described">%1$s, from the artist’s description</string>
+    <!-- Under the definition of a genre the artist's description names (#1000), before Why is this
+         …?, in the panel's quiet note style, the citation of the line after it: %1$s is the line's
+         sentence that names the genre, cut to the words around it, "…" where cut. -->
+    <string name="genre_described_named">Named in the artist’s description: “%1$s”</string>
+    <!-- In its place for Instrumental only the artist's description gives (#1000, #998's artist
+         hint), shown as a weak genre: %1$s is the line's sentence, as above. -->
+    <string name="genre_weak_hint">The artist’s description calls them instrumental, but no source says so of this track: “%1$s”</string>
 </resources>

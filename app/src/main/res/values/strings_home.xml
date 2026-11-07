@@ -345,6 +345,14 @@
     <string name="home_genres_album">Album</string>
     <!-- An artist's row with several credited artists, numbered in the credit's order ("Artist 2"). -->
     <string name="home_genre_artist_n">Artist %1$d</string>
+    <!-- The row of the genres an artist's description names (#1000), right after the artist's row
+         of tags; with several credited artists numbered as their row is ("Described 2", after
+         "Artist 2"). -->
+    <string name="home_genres_described_row">Described</string>
+    <string name="home_genre_described_n">Described %1$d</string>
+    <!-- That row's line under Tag sources: whose description it is (%1$s, the artist as the track
+         credits them), then the citations of its lines. -->
+    <string name="home_genre_description_of">%1$s’s description</string>
     <!-- Where the tags come from (#786): a bold heading, then the same rows, each source's name
          (Last.fm, MusicBrainz) linking that track's or artist's page there. -->
     <string name="home_genre_tag_sources">Tag sources</string>

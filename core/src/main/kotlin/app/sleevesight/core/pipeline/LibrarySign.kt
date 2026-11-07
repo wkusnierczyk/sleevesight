@@ -47,7 +47,7 @@ private fun TrackGenres.withoutInstrumental(weighed: Singing): TrackGenres {
         } else {
             combineGenres(given, credited, weighed)
         }
-    val found = combined.copy(singing = weighed)
+    val found = combined.copy(singing = weighed, descriptions = descriptions)
     return aiModel?.let { found.withAi(aiListed, it, aiSources) } ?: found
 }
 

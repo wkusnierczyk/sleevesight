@@ -17,12 +17,14 @@ enum class GenreLevel {
 /**
  * One row of a track's genres: the labels of one [level], combined over the label sources
  * ([combineLabels]), at most [GenreVocabulary.MAX_LABELS]. An artist's row names its [artist], as
- * the track credits it; the track's and the album's name none.
+ * the track credits it; the track's and the album's name none. [described]: an artist's row of the
+ * genres their description names (#1000, [TrackGenres.described]), not of their tags.
  */
 data class GenreRow(
     val level: GenreLevel,
     val artist: String?,
     val labels: List<TrackLabel>,
+    val described: Boolean = false,
 )
 
 /**
@@ -79,6 +81,15 @@ sealed interface WeakEvidence {
     data class Featured(
         val name: String,
     ) : SignOfVocals
+
+    /**
+     * Instrumental only an artist's description gives (#1000, #998's artist hint), [where] it says so,
+     * with no source saying so of the track: weak until a check of the track's vocals settles it
+     * (#998, [TrackGenres.artistHint]).
+     */
+    data class ArtistHint(
+        val where: DescribedIn,
+    ) : WeakEvidence
 }
 
 /**
@@ -127,7 +138,11 @@ data class Singing(
  * [given], the labels each source gave, before they were combined and capped ([combineGenres]), so
  * that lyrics found later combine them again without Instrumental ([withLyricsFound]); and
  * [instrumentalArtists], the artists whose own tags, from any source, include Instrumental, read
- * before the rows' cap ([signOfVocals]'s featured artist).
+ * before the rows' cap ([signOfVocals]'s featured artist). [descriptions] are the rows of the genres
+ * the artists' descriptions name (#1000, `withDescribed`; shown as [described]), apart from the
+ * tags' [rows], so that what
+ * reads the tags (the prompts' genres, the backing of a weak tag, the AI's genre list) does not take
+ * them for tags; [table] and [chips] show them beside the tags.
  */
 data class TrackGenres(
     val rows: List<GenreRow> = emptyList(),
@@ -138,9 +153,34 @@ data class TrackGenres(
     val singing: Singing = Singing.NONE,
     val given: Map<LabelSource, List<GenreLabel>> = emptyMap(),
     val instrumentalArtists: Set<String> = emptySet(),
+    val descriptions: List<GenreRow> = emptyList(),
 ) {
-    /** Whether no row has a label. */
-    val isEmpty: Boolean get() = rows.isEmpty()
+    /**
+     * The rows of the genres the artists' descriptions name (#1000), as shown: of each artist's
+     * [descriptions] (every genre their lines name, `describedGenres`), Instrumental left out when
+     * lyrics were found ([Singing.dropsInstrumental]) and those their own tags' row has left out,
+     * then at most [GenreVocabulary.MAX_LABELS], a row left with none dropped. Worked out from the
+     * rows as they are, so a genre a rebuilt row gains, or room Instrumental leaves, shows at once.
+     */
+    val described: List<GenreRow> by lazy {
+        descriptions.mapNotNull { row ->
+            val own =
+                rows
+                    .filter { it.level == GenreLevel.ARTIST && it.artist == row.artist }
+                    .flatMap { it.labels }
+                    .map { it.genre.identity }
+                    .toSet()
+            val labels =
+                row.labels
+                    .filter { !singing.dropsInstrumental || it.genre.identity != INSTRUMENTAL }
+                    .filter { it.genre.identity !in own }
+                    .take(GenreVocabulary.MAX_LABELS)
+            labels.takeIf { it.isNotEmpty() }?.let { row.copy(labels = it, described = true) }
+        }
+    }
+
+    /** Whether no row has a label, of the tags or of a description. */
+    val isEmpty: Boolean get() = rows.isEmpty() && described.isEmpty()
 
     /** The levels that have labels, in [GenreLevel] order. */
     val levels: List<GenreLevel> get() = rows.map { it.level }.distinct()
@@ -164,6 +204,12 @@ data class TrackGenres(
      * other level, the same rule: only a tag with [MIN_VOTES] is backed. Instrumental is weak, on
      * any row, when the track shows a sign of being sung ([signOfVocals], #996). The rows keep their
      * cap, [GenreVocabulary.MAX_LABELS]; the chips have none of their own.
+     *
+     * The genres the artists' descriptions name ([described], #1000) follow the sources' tags, before
+     * the AI's, in the same order of names, each placed on its artist's described row: only those no
+     * tag and no AI's genre gives (a tag, or the AI's genre list, wins). Instrumental among them is
+     * the artist's hint (#998): weak, with a sign of vocals as any Instrumental, else with no source
+     * saying so of the track ([artistHint]).
      */
     fun chips(names: Comparator<String> = CASE_FOLDED): List<PlacedLabel> {
         val others =
@@ -188,9 +234,16 @@ data class TrackGenres(
             }
         // The AI's Instrumental is weighed as a track's (#996): weak with a vocalist or a language.
         val aiMarked = added.map { it.copy(weak = signOfVocals(it) != null) }
+        val tagged = (sources + added).map { it.label.genre.identity }.toSet()
+        val text =
+            described
+                .flatMap { row -> row.labels.map { PlacedLabel(row, it) } }
+                .distinctBy { it.label.genre.identity }
+                .filter { it.label.genre.identity !in tagged }
+                .map { it.copy(weak = signOfVocals(it) != null || artistHint(it) != null) }
         val byName = compareBy<PlacedLabel, String>(names) { it.label.genre.label }
         val order = byName.thenBy { it.label.genre.identity }
-        return marked.sortedWith(order) + aiMarked.sortedWith(order)
+        return marked.sortedWith(order) + text.sortedWith(order) + aiMarked.sortedWith(order)
     }
 
     /**
@@ -204,12 +257,13 @@ data class TrackGenres(
 
     /**
      * Why the genre [identity] is weak (#875), when its chip is ([PlacedLabel.weak]): a sign of vocals
-     * where Instrumental has one ([signOfVocals], #996), else few votes; null when it is not weak, or
-     * no chip has it.
+     * where Instrumental has one ([signOfVocals], #996), else, for Instrumental only an artist's
+     * description gives, the artist's hint (#1000, [artistHint]), else few votes; null when it is not
+     * weak, or no chip has it.
      */
     fun weakEvidence(identity: String): WeakEvidence? {
         val chip = chips().firstOrNull { it.label.genre.identity == identity && it.weak } ?: return null
-        return signOfVocals(chip) ?: WeakEvidence.FewVotes(
+        return signOfVocals(chip) ?: artistHint(chip) ?: WeakEvidence.FewVotes(
             musicBrainz = chip.label.credits.any { it.source == LabelSource.MUSICBRAINZ },
             artists = rows.count { it.level == GenreLevel.ARTIST },
             album = rows.any { it.level == GenreLevel.ALBUM },
@@ -281,9 +335,35 @@ data class TrackGenres(
             } else {
                 combineGenres(given, credited, sung)
             }
-        val found = combined.copy(singing = sung)
+        val found = combined.copy(singing = sung, descriptions = descriptions)
         return aiModel?.let { found.withAi(aiListed, it, aiSources) } ?: found
     }
+
+    /**
+     * The rows as *Genre tags* shows them (#786, #1000): [rows], each artist's described row right
+     * after their tags' row; one whose artist has no tags' row after the artists' rows, before the
+     * album's.
+     */
+    val table: List<GenreRow>
+        get() {
+            if (described.isEmpty()) return rows
+            val left = described.toMutableList()
+            val shown = mutableListOf<GenreRow>()
+            for (row in rows) {
+                if (row.level == GenreLevel.ALBUM) {
+                    shown += left
+                    left.clear()
+                }
+                shown += row
+                if (row.level == GenreLevel.ARTIST) {
+                    left.firstOrNull { it.artist == row.artist }?.let {
+                        shown += it
+                        left.remove(it)
+                    }
+                }
+            }
+            return shown + left
+        }
 
     /**
      * Of [genres], an AI's genre list for the track (#762, #773), those any row may show: all but
@@ -337,11 +417,19 @@ data class TrackGenres(
             singing = singing,
             given = given,
             instrumentalArtists = instrumentalArtists,
+            descriptions = descriptions,
         )
     }
 
     /** Every label of every row, each genre once, in row order: for counting, and the CLI's report. */
     val all: List<TrackLabel> get() = rows.flatMap { it.labels }.distinctBy { it.genre.identity }
+
+    /**
+     * Every genre a chip may show (#1000): [all], then those only the artists' descriptions name
+     * ([described]), each genre once; what a genre's panel is found among.
+     */
+    val everyLabel: List<TrackLabel>
+        get() = (all + described.flatMap { it.labels }).distinctBy { it.genre.identity }
 
     companion object {
         // [genre] as a track's label the AI's genre list by [model] gives, and no source (#762).
@@ -380,6 +468,21 @@ data class TrackGenres(
          * with their base letters; ties are then broken by the genres' identities.
          */
         val CASE_FOLDED: Comparator<String> = compareBy { it.lowercase() }
+    }
+}
+
+/**
+ * The artist's hint that leaves [placed], Instrumental from an artist's description alone (#1000,
+ * #998), weak: no source says so of the track. Null for any other chip, or with the track marked
+ * instrumental ([Singing.marked]: by MusicBrainz, or by LRCLIB, #997), which says so. #998's check of
+ * the track's vocals lifts it or drops the genre here.
+ */
+private fun TrackGenres.artistHint(placed: PlacedLabel): WeakEvidence.ArtistHint? {
+    val where = placed.label.describedIn
+    return if (where != null && placed.label.genre.identity == TrackGenres.INSTRUMENTAL && !singing.marked) {
+        WeakEvidence.ArtistHint(where)
+    } else {
+        null
     }
 }
 

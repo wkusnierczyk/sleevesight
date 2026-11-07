@@ -1,5 +1,7 @@
 package app.sleevesight.core.pipeline
 
+import app.sleevesight.core.evidence.EvidenceLine
+import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.genres.GenreLabel
 import app.sleevesight.core.genres.GenreLevel
 import app.sleevesight.core.genres.GenreVocabulary
@@ -8,13 +10,18 @@ import app.sleevesight.core.genres.Singing
 import app.sleevesight.core.genres.TrackGenres
 import app.sleevesight.core.genres.WeakEvidence
 import app.sleevesight.core.genres.combineGenres
+import app.sleevesight.core.genres.describedGenres
+import app.sleevesight.core.genres.withDescribed
 import app.sleevesight.core.lyrics.LibraryLyrics
+import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.platform.JvmResourceReader
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlin.time.Instant
 
 /**
  * LRCLIB's answer as a sign for Instrumental (#997): lyrics drop it from every row, as MusicBrainz's
@@ -114,6 +121,33 @@ class LibraryGenresTest {
         // The AI's list adding it: called for.
         val listed = vocabulary.labelsFor(listOf("instrumental"), level = GenreLevel.TRACK)
         assertTrue(genres(artist(ARTIST, "jazz")).withAi(listed, "Model").wantsLibrary())
+    }
+
+    @Test
+    fun `an Instrumental only the artist's description names takes LRCLIB's answer as any other`() {
+        // *Eros*'s shape (#1000): the artist's tags, and a web line calling the act instrumental.
+        val line =
+            EvidenceLine(
+                "S8",
+                SourceId.WEB,
+                Scope.ARTIST,
+                "Islandman is described as an instrumental electro-acoustic band from Turkey.",
+                "https://example.org/S8",
+                Instant.parse("2026-11-06T00:00:00Z"),
+            )
+        val described = describedGenres(vocabulary, listOf(line), listOf(ARTIST))
+        val eros = genres(artist(ARTIST, "ambient", "house")).withDescribed(described)
+        assertIs<WeakEvidence.ArtistHint>(weakOf(eros))
+        // Lyrics found by LRCLIB drop it; its instrumental mark lifts the hint; no match leaves it.
+        val sung = eros.withLibrary(LibraryLyrics.LYRICS)
+        assertTrue(sung.chips().none { it.label.genre.identity == TrackGenres.INSTRUMENTAL })
+        assertEquals(listOf("ambient", "house"), sung.chips().map { it.label.genre.identity })
+        val marked = eros.withLibrary(LibraryLyrics.INSTRUMENTAL)
+        assertEquals(false, marked.shown()[TrackGenres.INSTRUMENTAL])
+        assertNull(weakOf(marked))
+        assertIs<WeakEvidence.ArtistHint>(weakOf(eros.withLibrary(LibraryLyrics.NONE)))
+        // Not a row of the tags: the run's genres do not call for LRCLIB for it (#998's).
+        assertFalse(eros.wantsLibrary())
     }
 
     // Why Instrumental is weak, if it is.
