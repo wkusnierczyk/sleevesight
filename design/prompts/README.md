@@ -31,6 +31,12 @@ it), and say so in the KDoc.
 | 5 (#695) | `genre-reason-v5-1.txt`, `genre-reason-v5-1-model.txt`: one message | The baseline of #767's blind A/B. |
 | 6 (#767) | `genre-reason-v6-system.txt`, `genre-reason-v6-system-model-search.txt`, `genre-reason-v6-1-user.txt` | Even with version 5 in the blind A/B (8 prompts: 1 each, 6 the same); kept for the insight's structure. |
 
+## Vocals check (`VocalsPrompt`)
+
+| Version | Files | How it fared |
+|---|---|---|
+| 1 (#998) | `vocals-check-v1-once.txt` (*Once*: the app's one search's pages in the prompt), `vocals-check-v1-agent.txt` (*Up to 3 times*: the model searches): one message, written from `VocalsPromptTest`'s *Nasnusa* | The first. Not yet measured on real tracks. |
+
 ## Changes made without a version
 
 | Change | Prompts | Why no version |

@@ -86,7 +86,8 @@ private const val WEAK_SELECTED = 0.72f
  * (or what stands in its place) and before *Why is this …?*, in the panel's quiet note style, the
  * genre in italics as its chip names it: "Few MusicBrainz contributors tagged this track *Country*,
  * and the artist's tags don't include it."; for Instrumental on a track with signs of vocals (#996),
- * the sign: the vocalist MusicBrainz credits, the language of the lyrics, or the featured artist;
+ * the sign: the vocalist MusicBrainz credits, the lyricist of its work (#998), the language of the
+ * lyrics, or the featured artist;
  * for Instrumental only the artist's description gives (#1000, #998's artist hint), what it says,
  * quoted, and the citation of its line, a link to it in *Sources* ([onCite]).
  * Nothing for a genre that is not weak.
@@ -130,6 +131,7 @@ private fun WeakLine(
                     othersClause(why)?.let { stringResource(it) }.orEmpty(),
                 )
             is WeakEvidence.Vocalist -> stringResource(R.string.genre_weak_vocalist, why.name, ALBUM_MARK)
+            is WeakEvidence.Lyricist -> stringResource(R.string.genre_weak_lyricist, why.name, ALBUM_MARK)
             is WeakEvidence.Language ->
                 why.name?.let { stringResource(R.string.genre_weak_language, it, ALBUM_MARK) }
                     ?: stringResource(R.string.genre_weak_lyrics, ALBUM_MARK)

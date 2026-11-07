@@ -146,8 +146,10 @@ class LibraryGenresTest {
         assertEquals(false, marked.shown()[TrackGenres.INSTRUMENTAL])
         assertNull(weakOf(marked))
         assertIs<WeakEvidence.ArtistHint>(weakOf(eros.withLibrary(LibraryLyrics.NONE)))
-        // Not a row of the tags: the run's genres do not call for LRCLIB for it (#998's).
-        assertFalse(eros.wantsLibrary())
+        // Not a row of the tags, but called for all the same (#998): the panel, which reads the
+        // descriptions, asks LRCLIB for it; once answered, or with lyrics found, no longer.
+        assertTrue(eros.wantsLibrary())
+        assertFalse(eros.withLibrary(LibraryLyrics.NONE).wantsLibrary())
     }
 
     // Why Instrumental is weak, if it is.

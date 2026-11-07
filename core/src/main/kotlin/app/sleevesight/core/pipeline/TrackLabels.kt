@@ -81,7 +81,8 @@ internal class TrackLabels(
     // What MusicBrainz's [lyrics] say of whether the track is sung (#996): marked instrumental (or only
     // `zxx` works, as the *Lyrics* panel reads it, `instrumental`); lyrics links listed; the works'
     // languages but `zxx` (and `und`, undetermined, which says nothing of words); those credited with
-    // vocals. Nothing while MusicBrainz has not answered with the song; LRCLIB's answer is added to it.
+    // vocals; the work's lyricists, and whether it credits composers alone (#998). Nothing while
+    // MusicBrainz has not answered with the song; LRCLIB's answer is added to it.
     private fun singing(lyrics: WorkLyrics?): Singing =
         lyrics?.let {
             Singing(
@@ -89,6 +90,8 @@ internal class TrackLabels(
                 lyrics = !it.links.isNullOrEmpty(),
                 languages = it.languages.filter { code -> code != NO_LINGUISTIC_CONTENT && code != UNDETERMINED },
                 vocalists = it.vocalists,
+                lyricists = it.lyricists,
+                composersOnly = it.composersOnly,
             )
         } ?: Singing.NONE
 

@@ -4,6 +4,8 @@ import app.sleevesight.core.ai.ModelNames
 import app.sleevesight.core.genres.GenreDefinitions
 import app.sleevesight.core.genres.GenreLabel
 import app.sleevesight.core.genres.GenreVocabulary
+import app.sleevesight.core.genres.TrackGenres
+import app.sleevesight.core.genres.wantsVocalsCheck
 import app.sleevesight.core.lyrics.LibraryLyrics
 import app.sleevesight.core.lyrics.LibraryQuery
 import app.sleevesight.core.model.SourceId
@@ -23,11 +25,15 @@ import app.sleevesight.core.pipeline.PipelineParts
 import app.sleevesight.core.pipeline.QuestionCost
 import app.sleevesight.core.pipeline.ReasonPath
 import app.sleevesight.core.pipeline.TrackState
+import app.sleevesight.core.pipeline.VocalsChecks
+import app.sleevesight.core.pipeline.VocalsState
 import app.sleevesight.core.settings.AiWebSearch
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.pastKeepHistory
 import app.sleevesight.core.synthesis.GenreListMode
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.Flow
@@ -118,6 +124,19 @@ sealed interface PanelLibrary {
     data object Unreachable : PanelLibrary
 }
 
+/**
+ * The check of a track's vocals (#998, [GenreNotes.vocals]), as the panel shows it: its [state], by
+ * [model] (its name, as the AI settings show it); [tapped] when a tap on *Why is this instrumental?*
+ * asked it on this play of the track, so an answer of vocals leaves the chip weak with its line until
+ * the genres are built again (the next play), where one asked by itself, or kept from before, drops
+ * Instrumental at once.
+ */
+data class VocalsShown(
+    val state: VocalsState,
+    val model: String,
+    val tapped: Boolean = false,
+)
+
 /** [this] with [list]'s genres in its track's row (`TrackGenres.withAi`); itself for none. */
 fun TrackState.withAi(list: AiGenreList?): TrackState =
     if (list == null ||
@@ -157,6 +176,18 @@ interface GenreNotes : DefinitionFeed {
     /** *Retry* of LRCLIB for [track]'s Instrumental the AI's list added (#997): asked again. */
     fun retryLibrary(track: TrackState) = Unit
 
+    /**
+     * The check of [track]'s vocals (#998), as it changes: null while none is known (not asked, or no
+     * check possible under the settings now: *AI web search* off, no AI service).
+     */
+    fun vocals(track: TrackState): Flow<VocalsShown?> = flowOf(null)
+
+    /**
+     * The check of [track]'s vocals started by itself (#998, *Ask AI automatically*), for genres that
+     * call for it (`TrackGenres.wantsVocalsCheck`): once a play, unless known or under way.
+     */
+    fun checkVocals(track: TrackState) = Unit
+
     /** [track]'s reason for [genre], as it changes. */
     fun reason(
         track: TrackState,
@@ -165,7 +196,8 @@ interface GenreNotes : DefinitionFeed {
 
     /**
      * A tap on *Why is this …?* or its *Retry*: [track]'s reason for [genre] is written, unless it is
-     * under way; for a genre only MusicBrainz gives, the AI's genre list is asked first (#762).
+     * under way; for a genre only MusicBrainz gives, the AI's genre list is asked first (#762); for
+     * Instrumental in doubt, the check of the track's vocals first (#998), whose answer heads the reason.
      */
     fun explain(
         track: TrackState,
@@ -224,6 +256,7 @@ interface GenreNotes : DefinitionFeed {
 @Suppress(
     "LongParameterList", // Where definitions, reasons and lists come from, where they run, and the time.
     "TooManyFunctions", // Each step of both paths, and its cache.
+    "LargeClass", // Those steps, with LRCLIB's lookups (#997) and the check of the track's vocals (#998).
 )
 class AppGenreNotes private constructor(
     /** The definitions (#786): fetched ahead ([AppGenreDefinitions.fetchAhead]), their states. */
@@ -238,12 +271,15 @@ class AppGenreNotes private constructor(
     private val paid: (QuestionCost) -> Unit,
     private val events: (PipelineEvent) -> Unit,
     private val plays: StateFlow<Play?>,
+    private val automaticOpen: () -> Boolean,
 ) : GenreNotes,
     DefinitionFeed by lookups {
     /**
      * Definitions from [definitions] while *Show genres* and Wikipedia under *Sources* are on, off the
      * main thread ([io]), in [scope], marked with [epoch] ([AppGenreDefinitions]); reasons and the AI's
-     * genre lists as above, read against [definitions]' vocabulary.
+     * genre lists as above, read against [definitions]' vocabulary; the check of a track's vocals
+     * (#998) started by itself only while [automaticOpen] says so (*Ask AI automatically* on and the
+     * app on screen), asked again right before each of its searches and calls.
      */
     @Suppress("LongParameterList") // As the class's.
     constructor(
@@ -258,6 +294,7 @@ class AppGenreNotes private constructor(
         paid: (QuestionCost) -> Unit = {},
         events: (PipelineEvent) -> Unit = {},
         plays: StateFlow<Play?> = MutableStateFlow(null),
+        automaticOpen: () -> Boolean = { true },
     ) : this(
         AppGenreDefinitions(definitions, settings, scope, epoch, io),
         definitions.vocabulary,
@@ -270,6 +307,7 @@ class AppGenreNotes private constructor(
         paid,
         events,
         plays,
+        automaticOpen,
     )
 
     // A reason shown, or a list, and when it was written.
@@ -422,6 +460,165 @@ class AppGenreNotes private constructor(
         val play: Long?,
     )
 
+    // The checks of tracks' vocals (#998), by key, oldest first, at most [KEPT]; the play each was
+    // asked by a tap in ([tappedIn]); the checks started by themselves, by key and play, tried once a
+    // play ([autoTried]); and those under way ([checking]).
+    private val checks = MutableStateFlow<Map<CardKey, Entry<VocalsState>>>(emptyMap())
+    private val tappedIn = ConcurrentHashMap<CardKey, Played>()
+    private val autoTried: MutableSet<Pair<CardKey, Played>> = ConcurrentHashMap.newKeySet()
+    private val checking = ConcurrentHashMap<CardKey, Job>()
+
+    override fun vocals(track: TrackState): Flow<VocalsShown?> =
+        combine(parts, settings) { made, now ->
+            if (made == null ||
+                now == null
+            ) {
+                null
+            } else {
+                checksOf(made).key(track, now)
+            }
+        }.distinctUntilChanged()
+            .onEach { key -> key?.let { lookCheck(it, track) } }
+            .combine(
+                combine(checks, settings) { known, now -> known to now?.historyLifetime },
+            ) { key, (known, lifetime) ->
+                key?.let { asked ->
+                    known[asked]?.takeIf { !expired(it.writtenAt, lifetime) }?.let { entry ->
+                        VocalsShown(
+                            entry.state,
+                            modelName(asked.model),
+                            tapped = tappedIn[asked] == Played(track.nowPlaying.play),
+                        )
+                    }
+                }
+            }.distinctUntilChanged()
+
+    override fun checkVocals(track: TrackState) {
+        val made = parts.value
+        val now = settings.value?.takeIf { it.searchWithAi && automaticOpen() && track.genres.wantsVocalsCheck() }
+        val key = if (made == null || now == null) null else checksOf(made).key(track, now)
+        // Once a play (#998, as *Ask AI automatically*'s searches): a failure is tried again only when
+        // the track plays again; one whose gate closed before its call, once it opens.
+        if (made != null && key != null && autoTried.add(key to Played(track.nowPlaying.play))) {
+            startCheck(made, key, track, automatic = true)
+        }
+    }
+
+    // [key]'s check for [track], or the one under way; null when one is known already, not failed nor
+    // past *Keep history for*. Asked by itself when [automatic] (*Ask AI automatically*), else by a tap.
+    private fun startCheck(
+        made: PipelineParts,
+        key: CardKey,
+        track: TrackState,
+        automatic: Boolean,
+    ): Job? {
+        val under = checking[key]
+        if (under != null || !openCheck(key)) return under
+        val job =
+            scope.launch(mark(), start = CoroutineStart.LAZY) {
+                try {
+                    check(made, key, track, automatic)
+                } finally {
+                    checking.remove(key)
+                }
+            }
+        val raced = checking.putIfAbsent(key, job)
+        return raced?.also { job.cancel() } ?: job.also { it.start() }
+    }
+
+    // Whether [key]'s check may be asked: not known, failed, or past *Keep history for*.
+    private fun openCheck(key: CardKey): Boolean {
+        val entry = checks.value[key]
+        return entry == null || entry.state is VocalsState.Failed || expired(entry.writtenAt)
+    }
+
+    // [key]'s check for [track]: kept meanwhile, with no call, or asked, each state shown while no
+    // *Clear history* came since it started. One whose gate closed before a paid step shows nothing,
+    // and one started by itself may start again.
+    private suspend fun check(
+        made: PipelineParts,
+        key: CardKey,
+        track: TrackState,
+        automatic: Boolean,
+    ) {
+        val work = currentCoroutineContext()
+        val show: (VocalsState, Instant) -> Unit = { state, at ->
+            publish(work) {
+                val refused = state is VocalsState.Failed && state.reason == VocalsChecks.REFUSED
+                checks.update { if (refused) it - key else it.with(key, Entry(state, at)) }
+            }
+        }
+        val asker = checksOf(made)
+        val asked = Asked(work, track, key, AiQuestion.Vocals, automatic)
+        try {
+            val kept = asker.kept(key)?.takeIf { !expired(it.writtenAt) }
+            if (kept != null) {
+                synchronized(lock) {
+                    if (current(
+                            work,
+                        )
+                    ) {
+                        tellKept(track, key, kept(track, key, AiQuestion.Vocals, kept.writtenAt, automatic))
+                    }
+                }
+                show(kept.state, kept.writtenAt ?: clock.now())
+                return
+            }
+            // Asked by a tap on this play: an answer of vocals leaves the chip weak until the next play.
+            if (!automatic) tappedIn[key] = Played(track.nowPlaying.play)
+            asked.start()
+            val end =
+                asker.ask(key, track, asking(automatic), asked.counted, mayPay = { mayCheck(automatic) }, show = show)
+            val refused = end is VocalsState.Failed && end.reason == VocalsChecks.REFUSED
+            asked.end(if (refused) AiOutcome.STOPPED else outcomeOf(end), (end as? VocalsState.Failed)?.reason)
+            // Its gate closed before its call: started by itself, it may start again once it opens.
+            if (automatic && refused) autoTried.remove(key to Played(track.nowPlaying.play))
+        } catch (e: CancellationException) {
+            asked.end(AiOutcome.STOPPED)
+            throw e
+        } catch (
+            // A bug, not the network, which the check maps to a state: shown as failed.
+            @Suppress("TooGenericExceptionCaught") e: Exception,
+        ) {
+            val reason = e::class.simpleName ?: FAILED
+            asked.end(AiOutcome.FAILED, reason)
+            show(VocalsState.Failed(reason), clock.now())
+        }
+    }
+
+    // How a check that ended in [end] ended, for the log (#851).
+    private fun outcomeOf(end: VocalsState): AiOutcome =
+        if (end is VocalsState.Checked) AiOutcome.ANSWERED else AiOutcome.FAILED
+
+    // Whether a check may make its next search or call (#998): *Show insights* and *AI web search* still
+    // on as used; started by itself, *Ask AI automatically* too, with the app on screen ([automaticOpen]).
+    private fun mayCheck(automatic: Boolean): Boolean {
+        val now = settings.value ?: return false
+        val on = now.writeInsights && now.aiWebSearchUsed != AiWebSearch.OFF
+        return on && (!automatic || (now.searchWithAi && automaticOpen()))
+    }
+
+    // [key]'s check kept in the synthesis cache, read once, unless one is known already.
+    private fun lookCheck(
+        key: CardKey,
+        track: TrackState,
+    ) {
+        if (key in checks.value || !looked.add(key)) return
+        val made = parts.value ?: return
+        scope.launch(mark()) {
+            val work = coroutineContext
+            val kept = checksOf(made).kept(key)?.takeIf { !expired(it.writtenAt) }
+            if (kept != null) {
+                val entry = Entry<VocalsState>(kept.state, kept.writtenAt ?: clock.now())
+                publish(work) {
+                    var added = false
+                    checks.update { (if (key in it) it else it.with(key, entry)).also { next -> added = next !== it } }
+                    if (added) tellKept(track, key, kept(track, key, AiQuestion.Vocals, kept.writtenAt))
+                }
+            }
+        }
+    }
+
     override fun reason(
         track: TrackState,
         genre: String,
@@ -552,6 +749,30 @@ class AppGenreNotes private constructor(
     ) {
         val made = parts.value ?: return
         val now = settings.value ?: return
+        // Instrumental in doubt (#998): the check of the track's vocals first, or the one under way;
+        // the reason once it has answered, whatever it answered.
+        val check =
+            checksOf(made)
+                .key(track, now)
+                ?.takeIf { genre == TrackGenres.INSTRUMENTAL && track.genres.wantsVocalsCheck() }
+                ?.let { startCheck(made, it, track, automatic = false) }
+        if (check != null) {
+            scope.launch(mark()) {
+                check.join()
+                if (current(coroutineContext)) explainNow(track, genre)
+            }
+        } else {
+            explainNow(track, genre)
+        }
+    }
+
+    // [explain]'s reason, or the AI's genre list before it.
+    private fun explainNow(
+        track: TrackState,
+        genre: String,
+    ) {
+        val made = parts.value ?: return
+        val now = settings.value ?: return
         when (val path = path(made, now, lists.value, track, genre)) {
             // Not shown, shown as failed, or past *Keep history for*; and not under way.
             is ReasonPath.Reason -> {
@@ -618,8 +839,11 @@ class AppGenreNotes private constructor(
     private fun listsOf(made: PipelineParts) =
         GenreLists(made.ai, made.cache, made.hasher, vocabulary, clock, made.webSearch)
 
-    // How a reason or a list searches the web (#801), as the settings last read say; by a tap.
-    private fun asking(): AiSearches.Asking = AiSearches.Asking.of(settings.value, automatic = false)
+    private fun checksOf(made: PipelineParts) = VocalsChecks(made.ai, made.cache, made.hasher, clock, made.webSearch)
+
+    // How a reason, a list or a check searches the web (#801), as the settings last read say; by a tap
+    // unless [automatic].
+    private fun asking(automatic: Boolean = false): AiSearches.Asking = AiSearches.Asking.of(settings.value, automatic)
 
     // Whether [key]'s reason may be asked for: not shown, shown as failed, or past *Keep history for*.
     private fun open(key: CardKey): Boolean {
@@ -693,6 +917,7 @@ class AppGenreNotes private constructor(
         private val track: TrackState,
         private val key: CardKey,
         private val question: AiQuestion,
+        private val automatic: Boolean = false,
     ) {
         private var started: Instant? = null
         private var cost = QuestionCost()
@@ -703,7 +928,7 @@ class AppGenreNotes private constructor(
         }
 
         fun start() {
-            note(work, PipelineEvent.AiAsked(track.normalized.lookupKey, question, false, key.provider, key.model))
+            note(work, PipelineEvent.AiAsked(track.normalized.lookupKey, question, automatic, key.provider, key.model))
             started = clock.now()
         }
 
@@ -726,13 +951,14 @@ class AppGenreNotes private constructor(
         key: CardKey,
         question: AiQuestion,
         writtenAt: Instant?,
+        automatic: Boolean = false,
     ) = PipelineEvent.AiKept(
         track.normalized.lookupKey,
         question,
         key.provider,
         key.model,
         writtenAt,
-        automatic = false,
+        automatic = automatic,
     )
 
     // The kept reasons and lists told to the log as served, by key and track as the sources name it,
@@ -859,6 +1085,9 @@ class AppGenreNotes private constructor(
             looked.clear()
             told.clear()
             libraries.value = emptyMap()
+            checks.value = emptyMap()
+            tappedIn.clear()
+            autoTried.clear()
         }
         lookups.forget()
     }

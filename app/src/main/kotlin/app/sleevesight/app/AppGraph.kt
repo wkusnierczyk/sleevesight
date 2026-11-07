@@ -592,6 +592,9 @@ class AppGraph internal constructor(
             events = { diagnostics.log.record(it) },
             // A reason written before this play of the track is kept from before (#851).
             plays = plays.current,
+            // The check of a track's vocals started by itself (#998), under *Ask AI automatically*'s
+            // gates: the setting on and the app on screen.
+            automaticOpen = { autoSearches.open() },
         )
 
     /**

@@ -33,7 +33,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.GenreNotes
-import app.sleevesight.app.pipeline.withAi
 import app.sleevesight.app.ui.logo.Busy
 import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.app.ui.theme.ChipFrame
@@ -76,6 +75,8 @@ internal fun genresItem(
     search: PanelSearch = PanelSearch(),
 ): InPlaceItem? {
     if (settings?.showGenres != true) return null
+    // The check of the track's vocals started by itself (#998), whether the panel is open or not.
+    AutoVocalsCheck(track, settings, notes, search)
     return InPlaceItem(
         id = InPlace.GENRES,
         name = stringResource(R.string.home_genres),
@@ -120,11 +121,11 @@ internal fun GenresContent(
 ) {
     // The track's genres with the AI's genre list (#762), where one is known: its genres join the
     // chips and the track's row, marked AI; an Instrumental it added weighed with LRCLIB's answer (#997).
-    // The genres the artists' descriptions name (#1000), beside the tags, before the AI's list's.
-    val described = withDescribed(playing, notes)
-    val joined = described?.withAi(aiGenres(described, notes.notes))
-    val weighed = withLibrary(described, joined, notes.notes)
-    val track = withLyricsFound(weighed.track, search)
+    // The genres the artists' descriptions name (#1000), beside the tags, before the AI's list's; the
+    // check of the track's vocals (#998) weighed in, and started by itself once they call for it.
+    val composed = composedGenres(playing, notes, search)
+    val track = composed.track
+    VocalsDue(playing, track, settings, notes.notes)
     val shown = GenresShown.of(track, settings)
     val style = MaterialTheme.typography.bodyLarge
     // The genre a tap opened, kept above the chips and the lines in their place (#772): while a run
@@ -172,7 +173,7 @@ internal fun GenresContent(
             afterRetry = toClose,
         )
     }
-    LibraryRetry(shown.libraryUnreachable, weighed.retry, retry, toClose)
+    LibraryRetry(shown.libraryUnreachable, composed.libraryRetry, retry, toClose)
     if (shown.none) Text(stringResource(R.string.home_genres_none), style = style)
     GenresSearch(track, shown, search, notes)
 }

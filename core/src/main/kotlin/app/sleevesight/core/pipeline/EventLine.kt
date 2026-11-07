@@ -122,6 +122,7 @@ private object AskAiLines {
                 if (q.kind == SearchKind.DEFINITION) "definition of \"${q.genre.orEmpty()}\"" else q.kind.key
             is AiQuestion.Reason -> "reason for \"${q.genre}\""
             AiQuestion.GenreList -> "genre list"
+            AiQuestion.Vocals -> "vocals check"
             is AiQuestion.Item -> "${q.item.kind.key} insight"
         }
 

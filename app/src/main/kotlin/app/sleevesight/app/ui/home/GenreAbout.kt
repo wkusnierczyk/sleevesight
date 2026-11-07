@@ -27,9 +27,11 @@ import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.core.genres.GenreDefinition
 import app.sleevesight.core.genres.GenreLabel
+import app.sleevesight.core.genres.TrackGenres
 import app.sleevesight.core.genres.describedIn
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.TrackState
+import app.sleevesight.core.pipeline.VocalsState
 import app.sleevesight.core.synthesis.SearchAnswer
 import app.sleevesight.core.synthesis.SearchKind
 
@@ -85,12 +87,18 @@ internal fun GenreAbout(
             .firstOrNull { it.genre.identity == genre }
             ?.genre ?: return
     val question = stringResource(R.string.genre_why, inSentence(named.label))
+    // The check of the track's vocals (#998), for Instrumental: its line under the weak genre's.
+    val vocals = vocalsOf(track, notes).takeIf { genre == TrackGenres.INSTRUMENTAL }
     GenreDefinitionNote(named, notes, search, afterRetry)
-    // Why its evidence is weak, for a weak genre (#875), under the definition; for a genre the
+    // Why its evidence is weak, for a weak genre (#875), under the definition, unless the check of the
+    // track's vocals, asked by a tap, says what it found in its place (#998); for a genre the
     // artist's description names (#1000), where, unless the weak line says it.
     val why = track.genres.weakEvidence(genre)
-    WeakEvidenceNote(why, named, onCite)
+    if (!answersWeak(vocals)) WeakEvidenceNote(why, named, onCite)
     DescribedNote(track.genres.describedIn(genre), why, onCite)
+    VocalsNote(vocals, named, shown.lines ?: track.evidence, onCite)
+    // While the check runs, no *Why is this …?*: a tap runs it, then the reason.
+    if (vocals?.state == VocalsState.Checking) return
     val explain = { notes.explain(asked, genre) }
     when (val shown = reason) {
         GenreReason.None -> Unit
