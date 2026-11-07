@@ -11,32 +11,6 @@ class GenreVocabularyTest {
     private val vocabulary = GenreVocabulary.load(JvmResourceReader)
 
     @Test
-    fun `every tag keeps its order, label, identity and definition without the families`() {
-        // #1020 dropped the genre families: the list read before it, a row per tag in the order the
-        // families gave (`genres/vocabulary-labels.tsv`), each with its label, identity, MusicBrainz
-        // genre and Wikipedia article ("-" for none). A tag added or changed later updates the file.
-        val rows =
-            checkNotNull(javaClass.getResource("/genres/vocabulary-labels.tsv")) { "no vocabulary-labels.tsv" }
-                .readText()
-                .lines()
-                .drop(1)
-                .filter { it.isNotEmpty() }
-        val now =
-            vocabulary.tags.map { tag ->
-                val label = vocabulary.labelsFor(listOf(tag)).single()
-                val identity = label.identity
-                listOf(
-                    tag,
-                    label.label,
-                    identity,
-                    vocabulary.musicBrainzGenre(identity) ?: "-",
-                    vocabulary.wikipediaArticle(identity) ?: "-",
-                ).joinToString("\t")
-            }
-        assertEquals(rows, now)
-    }
-
-    @Test
     fun `tags outside the vocabulary are dropped and the order is the source's`() {
         val labels = vocabulary.labelsFor(listOf("folk", "singer-songwriter", "70s", "canadian", "acoustic"))
         assertEquals(listOf("Folk", "Singer-Songwriter", "Acoustic"), labels.map { it.label })

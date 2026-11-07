@@ -15,10 +15,8 @@ import app.sleevesight.core.sources.ReleaseDate
 import app.sleevesight.core.sources.ResolvedArtist
 import app.sleevesight.core.sources.SourceResult
 import app.sleevesight.core.sources.WorkLyrics
-import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonIgnoreUnknownKeys
 import kotlin.time.Duration
 import kotlin.time.Instant
 
@@ -53,8 +51,8 @@ internal object RetrievalCodec {
      * optional field too, made a miss the same way (MusicBrainz's extraction version 10). The work's
      * writing credits (#998: its lyricists, and whether it credits composers alone) are optional
      * fields too, made a miss the same way (MusicBrainz's extraction version 11).
-     * A label no longer keeps its genre family either (#1020): an entry kept before it is read
-     * without the field (`GenreJson`), no miss, since the family changed nothing shown.
+     * A label no longer keeps its genre family either (#1020): an entry kept before it is read with
+     * the field ignored (`GenreJson.family`), no miss, since the family changed nothing shown.
      */
     const val FORMAT: Int = 7
 
@@ -323,9 +321,6 @@ internal object RetrievalCodec {
         val type: String? = null,
     )
 
-    // An entry kept before #1020 holds each label's genre family too, dropped since: read without it.
-    @OptIn(ExperimentalSerializationApi::class)
-    @JsonIgnoreUnknownKeys
     @Serializable
     private data class GenreJson(
         val tag: String,
@@ -335,6 +330,9 @@ internal object RetrievalCodec {
         val artist: String? = null,
         // A label past the cap (#996), on no row; one kept before it decodes without.
         val beyondCap: Boolean = false,
+        // Kept from before #1020, when each label held its genre family: read and ignored, never
+        // written (null, and defaults are not encoded).
+        val family: String? = null,
     )
 
     @Serializable
