@@ -17,6 +17,7 @@ import app.sleevesight.core.pipeline.PipelineParts
 import app.sleevesight.core.pipeline.QuestionCost
 import app.sleevesight.core.pipeline.TrackResolver
 import app.sleevesight.core.pipeline.TrackState
+import app.sleevesight.core.pipeline.VocalsChecks
 import app.sleevesight.core.pipeline.VocalsState
 import app.sleevesight.core.pipeline.withLibrary
 import app.sleevesight.core.platform.JvmAccentFolder
@@ -99,9 +100,10 @@ class AppGenreVocalsTest {
     // The check's owner, as `AppGraph` wires it, and the notes it starts the check through.
     private lateinit var notes: AppGenreNotes
     private val auto =
-        AutoSearches<Unit>({ track, now -> if (vocalsWanted(track, now)) setOf(Unit) else emptySet() }) { track, _ ->
-            notes.checkVocals(track)
-        }
+        AutoSearches<Unit>(
+            { track, now -> if (vocalsWanted(track, now)) setOf(Unit) else emptySet() },
+            { track, _ -> Triple(track.normalized, track.nowPlaying.duration, VocalsChecks.subject(track)) },
+        ) { track, _ -> notes.checkVocals(track) }
 
     private fun TestScope.notes(): AppGenreNotes =
         AppGenreNotes(
@@ -114,17 +116,24 @@ class AppGenreVocalsTest {
             events = { events += it },
             automaticOpen = { auto.open() },
             releaseAutomatic = { auto.release(it, Unit) },
+            playing = { playing },
         ).also { notes = it }
 
     private val track = VocalsFixtures.nasnusa
 
-    // The genres settled, followed by the owner, on screen or not.
+    // The playing track, as the pipeline holds it.
+    private var playing: TrackState? = track
+
+    // The genres settled (none told when [genres] is null), followed by the owner as `AppGraph` has it
+    // follow them: only those of the play the pipeline holds; on screen or not.
     private fun follow(
-        genres: TrackState = track,
+        genres: TrackState? = track,
         onScreen: Boolean = true,
     ) {
-        notes.genresShown(genres, settled = true)
-        auto.follow(notes.settledTracks.value, settings.value, onScreen)
+        genres?.let { notes.genresShown(it, settled = true) }
+        val now = playing
+        val shown = notes.settledTracks.value?.takeIf { now != null && samePlay(it, now) }
+        auto.follow(shown, settings.value, onScreen)
     }
 
     @Test
@@ -187,6 +196,96 @@ class AppGenreVocalsTest {
             assertEquals(1, provider.requests)
             val shown = notes.vocals(track).first { it != null }
             assertEquals(VocalsAnswer.VOCALS, (shown?.state as VocalsState.Checked).answer)
+        }
+
+    @Test
+    fun `switching the AI service off while Exa answers makes no call`() =
+        runTest {
+            notes()
+            searching = CompletableDeferred()
+            follow()
+            advanceUntilIdle()
+            settings.value = settings.value?.copy(aiProvider = null)
+            checkNotNull(searching).complete(Unit)
+            advanceUntilIdle()
+            assertEquals(1, queries.size)
+            assertEquals(0, provider.requests)
+        }
+
+    @Test
+    fun `lyrics Find the lyrics finds while Exa answers settle it, and no call is made`() =
+        runTest {
+            notes()
+            searching = CompletableDeferred()
+            follow()
+            advanceUntilIdle()
+            notes.genresShown(track.copy(genres = track.genres.withLyricsFound()), settled = true)
+            checkNotNull(searching).complete(Unit)
+            advanceUntilIdle()
+            assertEquals(1, queries.size)
+            assertEquals(0, provider.requests)
+        }
+
+    @Test
+    fun `MusicBrainz's lyrics in the run's genres while Exa answers settle it too`() =
+        runTest {
+            notes()
+            searching = CompletableDeferred()
+            follow()
+            advanceUntilIdle()
+            playing = track.copy(genres = track.genres.copy(singing = track.genres.singing.copy(lyrics = true)))
+            checkNotNull(searching).complete(Unit)
+            advanceUntilIdle()
+            assertEquals(0, provider.requests)
+        }
+
+    @Test
+    fun `left during A's search, back after B began, A is not asked again, nor in Settings`() =
+        runTest {
+            notes()
+            searching = CompletableDeferred()
+            follow()
+            advanceUntilIdle()
+            follow(genres = null, onScreen = false)
+            checkNotNull(searching).complete(Unit)
+            advanceUntilIdle()
+            assertEquals(0, provider.requests)
+            // B plays while the app is away; back on screen (Home, or Settings, which tells nothing),
+            // A's genres, told last, start nothing.
+            searching = null
+            playing = VocalsFixtures.biteNoSign
+            follow(genres = null)
+            advanceUntilIdle()
+            assertEquals(1, queries.size)
+            assertEquals(0, provider.requests)
+            assertFalse(notes.checkVocals(track))
+        }
+
+    @Test
+    fun `a track change while Exa answers makes no call for the track before`() =
+        runTest {
+            notes()
+            searching = CompletableDeferred()
+            follow()
+            advanceUntilIdle()
+            playing = VocalsFixtures.biteNoSign
+            checkNotNull(searching).complete(Unit)
+            advanceUntilIdle()
+            assertEquals(0, provider.requests)
+        }
+
+    @Test
+    fun `the same recording from another album starts its own check`() =
+        runTest {
+            notes()
+            follow()
+            advanceUntilIdle()
+            val deluxe = track.copy(nowPlaying = track.nowPlaying.copy(album = "Kokoro (Deluxe)"))
+            playing = deluxe
+            follow(deluxe)
+            advanceUntilIdle()
+            assertEquals(2, queries.size)
+            assertEquals(2, provider.requests)
         }
 
     @Test
@@ -268,6 +367,7 @@ class AppGenreVocalsTest {
             assertEquals(1, provider.requests)
             // The next play, in a new process: the answer is read from the cache, not asked.
             val replay = track.copy(nowPlaying = track.nowPlaying.copy(play = 2))
+            playing = replay
             val again = notes()
             val shown = again.vocals(replay).first { it != null }
             assertEquals(VocalsAnswer.VOCALS, (shown?.state as VocalsState.Checked).answer)

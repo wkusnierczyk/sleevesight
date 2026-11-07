@@ -225,9 +225,11 @@ class VocalsChecks(
         /** Why a check was not made: its gate closed before a search or a call (`WebReply.refused`). */
         const val REFUSED: String = "refused"
 
-        // What [track]'s check is about besides the track: the album the player names, as the prompt
-        // gives it, case and spacing aside; empty for none.
-        private fun subject(track: TrackState): String =
+        /**
+         * What [track]'s check is about besides the track and its length, in its key: the album the
+         * player names, as the prompt gives it, case and spacing aside; empty for none.
+         */
+        fun subject(track: TrackState): String =
             track.nowPlaying.album
                 ?.trim()
                 ?.lowercase()

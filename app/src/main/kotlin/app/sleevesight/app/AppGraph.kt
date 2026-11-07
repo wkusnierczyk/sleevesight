@@ -39,6 +39,7 @@ import app.sleevesight.app.pipeline.afterAcknowledged
 import app.sleevesight.app.pipeline.online
 import app.sleevesight.app.pipeline.pipelineKeys
 import app.sleevesight.app.pipeline.rebuilds
+import app.sleevesight.app.pipeline.samePlay
 import app.sleevesight.app.pipeline.shown
 import app.sleevesight.app.pipeline.vocalsWanted
 import app.sleevesight.app.secrets.AndroidKeystoreKey
@@ -81,6 +82,7 @@ import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.pipeline.ClearEpoch
 import app.sleevesight.core.pipeline.ListeningSessionFacts
+import app.sleevesight.core.pipeline.VocalsChecks
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmResourceReader
 import app.sleevesight.core.resolution.MusicBrainzLookup
@@ -597,6 +599,8 @@ class AppGraph internal constructor(
             // gates (the setting on and the app on screen), and handed back when they closed.
             automaticOpen = { autoVocals.open() },
             releaseAutomatic = { autoVocals.release(it, Unit) },
+            // The playing track as the pipeline holds it, what the check and its paid steps match.
+            playing = { pipeline.state.value.track },
         )
 
     /**
@@ -664,9 +668,9 @@ class AppGraph internal constructor(
     private val autoVocals: AutoSearches<Unit> by lazy {
         AutoSearches(
             { track, settings -> if (vocalsWanted(track, settings)) setOf(Unit) else emptySet() },
-        ) { track, _ ->
-            genreNotes.checkVocals(track)
-        }
+            // The check's own subject: the track, its length and album, so another album starts its own.
+            { track, _ -> Triple(track.normalized, track.nowPlaying.duration, VocalsChecks.subject(track)) },
+        ) { track, _ -> genreNotes.checkVocals(track) }
     }
 
     /**
@@ -760,7 +764,16 @@ class AppGraph internal constructor(
         // *Genres* composes are settled and call for it, while the app is on screen; again once it is
         // back, for one whose gates closed.
         pipelineScope.launch {
-            autoVocals.run(genreNotes.settledTracks, latestSettings, pipeline.onScreen, pipeline.liveParts)
+            autoVocals.run(
+                // Only the genres shown for the play the pipeline holds now: a report left from another
+                // track (the app back after a track change, or in Settings) starts nothing.
+                combine(genreNotes.settledTracks, pipeline.state.map { it.track }) { shown, playing ->
+                    shown?.takeIf { playing != null && samePlay(it, playing) }
+                },
+                latestSettings,
+                pipeline.onScreen,
+                pipeline.liveParts,
+            )
         }
         // Every genre of the playing track's table has its definition looked up as soon as the genres
         // are known, whether a panel is open or not (#786), while lookups are allowed (#961).

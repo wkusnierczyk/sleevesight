@@ -4,6 +4,8 @@ import app.sleevesight.core.evidence.EvidenceLine
 import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.lyrics.LibraryLyrics
 import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.pipeline.wantsLibrary
+import app.sleevesight.core.pipeline.withLibrary
 import app.sleevesight.core.platform.JvmResourceReader
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -186,6 +188,22 @@ class VocalsCheckTest {
         assertNull(confirmed.weakEvidence(TrackGenres.INSTRUMENTAL))
         // Unknown leaves it weak, for its votes as for its sign.
         assertEquals(true, oneVote.withVocals(VocalsAnswer.UNKNOWN, MODEL).chip(TrackGenres.INSTRUMENTAL)?.weak)
+    }
+
+    @Test
+    fun `composers alone wait for LRCLIB, whose lyrics or mark settle it, and whose no match leaves the check`() {
+        val hinted = bite(Singing(composersOnly = true))
+        assertTrue(hinted.wantsLibrary())
+        val sung = hinted.withLibrary(LibraryLyrics.LYRICS)
+        assertFalse(sung.wantsVocalsCheck())
+        assertFalse(sung.wantsLibrary())
+        val marked = hinted.withLibrary(LibraryLyrics.INSTRUMENTAL)
+        assertFalse(marked.wantsVocalsCheck())
+        // LRCLIB gives no genre: its mark settles the check and adds none.
+        assertTrue(marked.everyLabel.none { it.genre.identity == TrackGenres.INSTRUMENTAL })
+        val none = hinted.withLibrary(LibraryLyrics.NONE)
+        assertFalse(none.wantsLibrary())
+        assertTrue(none.wantsVocalsCheck())
     }
 
     @Test

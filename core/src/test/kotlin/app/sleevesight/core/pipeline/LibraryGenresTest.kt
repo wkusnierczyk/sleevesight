@@ -121,6 +121,13 @@ class LibraryGenresTest {
         // The AI's list adding it: called for.
         val listed = vocabulary.labelsFor(listOf("instrumental"), level = GenreLevel.TRACK)
         assertTrue(genres(artist(ARTIST, "jazz")).withAi(listed, "Model").wantsLibrary())
+        // #998: the work credits composers alone, with no Instrumental: LRCLIB before the paid check.
+        val hinted = genres(artist(ARTIST, "jazz"), singing = Singing(composersOnly = true))
+        assertTrue(hinted.wantsLibrary())
+        assertFalse(hinted.withLibrary(LibraryLyrics.NONE).wantsLibrary())
+        assertFalse(
+            genres(artist(ARTIST, "jazz"), singing = Singing(composersOnly = true, lyrics = true)).wantsLibrary(),
+        )
     }
 
     @Test

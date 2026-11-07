@@ -126,6 +126,20 @@ sealed interface PanelLibrary {
 }
 
 /**
+ * Whether [a] and [b] are the same play of the same recording (#998): the track and its length, the
+ * album as the check's key has it (`VocalsChecks.subject`), and the play (`NowPlaying.play`). What the
+ * check of the track's vocals started by itself, and each of its paid steps, is matched against.
+ */
+fun samePlay(
+    a: TrackState,
+    b: TrackState,
+): Boolean =
+    a.normalized == b.normalized &&
+        a.nowPlaying.duration == b.nowPlaying.duration &&
+        VocalsChecks.subject(a) == VocalsChecks.subject(b) &&
+        a.nowPlaying.play == b.nowPlaying.play
+
+/**
  * Whether [track]'s genres, settled (`AppGenreNotes.settledTracks`), call for *Ask AI automatically*'s
  * check of the track's vocals under [settings] (#998): *AI web search* on as used, and Instrumental in
  * doubt (`TrackGenres.wantsVocalsCheck`). *Ask AI automatically* and the app on screen are
@@ -292,6 +306,7 @@ class AppGenreNotes private constructor(
     private val plays: StateFlow<Play?>,
     private val automaticOpen: () -> Boolean,
     private val releaseAutomatic: (TrackState) -> Unit,
+    private val playing: () -> TrackState?,
 ) : GenreNotes,
     DefinitionFeed by lookups {
     /**
@@ -300,8 +315,9 @@ class AppGenreNotes private constructor(
      * genre lists as above, read against [definitions]' vocabulary; the check of a track's vocals
      * (#998) started by itself ([checkVocals], by `AppGraph`'s `AutoSearches`) only while
      * [automaticOpen] says so (*Ask AI automatically* on and the app on screen), asked again right
-     * before each of its searches and calls; one whose gate closed before a paid step handed back to
-     * [releaseAutomatic], to start again once it opens.
+     * before each of its searches and calls, with the AI service, the free signs and, for one started
+     * by itself, the play of the track [playing] (the pipeline's) as they are then; one whose gate
+     * closed before a paid step handed back to [releaseAutomatic], to start again once it opens.
      */
     @Suppress("LongParameterList") // As the class's.
     constructor(
@@ -318,6 +334,7 @@ class AppGenreNotes private constructor(
         plays: StateFlow<Play?> = MutableStateFlow(null),
         automaticOpen: () -> Boolean = { true },
         releaseAutomatic: (TrackState) -> Unit = {},
+        playing: () -> TrackState? = { null },
     ) : this(
         AppGenreDefinitions(definitions, settings, scope, epoch, io),
         definitions.vocabulary,
@@ -332,6 +349,7 @@ class AppGenreNotes private constructor(
         plays,
         automaticOpen,
         releaseAutomatic,
+        playing,
     )
 
     // A reason shown, or a list, and when it was written.
@@ -560,7 +578,9 @@ class AppGenreNotes private constructor(
     fun checkVocals(track: TrackState): Boolean {
         val made = parts.value
         val now = settings.value
-        val key = if (made == null || now == null) null else checksOf(made).key(track, now)
+        // A report left from another play (#998's review): nothing for it.
+        val current = playing()?.let { samePlay(it, track) } != false
+        val key = if (made == null || now == null || !current) null else checksOf(made).key(track, now)
         if (made != null && key != null) startCheck(made, key, track, automatic = true)
         return key != null
     }
@@ -583,9 +603,10 @@ class AppGenreNotes private constructor(
                 } finally {
                     checking.remove(key)
                 }
-                // Its gate closed before a paid step: started by itself, handed back, to start again
-                // once it opens (the app back on screen), now that it is no longer under way.
-                if (automatic && refused) releaseAutomatic(track)
+                // Its gate closed before a paid step (the app left): started by itself, handed back, to
+                // start again once it opens, now that it is no longer under way. One refused for what
+                // changed meanwhile (the AI service, a free sign, the play) is not: it is settled.
+                if (automatic && refused && !automaticOpen()) releaseAutomatic(track)
             }
         val raced = checking.putIfAbsent(key, job)
         return raced?.also { job.cancel() } ?: job.also { it.start() }
@@ -635,7 +656,7 @@ class AppGenreNotes private constructor(
                         track,
                         asking(automatic),
                         asked.counted,
-                        mayPay = { mayCheck(automatic) },
+                        mayPay = { mayCheck(key, track, automatic) },
                         show = show,
                     )
                 refused = end is VocalsState.Failed && end.reason == VocalsChecks.REFUSED
@@ -661,10 +682,44 @@ class AppGenreNotes private constructor(
 
     // Whether a check may make its next search or call (#998): *Show insights* and *AI web search* still
     // on as used; started by itself, *Ask AI automatically* too, with the app on screen ([automaticOpen]).
-    private fun mayCheck(automatic: Boolean): Boolean {
-        val now = settings.value ?: return false
-        val on = now.writeInsights && now.aiWebSearchUsed != AiWebSearch.OFF
-        return on && (!automatic || automaticOpen())
+    //
+    // Each against the state as it is now, not as it was when the check started (#998's review): the
+    // AI service and its key the same (the key worked out again from the live parts and the settings is
+    // [key], the service switched on its own); the playing track ([playing], the pipeline's) the same
+    // play, for one started by itself; and no free sign come since, in the track's genres as the run
+    // holds them (MusicBrainz's lyrics or mark, LRCLIB's) or as *Genres* last showed them (*Find the
+    // lyrics*, the panel's LRCLIB answer: [genresShown]).
+    private fun mayCheck(
+        key: CardKey,
+        track: TrackState,
+        automatic: Boolean,
+    ): Boolean {
+        val now = settings.value
+        val made = parts.value
+        val playingNow = playing()
+        val run = playingNow?.takeIf { samePlay(it, track) }
+        val against = run ?: track
+        val current = !automatic || (automaticOpen() && (playingNow == null || run != null))
+        val same =
+            now != null &&
+                made != null &&
+                now.writeInsights &&
+                now.aiWebSearchUsed != AiWebSearch.OFF &&
+                now.aiProvider == key.provider &&
+                checksOf(made).key(against, now) == key
+        return current && same && !settledSince(against, track)
+    }
+
+    // Whether a free sign settled [track]'s Instrumental since its check started: in [against], its
+    // genres as the run holds them now (MusicBrainz's lyrics or mark, LRCLIB's), or in those *Genres*
+    // last showed for its play (*Find the lyrics*, the panel's LRCLIB answer).
+    private fun settledSince(
+        against: TrackState,
+        track: TrackState,
+    ): Boolean {
+        val shown = settled.value?.takeIf { samePlay(it, track) }
+        return against.genres.singing.let { it.lifted || it.dropsInstrumental } ||
+            shown?.genres?.wantsVocalsCheck() == false
     }
 
     // [key]'s check kept in the synthesis cache, read once, unless one is known already.
