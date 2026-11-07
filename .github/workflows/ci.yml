@@ -57,7 +57,7 @@ jobs:
             while IFS= read -r file; do
               case "$file" in
                 README.md | privacy.md | LICENSE | CNAME | _config.yml | index.html | readme-page.html) ;;
-                _includes/* | _layouts/* | assets/* | release-notes/* | listing/* | .github/ISSUE_TEMPLATE/*) ;;
+                _includes/* | _layouts/* | assets/* | release-notes/* | listing/* | .github/ISSUE_TEMPLATE/* | .github/dependabot.yml) ;;
                 design/*.md | design/brand.html | design/simulator.html) ;;
                 *)
                   echo "Builds for \`$file\`." >> "$GITHUB_STEP_SUMMARY"
