@@ -18,6 +18,17 @@ package app.sleevesight.app.ui.home
 // backslash (`\*`) is shown as written, without the backslash, as in CommonMark, and so are code
 // and a web address written out (`https://…/Help!_(song)`). Runs pair across the sentences of a
 // paragraph, since the check may split a title (`*Help! I Need Somebody*`).
+//
+// A citation the model put after a sentence's stop, with only spaces between, shows before it, as
+// the others are (#1061): "… love [S15]. [S16]" shows as "… love [S15] [S16].". The grounding check
+// already reads such a citation as the sentence's before it (it ends a sentence after a stop's
+// citations, `GroundingCheck.splitSentences`), so only the place it shows changes; what is stored,
+// checked and reported stays as written. Position decides: a run of citations directly after a
+// `.`, `!` or `?` (and any closing brackets after it), before any word, moves when the end of the
+// sentence, a space or a line break follows it. A citation the check opens a sentence with (after a
+// line break and a list's marker) is in that sentence and stays there. Left as written: a stop in a
+// closing quote or in emphasis, which may be a title's own (`"Help!" [W1]`, `*DAMN.* [W1]`), and
+// the `.` of initials (`the U.S. [W1]`).
 
 /** A run of a sentence as shown: its text, in italics or bold, or one of its citations. */
 internal sealed interface ShownRun {
@@ -43,8 +54,69 @@ internal fun shown(sentences: List<String>): List<List<ShownRun>> {
     BareAddresses(paragraph).run()
     LineMarks(paragraph).run()
     Emphasis(paragraph).run()
-    return paragraph.output()
+    return paragraph.output().map(::citesBeforeStops)
 }
+
+// [runs] with each run of citations after a stop moved before it (#1061, above).
+private fun citesBeforeStops(runs: List<ShownRun>): List<ShownRun> {
+    val out = runs.toMutableList()
+    var i = 0
+    while (i < out.size) {
+        val text = out[i] as? ShownRun.Text
+        val stop = text?.takeIf { !it.italic && !it.bold }?.let(::stopAtEnd)
+        val last = if (stop == null) -1 else lastCiteAfter(out, i + 1)
+        if (text == null || stop == null || last < 0) {
+            i++
+            continue
+        }
+        val before = text.text.substring(0, stop.range.first) + stop.groupValues[GAP]
+        out.add(last + 1, ShownRun.Text(stop.groupValues[MARK]))
+        val next = out.getOrNull(last + 2) as? ShownRun.Text
+        if (next != null && !next.italic && !next.bold) {
+            out[last + 1] = ShownRun.Text(stop.groupValues[MARK] + next.text)
+            out.removeAt(last + 2)
+        }
+        if (before.isEmpty()) out.removeAt(i) else out[i] = ShownRun.Text(before)
+        // Read on from the stop, which may end the next sentence's text too (a paragraph not checked yet).
+        i = if (before.isEmpty()) last else last + 1
+    }
+    return out
+}
+
+// The last of the citations from [from] on, spaces alone between them, when the sentence ends,
+// or a space or a line break comes, after it; -1 otherwise.
+private fun lastCiteAfter(
+    runs: List<ShownRun>,
+    from: Int,
+): Int {
+    var k = from
+    var last = -1
+    while (k < runs.size) {
+        val run = runs[k]
+        val gap = run is ShownRun.Text && run.text.isNotEmpty() && run.text.all { it == ' ' }
+        when {
+            run is ShownRun.Cite -> last = k
+            !gap || runs.getOrNull(k + 1) !is ShownRun.Cite -> break
+        }
+        k++
+    }
+    val after = runs.getOrNull(last + 1)
+    val ends = after == null || (after is ShownRun.Text && after.text.firstOrNull()?.isWhitespace() == true)
+    return if (last >= 0 && ends) last else -1
+}
+
+// The stop that ends [text]'s run, but for the `.` of initials (`U.S.`, `R.E.M.`, `e.g.`), or null.
+private fun stopAtEnd(text: ShownRun.Text): MatchResult? =
+    STOP.find(text.text)?.takeUnless {
+        it.groupValues[MARK] == "." && INITIALS.containsMatchIn(text.text.substring(0, it.range.first + 1))
+    }
+
+// A stop at a text run's end: its `.`, `!` or `?` and any closing brackets after it ([MARK]), then
+// any spaces ([GAP]).
+private val STOP = Regex("([.!?]+[)\\]]*)( *)\\z")
+private const val MARK = 1
+private const val GAP = 2
+private val INITIALS = Regex("(?<![A-Za-z])(?:[A-Za-z]\\.){2,}\\z")
 
 /** Whether a sentence's runs show nothing: no citation, and no text but white space. */
 internal fun List<ShownRun>.isBlank(): Boolean = all { it is ShownRun.Text && it.text.isBlank() }
