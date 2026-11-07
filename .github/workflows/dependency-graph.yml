@@ -1,0 +1,38 @@
+name: Dependency graph
+
+# The Gradle build's dependencies, submitted to GitHub's dependency graph (#235), so Dependabot's
+# alerts and security updates (#236) cover them, transitive ones included; without it the graph
+# lists only the workflows' actions. Every configuration the build resolves is submitted: the app's
+# libraries, the build logic's plugins and the tests, since a build tool runs with the release's
+# secrets. On each push to `main`, the branch the alerts describe.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependency-graph
+  cancel-in-progress: true
+
+jobs:
+  submit:
+    name: Submit the Gradle dependency graph
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      # The dependency submission API, for this job alone.
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: gradle/actions/dependency-submission@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
