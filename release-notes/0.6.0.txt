@@ -1,0 +1,10 @@
+What's new in 0.6.0:
+New:
+- Genres checks whether a track is really instrumental: LRCLIB says if it has lyrics, and a web search settles it.
+- Genres shows the genres the artist's description names, with the quote.
+- Genres knows about 150 more genres.
+- A song the sources only list gets a web search for its insight.
+- The track's language is found for more tracks.
+Fixed:
+- The spinning logo draws far less often, to save battery.
+- Load keys: the step numbers sit in the middle of their circles.
