@@ -353,8 +353,9 @@ private fun searchFailureText(reason: String): String =
  * title and credited artists as cleaned for the sources (as *Lyrics*' Genius search uses them), the
  * album as the player reports it, and what the sources gave the other panels: the album's year as
  * Home shows it ([headerYears]), MusicBrainz's recording when it accepted one, its first release
- * ([firstReleaseOf]), and the genres a source other than MusicBrainz gives (D12: MusicBrainz's tags
- * never reach a prompt). The prompt leaves out the genres when it asks for them.
+ * ([firstReleaseOf]), and the genres a source other than MusicBrainz gives, LRCLIB's mark's
+ * Instrumental among them (#1024) (D12: MusicBrainz's tags never reach a prompt). The prompt leaves
+ * out the genres when it asks for them.
  */
 internal fun searchFacts(
     track: TrackState,
@@ -371,8 +372,9 @@ internal fun searchFacts(
     val genres =
         track.genres.rows
             .flatMap { it.labels }
-            .filter { label -> label.credits.any { it.source != LabelSource.MUSICBRAINZ } }
-            .map { it.genre.label }
+            .filter { label ->
+                label.markedBy != null || label.credits.any { it.source != LabelSource.MUSICBRAINZ }
+            }.map { it.genre.label }
             .distinct()
     return SearchFacts(
         title = track.normalized.title,
@@ -390,7 +392,8 @@ internal fun searchFacts(
  * The panels on Home whose *Search with AI* (#773) would show for [track] under [settings], for the
  * setting to start by itself (`AutoSearches`): none until every source has answered and no panel is
  * still looking (MusicBrainz, the genres gathered and assembled, the label requests after the
- * evidence answered); then *Dates* with no date, *Genres* with no genre (while *Show genres* is on)
+ * evidence answered); then *Dates* with no date, *Genres* with no tag (while *Show genres* is on;
+ * LRCLIB's Instrumental alone is none, #1024, `TrackGenres.hasTags`)
  * and *Lyrics* with no page (while *Lyrics links* is on; not for an instrumental, nor with a page
  * among the track's web search results, #801), as each panel
  * tells its empty states ([NoDates], [GenresShown], [homeLyrics]), beside the header the pipeline's
@@ -405,7 +408,8 @@ internal fun emptyPanels(
     if (!track.gathered || genresLooking || NoDates.of(track) == NoDates.LOOKING) return emptySet()
     return buildSet {
         if (homeDates(track, track.nowPlaying).isEmpty()) add(SearchKind.DATES)
-        if (settings.showGenres && track.genres.isEmpty) add(SearchKind.GENRES)
+        // LRCLIB's Instrumental alone is no tag (#1024): the search may still find the track's genres.
+        if (settings.showGenres && !track.genres.hasTags) add(SearchKind.GENRES)
         val lyrics = homeLyrics(track, settings.lyricsSearch)
         if (settings.lyricsLinks && lyrics is LyricsLinks.NoLink && lyrics.web.isEmpty()) {
             add(SearchKind.LYRICS)

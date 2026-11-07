@@ -1,6 +1,11 @@
 package app.sleevesight.core.pipeline
 
+import app.sleevesight.core.genres.GenreLabel
+import app.sleevesight.core.genres.GenreLevel
+import app.sleevesight.core.genres.GenreRow
+import app.sleevesight.core.genres.GenreVocabulary
 import app.sleevesight.core.genres.TrackGenres
+import app.sleevesight.core.genres.TrackLabel
 import app.sleevesight.core.genres.withoutInstrumental
 import app.sleevesight.core.lyrics.LibraryLyrics
 import app.sleevesight.core.lyrics.LibraryQuery
@@ -39,7 +44,9 @@ fun TrackGenres.showsInstrumental(): Boolean =
  * These genres weighed with LRCLIB's [answer] (#997, [app.sleevesight.core.genres.Singing.library]):
  * lyrics drop Instrumental from every row, combined again without it, as MusicBrainz's lyrics links
  * do; its instrumental mark lifts what left Instrumental weak; no match leaves them as they were.
- * Itself with no answer, or one already weighed.
+ * Itself with no answer, or one already weighed. What the panel's own answer does (#997): it asks
+ * only about an Instrumental already on a row, so the mark adds none there ([withLibraryMark] is the
+ * run's, #1024).
  */
 fun TrackGenres.withLibrary(answer: LibraryLyrics?): TrackGenres {
     val weighed = answer?.takeIf { singing.library == null }?.let { singing.copy(library = it) }
@@ -48,6 +55,44 @@ fun TrackGenres.withLibrary(answer: LibraryLyrics?): TrackGenres {
         !weighed.dropsInstrumental -> copy(singing = weighed)
         else -> withoutInstrumental(weighed)
     }
+}
+
+/**
+ * These genres with the Instrumental LRCLIB's instrumental mark adds (#1024; `design/design.md`,
+ * *Genre labels*): where the song's work credits composers alone and nothing says it is sung
+ * ([app.sleevesight.core.genres.Singing.composersHint]), which asked LRCLIB with no row showing
+ * Instrumental, and LRCLIB marks the track instrumental, [instrumental], the vocabulary's label of it,
+ * joins the track's row after its labels, credited to LRCLIB ([TrackLabel.markedBy]: named under *Tag
+ * sources*, not linked, as LRCLIB has no page for a track), a source's genre, not weak and not marked
+ * AI, while the row has room; a track row made for it where there was none. The paid check of the
+ * track's vocals is settled by the mark already. Not added with Instrumental on any row (the mark
+ * lifts it there, and it is not added twice), with lyrics MusicBrainz lists (a free sign that drops
+ * it wins), or the recording marked instrumental by MusicBrainz, which LRCLIB is not asked about:
+ * itself then, and with no [instrumental]. Applied twice, the same. The run applies it
+ * ([TrackLabels]), whose genres hold only the tags' rows: an Instrumental an artist's description
+ * names (#1000), which only the panel adds, does not stop it, and then sits on the *Described* row
+ * beside the mark's on the *Track* row, its chip the mark's (another level's genre stays on a
+ * described row; a tag's chip wins).
+ */
+fun TrackGenres.withLibraryMark(instrumental: GenreLabel?): TrackGenres {
+    val track = rows.firstOrNull { it.level == GenreLevel.TRACK }
+    val adds =
+        singing.library == LibraryLyrics.INSTRUMENTAL &&
+            singing.composersHint &&
+            !singing.instrumental &&
+            !singing.lyrics &&
+            everyLabel.none { it.genre.identity == TrackGenres.INSTRUMENTAL } &&
+            (track?.labels?.size ?: 0) < GenreVocabulary.MAX_LABELS
+    if (instrumental == null || !adds) return this
+    val label =
+        TrackLabel(
+            instrumental.copy(url = null, level = GenreLevel.TRACK, artist = null, votes = null),
+            emptyList(),
+            votes = null,
+            markedBy = SourceId.LRCLIB,
+        )
+    val row = GenreRow(GenreLevel.TRACK, null, track?.labels.orEmpty() + label)
+    return copy(rows = if (track == null) listOf(row) + rows else rows.map { if (it === track) row else it })
 }
 
 /** What came of asking LRCLIB for a track (#997, [LibraryLookup.ask]). */

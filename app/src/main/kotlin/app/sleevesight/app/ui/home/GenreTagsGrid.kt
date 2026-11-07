@@ -294,7 +294,9 @@ private fun Cell(
 
 // Each source that gave any of [row]'s labels, once, in [LabelSource] order, named as the settings
 // name it ("Last.fm", "MusicBrainz") and linked to the row's page there where it has one, " · " between;
-// then the model whose genre list gave any of its labels (#762), by name, not
+// then a source whose mark gave a label (#1024: "LRCLIB", for its Instrumental), named the same way,
+// not linked, as it has no page for a track; then the model whose genre list gave any of its labels
+// (#762), by name, not
 // linked, marked **AI** ([markStyle]); a screen reader reads it "Claude Haiku 5.5, AI", the comma there
 // for it alone, drawn too small to see ([HIDDEN_COMMA]): the row reads as one item with its links, so
 // it takes no description of its own.
@@ -316,6 +318,12 @@ private fun sourceParts(
             val url = given.firstNotNullOfOrNull { it.url }
             listOf(url?.let { TextPart.Link(name, it) } ?: TextPart.Words(name))
         }
+    // A source that gives no tags whose mark gave a label (#1024: LRCLIB's Instrumental), not linked.
+    val marked =
+        row.labels
+            .mapNotNull { it.markedBy }
+            .distinct()
+            .map { listOf(TextPart.Words(sourceName(it))) }
     val ai =
         model?.let {
             listOf(
@@ -325,7 +333,7 @@ private fun sourceParts(
                 TextPart.Styled(mark, markStyle),
             )
         }
-    return (sources + listOfNotNull(ai))
+    return (sources + marked + listOfNotNull(ai))
         .reduceOrNull { all, next -> all + TextPart.Words(SEPARATOR) + next }
         .orEmpty()
 }

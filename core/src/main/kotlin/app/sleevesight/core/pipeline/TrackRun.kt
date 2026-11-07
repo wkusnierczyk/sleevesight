@@ -4,6 +4,7 @@ import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.genres.TrackGenres
+import app.sleevesight.core.genres.instrumental
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.Outcome
@@ -151,6 +152,7 @@ internal class TrackRun(
             // A *Retry* asks the label requests of the sources it asks again only (#772).
             asking = input.again?.takeIf { it.only != null }?.let { it.asked + it.labelsAsked },
             library = library,
+            instrumental = parts.vocabulary?.instrumental(),
         )
 
     /**

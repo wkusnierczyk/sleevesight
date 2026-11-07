@@ -6,8 +6,7 @@ import androidx.compose.runtime.remember
 import app.sleevesight.app.pipeline.GenreNotes
 import app.sleevesight.app.pipeline.VocalsShown
 import app.sleevesight.app.pipeline.withAi
-import app.sleevesight.core.genres.GenreLevel
-import app.sleevesight.core.genres.TrackGenres
+import app.sleevesight.core.genres.instrumental
 import app.sleevesight.core.genres.withVocals
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.pipeline.VocalsState
@@ -78,10 +77,7 @@ internal fun withVocals(
     notes: GenreNotes,
 ): TrackState {
     val checked = shown?.state as? VocalsState.Checked ?: return track
-    val instrumental =
-        notes.vocabulary
-            ?.labelsFor(listOf(TrackGenres.INSTRUMENTAL), level = GenreLevel.TRACK)
-            ?.firstOrNull()
+    val instrumental = notes.vocabulary?.instrumental()
     val genres = track.genres.withVocals(checked.answer, shown.model, instrumental, drops = !shown.tapped)
     return if (genres === track.genres) track else track.copy(genres = genres)
 }
