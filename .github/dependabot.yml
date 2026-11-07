@@ -3,6 +3,7 @@
 # can target only `main`, which takes work only through a release branch, so they are notices, never
 # merged as they stand: an agent carries each bump into the open release branch, with the lockfiles
 # written again (`--write-locks`), and Dependabot closes its PR once `main` has the new version.
+# The prefix's trailing space keeps Dependabot from adding a colon after it.
 version: 2
 updates:
   - package-ecosystem: gradle
@@ -17,7 +18,7 @@ updates:
     assignees: [wkusnierczyk]
     labels: [infrastructure, "category:D-build", "urgency:low", "importance:medium", "progress:pending", "environment:workstation", "worker:agent"]
     commit-message:
-      prefix: "[INFRA]"
+      prefix: "[INFRA] "
 
   - package-ecosystem: github-actions
     directories: ["/", "/.github/actions/java-gradle"]
@@ -31,4 +32,4 @@ updates:
     assignees: [wkusnierczyk]
     labels: [infrastructure, "category:D-build", "urgency:low", "importance:medium", "progress:pending", "environment:workstation", "worker:agent"]
     commit-message:
-      prefix: "[INFRA]"
+      prefix: "[INFRA] "
