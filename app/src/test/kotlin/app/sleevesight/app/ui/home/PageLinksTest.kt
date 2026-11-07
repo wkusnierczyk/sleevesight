@@ -88,7 +88,7 @@ class PageLinksTest {
         artist: String? = null,
     ): TrackLabel {
         val shown = tag.replaceFirstChar(Char::uppercase)
-        val genre = GenreLabel(tag, "family", shown, tag, level = level, artist = artist)
+        val genre = GenreLabel(tag, shown, tag, level = level, artist = artist)
         // A track's label with the votes to be backed (#799, #875): no chip here is weak.
         val votes = TrackGenres.MIN_VOTES.takeIf { level == GenreLevel.TRACK }
         return TrackLabel(genre, listOf(LabelCredit(LabelSource.LASTFM, "https://example.org/$tag")), votes)

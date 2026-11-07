@@ -60,7 +60,7 @@ class GenreReasonsTest {
     ): TrackState {
         val playing = nowPlaying("So What", "Miles Davis", "Kind of Blue")
         val drafts = lines.map { (source, text) -> line(source, text, Scope.SONG) }
-        val label = GenreLabel("jazz", "jazzblues", "Jazz", "jazz", null, GenreLevel.ARTIST, "Miles Davis")
+        val label = GenreLabel("jazz", "Jazz", "jazz", null, GenreLevel.ARTIST, "Miles Davis")
         val given = credits.map { LabelCredit(it, null) }
         return TrackState(
             nowPlaying = playing,

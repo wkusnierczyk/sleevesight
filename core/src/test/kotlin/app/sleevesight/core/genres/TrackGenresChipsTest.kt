@@ -101,7 +101,7 @@ class TrackGenresChipsTest {
     @Test
     fun `the sources' chips are alphabetical whatever their case and level, the AI's after, alphabetical`() {
         // Written for the test: a name in lower case sorts among the others, as a reader expects.
-        val bebop = GenreLabel("bebop", "jazz", "bebop", "bebop", level = GenreLevel.TRACK, votes = 3)
+        val bebop = GenreLabel("bebop", "bebop", "bebop", level = GenreLevel.TRACK, votes = 3)
         val genres =
             combineGenres(
                 mapOf(LabelSource.LASTFM to album("soul") + artist("A", "blues") + listOf(bebop)),

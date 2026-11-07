@@ -6,39 +6,37 @@ import kotlinx.serialization.json.Json
 
 /**
  * The fixed genre vocabulary (`design/design.md`, *Genre labels*): the tags that become genre
- * labels, each in a family (with a hue, for the genre cards; the labels themselves are drawn
- * plain, #439). Tags outside it (places, decades, "seen live", noise) are dropped. It is
- * source-agnostic: Last.fm's tags go through it, and from Phase 1.0 MusicBrainz's (D12, #84;
+ * labels, in one list (the simulator's families and their hues are dropped, #1020: nothing read
+ * them once #439 drew the labels plain). Tags outside it (places, decades, "seen live", noise) are
+ * dropped. It is source-agnostic: Last.fm's tags go through it, and from Phase 1.0 MusicBrainz's (D12, #84;
  * [MusicBrainzLabels]), whose labels [combineLabels] joins to Last.fm's; the track's, the artists'
  * and the album's alike (#439; [GenreLevel]).
  *
  * The data is the resource [RESOURCE], first taken from the simulator's `GENRE_FAMILIES`.
  */
 class GenreVocabulary(
-    val families: List<GenreFamily>,
+    tags: List<String>,
     private val labelOverrides: Map<String, String> = emptyMap(),
     synonyms: List<List<String>> = emptyList(),
     musicBrainz: Map<String, String> = emptyMap(),
     wikipedia: Map<String, String> = emptyMap(),
 ) {
-    private val familyOf: Map<String, GenreFamily> =
-        buildMap {
-            for (family in families) {
-                require(family.hue in HUES) { "hue of ${family.id} is out of range" }
-                for (tag in family.tags) {
-                    require(tag == key(tag)) { "tag '$tag' is not lowercase and trimmed" }
-                    require(put(tag, family) == null) { "tag '$tag' is in two families" }
-                }
+    // The tags, in the vocabulary's order.
+    private val known: Set<String> =
+        buildSet {
+            for (tag in tags) {
+                require(tag == key(tag)) { "tag '$tag' is not lowercase and trimmed" }
+                require(add(tag)) { "tag '$tag' is listed twice" }
             }
         }
 
-    /** The vocabulary's tags. */
-    val tags: Set<String> get() = familyOf.keys
+    /** The vocabulary's tags, in its order. */
+    val tags: Set<String> get() = known
 
     private val synonymOf: Map<String, String> =
         buildMap {
             for (group in synonyms) {
-                require(group.all { it in familyOf }) { "synonyms $group are not all in the vocabulary" }
+                require(group.all { it in known }) { "synonyms $group are not all in the vocabulary" }
                 for (tag in group) {
                     require(
                         put(tag, spelling(group.first())) == null,
@@ -86,7 +84,7 @@ class GenreVocabulary(
      * digits (`hip-hop` and `hip hop` are `hiphop`), or its synonym group's (`r&b` and `rnb`).
      * Null for a tag outside the vocabulary.
      */
-    fun identity(tag: String): String? = key(tag).takeIf { it in familyOf }?.let { synonymOf[it] ?: spelling(it) }
+    fun identity(tag: String): String? = key(tag).takeIf { it in known }?.let { synonymOf[it] ?: spelling(it) }
 
     /**
      * The genre labels for [tags], in their order (the source's, most applied first), at most
@@ -114,17 +112,16 @@ class GenreVocabulary(
         return tags
             .asSequence()
             .map(::key)
-            .mapNotNull { tag -> familyOf[tag]?.let { tag to it } }
-            .map { (tag, family) -> Triple(tag, family, synonymOf[tag] ?: spelling(tag)) }
-            .filter { (_, _, identity) -> seen.add(identity) }
+            .filter { it in known }
+            .map { tag -> tag to (synonymOf[tag] ?: spelling(tag)) }
+            .filter { (_, identity) -> seen.add(identity) }
             .withIndex()
-            .filter { (at, found) -> at < MAX_LABELS || found.third in keepBeyondCap }
+            .filter { (at, found) -> at < MAX_LABELS || found.second in keepBeyondCap }
             .map { (at, found) ->
-                val (tag, family, identity) = found
+                val (tag, identity) = found
                 val label = labelOverrides[tag] ?: titleCase(tag)
                 GenreLabel(
                     tag,
-                    family.id,
                     label,
                     identity,
                     url,
@@ -139,8 +136,8 @@ class GenreVocabulary(
 
     // The tags of each spelling (letters and digits, case aside), in the vocabulary's order, for
     // [namedIn]; and the most words a tag has.
-    private val bySpelling: Map<String, List<String>> by lazy { familyOf.keys.groupBy { spelling(it) } }
-    private val mostWords: Int by lazy { familyOf.keys.maxOfOrNull { TAG_WORD.findAll(it).count() } ?: 0 }
+    private val bySpelling: Map<String, List<String>> by lazy { known.groupBy { spelling(it) } }
+    private val mostWords: Int by lazy { known.maxOfOrNull { TAG_WORD.findAll(it).count() } ?: 0 }
 
     /**
      * The genres [text] names (#1000), in its order: each run of words whose spelling ([identity]'s
@@ -198,9 +195,6 @@ class GenreVocabulary(
         /** The most labels a track shows, as in the simulator. */
         const val MAX_LABELS: Int = 5
 
-        private const val FULL_CIRCLE = 360
-        private val HUES = 0 until FULL_CIRCLE
-
         private val json = Json { ignoreUnknownKeys = false }
 
         /** The vocabulary bundled with `:core`. */
@@ -211,7 +205,7 @@ class GenreVocabulary(
         fun parse(text: String): GenreVocabulary {
             val file = json.decodeFromString<VocabularyFile>(text)
             return GenreVocabulary(
-                file.families.map { GenreFamily(it.id, it.hue, it.tags) },
+                file.tags,
                 file.labels,
                 file.synonyms,
                 file.musicbrainz,
@@ -234,15 +228,8 @@ class GenreVocabulary(
     }
 }
 
-/** A family of genres, with its [hue] (0 to 359), for the genre cards; labels are not drawn in it (#439). */
-data class GenreFamily(
-    val id: String,
-    val hue: Int,
-    val tags: List<String>,
-)
-
 /**
- * A genre label: the vocabulary [tag] it came from, its [family], and the [label] shown.
+ * A genre label: the vocabulary [tag] it came from and the [label] shown.
  *
  * @property identity the genre it stands for ([GenreVocabulary.identity]), by which labels from two
  *   sources, or two artists, are the same label (`hip-hop` and `hip hop`).
@@ -261,7 +248,6 @@ data class GenreFamily(
  */
 data class GenreLabel(
     val tag: String,
-    val family: String,
     val label: String,
     val identity: String,
     val url: String? = null,
@@ -274,16 +260,9 @@ data class GenreLabel(
 @Serializable
 private class VocabularyFile(
     @Suppress("unused") val about: String = "",
-    val families: List<FamilyEntry>,
+    val tags: List<String>,
     val labels: Map<String, String> = emptyMap(),
     val synonyms: List<List<String>> = emptyList(),
     val musicbrainz: Map<String, String> = emptyMap(),
     val wikipedia: Map<String, String> = emptyMap(),
-)
-
-@Serializable
-private class FamilyEntry(
-    val id: String,
-    val hue: Int,
-    val tags: List<String>,
 )

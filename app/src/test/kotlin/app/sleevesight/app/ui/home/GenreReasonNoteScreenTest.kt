@@ -71,7 +71,6 @@ class GenreReasonNoteScreenTest {
                                 TrackLabel(
                                     GenreLabel(
                                         "alternative",
-                                        "rock",
                                         "Alternative",
                                         "alternative",
                                         level = GenreLevel.ARTIST,

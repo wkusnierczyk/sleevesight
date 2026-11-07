@@ -70,7 +70,6 @@ class GenresLibraryScreenTest {
                         TrackLabel(
                             GenreLabel(
                                 "instrumental",
-                                "family",
                                 "Instrumental",
                                 "instrumental",
                                 level = GenreLevel.TRACK,
@@ -190,7 +189,7 @@ class GenresLibraryScreenTest {
 
     private val folk =
         TrackLabel(
-            GenreLabel("folk", "family", "Folk", "folk", level = GenreLevel.TRACK),
+            GenreLabel("folk", "Folk", "folk", level = GenreLevel.TRACK),
             listOf(LabelCredit(LabelSource.LASTFM, "https://example.org/folk")),
         )
 }

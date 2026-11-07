@@ -28,7 +28,7 @@ class PanelAsksLibraryTest {
                     null,
                     tags.map { tag ->
                         TrackLabel(
-                            GenreLabel(tag, "family", tag, tag, level = GenreLevel.TRACK),
+                            GenreLabel(tag, tag, tag, level = GenreLevel.TRACK),
                             listOf(LabelCredit(LabelSource.LASTFM, null)),
                         )
                     },
@@ -63,7 +63,7 @@ class PanelAsksLibraryTest {
                 "A",
                 listOf(
                     TrackLabel(
-                        GenreLabel("instrumental", "family", "Instrumental", "instrumental", artist = "A"),
+                        GenreLabel("instrumental", "Instrumental", "instrumental", artist = "A"),
                         emptyList(),
                         describedIn = DescribedIn("S8", "an instrumental band"),
                     ),

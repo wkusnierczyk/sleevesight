@@ -484,7 +484,7 @@ class ArtistKeepingTest {
                             Outcome.None,
                             emptyList(),
                             Duration.ZERO,
-                            genres = listOf(GenreLabel("folk", "folk", "Folk", "folk")),
+                            genres = listOf(GenreLabel("folk", "Folk", "folk")),
                         ) to SourceId.LASTFM
                     ),
                 // Last.fm's artist is another MusicBrainz artist's: a rejection and nothing else.

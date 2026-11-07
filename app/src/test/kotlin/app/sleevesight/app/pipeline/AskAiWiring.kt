@@ -119,7 +119,7 @@ internal class AskAi(
                                 "A",
                                 listOf(
                                     TrackLabel(
-                                        GenreLabel("punk", "rock", "Punk", "punk", null, GenreLevel.ARTIST, "A"),
+                                        GenreLabel("punk", "Punk", "punk", null, GenreLevel.ARTIST, "A"),
                                         listOf(LabelCredit(LabelSource.LASTFM, null)),
                                     ),
                                 ),

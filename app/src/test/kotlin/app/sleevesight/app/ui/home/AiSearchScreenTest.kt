@@ -496,7 +496,7 @@ class AiSearchScreenTest {
 
     // A genre source's label, Last.fm's.
     private fun labelled(tag: String): TrackGenres {
-        val genre = GenreLabel(tag, "family", tag.replaceFirstChar(Char::uppercase), tag, level = GenreLevel.TRACK)
+        val genre = GenreLabel(tag, tag.replaceFirstChar(Char::uppercase), tag, level = GenreLevel.TRACK)
         val label = TrackLabel(genre, listOf(LabelCredit(LabelSource.LASTFM, null)))
         return TrackGenres(listOf(GenreRow(GenreLevel.TRACK, null, listOf(label))))
     }

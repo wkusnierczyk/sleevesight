@@ -109,7 +109,7 @@ class AppGenreNotesTest {
         tag: String,
         source: LabelSource = LabelSource.LASTFM,
     ) = TrackLabel(
-        GenreLabel(tag, "rock", tag.replaceFirstChar(Char::uppercase), tag, null, GenreLevel.ARTIST, "A"),
+        GenreLabel(tag, tag.replaceFirstChar(Char::uppercase), tag, null, GenreLevel.ARTIST, "A"),
         listOf(LabelCredit(source, null)),
     )
 

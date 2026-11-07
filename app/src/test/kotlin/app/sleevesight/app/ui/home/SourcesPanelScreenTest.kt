@@ -113,7 +113,7 @@ class SourcesPanelScreenTest {
                     null,
                     listOf(
                         TrackLabel(
-                            GenreLabel("folk", "family", "Folk", "folk", level = GenreLevel.TRACK, artist = null),
+                            GenreLabel("folk", "Folk", "folk", level = GenreLevel.TRACK, artist = null),
                             listOf(LabelCredit(LabelSource.LASTFM, "https://example.org/folk")),
                         ),
                     ),

@@ -11,31 +11,35 @@ class GenreVocabularyTest {
     private val vocabulary = GenreVocabulary.load(JvmResourceReader)
 
     @Test
-    fun `the family hues are the design's`() {
-        // `design/design.md`, *Genre labels*.
-        val hues = vocabulary.families.associate { it.id to it.hue }
-        assertEquals(
-            mapOf(
-                "folk" to 135,
-                "rock" to 8,
-                "pop" to 328,
-                "hiphop" to 30,
-                "soul" to 48,
-                "reggae" to 92,
-                "electronic" to 190,
-                "score" to 262,
-                "jazzblues" to 215,
-                "world" to 295,
-            ),
-            hues,
-        )
+    fun `every tag keeps its order, label, identity and definition without the families`() {
+        // #1020 dropped the genre families: the list read before it, a row per tag in the order the
+        // families gave (`genres/vocabulary-labels.tsv`), each with its label, identity, MusicBrainz
+        // genre and Wikipedia article ("-" for none). A tag added or changed later updates the file.
+        val rows =
+            checkNotNull(javaClass.getResource("/genres/vocabulary-labels.tsv")) { "no vocabulary-labels.tsv" }
+                .readText()
+                .lines()
+                .drop(1)
+                .filter { it.isNotEmpty() }
+        val now =
+            vocabulary.tags.map { tag ->
+                val label = vocabulary.labelsFor(listOf(tag)).single()
+                val identity = label.identity
+                listOf(
+                    tag,
+                    label.label,
+                    identity,
+                    vocabulary.musicBrainzGenre(identity) ?: "-",
+                    vocabulary.wikipediaArticle(identity) ?: "-",
+                ).joinToString("\t")
+            }
+        assertEquals(rows, now)
     }
 
     @Test
     fun `tags outside the vocabulary are dropped and the order is the source's`() {
         val labels = vocabulary.labelsFor(listOf("folk", "singer-songwriter", "70s", "canadian", "acoustic"))
         assertEquals(listOf("Folk", "Singer-Songwriter", "Acoustic"), labels.map { it.label })
-        assertEquals(listOf("folk", "folk", "folk"), labels.map { it.family })
     }
 
     @Test
@@ -85,7 +89,6 @@ class GenreVocabularyTest {
             listOf("Psychedelic Rock", "Neo-Psychedelia", "Turkish Psychedelia", "Afrobeat"),
             labels.map { it.label },
         )
-        assertEquals(listOf("rock", "rock", "rock", "world"), labels.map { it.family })
         assertEquals(vocabulary.identity("anatolian rock"), vocabulary.identity("turkish psychedelia"))
         assertEquals(listOf("World Music"), vocabulary.labelsFor(listOf("world music")).map { it.label })
     }
@@ -134,11 +137,8 @@ class GenreVocabularyTest {
 
     @Test
     fun `a malformed vocabulary is refused`() {
-        assertFailsWith<IllegalArgumentException> {
-            GenreVocabulary(listOf(GenreFamily("a", 10, listOf("rock")), GenreFamily("b", 20, listOf("rock"))))
-        }
-        assertFailsWith<IllegalArgumentException> { GenreVocabulary(listOf(GenreFamily("a", 360, listOf("rock")))) }
-        assertFailsWith<IllegalArgumentException> { GenreVocabulary(listOf(GenreFamily("a", 10, listOf("Rock")))) }
+        assertFailsWith<IllegalArgumentException> { GenreVocabulary(listOf("rock", "rock")) }
+        assertFailsWith<IllegalArgumentException> { GenreVocabulary(listOf("Rock")) }
     }
 
     @Test
