@@ -8,8 +8,11 @@ import org.junit.Test
 /** A citation after a sentence's stop shows before it, as the others are (#1061). */
 class CitesBeforeStopsTest {
     // A text's sentences as shown, each its text with its citations in brackets.
-    private fun plain(sentences: List<String>): List<String> =
-        shown(sentences).map { runs ->
+    private fun plain(
+        sentences: List<String>,
+        checked: Boolean = false,
+    ): List<String> =
+        shown(sentences, checked).map { runs ->
             runs.joinToString("") {
                 when (it) {
                     is ShownRun.Text -> it.text
@@ -25,7 +28,7 @@ class CitesBeforeStopsTest {
     private fun checked(reply: String): List<List<String>> {
         val ids = setOf("S1", "S2", "S15", "S16", "W1", "MB3")
         val grounded = (GroundingCheck.check(reply, ids, allowModel = false) as InsightReply.Written).grounded
-        return grounded.paragraphs.map { paragraph -> plain(paragraph.map { it.text }) }
+        return grounded.paragraphs.map { paragraph -> plain(paragraph.map { it.text }, checked = true) }
     }
 
     @Test
@@ -85,6 +88,14 @@ class CitesBeforeStopsTest {
     }
 
     @Test
+    fun inACheckedSentenceACitationOnTheNextLineShowsBeforeTheStop() {
+        val reply = "It is great.\n[S1] It charted [W1]."
+        assertEquals(listOf(listOf("It is great [S1].", "It charted [W1].")), checked(reply))
+        // Not checked yet, a line break after a stop may end a sentence: the citation stays.
+        assertEquals(reply, unchecked(reply))
+    }
+
+    @Test
     fun aCitationWithinASentenceStaysWhereItIs() {
         for (sentence in listOf(
             "It charted [W1] and sold well [S2].",
@@ -106,8 +117,9 @@ class CitesBeforeStopsTest {
             "They called it \"Help!\" [W1]",
             "It is the album *DAMN.* [W1]",
             "It charted in the U.S. [W1]",
+            "It is the song `Help!` [W1]",
         )) {
-            assertEquals(sentence.replace("*", ""), unchecked(sentence))
+            assertEquals(sentence.replace("*", "").replace("`", ""), unchecked(sentence))
         }
         // Initials before a closing bracket too, checked and streaming.
         assertEquals("It charted (in the U.S.) [W1]", unchecked("It charted (in the U.S.) [W1]"))
@@ -124,7 +136,8 @@ class CitesBeforeStopsTest {
             listOf(listOf("It charted (in the U.S.) [W1] It sold [S1].")),
             checked("It charted (in the U.S.) [W1] It sold [S1]."),
         )
-        // A stop after the emphasis moves.
+        // A stop after the emphasis or the code moves.
+        assertEquals("It is the song Help [W1].", unchecked("It is the song `Help`. [W1]"))
         assertEquals("It is the album Sundown [W1].", unchecked("It is the album *Sundown*. [W1]"))
     }
 
