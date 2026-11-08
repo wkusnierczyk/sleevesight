@@ -13,6 +13,7 @@ import app.sleevesight.core.sources.SourceResult
 import app.sleevesight.core.synthesis.ReleaseType
 import app.sleevesight.core.synthesis.SearchAnswer
 import app.sleevesight.core.text.DateWhen
+import app.sleevesight.core.normalizer.Edition as EditionNames
 
 // The dates the home screen shows (#556, #724): the year after the album, and the *Dates* panel's
 // sentences, or why it has none, worked out from what the pipeline publishes, as plain functions.
@@ -66,10 +67,27 @@ internal sealed interface DateSentence {
     /**
      * "This album was originally released {when}.": the release of the album's name whose year the
      * album line shows; "This single …" or "This EP …" when MusicBrainz's release group of it is
-     * one, as [kind] names it (#1058).
+     * one, as [kind] names it (#1058). Only for the group's first release: a later edition of it is
+     * an [Edition] (#1099).
      */
     data class Album(
         val date: String,
+        val kind: ReleaseKind? = null,
+    ) : DateSentence
+
+    /**
+     * An edition of an album (#1099): the release of the album's name whose year the album line
+     * shows, on [date], as [Album] finds it, in a release group first released earlier
+     * ([firstDate]), or under another title, which [title] then names: "This edition was released
+     * {when}. The album, {title}, was first released {when}."; with the same title (its editions
+     * aside, "Rumours (Remastered)" is "Rumours") [title] is null: "This edition was released
+     * {when}; the album was first released {when}.". "The single …" or "The EP …" as [kind] names
+     * it, as [Album]'s does.
+     */
+    data class Edition(
+        val date: String,
+        val firstDate: String,
+        val title: String?,
         val kind: ReleaseKind? = null,
     ) : DateSentence
 
@@ -116,6 +134,9 @@ internal sealed interface DateSentence {
  * the date would be lost, #1058: then said with its own date and title), "this single" or "this EP"
  * when the album is one; and, for a cover, the song's original recording, with the release it
  * first came out on when known. Empty when no date is known: the panel then says why ([NoDates]).
+ * The album's sentence says "originally" only of its release group's first release: of a later
+ * edition, or of one under another title, it says the edition's date and the group's first
+ * ([DateSentence.Edition], #1099).
  *
  * From MusicBrainz's result, which keeps them in the retrieval cache, else the run's resolution,
  * as the album's year is ([headerYears]). A result kept before #724 has the first release's date
@@ -129,7 +150,7 @@ internal fun homeDates(
     val resolution = track?.resolution
     val album = AlbumDates.of(track, header)
     val sentences = mutableListOf<DateSentence>()
-    album.date?.let { sentences += DateSentence.Album(it, album.kind) }
+    album.sentence()?.let { sentences += it }
     val first = firstReleaseOf(track)
     val firstDate = first?.date ?: kept?.firstReleased ?: resolution?.firstReleaseDate
     val here = first != null && album.date != null && album.has(first)
@@ -192,14 +213,23 @@ internal enum class NoDates {
 
 // The album the player names and what the album line shows of it: its year, and of the releases its
 // name names in that year (without a same-year single or EP of its title beside an album, #724), the
-// earliest date, their release groups, and their type when all are singles or EPs (#1058).
+// earliest date, their release groups, their type when all are singles or EPs (#1058), and, when they
+// are an edition of their one release group, the group's first release (#1099).
 private class AlbumDates(
     val name: String?,
     val year: String?,
     val date: String?,
     val groups: Set<String>,
     val kind: ReleaseKind?,
+    val edition: FirstOfGroup? = null,
 ) {
+    // The first release of an edition's release group: its [date], and its [title] when it is
+    // another than the edition's, else null.
+    class FirstOfGroup(
+        val date: String,
+        val title: String?,
+    )
+
     /**
      * Whether [first] is this album: a known release group decides (a single and a later album of
      * one title are not one release), with the year: a reissue in the original's group, out in
@@ -214,6 +244,16 @@ private class AlbumDates(
             } else {
                 ALBUMS.albumKey(first.title) == ALBUMS.albumKey(name)
             }
+
+    /**
+     * The album's sentence, when its [date] is known: of an edition of its release group, the
+     * edition's date and the group's first release ([DateSentence.Edition], #1099); else, of the
+     * group's first release, "originally" ([DateSentence.Album]).
+     */
+    fun sentence(): DateSentence? =
+        date?.let { date ->
+            edition?.let { DateSentence.Edition(date, it.date, it.title, kind) } ?: DateSentence.Album(date, kind)
+        }
 
     // Whether [date] is in the year the album line shows, or its year is unknown. Only asked with
     // [groups], which are known only with a year shown.
@@ -235,7 +275,47 @@ private class AlbumDates(
                 }
             val album = if (year == null) emptyList() else albumsOf(named.filter { it.releaseYear == year }, named)
             val date = earliest(album.mapNotNull { it.date })
-            return AlbumDates(name, year, date, album.map { it.group }.toSet(), kindNamed(album, date))
+            val groups = album.map { it.group }.toSet()
+            return AlbumDates(name, year, date, groups, kindNamed(album, date), editionOf(album, date, groups, dates))
+        }
+
+        // The first release of the one release group of [album], whose date the album's sentence
+        // gives ([date]), when [album] is a later edition of it (#1099): of the releases kept
+        // ([dates], those of the track's recordings), the group's earliest dated one, when it is
+        // earlier than [date] (`1987` is not earlier than `1987-09-07`) or of another title than the
+        // release dated [date], their editions aside ([EditionNames.stripEditions]: "Rumours
+        // (Remastered)" is "Rumours"). Null when [album] is the group's first release, has several
+        // groups (which album would it be?) or no date.
+        private fun editionOf(
+            album: List<ReleaseDate>,
+            date: String?,
+            groups: Set<String>,
+            dates: List<ReleaseDate>,
+        ): FirstOfGroup? {
+            val group = groups.singleOrNull()
+            val inGroup = dates.filter { it.group == group && it.releaseYear != null }
+            val first = earliest(inGroup.mapNotNull { it.date })
+            if (group == null || date == null || first == null) return null
+            val edition = (album.firstOrNull { it.date == date } ?: album.first()).title
+            // The titles out on the first date: [earliest] gives one of the dates.
+            val firsts = inGroup.filter { it.date == first }.map { it.title }
+            val title = firsts.takeIf { titles -> titles.none { sameTitle(it, edition) } }?.minOrNull()
+            return FirstOfGroup(first, title).takeIf { before(first, date) || title != null }
+        }
+
+        // Whether [a] and [b] are one title, their bracketed editions aside, as the album's key reads them.
+        private fun sameTitle(
+            a: String,
+            b: String,
+        ): Boolean = ALBUMS.albumKey(EditionNames.stripEditions(a)) == ALBUMS.albumKey(EditionNames.stripEditions(b))
+
+        // Whether [a] is before [b], at the precision both have: `1987` is not before `1987-09-07`.
+        private fun before(
+            a: String,
+            b: String,
+        ): Boolean {
+            val n = minOf(a.length, b.length)
+            return a.take(n) < b.take(n)
         }
 
         // The type of [album]'s releases as its sentence names it (#1058): when every one is a

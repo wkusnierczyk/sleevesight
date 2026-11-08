@@ -155,6 +155,42 @@ class DatesScreenTest {
     }
 
     @Test
+    fun anEditionReadsItsDateAndTheAlbumsFirstReleaseTheAlbumsTitleInItalics() {
+        // TODO(#1099 texts): the wording waits on its pick; replaced word for word after it.
+        val actually = "Actually"
+        val cases =
+            listOf(
+                DateSentence.Edition("2001-06-04", "1987-09-07", actually) to
+                    (
+                        "This edition was released on 4 June 2001. " +
+                            "The album, $actually, was first released on 7 September 1987." to actually
+                    ),
+                DateSentence.Edition("2001", "1987-09", actually, ReleaseKind.SINGLE) to
+                    (
+                        "This edition was released in 2001. " +
+                            "The single, $actually, was first released in September 1987." to actually
+                    ),
+                DateSentence.Edition("2001-06", "1987", actually, ReleaseKind.EP) to
+                    (
+                        "This edition was released in June 2001. " +
+                            "The EP, $actually, was first released in 1987." to actually
+                    ),
+                DateSentence.Edition("2004", "1977-02-04", null) to
+                    ("This edition was released in 2004; the album was first released on 4 February 1977." to null),
+                DateSentence.Edition("2004", "1977", null, ReleaseKind.SINGLE) to
+                    ("This edition was released in 2004; the single was first released in 1977." to null),
+                DateSentence.Edition("2004-03", "1977", null, ReleaseKind.EP) to
+                    ("This edition was released in March 2004; the EP was first released in 1977." to null),
+            )
+        said(cases.map { it.first }) {
+            for ((_, expected) in cases) {
+                val (line, italic) = expected
+                assertEquals(line, listOfNotNull(italic), italics(line))
+            }
+        }
+    }
+
+    @Test
     fun aDateReadsAsPreciselyAsItIsKnownTheDayWithNoLeadingZero() =
         said(
             listOf(

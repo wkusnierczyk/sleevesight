@@ -129,6 +129,7 @@ internal fun dateText(sentence: DateSentence): AnnotatedString =
                 )
             AnnotatedString(stringResource(format, whenText(sentence.date)))
         }
+        is DateSentence.Edition -> editionText(sentence)
         is DateSentence.FirstHere -> {
             val format =
                 sentence.kind.pick(
@@ -169,6 +170,33 @@ internal fun dateText(sentence: DateSentence): AnnotatedString =
             }
         }
     }
+
+// An edition's sentence (#1099): its date, and its album's first release, named in italics when its
+// title is another, in a second sentence after the first, as one paragraph.
+@Composable
+private fun editionText(sentence: DateSentence.Edition): AnnotatedString {
+    val date = whenText(sentence.date)
+    val first = whenText(sentence.firstDate)
+    val title = sentence.title
+    return if (title == null) {
+        val format =
+            sentence.kind.pick(
+                R.string.home_dates_edition_same_album,
+                R.string.home_dates_edition_same_single,
+                R.string.home_dates_edition_same_ep,
+            )
+        AnnotatedString(stringResource(format, date, first))
+    } else {
+        val of =
+            sentence.kind.pick(
+                R.string.home_dates_edition_of_album,
+                R.string.home_dates_edition_of_single,
+                R.string.home_dates_edition_of_ep,
+            )
+        val line = stringResource(R.string.home_dates_edition, date) + " " + stringResource(of, ALBUM_MARK, first)
+        withAlbum(line, title)
+    }
+}
 
 // Of a sentence's three wordings, the one this kind of release takes: [album]'s for an album or a
 // release of no type named, [single]'s, [ep]'s.
