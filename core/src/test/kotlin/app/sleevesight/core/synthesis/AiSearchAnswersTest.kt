@@ -343,6 +343,16 @@ class AiSearchAnswersTest {
             SearchReading.Malformed,
             definition("{\"definition\": \"Rap \"rock\".\", \"source\": \"x\"}"),
         )
+        // A quote after two backslashes is not escaped: the second key is still found.
+        assertEquals(
+            SearchReading.Malformed,
+            definition("""{"definition": "Rock "music" ends with \\", "source": "x"}"""),
+        )
+        // After one backslash it is: the text holds no second key.
+        assertEquals(
+            SearchReading.Found(SearchAnswer.Definition("Rock \"music\" is \", \"loud\": so.")),
+            definition("""{"definition": "Rock "music" is \", \"loud\": so."}"""),
+        )
         // Only the one-text answers are recovered: a broken date stays broken.
         assertEquals(SearchReading.Malformed, answers.read(SearchKind.DATES, "{\"album_date\": \"19\"99\"}"))
     }

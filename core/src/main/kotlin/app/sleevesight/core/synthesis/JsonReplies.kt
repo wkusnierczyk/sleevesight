@@ -13,13 +13,17 @@ internal object JsonReplies {
     private val lenient = Json { ignoreUnknownKeys = true }
     private const val FENCE = "```"
 
+    // What comes before a quote not escaped: no backslash, or an even run of them.
+    private const val NOT_ESCAPED = """(?<!\\)(?:\\\\)*"""
+
     // The key of each answer that is one text alone, which [oneTextIn] may recover (#1088).
     private val TEXT_KEYS = mapOf(SearchKind.EXPLAIN to "explanation", SearchKind.DEFINITION to "definition")
 
     // JSON's structure in a string's text: a quote not escaped that closes an object (`"}`) or is
     // followed by another key (`", "sources":`), or an object opened (`{"`). Two objects one after the
-    // other, or a second key, make the text JSON fragments, not one answer.
-    private val STRUCTURE = Regex("""(?<!\\)"\s*}|(?<!\\)"\s*,\s*"[^"]*"\s*:|\{\s*"""")
+    // other, or a second key, make the text JSON fragments, not one answer. A quote is escaped after
+    // an odd run of backslashes, not after an even one (`\\"` ends a text with a backslash).
+    private val STRUCTURE = Regex("""$NOT_ESCAPED"\s*}|$NOT_ESCAPED"\s*,\s*"[^"]*"\s*:|\{\s*"""")
 
     /**
      * The JSON object in [reply], or null when there is none: its text trimmed, a Markdown code
@@ -59,7 +63,8 @@ internal object JsonReplies {
         return value?.let { parsed("{\"$key\": \"${quotesEscaped(it)}\"}") }
     }
 
-    // [value], a JSON string's text, with each `"` not escaped escaped; an escape kept as it is.
+    // [value], a JSON string's text, with each `"` not escaped escaped; an escape kept as it is, so a
+    // `\\` is one backslash and the quote after it is not escaped.
     private fun quotesEscaped(value: String): String =
         buildString {
             var i = 0
