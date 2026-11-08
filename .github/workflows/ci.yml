@@ -56,7 +56,7 @@ jobs:
             files=$(git diff --name-only --no-renames HEAD^1 HEAD)
             while IFS= read -r file; do
               case "$file" in
-                README.md | privacy.md | LICENSE | CNAME | _config.yml | index.html | readme-page.html) ;;
+                README.md | SECURITY.md | privacy.md | LICENSE | CNAME | _config.yml | index.html | readme-page.html) ;;
                 _includes/* | _layouts/* | assets/* | release-notes/* | listing/* | .github/ISSUE_TEMPLATE/*) ;;
                 design/*.md | design/brand.html | design/simulator.html) ;;
                 *)
