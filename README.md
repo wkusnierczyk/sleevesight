@@ -81,6 +81,7 @@ How it works and how it is made:
 
 - [Architecture](https://sleevesight.app/docs/architecture/), [dependencies](https://sleevesight.app/docs/dependencies/) and [solutions](https://sleevesight.app/docs/solutions/): how the app is put together, what it is built on, and what it solves in its own way.
 - [Process](https://sleevesight.app/docs/process/): how it is built, reviewed, tested and released.
+- [Security checks](https://sleevesight.app/docs/security/): what the app and its code are checked for, and the result for the latest release; [SECURITY.md](SECURITY.md) says how to report a problem.
 - For developers: [building and the pipeline CLI](design/development.md), the [design](design/design.md), the [architecture](design/architecture.md) and the [plan](design/plan.md).
 
 ## Roadmap
