@@ -102,7 +102,11 @@ enum class Unavailability {
      */
     CANNOT_LIST,
 
-    /** Only MusicBrainz gives the genre, and the AI's list does not have it ([ReasonPath.NotListed]). */
+    /**
+     * Only MusicBrainz gives the genre, and the AI's list does not have it ([ReasonPath.NotListed]),
+     * once its *Why is this …?* is tapped on this play of the track (#1059): "The AI service doesn’t
+     * list {genre} among this song’s genres. …", with *See why.* linking the docs' *Genre labels*.
+     */
     NOT_LISTED,
 }
 
@@ -259,7 +263,8 @@ interface GenreNotes : DefinitionFeed {
  * AI service, synthesis cache and hasher, [GenreReasons]) under the [settings] as last read; for a
  * genre only MusicBrainz gives, the AI's genre list for the track asked first ([GenreLists], #762),
  * read against [vocabulary], and the reason written when the genre is on it, the models named as the
- * AI settings name them ([modelName]).
+ * AI settings name them ([modelName]); when it is not, the tap answers so with no call, and the
+ * answer stays for the rest of the track's play, a genre not tapped saying nothing of the list (#1059).
  *
  * A reason is kept with the track, as its insight is: in memory, by its card's key, so it shows
  * again with no call when the panel is closed and opened, another genre is opened in between, or a
@@ -367,6 +372,12 @@ class AppGenreNotes private constructor(
     // The genres whose *Why is this …?* was tapped while their list was asked, or when it failed, by
     // the list's key (#762): each followed by its reason once the list has it.
     private val waiting = MutableStateFlow<Map<CardKey, Set<String>>>(emptyMap())
+
+    // The genres whose *Why is this …?* was tapped with the AI's list known without them, or waited on
+    // the list that came without them (#1059), by the track's play ([heldKey]) and genre, oldest first,
+    // at most [KEPT]: each shows the list's answer for the rest of the play; before its tap, a genre
+    // the list lacks is offered, as any other, and says nothing about the list.
+    private val notListed = MutableStateFlow<Set<Pair<Any, String>>>(emptySet())
 
     // The keys whose cached reason or list was looked for, and those being written.
     private val looked: MutableSet<CardKey> = ConcurrentHashMap.newKeySet()
@@ -763,19 +774,21 @@ class AppGenreNotes private constructor(
             }.combine(
                 combine(shown, lists, waiting, settings, plays) { reasons, known, asked, now, play ->
                     Shown(reasons, known, asked, now?.historyLifetime, play, now)
-                },
+                }.combine(notListed) { now, tapped -> now.copy(tapped = tapped) },
             ) { path, now -> shownFor(path, track, genre, now) }
     }
 
     // What the panel's states are made of: the reasons, the lists, the genres waiting on each,
-    // *Keep history for*, the play now (#851), and the settings, for what is off (#695).
-    private class Shown(
+    // *Keep history for*, the play now (#851), the settings, for what is off (#695), and the genres
+    // tapped that the list lacks ([notListed], #1059).
+    private data class Shown(
         val reasons: Map<CardKey, Entry<InsightState>>,
         val known: Map<CardKey, Entry<GenreListState>>,
         val waiting: Map<CardKey, Set<String>>,
         val lifetime: Duration?,
         val play: Play?,
         val settings: Settings?,
+        val tapped: Set<Pair<Any, String>> = emptySet(),
     )
 
     // What the panel shows for [track]'s [genre]'s [path], as [now] has it.
@@ -798,8 +811,13 @@ class AppGenreNotes private constructor(
                 GenreReason.Unavailable(Unavailability.CANNOT_LIST)
             }
 
+            // Said only once its button is tapped on this play (#1059): before, offered as any other.
             ReasonPath.NotListed -> {
-                GenreReason.Unavailable(Unavailability.NOT_LISTED)
+                if ((heldKey(track) to genre) in now.tapped) {
+                    GenreReason.Unavailable(Unavailability.NOT_LISTED)
+                } else {
+                    GenreReason.Offered
+                }
             }
 
             is ReasonPath.Listing -> {
@@ -958,8 +976,22 @@ class AppGenreNotes private constructor(
                 }
             }
 
+            // The list known without it (#1059): its answer, at once, for the rest of the play; no call.
+            ReasonPath.NotListed -> {
+                synchronized(lock) { tapNotListed(track, setOf(genre)) }
+            }
+
             else -> Unit
         }
+    }
+
+    // [genres] tapped on [track]'s play, with the AI's list known without them (#1059), under [lock].
+    private fun tapNotListed(
+        track: TrackState,
+        genres: Set<String>,
+    ) {
+        if (genres.isEmpty()) return
+        notListed.update { tapped -> (tapped + genres.map { heldKey(track) to it }).toList().takeLast(KEPT).toSet() }
     }
 
     // What a tap on [genre]'s *Why is this …?* does for [track] under [now], the lists [known].
@@ -1173,10 +1205,14 @@ class AppGenreNotes private constructor(
             publish(work) {
                 if (state is GenreListState.Listed) {
                     val asked = waiting.value[key].orEmpty()
-                    waiting.update { it - key }
                     next = asked.mapNotNull { genre -> follow(reasons, state, track, genre, at)?.let { it to genre } }
+                    // Those it lacks get its answer (#1059), before the list shows, so none is offered between.
+                    val ids = state.genres.map { it.identity }.toSet()
+                    tapNotListed(track, asked.filterNot { it in ids }.toSet())
                 }
                 lists.update { it.with(key, Entry(state, at)) }
+                // After the list shows, so no genre asked for is offered between.
+                if (state is GenreListState.Listed) waiting.update { it - key }
             }
         }
         val asked = Asked(work, track, key, AiQuestion.GenreList)
@@ -1250,6 +1286,7 @@ class AppGenreNotes private constructor(
             shown.value = emptyMap()
             lists.value = emptyMap()
             waiting.value = emptyMap()
+            notListed.value = emptySet()
             looked.clear()
             told.clear()
             libraries.value = emptyMap()

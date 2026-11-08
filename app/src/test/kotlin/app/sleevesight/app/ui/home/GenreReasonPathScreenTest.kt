@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasAnyAncestor
@@ -183,16 +184,34 @@ class GenreReasonPathScreenTest {
 
     @Test
     fun whenTheAiCannotExplainItTheButtonStaysDisabledWithWhyUnderIt() {
-        for (reason in listOf(
-            GenreReason.Unavailable(Unavailability.NOT_LISTED),
-            GenreReason.Shown(InsightState.NoEvidence),
-        )) {
-            val notes = Notes(reason)
-            show(notes) {
-                disabled(notes)
-                compose.onNodeWithText("AI could not find an explanation.").assertExists()
-                assertEquals(0, count(GENRE_REASON_TAG))
-            }
+        val notes = Notes(GenreReason.Shown(InsightState.NoEvidence))
+        show(notes) {
+            disabled(notes)
+            compose.onNodeWithText("AI could not find an explanation.").assertExists()
+            assertEquals(0, compose.onAllNodesWithText(NOT_LISTED, substring = true).fetchSemanticsNodes().size)
+            assertEquals(0, count(GENRE_REASON_TAG))
+        }
+    }
+
+    @Test
+    fun aGenreTheAiListLacksSaysSoOnceTappedWithSeeWhyLinkingTheDocs() {
+        val notes = Notes(GenreReason.Unavailable(Unavailability.NOT_LISTED))
+        show(notes) {
+            disabled(notes)
+            val line = "$NOT_LISTED See why."
+            compose.onNodeWithText(line).assertExists()
+            assertEquals(0, compose.onAllNodesWithText("AI could not find an explanation.").fetchSemanticsNodes().size)
+            assertEquals(0, count(GENRE_REASON_TAG))
+            // *See why.* is a link, read as one, to the docs' *Genre labels*.
+            val text =
+                compose
+                    .onNodeWithText(line, useUnmergedTree = true)
+                    .fetchSemanticsNode()
+                    .config[SemanticsProperties.Text]
+                    .single()
+            val links = text.getLinkAnnotations(0, text.length)
+            assertEquals(listOf(DOCS), links.map { (it.item as LinkAnnotation.Url).url })
+            assertEquals("See why.", text.substring(links.single().start, links.single().end))
         }
     }
 
@@ -296,6 +315,13 @@ class GenreReasonPathScreenTest {
     private companion object {
         const val MODEL = "Claude Haiku 5.5"
         const val REASON = "It was recorded in 1973 [MB1]."
+
+        /** The line for a genre the AI's list lacks (#1059), before its link. */
+        const val NOT_LISTED =
+            "The AI service doesn’t list rock among this song’s genres. Only MusicBrainz does, and " +
+                "Sleevesight could not use that annotation."
+
+        const val DOCS = "https://sleevesight.app/docs/tutorials/usage/#genre-labels"
         const val ROCK_CHIP = GENRE_PREFIX + "track:rock"
         const val BLUES_CHIP = GENRE_PREFIX + "track:blues"
     }

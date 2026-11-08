@@ -86,7 +86,8 @@ internal fun GenreAbout(
         track.genres.everyLabel
             .firstOrNull { it.genre.identity == genre }
             ?.genre ?: return
-    val question = stringResource(R.string.genre_why, inSentence(named.label))
+    val said = inSentence(named.label)
+    val question = stringResource(R.string.genre_why, said)
     // The check of the track's vocals (#998), for Instrumental: its line under the weak genre's.
     val vocals = vocalsOf(track, notes).takeIf { genre == TrackGenres.INSTRUMENTAL }
     GenreDefinitionNote(named, notes, search, afterRetry)
@@ -104,7 +105,7 @@ internal fun GenreAbout(
     when (val shown = reason) {
         GenreReason.None -> Unit
         GenreReason.Offered -> WhyButton(question, onClick = explain)
-        is GenreReason.Unavailable -> ReasonUnavailable(question, shown.why, openSettingsAt)
+        is GenreReason.Unavailable -> ReasonUnavailable(question, said, shown.why, openSettingsAt)
         is GenreReason.Shown -> {
             val readAloud =
                 readAloudControl(reader, Reading.genreReason(genre)) {

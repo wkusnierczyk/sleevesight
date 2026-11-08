@@ -377,6 +377,79 @@ class AppGenreListsTest {
             assertEquals(1, provider.prompts.count { GenreListPrompt.QUESTION in it })
         }
 
+    // A track whose artist row has punk, blues and folk, each from MusicBrainz alone, on [play].
+    private fun onlyMusicBrainz(play: Long = 1): TrackState {
+        val genres = listOf("punk", "blues", "folk").map { label(it, LabelSource.MUSICBRAINZ) }
+        val track = HomeFixtures.track()
+        return track.copy(
+            nowPlaying = track.nowPlaying.copy(play = play),
+            genres = TrackGenres(listOf(GenreRow(GenreLevel.ARTIST, "A", genres))),
+        )
+    }
+
+    @Test
+    fun `a genre the AI's list lacks is offered until its tap, which answers at once with no call (#1059)`() =
+        runTest {
+            knowing()
+            provider.reply = { n -> if (n == 1) PUNK_ONLY else "Its loud guitars are punk [MB1]." }
+            val notes = notes()
+            val track = onlyMusicBrainz()
+            notes.explain(track, "punk")
+            advanceUntilIdle()
+            assertEquals(2, provider.requests)
+            // The list known without blues: nothing said of it before its own button is tapped.
+            assertEquals(GenreReason.Offered, notes.reason(track, "blues").first())
+            notes.explain(track, "blues")
+            advanceUntilIdle()
+            assertEquals(GenreReason.Unavailable(Unavailability.NOT_LISTED), notes.reason(track, "blues").first())
+            assertEquals(2, provider.requests)
+            // Folk, which the list lacks too, is still offered: only a tap says it.
+            assertEquals(GenreReason.Offered, notes.reason(track, "folk").first())
+        }
+
+    @Test
+    fun `a genre tapped while the list is asked gets the list's answer once it comes without it (#1059)`() =
+        runTest {
+            knowing()
+            provider.reply = { n -> if (n == 1) PUNK_ONLY else "Its loud guitars are punk [MB1]." }
+            provider.streaming = 1.seconds
+            val notes = notes()
+            val track = onlyMusicBrainz()
+            notes.explain(track, "blues")
+            runCurrent()
+            assertEquals(GenreReason.Shown(InsightState.Writing("")), notes.reason(track, "blues").first())
+            advanceUntilIdle()
+            assertEquals(GenreReason.Unavailable(Unavailability.NOT_LISTED), notes.reason(track, "blues").first())
+            // The list only: no reason asked for blues, and folk, not tapped, offered.
+            assertEquals(1, provider.requests)
+            assertEquals(GenreReason.Offered, notes.reason(track, "folk").first())
+        }
+
+    @Test
+    fun `a tap on a genre the AI's list lacks is kept for the play, and forgotten by Clear history (#1059)`() =
+        runTest {
+            knowing()
+            provider.reply = { PUNK_ONLY }
+            val notes = notes()
+            val track = onlyMusicBrainz()
+            notes.explain(track, "blues")
+            advanceUntilIdle()
+            assertEquals(GenreReason.Unavailable(Unavailability.NOT_LISTED), notes.reason(track, "blues").first())
+            // The next play: offered again, the list kept, nothing asked.
+            val again = onlyMusicBrainz(play = 2)
+            assertEquals(GenreReason.Offered, notes.reason(again, "blues").first())
+            assertEquals(1, provider.requests)
+            // *Clear history*, the list read back from the cache (kept here): the tap is forgotten too.
+            notes.forget()
+            val reason = notes.reason(track, "blues")
+            reason.first()
+            advanceUntilIdle()
+            assertEquals(GenreReason.Offered, reason.first())
+            val list = checkNotNull(notes.aiGenres(track).first())
+            assertEquals(listOf("punk"), list.genres.map { it.identity })
+            assertEquals(1, provider.requests)
+        }
+
     // [cache], counting the reads and writes of cards.
     private class CountedCache(
         private val cache: PipelineCache,
@@ -403,6 +476,9 @@ class AppGenreListsTest {
     private companion object {
         /** The AI's genre list: punk, which MusicBrainz gives, and blues, which no source does. */
         const val LIST = """{"genres": ["Punk", "Blues"]}"""
+
+        /** The AI's genre list with punk alone (#1059). */
+        const val PUNK_ONLY = """{"genres": ["Punk"]}"""
 
         /** As many lists, and reasons, as the notes keep in memory (`AppGenreNotes`' `KEPT`). */
         const val MEMORY = 64
