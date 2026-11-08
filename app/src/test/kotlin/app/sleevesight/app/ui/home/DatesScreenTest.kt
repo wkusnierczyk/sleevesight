@@ -116,7 +116,12 @@ class DatesScreenTest {
         val cases =
             listOf(
                 DateSentence.Album("2014-07-29") to ("This album was released on 29 July 2014." to null),
-                DateSentence.FirstHere to ("This track was first released on this album." to null),
+                DateSentence.Album("1985", ReleaseKind.SINGLE) to
+                    ("This single was originally released in 1985." to null),
+                DateSentence.Album("1983-05", ReleaseKind.EP) to ("This EP was released in May 1983." to null),
+                DateSentence.FirstHere() to ("This track was first released on this album." to null),
+                DateSentence.FirstHere(ReleaseKind.SINGLE) to ("This track was first released on this single." to null),
+                DateSentence.FirstHere(ReleaseKind.EP) to ("This track was first released on this EP." to null),
                 DateSentence.First("1994-08-23", "Grace", null) to
                     ("This track was first released on Grace on 23 August 1994." to "Grace"),
                 DateSentence.First("1973", hooked, ReleaseKind.SINGLE) to
