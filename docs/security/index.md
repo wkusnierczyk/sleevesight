@@ -24,9 +24,9 @@ Sleevesight keeps your API keys on your phone and sends each only to its own ser
 
 Checked on 8 November 2026, on the code of release 0.6.2.
 
-- **Libraries:** no known vulnerability in any of the 182 libraries the app and its command-line tool use. The tools that build the app (its Gradle plugins) are now held at library versions with no known vulnerability. One known vulnerability is left there, of medium severity: the Kotlin version Gradle itself uses to compile the build’s own scripts, fixed with Gradle 9.9 and tracked in [#1108](https://github.com/wkusnierczyk/sleevesight/issues/1108); none of it goes into the app.
+- **Libraries:** no known vulnerability in any of the 182 libraries the app and its command-line tool use. The tools that build the app (its Gradle plugins) are now held at library versions with no known vulnerability. One known vulnerability is left there, of medium severity: the Kotlin version Gradle itself uses to compile the build's own scripts, fixed with Gradle 9.9 and tracked in [#1108](https://github.com/wkusnierczyk/sleevesight/issues/1108); none of it goes into the app.
 - **Secrets:** no API key or other credential in the code or anywhere in its history.
-- **Code checks:** Android lint’s security checks found nothing.
+- **Code checks:** Android lint's security checks found nothing.
 - **Security review:** no way found to reach your keys or your data in the new code. Two of the three low-risk things found in 0.6.1 are fixed: the build job that held more GitHub permission than it needed, and the guard on how links are put into text. The third, the slowdown a misbehaving player could cause with a very long album name, is smaller but not gone; finishing it is tracked on GitHub, in [Security: analysis and defenses](https://github.com/wkusnierczyk/sleevesight/milestone/12).
 
 ## What is checked
