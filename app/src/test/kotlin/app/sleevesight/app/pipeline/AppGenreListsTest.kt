@@ -35,6 +35,7 @@ import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.SourceSwitch
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.synthesis.GenreListPrompt
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.TestScope
@@ -64,6 +65,16 @@ class AppGenreListsTest {
     // A cache that says when each card was kept: the time given, or its own reading of [clock].
     private val cache = CardCache(clock = clock)
 
+    // [cache], whose kept cards are read only once [gate], while set, is open (#1059's review).
+    private var gate: CompletableDeferred<Unit>? = null
+    private val gated =
+        object : PipelineCache by cache {
+            override suspend fun keptCard(key: CardKey): KeptCard? {
+                gate?.await()
+                return cache.keptCard(key)
+            }
+        }
+
     // The hasher, which runs [during] once, at its next use, then hashes as `JvmHasher` (#1059's
     // review: a list completing while a tap works out its path).
     private val hasher =
@@ -86,7 +97,7 @@ class AppGenreListsTest {
                 resolver = TrackResolver { _, _ -> Resolution.NONE },
                 hasher = hasher,
                 ai = AiAccess(provider, Secret("key")),
-                cache = cache,
+                cache = gated,
             ),
         )
     private val settings = MutableStateFlow<Settings?>(Settings(aiProvider = ProviderId.ANTHROPIC))
@@ -522,6 +533,34 @@ class AppGenreListsTest {
             assertTrue((notes.reason(track, "punk").first() as GenreReason.Shown).state is InsightState.Written)
             assertEquals(2, provider.requests)
             assertEquals(GenreReason.Unavailable(Unavailability.NOT_LISTED), notes.reason(track, "folk").first())
+        }
+
+    @Test
+    fun `a tap as a panel's read of the cached list shows it writes the reason (#1059)`() =
+        runTest {
+            knowing()
+            provider.reply = { n -> if (n == 1) PUNK_ONLY else "Its loud guitars are punk [MB1]." }
+            val track = onlyMusicBrainz()
+            // The list asked and kept: one call.
+            notes().explain(track, "blues")
+            advanceUntilIdle()
+            assertEquals(1, provider.requests)
+            // A process later: the panel's read of the kept list under way, held, not yet shown.
+            val held = CompletableDeferred<Unit>()
+            gate = held
+            val later = notes()
+            assertEquals(GenreReason.Offered, later.reason(track, "punk").first())
+            runCurrent()
+            // It shows after the tap's step, before the tap's own work starts.
+            later.beforeLaunch = {
+                gate = null
+                held.complete(Unit)
+                testScheduler.advanceUntilIdle()
+            }
+            later.explain(track, "punk")
+            advanceUntilIdle()
+            assertTrue((later.reason(track, "punk").first() as GenreReason.Shown).state is InsightState.Written)
+            assertEquals(2, provider.requests)
         }
 
     // [cache], counting the reads and writes of cards.

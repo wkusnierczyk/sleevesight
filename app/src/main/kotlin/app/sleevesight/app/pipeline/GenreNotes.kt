@@ -954,48 +954,82 @@ class AppGenreNotes private constructor(
 
     // [explain]'s reason, or the AI's genre list before it.
     //
-    // A tap on a path that needs the list is recorded first (#1059's review), under the lock the list
-    // shows under ([publish]), for the play it was tapped in: so a list that shows after the record
-    // finds it (its reason followed, or its answer shown), and the path is worked out again only after
-    // it, from the lists as they are then, so a list that showed before the record is seen. The work
-    // starts after that.
+    // One step under the lock every list shows under ([showList]) and [forget] clears under (#1059's
+    // review): the path worked out from the lists as they are, the tap recorded for the play it was
+    // tapped in where the path needs the list ([tapped], and [waiting] for one asked), and the work it
+    // needs claimed (the reason's call, or the list's) and marked; the work starts after it, outside
+    // the lock. A list that shows before the step is seen by it; one that shows after finds the tap.
     private fun explainNow(
         track: TrackState,
         genre: String,
     ) {
         val made = parts.value ?: return
         val now = settings.value ?: return
-        val first = path(made, now, lists.value, track, genre)
-        val path =
-            if (first is ReasonPath.Listing || first is ReasonPath.NotListed) {
-                synchronized(lock) {
-                    tapped.update { (it + (heldKey(track) to genre)).toList().takeLast(KEPT).toSet() }
-                    if (first is ReasonPath.Listing) waitOn(first.key, genre)
-                }
-                path(made, now, lists.value, track, genre)
-            } else {
-                first
-            }
-        when (path) {
-            // Not shown, shown as failed, or past *Keep history for*; and not under way (nor claimed by
-            // the list that showed, `follow`).
-            is ReasonPath.Reason -> {
-                if (open(path.key) && writing.add(path.key)) {
-                    scope.launch(mark()) { write(reasonsOf(made), path.key, track, label(track, genre)) }
-                }
-            }
+        val start = synchronized(lock) { tap(made, now, track, genre) }
+        beforeLaunch()
+        when (start) {
+            is Start.Reason ->
+                scope.launch(start.work) { write(reasonsOf(made), start.key, track, label(track, genre)) }
 
-            // Asked, unless known or under way: the genre waits on it, recorded above (or now, for a
-            // list known at the tap that has just passed *Keep history for*, asked here after it).
+            is Start.Listing -> scope.launch(start.work) { list(made, start.key, track) }
+
+            null -> Unit
+        }
+    }
+
+    // What a tap starts once it is recorded ([tap]): [key]'s reason, or its list, marked as [work].
+    private sealed interface Start {
+        val key: CardKey
+        val work: CoroutineContext
+
+        class Reason(
+            override val key: CardKey,
+            override val work: CoroutineContext,
+        ) : Start
+
+        class Listing(
+            override val key: CardKey,
+            override val work: CoroutineContext,
+        ) : Start
+    }
+
+    // [explainNow]'s step under [lock]: [genre]'s tap recorded for [track] under [now], and what it
+    // starts, claimed; null for nothing.
+    private fun tap(
+        made: PipelineParts,
+        now: Settings,
+        track: TrackState,
+        genre: String,
+    ): Start? {
+        // Worked out again if a list showed meanwhile (one shown on this thread, which the lock lets in).
+        var known: Map<CardKey, Entry<GenreListState>>
+        var path: ReasonPath
+        do {
+            known = lists.value
+            path = path(made, now, known, track, genre)
+        } while (lists.value !== known)
+        if (path is ReasonPath.Listing || path is ReasonPath.NotListed) {
+            tapped.update { (it + (heldKey(track) to genre)).toList().takeLast(KEPT).toSet() }
+        }
+        return when (path) {
+            // Not shown, shown as failed, or past *Keep history for*; and not under way (nor claimed by
+            // the list that showed, [follow]).
+            is ReasonPath.Reason -> path.key.takeIf { open(it) && writing.add(it) }?.let { Start.Reason(it, mark()) }
+
+            // The genre waits on it; asked, unless known or under way.
             is ReasonPath.Listing -> {
-                if (first != path) synchronized(lock) { waitOn(path.key, genre) }
-                if (openList(path.key) && writing.add(path.key)) scope.launch(mark()) { list(made, path.key, track) }
+                waitOn(path.key, genre)
+                path.key.takeIf { openList(it) && writing.add(it) }?.let { Start.Listing(it, mark()) }
             }
 
             // The list known without it (#1059): its answer, recorded above, at once; no call.
-            else -> Unit
+            else -> null
         }
     }
+
+    /** For tests: runs between a tap's step under the lock and the work it starts ([explainNow]). */
+    @Volatile
+    internal var beforeLaunch: () -> Unit = {}
 
     // [genre] waiting on [key]'s list, followed by its reason once the list has it; under [lock].
     private fun waitOn(
@@ -1211,15 +1245,7 @@ class AppGenreNotes private constructor(
         val reasons = reasonsOf(made)
         var next: List<Pair<CardKey, String>> = emptyList()
         val show: (GenreListState, Instant) -> Unit = { state, at ->
-            publish(work) {
-                // Those it lacks show its answer for the plays they were tapped in ([tapped], #1059).
-                if (state is GenreListState.Listed) {
-                    val asked = waiting.value[key].orEmpty()
-                    waiting.update { it - key }
-                    next = asked.mapNotNull { genre -> follow(reasons, state, track, genre, at)?.let { it to genre } }
-                }
-                lists.update { it.with(key, Entry(state, at)) }
-            }
+            next = next + showList(work, reasons, key, track, Entry(state, at))
         }
         val asked = Asked(work, track, key, AiQuestion.GenreList)
         try {
@@ -1250,8 +1276,49 @@ class AppGenreNotes private constructor(
         } finally {
             writing.remove(key)
         }
-        // Each genre asked for, on the list, written; none after a *Clear history* since the list
-        // was asked, which drops their claims.
+        writeFollowing(work, reasons, next, track)
+    }
+
+    // [entry], [key]'s list for [track], shown if no *Clear history* came since [work] started, in place
+    // of one known, or, read from the cache by a panel ([kept], told to the log once shown), only where
+    // none is known; listed, the genres waiting on it handed on (#1059's
+    // review, from the network or the cache alike): those it has to their reasons, claimed and marked
+    // as being written before the list shows ([follow]), returned to write; those it lacks show its
+    // answer for the plays they were tapped in ([tapped]).
+    private fun showList(
+        work: CoroutineContext,
+        reasons: GenreReasons,
+        key: CardKey,
+        track: TrackState,
+        entry: Entry<GenreListState>,
+        kept: PipelineEvent? = null,
+    ): List<Pair<CardKey, String>> {
+        var next: List<Pair<CardKey, String>> = emptyList()
+        publish(work) {
+            val state = entry.state
+            if (state is GenreListState.Listed) {
+                val asked = waiting.value[key].orEmpty()
+                waiting.update { it - key }
+                val at = entry.writtenAt
+                next = asked.mapNotNull { genre -> follow(reasons, state, track, genre, at)?.let { it to genre } }
+            }
+            var added = false
+            lists.update { known ->
+                (if (kept != null && key in known) known else known.with(key, entry)).also { added = it !== known }
+            }
+            if (added && kept != null) tellKept(track, key, kept)
+        }
+        return next
+    }
+
+    // Each genre handed on by [key]'s list ([showList]), its reason written; none after a *Clear
+    // history* since [work] started, which drops their claims.
+    private suspend fun writeFollowing(
+        work: CoroutineContext,
+        reasons: GenreReasons,
+        next: List<Pair<CardKey, String>>,
+        track: TrackState,
+    ) {
         if (current(work)) {
             coroutineScope {
                 for ((reason, genre) in next) launch { write(reasons, reason, track, label(track, genre)) }
@@ -1382,12 +1449,10 @@ class AppGenreNotes private constructor(
             val work = coroutineContext
             val kept = listsOf(made).kept(key)?.takeIf { !expired(it.writtenAt) }
             if (kept != null) {
+                val reasons = reasonsOf(made)
                 val entry = Entry<GenreListState>(kept.state, kept.writtenAt ?: clock.now())
-                publish(work) {
-                    var added = false
-                    lists.update { (if (key in it) it else it.with(key, entry)).also { next -> added = next !== it } }
-                    if (added) tellKept(track, key, kept(track, key, AiQuestion.GenreList, kept.writtenAt))
-                }
+                val told = kept(track, key, AiQuestion.GenreList, kept.writtenAt)
+                writeFollowing(work, reasons, showList(work, reasons, key, track, entry, told), track)
             }
         }
     }

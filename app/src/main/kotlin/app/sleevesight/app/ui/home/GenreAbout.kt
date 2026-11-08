@@ -78,8 +78,17 @@ internal fun GenreAbout(
     // with the lines it was read from, those *Sources* lists.
     val asked = reasonedOn(track, genre, shown.lines)
     // A new subscription only when what the reason's key is made of changes, not on every state of
-    // the track (a source landing, labels joining).
-    val reason by remember(asked.normalized, asked.evidence?.fingerprint, asked.genres, genre, notes) {
+    // the track (a source landing, labels joining); and the play (#1059's review), which a tap on a
+    // genre the AI's list lacks is remembered for.
+    val reason by remember(
+        asked.normalized,
+        asked.nowPlaying.duration,
+        asked.nowPlaying.play,
+        asked.evidence?.fingerprint,
+        asked.genres,
+        genre,
+        notes,
+    ) {
         notes.reason(asked, genre)
     }.collectAsState(GenreReason.None)
     val named =
