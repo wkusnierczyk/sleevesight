@@ -22,10 +22,10 @@ import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.seconds
 
 /**
- * *Beat It* by Michael Jackson from *Thriller 25 Super Deluxe Edition* (#1065), against MusicBrainz's
- * searches as it answered them (`fixtures/http/musicbrainz-1065/`): a first page of 100 of 107
- * recordings, with the album's track 5 (`de798de6…`, 4:18, first released on *Thriller* in 1982)
- * and its track 14, *Beat It 2008* with Fergie (`9e5ae664…`, 4:11), and the search by 1982-11-30.
+ * *Beat It* by Michael Jackson from *Thriller 25 Super Deluxe Edition* (#1065), against a search
+ * cut down from MusicBrainz's answer (`fixtures/http/musicbrainz-1065/`): the album's track 5
+ * (`de798de6…`, 4:18, first released on *Thriller* in 1982) and its track 14, *Beat It 2008* with
+ * Fergie (`9e5ae664…`, 4:11, a length that fits too), each with only the releases that matter here.
  */
 class MusicBrainzReissueTest {
     private val net = ReplayNetClient("musicbrainz-1065")
