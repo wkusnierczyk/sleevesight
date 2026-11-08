@@ -90,4 +90,31 @@ class CheckRegexBracesTest {
         val source = "val s = Regex(" + "\"\"\"" + "\\{\\s*" + "\"\"\"\"" + ")"
         assertEquals(listOf(1 to """\{\s*""""), CheckRegexBraces.regexesInFile(source))
     }
+
+    @Test
+    fun `a brace in a string inside a template is not the template's end`() {
+        val q = "\"\"\""
+        // `Regex("""${Regex.escape("{")}""")`: the `{` in the template's string opens nothing, so the
+        // regex after it is still read.
+        val opening = "val a = Regex($q\${Regex.escape(\"{\")}$q)\nval b = Regex(\"later}\")"
+        assertEquals(listOf("A.kt:2: later}"), problems("A.kt" to opening))
+        // With `"}"`, the template does not end early and leave `")}` as the regex.
+        val closing = "val a = Regex($q\${Regex.escape(\"}\")}$q)"
+        assertEquals(emptyList(), problems("A.kt" to closing))
+        // A character and a comment in a template, too.
+        val other = "val a = Regex(\"\${listOf('{', /* } */ 'x').size}a\")\nval b = Regex(\"c}\")"
+        assertEquals(listOf("A.kt:2: c}"), problems("A.kt" to other))
+    }
+
+    @Test
+    fun `a literal toRegex is not read`() {
+        val source =
+            """
+            val a = "}".toRegex(RegexOption.LITERAL)
+            val b = "}".toRegex(setOf(RegexOption.IGNORE_CASE, RegexOption.LITERAL))
+            val c = "{".toRegex(RegexOption.IGNORE_CASE)
+            val d = "{".toRegex(setOf(RegexOption.IGNORE_CASE))
+            """.trimIndent()
+        assertEquals(listOf(3 to "{", 4 to "{"), CheckRegexBraces.regexesInFile(source))
+    }
 }

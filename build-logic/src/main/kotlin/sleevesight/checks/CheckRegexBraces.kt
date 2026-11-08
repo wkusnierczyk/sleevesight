@@ -21,7 +21,8 @@ import org.gradle.api.tasks.TaskAction
  * - the first argument of `Regex(…)` or `Pattern.compile(…)`: its string literals and `const val`s,
  *   in order; a call, a lambda or a variable in it adds nothing (nested brackets are skipped), and a
  *   call with `RegexOption.LITERAL` is not read;
- * - a string literal or a `const val` straight before `.toRegex(`;
+ * - a string literal or a `const val` straight before `.toRegex(`, unless its options hold
+ *   `RegexOption.LITERAL`;
  * - each element (literals and constants joined by `+`) of a `listOf`, `setOf`, `arrayOf`,
  *   `sequenceOf` or `mapOf` call that is mapped with a lambda calling `Regex(`, as in
  *   `listOf("a", "b").map { Regex(it) }`.
@@ -352,6 +353,31 @@ private class Lexer(
             else -> c.toString()
         }
 
+    // To the `}` that closes a `${…}` template, past the strings, characters and comments in it,
+    // whose braces are not the template's.
+    private fun skipTemplateExpression() {
+        var depth = 1
+        while (i < text.length) {
+            when {
+                text.startsWith("//", i) -> skipTo("\n")
+                text.startsWith("/*", i) -> skipBlockComment()
+                text.startsWith("\"\"\"", i) -> rawString()
+                text[i] == '"' -> plainString()
+                text[i] == '\'' -> skipCharLiteral()
+                text[i] == '{' -> {
+                    depth++
+                    advance()
+                }
+                text[i] == '}' -> {
+                    depth--
+                    if (depth == 0) return
+                    advance()
+                }
+                else -> advance()
+            }
+        }
+    }
+
     // A template at the current position, `$name` or `${…}`, added to [parts]; false if none.
     private fun template(parts: Parts): Boolean {
         if (text[i] != '$' || i + 1 >= text.length) return false
@@ -360,13 +386,7 @@ private class Lexer(
             next == '{' -> {
                 advance(2)
                 val start = i
-                var depth = 1
-                while (i < text.length) {
-                    if (text[i] == '{') depth++
-                    if (text[i] == '}') depth--
-                    if (depth == 0) break
-                    advance()
-                }
+                skipTemplateExpression()
                 parts.ref(text.substring(start, i))
                 advance()
                 true
@@ -425,7 +445,11 @@ private fun regexesIn(tokens: List<Token>): List<Pair<Int, List<Token>>> {
                 regexCall(tokens, i + 3)?.let(found::add)
             token.isName("toRegex") && tokens.getOrNull(i - 1).isPunct('.') -> {
                 val receiver = tokens.getOrNull(i - 2)
-                if (receiver != null && (receiver is Token.Str || receiver is Token.Name)) {
+                // `toRegex(RegexOption.LITERAL)` and `toRegex(setOf(…, LITERAL))` take the text as it is.
+                val literal =
+                    tokens.getOrNull(i + 1).isPunct('(') &&
+                        tokens.subList(i + 2, closing(tokens, i + 1)).any { it.isName("LITERAL") }
+                if (!literal && receiver != null && (receiver is Token.Str || receiver is Token.Name)) {
                     found += receiver.line to listOf(receiver)
                 }
             }
