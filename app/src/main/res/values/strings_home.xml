@@ -150,6 +150,12 @@
     <!-- The album's release, of the album's name whose year the album line shows: "This album was
          released on 29 July 2014." The date as above. -->
     <string name="home_dates_album">This album was released %1$s.</string>
+    <!-- The same, the release being played a single on MusicBrainz: "This single was originally
+         released in 1985." ("originally", since a single's remaster keeps the single's first date).
+         The date as above. -->
+    <string name="home_dates_album_single">This single was originally released %1$s.</string>
+    <!-- The same, the release being played an EP on MusicBrainz: "This EP was released in 1985." -->
+    <string name="home_dates_album_ep">This EP was released %1$s.</string>
     <!-- Where the track first came out: the release's title (in italics), then the date as above:
          "This track was first released on Grace on 23 August 1994."; a single's or an EP's named as
          such. -->
@@ -158,6 +164,11 @@
     <string name="home_dates_first_ep">This track was first released on the EP %1$s %2$s.</string>
     <!-- The track first came out on the album being played. -->
     <string name="home_dates_first_here">This track was first released on this album.</string>
+    <!-- The same, the release being played a single on MusicBrainz (its sentence above says "This
+         single was originally released …"). -->
+    <string name="home_dates_first_here_single">This track was first released on this single.</string>
+    <!-- The same, the release being played an EP on MusicBrainz ("This EP was released …" above). -->
+    <string name="home_dates_first_here_ep">This track was first released on this EP.</string>
     <!-- The track's first release with its title not known: the date alone, as above. -->
     <string name="home_dates_first_when">This track was first released %1$s.</string>
     <!-- For a cover, who recorded the song first and when (the date as above), and the release it
