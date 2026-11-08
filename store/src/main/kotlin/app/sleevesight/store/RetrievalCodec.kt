@@ -53,6 +53,10 @@ internal object RetrievalCodec {
      * fields too, made a miss the same way (MusicBrainz's extraction version 11).
      * A label no longer keeps its genre family either (#1020): an entry kept before it is read with
      * the field ignored (`GenreJson.family`), no miss, since the family changed nothing shown.
+     * Whether a rejection was only for want of what MusicBrainz resolves (#1069,
+     * [Rejection.withoutMusicBrainz]) is an optional field too, encoded only when true: an entry kept
+     * before it decodes without it, no miss, and its rejections read as before. A result made while
+     * MusicBrainz could not be reached, the only one whose row it changes, is never kept anyway.
      */
     const val FORMAT: Int = 7
 
@@ -84,7 +88,10 @@ internal object RetrievalCodec {
                 latency = result.latency.toIsoString(),
                 evidence = result.evidence.map(::draftJson),
                 unverified = result.unverified.map(::draftJson),
-                rejections = result.rejections.map { RejectionJson(it.subject, it.reason, it.scope.key) },
+                rejections =
+                    result.rejections.map {
+                        RejectionJson(it.subject, it.reason, it.scope.key, it.withoutMusicBrainz)
+                    },
                 genres =
                     result.genres.map {
                         GenreJson(
@@ -145,6 +152,7 @@ internal object RetrievalCodec {
                             it.subject,
                             it.reason,
                             requireNotNull(SCOPES[it.scope]) { "Unknown scope ${it.scope}" },
+                            it.withoutMusicBrainz,
                         )
                     },
                 // Kept results hold the artists' labels only: the track's and album's are asked apart.
@@ -371,5 +379,7 @@ internal object RetrievalCodec {
         val subject: String,
         val reason: String,
         val scope: String = Scope.SONG.key,
+        // Left out when false, and false in an entry kept before it (#1069).
+        val withoutMusicBrainz: Boolean = false,
     )
 }
