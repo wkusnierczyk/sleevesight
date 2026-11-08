@@ -76,8 +76,10 @@ class SourcesWithoutMusicBrainzScreenTest {
         )
     private val namesake = Rejection("Propellerheads", "“Propellerheads” is a disambiguation page", Scope.ARTIST)
 
-    private fun wikipedia(vararg rejections: Rejection) =
-        done(Outcome.Rejected(rejections.first().reason), rejections = rejections.toList())
+    private fun wikipedia(
+        vararg rejections: Rejection,
+        cached: Boolean = false,
+    ) = done(Outcome.Rejected(rejections.first().reason), cached = cached, rejections = rejections.toList())
 
     private fun state(
         musicBrainz: SourceState,
@@ -183,6 +185,20 @@ class SourcesWithoutMusicBrainzScreenTest {
         }
         show(state(done(Outcome.None), wikipedia(song, artist)), details) {
             assertEquals(listOf(name, text(R.string.home_source_rejected)), said("W"))
+        }
+    }
+
+    @Test
+    fun aMarkedRejectionKeptFromBeforeReadsAsBeforeDuringALaterOutage() {
+        // Kept, so made while MusicBrainz answered (a result made during an outage is never kept):
+        // the outage now is not why its match was rejected.
+        show(state(unreached, wikipedia(song, artist, cached = true))) {
+            assertEquals(listOf(name, text(R.string.home_source_none)), said("W"))
+            assertEquals(0, countText(unconfirmed))
+        }
+        show(state(unreached, wikipedia(song, artist, cached = true)), details) {
+            val kept = text(R.string.home_source_cached, text(R.string.home_source_rejected))
+            assertEquals(listOf(name, kept), said("W"))
         }
     }
 

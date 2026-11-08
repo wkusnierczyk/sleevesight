@@ -187,7 +187,8 @@ internal sealed interface ChipStatus {
     /**
      * A lookup done, with its [outcome], [cached] when kept from before. [withoutMusicBrainz] for a
      * rejected match whose every rejection was only for want of what MusicBrainz resolves, while
-     * MusicBrainz could not be reached (#1069, `SourceResult.withoutMusicBrainz`): its row says the match was not
+     * MusicBrainz could not be reached, in a result not kept from before (#1069,
+     * `SourceResult.withoutMusicBrainz`): its row says the match was not
      * confirmed without MusicBrainz, rather than that nothing was found.
      */
     data class Done(
@@ -256,7 +257,9 @@ internal fun sourceChips(
     return chips
 }
 
-// [state]'s status; a rejection only for want of MusicBrainz marked so while it was [unreached] (#1069).
+// [state]'s status; a rejection only for want of MusicBrainz marked so while it was [unreached] (#1069),
+// only in a result made now: one made while MusicBrainz could not be reached is never kept, so a kept
+// one was made while it answered, and the outage now is not why its match was rejected.
 private fun chipStatus(
     state: SourceState,
     unreached: Boolean,
@@ -265,7 +268,11 @@ private fun chipStatus(
         SourceState.Pending -> ChipStatus.Pending
         is SourceState.Failed -> ChipStatus.Failed
         is SourceState.Done ->
-            ChipStatus.Done(state.result.outcome, state.cached, unreached && state.result.withoutMusicBrainz)
+            ChipStatus.Done(
+                state.result.outcome,
+                state.cached,
+                unreached && !state.cached && state.result.withoutMusicBrainz,
+            )
     }
 
 private fun filtersOf(source: SourceId): Set<SourceId> =
