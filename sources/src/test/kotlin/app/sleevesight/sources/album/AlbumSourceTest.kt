@@ -527,6 +527,15 @@ class AlbumSourceTest {
         }
 
     @Test
+    fun `Last fm that fails is not asked again by the album's name without its edition`() =
+        runTest {
+            val lastFm = LastFm(failing = true)
+            val found = source(lastFm).lookup(query.copy(title = "Paris 1919 Remastered"))
+            assertTrue(found.unreachable)
+            assertEquals(listOf("Gordon Lightfoot" to "Paris 1919 Remastered"), lastFm.asked)
+        }
+
+    @Test
     fun `a lookup never searches the web, and says a search is due until one is kept`() =
         runTest {
             val web = Web()

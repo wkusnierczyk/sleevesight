@@ -218,15 +218,19 @@ class AlbumSource(
         // which Last.fm's page for the album does not have; then, until an album is confirmed, by the
         // names without an unbracketed one too, least stripped first, at most two (#1070:
         // "Decksandrumsandrockandroll 20th anniversary"; "Paris 1919 Remastered" is "Paris 1919", then
-        // "Paris").
+        // "Paris"). A request that fails ends them: Last.fm is down, and the next would wait as long.
         var title = Edition.stripEditions(query.title)
         var info: LastFmAlbum? = null
-        for (name in (listOf(title) + Edition.strippedNames(query.title)).distinct()) {
-            val answer = asking.read(client.albumInfo(query.artist, name), null)
+        val names = (listOf(title) + Edition.strippedNames(query.title)).distinct().iterator()
+        var failed = false
+        while (info == null && !failed && names.hasNext()) {
+            val name = names.next()
+            val lookup = client.albumInfo(query.artist, name)
+            val answer = asking.read(lookup, null)
+            failed = lookup is Lookup.Failed
             if (answer != null && isAlbum(answer, query, album, asking)) {
                 title = name
                 info = answer
-                break
             }
         }
         val sentences = info?.let { LastFmBio.sentences(it.summary) }

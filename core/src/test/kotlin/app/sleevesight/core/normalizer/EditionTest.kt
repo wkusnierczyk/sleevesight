@@ -52,6 +52,10 @@ class EditionTest {
                 "Sundown Special",
                 "Sundown 2011 Version",
                 "Sundown 2011 Edition",
+                // "Remasters" names a compilation, not an edition.
+                "Led Zeppelin Remasters",
+                "The Remasters",
+                "Sundown 2011 Remasters",
                 "Sundown 2011 Anniversary",
                 "Sundown Expanded",
                 "Remastered Sundown",

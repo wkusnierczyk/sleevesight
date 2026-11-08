@@ -4,7 +4,9 @@ package app.sleevesight.core.normalizer
  * A release name without the edition a player or a store adds to it in closing brackets
  * ("Rubber Soul (Remastered)" is "Rubber Soul"): for comparing the player's album with
  * MusicBrainz's release names, in the prompt's evidence (`PromptEvidence.restatesRelease`) and for
- * the header's year (#556).
+ * the header's year (#556); and, with an edition the name carries without brackets too ("… 20th
+ * anniversary", [strippedNames]), for the album's lookups by name (#1070): Wikipedia's article
+ * (`AlbumSource.titlesOf`) and Last.fm's `album.getInfo`.
  */
 object Edition {
     /**
@@ -241,12 +243,14 @@ object Edition {
     /** The dashes that may stand before an unbracketed edition: hyphen-minus, en dash, em dash. */
     private val DASHES = setOf('-', '\u2013', '\u2014')
 
-    /** The words an unbracketed edition suffix is made of, besides ordinals and years. */
+    /**
+     * The words an unbracketed edition suffix is made of, besides ordinals and years. Not "remasters":
+     * as a title's last word it names a compilation ("Led Zeppelin Remasters", "The Remasters").
+     */
     private val SUFFIX_WORDS =
         setOf(
             "remaster",
             "remastered",
-            "remasters",
             "digital",
             "deluxe",
             "super",
@@ -264,8 +268,8 @@ object Edition {
         )
 
     /** The words that alone make [SUFFIX_WORDS] an edition suffix. */
-    private val STRONG_SUFFIX_WORDS = setOf("remaster", "remastered", "remasters", "deluxe", "reissue", "reissued")
+    private val STRONG_SUFFIX_WORDS = setOf("remaster", "remastered", "deluxe", "reissue", "reissued")
 
     /** The words a year in an edition suffix stands next to. */
-    private val REMASTERS = setOf("remaster", "remastered", "remasters", "reissue", "reissued")
+    private val REMASTERS = setOf("remaster", "remastered", "reissue", "reissued")
 }
