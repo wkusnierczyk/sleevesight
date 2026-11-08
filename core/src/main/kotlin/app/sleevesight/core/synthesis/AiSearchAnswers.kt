@@ -7,8 +7,6 @@ import app.sleevesight.core.lyrics.LyricsLink
 import app.sleevesight.core.lyrics.pages
 import app.sleevesight.core.normalizer.AccentFolder
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.SerializationException
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -103,7 +101,10 @@ enum class ReleaseType {
 
 /** An answer as read ([AiSearchAnswers.read]). */
 sealed interface SearchReading {
-    /** Not a JSON object, even with a code fence stripped: the call failed. */
+    /**
+     * Not a JSON object, even with a code fence stripped, nor a one-key answer with a stray quote in
+     * its text ([JsonReplies.oneTextIn]): the call failed.
+     */
     data object Malformed : SearchReading
 
     /** A JSON object with nothing in it that passes the checks: the model found nothing. */
@@ -183,7 +184,7 @@ class AiSearchAnswers(
         pages: Collection<String>? = null,
         sources: List<CitedPage>? = null,
     ): SearchReading {
-        val answer = objectIn(reply) ?: return SearchReading.Malformed
+        val answer = objectIn(reply) ?: JsonReplies.oneTextIn(reply, kind) ?: return SearchReading.Malformed
         val found =
             if (kind == SearchKind.EXPLAIN) {
                 explanationIn(answer, sources.orEmpty(), artists)
@@ -342,9 +343,7 @@ class AiSearchAnswers(
         // Whether [text] has a link, a web address, or a mark of [MARKUP].
         private fun linksOrMarks(text: String): Boolean = text.any { it in MARKUP } || ADDRESS.containsMatchIn(text)
 
-        private val lenient = Json { ignoreUnknownKeys = true }
         private val DATE = Regex("(\\d{4})(?:-(\\d{2})(?:-(\\d{2}))?)?")
-        private const val FENCE = "```"
         private const val MONTHS = 12
 
         /**
@@ -352,26 +351,7 @@ class AiSearchAnswers(
          * fence around it stripped (with its language, ```` ```json ````), and, with words before or
          * after it, from its first `{` to its last `}`.
          */
-        fun objectIn(reply: String): JsonObject? {
-            var text = reply.trim()
-            if (text.startsWith(FENCE)) {
-                text = text.substringAfter('\n', "").trimEnd().removeSuffix(FENCE)
-            }
-            val start = text.indexOf('{')
-            val end = text.lastIndexOf('}')
-            if (start < 0 || end < start) return null
-            return try {
-                lenient.parseToJsonElement(text.substring(start, end + 1)) as? JsonObject
-            } catch (
-                @Suppress("SwallowedException") e: SerializationException,
-            ) {
-                null
-            } catch (
-                @Suppress("SwallowedException") e: IllegalArgumentException,
-            ) {
-                null
-            }
-        }
+        fun objectIn(reply: String): JsonObject? = JsonReplies.objectIn(reply)
 
         /**
          * [text] when it is a partial ISO date (`YYYY`, `YYYY-MM`, `YYYY-MM-DD`) of a real day, month
