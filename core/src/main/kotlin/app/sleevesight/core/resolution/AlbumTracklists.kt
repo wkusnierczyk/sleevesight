@@ -37,10 +37,7 @@ class AlbumTracklists(
             when (val releases = recording?.let { musicBrainz.recordingReleases(it) }) {
                 is Lookup.Found -> {
                     val listed = releases.value.releases
-
-                    fun inGroups(groups: Set<String>) =
-                        choose(listed.filter { (it.releaseGroup?.mbid ?: it.mbid) in groups })
-                    (inGroups(setOf(group)) ?: others.firstNotNullOfOrNull { inGroups(setOf(it)) })
+                    (inGroup(listed, group) ?: others.firstNotNullOfOrNull { inGroup(listed, it) })
                         ?.let { Lookup.Found(it) }
                 }
                 is Lookup.Failed -> releases
@@ -69,13 +66,20 @@ class AlbumTracklists(
             is Lookup.Found -> {
                 val listed = releases.value.releases
                 groups
-                    .mapNotNull { group -> choose(listed.filter { (it.releaseGroup?.mbid ?: it.mbid) == group }) }
+                    .mapNotNull { inGroup(listed, it) }
                     .singleOrNull()
                     ?.let { withTracks(musicBrainz.tracklist(it.mbid)) }
             }
             is Lookup.Failed -> releases
             Lookup.NotFound, null -> null
         }
+
+    // The release of the recording's [listed] releases in [group] to show, by [choose]; null when it is
+    // on none there (a release with no group counts as its own).
+    private fun inGroup(
+        listed: List<MbRelease>,
+        group: String,
+    ): MbRelease? = choose(listed.filter { (it.releaseGroup?.mbid ?: it.mbid) == group })
 
     // [tracklist], but not found when it lists no track.
     private fun withTracks(tracklist: Lookup<MbTracklist>): Lookup<MbTracklist> =
