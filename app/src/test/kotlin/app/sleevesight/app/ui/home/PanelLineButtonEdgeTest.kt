@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.hasAnyAncestor
@@ -26,6 +27,7 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -40,6 +42,7 @@ import app.sleevesight.app.session.PlaybackStatus
 import app.sleevesight.app.ui.home.HomeFixtures.done
 import app.sleevesight.app.ui.home.HomeFixtures.normalizer
 import app.sleevesight.app.ui.home.HomeFixtures.track
+import app.sleevesight.app.ui.theme.Panel
 import app.sleevesight.app.ui.theme.SleevesightTheme
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
@@ -67,7 +70,9 @@ import kotlin.time.Duration.Companion.milliseconds
 /**
  * A button at the end of a panel's line ends where the panel's *Close* ends (#1068): in the *Lyrics*
  * panel while the song is read about, *Stop*'s text ends where *Close*'s does, within a pixel, at the
- * default font size and twice it, and *Stop* is still at least 48 dp to touch, to its end. With
+ * default font size and twice it, and *Stop* is still at least 48 dp to touch, to its end. An
+ * outlined *Retry*, whose edge is its outline, and any *Retry* in a panel without *Close* keep to
+ * the line's end, as the panel's rule does. With
  * `SLEEVESIGHT_PICTURES` set, the panel is also saved there as a picture, as
  * `RewrittenNotePicturesTest` saves its own.
  */
@@ -189,7 +194,42 @@ class PanelLineButtonEdgeTest {
         }
     }
 
+    // The right edge, in the root, of the node [matcher] finds.
+    private fun end(matcher: SemanticsMatcher): Float =
+        compose.onNode(matcher).fetchSemanticsNode().let { it.positionInRoot.x + it.size.width }
+
+    @Test
+    fun anOutlinedRetryOrOneInAPanelWithoutCloseKeepsToTheLinesEnd() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity {
+                it.setContent {
+                    SleevesightTheme(darkTheme = false) {
+                        Column(Modifier.padding(16.dp)) {
+                            Panel(AnnotatedString("Closable"), "closable", onClose = {}) {
+                                RetryLine("Failed.", "Wikipedia", {}, Modifier.testTag(OUTLINED), outlined = true)
+                            }
+                            Panel(AnnotatedString("Unclosable"), "unclosable", onClose = null) {
+                                RetryLine("Failed.", "MusicBrainz", {}, Modifier.testTag(PLAIN))
+                            }
+                        }
+                    }
+                }
+            }
+            compose.waitForIdle()
+            for (line in listOf(OUTLINED, PLAIN)) {
+                assertEquals(
+                    "$line: Retry ends where its line does",
+                    end(hasTestTag(line)),
+                    end(hasTestTag(RETRY_TAG) and hasAnyAncestor(hasTestTag(line))),
+                    1f,
+                )
+            }
+        }
+    }
+
     private companion object {
+        const val OUTLINED = "outlined"
+        const val PLAIN = "plain"
         const val MIN_TOUCH = 48
         const val END = "end"
     }

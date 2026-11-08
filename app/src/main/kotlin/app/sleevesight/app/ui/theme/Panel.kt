@@ -101,7 +101,10 @@ internal fun Panel(
         }
         Column(modifier = Modifier.padding(end = CONTENT_END), verticalArrangement = Arrangement.spacedBy(spacing)) {
             PanelRule()
-            CompositionLocalProvider(LocalPanelEndReach provides CONTENT_END) { content() }
+            // Only where there is *Close* to line up with.
+            CompositionLocalProvider(LocalPanelEndReach provides if (onClose != null) CONTENT_END else 0.dp) {
+                content()
+            }
         }
     }
 }
@@ -169,7 +172,8 @@ private fun PanelClose(
  * with the title's on the left; a button's label already stands its own padding in from the button's
  * edge, so within that inset it ended its label short of *Close*'s. The button keeps its size (and
  * its touch target), and is laid out as that much narrower, so the line's text keeps its room. [reach]
- * is [LocalPanelEndReach]'s; outside a panel, none, and nothing changes.
+ * is [LocalPanelEndReach]'s, or none for an outlined button, whose edge is its outline; outside a
+ * panel, or in one without *Close*, none, and nothing changes.
  */
 internal fun Modifier.reachPanelEnd(reach: Dp): Modifier =
     if (reach == 0.dp) {
@@ -187,7 +191,8 @@ internal fun Modifier.reachPanelEnd(reach: Dp): Modifier =
 
 /**
  * How far a panel's content stops short of the panel's heading row at the end ([Panel]), for a
- * button at the end of a line to reach back ([reachPanelEnd]); none outside a panel.
+ * button at the end of a line to reach back ([reachPanelEnd]); none outside a panel, nor in one
+ * without *Close*, where there is nothing to line up with.
  */
 internal val LocalPanelEndReach = staticCompositionLocalOf { 0.dp }
 

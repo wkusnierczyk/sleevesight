@@ -110,9 +110,10 @@ internal fun RetryLine(
  * A button at the end of a line, as *Retry* is ([RetryLine]) and *Search with AI*'s *Stop* (#773):
  * a text button's look, [text] in the primary colour, with the action named for a screen reader
  * ([action]: "Double-tap to …"), which a Material `TextButton` cannot be given; at least 48 dp to
- * touch; in a panel, it ends its label where the panel's *Close* ends its own ([reachPanelEnd],
+ * touch; in a panel with *Close*, it ends its label where *Close* ends its own ([reachPanelEnd],
  * #1068). [modifier] goes on the button (a test tag, a focus requester). [outlined], with an
- * outline, as *Search with AI* is (#786: *Retry* under a genre's failed definition). [ai], with the
+ * outline, as *Search with AI* is (#786: *Retry* under a genre's failed definition), whose edge is
+ * the outline, so it keeps to the line's end, with the panel's rule. [ai], with the
  * **AI** mark ([AiLabel]), for a tap that calls the AI service (#624: *Retry* under a song's, an
  * artist's or an album's insight that failed, #522).
  */
@@ -131,7 +132,7 @@ internal fun LineButton(
         contentAlignment = Alignment.Center,
         modifier =
             Modifier
-                .reachPanelEnd(LocalPanelEndReach.current)
+                .reachPanelEnd(if (outlined) 0.dp else LocalPanelEndReach.current)
                 .then(modifier)
                 .minimumInteractiveComponentSize()
                 .clip(CircleShape)
