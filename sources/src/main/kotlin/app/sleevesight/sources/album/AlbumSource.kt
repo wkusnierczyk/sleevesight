@@ -41,13 +41,16 @@ import kotlin.time.Instant
  * - **Wikidata and Wikipedia** (with [AlbumQuery.wikipedia]): the album's item, the one MusicBrainz
  *   links, else the one whose MusicBrainz release group (P436) is the album's, else, for an album
  *   MusicBrainz does not name (or could not be asked about), the article the album's name finds
- *   (`Title (Artist album)`, `Title (album)`, `Title`) whose item is an album ([ALBUM_CLASSES]) by
+ *   (`Title (Artist album)`, `Title (album)`, `Title`; as given, then without its editions, bracketed
+ *   or not, [titlesOf]) whose item is an album ([ALBUM_CLASSES]) by
  *   the artist (a performer, P175, of the artist's name); then the item's record label and producers,
  *   templated (CC0), and its English article's lead, at most three sentences naming the album,
  *   verbatim and linked (D1, CC BY-SA 4.0), as Wikipedia's lines on a track are
  *   ([WikipediaSource.sentences]).
  * - **Last.fm** (with [AlbumQuery.lastFm] and the user's key, [lastFm], #885): the album
- *   (`album.getInfo`, by its name without an edition, `Edition.stripEditions`), when its
+ *   (`album.getInfo`, by its name without a bracketed edition, `Edition.stripEditions`, then, when
+ *   that finds no album, by the names without an unbracketed one too, least stripped first,
+ *   `Edition.strippedNames`), when its
  *   MusicBrainz id shows it is the album asked for ([isAlbum]: never by its names alone); its wiki
  *   summary's sentences, taken as an artist's bio's are ([LastFmBio]: whole, of a quotable length, at most three, none
  *   from a page several share, without the "Read more" link and the licence note), verbatim and
@@ -212,17 +215,25 @@ class AlbumSource(
         // With no release group, no answer could be confirmed ([isAlbum]): Last.fm is not asked.
         if (query.group == null) return emptyList()
         // Without the edition a player or store adds (#885: "Abbey Road (Remastered)" is "Abbey Road"),
-        // which Last.fm's page for the album does not have.
-        val title = Edition.stripEditions(query.title)
-        val info = asking.read(client.albumInfo(query.artist, title), null)
-        val sentences =
-            if (info != null &&
-                isAlbum(info, query, album, asking)
-            ) {
-                LastFmBio.sentences(info.summary)
-            } else {
-                null
+        // which Last.fm's page for the album does not have; then, until an album is confirmed, by the
+        // names without an unbracketed one too, least stripped first, at most two (#1070:
+        // "Decksandrumsandrockandroll 20th anniversary"; "Paris 1919 Remastered" is "Paris 1919", then
+        // "Paris"). A request that fails ends them: Last.fm is down, and the next would wait as long.
+        var title = Edition.stripEditions(query.title)
+        var info: LastFmAlbum? = null
+        val names = (listOf(title) + Edition.strippedNames(query.title)).distinct().iterator()
+        var failed = false
+        while (info == null && !failed && names.hasNext()) {
+            val name = names.next()
+            val lookup = client.albumInfo(query.artist, name)
+            val answer = asking.read(lookup, null)
+            failed = lookup is Lookup.Failed
+            if (answer != null && isAlbum(answer, query, album, asking)) {
+                title = name
+                info = answer
             }
+        }
+        val sentences = info?.let { LastFmBio.sentences(it.summary) }
         return sentences.orEmpty().map { sentence ->
             EvidenceDraft(
                 SourceId.LASTFM,
@@ -385,13 +396,9 @@ class AlbumSource(
         said: (String) -> String,
     ): String? = ids.mapNotNull { named[it] }.takeIf { it.isNotEmpty() }?.let { said(EvidenceText.list(it)) }
 
-    // The article titles an album would have, most specific first.
-    private fun titlesOf(query: AlbumQuery): List<String> {
-        val title = query.title.trim()
-        if (title.isEmpty()) return emptyList()
-        val artist = query.artist.trim()
-        return listOfNotNull(artist.takeIf { it.isNotEmpty() }?.let { "$title ($it album)" }, "$title (album)", title)
-    }
+    // The article titles an album would have, most specific first: by its name as given, then by
+    // its names without its editions (#1070, `Edition.strippedNames`), least stripped first.
+    private fun titlesOf(query: AlbumQuery): List<String> = titlesOf(query.title, query.artist)
 
     // The album's key in the table: its release group, else its folded names; with the sources asked
     // (Last.fm only with its key).
@@ -412,15 +419,36 @@ class AlbumSource(
 
     companion object {
         /**
+         * The article titles an album named [album] by [artist] would have, most specific first
+         * (`Title (Artist album)`, `Title (album)`, `Title`): by the name as given, then by the names
+         * without its editions, bracketed or not, least stripped first ([Edition.strippedNames],
+         * #1070: "Decksandrumsandrockandroll 20th anniversary" is "Decksandrumsandrockandroll";
+         * "Paris 1919 Remastered" is "Paris 1919", then "Paris"). The by-name check (an album item by
+         * the artist) still decides the match, the first such title's album taken.
+         */
+        fun titlesOf(
+            album: String,
+            artist: String,
+        ): List<String> {
+            val given = album.trim()
+            if (given.isEmpty()) return emptyList()
+            val by = artist.trim().takeIf { it.isNotEmpty() }
+            return (listOf(given) + Edition.strippedNames(given))
+                .flatMap { title -> listOfNotNull(by?.let { "$title ($it album)" }, "$title (album)", title) }
+        }
+
+        /**
          * An album's lines in the artist-level table (#238), by [keyOf]'s key: MusicBrainz's,
          * Wikidata's, Wikipedia's and Last.fm's, so kept for the shortest of their lifetimes.
          * Extraction 2 (#885): Last.fm's lines, and its switch in the key; an entry of 1 lacks them.
          * 3 (#850): Wikipedia's lines without the brackets a dropped pronunciation left empty.
+         * 4 (#1070): the album's name also tried without an unbracketed edition ("… 20th
+         *   anniversary"), whose article or Last.fm page an entry of 3 may have missed.
          */
         val PART: ArtistPart =
             ArtistPart(
                 "album.evidence",
-                extraction = 3,
+                extraction = 4,
                 encoding = 1,
                 sources = setOf(SourceId.MUSICBRAINZ, SourceId.WIKIPEDIA, SourceId.WIKIDATA, SourceId.LASTFM),
             )
