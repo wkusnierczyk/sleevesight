@@ -13,13 +13,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -96,9 +99,9 @@ internal fun Panel(
                 SubtitledHeading(title, subtitle, tag, closeModifier, onClose, actions)
             }
         }
-        Column(modifier = Modifier.padding(end = 8.dp), verticalArrangement = Arrangement.spacedBy(spacing)) {
+        Column(modifier = Modifier.padding(end = CONTENT_END), verticalArrangement = Arrangement.spacedBy(spacing)) {
             PanelRule()
-            content()
+            CompositionLocalProvider(LocalPanelEndReach provides CONTENT_END) { content() }
         }
     }
 }
@@ -160,6 +163,35 @@ private fun PanelClose(
 }
 
 /**
+ * A button at the end of a panel's line (`LineButton`: *Retry*, *Search with AI*'s *Stop*) reaching
+ * past the content's end into the panel's own end padding, as the heading's *Close* does (#1068):
+ * the content ends [CONTENT_END] short of where the heading's row does, so that its text lines up
+ * with the title's on the left; a button's label already stands its own padding in from the button's
+ * edge, so within that inset it ended its label short of *Close*'s. The button keeps its size (and
+ * its touch target), and is laid out as that much narrower, so the line's text keeps its room. [reach]
+ * is [LocalPanelEndReach]'s; outside a panel, none, and nothing changes.
+ */
+internal fun Modifier.reachPanelEnd(reach: Dp): Modifier =
+    if (reach == 0.dp) {
+        this
+    } else {
+        layout { measurable, constraints ->
+            val placeable = measurable.measure(constraints)
+            // Placed at the start of a narrower slot: it runs past the slot's end, on the right or,
+            // right to left, on the left.
+            layout((placeable.width - reach.roundToPx()).coerceAtLeast(0), placeable.height) {
+                placeable.placeRelative(0, 0)
+            }
+        }
+    }
+
+/**
+ * How far a panel's content stops short of the panel's heading row at the end ([Panel]), for a
+ * button at the end of a line to reach back ([reachPanelEnd]); none outside a panel.
+ */
+internal val LocalPanelEndReach = staticCompositionLocalOf { 0.dp }
+
+/**
  * The rule a panel draws under its heading ([Panel]), for a panel's content to draw where it sets a
  * part apart: what *Search with AI* found, under what the sources gave (#773); a genre unfolded
  * under *Genres*' chips (#786).
@@ -168,6 +200,10 @@ private fun PanelClose(
 internal fun PanelRule(modifier: Modifier = Modifier) {
     HorizontalDivider(modifier, color = MaterialTheme.colorScheme.onSurface.copy(alpha = RULE))
 }
+
+// How much further in from the panel's end its content ends than its heading's row (where *Close*
+// is): the content's text then ends as far in from the edge as it starts.
+private val CONTENT_END = 8.dp
 
 // Above and below a panel's title.
 private val HEADING_PADDING = 10.dp
