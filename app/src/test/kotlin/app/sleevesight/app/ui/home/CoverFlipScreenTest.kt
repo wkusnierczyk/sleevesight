@@ -59,7 +59,7 @@ class CoverFlipScreenTest {
 
     private fun text(id: Int) = app.getString(id)
 
-    private val looked = mutableListOf<String>()
+    private val looked = mutableListOf<String?>()
 
     private fun disc(
         vararg titles: String,
@@ -140,7 +140,7 @@ class CoverFlipScreenTest {
         shown(kindOfBlue) {
             assertEquals(text(R.string.home_art), description())
             assertEquals(text(R.string.home_art_show_tracklist), action())
-            assertEquals(emptyList<String>(), looked)
+            assertEquals(emptyList<String?>(), looked)
             cover().performClick()
             compose.onNodeWithTag(COVER_BACK_TAG).assertExists()
             assertEquals(text(R.string.home_tracklist), description())
