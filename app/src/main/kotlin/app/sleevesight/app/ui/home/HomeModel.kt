@@ -187,7 +187,7 @@ internal sealed interface ChipStatus {
     /**
      * A lookup done, with its [outcome], [cached] when kept from before. [withoutMusicBrainz] for a
      * rejected match whose every rejection was only for want of what MusicBrainz resolves, while
-     * MusicBrainz could not be reached, in a result not kept from before (#1069,
+     * MusicBrainz could not be reached (its row and the resolution), in a result not kept from before (#1069,
      * `SourceResult.withoutMusicBrainz`): its row says the match was not
      * confirmed without MusicBrainz, rather than that nothing was found.
      */
@@ -236,8 +236,12 @@ internal fun sourceChips(
         }
     val inLanguage = track.inLanguage
     val language = inLanguage?.sources.orEmpty()
+    // MusicBrainz could not be reached for the lookups shown: its row says so, and so does the
+    // resolution they were checked against. A retry of another source alone resolves again while
+    // MusicBrainz's row stays as it was, so a resolution that answered means it was not why (#1069).
     val unreached =
-        (track.sources[SourceId.MUSICBRAINZ] as? SourceState.Done)?.result?.outcome == Outcome.Unreachable
+        (track.sources[SourceId.MUSICBRAINZ] as? SourceState.Done)?.result?.outcome == Outcome.Unreachable &&
+            track.resolution?.outcome == Outcome.Unreachable
     for ((source, state) in looked) {
         chips += SourceChip(source, chipStatus(state, unreached), filtersOf(source))
         language[source]?.let {

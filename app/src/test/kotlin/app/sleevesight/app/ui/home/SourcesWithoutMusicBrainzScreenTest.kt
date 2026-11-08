@@ -31,6 +31,7 @@ import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.sources.Rejection
+import app.sleevesight.core.sources.Resolution
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -81,11 +82,15 @@ class SourcesWithoutMusicBrainzScreenTest {
         cached: Boolean = false,
     ) = done(Outcome.Rejected(rejections.first().reason), cached = cached, rejections = rejections.toList())
 
+    // The track with MusicBrainz's and Wikipedia's states, and the [resolution] Wikipedia's was checked
+    // against: MusicBrainz's own outcome, by default.
     private fun state(
-        musicBrainz: SourceState,
+        musicBrainz: SourceState.Done,
         wikipedia: SourceState,
+        resolution: Resolution = Resolution(outcome = musicBrainz.result.outcome),
     ): TrackState =
         track(sources = mapOf(SourceId.MUSICBRAINZ to musicBrainz, SourceId.WIKIPEDIA to wikipedia), evidence = null)
+            .copy(resolution = resolution)
 
     private val unreached = done(Outcome.Unreachable)
 
@@ -199,6 +204,20 @@ class SourcesWithoutMusicBrainzScreenTest {
         show(state(unreached, wikipedia(song, artist, cached = true)), details) {
             val kept = text(R.string.home_source_cached, text(R.string.home_source_rejected))
             assertEquals(listOf(name, kept), said("W"))
+        }
+    }
+
+    @Test
+    fun aRetryOfWikipediaAloneAfterMusicBrainzAnswersReadsAsBefore() {
+        // Both could not be reached; Wikipedia's Retry resolved again, and MusicBrainz answered with
+        // no recording, while its row stays as it was: the outage is not why the match was rejected.
+        val answered = Resolution(outcome = Outcome.None)
+        show(state(unreached, wikipedia(song, artist), answered)) {
+            assertEquals(listOf(name, text(R.string.home_source_none)), said("W"))
+            assertEquals(0, countText(unconfirmed))
+        }
+        show(state(unreached, wikipedia(song, artist), answered), details) {
+            assertEquals(listOf(name, text(R.string.home_source_rejected)), said("W"))
         }
     }
 
