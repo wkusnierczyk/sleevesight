@@ -25,20 +25,31 @@ object Edition {
     fun stripEditions(release: String): String = strip(release, ::isEdition)
 
     /**
-     * [release] less its editions, bracketed ones as [stripEditions] takes them and a trailing
-     * unbracketed one as [stripEditionSuffix] does, in turn while either takes something: "Abbey Road
-     * - 2019 Remaster (Deluxe)" is "Abbey Road". For the lookups by name (#1070), which try the name
-     * as given first: Wikipedia's article and Last.fm's `album.getInfo`, where a name kept with its
-     * edition finds nothing. Not for the header's year, which compares the name with MusicBrainz's
-     * releases, whose titles keep such words.
+     * The names [release] may have without its editions, least stripped first, each other than
+     * [release] and never empty; at most two. Bracketed editions go as [stripEditions] takes them and a
+     * trailing unbracketed one as [stripEditionSuffix] does, in turn while either takes something:
+     * first with every year and ordinal kept as the name's own, then with those an edition takes too
+     * ("2011 Remaster", "20th anniversary"). So "Paris 1919 Remastered" is "Paris 1919", then
+     * "Paris"; "Abbey Road - 2019 Remaster (Deluxe)" is "Abbey Road - 2019", then "Abbey Road";
+     * "Decksandrumsandrockandroll 20th anniversary" is "Decksandrumsandrockandroll" only. For the
+     * lookups by name (#1070), which try the name as given first, then these in order, until one is
+     * the album: Wikipedia's article and Last.fm's `album.getInfo`, where a name kept with its edition
+     * finds nothing. Not for the header's year, which compares the name with MusicBrainz's releases,
+     * whose titles keep such words.
      */
-    fun stripAllEditions(release: String): String {
-        var name = release.trim()
-        while (true) {
-            val less = stripEditionSuffix(stripEditions(name))
-            if (less == name) return name
-            name = less
-        }
+    fun strippedNames(release: String): List<String> {
+        val given = release.trim()
+        return listOf(false, true)
+            .map { numbers ->
+                var name = given
+                while (true) {
+                    val less = stripEditionSuffix(stripEditions(name), numbers)
+                    if (less == name) break
+                    name = less
+                }
+                name
+            }.distinct()
+            .filter { it != given && it.isNotEmpty() }
     }
 
     /**
@@ -53,8 +64,13 @@ object Edition {
      * elsewhere is the name's own ("The 1975 Deluxe Edition" is "The 1975"), and so is a
      * title that is only such words ("Deluxe", "Super Deluxe Edition"); "1999 Remastered" is "1999".
      * The longest suffix goes that leaves a word before it other than [SUFFIX_WORDS] and dashes.
+     * Without [numbers], every year and ordinal is the name's own: "Paris 1919 Remastered" is "Paris
+     * 1919", where with them it is "Paris".
      */
-    fun stripEditionSuffix(release: String): String {
+    fun stripEditionSuffix(
+        release: String,
+        numbers: Boolean = true,
+    ): String {
         val name = release.trim()
         val starts = name.indices.filter { i -> !name[i].isWhitespace() && (i == 0 || name[i - 1].isWhitespace()) }
         val words =
@@ -69,7 +85,7 @@ object Edition {
         // The first word of the longest suffix that leaves a word of the name's own before it.
         val first =
             (1 until words.size).firstOrNull { at ->
-                isSuffix(words.subList(at, words.size)) &&
+                isSuffix(words.subList(at, words.size), numbers) &&
                     words.subList(0, at).any { word -> word !in SUFFIX_WORDS && word.any { it !in DASHES } }
             }
         if (first == null) return name
@@ -80,10 +96,14 @@ object Edition {
             .trimEnd()
     }
 
-    // Whether [words] (lowercase) are an edition suffix, as [stripEditionSuffix] says.
-    private fun isSuffix(words: List<String>): Boolean {
+    // Whether [words] (lowercase) are an edition suffix, as [stripEditionSuffix] says, with or without
+    // [numbers].
+    private fun isSuffix(
+        words: List<String>,
+        numbers: Boolean,
+    ): Boolean {
         val dated = words.indices.any { i -> words[i] == "anniversary" && i > 0 && ORDINAL.matches(words[i - 1]) }
-        return words.indices.all { i -> isSuffixWord(words, i) } &&
+        return words.indices.all { i -> words[i] in SUFFIX_WORDS || (numbers && isEditionNumber(words, i)) } &&
             (
                 words.any { it in STRONG_SUFFIX_WORDS } ||
                     ("anniversary" in words && (dated || "edition" in words)) ||
@@ -91,18 +111,17 @@ object Edition {
             )
     }
 
-    // Whether [words]' word [i] may be in an edition suffix: one of [SUFFIX_WORDS]; a year only next to
-    // a remaster or a reissue ("2011 Remaster", "Remastered 2009", "2011 Digital Remaster"); an
-    // ordinal only before "anniversary". A year or an ordinal elsewhere is the name's own ("The 1975
-    // Deluxe Edition" is "The 1975").
-    private fun isSuffixWord(
+    // Whether [words]' word [i] is a number an edition suffix may take: a year next to a remaster or a
+    // reissue ("2011 Remaster", "Remastered 2009", "2011 Digital Remaster"), an ordinal before
+    // "anniversary". A year or an ordinal elsewhere is the name's own ("The 1975 Deluxe Edition" is
+    // "The 1975", "The 1975 10th Anniversary Edition" is "The 1975" too).
+    private fun isEditionNumber(
         words: List<String>,
         i: Int,
     ): Boolean {
         val word = words[i]
         val next = words.getOrNull(i + 1)
         return when {
-            word in SUFFIX_WORDS -> true
             YEAR.matches(word) ->
                 next in REMASTERS ||
                     (next == "digital" && words.getOrNull(i + 2) in REMASTERS) ||

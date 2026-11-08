@@ -62,12 +62,37 @@ class EditionTest {
     }
 
     @Test
-    fun `all editions go, bracketed and unbracketed, in turn, while a name is left`() {
-        assertEquals("Abbey Road", Edition.stripAllEditions("Abbey Road - 2019 Remaster (Deluxe)"))
-        assertEquals("Sundown", Edition.stripAllEditions(" Sundown (Deluxe) - 2011 Remaster "))
-        assertEquals("Sundown (Live)", Edition.stripAllEditions("Sundown (Live) - Remastered"))
-        assertEquals("Deluxe", Edition.stripAllEditions("Deluxe (Remastered)"))
-        assertEquals("Sundown", Edition.stripAllEditions("Sundown"))
+    fun `without numbers, every year and ordinal is the name's own`() {
+        assertEquals("Paris 1919", Edition.stripEditionSuffix("Paris 1919 Remastered", numbers = false))
+        assertEquals("Sundown Live 2011", Edition.stripEditionSuffix("Sundown Live 2011 Remaster", numbers = false))
+        assertEquals("Sundown", Edition.stripEditionSuffix("Sundown Deluxe Edition", numbers = false))
+        val kept = "Decksandrumsandrockandroll 20th anniversary"
+        assertEquals(kept, Edition.stripEditionSuffix(kept, numbers = false))
+    }
+
+    @Test
+    fun `the names without editions go least stripped first, bracketed and unbracketed in turn`() {
+        val names =
+            mapOf(
+                // A year next to a remaster may be the title's own: kept first, then taken.
+                "Paris 1919 Remastered" to listOf("Paris 1919", "Paris"),
+                "The 1975 Remastered" to listOf("The 1975", "The"),
+                "The 1975 Deluxe Edition" to listOf("The 1975"),
+                "The 1975 10th Anniversary Edition" to listOf("The 1975 10th", "The 1975"),
+                "Sundown Live 2011 Remaster" to listOf("Sundown Live 2011", "Sundown Live"),
+                "Decksandrumsandrockandroll 20th anniversary" to listOf("Decksandrumsandrockandroll"),
+                "1999 Remastered" to listOf("1999"),
+                "Abbey Road - 2019 Remaster (Deluxe)" to listOf("Abbey Road - 2019", "Abbey Road"),
+                " Sundown (Deluxe) - 2011 Remaster " to listOf("Sundown (Deluxe) - 2011", "Sundown"),
+                "Sundown (Live) - Remastered" to listOf("Sundown (Live)"),
+                "Deluxe (Remastered)" to listOf("Deluxe"),
+                // Nothing to strip, or nothing left: no names.
+                "Sundown" to emptyList(),
+                "Deluxe" to emptyList(),
+                "Super Deluxe Edition" to emptyList(),
+                " " to emptyList(),
+            )
+        for ((name, stripped) in names) assertEquals(stripped, Edition.strippedNames(name), name)
         // The bracketed ones only, as before, for the header's year.
         assertEquals("Abbey Road - 2019 Remaster", Edition.stripEditions("Abbey Road - 2019 Remaster (Deluxe)"))
     }

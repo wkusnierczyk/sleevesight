@@ -303,6 +303,12 @@ class AlbumSourceTest {
             listOf("Sundown (Remastered) (album)", "Sundown (Remastered)", "Sundown (album)", "Sundown"),
             AlbumSource.titlesOf(" Sundown (Remastered) ", " "),
         )
+        // A year next to a remaster may be the name's own: the name with it first, then without.
+        assertEquals(
+            listOf("Paris 1919 Remastered (album)", "Paris 1919 Remastered", "Paris 1919 (album)", "Paris 1919") +
+                listOf("Paris (album)", "Paris"),
+            AlbumSource.titlesOf("Paris 1919 Remastered", ""),
+        )
         // A year of the name's own stays in it.
         assertEquals(
             listOf("The 1975 Deluxe Edition (album)", "The 1975 Deluxe Edition", "The 1975 (album)", "The 1975"),
@@ -677,13 +683,22 @@ class AlbumSourceTest {
                     if (album == "Sundown") Lookup.Found(lastFmSundown) else Lookup.NotFound
                 }
             val found = source(lastFm).lookup(query.copy(title = "Sundown (Deluxe) - 2011 Remaster"))
-            assertEquals(listOf("Sundown (Deluxe) - 2011 Remaster", "Sundown"), asked)
+            assertEquals(listOf("Sundown (Deluxe) - 2011 Remaster", "Sundown (Deluxe) - 2011", "Sundown"), asked)
             assertTrue(found.drafts.filter { it.source == SourceId.LASTFM }.all { "wiki of “Sundown” says" in it.text })
             assertTrue(citesLastFm(found))
             // A name the first request finds is not asked again without its edition.
             asked.clear()
             source(lastFm).lookup(query.copy(title = "Sundown (Remastered)"))
             assertEquals(listOf("Sundown"), asked)
+            // The least stripped name first, and the first that is the album ends the requests.
+            val paris = mutableListOf<String>()
+            val parisLastFm =
+                LastFmAlbumInfo { _, album ->
+                    paris += album
+                    if (album == "Paris 1919") Lookup.Found(lastFmSundown) else Lookup.NotFound
+                }
+            assertTrue(citesLastFm(source(parisLastFm).lookup(query.copy(title = "Paris 1919 Remastered"))))
+            assertEquals(listOf("Paris 1919 Remastered", "Paris 1919"), paris)
         }
 
     // A clock the test moves.

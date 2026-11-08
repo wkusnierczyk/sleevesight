@@ -49,7 +49,8 @@ import kotlin.time.Instant
  *   ([WikipediaSource.sentences]).
  * - **Last.fm** (with [AlbumQuery.lastFm] and the user's key, [lastFm], #885): the album
  *   (`album.getInfo`, by its name without a bracketed edition, `Edition.stripEditions`, then, when
- *   that finds no album, without an unbracketed one too, `Edition.stripAllEditions`), when its
+ *   that finds no album, by the names without an unbracketed one too, least stripped first,
+ *   `Edition.strippedNames`), when its
  *   MusicBrainz id shows it is the album asked for ([isAlbum]: never by its names alone); its wiki
  *   summary's sentences, taken as an artist's bio's are ([LastFmBio]: whole, of a quotable length, at most three, none
  *   from a page several share, without the "Read more" link and the licence note), verbatim and
@@ -214,11 +215,13 @@ class AlbumSource(
         // With no release group, no answer could be confirmed ([isAlbum]): Last.fm is not asked.
         if (query.group == null) return emptyList()
         // Without the edition a player or store adds (#885: "Abbey Road (Remastered)" is "Abbey Road"),
-        // which Last.fm's page for the album does not have; then, when no album was confirmed, without
-        // an unbracketed one too (#1070: "Decksandrumsandrockandroll 20th anniversary").
+        // which Last.fm's page for the album does not have; then, until an album is confirmed, by the
+        // names without an unbracketed one too, least stripped first, at most two (#1070:
+        // "Decksandrumsandrockandroll 20th anniversary"; "Paris 1919 Remastered" is "Paris 1919", then
+        // "Paris").
         var title = Edition.stripEditions(query.title)
         var info: LastFmAlbum? = null
-        for (name in listOf(title, Edition.stripAllEditions(query.title)).distinct()) {
+        for (name in (listOf(title) + Edition.strippedNames(query.title)).distinct()) {
             val answer = asking.read(client.albumInfo(query.artist, name), null)
             if (answer != null && isAlbum(answer, query, album, asking)) {
                 title = name
@@ -390,7 +393,7 @@ class AlbumSource(
     ): String? = ids.mapNotNull { named[it] }.takeIf { it.isNotEmpty() }?.let { said(EvidenceText.list(it)) }
 
     // The article titles an album would have, most specific first: by its name as given, then by
-    // its name without its editions (#1070, `Edition.stripAllEditions`), when that differs.
+    // its names without its editions (#1070, `Edition.strippedNames`), least stripped first.
     private fun titlesOf(query: AlbumQuery): List<String> = titlesOf(query.title, query.artist)
 
     // The album's key in the table: its release group, else its folded names; with the sources asked
@@ -413,10 +416,11 @@ class AlbumSource(
     companion object {
         /**
          * The article titles an album named [album] by [artist] would have, most specific first
-         * (`Title (Artist album)`, `Title (album)`, `Title`): by the name as given, then by the name
-         * without its editions, bracketed or not ([Edition.stripAllEditions], #1070:
-         * "Decksandrumsandrockandroll 20th anniversary" is "Decksandrumsandrockandroll"), when that
-         * differs. The by-name check (an album item by the artist) still decides the match.
+         * (`Title (Artist album)`, `Title (album)`, `Title`): by the name as given, then by the names
+         * without its editions, bracketed or not, least stripped first ([Edition.strippedNames],
+         * #1070: "Decksandrumsandrockandroll 20th anniversary" is "Decksandrumsandrockandroll";
+         * "Paris 1919 Remastered" is "Paris 1919", then "Paris"). The by-name check (an album item by
+         * the artist) still decides the match, the first such title's album taken.
          */
         fun titlesOf(
             album: String,
@@ -425,8 +429,7 @@ class AlbumSource(
             val given = album.trim()
             if (given.isEmpty()) return emptyList()
             val by = artist.trim().takeIf { it.isNotEmpty() }
-            return listOf(given, Edition.stripAllEditions(given))
-                .distinct()
+            return (listOf(given) + Edition.strippedNames(given))
                 .flatMap { title -> listOfNotNull(by?.let { "$title ($it album)" }, "$title (album)", title) }
         }
 
