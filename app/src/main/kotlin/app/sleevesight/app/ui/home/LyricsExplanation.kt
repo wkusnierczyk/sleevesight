@@ -58,7 +58,7 @@ internal fun AiExplanation(answer: SearchAnswer.Explanation) {
     val flagged = SpanStyle(color = colours.onSurfaceVariant, fontStyle = FontStyle.Italic)
     val byId = remember(answer) { answer.pages.associateBy { it.id } }
     val sentences = answer.grounded.paragraphs.flatten()
-    val runs = remember(answer) { sentences.zip(shown(sentences.map { it.text })) }
+    val runs = remember(answer) { sentences.zip(shown(sentences.map { it.text }, checked = true)) }
     val uncited = stringResource(R.string.home_cite_none)
     val spoken =
         runs.joinToString(
