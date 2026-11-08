@@ -287,6 +287,59 @@ class AlbumSourceTest {
         }
 
     @Test
+    fun `an album's article is looked for by its name as given, then without an edition, bracketed or not`() {
+        assertEquals(
+            listOf(
+                "Decksandrumsandrockandroll 20th anniversary (Propellerheads album)",
+                "Decksandrumsandrockandroll 20th anniversary (album)",
+                "Decksandrumsandrockandroll 20th anniversary",
+                "Decksandrumsandrockandroll (Propellerheads album)",
+                "Decksandrumsandrockandroll (album)",
+                "Decksandrumsandrockandroll",
+            ),
+            AlbumSource.titlesOf("Decksandrumsandrockandroll 20th anniversary", "Propellerheads"),
+        )
+        assertEquals(
+            listOf("Sundown (Remastered) (album)", "Sundown (Remastered)", "Sundown (album)", "Sundown"),
+            AlbumSource.titlesOf(" Sundown (Remastered) ", " "),
+        )
+        // No edition, or only edition words: the name as given alone.
+        assertEquals(listOf("Sundown (album)", "Sundown"), AlbumSource.titlesOf("Sundown", ""))
+        assertEquals(listOf("Deluxe (album)", "Deluxe"), AlbumSource.titlesOf("Deluxe", ""))
+        assertEquals(emptyList(), AlbumSource.titlesOf(" ", "Propellerheads"))
+    }
+
+    @Test
+    fun `an album whose name carries an unbracketed edition finds its article by the name without it`() =
+        runTest {
+            val decks =
+                WdEntity(
+                    "Q1",
+                    "Decksandrumsandrockandroll",
+                    "Decksandrumsandrockandroll",
+                    mapOf(Wd.INSTANCE_OF to listOf("Q482994"), Wd.PERFORMER to listOf("Q3")),
+                )
+            val title = "Decksandrumsandrockandroll"
+            val wikipedia =
+                Wikipedia(
+                    pages = mapOf(title to "Q1"),
+                    leads = mapOf(title to "Decksandrumsandrockandroll is the only studio album by Propellerheads."),
+                )
+            val source =
+                AlbumSource(
+                    Groups(emptyMap()),
+                    Wikidata(mapOf("Q1" to decks), labels = mapOf("Q3" to "Propellerheads")),
+                    WikipediaClient(wikipedia),
+                    names,
+                )
+            val found = source.lookup(AlbumQuery("$title 20th anniversary", "Propellerheads", group = null))
+            assertEquals(
+                listOf(SourceId.WIKIPEDIA to "Decksandrumsandrockandroll is the only studio album by Propellerheads."),
+                found.drafts.map { it.source to it.text },
+            )
+        }
+
+    @Test
     fun `an album of another artist's of the same name is not taken`() =
         runTest {
             val wikipedia =
@@ -606,6 +659,26 @@ class AlbumSourceTest {
             val found = source(lastFm).lookup(query.copy(title = "Sundown (Remastered)"))
             assertEquals(listOf("Gordon Lightfoot" to "Sundown"), lastFm.asked)
             assertTrue(found.drafts.filter { it.source == SourceId.LASTFM }.all { "wiki of “Sundown” says" in it.text })
+        }
+
+    @Test
+    fun `Last fm is asked without an unbracketed edition when the name without brackets finds no album`() =
+        runTest {
+            // Last.fm's page is the album's name alone; any other name finds nothing.
+            val asked = mutableListOf<String>()
+            val lastFm =
+                LastFmAlbumInfo { _, album ->
+                    asked += album
+                    if (album == "Sundown") Lookup.Found(lastFmSundown) else Lookup.NotFound
+                }
+            val found = source(lastFm).lookup(query.copy(title = "Sundown (Deluxe) - 2011 Remaster"))
+            assertEquals(listOf("Sundown (Deluxe) - 2011 Remaster", "Sundown"), asked)
+            assertTrue(found.drafts.filter { it.source == SourceId.LASTFM }.all { "wiki of “Sundown” says" in it.text })
+            assertTrue(citesLastFm(found))
+            // A name the first request finds is not asked again without its edition.
+            asked.clear()
+            source(lastFm).lookup(query.copy(title = "Sundown (Remastered)"))
+            assertEquals(listOf("Sundown"), asked)
         }
 
     // A clock the test moves.

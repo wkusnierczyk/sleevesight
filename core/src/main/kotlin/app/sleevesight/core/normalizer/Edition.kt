@@ -25,6 +25,75 @@ object Edition {
     fun stripEditions(release: String): String = strip(release, ::isEdition)
 
     /**
+     * [release] less its editions, bracketed ones as [stripEditions] takes them and a trailing
+     * unbracketed one as [stripEditionSuffix] does, in turn while either takes something: "Abbey Road
+     * - 2019 Remaster (Deluxe)" is "Abbey Road". For the lookups by name (#1070), which try the name
+     * as given first: Wikipedia's article and Last.fm's `album.getInfo`, where a name kept with its
+     * edition finds nothing. Not for the header's year, which compares the name with MusicBrainz's
+     * releases, whose titles keep such words.
+     */
+    fun stripAllEditions(release: String): String {
+        var name = release.trim()
+        while (true) {
+            val less = stripEditionSuffix(stripEditions(name))
+            if (less == name) return name
+            name = less
+        }
+    }
+
+    /**
+     * [release] less a trailing edition its title carries without brackets (#1070), and any dash
+     * before it ("-", "–", "—"), as long as a name is left: "Decksandrumsandrockandroll 20th
+     * anniversary", "Abbey Road – 2019 Remaster", "Rubber Soul Deluxe Edition" and "Sundown
+     * Remastered" are the names before. Narrowly, whole words only: the suffix is words of
+     * [SUFFIX_WORDS], ordinals ("20th") and years, at least one of them a remaster, a reissue or
+     * "deluxe", or an "anniversary" with an ordinal, a year or "edition", or an "edition" with a word
+     * before it. So "Happy Anniversary", "Abbey Road Edition" and "Sundown Live" are kept, and so is a
+     * title that is only such words ("Deluxe", "Super Deluxe Edition"); "1999 Remastered" is "1999".
+     * The longest suffix goes that leaves a word before it other than [SUFFIX_WORDS] and dashes.
+     */
+    fun stripEditionSuffix(release: String): String {
+        val name = release.trim()
+        val starts = name.indices.filter { i -> !name[i].isWhitespace() && (i == 0 || name[i - 1].isWhitespace()) }
+        val words =
+            starts.mapIndexed { n, start ->
+                val end = starts.getOrNull(n + 1) ?: name.length
+                name
+                    .substring(start, end)
+                    .trim()
+                    .lowercase()
+                    .replace('\u2019', '\'')
+            }
+        // The first word of the longest suffix that leaves a word of the name's own before it.
+        val first =
+            (1 until words.size).firstOrNull { at ->
+                isSuffix(words.subList(at, words.size)) &&
+                    words.subList(0, at).any { word -> word !in SUFFIX_WORDS && word.any { it !in DASHES } }
+            }
+        if (first == null) return name
+        return name
+            .substring(0, starts[first])
+            .trimEnd()
+            .dropLastIf { it in DASHES }
+            .trimEnd()
+    }
+
+    // Whether [words] (lowercase) are an edition suffix, as [stripEditionSuffix] says.
+    private fun isSuffix(words: List<String>): Boolean {
+        val dated = words.any { ORDINAL.matches(it) || YEAR.matches(it) }
+        return words.all { it in SUFFIX_WORDS || ORDINAL.matches(it) || YEAR.matches(it) } &&
+            (
+                words.any { it in STRONG_SUFFIX_WORDS } ||
+                    ("anniversary" in words && (dated || "edition" in words)) ||
+                    words.indexOf("edition").let { it > 0 }
+            )
+    }
+
+    // [this] less its last character when [drop] accepts it.
+    private inline fun String.dropLastIf(drop: (Char) -> Boolean): String =
+        if (isNotEmpty() && drop(last())) dropLast(1) else this
+
+    /**
      * Whether a bracketed [part] ("(Remastered 2019)") names an edition: one of [EDITION_WORDS] as a
      * whole word, or a year alone ("(2011)"), and none of [OTHER_RECORDINGS] ("(Live 2011 Remaster)"
      * is not). Whole words, case and accents aside only as far as lowercasing goes: "(Specialist)" is
@@ -128,4 +197,34 @@ object Edition {
         )
 
     private val YEAR = Regex("(1[89]|20)[0-9]{2}")
+
+    private val ORDINAL = Regex("[0-9]{1,3}(st|nd|rd|th)")
+
+    /** The dashes that may stand before an unbracketed edition: hyphen-minus, en dash, em dash. */
+    private val DASHES = setOf('-', '\u2013', '\u2014')
+
+    /** The words an unbracketed edition suffix is made of, besides ordinals and years. */
+    private val SUFFIX_WORDS =
+        setOf(
+            "remaster",
+            "remastered",
+            "remasters",
+            "digital",
+            "deluxe",
+            "super",
+            "expanded",
+            "special",
+            "limited",
+            "collector's",
+            "collectors",
+            "bonus",
+            "anniversary",
+            "edition",
+            "version",
+            "reissue",
+            "reissued",
+        )
+
+    /** The words that alone make [SUFFIX_WORDS] an edition suffix. */
+    private val STRONG_SUFFIX_WORDS = setOf("remaster", "remastered", "remasters", "deluxe", "reissue", "reissued")
 }
