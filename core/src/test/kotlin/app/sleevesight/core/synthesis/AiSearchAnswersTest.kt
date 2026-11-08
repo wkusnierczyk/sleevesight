@@ -327,4 +327,33 @@ class AiSearchAnswersTest {
         assertEquals(SearchReading.NothingUsable, definition("{\"definition\": 3}"))
         assertEquals(SearchReading.Malformed, definition("Rock is a genre."))
     }
+
+    @Test
+    fun aDefinitionWithUnescapedDoubleQuotesInItIsReadAndStillChecked() {
+        // #1088: a quoted name, not escaped, is no valid JSON; the definition is kept.
+        assertEquals(
+            SearchReading.Found(SearchAnswer.Definition("Rap rock, or \"rapcore\", joins rapped vocals with rock.")),
+            definition("{\"definition\": \"Rap rock, or \"rapcore\", joins rapped vocals with rock.\"}"),
+        )
+        assertEquals(
+            SearchReading.NothingUsable,
+            definition("{\"definition\": \"Rap rock, or \"rapcore\", as allmusic.com says.\"}"),
+        )
+        assertEquals(
+            SearchReading.Malformed,
+            definition("{\"definition\": \"Rap \"rock\".\", \"source\": \"x\"}"),
+        )
+        // A quote after two backslashes is not escaped: the second key is still found.
+        assertEquals(
+            SearchReading.Malformed,
+            definition("""{"definition": "Rock "music" ends with \\", "source": "x"}"""),
+        )
+        // After one backslash it is: the text holds no second key.
+        assertEquals(
+            SearchReading.Found(SearchAnswer.Definition("Rock \"music\" is \", \"loud\": so.")),
+            definition("""{"definition": "Rock "music" is \", \"loud\": so."}"""),
+        )
+        // Only the one-text answers are recovered: a broken date stays broken.
+        assertEquals(SearchReading.Malformed, answers.read(SearchKind.DATES, "{\"album_date\": \"19\"99\"}"))
+    }
 }

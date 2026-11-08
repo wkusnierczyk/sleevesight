@@ -100,7 +100,8 @@ object AiSearchPrompt {
     /**
      * The version of [SearchKind.DEFINITION]'s prompt (#786), its own: a definition is kept by the
      * genre, not the track, and its prompt changes apart from the track's three. Not raised for the
-     * rule on dates ([InsightPrompt.dateRule], #957), as `InsightPrompt.VERSION` was not.
+     * rule on dates ([InsightPrompt.dateRule], #957), as `InsightPrompt.VERSION` was not, nor for the
+     * rule on quotation marks ([ExplainPrompt.QUOTE_RULE], #1088): a definition kept is as good.
      */
     const val DEFINITION_VERSION: Int = 1
 
@@ -111,7 +112,10 @@ object AiSearchPrompt {
      */
     const val WEB_VERSION: Int = 1
 
-    /** The version of [SearchKind.EXPLAIN]'s prompts (#908, [ExplainPrompt]), their own. */
+    /**
+     * The version of [SearchKind.EXPLAIN]'s prompts (#908, [ExplainPrompt]), their own. Not raised for
+     * the rule on quotation marks ([ExplainPrompt.QUOTE_RULE], #1088): an explanation kept is as good.
+     */
     const val EXPLAIN_VERSION: Int = 1
 
     /**
@@ -232,7 +236,8 @@ object AiSearchPrompt {
      *   is one, and never a URL made up from the title: a link the model has not seen is the likeliest
      *   thing for it to invent, and the app makes no request to check it (#728).
      * - [SearchKind.DEFINITION]: a short, neutral definition in plain text, its dates in [dates]' form
-     *   ([InsightPrompt.dateRule], #957), prose as [SearchKind.EXPLAIN]'s ([ExplainPrompt]) is; the
+     *   ([InsightPrompt.dateRule], #957), its quotations in single typographic quotes
+     *   ([ExplainPrompt.QUOTE_RULE], #1088), prose as [SearchKind.EXPLAIN]'s ([ExplainPrompt]) is; the
      *   others are JSON the app reads, their dates partial ISO dates it writes in its own form.
      */
     fun rules(
@@ -269,6 +274,7 @@ object AiSearchPrompt {
                     "- definition: two or three sentences, neutral, in the style of the opening of an encyclopedia " +
                         "article about the genre: what it is, where and when it arose, and what marks its sound.",
                     "- Plain text only: no Markdown, no HTML, no lists, no links or web addresses, no line breaks.",
+                    ExplainPrompt.QUOTE_RULE,
                     InsightPrompt.dateRule(dates),
                     "- About the genre in general: say nothing about any track, recording, artist or listener.",
                 )

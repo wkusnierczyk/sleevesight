@@ -40,10 +40,19 @@ object ExplainPrompt {
             "a line of the lyrics in full."
 
     /**
+     * The rule on quotation marks (#1088): a quoted word or phrase in single typographic quotes,
+     * which the reply's JSON string takes as they are, where a `"` left unescaped breaks the reply.
+     * A genre's definition, the other answer in prose, takes it too ([AiSearchPrompt.rules]).
+     */
+    const val QUOTE_RULE: String =
+        "- Put a quoted word or phrase in single typographic quotes, \u2018like this\u2019, never in " +
+            "double quotes."
+
+    /**
      * The rules of the explanation: the insight's on citations and the evidence, in the app's ids;
      * its length; a page's reading attributed to it ([InsightPrompt.WEB_READING_RULE]); the lyrics
-     * ([LYRICS_RULE]); plain text; dates in [dates]' form ([InsightPrompt.dateRule], #957); and `{}`
-     * when no page says what the song is about.
+     * ([LYRICS_RULE]) and quotations ([QUOTE_RULE]); plain text; dates in [dates]' form
+     * ([InsightPrompt.dateRule], #957); and `{}` when no page says what the song is about.
      */
     fun rules(dates: DateForm = DateForm.APP): List<String> =
         listOf(
@@ -56,6 +65,7 @@ object ExplainPrompt {
             "- Write about this song, by this artist; leave out a page about another song or another artist's " +
                 "version.",
             LYRICS_RULE,
+            QUOTE_RULE,
             InsightPrompt.PLAIN_TEXT_RULE + " No links or web addresses.",
             InsightPrompt.dateRule(dates),
             "- If no page says what the song is about, reply {}.",
