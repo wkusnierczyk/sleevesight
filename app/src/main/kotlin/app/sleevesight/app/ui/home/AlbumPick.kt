@@ -6,7 +6,8 @@ import app.sleevesight.core.sources.ReleaseDate
 
 /**
  * The album the player's name for it names, by its release groups, for the back of Home's cover
- * (#984): its group, with the others its name names; or several and none picked.
+ * (#984): its group, with the others its name names; or several and none picked, which the playing
+ * recording may tell apart.
  */
 internal sealed interface AlbumPick {
     /**
@@ -22,8 +23,19 @@ internal sealed interface AlbumPick {
         fun key(recording: String?): TracklistKey = TracklistKey(group, recording, others)
     }
 
-    /** Several groups, none of them told apart by the player's year or by the earliest date. */
-    data object Ambiguous : AlbumPick
+    /**
+     * Several [groups], none of them told apart by the player's year or by the earliest date: the one
+     * of them the playing recording is on is shown, when only one is (#1078).
+     */
+    data class Ambiguous(
+        val groups: List<String>,
+    ) : AlbumPick {
+        /**
+         * The tracklist to ask for with the playing [recording], of the one of [groups] it is on; null
+         * when the recording is not known, so nothing tells them apart.
+         */
+        fun key(recording: String?): TracklistKey? = recording?.let { TracklistKey(null, it, groups) }
+    }
 
     companion object {
         /**
@@ -36,8 +48,8 @@ internal sealed interface AlbumPick {
          * any has; of those, the one with the earliest named release, an undated one after every dated
          * one. The others go with it, the album-type ones first, then by their earliest named release,
          * so the lookup takes the first of them the playing recording is on when the one picked does not
-         * hold it. [Ambiguous] when two share that earliest date, or all are undated; null when it names
-         * none.
+         * hold it. [Ambiguous] when two share that earliest date, or all are undated, with the groups that
+         * share it; null when it names none.
          */
         fun of(
             album: String,
@@ -70,11 +82,12 @@ internal sealed interface AlbumPick {
             // A group's earliest named release, an undated group after every dated one.
             fun earliest(group: String): String = named.getValue(group).mapNotNull { it.date }.minOrNull() ?: UNDATED
             val first = pool.keys.minOf(::earliest)
-            val group = pool.keys.singleOrNull { earliest(it) == first }
+            val tied = pool.keys.filter { earliest(it) == first }
+            val group = tied.singleOrNull()
             // The album-type groups first, as the pick prefers them, then by date: the lookup takes the
             // first of them the playing recording is on.
             val others = named.keys.filter { it != group }.sortedWith(compareBy({ it !in albums }, ::earliest))
-            return if (group == null) Ambiguous else Groups(group, others)
+            return if (group == null) Ambiguous(tied) else Groups(group, others)
         }
 
         // MusicBrainz's primary type of an album's release group, as [CardEntity.Album.of] reads it.

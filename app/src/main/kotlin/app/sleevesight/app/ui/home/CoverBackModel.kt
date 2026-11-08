@@ -38,8 +38,9 @@ internal sealed interface CoverBack {
 
     /**
      * MusicBrainz has several albums of the name the player gives, and nothing tells which one is
-     * playing (#1062): "MusicBrainz reports several albums of this name for this artist. Sleevesight
-     * could not decide which one this is." ([albumPick]).
+     * playing (#1062), the playing recording on none of them, on several, or not known (#1078):
+     * "MusicBrainz reports several albums of this name for this artist. Sleevesight could not decide
+     * which one this is." ([albumPick]).
      */
     data object Ambiguous : CoverBack
 
@@ -97,21 +98,28 @@ internal fun albumIdentity(header: NowPlaying): String? =
 
 /**
  * The tracklist to ask for [track] beside [header] (#984): the album's group ([albumPick]), with the
- * others its name names, and the playing recording ([playingRecording]), whose release is shown; null
- * with no group, or several and none picked.
+ * others its name names, and the playing recording ([playingRecording]), whose release is shown; of
+ * several and none picked, the one the recording is on (#1078). Null with no group, or several and no
+ * recording known.
  */
 internal fun tracklistKey(
     track: TrackState?,
     header: NowPlaying,
-): TracklistKey? = (albumPick(track, header) as? AlbumPick.Groups)?.key(playingRecording(track))
+): TracklistKey? =
+    when (val pick = albumPick(track, header)) {
+        is AlbumPick.Groups -> pick.key(playingRecording(track))
+        is AlbumPick.Ambiguous -> pick.key(playingRecording(track))
+        null -> null
+    }
 
 /**
  * What the back shows for [track] beside [header] (#984), with [musicBrainzOn] as *Sources* has it,
  * and the tracklists looked up, [states]: MusicBrainz off first; then the track's own MusicBrainz state,
  * as *Dates* reads it ([NoDates.of]), until it is found; then the album's tracklist as looked up for
  * the playing recording ([tracklistKey]), looking until it is asked; when the album's name names several
- * groups and none is picked, [CoverBack.Ambiguous] ([albumPick]). While a new song of the album is
- * still looked up, the album's tracklist last found shows, its mark moved, rather than "Looking".
+ * groups and none is picked, the one of them the recording is on, else [CoverBack.Ambiguous]
+ * ([albumPick]). While a new song of the album is still looked up, the album's tracklist last found
+ * shows, its mark moved, rather than "Looking" (not for several none picked, which may differ).
  */
 internal fun coverBack(
     track: TrackState?,
@@ -128,19 +136,22 @@ internal fun coverBack(
         NoDates.NO_DATES ->
             when (val pick = albumPick(track, header)) {
                 null -> CoverBack.NotFound
-                AlbumPick.Ambiguous -> CoverBack.Ambiguous
+                is AlbumPick.Ambiguous ->
+                    pick.key(playingRecording(track))?.let { tracklistBack(it, states, track, header) }
+                        ?: CoverBack.Ambiguous
                 is AlbumPick.Groups -> tracklistBack(pick.key(playingRecording(track)), states, track, header)
             }
     }
 }
 
-// [key]'s state; while it is still looked up, the album's tracklist found last for another song of it.
+// [key]'s state; while it is still looked up, the album's tracklist found last for another song of it,
+// when its group is picked: of several none picked, another song's may be another album's.
 private fun stateOf(
     key: TracklistKey,
     states: Map<TracklistKey, TracklistState>,
 ): TracklistState? {
     val state = states[key]
-    return if (state == null || state == TracklistState.Looking) {
+    return if (key.group != null && (state == null || state == TracklistState.Looking)) {
         states.entries.lastOrNull { it.key.group == key.group && it.value is TracklistState.Found }?.value ?: state
     } else {
         state
@@ -158,6 +169,7 @@ private fun tracklistBack(
         null, TracklistState.Looking -> CoverBack.Looking
         TracklistState.Failed -> CoverBack.Unreachable(key)
         TracklistState.NotFound -> CoverBack.NotFound
+        TracklistState.Unclear -> CoverBack.Ambiguous
         is TracklistState.Found -> {
             val discs =
                 state.tracklist.media
