@@ -189,7 +189,7 @@ class BusyMessagesScreenTest {
             tap(SOURCES_CHIP_TAG)
             tap(DATES_CHIP_TAG)
             compose.onNodeWithText(text(R.string.home_source_none)).assertExists()
-            compose.onNodeWithText("This album was released in January 1974.").assertExists()
+            compose.onNodeWithText("This album was originally released in January 1974.").assertExists()
             assertEquals(emptyList<Rect>(), records())
         }
 
