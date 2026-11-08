@@ -80,6 +80,52 @@ class ExplainAnswersTest {
     }
 
     @Test
+    fun anExplanationWithUnescapedDoubleQuotesInItIsReadAndStillChecked() {
+        // #1088: a lyric quoted in double quotes, not escaped, is no valid JSON; the answer is kept.
+        val found =
+            explanation(
+                """{"explanation": "They call him a "legal alien". [S1] He walks his own way. [S2]"}""",
+            )
+        val sentences = found.grounded.paragraphs.flatten()
+        assertEquals(2, sentences.size)
+        assertTrue("\"legal alien\"" in sentences.first().text)
+        assertEquals(listOf(songfacts, interview), found.pages)
+        // In a code fence, an escaped quote beside the stray one.
+        val fenced = "```json\n{\"explanation\": \"A \\\"legal alien\". [S1]\"}\n```"
+        assertEquals(listOf(songfacts), explanation(fenced).pages)
+        // The checks still apply to what is recovered: a web address, no page backing it.
+        assertEquals(
+            SearchReading.NothingUsable,
+            read("""{"explanation": "A "legal alien", says https://genius.com/x. [S1]"}"""),
+        )
+        assertEquals(SearchReading.NothingUsable, read("""{"explanation": "A "legal alien". [S9]"}"""))
+    }
+
+    @Test
+    fun aBrokenReplyThatIsNotOneExplanationIsStillMalformed() {
+        for (reply in listOf(
+            "They call him a \"legal alien\". [S1]",
+            """{"explanation": "A "legal alien". [S1]", "sources": "S1"}""",
+            """{"summary": "A "legal alien". [S1]"}""",
+            """{"explanation": "A "legal alien". [S1]\"}""",
+            """{"explanation": 3 "x"}""",
+            // Two objects, one after the other: the text would be JSON fragments.
+            """{"explanation": "Loss. [S1]"} {"explanation": "Love. [S1]"}""",
+            """{"explanation": "Loss. [S1]"}{"explanation": "A "legal alien". [S1]"}""",
+            """{"explanation": "A "legal alien". {"note": "x"} [S1]"}""",
+        )) {
+            assertEquals(SearchReading.Malformed, read(reply), reply)
+        }
+    }
+
+    @Test
+    fun thePromptAsksForSingleTypographicQuotes() {
+        val prompt = ExplainPrompt.once(SearchFacts("Englishman In New York", listOf("Sting")), emptyList())
+        assertTrue(ExplainPrompt.QUOTE_RULE in prompt)
+        assertTrue("\u2018like this\u2019, never in double quotes" in ExplainPrompt.QUOTE_RULE)
+    }
+
+    @Test
     fun anyBareDomainIsAnAddressButOrdinaryProseIsNot() {
         val addresses =
             listOf(

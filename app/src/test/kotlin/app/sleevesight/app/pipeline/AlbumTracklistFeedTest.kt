@@ -20,8 +20,8 @@ import org.junit.Test
 class AlbumTracklistFeedTest {
     private val tracklist = MbTracklist("r", emptyList())
     private val g = TracklistKey("g", "rec")
-    private val asked = mutableListOf<String>()
-    private var answer: Lookup<MbTracklist> = Lookup.Found(tracklist)
+    private val asked = mutableListOf<String?>()
+    private var answer: Lookup<MbTracklist>? = Lookup.Found(tracklist)
     private val allowed = MutableStateFlow(true)
     private var on = true
 
@@ -101,6 +101,21 @@ class AlbumTracklistFeedTest {
             feed.retry(g)
             runCurrent()
             assertEquals(2, asked.size)
+        }
+
+    @Test
+    fun anAlbumOfSeveralThatTheRecordingTellsNotApartIsUnclear() =
+        runTest {
+            // #1078: the lookup answers none of the tied groups.
+            answer = null
+            val tied = TracklistKey(null, "rec", listOf("g-a", "g-b"))
+            val feed = feed()
+            feed.look(tied)
+            runCurrent()
+            assertEquals(TracklistState.Unclear, feed.states.value[tied])
+            feed.look(tied)
+            runCurrent()
+            assertEquals(1, asked.size)
         }
 
     @Test
