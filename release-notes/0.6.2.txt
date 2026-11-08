@@ -1,0 +1,4 @@
+Fixed in 0.6.2:
+- Explain the song: a quoted lyric no longer stops the answer.
+- Dates: an edition names its original album and when it came out.
+- Tracklists: albums of one name and date told apart by the song.
