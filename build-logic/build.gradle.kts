@@ -19,6 +19,38 @@ dependencies {
     testImplementation(libs.kotlin.test)
 }
 
+// The plugins' own libraries at no lower than the catalog's `build-floor-*` versions, the lowest with
+// no known vulnerability (#1087). As constraints on `implementation`, they hold here and in each
+// module's buildscript classpath, which resolves these plugins; they add no library. The modules'
+// other tool classpaths (Android lint, ktlint, the tests) get the same floors from
+// `sleevesight.locking` (`sleevesight.BuildFloors`).
+val catalog = extensions.getByType<VersionCatalogsExtension>().named("libs")
+dependencies.constraints {
+    catalog.libraryAliases.filter { it.startsWith("build.floor.") }.forEach { alias ->
+        val floor = catalog.findLibrary(alias).get().get()
+        implementation("${floor.module}:${floor.versionConstraint.requiredVersion}") {
+            because("The lowest version with no known vulnerability (#1087)")
+        }
+    }
+}
+
+// The plugins' classpath locked as the modules' shipping ones are (`sleevesight.locking`), so the
+// versions stay as reviewed and OSV-Scanner reads them (`build-logic/gradle.lockfile`). The root
+// build's `./gradlew resolveAndLockAll --write-locks` rewrites it too.
+val lockedConfigurations = setOf("runtimeClasspath", "compileClasspath")
+configurations.matching { it.name in lockedConfigurations }.configureEach {
+    resolutionStrategy.activateDependencyLocking()
+}
+tasks.register("resolveAndLockAll") {
+    notCompatibleWithConfigurationCache("Resolves configurations at execution time to write lockfiles")
+    doFirst {
+        require(gradle.startParameter.isWriteDependencyLocks) { "Run with --write-locks" }
+    }
+    doLast {
+        configurations.filter { it.name in lockedConfigurations }.forEach { it.resolve() }
+    }
+}
+
 tasks.test {
     useJUnitPlatform()
 }
