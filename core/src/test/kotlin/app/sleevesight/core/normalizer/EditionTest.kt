@@ -100,4 +100,26 @@ class EditionTest {
         // The bracketed ones only, as before, for the header's year.
         assertEquals("Abbey Road - 2019 Remaster", Edition.stripEditions("Abbey Road - 2019 Remaster (Deluxe)"))
     }
+
+    // A name of thousands of words (#1089): the suffix is looked for among its last words only, so the
+    // work stays a fixed number of short checks however long the name is.
+    private val longName = (1..5000).joinToString(" ") { "Word$it" }
+
+    @Test
+    fun `a long name with an edition at its end is stripped, and one with an edition far from its end is kept`() {
+        assertEquals(longName, Edition.stripEditionSuffix("$longName 25th Anniversary Edition"))
+        assertEquals(longName, Edition.stripEditionSuffix("$longName - 2011 Remaster"))
+        assertEquals(listOf(longName), Edition.strippedNames("$longName Super Deluxe Edition (Remastered)"))
+        val far = "Rubber Soul Deluxe Edition $longName"
+        assertEquals(far, Edition.stripEditionSuffix(far))
+        val onlyEditionWords = (1..5000).joinToString(" ") { "Deluxe" }
+        assertEquals(onlyEditionWords, Edition.stripEditionSuffix(onlyEditionWords))
+    }
+
+    @Test
+    fun `only the last words are tried as an edition suffix, and the names without editions take the rest in turn`() {
+        val longer = List(Edition.MAX_SUFFIX_WORDS + 3) { "Deluxe" }.joinToString(" ")
+        assertEquals("Abbey Road Deluxe Deluxe Deluxe", Edition.stripEditionSuffix("Abbey Road $longer"))
+        assertEquals(listOf("Abbey Road"), Edition.strippedNames("Abbey Road $longer"))
+    }
 }
