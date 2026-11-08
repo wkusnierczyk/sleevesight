@@ -6,17 +6,17 @@ ktlint-gradle = "14.2.0"
 # ktlint itself, set here rather than left to the plugin's default, so the pre-commit hook
 # (`.githooks/pre-commit`) formats with the same version; a new version needs its checksum there.
 ktlint = "1.5.0"
-ktor = "3.6.0"
-okhttp = "5.5.0"
-kotlinx-serialization = "1.11.0"
+ktor = "3.6.1"
+okhttp = "5.5.1"
+kotlinx-serialization = "1.12.0"
 kotlinx-coroutines = "1.11.0"
-asm = "9.9"
+asm = "9.11.1"
 sqldelight = "2.4.1"
 androidx-compose-bom = "2026.09.00"
 androidx-activity = "1.13.0"
 androidx-navigation = "2.10.2"
 androidx-lifecycle = "2.11.0"
-androidx-datastore = "1.2.1"
+androidx-datastore = "1.3.0"
 # The art's colours (design, *User interface*): a Kotlin port of Google's material-color-utilities.
 materialkolor = "5.0.1"
 # QR codes of the API keys (#268): drawn by the CLI, read by the app's camera; decoded on the phone.
