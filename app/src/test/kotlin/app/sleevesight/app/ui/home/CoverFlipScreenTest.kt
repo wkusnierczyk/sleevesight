@@ -198,6 +198,7 @@ class CoverFlipScreenTest {
         val cases =
             listOf(
                 CoverBack.NotFound to R.string.home_tracklist_none,
+                CoverBack.Ambiguous to R.string.home_tracklist_ambiguous,
                 CoverBack.Looking to R.string.home_musicbrainz_looking,
                 CoverBack.Off to R.string.home_musicbrainz_off,
                 CoverBack.Unreachable(TracklistKey("g")) to R.string.home_musicbrainz_unreachable,

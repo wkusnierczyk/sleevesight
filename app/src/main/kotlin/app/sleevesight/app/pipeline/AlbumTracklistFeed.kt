@@ -16,11 +16,14 @@ import kotlinx.coroutines.launch
 
 /**
  * An album to show the tracklist of: its release group ([group], as `ReleaseDate.group` has it), and the
- * playing [recording], whose release in it is shown (`AlbumTracklists.of`); null when not known.
+ * playing [recording], whose release in it is shown (`AlbumTracklists.of`); null when not known. With
+ * the [others] the album's name names besides, when it names several (#1062), of which the one the
+ * recording is on is shown when [group] holds it not.
  */
 data class TracklistKey(
     val group: String,
     val recording: String? = null,
+    val others: List<String> = emptyList(),
 )
 
 /** Where an album's tracklist is (#984): being looked up, found, known not to exist, or not obtained. */
