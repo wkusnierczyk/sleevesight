@@ -34,6 +34,22 @@ kotlin-serialization-plugin = { module = "org.jetbrains.kotlin:kotlin-serializat
 sqldelight-gradle-plugin = { module = "app.cash.sqldelight:gradle-plugin", version.ref = "sqldelight" }
 kotlin-compose-plugin = { module = "org.jetbrains.kotlin:compose-compiler-gradle-plugin", version.ref = "kotlin" }
 
+# Floors for the libraries the build's own tools bring in (the Gradle plugins, Android lint, ktlint,
+# the tests' Robolectric): the lowest version of each with no known vulnerability (#1087). They
+# raise a lower version, never add a library or lower one, and leave the classpaths that ship (the
+# lockfiles) alone. `build-logic/build.gradle.kts` and `sleevesight.locking` apply every
+# `build-floor-*` entry.
+build-floor-guava = "com.google.guava:guava:33.7.2-jre"
+build-floor-bcprov = "org.bouncycastle:bcprov-jdk18on:1.85"
+build-floor-bcpkix = "org.bouncycastle:bcpkix-jdk18on:1.85"
+build-floor-bcutil = "org.bouncycastle:bcutil-jdk18on:1.85"
+build-floor-jose4j = "org.bitbucket.b_c:jose4j:0.9.6"
+build-floor-jdom2 = "org.jdom:jdom2:2.0.6.1"
+build-floor-commons-lang3 = "org.apache.commons:commons-lang3:3.18.0"
+build-floor-httpclient = "org.apache.httpcomponents:httpclient:4.5.14"
+build-floor-logback-core = "ch.qos.logback:logback-core:1.5.34"
+build-floor-logback-classic = "ch.qos.logback:logback-classic:1.5.34"
+
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }

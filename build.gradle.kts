@@ -7,3 +7,9 @@ plugins {
 tasks.named("check") {
     dependsOn(gradle.includedBuild("build-logic").task(":check"))
 }
+
+// `./gradlew resolveAndLockAll --write-locks` rewrites the build logic's lockfile (the plugins'
+// classpath) with the modules' ones.
+tasks.register("resolveAndLockAll") {
+    dependsOn(gradle.includedBuild("build-logic").task(":resolveAndLockAll"))
+}
