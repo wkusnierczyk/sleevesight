@@ -134,10 +134,11 @@ internal fun SecretsSection(
 private fun LoadKeysMore() {
     // With *Load keys*, whose row it explains (#649).
     if (!shownInSearch(stringResource(R.string.settings_scan_keys))) return
-    // The address written in, and the guide's place left for its link, as the first.
+    // The address as plain text (#765), a part of its own rather than formatted in (#1091).
     val parts =
         linkedParts(
-            stringResource(R.string.settings_scan_keys_more, API_KEYS_URL, "%1\$s"),
+            stringResource(R.string.settings_scan_keys_more),
+            TextPart.Words(API_KEYS_URL),
             TextPart.Link(stringResource(R.string.settings_scan_keys_docs), LOAD_KEYS_DOCS_URL),
         )
     SelectionContainer {
