@@ -30,9 +30,11 @@ internal data class HeaderYears(
  * The years [header]'s album shows ([HeaderYears]): chosen from the releases of the track's
  * recordings that the player's album names and the player's own year ([NowPlaying.year]), by
  * [ReleaseDate.albumYear]'s rules (design, *Key data*), the album's name read by
- * [NameMatcher.albumKey] ("Vol. 2" is "Volume 2", #724); with no album reported, none. From
- * MusicBrainz's result, which keeps the releases in the retrieval cache, so a track served from the
- * cache (which makes no resolution) shows the same year; else from the run's resolution.
+ * [NameMatcher.albumKey] ("Vol. 2" is "Volume 2", #724), and, when its name gives several years
+ * and the player's none of them, the track's first release's when it is one of them (#1058); with
+ * no album reported, none. From MusicBrainz's result, which keeps the releases in the retrieval
+ * cache, so a track served from the cache (which makes no resolution) shows the same year; else
+ * from the run's resolution.
  */
 internal fun headerYears(
     track: TrackState?,
@@ -61,13 +63,24 @@ internal enum class ReleaseKind {
  * MusicBrainz gives it (`2014`, `2014-07`, `2014-07-29`), said as precisely ([DateWhen]).
  */
 internal sealed interface DateSentence {
-    /** "This album was released {when}.": the release of the album's name whose year the album line shows. */
+    /**
+     * "This album was released {when}.": the release of the album's name whose year the album line
+     * shows; "This single …" or "This EP …" when MusicBrainz's release group of it is one, as [kind]
+     * names it (#1058).
+     */
     data class Album(
         val date: String,
+        val kind: ReleaseKind? = null,
     ) : DateSentence
 
-    /** "This track was first released on this album.": its first release is the album being played. */
-    data object FirstHere : DateSentence
+    /**
+     * "This track was first released on this album.": its first release is the album being played,
+     * whose date the [Album] sentence above says (#1058); "… on this single." or "… on this EP." as
+     * [kind] names it, as [Album]'s does.
+     */
+    data class FirstHere(
+        val kind: ReleaseKind? = null,
+    ) : DateSentence
 
     /**
      * "This track was first released on {album} {when}.", on the single or EP [kind] names; with
@@ -99,9 +112,10 @@ internal sealed interface DateSentence {
  * album; none when the year is the player's own and no named release has it); the track's first
  * release, "on this album" when it is the album being played ([AlbumDates.has]: its release group
  * is one of those whose year the album line shows, and its year that year, or, when either side
- * has no release group, its title has the album's key); and, for a cover, the song's original
- * recording, with the release it first came out on when known. Empty when no date is known: the
- * panel then says why ([NoDates]).
+ * has no release group, its title has the album's key) and the album's sentence says its date (else
+ * the date would be lost, #1058: then said with its own date and title), "this single" or "this EP"
+ * when the album is one; and, for a cover, the song's original recording, with the release it
+ * first came out on when known. Empty when no date is known: the panel then says why ([NoDates]).
  *
  * From MusicBrainz's result, which keeps them in the retrieval cache, else the run's resolution,
  * as the album's year is ([headerYears]). A result kept before #724 has the first release's date
@@ -115,12 +129,12 @@ internal fun homeDates(
     val resolution = track?.resolution
     val album = AlbumDates.of(track, header)
     val sentences = mutableListOf<DateSentence>()
-    album.date?.let { sentences += DateSentence.Album(it) }
-    val first = kept?.firstRelease ?: resolution?.firstRelease
+    album.date?.let { sentences += DateSentence.Album(it, album.kind) }
+    val first = firstReleaseOf(track)
     val firstDate = first?.date ?: kept?.firstReleased ?: resolution?.firstReleaseDate
-    val here = first != null && album.has(first)
+    val here = first != null && album.date != null && album.has(first)
     when {
-        here -> sentences += DateSentence.FirstHere
+        here -> sentences += DateSentence.FirstHere(album.kind)
         firstDate != null && DateWhen.of(firstDate) != null ->
             sentences += DateSentence.First(firstDate, first?.title, ReleaseKind.of(first?.type))
     }
@@ -178,12 +192,13 @@ internal enum class NoDates {
 
 // The album the player names and what the album line shows of it: its year, and of the releases its
 // name names in that year (without a same-year single or EP of its title beside an album, #724), the
-// earliest date and their release groups.
+// earliest date, their release groups, and their type when all are singles or EPs (#1058).
 private class AlbumDates(
     val name: String?,
     val year: String?,
     val date: String?,
     val groups: Set<String>,
+    val kind: ReleaseKind?,
 ) {
     /**
      * Whether [first] is this album: a known release group decides (a single and a later album of
@@ -212,11 +227,47 @@ private class AlbumDates(
             val kept = keptMusicBrainz(track)
             val dates = kept?.releaseDates?.ifEmpty { null } ?: track?.resolution?.releaseDates.orEmpty()
             val name = header.album?.takeIf(String::isNotBlank)
-            val year = name?.let { ReleaseDate.albumYear(it, dates, header.year?.toString(), ALBUMS::albumKey) }
-            val named =
-                if (name == null || year == null) emptyList() else ReleaseDate.named(name, dates, ALBUMS::albumKey)
-            val album = albumsOf(named.filter { it.date?.let(ReleaseDate::yearIn) == year }, named)
-            return AlbumDates(name, year, earliest(album.mapNotNull { it.date }), album.map { it.group }.toSet())
+            val named = name?.let { ReleaseDate.named(it, dates, ALBUMS::albumKey) }.orEmpty()
+            val year =
+                name?.let {
+                    ReleaseDate.albumYear(it, dates, header.year?.toString(), ALBUMS::albumKey)
+                        ?: settledBy(firstReleaseOf(track), named)
+                }
+            val album = if (year == null) emptyList() else albumsOf(named.filter { it.releaseYear == year }, named)
+            val date = earliest(album.mapNotNull { it.date })
+            return AlbumDates(name, year, date, album.map { it.group }.toSet(), kindNamed(album, date))
+        }
+
+        // The type of [album]'s releases as its sentence names it (#1058): when every one is a
+        // single or an EP, the kind of the one whose [date] the sentence gives (a single and an EP
+        // of the name in one year, no album: the earlier one); null when any is an album or of no
+        // type known.
+        private fun kindNamed(
+            album: List<ReleaseDate>,
+            date: String?,
+        ): ReleaseKind? {
+            val short = album.isNotEmpty() && album.all { ReleaseKind.of(it.type) != null }
+            val dated = album.filter { it.date != null }
+            val said = dated.firstOrNull { it.date == date } ?: dated.minByOrNull { it.date.orEmpty() }
+            return said?.takeIf { short }?.let { ReleaseKind.of(it.type) }
+        }
+
+        // The year [first] gives an album whose name has releases in several years, none of them the
+        // player's (#1058: *Thriller*, 1982 and its reissues): its own, when it is a release of that
+        // name ([named], by its title's key) out in one of their years. Not a single's or an EP's
+        // beside an album of the name: the title track's single may be out in a year no album of
+        // the name is, and the album played is then not it. Null otherwise.
+        private fun settledBy(
+            first: FirstRelease?,
+            named: List<ReleaseDate>,
+        ): String? {
+            val year = first?.date?.let(ReleaseDate::yearIn) ?: return null
+            val key = ALBUMS.albumKey(first.title)
+            val short = ReleaseKind.of(first.type) != null
+            return year.takeIf {
+                named.any { it.releaseYear == year && ALBUMS.albumKey(it.title) == key } &&
+                    (!short || named.all { ReleaseKind.of(it.type) != null })
+            }
         }
 
         // Of [inYear], the album's releases: a single or EP of its title out the same year (the
@@ -281,7 +332,7 @@ internal fun aiDatesCited(
                 kindOf(first.type) == null &&
                 ALBUMS.albumKey(title) == ALBUMS.albumKey(album) &&
                 ReleaseDate.yearIn(first.date).let { it == null || it == answer.album?.let(ReleaseDate::yearIn) }
-        val sentence = if (here) DateSentence.FirstHere else DateSentence.First(first.date, title, kindOf(first.type))
+        val sentence = if (here) DateSentence.FirstHere() else DateSentence.First(first.date, title, kindOf(first.type))
         sentences += sentence to first.source
     }
     answer.original?.let { original ->
@@ -311,6 +362,9 @@ internal fun firstReleaseOf(track: TrackState?): FirstRelease? =
 // MusicBrainz's result for [track], as the run gave it or the retrieval cache kept it.
 private fun keptMusicBrainz(track: TrackState?): SourceResult? =
     (track?.sources?.get(SourceId.MUSICBRAINZ) as? SourceState.Done)?.result
+
+// A release's year, null when undated or unreadable ([ReleaseDate.yearIn]).
+private val ReleaseDate.releaseYear: String? get() = date?.let(ReleaseDate::yearIn)
 
 // A first release's group as [ReleaseDate.group] has it: the release group's id, else the release's own.
 private val FirstRelease.group: String get() = releaseGroupMbid ?: releaseMbid

@@ -120,8 +120,24 @@ internal fun NoDatesText(
 @Composable
 internal fun dateText(sentence: DateSentence): AnnotatedString =
     when (sentence) {
-        is DateSentence.Album -> AnnotatedString(stringResource(R.string.home_dates_album, whenText(sentence.date)))
-        DateSentence.FirstHere -> AnnotatedString(stringResource(R.string.home_dates_first_here))
+        is DateSentence.Album -> {
+            val format =
+                sentence.kind.pick(
+                    R.string.home_dates_album,
+                    R.string.home_dates_album_single,
+                    R.string.home_dates_album_ep,
+                )
+            AnnotatedString(stringResource(format, whenText(sentence.date)))
+        }
+        is DateSentence.FirstHere -> {
+            val format =
+                sentence.kind.pick(
+                    R.string.home_dates_first_here,
+                    R.string.home_dates_first_here_single,
+                    R.string.home_dates_first_here_ep,
+                )
+            AnnotatedString(stringResource(format))
+        }
         is DateSentence.First -> {
             val date = whenText(sentence.date)
             val title = sentence.title
@@ -129,11 +145,11 @@ internal fun dateText(sentence: DateSentence): AnnotatedString =
                 AnnotatedString(stringResource(R.string.home_dates_first_when, date))
             } else {
                 val format =
-                    when (sentence.kind) {
-                        ReleaseKind.SINGLE -> R.string.home_dates_first_single
-                        ReleaseKind.EP -> R.string.home_dates_first_ep
-                        null -> R.string.home_dates_first
-                    }
+                    sentence.kind.pick(
+                        R.string.home_dates_first,
+                        R.string.home_dates_first_single,
+                        R.string.home_dates_first_ep,
+                    )
                 withAlbum(stringResource(format, ALBUM_MARK, date), title)
             }
         }
@@ -144,14 +160,27 @@ internal fun dateText(sentence: DateSentence): AnnotatedString =
                 AnnotatedString(stringResource(R.string.home_dates_original_unreleased, date, sentence.artist))
             } else {
                 val format =
-                    when (sentence.kind) {
-                        ReleaseKind.SINGLE -> R.string.home_dates_original_single
-                        ReleaseKind.EP -> R.string.home_dates_original_ep
-                        null -> R.string.home_dates_original
-                    }
+                    sentence.kind.pick(
+                        R.string.home_dates_original,
+                        R.string.home_dates_original_single,
+                        R.string.home_dates_original_ep,
+                    )
                 withAlbum(stringResource(format, date, sentence.artist, ALBUM_MARK), title)
             }
         }
+    }
+
+// Of a sentence's three wordings, the one this kind of release takes: [album]'s for an album or a
+// release of no type named, [single]'s, [ep]'s.
+private fun ReleaseKind?.pick(
+    album: Int,
+    single: Int,
+    ep: Int,
+): Int =
+    when (this) {
+        ReleaseKind.SINGLE -> single
+        ReleaseKind.EP -> ep
+        null -> album
     }
 
 /**
