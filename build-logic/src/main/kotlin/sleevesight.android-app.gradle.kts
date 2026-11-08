@@ -11,6 +11,7 @@ import com.android.build.api.variant.HasAndroidTest
 import com.android.build.api.variant.HasUnitTest
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
+import sleevesight.Locking
 import sleevesight.checks.CheckApkClasses
 import sleevesight.checks.CheckApkNotices
 import sleevesight.checks.CheckDependencies
@@ -103,6 +104,16 @@ tasks.named("staticChecks") { dependsOn("lintDebug") }
 androidComponents {
     onVariants { variant ->
         val suffix = variant.name.replaceFirstChar { it.uppercase() }
+        // A variant's classpaths ship, so they must be locked (`Locking.configurations`): one left
+        // out would get the build floors instead (#1087), and a library could reach its APK raised,
+        // with no lockfile line for OSV-Scanner to read.
+        val unlocked =
+            listOf(variant.runtimeConfiguration.name, variant.compileConfiguration.name)
+                .filterNot { it in Locking.configurations }
+        check(unlocked.isEmpty()) {
+            "Variant ${variant.name}'s classpaths $unlocked are not locked: add them to " +
+                "`Locking.configurations` and run `./gradlew resolveAndLockAll --write-locks`."
+        }
         val runtimeRoot = variant.runtimeConfiguration.incoming.resolutionResult.rootComponent
         val compileRoot = variant.compileConfiguration.incoming.resolutionResult.rootComponent
         // The variant's tests, unit and instrumented: they are the module's code too, so a module kept
