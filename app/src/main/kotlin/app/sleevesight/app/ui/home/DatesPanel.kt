@@ -3,6 +3,7 @@ package app.sleevesight.app.ui.home
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
@@ -28,8 +29,11 @@ import app.sleevesight.core.text.DateWhen
  * ([NoDates], [none]): with MusicBrainz off, a link to *Settings → Sources* ([openSources]), and
  * when it could not be reached, *Retry* ([retry], [RetryLine]), which hands the focus to the panel's
  * *Close* as it goes. Under why, but while MusicBrainz is still asked, *Search with AI* ([search],
- * #773), which says what it found as the panel says MusicBrainz's dates ([aiDates]).
+ * #773), which says what it found as the panel says MusicBrainz's dates ([aiDates]). Open, it
+ * asks [look], which looks up the album's release group's first release (#1099) and may make its
+ * album sentence an edition's; null when there is none to ask, asked again when it changes.
  */
+@Suppress("LongParameterList") // What the panel says, and each of its ways out, from its own place.
 @Composable
 internal fun datesItem(
     sentences: List<DateSentence>,
@@ -37,6 +41,7 @@ internal fun datesItem(
     retry: (() -> Unit)?,
     openSources: () -> Unit,
     search: PanelSearch = PanelSearch(),
+    look: (() -> Unit)? = null,
 ): InPlaceItem =
     InPlaceItem(
         id = InPlace.DATES,
@@ -45,6 +50,7 @@ internal fun datesItem(
         tag = DATES_CHIP_TAG,
         panelTag = DATES_PANEL_TAG,
     ) { toClose ->
+        LaunchedEffect(look) { look?.invoke() }
         if (sentences.isEmpty()) {
             NoDatesText(none, retry, openSources, toClose)
             if (none != NoDates.LOOKING) {

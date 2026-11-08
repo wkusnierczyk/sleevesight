@@ -70,6 +70,13 @@ interface MusicBrainzLookup {
      */
     suspend fun tracklist(mbid: String): Lookup<MbTracklist> = Lookup.Failed("NotAsked")
 
+    /**
+     * The release group [mbid]'s own title and first-release date (#1099), for Home's *Dates*: whether
+     * the release played is a later edition of it. Not found for an id that is no release group's. A
+     * stand-in that does not answer it fails, so *Dates* says what it said before, never something wrong.
+     */
+    suspend fun groupFirst(mbid: String): Lookup<MbGroupFirst> = Lookup.Failed("NotAsked")
+
     companion object {
         /** The most recordings a search gives, its one page: MusicBrainz's largest. */
         const val SEARCH_PAGE: Int = 100
@@ -81,6 +88,17 @@ interface MusicBrainzLookup {
         const val OFFICIAL_PAGES: Int = 3
     }
 }
+
+/**
+ * A release group as *Dates* reads it (#1099): its own [title] and the date of its first release
+ * ([firstReleaseDate], as MusicBrainz gives it, at the precision it has; null when it gives none),
+ * over all its releases, not only those a recording is on. Core data, CC0.
+ */
+data class MbGroupFirst(
+    val mbid: String,
+    val title: String,
+    val firstReleaseDate: String?,
+)
 
 /**
  * The answer of a client in `:core`'s own terms, since `:core` cannot see `:net`'s: found, known

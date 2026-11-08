@@ -1,6 +1,7 @@
 package app.sleevesight.sources.musicbrainz
 
 import app.sleevesight.core.resolution.Lookup
+import app.sleevesight.core.resolution.MbGroupFirst
 import app.sleevesight.core.resolution.MbRelease
 import app.sleevesight.core.resolution.MbTracklist
 import app.sleevesight.sources.web.ReplayNetClient
@@ -71,6 +72,27 @@ class MusicBrainzTracklistTest {
             assertEquals(listOf("o1"), releases.map { it.mbid })
             assertEquals(1, net.sent.size)
             assertEquals(Lookup.NotFound, MusicBrainzClient(ReplayNetClient.status(404, "{}")).officialReleases("x"))
+        }
+
+    @Test
+    fun `a group's own title and first-release date, for Dates`() =
+        runTest {
+            // #1099: the group's lookup with no inclusion, its first release over all its releases.
+            val net = ReplayNetClient.ok("""{"id":"g1","title":"Kind of Blue","first-release-date":"1959-08-17"}""")
+            assertEquals(
+                Lookup.Found(MbGroupFirst("g1", "Kind of Blue", "1959-08-17")),
+                MusicBrainzClient(net).groupFirst("g1"),
+            )
+            val request = net.sent.single()
+            assertEquals("https://musicbrainz.org/ws/2/release-group/g1", request.url)
+            assertEquals(null, request.query["inc"])
+            // An empty date is none.
+            val undated = ReplayNetClient.ok("""{"id":"g1","title":"Kind of Blue","first-release-date":""}""")
+            assertEquals(
+                Lookup.Found(MbGroupFirst("g1", "Kind of Blue", null)),
+                MusicBrainzClient(undated).groupFirst("g1"),
+            )
+            assertEquals(Lookup.NotFound, MusicBrainzClient(ReplayNetClient.status(404, "{}")).groupFirst("x"))
         }
 
     @Test

@@ -1,6 +1,8 @@
 package app.sleevesight.app.ui.home
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.core.model.NowPlaying
@@ -61,7 +63,11 @@ internal fun UnderAlbum(
     val retry = retries.of(SourceId.MUSICBRAINZ)
     val openSources = { actions.openSettingsAt(SettingsTarget.sources) }
     val search = PanelSearch(actions.aiSearches, track, header)
-    val dates = datesItem(homeDates(track, header), NoDates.of(track), retry, openSources, search)
+    // The album's release group's first release, looked up when *Dates* opens (#1099).
+    val firsts by actions.releaseGroups.firsts.collectAsState()
+    val group = editionGroup(track, header)
+    val look = remember(group, actions.releaseGroups) { group?.let { { actions.releaseGroups.look(it) } } }
+    val dates = datesItem(homeDates(track, header, firsts), NoDates.of(track), retry, openSources, search, look)
     val lyrics =
         if (shown.lyricsLinks) {
             val links = remember(track, shown.lyricsSearch) { homeLyrics(track, shown.lyricsSearch) }

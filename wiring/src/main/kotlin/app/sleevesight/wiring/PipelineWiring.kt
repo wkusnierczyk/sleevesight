@@ -19,6 +19,8 @@ import app.sleevesight.core.pipeline.ClearEpoch
 import app.sleevesight.core.pipeline.TrackResolver
 import app.sleevesight.core.resolution.AlbumTracklists
 import app.sleevesight.core.resolution.IdentityCheck
+import app.sleevesight.core.resolution.Lookup
+import app.sleevesight.core.resolution.MbGroupFirst
 import app.sleevesight.core.resolution.MusicBrainzLookup
 import app.sleevesight.core.resolution.NameMatcher
 import app.sleevesight.core.resolution.RecordingResolver
@@ -139,6 +141,12 @@ class PipelineWiring internal constructor(
      * answers as resolution, so kept with them for a while, and under the client's one rate limit.
      */
     val tracklists: AlbumTracklists by lazy { AlbumTracklists(musicBrainz) }
+
+    /**
+     * A release group's own title and first-release date (#1099), for Home's *Dates*: asked through the
+     * same MusicBrainz answers as resolution, as [tracklists] are.
+     */
+    suspend fun groupFirst(mbid: String): Lookup<MbGroupFirst> = musicBrainz.groupFirst(mbid)
 
     /** Resolution over MusicBrainz (`RecordingResolver`), for `PipelineParts.resolver`. */
     val resolver: TrackResolver =

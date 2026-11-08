@@ -34,6 +34,7 @@ import app.sleevesight.app.pipeline.NetDump
 import app.sleevesight.app.pipeline.PipelineHost
 import app.sleevesight.app.pipeline.Plays
 import app.sleevesight.app.pipeline.PromptDump
+import app.sleevesight.app.pipeline.ReleaseGroupFeed
 import app.sleevesight.app.pipeline.UnavailableModel
 import app.sleevesight.app.pipeline.afterAcknowledged
 import app.sleevesight.app.pipeline.online
@@ -563,6 +564,19 @@ class AppGraph internal constructor(
         )
 
     /**
+     * The release groups' first releases *Dates* reads (#1099), looked up when *Dates* opens through the
+     * wiring's remembered MusicBrainz answers, as [tracklists] are.
+     */
+    val releaseGroups: ReleaseGroupFeed =
+        ReleaseGroupFeed(
+            lookup = { group -> wiring.groupFirst(group) },
+            scope = pipelineScope,
+            musicBrainzOn = { latestSettings.value?.isEnabled(SourceId.MUSICBRAINZ) == true },
+            allowed = pipeline.lookupsAllowed,
+            epoch = clearEpoch,
+        )
+
+    /**
      * When the play of the track shown began, as the session layer reports the tracks (#851): an AI
      * answer written before it is shown as kept from before.
      */
@@ -845,7 +859,8 @@ class AppGraph internal constructor(
      * one transaction and in turn with what is written about artists ([ArtistKeeping.clearWith]);
      * MusicBrainz's answers held in memory; the genres' reasons and definitions, and the AI
      * searches shown ([AppGenreNotes.forget], #786 too, [AppAiSearches.forget]); the albums'
-     * tracklists shown ([AlbumTracklistFeed.forget], #984); the
+     * tracklists shown ([AlbumTracklistFeed.forget], #984) and their release groups' first releases
+     * ([ReleaseGroupFeed.forget], #1099); the
      * artist facts the listening session cited; the session layer's last change, which names the
      * track before; and the diagnostics' steps, which name the tracks. The API keys and the settings stay.
      * Returns whether the caches were cleared; the rest cannot fail.
@@ -861,6 +876,7 @@ class AppGraph internal constructor(
         genreNotes.forget()
         itemNotes.forget()
         tracklists.forget()
+        releaseGroups.forget()
         aiSearches.forget()
         sessionFacts.forget()
         sessions.forgetLastChange()

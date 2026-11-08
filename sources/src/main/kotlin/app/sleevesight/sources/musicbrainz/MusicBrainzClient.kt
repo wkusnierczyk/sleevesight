@@ -6,6 +6,7 @@ import app.sleevesight.core.resolution.MbArtist
 import app.sleevesight.core.resolution.MbArtistRelation
 import app.sleevesight.core.resolution.MbArtistSearch
 import app.sleevesight.core.resolution.MbCredit
+import app.sleevesight.core.resolution.MbGroupFirst
 import app.sleevesight.core.resolution.MbMedium
 import app.sleevesight.core.resolution.MbPerformance
 import app.sleevesight.core.resolution.MbRecording
@@ -157,6 +158,18 @@ class MusicBrainzClient(
             val json = parseObject(response.body)
             json.required("id")
             json.array("releases").map(::release)
+        }
+    }
+
+    override suspend fun groupFirst(mbid: String): Lookup<MbGroupFirst> {
+        val request = NetRequest("$BASE/release-group/$mbid", query = mapOf("fmt" to "json"))
+        return net.lookup(request) { response ->
+            val json = parseObject(response.body)
+            MbGroupFirst(
+                mbid = json.required("id"),
+                title = json.required("title"),
+                firstReleaseDate = json.string("first-release-date")?.ifEmpty { null },
+            )
         }
     }
 

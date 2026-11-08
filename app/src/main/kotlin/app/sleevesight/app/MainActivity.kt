@@ -90,6 +90,8 @@ class MainActivity : ComponentActivity() {
             itemNotes = graph.itemNotes,
             // The album's tracklist on the back of the cover (#984).
             tracklists = graph.tracklists,
+            // The album's release group's first release, for Dates (#1099).
+            releaseGroups = graph.releaseGroups,
         )
     }
 

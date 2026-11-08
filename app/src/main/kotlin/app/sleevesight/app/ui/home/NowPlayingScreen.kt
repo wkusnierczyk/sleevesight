@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import app.sleevesight.app.pipeline.AiSearchFeed
 import app.sleevesight.app.pipeline.CallId
 import app.sleevesight.app.pipeline.GenreNotes
+import app.sleevesight.app.pipeline.GroupFeed
 import app.sleevesight.app.pipeline.ItemNotes
 import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.app.pipeline.TracklistFeed
@@ -87,6 +88,7 @@ import kotlinx.coroutines.flow.StateFlow
  *   (#773): each panel's search, a paid call, and its *Stop*.
  * @property itemNotes the song's, the artist's and the album's insights under *Key insights* (#522).
  * @property tracklists the albums' tracklists, on the back of the cover (#984).
+ * @property releaseGroups the albums' release groups' first releases, for *Dates* (#1099).
  * @property ad the ad the player plays in place of a track (#880), which Home shows as such
  *   ([AdHome]); null while it plays none.
  */
@@ -118,6 +120,7 @@ class HomeFeed(
     val itemNotes: ItemNotes = ItemNotes.None,
     val ad: StateFlow<AdPlaying?> = MutableStateFlow(null),
     val tracklists: TracklistFeed = TracklistFeed.None,
+    val releaseGroups: GroupFeed = GroupFeed.None,
 )
 
 /**
@@ -195,6 +198,7 @@ private fun HomeFeed.actions(
     aiSearches = aiSearches,
     itemNotes = itemNotes,
     tracklists = tracklists,
+    releaseGroups = releaseGroups,
 )
 
 /**
@@ -231,7 +235,8 @@ internal class NowPlayingState(
  * source that could not be reached (#724), as [write] takes one on Write. [aiSearches] gives *Search
  * with AI* under the empty *Dates*, *Genres* and *Lyrics* (#773). [itemNotes] gives the song's, the
  * artist's and the album's insights under *Key insights* (#522). [tracklists] gives the albums'
- * tracklists on the back of the cover (#984).
+ * tracklists on the back of the cover (#984), and [releaseGroups] the albums' release groups' first
+ * releases, for *Dates* (#1099).
  */
 @Suppress("LongParameterList") // Each of the screen's ways out, on its own.
 internal class NowPlayingActions(
@@ -256,6 +261,7 @@ internal class NowPlayingActions(
     val aiSearches: AiSearchFeed = AiSearchFeed.None,
     val itemNotes: ItemNotes = ItemNotes.None,
     val tracklists: TracklistFeed = TracklistFeed.None,
+    val releaseGroups: GroupFeed = GroupFeed.None,
 )
 
 /**
