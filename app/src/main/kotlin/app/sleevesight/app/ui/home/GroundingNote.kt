@@ -59,7 +59,7 @@ private fun Note(
 // The sentences the sources do not back that show on the card, dimmed.
 private fun unbacked(grounded: GroundedText): Int =
     grounded.paragraphs.sumOf { paragraph ->
-        paragraph.zip(shown(paragraph.map { it.text })).count { (sentence, runs) ->
+        paragraph.zip(shown(paragraph.map { it.text }, checked = true)).count { (sentence, runs) ->
             sentence.status in DIMMED && !runs.isBlank()
         }
     }

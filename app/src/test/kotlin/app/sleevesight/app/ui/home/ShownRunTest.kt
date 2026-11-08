@@ -212,7 +212,10 @@ class ShownRunTest {
     @Test
     fun codesBackticksAreTakenOutAndWhatIsInsideStaysAsWritten() {
         assertEquals("It is on side_a_b [W1].", plain("It is on `side_a_b` [W1]."))
-        assertEquals(listOf(text("It is *not* a title.")), one("It is `*not*` a title."))
+        assertEquals(
+            listOf(text("It is "), ShownRun.Text("*not*", code = true), text(" a title.")),
+            one("It is `*not*` a title."),
+        )
         // A backtick with no pair stays.
         assertEquals("It's `90s pop [W1].", plain("It's `90s pop [W1]."))
     }
