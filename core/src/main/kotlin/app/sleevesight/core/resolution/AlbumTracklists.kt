@@ -11,7 +11,8 @@ package app.sleevesight.core.resolution
  * the album's group, by [choose], so a bonus track shows the edition it is on. When the album's name
  * names other groups too (#1062: two singles named *Tom's Diner*, one of them another artist's), and
  * the recording is on none of the group's releases but on theirs, [choose]'s of the first of them, in
- * their order, that holds it.
+ * their order, that holds it. When it names several and none is picked (two share the earliest date,
+ * #1078), only the recording tells them apart ([ofOneOf]).
  * When the recording is not known, or is on none of these releases it lists, only the group is: its earliest official
  * release ([choose]); for an id that is no group's (`ReleaseDate.group` keeps a release's own for
  * want of a group), the release of that id. The group's lookup lists only its 25 earliest releases:
@@ -36,27 +37,57 @@ class AlbumTracklists(
             when (val releases = recording?.let { musicBrainz.recordingReleases(it) }) {
                 is Lookup.Found -> {
                     val listed = releases.value.releases
-
-                    fun inGroups(groups: Set<String>) =
-                        choose(listed.filter { (it.releaseGroup?.mbid ?: it.mbid) in groups })
-                    (inGroups(setOf(group)) ?: others.firstNotNullOfOrNull { inGroups(setOf(it)) })
+                    (inGroup(listed, group) ?: others.firstNotNullOfOrNull { inGroup(listed, it) })
                         ?.let { Lookup.Found(it) }
                 }
                 is Lookup.Failed -> releases
                 Lookup.NotFound, null -> null
             }
-        val tracklist =
+        return withTracks(
             when (matched) {
                 is Lookup.Found -> musicBrainz.tracklist(matched.value.mbid)
                 is Lookup.Failed -> matched
                 else -> ofGroup(group)
+            },
+        )
+    }
+
+    /**
+     * The tracklist of the one of [groups] (the album's name names them all, none told apart by the
+     * player's year or by date, #1078) that the playing [recording] is on, of its release there as [of]
+     * chooses it: found, not found or failed as [of] says; null when it is not clear which, the
+     * recording being on none of them, on several, or not known.
+     */
+    suspend fun ofOneOf(
+        groups: List<String>,
+        recording: String?,
+    ): Lookup<MbTracklist>? =
+        when (val releases = recording?.let { musicBrainz.recordingReleases(it) }) {
+            is Lookup.Found -> {
+                val listed = releases.value.releases
+                groups
+                    .mapNotNull { inGroup(listed, it) }
+                    .singleOrNull()
+                    ?.let { withTracks(musicBrainz.tracklist(it.mbid)) }
             }
-        return if (tracklist is Lookup.Found && tracklist.value.media.all { it.tracks.isEmpty() }) {
+            is Lookup.Failed -> releases
+            Lookup.NotFound, null -> null
+        }
+
+    // The release of the recording's [listed] releases in [group] to show, by [choose]; null when it is
+    // on none there (a release with no group counts as its own).
+    private fun inGroup(
+        listed: List<MbRelease>,
+        group: String,
+    ): MbRelease? = choose(listed.filter { (it.releaseGroup?.mbid ?: it.mbid) == group })
+
+    // [tracklist], but not found when it lists no track.
+    private fun withTracks(tracklist: Lookup<MbTracklist>): Lookup<MbTracklist> =
+        if (tracklist is Lookup.Found && tracklist.value.media.all { it.tracks.isEmpty() }) {
             Lookup.NotFound
         } else {
             tracklist
         }
-    }
 
     // The tracklist of [group]'s own release: its earliest official one, as [of] says.
     private suspend fun ofGroup(group: String): Lookup<MbTracklist> =

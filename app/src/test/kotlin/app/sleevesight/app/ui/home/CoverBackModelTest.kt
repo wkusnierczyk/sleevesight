@@ -150,9 +150,23 @@ class CoverBackModelTest {
                 ReleaseDate("Greatest Hits", "2001", "g-a", "Album"),
                 ReleaseDate("Greatest Hits", "2001", "g-b", "Album"),
             )
-        assertEquals(AlbumPick.Ambiguous, albumPick(track, idol))
-        assertNull(tracklistKey(track, idol))
-        assertEquals(CoverBack.Ambiguous, coverBack(track, idol, true, emptyMap()))
+        assertEquals(AlbumPick.Ambiguous(listOf("g-a", "g-b")), albumPick(track, idol))
+        // #1078: the tied groups go to the lookup, which tells them apart by the playing recording.
+        val tied = TracklistKey(null, "rec-eyes", listOf("g-a", "g-b"))
+        assertEquals(tied, tracklistKey(track, idol))
+        assertEquals(CoverBack.Looking, coverBack(track, idol, true, emptyMap()))
+        assertEquals(CoverBack.Ambiguous, coverBack(track, idol, true, mapOf(tied to TracklistState.Unclear)))
+        val found = coverBack(track, idol, true, mapOf(tied to tracklist(listOf("Eyes Without a Face"))))
+        assertEquals(TrackAt(0, 0), (found as CoverBack.Found).playing)
+        // With no recording known, nothing tells them apart, and nothing is asked.
+        val unknown = track.copy(resolution = track.resolution?.copy(recordingMbid = null))
+        assertNull(tracklistKey(unknown, idol))
+        assertEquals(CoverBack.Ambiguous, coverBack(unknown, idol, true, emptyMap()))
+        // Another song's tracklist of the name is not shown while this one's is looked up: it may be
+        // of another of the groups.
+        val other = TracklistKey(null, "rec-rebel", listOf("g-a", "g-b"))
+        val looking = mapOf(other to tracklist(listOf("Rebel Yell")), tied to TracklistState.Looking)
+        assertEquals(CoverBack.Looking, coverBack(track, idol, true, looking))
         val undated =
             releasedOn(
                 idol,
@@ -160,7 +174,8 @@ class CoverBackModelTest {
                 ReleaseDate("Greatest Hits", null, "g-a", "Album"),
                 ReleaseDate("Greatest Hits", null, "g-b", "Album"),
             )
-        assertEquals(CoverBack.Ambiguous, coverBack(undated, idol, true, emptyMap()))
+        assertEquals(tied, tracklistKey(undated, idol))
+        assertEquals(CoverBack.Ambiguous, coverBack(undated, idol, true, mapOf(tied to TracklistState.Unclear)))
     }
 
     @Test
