@@ -4,7 +4,6 @@ import app.sleevesight.app.ui.home.HomeFixtures
 import app.sleevesight.core.Secret
 import app.sleevesight.core.ai.AiErrorKind
 import app.sleevesight.core.ai.ModelNames
-import app.sleevesight.core.evidence.Hasher
 import app.sleevesight.core.genres.GenreArticles
 import app.sleevesight.core.genres.GenreDefinition
 import app.sleevesight.core.genres.GenreDefinitions
@@ -74,28 +73,13 @@ class AppGenreListsTest {
                 return cache.keptCard(key)
             }
         }
-
-    // The hasher, which runs [during] once, at its next use, then hashes as `JvmHasher` (#1059's
-    // review: a list completing while a tap works out its path).
-    private val hasher =
-        object : Hasher {
-            var during: (() -> Unit)? = null
-
-            override fun sha256(bytes: ByteArray): ByteArray {
-                during?.let {
-                    during = null
-                    it()
-                }
-                return JvmHasher.sha256(bytes)
-            }
-        }
     private val parts =
         MutableStateFlow<PipelineParts?>(
             PipelineParts(
                 normalizer = Normalizer(JvmAccentFolder),
                 adapters = emptyList(),
                 resolver = TrackResolver { _, _ -> Resolution.NONE },
-                hasher = hasher,
+                hasher = JvmHasher,
                 ai = AiAccess(provider, Secret("key")),
                 cache = gated,
             ),
@@ -507,8 +491,8 @@ class AppGenreListsTest {
             val track = onlyMusicBrainz()
             notes.explain(track, "punk")
             runCurrent()
-            // The list comes while the tap on blues works out what to do, from the lists before it.
-            hasher.during = { testScheduler.advanceUntilIdle() }
+            // The list comes after the tap's step, before its work would start.
+            notes.beforeLaunch = { testScheduler.advanceUntilIdle() }
             notes.explain(track, "blues")
             advanceUntilIdle()
             assertEquals(GenreReason.Unavailable(Unavailability.NOT_LISTED), notes.reason(track, "blues").first())
@@ -526,8 +510,8 @@ class AppGenreListsTest {
             val track = onlyMusicBrainz()
             notes.explain(track, "folk")
             runCurrent()
-            // The list comes while the tap on punk works out what to do, from the lists before it.
-            hasher.during = { testScheduler.advanceUntilIdle() }
+            // The list comes after the tap's step, before its work would start.
+            notes.beforeLaunch = { testScheduler.advanceUntilIdle() }
             notes.explain(track, "punk")
             advanceUntilIdle()
             assertTrue((notes.reason(track, "punk").first() as GenreReason.Shown).state is InsightState.Written)
@@ -561,6 +545,45 @@ class AppGenreListsTest {
             advanceUntilIdle()
             assertTrue((later.reason(track, "punk").first() as GenreReason.Shown).state is InsightState.Written)
             assertEquals(2, provider.requests)
+        }
+
+    @Test
+    fun `a genre tapped on a list that failed is not explained by a later play's list unasked (#1059)`() =
+        runTest {
+            knowing()
+            provider.error = AiErrorKind.OFFLINE
+            val notes = notes()
+            notes.explain(onlyMusicBrainz(play = 1), "punk")
+            advanceUntilIdle()
+            assertEquals(1, provider.requests)
+            // No *Retry*; on the next play, blues is tapped, and the list has punk too.
+            provider.error = null
+            provider.reply = { n -> if (n == 2) LIST else "Its loud guitars are blues [MB1]." }
+            val second = onlyMusicBrainz(play = 2)
+            notes.explain(second, "blues")
+            advanceUntilIdle()
+            // The list, and blues's reason: nothing for punk, not asked on this play.
+            assertEquals(3, provider.requests)
+            assertTrue((notes.reason(second, "blues").first() as GenreReason.Shown).state is InsightState.Written)
+            assertEquals(GenreReason.Offered, notes.reason(second, "punk").first())
+        }
+
+    @Test
+    fun `a tap right after Clear history is not lost to the work it stopped (#1059)`() =
+        runTest {
+            knowing()
+            provider.reply = { PUNK_ONLY }
+            provider.streaming = 1.seconds
+            val notes = notes()
+            val track = onlyMusicBrainz()
+            notes.explain(track, "blues")
+            runCurrent()
+            // *Clear history* while the list is asked; tapped again at once, the list is asked again.
+            notes.forget()
+            notes.explain(track, "blues")
+            advanceUntilIdle()
+            assertEquals(2, provider.requests)
+            assertEquals(GenreReason.Unavailable(Unavailability.NOT_LISTED), notes.reason(track, "blues").first())
         }
 
     // [cache], counting the reads and writes of cards.

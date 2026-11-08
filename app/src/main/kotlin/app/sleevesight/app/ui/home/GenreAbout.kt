@@ -52,9 +52,10 @@ import app.sleevesight.core.synthesis.SearchKind
  * genre only MusicBrainz gives, then the reason), "Looking for an explanation…" in the button's
  * place; the reason under it is credited "by {model}". Disabled, with why under it ([ReasonUnavailable]):
  * with no AI service ready, a link to *Settings → AI services*; for a genre only MusicBrainz gives,
- * when the AI's genre list cannot run, what to switch on, linked; when the AI could not explain it
- * (the list does not have it, or nothing the reason was asked with explains it), "AI could not find
- * an explanation.", and, for the reason, what was off that could have, linked (#695). A reason that
+ * when the AI's genre list cannot run, what to switch on, linked; once tapped, for one the list does
+ * not have, that the AI service doesn’t list it, with *See why.* linking the docs (#1059); when
+ * nothing the reason was asked with explains it, "AI could not find an explanation.", and what was
+ * off that could have, linked (#695). A reason that
  * cites no source, only the model's own knowledge, says so under the question; one from web pages
  * is credited "by {model}, with web search" (#695). A reason still being written reads its `[AI]`
  * as the settings allow it ([PanelNotes.modelAllowed]). A written reason has *Read aloud* (#325,

@@ -380,9 +380,37 @@ class AppGenreNotes private constructor(
     // says nothing of the list.
     private val tapped = MutableStateFlow<Set<Pair<Any, String>>>(emptySet())
 
-    // The keys whose cached reason or list was looked for, and those being written.
+    // The keys whose cached reason or list was looked for.
     private val looked: MutableSet<CardKey> = ConcurrentHashMap.newKeySet()
-    private val writing: MutableSet<CardKey> = ConcurrentHashMap.newKeySet()
+
+    // The keys being written, each with the count of [forget]s its work started after ([Forgets]): one
+    // claimed before the last *Clear history* is free to claim again (#1059's review), so a tap right
+    // after it is not lost to work that will show nothing.
+    private val writing = ConcurrentHashMap<CardKey, Long>()
+
+    // Claims [key] for work marked now ([mark]), under [lock]: true when it was free (not claimed, or
+    // claimed before the last [forget]).
+    private fun claim(key: CardKey): Boolean {
+        val count = forgets
+        var took = false
+        writing.compute(key) { _, held ->
+            if (held == count) {
+                held
+            } else {
+                took = true
+                count
+            }
+        }
+        return took
+    }
+
+    // [work]'s claim on [key] given up, unless claimed again since a *Clear history*.
+    private fun release(
+        key: CardKey,
+        work: CoroutineContext,
+    ) {
+        work[Forgets]?.let { writing.remove(key, it.count) }
+    }
 
     override fun aiGenres(track: TrackState): Flow<AiGenreList?> =
         combine(parts, settings) { made, now ->
@@ -1001,25 +1029,19 @@ class AppGenreNotes private constructor(
         track: TrackState,
         genre: String,
     ): Start? {
-        // Worked out again if a list showed meanwhile (one shown on this thread, which the lock lets in).
-        var known: Map<CardKey, Entry<GenreListState>>
-        var path: ReasonPath
-        do {
-            known = lists.value
-            path = path(made, now, known, track, genre)
-        } while (lists.value !== known)
+        val path = path(made, now, lists.value, track, genre)
         if (path is ReasonPath.Listing || path is ReasonPath.NotListed) {
             tapped.update { (it + (heldKey(track) to genre)).toList().takeLast(KEPT).toSet() }
         }
         return when (path) {
             // Not shown, shown as failed, or past *Keep history for*; and not under way (nor claimed by
             // the list that showed, [follow]).
-            is ReasonPath.Reason -> path.key.takeIf { open(it) && writing.add(it) }?.let { Start.Reason(it, mark()) }
+            is ReasonPath.Reason -> path.key.takeIf { open(it) && claim(it) }?.let { Start.Reason(it, mark()) }
 
             // The genre waits on it; asked, unless known or under way.
             is ReasonPath.Listing -> {
                 waitOn(path.key, genre)
-                path.key.takeIf { openList(it) && writing.add(it) }?.let { Start.Listing(it, mark()) }
+                path.key.takeIf { openList(it) && claim(it) }?.let { Start.Listing(it, mark()) }
             }
 
             // The list known without it (#1059): its answer, recorded above, at once; no call.
@@ -1148,7 +1170,7 @@ class AppGenreNotes private constructor(
             asked.end(AiOutcome.FAILED, reason)
             show(InsightState.Failed(reason), clock.now())
         } finally {
-            writing.remove(key)
+            release(key, work)
         }
     }
 
@@ -1274,7 +1296,7 @@ class AppGenreNotes private constructor(
             asked.end(AiOutcome.FAILED, reason)
             show(GenreListState.Failed(reason), clock.now())
         } finally {
-            writing.remove(key)
+            release(key, work)
         }
         writeFollowing(work, reasons, next, track)
     }
@@ -1296,11 +1318,15 @@ class AppGenreNotes private constructor(
         var next: List<Pair<CardKey, String>> = emptyList()
         publish(work) {
             val state = entry.state
-            if (state is GenreListState.Listed) {
+            // Ended, listed or failed (#1059's review), the genres waiting on it no longer do: a failed
+            // list's are asked again by *Retry*, not followed by a later list unasked.
+            if (state is GenreListState.Listed || state is GenreListState.Failed) {
                 val asked = waiting.value[key].orEmpty()
                 waiting.update { it - key }
                 val at = entry.writtenAt
-                next = asked.mapNotNull { genre -> follow(reasons, state, track, genre, at)?.let { it to genre } }
+                if (state is GenreListState.Listed) {
+                    next = asked.mapNotNull { genre -> follow(reasons, state, track, genre, at)?.let { it to genre } }
+                }
             }
             var added = false
             lists.update { known ->
@@ -1324,7 +1350,7 @@ class AppGenreNotes private constructor(
                 for ((reason, genre) in next) launch { write(reasons, reason, track, label(track, genre)) }
             }
         } else {
-            next.forEach { (reason, _) -> writing.remove(reason) }
+            next.forEach { (reason, _) -> release(reason, work) }
         }
     }
 
@@ -1342,7 +1368,7 @@ class AppGenreNotes private constructor(
             settings.value
                 ?.takeIf { genre in ids }
                 ?.let { reasons.key(track, genre, it, ids) }
-                ?.takeIf { open(it) && writing.add(it) }
+                ?.takeIf { open(it) && claim(it) }
         key?.let { claimed -> shown.update { it.with(claimed, Entry(InsightState.Writing(""), at)) } }
         return key
     }
