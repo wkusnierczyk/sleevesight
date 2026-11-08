@@ -18,6 +18,20 @@ package app.sleevesight.app.ui.home
 // backslash (`\*`) is shown as written, without the backslash, as in CommonMark, and so are code
 // and a web address written out (`https://…/Help!_(song)`). Runs pair across the sentences of a
 // paragraph, since the check may split a title (`*Help! I Need Somebody*`).
+//
+// A citation the model put after a sentence's stop, with only spaces between, shows before it, as
+// the others are (#1061): "… love [S15]. [S16]" shows as "… love [S15] [S16].". The grounding check
+// already reads such a citation as the sentence's before it (it ends a sentence after a stop's
+// citations, `GroundingCheck.splitSentences`), so only the place it shows changes; what is stored,
+// checked and reported stays as written. Position decides: a run of citations directly after a
+// `.`, `!` or `?` (and any closing brackets after it), before any word, moves when the end of the
+// sentence, a space or a line break follows it. A citation the check opens a sentence with (after a
+// line break and a list's marker) is in that sentence and stays there. Left as written: a stop in a
+// closing quote, in emphasis or in code, which may be a title's own (`"Help!" [W1]`, `*DAMN.* [W1]`,
+// `` `Help!` [W1] ``), and the `.` of initials (`the U.S. [W1]`). In a checked sentence, known to be
+// one, the citation may also be on the next line ("It is great.\n[S1] It charted.", which the check
+// reads as the first sentence's): it moves too, the line break shown as a space. In a paragraph not
+// checked yet, a line break after a stop may end a sentence, so a citation after it stays.
 
 /** A run of a sentence as shown: its text, in italics or bold, or one of its citations. */
 internal sealed interface ShownRun {
@@ -25,6 +39,8 @@ internal sealed interface ShownRun {
         val text: String,
         val italic: Boolean = false,
         val bold: Boolean = false,
+        // Code, shown as written (`` `Help!` ``).
+        val code: Boolean = false,
     ) : ShownRun
 
     data class Cite(
@@ -34,17 +50,98 @@ internal sealed interface ShownRun {
 
 /**
  * The sentences of one paragraph, as the grounding check split them, as shown: each its runs of
- * text, its Markdown cleaned and its titles in italics, and its citations where they were.
+ * text, its Markdown cleaned and its titles in italics, and its citations where they were, but for
+ * one after a stop, which shows before it (#1061). [checked] when each of [sentences] is one, as the
+ * check split them; a paragraph not checked yet is one text, which may hold several.
  */
-internal fun shown(sentences: List<String>): List<List<ShownRun>> {
+internal fun shown(
+    sentences: List<String>,
+    checked: Boolean = false,
+): List<List<ShownRun>> {
     val paragraph = Paragraph(sentences)
     EscapesAndCode(paragraph).run()
     Links(paragraph).run()
     BareAddresses(paragraph).run()
     LineMarks(paragraph).run()
     Emphasis(paragraph).run()
-    return paragraph.output()
+    return paragraph.output().map { citesBeforeStops(it, checked) }
 }
+
+// [runs] with each run of citations after a stop moved before it (#1061, above), a line break
+// between the two only when [checked].
+private fun citesBeforeStops(
+    runs: List<ShownRun>,
+    checked: Boolean,
+): List<ShownRun> {
+    val out = runs.toMutableList()
+    var i = 0
+    while (i < out.size) {
+        val text = out[i] as? ShownRun.Text
+        val stop = text?.takeIf { it.isPlain() }?.let { stopAtEnd(it, checked) }
+        val last = if (stop == null) -1 else lastCiteAfter(out, i + 1)
+        if (text == null || stop == null || last < 0) {
+            i++
+            continue
+        }
+        val gap = stop.groupValues[GAP]
+        val before = text.text.substring(0, stop.range.first) + if ('\n' in gap) " " else gap
+        out.add(last + 1, ShownRun.Text(stop.groupValues[MARK]))
+        val next = out.getOrNull(last + 2) as? ShownRun.Text
+        if (next != null && next.isPlain()) {
+            out[last + 1] = ShownRun.Text(stop.groupValues[MARK] + next.text)
+            out.removeAt(last + 2)
+        }
+        if (before.isEmpty()) out.removeAt(i) else out[i] = ShownRun.Text(before)
+        // Read on from the stop, which may end the next sentence's text too (a paragraph not checked yet).
+        i = if (before.isEmpty()) last else last + 1
+    }
+    return out
+}
+
+// The last of the citations from [from] on, spaces alone between them, when the sentence ends,
+// or a space or a line break comes, after it; -1 otherwise.
+private fun lastCiteAfter(
+    runs: List<ShownRun>,
+    from: Int,
+): Int {
+    var k = from
+    var last = -1
+    while (k < runs.size) {
+        val run = runs[k]
+        val gap = run is ShownRun.Text && run.text.isNotEmpty() && run.text.all { it == ' ' }
+        when {
+            run is ShownRun.Cite -> last = k
+            !gap || runs.getOrNull(k + 1) !is ShownRun.Cite -> break
+        }
+        k++
+    }
+    val after = runs.getOrNull(last + 1)
+    val ends = after == null || (after is ShownRun.Text && after.text.firstOrNull()?.isWhitespace() == true)
+    return if (last >= 0 && ends) last else -1
+}
+
+// Whether a run is text in no emphasis and no code, where a stop is the sentence's.
+private fun ShownRun.Text.isPlain(): Boolean = !italic && !bold && !code
+
+// The stop that ends [text]'s run, but for the `.` of initials (`U.S.`, `R.E.M.`, `e.g.`), closing
+// brackets after it or not (`(in the U.S.)`), and one before a line break unless [checked]; or null.
+private fun stopAtEnd(
+    text: ShownRun.Text,
+    checked: Boolean,
+): MatchResult? =
+    STOP.find(text.text)?.takeUnless {
+        val initials =
+            it.groupValues[MARK].trimEnd(')', ']') == "." &&
+                INITIALS.containsMatchIn(text.text.substring(0, it.range.first + 1))
+        initials || (!checked && '\n' in it.groupValues[GAP])
+    }
+
+// A stop at a text run's end: its `.`, `!` or `?` and any closing brackets after it ([MARK]), then
+// any spaces and line breaks ([GAP]).
+private val STOP = Regex("([.!?]+[)\\]]*)([ \\n]*)\\z")
+private const val MARK = 1
+private const val GAP = 2
+private val INITIALS = Regex("(?<![A-Za-z])(?:[A-Za-z]\\.){2,}\\z")
 
 /** Whether a sentence's runs show nothing: no citation, and no text but white space. */
 internal fun List<ShownRun>.isBlank(): Boolean = all { it is ShownRun.Text && it.text.isBlank() }
@@ -80,6 +177,9 @@ private class Paragraph(
     val literal = BooleanArray(length)
     val italic = BooleanArray(length)
     val bold = BooleanArray(length)
+
+    // Code's text (`` `x` ``), shown as written; its stop is no sentence's (#1061).
+    val code = BooleanArray(length)
 
     private fun add(
         c: Char,
@@ -141,17 +241,19 @@ private class Paragraph(
     fun output(): List<List<ShownRun>> {
         val out = List(sentences.size) { mutableListOf<ShownRun>() }
         val run = StringBuilder()
-        var style = Style(-1, italic = false, bold = false)
+        var style = Style(-1, italic = false, bold = false, code = false)
 
         fun flush() {
-            if (run.isNotEmpty()) out[style.sentence] += ShownRun.Text(run.toString(), style.italic, style.bold)
+            if (run.isNotEmpty()) {
+                out[style.sentence] += ShownRun.Text(run.toString(), style.italic, style.bold, style.code)
+            }
             run.clear()
         }
         for (i in 0 until length) {
             val s = sentenceOf[i]
             if (removed[i] || s < 0) continue
             val id = cites[i]
-            val at = Style(s, italic[i], bold[i])
+            val at = Style(s, italic[i], bold[i], code[i])
             if (id != null || at != style) flush()
             if (id != null) out[s] += ShownRun.Cite(id) else run.append(chars[i])
             style = at
@@ -164,6 +266,7 @@ private class Paragraph(
         val sentence: Int,
         val italic: Boolean,
         val bold: Boolean,
+        val code: Boolean,
     )
 
     companion object {
@@ -213,7 +316,10 @@ private class EscapesAndCode(
         val run = p.runAt(open, '`')
         val close = closing(open + run, run) ?: return open + run
         p.remove(open until open + run)
-        for (k in open + run until close) p.literal[k] = true
+        for (k in open + run until close) {
+            p.literal[k] = true
+            p.code[k] = true
+        }
         p.remove(close until close + run)
         // One space each side goes when both have one and there is more than space between them
         // (CommonMark), so a backtick can start or end the code: `` `x` `` is the code `x`.

@@ -80,7 +80,7 @@ internal fun CheckedProse(
     val shown =
         remember(paragraph) {
             var newLine = false
-            paragraph.zip(shown(sentences)).mapNotNull { (sentence, runs) ->
+            paragraph.zip(shown(sentences, checked = true)).mapNotNull { (sentence, runs) ->
                 newLine = newLine || sentence.afterLineBreak
                 if (runs.isBlank()) null else Triple(sentence, runs, newLine).also { newLine = false }
             }

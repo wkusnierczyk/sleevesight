@@ -316,8 +316,9 @@ class LyricsAiScreenTest {
             val prose = compose.onNodeWithTag(LYRICS_EXPLANATION_TAG).fetchSemanticsNode()
             val said = prose.config[SemanticsProperties.ContentDescription].single()
             assertEquals(
-                "It is about jealousy. (Source S1) It reads as a warning. (not cited) " +
-                    "The title is a time of day. (Source S2)",
+                // A citation after a stop is said before it, as it shows (#1061).
+                "It is about jealousy (Source S1). It reads as a warning. (not cited) " +
+                    "The title is a time of day (Source S2).",
                 said,
             )
             assertEquals(2, prose.config[SemanticsActions.CustomActions].size)
