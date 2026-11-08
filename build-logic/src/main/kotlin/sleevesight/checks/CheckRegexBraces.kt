@@ -25,7 +25,7 @@ import org.gradle.api.tasks.TaskAction
  *   `RegexOption.LITERAL`;
  * - each element (literals and constants joined by `+`) of a `listOf`, `setOf`, `arrayOf`,
  *   `sequenceOf` or `mapOf` call that is mapped with a lambda calling `Regex(`, as in
- *   `listOf("a", "b").map { Regex(it) }`.
+ *   `listOf("a", "b").map { Regex(it) }` (not when that call's options hold `RegexOption.LITERAL`).
  *
  * A template (`$NAME`, `${NAME}`) and a name in the expression are replaced by the `const val` of
  * that name in the same file, or else in another file the check reads; any other template or name
@@ -494,7 +494,12 @@ private fun mappedToRegexes(
             tokens.getOrNull(close + 3).isPunct('{')
     if (!mapped) return emptyList()
     val lambda = tokens.subList(close + 3, closing(tokens, close + 3))
-    val callsRegex = lambda.indices.any { lambda[it].isName("Regex") && lambda.getOrNull(it + 1).isPunct('(') }
+    // A `Regex(…, RegexOption.LITERAL)` in the lambda takes the elements as they are.
+    val callsRegex =
+        lambda.indices.any {
+            lambda[it].isName("Regex") && lambda.getOrNull(it + 1).isPunct('(') &&
+                lambda.subList(it + 2, closing(lambda, it + 1)).none { token -> token.isName("LITERAL") }
+        }
     if (!callsRegex) return emptyList()
     val runs = mutableListOf<MutableList<Token>>()
     var previous: Token? = null

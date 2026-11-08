@@ -117,4 +117,15 @@ class CheckRegexBracesTest {
             """.trimIndent()
         assertEquals(listOf(3 to "{", 4 to "{"), CheckRegexBraces.regexesInFile(source))
     }
+
+    @Test
+    fun `a collection mapped to literal regexes is not read`() {
+        val source =
+            """
+            val a = listOf("{literal}").map { Regex(it, RegexOption.LITERAL) }
+            val b = listOf("{x}").map { Regex(it, setOf(RegexOption.IGNORE_CASE, RegexOption.LITERAL)) }
+            val c = listOf("{y}").map { Regex(it, RegexOption.IGNORE_CASE) }
+            """.trimIndent()
+        assertEquals(listOf(3 to "{y}"), CheckRegexBraces.regexesInFile(source))
+    }
 }
