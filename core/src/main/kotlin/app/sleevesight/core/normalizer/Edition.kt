@@ -46,9 +46,11 @@ object Edition {
      * before it ("-", "–", "—"), as long as a name is left: "Decksandrumsandrockandroll 20th
      * anniversary", "Abbey Road – 2019 Remaster", "Rubber Soul Deluxe Edition" and "Sundown
      * Remastered" are the names before. Narrowly, whole words only: the suffix is words of
-     * [SUFFIX_WORDS], ordinals ("20th") and years, at least one of them a remaster, a reissue or
-     * "deluxe", or an "anniversary" with an ordinal, a year or "edition", or an "edition" with a word
-     * before it. So "Happy Anniversary", "Abbey Road Edition" and "Sundown Live" are kept, and so is a
+     * [SUFFIX_WORDS], ordinals before "anniversary" ("20th anniversary") and years next to a remaster
+     * or a reissue ("2011 Remaster"), at least one of them a remaster, a reissue or "deluxe", or an
+     * "anniversary" after an ordinal or with "edition", or an "edition" with a word before it. So
+     * "Happy Anniversary", "Abbey Road Edition" and "Sundown Live" are kept, a year or an ordinal
+     * elsewhere is the name's own ("The 1975 Deluxe Edition" is "The 1975"), and so is a
      * title that is only such words ("Deluxe", "Super Deluxe Edition"); "1999 Remastered" is "1999".
      * The longest suffix goes that leaves a word before it other than [SUFFIX_WORDS] and dashes.
      */
@@ -74,14 +76,14 @@ object Edition {
         return name
             .substring(0, starts[first])
             .trimEnd()
-            .dropLastIf { it in DASHES }
+            .let { if (it.last() in DASHES) it.dropLast(1) else it }
             .trimEnd()
     }
 
     // Whether [words] (lowercase) are an edition suffix, as [stripEditionSuffix] says.
     private fun isSuffix(words: List<String>): Boolean {
-        val dated = words.any { ORDINAL.matches(it) || YEAR.matches(it) }
-        return words.all { it in SUFFIX_WORDS || ORDINAL.matches(it) || YEAR.matches(it) } &&
+        val dated = words.indices.any { i -> words[i] == "anniversary" && i > 0 && ORDINAL.matches(words[i - 1]) }
+        return words.indices.all { i -> isSuffixWord(words, i) } &&
             (
                 words.any { it in STRONG_SUFFIX_WORDS } ||
                     ("anniversary" in words && (dated || "edition" in words)) ||
@@ -89,9 +91,26 @@ object Edition {
             )
     }
 
-    // [this] less its last character when [drop] accepts it.
-    private inline fun String.dropLastIf(drop: (Char) -> Boolean): String =
-        if (isNotEmpty() && drop(last())) dropLast(1) else this
+    // Whether [words]' word [i] may be in an edition suffix: one of [SUFFIX_WORDS]; a year only next to
+    // a remaster or a reissue ("2011 Remaster", "Remastered 2009", "2011 Digital Remaster"); an
+    // ordinal only before "anniversary". A year or an ordinal elsewhere is the name's own ("The 1975
+    // Deluxe Edition" is "The 1975").
+    private fun isSuffixWord(
+        words: List<String>,
+        i: Int,
+    ): Boolean {
+        val word = words[i]
+        val next = words.getOrNull(i + 1)
+        return when {
+            word in SUFFIX_WORDS -> true
+            YEAR.matches(word) ->
+                next in REMASTERS ||
+                    (next == "digital" && words.getOrNull(i + 2) in REMASTERS) ||
+                    words.getOrNull(i - 1) in REMASTERS
+            ORDINAL.matches(word) -> next == "anniversary"
+            else -> false
+        }
+    }
 
     /**
      * Whether a bracketed [part] ("(Remastered 2019)") names an edition: one of [EDITION_WORDS] as a
@@ -227,4 +246,7 @@ object Edition {
 
     /** The words that alone make [SUFFIX_WORDS] an edition suffix. */
     private val STRONG_SUFFIX_WORDS = setOf("remaster", "remastered", "remasters", "deluxe", "reissue", "reissued")
+
+    /** The words a year in an edition suffix stands next to. */
+    private val REMASTERS = setOf("remaster", "remastered", "remasters", "reissue", "reissued")
 }

@@ -303,6 +303,11 @@ class AlbumSourceTest {
             listOf("Sundown (Remastered) (album)", "Sundown (Remastered)", "Sundown (album)", "Sundown"),
             AlbumSource.titlesOf(" Sundown (Remastered) ", " "),
         )
+        // A year of the name's own stays in it.
+        assertEquals(
+            listOf("The 1975 Deluxe Edition (album)", "The 1975 Deluxe Edition", "The 1975 (album)", "The 1975"),
+            AlbumSource.titlesOf("The 1975 Deluxe Edition", ""),
+        )
         // No edition, or only edition words: the name as given alone.
         assertEquals(listOf("Sundown (album)", "Sundown"), AlbumSource.titlesOf("Sundown", ""))
         assertEquals(listOf("Deluxe (album)", "Deluxe"), AlbumSource.titlesOf("Deluxe", ""))

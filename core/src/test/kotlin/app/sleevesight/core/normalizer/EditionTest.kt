@@ -24,6 +24,14 @@ class EditionTest {
                 "Sundown 2011 Remastered Version" to "Sundown",
                 "Sundown Live 2011 Remaster" to "Sundown Live",
                 "1999 Remastered" to "1999",
+                "Abbey Road 2019 Digital Remaster" to "Abbey Road",
+                "Abbey Road 50th Anniversary Super Deluxe Edition" to "Abbey Road",
+                // A year or an ordinal that is not a remaster's or an anniversary's is the name's own.
+                "The 1975 Deluxe Edition" to "The 1975",
+                "The 1975 10th Anniversary Edition" to "The 1975",
+                "The 1975 2011 Remaster" to "The 1975",
+                "Sundown 2011 Deluxe Edition" to "Sundown 2011",
+                "Sundown 20th Deluxe Edition" to "Sundown 20th",
             )
         for ((name, stripped) in names) assertEquals(stripped, Edition.stripEditionSuffix(name), name)
     }
@@ -43,6 +51,8 @@ class EditionTest {
                 "Abbey Road Edition",
                 "Sundown Special",
                 "Sundown 2011 Version",
+                "Sundown 2011 Edition",
+                "Sundown 2011 Anniversary",
                 "Sundown Expanded",
                 "Remastered Sundown",
                 "Sundown-Remastered",
