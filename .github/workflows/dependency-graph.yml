@@ -18,13 +18,13 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  submit:
-    name: Submit the Gradle dependency graph
+  # Two jobs, so that build code never runs beside a token that can write to the repository (#1090):
+  # this one runs the Gradle build, plugins and all, with a read-only token and saves the graph as
+  # a workflow artifact; the next one only submits it.
+  generate:
+    name: Generate the Gradle dependency graph
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    permissions:
-      # The dependency submission API, for this job alone.
-      contents: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -36,3 +36,23 @@ jobs:
           java-version: "21"
 
       - uses: gradle/actions/dependency-submission@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+        with:
+          dependency-graph: generate-and-upload
+          # Only the next job reads it.
+          artifact-retention-days: 1
+
+  submit:
+    name: Submit the Gradle dependency graph
+    needs: generate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      # The dependency submission API, for this job alone. No checkout and no build: the action
+      # downloads this run's graph artifact and submits it.
+      contents: write
+    steps:
+      - uses: gradle/actions/dependency-submission@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+        with:
+          dependency-graph: download-and-submit
+          # Nothing is built here, so there is nothing to restore or save.
+          cache-disabled: true
