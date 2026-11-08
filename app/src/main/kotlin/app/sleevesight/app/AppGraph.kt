@@ -555,7 +555,7 @@ class AppGraph internal constructor(
      */
     val tracklists: AlbumTracklistFeed =
         AlbumTracklistFeed(
-            lookup = { key -> wiring.tracklists.of(key.group, key.recording) },
+            lookup = { key -> wiring.tracklists.of(key.group, key.recording, key.others) },
             scope = pipelineScope,
             musicBrainzOn = { latestSettings.value?.isEnabled(SourceId.MUSICBRAINZ) == true },
             allowed = pipeline.lookupsAllowed,

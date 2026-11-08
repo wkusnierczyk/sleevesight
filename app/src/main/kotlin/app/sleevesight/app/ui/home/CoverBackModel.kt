@@ -4,7 +4,6 @@ import app.sleevesight.app.pipeline.TracklistKey
 import app.sleevesight.app.pipeline.TracklistState
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.SourceId
-import app.sleevesight.core.pipeline.CardEntity
 import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.platform.JvmAccentFolder
@@ -38,6 +37,13 @@ internal sealed interface CoverBack {
     data object NotFound : CoverBack
 
     /**
+     * MusicBrainz has several albums of the name the player gives, and nothing tells which one is
+     * playing (#1062): "MusicBrainz has several albums of this name; it is not clear which one this
+     * is." ([albumPick]).
+     */
+    data object Ambiguous : CoverBack
+
+    /**
      * The album's [discs], each with its tracks, and the track [playing] among them, when found; of
      * [media] in the release, those with no track left out.
      */
@@ -64,19 +70,18 @@ internal data class TrackAt(
 )
 
 /**
- * The album [header] names, by its release group, as the album's insight keys it
- * (`ItemInsights.entity`, [CardEntity.Album.of]): the one group of the track's releases the album's
- * name names (of several, the one album among them); from the run's resolution, else MusicBrainz's
- * kept result. Null with no album named, nothing resolved, or no one group named.
+ * The album [header] names, by its release groups ([AlbumPick.of]): from the run's resolution, else
+ * MusicBrainz's kept result, with the player's year. Null with no album named, nothing resolved, or no
+ * group named.
  */
-internal fun albumGroup(
+internal fun albumPick(
     track: TrackState?,
     header: NowPlaying,
-): String? {
+): AlbumPick? {
     val album = header.album?.trim()?.takeIf(String::isNotEmpty) ?: return null
     val dates = track?.resolution?.releaseDates?.ifEmpty { null } ?: keptResult(track)?.releaseDates.orEmpty()
     val primary = track?.normalized?.primary.orEmpty()
-    return CardEntity.Album.of(album, primary, dates, NAMES::albumKey).group
+    return AlbumPick.of(album, primary, dates, header.year?.toString(), NAMES::albumKey)
 }
 
 /**
@@ -91,19 +96,22 @@ internal fun albumIdentity(header: NowPlaying): String? =
         ?.let(NAMES::albumKey)
 
 /**
- * The tracklist to ask for [track] beside [header] (#984): the album's group ([albumGroup]) with the
- * playing recording ([playingRecording]), whose release in it is shown; null with no group.
+ * The tracklist to ask for [track] beside [header] (#984): the album's group ([albumPick]), with the
+ * others its name names, and the playing recording ([playingRecording]), whose release is shown; null
+ * with no group, or several and none picked.
  */
 internal fun tracklistKey(
     track: TrackState?,
     header: NowPlaying,
-): TracklistKey? = albumGroup(track, header)?.let { TracklistKey(it, playingRecording(track)) }
+): TracklistKey? =
+    (albumPick(track, header) as? AlbumPick.Groups)?.let { TracklistKey(it.group, playingRecording(track), it.others) }
 
 /**
  * What the back shows for [track] beside [header] (#984), with [musicBrainzOn] as *Sources* has it,
  * and the tracklists looked up, [states]: MusicBrainz off first; then the track's own MusicBrainz state,
  * as *Dates* reads it ([NoDates.of]), until it is found; then the album's tracklist as looked up for
- * the playing recording ([tracklistKey]), looking until it is asked. While a new song of the album is
+ * the playing recording ([tracklistKey]), looking until it is asked; when the album's name names several
+ * groups and none is picked, [CoverBack.Ambiguous] ([albumPick]). While a new song of the album is
  * still looked up, the album's tracklist last found shows, its mark moved, rather than "Looking".
  */
 internal fun coverBack(
@@ -111,20 +119,22 @@ internal fun coverBack(
     header: NowPlaying,
     musicBrainzOn: Boolean,
     states: Map<TracklistKey, TracklistState>,
-): CoverBack =
-    if (!musicBrainzOn) {
-        CoverBack.Off
-    } else {
-        when (NoDates.of(track)) {
-            NoDates.LOOKING -> CoverBack.Looking
-            NoDates.OFF -> CoverBack.Off
-            NoDates.UNREACHABLE -> CoverBack.Unreachable(key = null)
-            NoDates.NOT_FOUND -> CoverBack.NotFound
-            NoDates.NO_DATES ->
-                tracklistKey(track, header)?.let { key -> tracklistBack(key, stateOf(key, states), track, header) }
-                    ?: CoverBack.NotFound
-        }
+): CoverBack {
+    if (!musicBrainzOn) return CoverBack.Off
+    return when (NoDates.of(track)) {
+        NoDates.LOOKING -> CoverBack.Looking
+        NoDates.OFF -> CoverBack.Off
+        NoDates.UNREACHABLE -> CoverBack.Unreachable(key = null)
+        NoDates.NOT_FOUND -> CoverBack.NotFound
+        NoDates.NO_DATES ->
+            when (val pick = albumPick(track, header)) {
+                null -> CoverBack.NotFound
+                AlbumPick.Ambiguous -> CoverBack.Ambiguous
+                is AlbumPick.Groups ->
+                    tracklistBack(TracklistKey(pick.group, playingRecording(track), pick.others), states, track, header)
+            }
     }
+}
 
 // [key]'s state; while it is still looked up, the album's tracklist found last for another song of it.
 private fun stateOf(
@@ -139,14 +149,14 @@ private fun stateOf(
     }
 }
 
-// What the back shows for the album [key] once the track is found: its tracklist as looked up, [state].
+// What the back shows for the album [key] once the track is found: its tracklist as looked up, of [states].
 private fun tracklistBack(
     key: TracklistKey,
-    state: TracklistState?,
+    states: Map<TracklistKey, TracklistState>,
     track: TrackState?,
     header: NowPlaying,
 ): CoverBack =
-    when (state) {
+    when (val state = stateOf(key, states)) {
         null, TracklistState.Looking -> CoverBack.Looking
         TracklistState.Failed -> CoverBack.Unreachable(key)
         TracklistState.NotFound -> CoverBack.NotFound

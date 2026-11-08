@@ -59,11 +59,87 @@ class CoverBackModelTest {
             ),
         )
 
+    // [playing], resolved to [recording], with [releases] by title, date, group and type.
+    private fun releasedOn(
+        playing: NowPlaying,
+        recording: String,
+        vararg releases: ReleaseDate,
+    ): TrackState =
+        track(playing).copy(
+            resolution =
+                Resolution(outcome = Outcome.SongArticle, recordingMbid = recording, releaseDates = releases.toList()),
+        )
+
+    // *Eyes Without A Face* (#1062), its recording on three compilations named *Greatest Hits*: the
+    // 2001 and 2006 ones, and one MusicBrainz dates not, each in a release group of its own.
+    private val idol =
+        NowPlaying(title = "Eyes Without a Face", artists = "Billy Idol", album = "Greatest Hits", player = "spotify")
+    private val idolTrack =
+        releasedOn(
+            idol,
+            "rec-eyes",
+            ReleaseDate("Greatest Hits", "2006-03", "g-2006", "Album"),
+            ReleaseDate("Greatest Hits", "2001-04-24", "g-2001", "Album"),
+            ReleaseDate("Greatest Hits", null, "g-undated", "Album"),
+            ReleaseDate("Rebel Yell", "1983-11-10", "g-rebel", "Album"),
+        )
+
     @Test
     fun theAlbumIsKeyedByTheReleaseGroupItsNameNames() {
-        assertEquals(group, albumGroup(resolved(), sundown))
-        assertNull(albumGroup(resolved(), sundown.copy(album = "Gord's Gold")))
-        assertNull(albumGroup(resolved(), sundown.copy(album = null)))
+        assertEquals(AlbumPick.Groups(group), albumPick(resolved(), sundown))
+        assertNull(albumPick(resolved(), sundown.copy(album = "Gord's Gold")))
+        assertNull(albumPick(resolved(), sundown.copy(album = null)))
+    }
+
+    @Test
+    fun ofSeveralAlbumsOfTheNameTheEarliestIsPickedTheOthersAfterIt() {
+        assertEquals(AlbumPick.Groups("g-2001", listOf("g-2006", "g-undated")), albumPick(idolTrack, idol))
+        assertEquals(TracklistKey("g-2001", "rec-eyes", listOf("g-2006", "g-undated")), tracklistKey(idolTrack, idol))
+    }
+
+    @Test
+    fun ofSeveralAlbumsOfTheNameThePlayersYearPicksOne() {
+        assertEquals("g-2006", (albumPick(idolTrack, idol.copy(year = 2006)) as AlbumPick.Groups).group)
+        // A year none of them is from picks none: the earliest still.
+        assertEquals("g-2001", (albumPick(idolTrack, idol.copy(year = 1999)) as AlbumPick.Groups).group)
+    }
+
+    @Test
+    fun ofTwoSinglesOfTheNameTheEarliestIsAskedWithTheOther() {
+        // *Tom's Diner*: Suzanne Vega's single (1987) and D.N.A.'s (1990), read as one name; the lookup
+        // takes the one the playing recording is on (`AlbumTracklists.of`).
+        val diner =
+            NowPlaying(title = "Tom's Diner", artists = "Suzanne Vega", album = "Tom's Diner", player = "spotify")
+        val track =
+            releasedOn(
+                diner,
+                "rec-diner",
+                ReleaseDate("Tom’s Diner", "1990-07", "g-dna", "Single"),
+                ReleaseDate("Tom's Diner", "1987", "g-vega", "Single"),
+            )
+        assertEquals(TracklistKey("g-vega", "rec-diner", listOf("g-dna")), tracklistKey(track, diner))
+    }
+
+    @Test
+    fun severalAlbumsOfTheNameNotToldApartSayItRatherThanNoTracklist() {
+        val track =
+            releasedOn(
+                idol,
+                "rec-eyes",
+                ReleaseDate("Greatest Hits", "2001", "g-a", "Album"),
+                ReleaseDate("Greatest Hits", "2001", "g-b", "Album"),
+            )
+        assertEquals(AlbumPick.Ambiguous, albumPick(track, idol))
+        assertNull(tracklistKey(track, idol))
+        assertEquals(CoverBack.Ambiguous, coverBack(track, idol, true, emptyMap()))
+        val undated =
+            releasedOn(
+                idol,
+                "rec-eyes",
+                ReleaseDate("Greatest Hits", null, "g-a", "Album"),
+                ReleaseDate("Greatest Hits", null, "g-b", "Album"),
+            )
+        assertEquals(CoverBack.Ambiguous, coverBack(undated, idol, true, emptyMap()))
     }
 
     @Test

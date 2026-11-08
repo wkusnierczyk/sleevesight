@@ -226,6 +226,50 @@ class AlbumTracklistsTest {
         }
 
     @Test
+    fun `of several groups of the album's name, the one the recording is on, the group's first`() =
+        runTest {
+            // *Tom's Diner* (#1062): D.N.A.'s single asked first, Suzanne Vega's after it; only hers
+            // holds the playing recording.
+            val fake =
+                Fake(
+                    emptyMap(),
+                    mapOf("vega" to tracks("vega", "Tom's Diner"), "best of" to tracks("best of", "Tom's Diner")),
+                    recordings =
+                        mapOf(
+                            "diner" to
+                                Lookup.Found(
+                                    listOf(
+                                        release("best of", "1998", "Official", group = "compilation"),
+                                        release("vega", "1987", "Official", group = "g-vega"),
+                                    ),
+                                ),
+                        ),
+                )
+            val tracklists = AlbumTracklists(fake)
+            val vega = assertIs<Lookup.Found<MbTracklist>>(tracklists.of("g-dna", "diner", listOf("g-vega")))
+            assertEquals("vega", vega.value.releaseMbid)
+            // *Greatest Hits*: the recording on each of them, so the group asked for, as picked.
+            val idol =
+                Fake(
+                    emptyMap(),
+                    mapOf("2006" to tracks("2006", "Eyes Without a Face")),
+                    recordings =
+                        mapOf(
+                            "eyes" to
+                                Lookup.Found(
+                                    listOf(
+                                        release("2001", "2001", "Official", group = "g-2001"),
+                                        release("2006", "2006", "Official", group = "g-2006"),
+                                    ),
+                                ),
+                        ),
+                )
+            val picked =
+                assertIs<Lookup.Found<MbTracklist>>(AlbumTracklists(idol).of("g-2006", "eyes", listOf("g-2001")))
+            assertEquals("2006", picked.value.releaseMbid)
+        }
+
+    @Test
     fun `an id that is no group's is looked up as a release's own`() =
         runTest {
             val fake = Fake(emptyMap(), mapOf("release" to tracks("release", "Airbag")))
