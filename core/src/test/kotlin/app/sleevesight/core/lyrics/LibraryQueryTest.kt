@@ -58,6 +58,8 @@ class LibraryQueryTest {
             "Nasnusa - Demo",
             "Nasnusa - Acoustic Version",
             "Nasnusa - Club Remix Version",
+            "Nasnusa - Instrumental Edit",
+            "Nasnusa - Live Edit",
             "Nasnusa (felt piano)",
         )) {
             assertNull(queryOf(playing.copy(title = title)), title)
@@ -68,6 +70,9 @@ class LibraryQueryTest {
             "Nasnusa - Remastered",
             "Nasnusa - Radio Edit",
             "Nasnusa - Single Edit",
+            "Nasnusa - Promo 7\" Edit",
+            "Nasnusa - 12\" Edit",
+            "Nasnusa - Edit",
             "Nasnusa - Single Version",
             "Nasnusa - Album Version",
             "Nasnusa - Mono",

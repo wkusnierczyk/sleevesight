@@ -9,7 +9,7 @@ import app.sleevesight.core.text.trimJs
  * Turns a player's title and artist strings into the song's plain title, its credited artists
  * and a lookup key, keeping what it removed (`design/design.md`, *Normalizer*).
  *
- * A port of the simulator's `normalize`, rule for rule, with three deviations:
+ * A port of the simulator's `normalize`, rule for rule, with four deviations:
  * - The design's table says a `(feat. X)` in the title moves X to the artists, and the simulator
  *   only noted it; here X is added after the credited artists unless it is one of them already.
  *   On the fixture playlist the result is the same, since its one featured artist is credited.
@@ -23,6 +23,10 @@ import app.sleevesight.core.text.trimJs
  *   is part of a title ("C++", "1+1") where other punctuation is not. See [foldForKey].
  *   For ASCII input, and for every fixture track, the key is the simulator's; it differs only where
  *   the simulator dropped a non-ASCII character (`lıve`, dotless, keys as `lıve`, not `lve`).
+ * - Any trailing `- … Edit` is dropped (#1060), where the simulator dropped `- Radio Edit` and
+ *   `- Single Edit` only: "Heaven Is a Place on Earth - Promo 7" Edit" was asked for whole, and
+ *   MusicBrainz found no such song. A `- … Mix` is kept, since a remix is often a recording of
+ *   its own there, and so is `Edit` within the title, with no ` - ` before it ("The Final Edit").
  *
  * The patterns spell out JavaScript's `\s`, `\w`, `\d` and `\b`, trimming uses JavaScript's
  * whitespace, and case is matched in ASCII only, as JavaScript's `/i` without `u` does (no
@@ -193,10 +197,20 @@ class Normalizer(
         // JavaScript's `\s`.
         const val S = JS_WHITESPACE_CLASS
 
+        // A character that is not JavaScript's `\s`, and one that is neither that nor a dash: `-`, the
+        // hyphens and dashes U+2010 to U+2015, or the minus sign U+2212.
+        val NOT_S = "[^" + S.removeSurrounding("[", "]") + "]"
+        val NOT_DASH = "[^" + S.removeSurrounding("[", "]") + "\\u2010-\\u2015\\u2212-]"
+
         val SUFFIX =
             Regex(
                 "$S+-$S+((?:[0-9]{4}$S+)?${ci("remaster")}(?:${ci("ed")})?(?:$S+[0-9]{4})?|" +
-                    "${ci("demo")}|${ci("radio edit")}|${ci("single edit")}|${ci("live")}|${ci("mono")}|" +
+                    "${ci("demo")}|${ci("live")}|${ci("mono")}|" +
+                    // Any edit (#1060): "Radio Edit", "Promo 7" Edit", "Edit": the word `edit` last and
+                    // on its own, after words none of which starts or ends with a dash, so a second
+                    // part ("2011 Remaster - Radio Edit", "Part 2 – Radio Edit", "Part 2- Radio Edit")
+                    // is not taken with it.
+                    "(?:$NOT_DASH(?:$NOT_S*$NOT_DASH)?$S+)*${ci("edit")}|" +
                     // The simulator's `[\w' ]*\bversion`: the word boundary means the `[\w' ]*` part is
                     // empty (preceded by whitespace) or ends with a quote or a space.
                     "(?:[A-Za-z0-9_' ]*[' ])?${ci("version")})$",
