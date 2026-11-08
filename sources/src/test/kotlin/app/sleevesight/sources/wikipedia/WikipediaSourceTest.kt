@@ -191,6 +191,7 @@ class WikipediaSourceTest {
                 assertTrue(result.outcome is Outcome.Rejected, "track $n: ${result.outcome}")
                 assertEquals(emptyList(), result.evidence)
                 assertTrue(
+                    // Unmarked: a disambiguation page is rejected whatever MusicBrainz says (#1069).
                     Rejection("Reem", "“Reem” is a disambiguation page", Scope.ARTIST) in result.rejections,
                     "${result.rejections}",
                 )
@@ -220,11 +221,25 @@ class WikipediaSourceTest {
         }
 
     @Test
+    fun `a same-title song found by name with no MusicBrainz recording is rejected for want of MusicBrainz`() =
+        runTest {
+            // Jessiah's "Willow", which MusicBrainz has no recording of, against Taylor Swift's (#1069);
+            // the tree's article ("Salix"), no song, is rejected whatever MusicBrainz says.
+            val result = lookup(61)
+            assertTrue(result.outcome is Outcome.Rejected, "${result.outcome}")
+            val byReason = result.rejections.associate { it.reason to it.withoutMusicBrainz }
+            assertEquals(true, byReason["“Willow” is by Taylor Swift, not by Jessiah"], "${result.rejections}")
+            assertEquals(false, byReason["“Salix” is not a song, single or musical work"], "${result.rejections}")
+        }
+
+    @Test
     fun `featured artist - Them's song and article, and Van Morrison, unresolved, rejected rather than guessed`() =
         runTest {
             val result = lookup(RegressionCase.FEATURED_ARTIST.tracks.single())
             assertEquals(Outcome.SongArticle, result.outcome)
             assertEquals(listOf("Van Morrison"), result.rejections.map { it.subject })
+            // With no MusicBrainz id to confirm his article, for want of MusicBrainz (#1069).
+            assertTrue(result.rejections.single().withoutMusicBrainz, "${result.rejections}")
             assertTrue(
                 result.evidence.any {
                     it.scope == Scope.ARTIST &&

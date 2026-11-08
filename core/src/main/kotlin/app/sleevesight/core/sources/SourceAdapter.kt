@@ -178,10 +178,14 @@ data class SourceResult(
  * A candidate that failed the entity check: what it was looked up for, [subject], and why it was
  * rejected. [scope] is what the candidate was about: [Scope.ARTIST] for an artist's page (Last.fm's
  * artist, the Wikipedia artist article), so a verdict on an artist is kept only as what was said
- * about the artist is (#420); [Scope.SONG] for the song's.
+ * about the artist is (#420); [Scope.SONG] for the song's. [withoutMusicBrainz] when it was rejected
+ * only for want of what MusicBrainz resolves (#1069, `IdentityCheck.Verdict.Rejected`): while
+ * MusicBrainz could not be reached, *Sources* says the match was not confirmed without it, rather
+ * than that nothing was found.
  */
 data class Rejection(
     val subject: String,
     val reason: String,
     val scope: Scope,
+    val withoutMusicBrainz: Boolean = false,
 )

@@ -8,6 +8,8 @@ import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.pipeline.TrackState
+import app.sleevesight.core.sources.Rejection
+import app.sleevesight.core.sources.SourceResult
 
 // What *Sources* shows of each source (#440, #662): a row of its table for each source but those
 // that are off, and a note only for what needs the listener; the sources that are off, and the
@@ -97,6 +99,15 @@ private val FOUND_ALONE: Map<Outcome, Scope> =
         Outcome.ArtistArticle to Scope.ARTIST,
         Outcome.OriginalSong to Scope.ORIGINAL_SONG,
     )
+
+/**
+ * Whether [this] is a rejected match whose every rejection was only for want of what MusicBrainz
+ * resolves (#1069, [Rejection.withoutMusicBrainz]): an artist's article with no MusicBrainz id to
+ * confirm it, a song's found by name that only MusicBrainz could tie to the track. False for a
+ * result that lists no rejection, whose reason alone cannot say.
+ */
+internal val SourceResult.withoutMusicBrainz: Boolean
+    get() = outcome is Outcome.Rejected && rejections.isNotEmpty() && rejections.all { it.withoutMusicBrainz }
 
 /**
  * Whether [this] source is off: switched off in the settings, or on but without its key, so not

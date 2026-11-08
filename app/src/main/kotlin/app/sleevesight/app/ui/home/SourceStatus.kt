@@ -35,8 +35,9 @@ internal fun statusText(
  * What a source's row in *Sources*' table says it found (#662), in [words]: a lookup that found
  * something, what it found ([finding], #768: *Found the track and the artist*, *Found pages about
  * the track*); any other status as it is. The statuses that are diagnostics show only with
- * grounding [details]: a match rejected, outside them, is nothing found, and a finding kept from an
- * earlier lookup says so ("Found the track (kept)") only with them.
+ * grounding [details]: a match rejected, outside them, is nothing found (unless only for want of
+ * MusicBrainz while it could not be reached, #1069), and a finding kept from an earlier lookup says
+ * so ("Found the track (kept)") only with them.
  */
 internal fun statusText(
     status: ChipStatus,
@@ -51,7 +52,7 @@ internal fun statusText(
         ChipStatus.NeedsKey -> words.get(R.string.home_source_needs_key)
         ChipStatus.ModelAllowed -> words.get(R.string.home_source_model_allowed)
         is ChipStatus.Done -> {
-            val found = finding?.let { findingText(it, words) } ?: outcomeText(status.outcome, details, words)
+            val found = finding?.let { findingText(it, words) } ?: outcomeText(status, details, words)
             if (status.cached && details) words.get(R.string.home_source_cached, found) else found
         }
     }
@@ -105,17 +106,29 @@ internal fun listText(
         words.get(R.string.home_source_finding_and, others, items.last())
     }
 
-/** What a lookup's [outcome] says alone: for one that found something, what (#768: *Found the track*). */
+/**
+ * What a lookup's outcome says alone: for one that found something, what (#768: *Found the track*);
+ * for a match rejected only for want of MusicBrainz while it could not be reached
+ * ([ChipStatus.Done.withoutMusicBrainz], #1069), that it was not confirmed without it, with grounding
+ * [details] or not.
+ */
 private fun outcomeText(
-    outcome: Outcome,
+    status: ChipStatus.Done,
     details: Boolean,
     words: Words,
 ): String =
-    when (outcome) {
+    when (val outcome = status.outcome) {
         Outcome.SongArticle -> findingText(Finding.Of(listOf(Scope.SONG)), words)
         Outcome.ArtistArticle -> findingText(Finding.Of(listOf(Scope.ARTIST)), words)
         Outcome.OriginalSong -> findingText(Finding.Of(listOf(Scope.ORIGINAL_SONG)), words)
-        is Outcome.Rejected -> words.get(if (details) R.string.home_source_rejected else R.string.home_source_none)
+        is Outcome.Rejected ->
+            words.get(
+                when {
+                    status.withoutMusicBrainz -> R.string.home_source_without_musicbrainz
+                    details -> R.string.home_source_rejected
+                    else -> R.string.home_source_none
+                },
+            )
         Outcome.None -> words.get(R.string.home_source_none)
         Outcome.SourceOff -> words.get(R.string.home_source_off)
         Outcome.Unreachable -> words.get(R.string.home_source_unreachable)
