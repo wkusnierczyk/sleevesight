@@ -83,14 +83,18 @@ internal class TrackRun(
     // still switched on but those it asks again ([Gathered.asked]): the `Unreachable` ones, or those a
     // *Retry* names (#724), a provisional one among them (#728), the other `Unreachable` ones kept so.
     // An adapter that threw (a bug, not the network) is not asked again; a source that was off then
-    // is looked up as usual.
+    // is looked up as usual. When MusicBrainz, unreachable then, is asked again, so is a source that
+    // rejected a match for want of what it resolves (#1069, `Rejection.withoutMusicBrainz`): its
+    // verdict was reached against the failed resolution, and the one made now may confirm the match.
     private val keptBefore: Map<SourceId, SourceState> =
         input.again
             ?.let { again ->
+                val musicBrainzAgain = SourceId.MUSICBRAINZ in again.asked && SourceId.MUSICBRAINZ in again.unreachable
                 again.sources.filter { (source, before) ->
                     enabled.any { it.id == source } &&
                         source !in again.asked &&
-                        (keeps(before) || source in again.unreachable)
+                        (keeps(before) || source in again.unreachable) &&
+                        !(musicBrainzAgain && waitedOnMusicBrainz(before))
                 }
             }.orEmpty()
 
@@ -445,6 +449,10 @@ internal class TrackRun(
         const val DEADLINE_REACHED: String = "GatherDeadline"
 
         fun nameOf(e: Throwable): String = e::class.simpleName ?: "Exception"
+
+        // Whether [before] rejected a match only for want of what MusicBrainz resolves (#1069).
+        fun waitedOnMusicBrainz(before: SourceState): Boolean =
+            before is SourceState.Done && before.result.rejections.any { it.withoutMusicBrainz }
 
         // Whether a source's state from an earlier run is kept rather than asked again (#192).
         fun keeps(before: SourceState): Boolean =
