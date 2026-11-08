@@ -120,6 +120,10 @@
          the album the player names (no release of it, or none that lists its tracks). The other
          reasons are home_musicbrainz_looking and those after it. -->
     <string name="home_tracklist_none">MusicBrainz has no tracklist for this album.</string>
+    <!-- On the back, in place of the tracklist: MusicBrainz has several albums of the name the player
+         gives (two compilations named "Greatest Hits"), and nothing tells which one is playing, so no
+         tracklist is shown. -->
+    <string name="home_tracklist_ambiguous">MusicBrainz reports several albums of this name for this artist. Sleevesight could not decide which one this is.</string>
     <string name="home_title_from">From %1$s</string>
     <string name="home_album_none">Album not reported</string>
     <!-- The album, then the year of the release being played: "Rubber Soul, 1965". -->
@@ -144,8 +148,15 @@
     <string name="home_dates_in_month">in %1$s</string>
     <string name="home_dates_in_year">in %1$s</string>
     <!-- The album's release, of the album's name whose year the album line shows: "This album was
-         released on 29 July 2014." The date as above. -->
-    <string name="home_dates_album">This album was released %1$s.</string>
+         originally released on 29 July 2014." ("originally", since a remaster keeps the first
+         release's date). The date as above. -->
+    <string name="home_dates_album">This album was originally released %1$s.</string>
+    <!-- The same, the release being played a single on MusicBrainz: "This single was originally
+         released in 1985." -->
+    <string name="home_dates_album_single">This single was originally released %1$s.</string>
+    <!-- The same, the release being played an EP on MusicBrainz: "This EP was originally released
+         in 1985." -->
+    <string name="home_dates_album_ep">This EP was originally released %1$s.</string>
     <!-- Where the track first came out: the release's title (in italics), then the date as above:
          "This track was first released on Grace on 23 August 1994."; a single's or an EP's named as
          such. -->
@@ -154,6 +165,12 @@
     <string name="home_dates_first_ep">This track was first released on the EP %1$s %2$s.</string>
     <!-- The track first came out on the album being played. -->
     <string name="home_dates_first_here">This track was first released on this album.</string>
+    <!-- The same, the release being played a single on MusicBrainz (its sentence above says "This
+         single was originally released …"). -->
+    <string name="home_dates_first_here_single">This track was first released on this single.</string>
+    <!-- The same, the release being played an EP on MusicBrainz ("This EP was originally
+         released …" above). -->
+    <string name="home_dates_first_here_ep">This track was first released on this EP.</string>
     <!-- The track's first release with its title not known: the date alone, as above. -->
     <string name="home_dates_first_when">This track was first released %1$s.</string>
     <!-- For a cover, who recorded the song first and when (the date as above), and the release it
@@ -564,6 +581,9 @@
     <!-- What web search found, whose lines are web pages. -->
     <string name="home_source_found_pages">Found pages about the track</string>
     <string name="home_source_rejected">Match rejected</string>
+    <!-- A source's matches set aside only because MusicBrainz, which could not be reached, gives the ids
+         that confirm them (#1069); with or without grounding details. -->
+    <string name="home_source_without_musicbrainz">Not confirmed without MusicBrainz</string>
     <string name="home_source_none">Nothing found</string>
     <string name="home_source_off">Off in Settings</string>
     <string name="home_source_unreachable">Could not be reached</string>

@@ -34,6 +34,7 @@ import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.SourceSwitch
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.synthesis.GenreListPrompt
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.TestScope
@@ -62,6 +63,16 @@ class AppGenreListsTest {
 
     // A cache that says when each card was kept: the time given, or its own reading of [clock].
     private val cache = CardCache(clock = clock)
+
+    // [cache], whose kept cards are read only once [gate], while set, is open (#1059's review).
+    private var gate: CompletableDeferred<Unit>? = null
+    private val gated =
+        object : PipelineCache by cache {
+            override suspend fun keptCard(key: CardKey): KeptCard? {
+                gate?.await()
+                return cache.keptCard(key)
+            }
+        }
     private val parts =
         MutableStateFlow<PipelineParts?>(
             PipelineParts(
@@ -70,7 +81,7 @@ class AppGenreListsTest {
                 resolver = TrackResolver { _, _ -> Resolution.NONE },
                 hasher = JvmHasher,
                 ai = AiAccess(provider, Secret("key")),
-                cache = cache,
+                cache = gated,
             ),
         )
     private val settings = MutableStateFlow<Settings?>(Settings(aiProvider = ProviderId.ANTHROPIC))
@@ -377,6 +388,204 @@ class AppGenreListsTest {
             assertEquals(1, provider.prompts.count { GenreListPrompt.QUESTION in it })
         }
 
+    // A track whose artist row has punk, blues and folk, each from MusicBrainz alone, on [play].
+    private fun onlyMusicBrainz(play: Long = 1): TrackState {
+        val genres = listOf("punk", "blues", "folk").map { label(it, LabelSource.MUSICBRAINZ) }
+        val track = HomeFixtures.track()
+        return track.copy(
+            nowPlaying = track.nowPlaying.copy(play = play),
+            genres = TrackGenres(listOf(GenreRow(GenreLevel.ARTIST, "A", genres))),
+        )
+    }
+
+    @Test
+    fun `a genre the AI's list lacks is offered until its tap, which answers at once with no call (#1059)`() =
+        runTest {
+            knowing()
+            provider.reply = { n -> if (n == 1) PUNK_ONLY else "Its loud guitars are punk [MB1]." }
+            val notes = notes()
+            val track = onlyMusicBrainz()
+            notes.explain(track, "punk")
+            advanceUntilIdle()
+            assertEquals(2, provider.requests)
+            // The list known without blues: nothing said of it before its own button is tapped.
+            assertEquals(GenreReason.Offered, notes.reason(track, "blues").first())
+            notes.explain(track, "blues")
+            advanceUntilIdle()
+            assertEquals(GenreReason.Unavailable(Unavailability.NOT_LISTED), notes.reason(track, "blues").first())
+            assertEquals(2, provider.requests)
+            // Folk, which the list lacks too, is still offered: only a tap says it.
+            assertEquals(GenreReason.Offered, notes.reason(track, "folk").first())
+        }
+
+    @Test
+    fun `a genre tapped while the list is asked gets the list's answer once it comes without it (#1059)`() =
+        runTest {
+            knowing()
+            provider.reply = { n -> if (n == 1) PUNK_ONLY else "Its loud guitars are punk [MB1]." }
+            provider.streaming = 1.seconds
+            val notes = notes()
+            val track = onlyMusicBrainz()
+            notes.explain(track, "blues")
+            runCurrent()
+            assertEquals(GenreReason.Shown(InsightState.Writing("")), notes.reason(track, "blues").first())
+            advanceUntilIdle()
+            assertEquals(GenreReason.Unavailable(Unavailability.NOT_LISTED), notes.reason(track, "blues").first())
+            // The list only: no reason asked for blues, and folk, not tapped, offered.
+            assertEquals(1, provider.requests)
+            assertEquals(GenreReason.Offered, notes.reason(track, "folk").first())
+        }
+
+    @Test
+    fun `a tap on a genre the AI's list lacks is kept for the play, and forgotten by Clear history (#1059)`() =
+        runTest {
+            knowing()
+            provider.reply = { PUNK_ONLY }
+            val notes = notes()
+            val track = onlyMusicBrainz()
+            notes.explain(track, "blues")
+            advanceUntilIdle()
+            assertEquals(GenreReason.Unavailable(Unavailability.NOT_LISTED), notes.reason(track, "blues").first())
+            // The next play: offered again, the list kept, nothing asked.
+            val again = onlyMusicBrainz(play = 2)
+            assertEquals(GenreReason.Offered, notes.reason(again, "blues").first())
+            assertEquals(1, provider.requests)
+            // *Clear history*, the list read back from the cache (kept here): the tap is forgotten too.
+            notes.forget()
+            val reason = notes.reason(track, "blues")
+            reason.first()
+            advanceUntilIdle()
+            assertEquals(GenreReason.Offered, reason.first())
+            val list = checkNotNull(notes.aiGenres(track).first())
+            assertEquals(listOf("punk"), list.genres.map { it.identity })
+            assertEquals(1, provider.requests)
+        }
+
+    @Test
+    fun `taps on two plays while one list is asked each show its answer on their own play (#1059)`() =
+        runTest {
+            knowing()
+            provider.reply = { PUNK_ONLY }
+            provider.streaming = 1.seconds
+            val notes = notes()
+            val first = onlyMusicBrainz(play = 1)
+            val second = onlyMusicBrainz(play = 2)
+            notes.explain(first, "folk")
+            runCurrent()
+            notes.explain(second, "blues")
+            advanceUntilIdle()
+            assertEquals(1, provider.requests)
+            assertEquals(GenreReason.Unavailable(Unavailability.NOT_LISTED), notes.reason(first, "folk").first())
+            assertEquals(GenreReason.Offered, notes.reason(first, "blues").first())
+            assertEquals(GenreReason.Unavailable(Unavailability.NOT_LISTED), notes.reason(second, "blues").first())
+            assertEquals(GenreReason.Offered, notes.reason(second, "folk").first())
+        }
+
+    @Test
+    fun `a tap as the list comes without the genre is not lost (#1059)`() =
+        runTest {
+            knowing()
+            provider.reply = { n -> if (n == 1) PUNK_ONLY else "Its loud guitars are punk [MB1]." }
+            provider.streaming = 1.seconds
+            val notes = notes()
+            val track = onlyMusicBrainz()
+            notes.explain(track, "punk")
+            runCurrent()
+            // The list comes after the tap's step, before its work would start.
+            notes.beforeLaunch = { testScheduler.advanceUntilIdle() }
+            notes.explain(track, "blues")
+            advanceUntilIdle()
+            assertEquals(GenreReason.Unavailable(Unavailability.NOT_LISTED), notes.reason(track, "blues").first())
+            assertEquals(GenreReason.Offered, notes.reason(track, "folk").first())
+            assertEquals(2, provider.requests)
+        }
+
+    @Test
+    fun `a tap as the list comes with the genre writes its reason (#1059)`() =
+        runTest {
+            knowing()
+            provider.reply = { n -> if (n == 1) PUNK_ONLY else "Its loud guitars are punk [MB1]." }
+            provider.streaming = 1.seconds
+            val notes = notes()
+            val track = onlyMusicBrainz()
+            notes.explain(track, "folk")
+            runCurrent()
+            // The list comes after the tap's step, before its work would start.
+            notes.beforeLaunch = { testScheduler.advanceUntilIdle() }
+            notes.explain(track, "punk")
+            advanceUntilIdle()
+            assertTrue((notes.reason(track, "punk").first() as GenreReason.Shown).state is InsightState.Written)
+            assertEquals(2, provider.requests)
+            assertEquals(GenreReason.Unavailable(Unavailability.NOT_LISTED), notes.reason(track, "folk").first())
+        }
+
+    @Test
+    fun `a tap as a panel's read of the cached list shows it writes the reason (#1059)`() =
+        runTest {
+            knowing()
+            provider.reply = { n -> if (n == 1) PUNK_ONLY else "Its loud guitars are punk [MB1]." }
+            val track = onlyMusicBrainz()
+            // The list asked and kept: one call.
+            notes().explain(track, "blues")
+            advanceUntilIdle()
+            assertEquals(1, provider.requests)
+            // A process later: the panel's read of the kept list under way, held, not yet shown.
+            val held = CompletableDeferred<Unit>()
+            gate = held
+            val later = notes()
+            assertEquals(GenreReason.Offered, later.reason(track, "punk").first())
+            runCurrent()
+            // It shows after the tap's step, before the tap's own work starts.
+            later.beforeLaunch = {
+                gate = null
+                held.complete(Unit)
+                testScheduler.advanceUntilIdle()
+            }
+            later.explain(track, "punk")
+            advanceUntilIdle()
+            assertTrue((later.reason(track, "punk").first() as GenreReason.Shown).state is InsightState.Written)
+            assertEquals(2, provider.requests)
+        }
+
+    @Test
+    fun `a genre tapped on a list that failed is not explained by a later play's list unasked (#1059)`() =
+        runTest {
+            knowing()
+            provider.error = AiErrorKind.OFFLINE
+            val notes = notes()
+            notes.explain(onlyMusicBrainz(play = 1), "punk")
+            advanceUntilIdle()
+            assertEquals(1, provider.requests)
+            // No *Retry*; on the next play, blues is tapped, and the list has punk too.
+            provider.error = null
+            provider.reply = { n -> if (n == 2) LIST else "Its loud guitars are blues [MB1]." }
+            val second = onlyMusicBrainz(play = 2)
+            notes.explain(second, "blues")
+            advanceUntilIdle()
+            // The list, and blues's reason: nothing for punk, not asked on this play.
+            assertEquals(3, provider.requests)
+            assertTrue((notes.reason(second, "blues").first() as GenreReason.Shown).state is InsightState.Written)
+            assertEquals(GenreReason.Offered, notes.reason(second, "punk").first())
+        }
+
+    @Test
+    fun `a tap right after Clear history is not lost to the work it stopped (#1059)`() =
+        runTest {
+            knowing()
+            provider.reply = { PUNK_ONLY }
+            provider.streaming = 1.seconds
+            val notes = notes()
+            val track = onlyMusicBrainz()
+            notes.explain(track, "blues")
+            runCurrent()
+            // *Clear history* while the list is asked; tapped again at once, the list is asked again.
+            notes.forget()
+            notes.explain(track, "blues")
+            advanceUntilIdle()
+            assertEquals(2, provider.requests)
+            assertEquals(GenreReason.Unavailable(Unavailability.NOT_LISTED), notes.reason(track, "blues").first())
+        }
+
     // [cache], counting the reads and writes of cards.
     private class CountedCache(
         private val cache: PipelineCache,
@@ -403,6 +612,9 @@ class AppGenreListsTest {
     private companion object {
         /** The AI's genre list: punk, which MusicBrainz gives, and blues, which no source does. */
         const val LIST = """{"genres": ["Punk", "Blues"]}"""
+
+        /** The AI's genre list with punk alone (#1059). */
+        const val PUNK_ONLY = """{"genres": ["Punk"]}"""
 
         /** As many lists, and reasons, as the notes keep in memory (`AppGenreNotes`' `KEPT`). */
         const val MEMORY = 64

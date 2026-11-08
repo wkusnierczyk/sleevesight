@@ -201,7 +201,7 @@ internal fun FlippingCover(
 /**
  * The back: the tracklist on the app's `surfaceContainerHigh`, a single disc as one list, several a
  * page each ([DiscPages]); else why there is none, as *Dates* says it ([NoDatesText]), but for an
- * album MusicBrainz has no tracklist of.
+ * album MusicBrainz has no tracklist of, or several albums of its name.
  */
 @Composable
 private fun CoverBackFace(turn: CoverTurn) {
@@ -218,6 +218,13 @@ private fun CoverBackFace(turn: CoverTurn) {
                 CoverBack.NotFound ->
                     Why {
                         Text(stringResource(R.string.home_tracklist_none), style = MaterialTheme.typography.bodyLarge)
+                    }
+                CoverBack.Ambiguous ->
+                    Why {
+                        Text(
+                            stringResource(R.string.home_tracklist_ambiguous),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
                     }
                 CoverBack.Looking -> Why { NoDatesText(NoDates.LOOKING, null, turn.openSources) }
                 CoverBack.Off -> Why { NoDatesText(NoDates.OFF, null, turn.openSources) }

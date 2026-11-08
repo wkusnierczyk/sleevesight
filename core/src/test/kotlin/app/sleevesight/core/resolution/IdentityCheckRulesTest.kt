@@ -91,7 +91,8 @@ class IdentityCheckRulesTest {
     fun `found by name, a same-title song by someone else is rejected`() =
         runTest {
             assertEquals(
-                Verdict.Rejected("Q1", "“Song” is by Original Act, not by Cover Act"),
+                // With no recording from MusicBrainz, only it could have told a cover from a namesake (#1069).
+                Verdict.Rejected("Q1", "“Song” is by Original Act, not by Cover Act", withoutMusicBrainz = true),
                 check.song("Q1", track, Resolution.NONE, Route.NAME),
             )
         }
