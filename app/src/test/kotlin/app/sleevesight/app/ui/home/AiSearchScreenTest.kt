@@ -413,7 +413,7 @@ class AiSearchScreenTest {
             assertTrue(rule.top >= boundsOf(text(R.string.home_musicbrainz_not_found)).bottom)
             val sentences =
                 listOf(
-                    "This album was released in January 1974.",
+                    "This album was originally released in January 1974.",
                     "This track was first released on the single Sundown in November 1973.",
                     "The song was originally recorded by Someone in 1972, and released on the EP First.",
                 )
@@ -429,7 +429,7 @@ class AiSearchScreenTest {
             tap(DATES_CHIP_TAG)
             val first = Released("1974-01", sundown.album, ReleaseType.ALBUM)
             set(SearchKind.DATES, AiSearch.Answered(SearchAnswer.Dates(album = "1974-01", first = first), model))
-            compose.waitUntil(WAIT_MS) { shows("This album was released in January 1974.") }
+            compose.waitUntil(WAIT_MS) { shows("This album was originally released in January 1974.") }
             assertTrue(shows(text(R.string.home_dates_first_here)))
         }
 

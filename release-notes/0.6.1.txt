@@ -1,0 +1,9 @@
+Fixed in 0.6.1:
+- Dates: albums like Thriller show their year again; singles and EPs say so.
+- Dates: a reissue is not taken for a track's first release.
+- Tracklists for albums that share a name.
+- Titles with an edit, such as "Promo 7" Edit", are found.
+- Albums with an unbracketed edition are found on Wikipedia.
+- Sources: "Not confirmed", not "Nothing found", when MusicBrainz is down.
+- Genres: no "could not find an explanation" before you ask.
+- Citations and Stop sit where they belong.

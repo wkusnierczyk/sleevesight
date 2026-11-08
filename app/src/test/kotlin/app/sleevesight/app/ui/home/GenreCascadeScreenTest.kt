@@ -162,6 +162,8 @@ class GenreCascadeScreenTest {
             compose.onNodeWithText("AI could not find an explanation.").assertExists()
             val enable = compose.onAllNodes(hasText("Enable", substring = true)).fetchSemanticsNodes()
             assertEquals(0, enable.size)
+            // Not the line for a genre the AI's list lacks (#1059): the reason was asked, and found nothing.
+            assertEquals(0, compose.onAllNodes(hasText("doesn’t list", substring = true)).fetchSemanticsNodes().size)
             assertEquals(1, count(GENRE_WHY_UNAVAILABLE_TAG))
         }
 }

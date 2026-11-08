@@ -8,8 +8,11 @@ package app.sleevesight.core.resolution
  *
  * The release shown is the one the song was matched to: of the playing recording's releases
  * (`MusicBrainzLookup.recordingReleases`, which resolution has most often asked already), those in
- * the album's group, by [choose], so a bonus track shows the edition it is on. When the recording is
- * not known, or is on none of the group's releases it lists, only the group is: its earliest official
+ * the album's group, by [choose], so a bonus track shows the edition it is on. When the album's name
+ * names other groups too (#1062: two singles named *Tom's Diner*, one of them another artist's), and
+ * the recording is on none of the group's releases but on theirs, [choose]'s of the first of them, in
+ * their order, that holds it.
+ * When the recording is not known, or is on none of these releases it lists, only the group is: its earliest official
  * release ([choose]); for an id that is no group's (`ReleaseDate.group` keeps a release's own for
  * want of a group), the release of that id. The group's lookup lists only its 25 earliest releases:
  * when none of them is official, its official releases are browsed
@@ -19,19 +22,26 @@ class AlbumTracklists(
     private val musicBrainz: MusicBrainzLookup,
 ) {
     /**
-     * The tracklist of the album [group], of the release the playing [recording] is on when known:
-     * found with at least one track; not found when the group has no release to show, or its release
-     * lists no track; failed when MusicBrainz could not be asked.
+     * The tracklist of the album [group], of the release the playing [recording] is on when known,
+     * else of its release in the first of [others] (the groups the album's name names besides, in the
+     * order they are preferred) that holds it: found with at least one track; not found when the group
+     * has no release to show, or its release lists no track; failed when MusicBrainz could not be asked.
      */
     suspend fun of(
         group: String,
         recording: String? = null,
+        others: List<String> = emptyList(),
     ): Lookup<MbTracklist> {
         val matched =
             when (val releases = recording?.let { musicBrainz.recordingReleases(it) }) {
-                is Lookup.Found ->
-                    choose(releases.value.releases.filter { (it.releaseGroup?.mbid ?: it.mbid) == group })
+                is Lookup.Found -> {
+                    val listed = releases.value.releases
+
+                    fun inGroups(groups: Set<String>) =
+                        choose(listed.filter { (it.releaseGroup?.mbid ?: it.mbid) in groups })
+                    (inGroups(setOf(group)) ?: others.firstNotNullOfOrNull { inGroups(setOf(it)) })
                         ?.let { Lookup.Found(it) }
+                }
                 is Lookup.Failed -> releases
                 Lookup.NotFound, null -> null
             }
