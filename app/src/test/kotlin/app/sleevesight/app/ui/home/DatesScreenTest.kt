@@ -115,10 +115,11 @@ class DatesScreenTest {
         val hooked = "Hooked on a Feeling"
         val cases =
             listOf(
-                DateSentence.Album("2014-07-29") to ("This album was released on 29 July 2014." to null),
+                DateSentence.Album("2014-07-29") to ("This album was originally released on 29 July 2014." to null),
                 DateSentence.Album("1985", ReleaseKind.SINGLE) to
                     ("This single was originally released in 1985." to null),
-                DateSentence.Album("1983-05", ReleaseKind.EP) to ("This EP was released in May 1983." to null),
+                DateSentence.Album("1983-05", ReleaseKind.EP) to
+                    ("This EP was originally released in May 1983." to null),
                 DateSentence.FirstHere() to ("This track was first released on this album." to null),
                 DateSentence.FirstHere(ReleaseKind.SINGLE) to ("This track was first released on this single." to null),
                 DateSentence.FirstHere(ReleaseKind.EP) to ("This track was first released on this EP." to null),
@@ -163,7 +164,7 @@ class DatesScreenTest {
             ),
         ) {
             compose.onNodeWithText("This track was first released on 9 July 2014.").assertExists()
-            compose.onNodeWithText("This album was released in July 2014.").assertExists()
+            compose.onNodeWithText("This album was originally released in July 2014.").assertExists()
             compose.onNodeWithText("The song was originally recorded by Someone in 2014.").assertExists()
         }
 
@@ -178,7 +179,7 @@ class DatesScreenTest {
             ),
         ) {
             compose.onNodeWithText("This track was first released on $day.").assertExists()
-            compose.onNodeWithText("This album was released in October 2026.").assertExists()
+            compose.onNodeWithText("This album was originally released in October 2026.").assertExists()
             compose.onNodeWithText("The song was originally recorded by Someone in 2026.").assertExists()
         }
 
@@ -192,7 +193,7 @@ class DatesScreenTest {
                 DateSentence.Original("2026-10-17", "Someone", "Four", null),
             ),
         ) {
-            compose.onNodeWithText("This album was released on July 9, 2014.").assertExists()
+            compose.onNodeWithText("This album was originally released on July 9, 2014.").assertExists()
             // The artist before the date, so a month-first date needs no comma after its year.
             val cover = "The song was originally recorded by Someone on October 17, 2026, and released on Four."
             compose.onNodeWithText(cover).assertExists()
@@ -333,7 +334,7 @@ class DatesScreenTest {
                 .onNodeWithTag(DATES_PANEL_CLOSE_TAG)
                 .assertTextEquals(text(R.string.page_close))
                 .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
-            compose.onNodeWithText("This album was released in January 1974.").assertExists()
+            compose.onNodeWithText("This album was originally released in January 1974.").assertExists()
             compose.onNodeWithText("This track was first released on this album.").assertExists()
 
             tap(DATES_PANEL_CLOSE_TAG)
@@ -359,7 +360,7 @@ class DatesScreenTest {
             )
         show(state(playing)) {
             tap(DATES_CHIP_TAG)
-            compose.onNodeWithText("This album was released on 21 March 1989.").assertExists()
+            compose.onNodeWithText("This album was originally released on 21 March 1989.").assertExists()
             val first = "This track was first released on the single Like a Prayer on 3 March 1989."
             compose.onNodeWithText(first).assertExists()
             assertEquals(0, compose.onAllNodesWithText("on this album", substring = true).fetchSemanticsNodes().size)

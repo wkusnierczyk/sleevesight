@@ -64,9 +64,9 @@ internal enum class ReleaseKind {
  */
 internal sealed interface DateSentence {
     /**
-     * "This album was released {when}.": the release of the album's name whose year the album line
-     * shows; "This single …" or "This EP …" when MusicBrainz's release group of it is one, as [kind]
-     * names it (#1058).
+     * "This album was originally released {when}.": the release of the album's name whose year the
+     * album line shows; "This single …" or "This EP …" when MusicBrainz's release group of it is
+     * one, as [kind] names it (#1058).
      */
     data class Album(
         val date: String,
