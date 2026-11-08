@@ -257,6 +257,26 @@ class HomeDatesTest {
             ),
             homeDates(resolved(girl, album, dates), girl),
         )
+        // A single and an EP of the name in one year, no album: the earlier one, whose date it says.
+        val both =
+            listOf(
+                ReleaseDate("Material Girl", "1985-03", "g-ep", "EP"),
+                ReleaseDate("Material Girl", "1985-01-23", "g-girl", "Single"),
+            )
+        assertEquals(
+            DateSentence.Album("1985-01-23", ReleaseKind.SINGLE),
+            homeDates(resolved(girl, album, both), girl).first(),
+        )
+        val epFirst = listOf(both[0].copy(date = "1985-01-02"), both[1])
+        assertEquals(
+            DateSentence.Album("1985-01-02", ReleaseKind.EP),
+            homeDates(resolved(girl, album, epFirst), girl).first(),
+        )
+        // One of no type known among them: an album, as before.
+        assertEquals(
+            DateSentence.Album("1985-01-23"),
+            homeDates(resolved(girl, album, listOf(both[0], both[1].copy(type = null))), girl).first(),
+        )
         // An EP likewise.
         val four = sundown.copy(album = "Four")
         val ep = FirstRelease("1983-05", "Four", "g-four", "r-four", "EP")

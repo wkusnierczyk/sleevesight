@@ -192,7 +192,7 @@ internal enum class NoDates {
 
 // The album the player names and what the album line shows of it: its year, and of the releases its
 // name names in that year (without a same-year single or EP of its title beside an album, #724), the
-// earliest date, their release groups, and their type when all are singles or all EPs (#1058).
+// earliest date, their release groups, and their type when all are singles or EPs (#1058).
 private class AlbumDates(
     val name: String?,
     val year: String?,
@@ -234,14 +234,22 @@ private class AlbumDates(
                         ?: settledBy(firstReleaseOf(track), named)
                 }
             val album = if (year == null) emptyList() else albumsOf(named.filter { it.releaseYear == year }, named)
-            val kinds = album.map { ReleaseKind.of(it.type) }.distinct()
-            return AlbumDates(
-                name,
-                year,
-                earliest(album.mapNotNull { it.date }),
-                album.map { it.group }.toSet(),
-                kinds.singleOrNull(),
-            )
+            val date = earliest(album.mapNotNull { it.date })
+            return AlbumDates(name, year, date, album.map { it.group }.toSet(), kindNamed(album, date))
+        }
+
+        // The type of [album]'s releases as its sentence names it (#1058): when every one is a
+        // single or an EP, the kind of the one whose [date] the sentence gives (a single and an EP
+        // of the name in one year, no album: the earlier one); null when any is an album or of no
+        // type known.
+        private fun kindNamed(
+            album: List<ReleaseDate>,
+            date: String?,
+        ): ReleaseKind? {
+            val short = album.isNotEmpty() && album.all { ReleaseKind.of(it.type) != null }
+            val dated = album.filter { it.date != null }
+            val said = dated.firstOrNull { it.date == date } ?: dated.minByOrNull { it.date.orEmpty() }
+            return said?.takeIf { short }?.let { ReleaseKind.of(it.type) }
         }
 
         // The year [first] gives an album whose name has releases in several years, none of them the
