@@ -270,6 +270,32 @@ class AlbumTracklistsTest {
         }
 
     @Test
+    fun `of the other groups, the first in their order that holds the recording, not the earliest release`() =
+        runTest {
+            // The album-type group comes before the single in `others`; the single's release is earlier.
+            val fake =
+                Fake(
+                    emptyMap(),
+                    mapOf("album" to tracks("album", "Song"), "single" to tracks("single", "Song")),
+                    recordings =
+                        mapOf(
+                            "rec" to
+                                Lookup.Found(
+                                    listOf(
+                                        release("single", "1980", "Official", group = "g-single"),
+                                        release("album", "1985", "Official", group = "g-album"),
+                                    ),
+                                ),
+                        ),
+                )
+            val found =
+                assertIs<Lookup.Found<MbTracklist>>(
+                    AlbumTracklists(fake).of("g-picked", "rec", listOf("g-album", "g-single")),
+                )
+            assertEquals("album", found.value.releaseMbid)
+        }
+
+    @Test
     fun `an id that is no group's is looked up as a release's own`() =
         runTest {
             val fake = Fake(emptyMap(), mapOf("release" to tracks("release", "Airbag")))

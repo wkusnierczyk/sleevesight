@@ -103,8 +103,7 @@ internal fun albumIdentity(header: NowPlaying): String? =
 internal fun tracklistKey(
     track: TrackState?,
     header: NowPlaying,
-): TracklistKey? =
-    (albumPick(track, header) as? AlbumPick.Groups)?.let { TracklistKey(it.group, playingRecording(track), it.others) }
+): TracklistKey? = (albumPick(track, header) as? AlbumPick.Groups)?.key(playingRecording(track))
 
 /**
  * What the back shows for [track] beside [header] (#984), with [musicBrainzOn] as *Sources* has it,
@@ -130,8 +129,7 @@ internal fun coverBack(
             when (val pick = albumPick(track, header)) {
                 null -> CoverBack.NotFound
                 AlbumPick.Ambiguous -> CoverBack.Ambiguous
-                is AlbumPick.Groups ->
-                    tracklistBack(TracklistKey(pick.group, playingRecording(track), pick.others), states, track, header)
+                is AlbumPick.Groups -> tracklistBack(pick.key(playingRecording(track)), states, track, header)
             }
     }
 }

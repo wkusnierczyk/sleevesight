@@ -1,5 +1,6 @@
 package app.sleevesight.app.ui.home
 
+import app.sleevesight.app.pipeline.TracklistKey
 import app.sleevesight.core.pipeline.CardEntity
 import app.sleevesight.core.sources.ReleaseDate
 
@@ -16,7 +17,10 @@ internal sealed interface AlbumPick {
     data class Groups(
         val group: String,
         val others: List<String> = emptyList(),
-    ) : AlbumPick
+    ) : AlbumPick {
+        /** The tracklist to ask for this album with the playing [recording], whose release is shown. */
+        fun key(recording: String?): TracklistKey = TracklistKey(group, recording, others)
+    }
 
     /** Several groups, none of them told apart by the player's year or by the earliest date. */
     data object Ambiguous : AlbumPick
@@ -30,8 +34,10 @@ internal sealed interface AlbumPick {
          * named *Tom's Diner*), one of them rather than none, of the albums among them when there are
          * any, else of all: of the groups with a release named in [playerYear], when it is given and
          * any has; of those, the one with the earliest named release, an undated one after every dated
-         * one. The others go with it, so the lookup takes the one the playing recording is on.
-         * [Ambiguous] when two share that earliest date (or are both undated); null when it names none.
+         * one. The others go with it, the album-type ones first, then by their earliest named release,
+         * so the lookup takes the first of them the playing recording is on when the one picked does not
+         * hold it. [Ambiguous] when two share that earliest date, or all are undated; null when it names
+         * none.
          */
         fun of(
             album: String,
@@ -65,7 +71,9 @@ internal sealed interface AlbumPick {
             fun earliest(group: String): String = named.getValue(group).mapNotNull { it.date }.minOrNull() ?: UNDATED
             val first = pool.keys.minOf(::earliest)
             val group = pool.keys.singleOrNull { earliest(it) == first }
-            val others = named.keys.filter { it != group }.sortedBy(::earliest)
+            // The album-type groups first, as the pick prefers them, then by date: the lookup takes the
+            // first of them the playing recording is on.
+            val others = named.keys.filter { it != group }.sortedWith(compareBy({ it !in albums }, ::earliest))
             return if (group == null) Ambiguous else Groups(group, others)
         }
 
@@ -73,6 +81,6 @@ internal sealed interface AlbumPick {
         private const val ALBUM_TYPE = "Album"
 
         // Past every date, so an undated group sorts after the dated ones.
-        private const val UNDATED = "￿"
+        private const val UNDATED = "\uffff"
     }
 }

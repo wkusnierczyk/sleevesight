@@ -105,6 +105,27 @@ class CoverBackModelTest {
     }
 
     @Test
+    fun ofAlbumsAndASingleOfTheNameAnAlbumIsPickedTheOthersAlbumsFirst() {
+        val track =
+            releasedOn(
+                idol,
+                "rec-eyes",
+                ReleaseDate("Greatest Hits", "1999", "g-single", "Single"),
+                ReleaseDate("Greatest Hits", "2001", "g-2001", "Album"),
+                ReleaseDate("Greatest Hits", "2006-09", "g-late", "Album"),
+                ReleaseDate("Greatest Hits", "2006-03", "g-2006", "Album"),
+            )
+        assertEquals(AlbumPick.Groups("g-2001", listOf("g-2006", "g-late", "g-single")), albumPick(track, idol))
+        // The player's year narrows the albums to two, the earlier of them picked.
+        assertEquals(
+            AlbumPick.Groups("g-2006", listOf("g-2001", "g-late", "g-single")),
+            albumPick(track, idol.copy(year = 2006)),
+        )
+        // Only the single is of the year: the albums are preferred, so the year decides nothing.
+        assertEquals("g-2001", (albumPick(track, idol.copy(year = 1999)) as AlbumPick.Groups).group)
+    }
+
+    @Test
     fun ofTwoSinglesOfTheNameTheEarliestIsAskedWithTheOther() {
         // *Tom's Diner*: Suzanne Vega's single (1987) and D.N.A.'s (1990), read as one name; the lookup
         // takes the one the playing recording is on (`AlbumTracklists.of`).
