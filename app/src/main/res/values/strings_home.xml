@@ -147,9 +147,9 @@
     <string name="home_dates_on_day">on %1$s</string>
     <string name="home_dates_in_month">in %1$s</string>
     <string name="home_dates_in_year">in %1$s</string>
-    <!-- The album's release, of the album's name whose year the album line shows: "This album was
-         originally released on 29 July 2014." ("originally", since a remaster keeps the first
-         release's date). The date as above. -->
+    <!-- The album's release, of the album's name whose year the album line shows, when it is its
+         release group's first release on MusicBrainz: "This album was originally released on 29 July
+         2014." The date as above. A later edition says home_dates_edition instead (#1099). -->
     <string name="home_dates_album">This album was originally released %1$s.</string>
     <!-- The same, the release being played a single on MusicBrainz: "This single was originally
          released in 1985." -->
@@ -157,6 +157,24 @@
     <!-- The same, the release being played an EP on MusicBrainz: "This EP was originally released
          in 1985." -->
     <string name="home_dates_album_ep">This EP was originally released %1$s.</string>
+    <!-- An edition of an album (#1099): the release being played is a later edition of its release
+         group on MusicBrainz (a remaster, a deluxe set, a reissue), or one under another title. Its
+         date, as above, then (home_dates_edition_of_album and the rest) the album's first release:
+         "This edition was released on 4 June 2001. The album, Actually, was first released on 7
+         September 1987." -->
+    <string name="home_dates_edition">This edition was released %1$s.</string>
+    <!-- After home_dates_edition, in the same paragraph: the album's title (in italics), then the date
+         of its first release, as above; a single's or an EP's named as such. -->
+    <string name="home_dates_edition_of_album">The album, %1$s, was first released %2$s.</string>
+    <string name="home_dates_edition_of_single">The single, %1$s, was first released %2$s.</string>
+    <string name="home_dates_edition_of_ep">The EP, %1$s, was first released %2$s.</string>
+    <!-- An edition under the album's own title (its edition aside: "Rumours (Remastered)" is
+         "Rumours"): the edition's date, then the album's first release's, as above: "This edition was
+         released in 2004; the album was first released on 4 February 1977."; a single's or an EP's
+         named as such. -->
+    <string name="home_dates_edition_same_album">This edition was released %1$s; the album was first released %2$s.</string>
+    <string name="home_dates_edition_same_single">This edition was released %1$s; the single was first released %2$s.</string>
+    <string name="home_dates_edition_same_ep">This edition was released %1$s; the EP was first released %2$s.</string>
     <!-- Where the track first came out: the release's title (in italics), then the date as above:
          "This track was first released on Grace on 23 August 1994."; a single's or an EP's named as
          such. -->

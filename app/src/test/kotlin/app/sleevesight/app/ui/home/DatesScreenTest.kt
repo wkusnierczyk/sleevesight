@@ -37,6 +37,7 @@ import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
+import app.sleevesight.app.pipeline.GroupFeed
 import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.app.session.PlaybackInfo
 import app.sleevesight.app.session.PlaybackStatus
@@ -53,6 +54,7 @@ import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.RunKey
 import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.pipeline.TrackState
+import app.sleevesight.core.resolution.MbGroupFirst
 import app.sleevesight.core.settings.Layout
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.sources.FirstRelease
@@ -60,6 +62,7 @@ import app.sleevesight.core.sources.ReleaseDate
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.text.DateWords
 import app.sleevesight.core.text.EnglishDateWords
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -145,6 +148,41 @@ class DatesScreenTest {
                     ("The song was originally recorded by Someone in 1990, and released on the EP Four." to "Four"),
                 DateSentence.Original("1993", "Nine Inch Nails", null, null) to
                     ("The song was originally recorded by Nine Inch Nails in 1993." to null),
+            )
+        said(cases.map { it.first }) {
+            for ((_, expected) in cases) {
+                val (line, italic) = expected
+                assertEquals(line, listOfNotNull(italic), italics(line))
+            }
+        }
+    }
+
+    @Test
+    fun anEditionReadsItsDateAndTheAlbumsFirstReleaseTheAlbumsTitleInItalics() {
+        val actually = "Actually"
+        val cases =
+            listOf(
+                DateSentence.Edition("2001-06-04", "1987-09-07", actually) to
+                    (
+                        "This edition was released on 4 June 2001. " +
+                            "The album, $actually, was first released on 7 September 1987." to actually
+                    ),
+                DateSentence.Edition("2001", "1987-09", actually, ReleaseKind.SINGLE) to
+                    (
+                        "This edition was released in 2001. " +
+                            "The single, $actually, was first released in September 1987." to actually
+                    ),
+                DateSentence.Edition("2001-06", "1987", actually, ReleaseKind.EP) to
+                    (
+                        "This edition was released in June 2001. " +
+                            "The EP, $actually, was first released in 1987." to actually
+                    ),
+                DateSentence.Edition("2004", "1977-02-04", null) to
+                    ("This edition was released in 2004; the album was first released on 4 February 1977." to null),
+                DateSentence.Edition("2004", "1977", null, ReleaseKind.SINGLE) to
+                    ("This edition was released in 2004; the single was first released in 1977." to null),
+                DateSentence.Edition("2004-03", "1977", null, ReleaseKind.EP) to
+                    ("This edition was released in March 2004; the EP was first released in 1977." to null),
             )
         said(cases.map { it.first }) {
             for ((_, expected) in cases) {
@@ -282,11 +320,23 @@ class DatesScreenTest {
     private val retried = mutableListOf<Triple<RunKey, SourceId, NowPlaying>>()
     private val opened = mutableListOf<SettingsTarget>()
 
+    // The album's release groups, as MusicBrainz's lookups would give them (#1099), and each looked up.
+    private val groups =
+        object : GroupFeed {
+            val looked = mutableListOf<String>()
+            override val firsts = MutableStateFlow<Map<String, MbGroupFirst>>(emptyMap())
+
+            override fun look(group: String) {
+                looked += group
+            }
+        }
+
     private val actions =
         NowPlayingActions(
             normalizer::normalize,
             openSettingsAt = { opened += it },
             askAgain = { key, source, shown -> retried += Triple(key, source, shown) },
+            releaseGroups = groups,
         )
 
     private fun show(
@@ -340,6 +390,30 @@ class DatesScreenTest {
             tap(DATES_PANEL_CLOSE_TAG)
             assertEquals(1, count(DATES_CHIP_TAG))
             assertEquals(0, count(DATES_PANEL_TAG))
+        }
+
+    @Test
+    fun theAlbumsReleaseGroupIsLookedUpOnlyOnceDatesOpensAndItsAnswerMakesItAnEdition() =
+        show {
+            // Closed: MusicBrainz is not asked (`privacy.md`: when you open *Dates*, and only then).
+            assertEquals(emptyList<String>(), groups.looked)
+            tap(DATES_CHIP_TAG)
+            assertEquals(listOf("g-sundown"), groups.looked)
+            compose.onNodeWithText("This album was originally released in January 1974.").assertExists()
+            // The group's answer: first released the year before, so this is an edition of it, and
+            // the track says its own date and title. Recomposed, the panel asks nothing more.
+            groups.firsts.value = mapOf("g-sundown" to MbGroupFirst("g-sundown", "Sundown", "1973-05"))
+            compose.waitForIdle()
+            compose
+                .onNodeWithText("This edition was released in January 1974; the album was first released in May 1973.")
+                .assertExists()
+            compose.onNodeWithText("This track was first released on Sundown in January 1974.").assertExists()
+            assertEquals(listOf("g-sundown"), groups.looked)
+            // Closed and opened again, it asks again (the feed answers from what it holds).
+            tap(DATES_PANEL_CLOSE_TAG)
+            assertEquals(1, groups.looked.size)
+            tap(DATES_CHIP_TAG)
+            assertEquals(listOf("g-sundown", "g-sundown"), groups.looked)
         }
 
     @Test
