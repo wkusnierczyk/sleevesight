@@ -27,6 +27,55 @@ class NormalizerTest {
         }
     }
 
+    // #1060: any trailing edit, not only a radio or single one.
+    @Test
+    fun `any edit suffix is stripped and noted`() {
+        val track = normalizer.normalize("Heaven Is a Place on Earth - Promo 7\" Edit", "Belinda Carlisle")
+        assertEquals("Heaven Is a Place on Earth", track.title)
+        assertEquals("Promo 7\" Edit", track.dropped)
+        assertEquals(listOf("drop \"Promo 7\" Edit\""), track.notes)
+        assertEquals("belinda carlisle|heaven is a place on earth", track.lookupKey)
+        for (suffix in listOf("7\" Edit", "Edit", "edit", "EDIT", "12\" Promo Edit", "Single Edit")) {
+            assertEquals("Song", normalizer.normalize("Song - $suffix", "A").title, suffix)
+        }
+    }
+
+    @Test
+    fun `an edit in the title itself is kept`() {
+        for (title in listOf(
+            "The Final Edit",
+            "Edit Me",
+            "Song-Edit",
+            "Song - Credit",
+            "Song - Edited",
+            "Song - Edits",
+            "Song - Edit Me",
+            "Song - Re-Edit",
+            // A dash other than " - " before the edit: no word starts or ends with one, and only
+            // " - " separates the suffix, so nothing is dropped.
+            "Song - Part 2 \u2013 Radio Edit",
+            "Song - Live \u2014 Edit",
+            "Song - Part 2 \u2212 Edit",
+            "Song - Part 2 \u2010 Edit",
+            "Song - Part 2- Radio Edit",
+            "Song - Part 2 -Radio Edit",
+        )) {
+            assertEquals(title, normalizer.normalize(title, "A").title, title)
+        }
+        // A dash within a word is the word's.
+        assertEquals("Song", normalizer.normalize("Song - Re-Recorded Edit", "A").title)
+        // Only the last " - " part goes: the one before it is the title's, as with "Radio Edit".
+        assertEquals("Song - 2011 Remaster", normalizer.normalize("Song - 2011 Remaster - Radio Edit", "A").title)
+        assertEquals("Song - Part 2", normalizer.normalize("Song - Part 2 - Edit", "A").title)
+    }
+
+    @Test
+    fun `a mix or promo suffix is kept`() {
+        for (title in listOf("Song - Extended Mix", "Song - 12\" Mix", "Song - Remix", "Song - Promo")) {
+            assertEquals(title, normalizer.normalize(title, "A").title, title)
+        }
+    }
+
     @Test
     fun `a featured artist in the title moves to the artists`() {
         val track = normalizer.normalize("Baby, Please Don't Go (feat. Van Morrison)", "Them")
@@ -139,7 +188,7 @@ class NormalizerTest {
         for (entry in expected) {
             assertMatches(entry.normalized, entry.title, entry.artist, "edge case ${entry.n}, ${entry.title}")
         }
-        assertEquals("Song - ſingle edit", normalizer.normalize("Song - ſingle edit", "A").title)
+        assertEquals("Song - remaſtered", normalizer.normalize("Song - remaſtered", "A").title)
     }
 
     // #72: the key keeps letters and digits in any script, and `+`.
