@@ -4,12 +4,20 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import sleevesight.checks.CheckDependencies
 import sleevesight.checks.CheckModuleGraph
+import sleevesight.checks.SecurityLint
 import sleevesight.checks.networkModules
 
 plugins {
     kotlin("jvm")
     id("sleevesight.quality")
     id("sleevesight.locking")
+    // Android lint on the JVM modules too, for its security checks (`SecurityLint`): `:net`'s TLS
+    // setup is where a weakened one would land, and the app's lint does not look into it.
+    id("com.android.lint")
+}
+
+lint {
+    error += SecurityLint.checks
 }
 
 kotlin {
