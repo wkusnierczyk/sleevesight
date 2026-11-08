@@ -23,8 +23,8 @@ import org.gradle.api.tasks.TaskAction
  *   call with `RegexOption.LITERAL` is not read;
  * - a string literal or a `const val` straight before `.toRegex(`, unless its options hold
  *   `RegexOption.LITERAL`;
- * - each element (literals and constants joined by `+`) of a `listOf`, `setOf`, `arrayOf`,
- *   `sequenceOf` or `mapOf` call that is mapped with a lambda calling `Regex(`, as in
+ * - each element (literals and constants joined by `+`; not a map's key, before `to`) of a `listOf`,
+ *   `setOf`, `arrayOf`, `sequenceOf` or `mapOf` call that is mapped with a lambda calling `Regex(`, as in
  *   `listOf("a", "b").map { Regex(it) }` (not when that call's options hold `RegexOption.LITERAL`).
  *
  * A template (`$NAME`, `${NAME}`) and a name in the expression are replaced by the `const val` of
@@ -506,12 +506,14 @@ private fun mappedToRegexes(
     for (token in tokens.subList(open + 1, close)) {
         val operand = token is Token.Str || token is Token.Name
         when {
+            // A map's key is not a pattern.
+            token.isName("to") -> if (runs.isNotEmpty()) runs.removeAt(runs.lastIndex)
             operand && (previous.isPunct('+') || previous.isPunct('.')) && runs.isNotEmpty() -> runs.last() += token
             operand -> runs += mutableListOf(token)
         }
         previous = token
     }
-    return runs.filter { run -> run.any { it is Token.Str } }.map { it.first().line to it }
+    return runs.map { it.first().line to it }
 }
 
 // The index of the bracket that closes the one at [open], or the last token's.

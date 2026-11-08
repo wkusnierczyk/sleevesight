@@ -128,4 +128,16 @@ class CheckRegexBracesTest {
             """.trimIndent()
         assertEquals(listOf(3 to "{y}"), CheckRegexBraces.regexesInFile(source))
     }
+
+    @Test
+    fun `a collection's constants are read and a map's keys are not`() {
+        val source =
+            """
+            const val CLOSE = "}"
+            const val KEY = "k{"
+            val a = listOf(CLOSE).map { Regex(it) }
+            val b = mapOf(KEY to "v}").map { Regex(it.value) }
+            """.trimIndent()
+        assertEquals(listOf(3 to "}", 4 to "v}"), CheckRegexBraces.regexesInFile(source))
+    }
 }
