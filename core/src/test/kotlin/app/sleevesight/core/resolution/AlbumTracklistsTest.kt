@@ -296,6 +296,37 @@ class AlbumTracklistsTest {
         }
 
     @Test
+    fun `of tied groups none picked, the one the recording is on, else not clear`() =
+        runTest {
+            // #1078: two *Greatest Hits* of one date; the recording on [onA], on both, on neither.
+            fun on(vararg groups: String) =
+                Lookup.Found(groups.map { release("r-$it", "2001", "Official", group = it) })
+            val fake =
+                Fake(
+                    emptyMap(),
+                    mapOf("r-g-a" to tracks("r-g-a", "Eyes Without a Face"), "r-g-b" to tracks("r-g-b", "Mony Mony")),
+                    recordings =
+                        mapOf(
+                            "onA" to on("g-a", "compilation"),
+                            "onBoth" to on("g-a", "g-b"),
+                            "onNeither" to on("compilation"),
+                            "offline" to Lookup.Failed("Offline"),
+                        ),
+                )
+            val tracklists = AlbumTracklists(fake)
+            val tied = listOf("g-a", "g-b")
+            val a = assertIs<Lookup.Found<MbTracklist>>(tracklists.ofOneOf(tied, "onA"))
+            assertEquals("r-g-a", a.value.releaseMbid)
+            assertNull(tracklists.ofOneOf(tied, "onBoth"))
+            assertNull(tracklists.ofOneOf(tied, "onNeither"))
+            assertNull(tracklists.ofOneOf(tied, "unknown"))
+            assertNull(tracklists.ofOneOf(tied, null))
+            assertEquals(Lookup.Failed("Offline"), tracklists.ofOneOf(tied, "offline"))
+            // No group's own releases are asked for: only the recording tells them apart.
+            assertEquals(emptyList(), fake.asked.filter { it.startsWith("group") || it.startsWith("official") })
+        }
+
+    @Test
     fun `an id that is no group's is looked up as a release's own`() =
         runTest {
             val fake = Fake(emptyMap(), mapOf("release" to tracks("release", "Airbag")))
