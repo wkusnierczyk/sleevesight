@@ -36,7 +36,7 @@ internal fun spokenSentences(
         return listOfNotNull(tidy(whole).ifEmpty { null })
     }
     return grounded.paragraphs.flatMap { paragraph ->
-        paragraph.zip(shown(paragraph.map { it.text })).mapNotNull { (sentence, runs) ->
+        paragraph.zip(shown(paragraph.map { it.text }, checked = true)).mapNotNull { (sentence, runs) ->
             val said = tidy(runs.filterIsInstance<ShownRun.Text>().joinToString("") { it.text })
             when {
                 said.isEmpty() -> null
