@@ -66,8 +66,8 @@ data class LibraryQuery(
          * Whether normalizing [track]'s title removed what may tell one recording from another (#997):
          * a variant (`NormalizedTrack.variant`: "(felt piano)", "(acoustic)"), or a dropped suffix
          * (`NormalizedTrack.dropped`) with a word not among [SAFE_WORDS] or a year. Only the suffixes
-         * known to name the song's own recording pass ("2006 Remaster", "Radio Edit", "Album
-         * Version"); any other ("Off Vocal Version", "No Vocals Version", "Live") may be another
+         * known to name the song's own recording pass ("2006 Remaster", "Radio Edit", "Promo 7" Edit",
+         * "Album Version"); any other ("Off Vocal Version", "No Vocals Version", "Live") may be another
          * mix, which LRCLIB, asked by the plain title, would take for the vocal one.
          */
         fun removedVersion(track: NormalizedTrack): Boolean =
@@ -76,7 +76,8 @@ data class LibraryQuery(
 
         /**
          * The words of a dropped suffix that leave the recording the song's own: a remaster, an edit,
-         * the single's or the album's version, mono or stereo, the explicit or the clean one.
+         * the single's, the album's or the promo's version, the record's size (7", 10", 12"; #1060),
+         * mono or stereo, the explicit or the clean one.
          */
         val SAFE_WORDS: Set<String> =
             setOf(
@@ -85,6 +86,10 @@ data class LibraryQuery(
                 "radio",
                 "edit",
                 "single",
+                "promo",
+                "7",
+                "10",
+                "12",
                 "album",
                 "version",
                 "mono",
