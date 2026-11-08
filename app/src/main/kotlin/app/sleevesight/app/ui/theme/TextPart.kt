@@ -35,20 +35,24 @@ internal sealed interface TextPart {
 }
 
 /**
- * [template] as parts: its words, and in place of each `%1$s`, `%2$s`… the link of that number in
- * [links] (#541), so a translation may put the links where its grammar needs them. A placeholder
- * with no link of its number stays as written.
+ * [template] as parts: its words, and in place of each `%1$s`, `%2$s`… the part of that number in
+ * [args] (#541), so a translation may put the links where its grammar needs them. A placeholder
+ * with no part of its number, or a number too large to read, stays as written.
+ *
+ * Text from outside the template, such as a genre's name, goes in [args] as [TextPart.Words], never
+ * formatted into [template] first (#1091): a `%1$s` in it would then be read as a placeholder too.
  */
 internal fun linkedParts(
     template: String,
-    vararg links: TextPart.Linked,
+    vararg args: TextPart,
 ): List<TextPart> {
     val parts = mutableListOf<TextPart>()
     var at = 0
     for (match in PLACEHOLDER.findAll(template)) {
         if (match.range.first > at) parts += TextPart.Words(template.substring(at, match.range.first))
-        // A number with no link given stays as written, rather than fail.
-        parts += links.getOrNull(match.groupValues[1].toInt() - 1) ?: TextPart.Words(match.value)
+        // A number with no part given, or past what an `Int` holds, stays as written, rather than fail.
+        val number = match.groupValues[1].toIntOrNull()
+        parts += number?.let { args.getOrNull(it - 1) } ?: TextPart.Words(match.value)
         at = match.range.last + 1
     }
     if (at < template.length) parts += TextPart.Words(template.substring(at))
