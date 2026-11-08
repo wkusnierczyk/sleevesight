@@ -12,6 +12,9 @@ import app.sleevesight.core.sources.OriginalRecording
 import app.sleevesight.core.sources.ReleaseDate
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.SourceResult
+import app.sleevesight.core.synthesis.ReleaseType
+import app.sleevesight.core.synthesis.Released
+import app.sleevesight.core.synthesis.SearchAnswer
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import kotlin.time.Duration.Companion.seconds
@@ -103,6 +106,65 @@ class HomeDatesTest {
         val twd = resolved(december, first, listOf(ReleaseDate(volume, "2011-11-15", "g-twd")))
         assertEquals(listOf(DateSentence.Album("2011-11-15"), DateSentence.FirstHere), homeDates(twd, december))
         assertEquals(HeaderYears(album = "2011"), headerYears(twd, december))
+    }
+
+    @Test
+    fun aReissueInTheOriginalsReleaseGroupIsNotWhereTheTrackFirstCameOut() {
+        // #1065: MusicBrainz files *Thriller 25 Super Deluxe Edition* (2008) in *Thriller*'s release
+        // group, where *Beat It* first came out in 1982.
+        val deluxe = "Thriller 25 Super Deluxe Edition"
+        val beatIt = sundown.copy(title = "Beat It", artists = "Michael Jackson", album = deluxe, year = 2008)
+        val thriller = FirstRelease("1982-11-30", "Thriller", "g-thriller", "r-thriller", "Album")
+        val dates =
+            listOf(ReleaseDate("Thriller", "1982-11-30", "g-thriller"), ReleaseDate(deluxe, "2008-02-08", "g-thriller"))
+        assertEquals(
+            listOf(DateSentence.Album("2008-02-08"), DateSentence.First("1982-11-30", "Thriller", null)),
+            homeDates(resolved(beatIt, thriller, dates), beatIt),
+        )
+        assertEquals(HeaderYears(album = "2008"), headerYears(resolved(beatIt, thriller, dates), beatIt))
+        // With no year from the player, the year shown is MusicBrainz's: the same.
+        val unyeared = beatIt.copy(year = null)
+        assertEquals(HeaderYears(album = "2008"), headerYears(resolved(unyeared, thriller, dates), unyeared))
+        assertEquals(
+            listOf(DateSentence.Album("2008-02-08"), DateSentence.First("1982-11-30", "Thriller", null)),
+            homeDates(resolved(unyeared, thriller, dates), unyeared),
+        )
+        // A player's year MusicBrainz does not give the album is overridden by the one it does.
+        val misdated = beatIt.copy(year = 1982)
+        assertEquals(HeaderYears(album = "2008"), headerYears(resolved(misdated, thriller, dates), misdated))
+        assertEquals(
+            listOf(DateSentence.Album("2008-02-08"), DateSentence.First("1982-11-30", "Thriller", null)),
+            homeDates(resolved(misdated, thriller, dates), misdated),
+        )
+        // The group's release of the album's own year is still this album, on another day too.
+        val sameYear = thriller.copy(date = "2008-01-15")
+        val withSameYear = listOf(ReleaseDate("Thriller", "2008-01-15", "g-thriller"), dates[1])
+        assertEquals(HeaderYears(album = "2008"), headerYears(resolved(beatIt, sameYear, withSameYear), beatIt))
+        assertEquals(
+            listOf(DateSentence.Album("2008-02-08"), DateSentence.FirstHere),
+            homeDates(resolved(beatIt, sameYear, withSameYear), beatIt),
+        )
+        // A first release in the group with no readable year is still this album, as before.
+        assertEquals(
+            listOf(DateSentence.Album("2008-02-08"), DateSentence.FirstHere),
+            homeDates(resolved(beatIt, thriller.copy(date = ""), dates), beatIt),
+        )
+    }
+
+    @Test
+    fun anAiAnswersFirstReleaseOfTheAlbumsTitleInAnEarlierYearIsNotThisAlbum() {
+        // A 2008 edition of *Thriller*: the answer dates the album 2008, its first release 1982.
+        val edition = sundown.copy(title = "Beat It", artists = "Michael Jackson", album = "Thriller")
+        val first = Released("1982-11-30", "Thriller", ReleaseType.ALBUM)
+        assertEquals(
+            listOf(DateSentence.Album("2008-02-08"), DateSentence.First("1982-11-30", "Thriller", null)),
+            aiDates(SearchAnswer.Dates(album = "2008-02-08", first = first), edition),
+        )
+        // In the album's year, it is this album.
+        assertEquals(
+            listOf(DateSentence.Album("1982-11-30"), DateSentence.FirstHere),
+            aiDates(SearchAnswer.Dates(album = "1982-11-30", first = first), edition),
+        )
     }
 
     @Test
