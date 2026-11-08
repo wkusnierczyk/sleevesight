@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.GenreReason
 import app.sleevesight.app.pipeline.Unavailability
+import app.sleevesight.app.ui.GENRE_LABELS_DOCS_URL
 import app.sleevesight.app.ui.logo.Busy
 import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.app.ui.theme.LinkedText
@@ -33,10 +34,12 @@ import app.sleevesight.core.synthesis.GenreListMode
 // with why under it.
 
 // *Why is this …?* disabled (#762), and why under it ([why]), in the panel's quiet note style, its
-// links opening the settings ([openSettingsAt]).
+// links opening the settings ([openSettingsAt]) or, for a genre the AI's list does not have, the
+// docs; [genre] is the genre's name as the question gives it.
 @Composable
 internal fun ReasonUnavailable(
     question: String,
+    genre: String,
     why: Unavailability,
     openSettingsAt: (SettingsTarget) -> Unit,
 ) {
@@ -57,8 +60,12 @@ internal fun ReasonUnavailable(
                 QuietLinks(enableParts(GenreLists.MODES, openSettingsAt))
             }
 
+            // Once tapped (#1059): the list lacks it, only MusicBrainz gives it, and *See why.* links
+            // the docs' *Genre labels*, read as a link.
             Unavailability.NOT_LISTED -> {
-                QuietNote(stringResource(R.string.genre_why_not_found))
+                val link = TextPart.Link(stringResource(R.string.genre_why_not_listed_link), GENRE_LABELS_DOCS_URL)
+                // The link's place kept as a placeholder, for [linkedParts].
+                QuietLinks(linkedParts(stringResource(R.string.genre_why_not_listed, genre, "%1\$s"), link))
             }
         }
     }
@@ -170,8 +177,8 @@ internal fun ReasonShown(
                 if (!state.complete) QuietNote(stringResource(R.string.genre_why_incomplete))
             }
 
-        // The AI could not explain it (#762): as when its list does not have it, then what is off
-        // that could (#695).
+        // The AI could not explain it (#762), then what is off that could (#695). Not for a genre the
+        // AI's list does not have, which says so (#1059, [ReasonUnavailable]).
         InsightState.NoEvidence -> NotFound(question, shown.couldHelp, actions.openSettingsAt)
 
         is InsightState.Failed ->
@@ -218,9 +225,10 @@ private fun ReasonCredits(
     }
 }
 
-// *Why is this …?* disabled once the AI could not explain it (#762), "AI could not find an
-// explanation." under it, then "Enable {what}." naming what is off and could explain it
-// ([couldHelp], #695), each linked to where it is set ([openSettingsAt]); no such line with both on.
+// *Why is this …?* disabled once the AI, asked for the reason, could not explain it (#762), "AI
+// could not find an explanation." under it, then "Enable {what}." naming what is off and could
+// explain it ([couldHelp], #695), each linked to where it is set ([openSettingsAt]); no such line
+// with both on.
 @Composable
 private fun NotFound(
     question: String,

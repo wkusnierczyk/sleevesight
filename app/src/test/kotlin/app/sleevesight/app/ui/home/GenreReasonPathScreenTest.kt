@@ -4,8 +4,11 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertContentDescriptionEquals
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasContentDescription
@@ -183,16 +186,79 @@ class GenreReasonPathScreenTest {
 
     @Test
     fun whenTheAiCannotExplainItTheButtonStaysDisabledWithWhyUnderIt() {
-        for (reason in listOf(
-            GenreReason.Unavailable(Unavailability.NOT_LISTED),
-            GenreReason.Shown(InsightState.NoEvidence),
-        )) {
-            val notes = Notes(reason)
-            show(notes) {
-                disabled(notes)
-                compose.onNodeWithText("AI could not find an explanation.").assertExists()
-                assertEquals(0, count(GENRE_REASON_TAG))
+        val notes = Notes(GenreReason.Shown(InsightState.NoEvidence))
+        show(notes) {
+            disabled(notes)
+            compose.onNodeWithText("AI could not find an explanation.").assertExists()
+            assertEquals(0, compose.onAllNodesWithText(NOT_LISTED, substring = true).fetchSemanticsNodes().size)
+            assertEquals(0, count(GENRE_REASON_TAG))
+        }
+    }
+
+    @Test
+    fun aGenreTheAiListLacksSaysSoOnceTappedWithSeeWhyLinkingTheDocs() {
+        val notes = Notes(GenreReason.Unavailable(Unavailability.NOT_LISTED))
+        show(notes) {
+            disabled(notes)
+            val line = "$NOT_LISTED See why."
+            compose.onNodeWithText(line).assertExists()
+            assertEquals(0, compose.onAllNodesWithText("AI could not find an explanation.").fetchSemanticsNodes().size)
+            assertEquals(0, count(GENRE_REASON_TAG))
+            // *See why.* is a link, read as one, to the docs' *Genre labels*.
+            val text =
+                compose
+                    .onNodeWithText(line, useUnmergedTree = true)
+                    .fetchSemanticsNode()
+                    .config[SemanticsProperties.Text]
+                    .single()
+            val links = text.getLinkAnnotations(0, text.length)
+            assertEquals(listOf(DOCS), links.map { (it.item as LinkAnnotation.Url).url })
+            assertEquals("See why.", text.substring(links.single().start, links.single().end))
+        }
+    }
+
+    @Test
+    fun aNewPlayOfTheSameSongAsksForTheReasonAgainOnTheSamePage() {
+        // As `AppGenreNotes` gives it (#1059): the answer of a tap on the first play, none on the second.
+        val notes =
+            object : GenreNotes {
+                override fun definition(genre: String): Flow<DefinitionState?> = flowOf(null)
+
+                override fun reason(
+                    track: TrackState,
+                    genre: String,
+                ): Flow<GenreReason> =
+                    flowOf(
+                        if (track.nowPlaying.play == 1L) {
+                            GenreReason.Unavailable(Unavailability.NOT_LISTED)
+                        } else {
+                            GenreReason.Offered
+                        },
+                    )
+
+                override fun explain(
+                    track: TrackState,
+                    genre: String,
+                ) = Unit
             }
+        val first = playing.copy(nowPlaying = playing.nowPlaying.copy(play = 1))
+        val shown = mutableStateOf(first)
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity {
+                it.setContent {
+                    Column(Modifier.verticalScroll(rememberScrollState())) {
+                        GenresContent(shown.value, Settings(), notes = PanelNotes(notes))
+                    }
+                }
+            }
+            compose.onNodeWithTag(ROCK_CHIP).unfold()
+            compose.waitForIdle()
+            compose.onNodeWithTag(GENRE_WHY_TAG).assertIsNotEnabled()
+            // Only the play changes: the page, and the chip open on it, stay.
+            shown.value = first.copy(nowPlaying = first.nowPlaying.copy(play = 2))
+            compose.waitForIdle()
+            compose.onNodeWithTag(GENRE_WHY_TAG).assertIsEnabled()
+            assertEquals(0, compose.onAllNodesWithText(NOT_LISTED, substring = true).fetchSemanticsNodes().size)
         }
     }
 
@@ -296,6 +362,13 @@ class GenreReasonPathScreenTest {
     private companion object {
         const val MODEL = "Claude Haiku 5.5"
         const val REASON = "It was recorded in 1973 [MB1]."
+
+        /** The line for a genre the AI's list lacks (#1059), before its link. */
+        const val NOT_LISTED =
+            "The AI service doesn’t list rock among this song’s genres. Only MusicBrainz does, and " +
+                "Sleevesight could not use that annotation."
+
+        const val DOCS = "https://sleevesight.app/docs/tutorials/usage/#genre-labels"
         const val ROCK_CHIP = GENRE_PREFIX + "track:rock"
         const val BLUES_CHIP = GENRE_PREFIX + "track:blues"
     }
