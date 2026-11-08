@@ -182,7 +182,9 @@ data class ReleaseDate(
          * 4. [playerYear], when the named releases give no year (none named, or only undated ones);
          *    else null.
          * 5. Null when they have several years and [playerYear] is none of them: two releases of one
-         *    name in different years, and nothing to tell which is playing.
+         *    name in different years, and nothing to tell which is playing. Home's `AlbumDates.of`
+         *    then takes the track's first release's year when it is a release of that name out in one
+         *    of those years (#1058).
          */
         fun albumYear(
             album: String,
