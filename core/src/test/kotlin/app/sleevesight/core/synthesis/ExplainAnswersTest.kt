@@ -109,6 +109,10 @@ class ExplainAnswersTest {
             """{"summary": "A "legal alien". [S1]"}""",
             """{"explanation": "A "legal alien". [S1]\"}""",
             """{"explanation": 3 "x"}""",
+            // Two objects, one after the other: the text would be JSON fragments.
+            """{"explanation": "Loss. [S1]"} {"explanation": "Love. [S1]"}""",
+            """{"explanation": "Loss. [S1]"}{"explanation": "A "legal alien". [S1]"}""",
+            """{"explanation": "A "legal alien". {"note": "x"} [S1]"}""",
         )) {
             assertEquals(SearchReading.Malformed, read(reply), reply)
         }

@@ -16,8 +16,10 @@ internal object JsonReplies {
     // The key of each answer that is one text alone, which [oneTextIn] may recover (#1088).
     private val TEXT_KEYS = mapOf(SearchKind.EXPLAIN to "explanation", SearchKind.DEFINITION to "definition")
 
-    // A second key in a string's text: a closing quote, a comma, and a quoted name with a colon.
-    private val ANOTHER_KEY = Regex("""\"\s*,\s*\"[^"]*\"\s*:""")
+    // JSON's structure in a string's text: a quote not escaped that closes an object (`"}`) or is
+    // followed by another key (`", "sources":`), or an object opened (`{"`). Two objects one after the
+    // other, or a second key, make the text JSON fragments, not one answer.
+    private val STRUCTURE = Regex("""(?<!\\)"\s*}|(?<!\\)"\s*,\s*"[^"]*"\s*:|\{\s*"""")
 
     /**
      * The JSON object in [reply], or null when there is none: its text trimmed, a Markdown code
@@ -40,7 +42,8 @@ internal object JsonReplies {
      * ([objectIn]'s text) that is that one key with a string value, `{"explanation": "…"}`, its text
      * from the key's opening quote to the closing `"}`, a `"` in it not escaped taken as a quote of
      * its text. A model quoting a phrase in double quotes, unescaped, costs the quote, not the answer.
-     * A text that reads as a second key (`", "sources": `) is no such object.
+     * A text that holds JSON's structure, a second key (`", "sources": `) or another object (`"}`,
+     * `{"`), as two objects one after the other do, is no such object.
      */
     fun oneKeyIn(
         reply: String,
@@ -52,7 +55,7 @@ internal object JsonReplies {
                 ?.let { pattern.find(it) }
                 ?.groupValues
                 ?.get(1)
-                ?.takeUnless { ANOTHER_KEY.containsMatchIn(it) }
+                ?.takeUnless { STRUCTURE.containsMatchIn(it) }
         return value?.let { parsed("{\"$key\": \"${quotesEscaped(it)}\"}") }
     }
 
