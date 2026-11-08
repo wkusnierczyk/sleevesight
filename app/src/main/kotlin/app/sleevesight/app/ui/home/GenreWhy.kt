@@ -64,8 +64,8 @@ internal fun ReasonUnavailable(
             // the docs' *Genre labels*, read as a link.
             Unavailability.NOT_LISTED -> {
                 val link = TextPart.Link(stringResource(R.string.genre_why_not_listed_link), GENRE_LABELS_DOCS_URL)
-                // The link's place kept as a placeholder, for [linkedParts].
-                QuietLinks(linkedParts(stringResource(R.string.genre_why_not_listed, genre, "%1\$s"), link))
+                // The name as a part of its own, not formatted in, so nothing in it reads as a placeholder (#1091).
+                QuietLinks(linkedParts(stringResource(R.string.genre_why_not_listed), TextPart.Words(genre), link))
             }
         }
     }

@@ -31,4 +31,21 @@ class LinkedPartsTest {
             linkedParts("%1\$s and %3\$s", page, guide),
         )
     }
+
+    @Test
+    fun aPlaceholderWithANumberTooLargeToReadStaysAsWrittenRatherThanFail() {
+        assertEquals(
+            listOf(TextPart.Words("%99999999999\$s"), TextPart.Words(" or "), page),
+            linkedParts("%99999999999\$s or %1\$s", page),
+        )
+    }
+
+    @Test
+    fun wordsGivenAsAPartAreNotReadForPlaceholders() {
+        val name = TextPart.Words("rock %1\$s")
+        assertEquals(
+            listOf(TextPart.Words("Not "), name, TextPart.Words(". "), page),
+            linkedParts("Not %1\$s. %2\$s", name, page),
+        )
+    }
 }
