@@ -34,11 +34,16 @@
     <!-- Under the question, above a reason none of whose sentences cites a source or a web page, only
          the model's own knowledge (#695), in the panel's quiet note style. -->
     <string name="genre_why_from_model">The sources don’t explain this genre. This is from the AI model’s own knowledge, not verified.</string>
-    <!-- Under the disabled button when the AI could not explain the genre (#762): the AI's genre list
-         does not have it, or nothing the reason was asked with explains it; then, for the reason,
-         genre_why_enable on its own line, naming what was off (#695: AI service knowledge, AI web
-         search), none with both on. -->
+    <!-- Under the disabled button when the AI could not explain the genre (#762): nothing the reason
+         was asked with explains it; then genre_why_enable on its own line, naming what was off (#695:
+         AI service knowledge, AI web search), none with both on. -->
     <string name="genre_why_not_found">AI could not find an explanation.</string>
+    <!-- Under the disabled button once it is tapped for a genre only MusicBrainz gives that the AI's
+         genre list for the song does not have (#1059). %1$s is the genre's name as in genre_why
+         ("contemporary R&B"); %2$s is genre_why_not_listed_link, a link to the docs' Genre labels,
+         which say why MusicBrainz's genres are never sent to an AI service. -->
+    <string name="genre_why_not_listed">The AI service doesn’t list %1$s among this song’s genres. Only MusicBrainz does, and Sleevesight could not use that annotation. %2$s</string>
+    <string name="genre_why_not_listed_link">See why.</string>
     <!-- When the AI's genre list cannot run (#762), for a genre only MusicBrainz gives: under the
          disabled button, this line, then genre_why_enable on its own line. -->
     <string name="genre_why_no_ai">No AI service enabled.</string>

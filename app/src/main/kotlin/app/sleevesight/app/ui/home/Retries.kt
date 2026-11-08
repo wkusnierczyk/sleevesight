@@ -26,6 +26,8 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.PipelineView
+import app.sleevesight.app.ui.theme.LocalPanelEndReach
+import app.sleevesight.app.ui.theme.reachPanelEnd
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.RunKey
@@ -108,8 +110,10 @@ internal fun RetryLine(
  * A button at the end of a line, as *Retry* is ([RetryLine]) and *Search with AI*'s *Stop* (#773):
  * a text button's look, [text] in the primary colour, with the action named for a screen reader
  * ([action]: "Double-tap to …"), which a Material `TextButton` cannot be given; at least 48 dp to
- * touch. [modifier] goes on the outside (a test tag, a focus requester). [outlined], with an
- * outline, as *Search with AI* is (#786: *Retry* under a genre's failed definition). [ai], with the
+ * touch; in a panel with *Close*, it ends its label where *Close* ends its own ([reachPanelEnd],
+ * #1068). [modifier] goes on the button (a test tag, a focus requester). [outlined], with an
+ * outline, as *Search with AI* is (#786: *Retry* under a genre's failed definition), whose edge is
+ * the outline, so it keeps to the line's end, with the panel's rule. [ai], with the
  * **AI** mark ([AiLabel]), for a tap that calls the AI service (#624: *Retry* under a song's, an
  * artist's or an album's insight that failed, #522).
  */
@@ -127,7 +131,9 @@ internal fun LineButton(
     Box(
         contentAlignment = Alignment.Center,
         modifier =
-            modifier
+            Modifier
+                .reachPanelEnd(if (outlined) 0.dp else LocalPanelEndReach.current)
+                .then(modifier)
                 .minimumInteractiveComponentSize()
                 .clip(CircleShape)
                 .let { if (outlined) it.border(1.dp, edge, CircleShape) else it }

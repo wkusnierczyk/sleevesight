@@ -253,9 +253,9 @@ class AskAiWebScreenTest {
                 SearchKind.DATES,
                 AiSearch.Answered(SearchAnswer.Dates(album = "1974-01", albumSource = discogs), model, web),
             )
-            compose.waitUntil(WAIT_MS) { shows("This album was released in January 1974.") }
+            compose.waitUntil(WAIT_MS) { shows(ALBUM_SENTENCE) }
             compose.onNodeWithTag(AI_SEARCH_FROM_TAG).assertTextEquals("From discogs.com")
-            assertTrue(bounds(AI_SEARCH_FROM_TAG).top >= boundsOf("This album was released in January 1974.").bottom)
+            assertTrue(bounds(AI_SEARCH_FROM_TAG).top >= boundsOf(ALBUM_SENTENCE).bottom)
             assertEquals(0, count(AI_SEARCH_KNOWLEDGE_TAG))
             compose.onNodeWithTag(AI_SEARCH_BY_TAG).assertTextEquals("by Claude Haiku 5.5")
         }
@@ -296,7 +296,7 @@ class AskAiWebScreenTest {
             compose.onNodeWithTag(AI_KEPT_TAG).assertTextEquals(keptLine(today))
             assertTrue(keptLine(today).startsWith("Kept from before: written today at "))
             // The answer, by its model, from its knowledge, then kept from before.
-            assertTrue(bounds(AI_SEARCH_BY_TAG).top >= boundsOf("This album was released in January 1974.").bottom)
+            assertTrue(bounds(AI_SEARCH_BY_TAG).top >= boundsOf(ALBUM_SENTENCE).bottom)
             assertTrue(bounds(AI_SEARCH_KNOWLEDGE_TAG).top >= bounds(AI_SEARCH_BY_TAG).bottom)
             assertTrue(bounds(AI_KEPT_TAG).top >= bounds(AI_SEARCH_KNOWLEDGE_TAG).bottom)
             assertEquals(null, fontStyle(AI_KEPT_TAG))
@@ -410,3 +410,6 @@ class AskAiWebScreenTest {
         assertEquals("not a url", siteOf("not a url"))
     }
 }
+
+/** The *Dates* panel's album sentence for an answer of January 1974. */
+private const val ALBUM_SENTENCE = "This album was originally released in January 1974."

@@ -18,6 +18,13 @@ internal const val DEPENDENCIES_PAGE_URL = "https://sleevesight.app/docs/depende
 /** The FAQ's answer on which players work (`docs/faq`, #758), linked from *Can’t see your player?* under *Players*. */
 internal const val PLAYERS_FAQ_URL = "${DOCS_URL}faq/#which-music-players-work-with-sleevesight"
 
+/**
+ * The usage page's *Genre labels* (`docs/tutorials/usage`, #415), whose paragraph *A genre only
+ * MusicBrainz gives* says why MusicBrainz's genres are never sent to an AI service; linked from
+ * *See why.* under *Why is this …?* for a genre the AI's genre list does not have (#1059).
+ */
+internal const val GENRE_LABELS_DOCS_URL = "${DOCS_URL}tutorials/usage/#genre-labels"
+
 /** The settings page of the documentation (`docs/tutorials/settings`, #415). */
 private const val SETTINGS_PAGE_URL = "https://sleevesight.app/docs/tutorials/settings/"
 

@@ -237,9 +237,14 @@ private fun Table(
     }
 }
 
-/** Whether a source's lookup failed or its match was rejected. */
+/**
+ * Whether a source's lookup failed or its match was rejected; not one rejected only for want of
+ * MusicBrainz while it could not be reached (#1069), which says so in the row's own colour.
+ */
 private val ChipStatus.wentWrong: Boolean
-    get() = this == ChipStatus.Failed || (this as? ChipStatus.Done)?.outcome is Outcome.Rejected
+    get() =
+        this == ChipStatus.Failed ||
+            (this as? ChipStatus.Done)?.let { it.outcome is Outcome.Rejected && !it.withoutMusicBrainz } == true
 
 /**
  * One row of the table: [chip]'s letter, right-aligned in a column [width] wide, its name and what
