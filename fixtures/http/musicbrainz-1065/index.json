@@ -1,0 +1,13 @@
+[
+ {
+  "method": "GET",
+  "url": "https://musicbrainz.org/ws/2/recording",
+  "query": {
+   "query": "recording:\"Beat It\" AND artist:\"Michael Jackson\"",
+   "limit": "100",
+   "fmt": "json"
+  },
+  "status": 200,
+  "file": "recording-recording-beat-it-and-artist-michael-jackson.json"
+ }
+]

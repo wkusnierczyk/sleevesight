@@ -1,0 +1,83 @@
+{
+ "count": 2,
+ "offset": 0,
+ "recordings": [
+  {
+   "id": "de798de6-70fc-49f6-b580-339cd2e62052",
+   "score": 100,
+   "title": "Beat It",
+   "length": 258173,
+   "artist-credit": [
+    {
+     "name": "Michael Jackson",
+     "artist": {
+      "id": "f27ec8db-af05-4f36-916e-3d57f91ecf5e",
+      "name": "Michael Jackson"
+     }
+    }
+   ],
+   "first-release-date": "1982-11-30",
+   "releases": [
+    {
+     "id": "3eb2ed58-5a39-411a-9c69-2f18b1531ae5",
+     "title": "Thriller 25 Super Deluxe Edition",
+     "status": "Official",
+     "date": "2008-02-08",
+     "release-group": {
+      "id": "f32fab67-77dd-3937-addc-9062e28e4c37",
+      "title": "Thriller",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "39898f04-c6a6-45c7-a785-31b4143dd7e1",
+     "title": "Thriller",
+     "status": "Official",
+     "date": "1982-11-30",
+     "release-group": {
+      "id": "f32fab67-77dd-3937-addc-9062e28e4c37",
+      "title": "Thriller",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "9e5ae664-07b3-4fe9-85fd-44722e2dbbe1",
+   "score": 81,
+   "title": "Beat It 2008",
+   "length": 252000,
+   "artist-credit": [
+    {
+     "name": "Michael Jackson",
+     "artist": {
+      "id": "f27ec8db-af05-4f36-916e-3d57f91ecf5e",
+      "name": "Michael Jackson"
+     },
+     "joinphrase": " with "
+    },
+    {
+     "name": "Fergie",
+     "artist": {
+      "id": "1c46e82f-4764-4d82-a33b-5d5aee5e2881",
+      "name": "Fergie"
+     }
+    }
+   ],
+   "first-release-date": "2008-02-08",
+   "releases": [
+    {
+     "id": "3eb2ed58-5a39-411a-9c69-2f18b1531ae5",
+     "title": "Thriller 25 Super Deluxe Edition",
+     "status": "Official",
+     "date": "2008-02-08",
+     "release-group": {
+      "id": "f32fab67-77dd-3937-addc-9062e28e4c37",
+      "title": "Thriller",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  }
+ ]
+}
