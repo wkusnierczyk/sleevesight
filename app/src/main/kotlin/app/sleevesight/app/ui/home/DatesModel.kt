@@ -153,10 +153,13 @@ internal fun homeDates(
     val resolution = track?.resolution
     val album = AlbumDates.of(track, header)
     val sentences = mutableListOf<DateSentence>()
-    album.sentence(firsts)?.let { sentences += it }
+    val albumSentence = album.sentence(firsts)
+    albumSentence?.let { sentences += it }
     val first = firstReleaseOf(track)
     val firstDate = first?.date ?: kept?.firstReleased ?: resolution?.firstReleaseDate
-    val here = first != null && album.date != null && album.has(first)
+    // After an edition's sentence, "this album" would read as the group's first release (#1099):
+    // the track's own date and title are said instead.
+    val here = first != null && albumSentence is DateSentence.Album && album.has(first)
     when {
         here -> sentences += DateSentence.FirstHere(album.kind)
         firstDate != null && DateWhen.of(firstDate) != null ->
@@ -269,18 +272,20 @@ private class AlbumDates(
         }
 
     // The edition's sentence of the release dated [date], when [first], its group as MusicBrainz's
-    // lookup gives it, was first released before it (`1987` is not before `1987-09-07`), or as early
-    // under another title than [title], their editions aside ([EditionNames.stripEditions]:
-    // "Rumours (Remastered)" is "Rumours"); with the group's title when it is another. Null when the
-    // group gives no readable date, or one after [date] (which MusicBrainz should not: then nothing
-    // is said that it does not say).
+    // lookup gives it, was first released in an earlier year (an original played in its own year is
+    // not an edition of a pressing out days before it), or as early under another title than [title],
+    // their editions aside ([EditionNames.stripEditions]: "Rumours (Remastered)" is "Rumours"); with
+    // the group's title when it is another. Null when the group gives no readable date, or one after
+    // [date] (which MusicBrainz should not: then nothing is said that it does not say).
     private fun editionOf(
         first: MbGroupFirst,
         date: String,
     ): DateSentence.Edition? {
-        val firstDate = first.firstReleaseDate?.takeIf { ReleaseDate.yearIn(it) != null } ?: return null
+        val firstDate = first.firstReleaseDate
+        val firstYear = firstDate?.let(ReleaseDate::yearIn)
+        if (firstDate == null || firstYear == null) return null
         val another = title != null && !sameTitle(first.title, title)
-        val earlier = before(firstDate, date)
+        val earlier = ReleaseDate.yearIn(date)?.let { firstYear < it } == true
         val edition = DateSentence.Edition(date, firstDate, first.title.takeIf { another }, kind)
         return edition.takeIf { earlier || (another && !before(date, firstDate)) }
     }

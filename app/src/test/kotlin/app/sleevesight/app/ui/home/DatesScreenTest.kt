@@ -156,7 +156,6 @@ class DatesScreenTest {
 
     @Test
     fun anEditionReadsItsDateAndTheAlbumsFirstReleaseTheAlbumsTitleInItalics() {
-        // TODO(#1099 texts): the wording waits on its pick; replaced word for word after it.
         val actually = "Actually"
         val cases =
             listOf(

@@ -162,25 +162,18 @@
          date, as above, then (home_dates_edition_of_album and the rest) the album's first release:
          "This edition was released on 4 June 2001. The album, Actually, was first released on 7
          September 1987." -->
-    <!-- TODO(#1099 texts) -->
     <string name="home_dates_edition">This edition was released %1$s.</string>
     <!-- After home_dates_edition, in the same paragraph: the album's title (in italics), then the date
          of its first release, as above; a single's or an EP's named as such. -->
-    <!-- TODO(#1099 texts) -->
     <string name="home_dates_edition_of_album">The album, %1$s, was first released %2$s.</string>
-    <!-- TODO(#1099 texts) -->
     <string name="home_dates_edition_of_single">The single, %1$s, was first released %2$s.</string>
-    <!-- TODO(#1099 texts) -->
     <string name="home_dates_edition_of_ep">The EP, %1$s, was first released %2$s.</string>
     <!-- An edition under the album's own title (its edition aside: "Rumours (Remastered)" is
          "Rumours"): the edition's date, then the album's first release's, as above: "This edition was
          released in 2004; the album was first released on 4 February 1977."; a single's or an EP's
          named as such. -->
-    <!-- TODO(#1099 texts) -->
     <string name="home_dates_edition_same_album">This edition was released %1$s; the album was first released %2$s.</string>
-    <!-- TODO(#1099 texts) -->
     <string name="home_dates_edition_same_single">This edition was released %1$s; the single was first released %2$s.</string>
-    <!-- TODO(#1099 texts) -->
     <string name="home_dates_edition_same_ep">This edition was released %1$s; the EP was first released %2$s.</string>
     <!-- Where the track first came out: the release's title (in italics), then the date as above:
          "This track was first released on Grace on 23 August 1994."; a single's or an EP's named as
