@@ -189,8 +189,8 @@ private class AlbumDates(
      * Whether [first] is this album: a known release group decides (a single and a later album of
      * one title are not one release), with the year: a reissue in the original's group, out in
      * another year than [first] (*Thriller 25*, 2008, in *Thriller*'s, 1982), is not where the track
-     * first came out (#1065), unless either year is unknown. Only without a group on either side
-     * does the title, as [NameMatcher.albumKey] reads it.
+     * first came out (#1065), unless the first release's year is unknown. Only without a group on
+     * either side does the title, as [NameMatcher.albumKey] reads it.
      */
     fun has(first: FirstRelease): Boolean =
         name != null &&
@@ -200,11 +200,9 @@ private class AlbumDates(
                 ALBUMS.albumKey(first.title) == ALBUMS.albumKey(name)
             }
 
-    // Whether [date] is in the year the album line shows, or either year is unknown.
-    private fun sameYear(date: String): Boolean {
-        val first = ReleaseDate.yearIn(date)
-        return year == null || first == null || first == year
-    }
+    // Whether [date] is in the year the album line shows, or its year is unknown. Only asked with
+    // [groups], which are known only with a year shown.
+    private fun sameYear(date: String): Boolean = ReleaseDate.yearIn(date).let { it == null || it == year }
 
     companion object {
         fun of(
@@ -255,7 +253,8 @@ private class AlbumDates(
  * MusicBrainz's, each part only where the answer gives it: the album's release; the track's first
  * release, "on this album" when its title is the album's beside [header] ([NameMatcher.albumKey]), it
  * is not named a single or an EP, and the answer gives the album's date too (else its own date would
- * be lost: then said with it); and a cover's original.
+ * be lost: then said with it), in the first release's year when that is known (a reissue's later date
+ * is not where the track first came out, #1065); and a cover's original.
  */
 internal fun aiDates(
     answer: SearchAnswer.Dates,
@@ -280,7 +279,8 @@ internal fun aiDatesCited(
                 album != null &&
                 title != null &&
                 kindOf(first.type) == null &&
-                ALBUMS.albumKey(title) == ALBUMS.albumKey(album)
+                ALBUMS.albumKey(title) == ALBUMS.albumKey(album) &&
+                ReleaseDate.yearIn(first.date).let { it == null || it == answer.album?.let(ReleaseDate::yearIn) }
         val sentence = if (here) DateSentence.FirstHere else DateSentence.First(first.date, title, kindOf(first.type))
         sentences += sentence to first.source
     }

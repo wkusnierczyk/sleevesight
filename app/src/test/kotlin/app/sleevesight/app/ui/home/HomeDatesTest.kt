@@ -12,6 +12,9 @@ import app.sleevesight.core.sources.OriginalRecording
 import app.sleevesight.core.sources.ReleaseDate
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.SourceResult
+import app.sleevesight.core.synthesis.ReleaseType
+import app.sleevesight.core.synthesis.Released
+import app.sleevesight.core.synthesis.SearchAnswer
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import kotlin.time.Duration.Companion.seconds
@@ -140,6 +143,27 @@ class HomeDatesTest {
         assertEquals(
             listOf(DateSentence.Album("2008-02-08"), DateSentence.FirstHere),
             homeDates(resolved(beatIt, sameYear, withSameYear), beatIt),
+        )
+        // A first release in the group with no readable year is still this album, as before.
+        assertEquals(
+            listOf(DateSentence.Album("2008-02-08"), DateSentence.FirstHere),
+            homeDates(resolved(beatIt, thriller.copy(date = ""), dates), beatIt),
+        )
+    }
+
+    @Test
+    fun anAiAnswersFirstReleaseOfTheAlbumsTitleInAnEarlierYearIsNotThisAlbum() {
+        // A 2008 edition of *Thriller*: the answer dates the album 2008, its first release 1982.
+        val edition = sundown.copy(title = "Beat It", artists = "Michael Jackson", album = "Thriller")
+        val first = Released("1982-11-30", "Thriller", ReleaseType.ALBUM)
+        assertEquals(
+            listOf(DateSentence.Album("2008-02-08"), DateSentence.First("1982-11-30", "Thriller", null)),
+            aiDates(SearchAnswer.Dates(album = "2008-02-08", first = first), edition),
+        )
+        // In the album's year, it is this album.
+        assertEquals(
+            listOf(DateSentence.Album("1982-11-30"), DateSentence.FirstHere),
+            aiDates(SearchAnswer.Dates(album = "1982-11-30", first = first), edition),
         )
     }
 
