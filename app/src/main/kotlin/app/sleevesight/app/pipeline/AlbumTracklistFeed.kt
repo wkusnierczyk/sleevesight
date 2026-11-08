@@ -18,15 +18,20 @@ import kotlinx.coroutines.launch
  * An album to show the tracklist of: its release group ([group], as `ReleaseDate.group` has it), and the
  * playing [recording], whose release in it is shown (`AlbumTracklists.of`); null when not known. With
  * the [others] the album's name names besides, when it names several (#1062), of which the one the
- * recording is on is shown when [group] holds it not.
+ * recording is on is shown when [group] holds it not. With no [group] when none of several is picked
+ * (#1078): [others] are those groups, and the one of them the recording is on is shown
+ * (`AlbumTracklists.ofOneOf`), or none when that is not clear.
  */
 data class TracklistKey(
-    val group: String,
+    val group: String?,
     val recording: String? = null,
     val others: List<String> = emptyList(),
 )
 
-/** Where an album's tracklist is (#984): being looked up, found, known not to exist, or not obtained. */
+/**
+ * Where an album's tracklist is (#984): being looked up, found, known not to exist, not clear among
+ * several albums of the name, or not obtained.
+ */
 sealed interface TracklistState {
     /** MusicBrainz is being asked, or will be once lookups are allowed. */
     data object Looking : TracklistState
@@ -37,6 +42,12 @@ sealed interface TracklistState {
 
     /** MusicBrainz has no release of the album to show, or its release lists no track. */
     data object NotFound : TracklistState
+
+    /**
+     * The album's name names several groups, none picked, and the playing recording tells no one of
+     * them (#1078): it is on none of them, on several, or is not known.
+     */
+    data object Unclear : TracklistState
 
     /** MusicBrainz could not be asked; [TracklistFeed.retry] asks again. */
     data object Failed : TracklistState
@@ -71,15 +82,15 @@ interface TracklistFeed {
 
 /**
  * The app's [TracklistFeed]: each tracklist asked through [lookup] (`AlbumTracklists`, over the
- * remembered MusicBrainz answers) in [scope], once [allowed] (the pipeline's `lookupsAllowed`: on
- * screen, or *Look up in the background* on; as the art fetch waits for it), and only while
- * [musicBrainzOn] (*Sources* has MusicBrainz on), read when the request would go: off, nothing is
- * asked and nothing is kept, so the album is asked again once it is back on. At most [CAPACITY]
- * albums are kept, the least recently asked dropped first. *Clear history* ([forget]) drops them all;
- * a lookup started before it keeps nothing ([epoch]).
+ * remembered MusicBrainz answers; null when it is not clear which album of several, #1078) in
+ * [scope], once [allowed] (the pipeline's `lookupsAllowed`: on screen, or *Look up in the background*
+ * on; as the art fetch waits for it), and only while [musicBrainzOn] (*Sources* has MusicBrainz on),
+ * read when the request would go: off, nothing is asked and nothing is kept, so the album is asked
+ * again once it is back on. At most [CAPACITY] albums are kept, the least recently asked dropped
+ * first. *Clear history* ([forget]) drops them all; a lookup started before it keeps nothing ([epoch]).
  */
 class AlbumTracklistFeed(
-    private val lookup: suspend (TracklistKey) -> Lookup<MbTracklist>,
+    private val lookup: suspend (TracklistKey) -> Lookup<MbTracklist>?,
     private val scope: CoroutineScope,
     private val musicBrainzOn: () -> Boolean,
     private val allowed: Flow<Boolean> = flowOf(true),
@@ -118,6 +129,7 @@ class AlbumTracklistFeed(
                         is Lookup.Found -> TracklistState.Found(answer.value)
                         Lookup.NotFound -> TracklistState.NotFound
                         is Lookup.Failed -> TracklistState.Failed
+                        null -> TracklistState.Unclear
                     }
                 }
             epoch.ifCurrent(currentCoroutineContext()) {
