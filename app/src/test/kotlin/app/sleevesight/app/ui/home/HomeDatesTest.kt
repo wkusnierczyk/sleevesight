@@ -84,7 +84,7 @@ class HomeDatesTest {
         // By its title, as the album's key reads it, when it has no release group.
         val byTitle = FirstRelease("1974-01", "Sundown", null, "r-1", "Album")
         assertEquals(
-            listOf(DateSentence.Album("1974-01"), DateSentence.FirstHere),
+            listOf(DateSentence.Album("1974-01"), DateSentence.FirstHere()),
             homeDates(resolved(sundown, byTitle, listOf(sundownAlbum)), sundown),
         )
         // Not by its title when its release group is another: a single of the album's title.
@@ -96,7 +96,7 @@ class HomeDatesTest {
         // By its release group, the one whose year the album line shows, under another title.
         val byGroup = FirstRelease("1974-01", "Sundown (Original)", "g-sundown", "r-1", "Album")
         assertEquals(
-            listOf(DateSentence.Album("1974-01"), DateSentence.FirstHere),
+            listOf(DateSentence.Album("1974-01"), DateSentence.FirstHere()),
             homeDates(resolved(sundown, byGroup, listOf(sundownAlbum)), sundown),
         )
         // The screenshot's album (#724): the player's "Vol. 2" is MusicBrainz's "Volume 2".
@@ -104,7 +104,7 @@ class HomeDatesTest {
         val december = sundown.copy(album = "This Warm December, A Brushfire Holiday Vol. 2")
         val first = FirstRelease("2011-11-15", volume, "g-twd", "r-twd", "Album")
         val twd = resolved(december, first, listOf(ReleaseDate(volume, "2011-11-15", "g-twd")))
-        assertEquals(listOf(DateSentence.Album("2011-11-15"), DateSentence.FirstHere), homeDates(twd, december))
+        assertEquals(listOf(DateSentence.Album("2011-11-15"), DateSentence.FirstHere()), homeDates(twd, december))
         assertEquals(HeaderYears(album = "2011"), headerYears(twd, december))
     }
 
@@ -141,13 +141,128 @@ class HomeDatesTest {
         val withSameYear = listOf(ReleaseDate("Thriller", "2008-01-15", "g-thriller"), dates[1])
         assertEquals(HeaderYears(album = "2008"), headerYears(resolved(beatIt, sameYear, withSameYear), beatIt))
         assertEquals(
-            listOf(DateSentence.Album("2008-02-08"), DateSentence.FirstHere),
+            listOf(DateSentence.Album("2008-02-08"), DateSentence.FirstHere()),
             homeDates(resolved(beatIt, sameYear, withSameYear), beatIt),
         )
         // A first release in the group with no readable year is still this album, as before.
         assertEquals(
-            listOf(DateSentence.Album("2008-02-08"), DateSentence.FirstHere),
+            listOf(DateSentence.Album("2008-02-08"), DateSentence.FirstHere()),
             homeDates(resolved(beatIt, thriller.copy(date = ""), dates), beatIt),
+        )
+    }
+
+    @Test
+    fun theFirstReleaseSettlesTheYearOfAnAlbumWhoseNameHasReleasesInSeveralYears() {
+        // #1058: *Thriller* on Spotify, no year; MusicBrainz names the 1982 original and reissues.
+        val thrillerTrack =
+            sundown.copy(
+                title = "Thriller",
+                artists = "Michael Jackson",
+                album = "Thriller",
+                year = null,
+            )
+        val first = FirstRelease("1982-11-30", "Thriller", "g-thriller", "r-thriller", "Album")
+        val dates =
+            listOf(
+                ReleaseDate("Thriller", "1982-11-30", "g-thriller", "Album"),
+                ReleaseDate("Thriller", "2001-10-16", "g-special", "Album"),
+                ReleaseDate("Thriller", "2022-11-18", "g-forty", "Album"),
+            )
+        val state = resolved(thrillerTrack, first, dates)
+        assertEquals(HeaderYears(album = "1982"), headerYears(state, thrillerTrack))
+        assertEquals(
+            listOf(DateSentence.Album("1982-11-30"), DateSentence.FirstHere()),
+            homeDates(state, thrillerTrack),
+        )
+        // A player's year that is none of them decides nothing either: the first release does.
+        val misdated = thrillerTrack.copy(year = 1999)
+        assertEquals(HeaderYears(album = "1982"), headerYears(resolved(misdated, first, dates), misdated))
+        // A player's year that is one of them still decides, as before: the 2001 edition.
+        val special = thrillerTrack.copy(year = 2001)
+        assertEquals(
+            listOf(DateSentence.Album("2001-10-16"), DateSentence.First("1982-11-30", "Thriller", null)),
+            homeDates(resolved(special, first, dates), special),
+        )
+        // The first release on another title: no year shown, and its date said with its title.
+        val elsewhere = FirstRelease("1982-10-18", "The Girl Is Mine", "g-girl", "r-girl", "Single")
+        val other = resolved(thrillerTrack, elsewhere, dates)
+        assertEquals(HeaderYears(), headerYears(other, thrillerTrack))
+        assertEquals(
+            listOf(DateSentence.First("1982-10-18", "The Girl Is Mine", ReleaseKind.SINGLE)),
+            homeDates(other, thrillerTrack),
+        )
+        // A release of the name, in none of their years: none either, and its date said with its
+        // title, never a bare "this album".
+        val offYear = first.copy(date = "1983-02")
+        assertEquals(HeaderYears(), headerYears(resolved(thrillerTrack, offYear, dates), thrillerTrack))
+        assertEquals(
+            listOf(DateSentence.First("1983-02", "Thriller", null)),
+            homeDates(resolved(thrillerTrack, offYear, dates), thrillerTrack),
+        )
+    }
+
+    @Test
+    fun aTitleTracksSingleBesideAnAlbumOfTheNameSettlesNoYear() {
+        // The single of the title in 1989, the album in 1990 and reissued in 2000: the album is
+        // played, so the single's year is not its own.
+        val x = sundown.copy(title = "X", artists = "Someone", album = "X", year = null)
+        val single = FirstRelease("1989-05", "X", "g-single", "r-single", "Single")
+        val dates =
+            listOf(
+                ReleaseDate("X", "1989-05", "g-single", "Single"),
+                ReleaseDate("X", "1990-02", "g-album", "Album"),
+                ReleaseDate("X", "2000-03", "g-reissue", "Album"),
+            )
+        assertEquals(HeaderYears(), headerYears(resolved(x, single, dates), x))
+        assertEquals(
+            listOf(DateSentence.First("1989-05", "X", ReleaseKind.SINGLE)),
+            homeDates(resolved(x, single, dates), x),
+        )
+        // With only singles of the name, in two years, the first one settles it, and is named so.
+        val singles = listOf(dates[0], ReleaseDate("X", "2010", "g-single-2", "Single"))
+        assertEquals(
+            listOf(DateSentence.Album("1989-05", ReleaseKind.SINGLE), DateSentence.FirstHere(ReleaseKind.SINGLE)),
+            homeDates(resolved(x, single, singles), x),
+        )
+    }
+
+    @Test
+    fun withNoAlbumSentenceTheFirstReleaseIsNeverABareThisAlbum() {
+        // The album of the name named, in the year the album line shows, but undated: no album
+        // sentence, so the first release says its own date.
+        val first = FirstRelease("1974-01", "Sundown", null, "r-1", "Album")
+        val undated = resolved(sundown.copy(year = 1974), first, listOf(ReleaseDate("Sundown", null, "g-sundown")))
+        assertEquals(
+            listOf(DateSentence.First("1974-01", "Sundown", null)),
+            homeDates(undated, sundown.copy(year = 1974)),
+        )
+    }
+
+    @Test
+    fun aSingleOrAnEpBeingPlayedIsNamedAsSuch() {
+        // #1058: *Material Girl (2024 Remaster)* is MusicBrainz's 1985 single.
+        val girl = sundown.copy(title = "Material Girl", artists = "Madonna", album = "Material Girl (2024 Remaster)")
+        val dates = listOf(ReleaseDate("Material Girl", "1985-01-23", "g-girl", "Single"))
+        val single = FirstRelease("1985-01-23", "Material Girl", "g-girl", "r-girl", "Single")
+        assertEquals(
+            listOf(DateSentence.Album("1985-01-23", ReleaseKind.SINGLE), DateSentence.FirstHere(ReleaseKind.SINGLE)),
+            homeDates(resolved(girl, single, dates), girl),
+        )
+        // First released elsewhere: the single's own sentence names it, the first release its own.
+        val album = FirstRelease("1984-11-12", "Like a Virgin", "g-virgin", "r-virgin", "Album")
+        assertEquals(
+            listOf(
+                DateSentence.Album("1985-01-23", ReleaseKind.SINGLE),
+                DateSentence.First("1984-11-12", "Like a Virgin", null),
+            ),
+            homeDates(resolved(girl, album, dates), girl),
+        )
+        // An EP likewise.
+        val four = sundown.copy(album = "Four")
+        val ep = FirstRelease("1983-05", "Four", "g-four", "r-four", "EP")
+        assertEquals(
+            listOf(DateSentence.Album("1983-05", ReleaseKind.EP), DateSentence.FirstHere(ReleaseKind.EP)),
+            homeDates(resolved(four, ep, listOf(ReleaseDate("Four", "1983-05", "g-four", "EP"))), four),
         )
     }
 
@@ -162,7 +277,7 @@ class HomeDatesTest {
         )
         // In the album's year, it is this album.
         assertEquals(
-            listOf(DateSentence.Album("1982-11-30"), DateSentence.FirstHere),
+            listOf(DateSentence.Album("1982-11-30"), DateSentence.FirstHere()),
             aiDates(SearchAnswer.Dates(album = "1982-11-30", first = first), edition),
         )
     }
@@ -210,16 +325,16 @@ class HomeDatesTest {
         )
         val album = FirstRelease("1989-03-21", "Like a Prayer", "g-album", "r-album", "Album")
         assertEquals(
-            listOf(DateSentence.Album("1989-03-21"), DateSentence.FirstHere),
+            listOf(DateSentence.Album("1989-03-21"), DateSentence.FirstHere()),
             homeDates(resolved(prayer, album, dates), prayer),
         )
         assertEquals(HeaderYears(album = "1989"), headerYears(resolved(prayer, single, dates), prayer))
         // An EP of the title is left out the same way, and an album of no known type is the album.
         val ep = listOf(dates[0].copy(type = "EP"), dates[1].copy(type = null))
         assertEquals(DateSentence.Album("1989-03-21"), homeDates(resolved(prayer, null, ep), prayer).single())
-        // With only a single of the title named, it is the album played.
+        // With only a single of the title named, it is the single played, and named so (#1058).
         assertEquals(
-            listOf(DateSentence.Album("1989-03-03"), DateSentence.FirstHere),
+            listOf(DateSentence.Album("1989-03-03", ReleaseKind.SINGLE), DateSentence.FirstHere(ReleaseKind.SINGLE)),
             homeDates(resolved(prayer, single, dates.take(1)), prayer),
         )
         // The album named but undated, the single dated in the year: no album date, and the single
@@ -229,7 +344,7 @@ class HomeDatesTest {
         // Kept before the types: as before, the earliest of the year, the single's group among the album's.
         val untyped = dates.map { it.copy(type = null) }
         assertEquals(
-            listOf(DateSentence.Album("1989-03-03"), DateSentence.FirstHere),
+            listOf(DateSentence.Album("1989-03-03"), DateSentence.FirstHere()),
             homeDates(resolved(prayer, single, untyped), prayer),
         )
         assertEquals(
