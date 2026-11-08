@@ -38,8 +38,8 @@ internal sealed interface CoverBack {
 
     /**
      * MusicBrainz has several albums of the name the player gives, and nothing tells which one is
-     * playing (#1062): "MusicBrainz has several albums of this name; it is not clear which one this
-     * is." ([albumPick]).
+     * playing (#1062): "MusicBrainz reports several albums of this name for this artist. Sleevesight
+     * could not decide which one this is." ([albumPick]).
      */
     data object Ambiguous : CoverBack
 

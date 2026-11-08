@@ -120,11 +120,10 @@
          the album the player names (no release of it, or none that lists its tracks). The other
          reasons are home_musicbrainz_looking and those after it. -->
     <string name="home_tracklist_none">MusicBrainz has no tracklist for this album.</string>
-    <!-- TODO(#1062 texts): proposed, waiting for the text pick. -->
     <!-- On the back, in place of the tracklist: MusicBrainz has several albums of the name the player
          gives (two compilations named "Greatest Hits"), and nothing tells which one is playing, so no
          tracklist is shown. -->
-    <string name="home_tracklist_ambiguous">MusicBrainz has several albums of this name; it is not clear which one this is.</string>
+    <string name="home_tracklist_ambiguous">MusicBrainz reports several albums of this name for this artist. Sleevesight could not decide which one this is.</string>
     <string name="home_title_from">From %1$s</string>
     <string name="home_album_none">Album not reported</string>
     <!-- The album, then the year of the release being played: "Rubber Soul, 1965". -->
