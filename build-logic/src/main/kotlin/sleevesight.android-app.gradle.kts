@@ -18,6 +18,7 @@ import sleevesight.checks.CheckDependencyPage
 import sleevesight.checks.CheckManifest
 import sleevesight.checks.CheckModuleGraph
 import sleevesight.checks.ListLibraryLicences
+import sleevesight.checks.SecurityLint
 import sleevesight.checks.networkModules
 import sleevesight.release.UploadSigning
 
@@ -43,6 +44,10 @@ extensions.configure<ApplicationExtension> {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+    // Android lint's security checks fail the build (`SecurityLint`).
+    lint {
+        error += SecurityLint.checks
     }
     // Without the key, the release build is unsigned: `./gradlew build` assembles it anywhere, and
     // only the release workflow, which has the key, produces a bundle Google Play takes.
