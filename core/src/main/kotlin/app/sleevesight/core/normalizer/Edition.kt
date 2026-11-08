@@ -65,7 +65,8 @@ object Edition {
      * "Happy Anniversary", "Abbey Road Edition" and "Sundown Live" are kept, a year or an ordinal
      * elsewhere is the name's own ("The 1975 Deluxe Edition" is "The 1975"), and so is a
      * title that is only such words ("Deluxe", "Super Deluxe Edition"); "1999 Remastered" is "1999".
-     * The longest suffix goes that leaves a word before it other than [SUFFIX_WORDS] and dashes.
+     * The longest suffix goes that leaves a word before it other than [SUFFIX_WORDS] and dashes,
+     * among the last [MAX_SUFFIX_WORDS] words only, so a long name costs no more than a short one.
      * Without [numbers], every year and ordinal is the name's own: "Paris 1919 Remastered" is "Paris
      * 1919", where with them it is "Paris".
      */
@@ -84,11 +85,17 @@ object Edition {
                     .lowercase()
                     .replace('\u2019', '\'')
             }
-        // The first word of the longest suffix that leaves a word of the name's own before it.
+        // The name's first word of its own, and the last "anniversary" after an ordinal ("20th
+        // anniversary"), each found once for every suffix tried.
+        val own = words.indexOfFirst { word -> word !in SUFFIX_WORDS && word.any { it !in DASHES } }
+        val anniversary =
+            words.indices.lastOrNull { i -> i > 0 && words[i] == "anniversary" && ORDINAL.matches(words[i - 1]) }
+        // The first word of the longest suffix, among the last few words, that leaves a word of the
+        // name's own before it.
         val first =
-            (1 until words.size).firstOrNull { at ->
-                isSuffix(words.subList(at, words.size), numbers) &&
-                    words.subList(0, at).any { word -> word !in SUFFIX_WORDS && word.any { it !in DASHES } }
+            (maxOf(1, words.size - MAX_SUFFIX_WORDS) until words.size).firstOrNull { at ->
+                own in 0 until at &&
+                    isSuffix(words.subList(at, words.size), numbers, dated = anniversary != null && anniversary > at)
             }
         if (first == null) return name
         return name
@@ -99,19 +106,18 @@ object Edition {
     }
 
     // Whether [words] (lowercase) are an edition suffix, as [stripEditionSuffix] says, with or without
-    // [numbers].
+    // [numbers]; [dated] when they carry an "anniversary" after an ordinal ("20th anniversary").
     private fun isSuffix(
         words: List<String>,
         numbers: Boolean,
-    ): Boolean {
-        val dated = words.indices.any { i -> words[i] == "anniversary" && i > 0 && ORDINAL.matches(words[i - 1]) }
-        return words.indices.all { i -> words[i] in SUFFIX_WORDS || (numbers && isEditionNumber(words, i)) } &&
+        dated: Boolean,
+    ): Boolean =
+        words.indices.all { i -> words[i] in SUFFIX_WORDS || (numbers && isEditionNumber(words, i)) } &&
             (
                 words.any { it in STRONG_SUFFIX_WORDS } ||
                     ("anniversary" in words && (dated || "edition" in words)) ||
                     words.indexOf("edition").let { it > 0 }
             )
-    }
 
     // Whether [words]' word [i] is a number an edition suffix may take: a year next to a remaster or a
     // reissue ("2011 Remaster", "Remastered 2009", "2011 Digital Remaster"), an ordinal before
@@ -184,6 +190,13 @@ object Edition {
             depth == 0
         }
     }
+
+    /**
+     * The most words [stripEditionSuffix] tries as an edition suffix. The longest the tests strip is
+     * five ("50th Anniversary Super Deluxe Edition"); twelve leaves room for longer runs of the suffix
+     * words while keeping the work for a name of any length to a fixed number of short checks.
+     */
+    internal const val MAX_SUFFIX_WORDS = 12
 
     private val OPENERS = setOf('(', '[')
     private val CLOSERS = setOf(')', ']')
