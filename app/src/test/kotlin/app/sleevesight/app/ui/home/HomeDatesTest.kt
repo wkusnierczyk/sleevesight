@@ -118,11 +118,28 @@ class HomeDatesTest {
             listOf(DateSentence.Album("2008-02-08"), DateSentence.First("1982-11-30", "Thriller", null)),
             homeDates(resolved(beatIt, thriller, dates), beatIt),
         )
-        // The group's release of the album's own year is still this album.
-        val reissued = thriller.copy(date = "2008-02-08", title = deluxe)
+        assertEquals(HeaderYears(album = "2008"), headerYears(resolved(beatIt, thriller, dates), beatIt))
+        // With no year from the player, the year shown is MusicBrainz's: the same.
+        val unyeared = beatIt.copy(year = null)
+        assertEquals(HeaderYears(album = "2008"), headerYears(resolved(unyeared, thriller, dates), unyeared))
+        assertEquals(
+            listOf(DateSentence.Album("2008-02-08"), DateSentence.First("1982-11-30", "Thriller", null)),
+            homeDates(resolved(unyeared, thriller, dates), unyeared),
+        )
+        // A player's year MusicBrainz does not give the album is overridden by the one it does.
+        val misdated = beatIt.copy(year = 1982)
+        assertEquals(HeaderYears(album = "2008"), headerYears(resolved(misdated, thriller, dates), misdated))
+        assertEquals(
+            listOf(DateSentence.Album("2008-02-08"), DateSentence.First("1982-11-30", "Thriller", null)),
+            homeDates(resolved(misdated, thriller, dates), misdated),
+        )
+        // The group's release of the album's own year is still this album, on another day too.
+        val sameYear = thriller.copy(date = "2008-01-15")
+        val withSameYear = listOf(ReleaseDate("Thriller", "2008-01-15", "g-thriller"), dates[1])
+        assertEquals(HeaderYears(album = "2008"), headerYears(resolved(beatIt, sameYear, withSameYear), beatIt))
         assertEquals(
             listOf(DateSentence.Album("2008-02-08"), DateSentence.FirstHere),
-            homeDates(resolved(beatIt, reissued, dates), beatIt),
+            homeDates(resolved(beatIt, sameYear, withSameYear), beatIt),
         )
     }
 
