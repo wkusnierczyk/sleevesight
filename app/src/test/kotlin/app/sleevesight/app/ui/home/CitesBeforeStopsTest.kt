@@ -109,6 +109,21 @@ class CitesBeforeStopsTest {
         )) {
             assertEquals(sentence.replace("*", ""), unchecked(sentence))
         }
+        // Initials before a closing bracket too, checked and streaming.
+        assertEquals("It charted (in the U.S.) [W1]", unchecked("It charted (in the U.S.) [W1]"))
+        assertEquals(
+            "It charted (in the U.S.) [W1] It sold.",
+            unchecked("It charted (in the U.S.) [W1] It sold."),
+        )
+        assertEquals(
+            listOf(listOf("It sold [S1].", "It charted (in the U.S.) [W1]")),
+            checked("It sold [S1]. It charted (in the U.S.) [W1]"),
+        )
+        // The check reads no stop before a `)` as a sentence's end, so this is one sentence.
+        assertEquals(
+            listOf(listOf("It charted (in the U.S.) [W1] It sold [S1].")),
+            checked("It charted (in the U.S.) [W1] It sold [S1]."),
+        )
         // A stop after the emphasis moves.
         assertEquals("It is the album Sundown [W1].", unchecked("It is the album *Sundown*. [W1]"))
     }

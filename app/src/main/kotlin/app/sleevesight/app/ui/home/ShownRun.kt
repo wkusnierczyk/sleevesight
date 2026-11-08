@@ -105,10 +105,12 @@ private fun lastCiteAfter(
     return if (last >= 0 && ends) last else -1
 }
 
-// The stop that ends [text]'s run, but for the `.` of initials (`U.S.`, `R.E.M.`, `e.g.`), or null.
+// The stop that ends [text]'s run, but for the `.` of initials (`U.S.`, `R.E.M.`, `e.g.`), closing
+// brackets after it or not (`(in the U.S.)`), or null.
 private fun stopAtEnd(text: ShownRun.Text): MatchResult? =
     STOP.find(text.text)?.takeUnless {
-        it.groupValues[MARK] == "." && INITIALS.containsMatchIn(text.text.substring(0, it.range.first + 1))
+        it.groupValues[MARK].trimEnd(')', ']') == "." &&
+            INITIALS.containsMatchIn(text.text.substring(0, it.range.first + 1))
     }
 
 // A stop at a text run's end: its `.`, `!` or `?` and any closing brackets after it ([MARK]), then
