@@ -95,7 +95,13 @@ class IdentityCheckTest {
     fun `a same-title song by someone else that is not the title's primary topic is rejected`() =
         runTest {
             assertEquals(
-                Verdict.Rejected("Q104092599", "“Willow” is by Taylor Swift, not by Jessiah"),
+                // MusicBrainz has no recording of Jessiah's, so only it could have told a cover from
+                // a namesake: rejected for want of MusicBrainz (#1069).
+                Verdict.Rejected(
+                    "Q104092599",
+                    "“Willow” is by Taylor Swift, not by Jessiah",
+                    withoutMusicBrainz = true,
+                ),
                 verdict(case(61)),
             )
         }

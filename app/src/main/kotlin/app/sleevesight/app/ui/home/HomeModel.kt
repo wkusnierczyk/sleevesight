@@ -184,9 +184,16 @@ internal sealed interface ChipStatus {
 
     data object ModelAllowed : ChipStatus
 
+    /**
+     * A lookup done, with its [outcome], [cached] when kept from before. [withoutMusicBrainz] for a
+     * rejected match whose every rejection was only for want of what MusicBrainz resolves, while
+     * MusicBrainz could not be reached (#1069, `SourceResult.withoutMusicBrainz`): its row says the match was not
+     * confirmed without MusicBrainz, rather than that nothing was found.
+     */
     data class Done(
         val outcome: Outcome,
         val cached: Boolean,
+        val withoutMusicBrainz: Boolean = false,
     ) : ChipStatus
 }
 
@@ -228,9 +235,13 @@ internal fun sourceChips(
         }
     val inLanguage = track.inLanguage
     val language = inLanguage?.sources.orEmpty()
+    val unreached =
+        (track.sources[SourceId.MUSICBRAINZ] as? SourceState.Done)?.result?.outcome == Outcome.Unreachable
     for ((source, state) in looked) {
-        chips += SourceChip(source, chipStatus(state), filtersOf(source))
-        language[source]?.let { chips += SourceChip(source, chipStatus(it), filtersOf(source), inLanguage?.language) }
+        chips += SourceChip(source, chipStatus(state, unreached), filtersOf(source))
+        language[source]?.let {
+            chips += SourceChip(source, chipStatus(it, unreached), filtersOf(source), inLanguage?.language)
+        }
     }
     for (source in order.filter { it !in track.sources }) {
         val status =
@@ -245,11 +256,16 @@ internal fun sourceChips(
     return chips
 }
 
-private fun chipStatus(state: SourceState): ChipStatus =
+// [state]'s status; a rejection only for want of MusicBrainz marked so while it was [unreached] (#1069).
+private fun chipStatus(
+    state: SourceState,
+    unreached: Boolean,
+): ChipStatus =
     when (state) {
         SourceState.Pending -> ChipStatus.Pending
         is SourceState.Failed -> ChipStatus.Failed
-        is SourceState.Done -> ChipStatus.Done(state.result.outcome, state.cached)
+        is SourceState.Done ->
+            ChipStatus.Done(state.result.outcome, state.cached, unreached && state.result.withoutMusicBrainz)
     }
 
 private fun filtersOf(source: SourceId): Set<SourceId> =

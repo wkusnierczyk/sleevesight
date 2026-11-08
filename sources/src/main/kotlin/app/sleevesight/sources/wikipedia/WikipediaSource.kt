@@ -98,7 +98,9 @@ class WikipediaSource(
                 kept[i] ?: part(checkNotNull(verdicts[i]), track, retrievedAt).also { keep(artist, it) }
             }
         for ((artist, part) in credits.zip(parts)) {
-            part.rejection?.let { findings.rejections += Rejection(artist.name, it, Scope.ARTIST) }
+            part.rejection?.let {
+                findings.rejections += Rejection(artist.name, it, Scope.ARTIST, part.withoutMusicBrainz)
+            }
             if (part.unreachable) findings.unreachable = true
         }
         findings.artistFound = parts.any { it.accepted }
@@ -140,7 +142,9 @@ class WikipediaSource(
     /**
      * What one credited artist gave: whether an article was confirmed, its lines, the rejection's
      * reason, and whether Wikidata or Wikipedia did not answer, which keeps it out of the artist
-     * cache; for one the artist cache kept, when it stops being fresh.
+     * cache; for one the artist cache kept, when it stops being fresh; whether the rejection was only
+     * for want of a MusicBrainz id (#1069), never so for one the artist cache kept, since only an
+     * artist with an id is kept.
      */
     private class ArtistFinding(
         val accepted: Boolean,
@@ -148,6 +152,7 @@ class WikipediaSource(
         val rejection: String?,
         val unreachable: Boolean,
         val freshUntil: Instant? = null,
+        val withoutMusicBrainz: Boolean = false,
     )
 
     /** One artist's identity check: its verdict, if any item was checked, and whether a lookup failed. */
@@ -168,7 +173,13 @@ class WikipediaSource(
             }
 
             is Verdict.Rejected -> {
-                ArtistFinding(false, emptyList(), verdict.reason, checked.unreachable)
+                ArtistFinding(
+                    false,
+                    emptyList(),
+                    verdict.reason,
+                    checked.unreachable,
+                    withoutMusicBrainz = verdict.withoutMusicBrainz,
+                )
             }
 
             Verdict.Unreachable -> {
@@ -274,7 +285,12 @@ class WikipediaSource(
                 is Verdict.Accepted -> return verdict
                 is Verdict.Rejected ->
                     rejections +=
-                        Rejection(candidate.title ?: candidate.item, verdict.reason, Scope.SONG)
+                        Rejection(
+                            candidate.title ?: candidate.item,
+                            verdict.reason,
+                            Scope.SONG,
+                            verdict.withoutMusicBrainz,
+                        )
                 is Verdict.Unreachable -> findings.unreachable = true
             }
         }

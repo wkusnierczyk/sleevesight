@@ -65,9 +65,17 @@ class IdentityCheck(
             val labels: Map<String, String>,
         ) : Verdict
 
+        /**
+         * The item failed the check, for [reason]. [withoutMusicBrainz] when it failed only for want
+         * of what MusicBrainz resolves (#1069): an artist with no MusicBrainz id to confirm it, or a
+         * song found by name with no recording MusicBrainz accepted, which only MusicBrainz could
+         * tie to the track. Not for an item that fails whatever MusicBrainz says (a disambiguation
+         * page, not a song, another MusicBrainz artist).
+         */
         data class Rejected(
             val item: String,
             val reason: String,
+            val withoutMusicBrainz: Boolean = false,
         ) : Verdict
 
         data object Unreachable : Verdict
@@ -120,7 +128,12 @@ class IdentityCheck(
             when {
                 entity == null -> Verdict.Rejected(id, "$id is not a Wikidata item")
                 disambiguation -> Verdict.Rejected(id, "“$name” is a disambiguation page")
-                mbid == null -> Verdict.Rejected(id, "no MusicBrainz id for ${artist.name} to confirm “$name”")
+                mbid == null ->
+                    Verdict.Rejected(
+                        id,
+                        "no MusicBrainz id for ${artist.name} to confirm “$name”",
+                        withoutMusicBrainz = true,
+                    )
                 mbid in
                     claims(
                         id,
@@ -197,7 +210,11 @@ class IdentityCheck(
         return if (scope != null) {
             Verdict.Accepted(entity, scope, labels)
         } else {
-            Verdict.Rejected(entity.id, songRejection(name, classes, performers, labels, context))
+            // Found by name with no recording MusicBrainz accepted: only MusicBrainz's link or its
+            // artists' ids could have tied a song-like item to the track (#1069).
+            val withoutMusicBrainz =
+                songLike(classes) && context.route == Route.NAME && context.resolution.recordingMbid == null
+            Verdict.Rejected(entity.id, songRejection(name, classes, performers, labels, context), withoutMusicBrainz)
         }
     }
 

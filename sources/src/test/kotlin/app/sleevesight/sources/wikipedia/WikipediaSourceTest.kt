@@ -191,6 +191,7 @@ class WikipediaSourceTest {
                 assertTrue(result.outcome is Outcome.Rejected, "track $n: ${result.outcome}")
                 assertEquals(emptyList(), result.evidence)
                 assertTrue(
+                    // Unmarked: a disambiguation page is rejected whatever MusicBrainz says (#1069).
                     Rejection("Reem", "“Reem” is a disambiguation page", Scope.ARTIST) in result.rejections,
                     "${result.rejections}",
                 )
@@ -225,6 +226,8 @@ class WikipediaSourceTest {
             val result = lookup(RegressionCase.FEATURED_ARTIST.tracks.single())
             assertEquals(Outcome.SongArticle, result.outcome)
             assertEquals(listOf("Van Morrison"), result.rejections.map { it.subject })
+            // With no MusicBrainz id to confirm his article, for want of MusicBrainz (#1069).
+            assertTrue(result.rejections.single().withoutMusicBrainz, "${result.rejections}")
             assertTrue(
                 result.evidence.any {
                     it.scope == Scope.ARTIST &&
