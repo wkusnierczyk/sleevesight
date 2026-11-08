@@ -1,0 +1,24 @@
+[
+ {
+  "method": "GET",
+  "url": "https://musicbrainz.org/ws/2/recording",
+  "query": {
+   "query": "recording:\"Beat It\" AND artist:\"Michael Jackson\"",
+   "limit": "100",
+   "fmt": "json"
+  },
+  "status": 200,
+  "file": "recording-recording-beat-it-and-artist-michael-jackson.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://musicbrainz.org/ws/2/recording",
+  "query": {
+   "query": "recording:\"Beat It\" AND artist:\"Michael Jackson\" AND firstreleasedate:[* TO 1982-11-30]",
+   "limit": "100",
+   "fmt": "json"
+  },
+  "status": 200,
+  "file": "recording-recording-beat-it-and-artist-michael-jackson-by-1982-11-30.json"
+ }
+]

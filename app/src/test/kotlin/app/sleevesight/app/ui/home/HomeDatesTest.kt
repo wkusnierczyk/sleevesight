@@ -106,6 +106,27 @@ class HomeDatesTest {
     }
 
     @Test
+    fun aReissueInTheOriginalsReleaseGroupIsNotWhereTheTrackFirstCameOut() {
+        // #1065: MusicBrainz files *Thriller 25 Super Deluxe Edition* (2008) in *Thriller*'s release
+        // group, where *Beat It* first came out in 1982.
+        val deluxe = "Thriller 25 Super Deluxe Edition"
+        val beatIt = sundown.copy(title = "Beat It", artists = "Michael Jackson", album = deluxe, year = 2008)
+        val thriller = FirstRelease("1982-11-30", "Thriller", "g-thriller", "r-thriller", "Album")
+        val dates =
+            listOf(ReleaseDate("Thriller", "1982-11-30", "g-thriller"), ReleaseDate(deluxe, "2008-02-08", "g-thriller"))
+        assertEquals(
+            listOf(DateSentence.Album("2008-02-08"), DateSentence.First("1982-11-30", "Thriller", null)),
+            homeDates(resolved(beatIt, thriller, dates), beatIt),
+        )
+        // The group's release of the album's own year is still this album.
+        val reissued = thriller.copy(date = "2008-02-08", title = deluxe)
+        assertEquals(
+            listOf(DateSentence.Album("2008-02-08"), DateSentence.FirstHere),
+            homeDates(resolved(beatIt, reissued, dates), beatIt),
+        )
+    }
+
+    @Test
     fun aFreshOriginalWithItsReleaseWinsOverAKeptOneWithout() {
         // A look again that found the release a failed lookup missed keeps the earlier state.
         val keptOriginal = cohen.copy(release = null)

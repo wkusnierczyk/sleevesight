@@ -98,9 +98,10 @@ internal sealed interface DateSentence {
  * earliest date of the named releases in that year, a single or EP of its title left out beside an
  * album; none when the year is the player's own and no named release has it); the track's first
  * release, "on this album" when it is the album being played ([AlbumDates.has]: its release group
- * is one of those whose year the album line shows, or, when either side has no release group, its
- * title has the album's key); and, for a cover, the song's original recording, with the release it
- * first came out on when known. Empty when no date is known: the panel then says why ([NoDates]).
+ * is one of those whose year the album line shows, and its year that year, or, when either side
+ * has no release group, its title has the album's key); and, for a cover, the song's original
+ * recording, with the release it first came out on when known. Empty when no date is known: the
+ * panel then says why ([NoDates]).
  *
  * From MusicBrainz's result, which keeps them in the retrieval cache, else the run's resolution,
  * as the album's year is ([headerYears]). A result kept before #724 has the first release's date
@@ -186,16 +187,24 @@ private class AlbumDates(
 ) {
     /**
      * Whether [first] is this album: a known release group decides (a single and a later album of
-     * one title are not one release); only without one on either side does the title, as
-     * [NameMatcher.albumKey] reads it.
+     * one title are not one release), with the year: a reissue in the original's group, out in
+     * another year than [first] (*Thriller 25*, 2008, in *Thriller*'s, 1982), is not where the track
+     * first came out (#1065), unless either year is unknown. Only without a group on either side
+     * does the title, as [NameMatcher.albumKey] reads it.
      */
     fun has(first: FirstRelease): Boolean =
         name != null &&
             if (first.releaseGroupMbid != null && groups.isNotEmpty()) {
-                first.group in groups
+                first.group in groups && sameYear(first.date)
             } else {
                 ALBUMS.albumKey(first.title) == ALBUMS.albumKey(name)
             }
+
+    // Whether [date] is in the year the album line shows, or either year is unknown.
+    private fun sameYear(date: String): Boolean {
+        val first = ReleaseDate.yearIn(date)
+        return year == null || first == null || first == year
+    }
 
     companion object {
         fun of(
