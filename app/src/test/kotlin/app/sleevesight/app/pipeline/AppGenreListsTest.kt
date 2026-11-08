@@ -4,6 +4,7 @@ import app.sleevesight.app.ui.home.HomeFixtures
 import app.sleevesight.core.Secret
 import app.sleevesight.core.ai.AiErrorKind
 import app.sleevesight.core.ai.ModelNames
+import app.sleevesight.core.evidence.Hasher
 import app.sleevesight.core.genres.GenreArticles
 import app.sleevesight.core.genres.GenreDefinition
 import app.sleevesight.core.genres.GenreDefinitions
@@ -62,13 +63,28 @@ class AppGenreListsTest {
 
     // A cache that says when each card was kept: the time given, or its own reading of [clock].
     private val cache = CardCache(clock = clock)
+
+    // The hasher, which runs [during] once, at its next use, then hashes as `JvmHasher` (#1059's
+    // review: a list completing while a tap works out its path).
+    private val hasher =
+        object : Hasher {
+            var during: (() -> Unit)? = null
+
+            override fun sha256(bytes: ByteArray): ByteArray {
+                during?.let {
+                    during = null
+                    it()
+                }
+                return JvmHasher.sha256(bytes)
+            }
+        }
     private val parts =
         MutableStateFlow<PipelineParts?>(
             PipelineParts(
                 normalizer = Normalizer(JvmAccentFolder),
                 adapters = emptyList(),
                 resolver = TrackResolver { _, _ -> Resolution.NONE },
-                hasher = JvmHasher,
+                hasher = hasher,
                 ai = AiAccess(provider, Secret("key")),
                 cache = cache,
             ),
@@ -448,6 +464,64 @@ class AppGenreListsTest {
             val list = checkNotNull(notes.aiGenres(track).first())
             assertEquals(listOf("punk"), list.genres.map { it.identity })
             assertEquals(1, provider.requests)
+        }
+
+    @Test
+    fun `taps on two plays while one list is asked each show its answer on their own play (#1059)`() =
+        runTest {
+            knowing()
+            provider.reply = { PUNK_ONLY }
+            provider.streaming = 1.seconds
+            val notes = notes()
+            val first = onlyMusicBrainz(play = 1)
+            val second = onlyMusicBrainz(play = 2)
+            notes.explain(first, "folk")
+            runCurrent()
+            notes.explain(second, "blues")
+            advanceUntilIdle()
+            assertEquals(1, provider.requests)
+            assertEquals(GenreReason.Unavailable(Unavailability.NOT_LISTED), notes.reason(first, "folk").first())
+            assertEquals(GenreReason.Offered, notes.reason(first, "blues").first())
+            assertEquals(GenreReason.Unavailable(Unavailability.NOT_LISTED), notes.reason(second, "blues").first())
+            assertEquals(GenreReason.Offered, notes.reason(second, "folk").first())
+        }
+
+    @Test
+    fun `a tap as the list comes without the genre is not lost (#1059)`() =
+        runTest {
+            knowing()
+            provider.reply = { n -> if (n == 1) PUNK_ONLY else "Its loud guitars are punk [MB1]." }
+            provider.streaming = 1.seconds
+            val notes = notes()
+            val track = onlyMusicBrainz()
+            notes.explain(track, "punk")
+            runCurrent()
+            // The list comes while the tap on blues works out what to do, from the lists before it.
+            hasher.during = { testScheduler.advanceUntilIdle() }
+            notes.explain(track, "blues")
+            advanceUntilIdle()
+            assertEquals(GenreReason.Unavailable(Unavailability.NOT_LISTED), notes.reason(track, "blues").first())
+            assertEquals(GenreReason.Offered, notes.reason(track, "folk").first())
+            assertEquals(2, provider.requests)
+        }
+
+    @Test
+    fun `a tap as the list comes with the genre writes its reason (#1059)`() =
+        runTest {
+            knowing()
+            provider.reply = { n -> if (n == 1) PUNK_ONLY else "Its loud guitars are punk [MB1]." }
+            provider.streaming = 1.seconds
+            val notes = notes()
+            val track = onlyMusicBrainz()
+            notes.explain(track, "folk")
+            runCurrent()
+            // The list comes while the tap on punk works out what to do, from the lists before it.
+            hasher.during = { testScheduler.advanceUntilIdle() }
+            notes.explain(track, "punk")
+            advanceUntilIdle()
+            assertTrue((notes.reason(track, "punk").first() as GenreReason.Shown).state is InsightState.Written)
+            assertEquals(2, provider.requests)
+            assertEquals(GenreReason.Unavailable(Unavailability.NOT_LISTED), notes.reason(track, "folk").first())
         }
 
     // [cache], counting the reads and writes of cards.
