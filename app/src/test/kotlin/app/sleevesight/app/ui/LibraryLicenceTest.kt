@@ -87,7 +87,7 @@ class LibraryLicenceTest {
         assertTrue(asset("licences/mpl-2.0-publicsuffix.txt").contains("Mozilla Public License Version 2.0"))
         assertTrue(asset("licences/mit-slf4j.txt").contains("Copyright (c) 2004-2023 QOS.ch"))
         assertTrue(asset("licences/bsd-3-clause-protobuf.txt").contains("Copyright 2008 Google Inc."))
-        assertTrue(asset("licences/mit-materialkolor.txt").contains("Copyright (c) 2025 Jordon de Hoog"))
+        assertTrue(asset("licences/mit-materialkolor.txt").contains("Copyright (c) 2026 Jordon de Hoog"))
     }
 
     @Test
