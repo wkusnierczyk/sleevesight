@@ -106,7 +106,7 @@ class ReportButtonHiderTest {
                     throw failure
             }
         try {
-            val saved = SettingsStore(broken, testBuild).reportButtonHider(scope)()
+            val saved = SettingsStore(broken, testBuild, Dispatchers.Unconfined).reportButtonHider(scope)()
             runBlocking {
                 // A guard against a hang only; the failure arrives at once.
                 withTimeout(GUARD) {

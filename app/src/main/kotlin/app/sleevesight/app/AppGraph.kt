@@ -105,6 +105,7 @@ import app.sleevesight.store.db.CacheDatabase
 import app.sleevesight.store.history.HistoryDatabase
 import app.sleevesight.wiring.PipelineWiring
 import app.sleevesight.wiring.appPipelineWiring
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
@@ -135,6 +136,8 @@ import kotlinx.coroutines.withContext
  * @param settingsData the settings' file, made here unless a test passes a stand-in.
  * @param secretCipher seals the keys; a test seam, since Robolectric has no Android Keystore.
  * @param musicBrainzThrough wraps the MusicBrainz client; a test seam, to count its questions.
+ * @param settingsDispatcher where the settings' DataStore work runs ([SettingsStore]); a test seam,
+ *   for a test on the main looper's clock.
  */
 class AppGraph internal constructor(
     context: Context,
@@ -142,6 +145,7 @@ class AppGraph internal constructor(
         preferences(context.applicationContext, SETTINGS_FILE, listOf(PrunePlayersMigration)),
     secretCipher: SecretCipher = SecretCipher(AndroidKeystoreKey()),
     musicBrainzThrough: (MusicBrainzLookup) -> MusicBrainzLookup = { it },
+    settingsDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) {
     private val appContext = context.applicationContext
 
@@ -163,7 +167,7 @@ class AppGraph internal constructor(
      * The user's settings, with this build's defaults, in [settingsData]. DataStore allows one
      * instance per file in a process, so it is made only for the graph.
      */
-    val settings = SettingsStore(settingsData, SettingsStore.BUILD_DEFAULTS)
+    val settings = SettingsStore(settingsData, SettingsStore.BUILD_DEFAULTS, settingsDispatcher)
 
     /** The user's keys, sealed with the app's Android Keystore key, in a file of their own. */
     val secrets =

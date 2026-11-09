@@ -35,7 +35,7 @@ import org.junit.Test
 class KeyGateTest {
     private val key = softwareKey()
     private val settingsData = FlakyDataStore(MemoryStore())
-    private val settings = SettingsStore(settingsData)
+    private val settings = SettingsStore(settingsData, dispatcher = Dispatchers.Unconfined)
     private val secretsData = MemoryStore()
     private val secrets = secretStore()
 

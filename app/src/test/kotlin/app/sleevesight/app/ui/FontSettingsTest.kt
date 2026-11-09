@@ -242,7 +242,7 @@ class FontSettingsTest {
         // waits on the main looper's clock, which only this test advances: no file, and no thread
         // of DataStore's own to wait on in real time (#629).
         val data = FlakyDataStore(MemoryStore()).apply { failures.set(Int.MAX_VALUE) }
-        app.makeGraph = { AppGraph(it, settingsData = data) }
+        app.makeGraph = { AppGraph(it, settingsData = data, settingsDispatcher = Dispatchers.Unconfined) }
         assertEquals(FontChoice.SYSTEM_FONT, app.graph.font.value)
         // Several collectors read at the start; the retries come only as the clock moves on.
         val firstReads = data.reads.get()

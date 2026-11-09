@@ -11,9 +11,13 @@ import app.sleevesight.core.settings.ThemeChoice
 import app.sleevesight.core.settings.WriteAutomatically
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
@@ -25,6 +29,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.IOException
 import kotlin.math.pow
 import kotlin.time.Duration
@@ -49,12 +54,19 @@ import kotlin.time.Duration.Companion.seconds
  *
  * **The defaults** are [defaults] wherever the user has not chosen: the app's store has this
  * build's, [BUILD_DEFAULTS]; a test's store has `:core`'s unless it passes others.
+ *
+ * **DataStore's work runs on [dispatcher]** (#1107), never on the caller's: from DataStore 1.3 a
+ * first read takes the store's init lock on the caller's dispatcher, and a collector on the main
+ * thread would then hold it until the main looper runs again, which a test blocked on the store
+ * from that thread never lets happen. IO in the app; a test on virtual time passes its own.
  */
 class SettingsStore(
     private val dataStore: DataStore<Preferences>,
     private val defaults: Settings = Settings(),
+    private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) {
-    private val stored: Flow<Settings> = dataStore.data.map { SettingsCodec.read(it, defaults) }
+    private val stored: Flow<Settings> =
+        dataStore.data.map { SettingsCodec.read(it, defaults) }.collectedOn(dispatcher)
 
     /** The current settings, and each change to them; nothing while the file cannot be read. */
     val settings: Flow<Settings> = stored.retryReads {}.distinctUntilChanged()
@@ -83,8 +95,10 @@ class SettingsStore(
      * written ([SettingsCodec.write]), so what a later version stored survives a downgrade.
      */
     suspend fun update(transform: (Settings) -> Settings) {
-        dataStore.edit { prefs ->
-            SettingsCodec.write(transform(SettingsCodec.read(prefs, defaults)), prefs, defaults)
+        withContext(dispatcher) {
+            dataStore.edit { prefs ->
+                SettingsCodec.write(transform(SettingsCodec.read(prefs, defaults)), prefs, defaults)
+            }
         }
     }
 
@@ -152,7 +166,7 @@ class SettingsStore(
     /** *Reactive*'s mode as the store holds it now; null when it cannot be read, whatever failed. */
     suspend fun storedMode(): WriteAutomatically? =
         try {
-            SettingsCodec.read(dataStore.data.first(), defaults).writeAutomatically
+            SettingsCodec.read(withContext(dispatcher) { dataStore.data.first() }, defaults).writeAutomatically
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (_: Exception) {
@@ -258,6 +272,25 @@ class SettingsStore(
          */
         internal fun backoff(failures: Int): Duration =
             minOf(FIRST_RETRY * 2.0.pow(failures.coerceIn(0, DOUBLINGS)), MAX_RETRY)
+
+        /**
+         * This flow, collected on [dispatcher] and handed on in order, each value before any failure
+         * that follows it. Not `flowOn`: its buffer can drop a value that came just before a failure,
+         * since the failure cancels the collection while the value waits to be taken.
+         */
+        private fun <T> Flow<T>.collectedOn(dispatcher: CoroutineDispatcher): Flow<T> {
+            val upstream = this
+            return flow {
+                coroutineScope {
+                    val values = Channel<T>(Channel.RENDEZVOUS)
+                    launch(dispatcher) {
+                        // Closed after the values, as the collection ends: with its failure, if any.
+                        values.close(runCatching { upstream.collect { values.send(it) } }.exceptionOrNull())
+                    }
+                    for (value in values) emit(value)
+                }
+            }
+        }
 
         /**
          * Retries this flow after each I/O error, after [backoff], calling [onFailure] first; any
