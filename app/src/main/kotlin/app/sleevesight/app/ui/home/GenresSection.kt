@@ -85,7 +85,7 @@ internal fun genresItem(
         tag = if (openPage != null) GENRES_PAGE_LINK_TAG else GENRES_CHIP_TAG,
         panelTag = GENRES_PANEL_TAG,
         page = openPage,
-    ) { toClose -> GenresContent(track, settings, notes, retries::of, openSettingsAt, toClose, search = search) }
+    ) { toClose -> GenresContent(track, settings, notes, retries::ofAll, openSettingsAt, toClose, search = search) }
 }
 
 /**
@@ -95,8 +95,9 @@ internal fun genresItem(
  * [GenreNotes.aiGenres]), each unfolding its genre under them and a
  * rule (#786, [GenresBox], [GenreBody]); under the chips, or in their place with none, why
  * there are no more: "Looking on Last.fm and MusicBrainz…" while the genres are gathered (the
- * sources still asked), a source that could not be reached with *Retry* beside it ([retry] of its
- * [SourceId], [RetryLine], which then hands the focus to the panel's *Close*, [toClose]), "None
+ * sources still asked), the sources that could not be reached, on one line that says some genres may
+ * be missing (#1121), with *Retry* beside it ([retry] of their [SourceId]s, which asks them again
+ * together, [RetryLine], and then hands the focus to the panel's *Close*, [toClose]), "None
  * found."; and with every genre source off, two lines, the second a link to where they are switched
  * on ([openSettingsAt]: *Settings → Sources*, or *Settings → Genres* when the sources are on and
  * their genre switches are not). With [everyGenre] (the genres' page, #772), no chips: every
@@ -114,7 +115,7 @@ internal fun GenresContent(
     playing: TrackState?,
     settings: Settings,
     notes: PanelNotes = PanelNotes(),
-    retry: (SourceId) -> (() -> Unit)? = { null },
+    retry: (Collection<SourceId>) -> (() -> Unit)? = { null },
     openSettingsAt: (SettingsTarget) -> Unit = {},
     toClose: () -> Unit = {},
     everyGenre: Boolean = false,
@@ -165,12 +166,13 @@ internal fun GenresContent(
     if (shown.looking.isNotEmpty()) {
         Busy(stringResource(R.string.home_genres_looking, sourcesNamed(shown.looking)), style)
     }
-    for (source in shown.unreachable) {
-        val name = sourceName(source.source)
+    if (shown.unreachable.isNotEmpty()) {
+        // One line for every source not reached, so the list does not look complete (#1121).
+        val names = namedTogether(shown.unreachable.map { sourceName(it.source) })
         RetryLine(
-            stringResource(R.string.home_genre_source_unreachable, name),
-            name,
-            retry(source.source),
+            stringResource(R.string.home_genres_partial, names),
+            names,
+            retry(shown.unreachable.map { it.source }),
             afterRetry = toClose,
         )
     }
@@ -189,7 +191,7 @@ private fun sourcesNamed(sources: List<LabelSource>): String {
 /**
  * What *Genres*' panel says besides its chips (#772), for a track and the settings: the label
  * sources still being asked while the genres are gathered, by name ([looking]); those that could
- * not be reached, each with *Retry* ([unreachable]); with every genre source off and no genre, where
+ * not be reached, on one line with *Retry* ([unreachable], #1121); with every genre source off and no genre, where
  * its link leads ([off]); whether it says none were found ([none]); and whether LRCLIB, asked about
  * the track's Instrumental, could not be reached, with *Retry* ([libraryUnreachable], #997).
  */

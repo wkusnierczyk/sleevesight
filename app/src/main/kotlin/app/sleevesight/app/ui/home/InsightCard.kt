@@ -193,6 +193,7 @@ private fun Written(
     for (paragraph in paragraphs) {
         CheckedProse(paragraph, insight.grounded, context.track?.evidence, actions.onCite, insight.held)
     }
+    context.unanswered?.let { InsightPartial(it) }
     Footer(insight, context, actions, groundingDetails)
 }
 

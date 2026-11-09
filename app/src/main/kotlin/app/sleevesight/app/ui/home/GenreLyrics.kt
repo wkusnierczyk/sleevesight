@@ -104,7 +104,7 @@ internal fun withLibrary(
 internal fun LibraryRetry(
     unreachable: Boolean,
     panelRetry: (() -> Unit)?,
-    retry: (SourceId) -> (() -> Unit)?,
+    retry: (Collection<SourceId>) -> (() -> Unit)?,
     toClose: () -> Unit,
 ) {
     if (!unreachable) return
@@ -112,7 +112,7 @@ internal fun LibraryRetry(
     RetryLine(
         stringResource(R.string.home_genre_source_unreachable, name),
         name,
-        panelRetry ?: retry(SourceId.LRCLIB),
+        panelRetry ?: retry(listOf(SourceId.LRCLIB)),
         afterRetry = toClose,
     )
 }

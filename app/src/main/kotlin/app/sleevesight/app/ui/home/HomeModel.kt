@@ -41,7 +41,8 @@ internal fun trackFor(
  * the line about the split button says it writes automatically (#615). Whether the insight shown
  * is the card paid for, kept from before in place of an insight the run lacks ([cardShown],
  * `PipelineView.cardShown`), and why its rewrite failed or that it was stopped ([rewriteFailed],
- * `PipelineView.rewriteFailed`).
+ * `PipelineView.rewriteFailed`). The sources it draws on that did not answer ([unanswered], #1121),
+ * said under a written insight's text with *Retry*.
  */
 @Suppress("LongParameterList") // Each what one part of the card says.
 internal class InsightContext(
@@ -55,6 +56,7 @@ internal class InsightContext(
     val waiting: Boolean = false,
     val cardShown: Boolean = false,
     val rewriteFailed: String? = null,
+    val unanswered: Unanswered? = null,
 )
 
 /**

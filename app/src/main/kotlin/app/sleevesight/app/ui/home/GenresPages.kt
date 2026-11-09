@@ -50,13 +50,13 @@ internal fun GenresPage(
 }
 
 /**
- * The genres' page's ways out when it has no genre to show (#772): [retry] of a label source not
- * reached, [openSettingsAt] where the genre sources are switched on, and [afterRetry], where the
- * focus goes as *Retry* gives way to "Looking on …" (the page's back arrow), or a keyboard's or a
- * screen reader's would fall to the top of the screen.
+ * The genres' page's ways out when it has no genre to show (#772): [retry] of the label sources not
+ * reached (#1121: together, on one line), [openSettingsAt] where the genre sources are switched on,
+ * and [afterRetry], where the focus goes as *Retry* gives way to "Looking on …" (the page's back
+ * arrow), or a keyboard's or a screen reader's would fall to the top of the screen.
  */
 internal class GenresWays(
-    val retry: (SourceId) -> (() -> Unit)? = { null },
+    val retry: (Collection<SourceId>) -> (() -> Unit)? = { null },
     val openSettingsAt: (SettingsTarget) -> Unit = {},
     val afterRetry: () -> Unit = {},
 )

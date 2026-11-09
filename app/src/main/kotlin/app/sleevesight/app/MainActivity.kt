@@ -66,7 +66,8 @@ class MainActivity : ComponentActivity() {
             stop = graph.pipeline::stop,
             // *Look again* on the card paid for (#617): fresh lookups, a write only for new evidence.
             lookAgain = graph.pipeline::lookAgain,
-            // *Retry* beside a source that could not be reached (#724): that source alone, asked again.
+            // *Retry* beside a source that could not be reached (#724): that source alone, asked again; or
+            // the two named on one line (#1121), together.
             askAgain = graph.pipeline::askAgain,
             unavailableModel = graph.unavailableModel,
             // The insight card's menu of Reactive's modes (#615), saved in the process's scope; an

@@ -130,9 +130,9 @@ class GenresLibraryScreenTest {
         block: () -> Unit,
     ) {
         val actions =
-            NowPlayingActions(normalizer::normalize, genreNotes = genreNotes, askAgain = { key, source, shown ->
+            NowPlayingActions(normalizer::normalize, genreNotes = genreNotes, askAgain = { key, sources, shown ->
                 retried +=
-                    Triple(key, source, shown)
+                    Triple(key, sources.single(), shown)
             })
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity {

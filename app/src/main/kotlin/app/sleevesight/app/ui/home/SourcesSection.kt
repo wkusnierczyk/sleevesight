@@ -126,7 +126,7 @@ internal fun SourcesSection(
                 },
                 closeModifier = Modifier.handoffTarget(handoff, close),
             ) {
-                SourcesBody(shown, focus, fold, openSettings)
+                SourcesBody(shown, focus, fold, openSettings) { handoff.moveTo(close) }
             }
         }
     }
@@ -137,7 +137,8 @@ internal fun SourcesSection(
  * off unless with grounding [details]), whether the insight shown is the card kept from before
  * ([cardKept]), and whether the phone is [offline] with a source unreachable. Its lines are [lines]:
  * the track's evidence, with the album's own lines once its insight gathered them (#522,
- * [SourcesLines]), which the chips show and hide as the track's.
+ * [SourcesLines]), which the chips show and hide as the track's. [retry] of the sources that could
+ * not be reached is *Retry* beside the note that says so (#1121), null while it is not offered.
  */
 @Suppress("LongParameterList") // What the section shows, each its own.
 internal class SourcesShown(
@@ -147,12 +148,14 @@ internal class SourcesShown(
     val offline: Boolean = false,
     val details: Boolean = false,
     val lines: SourcesLines = SourcesLines(track?.evidence),
+    val retry: (Collection<SourceId>) -> (() -> Unit)? = { null },
 )
 
 /**
  * The section's content (#447: one component, mounted in place in its panel or on a page of its
  * own): the table of the sources, the note, and the list as far as [fold] unfolds it, with its paging. Drawn as a
- * column of its own, spaced as the section is.
+ * column of its own, spaced as the section is. A tap on the note's *Retry* (#1121) then runs
+ * [afterRetry], which hands the focus on as *Retry* goes.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -161,6 +164,7 @@ internal fun SourcesBody(
     focus: LineFocus,
     fold: SourcesFold,
     openSettings: () -> Unit = {},
+    afterRetry: () -> Unit = {},
 ) {
     val track = shown.track
     val details = shown.details
@@ -176,7 +180,7 @@ internal fun SourcesBody(
         val tagWidth = tagColumnWidth(lines.map { it.id } + unverified.map { it.source.tag })
         val chips = shown.chips
         SourceTable(tableRows(chips, shownLines.evidence, details), details, lines, focus, fold)
-        Notes(sourceNotes(chips, shown.offline), openSettings)
+        Notes(sourceNotes(chips, shown.offline), openSettings, shown.retry, afterRetry)
         if (shown.offline) Small(stringResource(R.string.home_sources_offline))
         if (lines.isEmpty()) {
             // Still looking, with the turning record before it (#785); nothing found, without, the

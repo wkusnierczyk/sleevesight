@@ -54,6 +54,29 @@ class PipelineCoordinatorRetryTest {
     }
 
     @Test
+    fun `a tap naming two sources asks both again together, and one not offered is not asked`() {
+        val world = unreachable()
+        val key = world.coordinator.state.askAgainKey ?: world.key("No run offers Retry")
+        world.send(CoordinatorEvent.RetryTapped(key, setOf(SourceId.WEB, SourceId.WIKIPEDIA, SourceId.LASTFM)))
+        world.advance(0)
+        world.settle()
+
+        assertEquals(listOf("A"), world.askedAgain)
+        assertEquals(setOf(SourceId.WEB, SourceId.WIKIPEDIA), world.carried.single().asked)
+    }
+
+    @Test
+    fun `a tap naming no source the run offers does nothing`() {
+        val world = unreachable()
+        val key = world.coordinator.state.askAgainKey ?: world.key("No run offers Retry")
+        world.send(CoordinatorEvent.RetryTapped(key, setOf(SourceId.LASTFM)))
+        world.advance(0)
+        world.settle()
+
+        assertEquals(emptyList<String>(), world.askedAgain)
+    }
+
+    @Test
     fun `a tap that brings lines writes nothing unasked, unlike back online, Write waiting for a tap`() {
         val world = unreachable()
         val calls = world.calls.toMap()

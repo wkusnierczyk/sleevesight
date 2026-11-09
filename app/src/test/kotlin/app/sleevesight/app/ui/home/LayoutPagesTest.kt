@@ -525,7 +525,7 @@ class LayoutPagesTest {
         show(offered) { current ->
             compose.onNodeWithTag(GENRES_PAGE_LINK_TAG).performScrollTo().performClick()
             compose.waitForIdle()
-            compose.onNodeWithText("Last.fm could not be reached.").assertExists()
+            compose.onNodeWithText("Last.fm could not be reached; some genres may be missing.").assertExists()
             compose.onNodeWithTag(RETRY_TAG).performScrollTo().requestFocus()
             compose.waitForIdle()
             compose.onNodeWithTag(RETRY_TAG).assertIsFocused().performClick()

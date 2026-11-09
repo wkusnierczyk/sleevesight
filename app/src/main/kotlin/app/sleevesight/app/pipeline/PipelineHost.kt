@@ -397,19 +397,19 @@ class PipelineHost(
     }
 
     /**
-     * The user tapped *Retry* beside [source], which could not be reached, offered under [key]
-     * ([PipelineView.askAgainKey], #724) beside the track [shown]: the coordinator asks that source
-     * alone again if it still offers it, as back online asks every one (#192), free. Dropped, as a
-     * tap on Write is, for a track the session layer no longer shows.
+     * The user tapped *Retry* beside [sources], which could not be reached, offered under [key]
+     * ([PipelineView.askAgainKey], #724) beside the track [shown]: the coordinator asks those it still
+     * offers alone again, together (two named on one line, #1121), as back online asks every one
+     * (#192), free. Dropped, as a tap on Write is, for a track the session layer no longer shows.
      */
     fun askAgain(
         key: RunKey,
-        source: SourceId,
+        sources: Set<SourceId>,
         shown: NowPlaying,
     ) {
         val latest = latestPlaying() ?: return
         if (!sameInsightTrack(shown, latest)) return
-        queue.trySend(CoordinatorEvent.RetryTapped(key, source))
+        queue.trySend(CoordinatorEvent.RetryTapped(key, sources))
     }
 
     /**

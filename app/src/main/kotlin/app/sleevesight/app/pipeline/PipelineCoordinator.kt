@@ -229,14 +229,18 @@ sealed interface CoordinatorEvent {
     ) : CoordinatorEvent
 
     /**
-     * The user tapped *Retry* beside a [source] that could not be reached, offered for the run under
-     * [key] ([CoordinatorState.askAgainKey], #724): that source alone is asked again. A tap for any
-     * other run, or for a source the run did not find unreachable, does nothing.
+     * The user tapped *Retry* beside [sources] that could not be reached, offered for the run under
+     * [key] ([CoordinatorState.askAgainKey], #724): those of them it offers are asked again together,
+     * the others kept (two that did not answer, named on one line, #1121). A tap for any other run,
+     * or naming no source the run offers, does nothing.
      */
     data class RetryTapped(
         val key: RunKey,
-        val source: SourceId,
-    ) : CoordinatorEvent
+        val sources: Set<SourceId>,
+    ) : CoordinatorEvent {
+        /** A tap beside one [source] alone. */
+        constructor(key: RunKey, source: SourceId) : this(key, setOf(source))
+    }
 
     /**
      * Run [run]'s [evidence] is assembled (`RunControl.assembled`): sent after [SourcesGathered],
@@ -973,8 +977,8 @@ fun sameInsightTrack(
  * | otherwise (a tap for another run's key included) | WriteTapped(key) | unchanged | none |
  * | current run of the ledger's written track, its card citing evidence, its sources landed, no model call under way, not itself looking again still, allowed, of the tap's key | LookAgainTapped(key) (#617) | a new run of its key and report, looking again, with the card's evidence; a preparation cancelled; not the first action | CancelRun (old), CancelPreparation (if one is cancelled), StartRun (looking again, with what the old run gathered), Acted |
  * | otherwise | LookAgainTapped(key) | unchanged | none |
- * | current run, its sources landed with [source] among those unreachable, no model call under way, allowed, of the tap's key | RetryTapped(key, source) (#724) | a new run of its key and report asking again [source] alone, as back online does all of them (a tap kept likewise), but never writing unasked, nor any run replacing it (`retried`); a preparation cancelled; not the first action | CancelRun (old), CancelPreparation (if one is cancelled), StartRun (new, `again` asking [source]), Acted |
- * | otherwise | RetryTapped(key, source) | unchanged | none |
+ * | current run, its sources landed with some of [sources] among those unreachable, no model call under way, allowed, of the tap's key | RetryTapped(key, sources) (#724, #1121) | a new run of its key and report asking again those of [sources] alone, as back online does all of them (a tap kept likewise), but never writing unasked, nor any run replacing it (`retried`); a preparation cancelled; not the first action | CancelRun (old), CancelPreparation (if one is cancelled), StartRun (new, `again` asking those of [sources]), Acted |
+ * | otherwise | RetryTapped(key, sources) | unchanged | none |
  * | the run | EvidenceAssembled(evidence) | a look again's: whether it holds a line the card's evidence does not say; its question is then answered by offering *Rewrite insight* if so (else only if the run it replaced offered it), never by writing | none |
  * | the run, the tap's call under way | StopTapped(call) | unchanged (the call ends with its StepEnded; the ledger stays written, so nothing writes it again without a tap) | StopCall(call) |
  * | otherwise (no call under way, another run's call, or an earlier call of the run) | StopTapped(call) | unchanged | none |
@@ -1062,7 +1066,7 @@ class PipelineCoordinator(
         when (event) {
             is CoordinatorEvent.WriteTapped -> tapped(event.key)
             is CoordinatorEvent.LookAgainTapped -> lookAgain(event.key)
-            is CoordinatorEvent.RetryTapped -> retried(event.key, event.source)
+            is CoordinatorEvent.RetryTapped -> retried(event.key, event.sources)
             is CoordinatorEvent.StopTapped -> stopTapped(event.call)
             else -> Unit
         }
@@ -1311,15 +1315,17 @@ class PipelineCoordinator(
         replaceAskingAgain(run, checkNotNull(run.gathered))
     }
 
-    // A tap on *Retry* beside [source] (#724), for the run under [key]: replaced as back online, but
-    // asking that source alone again, the others unreachable kept so. A user's action for skip
-    // detection (D15), as *Look again* is, but not the first action (D5).
+    // A tap on *Retry* beside [sources] (#724; two on one line, #1121), for the run under [key]:
+    // replaced as back online, but asking those it offers alone again, together, the others
+    // unreachable kept so. A user's action for skip detection (D15), as *Look again* is, but not the
+    // first action (D5).
     private fun retried(
         key: RunKey,
-        source: SourceId,
+        sources: Set<SourceId>,
     ) {
-        val run = state.current?.takeIf { state.askAgainKey == key && source in state.askable } ?: return
-        replaceAskingAgain(run, checkNotNull(run.gathered).asking(setOf(source)), retried = true)
+        val asked = sources intersect state.askable
+        val run = state.current?.takeIf { state.askAgainKey == key && asked.isNotEmpty() } ?: return
+        replaceAskingAgain(run, checkNotNull(run.gathered).asking(asked), retried = true)
         effects += CoordinatorEffect.Acted
     }
 

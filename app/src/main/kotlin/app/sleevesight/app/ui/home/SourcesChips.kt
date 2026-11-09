@@ -45,6 +45,7 @@ import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.app.ui.theme.chipColours
 import app.sleevesight.core.evidence.EvidenceLine
 import app.sleevesight.core.model.Outcome
+import app.sleevesight.core.model.SourceId
 
 // *Sources*' chip on Home (#623), its table of the sources (#662) and its note (#440).
 
@@ -136,46 +137,93 @@ internal fun PanelChip(
 /**
  * What needs the listener, in one note (#440): each source that needs its key, "Last.fm needs your
  * key, in Settings.", the settings a link ([openSettings]); each one that could not be reached or
- * failed.
+ * failed. Those that could not be reached in English are named together, in one sentence where the
+ * first was ("Last.fm and MusicBrainz could not be reached.", #1121), with *Retry* beside the note
+ * ([retry] of them, null while it is not offered), which asks them again and then runs
+ * [afterRetry]; a lookup in the track's language (#902), which *Retry* does not ask, keeps a
+ * sentence of its own.
  */
 @Composable
 internal fun Notes(
     notes: List<SourceNote>,
     openSettings: () -> Unit,
+    retry: (Collection<SourceId>) -> (() -> Unit)? = { null },
+    afterRetry: () -> Unit = {},
 ) {
     if (notes.isEmpty()) return
     val settings = stringResource(R.string.home_source_note_settings)
+    val unreachable = notes.filter { it is SourceNote.Unreachable && it.language == null }.map { it.source }
+    val together =
+        unreachable.takeIf { it.isNotEmpty() }?.let { sources ->
+            namedTogether(sources.map { chipName(it) })
+        }
     val sentences =
-        notes.map { note ->
-            val name = rowName(note.source, note.language)
-            when (note) {
-                is SourceNote.NeedsKey -> stringResource(R.string.home_source_note_key, name, settings)
-                is SourceNote.Unreachable -> stringResource(R.string.home_source_note_unreachable, name)
-                is SourceNote.Failed -> stringResource(R.string.home_source_note_failed, name)
-            } to (note is SourceNote.NeedsKey)
-        }
-    val parts =
-        sentences.flatMapIndexed { index, (sentence, linked) ->
-            val gap = if (index > 0) listOf(TextPart.Words(" ")) else emptyList()
-            val at = sentence.lastIndexOf(settings)
-            gap +
-                if (!linked || at < 0) {
-                    listOf(TextPart.Words(sentence))
-                } else {
-                    listOf(
-                        TextPart.Words(sentence.substring(0, at)),
-                        TextPart.Action(settings, SETTINGS_LINK, openSettings),
-                        TextPart.Words(sentence.substring(at + settings.length)),
-                    )
+        notes.mapNotNull { note ->
+            if (note is SourceNote.Unreachable && note.language == null) {
+                // Once, where the first of them was.
+                together?.takeIf { note.source == unreachable.first() }?.let {
+                    stringResource(R.string.home_source_note_unreachable, it) to false
                 }
+            } else {
+                noteSentence(note, settings) to (note is SourceNote.NeedsKey)
+            }
         }
-    LinkedText(
-        parts,
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.testTag(SOURCES_NOTE_TAG),
-    )
+    val parts = linkedNote(sentences, settings, openSettings)
+    val onRetry = together?.let { retry(unreachable) }
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        LinkedText(
+            parts,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f).testTag(SOURCES_NOTE_TAG),
+        )
+        if (together != null && onRetry != null) {
+            LineButton(
+                stringResource(R.string.home_retry),
+                stringResource(R.string.home_retry_action, together),
+                Modifier.testTag(SOURCES_RETRY_TAG),
+            ) {
+                onRetry()
+                afterRetry()
+            }
+        }
+    }
 }
+
+// [note]'s sentence, naming its source, [settings] the words of the link in a key's.
+@Composable
+private fun noteSentence(
+    note: SourceNote,
+    settings: String,
+): String {
+    val name = rowName(note.source, note.language)
+    return when (note) {
+        is SourceNote.NeedsKey -> stringResource(R.string.home_source_note_key, name, settings)
+        is SourceNote.Unreachable -> stringResource(R.string.home_source_note_unreachable, name)
+        is SourceNote.Failed -> stringResource(R.string.home_source_note_failed, name)
+    }
+}
+
+// The note's [sentences] one after another, in a sentence that is [linked] its [settings] a link.
+private fun linkedNote(
+    sentences: List<Pair<String, Boolean>>,
+    settings: String,
+    openSettings: () -> Unit,
+): List<TextPart> =
+    sentences.flatMapIndexed { index, (sentence, linked) ->
+        val gap = if (index > 0) listOf(TextPart.Words(" ")) else emptyList()
+        val at = sentence.lastIndexOf(settings)
+        gap +
+            if (!linked || at < 0) {
+                listOf(TextPart.Words(sentence))
+            } else {
+                listOf(
+                    TextPart.Words(sentence.substring(0, at)),
+                    TextPart.Action(settings, SETTINGS_LINK, openSettings),
+                    TextPart.Words(sentence.substring(at + settings.length)),
+                )
+            }
+    }
 
 /**
  * *Sources*' table (#662): a row for each of [rows], in two columns, so a citation's letter can be
@@ -385,6 +433,9 @@ const val SOURCES_CHIP_TAG: String = "sources-chip"
 
 /** The test tag of the note of what needs the listener. */
 const val SOURCES_NOTE_TAG: String = "sources-note"
+
+/** The test tag of *Retry* beside *Sources*' note, which asks the sources that could not be reached again (#1121). */
+const val SOURCES_RETRY_TAG: String = "sources-note:retry"
 
 /** The test tag of a source's chip, before its tag (`MB`, `W`; `W:hi` in the track's language, #902). */
 const val CHIP_PREFIX: String = "chip:"
