@@ -16,7 +16,7 @@ androidx-compose-bom = "2026.09.00"
 androidx-activity = "1.13.0"
 androidx-navigation = "2.10.2"
 androidx-lifecycle = "2.11.0"
-androidx-datastore = "1.2.1"
+androidx-datastore = "1.3.0"
 # The art's colours (design, *User interface*): a Kotlin port of Google's material-color-utilities.
 materialkolor = "6.0.0"
 # QR codes of the API keys (#268): drawn by the CLI, read by the app's camera; decoded on the phone.
