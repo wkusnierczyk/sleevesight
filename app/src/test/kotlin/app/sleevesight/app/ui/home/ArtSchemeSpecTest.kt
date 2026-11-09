@@ -9,9 +9,10 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
- * The art's colours stay as they were when material-color-utilities moved to 6.0.0 (#1111): the
- * expected values are what 5.0.1 gave, whose default colour spec was the 2021 one. 6.0.0 defaults
- * to the 2025 spec, which changes nearly every role of this seed's schemes, light and dark.
+ * The art's colours when material-color-utilities moved to 6.0.0 (#1111). A seed's schemes stay as
+ * 5.0.1 gave them, whose default colour spec was the 2021 one: 6.0.0 defaults to the 2025 spec, which
+ * changes nearly every role of this seed's schemes, light and dark. The seed some art gives does
+ * change, to Google's own (see [manyColouredArtGivesGooglesSeed]).
  */
 @RunWith(RobolectricTestRunner::class)
 class ArtSchemeSpecTest {
@@ -25,15 +26,39 @@ class ArtSchemeSpecTest {
         assertEquals(DARK, roles(seedScheme(SEED, dark = true)))
     }
 
+    /**
+     * The seed of a many-coloured art, as 6.0.0 picks it, which differs from 5.0.1 for some art. 6.0.0's
+     * `QuantizerWsmeans` assigns the pixels' first clusters with `JavaRandom`, the `java.util.Random`
+     * sequence that Google's Java library and Android's own wallpaper colours use; 5.0.1 departed from
+     * them with `kotlin.random.Random`. This art's seed was `FF334C4F` under 5.0.1, a teal where 6.0.0's is
+     * a blue; the spec above stays 2021's either way.
+     */
+    @Test
+    fun manyColouredArtGivesGooglesSeed() {
+        assertEquals(0xFF323D4F.toInt(), artSeed(stripes(size = 112, stripe = 18, band = 37)))
+    }
+
+    /** A many-coloured art whose seed is the same under 5.0.1 and 6.0.0 (scaled down first). */
     @Test
     fun manyColouredArtGivesTheSameSeed() {
-        val art = Bitmap.createBitmap(ART, ART, Bitmap.Config.ARGB_8888)
-        // Stripes of each colour, shifted every third of the way down, so their shares differ.
-        for (y in 0 until ART) {
-            for (x in 0 until ART) art.setPixel(x, y, ART_COLOURS[(x / STRIPE + y / BAND) % ART_COLOURS.size])
-        }
-        assertEquals(0xFF8C2F39.toInt(), artSeed(art))
+        assertEquals(0xFF8C2F39.toInt(), artSeed(stripes(size = 120, stripe = 20, band = 40)))
     }
+
+    /**
+     * Stripes of each of [ART_COLOURS], [stripe] pixels wide, shifted by one colour every [band] rows so
+     * their shares differ. `artSeed` scales art over `SAMPLE` (112) a side, so a [size] of 112 is read
+     * pixel for pixel.
+     */
+    private fun stripes(
+        size: Int,
+        stripe: Int,
+        band: Int,
+    ): Bitmap =
+        Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888).apply {
+            for (y in 0 until size) {
+                for (x in 0 until size) setPixel(x, y, ART_COLOURS[(x / stripe + y / band) % ART_COLOURS.size])
+            }
+        }
 
     /** Every role [ArtTheme] takes from the art, as ARGB hex, so a failure names the roles that moved. */
     private fun roles(scheme: ColorScheme): Map<String, String> =
@@ -80,9 +105,6 @@ class ArtSchemeSpecTest {
 
     private companion object {
         const val SEED = 0xFF6A3D9A.toInt()
-        const val ART = 120
-        const val STRIPE = 20
-        const val BAND = 40
         val ART_COLOURS =
             listOf(0xFF1B3A5C, 0xFFD9A441, 0xFF8C2F39, 0xFF2E6B4F, 0xFFFFFFFF, 0xFF404040).map { it.toInt() }
 
