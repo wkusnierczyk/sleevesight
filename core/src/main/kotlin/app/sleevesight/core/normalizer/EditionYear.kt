@@ -58,18 +58,17 @@ object EditionYear {
         val words = starts.map { start -> head.substring(start).takeWhile { !it.isWhitespace() }.lowercase() }
         val tagged =
             (maxOf(1, words.size - MAX_SUFFIX) until words.size)
-                .map { from -> from to words.subList(from, words.size) }
-                .filter { (_, run) -> run.all { it in SUFFIX_WORDS || Edition.YEAR.matches(it) } }
-                .firstNotNullOfOrNull { (from, run) -> yearIn(run)?.let { from to it } }
-                ?: return null
-        val (from, tag) = tagged
-        val left =
-            head
-                .substring(0, starts[from])
-                .trimEnd()
-                .let { if (it.lastOrNull() in Edition.DASHES) it.dropLast(1) else it }
-                .trimEnd()
-        return if (left.isEmpty()) null else YearTag(tag.first, tag.second, (left + tail).trim())
+                .filter { from -> words.drop(from).all { it in SUFFIX_WORDS || Edition.YEAR.matches(it) } }
+                .firstNotNullOfOrNull { from -> yearIn(words.drop(from))?.let { from to it } }
+        return tagged?.let { (from, tag) ->
+            val left =
+                head
+                    .substring(0, starts[from])
+                    .trimEnd()
+                    .let { if (it.lastOrNull() in Edition.DASHES) it.dropLast(1) else it }
+                    .trimEnd()
+            YearTag(tag.first, tag.second, (left + tail).trim()).takeIf { left.isNotEmpty() }
+        }
     }
 
     // The year and whether it is a remaster's, of a year next to a remaster ("2024 remaster",
