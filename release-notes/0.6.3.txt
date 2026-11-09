@@ -1,0 +1,6 @@
+Fixed in 0.6.3:
+- Dates: a remaster or edition names the original first, then itself.
+- MusicBrainz busy: asked again for up to a time you choose (Settings, Sources).
+- Home says when a source could not be reached, with Retry.
+- Clear history: the track on Home is looked up again, or on request.
+- Colours from some covers may look slightly different.
