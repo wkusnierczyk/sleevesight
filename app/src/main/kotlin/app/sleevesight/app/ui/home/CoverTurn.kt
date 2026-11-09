@@ -76,7 +76,9 @@ import kotlin.time.Duration.Companion.milliseconds
  * the same, and the cover shows again when it changes), what the back shows ([back]), the album's
  * tracklist to [look] up on a flip, [key] (null while MusicBrainz is off or the album is not known), the
  * [retry] *Retry* runs when MusicBrainz could not be reached, the way to *Settings → Sources*
- * ([openSources]), and the app's own [colors], since the back takes nothing from the art.
+ * ([openSources]), and the app's own [colors], since the back takes nothing from the art. For a
+ * track *Clear history* holds under *On request* (#1112), [lookUp] asks for it to be looked up again,
+ * as *Look up again* does: the back shown asks, and fills once the sources answer; null otherwise.
  */
 @Suppress("LongParameterList") // What the back shows, what it asks, and where its buttons go.
 internal class CoverTurn(
@@ -87,6 +89,7 @@ internal class CoverTurn(
     val retry: (() -> Unit)?,
     val openSources: () -> Unit,
     val colors: ColorScheme,
+    val lookUp: (() -> Unit)? = null,
 )
 
 /**
@@ -125,6 +128,7 @@ internal fun coverTurn(
         retry = retry,
         openSources = { actions.openSettingsAt(SettingsTarget.sources) },
         colors = colors,
+        lookUp = { actions.lookUpAgain(shown.playing) }.takeIf { shown.cleared },
     )
 }
 
@@ -133,7 +137,9 @@ internal fun coverTurn(
  * vertical axis in [FLIP_MS] (at once under *Remove animations*), to show the album's tracklist on
  * its back ([CoverBackFace]), and a tap anywhere on the back turns back; a scroll or a swipe on it
  * does not, nor a tap on its buttons. The first turn asks for the album's tracklist ([CoverTurn.look]),
- * and so does a back shown when the album becomes known. The back stays while [CoverTurn.album] is
+ * and so does a back shown when the album becomes known. For a track *Clear history* holds, the back
+ * shown asks for it to be looked up again ([CoverTurn.lookUp], #1112), once while the hold lasts:
+ * turning back and over again asks no more. The back stays while [CoverTurn.album] is
  * the same, the playing song's mark moving with the track, and gives way to the cover on another
  * album. A screen reader reads the cover as a button, "Album art", "Double-tap to show tracklist",
  * and the back as "Tracklist", "Double-tap to show cover", its tracks a list in it.
@@ -154,6 +160,15 @@ internal fun FlippingCover(
     val toggle = { backOf = if (backOf == album) null else album }
     LaunchedEffect(flipped, turn.key) {
         if (flipped) turn.key?.let(turn.look)
+    }
+    // Once for each hold of the album (#1112): a new clear's hold asks again.
+    val lookUp = turn.lookUp
+    var askedLookUp by remember(album, lookUp != null) { mutableStateOf(false) }
+    LaunchedEffect(flipped, lookUp != null) {
+        if (flipped && lookUp != null && !askedLookUp) {
+            askedLookUp = true
+            lookUp()
+        }
     }
     val still = animatorDurationScale() == 0f
     val target = if (flipped) HALF_TURN else 0f
@@ -201,13 +216,15 @@ internal fun FlippingCover(
 /**
  * The back: the tracklist on the app's `surfaceContainerHigh`, a single disc as one list, several a
  * page each ([DiscPages]); else why there is none, as *Dates* says it ([NoDatesText]), but for an
- * album MusicBrainz has no tracklist of, or several albums of its name.
+ * album MusicBrainz has no tracklist of, or several albums of its name. Never "Cleared with the
+ * history." (#1112): a back shown for a track a clear holds asks for it to be looked up, so it says
+ * it is looking.
  */
 @Composable
 private fun CoverBackFace(turn: CoverTurn) {
     val colors = MaterialTheme.colorScheme
     Box(Modifier.fillMaxSize().background(colors.surfaceContainerHigh).testTag(COVER_BACK_TAG)) {
-        CompositionLocalProvider(LocalContentColor provides colors.onSurface) {
+        CompositionLocalProvider(LocalContentColor provides colors.onSurface, LocalTrackCleared provides false) {
             when (val back = turn.back) {
                 is CoverBack.Found ->
                     if (back.discs.size == 1) {

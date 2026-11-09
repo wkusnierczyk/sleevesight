@@ -361,4 +361,26 @@ internal class PipelineHostLookUpAgainTest : PipelineHostFixture() {
             settle()
             lookedUp("One")
         }
+
+    @Test
+    fun `asking again, during the wipe or once the run started, runs the track once`() =
+        runTest {
+            started()
+            play("One")
+            settle()
+            val wiping = CompletableDeferred<Unit>()
+            clearWaiting(automatically = false, wiping)
+            // The cover turned over, and *Look up again*, while the stores are wiped.
+            host.lookUpAgain(checkNotNull(playing))
+            host.lookUpAgain(checkNotNull(playing))
+            runCurrent()
+            wiping.complete(Unit)
+            settle()
+            // The cover turned over again once the run started.
+            host.lookUpAgain(checkNotNull(playing))
+            settle()
+
+            assertEquals(listOf("artist|one", "artist|one"), musicBrainz.asked)
+            lookedUp("One")
+        }
 }

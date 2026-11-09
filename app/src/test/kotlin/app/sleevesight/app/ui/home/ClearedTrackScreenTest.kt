@@ -5,6 +5,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
@@ -39,9 +43,10 @@ import org.robolectric.annotation.Config
  * Home for a track *Clear history* holds (#1112, *Look up the track again*'s *On request*): no field
  * waits on a run that does not exist. *Key insights* says the findings were cleared, with *Look up
  * again*, whose tap asks for the track shown; *Sources*, *Genres*, *Dates*, *Lyrics* and the song's
- * row say "Cleared with the history.", without the turning record, as do the cover's back and the
- * pages of *Separate pages*; a model found unavailable is still said; a hold on another track leaves
- * the waiting texts, which are then true.
+ * row say "Cleared with the history.", without the turning record, as do the pages of *Separate
+ * pages*; the cover's back does not: turning the cover over asks for the look-up, once; a model
+ * found unavailable is still said; a hold on another track leaves the waiting texts, which are then
+ * true.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w411dp-h891dp-420dpi")
@@ -149,12 +154,28 @@ class ClearedTrackScreenTest {
     }
 
     @Test
-    fun theCoversBackSaysClearedWithTheHistory() =
+    fun turningTheCoverOverAsksForTheLookUpOnceAndItsBackSaysItIsLooking() =
         show(cleared = playing) {
             tap(COVER_TAG)
             compose.onNodeWithTag(COVER_BACK_TAG).assertExists()
-            assertTrue(shows(text(R.string.home_cleared)))
-            assertNoWaitingText()
+            assertEquals("the turn asks, as Look up again does", listOf(playing), lookedUp)
+            val onBack = hasAnyAncestor(hasTestTag(COVER_BACK_TAG))
+            val cleared = hasText(text(R.string.home_cleared)) and onBack
+            val looking = hasText(text(R.string.home_musicbrainz_looking)) and onBack
+            compose.onAllNodes(cleared, useUnmergedTree = true).assertCountEquals(0)
+            compose.onAllNodes(looking, useUnmergedTree = true).assertCountEquals(1)
+            // Back to the cover, and over again: no second ask.
+            tap(COVER_TAG)
+            tap(COVER_TAG)
+            assertEquals(listOf(playing), lookedUp)
+        }
+
+    @Test
+    fun turningTheCoverWithNoClearHoldingTheTrackAsksNothing() =
+        show(cleared = null) {
+            tap(COVER_TAG)
+            compose.onNodeWithTag(COVER_BACK_TAG).assertExists()
+            assertEquals(emptyList<NowPlaying>(), lookedUp)
         }
 
     @Test
