@@ -335,8 +335,10 @@ private class AlbumDates(
 
     /**
      * Whether [first] is the original album of an edition first released on [firstDate] (#1116):
-     * in one of its release groups, out in [firstDate]'s year, or in an unknown year, as [has] reads
-     * a year.
+     * in one of its release groups, out in [firstDate]'s year and not after [firstDate] at the
+     * precision both have (a bonus track first out on a later release of the year, `2020-11-20`
+     * beside `2020-01-10`, is not: it keeps its own date), or in an unknown year, as [has] reads a
+     * year.
      */
     fun isOriginal(
         first: FirstRelease,
@@ -344,7 +346,9 @@ private class AlbumDates(
     ): Boolean =
         first.releaseGroupMbid != null &&
             first.group in groups &&
-            ReleaseDate.yearIn(first.date).let { it == null || it == ReleaseDate.yearIn(firstDate) }
+            ReleaseDate.yearIn(first.date).let { year ->
+                year == null || (year == ReleaseDate.yearIn(firstDate) && !before(firstDate, first.date))
+            }
 
     /**
      * The album's sentence, when its [date] is known (#1099): of a later edition of its release
