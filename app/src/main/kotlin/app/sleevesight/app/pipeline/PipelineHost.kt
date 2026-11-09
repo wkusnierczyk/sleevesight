@@ -472,12 +472,12 @@ class PipelineHost(
         val taken = CompletableDeferred<Unit>()
         forgetting.add(taken)
         // Queued without suspending, so that a clear queued always reaches the finally below.
-        queue.trySend(CoordinatorEvent.Cleared)
+        queue.trySend(CoordinatorEvent.Cleared(lookUp))
         try {
             taken.await()
             return wipe()
         } finally {
-            queue.trySend(CoordinatorEvent.ClearEnded(lookUp, latestPlaying()))
+            queue.trySend(CoordinatorEvent.ClearEnded(latestPlaying()))
         }
     }
 
@@ -551,7 +551,7 @@ class PipelineHost(
             if (event is CoordinatorEvent.PreparationEnded) preparations.remove(event.prep)
             // The pipelines forget their state before the coordinator's clear is published, so the
             // view never pairs that clear with a state from before it.
-            if (event == CoordinatorEvent.Cleared) {
+            if (event is CoordinatorEvent.Cleared) {
                 live.value?.pipeline?.forget()
                 built.values.forEach { (pipeline, _) -> pipeline.forget() }
                 failed.value = null
@@ -566,7 +566,7 @@ class PipelineHost(
             }
             snapshot.value = coordinator.state
             effects.forEach { perform(it, scope) }
-            if (event == CoordinatorEvent.Cleared) forgetting.poll()?.complete(Unit)
+            if (event is CoordinatorEvent.Cleared) forgetting.poll()?.complete(Unit)
         }
     }
 

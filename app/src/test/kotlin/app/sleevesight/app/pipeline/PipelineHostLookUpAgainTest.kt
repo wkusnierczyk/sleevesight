@@ -334,4 +334,31 @@ internal class PipelineHostLookUpAgainTest : PipelineHostFixture() {
             assertEquals("no run of the ad", listOf("artist|one"), musicBrainz.asked)
             assertNull("an ad's hold is not shown as cleared", host.state.value.cleared)
         }
+
+    @Test
+    fun `while the stores are wiped, the cleared card shows only until a look-up is asked for`() =
+        runTest {
+            started()
+            play("One")
+            settle()
+            val automatic = CompletableDeferred<Unit>()
+            clearWaiting(automatically = true, automatic)
+            assertNull("Automatically: the run follows, so nothing says cleared", host.state.value.cleared)
+            automatic.complete(Unit)
+            settle()
+
+            val onRequest = CompletableDeferred<Unit>()
+            clearWaiting(automatically = false, onRequest)
+            assertEquals(
+                "One",
+                host.state.value.cleared
+                    ?.title,
+            )
+            host.lookUpAgain(checkNotNull(playing))
+            runCurrent()
+            assertNull("tapped: the run follows", host.state.value.cleared)
+            onRequest.complete(Unit)
+            settle()
+            lookedUp("One")
+        }
 }
