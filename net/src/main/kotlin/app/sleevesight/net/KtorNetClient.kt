@@ -27,6 +27,7 @@ import kotlinx.io.readByteArray
 import kotlin.random.Random
 import kotlin.time.Clock
 import kotlin.time.Duration
+import kotlin.time.TimeMark
 import kotlin.time.TimeSource
 
 /**
@@ -132,10 +133,14 @@ internal class KtorNetClient(
         val limiter = domain?.let { limiters.getValue(it) }
         val policy = domain?.let { config.hosts.getValue(it) }
         val description = Redaction.describe(request, url, hidden)
+        // Read once per request: a change of *Wait when busy* applies from the next (#1120).
+        val busyWait = policy?.waitWhenBusy?.invoke()
+        var first: TimeMark? = null
         var attempt = 1
         while (true) {
             limiter?.acquire()
             val started = timeSource.markNow()
+            val origin = first ?: started.also { first = it }
             val outcome =
                 try {
                     tryOnce(request, url, policy, onLine)
@@ -146,7 +151,10 @@ internal class KtorNetClient(
                     throw e
                 }
             val limited = (outcome as? Attempt.Failed)?.error is NetError.RateLimited
-            val wait = retryWait(request, outcome, attempt)?.let { it + policy.jitter(limited, random) }
+            val jittered = retryWait(request, outcome, attempt, busyWait)?.let { it + policy.jitter(limited, random) }
+            // With *Wait when busy*, a rate-limited answer is retried while the next attempt starts
+            // within it of the first's start (#1120); the jitter counts, so the limit holds.
+            val wait = jittered?.takeIf { !limited || busyWait == null || origin.elapsedNow() + it <= busyWait }
             log.log(logLine(description, outcome, started.elapsedNow(), attempt, wait))
             if (wait == null) return outcome.result
             delay(wait)
@@ -304,14 +312,19 @@ internal class KtorNetClient(
     /**
      * The wait before the next attempt, or null to stop. 429 is retried for any method, since the
      * server refused the request without acting on it; 5xx and no response only for idempotent ones,
-     * so a paid call is never sent twice.
+     * so a paid call is never sent twice. A rate-limited answer's `Retry-After` of zero is taken as
+     * none, so the backoff applies rather than a retry at once (#1120). With [busyWait] (the host's
+     * `HostPolicy.waitWhenBusy`), a rate-limited answer is not bound by the attempts or by
+     * `RetryPolicy.maxDelay`: the caller bounds it by the time since the first attempt.
      */
     private fun retryWait(
         request: NetRequest,
         outcome: Attempt,
         attempt: Int,
+        busyWait: Duration?,
     ): Duration? {
-        if (outcome !is Attempt.Failed || outcome.final || attempt >= config.retry.maxAttempts) return null
+        if (outcome !is Attempt.Failed || outcome.final) return null
+        val limited = outcome.error is NetError.RateLimited
         val retryable =
             when (outcome.error) {
                 is NetError.RateLimited -> true
@@ -320,8 +333,12 @@ internal class KtorNetClient(
                 is NetError.Protocol,
                 -> false
             }
-        val wait = outcome.retryAfter ?: config.retry.delayAfter(attempt)
-        return wait.takeIf { retryable && it <= config.retry.maxDelay }
+        val retryAfter = outcome.retryAfter?.takeUnless { limited && !it.isPositive() }
+        val wait = retryAfter ?: config.retry.delayAfter(attempt)
+        val timed = limited && busyWait != null
+        return wait.takeIf {
+            retryable && (timed || (attempt < config.retry.maxAttempts && it <= config.retry.maxDelay))
+        }
     }
 
     private fun logLine(

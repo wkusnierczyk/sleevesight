@@ -188,9 +188,10 @@ class KtorNetClientTest {
         }
 
     @Test
-    fun `a Retry-After date in the past is no wait, and negative seconds are no Retry-After`() =
+    fun `a Retry-After date in the past is no wait, so the backoff, and negative seconds are no Retry-After`() =
         runTest {
-            assertEquals(listOf(0L, 0L), retryTimes(GMTDate(EPOCH_MILLIS - 60_000).toHttpDate(), get))
+            // No wait from a rate-limited answer is taken as none, not as a retry at once (#1120).
+            assertEquals(listOf(0L, 500L), retryTimes(GMTDate(EPOCH_MILLIS - 60_000).toHttpDate(), get))
             assertEquals(listOf(0L, 500L), retryTimes("-5", get))
         }
 
@@ -559,6 +560,7 @@ class KtorNetClientTest {
                 respond("ok")
             }
         }) { assertIs<NetResult.Success<NetResponse>>(it.send(request)) }
-        return times
+        // From the first attempt, so a test may ask more than once.
+        return times.map { it - times.first() }
     }
 }
