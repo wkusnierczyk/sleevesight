@@ -363,7 +363,7 @@ class DatesScreenTest {
         NowPlayingActions(
             normalizer::normalize,
             openSettingsAt = { opened += it },
-            askAgain = { key, source, shown -> retried += Triple(key, source, shown) },
+            askAgain = { key, sources, shown -> retried += Triple(key, sources.single(), shown) },
             releaseGroups = groups,
         )
 

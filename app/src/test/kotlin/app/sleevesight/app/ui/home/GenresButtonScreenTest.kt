@@ -125,7 +125,7 @@ class GenresButtonScreenTest {
         NowPlayingActions(
             normalizer::normalize,
             openSettingsAt = { opened += it },
-            askAgain = { key, source, shown -> retried += Triple(key, source, shown) },
+            askAgain = { key, sources, shown -> retried += Triple(key, sources.single(), shown) },
         )
 
     private fun show(
@@ -487,7 +487,7 @@ class GenresButtonScreenTest {
     @Test
     fun aRequestAfterTheEvidenceThatFailedSaysItsSourceCouldNotBeReachedNotNoneFound() =
         show(state(labelled(TrackGenres(), later = mapOf(LabelSource.MUSICBRAINZ to LaterLabels.FAILED)))) {
-            opensTo("MusicBrainz could not be reached.")
+            opensTo("MusicBrainz could not be reached; some genres may be missing.")
             compose.onNodeWithText(text(R.string.home_genres_none)).assertDoesNotExist()
             // *Retry* only where the pipeline offers it, for a source its lookup did not reach.
             assertEquals(0, count(RETRY_TAG))
@@ -511,7 +511,7 @@ class GenresButtonScreenTest {
                 PipelineView(it, aiReady = true, askAgainKey = key, askable = setOf(SourceId.MUSICBRAINZ))
             }
         show(offered) {
-            opensTo("MusicBrainz could not be reached.")
+            opensTo("MusicBrainz could not be reached; some genres may be missing.")
             compose
                 .onNodeWithTag(RETRY_TAG)
                 .performScrollTo()
@@ -532,7 +532,7 @@ class GenresButtonScreenTest {
             current.value = state(labelled(later = mapOf(LabelSource.MUSICBRAINZ to LaterLabels.DONE)))
             compose.waitForIdle()
             assertEquals(1, count(FOLK))
-            compose.onNodeWithText("MusicBrainz could not be reached.").assertDoesNotExist()
+            compose.onNodeWithText("MusicBrainz could not be reached; some genres may be missing.").assertDoesNotExist()
         }
     }
 
@@ -598,8 +598,8 @@ class GenresButtonScreenTest {
     fun aSourceNotReachedGetsRetryOnItsLineUnderTheOtherSourcesChips() =
         show(lastFmUnreachable()) {
             tap(GENRES_CHIP_TAG)
-            val line = "Last.fm could not be reached."
-            assertEquals(line, app.getString(R.string.home_genre_source_unreachable, "Last.fm"))
+            val line = "Last.fm could not be reached; some genres may be missing."
+            assertEquals(line, app.getString(R.string.home_genres_partial, "Last.fm"))
             compose.onNodeWithText(line).assertExists()
             assertTrue(
                 top(FOLK) <
@@ -640,7 +640,7 @@ class GenresButtonScreenTest {
     fun whenRetryIsNotOfferedTheMessageStandsAlone() =
         show(lastFmUnreachable(offered = false)) {
             tap(GENRES_CHIP_TAG)
-            compose.onNodeWithText("Last.fm could not be reached.").assertExists()
+            compose.onNodeWithText("Last.fm could not be reached; some genres may be missing.").assertExists()
             assertEquals(0, count(RETRY_TAG))
         }
 

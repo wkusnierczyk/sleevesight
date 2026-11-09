@@ -68,7 +68,8 @@ class MainActivity : ComponentActivity() {
             lookAgain = graph.pipeline::lookAgain,
             // *Look up again* after *Clear history* under *On request* (#1112): a run as a new track's.
             lookUpAgain = graph.pipeline::lookUpAgain,
-            // *Retry* beside a source that could not be reached (#724): that source alone, asked again.
+            // *Retry* beside a source that could not be reached (#724): that source alone, asked again; or
+            // the two named on one line (#1121), together.
             askAgain = graph.pipeline::askAgain,
             unavailableModel = graph.unavailableModel,
             // The insight card's menu of Reactive's modes (#615), saved in the process's scope; an

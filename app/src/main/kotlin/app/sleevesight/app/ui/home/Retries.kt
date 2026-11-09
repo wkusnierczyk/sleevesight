@@ -29,31 +29,88 @@ import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.app.ui.theme.LocalPanelEndReach
 import app.sleevesight.app.ui.theme.reachPanelEnd
 import app.sleevesight.core.model.NowPlaying
+import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.RunKey
+import app.sleevesight.core.pipeline.SourceState
+import app.sleevesight.core.pipeline.TrackState
 
 // *Retry* beside a source that could not be reached (#724): the line that offers it, and what a tap
 // on it asks. For any panel on Home whose source did not answer: *Dates*' MusicBrainz, and *Lyrics*'
-// (#728), also when its lyrics links are not known; the genres' (#772) to come.
+// (#728), also when its lyrics links are not known; the genres' (#772); and where what is shown may be
+// partial for it (#1121): under the insight, in *Genres*, and in *Sources*' note.
 
 /**
  * Where a tap on *Retry* goes, from the pipeline's [view] beside the track [playing]: [of] a source
  * is the tap that asks it alone again ([PipelineView.askAgainKey], free, as back online asks every
  * source, #192), or null while the pipeline does not offer it (the sources not landed yet, a model
- * call under way, or a source that did not end unreachable). [askAgain] carries the tap to the
+ * call under way, or a source that did not end unreachable). [ofAll] some sources, named on one
+ * line (#1121: "Last.fm and MusicBrainz could not be reached; …"), is the tap that asks those of them
+ * it offers again, together, or null while it offers none. [askAgain] carries the tap to the
  * pipeline (`PipelineHost.askAgain`), with the key it was offered under and the track it was shown
  * beside, as Write's does.
  */
 internal class Retries(
     private val view: PipelineView,
     private val playing: NowPlaying,
-    private val askAgain: (RunKey, SourceId, NowPlaying) -> Unit,
+    private val askAgain: (RunKey, Set<SourceId>, NowPlaying) -> Unit,
 ) {
-    fun of(source: SourceId): (() -> Unit)? {
-        val key = view.askAgainKey?.takeIf { source in view.askable } ?: return null
-        return { askAgain(key, source, playing) }
+    fun of(source: SourceId): (() -> Unit)? = ofAll(listOf(source))
+
+    /** The sources the insight draws on that did not answer for [track] ([insightUnanswered]), and their *Retry*. */
+    fun forInsight(track: TrackState?): Unanswered? =
+        insightUnanswered(track).takeIf { it.isNotEmpty() }?.let { Unanswered(it, ofAll(it)) }
+
+    fun ofAll(sources: Collection<SourceId>): (() -> Unit)? {
+        val key = view.askAgainKey
+        val asked = sources.filterTo(mutableSetOf()) { it in view.askable }
+        return if (key == null || asked.isEmpty()) null else ({ askAgain(key, asked, playing) })
     }
 }
+
+/**
+ * [sources] that did not answer (#1121), named on one line, with the tap on *Retry* beside it that
+ * asks them again ([retry], null while the pipeline does not offer it).
+ */
+internal class Unanswered(
+    val sources: List<SourceId>,
+    val retry: (() -> Unit)?,
+)
+
+/**
+ * [names] said together, in alphabetical order, as one line names the sources that did not answer
+ * (#1121): "MusicBrainz"; "Last.fm and MusicBrainz" ([R.string.home_sources_two]); for more, a list,
+ * "Last.fm, MusicBrainz and Wikipedia" ([R.string.home_sources_list] up to the last but one, then
+ * [R.string.home_sources_list_last]).
+ */
+@Composable
+internal fun namedTogether(names: List<String>): String {
+    val sorted = names.distinct().sorted()
+    return when (sorted.size) {
+        1 -> sorted.single()
+        2 -> stringResource(R.string.home_sources_two, sorted[0], sorted[1])
+        else -> {
+            val head =
+                sorted.dropLast(1).drop(1).fold(sorted.first()) { all, next ->
+                    stringResource(R.string.home_sources_list, all, next)
+                }
+            stringResource(R.string.home_sources_list_last, head, sorted.last())
+        }
+    }
+}
+
+/**
+ * The sources the insight draws on that did not answer for [track] (#1121): those whose lookup ended
+ * unreachable, in its sources' order, but LRCLIB, which gives no evidence line. Empty for none.
+ */
+internal fun insightUnanswered(track: TrackState?): List<SourceId> =
+    track
+        ?.sources
+        ?.filter { (source, state) ->
+            source != SourceId.LRCLIB && (state as? SourceState.Done)?.result?.outcome == Outcome.Unreachable
+        }?.keys
+        ?.toList()
+        .orEmpty()
 
 /**
  * [message], that [source] (its name, as the screen reader's action names it) could not be reached,
@@ -66,6 +123,8 @@ internal class Retries(
  * message otherwise, and [outlined] draws *Retry* outlined: a genre's definition that Wikipedia did
  * not give (#786), in the panel's quiet note style. [ai] gives *Retry* the **AI** mark, where it
  * calls the AI service ([LineButton]).
+ *
+ * [tag] is *Retry*'s test tag ([RETRY_TAG] unless given).
  *
  * A tap then runs [afterRetry]: the source asked again, the line gives way to the panel's "Looking
  * on …", and *Retry*, holding the focus, goes, so the caller hands the focus on (to its panel's
@@ -84,6 +143,7 @@ internal fun RetryLine(
     style: TextStyle = MaterialTheme.typography.bodyLarge,
     outlined: Boolean = false,
     ai: Boolean = false,
+    tag: String = RETRY_TAG,
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
@@ -95,7 +155,7 @@ internal fun RetryLine(
             LineButton(
                 stringResource(R.string.home_retry),
                 action,
-                Modifier.testTag(RETRY_TAG),
+                Modifier.testTag(tag),
                 outlined,
                 ai,
             ) {
@@ -152,5 +212,36 @@ internal fun LineButton(
     }
 }
 
+/**
+ * Under the insight's text, while sources it draws on did not answer (#1121): that some evidence for
+ * it may be missing, naming them, quiet as the footer's lines, with *Retry* beside it, which asks them
+ * again and then runs [afterRetry], which hands the focus on as *Retry* goes; the line goes once they
+ * answer.
+ */
+@Composable
+internal fun InsightPartial(
+    unanswered: Unanswered,
+    afterRetry: () -> Unit = {},
+) {
+    val names = namedTogether(unanswered.sources.map { chipName(it) })
+    RetryLine(
+        stringResource(R.string.home_insight_partial, names),
+        names,
+        unanswered.retry,
+        Modifier.testTag(INSIGHT_PARTIAL_TAG),
+        afterRetry = afterRetry,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        tag = INSIGHT_RETRY_TAG,
+    )
+}
+
 /** The test tag of *Retry* ([RetryLine]). */
 const val RETRY_TAG: String = "retry"
+
+/**
+ * The test tags of the line under the insight while a source it draws on did not answer, and of its
+ * *Retry* (#1121, [InsightPartial]).
+ */
+const val INSIGHT_PARTIAL_TAG: String = "insight-partial"
+const val INSIGHT_RETRY_TAG: String = "insight-partial:retry"

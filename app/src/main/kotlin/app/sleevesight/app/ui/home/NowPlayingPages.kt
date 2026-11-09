@@ -67,14 +67,14 @@ internal fun NowPlayingPageContent(
             // Nothing asked for a track the last clear holds (#1112): its fields say so.
             CompositionLocalProvider(LocalTrackCleared provides shown.cleared) {
                 when (page) {
-                    is HomePage.Sources -> SourcesPage(shown, playing, page.cite, actions)
+                    is HomePage.Sources -> SourcesPage(shown, playing, page.cite, actions) { handoff.moveTo(back) }
                     HomePage.Genres, is HomePage.GenresAt -> {
                         val retries = Retries(shown.view, playing, actions.askAgain)
                         GenresPage(
                             shown.track,
                             state.settings,
                             genreNotes(shown, actions, sourcesLines(actions.itemNotes, shown.track).evidence),
-                            GenresWays(retries::of, actions.openSettingsAt) { handoff.moveTo(back) },
+                            GenresWays(retries::ofAll, actions.openSettingsAt) { handoff.moveTo(back) },
                             // *Search with AI* under no genre (#773), as in the panel on Home.
                             PanelSearch(actions.aiSearches, shown.track, shown.track?.nowPlaying ?: playing),
                         )
@@ -181,7 +181,8 @@ private val OPENED_ON: Saver<MutableState<NowPlaying?>, Any> =
 /**
  * *Sources*' page: [SourcesBody], the component the box unfolds, with a fold and chips of its own,
  * at its first screenful and every source's lines shown; with [cite], once, unfolded as far as
- * that line, scrolled to it and flashed, as a citation does on Home.
+ * that line, scrolled to it and flashed, as a citation does on Home. A tap on the note's *Retry*
+ * (#1121) then runs [afterRetry], which hands the focus to the back arrow.
  */
 @Composable
 private fun SourcesPage(
@@ -189,6 +190,7 @@ private fun SourcesPage(
     playing: NowPlaying,
     cite: String?,
     actions: NowPlayingActions,
+    afterRetry: () -> Unit,
 ) {
     // Its own evidence, with its album's lines once its insight gathered them (#522).
     val lines = sourcesLines(actions.itemNotes, shown.track)
@@ -199,7 +201,8 @@ private fun SourcesPage(
     val current = citedOn.value?.let { TrackIdentity.playsOn(it, playing) } == true
     SideEffect { if (!current) citedOn.value = null }
     CitedLine(cite?.takeIf { current }, lines.evidence, focus, fold)
-    SourcesBody(shown.sources(lines), focus, fold, actions.openSettings)
+    val retries = Retries(shown.view, playing, actions.askAgain)
+    SourcesBody(shown.sources(lines, retries::ofAll), focus, fold, actions.openSettings, afterRetry)
 }
 
 /**
@@ -285,14 +288,20 @@ internal class Showing(
     /** *Search Genius when there is no link* (#728), on until the settings are read, as by default. */
     val lyricsSearch: Boolean = settings?.lyricsSearch ?: true
 
-    /** What *Sources* shows of [track], its lines [lines] (its evidence, with its album's, #522). */
-    fun sources(lines: SourcesLines = SourcesLines(track?.evidence)) =
-        SourcesShown(
-            track = track,
-            chips = track?.let { sourceChips(it, view.needsKey, modelAllowed, keyedOff) }.orEmpty(),
-            cardKept = view.cardShown && track != null,
-            offline = offlineShown(view, track),
-            details = details,
-            lines = lines,
-        )
+    /**
+     * What *Sources* shows of [track], its lines [lines] (its evidence, with its album's, #522), and
+     * [retry] of the sources that could not be reached (#1121).
+     */
+    fun sources(
+        lines: SourcesLines = SourcesLines(track?.evidence),
+        retry: (Collection<SourceId>) -> (() -> Unit)? = { null },
+    ) = SourcesShown(
+        track = track,
+        chips = track?.let { sourceChips(it, view.needsKey, modelAllowed, keyedOff) }.orEmpty(),
+        cardKept = view.cardShown && track != null,
+        offline = offlineShown(view, track),
+        details = details,
+        lines = lines,
+        retry = retry,
+    )
 }

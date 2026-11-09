@@ -85,8 +85,8 @@ import kotlinx.coroutines.flow.StateFlow
  * @property readAloud *Read aloud* (#325), beside *Key insights* (#725) and under a genre's reason; null shows
  *   no button.
  * @property askAgain a tap on *Retry* beside a source that could not be reached (#724), with the key
- *   it was offered under, the source, and the track it was shown beside: that source alone is asked
- *   again (`PipelineHost.askAgain`), free.
+ *   it was offered under, the source (or the two named on one line, #1121), and the track it was
+ *   shown beside: those alone are asked again (`PipelineHost.askAgain`), free.
  * @property aiSearches *Search with AI* under the empty state of *Dates*, *Genres* and *Lyrics*
  *   (#773): each panel's search, a paid call, and its *Stop*.
  * @property itemNotes the song's, the artist's and the album's insights under *Key insights* (#522).
@@ -118,7 +118,7 @@ class HomeFeed(
     val genreNotes: GenreNotes = GenreNotes.None,
     val lookAgain: (RunKey, NowPlaying) -> Unit = { _, _ -> },
     val readAloud: ReadAloud? = null,
-    val askAgain: (RunKey, SourceId, NowPlaying) -> Unit = { _, _, _ -> },
+    val askAgain: (RunKey, Set<SourceId>, NowPlaying) -> Unit = { _, _, _ -> },
     val aiSearches: AiSearchFeed = AiSearchFeed.None,
     val itemNotes: ItemNotes = ItemNotes.None,
     val ad: StateFlow<AdPlaying?> = MutableStateFlow(null),
@@ -263,7 +263,7 @@ internal class NowPlayingActions(
     val genreNotes: GenreNotes = GenreNotes.None,
     val lookAgain: (RunKey, NowPlaying) -> Unit = { _, _ -> },
     val readAloud: ReadAloud? = null,
-    val askAgain: (RunKey, SourceId, NowPlaying) -> Unit = { _, _, _ -> },
+    val askAgain: (RunKey, Set<SourceId>, NowPlaying) -> Unit = { _, _, _ -> },
     val aiSearches: AiSearchFeed = AiSearchFeed.None,
     val itemNotes: ItemNotes = ItemNotes.None,
     val tracklists: TracklistFeed = TracklistFeed.None,
@@ -314,6 +314,8 @@ internal fun NowPlayingContent(
     }
     val shown = Showing(state, playing)
     val view = shown.view
+    // *Retry* beside the sources that did not answer, under the insight and in *Sources* (#1121).
+    val retries = Retries(view, playing, actions.askAgain)
     val track = shown.track
     // The header from the pipeline's track (its latest report of the track) once it has one.
     val header = track?.nowPlaying ?: playing
@@ -344,7 +346,7 @@ internal fun NowPlayingContent(
                 TrackHeader(shown, header, UnderAlbumLine(inPlace, settings, notes, genresPage), actions)
                 InsightCard(
                     track?.insight ?: NOT_YET,
-                    insightContext(view, track, settings, shown.modelAllowed, state.unavailable),
+                    insightContext(view, track, settings, shown.modelAllowed, state.unavailable, retries),
                     insightActions(state, playing, actions, cite) { reportedTrack, written ->
                         reporting = Reported(reportedTrack, written)
                     },
@@ -357,7 +359,7 @@ internal fun NowPlayingContent(
                     // A dim line between the song's, the artist's and the album's rows and *Sources* (#894),
                     // under either layout; nothing a screen reader stops on.
                     PanelRule(Modifier.testTag(SOURCES_LINE_TAG).clearAndSetSemantics {})
-                    SourcesItem(pages, shown.sources(lines), focus, fold, actions)
+                    SourcesItem(pages, shown.sources(lines, retries::ofAll), focus, fold, actions)
                 }
             }
         }
@@ -391,13 +393,16 @@ private fun SourcesItem(
     }
 }
 
-// What the insight card needs besides the insight, from the pipeline's [view] of [track] and the [settings].
+// What the insight card needs besides the insight, from the pipeline's [view] of [track] and the
+// [settings]; the sources it draws on that did not answer with their *Retry*, from [retries] (#1121).
+@Suppress("LongParameterList") // What the card is shown with, each its own.
 private fun insightContext(
     view: PipelineView,
     track: TrackState?,
     settings: Settings?,
     modelAllowed: Boolean,
     unavailable: UnavailableModel?,
+    retries: Retries,
 ) = InsightContext(
     track = track,
     aiReady = view.aiReady,
@@ -421,6 +426,7 @@ private fun insightContext(
     waiting = view.waiting,
     cardShown = view.cardShown && track != null,
     rewriteFailed = view.rewriteFailed.takeIf { track != null },
+    unanswered = retries.forInsight(track),
 )
 
 // The insight card's menu of *Reactive*'s modes (#615): the mode chosen, fixed while *Show

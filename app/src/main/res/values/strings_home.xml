@@ -350,8 +350,20 @@
     <string name="home_genres_looking">Looking on %1$s…</string>
     <!-- Two sources named together: "Last.fm and MusicBrainz". -->
     <string name="home_sources_two">%1$s and %2$s</string>
-    <!-- In the Genres panel, a genre source that could not be reached; Retry (home_retry) beside it asks
-         it again. %1$s is the source. -->
+    <!-- Three or more sources named together (#1121), "Last.fm, MusicBrainz and Wikipedia": this joins
+         each but the last to those before it ("Last.fm, MusicBrainz"); %1$s the sources so far, %2$s
+         the next. -->
+    <string name="home_sources_list">%1$s, %2$s</string>
+    <!-- Three or more sources named together (#1121): the last joined to the others; %1$s the others
+         as home_sources_list joined them ("Last.fm, MusicBrainz"), %2$s the last ("Wikipedia"). -->
+    <string name="home_sources_list_last">%1$s and %2$s</string>
+    <!-- In the Genres panel, the genre sources that could not be reached, so its list may lack their
+         genres (#1121); Retry (home_retry) beside it asks them again. %1$s is the source, or two
+         (home_sources_two), or more
+         (home_sources_list). -->
+    <string name="home_genres_partial">%1$s could not be reached; some genres may be missing.</string>
+    <!-- In the Genres panel, LRCLIB, asked whether the track has lyrics for its Instrumental, could not
+         be reached; Retry (home_retry) beside it asks it again. %1$s is the source. -->
     <string name="home_genre_source_unreachable">%1$s could not be reached.</string>
     <!-- No genre from any source (#801's pick): the line above Ask AI and the genres it finds. -->
     <string name="home_genres_none">The sources give no genres.</string>
@@ -493,6 +505,10 @@
     <!-- %1$s: why, as failureText says it. The second with Write insight offered again (#625). -->
     <string name="home_insight_failed">Writing failed: %1$s.</string>
     <string name="home_insight_failed_retry">Writing failed: %1$s. Tap Write insight to try again, as a new call.</string>
+    <!-- Under the insight's text, while a source it draws on could not be reached (#1121); Retry
+         (home_retry) beside it asks them again. %1$s is the source, or two (home_sources_two), or more
+         (home_sources_list). -->
+    <string name="home_insight_partial">%1$s could not be reached; some evidence for the insight may be missing.</string>
     <string name="home_insight_incomplete">The reply stopped early, so this is incomplete, and it was not kept.</string>
     <!-- The first line of a written insight's footer (#671), for an insight not written in this run but
          earlier: on an earlier play of the track, or before a Look again, a settings change or a
@@ -648,6 +664,9 @@
     <string name="home_source_note_key">%1$s needs your key, in %2$s.</string>
     <!-- The link to the settings in the sentence above. -->
     <string name="home_source_note_settings">Settings</string>
+    <!-- The sources that could not be reached, on a line of their own with Retry (home_retry) beside it,
+         which asks them again (#1121). %1$s is the source, or two (home_sources_two), or more
+         (home_sources_list). -->
     <string name="home_source_note_unreachable">%1$s could not be reached.</string>
     <string name="home_source_note_failed">%1$s failed.</string>
     <!-- The paging of the list of sources: one group of three buttons under it, in this order. -->

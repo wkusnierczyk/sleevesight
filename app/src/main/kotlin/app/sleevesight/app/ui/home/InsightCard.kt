@@ -9,8 +9,10 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.isTraversalGroup
@@ -21,6 +23,8 @@ import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.PipelineHost
 import app.sleevesight.app.ui.logo.Busy
 import app.sleevesight.app.ui.report.ReportAction
+import app.sleevesight.app.ui.theme.handoffTarget
+import app.sleevesight.app.ui.theme.rememberFocusHandoff
 import app.sleevesight.core.pipeline.InsightState
 
 /**
@@ -201,7 +205,12 @@ private fun Written(
     for (paragraph in paragraphs) {
         CheckedProse(paragraph, insight.grounded, context.track?.evidence, actions.onCite, insight.held)
     }
-    Footer(insight, context, actions, groundingDetails)
+    // Its *Retry* goes once tapped, so it hands the focus to *Report a problem* under it, which
+    // stays beside a written insight in either layout (#1121).
+    val handoff = rememberFocusHandoff()
+    val report = remember { FocusRequester() }
+    context.unanswered?.let { InsightPartial(it) { handoff.moveTo(report) } }
+    Footer(insight, context, actions, groundingDetails, Modifier.handoffTarget(handoff, report))
 }
 
 /**
@@ -218,7 +227,8 @@ private fun Written(
  *   insight's history and above *Report a problem*, the action it leads to;
  * - which citations it translated from the track's language ([TranslatedLine], #902);
  * - that the reply stopped early, for an incomplete insight;
- * - *Report a problem* ([ReportAction]), in the theme's error colour;
+ * - *Report a problem* ([ReportAction]), in the theme's error colour, where the focus goes from the
+ *   *Retry* of the line above the footer ([reportModifier], #1121) as it goes;
  * - while the model is found unavailable (#540), that it is ([ModelUnavailable]), with its link to the
  *   settings (#911): last, just above the split button, whose Write it leaves disabled, and in place
  *   of what *Rewrite insight* would use, which is not offered then.
@@ -229,6 +239,7 @@ private fun Footer(
     context: InsightContext,
     actions: InsightActions,
     groundingDetails: Boolean,
+    reportModifier: Modifier = Modifier,
 ) {
     Column(Modifier.fillMaxWidth()) {
         val looking = lookingAgainLine(context)
@@ -244,7 +255,7 @@ private fun Footer(
         GroundingLine(insight.grounded, details = groundingDetails)
         TranslatedLine(insight.grounded, context.track?.evidence, insight.held)
         if (!insight.complete) Quiet(stringResource(R.string.home_insight_incomplete))
-        context.track?.let { track -> ReportAction { actions.onReport(track, insight) } }
+        context.track?.let { track -> ReportAction(reportModifier) { actions.onReport(track, insight) } }
         // Last, just above the split button's disabled Write, which it explains (#911).
         context.unavailable?.let { ModelUnavailable(it, actions.onSettings) }
     }
