@@ -10,6 +10,7 @@ import app.sleevesight.core.genres.TrackGenres
 import app.sleevesight.core.lyrics.LyricsLibrary
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
+import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.sources.AlbumLookup
@@ -306,6 +307,21 @@ class Pipeline(
          * card for minutes.
          */
         val GATHER_DEADLINE: Duration = 20.seconds
+
+        /**
+         * A run's gather deadline under [settings]: [GATHER_DEADLINE], and, while MusicBrainz is on,
+         * its *Wait when busy* besides (#1120, [Settings.musicBrainzWait]), so the time the user gives
+         * a busy MusicBrainz is not cut short, nor taken from the other lookups.
+         */
+        fun gatherDeadline(settings: Settings): Duration =
+            if (settings.isEnabled(
+                    SourceId.MUSICBRAINZ,
+                )
+            ) {
+                GATHER_DEADLINE + settings.musicBrainzWait
+            } else {
+                GATHER_DEADLINE
+            }
     }
 }
 

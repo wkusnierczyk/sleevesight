@@ -3,12 +3,15 @@ package app.sleevesight.wiring
 import app.sleevesight.ai.anthropic.AnthropicProvider
 import app.sleevesight.ai.google.GoogleProvider
 import app.sleevesight.ai.openai.OpenAiProvider
+import app.sleevesight.core.settings.Settings
 import app.sleevesight.net.NetConfig
 import app.sleevesight.sources.lrclib.LrclibClient
 import app.sleevesight.sources.web.ExaWebSearch
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertSame
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 class HostPoliciesTest {
     /**
@@ -32,7 +35,8 @@ class HostPoliciesTest {
         for (version in listOf("0.0", "1.4.2")) {
             val config = HostPolicies.netConfig(version)
             for ((host, policy) in stated) {
-                assertEquals(policy, config.hosts[host], host)
+                // MusicBrainz's carries *Wait when busy* besides (#1120), checked below.
+                assertEquals(policy, config.hosts[host]?.copy(waitWhenBusy = null), host)
             }
             assertEquals(stated.keys, config.hosts.keys)
             assertSame(HostPolicies.RETRY, config.retry)
@@ -55,6 +59,27 @@ class HostPoliciesTest {
         val googleHost = GoogleProvider.BASE_URL.removePrefix("https://").substringBefore('/')
         assertEquals(GoogleProvider.HOST, config.domainFor(googleHost))
         assertEquals(NetConfig.MUSICBRAINZ, config.domainFor("musicbrainz.org"))
-        assertEquals(HostPolicies.ALL, config.hosts)
+        assertEquals(HostPolicies.ALL.keys, config.hosts.keys)
+    }
+
+    @Test
+    fun `MusicBrainz's policy reads Wait when busy for each request, the default without one`() {
+        var wait = 30.seconds
+        val waits =
+            HostPolicies
+                .netConfig("0.0") { wait }
+                .hosts
+                .getValue(NetConfig.MUSICBRAINZ)
+                .waitWhenBusy
+        assertEquals(30.seconds, waits?.invoke())
+        wait = Duration.ZERO
+        assertEquals(Duration.ZERO, waits?.invoke())
+        val default =
+            HostPolicies
+                .netConfig("0.0")
+                .hosts
+                .getValue(NetConfig.MUSICBRAINZ)
+                .waitWhenBusy
+        assertEquals(Settings.DEFAULT_MUSICBRAINZ_WAIT, default?.invoke())
     }
 }

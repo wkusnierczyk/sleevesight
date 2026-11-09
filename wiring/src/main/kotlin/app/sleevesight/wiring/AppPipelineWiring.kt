@@ -5,9 +5,11 @@ import app.sleevesight.core.ai.AiProvider
 import app.sleevesight.core.normalizer.AccentFolder
 import app.sleevesight.core.pipeline.ClearEpoch
 import app.sleevesight.core.resolution.MusicBrainzLookup
+import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.sources.ArtistResults
 import app.sleevesight.net.NetClient
 import app.sleevesight.net.NetLog
+import kotlin.time.Duration
 
 /**
  * The app's wiring, on the process's one client, which this creates from [HostPolicies.netConfig]
@@ -25,7 +27,8 @@ import app.sleevesight.net.NetLog
  * the search in the track's language found about an artist or an album is kept in [artists] or in
  * memory (#939, [PipelineWiring.languageLines]). [netLog] takes the client's log, a line for each
  * attempt of each request, redacted (`:net`'s `Redaction`): the debug builds' log of requests; by
- * default nowhere.
+ * default nowhere. [musicBrainzWait] is *Wait when busy* (#1120), as last read: how long a MusicBrainz
+ * request it refuses as busy is asked again ([HostPolicies.netConfig]).
  *
  * Its parameters and result are `:core` types and plain values, so `:app` calls it without `:net`
  * on its compile classpath. Kept apart from [pipelineWiringOn], which takes a `:net` type: no
@@ -44,9 +47,10 @@ fun appPipelineWiring(
     aiThrough: (AiProvider) -> AiProvider = { it },
     keepsArtists: () -> Boolean = { true },
     netLog: (String) -> Unit = {},
+    musicBrainzWait: () -> Duration = { Settings.DEFAULT_MUSICBRAINZ_WAIT },
 ): PipelineWiring =
     PipelineWiring(
-        NetClient(HostPolicies.netConfig(appVersion), NetLog(netLog)),
+        NetClient(HostPolicies.netConfig(appVersion, musicBrainzWait), NetLog(netLog)),
         accentFolder,
         resources,
         rememberMusicBrainz = true,

@@ -3,11 +3,13 @@ package app.sleevesight.wiring
 import app.sleevesight.ai.anthropic.AnthropicProvider
 import app.sleevesight.ai.google.GoogleProvider
 import app.sleevesight.ai.openai.OpenAiProvider
+import app.sleevesight.core.settings.Settings
 import app.sleevesight.net.HostPolicy
 import app.sleevesight.net.NetConfig
 import app.sleevesight.net.RetryPolicy
 import app.sleevesight.sources.lrclib.LrclibClient
 import app.sleevesight.sources.web.ExaWebSearch
+import kotlin.time.Duration
 
 /**
  * The one list of host policies (architecture, *Networking*): each adapter's and provider's own
@@ -43,7 +45,15 @@ object HostPolicies {
 
     /**
      * The configuration of the client of a process whose version is [appVersion], for the
-     * User-Agent: the app passes its `versionName`, the CLI its own.
+     * User-Agent: the app passes its `versionName`, the CLI its own. [musicBrainzWait] is *Wait when
+     * busy* (#1120, `Settings.musicBrainzWait`), read for each MusicBrainz request: how long one it
+     * refuses as busy is asked again (`HostPolicy.waitWhenBusy`); the CLI keeps the default.
      */
-    fun netConfig(appVersion: String): NetConfig = NetConfig(appVersion, ALL, retry = RETRY)
+    fun netConfig(
+        appVersion: String,
+        musicBrainzWait: () -> Duration = { Settings.DEFAULT_MUSICBRAINZ_WAIT },
+    ): NetConfig {
+        val musicBrainz = ALL.getValue(NetConfig.MUSICBRAINZ).copy(waitWhenBusy = musicBrainzWait)
+        return NetConfig(appVersion, ALL + (NetConfig.MUSICBRAINZ to musicBrainz), retry = RETRY)
+    }
 }

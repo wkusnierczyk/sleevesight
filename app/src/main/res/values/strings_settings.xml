@@ -72,6 +72,14 @@
 
     <!-- Sources. -->
     <string name="settings_source_musicbrainz_summary">An open music encyclopedia: recordings, releases, credits and release dates.</string>
+    <!-- Wait when busy (#1120): under MusicBrainz, a stepped slider with a label under each stop and the
+         value chosen at the row's right. The stops' labels are short, to fit under the slider at any font
+         size; a screen reader reads the value in words (settings_seconds, settings_minutes). -->
+    <string name="settings_musicbrainz_wait">Wait when busy</string>
+    <string name="settings_musicbrainz_wait_summary">When MusicBrainz is busy, Sleevesight asks again, waiting longer each time, for up to this long before going on without it. A longer wait gives fuller genres and dates; a shorter one shows the insight sooner.</string>
+    <string name="settings_musicbrainz_wait_none">Don’t wait</string>
+    <string name="settings_musicbrainz_wait_seconds">%1$d s</string>
+    <string name="settings_musicbrainz_wait_minutes">%1$d min</string>
     <string name="settings_source_wikipedia_summary">Articles on songs, albums and artists, and the facts behind them.</string>
     <string name="settings_source_lastfm_summary">Listeners’ tags and artist biographies.</string>
     <!-- LRCLIB (#997): asked only when one of the track's genres is Instrumental. -->

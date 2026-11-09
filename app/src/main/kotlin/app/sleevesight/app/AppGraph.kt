@@ -325,6 +325,8 @@ class AppGraph internal constructor(
             keepsArtists = { artistKeeping.on },
             // Every network request, its status and time in logcat, in debug builds only.
             netLog = NetDump.line,
+            // *Wait when busy* (#1120) as last read: the default until the first read.
+            musicBrainzWait = { latestSettings.value?.musicBrainzWait ?: Settings.DEFAULT_MUSICBRAINZ_WAIT },
         )
 
     /**

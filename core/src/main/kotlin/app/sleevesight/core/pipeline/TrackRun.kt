@@ -127,8 +127,9 @@ internal class TrackRun(
 
     private val guard = CacheGuard(parts.cache, key, onEvent)
 
-    // The gather's deadline (#983), shared with the search in the track's language.
-    private val budget = GatherBudget(time.timeSource)
+    // The gather's deadline (#983), shared with the search in the track's language; longer by
+    // MusicBrainz's *Wait when busy* (#1120).
+    private val budget = GatherBudget(time.timeSource, Pipeline.gatherDeadline(settings))
 
     // LRCLIB, asked whether the track has lyrics when a genre is Instrumental (#997): with its switch
     // on; by a *Retry* when it names LRCLIB or the genres before it never called for LRCLIB (an

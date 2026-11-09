@@ -11,6 +11,7 @@ import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.resolution.Lookup
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.settings.SourceSwitch
 import app.sleevesight.core.settings.TrackLanguageSearch
 import app.sleevesight.core.sources.LanguageAdapter
 import app.sleevesight.core.sources.LanguageItems
@@ -50,7 +51,8 @@ class GatherDeadlineTest {
     // Tamil script names the language, with no request (`TrackLanguage`).
     private val tamil = nowPlaying("கண்ணான கண்ணே", "Sid Sriram")
 
-    private var settings = Settings(aiProvider = ProviderId.ANTHROPIC)
+    // No *Wait when busy* (#1120), which lengthens the deadline: the deadline alone, at 20 s.
+    private var settings = Settings(aiProvider = ProviderId.ANTHROPIC, musicBrainzWait = Duration.ZERO)
 
     private val stalled = 10.minutes
 
@@ -115,6 +117,21 @@ class GatherDeadlineTest {
                 "deadline   gordon lightfoot|sundown: S cut after 20000 ms",
                 EventLine.of(events.filterIsInstance<PipelineEvent.GatherCut>().single()),
             )
+        }
+
+    @Test
+    fun `MusicBrainz's Wait when busy lengthens the deadline by as much, while MusicBrainz is on`() =
+        runTest {
+            settings = settings.copy(musicBrainzWait = 30.seconds)
+            val pipeline = pipeline(listOf(FakeAdapter(SourceId.MUSICBRAINZ), web()), FakeResolver(delay = stalled))
+
+            val state = pipeline.run(sundown, write = false)
+
+            assertEquals(50.seconds, testScheduler.currentTime.milliseconds)
+            assertEquals(Resolution.unreachable(TrackRun.DEADLINE_REACHED), state.resolution)
+            assertEquals(50.seconds, Pipeline.gatherDeadline(settings))
+            val off = settings.copy(enabledSources = settings.enabledSources - SourceSwitch.MUSICBRAINZ)
+            assertEquals(Pipeline.GATHER_DEADLINE, Pipeline.gatherDeadline(off))
         }
 
     @Test

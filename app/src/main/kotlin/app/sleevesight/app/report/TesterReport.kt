@@ -420,6 +420,7 @@ internal val SETTING_LINES: List<Pair<String, (Settings) -> String>> =
         "searchWithAi" to { onOff(it.searchWithAi) },
         "aiWebSearch" to { it.aiWebSearch.name },
         "trackLanguageSearch" to { it.trackLanguageSearch.name },
+        "musicBrainzWait" to { it.musicBrainzWait.toString() },
         "readAloudMusic" to { it.readAloudMusic.name },
         "readTrackLineFirst" to { onOff(it.readTrackLineFirst) },
         "readNewInsightsAloud" to { onOff(it.readNewInsightsAloud) },
