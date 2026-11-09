@@ -137,6 +137,17 @@ class EditionTest {
     }
 
     @Test
+    fun `the suffix is found checking each word a fixed number of times, whether the run is an edition or not`() {
+        for (run in listOf("deluxe", "super")) {
+            val words = listOf("abbey", "road") + List(5000) { run }
+            var checks = 0
+            val start = Edition.SuffixWords(words) { checks++ }.start(numbers = true)
+            assertEquals(if (run == "deluxe") 2 else null, start, run)
+            assertTrue(checks <= 3 * words.size, "$checks checks of ${words.size} words ($run)")
+        }
+    }
+
+    @Test
     fun `a name made of editions in turn, bracketed and not, takes at most a few turns`() {
         val turns = List(5000) { "Deluxe (Deluxe)" }.joinToString(" ")
         var passes = 0

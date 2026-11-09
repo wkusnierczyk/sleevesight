@@ -107,9 +107,11 @@ object Edition {
     }
 
     // A name's [words] (lowercase), with where the words that make a suffix an edition stand last,
-    // so whether the words from any one to the end make one is a fixed number of checks.
-    private class SuffixWords(
+    // so whether the words from any one to the end make one is a fixed number of checks; [onCheck]
+    // is called at each check of one word, for the tests to count them.
+    internal class SuffixWords(
         private val words: List<String>,
+        private val onCheck: () -> Unit = {},
     ) {
         private val strong = words.indexOfLast { it in STRONG_SUFFIX_WORDS }
         private val anniversary = words.lastIndexOf("anniversary")
@@ -129,19 +131,31 @@ object Edition {
             // The first word a suffix may start at: every word after it may stand in one, with the
             // words before it in the suffix too.
             var low = words.size - 1
-            while (low - 1 > own && isSuffixWord(words, low, numbers, first = false)) low--
+            while (low - 1 > own && isSuffixWord(low, numbers, first = false)) low--
             return (maxOf(low, own + 1) until words.size).firstOrNull { at ->
-                isEdition(at) && isSuffixWord(words, at, numbers, first = true)
+                isEdition(at) && isSuffixWord(at, numbers, first = true)
             }
+        }
+
+        // [Edition.isSuffixWord] for word [i], counted.
+        private fun isSuffixWord(
+            i: Int,
+            numbers: Boolean,
+            first: Boolean,
+        ): Boolean {
+            onCheck()
+            return isSuffixWord(words, i, numbers, first)
         }
 
         // Whether the words from [at] to the end, if each may stand in a suffix, make an edition: one
         // of them a remaster, a reissue or "deluxe", or an "anniversary" after an ordinal or with
         // "edition", or an "edition" with a word before it.
-        private fun isEdition(at: Int): Boolean =
-            strong >= at ||
+        private fun isEdition(at: Int): Boolean {
+            onCheck()
+            return strong >= at ||
                 (anniversary >= at && (dated > at || edition >= at)) ||
                 (edition >= at && words[at] != "edition")
+        }
     }
 
     // Whether [words]' word [i] (lowercase) may stand in an edition suffix that runs to the end of
