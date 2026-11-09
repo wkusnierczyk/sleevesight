@@ -28,7 +28,8 @@ import kotlin.time.Duration
  * memory (#939, [PipelineWiring.languageLines]). [netLog] takes the client's log, a line for each
  * attempt of each request, redacted (`:net`'s `Redaction`): the debug builds' log of requests; by
  * default nowhere. [musicBrainzWait] is *Wait when busy* (#1120), as last read: how long a MusicBrainz
- * request it refuses as busy is asked again ([HostPolicies.netConfig]).
+ * request made outside a track's run may wait it out when it is busy; a run's requests share the
+ * run's own allowance ([HostPolicies.netConfig]).
  *
  * Its parameters and result are `:core` types and plain values, so `:app` calls it without `:net`
  * on its compile classpath. Kept apart from [pipelineWiringOn], which takes a `:net` type: no

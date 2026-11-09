@@ -45,7 +45,7 @@ class NetConfig(
          * MusicBrainz allows one request per second per client, and answers 503 beyond it, so its
          * policy reports a 503 to a GET as [NetError.RateLimited]; a retry of one waits up to half a
          * second more, at random (#1120), so clients refused together do not come back together. How
-         * long it is retried is the app's *Wait when busy* (`HostPolicy.waitWhenBusy`, set in
+         * long it is retried is the app's *Wait when busy* (`HostPolicy.busyWait`, set in
          * `:wiring`'s `HostPolicies`). Last.fm's API terms
          * (checked 2026-10-13) say limits are set and enforced at its discretion, with no figure, and
          * Wikimedia asks for serial requests without a rate, so neither has an entry. Another
@@ -79,11 +79,12 @@ class NetConfig(
  * 429 (its `Retry-After`, or the backoff), for a host that asks clients for jitter (LRCLIB), so
  * clients refused together do not come back together.
  *
- * [waitWhenBusy], when set, is how long a request the host refuses as [NetError.RateLimited] is
- * retried (#1120): with the backoff of [RetryPolicy], until the next attempt would start later than
- * that after the first began, in place of [RetryPolicy.maxAttempts] and [RetryPolicy.maxDelay]; zero
- * for a single try. Read once per request, so a change applies from the next one: MusicBrainz's is
- * the user's *Wait when busy*. Other failures keep [RetryPolicy]'s attempts.
+ * [busyWait], when set, gives the allowance for waiting out the host when it refuses a request as
+ * [NetError.RateLimited] (#1120, [BusyWait]): asked for, in the request's coroutine, at its first such
+ * answer. The request is retried with the backoff of [RetryPolicy] while each wait, and the turn at
+ * the host after it, fit in what is left of the allowance, in place of [RetryPolicy.maxAttempts] and
+ * [RetryPolicy.maxDelay]; with none left, a single try. MusicBrainz's is the user's *Wait when busy*,
+ * one allowance for a track's run. Other failures keep [RetryPolicy]'s attempts.
  */
 data class HostPolicy(
     val minInterval: Duration,
@@ -91,7 +92,7 @@ data class HostPolicy(
     val passOn429: Boolean = false,
     val contact: String? = null,
     val retryJitter: Duration = Duration.ZERO,
-    val waitWhenBusy: (() -> Duration)? = null,
+    val busyWait: (suspend () -> BusyWait)? = null,
 )
 
 /**
@@ -109,7 +110,7 @@ data class Timeouts(
  * twice as long each time, up to [maxDelay]. A positive `Retry-After` from the server replaces the
  * wait; one longer than [maxDelay] ends the retries. A rate-limited answer's `Retry-After` of zero,
  * which says to come back at once, is taken as none (#1120): MusicBrainz says so with each refusal,
- * and three attempts a second apart all met it. A host's `HostPolicy.waitWhenBusy` replaces the
+ * and three attempts a second apart all met it. A host's `HostPolicy.busyWait` replaces the
  * attempts and [maxDelay] for its rate-limited answers.
  */
 data class RetryPolicy(

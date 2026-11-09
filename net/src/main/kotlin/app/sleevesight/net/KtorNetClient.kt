@@ -22,12 +22,12 @@ import io.ktor.utils.io.readBuffer
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.io.IOException
 import kotlinx.io.readByteArray
 import kotlin.random.Random
 import kotlin.time.Clock
 import kotlin.time.Duration
-import kotlin.time.TimeMark
 import kotlin.time.TimeSource
 
 /**
@@ -133,14 +133,15 @@ internal class KtorNetClient(
         val limiter = domain?.let { limiters.getValue(it) }
         val policy = domain?.let { config.hosts.getValue(it) }
         val description = Redaction.describe(request, url, hidden)
-        // Read once per request: a change of *Wait when busy* applies from the next (#1120).
-        val busyWait = policy?.waitWhenBusy?.invoke()
-        var first: TimeMark? = null
+        // The allowance for waiting out a busy host (#1120), asked for at the first busy answer.
+        var busy: BusyWait? = null
+        // Whether the next attempt already has its turn at the host, taken within the allowance.
+        var turnTaken = false
         var attempt = 1
         while (true) {
-            limiter?.acquire()
+            if (!turnTaken) limiter?.acquire()
+            turnTaken = false
             val started = timeSource.markNow()
-            val origin = first ?: started.also { first = it }
             val outcome =
                 try {
                     tryOnce(request, url, policy, onLine)
@@ -151,13 +152,20 @@ internal class KtorNetClient(
                     throw e
                 }
             val limited = (outcome as? Attempt.Failed)?.error is NetError.RateLimited
-            val jittered = retryWait(request, outcome, attempt, busyWait)?.let { it + policy.jitter(limited, random) }
-            // With *Wait when busy*, a rate-limited answer is retried while the next attempt starts
-            // within it of the first's start (#1120); the jitter counts, so the limit holds.
-            val wait = jittered?.takeIf { !limited || busyWait == null || origin.elapsedNow() + it <= busyWait }
+            val allowance = policy?.busyWait?.takeIf { limited }?.let { busy ?: it().also { read -> busy = read } }
+            // Within what is left of the allowance, the jitter counted (#1120).
+            val most = allowance?.left
+            val wait =
+                retryWait(request, outcome, attempt, allowance != null)
+                    ?.let { it + policy.jitter(limited, random) }
+                    ?.takeIf { most == null || it < most }
             log.log(logLine(description, outcome, started.elapsedNow(), attempt, wait))
             if (wait == null) return outcome.result
-            delay(wait)
+            if (!awaitRetry(wait, allowance, most, limiter)) {
+                log.log("$description -> no turn within the wait allowed when busy (attempt ${attempt + 1} not sent)")
+                return outcome.result
+            }
+            turnTaken = allowance != null
             attempt++
         }
     }
@@ -313,15 +321,15 @@ internal class KtorNetClient(
      * The wait before the next attempt, or null to stop. 429 is retried for any method, since the
      * server refused the request without acting on it; 5xx and no response only for idempotent ones,
      * so a paid call is never sent twice. A rate-limited answer's `Retry-After` of zero is taken as
-     * none, so the backoff applies rather than a retry at once (#1120). With [busyWait] (the host's
-     * `HostPolicy.waitWhenBusy`), a rate-limited answer is not bound by the attempts or by
-     * `RetryPolicy.maxDelay`: the caller bounds it by the time since the first attempt.
+     * none, so the backoff applies rather than a retry at once (#1120). A rate-limited answer [timed]
+     * by an allowance (the host's `HostPolicy.busyWait`) is not bound by the attempts or by
+     * `RetryPolicy.maxDelay`: the caller bounds it by what is left of the allowance.
      */
     private fun retryWait(
         request: NetRequest,
         outcome: Attempt,
         attempt: Int,
-        busyWait: Duration?,
+        timed: Boolean,
     ): Duration? {
         if (outcome !is Attempt.Failed || outcome.final) return null
         val limited = outcome.error is NetError.RateLimited
@@ -335,7 +343,6 @@ internal class KtorNetClient(
             }
         val retryAfter = outcome.retryAfter?.takeUnless { limited && !it.isPositive() }
         val wait = retryAfter ?: config.retry.delayAfter(attempt)
-        val timed = limited && busyWait != null
         return wait.takeIf {
             retryable && (timed || (attempt < config.retry.maxAttempts && it <= config.retry.maxDelay))
         }
@@ -389,4 +396,29 @@ private fun HostPolicy?.jitter(
 ): Duration {
     val most = this?.retryJitter ?: Duration.ZERO
     return if (rateLimited && most.isPositive()) most * random.nextDouble() else Duration.ZERO
+}
+
+/**
+ * Waits [wait] before the next attempt. Within an [allowance] (#1120), the wait and then the turn at
+ * the host's [limiter], behind its other requests, are both bounded by what was left of it ([most]):
+ * false when the turn would come past it, so a retry never starts past the allowance; true once the
+ * turn is taken.
+ */
+private suspend fun awaitRetry(
+    wait: Duration,
+    allowance: BusyWait?,
+    most: Duration?,
+    limiter: RateLimiter?,
+): Boolean {
+    if (allowance == null || most == null) {
+        delay(wait)
+        return true
+    }
+    return allowance.waiting {
+        withTimeoutOrNull(most) {
+            delay(wait)
+            limiter?.acquire()
+            true
+        } ?: false
+    }
 }

@@ -5,6 +5,7 @@ import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.sources.BusyWaits
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.SourceResult
@@ -13,6 +14,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
@@ -53,8 +55,13 @@ internal class Preparation(
 ) {
     private val key = track.lookupKey
 
+    /** Its MusicBrainz requests share one allowance for waiting it out when busy, as a run's (#1120). */
     suspend fun run() {
         if (!settings.isEnabled(SourceId.MUSICBRAINZ) || track.title.isBlank() || track.primary.isBlank()) return
+        withContext(BusyWaits(settings.musicBrainzWait, time.timeSource)) { prepare() }
+    }
+
+    private suspend fun prepare() {
         val results = lookUp()
         val artists =
             results

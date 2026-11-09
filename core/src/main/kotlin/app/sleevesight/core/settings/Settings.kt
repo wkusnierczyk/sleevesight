@@ -84,9 +84,10 @@ import kotlin.time.Duration.Companion.seconds
  *   language ([TrackLanguageSearch]); *If needed* by default. Each search keeps its own source's switch
  *   (Wikipedia and Wikidata; Exa web search), and the language is named only by what is written or
  *   recorded (`TrackLanguage`).
- * @property musicBrainzWait *Wait when busy* (#1120), under MusicBrainz: how long a MusicBrainz request
- *   it refuses as busy is asked again, waiting longer each time, before the lookup goes on without
- *   it; zero (*Don’t wait*) for a single try. See [DEFAULT_MUSICBRAINZ_WAIT] and [MUSICBRAINZ_WAITS].
+ * @property musicBrainzWait *Wait when busy* (#1120), under MusicBrainz: how long a track's lookup
+ *   may wait, all its MusicBrainz requests together (`BusyWaits`), to ask again those MusicBrainz
+ *   refuses as busy, waiting longer each time, before it goes on without them; zero (*Don’t wait*)
+ *   for a single try. See [DEFAULT_MUSICBRAINZ_WAIT] and [MUSICBRAINZ_WAITS].
  * @property cacheLifetimes the retrieval cache lifetime per source (D9). A source with none (the
  *   pseudo-sources, which retrieve nothing) is not cached.
  * @property keepArtistResults *Keep what sources said about each artist* (#420): whether what the

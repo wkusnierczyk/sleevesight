@@ -11,8 +11,8 @@ import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.resolution.Lookup
 import app.sleevesight.core.settings.Settings
-import app.sleevesight.core.settings.SourceSwitch
 import app.sleevesight.core.settings.TrackLanguageSearch
+import app.sleevesight.core.sources.BusyWaits
 import app.sleevesight.core.sources.LanguageAdapter
 import app.sleevesight.core.sources.LanguageItems
 import app.sleevesight.core.sources.LanguageQuery
@@ -51,8 +51,7 @@ class GatherDeadlineTest {
     // Tamil script names the language, with no request (`TrackLanguage`).
     private val tamil = nowPlaying("கண்ணான கண்ணே", "Sid Sriram")
 
-    // No *Wait when busy* (#1120), which lengthens the deadline: the deadline alone, at 20 s.
-    private var settings = Settings(aiProvider = ProviderId.ANTHROPIC, musicBrainzWait = Duration.ZERO)
+    private var settings = Settings(aiProvider = ProviderId.ANTHROPIC)
 
     private val stalled = 10.minutes
 
@@ -119,19 +118,59 @@ class GatherDeadlineTest {
             )
         }
 
+    /** A resolution that waits out a busy MusicBrainz for [busy] (#1120), as the client does, then answers. */
+    private fun waitingOut(busy: Duration) =
+        TrackResolver { _, _ ->
+            checkNotNull(BusyWaits.current()).waiting { delay(busy) }
+            Resolution(outcome = Outcome.SongArticle, recordingMbid = "rec-1")
+        }
+
     @Test
-    fun `MusicBrainz's Wait when busy lengthens the deadline by as much, while MusicBrainz is on`() =
+    fun `MusicBrainz answering at once leaves the deadline at 20 s, whatever Wait when busy says`() =
         runTest {
-            settings = settings.copy(musicBrainzWait = 30.seconds)
-            val pipeline = pipeline(listOf(FakeAdapter(SourceId.MUSICBRAINZ), web()), FakeResolver(delay = stalled))
+            settings = settings.copy(musicBrainzWait = 1.minutes)
+            val pipeline = pipeline(listOf(FakeAdapter(SourceId.MUSICBRAINZ), web(byName = stalled)), FakeResolver())
 
             val state = pipeline.run(sundown, write = false)
 
-            assertEquals(50.seconds, testScheduler.currentTime.milliseconds)
-            assertEquals(Resolution.unreachable(TrackRun.DEADLINE_REACHED), state.resolution)
-            assertEquals(50.seconds, Pipeline.gatherDeadline(settings))
-            val off = settings.copy(enabledSources = settings.enabledSources - SourceSwitch.MUSICBRAINZ)
-            assertEquals(Pipeline.GATHER_DEADLINE, Pipeline.gatherDeadline(off))
+            assertEquals(20.seconds, testScheduler.currentTime.milliseconds)
+            assertEquals(Outcome.SongArticle, state.outcome(SourceId.MUSICBRAINZ))
+            assertEquals(Outcome.Unreachable, state.outcome(SourceId.WEB))
+        }
+
+    @Test
+    fun `the time MusicBrainz was waited out lengthens the deadline by as much, at most Wait when busy`() =
+        runTest {
+            settings = settings.copy(musicBrainzWait = 15.seconds)
+            val waited =
+                pipeline(listOf(FakeAdapter(SourceId.MUSICBRAINZ), web(byName = stalled)), waitingOut(10.seconds))
+
+            val state = waited.run(sundown, write = false)
+
+            // 20 s, and the 10 s MusicBrainz was waited out.
+            assertEquals(30.seconds, testScheduler.currentTime.milliseconds)
+            assertEquals(Outcome.SongArticle, state.outcome(SourceId.MUSICBRAINZ))
+            assertEquals(Outcome.Unreachable, state.outcome(SourceId.WEB))
+        }
+
+    @Test
+    fun `a run's MusicBrainz requests share one allowance for waiting it out`() =
+        runTest {
+            settings = settings.copy(musicBrainzWait = 15.seconds)
+            val lefts = mutableListOf<Duration>()
+            val twice =
+                TrackResolver { _, _ ->
+                    val busy = checkNotNull(BusyWaits.current())
+                    repeat(2) {
+                        busy.waiting { delay(6.seconds) }
+                        lefts += busy.left
+                    }
+                    Resolution(outcome = Outcome.SongArticle, recordingMbid = "rec-1")
+                }
+
+            pipeline(listOf(FakeAdapter(SourceId.MUSICBRAINZ)), twice).run(sundown, write = false)
+
+            assertEquals(listOf(9.seconds, 3.seconds), lefts)
         }
 
     @Test
