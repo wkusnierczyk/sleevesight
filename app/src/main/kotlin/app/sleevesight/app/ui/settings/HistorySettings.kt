@@ -9,6 +9,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import app.sleevesight.app.R
 import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.settings.LookUpAfterClear
 import app.sleevesight.core.settings.Settings
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
@@ -17,7 +18,8 @@ import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 // *History* (#148, #444): *Keep history for*, then *Clear history* under it, so how long the history
-// is kept and the way to wipe it sit together, since *Forever* is offered (#547); *New session idle
+// is kept and the way to wipe it sit together, since *Forever* is offered (#547), and under that
+// *Look up the track again*, what follows a clear for the track on Home (#1112); *New session idle
 // trigger*, how long each source's findings are kept (D9), and *Keep what sources said about each
 // artist* (#420).
 
@@ -80,6 +82,12 @@ internal fun HistorySection(
         value = stringResource(R.string.settings_clear_history_value),
         onClick = { open(SettingsDialog.ClearHistory) },
     )
+    ChoiceButtonsRow(
+        title = stringResource(R.string.settings_look_up_again),
+        summary = stringResource(R.string.settings_look_up_again_summary),
+        choices = lookUpAgainChoices(),
+        selected = settings.lookUpAfterClear,
+    ) { chosen -> update { it.copy(lookUpAfterClear = chosen) } }
 
     val gap = settings.sessionGap
     val gaps = sessionGaps(gap)
@@ -167,6 +175,14 @@ internal fun ClearHistoryDialog(
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.settings_cancel)) } },
     )
 }
+
+/** *Look up the track again*'s choices (#1112), in the group's order. */
+@Composable
+internal fun lookUpAgainChoices(): List<Pair<LookUpAfterClear, String>> =
+    listOf(
+        LookUpAfterClear.AUTOMATICALLY to stringResource(R.string.settings_look_up_again_automatically),
+        LookUpAfterClear.ON_REQUEST to stringResource(R.string.settings_look_up_again_on_request),
+    )
 
 /** *Keep history for*'s choices, [lifetime] the one set among them; null is *Forever*. */
 @Composable

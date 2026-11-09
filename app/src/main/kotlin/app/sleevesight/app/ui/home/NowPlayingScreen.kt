@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -79,6 +80,8 @@ import kotlinx.coroutines.flow.StateFlow
  *   *Why is this …?*.
  * @property lookAgain a tap on *Look again* (#617), with the key it was offered under and the track
  *   it was shown beside, as [write] takes a tap on Write.
+ * @property lookUpAgain a tap on *Look up again* (#1112), after *Clear history* held the track, with
+ *   the track it was shown beside.
  * @property readAloud *Read aloud* (#325), beside *Key insights* (#725) and under a genre's reason; null shows
  *   no button.
  * @property askAgain a tap on *Retry* beside a source that could not be reached (#724), with the key
@@ -119,6 +122,7 @@ class HomeFeed(
     val aiSearches: AiSearchFeed = AiSearchFeed.None,
     val itemNotes: ItemNotes = ItemNotes.None,
     val ad: StateFlow<AdPlaying?> = MutableStateFlow(null),
+    val lookUpAgain: (NowPlaying) -> Unit = {},
     val tracklists: TracklistFeed = TracklistFeed.None,
     val releaseGroups: GroupFeed = GroupFeed.None,
 )
@@ -185,6 +189,7 @@ private fun HomeFeed.actions(
     write = write,
     stop = stop,
     lookAgain = lookAgain,
+    lookUpAgain = lookUpAgain,
     chooseWritingMode = chooseWritingMode,
     installedPlayers = installedPlayers,
     hideGuideOnce = hideGuideOnce,
@@ -228,7 +233,8 @@ internal class NowPlayingState(
  * an item on a page of its own, under *Layout*'s *Separate pages* (#447). [chooseWritingMode] saves
  * a mode chosen in the insight card's menu of *Reactive*'s modes (#615). [genreNotes] gives what a
  * genre's panel shows above its table (#523); [lookAgain] takes a tap on *Look again* (#617), as
- * [write] takes one on Write. While nothing plays (#627), the players are listed with
+ * [write] takes one on Write, and [lookUpAgain] one on *Look up again* after *Clear history* (#1112).
+ * While nothing plays (#627), the players are listed with
  * [installedPlayers]' icons, and the guide's buttons go to [hideGuideOnce] (*Hide once*) or
  * to [dismissals] (*Dismiss*, and its *Undo*; #759). [readAloud] reads the insight, or a genre's
  * reason, aloud (#325); null shows no *Read aloud*. [askAgain] takes a tap on *Retry* beside a
@@ -262,6 +268,7 @@ internal class NowPlayingActions(
     val itemNotes: ItemNotes = ItemNotes.None,
     val tracklists: TracklistFeed = TracklistFeed.None,
     val releaseGroups: GroupFeed = GroupFeed.None,
+    val lookUpAgain: (NowPlaying) -> Unit = {},
 )
 
 /**
@@ -326,38 +333,32 @@ internal fun NowPlayingContent(
 
     // Straight on Home's background, with no panel around it (#609): the art's scheme colours the
     // parts drawn in its roles (the position bar, the chips, the buttons), not a ground of its own.
+    // A track the last clear holds (#1112): every field says it was cleared rather than wait.
     ArtTheme(state.art) {
-        Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            PlayerRow(playing.player, state.playback, actions)
-            ArtAndProgress(state.art, state.playback, header.duration, coverTurn(shown, header, settings, actions))
-            val notes = panelNotes(actions, cite, shown.modelAllowed, lines.evidence)
-            val genresPage = { actions.openPage(HomePage.Genres) }.takeIf { pages }
-            TrackHeader(shown, header, UnderAlbumLine(inPlace, settings, notes, genresPage), actions)
-            // A tap carries what it was shown for: the run Write is offered for, beside this track.
-            val onWrite: () -> Unit = { view.writeKey?.let { actions.write(it, playing) } }
-            val onStop: () -> Unit = { view.stopCall?.let(actions.stop) }
-            val onLookAgain: () -> Unit = { view.lookAgainKey?.let { actions.lookAgain(it, playing) } }
-            // The note of a model found unavailable opens *AI services* at that model's row (#581).
-            val onModelSettings: () -> Unit = {
-                state.unavailable?.let { actions.openSettingsAt(SettingsTarget.model(it.provider)) }
-                    ?: actions.openSettings()
-            }
-            InsightCard(
-                track?.insight ?: NOT_YET,
-                insightContext(view, track, settings, shown.modelAllowed, state.unavailable),
-                InsightActions(onWrite, onStop, cite, onModelSettings, onLookAgain) { reportedTrack, written ->
-                    reporting = Reported(reportedTrack, written)
-                },
-                shown.details,
-                settings?.let { writingChoice(it, actions) },
-                insightReading(actions.readAloud, track),
-            )
-            HomeItems(state, shown, header, itemMemory, cite, actions) { t, w, i -> reporting = Reported(t, w, i) }
-            if (settings != null) {
-                // A dim line between the song's, the artist's and the album's rows and *Sources* (#894),
-                // under either layout; nothing a screen reader stops on.
-                PanelRule(Modifier.testTag(SOURCES_LINE_TAG).clearAndSetSemantics {})
-                SourcesItem(pages, shown.sources(lines), focus, fold, actions)
+        CompositionLocalProvider(LocalTrackCleared provides shown.cleared) {
+            Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                PlayerRow(playing.player, state.playback, actions)
+                ArtAndProgress(state.art, state.playback, header.duration, coverTurn(shown, header, settings, actions))
+                val notes = panelNotes(actions, cite, shown.modelAllowed, lines.evidence)
+                val genresPage = { actions.openPage(HomePage.Genres) }.takeIf { pages }
+                TrackHeader(shown, header, UnderAlbumLine(inPlace, settings, notes, genresPage), actions)
+                InsightCard(
+                    track?.insight ?: NOT_YET,
+                    insightContext(view, track, settings, shown.modelAllowed, state.unavailable),
+                    insightActions(state, playing, actions, cite) { reportedTrack, written ->
+                        reporting = Reported(reportedTrack, written)
+                    },
+                    shown.details,
+                    settings?.let { writingChoice(it, actions) },
+                    insightReading(actions.readAloud, track),
+                )
+                HomeItems(state, shown, header, itemMemory, cite, actions) { t, w, i -> reporting = Reported(t, w, i) }
+                if (settings != null) {
+                    // A dim line between the song's, the artist's and the album's rows and *Sources* (#894),
+                    // under either layout; nothing a screen reader stops on.
+                    PanelRule(Modifier.testTag(SOURCES_LINE_TAG).clearAndSetSemantics {})
+                    SourcesItem(pages, shown.sources(lines), focus, fold, actions)
+                }
             }
         }
     }
