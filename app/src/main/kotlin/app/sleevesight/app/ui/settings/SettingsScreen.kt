@@ -50,6 +50,7 @@ import app.sleevesight.app.ui.theme.DeveloperMark
 import app.sleevesight.app.ui.theme.MessageHost
 import app.sleevesight.core.ai.AiProvider
 import app.sleevesight.core.model.ProviderId
+import app.sleevesight.core.settings.LookUpAfterClear
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WriteAutomatically
 import kotlinx.coroutines.CoroutineScope
@@ -71,7 +72,8 @@ import kotlinx.coroutines.launch
  *
  * [aiProviders] list a service's models for the model choice; a service missing from it offers
  * its default model only. [clearHistory] clears everything kept about the tracks played (#547), once
- * the user confirms, outside the screen's lifetime; the screen only waits for the result, and says
+ * the user confirms, outside the screen's lifetime, told whether *Look up the track again* is then
+ * *Automatically* (#1112); the screen only waits for the result, and says
  * above the list that the history was cleared, or could not be. The saves (a setting, a key, a
  * removal of keys) run in [saves], which outlives the screen, as the clear does, so leaving the
  * screen, or a rotation, does not cut one short; the screen and its dialogs only wait for the
@@ -99,7 +101,7 @@ fun SettingsScreen(
     settingsStore: SettingsStore,
     secretStore: SecretStore,
     aiProviders: Map<ProviderId, AiProvider>,
-    clearHistory: () -> Deferred<Boolean>,
+    clearHistory: (lookUp: Boolean) -> Deferred<Boolean>,
     saves: CoroutineScope,
     onOpenCredits: () -> Unit = {},
     onOpenDiagnostics: () -> Unit = {},
@@ -155,7 +157,7 @@ fun SettingsScreen(
         MessageHost(Modifier.safeDrawingPadding()) {
             Column(modifier = Modifier.fillMaxSize()) {
                 // Above the list, so it shows wherever the list is scrolled to.
-                Notices(changeFailures, clearing.ended)
+                Notices(changeFailures, clearing.ended, clearing.looksUp)
                 settings?.let { current ->
                     val navigation =
                         Navigation(
@@ -205,7 +207,11 @@ fun SettingsScreen(
 
         SettingsDialog.ClearHistory -> {
             ClearHistoryDialog(
-                onClear = { clearing.start(clearHistory) },
+                // Whether the track on Home is looked up again, as the setting was at the clear (#1112).
+                onClear = {
+                    val looksUp = settings.orDefaults().lookUpAfterClear == LookUpAfterClear.AUTOMATICALLY
+                    clearing.start(clearHistory, looksUp)
+                },
                 onDismiss = close,
             )
         }
@@ -271,10 +277,22 @@ internal class Clearing(
     var ended by mutableStateOf<Boolean?>(null)
         private set
 
-    /** Starts [clear], which runs outside the screen's scope, and waits for its result in [scope]. */
-    fun start(clear: () -> Deferred<Boolean>) {
+    /** Whether the last clear looks the track on Home up again (#1112), as its message says. */
+    var looksUp by mutableStateOf(false)
+        private set
+
+    /**
+     * Starts [clear], which runs outside the screen's scope, and waits for its result in [scope];
+     * [looksUp] when *Look up the track again* is *Automatically* (#1112), the one choice both the
+     * clear and its message follow.
+     */
+    fun start(
+        clear: (lookUp: Boolean) -> Deferred<Boolean>,
+        looksUp: Boolean = false,
+    ) {
         ended = null
-        val result = clear()
+        this.looksUp = looksUp
+        val result = clear(looksUp)
         scope.launch { ended = result.await() }
     }
 }
@@ -384,13 +402,16 @@ internal class KeysShown(
 
 /**
  * Says above the list that the last change could not be saved ([changeFailures], the failures in a
- * row), and how the last *Clear history* ended ([cleared]; null for none). Never an error's text,
+ * row), and how the last *Clear history* ended ([cleared]; null for none), with, when it succeeded
+ * and *Look up the track again* is *Automatically* ([looksUp], #1112), that the track on Home is
+ * looked up again. Never an error's text,
  * which may name a path.
  */
 @Composable
 private fun Notices(
     changeFailures: Int,
     cleared: Boolean?,
+    looksUp: Boolean,
 ) {
     // Each notice is announced by a screen reader when it shows.
     @Composable
@@ -414,7 +435,11 @@ private fun Notices(
     when (cleared) {
         null -> {}
         false -> Notice(R.string.settings_clear_history_failed, failure = true)
-        true -> Notice(R.string.settings_clear_history_done, failure = false)
+        true ->
+            Notice(
+                if (looksUp) R.string.settings_clear_history_done_looked_up else R.string.settings_clear_history_done,
+                failure = false,
+            )
     }
 }
 

@@ -111,7 +111,7 @@ class SettingsScreenTest {
     private fun show(
         onOpenCredits: () -> Unit = {},
         settingsStore: SettingsStore = settings,
-        clearHistory: () -> Deferred<Boolean> = ::clearedAtOnce,
+        clearHistory: (Boolean) -> Deferred<Boolean> = { clearedAtOnce() },
         secretStore: SecretStore = secrets,
         block: ActivityScenario<MainActivity>.() -> Unit,
     ) {
@@ -260,7 +260,7 @@ class SettingsScreenTest {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 activity.setContent {
-                    SettingsScreen(settings, failingSecrets, emptyMap(), ::clearedAtOnce, saves) { it }
+                    SettingsScreen(settings, failingSecrets, emptyMap(), { clearedAtOnce() }, saves) { it }
                 }
             }
             waitForText(text(R.string.settings_title))
@@ -571,7 +571,7 @@ class SettingsScreenTest {
     @Test
     fun clearHistoryAsksFirst() {
         var cleared = 0
-        val clear = {
+        val clear = { _: Boolean ->
             cleared++
             CompletableDeferred(true)
         }
@@ -586,7 +586,7 @@ class SettingsScreenTest {
             compose.onNodeWithText(text(R.string.settings_clear_history)).performScrollTo().performClick()
             compose.onNodeWithText(text(R.string.settings_clear)).performClick()
             waitFor("one clear asked for") { cleared == 1 }
-            waitForText(text(R.string.settings_clear_history_done))
+            waitForText(text(R.string.settings_clear_history_done_looked_up))
             assertEquals(
                 0,
                 compose.onAllNodesWithText(text(R.string.settings_clear_history_failed)).fetchSemanticsNodes().size,
@@ -609,7 +609,7 @@ class SettingsScreenTest {
             waitFor("the clear failure message gone") {
                 compose.onAllNodesWithText(text(R.string.settings_clear_history_failed)).fetchSemanticsNodes().isEmpty()
             }
-            waitForText(text(R.string.settings_clear_history_done))
+            waitForText(text(R.string.settings_clear_history_done_looked_up))
         }
     }
 

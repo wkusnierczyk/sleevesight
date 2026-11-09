@@ -100,7 +100,13 @@ internal fun NoDatesText(
 ) {
     val style = MaterialTheme.typography.bodyLarge
     when (none) {
-        NoDates.LOOKING -> Busy(stringResource(R.string.home_musicbrainz_looking), style)
+        // Nothing asked for a track the last clear holds (#1112): it says so, without the record.
+        NoDates.LOOKING ->
+            Busy(
+                waitingOrCleared(stringResource(R.string.home_musicbrainz_looking)),
+                style,
+                record = !LocalTrackCleared.current,
+            )
         NoDates.OFF -> {
             Text(stringResource(R.string.home_musicbrainz_off), style = style)
             val link =

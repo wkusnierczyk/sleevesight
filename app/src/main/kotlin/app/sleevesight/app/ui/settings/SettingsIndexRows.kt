@@ -148,6 +148,14 @@ internal fun historyRows(settings: Settings): List<IndexedRow> {
             stringResource(R.string.settings_clear_history),
             stringResource(R.string.settings_clear_history_value),
         ),
+        // *Look up the track again* (#1112): its name, description and choices.
+        stringResource(R.string.settings_look_up_again).let { title ->
+            IndexedRow(
+                title,
+                listOf(title, stringResource(R.string.settings_look_up_again_summary)) +
+                    lookUpAgainChoices().map { it.second },
+            )
+        },
         choiceRow(
             stringResource(R.string.settings_session_gap),
             stringResource(R.string.settings_session_gap_summary),

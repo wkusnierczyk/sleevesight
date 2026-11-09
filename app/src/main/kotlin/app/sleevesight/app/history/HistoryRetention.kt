@@ -38,7 +38,7 @@ class HistoryRetention(
     private val scope: CoroutineScope,
     // Before [forget], which a trailing lambda names.
     private val trim: suspend () -> Unit = {},
-    private val forget: suspend () -> Boolean = { true },
+    private val forget: suspend (lookUp: Boolean) -> Boolean = { true },
 ) {
     // The lifetime now, for the deletions already queued: they run on the I/O dispatcher.
     @Volatile
@@ -75,13 +75,14 @@ class HistoryRetention(
     /**
      * *Clear history*, in [scope], which lives as long as the process: once confirmed, a clear is
      * made even if the screen that asked goes away. The history is cleared, then [forget] runs,
-     * even if the history's clear failed, so as much as can be is deleted. The result says whether
-     * both succeeded.
+     * even if the history's clear failed, so as much as can be is deleted, given [lookUp]: whether
+     * the track on Home is then looked up again (*Look up the track again*, #1112), as chosen when
+     * the clear was asked. The result says whether both succeeded.
      */
-    fun clear(): Deferred<Boolean> =
+    fun clear(lookUp: Boolean = false): Deferred<Boolean> =
         scope.async {
             val history = recorder.clear()
-            val rest = forget()
+            val rest = forget(lookUp)
             history && rest
         }
 
