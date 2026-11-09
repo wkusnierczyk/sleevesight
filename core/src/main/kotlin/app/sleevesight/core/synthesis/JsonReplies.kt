@@ -23,7 +23,7 @@ internal object JsonReplies {
     // followed by another key (`", "sources":`), or an object opened (`{"`). Two objects one after the
     // other, or a second key, make the text JSON fragments, not one answer. A quote is escaped after
     // an odd run of backslashes, not after an even one (`\\"` ends a text with a backslash).
-    private val STRUCTURE = Regex("""$NOT_ESCAPED"\s*\}|$NOT_ESCAPED"\s*,\s*"[^"]*"\s*:|\{\s*"""")
+    private val STRUCTURE = Regex("""$NOT_ESCAPED"\s*}|$NOT_ESCAPED"\s*,\s*"[^"]*"\s*:|\{\s*"""")
 
     /**
      * The JSON object in [reply], or null when there is none: its text trimmed, a Markdown code
@@ -53,7 +53,7 @@ internal object JsonReplies {
         reply: String,
         key: String,
     ): JsonObject? {
-        val pattern = Regex("""^\{\s*"${Regex.escape(key)}"\s*:\s*"(.*)"\s*\}$""", RegexOption.DOT_MATCHES_ALL)
+        val pattern = Regex("""^\{\s*"${Regex.escape(key)}"\s*:\s*"(.*)"\s*}$""", RegexOption.DOT_MATCHES_ALL)
         val value =
             objectText(reply)
                 ?.let { pattern.find(it) }
