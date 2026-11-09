@@ -11,6 +11,7 @@ import androidx.compose.runtime.saveable.LocalSaveableStateRegistry
 import androidx.compose.runtime.saveable.SaveableStateRegistry
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
@@ -22,6 +23,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
@@ -247,6 +249,15 @@ class ClearedTrackScreenTest {
             leave()
             held = playing
             comeBack()
+        }
+
+    @Test
+    fun aScreenReadersTurnOfTheCoverOverAsksForTheLookUpOnce() =
+        show(cleared = playing) {
+            compose.onNodeWithTag(COVER_TAG).performScrollTo().performSemanticsAction(SemanticsActions.OnClick)
+            compose.waitForIdle()
+            compose.onNodeWithTag(COVER_BACK_TAG).assertExists()
+            assertEquals("the screen reader's turn asks, as a tap does", listOf(playing), lookedUp)
         }
 
     @Test
