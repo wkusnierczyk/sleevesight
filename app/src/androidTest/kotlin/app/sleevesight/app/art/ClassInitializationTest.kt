@@ -3,7 +3,6 @@ package app.sleevesight.app.art
 import androidx.test.platform.app.InstrumentationRegistry
 import dalvik.system.DexFile
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -18,8 +17,11 @@ class ClassInitializationTest {
     fun everyClassOfTheAppInitializesOnArt() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val names = classesIn(context.packageCodePath).filter { it.startsWith(PREFIX) }
-        // The APK read: its classes found, not an empty list that would pass with nothing loaded.
-        assertTrue("only ${names.size} classes under $PREFIX in ${context.packageCodePath}", names.size > MIN_CLASSES)
+        // The APK read whole: a class of each shipped module found, not a list that would pass with
+        // part of the code, or none of it, loaded.
+        val missing = MODULE_CLASSES - names.toSet()
+        val read = "${names.size} classes read from ${context.packageCodePath}"
+        assertEquals("module classes not found among the $read", emptySet<String>(), missing)
         val failures =
             names.mapNotNull { name ->
                 try {
@@ -37,8 +39,17 @@ class ClassInitializationTest {
     private companion object {
         const val PREFIX = "app.sleevesight."
 
-        // Far fewer than the app has (thousands); enough to tell the APK was read.
-        const val MIN_CLASSES = 500
+        // One class of each module the APK ships, by name: `:net`'s may not be named in `:app`'s code.
+        val MODULE_CLASSES =
+            setOf(
+                "app.sleevesight.core.normalizer.Normalizer",
+                "app.sleevesight.net.NetConfig",
+                "app.sleevesight.sources.wikipedia.WikipediaClient",
+                "app.sleevesight.ai.openai.OpenAiProvider",
+                "app.sleevesight.wiring.PipelineWiring",
+                "app.sleevesight.store.SynthesisCache",
+                "app.sleevesight.app.MainActivity",
+            )
 
         // The class names in every dex file of the APK at [path]. `DexFile` is deprecated for
         // loading code, not for listing it, and no other API lists an APK's classes.

@@ -758,7 +758,7 @@ GitHub Actions from the first code PR. On every pull request, and every push to 
 2. `./gradlew :build-logic:functionalTest`: the convention plugins' functional tests, nested TestKit builds, which need Maven Central and so are not part of `build`.
 3. `checkDependencies`, `checkManifest`, `checkModuleGraph`.
 4. `assembleDebug`, with the APK uploaded as a workflow artifact.
-5. The instrumented tests (*Testing*) on an Android emulator (an x86_64 Automated Test Device image on the runner's KVM, started from a cached snapshot), in a job beside the others. Advisory for now: `build` does not wait for it, so it does not stop a merge, while its time and false failures are measured.
+5. The instrumented tests (*Testing*) on an Android emulator (an x86_64 Automated Test Device image on the runner's KVM, started from a booted snapshot that pushes to `main` and `dev-*` cache, keyed on the image and the pinned emulator build), in a job beside the others. Advisory for now: `build` does not wait for it, so it does not stop a merge, while its time and false failures are measured.
 
 `main` requires the `build` check, so every pull request runs it, Markdown-only ones included: a required check that never reports leaves the pull request unmergeable.
 
