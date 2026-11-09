@@ -3,6 +3,9 @@ package app.sleevesight.core.normalizer
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.measureTime
 
 /** The year a release's name gives its edition, a remaster's or an edition's (#1116). */
 class EditionYearTagTest {
@@ -97,5 +100,56 @@ class EditionYearTagTest {
                 "",
             )
         for (name in names) assertNull(EditionYear.of(name), name)
+    }
+
+    // Names of about 250k characters and four times that (#1147): plain words, year ranges, and
+    // bracketed editions, each read in time that grows with the name's length, not its square.
+    private fun words(n: Int) = (1..n).joinToString(" ") { "Word$it" }
+
+    private fun ranges(n: Int) = List(n) { "1987 - 1988" }.joinToString(" ")
+
+    private fun deluxes(n: Int) = List(n) { "(Deluxe)" }.joinToString(" ")
+
+    // [EditionYear.of] the name [name] builds from a run of [size] parts, and of four times that,
+    // each well under a second however slow the machine (a cost that grows with the square of the
+    // length takes seconds); [tag] is what it should give, from the run.
+    private fun linear(
+        size: Int,
+        run: (Int) -> String,
+        name: (String) -> String,
+        tag: (String) -> YearTag?,
+    ) {
+        EditionYear.of(name(run(size / 16))) // Warms the code up, so the first timing is not the compiler's.
+        for (n in listOf(size, 4 * size)) {
+            val parts = run(n)
+            val given = name(parts)
+            val read: YearTag?
+            val took = measureTime { read = EditionYear.of(given) }
+            assertTrue(took < 1.seconds, "${given.length} characters took $took")
+            assertEquals(tag(parts), read, "${given.length} characters")
+        }
+    }
+
+    @Test
+    fun `a very long name of plain words is read in linear time`() {
+        // "Word1" to "Word30000" is about 289k characters.
+        linear(30_000, ::words, { "$it 2011 Remaster" }) { YearTag("2011", true, it) }
+        linear(30_000, ::words, { "$it Road - 2011 Remaster" }) { YearTag("2011", true, "$it Road") }
+        linear(30_000, ::words, { it }) { null }
+    }
+
+    @Test
+    fun `a very long name of year ranges is read in linear time`() {
+        // "1987 - 1988" 21000 times is about 252k characters, every word in a range.
+        linear(21_000, ::ranges, { "$it 2011 Remaster" }) { YearTag("2011", true, it) }
+        linear(21_000, ::ranges, { "$it Edition" }) { null }
+    }
+
+    @Test
+    fun `a very long run of bracketed editions is read in linear time`() {
+        // "(Deluxe)" 28000 times is about 252k characters, each an edition with no year.
+        linear(28_000, ::deluxes, { "Abbey Road 2019 Remaster $it" }) { YearTag("2019", true, "Abbey Road $it") }
+        linear(28_000, ::deluxes, { "Abbey Road (2019 Remaster) $it" }) { YearTag("2019", true, "Abbey Road $it") }
+        linear(28_000, ::deluxes, { "Abbey Road $it" }) { null }
     }
 }
