@@ -72,7 +72,8 @@ import kotlinx.coroutines.launch
  *
  * [aiProviders] list a service's models for the model choice; a service missing from it offers
  * its default model only. [clearHistory] clears everything kept about the tracks played (#547), once
- * the user confirms, outside the screen's lifetime; the screen only waits for the result, and says
+ * the user confirms, outside the screen's lifetime, told whether *Look up the track again* is then
+ * *Automatically* (#1112); the screen only waits for the result, and says
  * above the list that the history was cleared, or could not be. The saves (a setting, a key, a
  * removal of keys) run in [saves], which outlives the screen, as the clear does, so leaving the
  * screen, or a rotation, does not cut one short; the screen and its dialogs only wait for the
@@ -100,7 +101,7 @@ fun SettingsScreen(
     settingsStore: SettingsStore,
     secretStore: SecretStore,
     aiProviders: Map<ProviderId, AiProvider>,
-    clearHistory: () -> Deferred<Boolean>,
+    clearHistory: (lookUp: Boolean) -> Deferred<Boolean>,
     saves: CoroutineScope,
     onOpenCredits: () -> Unit = {},
     onOpenDiagnostics: () -> Unit = {},
@@ -282,15 +283,16 @@ internal class Clearing(
 
     /**
      * Starts [clear], which runs outside the screen's scope, and waits for its result in [scope];
-     * [looksUp] when *Look up the track again* is *Automatically* (#1112).
+     * [looksUp] when *Look up the track again* is *Automatically* (#1112), the one choice both the
+     * clear and its message follow.
      */
     fun start(
-        clear: () -> Deferred<Boolean>,
+        clear: (lookUp: Boolean) -> Deferred<Boolean>,
         looksUp: Boolean = false,
     ) {
         ended = null
         this.looksUp = looksUp
-        val result = clear()
+        val result = clear(looksUp)
         scope.launch { ended = result.await() }
     }
 }

@@ -403,21 +403,24 @@ class PipelineHost(
 
     /**
      * The user tapped *Look up again* beside the track [shown] (#1112), which the last *Clear
-     * history* holds ([PipelineView.cleared]): it is looked up as a new track is. Dropped, as a tap
-     * on Write is, for a track the session layer no longer shows.
+     * history* holds ([PipelineView.cleared]): it is looked up as a new track is, once no clear is
+     * still wiping the stores ([clearEnded]). Dropped, as a tap on Write is, for a track the session
+     * layer no longer shows.
      */
     fun lookUpAgain(shown: NowPlaying) {
         val latest = latestPlaying() ?: return
         if (!sameInsightTrack(shown, latest)) return
-        queue.trySend(CoordinatorEvent.LookUpAgain(tapped = true))
+        queue.trySend(CoordinatorEvent.LookUpTapped)
     }
 
     /**
-     * *Clear history* has ended, under *Look up the track again*'s *Automatically* (#1112): the track
-     * it held, if still the one playing, is looked up as a new track is.
+     * *Clear history* has wiped every store, after [forget] (#1112); called once for each clear,
+     * whatever its outcome. A tap on *Look up again* held meanwhile is taken, and with [lookUp]
+     * (*Look up the track again*'s *Automatically*, as chosen when the clear was asked) the track it
+     * holds, if still the one playing, is looked up as a new track is.
      */
-    fun lookUpAfterClear() {
-        queue.trySend(CoordinatorEvent.LookUpAgain(tapped = false))
+    fun clearEnded(lookUp: Boolean) {
+        queue.trySend(CoordinatorEvent.ClearEnded(lookUp))
     }
 
     /**
@@ -464,8 +467,8 @@ class PipelineHost(
      * *Clear history*'s part here (#547): the run and the preparation cancelled, the live
      * pipeline's state and the insight shown gone, the coordinator's ledger emptied, and the track
      * playing not looked up again until another one plays or it is looked up again
-     * ([lookUpAfterClear], [lookUpAgain], #1112; no paid call on its own). Returns once the loop has
-     * taken it. The host must have been started ([start]).
+     * ([clearEnded], [lookUpAgain], #1112; no paid call on its own); [clearEnded] must follow.
+     * Returns once the loop has taken it. The host must have been started ([start]).
      */
     suspend fun forget() {
         val done = CompletableDeferred<Unit>()

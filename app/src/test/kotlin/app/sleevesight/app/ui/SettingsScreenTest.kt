@@ -111,7 +111,7 @@ class SettingsScreenTest {
     private fun show(
         onOpenCredits: () -> Unit = {},
         settingsStore: SettingsStore = settings,
-        clearHistory: () -> Deferred<Boolean> = ::clearedAtOnce,
+        clearHistory: (Boolean) -> Deferred<Boolean> = { clearedAtOnce() },
         secretStore: SecretStore = secrets,
         block: ActivityScenario<MainActivity>.() -> Unit,
     ) {
@@ -260,7 +260,7 @@ class SettingsScreenTest {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 activity.setContent {
-                    SettingsScreen(settings, failingSecrets, emptyMap(), ::clearedAtOnce, saves) { it }
+                    SettingsScreen(settings, failingSecrets, emptyMap(), { clearedAtOnce() }, saves) { it }
                 }
             }
             waitForText(text(R.string.settings_title))
@@ -571,7 +571,7 @@ class SettingsScreenTest {
     @Test
     fun clearHistoryAsksFirst() {
         var cleared = 0
-        val clear = {
+        val clear = { _: Boolean ->
             cleared++
             CompletableDeferred(true)
         }

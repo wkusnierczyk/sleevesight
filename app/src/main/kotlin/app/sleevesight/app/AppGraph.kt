@@ -91,7 +91,6 @@ import app.sleevesight.core.resolution.NameMatcher
 import app.sleevesight.core.settings.Crossfade
 import app.sleevesight.core.settings.FontChoice
 import app.sleevesight.core.settings.LinkStyle
-import app.sleevesight.core.settings.LookUpAfterClear
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.ThemeChoice
 import app.sleevesight.core.settings.WriteAutomatically
@@ -871,31 +870,33 @@ class AppGraph internal constructor(
      * ([ReleaseGroupFeed.forget], #1099); the
      * artist facts the listening session cited; the session layer's last change, which names the
      * track before; and the diagnostics' steps, which name the tracks. The API keys and the settings stay.
-     * Last, under *Look up the track again*'s *Automatically* (#1112), the track playing is looked up
-     * again ([PipelineHost.lookUpAfterClear]), after everything is cleared, so its run finds nothing
-     * kept from before and keeps what it finds; under *On request* it waits for *Look up again*.
-     * Returns whether the caches were cleared; the rest cannot fail.
+     * Last, whatever came before, the pipeline hears that the clear has ended
+     * ([PipelineHost.clearEnded], #1112): with [lookUp] (*Look up the track again*'s *Automatically*,
+     * as chosen when the clear was asked) the track playing is looked up again, and a tap on *Look up
+     * again* made meanwhile is taken, so that run finds nothing kept from before and keeps what it
+     * finds. Returns whether the caches were cleared; the rest cannot fail.
      */
-    private suspend fun forgetTracks(): Boolean {
+    private suspend fun forgetTracks(lookUp: Boolean): Boolean {
         clearEpoch.advance()
         pipeline.forget()
-        // Again just before the caches' clear, so it waits for the writes under way then too.
-        clearEpoch.advance()
-        val cleared = artistKeeping.clearWith { withContext(Dispatchers.IO) { caches.clearAll() } }
-        if (!cleared) Log.w(TAG, "The caches could not be cleared")
-        wiring.forgetRemembered()
-        genreNotes.forget()
-        itemNotes.forget()
-        tracklists.forget()
-        releaseGroups.forget()
-        aiSearches.forget()
-        sessionFacts.forget()
-        sessions.forgetLastChange()
-        diagnostics.log.clear()
-        if ((latestSettings.value ?: Settings()).lookUpAfterClear == LookUpAfterClear.AUTOMATICALLY) {
-            pipeline.lookUpAfterClear()
+        try {
+            // Again just before the caches' clear, so it waits for the writes under way then too.
+            clearEpoch.advance()
+            val cleared = artistKeeping.clearWith { withContext(Dispatchers.IO) { caches.clearAll() } }
+            if (!cleared) Log.w(TAG, "The caches could not be cleared")
+            wiring.forgetRemembered()
+            genreNotes.forget()
+            itemNotes.forget()
+            tracklists.forget()
+            releaseGroups.forget()
+            aiSearches.forget()
+            sessionFacts.forget()
+            sessions.forgetLastChange()
+            diagnostics.log.clear()
+            return cleared
+        } finally {
+            pipeline.clearEnded(lookUp)
         }
-        return cleared
     }
 
     /**

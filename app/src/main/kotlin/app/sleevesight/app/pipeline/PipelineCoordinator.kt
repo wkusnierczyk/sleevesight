@@ -183,12 +183,19 @@ sealed interface CoordinatorEvent {
     data object Cleared : CoordinatorEvent
 
     /**
-     * The track the last clear held is looked up again (#1112): once *Clear history* has ended, under
-     * *Look up the track again*'s *Automatically*, or on a tap on *Look up again* ([tapped]). Its run
-     * starts as a new track's would.
+     * The user tapped *Look up again* beside the track the last clear holds (#1112): it is looked up
+     * as a new track is, once no clear is under way ([ClearEnded]), so its run finds nothing from
+     * before and nothing it keeps is wiped after it.
      */
-    data class LookUpAgain(
-        val tapped: Boolean,
+    data object LookUpTapped : CoordinatorEvent
+
+    /**
+     * A clear has wiped every store (#1112), after its [Cleared]: a tap on *Look up again* held
+     * meanwhile is taken, and with [lookUp] (*Look up the track again*'s *Automatically*, as chosen
+     * when the clear was asked) the track the clear holds is looked up again as a new track is.
+     */
+    data class ClearEnded(
+        val lookUp: Boolean,
     ) : CoordinatorEvent
 
     /** Build [build] ended; [built] is false when it failed. */
@@ -449,10 +456,12 @@ sealed interface CoordinatorEffect {
  * returns, from offline to online, so a run knows whether the network came back after its lookups
  * were granted (#192). [clears] counts *Clear history*'s clears (#547), and [cleared] is the track
  * playing at the last one, which gets no run (nor a rebuild's) until a report of another insight
- * track settles, or it is looked up again ([CoordinatorEvent.LookUpAgain], #1112): no lookup, and
- * no paid call, follows the clear on its own. [cleared] holds an ad told late the same way
- * ([CoordinatorEvent.Withdrawn], #880), and [withdrawals] counts the runs of such ads cancelled, so
- * the host forgets what they showed; [byClear] says the hold is a clear's, not an ad's.
+ * track settles, or it is looked up again (#1112): no lookup, and no paid call, follows the clear
+ * on its own. [cleared] holds an ad told late the same way ([CoordinatorEvent.Withdrawn], #880), and
+ * [withdrawals] counts the runs of such ads cancelled, so the host forgets what they showed;
+ * [byClear] says the hold is a clear's, not an ad's (a clear keeps an ad's hold an ad's). [clearing]
+ * counts the clears whose stores are still being wiped ([CoordinatorEvent.ClearEnded]), and
+ * [lookUpAsked] says the track held is to be looked up again once none is ([released]).
  */
 data class CoordinatorState(
     val acknowledged: Boolean = false,
@@ -481,6 +490,8 @@ data class CoordinatorState(
     val clears: Long = 0,
     val cleared: NowPlaying? = null,
     val byClear: Boolean = false,
+    val clearing: Int = 0,
+    val lookUpAsked: Boolean = false,
     val withdrawals: Long = 0,
 ) {
     /**
@@ -982,9 +993,11 @@ fun sameInsightTrack(
  * | any | RebuildRequested | building = a new build; no run is current; a preparation cancelled, and nothing prepared on the new pipeline yet | CancelPreparation (if one is cancelled), Build |
  * | the ledger's card written at the time | CardExpired(writtenAt) (#643) | the ledger's card forgotten, the ledger still written | none |
  * | otherwise | CardExpired(writtenAt) | unchanged | none |
- * | any | Cleared (#547) | no run, no preparation, nothing prepared, the ledger empty; one more clear; the latest report's track cleared, by a clear: it starts no run, nor does a swap, until a report of another insight track settles or it is looked up again; a pending swap goes ahead | CancelRun (if a run), CancelPreparation (if one), Swap (if pending) |
- * | a track held by a clear | LookUpAgain(tapped) (#1112) | the hold ended; a run of latest if settled, as Settled starts one; not the first action | StartRun (if it starts now), Acted (if tapped) |
- * | otherwise (no hold, or an ad's) | LookUpAgain | unchanged | none |
+ * | any | Cleared (#547) | no run, no preparation, nothing prepared, the ledger empty; one more clear, one more under way (#1112); the latest report's track cleared, by a clear unless an ad's hold of it stands: it starts no run, nor does a swap, until a report of another insight track settles or it is looked up again; a pending swap goes ahead | CancelRun (if a run), CancelPreparation (if one), Swap (if pending) |
+ * | any | LookUpTapped (#1112) | asked to look the track up again if a clear holds it; then as below; not the first action | as below, Acted |
+ * | any | ClearEnded(lookUp) (#1112) | one clear fewer under way; asked to look the track up again with lookUp; then as below | as below |
+ * | asked, no clear under way, a clear's hold of latest | (after LookUpTapped, ClearEnded) | the hold ended; a run of latest if settled, as Settled starts one | StartRun (if it starts now) |
+ * | asked, no clear under way, no clear's hold of latest (none, an ad's, or another track's) | (after LookUpTapped, ClearEnded) | no longer asked | none |
  * | build not the one pending | RebuildFinished | unchanged | none |
  * | the pending build, the run's model call under way | RebuildFinished | built known; waits for the call | none |
  * | the pending build, no model call under way | RebuildFinished | the new pipeline live (or none); run cleared; the ledger kept | CancelRun (old), Swap; StartRun of latest if settled (of the ledger's key and report, for its written track) |
@@ -1058,12 +1071,13 @@ class PipelineCoordinator(
             is CoordinatorEvent.Settled -> settled(event.report)
             CoordinatorEvent.RebuildRequested -> rebuild()
             CoordinatorEvent.Cleared -> cleared()
-            is CoordinatorEvent.LookUpAgain -> lookUpAgain(event.tapped)
+            is CoordinatorEvent.ClearEnded -> lookUpAgain(state.clearEnded(event.lookUp), tapped = false)
             is CoordinatorEvent.RebuildFinished -> finished(event)
             is CoordinatorEvent.WriteTapped,
             is CoordinatorEvent.LookAgainTapped,
             is CoordinatorEvent.RetryTapped,
             is CoordinatorEvent.StopTapped,
+            CoordinatorEvent.LookUpTapped,
             -> onTap(event)
             is CoordinatorEvent.NextChanged -> nextChanged(event.next)
             is CoordinatorEvent.PreparationEnded -> preparationEnded(event.prep)
@@ -1074,7 +1088,7 @@ class PipelineCoordinator(
         }
     }
 
-    // A tap on the screen: Write, *Look again* (#617), *Retry* (#724), Stop.
+    // A tap on the screen: Write, *Look again* (#617), *Retry* (#724), Stop, *Look up again* (#1112).
     // What the session layer reports: a track, or a track taken back, an ad told late (#880).
     private fun fromSession(event: CoordinatorEvent) {
         if (event is CoordinatorEvent.Reported) return reported(event)
@@ -1089,6 +1103,7 @@ class PipelineCoordinator(
             is CoordinatorEvent.LookAgainTapped -> lookAgain(event.key)
             is CoordinatorEvent.RetryTapped -> retried(event.key, event.source)
             is CoordinatorEvent.StopTapped -> stopTapped(event.call)
+            CoordinatorEvent.LookUpTapped -> lookUpAgain(state.lookUpTapped(), tapped = true)
             else -> Unit
         }
     }
@@ -1279,25 +1294,20 @@ class PipelineCoordinator(
     private fun cleared() {
         state.run?.let { effects += CoordinatorEffect.CancelRun(it.id) }
         cancelPreparation()
-        state =
-            state.copy(
-                run = null,
-                ledger = null,
-                prepared = null,
-                clears = state.clears + 1,
-                cleared = state.latest?.nowPlaying,
-                byClear = state.latest != null,
-            )
+        state = state.clearedNow()
         swap()
     }
 
-    // The track the last clear held, looked up again (#1112): the hold ends, and the latest report,
-    // once settled, runs as a new track's would (the swap starts it while a rebuild is pending). A
-    // tap is a user's action for skip detection (D15), as *Retry* is, but not the first action (D5).
-    // Nothing for a hold that is not a clear's, or once another track ended it.
-    private fun lookUpAgain(tapped: Boolean) {
-        state = state.lookedUpAgain() ?: return
-        state.latest?.takeIf { it.settled && startsNow(it) }?.let(::startRun)
+    // The track the last clear held, looked up again (#1112) once [next] has released it: the latest
+    // report, once settled, runs as a new track's would (the swap starts it while a rebuild is
+    // pending). A tap is a user's action for skip detection (D15), as *Retry* is, but not the first
+    // action (D5).
+    private fun lookUpAgain(
+        next: Pair<CoordinatorState, Boolean>,
+        tapped: Boolean,
+    ) {
+        state = next.first
+        if (next.second) state.latest?.takeIf { it.settled && startsNow(it) }?.let(::startRun)
         if (tapped) effects += CoordinatorEffect.Acted
     }
 
@@ -1842,12 +1852,45 @@ internal fun CoordinatorState.withdrawn(track: NowPlaying): Pair<CoordinatorStat
 }
 
 /**
- * The hold of the last clear ended, for its track to be looked up again (#1112); null when there is
- * none, or the hold is an ad's ([withdrawn]). [CoordinatorState.byClear] is read only with a hold:
- * once another track ends it, or a withdrawal replaces it, it no longer counts.
+ * *Clear history* ([CoordinatorEvent.Cleared], #547): no run, no ledger, nothing prepared, one more
+ * clear, and one more under way ([CoordinatorState.clearing], #1112); the latest report's track held,
+ * by the clear, unless an ad told late holds it already, whose hold stays an ad's (#880): it is never
+ * looked up again.
  */
-internal fun CoordinatorState.lookedUpAgain(): CoordinatorState? =
-    takeIf { byClear && cleared != null }?.copy(cleared = null, byClear = false)
+internal fun CoordinatorState.clearedNow(): CoordinatorState {
+    val adHeld = !byClear && cleared?.let { held -> latest?.let { sameInsightTrack(held, it.nowPlaying) } } == true
+    return copy(
+        run = null,
+        ledger = null,
+        prepared = null,
+        clears = clears + 1,
+        cleared = latest?.nowPlaying,
+        byClear = latest != null && !adHeld,
+        clearing = clearing + 1,
+    )
+}
+
+/** A tap on *Look up again* (#1112): asked, if a clear holds a track; [released] says what follows. */
+internal fun CoordinatorState.lookUpTapped(): Pair<CoordinatorState, Boolean> =
+    copy(lookUpAsked = lookUpAsked || (byClear && cleared != null)).released()
+
+/** A clear's stores wiped (#1112): one fewer under way, asked with [lookUp]; [released] says what follows. */
+internal fun CoordinatorState.clearEnded(lookUp: Boolean): Pair<CoordinatorState, Boolean> =
+    copy(clearing = (clearing - 1).coerceAtLeast(0), lookUpAsked = lookUpAsked || lookUp).released()
+
+/**
+ * Once asked, and with no clear under way (#1112): a clear's hold of the latest report's track ended,
+ * true for its run to start; with none (another track ended it, or the hold is an ad's), no longer
+ * asked. Otherwise unchanged, still waiting.
+ */
+private fun CoordinatorState.released(): Pair<CoordinatorState, Boolean> {
+    val held = cleared?.takeIf { byClear && latest?.let { l -> sameInsightTrack(it, l.nowPlaying) } == true }
+    return when {
+        !lookUpAsked || clearing > 0 -> this to false
+        held == null -> copy(lookUpAsked = false) to false
+        else -> copy(cleared = null, byClear = false, lookUpAsked = false) to true
+    }
+}
 
 /** What a report's withdrawal undoes ([CoordinatorState.Report.counted] and the rest, #880). */
 private data class Undo(

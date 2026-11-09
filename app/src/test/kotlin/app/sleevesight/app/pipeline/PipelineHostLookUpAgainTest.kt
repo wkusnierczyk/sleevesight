@@ -20,9 +20,10 @@ import kotlin.time.Duration.Companion.seconds
  * After *Clear history* (#1112): the track playing is held, with no run, and the view says so
  * ([PipelineView.cleared]) rather than leave Home waiting on a run that does not exist, whether the
  * clear came during a run or after one; *Look up the track again*'s *Automatically* looks it up
- * afresh once the clear has ended ([PipelineHost.lookUpAfterClear]), as a new track, the insight
+ * afresh once the clear has ended ([PipelineHost.clearEnded]), as a new track, the insight
  * written again only if insights are written automatically; *On request* waits for *Look up again*
- * ([PipelineHost.lookUpAgain]), which does the same.
+ * ([PipelineHost.lookUpAgain]), which does the same, and a tap made while the clear still wipes the
+ * stores waits for its end. A track an ad's withdrawal holds is never looked up again.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class PipelineHostLookUpAgainTest : PipelineHostFixture() {
@@ -33,7 +34,7 @@ internal class PipelineHostLookUpAgainTest : PipelineHostFixture() {
             epoch.advance()
             host.forget()
             cache.clearCards()
-            if (automatically) host.lookUpAfterClear()
+            host.clearEnded(automatically)
         }
         runCurrent()
     }
@@ -199,5 +200,73 @@ internal class PipelineHostLookUpAgainTest : PipelineHostFixture() {
 
             assertEquals(listOf("artist|one", "artist|two"), musicBrainz.asked)
             lookedUp("Two")
+        }
+
+    @Test
+    fun `Look up again tapped while the clear still wipes the stores waits for its end, then runs once`() =
+        runTest {
+            started()
+            play("One")
+            settle()
+            // The clear's first part: the stores are still being wiped.
+            backgroundScope.launch {
+                epoch.advance()
+                host.forget()
+            }
+            runCurrent()
+            assertEquals(
+                "One",
+                host.state.value.cleared
+                    ?.title,
+            )
+
+            host.lookUpAgain(checkNotNull(playing))
+            settle()
+            assertEquals("no run before the wipe ends", listOf("artist|one"), musicBrainz.asked)
+
+            cache.clearCards()
+            host.clearEnded(lookUp = false)
+            settle()
+            assertEquals("exactly one run after it", listOf("artist|one", "artist|one"), musicBrainz.asked)
+            lookedUp("One")
+        }
+
+    @Test
+    fun `automatically with a tap while the stores are wiped, the track runs once`() =
+        runTest {
+            started()
+            play("One")
+            settle()
+            backgroundScope.launch {
+                epoch.advance()
+                host.forget()
+            }
+            runCurrent()
+            host.lookUpAgain(checkNotNull(playing))
+            settle()
+            assertEquals(listOf("artist|one"), musicBrainz.asked)
+
+            cache.clearCards()
+            host.clearEnded(lookUp = true)
+            settle()
+            assertEquals(listOf("artist|one", "artist|one"), musicBrainz.asked)
+        }
+
+    @Test
+    fun `a track an ad's withdrawal holds is not looked up again after a clear`() =
+        runTest {
+            started()
+            play("One")
+            settle()
+            withdrawn.value = playing
+            runCurrent()
+
+            clear(automatically = true)
+            settle()
+            host.lookUpAgain(checkNotNull(playing))
+            settle()
+
+            assertEquals("no run of the ad", listOf("artist|one"), musicBrainz.asked)
+            assertNull("an ad's hold is not shown as cleared", host.state.value.cleared)
         }
 }

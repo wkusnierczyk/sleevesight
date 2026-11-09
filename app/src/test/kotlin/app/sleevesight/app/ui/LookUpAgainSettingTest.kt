@@ -38,7 +38,8 @@ import org.robolectric.RobolectricTestRunner
 /**
  * *Look up the track again* (#1112): under *History*, just below *Clear history*, a group
  * *Automatically* | *On request*, *Automatically* chosen by default, a tap stored at once; and the
- * message after a clear, which says the track on Home is looked up again only under *Automatically*.
+ * message after a clear, which says the track on Home is looked up again only under *Automatically*,
+ * the same choice the clear is told.
  */
 @RunWith(RobolectricTestRunner::class)
 class LookUpAgainSettingTest {
@@ -49,6 +50,9 @@ class LookUpAgainSettingTest {
     private val settings = SettingsStore(MemoryStore())
     private val secrets = SecretStore(MemoryStore(), testCipher(), dispatcher = Dispatchers.Unconfined)
     private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    // What each clear was told: whether the track on Home is looked up again.
+    private val clears = mutableListOf<Boolean>()
 
     @After
     fun close() {
@@ -63,7 +67,10 @@ class LookUpAgainSettingTest {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 activity.setContent {
-                    SettingsScreen(settings, secrets, emptyMap(), { CompletableDeferred(true) }, saves) { it }
+                    SettingsScreen(settings, secrets, emptyMap(), {
+                        clears += it
+                        CompletableDeferred(true)
+                    }, saves) { it }
                 }
             }
             compose.openSection(SettingsSection.HISTORY)
@@ -138,6 +145,7 @@ class LookUpAgainSettingTest {
         showHistory {
             clearHistory()
             compose.waitUntil(WAIT_MS) { shows(text(R.string.settings_clear_history_done_looked_up)) }
+            assertEquals(listOf(true), clears)
         }
 
     @Test
@@ -151,5 +159,6 @@ class LookUpAgainSettingTest {
             clearHistory()
             compose.waitUntil(WAIT_MS) { shows(text(R.string.settings_clear_history_done)) }
             assertFalse(shows(text(R.string.settings_clear_history_done_looked_up)))
+            assertEquals(listOf(false), clears)
         }
 }
