@@ -40,9 +40,9 @@ import app.sleevesight.app.MemoryStore
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.WAIT_MS
+import app.sleevesight.app.memorySettings
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretStore
-import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.testCipher
 import app.sleevesight.app.ui.settings.SettingsScreen
 import app.sleevesight.app.ui.settings.SettingsSection
@@ -83,7 +83,7 @@ class SettingsKeyLinksTest {
     // add a note to each row that needs a key, which moves the rows below. From their files, those
     // reads ran on DataStore's own threads (and the keys' on `Dispatchers.IO`), which `waitForIdle`
     // does not wait for: on a busy machine the rows were not back yet when the test looked for them.
-    private val settings = SettingsStore(MemoryStore())
+    private val settings = memorySettings()
     private val secrets = SecretStore(MemoryStore(), testCipher(), dispatcher = Dispatchers.Unconfined)
     private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var inputModes: InputModeManager? = null

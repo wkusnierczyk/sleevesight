@@ -209,7 +209,7 @@ class FontSettingsTest {
      */
     @Test
     fun mainActivityStartsInTheStoredFontAndFollowsIt() {
-        app.makeGraph = { AppGraph(it, settingsData = MemoryStore()) }
+        app.makeGraph = { AppGraph(it, settingsData = MemoryStore(), settingsDispatcher = Dispatchers.Unconfined) }
         val title = text(R.string.first_run_leaves_title)
         // *System font* stored and read by this process; no `LastFont` from an earlier one.
         runBlocking { app.graph.settings.update { it.copy(font = FontChoice.SYSTEM_FONT) } }
@@ -242,7 +242,7 @@ class FontSettingsTest {
         // waits on the main looper's clock, which only this test advances: no file, and no thread
         // of DataStore's own to wait on in real time (#629).
         val data = FlakyDataStore(MemoryStore()).apply { failures.set(Int.MAX_VALUE) }
-        app.makeGraph = { AppGraph(it, settingsData = data) }
+        app.makeGraph = { AppGraph(it, settingsData = data, settingsDispatcher = Dispatchers.Unconfined) }
         assertEquals(FontChoice.SYSTEM_FONT, app.graph.font.value)
         // Several collectors read at the start; the retries come only as the clock moves on.
         val firstReads = data.reads.get()

@@ -14,6 +14,7 @@ import app.sleevesight.core.ai.ReasoningEffort
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.settings.Dismissable
 import app.sleevesight.core.settings.Settings
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -304,7 +305,7 @@ class SettingsStoreTest {
             // Each read gives the file and then fails: failure, recovery, failure, five times over.
             val flaky = FlakyDataStore(MemoryStore())
             flaky.failuresAfterAValue.set(5)
-            val store = SettingsStore(flaky)
+            val store = SettingsStore(flaky, dispatcher = Dispatchers.Unconfined)
             val shown = mutableListOf<Settings>()
             // Not in `backgroundScope`, whose work `advanceUntilIdle` leaves waiting.
             val job = launch { store.settings.collect { shown += it } }

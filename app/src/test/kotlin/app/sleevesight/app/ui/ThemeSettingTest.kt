@@ -211,7 +211,7 @@ class ThemeSettingTest {
      */
     @Test
     fun theThemeIsGivenToTheSystemAsTheAppsNightMode() {
-        app.makeGraph = { AppGraph(it, settingsData = MemoryStore()) }
+        app.makeGraph = { AppGraph(it, settingsData = MemoryStore(), settingsDispatcher = Dispatchers.Unconfined) }
         val uiMode = shadowOf(app.getSystemService(UiModeManager::class.java))
         for ((theme, mode) in listOf(
             ThemeChoice.DARK to UiModeManager.MODE_NIGHT_YES,
