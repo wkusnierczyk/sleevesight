@@ -126,9 +126,11 @@ object EditionYear {
 
     /**
      * A range of years, its endpoints no edition's year (#1116): "1987–1988", "1987 - 1988",
-     * "2011-12", with a hyphen, an en dash or an em dash. ICU-safe: braces only as quantifiers.
+     * "2011-12", with a hyphen, an en dash or an em dash, and any spaces, no-break ones too
+     * (`\p{Zs}`: ICU's `\s` takes them and the JVM's does not, so the two read alike). ICU-safe:
+     * braces only as quantifiers and in `\p{Zs}`.
      */
-    private val RANGE = Regex("(1[89]|20)[0-9]{2}\\s*[-\u2013\u2014]\\s*[0-9]{2,4}")
+    private val RANGE = Regex("(1[89]|20)[0-9]{2}[\\s\\p{Zs}]*[-\u2013\u2014][\\s\\p{Zs}]*[0-9]{2,4}")
 
     /** What a year range stands as among a name's words: no year, and no edition's word. */
     private const val RANGE_WORD = "range"

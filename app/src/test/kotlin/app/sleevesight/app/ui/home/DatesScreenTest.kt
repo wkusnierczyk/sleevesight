@@ -434,7 +434,7 @@ class DatesScreenTest {
             compose.waitForIdle()
             val edition = "The album Sundown was first released in May 1973. This edition was released in January 1974."
             compose.onNodeWithText(edition).assertExists()
-            compose.onNodeWithText("This track was first released on the album Sundown in January 1974.").assertExists()
+            compose.onNodeWithText("This track was first released on Sundown in January 1974.").assertExists()
             assertEquals(listOf("g-sundown"), groups.looked)
             // Closed and opened again, it asks again (the feed answers from what it holds).
             tap(DATES_PANEL_CLOSE_TAG)

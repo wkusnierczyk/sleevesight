@@ -88,6 +88,9 @@ class EditionYearTagTest {
                 "X (2011-12 Edition)",
                 "X 1987 - 1988 Edition",
                 "X Deluxe Edition 2011 – 2012",
+                // No-break spaces around the dash, which ICU's `\s` takes and the JVM's does not.
+                "X (Deluxe Edition 2011\u00A0–\u00A02012)",
+                "X 1987\u00A0-\u00A01988 Edition",
                 "1999 Remastered",
                 "(2011 Remaster)",
                 "Edition 2004",

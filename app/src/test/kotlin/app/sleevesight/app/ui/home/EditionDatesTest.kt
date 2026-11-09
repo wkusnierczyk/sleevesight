@@ -99,12 +99,14 @@ class EditionDatesTest {
         val first = FirstRelease("1997", "X", "g-x", "r-x", "Album")
         val state = resolved(bonus, first, listOf(ReleaseDate("X", "1997", "g-x", "Album")))
         val remaster = EditionPart.Its(YearTag("2018", true, "X"))
-        val track = DateSentence.First("1997", "X", null, album = true)
         // Pending or offline: "The album X was first released in 1997. This is its 2018 remaster."
-        assertEquals(listOf(DateSentence.Edition("1997", "X", remaster), track), homeDates(state, bonus))
-        // The lookup answers: the album's first release is 1959's, and the track's still 1997's.
+        val pending = DateSentence.First("1997", "X", null, album = true)
+        assertEquals(listOf(DateSentence.Edition("1997", "X", remaster), pending), homeDates(state, bonus))
+        // The lookup answers: the album's first release is 1959's, and the track's still 1997's, on
+        // the reissue under the group's title: "on X in 1997", not "the album X", the 1959 one.
         val group = mapOf("g-x" to MbGroupFirst("g-x", "X", "1959-03"))
-        assertEquals(listOf(DateSentence.Edition("1959-03", "X", remaster), track), homeDates(state, bonus, group))
+        val answered = DateSentence.First("1997", "X", null)
+        assertEquals(listOf(DateSentence.Edition("1959-03", "X", remaster), answered), homeDates(state, bonus, group))
     }
 
     @Test
@@ -115,9 +117,10 @@ class EditionDatesTest {
         val first = FirstRelease("1997-11-20", "X", "g-x", "r-x", "Album")
         val state = resolved(track, first, listOf(ReleaseDate("X", "1997-11-20", "g-x", "Album")))
         val remaster = EditionPart.Its(YearTag("2018", true, "X"))
-        val dated = DateSentence.First("1997-11-20", "X", null, album = true)
         // Pending: the release matched as the original, the track with its own date.
-        assertEquals(listOf(DateSentence.Edition("1997-11-20", "X", remaster), dated), homeDates(state, track))
+        val pending = DateSentence.First("1997-11-20", "X", null, album = true)
+        assertEquals(listOf(DateSentence.Edition("1997-11-20", "X", remaster), pending), homeDates(state, track))
+        val dated = DateSentence.First("1997-11-20", "X", null)
         // Answered: the original is January's, and the track, out in November, keeps its date.
         val group = mapOf("g-x" to MbGroupFirst("g-x", "X", "1997-01-10"))
         assertEquals(listOf(DateSentence.Edition("1997-01-10", "X", remaster), dated), homeDates(state, track, group))
@@ -142,7 +145,8 @@ class EditionDatesTest {
                 ReleaseDate("X", "2020-01-10", "g-x", "Album"),
                 ReleaseDate("X (Expanded)", "2020-11-20", "g-x", "Album"),
             )
-        val expanded = FirstRelease("2020-11-20", "X (Expanded)", "g-x", "r-x-expanded", "Album")
+        // MusicBrainz gives the first release its group's title, *X*: said by its own, from the releases.
+        val expanded = FirstRelease("2020-11-20", "X", "g-x", "r-x-expanded", "Album")
         val later = DateSentence.First("2020-11-20", "X (Expanded)", null, album = true)
         val state = resolved(bonus, expanded, dates)
         assertEquals(listOf(DateSentence.Album("2020-01-10"), later), homeDates(state, bonus))
@@ -156,6 +160,33 @@ class EditionDatesTest {
         assertEquals(DateSentence.First("2020-11-20", "X", null, album = true), aiDates(answer, bonus)[1])
         val sameDay = answer.copy(first = Released("2020-01", "X", ReleaseType.ALBUM))
         assertEquals(DateSentence.FirstHere(), aiDates(sameDay, bonus)[1])
+    }
+
+    @Test
+    fun aBonusTrackFirstOutOnALaterReleaseInTheGroupIsSaidByThatReleasesTitle() {
+        // A bonus track first out on *Thriller 25 Super Deluxe Edition*, in *Thriller*'s group,
+        // which MusicBrainz gives the group's title, *Thriller*.
+        val deluxe = "Thriller 25 Super Deluxe Edition"
+        val bonus = sundown.copy(title = "For All Time", artists = "Michael Jackson", album = deluxe, year = 2008)
+        val dates =
+            listOf(
+                ReleaseDate("Thriller", "1982-11-30", "g-thriller", "Album"),
+                ReleaseDate(deluxe, "2008-02-08", "g-thriller", "Album"),
+            )
+        val first = FirstRelease("2008-02-08", "Thriller", "g-thriller", "r-25", "Album")
+        val group = mapOf("g-thriller" to MbGroupFirst("g-thriller", "Thriller", "1982-11-30"))
+        assertEquals(
+            listOf(
+                DateSentence.Edition("1982-11-30", "Thriller", EditionPart.Named(deluxe, "2008-02-08")),
+                DateSentence.First("2008-02-08", deluxe, null, album = true),
+            ),
+            homeDates(resolved(bonus, first, dates), bonus, group),
+        )
+        // Before the lookup answers: the album played, first released then, is where it first came out.
+        assertEquals(
+            listOf(DateSentence.Album("2008-02-08"), DateSentence.FirstHere()),
+            homeDates(resolved(bonus, first, dates), bonus),
+        )
     }
 
     @Test
@@ -255,7 +286,8 @@ class EditionDatesTest {
                 ReleaseDate("X (Deluxe)", "2022", "g-x", "Album"),
             )
         val group = mapOf("g-x" to MbGroupFirst("g-x", "X", "2020-01-10"))
-        val expanded = FirstRelease("2020-11-20", "X (Expanded)", "g-x", "r-x-expanded", "Album")
+        // MusicBrainz gives the first release its group's title, *X*: said by its own, from the releases.
+        val expanded = FirstRelease("2020-11-20", "X", "g-x", "r-x-expanded", "Album")
         assertEquals(
             listOf(
                 DateSentence.Edition("2020-01-10", "X", EditionPart.Same("2022")),

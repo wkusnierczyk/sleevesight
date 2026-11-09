@@ -217,9 +217,7 @@ internal fun homeDates(
     val sentences = mutableListOf<DateSentence>()
     val albumSentence = album.sentence(firsts)
     albumSentence?.let { sentences += it }
-    val first = firstReleaseOf(track)
-    val firstDate = first?.date ?: kept?.firstReleased ?: resolution?.firstReleaseDate
-    trackSentence(album, albumSentence, first, firstDate, firsts)?.let { sentences += it }
+    trackSentence(album, albumSentence, track, firsts)?.let { sentences += it }
     // A fresh lookup's original wins over a kept one without its release (#724): a *Look again*
     // that finds the release a failed lookup missed keeps the earlier state, which lacks it.
     val cover = kept?.original?.takeIf { it.release != null } ?: resolution?.original ?: kept?.original
@@ -231,7 +229,8 @@ internal fun homeDates(
     return sentences
 }
 
-// The track's first release's sentence ([homeDates]), its [first] release dated [firstDate]: "this
+// The track's first release's sentence ([homeDates]), dated as MusicBrainz's result or the run's
+// resolution gives it and titled as [AlbumDates.firstTitle] says: "this
 // album" when it is the album played, said as the group's first release ([albumSentence]); after an
 // edition's sentence, where "this album" would read as the group's first release (#1099), "the
 // original album" ("single", "EP", #1116), once MusicBrainz's lookup of the group ([firsts]) dates
@@ -240,15 +239,17 @@ internal fun homeDates(
 private fun trackSentence(
     album: AlbumDates,
     albumSentence: DateSentence?,
-    first: FirstRelease?,
-    firstDate: String?,
+    track: TrackState?,
     firsts: Map<String, MbGroupFirst>,
 ): DateSentence? {
+    val first = firstReleaseOf(track)
+    val firstDate = first?.date ?: keptMusicBrainz(track)?.firstReleased ?: track?.resolution?.firstReleaseDate
     val edition = albumSentence as? DateSentence.Edition
     val original = edition?.takeIf { first != null && album.isOriginal(first, it.firstDate) }
     val dated =
         firstDate?.takeIf { DateWhen.of(it) != null }?.let {
-            DateSentence.First(it, first?.title, ReleaseKind.of(first?.type), first?.type == ALBUM_TYPE)
+            val (title, named) = album.firstTitle(first, AlbumDates.releasesOf(track), firsts)
+            DateSentence.First(it, title, ReleaseKind.of(first?.type), named)
         }
     return when {
         first != null && albumSentence is DateSentence.Album && album.has(first) -> DateSentence.FirstHere(album.kind)
@@ -340,6 +341,33 @@ private class AlbumDates(
             } else {
                 ALBUMS.albumKey(first.title) == ALBUMS.albumKey(name)
             }
+
+    /**
+     * The title the track's [first] release is said by, and whether it is named "the album" (#1116):
+     * MusicBrainz gives a release its group's title ([FirstRelease.title]), so a first release in one
+     * of the album's [groups] (a bonus track first out on *Thriller 25 Super Deluxe Edition*, in
+     * *Thriller*'s) is said by its own title, from the track's [releases] of that group and date (by
+     * the group's when its own is not known). Under the group's own title it is "the album" only
+     * while nothing shows it is not the group's first release, which that title names: an earlier
+     * release of the group among [releases], or MusicBrainz's lookup of the group ([firsts]) dating
+     * it otherwise; else "on *X* in 1997", as before, which reads as no claim on the original. Any
+     * other, by its title, "the album" when MusicBrainz says it is one.
+     */
+    fun firstTitle(
+        first: FirstRelease?,
+        releases: List<ReleaseDate>,
+        firsts: Map<String, MbGroupFirst>,
+    ): Pair<String?, Boolean> {
+        val album = first?.type == ALBUM_TYPE
+        if (first?.releaseGroupMbid == null || first.group !in groups) return first?.title to album
+        val inGroup = releases.filter { it.group == first.group && it.date != null }
+        val own = inGroup.firstOrNull { it.date == first.date }?.title ?: first.title
+        val later =
+            inGroup.any { Precise.before(it.date.orEmpty(), first.date) } ||
+                firsts[first.group]?.firstReleaseDate?.let { !Precise.sameDate(it, first.date) } == true
+        val groupTitled = ALBUMS.albumKey(own) == ALBUMS.albumKey(first.title)
+        return own to (album && !(groupTitled && later))
+    }
 
     /**
      * Whether MusicBrainz's lookup of the group ([firsts]) dates its first release on [firstDate],
@@ -450,12 +478,16 @@ private class AlbumDates(
             date?.let { Precise.inYearNotAfter(released, it) } ?: (ReleaseDate.yearIn(released) == year)
 
     companion object {
+        // The releases of [track]'s recordings MusicBrainz gives, from its result, else the run's
+        // resolution.
+        fun releasesOf(track: TrackState?): List<ReleaseDate> =
+            keptMusicBrainz(track)?.releaseDates?.ifEmpty { null } ?: track?.resolution?.releaseDates.orEmpty()
+
         fun of(
             track: TrackState?,
             header: NowPlaying,
         ): AlbumDates {
-            val kept = keptMusicBrainz(track)
-            val dates = kept?.releaseDates?.ifEmpty { null } ?: track?.resolution?.releaseDates.orEmpty()
+            val dates = releasesOf(track)
             val name = header.album?.takeIf(String::isNotBlank)
             val named = name?.let { ReleaseDate.named(it, dates, ALBUMS::albumKey) }.orEmpty()
             val year =

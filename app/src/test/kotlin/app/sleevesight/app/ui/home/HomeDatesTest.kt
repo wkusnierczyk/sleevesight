@@ -254,7 +254,7 @@ class HomeDatesTest {
         val expected =
             listOf(
                 DateSentence.Edition("1959-03", "X", EditionPart.Same("2009")),
-                DateSentence.First("1997", "X", null, album = true),
+                DateSentence.First("1997", "X", null),
             )
         assertEquals(expected, homeDates(resolved(bonus, first, dates), bonus, group))
         val kept = kept("1997", dates).copy(firstRelease = first)
@@ -277,7 +277,7 @@ class HomeDatesTest {
         val expected =
             listOf(
                 DateSentence.Edition("1959-03", "X", EditionPart.Same("1997")),
-                DateSentence.First("1997", "X", null, album = true),
+                DateSentence.First("1997", "X", null),
             )
         assertEquals(expected, homeDates(resolved(reissue, first, dates), reissue, group))
         val kept = kept("1997", dates).copy(firstRelease = first)
