@@ -876,25 +876,30 @@ class AppGraph internal constructor(
      * ([ReleaseGroupFeed.forget], #1099); the
      * artist facts the listening session cited; the session layer's last change, which names the
      * track before; and the diagnostics' steps, which name the tracks. The API keys and the settings stay.
-     * Returns whether the caches were cleared; the rest cannot fail.
+     * The pipeline's part brackets the rest ([PipelineHost.clear], #1112), which ends, whatever came
+     * before, cancellation included, with the clear's end: with [lookUp] (*Look up the track again*'s *Automatically*,
+     * as chosen when the clear was asked) the track playing is looked up again, and a tap on *Look up
+     * again* made meanwhile is taken, so that run finds nothing kept from before and keeps what it
+     * finds. Returns whether the caches were cleared; the rest cannot fail.
      */
-    private suspend fun forgetTracks(): Boolean {
+    private suspend fun forgetTracks(lookUp: Boolean): Boolean {
         clearEpoch.advance()
-        pipeline.forget()
-        // Again just before the caches' clear, so it waits for the writes under way then too.
-        clearEpoch.advance()
-        val cleared = artistKeeping.clearWith { withContext(Dispatchers.IO) { caches.clearAll() } }
-        if (!cleared) Log.w(TAG, "The caches could not be cleared")
-        wiring.forgetRemembered()
-        genreNotes.forget()
-        itemNotes.forget()
-        tracklists.forget()
-        releaseGroups.forget()
-        aiSearches.forget()
-        sessionFacts.forget()
-        sessions.forgetLastChange()
-        diagnostics.log.clear()
-        return cleared
+        return pipeline.clear(lookUp) {
+            // Again just before the caches' clear, so it waits for the writes under way then too.
+            clearEpoch.advance()
+            val cleared = artistKeeping.clearWith { withContext(Dispatchers.IO) { caches.clearAll() } }
+            if (!cleared) Log.w(TAG, "The caches could not be cleared")
+            wiring.forgetRemembered()
+            genreNotes.forget()
+            itemNotes.forget()
+            tracklists.forget()
+            releaseGroups.forget()
+            aiSearches.forget()
+            sessionFacts.forget()
+            sessions.forgetLastChange()
+            diagnostics.log.clear()
+            cleared
+        }
     }
 
     /**

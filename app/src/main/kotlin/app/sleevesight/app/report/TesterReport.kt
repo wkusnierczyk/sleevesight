@@ -429,6 +429,7 @@ internal val SETTING_LINES: List<Pair<String, (Settings) -> String>> =
         "artistCacheLifetime" to { it.artistCacheLifetime.toString() },
         "cacheSizeLimit" to { "${it.cacheSizeLimit} bytes" },
         "historyLifetime" to { s -> s.historyLifetime?.toString() ?: "forever" },
+        "lookUpAfterClear" to { it.lookUpAfterClear.name },
         "sessionGap" to { it.sessionGap.toString() },
         "sourcesOnNewTrack" to { it.sourcesOnNewTrack.key },
         "itemsOnNewTrack" to { it.itemsOnNewTrack.key },

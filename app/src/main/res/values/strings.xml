@@ -200,6 +200,13 @@
     <string name="settings_clear">Clear</string>
     <string name="settings_clear_history_failed">Not everything could be cleared. Try again.</string>
     <string name="settings_clear_history_done">History cleared.</string>
+    <!-- After Clear history with "Look up the track again" on Automatically (#1112). -->
+    <string name="settings_clear_history_done_looked_up">History cleared. The track on Home is looked up again.</string>
+    <!-- Under Clear history (#1112): a button group, Automatically or On request. -->
+    <string name="settings_look_up_again">Look up the track again</string>
+    <string name="settings_look_up_again_summary">After Clear history, the evidence for the current track on Home is wiped. It can be looked up again automatically, or only when you tap the Look up again button. Looking it up asks the sources again and, if insights are written automatically, writes the insight again as well.</string>
+    <string name="settings_look_up_again_automatically">Automatically</string>
+    <string name="settings_look_up_again_on_request">On request</string>
     <string name="settings_section_appearance">Appearance</string>
     <string name="settings_font">Font</string>
     <string name="settings_font_app">App</string>

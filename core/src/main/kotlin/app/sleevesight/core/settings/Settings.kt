@@ -117,6 +117,9 @@ import kotlin.time.Duration.Companion.seconds
  *   are kept, counted back from today to when a track began to play and a change began, and the
  *   insights and genre reasons written, counted back to when each was written (#523, #643); null
  *   keeps them for ever. See [DEFAULT_HISTORY_LIFETIME].
+ * @property lookUpAfterClear *Look up the track again* (#1112), under *Clear history*: whether the
+ *   track on Home is looked up again by itself once *Clear history* has wiped what was found for
+ *   it, or only on a tap on *Look up again* ([LookUpAfterClear]); *Automatically* by default.
  * @property sessionGap *New session idle trigger*: how long a break in listening, from
  *   when the last track was last heard, ends a listening session. See [DEFAULT_SESSION_GAP].
  * @property sourcesOnNewTrack *Sources on a new track* (#269; a choice since #522, which was the
@@ -232,6 +235,7 @@ data class Settings(
     val artistCacheLifetime: Duration = DEFAULT_ARTIST_CACHE_LIFETIME,
     val cacheSizeLimit: Long = DEFAULT_CACHE_SIZE_LIMIT,
     val historyLifetime: Duration? = DEFAULT_HISTORY_LIFETIME,
+    val lookUpAfterClear: LookUpAfterClear = LookUpAfterClear.AUTOMATICALLY,
     val sessionGap: Duration = DEFAULT_SESSION_GAP,
     val sourcesOnNewTrack: NewTrackFold = NewTrackFold.FOLDED,
     val itemsOnNewTrack: NewTrackFold = NewTrackFold.FOLDED,
@@ -697,6 +701,21 @@ enum class FontChoice {
 
     /** The font chosen in the phone's own settings, for someone who prefers it everywhere. */
     SYSTEM_FONT,
+}
+
+/**
+ * *Look up the track again* (#1112, [Settings.lookUpAfterClear]): what follows *Clear history* for
+ * the track on Home, whose findings went with the history.
+ */
+enum class LookUpAfterClear {
+    /**
+     * A new run at once, as for a new track: the sources asked again, and the insight written again
+     * only if insights are written automatically. The default.
+     */
+    AUTOMATICALLY,
+
+    /** Nothing asked: Home says the findings were cleared, with *Look up again*; the next track as usual. */
+    ON_REQUEST,
 }
 
 /**
