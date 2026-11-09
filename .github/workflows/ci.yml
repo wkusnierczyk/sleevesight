@@ -21,7 +21,8 @@ permissions:
 # The Gradle build runs as three jobs side by side, each on a runner of its own (#746): the tests,
 # the release build, and lint with the static checks. Together they run every task `./gradlew build`
 # does. `build`, the check `main` requires, is the last job: it passes when every other job passed or
-# skipped the build.
+# skipped the build. Beside them, the instrumented tests on an emulator (#1114), which `build` does
+# not wait for while they are advisory.
 jobs:
   changes:
     name: Changes
@@ -266,6 +267,87 @@ jobs:
       # part of `build`.
       - name: Functional tests of the build logic
         run: ./gradlew :build-logic:functionalTest --console=plain
+
+  # The instrumented tests (`app/src/androidTest`, #1114) on an Android emulator: every other job runs
+  # on the JVM, whose regex engine, libraries and locale data are not Android's (#1113: a regex the
+  # JVM compiled failed on every phone). Every class of the app initialized on ART, and the AI's
+  # answers read there from fixtures. Advisory while its time and false failures are measured: `build`
+  # does not need it, so a failure here shows on the pull request but does not stop a merge.
+  emulator:
+    name: Instrumented tests on an emulator
+    needs: changes
+    if: needs.changes.outputs.build == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      VERSION_ARG: ${{ needs.changes.outputs.version-arg }}
+      # An Automated Test Device image: Android without the apps and services a test does not need,
+      # made for headless runs; x86_64, which the runner's KVM runs at native speed.
+      API_LEVEL: 35
+      TARGET: aosp_atd
+      ARCH: x86_64
+      EMULATOR_OPTIONS: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/java-gradle
+
+      # The APKs before the emulator starts, so it does not wait on the build.
+      - name: App and test APKs
+        run: |
+          ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest \
+            ${VERSION_ARG:+"$VERSION_ARG"} --console=plain
+
+      # The emulator runs on KVM, which the runner has but only root may open.
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      # The virtual device and a snapshot of it booted, so a run starts from the snapshot rather than
+      # booting Android. Keyed on the image; a new image or options makes a new one.
+      - uses: actions/cache@v6
+        id: avd
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-${{ env.API_LEVEL }}-${{ env.TARGET }}-${{ env.ARCH }}-1
+
+      - name: Booted snapshot
+        if: steps.avd.outputs.cache-hit != 'true'
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: ${{ env.API_LEVEL }}
+          target: ${{ env.TARGET }}
+          arch: ${{ env.ARCH }}
+          force-avd-creation: false
+          emulator-options: ${{ env.EMULATOR_OPTIONS }}
+          disable-animations: false
+          script: echo "Snapshot made."
+
+      - name: Instrumented tests
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: ${{ env.API_LEVEL }}
+          target: ${{ env.TARGET }}
+          arch: ${{ env.ARCH }}
+          force-avd-creation: false
+          emulator-options: -no-snapshot-save ${{ env.EMULATOR_OPTIONS }}
+          disable-animations: true
+          script: ./gradlew :app:connectedDebugAndroidTest ${VERSION_ARG:+"$VERSION_ARG"} --console=plain
+
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: instrumented-test-reports
+          path: |
+            app/build/reports/androidTests/
+            app/build/outputs/androidTest-results/
+          if-no-files-found: ignore
+          retention-days: 14
 
   # `always()`, not `!cancelled()`: in a cancelled run, `build` would be skipped, and GitHub takes a
   # skipped required check as passed. Run, it fails on the cancelled jobs.
