@@ -51,6 +51,7 @@ import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.normalizer.YearTag
 import app.sleevesight.core.pipeline.RunKey
 import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.pipeline.TrackState
@@ -158,36 +159,54 @@ class DatesScreenTest {
     }
 
     @Test
-    fun anEditionReadsItsDateAndTheAlbumsFirstReleaseTheAlbumsTitleInItalics() {
-        val actually = "Actually"
+    fun anEditionReadsTheOriginalThenTheEditionEachTitleInItalics() {
+        // #1116's picked wording: the original first, then the edition played.
+        val thriller = "Thriller"
+        val deluxe = "Thriller 25 Super Deluxe Edition"
+        val further = "Actually: Further Listening 1987 - 1988"
+        val girl = "Material Girl"
+        val remaster2018 = YearTag("2018", true, further)
+        val edition2004 = YearTag("2004", false, "Four")
+        val actually =
+            DateSentence.Edition("1987-09-07", "Actually", EditionPart.Remaster(remaster2018, further, "2001-06"))
         val cases =
             listOf(
-                DateSentence.Edition("2001-06-04", "1987-09-07", actually) to
+                DateSentence.Edition("1982-11-30", thriller, EditionPart.Named(deluxe, "2008-02-08")) to
                     (
-                        "This edition was released on 4 June 2001. " +
-                            "The album, $actually, was first released on 7 September 1987." to actually
+                        "The album $thriller was first released on 30 November 1982. " +
+                            "$deluxe was released on 8 February 2008." to listOf(thriller, deluxe)
                     ),
-                DateSentence.Edition("2001", "1987-09", actually, ReleaseKind.SINGLE) to
+                DateSentence.Edition("1977-02-04", "Rumours", EditionPart.Same("2004")) to
                     (
-                        "This edition was released in 2001. " +
-                            "The single, $actually, was first released in September 1987." to actually
+                        "The album Rumours was first released on 4 February 1977. " +
+                            "This edition was released in 2004." to listOf("Rumours")
                     ),
-                DateSentence.Edition("2001-06", "1987", actually, ReleaseKind.EP) to
+                actually to
                     (
-                        "This edition was released in June 2001. " +
-                            "The EP, $actually, was first released in 1987." to actually
+                        "The album Actually was first released on 7 September 1987. " +
+                            "This is a 2018 remaster of $further, first released in June 2001." to
+                            listOf("Actually", further)
                     ),
-                DateSentence.Edition("2004", "1977-02-04", null) to
-                    ("This edition was released in 2004; the album was first released on 4 February 1977." to null),
-                DateSentence.Edition("2004", "1977", null, ReleaseKind.SINGLE) to
-                    ("This edition was released in 2004; the single was first released in 1977." to null),
-                DateSentence.Edition("2004-03", "1977", null, ReleaseKind.EP) to
-                    ("This edition was released in March 2004; the EP was first released in 1977." to null),
+                DateSentence.Edition(
+                    "1985",
+                    girl,
+                    EditionPart.Its(YearTag("2024", true, girl)),
+                    ReleaseKind.SINGLE,
+                ) to ("The single $girl was first released in 1985. This is its 2024 remaster." to listOf(girl)),
+                DateSentence.Edition("1983-05", "Four", EditionPart.Its(edition2004), ReleaseKind.EP) to
+                    ("The EP Four was first released in May 1983. This is its 2004 edition." to listOf("Four")),
+                DateSentence.FirstOriginal(thriller) to
+                    ("This track was first released on the original $thriller album." to listOf(thriller)),
+                DateSentence.First("1984-11-13", "Like a Virgin", null, album = true) to
+                    (
+                        "This track was first released on the album Like a Virgin on 13 November 1984." to
+                            listOf("Like a Virgin")
+                    ),
             )
         said(cases.map { it.first }) {
             for ((_, expected) in cases) {
                 val (line, italic) = expected
-                assertEquals(line, listOfNotNull(italic), italics(line))
+                assertEquals(line, italic, italics(line))
             }
         }
     }
@@ -404,10 +423,9 @@ class DatesScreenTest {
             // the track says its own date and title. Recomposed, the panel asks nothing more.
             groups.firsts.value = mapOf("g-sundown" to MbGroupFirst("g-sundown", "Sundown", "1973-05"))
             compose.waitForIdle()
-            compose
-                .onNodeWithText("This edition was released in January 1974; the album was first released in May 1973.")
-                .assertExists()
-            compose.onNodeWithText("This track was first released on Sundown in January 1974.").assertExists()
+            val edition = "The album Sundown was first released in May 1973. This edition was released in January 1974."
+            compose.onNodeWithText(edition).assertExists()
+            compose.onNodeWithText("This track was first released on the album Sundown in January 1974.").assertExists()
             assertEquals(listOf("g-sundown"), groups.looked)
             // Closed and opened again, it asks again (the feed answers from what it holds).
             tap(DATES_PANEL_CLOSE_TAG)

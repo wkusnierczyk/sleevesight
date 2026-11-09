@@ -439,7 +439,7 @@ class AiSearchScreenTest {
             tap(DATES_CHIP_TAG)
             val first = Released("1974-01", sundown.album, ReleaseType.ALBUM)
             set(SearchKind.DATES, AiSearch.Answered(SearchAnswer.Dates(first = first), model))
-            compose.waitUntil(WAIT_MS) { shows("This track was first released on Sundown in January 1974.") }
+            compose.waitUntil(WAIT_MS) { shows("This track was first released on the album Sundown in January 1974.") }
             assertFalse(shows(text(R.string.home_dates_first_here)))
         }
 

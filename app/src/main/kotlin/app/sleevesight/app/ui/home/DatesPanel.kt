@@ -16,6 +16,7 @@ import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.app.ui.theme.linkedParts
 import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.normalizer.YearTag
 import app.sleevesight.core.synthesis.SearchAnswer
 import app.sleevesight.core.synthesis.SearchKind
 import app.sleevesight.core.text.DateWhen
@@ -136,6 +137,8 @@ internal fun dateText(sentence: DateSentence): AnnotatedString =
             AnnotatedString(stringResource(format, whenText(sentence.date)))
         }
         is DateSentence.Edition -> editionText(sentence)
+        is DateSentence.FirstOriginal ->
+            withAlbum(stringResource(R.string.home_dates_first_original, ALBUM_MARK), sentence.title)
         is DateSentence.FirstHere -> {
             val format =
                 sentence.kind.pick(
@@ -153,7 +156,7 @@ internal fun dateText(sentence: DateSentence): AnnotatedString =
             } else {
                 val format =
                     sentence.kind.pick(
-                        R.string.home_dates_first,
+                        if (sentence.album) R.string.home_dates_first_album else R.string.home_dates_first,
                         R.string.home_dates_first_single,
                         R.string.home_dates_first_ep,
                     )
@@ -177,32 +180,36 @@ internal fun dateText(sentence: DateSentence): AnnotatedString =
         }
     }
 
-// An edition's sentence (#1099): its date, and its album's first release, named in italics when its
-// title is another, in a second sentence after the first, as one paragraph.
+// An edition's sentences (#1099, #1116), as one paragraph: its album's first release, its title in
+// italics, then the edition as [DateSentence.Edition.edition] says it, a title it names in italics too.
 @Composable
 private fun editionText(sentence: DateSentence.Edition): AnnotatedString {
-    val date = whenText(sentence.date)
-    val first = whenText(sentence.firstDate)
-    val title = sentence.title
-    return if (title == null) {
-        val format =
-            sentence.kind.pick(
-                R.string.home_dates_edition_same_album,
-                R.string.home_dates_edition_same_single,
-                R.string.home_dates_edition_same_ep,
-            )
-        AnnotatedString(stringResource(format, date, first))
-    } else {
-        val of =
-            sentence.kind.pick(
-                R.string.home_dates_edition_of_album,
-                R.string.home_dates_edition_of_single,
-                R.string.home_dates_edition_of_ep,
-            )
-        val line = stringResource(R.string.home_dates_edition, date) + " " + stringResource(of, ALBUM_MARK, first)
-        withAlbum(line, title)
-    }
+    val opener =
+        sentence.kind.pick(
+            R.string.home_dates_edition_first_album,
+            R.string.home_dates_edition_first_single,
+            R.string.home_dates_edition_first_ep,
+        )
+    val original = withAlbum(stringResource(opener, ALBUM_MARK, whenText(sentence.firstDate)), sentence.title)
+    val edition =
+        when (val part = sentence.edition) {
+            is EditionPart.Same -> AnnotatedString(stringResource(R.string.home_dates_edition, whenText(part.date)))
+            is EditionPart.Named ->
+                withAlbum(stringResource(R.string.home_dates_edition_named, ALBUM_MARK, whenText(part.date)), part.name)
+            is EditionPart.Remaster -> {
+                val tag = tagText(part.tag)
+                val line = stringResource(R.string.home_dates_edition_remaster, tag, ALBUM_MARK, whenText(part.date))
+                withAlbum(line, part.name)
+            }
+            is EditionPart.Its -> AnnotatedString(stringResource(R.string.home_dates_edition_its, tagText(part.tag)))
+        }
+    return original + AnnotatedString(" ") + edition
 }
+
+// A remaster or an edition as the title names it, by its year (#1116): "2024 remaster".
+@Composable
+private fun tagText(tag: YearTag): String =
+    stringResource(if (tag.remaster) R.string.home_dates_remaster_year else R.string.home_dates_edition_year, tag.year)
 
 // Of a sentence's three wordings, the one this kind of release takes: [album]'s for an album or a
 // release of no type named, [single]'s, [ep]'s.

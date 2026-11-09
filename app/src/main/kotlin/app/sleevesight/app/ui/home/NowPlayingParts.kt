@@ -250,7 +250,8 @@ private fun Progress(
  * the year of the release being played when it is known (#556, [HeaderYears]). The title is as
  * normalized, with the source work and the variant it named under it; the artists are the credited
  * ones, featured artists included. The album and its year are one text, so a screen reader reads
- * them as one line; with no album reported, the line says so. When the recording first came out is
+ * them as one line; with no album reported, the line says so. No year when the album's name gives its
+ * edition's ([albumLineYear], #1116: "Material Girl (2024 Remaster)"). When the recording first came out is
  * in the *Dates* panel under it ([DatesPanel], #724), never in the album's place.
  */
 @OptIn(ExperimentalLayoutApi::class)
@@ -279,7 +280,7 @@ internal fun KeyData(
         if (album == null) {
             Text(stringResource(R.string.home_album_none), style = MaterialTheme.typography.bodyLarge)
         } else {
-            Text(albumLine(album, years.album), style = MaterialTheme.typography.bodyLarge)
+            Text(albumLine(album, albumLineYear(album, years.album)), style = MaterialTheme.typography.bodyLarge)
         }
     }
 }
