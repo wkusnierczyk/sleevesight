@@ -21,7 +21,8 @@ permissions:
 # The Gradle build runs as three jobs side by side, each on a runner of its own (#746): the tests,
 # the release build, and lint with the static checks. Together they run every task `./gradlew build`
 # does. `build`, the check `main` requires, is the last job: it passes when every other job passed or
-# skipped the build.
+# skipped the build. Beside them, the instrumented tests on an emulator (#1114), which `build` does
+# not wait for while they are advisory.
 jobs:
   changes:
     name: Changes
@@ -266,6 +267,136 @@ jobs:
       # part of `build`.
       - name: Functional tests of the build logic
         run: ./gradlew :build-logic:functionalTest --console=plain
+
+  # The instrumented tests (`app/src/androidTest`, #1114) on an Android emulator: every other job runs
+  # on the JVM, whose regex engine, libraries and locale data are not Android's (#1113: a regex the
+  # JVM compiled failed on every phone). Every class of the app initialized on ART, and the AI's
+  # answers read there from fixtures. Advisory while its time and false failures are measured: `build`
+  # does not need it, so a failure here shows on the pull request but does not stop a merge.
+  emulator:
+    name: Instrumented tests on an emulator
+    needs: changes
+    if: needs.changes.outputs.build == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      VERSION_ARG: ${{ needs.changes.outputs.version-arg }}
+      # An Automated Test Device image: Android without the apps and services a test does not need,
+      # made for headless runs; x86_64, which the runner's KVM runs at native speed.
+      API_LEVEL: 35
+      TARGET: aosp_atd
+      ARCH: x86_64
+      # The emulator's build (37.2.13.0), pinned: the action would otherwise install the latest in each
+      # run, and a snapshot made by one build does not load in another (the AVD cache's key).
+      EMULATOR_BUILD: 16740729
+      EMULATOR_OPTIONS: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/java-gradle
+
+      # The APKs before the emulator starts, so it does not wait on the build.
+      - name: App and test APKs
+        run: |
+          ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest \
+            ${VERSION_ARG:+"$VERSION_ARG"} --console=plain
+
+      # The emulator runs on KVM, which the runner has but only root may open.
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      # The virtual device and a snapshot of it booted, so a run starts from the snapshot rather than
+      # booting Android. A snapshot loads only in the emulator build that made it, so the key names
+      # that build, which the steps below pin (`EMULATOR_BUILD`): a new image, build or options makes
+      # a new one. Restored in every run, saved only from pushes to `main` and `dev-*`, as Gradle's
+      # cache is: a pull request that misses it boots Android afresh and saves nothing.
+      - uses: actions/cache/restore@v6
+        id: avd
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-${{ env.API_LEVEL }}-${{ env.TARGET }}-${{ env.ARCH }}-${{ env.EMULATOR_BUILD }}
+
+      - name: Booted snapshot
+        if: steps.avd.outputs.cache-hit != 'true' && github.event_name != 'pull_request'
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: ${{ env.API_LEVEL }}
+          target: ${{ env.TARGET }}
+          arch: ${{ env.ARCH }}
+          emulator-build: ${{ env.EMULATOR_BUILD }}
+          force-avd-creation: false
+          emulator-options: ${{ env.EMULATOR_OPTIONS }}
+          disable-animations: false
+          script: echo "Snapshot made."
+
+      # Saved as the snapshot was made, before a test run changes the device.
+      - uses: actions/cache/save@v6
+        if: steps.avd.outputs.cache-hit != 'true' && github.event_name != 'pull_request'
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: ${{ steps.avd.outputs.cache-primary-key }}
+
+      - name: Instrumented tests
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: ${{ env.API_LEVEL }}
+          target: ${{ env.TARGET }}
+          arch: ${{ env.ARCH }}
+          emulator-build: ${{ env.EMULATOR_BUILD }}
+          force-avd-creation: false
+          emulator-options: -no-snapshot-save ${{ env.EMULATOR_OPTIONS }}
+          disable-animations: true
+          script: ./gradlew :app:connectedDebugAndroidTest ${VERSION_ARG:+"$VERSION_ARG"} --console=plain
+
+      # How many tests ran, and each failure with its message and first frames, in the log and the
+      # run's summary: Gradle prints neither, and the reports are kept only 14 days. A run in which no
+      # test ran fails, rather than pass with nothing tested.
+      - name: Test counts
+        if: ${{ !cancelled() }}
+        shell: python3 -I {0}
+        run: |
+          import glob, os, sys, xml.etree.ElementTree as ET
+
+          lines, ran = [], 0
+          for path in sorted(glob.glob("app/build/outputs/androidTest-results/**/*.xml", recursive=True)):
+              for suite in ET.parse(path).getroot().iter("testsuite"):
+                  ran += int(suite.get("tests", "0"))
+                  lines.append(f"{suite.get('name')}: {suite.get('tests')} tests, {suite.get('failures')} failed")
+                  for case in suite.iter("testcase"):
+                      failure = case.find("failure")
+                      if failure is None:
+                          continue
+                      # The failure's message and the first frames of its stack trace.
+                      text = (failure.get("message") or failure.text or "").strip().splitlines()
+                      frames = [i for i, line in enumerate(text) if line.lstrip().startswith("at ")]
+                      shown = text[: (frames[0] + 3) if frames else len(text)]
+                      lines.append(f"  FAILED {case.get('name')}:")
+                      lines += [f"    {line.rstrip()}" for line in shown]
+          report = "\n".join(lines) or "No test results."
+          print(report)
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as summary:
+              summary.write(f"```\n{report}\n```\n")
+          if ran == 0:
+              print("::error::No instrumented test ran.")
+              sys.exit(1)
+
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: instrumented-test-reports
+          path: |
+            app/build/reports/androidTests/
+            app/build/outputs/androidTest-results/
+          if-no-files-found: ignore
+          retention-days: 14
 
   # `always()`, not `!cancelled()`: in a cancelled run, `build` would be skipped, and GitHub takes a
   # skipped required check as passed. Run, it fails on the cancelled jobs.
