@@ -348,11 +348,19 @@ object Edition {
 }
 
 // A bracketed part's words, lowercase, split at anything but letters and digits: for
-// [Edition.isEdition] and [EditionYear.of].
-internal fun partWords(part: String): List<String> =
-    part
-        .lowercase()
-        .map { if (it.isLetterOrDigit()) it else ' ' }
-        .joinToString("")
-        .split(' ')
-        .filter { it.isNotEmpty() }
+// [Edition.isEdition] and [EditionYear.of]. In one pass with no copy per character, since a name
+// may have thousands of parts (#1147).
+internal fun partWords(part: String): List<String> {
+    val words = mutableListOf<String>()
+    val word = StringBuilder()
+    for (c in part.lowercase()) {
+        if (c.isLetterOrDigit()) {
+            word.append(c)
+        } else if (word.isNotEmpty()) {
+            words += word.toString()
+            word.clear()
+        }
+    }
+    if (word.isNotEmpty()) words += word.toString()
+    return words
+}

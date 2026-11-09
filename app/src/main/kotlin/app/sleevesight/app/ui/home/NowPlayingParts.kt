@@ -280,7 +280,9 @@ internal fun KeyData(
         if (album == null) {
             Text(stringResource(R.string.home_album_none), style = MaterialTheme.typography.bodyLarge)
         } else {
-            Text(albumLine(album, albumLineYear(album, years.album)), style = MaterialTheme.typography.bodyLarge)
+            // Read once per album and year, not at every recomposition (#1147).
+            val year = remember(album, years.album) { albumLineYear(album, years.album) }
+            Text(albumLine(album, year), style = MaterialTheme.typography.bodyLarge)
         }
     }
 }
