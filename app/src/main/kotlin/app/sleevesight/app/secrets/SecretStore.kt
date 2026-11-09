@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
+import app.sleevesight.app.collectedOn
 import app.sleevesight.core.Secret
 import app.sleevesight.core.keys.KeyName
 import app.sleevesight.core.model.ProviderId
@@ -159,9 +160,8 @@ enum class SecretState {
  * The cipher's work, which goes to the Keystore over binder calls, runs on [dispatcher], never on
  * the caller's (the screen's main thread); so do DataStore's reads and writes (#1107), whose first
  * read from DataStore 1.3 would otherwise take the store's init lock on the caller's dispatcher.
- * Only [changes] reads on its collector's, the pipeline's, which is never the main thread. Saves,
- * removals and resets run one at a time. One that fails, in the key store or in DataStore, says so
- * in what it returns rather than throwing.
+ * Saves, removals and resets run one at a time. One that fails, in the key store or in DataStore,
+ * says so in what it returns rather than throwing.
  */
 class SecretStore(
     private val dataStore: DataStore<Preferences>,
@@ -205,6 +205,7 @@ class SecretStore(
                 var failures = 0L
                 emitAll(
                     dataStore.data
+                        .collectedOn(dispatcher)
                         .onEach { failures = 0 }
                         .retryWhen {
                             cause,
@@ -220,9 +221,9 @@ class SecretStore(
             .map { }
 
     /** The key [id], or null when none is saved or it cannot be read. */
-    suspend fun get(id: SecretId): Secret? {
-        val stored = withContext(dispatcher) { data.first() }[keyOf(id)] ?: return null
-        return withContext(dispatcher) {
+    suspend fun get(id: SecretId): Secret? =
+        withContext(dispatcher) {
+            val stored = data.first()[keyOf(id)] ?: return@withContext null
             open(id, stored)?.let { plain ->
                 try {
                     Secret(plain.decodeToString())
@@ -231,7 +232,6 @@ class SecretStore(
                 }
             }
         }
-    }
 
     /**
      * Whether an entry is stored for the key [id], whether or not it can be opened (#540): what

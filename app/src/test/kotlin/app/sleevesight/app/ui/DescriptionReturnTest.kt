@@ -31,10 +31,10 @@ import app.sleevesight.app.MemoryStore
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.WAIT_MS
+import app.sleevesight.app.memorySettings
 import app.sleevesight.app.now
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.SettingsCodec
-import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.testCipher
 import app.sleevesight.app.ui.settings.DESCRIPTION_TAG
 import app.sleevesight.app.ui.settings.ROW_TITLE_TAG
@@ -80,7 +80,7 @@ class DescriptionReturnTest {
 
     // What the phone keeps: a restart reads it with a new store ([restart]).
     private val file = MemoryStore()
-    private var settings by mutableStateOf(SettingsStore(file))
+    private var settings by mutableStateOf(memorySettings(file))
     private val secrets = SecretStore(MemoryStore(), testCipher(), dispatcher = Dispatchers.Unconfined)
     private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -99,7 +99,7 @@ class DescriptionReturnTest {
     private fun leaveAndComeBack(restart: Boolean = false) {
         emitted = false
         compose.waitForIdle()
-        if (restart) settings = SettingsStore(file)
+        if (restart) settings = memorySettings(file)
         registry = SaveableStateRegistry(null) { true }
         emitted = true
         compose.waitForIdle()

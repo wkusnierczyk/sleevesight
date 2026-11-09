@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import app.sleevesight.app.BuildConfig
+import app.sleevesight.app.collectedOn
 import app.sleevesight.core.settings.Dismissable
 import app.sleevesight.core.settings.ReportButton
 import app.sleevesight.core.settings.Settings
@@ -16,8 +17,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
@@ -272,25 +271,6 @@ class SettingsStore(
          */
         internal fun backoff(failures: Int): Duration =
             minOf(FIRST_RETRY * 2.0.pow(failures.coerceIn(0, DOUBLINGS)), MAX_RETRY)
-
-        /**
-         * This flow, collected on [dispatcher] and handed on in order, each value before any failure
-         * that follows it. Not `flowOn`: its buffer can drop a value that came just before a failure,
-         * since the failure cancels the collection while the value waits to be taken.
-         */
-        private fun <T> Flow<T>.collectedOn(dispatcher: CoroutineDispatcher): Flow<T> {
-            val upstream = this
-            return flow {
-                coroutineScope {
-                    val values = Channel<T>(Channel.RENDEZVOUS)
-                    launch(dispatcher) {
-                        // Closed after the values, as the collection ends: with its failure, if any.
-                        values.close(runCatching { upstream.collect { values.send(it) } }.exceptionOrNull())
-                    }
-                    for (value in values) emit(value)
-                }
-            }
-        }
 
         /**
          * Retries this flow after each I/O error, after [backoff], calling [onFailure] first; any

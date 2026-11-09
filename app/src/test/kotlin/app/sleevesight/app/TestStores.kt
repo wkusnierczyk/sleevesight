@@ -8,6 +8,8 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.emptyPreferences
 import app.sleevesight.app.secrets.SecretCipher
 import app.sleevesight.app.secrets.SecretKeySource
+import app.sleevesight.app.settings.SettingsStore
+import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
@@ -62,7 +64,9 @@ class TestStores(
 /**
  * A DataStore held in memory, for a test that needs the settings but not their file: an update is
  * done, and seen by [data]'s collectors, on the caller's thread, with no thread of DataStore's own
- * to wait on, so a wait for it does not depend on how busy the machine is.
+ * to wait on, so a wait for it does not depend on how busy the machine is. A [SettingsStore] moves
+ * its DataStore work to `Dispatchers.IO` unless told otherwise: build one over this store with
+ * [memorySettings], which keeps it on the caller's thread.
  */
 class MemoryStore(
     initial: Preferences = emptyPreferences(),
@@ -75,6 +79,17 @@ class MemoryStore(
     override suspend fun updateData(transform: suspend (t: Preferences) -> Preferences): Preferences =
         writes.withLock { transform(state.value).also { state.value = it } }
 }
+
+/**
+ * The settings over [data], in memory by default, read and written on the caller's thread
+ * (`Dispatchers.Unconfined`, #1107): `waitForIdle` and the main looper do not wait for
+ * `Dispatchers.IO`, the store's own default, so on a busy machine a screen's settings could still
+ * be unread when the test looked (#622).
+ */
+fun memorySettings(
+    data: DataStore<Preferences> = MemoryStore(),
+    defaults: Settings = Settings(),
+): SettingsStore = SettingsStore(data, defaults, Dispatchers.Unconfined)
 
 /** A software AES key, standing in for the Keystore's on the JVM. */
 fun softwareKey(): SecretKey = KeyGenerator.getInstance("AES").apply { init(256) }.generateKey()

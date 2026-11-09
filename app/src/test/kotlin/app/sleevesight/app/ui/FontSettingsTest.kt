@@ -209,7 +209,7 @@ class FontSettingsTest {
      */
     @Test
     fun mainActivityStartsInTheStoredFontAndFollowsIt() {
-        app.makeGraph = { AppGraph(it, settingsData = MemoryStore()) }
+        app.makeGraph = { AppGraph(it, settingsData = MemoryStore(), settingsDispatcher = Dispatchers.Unconfined) }
         val title = text(R.string.first_run_leaves_title)
         // *System font* stored and read by this process; no `LastFont` from an earlier one.
         runBlocking { app.graph.settings.update { it.copy(font = FontChoice.SYSTEM_FONT) } }
