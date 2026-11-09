@@ -103,10 +103,12 @@ internal sealed interface DateSentence {
 
     /**
      * "This track was first released on the original {title} album.": its first release is the
-     * original of the edition an [Edition] sentence says, whose date that says (#1116).
+     * original of the edition an [Edition] sentence says, whose date that says (#1116); "… on the
+     * original single." or "… on the original EP." as [kind] names it.
      */
     data class FirstOriginal(
         val title: String,
+        val kind: ReleaseKind? = null,
     ) : DateSentence
 
     /**
@@ -197,8 +199,8 @@ internal sealed interface EditionPart {
  * before. A remaster or edition the player's album names with a year later than the release dated
  * ([EditionYear.of]) is said as such (#1116): of that edition, or, when MusicBrainz has no
  * release of it, "This is its {tag}." after the original. After an edition, a track first released
- * on its original album says so with no date ([DateSentence.FirstOriginal]); on a single or an EP,
- * with its date.
+ * on its original album, single or EP says so with no date ([DateSentence.FirstOriginal]), once
+ * MusicBrainz's lookup of the group has dated the original.
  *
  * From MusicBrainz's result, which keeps them in the retrieval cache, else the run's resolution,
  * as the album's year is ([headerYears]). A result kept before #724 has the first release's date
@@ -217,7 +219,7 @@ internal fun homeDates(
     albumSentence?.let { sentences += it }
     val first = firstReleaseOf(track)
     val firstDate = first?.date ?: kept?.firstReleased ?: resolution?.firstReleaseDate
-    trackSentence(album, albumSentence, first, firstDate)?.let { sentences += it }
+    trackSentence(album, albumSentence, first, firstDate, firsts)?.let { sentences += it }
     // A fresh lookup's original wins over a kept one without its release (#724): a *Look again*
     // that finds the release a failed lookup missed keeps the earlier state, which lacks it.
     val cover = kept?.original?.takeIf { it.release != null } ?: resolution?.original ?: kept?.original
@@ -231,24 +233,28 @@ internal fun homeDates(
 
 // The track's first release's sentence ([homeDates]), its [first] release dated [firstDate]: "this
 // album" when it is the album played, said as the group's first release ([albumSentence]); after an
-// edition's sentence, where "this album" would read as the group's first release (#1099), the
-// original album named, a single or an EP with its date and title (#1116); else with its date.
+// edition's sentence, where "this album" would read as the group's first release (#1099), "the
+// original album" ("single", "EP", #1116), once MusicBrainz's lookup of the group ([firsts]) dates
+// the original the edition's sentence names: before it answers, or offline, the track's own date
+// and title, when known, since the original is then only the release matched; else with its date.
 private fun trackSentence(
     album: AlbumDates,
     albumSentence: DateSentence?,
     first: FirstRelease?,
     firstDate: String?,
+    firsts: Map<String, MbGroupFirst>,
 ): DateSentence? {
-    val original =
-        (albumSentence as? DateSentence.Edition)
-            ?.takeIf { first != null && it.kind == null && album.isOriginal(first, it.firstDate) }
-            ?.title
+    val edition = albumSentence as? DateSentence.Edition
+    val original = edition?.takeIf { first != null && album.isOriginal(first, it.firstDate) }
+    val dated =
+        firstDate?.takeIf { DateWhen.of(it) != null }?.let {
+            DateSentence.First(it, first?.title, ReleaseKind.of(first?.type), first?.type == ALBUM_TYPE)
+        }
     return when {
         first != null && albumSentence is DateSentence.Album && album.has(first) -> DateSentence.FirstHere(album.kind)
-        original != null -> DateSentence.FirstOriginal(original)
-        firstDate != null && DateWhen.of(firstDate) != null ->
-            DateSentence.First(firstDate, first?.title, ReleaseKind.of(first?.type), first?.type == ALBUM_TYPE)
-        else -> null
+        original != null && (album.dates(firsts, original.firstDate) || dated == null) ->
+            DateSentence.FirstOriginal(original.title, original.kind)
+        else -> dated
     }
 }
 
@@ -332,6 +338,21 @@ private class AlbumDates(
             } else {
                 ALBUMS.albumKey(first.title) == ALBUMS.albumKey(name)
             }
+
+    /**
+     * Whether MusicBrainz's lookup of the group ([firsts]) dates its first release in [firstDate]'s
+     * year (#1116): so the original an edition's sentence names, first released then, is the
+     * group's, not only the release matched.
+     */
+    fun dates(
+        firsts: Map<String, MbGroupFirst>,
+        firstDate: String,
+    ): Boolean =
+        group
+            ?.let { firsts[it] }
+            ?.firstReleaseDate
+            ?.let(ReleaseDate::yearIn)
+            .let { it != null && it == ReleaseDate.yearIn(firstDate) }
 
     /**
      * Whether [first] is the original album of an edition first released on [firstDate] (#1116):

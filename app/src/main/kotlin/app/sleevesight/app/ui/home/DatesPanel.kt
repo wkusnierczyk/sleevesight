@@ -138,7 +138,11 @@ internal fun dateText(sentence: DateSentence): AnnotatedString =
         }
         is DateSentence.Edition -> editionText(sentence)
         is DateSentence.FirstOriginal ->
-            withAlbum(stringResource(R.string.home_dates_first_original, ALBUM_MARK), sentence.title)
+            when (sentence.kind) {
+                ReleaseKind.SINGLE -> AnnotatedString(stringResource(R.string.home_dates_first_original_single))
+                ReleaseKind.EP -> AnnotatedString(stringResource(R.string.home_dates_first_original_ep))
+                null -> withAlbum(stringResource(R.string.home_dates_first_original, ALBUM_MARK), sentence.title)
+            }
         is DateSentence.FirstHere -> {
             val format =
                 sentence.kind.pick(

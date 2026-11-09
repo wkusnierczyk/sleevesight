@@ -202,6 +202,10 @@ class DatesScreenTest {
                     ),
                 DateSentence.FirstOriginal(thriller) to
                     ("This track was first released on the original $thriller album." to listOf(thriller)),
+                DateSentence.FirstOriginal(girl, ReleaseKind.SINGLE) to
+                    ("This track was first released on the original single." to emptyList()),
+                DateSentence.FirstOriginal("Four", ReleaseKind.EP) to
+                    ("This track was first released on the original EP." to emptyList()),
                 DateSentence.First("1984-11-13", "Like a Virgin", null, album = true) to
                     (
                         "This track was first released on the album Like a Virgin on 13 November 1984." to

@@ -195,6 +195,11 @@
     <!-- After an edition's sentences (home_dates_edition_first_album): the track first came out on
          the album the edition is of, whose date they say; its title in italics (#1116). -->
     <string name="home_dates_first_original">This track was first released on the original %1$s album.</string>
+    <!-- The same, the edition's original a single on MusicBrainz ("The single Material Girl was first
+         released in 1985. This is its 2024 remaster." above): not named again (#1116). -->
+    <string name="home_dates_first_original_single">This track was first released on the original single.</string>
+    <!-- The same, the original an EP on MusicBrainz. -->
+    <string name="home_dates_first_original_ep">This track was first released on the original EP.</string>
     <!-- The track first came out on the album being played. -->
     <string name="home_dates_first_here">This track was first released on this album.</string>
     <!-- The same, the release being played a single on MusicBrainz (its sentence above says "This
