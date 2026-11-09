@@ -37,16 +37,28 @@ object Edition {
      * lookups by name (#1070), which try the name as given first, then these in order, until one is
      * the album: Wikipedia's article and Last.fm's `album.getInfo`, where a name kept with its edition
      * finds nothing. Not for the header's year, which compares the name with MusicBrainz's releases,
-     * whose titles keep such words.
+     * whose titles keep such words. Each turn takes every bracketed edition at the end and the whole
+     * run of unbracketed edition words before them, so a name needs a turn or two; the turns stop at
+     * [MAX_PASSES], so a name of any length costs a few linear passes (#1119).
      */
-    fun strippedNames(release: String): List<String> {
+    fun strippedNames(release: String): List<String> = strippedNames(release) {}
+
+    // [strippedNames], calling [onPass] at each turn of either kind, for the tests to count them.
+    internal fun strippedNames(
+        release: String,
+        onPass: () -> Unit,
+    ): List<String> {
         val given = release.trim()
         return listOf(false, true)
             .map { numbers ->
                 var name = given
-                while (true) {
+                var changed = true
+                var passes = 0
+                while (changed && passes < MAX_PASSES) {
+                    onPass()
+                    passes++
                     val less = stripEditionSuffix(stripEditions(name), numbers)
-                    if (less == name) break
+                    changed = less != name
                     name = less
                 }
                 name
@@ -66,7 +78,8 @@ object Edition {
      * elsewhere is the name's own ("The 1975 Deluxe Edition" is "The 1975"), and so is a
      * title that is only such words ("Deluxe", "Super Deluxe Edition"); "1999 Remastered" is "1999".
      * The longest suffix goes that leaves a word before it other than [SUFFIX_WORDS] and dashes,
-     * among the last [MAX_SUFFIX_WORDS] words only, so a long name costs no more than a short one.
+     * however many words it has ("Abbey Road" and a run of "Deluxe" is "Abbey Road"), found in one
+     * pass from the end of the name, so the work grows only with the name's length (#1119).
      * Without [numbers], every year and ordinal is the name's own: "Paris 1919 Remastered" is "Paris
      * 1919", where with them it is "Paris".
      */
@@ -85,19 +98,7 @@ object Edition {
                     .lowercase()
                     .replace('\u2019', '\'')
             }
-        // The name's first word of its own, and the last "anniversary" after an ordinal ("20th
-        // anniversary"), each found once for every suffix tried.
-        val own = words.indexOfFirst { word -> word !in SUFFIX_WORDS && word.any { it !in DASHES } }
-        val anniversary =
-            words.indices.lastOrNull { i -> i > 0 && words[i] == "anniversary" && ORDINAL.matches(words[i - 1]) }
-        // The first word of the longest suffix, among the last few words, that leaves a word of the
-        // name's own before it.
-        val first =
-            (maxOf(1, words.size - MAX_SUFFIX_WORDS) until words.size).firstOrNull { at ->
-                own in 0 until at &&
-                    isSuffix(words.subList(at, words.size), numbers, dated = anniversary != null && anniversary > at)
-            }
-        if (first == null) return name
+        val first = SuffixWords(words).start(numbers) ?: return name
         return name
             .substring(0, starts[first])
             .trimEnd()
@@ -105,27 +106,63 @@ object Edition {
             .trimEnd()
     }
 
-    // Whether [words] (lowercase) are an edition suffix, as [stripEditionSuffix] says, with or without
-    // [numbers]; [dated] when they carry an "anniversary" after an ordinal ("20th anniversary").
-    private fun isSuffix(
+    // A name's [words] (lowercase), with where the words that make a suffix an edition stand last,
+    // so whether the words from any one to the end make one is a fixed number of checks.
+    private class SuffixWords(
+        private val words: List<String>,
+    ) {
+        private val strong = words.indexOfLast { it in STRONG_SUFFIX_WORDS }
+        private val anniversary = words.lastIndexOf("anniversary")
+        private val edition = words.lastIndexOf("edition")
+
+        // The last "anniversary" after an ordinal ("20th anniversary").
+        private val dated =
+            words.indices.lastOrNull { i -> i > 0 && words[i] == "anniversary" && ORDINAL.matches(words[i - 1]) } ?: -1
+
+        // The index of the first word of the longest edition suffix, as [stripEditionSuffix] says,
+        // with or without [numbers], that leaves a word of the name's own before it; null when none
+        // does. Each word is looked at a fixed number of times, however long the suffix is.
+        fun start(numbers: Boolean): Int? {
+            // The name's first word of its own: a suffix starts after it.
+            val own = words.indexOfFirst { word -> word !in SUFFIX_WORDS && word.any { it !in DASHES } }
+            if (own < 0) return null
+            // The first word a suffix may start at: every word after it may stand in one, with the
+            // words before it in the suffix too.
+            var low = words.size - 1
+            while (low - 1 > own && isSuffixWord(words, low, numbers, first = false)) low--
+            return (maxOf(low, own + 1) until words.size).firstOrNull { at ->
+                isEdition(at) && isSuffixWord(words, at, numbers, first = true)
+            }
+        }
+
+        // Whether the words from [at] to the end, if each may stand in a suffix, make an edition: one
+        // of them a remaster, a reissue or "deluxe", or an "anniversary" after an ordinal or with
+        // "edition", or an "edition" with a word before it.
+        private fun isEdition(at: Int): Boolean =
+            strong >= at ||
+                (anniversary >= at && (dated > at || edition >= at)) ||
+                (edition >= at && words[at] != "edition")
+    }
+
+    // Whether [words]' word [i] (lowercase) may stand in an edition suffix that runs to the end of
+    // [words], with or without [numbers]: one of [SUFFIX_WORDS], or a number an edition takes. [first]
+    // when the suffix starts at it, so the word before it is not the suffix's.
+    private fun isSuffixWord(
         words: List<String>,
+        i: Int,
         numbers: Boolean,
-        dated: Boolean,
-    ): Boolean =
-        words.indices.all { i -> words[i] in SUFFIX_WORDS || (numbers && isEditionNumber(words, i)) } &&
-            (
-                words.any { it in STRONG_SUFFIX_WORDS } ||
-                    ("anniversary" in words && (dated || "edition" in words)) ||
-                    words.indexOf("edition").let { it > 0 }
-            )
+        first: Boolean,
+    ): Boolean = words[i] in SUFFIX_WORDS || (numbers && isEditionNumber(words, i, first))
 
     // Whether [words]' word [i] is a number an edition suffix may take: a year next to a remaster or a
     // reissue ("2011 Remaster", "Remastered 2009", "2011 Digital Remaster"), an ordinal before
-    // "anniversary". A year or an ordinal elsewhere is the name's own ("The 1975 Deluxe Edition" is
-    // "The 1975", "The 1975 10th Anniversary Edition" is "The 1975" too).
+    // "anniversary"; the word before it only when it is not the suffix's [first]. A year or an ordinal
+    // elsewhere is the name's own ("The 1975 Deluxe Edition" is "The 1975", "The 1975 10th Anniversary
+    // Edition" is "The 1975" too).
     private fun isEditionNumber(
         words: List<String>,
         i: Int,
+        first: Boolean,
     ): Boolean {
         val word = words[i]
         val next = words.getOrNull(i + 1)
@@ -133,7 +170,7 @@ object Edition {
             YEAR.matches(word) ->
                 next in REMASTERS ||
                     (next == "digital" && words.getOrNull(i + 2) in REMASTERS) ||
-                    words.getOrNull(i - 1) in REMASTERS
+                    (!first && words.getOrNull(i - 1) in REMASTERS)
             ORDINAL.matches(word) -> next == "anniversary"
             else -> false
         }
@@ -158,45 +195,60 @@ object Edition {
             (words.size == 1 && YEAR.matches(words.single()))
     }
 
-    // [release] less its closing bracketed parts while [take] accepts each.
-    private fun strip(
-        release: String,
+    // [release] less its closing bracketed parts while [take] accepts each (with the white space
+    // before it), and as long as something is left. By the bounds of what is left rather than copies
+    // of it, so each character is looked at a fixed number of times however many parts go (#1119).
+    internal fun strip(
+        release: CharSequence,
         take: (String) -> Boolean,
     ): String {
-        var name = release.trim()
-        var rest = less(name)
-        while (rest != null && take(name.substring(rest.length))) {
-            name = rest
-            rest = less(name)
+        var start = 0
+        var end = release.length
+        while (start < end && release[start].isWhitespace()) start++
+        while (end > start && release[end - 1].isWhitespace()) end--
+        var opener = openerOfLast(release, start, end)
+        while (opener != null) {
+            var rest = opener
+            while (rest > start && release[rest - 1].isWhitespace()) rest--
+            opener =
+                if (rest > start && take(release.subSequence(rest, end).toString())) {
+                    end = rest
+                    openerOfLast(release, start, end)
+                } else {
+                    null
+                }
         }
-        return name
+        return release.subSequence(start, end).toString()
     }
 
-    // [name] less the bracketed part it ends with and the white space before it; null when it ends
-    // with none, or nothing would be left.
-    private fun less(name: String): String? =
-        openerOfLast(name)?.let { name.substring(0, it).trim() }?.takeIf { it.isNotEmpty() }
-
-    // The index of the bracket that opens the one [name] ends with, or null when it ends with none or
-    // it is not balanced.
-    private fun openerOfLast(name: String): Int? {
-        if (name.isEmpty() || name.last() !in CLOSERS) return null
+    // The index of the bracket that opens the one [name]'s characters from [start] to [end] end with,
+    // or null when they end with none or it is not balanced.
+    private fun openerOfLast(
+        name: CharSequence,
+        start: Int,
+        end: Int,
+    ): Int? {
+        if (end <= start || name[end - 1] !in CLOSERS) return null
         var depth = 0
-        return name.indices.reversed().firstOrNull { i ->
+        var i = end
+        do {
+            i--
             when (name[i]) {
                 in CLOSERS -> depth++
                 in OPENERS -> depth--
             }
-            depth == 0
-        }
+        } while (depth > 0 && i > start)
+        return i.takeIf { depth == 0 }
     }
 
     /**
-     * The most words [stripEditionSuffix] tries as an edition suffix. The longest the tests strip is
-     * five ("50th Anniversary Super Deluxe Edition"); twelve leaves room for longer runs of the suffix
-     * words while keeping the work for a name of any length to a fixed number of short checks.
+     * The most turns [strippedNames] takes for each of its names. A turn takes the bracketed editions
+     * at the end and then an unbracketed one before them ("Abbey Road - 2019 Remaster (Deluxe)" in
+     * one), so a real name changes in a turn or two, and one more finds nothing left; the rest is
+     * room, while a name made of editions in turn, bracketed and not, a thousand times over, costs no
+     * more than a few passes over it.
      */
-    internal const val MAX_SUFFIX_WORDS = 12
+    internal const val MAX_PASSES = 4
 
     private val OPENERS = setOf('(', '[')
     private val CLOSERS = setOf(')', ']')
