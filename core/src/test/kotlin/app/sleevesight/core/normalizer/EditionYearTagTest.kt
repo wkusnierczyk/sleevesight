@@ -46,6 +46,19 @@ class EditionYearTagTest {
     }
 
     @Test
+    fun `a remaster's own year beside a year range is still read`() {
+        val names =
+            mapOf(
+                "Actually: Further Listening 1987–1988 (2018 Remaster)" to
+                    YearTag("2018", true, "Actually: Further Listening 1987–1988"),
+                "Actually: Further Listening 1987 - 1988 - 2018 Remaster" to
+                    YearTag("2018", true, "Actually: Further Listening 1987 - 1988"),
+                "Hits 1987-1988 (Deluxe Edition 2011)" to YearTag("2011", false, "Hits 1987-1988"),
+            )
+        for ((name, tag) in names) assertEquals(tag, EditionYear.of(name), name)
+    }
+
+    @Test
     fun `a name with no year an edition takes gives none`() {
         val names =
             listOf(
@@ -65,6 +78,16 @@ class EditionYearTagTest {
                 "2001: A Space Odyssey (Special Edition)",
                 "Sundown (25th Anniversary Edition)",
                 "Sundown (2011 Live Edition)",
+                // A year range's endpoints are no edition's year: hyphen, en dash, em dash, spaced.
+                "X (Deluxe Edition 2011–2012)",
+                "X (Deluxe Edition 2011-2012)",
+                "X (Deluxe Edition 2011 - 2012)",
+                "X (1987–1988 Deluxe Edition)",
+                "X (1987-1988 Edition)",
+                "X (1987 — 1988 Super Deluxe Edition)",
+                "X (2011-12 Edition)",
+                "X 1987 - 1988 Edition",
+                "X Deluxe Edition 2011 – 2012",
                 "1999 Remastered",
                 "(2011 Remaster)",
                 "Edition 2004",

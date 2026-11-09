@@ -38,7 +38,7 @@ object EditionYear {
             through = rest > 0 && Edition.isEdition(part)
             val left = (name.substring(0, rest) + name.substring(end)).trim()
             found =
-                yearIn(partWords(part), qualified = true)
+                yearIn(partWords(RANGE.replace(part, " $RANGE_WORD ")), qualified = true)
                     ?.takeIf { through }
                     ?.let { (year, remaster) -> YearTag(year, remaster, left) }
             end = rest
@@ -55,7 +55,16 @@ object EditionYear {
         tail: String,
     ): YearTag? {
         val starts = head.indices.filter { i -> !head[i].isWhitespace() && (i == 0 || head[i - 1].isWhitespace()) }
-        val words = starts.map { start -> head.substring(start).takeWhile { !it.isWhitespace() }.lowercase() }
+        // A word in a year range ("1987 - 1988") is no edition's year: it stands as [RANGE_WORD].
+        val ranged = RANGE.findAll(head).map { it.range }.toList()
+        val words =
+            starts.map { start ->
+                if (ranged.any { start in it }) {
+                    RANGE_WORD
+                } else {
+                    head.substring(start).takeWhile { !it.isWhitespace() }.lowercase()
+                }
+            }
         val tagged =
             (maxOf(1, words.size - MAX_SUFFIX) until words.size)
                 .filter { from -> words.drop(from).all { it in SUFFIX_WORDS || Edition.YEAR.matches(it) } }
@@ -114,6 +123,15 @@ object EditionYear {
     /** The words that may name an edition between its year and "edition", or before "edition" and its year. */
     private val QUALIFIERS =
         setOf("anniversary", "deluxe", "expanded", "special", "legacy", "super", "limited", "collectors")
+
+    /**
+     * A range of years, its endpoints no edition's year (#1116): "1987–1988", "1987 - 1988",
+     * "2011-12", with a hyphen, an en dash or an em dash. ICU-safe: braces only as quantifiers.
+     */
+    private val RANGE = Regex("(1[89]|20)[0-9]{2}\\s*[-\u2013\u2014]\\s*[0-9]{2,4}")
+
+    /** What a year range stands as among a name's words: no year, and no edition's word. */
+    private const val RANGE_WORD = "range"
 
     /** The words that make a year next to them a remaster's. */
     private val REMASTERS = setOf("remaster", "remastered")
