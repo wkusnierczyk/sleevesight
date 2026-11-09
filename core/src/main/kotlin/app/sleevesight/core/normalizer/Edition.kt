@@ -197,13 +197,7 @@ object Edition {
      * not "special", "(Livestock Deluxe)" is a deluxe edition.
      */
     fun isEdition(part: String): Boolean {
-        val words =
-            part
-                .lowercase()
-                .map { if (it.isLetterOrDigit()) it else ' ' }
-                .joinToString("")
-                .split(' ')
-                .filter { it.isNotEmpty() }
+        val words = partWords(part)
         if (words.any { it in OTHER_RECORDINGS }) return false
         return words.any { it in EDITION_WORDS } ||
             (words.size == 1 && YEAR.matches(words.single()))
@@ -237,7 +231,7 @@ object Edition {
 
     // The index of the bracket that opens the one [name]'s characters from [start] to [end] end with,
     // or null when they end with none or it is not balanced.
-    private fun openerOfLast(
+    internal fun openerOfLast(
         name: CharSequence,
         start: Int,
         end: Int,
@@ -315,12 +309,12 @@ object Edition {
             "bootleg",
         )
 
-    private val YEAR = Regex("(1[89]|20)[0-9]{2}")
+    internal val YEAR = Regex("(1[89]|20)[0-9]{2}")
 
     private val ORDINAL = Regex("[0-9]{1,3}(st|nd|rd|th)")
 
     /** The dashes that may stand before an unbracketed edition: hyphen-minus, en dash, em dash. */
-    private val DASHES = setOf('-', '\u2013', '\u2014')
+    internal val DASHES = setOf('-', '\u2013', '\u2014')
 
     /**
      * The words an unbracketed edition suffix is made of, besides ordinals and years. Not "remasters":
@@ -352,3 +346,13 @@ object Edition {
     /** The words a year in an edition suffix stands next to. */
     private val REMASTERS = setOf("remaster", "remastered", "reissue", "reissued")
 }
+
+// A bracketed part's words, lowercase, split at anything but letters and digits: for
+// [Edition.isEdition] and [EditionYear.of].
+internal fun partWords(part: String): List<String> =
+    part
+        .lowercase()
+        .map { if (it.isLetterOrDigit()) it else ' ' }
+        .joinToString("")
+        .split(' ')
+        .filter { it.isNotEmpty() }
