@@ -27,24 +27,27 @@ class BusyWaits(
     val total: Duration,
     private val timeSource: TimeSource = TimeSource.Monotonic,
 ) : AbstractCoroutineContextElement(BusyWaits) {
-    private val lock = Any()
+    /**
+     * How many requests are waiting, the time waited before those waits began, and when they began;
+     * changed as one value, so it needs no lock.
+     */
+    private data class State(
+        val waiters: Int = 0,
+        val before: Duration = Duration.ZERO,
+        val since: TimeMark? = null,
+    )
 
-    // The time waited before the waits under way began, and when they began; guarded by [lock].
-    private var before = Duration.ZERO
-    private var since: TimeMark? = null
-
-    /** How many requests are waiting now. */
-    private val waiters = MutableStateFlow(0)
+    private val state = MutableStateFlow(State())
 
     /** The time some request has spent waiting, overlapping waits counted once. */
     val waited: Duration
-        get() = synchronized(lock) { before + (since?.elapsedNow() ?: Duration.ZERO) }
+        get() = state.value.let { it.before + (it.since?.elapsedNow() ?: Duration.ZERO) }
 
     /** How much longer the run's requests may wait. */
     val left: Duration get() = (total - waited).coerceAtLeast(Duration.ZERO)
 
     /** Whether a request is waiting now. */
-    val waitingNow: Boolean get() = waiters.value > 0
+    val waitingNow: Boolean get() = state.value.waiters > 0
 
     /** Runs [block], a wait before asking a busy MusicBrainz again, counted as [waited]. */
     suspend fun <T> waiting(block: suspend () -> T): T {
@@ -59,22 +62,32 @@ class BusyWaits(
     /** Returns once no request is waiting. */
     @Suppress("RedundantSuspendModifier") // Detekt does not see `Flow.first` as suspending.
     suspend fun idle() {
-        waiters.first { it == 0 }
+        state.first { it.waiters == 0 }
     }
 
     private fun begin() {
-        synchronized(lock) {
-            if (waiters.value == 0) since = timeSource.markNow()
-            waiters.update { it + 1 }
+        state.update {
+            if (it.waiters ==
+                0
+            ) {
+                it.copy(waiters = 1, since = timeSource.markNow())
+            } else {
+                it.copy(waiters = it.waiters + 1)
+            }
         }
     }
 
     private fun end() {
-        synchronized(lock) {
-            waiters.update { it - 1 }
-            if (waiters.value == 0) {
-                before += since?.elapsedNow() ?: Duration.ZERO
-                since = null
+        state.update {
+            if (it.waiters ==
+                1
+            ) {
+                State(before = it.before + (it.since?.elapsedNow() ?: Duration.ZERO))
+            } else {
+                it.copy(
+                    waiters =
+                        it.waiters - 1,
+                )
             }
         }
     }
