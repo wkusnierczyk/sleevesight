@@ -53,9 +53,9 @@ import org.robolectric.annotation.Config
  * again*, whose tap asks for the track shown; *Sources*, *Genres*, *Dates*, *Lyrics* and the song's
  * row say "Cleared with the history.", without the turning record, as do the pages of *Separate
  * pages*; the cover's back does not: turning the cover over asks for the look-up, once; a back left
- * turned over from before the clear asks nothing, as Home is composed again or comes back, and says
- * the track was cleared, until the cover is turned over again (#1148); a model found unavailable is
- * still said; a hold on another track leaves the waiting texts, which are then true.
+ * turned over from before the clear asks nothing, as Home is composed again or comes back, and gives
+ * way to the cover's front until it is turned over again (#1148); a model found unavailable is still
+ * said; a hold on another track leaves the waiting texts, which are then true.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w411dp-h891dp-420dpi")
@@ -215,19 +215,17 @@ class ClearedTrackScreenTest {
         compose.onAllNodes(hasText(text(notSaid)) and onBack, useUnmergedTree = true).assertCountEquals(0)
     }
 
-    // The cover turned over before the clear, then [clear] holds the track; then a fresh turn asks once.
+    // The cover turned over before the clear, then [clear] holds the track: the front shows, and nothing
+    // is asked; then a fresh turn asks once.
     private fun aBackLeftTurnedOverAsksNothingUntilTurnedAgain(clear: () -> Unit) =
         show(cleared = null) {
             tap(COVER_TAG)
             compose.onNodeWithTag(COVER_BACK_TAG).assertExists()
             clear()
-            compose.onNodeWithTag(COVER_BACK_TAG).assertExists()
+            compose.onNodeWithTag(COVER_BACK_TAG).assertDoesNotExist()
             assertEquals("nothing asked for a back left turned over", emptyList<NowPlaying>(), lookedUp)
-            backSays(R.string.home_cleared, notSaid = R.string.home_musicbrainz_looking)
             assertEquals("no turning record", 0, records())
-            // Turned back and over again: that turn asks, once.
-            tap(COVER_TAG)
-            assertEquals(emptyList<NowPlaying>(), lookedUp)
+            // The front shows: the next turn turns it over, and asks, once.
             tap(COVER_TAG)
             assertEquals("the new turn asks", listOf(playing), lookedUp)
             backSays(R.string.home_musicbrainz_looking, notSaid = R.string.home_cleared)

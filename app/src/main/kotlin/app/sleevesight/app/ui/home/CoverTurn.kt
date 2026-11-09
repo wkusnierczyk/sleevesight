@@ -142,9 +142,9 @@ internal fun coverTurn(
  * and so does a back shown when the album becomes known. For a track *Clear history* holds, a turn of
  * the cover over asks for it to be looked up again ([CoverTurn.lookUp], #1112), once while the hold
  * lasts: turning back and over again asks no more. The turn asks, not the back shown (#1148): a back
- * left turned over from before the clear, kept with Home ([rememberSaveable]) while *Settings* clears,
- * asks nothing when Home comes back, and says the track was cleared, as every other field does, until
- * the cover is turned over again or *Look up again* is tapped. The back stays while [CoverTurn.album] is
+ * left turned over from before the clear asks nothing, and the cover turns to its front when the hold
+ * comes, or shows its front at once when Home comes back with the back kept ([rememberSaveable]) while
+ * *Settings* cleared; turning it over again asks. The back stays while [CoverTurn.album] is
  * the same, the playing song's mark moving with the track, and gives way to the cover on another
  * album. A screen reader reads the cover as a button, "Album art", "Double-tap to show tracklist",
  * and the back as "Tracklist", "Double-tap to show cover", its tracks a list in it.
@@ -161,11 +161,14 @@ internal fun FlippingCover(
     val album = turn.album.orEmpty()
     var backOf by rememberSaveable { mutableStateOf<String?>(null) }
     LaunchedEffect(album) { if (backOf != album) backOf = null }
-    val flipped = backOf == album
+    val lookUp = lookUpOnTurn(album, turn.lookUp)
+    // A back left turned over when a clear's hold comes, which asked nothing (#1148): the cover turns
+    // to its front, and a back restored so is not shown at all.
+    LaunchedEffect(lookUp.unasked) { if (lookUp.unasked) backOf = null }
+    val flipped = backOf == album && !lookUp.unasked
     LaunchedEffect(flipped, turn.key) {
         if (flipped) turn.key?.let(turn.look)
     }
-    val lookUp = lookUpOnTurn(album, turn.lookUp)
     val toggle = {
         val over = backOf != album
         backOf = if (over) album else null
@@ -208,7 +211,7 @@ internal fun FlippingCover(
         } else {
             // Turned once more, so the back reads the right way round once the cover has turned.
             Box(Modifier.fillMaxSize().graphicsLayer { rotationY = HALF_TURN }) {
-                MaterialTheme(colorScheme = turn.colors) { CoverBackFace(turn, lookUp.unasked) }
+                MaterialTheme(colorScheme = turn.colors) { CoverBackFace(turn) }
             }
         }
     }
@@ -216,7 +219,7 @@ internal fun FlippingCover(
 
 /**
  * For a track a clear holds (#1112), the look-up a turn of the cover over asks for, [ask]; [unasked]
- * while the hold lasts and nothing was asked, so a back left turned over says the track was cleared.
+ * while the hold lasts and nothing was asked, so a back left turned over gives way to the front.
  */
 private class TurnLookUp(
     val ask: () -> Unit,
@@ -246,19 +249,16 @@ private fun lookUpOnTurn(
 /**
  * The back: the tracklist on the app's `surfaceContainerHigh`, a single disc as one list, several a
  * page each ([DiscPages]); else why there is none, as *Dates* says it ([NoDatesText]), but for an
- * album MusicBrainz has no tracklist of, or several albums of its name. For a track a clear holds
- * (#1112), a turn over asks for it to be looked up, so the back says it is looking; only a back left
- * turned over from before the clear, which asked nothing ([cleared], #1148), says "Cleared with the
- * history.", as every other field does.
+ * album MusicBrainz has no tracklist of, or several albums of its name. Never "Cleared with the
+ * history." (#1112): a back shown for a track a clear holds was turned over during the hold, which
+ * asked for it to be looked up, so it says it is looking (a back left turned over gives way to the
+ * front, #1148).
  */
 @Composable
-private fun CoverBackFace(
-    turn: CoverTurn,
-    cleared: Boolean,
-) {
+private fun CoverBackFace(turn: CoverTurn) {
     val colors = MaterialTheme.colorScheme
     Box(Modifier.fillMaxSize().background(colors.surfaceContainerHigh).testTag(COVER_BACK_TAG)) {
-        CompositionLocalProvider(LocalContentColor provides colors.onSurface, LocalTrackCleared provides cleared) {
+        CompositionLocalProvider(LocalContentColor provides colors.onSurface, LocalTrackCleared provides false) {
             when (val back = turn.back) {
                 is CoverBack.Found ->
                     if (back.discs.size == 1) {
