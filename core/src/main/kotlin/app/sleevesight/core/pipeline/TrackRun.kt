@@ -10,6 +10,7 @@ import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.sources.BusyWaits
 import app.sleevesight.core.sources.FreshLookups
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.SourceAdapter
@@ -127,8 +128,13 @@ internal class TrackRun(
 
     private val guard = CacheGuard(parts.cache, key, onEvent)
 
-    // The gather's deadline (#983), shared with the search in the track's language.
-    private val budget = GatherBudget(time.timeSource)
+    // How long the run's MusicBrainz requests may wait it out when it is busy, all of them together
+    // (*Wait when busy*, #1120): in the run's context, for the client's retries.
+    private val busyWaits = BusyWaits(settings.musicBrainzWait, time.timeSource)
+
+    // The gather's deadline (#983), shared with the search in the track's language; longer by the
+    // time MusicBrainz was waited out (#1120).
+    private val budget = GatherBudget(time.timeSource, busy = busyWaits)
 
     // LRCLIB, asked whether the track has lyrics when a genre is Instrumental (#997): with its switch
     // on; by a *Retry* when it names LRCLIB or the genres before it never called for LRCLIB (an
@@ -165,14 +171,15 @@ internal class TrackRun(
      * requests (MusicBrainz's artists', Last.fm's track's and album's) are asked for beside the
      * insight, after the evidence, so it does not wait for them; the run
      * ends when both have. Each step that sends requests starts once [control] grants it. A run that
-     * looks again (#617) does all of it marked [FreshLookups], so no cache answers its lookups.
+     * looks again (#617) does all of it marked [FreshLookups], so no cache answers its lookups. All
+     * of it shares one allowance for waiting out a busy MusicBrainz ([BusyWaits], #1120).
      */
     suspend fun run(): TrackState {
         try {
             emit(PipelineEvent.Received(nowPlaying))
             emit(PipelineEvent.Normalized(track))
             publish(state.value)
-            withContext(if (looksAgain) FreshLookups else EmptyCoroutineContext) {
+            withContext((if (looksAgain) FreshLookups else EmptyCoroutineContext) + busyWaits) {
                 gather()
                 // In the track's language (#902), before the evidence is assembled: the insight waits for it.
                 val interrupted =

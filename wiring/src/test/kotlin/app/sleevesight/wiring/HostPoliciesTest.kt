@@ -3,12 +3,20 @@ package app.sleevesight.wiring
 import app.sleevesight.ai.anthropic.AnthropicProvider
 import app.sleevesight.ai.google.GoogleProvider
 import app.sleevesight.ai.openai.OpenAiProvider
+import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.sources.BusyWaits
 import app.sleevesight.net.NetConfig
 import app.sleevesight.sources.lrclib.LrclibClient
 import app.sleevesight.sources.web.ExaWebSearch
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertSame
+import kotlin.test.assertTrue
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 class HostPoliciesTest {
     /**
@@ -32,7 +40,8 @@ class HostPoliciesTest {
         for (version in listOf("0.0", "1.4.2")) {
             val config = HostPolicies.netConfig(version)
             for ((host, policy) in stated) {
-                assertEquals(policy, config.hosts[host], host)
+                // MusicBrainz's carries *Wait when busy* besides (#1120), checked below.
+                assertEquals(policy, config.hosts[host]?.copy(busyWait = null), host)
             }
             assertEquals(stated.keys, config.hosts.keys)
             assertSame(HostPolicies.RETRY, config.retry)
@@ -55,6 +64,40 @@ class HostPoliciesTest {
         val googleHost = GoogleProvider.BASE_URL.removePrefix("https://").substringBefore('/')
         assertEquals(GoogleProvider.HOST, config.domainFor(googleHost))
         assertEquals(NetConfig.MUSICBRAINZ, config.domainFor("musicbrainz.org"))
-        assertEquals(HostPolicies.ALL, config.hosts)
+        assertEquals(HostPolicies.ALL.keys, config.hosts.keys)
     }
+
+    @Test
+    fun `MusicBrainz's requests draw on their run's allowance, else on one of Wait when busy`() =
+        runBlocking {
+            var wait = 30.seconds
+            val allowance =
+                checkNotNull(
+                    HostPolicies
+                        .netConfig("0.0") { wait }
+                        .hosts
+                        .getValue(NetConfig.MUSICBRAINZ)
+                        .busyWait,
+                )
+            // Outside a run: an allowance of its own, of the setting as it reads then.
+            assertEquals(30.seconds, allowance().left)
+            wait = Duration.ZERO
+            assertEquals(Duration.ZERO, allowance().left)
+            // In a run: the run's, shared.
+            val run = BusyWaits(15.seconds)
+            withContext(run) {
+                allowance().waiting { delay(1) }
+                assertEquals(run.left, allowance().left)
+                assertTrue(run.left < 15.seconds)
+            }
+            val default =
+                checkNotNull(
+                    HostPolicies
+                        .netConfig("0.0")
+                        .hosts
+                        .getValue(NetConfig.MUSICBRAINZ)
+                        .busyWait,
+                )
+            assertEquals(Settings.DEFAULT_MUSICBRAINZ_WAIT, default().left)
+        }
 }

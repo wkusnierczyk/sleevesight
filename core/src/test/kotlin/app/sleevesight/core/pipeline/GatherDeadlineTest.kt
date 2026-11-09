@@ -12,6 +12,7 @@ import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.resolution.Lookup
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.TrackLanguageSearch
+import app.sleevesight.core.sources.BusyWaits
 import app.sleevesight.core.sources.LanguageAdapter
 import app.sleevesight.core.sources.LanguageItems
 import app.sleevesight.core.sources.LanguageQuery
@@ -115,6 +116,61 @@ class GatherDeadlineTest {
                 "deadline   gordon lightfoot|sundown: S cut after 20000 ms",
                 EventLine.of(events.filterIsInstance<PipelineEvent.GatherCut>().single()),
             )
+        }
+
+    /** A resolution that waits out a busy MusicBrainz for [busy] (#1120), as the client does, then answers. */
+    private fun waitingOut(busy: Duration) =
+        TrackResolver { _, _ ->
+            checkNotNull(BusyWaits.current()).waiting { delay(busy) }
+            Resolution(outcome = Outcome.SongArticle, recordingMbid = "rec-1")
+        }
+
+    @Test
+    fun `MusicBrainz answering at once leaves the deadline at 20 s, whatever Wait when busy says`() =
+        runTest {
+            settings = settings.copy(musicBrainzWait = 1.minutes)
+            val pipeline = pipeline(listOf(FakeAdapter(SourceId.MUSICBRAINZ), web(byName = stalled)), FakeResolver())
+
+            val state = pipeline.run(sundown, write = false)
+
+            assertEquals(20.seconds, testScheduler.currentTime.milliseconds)
+            assertEquals(Outcome.SongArticle, state.outcome(SourceId.MUSICBRAINZ))
+            assertEquals(Outcome.Unreachable, state.outcome(SourceId.WEB))
+        }
+
+    @Test
+    fun `the time MusicBrainz was waited out lengthens the deadline by as much, at most Wait when busy`() =
+        runTest {
+            settings = settings.copy(musicBrainzWait = 15.seconds)
+            val waited =
+                pipeline(listOf(FakeAdapter(SourceId.MUSICBRAINZ), web(byName = stalled)), waitingOut(10.seconds))
+
+            val state = waited.run(sundown, write = false)
+
+            // 20 s, and the 10 s MusicBrainz was waited out.
+            assertEquals(30.seconds, testScheduler.currentTime.milliseconds)
+            assertEquals(Outcome.SongArticle, state.outcome(SourceId.MUSICBRAINZ))
+            assertEquals(Outcome.Unreachable, state.outcome(SourceId.WEB))
+        }
+
+    @Test
+    fun `a run's MusicBrainz requests share one allowance for waiting it out`() =
+        runTest {
+            settings = settings.copy(musicBrainzWait = 15.seconds)
+            val lefts = mutableListOf<Duration>()
+            val twice =
+                TrackResolver { _, _ ->
+                    val busy = checkNotNull(BusyWaits.current())
+                    repeat(2) {
+                        busy.waiting { delay(6.seconds) }
+                        lefts += busy.left
+                    }
+                    Resolution(outcome = Outcome.SongArticle, recordingMbid = "rec-1")
+                }
+
+            pipeline(listOf(FakeAdapter(SourceId.MUSICBRAINZ)), twice).run(sundown, write = false)
+
+            assertEquals(listOf(9.seconds, 3.seconds), lefts)
         }
 
     @Test
