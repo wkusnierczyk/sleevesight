@@ -10,6 +10,7 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -19,6 +20,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.requestFocus
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
@@ -235,6 +237,27 @@ class PartialSourcesScreenTest {
                 .assert(labelled("ask MusicBrainz again"))
             tap(INSIGHT_RETRY_TAG)
             assertEquals(listOf(Triple(key, setOf(SourceId.MUSICBRAINZ), sundown)), retried)
+        }
+
+    @Test
+    fun aTapOnTheInsightsRetryHandsTheFocusToReportAProblemAsTheLineGoes() =
+        show(state(sundownWith(setOf(SourceId.MUSICBRAINZ)))) {
+            compose.onNodeWithTag(INSIGHT_RETRY_TAG).performScrollTo().requestFocus()
+            compose.waitForIdle()
+            compose.onNodeWithTag(INSIGHT_RETRY_TAG).assertIsFocused()
+            tap(INSIGHT_RETRY_TAG)
+            // The pipeline asks MusicBrainz again: no *Retry* offered while it does.
+            val asking =
+                sundownWith(emptySet()).let {
+                    it.copy(
+                        sources =
+                            it.sources + (SourceId.MUSICBRAINZ to SourceState.Pending),
+                    )
+                }
+            current.value = state(asking)
+            compose.waitForIdle()
+            assertEquals(0, count(INSIGHT_PARTIAL_TAG))
+            compose.onNodeWithTag(REPORT_TAG).assertIsFocused()
         }
 
     @Test

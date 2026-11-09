@@ -203,16 +203,21 @@ internal fun LineButton(
 /**
  * Under the insight's text, while sources it draws on did not answer (#1121): that some evidence for
  * it may be missing, naming them, quiet as the footer's lines, with *Retry* beside it, which asks them
- * again; the line goes once they answer.
+ * again and then runs [afterRetry], which hands the focus on as *Retry* goes; the line goes once they
+ * answer.
  */
 @Composable
-internal fun InsightPartial(unanswered: Unanswered) {
+internal fun InsightPartial(
+    unanswered: Unanswered,
+    afterRetry: () -> Unit = {},
+) {
     val names = namedTogether(unanswered.sources.map { sourceName(it) })
     RetryLine(
         stringResource(R.string.home_insight_partial, names),
         names,
         unanswered.retry,
         Modifier.testTag(INSIGHT_PARTIAL_TAG),
+        afterRetry = afterRetry,
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         tag = INSIGHT_RETRY_TAG,

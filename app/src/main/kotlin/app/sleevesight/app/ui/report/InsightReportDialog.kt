@@ -108,15 +108,19 @@ private const val NOTE_LIMIT = 2000
  * *Report a problem*: a small text action, which a screen reader names with the insight it is for,
  * in the theme's error colour (#671). Its label starts where the lines above it start: the button
  * is moved back by its own start padding, which stays round the label as part of its target.
+ * [modifier] goes on the button: a focus handoff's target (#1121).
  */
 @Composable
-internal fun ReportAction(onReport: () -> Unit) {
+internal fun ReportAction(
+    modifier: Modifier = Modifier,
+    onReport: () -> Unit,
+) {
     val description = stringResource(R.string.report_action_description)
     val padding = ButtonDefaults.TextButtonContentPadding
     TextButton(
         onClick = onReport,
         modifier =
-            Modifier
+            modifier
                 .offset(x = -padding.calculateStartPadding(LocalLayoutDirection.current))
                 .testTag(REPORT_TAG)
                 .semantics { contentDescription = description },
