@@ -116,9 +116,12 @@ internal fun MusicBrainzWaitRow(
         Slider(
             value = shown,
             onValueChange = { value ->
+                // Against the stop shown, not the one stored: a quick drag back to where it started
+                // is written too, before the store has answered the move away.
+                val before = shown.roundToInt().coerceIn(waits.indices)
                 shown = value
                 val chosen = value.roundToInt().coerceIn(waits.indices)
-                if (chosen != stored) update { it.copy(musicBrainzWait = waits[chosen]) }
+                if (chosen != before) update { it.copy(musicBrainzWait = waits[chosen]) }
             },
             modifier =
                 Modifier

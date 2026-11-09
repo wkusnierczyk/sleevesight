@@ -1,6 +1,7 @@
 package app.sleevesight.app.ui
 
 import androidx.activity.compose.setContent
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
@@ -12,6 +13,8 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
@@ -60,7 +63,9 @@ class MusicBrainzWaitSettingTest {
     private val app = ApplicationProvider.getApplicationContext<SleevesightApplication>()
     private val settings = SettingsStore(MemoryStore())
     private val secrets = SecretStore(MemoryStore(), testCipher(), dispatcher = Dispatchers.Unconfined)
-    private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    // One at a time, in order: two saves in quick succession land as made.
+    private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Default.limitedParallelism(1))
 
     @After
     fun close() {
@@ -158,6 +163,25 @@ class MusicBrainzWaitSettingTest {
             moveTo(2)
             compose.waitUntil(WAIT_MS) { settings.now().musicBrainzWait == 30.seconds }
             compose.waitUntil(WAIT_MS) { spoken() == "30 seconds" }
+        }
+
+    // A drag to 30 s and back to 15 s in one gesture, faster than the store answers: the move back is
+    // written too, and the setting ends where the drag did.
+    @Test
+    fun aQuickDragAwayAndBackEndsWhereItEnded() =
+        showSources {
+            slider().performTouchInput {
+                val inset = 12.dp.toPx()
+                val stop = { i: Int -> Offset(inset + (width - 2 * inset) * i / 3, centerY) }
+                down(stop(1))
+                moveTo(stop(2))
+                moveTo(stop(1))
+                up()
+            }
+            compose.waitUntil(WAIT_MS) { spoken() == "15 seconds" }
+            compose.waitForIdle()
+            assertEquals(15.seconds, settings.now().musicBrainzWait)
+            assertEquals("15 seconds", spoken())
         }
 
     @Test

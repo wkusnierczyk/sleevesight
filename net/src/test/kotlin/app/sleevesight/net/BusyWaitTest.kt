@@ -93,16 +93,40 @@ class BusyWaitTest {
         }
 
     @Test
-    fun `a host that stays busy is asked again until the next try would start past the wait`() =
+    fun `a host that stays busy is asked again until the wait allowed is spent, the last try just inside it`() =
         runTest {
             val (fifteen, refused) = attempts(busyHost { 15.seconds })
-            // The next wait, 8 s, would start a sixth try at 15.5 s.
-            assertEquals(listOf(0L, 500L, 1_500L, 3_500L, 7_500L), fifteen)
+            // The next backoff, 8 s, would pass 15 s: the last wait is what is left less a turn (½ s here).
+            assertEquals(listOf(0L, 500L, 1_500L, 3_500L, 7_500L, 14_500L), fifteen)
             assertEquals(NetResult.Failure(NetError.RateLimited(Duration.ZERO)), refused)
 
             // Past the retries' cap of 10 s a wait stays at it, and the attempts are not counted.
             val (thirty, _) = attempts(busyHost { 30.seconds })
-            assertEquals(listOf(0L, 500L, 1_500L, 3_500L, 7_500L, 15_500L, 25_500L), thirty)
+            assertEquals(listOf(0L, 500L, 1_500L, 3_500L, 7_500L, 15_500L, 25_500L, 29_500L), thirty)
+        }
+
+    @Test
+    fun `MusicBrainz at the default wait is asked a sixth time a little before 15 s, never past it`() =
+        runTest {
+            val allowance: suspend () -> BusyWait = { TestBusyWait(15.seconds, testScheduler.timeSource) }
+            val musicBrainz = NetConfig.DEFAULT_HOSTS.getValue(NetConfig.MUSICBRAINZ).copy(busyWait = allowance)
+            val config = NetConfig(appVersion = "test", hosts = mapOf(NetConfig.MUSICBRAINZ to musicBrainz))
+            val (times, _) = attempts(config, "https://musicbrainz.org/ws/2/recording?query=x", random = Random(1))
+
+            assertEquals(6, times.size, "$times")
+            assertTrue(times.last() in 13_000L..15_000L, "$times")
+        }
+
+    @Test
+    fun `a Retry-After longer than what is left ends the tries, not shortened`() =
+        runTest {
+            val times = mutableListOf<Long>()
+            withClient(busyHost { 15.seconds }, handler = {
+                times += testScheduler.currentTime
+                respond("", HttpStatusCode.ServiceUnavailable, headersOf(HttpHeaders.RetryAfter, "20"))
+            }) { it.send(NetRequest("https://busy.example/a")) }
+
+            assertEquals(listOf(0L), times)
         }
 
     @Test

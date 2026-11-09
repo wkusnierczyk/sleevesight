@@ -155,10 +155,11 @@ internal class KtorNetClient(
             val allowance = policy?.busyWait?.takeIf { limited }?.let { busy ?: it().also { read -> busy = read } }
             // Within what is left of the allowance, the jitter counted (#1120).
             val most = allowance?.left
+            val asked = (outcome as? Attempt.Failed)?.retryAfter?.isPositive() == true
             val wait =
                 retryWait(request, outcome, attempt, allowance != null)
                     ?.let { it + policy.jitter(limited, random) }
-                    ?.takeIf { most == null || it < most }
+                    ?.let { if (most == null) it else withinAllowance(it, most, policy.lastTurn(config.retry), asked) }
             log.log(logLine(description, outcome, started.elapsedNow(), attempt, wait))
             if (wait == null) return outcome.result
             if (!awaitRetry(wait, allowance, most, limiter)) {
@@ -422,3 +423,29 @@ private suspend fun awaitRetry(
         } ?: false
     }
 }
+
+/**
+ * The wait before the next try at a busy host within what is left of its allowance ([most], #1120):
+ * [wait] when it fits; else, for a backoff (not a wait the server [asked] for, which is kept as
+ * asked), what is left less [margin], the room a turn at the host takes, for one last try before the
+ * allowance runs out; else none. So the doubling waits do not end the tries long before the time
+ * allowed: at 15 s, an 8 s backoff after 7.5 s waited becomes a last wait of about 7 s.
+ */
+private fun withinAllowance(
+    wait: Duration,
+    most: Duration,
+    margin: Duration,
+    asked: Boolean,
+): Duration? =
+    when {
+        wait < most -> wait
+        !asked && most > margin -> most - margin
+        else -> null
+    }
+
+/**
+ * The room a last turn at a busy host needs within its allowance (#1120): its interval and its
+ * jitter, or, for a host with no interval, [retry]'s first backoff.
+ */
+private fun HostPolicy?.lastTurn(retry: RetryPolicy): Duration =
+    this?.takeIf { it.minInterval.isPositive() }?.let { it.minInterval + it.retryJitter } ?: retry.initialDelay

@@ -599,8 +599,9 @@ data class Settings(
 
         /**
          * 15 s (#1120). The waits before asking a busy MusicBrainz again, ½ s and then twice as long
-         * each time, add up to about 15 s over five more tries; its refusals usually clear within
-         * seconds. Long enough for its genres and dates, short enough that the insight is not held up.
+         * each time (1 s, 2 s, 4 s), then what is left less a turn at it: six more tries, the last a
+         * little before 15 s; its refusals usually clear within seconds. Long enough for its genres
+         * and dates, short enough that the insight is not held up.
          */
         val DEFAULT_MUSICBRAINZ_WAIT: Duration = MUSICBRAINZ_WAIT_SECONDS.seconds
 

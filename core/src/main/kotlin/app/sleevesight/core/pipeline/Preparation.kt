@@ -158,9 +158,10 @@ internal class Preparation(
          * How long a preparation whose resolution ended unreachable for a passing failure
          * ([PASSING]) waits before its one more try (#191). MusicBrainz can refuse requests (503)
          * for a moment when the pool it shares among its clients runs out, however slowly one
-         * client sends, and the client's own retries end within about 2 s at its one request a
-         * second; a while later, it answers again. A preparation runs minutes before its track
-         * plays, and the user never waits for it, so it can wait this long, and one more try
+         * client sends. The client retries such a refusal within the preparation's own allowance
+         * for waiting it out (*Wait when busy*, `BusyWaits`, #1120); this is one more try once that
+         * has run out, since a while later it answers again. A preparation runs minutes before its
+         * track plays, and the user never waits for it, so it can wait this long, and one more try
          * bounds what it sends. A constant, not a setting: nothing in it is the user's to choose.
          */
         val RETRY_WAIT: Duration = 15.seconds
