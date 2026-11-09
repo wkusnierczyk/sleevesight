@@ -1,0 +1,203 @@
+package app.sleevesight.app.pipeline
+
+import app.sleevesight.core.model.NowPlaying
+import app.sleevesight.core.pipeline.InsightState
+import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.settings.WriteAutomatically
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import kotlin.time.Duration.Companion.seconds
+
+/**
+ * After *Clear history* (#1112): the track playing is held, with no run, and the view says so
+ * ([PipelineView.cleared]) rather than leave Home waiting on a run that does not exist, whether the
+ * clear came during a run or after one; *Look up the track again*'s *Automatically* looks it up
+ * afresh once the clear has ended ([PipelineHost.lookUpAfterClear]), as a new track, the insight
+ * written again only if insights are written automatically; *On request* waits for *Look up again*
+ * ([PipelineHost.lookUpAgain]), which does the same.
+ */
+@OptIn(ExperimentalCoroutinesApi::class)
+internal class PipelineHostLookUpAgainTest : PipelineHostFixture() {
+    // The clear as the app makes it: the boundary, the host's part, the caches, and under
+    // *Automatically* the track looked up again once the rest is cleared.
+    private fun TestScope.clear(automatically: Boolean) {
+        backgroundScope.launch {
+            epoch.advance()
+            host.forget()
+            cache.clearCards()
+            if (automatically) host.lookUpAfterClear()
+        }
+        runCurrent()
+    }
+
+    private val playing: NowPlaying? get() = changes.value?.nowPlaying
+
+    private fun TestScope.lookedUp(title: String) {
+        val view = host.state.value
+        assertNull("nothing held once it is looked up again", view.cleared)
+        assertEquals(title, view.track?.nowPlaying?.title)
+        assertTrue("its run's sources landed", view.track?.gathered == true)
+    }
+
+    @Test
+    fun `on request, a clear after a run holds the track, says so, and asks nothing`() =
+        runTest {
+            started()
+            play("One")
+            settle()
+            clear(automatically = false)
+            settle()
+
+            val view = host.state.value
+            assertNull(view.track)
+            assertEquals("One", view.cleared?.title)
+            assertEquals("nothing asked again", listOf("artist|one"), musicBrainz.asked)
+        }
+
+    @Test
+    fun `on request, a clear during a run holds the track, says so, and asks nothing`() =
+        runTest {
+            musicBrainz.byName = 3.seconds
+            started()
+            play("One")
+            advanceTimeBy(DEBOUNCE + 1.seconds)
+            assertEquals(listOf("artist|one"), musicBrainz.asked)
+
+            clear(automatically = false)
+            settle()
+
+            val view = host.state.value
+            assertNull(view.track)
+            assertEquals("One", view.cleared?.title)
+            assertEquals(listOf("artist|one"), musicBrainz.asked)
+        }
+
+    @Test
+    fun `on request, Look up again runs the track as a new one`() =
+        runTest {
+            started()
+            play("One")
+            settle()
+            clear(automatically = false)
+            settle()
+
+            host.lookUpAgain(checkNotNull(playing))
+            settle()
+
+            assertEquals(listOf("artist|one", "artist|one"), musicBrainz.asked)
+            lookedUp("One")
+            assertEquals("a user's action, for skip detection", 1, actions)
+        }
+
+    @Test
+    fun `Look up again for a track no longer playing is dropped`() =
+        runTest {
+            started()
+            play("One")
+            settle()
+            clear(automatically = false)
+            settle()
+            val shown = checkNotNull(playing)
+            changes.value = changes.value?.copy(nowPlaying = shown.copy(title = "Two"))
+
+            host.lookUpAgain(shown)
+            runCurrent()
+
+            assertEquals(listOf("artist|one"), musicBrainz.asked)
+            assertEquals(0, actions)
+        }
+
+    @Test
+    fun `automatically, a clear after a run looks the track up again`() =
+        runTest {
+            started()
+            play("One")
+            settle()
+            clear(automatically = true)
+            settle()
+
+            assertEquals(listOf("artist|one", "artist|one"), musicBrainz.asked)
+            lookedUp("One")
+            assertEquals("not a user's action", 0, actions)
+        }
+
+    @Test
+    fun `automatically, a clear during a run looks the track up again`() =
+        runTest {
+            musicBrainz.byName = 3.seconds
+            started()
+            play("One")
+            advanceTimeBy(DEBOUNCE + 1.seconds)
+
+            clear(automatically = true)
+            advanceTimeBy(10.seconds)
+
+            assertEquals(listOf("artist|one", "artist|one"), musicBrainz.asked)
+            lookedUp("One")
+        }
+
+    @Test
+    fun `automatically, the insight is written again when insights are written automatically`() =
+        runTest {
+            started()
+            play("One")
+            settle()
+            // The first action: insights are written automatically from now on.
+            tap()
+            settle()
+            assertEquals(1, provider.requestsFor("One"))
+
+            clear(automatically = true)
+            settle()
+
+            assertEquals(2, provider.requestsFor("One"))
+            assertTrue(
+                host.state.value.track
+                    ?.insight is InsightState.Written,
+            )
+        }
+
+    @Test
+    fun `automatically, the insight is not written again when insights are written on a tap`() =
+        runTest {
+            settings.value =
+                Settings(aiProvider = settings.value.aiProvider, writeAutomatically = WriteAutomatically.NEVER)
+            started()
+            play("One")
+            settle()
+            tap()
+            settle()
+            assertEquals(1, provider.requestsFor("One"))
+
+            clear(automatically = true)
+            settle()
+
+            assertEquals(1, provider.requestsFor("One"))
+            assertEquals(listOf("artist|one", "artist|one"), musicBrainz.asked)
+            assertTrue("Write is offered", host.state.value.writeKey != null)
+        }
+
+    @Test
+    fun `on request, the next track starts as usual and nothing is held`() =
+        runTest {
+            started()
+            play("One")
+            settle()
+            clear(automatically = false)
+            settle()
+
+            play("Two")
+            settle()
+
+            assertEquals(listOf("artist|one", "artist|two"), musicBrainz.asked)
+            lookedUp("Two")
+        }
+}

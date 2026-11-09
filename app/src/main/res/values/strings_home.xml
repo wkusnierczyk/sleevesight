@@ -444,6 +444,12 @@
     <!-- The split button's Write beside the card paid for, once a settings change changed its key (#615). -->
     <string name="home_rewrite">Rewrite insight</string>
     <string name="home_insight_gathering">Gathering evidence…</string>
+    <!-- After Clear history under "Look up the track again: On request" (#1112): Key insights, with
+         home_look_up_again under it, a new run as for a new track; every other field says home_cleared
+         in place of its waiting text, since nothing is asked. -->
+    <string name="home_insight_cleared">This track’s findings were cleared with the history.</string>
+    <string name="home_look_up_again">Look up again</string>
+    <string name="home_cleared">Cleared with the history.</string>
     <string name="home_insight_preparing">Getting the insight ready…</string>
     <string name="home_insight_tap_write">Tap Write insight to have it written from the sources below.</string>
     <!-- Write insight offered for a track that came to play while Saver had paused automatic writing,

@@ -50,7 +50,7 @@ Every choice is a setting, with a reasoned default:
 - **When it writes:** on every track change, only on a skip, or only when you tap *Write insight*; *Song*, *Artist* and *Album* write theirs as you open them.
 - **Layout:** what opens from Home (*Sources*, the genres, the song's, the artist's and the album's insights) in place or each on a page of its own; in place, whether *Sources* and the three insights start folded on each new track, unfolded, or as you left them.
 - **Ask AI:** whether a panel with nothing from its sources asks your AI service by itself (*Ask AI automatically*, off by default; never *Explain the song*), and how it searches the web with Exa (*AI web search*: *Off*, *Once*, the default, or *Up to 3 times*).
-- **History:** what is kept on the phone, for how long, and *Clear history*.
+- **History:** what is kept on the phone, for how long, and *Clear history*, after which the track on Home is looked up again by itself or only when you tap *Look up again* (*Look up the track again*: *Automatically*, the default, or *On request*).
 - **Keys:** typed, scanned from a QR code, or typed on a computer; kept encrypted on the phone. Saving them asks which of their services to switch on.
 
 [Setting up external services](https://sleevesight.app/docs/services/) gets the keys and switches the services on; [Settings](https://sleevesight.app/docs/tutorials/settings/) explains every setting; [What it costs you](https://sleevesight.app/docs/costs/) lists each service's prices and free tier. Sleevesight itself charges nothing.

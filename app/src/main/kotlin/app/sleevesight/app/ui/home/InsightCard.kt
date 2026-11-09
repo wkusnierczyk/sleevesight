@@ -79,7 +79,13 @@ internal fun InsightCard(
             read?.let { ReadAloudButton(it, READ_ALOUD_TAG) }
         }
         if (read?.pausedInstead == true) Quiet(stringResource(R.string.home_read_aloud_paused_instead))
-        InsightBody(insight, context, actions, groundingDetails)
+        // A track the last *Clear history* holds (#1112): its findings were cleared and nothing is
+        // asked, so the card says so, with *Look up again*, rather than why nothing is written yet.
+        if (LocalTrackCleared.current && insight is InsightState.Idle) {
+            ClearedInsight(actions.onLookUpAgain)
+        } else {
+            InsightBody(insight, context, actions, groundingDetails)
+        }
         val lookAgain =
             (insight as? InsightState.Written)?.let {
                 LookAgainItem(

@@ -144,6 +144,10 @@ import kotlin.time.Instant
  *   asks again (#724), which the tap carries back ([PipelineHost.askAgain]): its sources have
  *   landed, some unreachable or shown but not kept for a failed lookup (#728), and no call is under
  *   way ([CoordinatorState.askAgainKey]); null otherwise.
+ * @property cleared the track the last *Clear history* holds (#1112, [CoordinatorState.clearedShown]):
+ *   its findings went with the history and nothing is asked for it until *Look up again*
+ *   ([PipelineHost.lookUpAgain]) or another track, so Home says so in place of waiting texts; null
+ *   otherwise.
  */
 data class PipelineView(
     val track: TrackState? = null,
@@ -167,6 +171,7 @@ data class PipelineView(
     val rewriteWith: RewriteOffer? = null,
     val askAgainKey: RunKey? = null,
     val askable: Set<SourceId> = emptySet(),
+    val cleared: NowPlaying? = null,
 )
 
 /**
@@ -397,6 +402,25 @@ class PipelineHost(
     }
 
     /**
+     * The user tapped *Look up again* beside the track [shown] (#1112), which the last *Clear
+     * history* holds ([PipelineView.cleared]): it is looked up as a new track is. Dropped, as a tap
+     * on Write is, for a track the session layer no longer shows.
+     */
+    fun lookUpAgain(shown: NowPlaying) {
+        val latest = latestPlaying() ?: return
+        if (!sameInsightTrack(shown, latest)) return
+        queue.trySend(CoordinatorEvent.LookUpAgain(tapped = true))
+    }
+
+    /**
+     * *Clear history* has ended, under *Look up the track again*'s *Automatically* (#1112): the track
+     * it held, if still the one playing, is looked up as a new track is.
+     */
+    fun lookUpAfterClear() {
+        queue.trySend(CoordinatorEvent.LookUpAgain(tapped = false))
+    }
+
+    /**
      * The user tapped *Retry* beside [source], which could not be reached, offered under [key]
      * ([PipelineView.askAgainKey], #724) beside the track [shown]: the coordinator asks that source
      * alone again if it still offers it, as back online asks every one (#192), free. Dropped, as a
@@ -439,8 +463,9 @@ class PipelineHost(
     /**
      * *Clear history*'s part here (#547): the run and the preparation cancelled, the live
      * pipeline's state and the insight shown gone, the coordinator's ledger emptied, and the track
-     * playing not looked up again until another one plays (no paid call on its own). Returns once
-     * the loop has taken it. The host must have been started ([start]).
+     * playing not looked up again until another one plays or it is looked up again
+     * ([lookUpAfterClear], [lookUpAgain], #1112; no paid call on its own). Returns once the loop has
+     * taken it. The host must have been started ([start]).
      */
     suspend fun forget() {
         val done = CompletableDeferred<Unit>()
@@ -880,6 +905,7 @@ class PipelineHost(
                 rewriteWith = if (rewrite) rewriteOffer(shown.track, owner) else null,
                 askAgainKey = owner.askAgainKey,
                 askable = owner.askable,
+                cleared = owner.clearedShown,
             )
         }.collect {
             view.value = it

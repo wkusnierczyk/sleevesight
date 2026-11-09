@@ -62,13 +62,17 @@ internal fun WriteButton(
     }
 }
 
-/** The evidence still coming: *Gathering evidence…* with the turning record. */
+/**
+ * The evidence still coming: *Gathering evidence…* with the turning record; for a track the last
+ * *Clear history* holds, that it was cleared, without (#1112).
+ */
 @Composable
 internal fun Gathering() =
     Busy(
-        stringResource(R.string.home_insight_gathering),
+        waitingOrCleared(stringResource(R.string.home_insight_gathering)),
         MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
+        record = !LocalTrackCleared.current,
     )
 
 /** *Writing…* with the turning record. */

@@ -91,6 +91,7 @@ import app.sleevesight.core.resolution.NameMatcher
 import app.sleevesight.core.settings.Crossfade
 import app.sleevesight.core.settings.FontChoice
 import app.sleevesight.core.settings.LinkStyle
+import app.sleevesight.core.settings.LookUpAfterClear
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.ThemeChoice
 import app.sleevesight.core.settings.WriteAutomatically
@@ -870,6 +871,9 @@ class AppGraph internal constructor(
      * ([ReleaseGroupFeed.forget], #1099); the
      * artist facts the listening session cited; the session layer's last change, which names the
      * track before; and the diagnostics' steps, which name the tracks. The API keys and the settings stay.
+     * Last, under *Look up the track again*'s *Automatically* (#1112), the track playing is looked up
+     * again ([PipelineHost.lookUpAfterClear]), after everything is cleared, so its run finds nothing
+     * kept from before and keeps what it finds; under *On request* it waits for *Look up again*.
      * Returns whether the caches were cleared; the rest cannot fail.
      */
     private suspend fun forgetTracks(): Boolean {
@@ -888,6 +892,9 @@ class AppGraph internal constructor(
         sessionFacts.forget()
         sessions.forgetLastChange()
         diagnostics.log.clear()
+        if ((latestSettings.value ?: Settings()).lookUpAfterClear == LookUpAfterClear.AUTOMATICALLY) {
+            pipeline.lookUpAfterClear()
+        }
         return cleared
     }
 

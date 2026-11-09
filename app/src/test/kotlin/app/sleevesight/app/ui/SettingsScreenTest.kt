@@ -586,7 +586,7 @@ class SettingsScreenTest {
             compose.onNodeWithText(text(R.string.settings_clear_history)).performScrollTo().performClick()
             compose.onNodeWithText(text(R.string.settings_clear)).performClick()
             waitFor("one clear asked for") { cleared == 1 }
-            waitForText(text(R.string.settings_clear_history_done))
+            waitForText(text(R.string.settings_clear_history_done_looked_up))
             assertEquals(
                 0,
                 compose.onAllNodesWithText(text(R.string.settings_clear_history_failed)).fetchSemanticsNodes().size,
@@ -609,7 +609,7 @@ class SettingsScreenTest {
             waitFor("the clear failure message gone") {
                 compose.onAllNodesWithText(text(R.string.settings_clear_history_failed)).fetchSemanticsNodes().isEmpty()
             }
-            waitForText(text(R.string.settings_clear_history_done))
+            waitForText(text(R.string.settings_clear_history_done_looked_up))
         }
     }
 

@@ -2,6 +2,8 @@ package app.sleevesight.app.ui.home
 
 import androidx.annotation.StringRes
 import app.sleevesight.app.R
+import app.sleevesight.app.ui.settings.SettingsTarget
+import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.InsightState
@@ -133,3 +135,30 @@ internal fun runsByItself(context: InsightContext): Boolean =
 @StringRes
 internal fun runningLine(mode: WriteAutomatically): Int =
     if (mode == WriteAutomatically.WHEN_I_SKIP) R.string.home_insight_auto_skip else R.string.home_insight_auto_change
+
+/**
+ * Where the insight card's taps go, each carrying what it was shown for: the run Write (or *Look
+ * again*) is offered for, beside [playing]; *Look up again* for [playing] itself (#1112).
+ */
+internal fun insightActions(
+    state: NowPlayingState,
+    playing: NowPlaying,
+    actions: NowPlayingActions,
+    cite: (String) -> Unit,
+    onReport: (TrackState, InsightState.Written) -> Unit,
+): InsightActions {
+    val view = state.view
+    return InsightActions(
+        onWrite = { view.writeKey?.let { actions.write(it, playing) } },
+        onStop = { view.stopCall?.let(actions.stop) },
+        onCite = cite,
+        // The note of a model found unavailable opens *AI services* at that model's row (#581).
+        onSettings = {
+            state.unavailable?.let { actions.openSettingsAt(SettingsTarget.model(it.provider)) }
+                ?: actions.openSettings()
+        },
+        onLookAgain = { view.lookAgainKey?.let { actions.lookAgain(it, playing) } },
+        onLookUpAgain = { actions.lookUpAgain(playing) },
+        onReport = onReport,
+    )
+}

@@ -163,7 +163,12 @@ internal fun GenresContent(
         LinkedText(linkedParts(stringResource(R.string.home_genres_off_see), link), style = style)
     }
     if (shown.looking.isNotEmpty()) {
-        Busy(stringResource(R.string.home_genres_looking, sourcesNamed(shown.looking)), style)
+        // Nothing asked for a track the last clear holds (#1112): it says so, without the record.
+        Busy(
+            waitingOrCleared(stringResource(R.string.home_genres_looking, sourcesNamed(shown.looking))),
+            style,
+            record = !LocalTrackCleared.current,
+        )
     }
     for (source in shown.unreachable) {
         val name = sourceName(source.source)
