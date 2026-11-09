@@ -31,6 +31,7 @@ class BusyWaitTest {
         )
 
     /** The times of the attempts at [url], each refused as busy until [refusals] have been. */
+    @Suppress("RedundantSuspendModifier") // Detekt misses `send` inside `use`; the compiler needs it.
     private suspend fun TestScope.attempts(
         config: NetConfig,
         url: String = "https://busy.example/a",
