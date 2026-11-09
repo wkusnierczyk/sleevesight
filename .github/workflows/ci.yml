@@ -339,6 +339,16 @@ jobs:
           disable-animations: true
           script: ./gradlew :app:connectedDebugAndroidTest ${VERSION_ARG:+"$VERSION_ARG"} --console=plain
 
+      # How many tests ran and failed, in the log and the run's summary, which Gradle does not print;
+      # a run in which no test ran fails, rather than pass with nothing tested.
+      - name: Test counts
+        if: ${{ !cancelled() }}
+        run: |
+          suites=$(find app/build/outputs/androidTest-results -name '*.xml' -exec grep -ho '<testsuite [^>]*>' {} + || true)
+          { echo '```'; echo "${suites:-No test results.}"; echo '```'; } | tee -a "$GITHUB_STEP_SUMMARY"
+          ran=$(grep -o ' tests="[0-9]*"' <<< "$suites" | awk -F'"' '{ n += $2 } END { print n + 0 }')
+          [ "$ran" -gt 0 ] || { echo "::error::No instrumented test ran."; exit 1; }
+
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
