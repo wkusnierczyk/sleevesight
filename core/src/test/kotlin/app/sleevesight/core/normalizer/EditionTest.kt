@@ -2,6 +2,7 @@ package app.sleevesight.core.normalizer
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 /** An album's name without the edition its title carries without brackets (#1070). */
 class EditionTest {
@@ -101,8 +102,8 @@ class EditionTest {
         assertEquals("Abbey Road - 2019 Remaster", Edition.stripEditions("Abbey Road - 2019 Remaster (Deluxe)"))
     }
 
-    // A name of thousands of words (#1089): the suffix is looked for among its last words only, so the
-    // work stays a fixed number of short checks however long the name is.
+    // A name of thousands of words (#1089): the suffix is looked for in one pass from the end, which
+    // stops at the first word that cannot stand in one (#1119).
     private val longName = (1..5000).joinToString(" ") { "Word$it" }
 
     @Test
@@ -116,10 +117,82 @@ class EditionTest {
         assertEquals(onlyEditionWords, Edition.stripEditionSuffix(onlyEditionWords))
     }
 
+    // A run of 5000 edition words after a name (#1119).
+    private val deluxeRun = List(5000) { "Deluxe" }.joinToString(" ")
+
     @Test
-    fun `only the last words are tried as an edition suffix, and the names without editions take the rest in turn`() {
-        val longer = List(Edition.MAX_SUFFIX_WORDS + 3) { "Deluxe" }.joinToString(" ")
-        assertEquals("Abbey Road Deluxe Deluxe Deluxe", Edition.stripEditionSuffix("Abbey Road $longer"))
-        assertEquals(listOf("Abbey Road"), Edition.strippedNames("Abbey Road $longer"))
+    fun `a long run of edition words goes in one turn, so the names without editions take a bounded number`() {
+        assertEquals("Abbey Road", Edition.stripEditionSuffix("Abbey Road $deluxeRun"))
+        var passes = 0
+        assertEquals(listOf("Abbey Road"), Edition.strippedNames("Abbey Road $deluxeRun") { passes++ })
+        // One turn that takes the run and one that finds nothing left, with and without numbers.
+        assertEquals(4, passes)
+        // A run that stands for the whole title stays, however long.
+        assertEquals(deluxeRun, Edition.stripEditionSuffix(deluxeRun))
+        assertEquals(
+            "Abbey Road - 2019",
+            Edition.stripEditionSuffix("Abbey Road - 2019 Remaster $deluxeRun", numbers = false),
+        )
+        assertEquals("Abbey Road", Edition.stripEditionSuffix("Abbey Road - 2019 Remaster $deluxeRun"))
+    }
+
+    @Test
+    fun `the suffix is found checking each word a fixed number of times, whether the run is an edition or not`() {
+        for (run in listOf("deluxe", "super")) {
+            val words = listOf("abbey", "road") + List(5000) { run }
+            var checks = 0
+            val start = Edition.SuffixWords(words) { checks++ }.start(numbers = true)
+            assertEquals(if (run == "deluxe") 2 else null, start, run)
+            assertTrue(checks <= 3 * words.size, "$checks checks of ${words.size} words ($run)")
+        }
+    }
+
+    @Test
+    fun `a name made of editions in turn, bracketed and not, takes at most a few turns`() {
+        val turns = List(5000) { "Deluxe (Deluxe)" }.joinToString(" ")
+        var passes = 0
+        val names = Edition.strippedNames("Abbey Road $turns") { passes++ }
+        assertTrue(passes <= 2 * Edition.MAX_PASSES, "$passes turns")
+        assertTrue(names.isNotEmpty() && names.all { "Abbey Road $turns".startsWith(it) }, names.toString())
+    }
+
+    @Test
+    fun `a long run of bracketed editions goes looking at each character a fixed number of times`() {
+        val brackets = List(5000) { "(Deluxe)" }.joinToString(" ")
+        val release = Reads("Abbey Road $brackets")
+        assertEquals("Abbey Road", Edition.strip(release, Edition::isEdition))
+        val reads = release.count[0]
+        assertTrue(reads <= 4 * release.length, "$reads reads of ${release.length}")
+        var passes = 0
+        assertEquals(listOf("Abbey Road"), Edition.strippedNames("Abbey Road $brackets") { passes++ })
+        assertEquals(4, passes)
+        assertEquals("Abbey Road", Edition.strip("Abbey Road $brackets"))
+    }
+
+    // [text], counting in [count] the characters read from it, one at a time or as a copy, and from
+    // its copies in turn, so a copy of what is left for each part taken counts too.
+    private class Reads(
+        private val text: String,
+        val count: IntArray = intArrayOf(0),
+    ) : CharSequence {
+        override val length: Int get() = text.length
+
+        override fun get(index: Int): Char {
+            count[0]++
+            return text[index]
+        }
+
+        override fun subSequence(
+            startIndex: Int,
+            endIndex: Int,
+        ): CharSequence {
+            count[0] += endIndex - startIndex
+            return Reads(text.substring(startIndex, endIndex), count)
+        }
+
+        override fun toString(): String {
+            count[0] += text.length
+            return text
+        }
     }
 }
