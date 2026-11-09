@@ -153,6 +153,12 @@ class ListLibraryLicencesTest {
     fun `the build knows the Apache License, MIT, BSD-3-Clause, MPL-2_0 and Unicode-3_0 by name or URL, and no other`() {
         assertEquals("Apache-2.0", ListLibraryLicences.spdx(apache))
         assertEquals("Apache-2.0", ListLibraryLicences.spdx(PomLicence("Apache-2.0", "")))
+        assertEquals(
+            "Apache-2.0",
+            ListLibraryLicences.spdx(
+                PomLicence("Apache License, Version 2.0 (upstream Material Color Utilities)", "https://www.apache.org/licenses/LICENSE-2.0"),
+            ),
+        )
         assertEquals("MIT", ListLibraryLicences.spdx(PomLicence("The MIT License", "https://github.com/x/y/blob/master/LICENSE")))
         assertEquals("MIT", ListLibraryLicences.spdx(mit))
         assertEquals("BSD-3-Clause", ListLibraryLicences.spdx(PomLicence("BSD-3-Clause", "https://opensource.org/licenses/BSD-3-Clause")))

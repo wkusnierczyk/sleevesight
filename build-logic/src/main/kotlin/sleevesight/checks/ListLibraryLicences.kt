@@ -209,6 +209,8 @@ abstract class ListLibraryLicences : DefaultTask() {
             mapOf(
                 "apache software license, version 2.0" to APACHE,
                 "apache license, version 2.0" to APACHE,
+                // materialkolor's, from 6.0.0, for the Google code it ports (#1111).
+                "apache license, version 2.0 (upstream material color utilities)" to APACHE,
                 "apache license 2.0" to APACHE,
                 "apache-2.0" to APACHE,
                 "apache 2.0" to APACHE,

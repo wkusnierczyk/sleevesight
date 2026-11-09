@@ -13,9 +13,10 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.core.graphics.scale
 import app.sleevesight.app.ui.theme.isAppInDarkTheme
+import com.materialkolor.dynamiccolor.ColorSpec
+import com.materialkolor.dynamiccolor.DynamicScheme
 import com.materialkolor.hct.Hct
 import com.materialkolor.quantize.QuantizerCelebi
-import com.materialkolor.scheme.DynamicScheme
 import com.materialkolor.scheme.SchemeTonalSpot
 import com.materialkolor.score.Score
 import kotlinx.coroutines.Dispatchers
@@ -62,8 +63,24 @@ internal fun artScheme(
     dark: Boolean,
 ): ColorScheme? {
     val seed = artSeed(art) ?: return null
-    return SchemeTonalSpot(Hct.fromInt(seed), dark, 0.0).toColorScheme(dark)
+    return seedScheme(seed, dark)
 }
+
+/**
+ * The Material 3 tonal-spot scheme seeded by [seed] (ARGB), light or dark, under the 2021 colour
+ * spec: material-color-utilities 6 defaults to the 2025 one, which would change the screen's colours
+ * (#1111).
+ */
+internal fun seedScheme(
+    seed: Int,
+    dark: Boolean,
+): ColorScheme =
+    SchemeTonalSpot(
+        sourceColorHctList = listOf(Hct.fromInt(seed)),
+        isDark = dark,
+        contrastLevel = 0.0,
+        specVersion = ColorSpec.SpecVersion.SPEC_2021,
+    ).toColorScheme(dark)
 
 /**
  * The art's seed colour: its pixels, at most [SAMPLE] a side, quantized to [COLOURS] colours and
