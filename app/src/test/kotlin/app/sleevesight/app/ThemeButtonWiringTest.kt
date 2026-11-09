@@ -15,6 +15,7 @@ import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.session.SleevesightListenerService
 import app.sleevesight.app.ui.themeMenuTag
 import app.sleevesight.core.settings.ThemeChoice
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -51,7 +52,7 @@ class ThemeButtonWiringTest {
     // in memory, as `ThemeSettingTest`'s night mode test has them, so no wait depends on
     // DataStore's own threads.
     private fun home(block: (ActivityScenario<MainActivity>) -> Unit) {
-        app.makeGraph = { AppGraph(it, settingsData = MemoryStore()) }
+        app.makeGraph = { AppGraph(it, settingsData = MemoryStore(), settingsDispatcher = Dispatchers.Unconfined) }
         val listener = ComponentName(app, SleevesightListenerService::class.java)
         Settings.Secure.putString(app.contentResolver, "enabled_notification_listeners", listener.flattenToString())
         shadowOf(

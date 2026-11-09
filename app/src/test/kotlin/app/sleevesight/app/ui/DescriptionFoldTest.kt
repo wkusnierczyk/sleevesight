@@ -37,9 +37,9 @@ import app.sleevesight.app.MemoryStore
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.WAIT_MS
+import app.sleevesight.app.memorySettings
 import app.sleevesight.app.now
 import app.sleevesight.app.secrets.SecretStore
-import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.testCipher
 import app.sleevesight.app.ui.settings.DESCRIPTION_TAG
 import app.sleevesight.app.ui.settings.ROW_TITLE_TAG
@@ -90,7 +90,7 @@ class DescriptionFoldTest {
     private val app = ApplicationProvider.getApplicationContext<SleevesightApplication>()
 
     // In memory, and read on the main thread, as `SettingsFoldTest`'s.
-    private val settings = SettingsStore(MemoryStore())
+    private val settings = memorySettings()
     private val secrets = SecretStore(MemoryStore(), testCipher(), dispatcher = Dispatchers.Unconfined)
     private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 

@@ -27,8 +27,8 @@ import app.sleevesight.app.MemoryStore
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.WAIT_MS
+import app.sleevesight.app.memorySettings
 import app.sleevesight.app.secrets.SecretStore
-import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.testCipher
 import app.sleevesight.app.ui.settings.ROW_TITLE_TAG
 import app.sleevesight.app.ui.settings.SEARCH_ANNOUNCEMENT_TAG
@@ -66,7 +66,7 @@ class SettingsSearchTest {
     private val app = ApplicationProvider.getApplicationContext<SleevesightApplication>()
 
     // In memory, and read on the main thread, as `SettingsKeyLinksTest`'s (#622).
-    private val settings = SettingsStore(MemoryStore())
+    private val settings = memorySettings()
     private val secrets = SecretStore(MemoryStore(), testCipher(), dispatcher = Dispatchers.Unconfined)
     private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 

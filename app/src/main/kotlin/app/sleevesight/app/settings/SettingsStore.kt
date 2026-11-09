@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import app.sleevesight.app.BuildConfig
+import app.sleevesight.app.collectedOn
 import app.sleevesight.core.settings.Dismissable
 import app.sleevesight.core.settings.ReportButton
 import app.sleevesight.core.settings.Settings
@@ -11,8 +12,10 @@ import app.sleevesight.core.settings.ThemeChoice
 import app.sleevesight.core.settings.WriteAutomatically
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -25,6 +28,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.IOException
 import kotlin.math.pow
 import kotlin.time.Duration
@@ -49,12 +53,19 @@ import kotlin.time.Duration.Companion.seconds
  *
  * **The defaults** are [defaults] wherever the user has not chosen: the app's store has this
  * build's, [BUILD_DEFAULTS]; a test's store has `:core`'s unless it passes others.
+ *
+ * **DataStore's work runs on [dispatcher]** (#1107), never on the caller's: from DataStore 1.3 a
+ * first read takes the store's init lock on the caller's dispatcher, and a collector on the main
+ * thread would then hold it until the main looper runs again, which a test blocked on the store
+ * from that thread never lets happen. IO in the app; a test on virtual time passes its own.
  */
 class SettingsStore(
     private val dataStore: DataStore<Preferences>,
     private val defaults: Settings = Settings(),
+    private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) {
-    private val stored: Flow<Settings> = dataStore.data.map { SettingsCodec.read(it, defaults) }
+    private val stored: Flow<Settings> =
+        dataStore.data.map { SettingsCodec.read(it, defaults) }.collectedOn(dispatcher)
 
     /** The current settings, and each change to them; nothing while the file cannot be read. */
     val settings: Flow<Settings> = stored.retryReads {}.distinctUntilChanged()
@@ -83,8 +94,10 @@ class SettingsStore(
      * written ([SettingsCodec.write]), so what a later version stored survives a downgrade.
      */
     suspend fun update(transform: (Settings) -> Settings) {
-        dataStore.edit { prefs ->
-            SettingsCodec.write(transform(SettingsCodec.read(prefs, defaults)), prefs, defaults)
+        withContext(dispatcher) {
+            dataStore.edit { prefs ->
+                SettingsCodec.write(transform(SettingsCodec.read(prefs, defaults)), prefs, defaults)
+            }
         }
     }
 
@@ -152,7 +165,7 @@ class SettingsStore(
     /** *Reactive*'s mode as the store holds it now; null when it cannot be read, whatever failed. */
     suspend fun storedMode(): WriteAutomatically? =
         try {
-            SettingsCodec.read(dataStore.data.first(), defaults).writeAutomatically
+            SettingsCodec.read(withContext(dispatcher) { dataStore.data.first() }, defaults).writeAutomatically
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (_: Exception) {
