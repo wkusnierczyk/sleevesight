@@ -310,6 +310,21 @@ class PartialSourcesScreenTest {
     }
 
     @Test
+    fun threeSourcesAreListedWithCommasAndAndBeforeTheLastAndOneRetryAsksThemAll() {
+        val three = setOf(SourceId.LASTFM, SourceId.MUSICBRAINZ, SourceId.WIKIPEDIA)
+        val listed = "Last.fm, MusicBrainz and Wikipedia"
+        show(state(sundownWith(three))) {
+            assertEquals(1, countText("$listed could not be reached; some evidence for the insight may be missing."))
+            compose.onNodeWithTag(INSIGHT_RETRY_TAG).assert(labelled("ask $listed again"))
+            tap(INSIGHT_RETRY_TAG)
+            tap(SOURCES_CHIP_TAG)
+            compose.onNodeWithTag(SOURCES_NOTE_TAG).assertTextEquals("$listed could not be reached.")
+            tap(SOURCES_RETRY_TAG)
+            assertEquals(List(2) { Triple(key, three, sundown) }, retried)
+        }
+    }
+
+    @Test
     fun retryAsksOnlyTheSourcesThePipelineOffers() =
         show(state(sundownWith(setOf(SourceId.LASTFM, SourceId.MUSICBRAINZ)), offered = setOf(SourceId.LASTFM))) {
             tap(INSIGHT_RETRY_TAG)

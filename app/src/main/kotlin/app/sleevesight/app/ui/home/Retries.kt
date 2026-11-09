@@ -79,12 +79,24 @@ internal class Unanswered(
 
 /**
  * [names] said together, in alphabetical order, as one line names the sources that did not answer
- * (#1121): "MusicBrainz", "Last.fm and MusicBrainz" ([R.string.home_sources_two]), and so on for more.
+ * (#1121): "MusicBrainz"; "Last.fm and MusicBrainz" ([R.string.home_sources_two]); for more, a list,
+ * "Last.fm, MusicBrainz and Wikipedia" ([R.string.home_sources_list] up to the last but one, then
+ * [R.string.home_sources_list_last]).
  */
 @Composable
 internal fun namedTogether(names: List<String>): String {
     val sorted = names.distinct().sorted()
-    return sorted.drop(1).fold(sorted.first()) { all, next -> stringResource(R.string.home_sources_two, all, next) }
+    return when (sorted.size) {
+        1 -> sorted.single()
+        2 -> stringResource(R.string.home_sources_two, sorted[0], sorted[1])
+        else -> {
+            val head =
+                sorted.dropLast(1).drop(1).fold(sorted.first()) { all, next ->
+                    stringResource(R.string.home_sources_list, all, next)
+                }
+            stringResource(R.string.home_sources_list_last, head, sorted.last())
+        }
+    }
 }
 
 /**
@@ -211,7 +223,7 @@ internal fun InsightPartial(
     unanswered: Unanswered,
     afterRetry: () -> Unit = {},
 ) {
-    val names = namedTogether(unanswered.sources.map { sourceName(it) })
+    val names = namedTogether(unanswered.sources.map { chipName(it) })
     RetryLine(
         stringResource(R.string.home_insight_partial, names),
         names,
