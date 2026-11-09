@@ -4,7 +4,14 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.LocalSaveableStateRegistry
+import androidx.compose.runtime.saveable.SaveableStateRegistry
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
@@ -16,6 +23,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
@@ -44,9 +52,10 @@ import org.robolectric.annotation.Config
  * waits on a run that does not exist. *Key insights* says the findings were cleared, with *Look up
  * again*, whose tap asks for the track shown; *Sources*, *Genres*, *Dates*, *Lyrics* and the song's
  * row say "Cleared with the history.", without the turning record, as do the pages of *Separate
- * pages*; the cover's back does not: turning the cover over asks for the look-up, once; a model
- * found unavailable is still said; a hold on another track leaves the waiting texts, which are then
- * true.
+ * pages*; the cover's back does not: turning the cover over asks for the look-up, once; a back left
+ * turned over from before the clear asks nothing, as Home is composed again or comes back, and gives
+ * way to the cover's front until it is turned over again (#1148); a model found unavailable is still
+ * said; a hold on another track leaves the waiting texts, which are then true.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w411dp-h891dp-420dpi")
@@ -62,6 +71,28 @@ class ClearedTrackScreenTest {
 
     private fun shows(text: String) = compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty()
 
+    // The track the pipeline holds, which a test may change while Home shows.
+    private var held by mutableStateOf<NowPlaying?>(null)
+
+    // Home's saved state, as an activity keeps it: [leave] saves it and drops Home, as going to
+    // *Settings* does, and [comeBack] composes it afresh from what was saved, as `rememberSaveable`
+    // restores it (what `StateRestorationTester` does, which needs a content rule these tests do not use).
+    private var emitted by mutableStateOf(true)
+    private var registry by mutableStateOf(SaveableStateRegistry(null) { true })
+    private var saved: Map<String, List<Any?>> = emptyMap()
+
+    private fun leave() {
+        saved = registry.performSave()
+        emitted = false
+        compose.waitForIdle()
+    }
+
+    private fun comeBack() {
+        registry = SaveableStateRegistry(saved) { true }
+        emitted = true
+        compose.waitForIdle()
+    }
+
     // Home for [playing], the pipeline holding [cleared]; on [page] of its own under *Separate pages*,
     // else Home itself.
     private fun show(
@@ -70,22 +101,29 @@ class ClearedTrackScreenTest {
         unavailable: UnavailableModel? = null,
         block: () -> Unit,
     ) {
-        val state =
-            NowPlayingState(
-                PipelineView(track = null, aiReady = true, cleared = cleared),
-                playing,
-                PlaybackInfo(Settings.SPOTIFY, PlaybackStatus.PAUSED),
-                settings = Settings(),
-                unavailable = unavailable,
-            )
+        held = cleared
         val actions = NowPlayingActions(HomeFixtures.normalizer::normalize, lookUpAgain = { lookedUp += it })
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity {
                 it.setContent {
-                    if (page != null) {
-                        NowPlayingPageContent(page, state, actions) {}
-                    } else {
-                        Column(Modifier.verticalScroll(rememberScrollState())) { NowPlayingContent(state, actions) }
+                    val state =
+                        NowPlayingState(
+                            PipelineView(track = null, aiReady = true, cleared = held),
+                            playing,
+                            PlaybackInfo(Settings.SPOTIFY, PlaybackStatus.PAUSED),
+                            settings = Settings(),
+                            unavailable = unavailable,
+                        )
+                    if (emitted) {
+                        CompositionLocalProvider(LocalSaveableStateRegistry provides registry) {
+                            if (page != null) {
+                                NowPlayingPageContent(page, state, actions) {}
+                            } else {
+                                Column(Modifier.verticalScroll(rememberScrollState())) {
+                                    NowPlayingContent(state, actions)
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -159,15 +197,65 @@ class ClearedTrackScreenTest {
             tap(COVER_TAG)
             compose.onNodeWithTag(COVER_BACK_TAG).assertExists()
             assertEquals("the turn asks, as Look up again does", listOf(playing), lookedUp)
-            val onBack = hasAnyAncestor(hasTestTag(COVER_BACK_TAG))
-            val cleared = hasText(text(R.string.home_cleared)) and onBack
-            val looking = hasText(text(R.string.home_musicbrainz_looking)) and onBack
-            compose.onAllNodes(cleared, useUnmergedTree = true).assertCountEquals(0)
-            compose.onAllNodes(looking, useUnmergedTree = true).assertCountEquals(1)
+            backSays(R.string.home_musicbrainz_looking, notSaid = R.string.home_cleared)
             // Back to the cover, and over again: no second ask.
             tap(COVER_TAG)
             tap(COVER_TAG)
             assertEquals(listOf(playing), lookedUp)
+        }
+
+    private val onBack = hasAnyAncestor(hasTestTag(COVER_BACK_TAG))
+
+    // What the back says: [said] once, and not [notSaid].
+    private fun backSays(
+        said: Int,
+        notSaid: Int,
+    ) {
+        compose.onAllNodes(hasText(text(said)) and onBack, useUnmergedTree = true).assertCountEquals(1)
+        compose.onAllNodes(hasText(text(notSaid)) and onBack, useUnmergedTree = true).assertCountEquals(0)
+    }
+
+    // The cover turned over before the clear, then [clear] holds the track: the front shows, and nothing
+    // is asked; then a fresh turn asks once.
+    private fun aBackLeftTurnedOverAsksNothingUntilTurnedAgain(clear: () -> Unit) =
+        show(cleared = null) {
+            tap(COVER_TAG)
+            compose.onNodeWithTag(COVER_BACK_TAG).assertExists()
+            clear()
+            compose.onNodeWithTag(COVER_BACK_TAG).assertDoesNotExist()
+            assertEquals("nothing asked for a back left turned over", emptyList<NowPlaying>(), lookedUp)
+            assertEquals("no turning record", 0, records())
+            // The front shows: the next turn turns it over, and asks, once.
+            tap(COVER_TAG)
+            assertEquals("the new turn asks", listOf(playing), lookedUp)
+            backSays(R.string.home_musicbrainz_looking, notSaid = R.string.home_cleared)
+            tap(COVER_TAG)
+            tap(COVER_TAG)
+            assertEquals("once while the hold lasts", listOf(playing), lookedUp)
+        }
+
+    @Test
+    fun aBackLeftTurnedOverAsksNothingWhenTheClearComesWithHomeShown() =
+        aBackLeftTurnedOverAsksNothingUntilTurnedAgain {
+            held = playing
+            compose.waitForIdle()
+        }
+
+    @Test
+    fun aBackLeftTurnedOverAsksNothingWhenHomeComesBackAfterTheClear() =
+        aBackLeftTurnedOverAsksNothingUntilTurnedAgain {
+            leave()
+            held = playing
+            comeBack()
+        }
+
+    @Test
+    fun aScreenReadersTurnOfTheCoverOverAsksForTheLookUpOnce() =
+        show(cleared = playing) {
+            compose.onNodeWithTag(COVER_TAG).performScrollTo().performSemanticsAction(SemanticsActions.OnClick)
+            compose.waitForIdle()
+            compose.onNodeWithTag(COVER_BACK_TAG).assertExists()
+            assertEquals("the screen reader's turn asks, as a tap does", listOf(playing), lookedUp)
         }
 
     @Test

@@ -36,11 +36,14 @@ object EditionYear {
             while (rest > 0 && name[rest - 1].isWhitespace()) rest--
             val part = name.substring(opener, end)
             through = rest > 0 && Edition.isEdition(part)
-            val left = (name.substring(0, rest) + name.substring(end)).trim()
+            // The name less the part is built only for the part that gives a year, so a run of
+            // editions without one costs a pass over the name, not one per part (#1147).
             found =
                 yearIn(partWords(RANGE.replace(part, " $RANGE_WORD ")), qualified = true)
                     ?.takeIf { through }
-                    ?.let { (year, remaster) -> YearTag(year, remaster, left) }
+                    ?.let { (year, remaster) ->
+                        YearTag(year, remaster, (name.substring(0, rest) + name.substring(end)).trim())
+                    }
             end = rest
             opener = Edition.openerOfLast(name, 0, end)
         }
@@ -49,24 +52,17 @@ object EditionYear {
 
     // The year tag at the end of [head], without brackets: the longest run of at most [MAX_SUFFIX]
     // words of [SUFFIX_WORDS] and years at its end that gives one, with a word before it; the
-    // editions after it ([tail]) kept.
+    // editions after it ([tail]) kept. Only the last [MAX_SUFFIX] + 1 words are read, found from the
+    // end, and the year ranges marked in one pass over the name, so the work grows with its length
+    // only (#1147).
     private fun suffix(
         head: String,
         tail: String,
     ): YearTag? {
-        val starts = head.indices.filter { i -> !head[i].isWhitespace() && (i == 0 || head[i - 1].isWhitespace()) }
-        // A word in a year range ("1987 - 1988") is no edition's year: it stands as [RANGE_WORD].
-        val ranged = RANGE.findAll(head).map { it.range }.toList()
-        val words =
-            starts.map { start ->
-                if (ranged.any { start in it }) {
-                    RANGE_WORD
-                } else {
-                    head.substring(start).takeWhile { !it.isWhitespace() }.lowercase()
-                }
-            }
+        val (starts, words) = lastWords(head)
+        // Word 0 is the one before the tag's words, or the name's first word: a tag starts after it.
         val tagged =
-            (maxOf(1, words.size - MAX_SUFFIX) until words.size)
+            (1 until words.size)
                 .filter { from -> words.drop(from).all { it in SUFFIX_WORDS || Edition.YEAR.matches(it) } }
                 .firstNotNullOfOrNull { from -> yearIn(words.drop(from), qualified = false)?.let { from to it } }
         return tagged?.let { (from, tag) ->
@@ -78,6 +74,28 @@ object EditionYear {
                     .trimEnd()
             YearTag(tag.first, tag.second, (left + tail).trim()).takeIf { left.isNotEmpty() }
         }
+    }
+
+    // The starts of [head]'s last [MAX_SUFFIX] + 1 words, first to last, and the words, lowercase:
+    // found from the end, by index. A word in a year range ("1987 - 1988") is no edition's year: it
+    // stands as [RANGE_WORD], the ranges marked in one pass over [head].
+    private fun lastWords(head: String): Pair<List<Int>, List<String>> {
+        val starts = ArrayDeque<Int>()
+        val ends = ArrayDeque<Int>()
+        var at = head.length
+        while (starts.size <= MAX_SUFFIX) {
+            while (at > 0 && head[at - 1].isWhitespace()) at--
+            if (at == 0) break
+            ends.addFirst(at)
+            while (at > 0 && !head[at - 1].isWhitespace()) at--
+            starts.addFirst(at)
+        }
+        val ranged = BooleanArray(starts.size)
+        for (range in RANGE.findAll(head)) {
+            starts.forEachIndexed { k, start -> if (start in range.range) ranged[k] = true }
+        }
+        val words = starts.indices.map { k -> if (ranged[k]) RANGE_WORD else head.substring(starts[k], ends[k]) }
+        return starts to words.map(String::lowercase)
     }
 
     // The year and whether it is a remaster's, of a year next to a remaster ("2024 remaster",

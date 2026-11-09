@@ -67,7 +67,9 @@ internal fun UnderAlbum(
     val firsts by actions.releaseGroups.firsts.collectAsState()
     val group = editionGroup(track, header)
     val look = remember(group, actions.releaseGroups) { group?.let { { actions.releaseGroups.look(it) } } }
-    val dates = datesItem(homeDates(track, header, firsts), NoDates.of(track), retry, openSources, search, look)
+    // Worked out once per track, header and group lookup, not at every recomposition (#1147).
+    val sentences = remember(track, header, firsts) { homeDates(track, header, firsts) }
+    val dates = datesItem(sentences, NoDates.of(track), retry, openSources, search, look)
     val lyrics =
         if (shown.lyricsLinks) {
             val links = remember(track, shown.lyricsSearch) { homeLyrics(track, shown.lyricsSearch) }

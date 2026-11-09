@@ -35,6 +35,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -78,7 +79,8 @@ import kotlin.time.Duration.Companion.milliseconds
  * [retry] *Retry* runs when MusicBrainz could not be reached, the way to *Settings → Sources*
  * ([openSources]), and the app's own [colors], since the back takes nothing from the art. For a
  * track *Clear history* holds under *On request* (#1112), [lookUp] asks for it to be looked up again,
- * as *Look up again* does: the back shown asks, and fills once the sources answer; null otherwise.
+ * as *Look up again* does: a turn of the cover over asks, and the back fills once the sources answer;
+ * null otherwise.
  */
 @Suppress("LongParameterList") // What the back shows, what it asks, and where its buttons go.
 internal class CoverTurn(
@@ -137,9 +139,12 @@ internal fun coverTurn(
  * vertical axis in [FLIP_MS] (at once under *Remove animations*), to show the album's tracklist on
  * its back ([CoverBackFace]), and a tap anywhere on the back turns back; a scroll or a swipe on it
  * does not, nor a tap on its buttons. The first turn asks for the album's tracklist ([CoverTurn.look]),
- * and so does a back shown when the album becomes known. For a track *Clear history* holds, the back
- * shown asks for it to be looked up again ([CoverTurn.lookUp], #1112), once while the hold lasts:
- * turning back and over again asks no more. The back stays while [CoverTurn.album] is
+ * and so does a back shown when the album becomes known. For a track *Clear history* holds, a turn of
+ * the cover over asks for it to be looked up again ([CoverTurn.lookUp], #1112), once while the hold
+ * lasts: turning back and over again asks no more. The turn asks, not the back shown (#1148): a back
+ * left turned over from before the clear asks nothing, and the cover turns to its front when the hold
+ * comes, or shows its front at once when Home comes back with the back kept ([rememberSaveable]) while
+ * *Settings* cleared; turning it over again asks. The back stays while [CoverTurn.album] is
  * the same, the playing song's mark moving with the track, and gives way to the cover on another
  * album. A screen reader reads the cover as a button, "Album art", "Double-tap to show tracklist",
  * and the back as "Tracklist", "Double-tap to show cover", its tracks a list in it.
@@ -156,19 +161,18 @@ internal fun FlippingCover(
     val album = turn.album.orEmpty()
     var backOf by rememberSaveable { mutableStateOf<String?>(null) }
     LaunchedEffect(album) { if (backOf != album) backOf = null }
-    val flipped = backOf == album
-    val toggle = { backOf = if (backOf == album) null else album }
+    val lookUp = lookUpOnTurn(album, turn.lookUp)
+    // A back left turned over when a clear's hold comes, which asked nothing (#1148): the cover turns
+    // to its front, and a back restored so is not shown at all.
+    LaunchedEffect(lookUp.unasked) { if (lookUp.unasked) backOf = null }
+    val flipped = backOf == album && !lookUp.unasked
     LaunchedEffect(flipped, turn.key) {
         if (flipped) turn.key?.let(turn.look)
     }
-    // Once for each hold of the album (#1112): a new clear's hold asks again.
-    val lookUp = turn.lookUp
-    var askedLookUp by remember(album, lookUp != null) { mutableStateOf(false) }
-    LaunchedEffect(flipped, lookUp != null) {
-        if (flipped && lookUp != null && !askedLookUp) {
-            askedLookUp = true
-            lookUp()
-        }
+    val toggle = {
+        val over = backOf != album
+        backOf = if (over) album else null
+        if (over) lookUp.ask()
     }
     val still = animatorDurationScale() == 0f
     val target = if (flipped) HALF_TURN else 0f
@@ -214,11 +218,41 @@ internal fun FlippingCover(
 }
 
 /**
+ * For a track a clear holds (#1112), the look-up a turn of the cover over asks for, [ask]; [unasked]
+ * while the hold lasts and nothing was asked, so a back left turned over gives way to the front.
+ */
+private class TurnLookUp(
+    val ask: () -> Unit,
+    val unasked: Boolean,
+)
+
+/**
+ * The look-up [lookUp] for the [album] shown, asked once for each hold (#1112): a new clear's hold
+ * asks again. Asked by the turn itself, never by a back already showing (#1148), and read when the
+ * turn is made, since the tap's handler outlives the composition it was made in.
+ */
+@Composable
+private fun lookUpOnTurn(
+    album: String,
+    lookUp: (() -> Unit)?,
+): TurnLookUp {
+    var asked by remember(album, lookUp != null) { mutableStateOf(false) }
+    val ask by rememberUpdatedState {
+        if (lookUp != null && !asked) {
+            asked = true
+            lookUp()
+        }
+    }
+    return TurnLookUp({ ask() }, unasked = lookUp != null && !asked)
+}
+
+/**
  * The back: the tracklist on the app's `surfaceContainerHigh`, a single disc as one list, several a
  * page each ([DiscPages]); else why there is none, as *Dates* says it ([NoDatesText]), but for an
  * album MusicBrainz has no tracklist of, or several albums of its name. Never "Cleared with the
- * history." (#1112): a back shown for a track a clear holds asks for it to be looked up, so it says
- * it is looking.
+ * history." (#1112): a back shown for a track a clear holds was turned over during the hold, which
+ * asked for it to be looked up, so it says it is looking (a back left turned over gives way to the
+ * front, #1148).
  */
 @Composable
 private fun CoverBackFace(turn: CoverTurn) {
