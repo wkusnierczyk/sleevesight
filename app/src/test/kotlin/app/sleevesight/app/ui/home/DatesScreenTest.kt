@@ -195,6 +195,11 @@ class DatesScreenTest {
                 ) to ("The single $girl was first released in 1985. This is its 2024 remaster." to listOf(girl)),
                 DateSentence.Edition("1983-05", "Four", EditionPart.Its(edition2004), ReleaseKind.EP) to
                     ("The EP Four was first released in May 1983. This is its 2004 edition." to listOf("Four")),
+                DateSentence.Edition("1974-01", "Sundown", EditionPart.Its(YearTag("2011", false, "Sundown"))) to
+                    (
+                        "The album Sundown was first released in January 1974. This is its 2011 edition." to
+                            listOf("Sundown")
+                    ),
                 DateSentence.FirstOriginal(thriller) to
                     ("This track was first released on the original $thriller album." to listOf(thriller)),
                 DateSentence.First("1984-11-13", "Like a Virgin", null, album = true) to

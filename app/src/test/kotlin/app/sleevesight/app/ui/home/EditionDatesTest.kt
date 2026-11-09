@@ -148,6 +148,58 @@ class EditionDatesTest {
     }
 
     @Test
+    fun aQualifiedEditionMusicBrainzLacksIsItsEdition() {
+        // *Sundown (2011 Anniversary Edition)* and *Sundown (Deluxe Edition 2011)*, matched to the
+        // 1974 album: "This is its 2011 edition."
+        val dates = listOf(ReleaseDate("Sundown", "1974-01", "g-sundown", "Album"))
+        val first = FirstRelease("1974-01", "Sundown", "g-sundown", "r-sundown", "Album")
+        val group = mapOf("g-sundown" to MbGroupFirst("g-sundown", "Sundown", "1974-01"))
+        for (album in listOf("Sundown (2011 Anniversary Edition)", "Sundown (Deluxe Edition 2011)")) {
+            val playing = sundown.copy(album = album, year = 2011)
+            assertEquals(
+                album,
+                listOf(
+                    DateSentence.Edition("1974-01", "Sundown", EditionPart.Its(YearTag("2011", false, "Sundown"))),
+                    DateSentence.FirstOriginal("Sundown"),
+                ),
+                homeDates(resolved(playing, first, dates), playing, group),
+            )
+            assertEquals(album, null, albumLineYear(album, "1974"))
+        }
+    }
+
+    @Test
+    fun aTrackFirstOutLaterInTheOriginalsYearKeepsItsOwnDate() {
+        // A bonus track first out on *X (Expanded)*, 20 November 2020, in the group of *X*, first
+        // released on 10 January 2020; played on the 2022 deluxe edition.
+        val bonus = sundown.copy(title = "Bonus", artists = "Someone", album = "X (Deluxe)", year = 2022)
+        val dates =
+            listOf(
+                ReleaseDate("X", "2020-01-10", "g-x", "Album"),
+                ReleaseDate("X (Expanded)", "2020-11-20", "g-x", "Album"),
+                ReleaseDate("X (Deluxe)", "2022", "g-x", "Album"),
+            )
+        val group = mapOf("g-x" to MbGroupFirst("g-x", "X", "2020-01-10"))
+        val expanded = FirstRelease("2020-11-20", "X (Expanded)", "g-x", "r-x-expanded", "Album")
+        assertEquals(
+            listOf(
+                DateSentence.Edition("2020-01-10", "X", EditionPart.Same("2022")),
+                DateSentence.First("2020-11-20", "X (Expanded)", null, album = true),
+            ),
+            homeDates(resolved(bonus, expanded, dates), bonus, group),
+        )
+        // Out on the original's date, or one less precise in its year: the original album.
+        for (date in listOf("2020-01-10", "2020-01", "2020")) {
+            val original = FirstRelease(date, "X", "g-x", "r-x", "Album")
+            assertEquals(
+                date,
+                DateSentence.FirstOriginal("X"),
+                homeDates(resolved(bonus, original, dates), bonus, group)[1],
+            )
+        }
+    }
+
+    @Test
     fun theAlbumLineDropsItsYearOnlyWhenTheNameGivesALaterOrTheSameEditionYear() {
         assertEquals(null, albumLineYear("Material Girl (2024 Remaster)", "1985"))
         assertEquals(null, albumLineYear("Actually: Further Listening 1987 - 1988 (2018 Remaster)", "2001"))

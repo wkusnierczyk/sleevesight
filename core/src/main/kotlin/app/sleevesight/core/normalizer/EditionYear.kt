@@ -38,7 +38,7 @@ object EditionYear {
             through = rest > 0 && Edition.isEdition(part)
             val left = (name.substring(0, rest) + name.substring(end)).trim()
             found =
-                yearIn(partWords(part))
+                yearIn(partWords(part), qualified = true)
                     ?.takeIf { through }
                     ?.let { (year, remaster) -> YearTag(year, remaster, left) }
             end = rest
@@ -59,7 +59,7 @@ object EditionYear {
         val tagged =
             (maxOf(1, words.size - MAX_SUFFIX) until words.size)
                 .filter { from -> words.drop(from).all { it in SUFFIX_WORDS || Edition.YEAR.matches(it) } }
-                .firstNotNullOfOrNull { from -> yearIn(words.drop(from))?.let { from to it } }
+                .firstNotNullOfOrNull { from -> yearIn(words.drop(from), qualified = false)?.let { from to it } }
         return tagged?.let { (from, tag) ->
             val left =
                 head
@@ -72,25 +72,52 @@ object EditionYear {
     }
 
     // The year and whether it is a remaster's, of a year next to a remaster ("2024 remaster",
-    // "remastered 2011", "2011 digital remaster") or before an "edition", in [words]; null when none.
-    private fun yearIn(words: List<String>): Pair<String, Boolean>? =
+    // "remastered 2011", "2011 digital remaster"), or next to an "edition" ("2004 edition", "deluxe
+    // edition 2011"), in [words]; null when none. With [qualified], also a year before an edition one
+    // or two of [QUALIFIERS] name ("2011 anniversary edition", "2011 super deluxe edition"): in a
+    // bracketed part only, since without brackets the year may be the name's own ("The 1975 Deluxe
+    // Edition").
+    private fun yearIn(
+        words: List<String>,
+        qualified: Boolean,
+    ): Pair<String, Boolean>? =
         words.indices.firstNotNullOfOrNull { i ->
             val next = words.getOrNull(i + 1).let { if (it == "digital") words.getOrNull(i + 2) else it }
+            val before = words.getOrNull(i - 1)
             when {
                 !Edition.YEAR.matches(words[i]) -> null
-                next in REMASTERS -> words[i] to true
-                next == "edition" -> words[i] to false
-                words.getOrNull(i - 1) in REMASTERS -> words[i] to true
+                next in REMASTERS || before in REMASTERS -> words[i] to true
+                next == "edition" || before == "edition" -> words[i] to false
+                qualified && qualifiedEdition(words, i) -> words[i] to false
                 else -> null
             }
         }
 
-    /** The most words an unbracketed year tag has: "2011 Remastered Version", "2011 Digital Remaster". */
-    private const val MAX_SUFFIX = 3
+    // Whether [words] after word [i] are one or two of [QUALIFIERS], then "edition".
+    private fun qualifiedEdition(
+        words: List<String>,
+        i: Int,
+    ): Boolean =
+        (1..MAX_QUALIFIERS).any { n ->
+            words.getOrNull(i + n + 1) == "edition" && (1..n).all { words.getOrNull(i + it) in QUALIFIERS }
+        }
+
+    /**
+     * The most words an unbracketed year tag has: "2011 Remastered Version", "Super Deluxe Edition
+     * 2011".
+     */
+    private const val MAX_SUFFIX = 4
+
+    /** The most [QUALIFIERS] between a year and its "edition": "2011 Super Deluxe Edition". */
+    private const val MAX_QUALIFIERS = 2
+
+    /** The words that may name an edition between its year and "edition", or before "edition" and its year. */
+    private val QUALIFIERS =
+        setOf("anniversary", "deluxe", "expanded", "special", "legacy", "super", "limited", "collectors")
 
     /** The words that make a year next to them a remaster's. */
     private val REMASTERS = setOf("remaster", "remastered")
 
     /** The words besides years an unbracketed year tag is made of. */
-    private val SUFFIX_WORDS = REMASTERS + setOf("edition", "digital", "version")
+    private val SUFFIX_WORDS = REMASTERS + QUALIFIERS + setOf("edition", "digital", "version")
 }
