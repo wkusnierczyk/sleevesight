@@ -9,6 +9,9 @@ import app.sleevesight.core.resolution.MbGroupFirst
 import app.sleevesight.core.sources.FirstRelease
 import app.sleevesight.core.sources.ReleaseDate
 import app.sleevesight.core.sources.Resolution
+import app.sleevesight.core.synthesis.ReleaseType
+import app.sleevesight.core.synthesis.Released
+import app.sleevesight.core.synthesis.SearchAnswer
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -102,6 +105,57 @@ class EditionDatesTest {
         // The lookup answers: the album's first release is 1959's, and the track's still 1997's.
         val group = mapOf("g-x" to MbGroupFirst("g-x", "X", "1959-03"))
         assertEquals(listOf(DateSentence.Edition("1959-03", "X", remaster), track), homeDates(state, bonus, group))
+    }
+
+    @Test
+    fun aGroupFirstReleasedEarlierInTheSameYearGivesTheOriginalItsDate() {
+        // *X (2018 Remaster)*, matched to *X* of 20 November 1997, where the track first came out;
+        // the group's first release is of 10 January 1997, under the same title.
+        val track = sundown.copy(title = "Outtake", artists = "Someone", album = "X (2018 Remaster)", year = 2018)
+        val first = FirstRelease("1997-11-20", "X", "g-x", "r-x", "Album")
+        val state = resolved(track, first, listOf(ReleaseDate("X", "1997-11-20", "g-x", "Album")))
+        val remaster = EditionPart.Its(YearTag("2018", true, "X"))
+        val dated = DateSentence.First("1997-11-20", "X", null, album = true)
+        // Pending: the release matched as the original, the track with its own date.
+        assertEquals(listOf(DateSentence.Edition("1997-11-20", "X", remaster), dated), homeDates(state, track))
+        // Answered: the original is January's, and the track, out in November, keeps its date.
+        val group = mapOf("g-x" to MbGroupFirst("g-x", "X", "1997-01-10"))
+        assertEquals(listOf(DateSentence.Edition("1997-01-10", "X", remaster), dated), homeDates(state, track, group))
+        // Answered with the matched release's own date, or only its year: the original album.
+        for (answer in listOf("1997-11-20", "1997")) {
+            val same = mapOf("g-x" to MbGroupFirst("g-x", "X", answer))
+            assertEquals(
+                answer,
+                listOf(DateSentence.Edition(answer, "X", remaster), DateSentence.FirstOriginal("X")),
+                homeDates(state, track, same),
+            )
+        }
+    }
+
+    @Test
+    fun aTrackFirstOutLaterInTheAlbumsYearIsNotThisAlbum() {
+        // The album played, *X* of 10 January 2020; the track first out on *X (Expanded)*, in the
+        // same group, on 20 November 2020: not "this album".
+        val bonus = sundown.copy(title = "Bonus", artists = "Someone", album = "X", year = 2020)
+        val dates =
+            listOf(
+                ReleaseDate("X", "2020-01-10", "g-x", "Album"),
+                ReleaseDate("X (Expanded)", "2020-11-20", "g-x", "Album"),
+            )
+        val expanded = FirstRelease("2020-11-20", "X (Expanded)", "g-x", "r-x-expanded", "Album")
+        val later = DateSentence.First("2020-11-20", "X (Expanded)", null, album = true)
+        val state = resolved(bonus, expanded, dates)
+        assertEquals(listOf(DateSentence.Album("2020-01-10"), later), homeDates(state, bonus))
+        // On the album's date, or one less precise: this album.
+        for (date in listOf("2020-01-10", "2020-01", "2020")) {
+            val here = FirstRelease(date, "X", "g-x", "r-x", "Album")
+            assertEquals(date, DateSentence.FirstHere(), homeDates(resolved(bonus, here, dates), bonus)[1])
+        }
+        // The same for an AI answer's dates.
+        val answer = SearchAnswer.Dates(album = "2020-01-10", first = Released("2020-11-20", "X", ReleaseType.ALBUM))
+        assertEquals(DateSentence.First("2020-11-20", "X", null, album = true), aiDates(answer, bonus)[1])
+        val sameDay = answer.copy(first = Released("2020-01", "X", ReleaseType.ALBUM))
+        assertEquals(DateSentence.FirstHere(), aiDates(sameDay, bonus)[1])
     }
 
     @Test
