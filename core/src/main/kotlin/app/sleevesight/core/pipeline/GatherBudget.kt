@@ -38,7 +38,9 @@ internal class GatherBudget(
      */
     suspend fun within(block: suspend CoroutineScope.() -> Unit): Duration? {
         val started = timeSource.markNow()
-        var allowed = left + credit()
+        // Waiting done between two calls, when no budget runs, is not credited.
+        credit()
+        var allowed = left
         if (!allowed.isPositive() && !waiting()) return Duration.ZERO
         val ended =
             coroutineScope {
@@ -58,7 +60,10 @@ internal class GatherBudget(
                 }
                 outcome
             }
+        // The waiting up to the end, credited before what ran is taken and the rest clamped: else
+        // waiting at its end would be given to the next call, past a deficit dropped by the clamp.
         val ran = started.elapsedNow()
+        allowed += credit()
         left = (allowed - ran).coerceAtLeast(Duration.ZERO)
         return ran.takeIf { !ended }
     }
