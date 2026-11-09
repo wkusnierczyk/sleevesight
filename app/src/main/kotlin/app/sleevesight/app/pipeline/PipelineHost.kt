@@ -404,23 +404,13 @@ class PipelineHost(
     /**
      * The user tapped *Look up again* beside the track [shown] (#1112), which the last *Clear
      * history* holds ([PipelineView.cleared]): it is looked up as a new track is, once no clear is
-     * still wiping the stores ([clearEnded]). Dropped, as a tap on Write is, for a track the session
-     * layer no longer shows.
+     * still wiping the stores ([clear]), and only if the session layer still shows it then.
+     * Dropped, as a tap on Write is, for a track the session layer no longer shows.
      */
     fun lookUpAgain(shown: NowPlaying) {
         val latest = latestPlaying() ?: return
         if (!sameInsightTrack(shown, latest)) return
-        queue.trySend(CoordinatorEvent.LookUpTapped)
-    }
-
-    /**
-     * *Clear history* has wiped every store, after [forget] (#1112); called once for each clear,
-     * whatever its outcome. A tap on *Look up again* held meanwhile is taken, and with [lookUp]
-     * (*Look up the track again*'s *Automatically*, as chosen when the clear was asked) the track it
-     * holds, if still the one playing, is looked up as a new track is.
-     */
-    fun clearEnded(lookUp: Boolean) {
-        queue.trySend(CoordinatorEvent.ClearEnded(lookUp))
+        queue.trySend(CoordinatorEvent.LookUpTapped(latest))
     }
 
     /**
@@ -466,16 +456,33 @@ class PipelineHost(
     /**
      * *Clear history*'s part here (#547): the run and the preparation cancelled, the live
      * pipeline's state and the insight shown gone, the coordinator's ledger emptied, and the track
-     * playing not looked up again until another one plays or it is looked up again
-     * ([clearEnded], [lookUpAgain], #1112; no paid call on its own); [clearEnded] must follow.
-     * Returns once the loop has taken it. The host must have been started ([start]).
+     * playing not looked up again until another one plays or it is looked up again (#1112; no paid
+     * call on its own). Once the loop has taken that, [wipe] runs (the rest of the clear: the
+     * caches and what is held in memory), and then, whatever happened, however it ended (cancelled
+     * too, at any point after the clear was queued), the clear's end, exactly once
+     * ([CoordinatorEvent.ClearEnded]): a tap on *Look up again* ([lookUpAgain]) waits for it, and
+     * with [lookUp] (*Look up the track again*'s *Automatically*, as chosen when the clear was asked)
+     * the track held is looked up again as a new track is, if the session layer still shows it.
+     * Returns what [wipe] returns. The host must have been started ([start]).
      */
-    suspend fun forget() {
-        val done = CompletableDeferred<Unit>()
-        forgetting.add(done)
-        queue.send(CoordinatorEvent.Cleared)
-        done.await()
+    suspend fun <T> clear(
+        lookUp: Boolean,
+        wipe: suspend () -> T,
+    ): T {
+        val taken = CompletableDeferred<Unit>()
+        forgetting.add(taken)
+        // Queued without suspending, so that a clear queued always reaches the finally below.
+        queue.trySend(CoordinatorEvent.Cleared)
+        try {
+            taken.await()
+            return wipe()
+        } finally {
+            queue.trySend(CoordinatorEvent.ClearEnded(lookUp, latestPlaying()))
+        }
     }
+
+    /** [clear] with nothing more to wipe, and nothing looked up again unless asked. */
+    suspend fun forget() = clear(lookUp = false) {}
 
     /** Runs until [scope] is cancelled; called once. */
     fun start(scope: CoroutineScope) {

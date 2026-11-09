@@ -4,6 +4,8 @@ import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WriteAutomatically
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
@@ -20,7 +22,7 @@ import kotlin.time.Duration.Companion.seconds
  * After *Clear history* (#1112): the track playing is held, with no run, and the view says so
  * ([PipelineView.cleared]) rather than leave Home waiting on a run that does not exist, whether the
  * clear came during a run or after one; *Look up the track again*'s *Automatically* looks it up
- * afresh once the clear has ended ([PipelineHost.clearEnded]), as a new track, the insight
+ * afresh once the clear has ended ([PipelineHost.clear]), as a new track, the insight
  * written again only if insights are written automatically; *On request* waits for *Look up again*
  * ([PipelineHost.lookUpAgain]), which does the same, and a tap made while the clear still wipes the
  * stores waits for its end. A track an ad's withdrawal holds is never looked up again.
@@ -32,9 +34,22 @@ internal class PipelineHostLookUpAgainTest : PipelineHostFixture() {
     private fun TestScope.clear(automatically: Boolean) {
         backgroundScope.launch {
             epoch.advance()
-            host.forget()
-            cache.clearCards()
-            host.clearEnded(automatically)
+            host.clear(automatically) { cache.clearCards() }
+        }
+        runCurrent()
+    }
+
+    // A clear whose wipe waits for [wiping], as a slow one would: the stores are still being wiped.
+    private fun TestScope.clearWaiting(
+        automatically: Boolean,
+        wiping: CompletableDeferred<Unit>,
+    ) {
+        backgroundScope.launch {
+            epoch.advance()
+            host.clear(automatically) {
+                wiping.await()
+                cache.clearCards()
+            }
         }
         runCurrent()
     }
@@ -208,12 +223,8 @@ internal class PipelineHostLookUpAgainTest : PipelineHostFixture() {
             started()
             play("One")
             settle()
-            // The clear's first part: the stores are still being wiped.
-            backgroundScope.launch {
-                epoch.advance()
-                host.forget()
-            }
-            runCurrent()
+            val wiping = CompletableDeferred<Unit>()
+            clearWaiting(automatically = false, wiping)
             assertEquals(
                 "One",
                 host.state.value.cleared
@@ -224,8 +235,7 @@ internal class PipelineHostLookUpAgainTest : PipelineHostFixture() {
             settle()
             assertEquals("no run before the wipe ends", listOf("artist|one"), musicBrainz.asked)
 
-            cache.clearCards()
-            host.clearEnded(lookUp = false)
+            wiping.complete(Unit)
             settle()
             assertEquals("exactly one run after it", listOf("artist|one", "artist|one"), musicBrainz.asked)
             lookedUp("One")
@@ -237,19 +247,74 @@ internal class PipelineHostLookUpAgainTest : PipelineHostFixture() {
             started()
             play("One")
             settle()
-            backgroundScope.launch {
-                epoch.advance()
-                host.forget()
-            }
-            runCurrent()
+            val wiping = CompletableDeferred<Unit>()
+            clearWaiting(automatically = true, wiping)
             host.lookUpAgain(checkNotNull(playing))
             settle()
             assertEquals(listOf("artist|one"), musicBrainz.asked)
 
-            cache.clearCards()
-            host.clearEnded(lookUp = true)
+            wiping.complete(Unit)
             settle()
             assertEquals(listOf("artist|one", "artist|one"), musicBrainz.asked)
+        }
+
+    @Test
+    fun `automatically, nothing runs when the player stopped showing the track before the clear ended`() =
+        runTest {
+            started()
+            play("One")
+            settle()
+            val wiping = CompletableDeferred<Unit>()
+            clearWaiting(automatically = true, wiping)
+            // The session layer shows nothing (the player gone); the pipeline hears no report of it.
+            changes.value = null
+            runCurrent()
+
+            wiping.complete(Unit)
+            settle()
+            assertEquals(listOf("artist|one"), musicBrainz.asked)
+            assertEquals(0, provider.requestsFor("One"))
+        }
+
+    @Test
+    fun `a tap held through the wipe runs nothing when an ad plays by its end`() =
+        runTest {
+            started()
+            play("One")
+            settle()
+            val wiping = CompletableDeferred<Unit>()
+            clearWaiting(automatically = false, wiping)
+            host.lookUpAgain(checkNotNull(playing))
+            // An ad starts: the session layer shows no track while it plays, and reports none.
+            changes.value = null
+            runCurrent()
+
+            wiping.complete(Unit)
+            settle()
+            assertEquals(listOf("artist|one"), musicBrainz.asked)
+        }
+
+    @Test
+    fun `a clear cancelled while it waits to be taken still ends, so another clear's end looks up once`() =
+        runTest {
+            started()
+            play("One")
+            settle()
+            val wiping = CompletableDeferred<Unit>()
+            clearWaiting(automatically = false, wiping)
+            host.lookUpAgain(checkNotNull(playing))
+            runCurrent()
+            // A second clear, cancelled while it waits for the loop to take it.
+            val second =
+                backgroundScope.launch(start = CoroutineStart.UNDISPATCHED) { host.clear(lookUp = false) {} }
+            second.cancel()
+            settle()
+            assertEquals("the first clear still wipes", listOf("artist|one"), musicBrainz.asked)
+
+            wiping.complete(Unit)
+            settle()
+            assertEquals("one run once both ended", listOf("artist|one", "artist|one"), musicBrainz.asked)
+            lookedUp("One")
         }
 
     @Test

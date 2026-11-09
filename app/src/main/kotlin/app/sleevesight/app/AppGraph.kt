@@ -870,16 +870,15 @@ class AppGraph internal constructor(
      * ([ReleaseGroupFeed.forget], #1099); the
      * artist facts the listening session cited; the session layer's last change, which names the
      * track before; and the diagnostics' steps, which name the tracks. The API keys and the settings stay.
-     * Last, whatever came before, the pipeline hears that the clear has ended
-     * ([PipelineHost.clearEnded], #1112): with [lookUp] (*Look up the track again*'s *Automatically*,
+     * The pipeline's part brackets the rest ([PipelineHost.clear], #1112), which ends, whatever came
+     * before, cancellation included, with the clear's end: with [lookUp] (*Look up the track again*'s *Automatically*,
      * as chosen when the clear was asked) the track playing is looked up again, and a tap on *Look up
      * again* made meanwhile is taken, so that run finds nothing kept from before and keeps what it
      * finds. Returns whether the caches were cleared; the rest cannot fail.
      */
     private suspend fun forgetTracks(lookUp: Boolean): Boolean {
         clearEpoch.advance()
-        pipeline.forget()
-        try {
+        return pipeline.clear(lookUp) {
             // Again just before the caches' clear, so it waits for the writes under way then too.
             clearEpoch.advance()
             val cleared = artistKeeping.clearWith { withContext(Dispatchers.IO) { caches.clearAll() } }
@@ -893,9 +892,7 @@ class AppGraph internal constructor(
             sessionFacts.forget()
             sessions.forgetLastChange()
             diagnostics.log.clear()
-            return cleared
-        } finally {
-            pipeline.clearEnded(lookUp)
+            cleared
         }
     }
 
