@@ -41,6 +41,9 @@ android {
         versionCode = appVersion.code
         versionName = appVersion.name
         buildConfigField("boolean", "DEVELOPER_MODE_DEFAULT", developerModeDefault.toString())
+        // The instrumented tests (`src/androidTest`, #1114), which CI runs on an emulator: the app's
+        // classes initialized on ART, and the AI's answers read there.
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     testOptions {
         // Robolectric reads the app's resources and manifest, and sets a `FileDescriptor`'s
@@ -98,4 +101,8 @@ dependencies {
     testImplementation(libs.robolectric)
     // The history's tests run on an in-memory database through the JDBC driver, as `:store`'s do.
     testImplementation(libs.sqldelight.sqlite.driver)
+
+    // The instrumented tests' runner and JUnit 4 (#1114).
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.junit4)
 }

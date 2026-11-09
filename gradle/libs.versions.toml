@@ -22,6 +22,8 @@ materialkolor = "6.0.0"
 # QR codes of the API keys (#268): drawn by the CLI, read by the app's camera; decoded on the phone.
 zxing = "3.5.4"
 junit4 = "4.13.2"
+# The instrumented tests' runner, on an emulator in CI (#1114).
+androidx-test-runner = "1.7.0"
 robolectric = "4.17"
 
 [libraries]
@@ -76,3 +78,4 @@ zxing-core = { module = "com.google.zxing:core", version.ref = "zxing" }
 materialkolor-utilities = { module = "com.materialkolor:material-color-utilities", version.ref = "materialkolor" }
 junit4 = { module = "junit:junit", version.ref = "junit4" }
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
+androidx-test-runner = { module = "androidx.test:runner", version.ref = "androidx-test-runner" }
