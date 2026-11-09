@@ -103,7 +103,8 @@ private val SOURCE_ROWS: List<SourceRow> =
  * while no AI service can be used ([aiServiceUsable]), its switch shows the value stored, dimmed,
  * and cannot be moved (#846). A web search engine's row is on while web search is on with that
  * engine ([Settings.isEnabled] needs both): switching it on turns both on, and off turns the engine
- * off. After the web search engines, *Search in the track’s language* ([TrackLanguageRow], #902).
+ * off. Under MusicBrainz, *Wait when busy* ([MusicBrainzWaitRow], #1120); after the web search
+ * engines, *Search in the track’s language* ([TrackLanguageRow], #902).
  */
 @Composable
 internal fun SourcesSection(
@@ -113,6 +114,7 @@ internal fun SourcesSection(
 ) {
     for (row in SOURCE_ROWS) {
         SourceSwitchRow(row, settings, secrets, update)
+        if (row is SourceRow.Source && row.switch == SourceSwitch.MUSICBRAINZ) MusicBrainzWaitRow(settings, update)
         if (row is SourceRow.Engine && row.engine == WebEngine.EXA) TrackLanguageRow(settings, update)
     }
 }
@@ -306,8 +308,9 @@ private fun labelSourcePage(source: LabelSource): String =
     }
 
 /**
- * *Sources*' rows as the settings' search finds them (#649): each by its name and what it is; *Search
- * in the track’s language* (#902) also by its choices and what each does.
+ * *Sources*' rows as the settings' search finds them (#649): each by its name and what it is; *Wait
+ * when busy* (#1120) also by its stops; *Search in the track’s language* (#902) also by its choices and
+ * what each does.
  */
 @Composable
 internal fun sourceIndexRows(): List<IndexedRow> {
@@ -317,5 +320,5 @@ internal fun sourceIndexRows(): List<IndexedRow> {
             // *AI service knowledge*'s description names *AI services*.
             indexRow(stringResource(source.name), stringResource(source.summary, aiServices))
         }
-    return sources + trackLanguageIndexRow()
+    return sources + musicBrainzWaitIndexRow() + trackLanguageIndexRow()
 }

@@ -84,6 +84,10 @@ import kotlin.time.Duration.Companion.seconds
  *   language ([TrackLanguageSearch]); *If needed* by default. Each search keeps its own source's switch
  *   (Wikipedia and Wikidata; Exa web search), and the language is named only by what is written or
  *   recorded (`TrackLanguage`).
+ * @property musicBrainzWait *Wait when busy* (#1120), under MusicBrainz: how long a track's lookup
+ *   may wait, all its MusicBrainz requests together (`BusyWaits`), to ask again those MusicBrainz
+ *   refuses as busy, waiting longer each time, before it goes on without them; zero (*Don’t wait*)
+ *   for a single try. See [DEFAULT_MUSICBRAINZ_WAIT] and [MUSICBRAINZ_WAITS].
  * @property cacheLifetimes the retrieval cache lifetime per source (D9). A source with none (the
  *   pseudo-sources, which retrieve nothing) is not cached.
  * @property keepArtistResults *Keep what sources said about each artist* (#420): whether what the
@@ -225,6 +229,7 @@ data class Settings(
     val searchWithAi: Boolean = false,
     val aiWebSearch: AiWebSearch = AiWebSearch.ONCE,
     val trackLanguageSearch: TrackLanguageSearch = TrackLanguageSearch.IF_NEEDED,
+    val musicBrainzWait: Duration = DEFAULT_MUSICBRAINZ_WAIT,
     val cacheLifetimes: Map<SourceId, Duration> = DEFAULT_CACHE_LIFETIMES,
     val keepArtistResults: Boolean = false,
     val artistCacheLifetime: Duration = DEFAULT_ARTIST_CACHE_LIFETIME,
@@ -260,6 +265,7 @@ data class Settings(
             "The history lifetime must be positive, was $historyLifetime"
         }
         require(sessionGap.isPositive()) { "The session gap must be positive, was $sessionGap" }
+        require(!musicBrainzWait.isNegative()) { "The MusicBrainz wait must not be negative, was $musicBrainzWait" }
         require(pauseAutoWriteAfter == null || pauseAutoWriteAfter > 0) {
             "Automatic writing must pause after a positive number of track changes, was $pauseAutoWriteAfter"
         }
@@ -591,6 +597,21 @@ data class Settings(
          * listening and the evening's.
          */
         val DEFAULT_SESSION_GAP: Duration = SESSION_GAP_MINUTES.minutes
+
+        private const val MUSICBRAINZ_WAIT_SECONDS = 15
+        private const val MUSICBRAINZ_WAIT_LONG_SECONDS = 30
+
+        /**
+         * 15 s (#1120). The waits before asking a busy MusicBrainz again, ½ s and then twice as long
+         * each time (1 s, 2 s, 4 s), then what is left less a turn at it: six more tries, the last a
+         * little before 15 s; its refusals usually clear within seconds. Long enough for its genres
+         * and dates, short enough that the insight is not held up.
+         */
+        val DEFAULT_MUSICBRAINZ_WAIT: Duration = MUSICBRAINZ_WAIT_SECONDS.seconds
+
+        /** *Wait when busy*'s stops, in order: *Don’t wait*, 15 s, 30 s and 1 min (#1120). */
+        val MUSICBRAINZ_WAITS: List<Duration> =
+            listOf(Duration.ZERO, DEFAULT_MUSICBRAINZ_WAIT, MUSICBRAINZ_WAIT_LONG_SECONDS.seconds, 1.minutes)
     }
 }
 

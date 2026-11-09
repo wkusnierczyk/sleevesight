@@ -5,6 +5,7 @@ import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.sources.BusyWaits
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.SourceResult
@@ -13,6 +14,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
@@ -53,8 +55,13 @@ internal class Preparation(
 ) {
     private val key = track.lookupKey
 
+    /** Its MusicBrainz requests share one allowance for waiting it out when busy, as a run's (#1120). */
     suspend fun run() {
         if (!settings.isEnabled(SourceId.MUSICBRAINZ) || track.title.isBlank() || track.primary.isBlank()) return
+        withContext(BusyWaits(settings.musicBrainzWait, time.timeSource)) { prepare() }
+    }
+
+    private suspend fun prepare() {
         val results = lookUp()
         val artists =
             results
@@ -151,9 +158,10 @@ internal class Preparation(
          * How long a preparation whose resolution ended unreachable for a passing failure
          * ([PASSING]) waits before its one more try (#191). MusicBrainz can refuse requests (503)
          * for a moment when the pool it shares among its clients runs out, however slowly one
-         * client sends, and the client's own retries end within about 2 s at its one request a
-         * second; a while later, it answers again. A preparation runs minutes before its track
-         * plays, and the user never waits for it, so it can wait this long, and one more try
+         * client sends. The client retries such a refusal within the preparation's own allowance
+         * for waiting it out (*Wait when busy*, `BusyWaits`, #1120); this is one more try once that
+         * has run out, since a while later it answers again. A preparation runs minutes before its
+         * track plays, and the user never waits for it, so it can wait this long, and one more try
          * bounds what it sends. A constant, not a setting: nothing in it is the user's to choose.
          */
         val RETRY_WAIT: Duration = 15.seconds
