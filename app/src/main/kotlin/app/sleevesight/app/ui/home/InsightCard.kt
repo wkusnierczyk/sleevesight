@@ -83,7 +83,15 @@ internal fun InsightCard(
             read?.let { ReadAloudButton(it, READ_ALOUD_TAG) }
         }
         if (read?.pausedInstead == true) Quiet(stringResource(R.string.home_read_aloud_paused_instead))
-        InsightBody(insight, context, actions, groundingDetails)
+        // A track the last *Clear history* holds (#1112): its findings were cleared and nothing is
+        // asked, so the card says so, with *Look up again*, rather than why nothing is written yet;
+        // a model found unavailable (#540) is still said, under it, with its link.
+        if (LocalTrackCleared.current && insight is InsightState.Idle) {
+            ClearedInsight(actions.onLookUpAgain)
+            context.unavailable?.let { ModelUnavailable(it, actions.onSettings) }
+        } else {
+            InsightBody(insight, context, actions, groundingDetails)
+        }
         val lookAgain =
             (insight as? InsightState.Written)?.let {
                 LookAgainItem(

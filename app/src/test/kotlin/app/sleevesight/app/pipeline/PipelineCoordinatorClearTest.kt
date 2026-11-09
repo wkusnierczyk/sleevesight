@@ -10,7 +10,7 @@ import org.junit.Test
  */
 class PipelineCoordinatorClearTest {
     private fun World.clear() {
-        send(CoordinatorEvent.Cleared)
+        send(CoordinatorEvent.Cleared())
         advance(0)
     }
 

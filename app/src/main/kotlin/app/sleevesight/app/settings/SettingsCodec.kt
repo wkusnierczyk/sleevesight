@@ -77,6 +77,7 @@ internal object SettingsCodec {
     private val CACHE_SIZE_LIMIT = longPreferencesKey("cache.size_limit")
     private val HISTORY_LIFETIME_MS = longPreferencesKey("history.lifetime_ms")
     private val SESSION_GAP_MS = longPreferencesKey("history.session_gap_ms")
+    private val LOOK_UP_AFTER_CLEAR = stringPreferencesKey("history.look_up_after_clear")
 
     // *Keep Sources as you left them*, the switch *Sources on a new track* was before #522: read only
     // while the choice is not stored, on as *As left*, off as *Folded*; removed once it is.
@@ -113,7 +114,7 @@ internal object SettingsCodec {
 
     private fun lifetimeKey(source: SourceId) = longPreferencesKey("cache.lifetime_ms.${source.name}")
 
-    @Suppress("CyclomaticComplexMethod") // One line per setting, each its own key.
+    @Suppress("CyclomaticComplexMethod", "LongMethod") // One line per setting, each its own key.
     fun read(
         prefs: Preferences,
         defaults: Settings = Settings(),
@@ -153,6 +154,7 @@ internal object SettingsCodec {
                     else -> stored?.takeIf { it > 0 }?.milliseconds ?: defaults.historyLifetime
                 },
             sessionGap = prefs[SESSION_GAP_MS]?.takeIf { it > 0 }?.milliseconds ?: defaults.sessionGap,
+            lookUpAfterClear = enumOf(prefs[LOOK_UP_AFTER_CLEAR]) ?: defaults.lookUpAfterClear,
             sourcesOnNewTrack = newTrackFoldOf(prefs[SOURCES_ON_NEW_TRACK], prefs[KEEP_SOURCES_UNFOLDED], defaults),
             itemsOnNewTrack = NewTrackFold.of(prefs[ITEMS_ON_NEW_TRACK]) ?: defaults.itemsOnNewTrack,
             lyricsLinks = prefs[LYRICS_LINKS] ?: defaults.lyricsLinks,
@@ -292,6 +294,9 @@ internal object SettingsCodec {
         }
         if (moved { it.sessionGap }) {
             prefs.put(SESSION_GAP_MS, settings.sessionGap.inWholeMilliseconds, defaults.sessionGap.inWholeMilliseconds)
+        }
+        if (moved { it.lookUpAfterClear }) {
+            prefs.put(LOOK_UP_AFTER_CLEAR, settings.lookUpAfterClear.name, defaults.lookUpAfterClear.name)
         }
         if (moved { it.sourcesOnNewTrack }) {
             prefs.put(SOURCES_ON_NEW_TRACK, settings.sourcesOnNewTrack.key, defaults.sourcesOnNewTrack.key)

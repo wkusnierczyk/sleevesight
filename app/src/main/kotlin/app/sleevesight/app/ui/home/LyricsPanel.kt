@@ -96,7 +96,13 @@ internal fun LyricsPanel(
     val width =
         aiButtonWidth(listOf(stringResource(R.string.home_lyrics_find), stringResource(R.string.home_lyrics_explain)))
     when (links) {
-        LyricsLinks.Looking -> Busy(stringResource(R.string.home_musicbrainz_looking), style)
+        // Nothing asked for a track the last clear holds (#1112): it says so, without the record.
+        LyricsLinks.Looking ->
+            Busy(
+                waitingOrCleared(stringResource(R.string.home_musicbrainz_looking)),
+                style,
+                record = !LocalTrackCleared.current,
+            )
         LyricsLinks.Instrumental -> Text(stringResource(R.string.home_lyrics_instrumental), style = style)
         is LyricsLinks.Links -> {
             for (link in links.links) PageLink(link, search = false)

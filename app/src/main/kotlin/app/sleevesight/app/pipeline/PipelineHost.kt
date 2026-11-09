@@ -144,6 +144,10 @@ import kotlin.time.Instant
  *   asks again (#724), which the tap carries back ([PipelineHost.askAgain]): its sources have
  *   landed, some unreachable or shown but not kept for a failed lookup (#728), and no call is under
  *   way ([CoordinatorState.askAgainKey]); null otherwise.
+ * @property cleared the track the last *Clear history* holds (#1112, [CoordinatorState.clearedShown]):
+ *   its findings went with the history and nothing is asked for it until *Look up again*
+ *   ([PipelineHost.lookUpAgain]) or another track, so Home says so in place of waiting texts; null
+ *   otherwise.
  */
 data class PipelineView(
     val track: TrackState? = null,
@@ -167,6 +171,7 @@ data class PipelineView(
     val rewriteWith: RewriteOffer? = null,
     val askAgainKey: RunKey? = null,
     val askable: Set<SourceId> = emptySet(),
+    val cleared: NowPlaying? = null,
 )
 
 /**
@@ -397,6 +402,18 @@ class PipelineHost(
     }
 
     /**
+     * The user tapped *Look up again* beside the track [shown] (#1112), which the last *Clear
+     * history* holds ([PipelineView.cleared]): it is looked up as a new track is, once no clear is
+     * still wiping the stores ([clear]), and only if the session layer still shows it then.
+     * Dropped, as a tap on Write is, for a track the session layer no longer shows.
+     */
+    fun lookUpAgain(shown: NowPlaying) {
+        val latest = latestPlaying() ?: return
+        if (!sameInsightTrack(shown, latest)) return
+        queue.trySend(CoordinatorEvent.LookUpTapped(latest))
+    }
+
+    /**
      * The user tapped *Retry* beside [sources], which could not be reached, offered under [key]
      * ([PipelineView.askAgainKey], #724) beside the track [shown]: the coordinator asks those it still
      * offers alone again, together (two named on one line, #1121), as back online asks every one
@@ -439,15 +456,33 @@ class PipelineHost(
     /**
      * *Clear history*'s part here (#547): the run and the preparation cancelled, the live
      * pipeline's state and the insight shown gone, the coordinator's ledger emptied, and the track
-     * playing not looked up again until another one plays (no paid call on its own). Returns once
-     * the loop has taken it. The host must have been started ([start]).
+     * playing not looked up again until another one plays or it is looked up again (#1112; no paid
+     * call on its own). Once the loop has taken that, [wipe] runs (the rest of the clear: the
+     * caches and what is held in memory), and then, whatever happened, however it ended (cancelled
+     * too, at any point after the clear was queued), the clear's end, exactly once
+     * ([CoordinatorEvent.ClearEnded]): a tap on *Look up again* ([lookUpAgain]) waits for it, and
+     * with [lookUp] (*Look up the track again*'s *Automatically*, as chosen when the clear was asked)
+     * the track held is looked up again as a new track is, if the session layer still shows it.
+     * Returns what [wipe] returns. The host must have been started ([start]).
      */
-    suspend fun forget() {
-        val done = CompletableDeferred<Unit>()
-        forgetting.add(done)
-        queue.send(CoordinatorEvent.Cleared)
-        done.await()
+    suspend fun <T> clear(
+        lookUp: Boolean,
+        wipe: suspend () -> T,
+    ): T {
+        val taken = CompletableDeferred<Unit>()
+        forgetting.add(taken)
+        // Queued without suspending, so that a clear queued always reaches the finally below.
+        queue.trySend(CoordinatorEvent.Cleared(lookUp))
+        try {
+            taken.await()
+            return wipe()
+        } finally {
+            queue.trySend(CoordinatorEvent.ClearEnded(latestPlaying()))
+        }
     }
+
+    /** [clear] with nothing more to wipe, and nothing looked up again unless asked. */
+    suspend fun forget() = clear(lookUp = false) {}
 
     /** Runs until [scope] is cancelled; called once. */
     fun start(scope: CoroutineScope) {
@@ -516,7 +551,7 @@ class PipelineHost(
             if (event is CoordinatorEvent.PreparationEnded) preparations.remove(event.prep)
             // The pipelines forget their state before the coordinator's clear is published, so the
             // view never pairs that clear with a state from before it.
-            if (event == CoordinatorEvent.Cleared) {
+            if (event is CoordinatorEvent.Cleared) {
                 live.value?.pipeline?.forget()
                 built.values.forEach { (pipeline, _) -> pipeline.forget() }
                 failed.value = null
@@ -531,7 +566,7 @@ class PipelineHost(
             }
             snapshot.value = coordinator.state
             effects.forEach { perform(it, scope) }
-            if (event == CoordinatorEvent.Cleared) forgetting.poll()?.complete(Unit)
+            if (event is CoordinatorEvent.Cleared) forgetting.poll()?.complete(Unit)
         }
     }
 
@@ -880,6 +915,7 @@ class PipelineHost(
                 rewriteWith = if (rewrite) rewriteOffer(shown.track, owner) else null,
                 askAgainKey = owner.askAgainKey,
                 askable = owner.askable,
+                cleared = owner.clearedShown,
             )
         }.collect {
             view.value = it

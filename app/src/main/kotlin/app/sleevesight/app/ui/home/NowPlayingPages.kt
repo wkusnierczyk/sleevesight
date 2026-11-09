@@ -3,6 +3,7 @@ package app.sleevesight.app.ui.home
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.SideEffect
@@ -63,21 +64,24 @@ internal fun NowPlayingPageContent(
                 PageNothingPlaying()
                 return@PageFrame
             }
-            when (page) {
-                is HomePage.Sources -> SourcesPage(shown, playing, page.cite, actions) { handoff.moveTo(back) }
-                HomePage.Genres, is HomePage.GenresAt -> {
-                    val retries = Retries(shown.view, playing, actions.askAgain)
-                    GenresPage(
-                        shown.track,
-                        state.settings,
-                        genreNotes(shown, actions, sourcesLines(actions.itemNotes, shown.track).evidence),
-                        GenresWays(retries::ofAll, actions.openSettingsAt) { handoff.moveTo(back) },
-                        // *Search with AI* under no genre (#773), as in the panel on Home.
-                        PanelSearch(actions.aiSearches, shown.track, shown.track?.nowPlaying ?: playing),
-                    )
-                }
+            // Nothing asked for a track the last clear holds (#1112): its fields say so.
+            CompositionLocalProvider(LocalTrackCleared provides shown.cleared) {
+                when (page) {
+                    is HomePage.Sources -> SourcesPage(shown, playing, page.cite, actions) { handoff.moveTo(back) }
+                    HomePage.Genres, is HomePage.GenresAt -> {
+                        val retries = Retries(shown.view, playing, actions.askAgain)
+                        GenresPage(
+                            shown.track,
+                            state.settings,
+                            genreNotes(shown, actions, sourcesLines(actions.itemNotes, shown.track).evidence),
+                            GenresWays(retries::ofAll, actions.openSettingsAt) { handoff.moveTo(back) },
+                            // *Search with AI* under no genre (#773), as in the panel on Home.
+                            PanelSearch(actions.aiSearches, shown.track, shown.track?.nowPlaying ?: playing),
+                        )
+                    }
 
-                is HomePage.Item -> ItemPageOf(page, state, shown, playing, actions)
+                    is HomePage.Item -> ItemPageOf(page, state, shown, playing, actions)
+                }
             }
         }
     }
@@ -261,6 +265,12 @@ internal class Showing(
 
     /** The pipeline's track beside [playing], or null until the pipeline reaches it. */
     val track: TrackState? = trackFor(view, playing)
+
+    /**
+     * Whether [playing] is the track the last *Clear history* holds (#1112): no run, so its fields
+     * say it was cleared ([LocalTrackCleared]) rather than wait.
+     */
+    val cleared: Boolean = track == null && view.cleared?.let { TrackIdentity.playsOn(it, playing) } == true
 
     /**
      * The sources looked up only with the user's key that are switched off (#667), which have no

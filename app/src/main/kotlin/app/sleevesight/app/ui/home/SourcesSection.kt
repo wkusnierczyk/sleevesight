@@ -184,13 +184,18 @@ internal fun SourcesBody(
         if (shown.offline) Small(stringResource(R.string.home_sources_offline))
         if (lines.isEmpty()) {
             // Still looking, with the turning record before it (#785); nothing found, without, the
-            // same node.
+            // same node; nothing asked for a track the last clear holds (#1112), without too.
             val gathered = track?.gathered == true
+            val cleared = LocalTrackCleared.current && track == null
             Busy(
-                stringResource(if (gathered) R.string.home_evidence_empty else R.string.home_evidence_looking),
+                when {
+                    cleared -> stringResource(R.string.home_cleared)
+                    gathered -> stringResource(R.string.home_evidence_empty)
+                    else -> stringResource(R.string.home_evidence_looking)
+                },
                 MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                record = !gathered,
+                record = !gathered && !cleared,
             )
         }
         if (entries.isEmpty() && filtered == 0) return@Column
