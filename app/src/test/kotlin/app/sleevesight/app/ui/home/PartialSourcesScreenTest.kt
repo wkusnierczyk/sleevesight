@@ -260,6 +260,44 @@ class PartialSourcesScreenTest {
             compose.onNodeWithTag(REPORT_TAG).assertIsFocused()
         }
 
+    // Sundown while the pipeline asks MusicBrainz again: no *Retry* offered while it does.
+    private fun askingMusicBrainz(): NowPlayingState {
+        val answered = sundownWith(emptySet())
+        return state(answered.copy(sources = answered.sources + (SourceId.MUSICBRAINZ to SourceState.Pending)))
+    }
+
+    @Test
+    fun aTapOnSourcesRetryHandsTheFocusToThePanelsCloseAsTheNoteGoes() =
+        show(state(sundownWith(setOf(SourceId.MUSICBRAINZ)))) {
+            tap(SOURCES_CHIP_TAG)
+            compose.onNodeWithTag(SOURCES_RETRY_TAG).performScrollTo().requestFocus()
+            compose.waitForIdle()
+            compose.onNodeWithTag(SOURCES_RETRY_TAG).assertIsFocused()
+            tap(SOURCES_RETRY_TAG)
+            current.value = askingMusicBrainz()
+            compose.waitForIdle()
+            assertEquals(0, count(SOURCES_RETRY_TAG))
+            compose.onNodeWithTag(SOURCES_PANEL_CLOSE_TAG).assertIsFocused()
+        }
+
+    @Test
+    fun onSourcesPageATapOnRetryHandsTheFocusToTheBackArrowAsTheNoteGoes() =
+        show(
+            state(sundownWith(setOf(SourceId.MUSICBRAINZ)), Settings(layout = Layout.SEPARATE_PAGES)),
+            HomePage.Sources(),
+        ) {
+            compose.onNodeWithTag(SOURCES_RETRY_TAG).performScrollTo().requestFocus()
+            compose.waitForIdle()
+            compose.onNodeWithTag(SOURCES_RETRY_TAG).assertIsFocused()
+            tap(SOURCES_RETRY_TAG)
+            current.value = askingMusicBrainz()
+            compose.waitForIdle()
+            assertEquals(0, count(SOURCES_RETRY_TAG))
+            // The back arrow is also where a keyboard's focus falls by itself on a page, its first
+            // control; the handoff moves a screen reader's there too.
+            compose.onNodeWithTag(PAGE_BACK_TAG).assertIsFocused()
+        }
+
     @Test
     fun genresSaysSomeGenresMayBeMissingWithRetryInPlaceOfTheShortLine() =
         show(state(sundownWith(setOf(SourceId.MUSICBRAINZ)))) {
