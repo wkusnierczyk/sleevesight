@@ -191,6 +191,7 @@ Rules:
 - **Keep recording and release apart.** A release date belongs to the release the player filed the recording under, which is often a compilation or remaster. The prototype showed "Released 2002" for a 1978 song for this reason. MusicBrainz models recordings, releases and release groups separately; use it to find the first release date of the recording.
 - **Look past a full first page for the earliest recording** (#906). A search gives at most 100 recordings, and a song an artist has recorded more often than that, mostly live, may come without the studio one: *Dream On* by Aerosmith (169 recordings, most scoring alike, so ranked differently from one request to the next), with the player reporting the 1973 debut *Aerosmith*, resolved to the 1978 live recording on *Live! Bootleg*, with its date and producers. Only a recording released no later than the first page's earliest one that could be chosen could beat it, so when the first page is full, a second search asks for those (by the first release date, `firstreleasedate:[* TO …]`): few, deterministic, one more request. The usual rules then choose among both, the earliest released first. Only the title and artist are sent, as for the first page. Paging (`offset`) was tried first and dropped: with most scores tied, pages overlap and skip recordings from one request to the next. The album the player reports is not used either: it would send the album to MusicBrainz, and a compilation it names often carries a later recording of the song.
 - Entity matching is deterministic code (name similarity, duration tolerance, MusicBrainz relationships), never the language model.
+- **Classical music** (#1134): streaming services credit the composer first and put the composer in the title, and one work has many recordings. Where the first artist stands in for the performer, how to tell the composer from the performers, the work from the recording (a performance of a composed work is not a cover), and the regression tracks: [classical.md](classical.md).
 
 ### Source adapters
 
@@ -719,6 +720,8 @@ The simulator's data makes a ready fixture: the playlist "Below Soundtrack Netfl
 | 63 Baby, Please Don't Go (feat. Van Morrison) | Featured artist in the title |
 | 13 New York Groove, 36 Snowbird | Release year is a compilation's, not the song's |
 | 23, 30, 77 | Almost nothing documented anywhere; the card must say so |
+
+Classical regression tracks (solo, concerto, chamber, opera, choral, crossover), with their MusicBrainz recordings: [classical.md](classical.md), section 4.
 
 ## Appendix. Prompt contracts
 
