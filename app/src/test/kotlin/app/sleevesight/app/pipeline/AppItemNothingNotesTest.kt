@@ -235,20 +235,31 @@ class AppItemNothingNotesTest {
             assertEquals(listOf(SourceId.MUSICBRAINZ, SourceId.WIKIPEDIA), held.evidence.unanswered)
             val asked = albumLookups
 
-            // *Retry*: MusicBrainz asked again by the track's run, the album not from the track it replaces.
+            // The track playing, as the pipeline shows it, followed whether a panel is open or not.
+            val tracks = MutableStateFlow<TrackState?>(before)
+            val following = launch { notes.gatherAfterRuns(tracks) }
+            advanceUntilIdle()
+
+            // *Retry*: MusicBrainz asked again by the track's run, the album not from the track it
+            // replaces, nor while the run asks.
             notes.gatherAgain(before, InsightItem.ALBUM, afterRun = true)
+            advanceUntilIdle()
+            tracks.value = before.copy(sources = before.sources + (SourceId.MUSICBRAINZ to SourceState.Pending))
             advanceUntilIdle()
             assertEquals(asked, albumLookups)
 
-            // The run lands, MusicBrainz finding no recording (still no release group): the album
-            // gathered once, from it, whatever follows it meanwhile.
+            // The run lands, MusicBrainz finding no recording (still no release group), the panel
+            // closed meanwhile: the album gathered once, from it, with nothing following it.
             waiting = CompletableDeferred()
             album =
                 AlbumFound(
                     listOf(HomeFixtures.draft(SourceId.WIKIPEDIA, "Mezzanine is an album.", scope = Scope.RELEASE)),
                 )
             val after = track(reached = false, notFound = true)
-            // Two rows following it, as a panel and a page would.
+            tracks.value = after
+            advanceUntilIdle()
+            assertEquals(asked + 1, albumLookups)
+            // Opened again while it gathers, as a panel and a page: they join it.
             val row = launch { notes.item(after, InsightItem.ALBUM).collect {} }
             val page = launch { notes.item(after, InsightItem.ALBUM).collect {} }
             advanceUntilIdle()
@@ -260,6 +271,33 @@ class AppItemNothingNotesTest {
             assertEquals(0, provider.requests)
             row.cancel()
             page.cancel()
+            following.cancel()
+        }
+
+    @Test
+    fun `two taps on Retry during one lookup of the album ask it once, and its outcome is taken`() =
+        runTest {
+            album = AlbumFound(emptyList(), unanswered = listOf(SourceId.WIKIPEDIA))
+            val notes = notes()
+            val track = track(reached = true)
+            notes.write(track, InsightItem.ALBUM)
+            advanceUntilIdle()
+            val asked = albumLookups
+            waiting = CompletableDeferred()
+            album =
+                AlbumFound(
+                    listOf(HomeFixtures.draft(SourceId.WIKIPEDIA, "Mezzanine is an album.", scope = Scope.RELEASE)),
+                )
+            notes.gatherAgain(track, InsightItem.ALBUM)
+            advanceUntilIdle()
+            notes.gatherAgain(track, InsightItem.ALBUM)
+            advanceUntilIdle()
+            assertEquals(asked + 1, albumLookups)
+            checkNotNull(waiting).complete(Unit)
+            advanceUntilIdle()
+            // Followed again (a panel opened, the page): what it gathered is taken, not asked for again.
+            assertEquals(ItemShown.Offered, notes.item(track, InsightItem.ALBUM).first { it !is ItemShown.Gathering })
+            assertEquals(asked + 1, albumLookups)
         }
 
     @Test

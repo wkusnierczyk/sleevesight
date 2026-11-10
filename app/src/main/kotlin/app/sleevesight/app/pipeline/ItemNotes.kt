@@ -663,21 +663,105 @@ class AppItemNotes(
         }
     }
 
-    // Gathered again whatever is kept (#1187), as a write would gather it; while one gathers, that one.
-    // What was gathered for [item] on the track before is not taken again ([usable]); with [afterRun],
-    // it is gathered once the run asking the track's sources again lands, not from [track] now.
+    // Gathered again whatever is kept (#1187), as a write would gather it; while one gathers, that one,
+    // whose outcome is then taken (several taps during one lookup ask once). What was gathered for
+    // [item] on the track before is not taken again ([usable]). With [afterRun], it is gathered once
+    // the run asking the track's sources again lands ([gatherAfterRuns]), not from [track] now, whether
+    // or not anything follows the item then.
     override fun gatherAgain(
         track: TrackState,
         item: InsightItem,
         afterRun: Boolean,
     ) {
-        asked[item to track.normalized.lookupKey] = rounds.incrementAndGet()
-        if (afterRun) return
+        if (afterRun) gatherAfterRun(track, item) else gatherNow(track, item)
+    }
+
+    // [item] on [track] gathered again now, unless a gathering of it is under way, whose outcome is taken.
+    private fun gatherNow(
+        track: TrackState,
+        item: InsightItem,
+    ) {
         val made = parts.value
         val now = settings.value?.takeIf { it.writeInsights && ItemInsights.offered(track) }
         if (made == null || now == null) return
         val insights = insightsOf(made)
-        gather(insights, track, item, now, gatheredFor(insights, track, item, now))
+        val at = gatheredFor(insights, track, item, now)
+        if (inflight[at]?.isActive != true) {
+            asked[item to track.normalized.lookupKey] = rounds.incrementAndGet()
+            gather(insights, track, item, now, at)
+        }
+    }
+
+    // [item] on [track] to gather once the run asking the track's sources again lands ([landed]).
+    private fun gatherAfterRun(
+        track: TrackState,
+        item: InsightItem,
+    ) {
+        val lookupKey = track.normalized.lookupKey
+        asked[item to lookupKey] = rounds.incrementAndGet()
+        synchronized(afterRuns) {
+            val waiting = afterRuns[lookupKey]
+            afterRuns.clear()
+            afterRuns[lookupKey] = AfterRun(track, waiting?.items.orEmpty() + item)
+        }
+    }
+
+    // A *Retry* gathering waiting for the run asking [track]'s sources again (#1187): the track it was
+    // tapped beside, the [items] to gather, and whether a state of the track with a source still to
+    // land was seen since ([asking]).
+    private class AfterRun(
+        val track: TrackState,
+        val items: Set<InsightItem>,
+        val asking: Boolean = false,
+    )
+
+    // The *Retry* gatherings waiting, by the track's lookup key: one track's at most, the latest tapped.
+    private val afterRuns = HashMap<String, AfterRun>()
+
+    /**
+     * Gathers the items a *Retry* asked again with the track's own sources ([gatherAgain]'s `afterRun`,
+     * #1187) once the run asking them has landed on [tracks] (the track playing as it changes): a state
+     * of the same track, every source landed, after one still asking or with sources other than those
+     * it was tapped beside; from that state, whether a panel or page follows the item then or not. One
+     * for another track is dropped. Until cancelled.
+     */
+    suspend fun gatherAfterRuns(tracks: Flow<TrackState?>) {
+        tracks.collect { track -> track?.let { landed(it) } }
+    }
+
+    // [track] as [gatherAfterRuns] sees it: the items waiting for its run gathered once it landed.
+    private fun landed(track: TrackState) {
+        val lookupKey = track.normalized.lookupKey
+        val offered = ItemInsights.offered(track)
+        val due =
+            synchronized(afterRuns) {
+                val waiting = afterRuns[lookupKey]
+                afterRuns.keys.retainAll(setOf(lookupKey))
+                when {
+                    waiting == null -> {
+                        null
+                    }
+
+                    !offered -> {
+                        afterRuns[lookupKey] = AfterRun(waiting.track, waiting.items, asking = true)
+                        null
+                    }
+
+                    waiting.asking || track.sources != waiting.track.sources -> {
+                        afterRuns.remove(lookupKey)
+                        waiting
+                    }
+
+                    else -> {
+                        null
+                    }
+                }
+            }
+        val made = parts.value
+        val now = settings.value?.takeIf { it.writeInsights }
+        if (due == null || made == null || now == null) return
+        val insights = insightsOf(made)
+        due.items.forEach { item -> gather(insights, track, item, now, gatheredFor(insights, track, item, now)) }
     }
 
     // [block] in [scope], marked with the epoch and the count of *Clear history*, held in [pending]
@@ -1635,6 +1719,7 @@ class AppItemNotes(
             inflight.clear()
             looked.clear()
         }
+        synchronized(afterRuns) { afterRuns.clear() }
         // What was gathering, reading or writing goes: nothing it found is kept or shown, and no call
         // it would have made is made.
         pending.toList().forEach { it.cancel() }

@@ -1551,8 +1551,9 @@ private fun heldOf(
     return SourcesHeld(named, retry, failed).takeIf { named.isNotEmpty() || failed.isNotEmpty() }
 }
 
-// The sources an album's lookup asks (`AlbumSource`), all failed when it throws (#1187).
-private val ALBUM_SOURCES = listOf(SourceId.MUSICBRAINZ, SourceId.WIKIPEDIA, SourceId.LASTFM)
+// The sources an album's lookup asks (`AlbumSource`, Wikidata with Wikipedia's switch), all failed
+// when it throws (#1187).
+private val ALBUM_SOURCES = listOf(SourceId.MUSICBRAINZ, SourceId.WIKIDATA, SourceId.WIKIPEDIA, SourceId.LASTFM)
 
 // Why [album]'s lookups on [track], under [settings], with no line, may yet have one (#1187;
 // [SourcesHeld]): the sources its own lookups could not reach ([unreached], asked again by gathering

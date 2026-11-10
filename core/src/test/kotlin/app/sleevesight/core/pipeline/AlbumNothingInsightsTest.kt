@@ -186,7 +186,16 @@ class AlbumNothingInsightsTest {
             val evidence = evidence()
             assertTrue(evidence.unreachable)
             assertEquals(emptyList(), evidence.unanswered)
-            assertEquals(listOf(SourceId.MUSICBRAINZ, SourceId.WIKIPEDIA, SourceId.LASTFM), evidence.failed)
+            assertEquals(
+                listOf(SourceId.MUSICBRAINZ, SourceId.WIKIDATA, SourceId.WIKIPEDIA, SourceId.LASTFM),
+                evidence.failed,
+            )
+            // Wikidata with Wikipedia's switch: off, neither is named.
+            val off = settings.copy(enabledSources = settings.enabledSources - SourceSwitch.WIKIPEDIA)
+            assertEquals(
+                listOf(SourceId.MUSICBRAINZ, SourceId.LASTFM),
+                checkNotNull(items.evidence(InsightItem.ALBUM, track(), off)).failed,
+            )
         }
 
     @Test

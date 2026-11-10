@@ -10,6 +10,7 @@ import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.pipeline.ItemAsk
@@ -38,7 +39,7 @@ import org.robolectric.RobolectricTestRunner
  * Under an automatic mode, a panel opened by a tap asks for its insight as an opening, and, left
  * open, asks again as the track's evidence changes as kept open (#1163): what a *Retry* of a source
  * brings then starts no call by itself (`CoordinatorState.itemCallAllowed`), while a tap's opening
- * still writes.
+ * still writes; so too, asked again as the app comes back on screen (#1187).
  */
 @RunWith(RobolectricTestRunner::class)
 class ItemKeptOpenScreenTest {
@@ -78,6 +79,33 @@ class ItemKeptOpenScreenTest {
             assertEquals(listOf(ItemAsk.OPENED), notes.asks)
 
             current.value = state(after)
+            compose.waitForIdle()
+            assertEquals(listOf(ItemAsk.OPENED, ItemAsk.KEPT_OPEN), notes.asks)
+        }
+    }
+
+    @Test
+    fun aPanelLeftOpenAsksAgainAsKeptOpenWhenTheAppComesBackOnScreen() {
+        // #1187: the lines an album's *Retry* brought, the evidence unchanged; the app left and come
+        // back to. Not an opening again, which a *Retry* would not hold.
+        val shown = state(track(evidence = EvidenceSet.of(listOf(musicBrainzLine), JvmHasher)))
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity {
+                it.setContent {
+                    Column(Modifier.verticalScroll(rememberScrollState())) {
+                        NowPlayingContent(shown, NowPlayingActions(normalizer::normalize, itemNotes = notes))
+                    }
+                }
+            }
+            compose.waitForIdle()
+            compose.onNodeWithTag(itemRowTag(InsightItem.ALBUM)).performScrollTo().performClick()
+            compose.waitForIdle()
+            assertEquals(listOf(ItemAsk.OPENED), notes.asks)
+
+            // Paused (another window over it), then back: off screen and on, as `WritesAtOnce` reads it.
+            scenario.moveToState(Lifecycle.State.STARTED)
+            compose.waitForIdle()
+            scenario.moveToState(Lifecycle.State.RESUMED)
             compose.waitForIdle()
             assertEquals(listOf(ItemAsk.OPENED, ItemAsk.KEPT_OPEN), notes.asks)
         }
